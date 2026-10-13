@@ -75,7 +75,7 @@
           <% end %>
           <% if @reconciliation.rows.empty? %>
             <tr>
-              <td class="td py-8 text-center text-taupe">No SKU links yet — run a sync first.</td>
+              <td class="empty-row">No SKU links yet — run a sync first.</td>
             </tr>
           <% end %>
         </tbody>
@@ -121,7 +121,7 @@
           <% end %>
           <% if @reconciliation.decisions.empty? %>
             <tr>
-              <td class="td py-8 text-center text-taupe">No maintenance writes yet today.</td>
+              <td class="empty-row">No maintenance writes yet today.</td>
             </tr>
           <% end %>
         </tbody>

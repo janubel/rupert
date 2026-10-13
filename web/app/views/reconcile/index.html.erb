@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Catalog Links</h1>
+      <h1 class="page-title">Catalog Links</h1>
       <p class="mt-1 max-w-2xl text-sm text-mocha">Which sellable items are the same across Shopify and Square. This is an identity audit only — Shopify and Square are separate locations with independent inventories, so different quantities are normal and never auto-corrected.</p>
     </div>
     <%= link_to "Download PDF snapshot", pdf_inventory_index_path, class: "btn-ghost", data: { turbo: false } %>
@@ -166,7 +166,7 @@
           <tbody class="divide-y divide-fog">
             <% if @rows.empty? %>
               <tr>
-                <td colspan="6" class="td py-8 text-center text-taupe">No SKU links yet — run a sync first.</td>
+                <td colspan="6" class="empty-row">No SKU links yet — run a sync first.</td>
               </tr>
             <% end %>
             <% @rows.each do |row| %>

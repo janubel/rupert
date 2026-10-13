@@ -15,9 +15,9 @@
     <%= javascript_importmap_tags %>
   </head>
   <body class="min-h-full">
-    <main class="mx-auto max-w-5xl px-6 py-10">
-      <% if notice %><div aria-live="polite" role="status" class="mb-4 rounded-xl border border-fern/30 bg-fern/10 px-4 py-2.5 text-sm text-fern"><%= notice %></div><% end %>
-      <% if alert %><div aria-live="assertive" role="alert" class="mb-4 rounded-xl border border-rose/30 bg-rose/10 px-4 py-2.5 text-sm text-rose"><%= alert %></div><% end %>
+    <main id="main" tabindex="-1" class="mx-auto max-w-5xl px-6 py-10 focus:outline-none">
+      <% if notice %><div aria-live="polite" role="status" class="flash flash-notice mb-4"><%= notice %></div><% end %>
+      <% if alert %><div aria-live="assertive" role="alert" class="flash flash-alert mb-4"><%= alert %></div><% end %>
       <%= yield %>
     </main>
   </body>

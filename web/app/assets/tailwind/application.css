@@ -61,6 +61,26 @@
     @apply p-5;
   }
 
+  .page-title {
+    @apply font-display text-3xl text-ink;
+  }
+
+  .empty-row {
+    @apply px-4 py-8 text-center align-middle text-taupe;
+  }
+
+  .flash {
+    @apply rounded-xl border px-4 py-2.5 text-sm;
+  }
+
+  .flash-notice {
+    @apply border-fern/30 bg-fern/10 text-fern;
+  }
+
+  .flash-alert {
+    @apply border-rose/30 bg-rose/10 text-rose;
+  }
+
   .eyebrow {
     @apply text-[11px] font-semibold uppercase tracking-[0.16em];
   }

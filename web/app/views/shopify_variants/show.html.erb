@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @variant.title %></h1>
+      <h1 class="page-title"><%= @variant.title %></h1>
       <p class="mt-1 text-sm text-mocha">
         <%= @product&.title %> · <span class="font-mono text-xs text-taupe"><%= @variant.sku.presence || "no SKU" %></span>
         <% if @variant.tracked %><span class="ml-2 pill-fern">tracked</span><% end %>

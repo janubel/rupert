@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Payroll</h1>
+      <h1 class="page-title">Payroll</h1>
       <p class="mt-1 text-sm text-mocha">Pay runs built from approved timesheets, finalized and paid.</p>
     </div>
     <% if Current.user.can?("payroll.write") %>
@@ -53,7 +53,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @pay_runs.empty? %>
-            <tr><td colspan="6" class="td py-8 text-center text-taupe">No pay runs yet.</td></tr>
+            <tr><td colspan="6" class="empty-row">No pay runs yet.</td></tr>
           <% end %>
           <% @pay_runs.each do |pay_run| %>
             <tr class="hover:bg-cream">

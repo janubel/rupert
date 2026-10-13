@@ -1,7 +1,7 @@
 <% content_for :title, "Activity" %>
 <div class="space-y-6">
   <section>
-    <h1 class="font-display text-3xl text-ink">Activity</h1>
+    <h1 class="page-title">Activity</h1>
     <p class="mt-1 text-sm text-mocha">Audit trail — who did what, and when. Showing the most recent <%= @activities.length %> actions.</p>
   </section>
 
@@ -19,7 +19,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @activities.empty? %>
-            <tr><td colspan="5" class="td py-8 text-center text-taupe">No activity recorded yet.</td></tr>
+            <tr><td colspan="5" class="empty-row">No activity recorded yet.</td></tr>
           <% end %>
           <% @activities.each do |a| %>
             <tr class="hover:bg-cream">

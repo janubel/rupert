@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @purchase_order.order_number %></h1>
+      <h1 class="page-title"><%= @purchase_order.order_number %></h1>
       <p class="mt-1 text-sm text-mocha">
         <%= link_to @purchase_order.vendor.name, @purchase_order.vendor, class: "text-olive hover:underline" %>
         · <span class="<%= @purchase_order.status == "received" ? "pill-fern" : @purchase_order.status == "ordered" ? "pill-olive" : @purchase_order.status == "cancelled" ? "pill-rose" : "pill-taupe" %>"><%= @purchase_order.status %></span>
@@ -87,7 +87,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @lines.empty? %>
-            <tr><td colspan="<%= @purchase_order.draft? ? 7 : 6 %>" class="td py-8 text-center text-taupe">No lines yet.</td></tr>
+            <tr><td colspan="<%= @purchase_order.draft? ? 7 : 6 %>" class="empty-row">No lines yet.</td></tr>
           <% end %>
           <% @lines.each do |line| %>
             <tr class="hover:bg-cream">

@@ -20,6 +20,9 @@ Square ───┼── sync engine ──▶ PostgreSQL DB ──▶ GUI
 | --- | --- |
 | `web/` | The Rails 8.1 app: sync engine services, Oatmeal GUI, JSON APIs |
 | `legacy/` | The original Node/React implementation, kept as reference |
+| `docs/` | Docs site, plans, audits and research (see `docs/README.md`) |
+| `deploy/` | Old droplet systemd units, kept for reference only (see below) |
+| `bin/` | Host scripts (`backup.sh`) |
 | `shopify.app.toml` | Shopify app config (scopes, webhooks) |
 | `Dockerfile`, `docker-compose.yml` | Optional container deployment |
 
@@ -134,10 +137,9 @@ manual source (`SwipesimpleImporter`) feeds CSV exports through the same seam.
 - HR: `app/modules/people/` (employees, departments, positions, timesheets,
   leave & PTO, payroll) with `PayrollCalculator` turning approved timesheets
   into payslips
-- DB: PostgreSQL (`pg` gem) is the production default. An opt-in SQLite
-  adapter with FTS5 search is available for local evaluation; set
-  `RUPERT_DB_ADAPTER=sqlite3`. This is experimental and is not the production
-  database.
+- DB: PostgreSQL (`pg` gem) is the production default. SQLite with FTS5 search
+  is a supported alternative (`RUPERT_DB_ADAPTER=sqlite3`, full test suite passes on both); moving the live
+  instance is covered by `docs/ops/sqlite-migration.md`.
 
 ## Production and deployment
 
@@ -150,9 +152,10 @@ from the previous host layout. They do not describe the current Incus
 deployment and must not be used as its runbook. The host's live deployment and
 backup configuration still needs to be reconciled with this repository.
 
-Keep PostgreSQL as the production database. The SQLite adapter is an
-experimental, opt-in path and should not be enabled on the live instance by
-setting `RUPERT_DB_ADAPTER`.
+PostgreSQL is still what the live instance runs. SQLite is a supported, fully tested
+adapter (`RUPERT_DB_ADAPTER=sqlite3`), and the migration path for the live instance is
+written and rehearsed but not yet run: see `docs/ops/sqlite-migration.md`. Do not set
+`RUPERT_DB_ADAPTER` on the live instance except by following that runbook.
 
 ## Data model
 

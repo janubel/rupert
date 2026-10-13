@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @pay_run.name %></h1>
+      <h1 class="page-title"><%= @pay_run.name %></h1>
       <p class="mt-1 text-sm text-mocha">
         <%= @pay_run.period_label %>
         <span class="text-taupe">·</span>
@@ -89,7 +89,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @pay_run.payslips.empty? %>
-            <tr><td colspan="<%= @pay_run.draft? ? 7 : 6 %>" class="td py-8 text-center text-taupe">No payslips yet — regenerate from timesheets or add one manually.</td></tr>
+            <tr><td colspan="<%= @pay_run.draft? ? 7 : 6 %>" class="empty-row">No payslips yet — regenerate from timesheets or add one manually.</td></tr>
           <% end %>
           <% @pay_run.payslips.includes(:employee, :pay_rate).order(id: :asc).each do |slip| %>
             <tr class="hover:bg-cream">

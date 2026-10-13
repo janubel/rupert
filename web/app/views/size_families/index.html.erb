@@ -8,7 +8,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Sizes</h1>
+      <h1 class="page-title">Sizes</h1>
       <p class="mt-1 text-sm text-mocha">Multi-size gram products derived from a root gram bank. Every 15-minute sync folds in new sales and recomputes each size as <code class="font-mono text-xs">floor(root grams ÷ size grams)</code>, then writes to Square instead of trusting realtime counts.</p>
     </div>
     <div class="flex flex-wrap gap-2">
@@ -178,7 +178,7 @@
         <tbody class="divide-y divide-fog">
           <% if @pending_changes.empty? %>
             <tr>
-              <td class="td py-8 text-center text-taupe" colspan="8">Nothing pending — sizes are in sync with their root gram banks.</td>
+              <td class="empty-row" colspan="8">Nothing pending — sizes are in sync with their root gram banks.</td>
             </tr>
           <% end %>
           <% @pending_changes.each do |change| %>

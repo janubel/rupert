@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Vendors</h1>
+      <h1 class="page-title">Vendors</h1>
       <p class="mt-1 text-sm text-mocha">Who the shop buys from, with their purchase-order history.</p>
     </div>
     <% if Current.user.can?("purchasing.write") %>
@@ -29,7 +29,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @vendors.empty? %>
-            <tr><td colspan="6" class="td py-8 text-center text-taupe"><%= @q.present? ? "Nothing matches that search." : "No vendors yet — add the first one." %></td></tr>
+            <tr><td colspan="6" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No vendors yet — add the first one." %></td></tr>
           <% end %>
           <% @vendors.each do |vendor| %>
             <tr class="hover:bg-cream">

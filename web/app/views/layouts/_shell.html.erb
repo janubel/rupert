@@ -1,3 +1,4 @@
+<a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:fixed focus:left-4 focus:top-3">Skip to content</a>
 <div class="min-h-full">
   <header class="sticky top-0 z-20 border-b border-fog bg-oat/90 backdrop-blur">
     <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-3 md:pr-44">
@@ -67,12 +68,12 @@
     </div>
   <% end %>
 
-  <main class="mx-auto max-w-6xl px-6 py-8">
+  <main id="main" tabindex="-1" class="mx-auto max-w-6xl px-6 py-8 focus:outline-none">
     <% if (guide = PageGuides.for_path(request.path)) %>
       <%= render "shared/page_guide", guide: guide %>
     <% end %>
-    <% if notice %><div aria-live="polite" role="status" class="mb-4 rounded-xl border border-fern/30 bg-fern/10 px-4 py-2.5 text-sm text-fern"><%= notice %></div><% end %>
-    <% if alert %><div aria-live="assertive" role="alert" class="mb-4 rounded-xl border border-rose/30 bg-rose/10 px-4 py-2.5 text-sm text-rose"><%= alert %></div><% end %>
+    <% if notice %><div aria-live="polite" role="status" class="flash flash-notice mb-4"><%= notice %></div><% end %>
+    <% if alert %><div aria-live="assertive" role="alert" class="flash flash-alert mb-4"><%= alert %></div><% end %>
     <%= yield %>
   </main>
 </div>

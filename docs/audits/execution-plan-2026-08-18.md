@@ -15,7 +15,7 @@ Derived read-only from the live Square + Shopify APIs (see
 ## The three-part plan
 
 ### Part 1 — Automatic Shopify SKU rewrites (13, high-confidence)
-`execution_plan_shopify_sku_rewrites.csv`
+`data/execution_plan_shopify_sku_rewrites.csv`
 
 Unambiguous 1:1 variation matches — set the Shopify variant's SKU to Square's
 so `SkuLink` auto-links. Examples:
@@ -25,14 +25,14 @@ so `SkuLink` auto-links. Examples:
   distinct Square SKUs (this also fixes the shared-SKU issue).
 
 ### Part 2 — Products to create on Shopify (126 items / 344 variations)
-`execution_plan_create_products.csv`
+`data/execution_plan_create_products.csv`
 
 Every Square item with no Shopify counterpart — create on Shopify carrying its
 Square SKUs + current Square quantities. 54 are sellable (~741 units); the rest
 are zero-qty (still created so the catalog matches, per the directive).
 
 ### Part 3 — Needs manual confirmation (118) — DO NOT auto-apply
-`execution_plan_confirm.csv`
+`data/execution_plan_confirm.csv`
 
 Two kinds:
 - **62 weak-item matches** — Square items that fuzzy-matched a Shopify product

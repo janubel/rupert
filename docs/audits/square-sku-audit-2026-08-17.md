@@ -9,7 +9,7 @@ and cross-referenced against the local mirror (`SquareVariation` / `SquareItem`)
 Reusable tooling added:
 - `bin/rails ops:audit:square_skus` — prints the full live-vs-mirror-vs-Shopify breakdown.
 - `bin/rails ops:audit:prune_stale_mirror` — DB-only cleanup of mirror rows no longer in live API.
-- Full per-variation remediation plan: `docs/audits/square-sku-plan-2026-08-17.txt`.
+- Full per-variation remediation plan: `docs/audits/data/square-sku-plan-2026-08-17.txt`.
 
 ---
 

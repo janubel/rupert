@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Inventory</h1>
+      <h1 class="page-title">Inventory</h1>
       <p class="mt-1 max-w-2xl text-sm text-mocha">Stock held at each location. Shopify and Square are separate locations with independent inventories — different numbers across columns are normal, not an error.</p>
     </div>
     <div class="flex gap-2">
@@ -40,7 +40,7 @@
         <tbody class="divide-y divide-fog">
           <% if @products.empty? %>
             <tr>
-              <td class="td py-8 text-center text-taupe" colspan="<%= 6 + @stock_locations.length %>"><%= @q.present? ? "Nothing matches that search." : "No products mirrored yet — run a sync." %></td>
+              <td class="empty-row" colspan="<%= 6 + @stock_locations.length %>"><%= @q.present? ? "Nothing matches that search." : "No products mirrored yet — run a sync." %></td>
             </tr>
           <% end %>
           <% @products.each do |product| %>

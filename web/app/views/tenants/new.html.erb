@@ -4,7 +4,7 @@
 
   <%= form_with url: tenants_path, method: :post, class: "card card-pad space-y-4" do |f| %>
     <% if @tenant&.errors&.any? %>
-      <div class="rounded-xl border border-rose/30 bg-rose/10 px-4 py-2.5 text-sm text-rose">
+      <div class="flash flash-alert">
         <%= @tenant.errors.full_messages.join(", ") %>
       </div>
     <% end %>

@@ -1,7 +1,7 @@
 <% content_for :title, "Edit #{@vendor.name}" %>
 <div class="space-y-6">
   <section>
-    <h1 class="font-display text-3xl text-ink">Edit <%= @vendor.name %></h1>
+    <h1 class="page-title">Edit <%= @vendor.name %></h1>
   </section>
   <div class="card card-pad max-w-2xl">
     <%= render "form", vendor: @vendor %>

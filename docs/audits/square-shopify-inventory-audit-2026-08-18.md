@@ -9,8 +9,8 @@ either platform or the database. Matching is by SKU (the engine's link key)
 SKU-scheme divergence.
 
 Reusable artifacts (committed in this folder):
-- `square_missing_from_shopify.csv` — Square items with no Shopify counterpart.
-- `shopify_missing_from_square.csv` — Shopify variants with no Square counterpart (excl. wholesale + ROUTEINS).
+- `data/square_missing_from_shopify.csv` — Square items with no Shopify counterpart.
+- `data/shopify_missing_from_square.csv` — Shopify variants with no Square counterpart (excl. wholesale + ROUTEINS).
 
 ---
 

@@ -2,7 +2,7 @@
 <% cached_fragment("finance/accounts") do %>
 <div class="space-y-6">
   <section>
-    <h1 class="font-display text-3xl text-ink">Accounts</h1>
+    <h1 class="page-title">Accounts</h1>
     <p class="mt-1 text-sm text-mocha">Payables — what the shop owes vendors — and receivables — what customers owe the shop.</p>
   </section>
 
@@ -36,7 +36,7 @@
           </thead>
           <tbody class="divide-y divide-fog">
             <% if @payables.empty? %>
-              <tr><td colspan="4" class="td py-8 text-center text-taupe">No vendor balances.</td></tr>
+              <tr><td colspan="4" class="empty-row">No vendor balances.</td></tr>
             <% end %>
             <% @payables.each do |row| %>
               <tr class="hover:bg-cream">
@@ -77,7 +77,7 @@
           </thead>
           <tbody class="divide-y divide-fog">
             <% if @receivables.empty? %>
-              <tr><td colspan="3" class="td py-8 text-center text-taupe">No customer balances.</td></tr>
+              <tr><td colspan="3" class="empty-row">No customer balances.</td></tr>
             <% end %>
             <% @receivables.each do |row| %>
               <tr class="hover:bg-cream">

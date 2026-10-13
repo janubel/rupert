@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @location.name %></h1>
+      <h1 class="page-title"><%= @location.name %></h1>
       <p class="mt-1 text-sm text-mocha">
         <span class="pill-taupe capitalize"><%= @location.source %></span>
         <% if @location.kind %><span class="ml-2 text-taupe capitalize"><%= @location.kind.downcase %></span><% end %>
@@ -45,7 +45,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @levels.empty? %>
-            <tr><td colspan="4" class="td py-8 text-center text-taupe">No stock recorded at this location.</td></tr>
+            <tr><td colspan="4" class="empty-row">No stock recorded at this location.</td></tr>
           <% end %>
           <% @levels.each do |level| %>
             <tr class="hover:bg-cream">

@@ -3,7 +3,7 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <div class="flex items-center gap-3">
-        <h1 class="font-display text-3xl text-ink">Manual count</h1>
+        <h1 class="page-title">Manual count</h1>
         <span class="<%= count.draft? ? "pill-taupe" : count.pending? ? "pill-clay" : count.approved? ? "pill-fern" : "pill-rose" %>"><%= count.status %></span>
       </div>
       <p class="mt-1 text-sm text-mocha">
@@ -30,7 +30,7 @@
   <% end %>
 
   <% if count.approved? %>
-    <p class="rounded-xl border border-fern/30 bg-fern/10 px-4 py-3 text-sm text-fern">
+    <p class="flash flash-notice">
       Approved <%= l(count.approvedAt, format: :long) %> as an audit record. Overrides are disabled until
       Rupert becomes the source of truth — Square is the source of truth today, so counted quantities do
       not change inventory.
@@ -55,7 +55,7 @@
         <tbody class="divide-y divide-fog">
           <% if count.items.empty? %>
             <tr>
-              <td class="td py-8 text-center text-taupe">No items recorded.</td>
+              <td class="empty-row">No items recorded.</td>
             </tr>
           <% end %>
           <% count.items.order(:sku).each do |item| %>

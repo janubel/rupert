@@ -1,7 +1,7 @@
 <% content_for :title, "Ledger" %>
 <div class="space-y-6">
   <section>
-    <h1 class="font-display text-3xl text-ink">Ledger</h1>
+    <h1 class="page-title">Ledger</h1>
     <p class="mt-1 text-sm text-mocha">Central transaction ledger across Shopify and Square.</p>
   </section>
 
@@ -44,7 +44,7 @@
         <tbody class="divide-y divide-fog">
           <% if @entries.empty? %>
             <tr>
-              <td class="td py-8 text-center text-taupe">No ledger entries in this range.</td>
+              <td class="empty-row">No ledger entries in this range.</td>
             </tr>
           <% end %>
           <% @entries.each do |entry| %>

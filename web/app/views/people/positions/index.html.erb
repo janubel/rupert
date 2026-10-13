@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Positions</h1>
+      <h1 class="page-title">Positions</h1>
       <p class="mt-1 text-sm text-mocha">Job titles and pay grades across the org.</p>
     </div>
     <% if Current.user.can?("hr.write") %>
@@ -24,7 +24,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @positions.empty? %>
-            <tr><td colspan="<%= Current.user.can?("hr.write") ? 5 : 4 %>" class="td py-8 text-center text-taupe">No positions yet — add the first one.</td></tr>
+            <tr><td colspan="<%= Current.user.can?("hr.write") ? 5 : 4 %>" class="empty-row">No positions yet — add the first one.</td></tr>
           <% end %>
           <% @positions.each do |position| %>
             <tr class="hover:bg-cream">

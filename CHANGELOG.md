@@ -1,5 +1,12 @@
 # Rupert changelog
 
+## Unreleased
+
+- Add `db:postgres_to_sqlite` and `bin/migrate-to-sqlite` to copy a live PostgreSQL database into SQLite with verified
+  row counts, and SQLite support in `bin/backup.sh`. Runbook: `docs/ops/sqlite-migration.md`.
+- Reorganize `docs/` (plans, research, audit data, index) and remove dead scaffolding (`.gitmodules`, empty `extensions/`).
+- UI: shared `.page-title`, `.empty-row` and `.flash` components, skip-to-content link, `main` landmark target.
+
 ## 0.2.0 — 2026-10-03
 
 - Add opt-in SQLite support with FTS5 trigram search for local performance evaluation. PostgreSQL remains the production default.

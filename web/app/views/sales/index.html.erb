@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Sales</h1>
+      <h1 class="page-title">Sales</h1>
       <p class="mt-1 text-sm text-mocha">Daily sales journal — where each sale came in, in the order it happened.</p>
     </div>
     <div class="flex items-center gap-2">
@@ -139,7 +139,7 @@
         <tbody class="divide-y divide-fog">
           <% if @day_sales.empty? %>
             <tr>
-              <td class="td py-8 text-center text-taupe">No sales recorded on <%= l(@date, format: :long) %>.</td>
+              <td class="empty-row">No sales recorded on <%= l(@date, format: :long) %>.</td>
             </tr>
           <% end %>
           <% @day_sales.each do |sale| %>

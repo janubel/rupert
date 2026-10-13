@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Chart of accounts</h1>
+      <h1 class="page-title">Chart of accounts</h1>
       <p class="mt-1 text-sm text-mocha">The account codes the ledger posts to, grouped by type. <%= @active_count %> active of <%= @grouped.values.sum(&:length) %> accounts.</p>
     </div>
     <% if Current.user.can?("finance.write") %>
@@ -30,7 +30,7 @@
           </thead>
           <tbody class="divide-y divide-fog">
             <% if accounts.empty? %>
-              <tr><td colspan="5" class="td py-8 text-center text-taupe">No <%= label.downcase %> accounts.</td></tr>
+              <tr><td colspan="5" class="empty-row">No <%= label.downcase %> accounts.</td></tr>
             <% end %>
             <% accounts.each do |account| %>
               <tr class="hover:bg-cream <%= account.active ? "" : "opacity-50" %>">

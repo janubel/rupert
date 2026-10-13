@@ -1,0 +1,8 @@
+# SER8 (Incus container "rupert"): install to /etc/systemd/system/. Runs as root because /etc/rupert.env is root-only.
+[Unit]
+Description=Rupert database backup
+
+[Service]
+Type=oneshot
+Environment=APP_DIR=/opt/rupert
+ExecStart=/opt/rupert/bin/backup.sh

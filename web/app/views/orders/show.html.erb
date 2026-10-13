@@ -2,7 +2,7 @@
 <div class="space-y-6 print:hidden">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Order <%= @order.display_number %></h1>
+      <h1 class="page-title">Order <%= @order.display_number %></h1>
       <p class="mt-1 text-sm text-mocha">
         <%= l(@order.occurred_at, format: :long) %> · <span class="capitalize"><%= @order.source %></span>
         <span class="ml-2"><span class="<%= @order.status == "fulfilled" ? "pill-fern" : @order.status == "paid" ? "pill-olive" : "pill-taupe" %>"><%= @order.status %></span></span>
@@ -196,7 +196,7 @@
       </thead>
       <tbody class="divide-y divide-fog">
         <% if @order.order_lines.empty? %>
-          <tr><td colspan="<%= @doc == "invoice" ? 5 : 3 %>" class="td py-8 text-center text-taupe">No line items recorded.</td></tr>
+          <tr><td colspan="<%= @doc == "invoice" ? 5 : 3 %>" class="empty-row">No line items recorded.</td></tr>
         <% end %>
         <% @order.order_lines.each do |line| %>
           <tr>

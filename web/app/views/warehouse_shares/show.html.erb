@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @share.name %></h1>
+      <h1 class="page-title"><%= @share.name %></h1>
       <p class="mt-1 text-sm text-mocha">
         <span class="pill-<%= @share.active? ? "fern" : "taupe" %>"><span class="dot <%= @share.active? ? "bg-fern" : "bg-taupe" %>"></span><%= @share.status %></span>
         <span class="ml-2 text-taupe">multiplier <%= number_with_precision(@share.priceMultiplier, precision: 2) %>×</span>

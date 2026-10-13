@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Timesheets</h1>
+      <h1 class="page-title">Timesheets</h1>
       <p class="mt-1 text-sm text-mocha">Hours by week per employee, submitted for review.</p>
     </div>
     <% if Current.user.can?("timesheets.write") %>
@@ -37,7 +37,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @timesheets.empty? %>
-            <tr><td colspan="4" class="td py-8 text-center text-taupe">No timesheets found.</td></tr>
+            <tr><td colspan="4" class="empty-row">No timesheets found.</td></tr>
           <% end %>
           <% @timesheets.each do |timesheet| %>
             <tr class="hover:bg-cream">

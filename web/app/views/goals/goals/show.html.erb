@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @goal.name %></h1>
+      <h1 class="page-title"><%= @goal.name %></h1>
       <p class="mt-1 text-sm text-mocha">
         <span class="<%= @goal.achieved? ? "pill-fern" : @goal.active? ? "pill-olive" : @goal.abandoned? ? "pill-taupe" : "pill-clay" %>"><%= @goal.status %></span>
         <% if @goal.due_on %><span class="ml-2 text-taupe">Due <%= l(@goal.due_on, format: :long) %></span><% end %>

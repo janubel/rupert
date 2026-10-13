@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Employees</h1>
+      <h1 class="page-title">Employees</h1>
       <p class="mt-1 text-sm text-mocha">The team directory with their department, position, and employment status.</p>
     </div>
     <div class="flex flex-wrap gap-2">
@@ -57,7 +57,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @employees.empty? %>
-            <tr><td colspan="5" class="td py-8 text-center text-taupe"><%= @q.present? ? "Nothing matches that search." : "No employees yet — add the first one." %></td></tr>
+            <tr><td colspan="5" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No employees yet — add the first one." %></td></tr>
           <% end %>
           <% @employees.each do |employee| %>
             <tr class="hover:bg-cream">

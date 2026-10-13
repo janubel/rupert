@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @customer.name %></h1>
+      <h1 class="page-title"><%= @customer.name %></h1>
       <p class="mt-1 text-sm text-mocha">
         <span class="pill-taupe capitalize"><%= @customer.source %></span>
         <% if @customer.email.present? %><span class="ml-2"><%= @customer.email %></span><% end %>

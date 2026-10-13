@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @project.name %></h1>
+      <h1 class="page-title"><%= @project.name %></h1>
       <p class="mt-1 text-sm text-mocha">
         <span class="<%= @project.completed? ? "pill-fern" : @project.archived? ? "pill-taupe" : @project.active? ? "pill-olive" : "pill-clay" %>"><%= @project.status %></span>
         <% if @project.due_on %><span class="ml-2 text-taupe">Due <%= l(@project.due_on, format: :long) %></span><% end %>

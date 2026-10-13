@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @session.name %></h1>
+      <h1 class="page-title"><%= @session.name %></h1>
       <p class="mt-1 text-sm text-mocha">
         Opened <%= l(@session.opened_at, format: :long) %>
         <% if @session.closed_at %> · closed <%= l(@session.closed_at, format: :long) %><% end %>
@@ -96,7 +96,7 @@
         <tbody class="divide-y divide-fog">
           <% if @orders.empty? %>
             <tr>
-              <td class="td py-8 text-center text-taupe">No orders yet in this session.</td>
+              <td class="empty-row">No orders yet in this session.</td>
             </tr>
           <% end %>
           <% @orders.each do |order| %>

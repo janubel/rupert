@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Leave & PTO</h1>
+      <h1 class="page-title">Leave & PTO</h1>
       <p class="mt-1 text-sm text-mocha">Time-off requests, approvals, and annual balances.</p>
     </div>
     <% if Current.user.can?("leave.write") %>
@@ -46,7 +46,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @requests.empty? %>
-            <tr><td colspan="5" class="td py-8 text-center text-taupe">No leave requests yet.</td></tr>
+            <tr><td colspan="5" class="empty-row">No leave requests yet.</td></tr>
           <% end %>
           <% @requests.each do |request| %>
             <tr class="hover:bg-cream">

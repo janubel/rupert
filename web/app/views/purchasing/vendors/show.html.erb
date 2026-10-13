@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink"><%= @vendor.name %></h1>
+      <h1 class="page-title"><%= @vendor.name %></h1>
       <p class="mt-1 text-sm text-mocha">
         <% if @vendor.email.present? %><span><%= @vendor.email %></span><% end %>
         <% if @vendor.phone.present? %><span class="ml-2"><%= @vendor.phone %></span><% end %>
@@ -41,7 +41,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @purchase_orders.empty? %>
-            <tr><td colspan="5" class="td py-8 text-center text-taupe">No purchase orders yet.</td></tr>
+            <tr><td colspan="5" class="empty-row">No purchase orders yet.</td></tr>
           <% end %>
           <% @purchase_orders.each do |po| %>
             <tr class="hover:bg-cream">

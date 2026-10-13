@@ -1,6 +1,6 @@
 <%= form_with model: @account, url: (@account.persisted? ? finance_chart_of_account_path(@account) : finance_chart_of_accounts_path), class: "mt-6 space-y-4" do |f| %>
   <% if @account.errors.any? %>
-    <div role="alert" class="rounded-xl border border-rose/30 bg-rose/10 px-4 py-2.5 text-sm text-rose">
+    <div role="alert" class="flash flash-alert">
       <%= @account.errors.full_messages.to_sentence %>
     </div>
   <% end %>

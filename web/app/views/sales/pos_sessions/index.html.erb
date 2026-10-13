@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Registers</h1>
+      <h1 class="page-title">Registers</h1>
       <p class="mt-1 text-sm text-mocha">POS sessions and cash-drawer reconciliation.</p>
     </div>
     <% if Current.user.can?("sales.write") %>
@@ -43,7 +43,7 @@
         <tbody class="divide-y divide-fog">
           <% if @sessions.empty? %>
             <tr>
-              <td class="td py-8 text-center text-taupe">No registers yet — open one to start the day.</td>
+              <td class="empty-row">No registers yet — open one to start the day.</td>
             </tr>
           <% end %>
           <% @sessions.each do |s| %>

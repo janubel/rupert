@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">System health</h1>
+      <h1 class="page-title">System health</h1>
       <p class="mt-1 text-sm text-mocha">Server resources, database, and query health. Uptime <%= distance_of_time_in_words(@system.uptime_seconds) %> on <%= @system.cpu_count %> cores.</p>
     </div>
     <a href="/system" class="btn-ghost btn-sm">Refresh</a>
@@ -177,7 +177,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @system.big_tables.empty? %>
-            <tr><td colspan="3" class="td py-8 text-center text-taupe">No tables reported yet.</td></tr>
+            <tr><td colspan="3" class="empty-row">No tables reported yet.</td></tr>
           <% end %>
           <% @system.big_tables.each do |t| %>
             <tr>

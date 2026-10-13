@@ -1,7 +1,7 @@
 <% content_for :title, "Alerts" %>
 <div class="space-y-6" data-controller="bulk">
   <section>
-    <h1 class="font-display text-3xl text-ink">Alerts</h1>
+    <h1 class="page-title">Alerts</h1>
     <p class="mt-1 text-sm text-mocha">Low-stock flags raised from inventory levels.</p>
   </section>
 
@@ -46,7 +46,7 @@
           <tbody class="divide-y divide-fog" data-bulk-target="rows">
             <% if @alerts.empty? %>
               <tr>
-                <td colspan="11" class="td py-8 text-center text-taupe">No alerts here.</td>
+                <td colspan="11" class="empty-row">No alerts here.</td>
               </tr>
             <% end %>
             <% @alerts.each do |alert| %>

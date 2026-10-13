@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="font-display text-3xl text-ink">Employee accounts</h1>
+      <h1 class="page-title">Employee accounts</h1>
       <p class="mt-1 text-sm text-mocha">Login accounts for Rupert and their access level. HR records live under Employees.</p>
     </div>
     <div class="flex gap-2">
@@ -25,7 +25,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @users.empty? %>
-            <tr><td colspan="5" class="td py-8 text-center text-taupe">No accounts yet — add the first one.</td></tr>
+            <tr><td colspan="5" class="empty-row">No accounts yet — add the first one.</td></tr>
           <% end %>
           <% @users.each do |user| %>
             <tr class="hover:bg-cream">
