@@ -12,6 +12,17 @@ PostgreSQL on `rupert-db` still holds the pre-cutover data and was never modifie
   cannot signal the process), so restarts collide on port 3000. Stop the app by restarting the container from the
   host: `systemctl disable rupert-web; incus restart rupert; ...; systemctl enable --now rupert-web`.
   `cutover-ser8.sh` cannot do this from inside the container; use it only for the code phase.
+  Root cause (confirmed on the `homeboard` container, 2026-10-13): the host's AppArmor denies `signal` from the
+  container's current profile (`incus-<name>_</var/lib/incus>`) to processes that started under an older profile, so
+  nothing inside the container can stop them. Symptoms: `Found left-over process ... in control group`, `Failed to kill
+  control group ... Permission denied`, and a service in an endless `activating (auto-restart)` loop with
+  `Address already in use` (Homeboard reached 18,899 restarts). Check with `incus exec <name> -- systemctl show <unit>
+  -p NRestarts`, and on the host with `journalctl -k | grep 'apparmor="DENIED" operation="signal"'`. Any `systemctl
+  restart` can trigger it after an Incus profile reload, so for `rupert-web` and `rupert-jobs` prefer
+  `incus restart rupert` from the host. The data is on disk, so the restart costs only a short outage.
+- The container had no job worker: scheduled syncs silently stopped after the 2026-10-02 container reboot and only
+  resumed on 2026-10-13 once `deploy/rupert-jobs-ser8.service` was installed (`systemctl enable --now rupert-jobs`).
+  Check `SolidQueue::Process.count` and the latest `SyncRun` after any container restart.
 - Before this work the container had no database backup at all. It now has `/var/backups/rupert` (SQLite snapshots +
   settings + env copy) on a 6-hourly timer; copy that directory off the host periodically.
 

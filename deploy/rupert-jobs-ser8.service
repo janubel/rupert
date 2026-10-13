@@ -1,0 +1,25 @@
+# SER8 (Incus container "rupert"): install to /etc/systemd/system/ and `systemctl enable --now rupert-jobs`.
+# systemd reads /etc/rupert.env (root-only) before dropping to the rupert user. Runs all of config/recurring.yml.
+# Paths match the SER8 `rupert` Incus container (same layout as rupert-web.service).
+[Unit]
+Description=Rupert background jobs (Solid Queue)
+After=network.target rupert-web.service
+Wants=rupert-web.service
+
+[Service]
+Type=simple
+User=rupert
+Group=rupert
+WorkingDirectory=/opt/rupert/web
+EnvironmentFile=/etc/rupert.env
+Environment=RAILS_ENV=production
+Environment=RAILS_LOG_TO_STDOUT=1
+Environment=PATH=/opt/rbenv/versions/4.0.6/bin:/opt/rbenv/shims:/opt/rbenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/opt/rbenv/versions/4.0.6/bin/bundle exec bin/jobs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
