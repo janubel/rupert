@@ -3,18 +3,43 @@ on:
   schedule:
     - cron: "30 1 * * *"
   workflow_dispatch:
+permissions:
+  issues: write
 jobs:
   check-need-info:
     runs-on: ubuntu-latest
     steps:
       - name: close-issues
-        uses: actions-cool/issues-helper@200c78641dbf33838311e5a1e0c31bbdb92d7cf0 # v3.6.2
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          actions: 'close-issues'
-          token: ${{ secrets.GITHUB_TOKEN }}
-          labels: 'Waiting for Response'
-          inactive-day: 7
-          body: |
-            We are closing this issue because we did not hear back regarding additional details we needed to resolve this issue. If the issue persists and you are able to provide the missing clarification we need, feel free to respond and reopen this issue.
+          script: |
+            const label = 'Waiting for Response';
+            const inactiveDays = 7;
+            const cutoff = Date.now() - inactiveDays * 24 * 60 * 60 * 1000;
+            const body = `We are closing this issue because we did not hear back regarding additional details we needed to resolve this issue. If the issue persists and you are able to provide the missing clarification we need, feel free to respond and reopen this issue.
 
-            We appreciate your understanding as we try to manage our number of open issues.
+            We appreciate your understanding as we try to manage our number of open issues.`;
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              ...context.repo,
+              state: 'open',
+              labels: label,
+              per_page: 100,
+            });
+
+            for (const issue of issues) {
+              if (issue.pull_request) continue;
+              if (new Date(issue.updated_at).getTime() > cutoff) continue;
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issue.number,
+                body,
+              });
+              await github.rest.issues.update({
+                ...context.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'not_planned',
+              });
+              core.info(`Closed #${issue.number}`);
+            }
