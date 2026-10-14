@@ -1,0 +1,7 @@
+# User unit on the SER8 host (systemctl --user). A failed run shows as "failed" in Cockpit and `systemctl --user --failed`.
+[Unit]
+Description=Check that Rupert syncs are fresh
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rupert-sync-watch.sh
