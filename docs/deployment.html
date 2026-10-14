@@ -16,6 +16,9 @@
   <div class="wrap">
     <a class="brand" href="/rupert/"><span class="mark">R</span><strong>Rupert</strong></a>
     <nav class="desktop">
+      <a href="roadmap.html">Roadmap</a>
+      <a href="competitors.html">Compare</a>
+      <a href="sqlite-incus.html">SQLite &amp; Incus</a>
       <a href="index.html">Home</a>
       <a href="modules.html">Modules</a>
       <a href="architecture.html">Architecture</a>
@@ -32,22 +35,22 @@
   <section>
     <h2>Release and deployment</h2>
     <p>GitHub Actions runs CI and creates a GitHub release from a version tag. There is no automated production deploy configured in this repository. A release does not update the live instance.</p>
-    <p>The checked-in systemd units describe a previous host layout and are not the live Incus deployment runbook. Confirm the host's release procedure and backup status before promoting a release.</p>
+    <p>Use the SER8-specific worker and backup units plus the host freshness watcher under <code>deploy/</code>. Older droplet units are reference material. Confirm active services before promotion.</p>
   </section>
 
   <section>
     <h2>Database</h2>
-    <p>Production uses PostgreSQL. The optional SQLite adapter is experimental and intended for local evaluation; it is not enabled for the live instance.</p>
+    <p>The October 13, 2026 cutover report records production on SQLite with FTS5 search. This review has not independently rechecked the host. See <a href="sqlite-incus.html">SQLite and Incus operations</a> for tuning, recovery and scaling decisions.</p>
   </section>
 
   <section>
     <h2>Backups</h2>
-    <p>Rupert includes PostgreSQL backup and Google Drive backup support. The current production backup schedule, off-host copies, and restore procedure still need verification against the live Incus instance; the systemd backup files here are from the older host layout.</p>
+    <p>The cutover report records six-hourly local SQLite snapshots and settings/env backups. Verify off-host encrypted copies and a restore drill; local snapshots alone cannot recover from host loss.</p>
   </section>
 
   <section>
     <h2>Continuous integration</h2>
-    <p>CI runs in the official <code>ruby:4.0</code> container against PostgreSQL: RuboCop, migrations, Tailwind build, asset precompile, and the full test suite. Every push or pull request triggers it.</p>
+    <p>CI runs in the official <code>ruby:4.0</code> container against PostgreSQL and SQLite: RuboCop, migrations, Tailwind build, asset precompile, and the full test suite. Every push or pull request triggers it.</p>
   </section>
 </main>
 

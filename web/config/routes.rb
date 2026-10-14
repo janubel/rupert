@@ -44,6 +44,7 @@ Rails.application.routes.draw do
 
   get '/search', to: 'search#index', as: :search
   get '/dashboard', to: 'home#index'
+  get '/roadmap', to: 'roadmap#index', as: :roadmap
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)

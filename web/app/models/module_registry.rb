@@ -13,6 +13,7 @@ class ModuleRegistry
   Entry = Struct.new(:key, :name, :path, :permission, :position, keyword_init: true)
 
   ENTRIES = [
+    Entry.new(key: 'roadmap', name: 'Features & roadmap', path: -> { roadmap_path }, permission: nil, position: 110),
     Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: nil, position: 10),
     Entry.new(key: 'sales', name: 'Sales', path: -> { sales_path }, permission: 'sales.read', position: 20),
     Entry.new(key: 'registers', name: 'Registers', path: lambda {
@@ -129,7 +130,7 @@ class ModuleRegistry
       { key: 'team', name: 'Team',
         modules: %w[accounts employees departments positions timesheets leave payroll permissions] },
       { key: 'system', name: 'System',
-        modules: %w[system connections sync settings warehouse activity access_log] }
+        modules: %w[system connections sync settings warehouse activity access_log roadmap] }
     ].freeze
 
     def area_key_for(module_key)

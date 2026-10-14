@@ -1,7 +1,7 @@
 # Rupert
 
 Centralized inventory operations: a Shopify + Square sync
-engine with an Oatmeal-styled web dashboard, backed by PostgreSQL. Runs as a
+engine with an Oatmeal-styled web dashboard, backed by SQLite in production. Runs as a
 Ruby on Rails 8.1 app (based on the
 [Shopify Ruby app template](https://github.com/Shopify/shopify-app-template-ruby))
 and is currently hosted at [rupert.stoverparc.org](https://rupert.stoverparc.org/).
@@ -9,7 +9,7 @@ and is currently hosted at [rupert.stoverparc.org](https://rupert.stoverparc.org
 ```
 Shopify ──┐                     ┌── Dashboard
           │                     ├── Inventory
-Square ───┼── sync engine ──▶ PostgreSQL DB ──▶ GUI
+Square ───┼── sync engine ──▶ SQLite DB     ──▶ GUI
           │   (Rails jobs)     │      (Rails + Tailwind)
           └────────────────────┴── Settings (env, backup/restore)
 ```
@@ -62,7 +62,7 @@ bin/rails test                        # page + API smoke tests
 ```
 
 Scheduled syncs run through Solid Queue (`bin/jobs`) — every 15 minutes in
-production, configurable via `SYNC_MINUTES` / `config/solid_queue.yml`.
+production, scheduled in `config/recurring.yml`.
 
 ## Write safety
 
@@ -106,7 +106,7 @@ and never write SKUs without explicit sign-off.**
   - `GET /settings/env.json` · masked env keys
   - `POST /settings/env_import` · body `{ "text": "KEY=VALUE\n…" }`
   - `GET /settings/env_export` · full `.env` text
-  - `GET /settings/backup` · consistent snapshot (PostgreSQL `pg_dump`)
+  - `GET /settings/backup` · consistent adapter-aware snapshot (SQLite or PostgreSQL)
   - `POST /settings/restore` · multipart `file` upload
 - **Team / People (HR)** — full employee lifecycle:
   - **Employees** · HR records with department, position, and status lifecycle
@@ -116,7 +116,7 @@ and never write SKUs without explicit sign-off.**
   - **Leave & PTO** · requests, approvals, and annual balances
   - **Payroll** · pay runs built from approved timesheets and pay rates
 
-All pages sit behind Shopify OAuth (the app installs into your store).
+ERP pages require a Rupert login. Password login and configured Google OAuth are supported; Shopify OAuth remains available for store integration.
 
 ## ERP architecture
 
@@ -137,9 +137,7 @@ manual source (`SwipesimpleImporter`) feeds CSV exports through the same seam.
 - HR: `app/modules/people/` (employees, departments, positions, timesheets,
   leave & PTO, payroll) with `PayrollCalculator` turning approved timesheets
   into payslips
-- DB: PostgreSQL (`pg` gem) is the production default. SQLite with FTS5 search
-  is a supported alternative (`RUPERT_DB_ADAPTER=sqlite3`, full test suite passes on both); moving the live
-  instance is covered by `docs/ops/sqlite-migration.md`.
+- DB: SQLite with FTS5 search runs in production as recorded by the October 13 cutover report. PostgreSQL remains the default for unconfigured environments; CI covers both adapters. See `docs/ops/sqlite-incus.md` for tuning, recovery and scaling triggers.
 
 ## Production and deployment
 
@@ -147,15 +145,17 @@ Production is hosted on SER8 in Incus and served at
 [rupert.stoverparc.org](https://rupert.stoverparc.org/). GitHub is the source
 repository; pushing a commit or creating a GitHub release does not deploy it.
 
-The checked-in `deploy/` systemd units and older droplet instructions are
-from the previous host layout. They do not describe the current Incus
-deployment and must not be used as its runbook. The host's live deployment and
-backup configuration still needs to be reconciled with this repository.
+The SER8-specific worker/backup units and host freshness watcher are under `deploy/`. Older droplet units are reference material; do not substitute them for the Incus layout.
 
-PostgreSQL is still what the live instance runs. SQLite is a supported, fully tested
-adapter (`RUPERT_DB_ADAPTER=sqlite3`), and the migration path for the live instance is
-written and rehearsed but not yet run: see `docs/ops/sqlite-migration.md`. Do not set
-`RUPERT_DB_ADAPTER` on the live instance except by following that runbook.
+The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 61 tables verified). This documentation update has not independently rechecked the live host. Read [SQLite and Incus operations](docs/ops/sqlite-incus.md) and the [cutover report](docs/ops/sqlite-migration.md). The PostgreSQL copy is frozen at cutover; switching back after new SQLite writes requires reconciliation.
+
+## Features, roadmap and comparison
+
+- [Public roadmap](https://techmore.github.io/rupert/roadmap.html) — 49 features, implementation evidence, delivery phases and acceptance gates.
+- [Competitor matrix](https://techmore.github.io/rupert/competitors.html) — 14 competitors across 32 scoped capabilities, official sources and CSV/JSON downloads.
+- Signed-in **System → Features & roadmap** (`/roadmap`) shows the same catalog. Planned items are not enabled.
+- `web/config/product_roadmap.json` is the canonical catalog. Run `bin/build-product-site` after changing it; `--check` detects drift in CI.
+- `bin/rails ops:sqlite:report` reads SQLite settings/space metrics; `bin/rails ops:sqlite:optimize` explicitly refreshes planner statistics. SQLite job concurrency defaults to one thread (`JOB_THREADS` can override).
 
 ## Data model
 
@@ -174,8 +174,7 @@ records; no longer written), `Location`,
   rejected (`[API] Invalid API key or access token`), re-install the app on
   the store or regenerate the secret in the Shopify admin — the sync will
   fail loudly in the Sync page until then.
-- **PostgreSQL** is the production database (the legacy SQLite import path is
-  kept only for one-time migrations). Mirror/journal tables are pruned
+- **SQLite** is the recorded production database; PostgreSQL remains supported for development and scaling alternatives. Mirror/journal tables are pruned
   nightly by `DataRetentionJob`; canonical business data is never pruned.
 - **Shopify and Square are separate locations with independent inventories.**
   The sync is a read-only mirror; nothing equalizes quantities across them.

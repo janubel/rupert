@@ -1,6 +1,13 @@
 on: [push, pull_request]
 name: CI
 jobs:
+  product_site:
+    name: Product site consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: python3 bin/build-product-site --check
+      - run: python3 bin/check-doc-links
   CI:
     name: CI (${{ matrix.adapter }})
     runs-on: ubuntu-latest

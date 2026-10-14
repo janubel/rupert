@@ -1,0 +1,810 @@
+{
+  "reviewed": "2026-10-14",
+  "method": "Directional capability comparison from the linked official product pages, not a hands-on vendor certification. Advertised means the cited product family explicitly describes the capability, subject to edition, region and plan. Integration / companion means a separate product, connector, or related module. Not established means the reviewed page does not establish the feature; it is not a claim of absence. Rupert Available means code exists, not independently verified live. This is a scoped set of relevant competitors, not an exhaustive inventory of the market.",
+  "competitors": [
+    {
+      "id": "odoo",
+      "name": "Odoo",
+      "category": "ERP suite",
+      "url": "https://www.odoo.com/page/all-apps",
+      "caveat": "Broad modular ERP; Community/Enterprise and paid app differences need a scoped quote."
+    },
+    {
+      "id": "erpnext",
+      "name": "ERPNext + Frappe HR",
+      "category": "Open-source ERP",
+      "url": "https://erpnext.com",
+      "caveat": "ERPNext core plus companion Frappe HR; module-specific deployment required."
+    },
+    {
+      "id": "dolibarr",
+      "name": "Dolibarr",
+      "category": "Open-source ERP/CRM",
+      "url": "https://www.dolibarr.org/",
+      "caveat": "Modular self-hosted suite; connectors can require marketplace modules."
+    },
+    {
+      "id": "netsuite",
+      "name": "Oracle NetSuite",
+      "category": "Enterprise ERP benchmark",
+      "url": "https://www.netsuite.com/portal/products/erp.shtml",
+      "caveat": "Cloud ERP with core platform, optional modules and user licensing; implementation required."
+    },
+    {
+      "id": "zoho",
+      "name": "Zoho Inventory",
+      "category": "Inventory suite",
+      "url": "https://www.zoho.com/inventory/features/",
+      "caveat": "Inventory plus Zoho Books/CRM and other integrated products; limits vary by plan."
+    },
+    {
+      "id": "cin7",
+      "name": "Cin7",
+      "category": "Inventory operations",
+      "url": "https://www.cin7.com/",
+      "caveat": "Core and Omni differ; manufacturing/automation/integrations depend on product and plan."
+    },
+    {
+      "id": "inflow",
+      "name": "inFlow",
+      "category": "Inventory operations",
+      "url": "https://www.inflowinventory.com/features",
+      "caveat": "Inventory, purchasing, barcodes and B2B; paid add-ons and limits vary."
+    },
+    {
+      "id": "katana",
+      "name": "Katana",
+      "category": "Inventory / manufacturing",
+      "url": "https://katanamrp.com/",
+      "caveat": "Commerce inventory and manufacturing; confirm selected manufacturing options."
+    },
+    {
+      "id": "fishbowl",
+      "name": "Fishbowl",
+      "category": "Inventory / manufacturing",
+      "url": "https://www.fishbowlinventory.com/",
+      "caveat": "Warehouse and manufacturing product family; verify edition and integrations."
+    },
+    {
+      "id": "brightpearl",
+      "name": "Brightpearl",
+      "category": "Retail operations",
+      "url": "https://www.brightpearl.com/",
+      "caveat": "Retail automation, inventory planning, accounting and integrations."
+    },
+    {
+      "id": "linnworks",
+      "name": "Linnworks",
+      "category": "Multichannel operations",
+      "url": "https://www.linnworks.com/",
+      "caveat": "Listings, channel integrations, routing and shipping; not a full HR/finance suite."
+    },
+    {
+      "id": "lightspeed",
+      "name": "Lightspeed Retail",
+      "category": "Retail POS",
+      "url": "https://www.lightspeedhq.com/pos/retail/",
+      "caveat": "Retail POS, suppliers, analytics and eCom; product/region and plan matter."
+    },
+    {
+      "id": "square",
+      "name": "Square for Retail",
+      "category": "Retail POS",
+      "url": "https://squareup.com/us/en/point-of-sale/retail",
+      "caveat": "Retail workflows with separate Square Staff, Payroll, Loyalty and Marketing products."
+    },
+    {
+      "id": "shopify",
+      "name": "Shopify POS",
+      "category": "Commerce / POS",
+      "url": "https://www.shopify.com/pos",
+      "caveat": "Commerce and POS, with app ecosystem extensions; POS Pro/plan restrictions apply."
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "Multi-location inventory",
+      "rupert": "Available",
+      "scope": "Independent inventories and stock visibility",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Advertised",
+        "cin7": "Advertised",
+        "inflow": "Advertised",
+        "katana": "Advertised",
+        "fishbowl": "Advertised",
+        "brightpearl": "Advertised",
+        "linnworks": "Advertised",
+        "lightspeed": "Advertised",
+        "square": "Advertised",
+        "shopify": "Advertised",
+        "netsuite": "Advertised"
+      }
+    },
+    {
+      "name": "Orders and sales",
+      "rupert": "Available",
+      "scope": "Sales/order management",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Advertised",
+        "cin7": "Advertised",
+        "inflow": "Advertised",
+        "katana": "Advertised",
+        "fishbowl": "Advertised",
+        "brightpearl": "Advertised",
+        "linnworks": "Advertised",
+        "lightspeed": "Advertised",
+        "square": "Advertised",
+        "shopify": "Advertised",
+        "netsuite": "Advertised"
+      }
+    },
+    {
+      "name": "Customer records",
+      "rupert": "Available",
+      "scope": "Directory and order history, not advanced CRM",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Advertised",
+        "cin7": "Not established",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Advertised",
+        "square": "Integration / companion",
+        "shopify": "Advertised",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "POS checkout / payment capture",
+      "rupert": "Integration / companion",
+      "scope": "Rupert mirrors Shopify/Square POS; register settlement is local",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Advertised",
+        "square": "Advertised",
+        "shopify": "Advertised",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Invoices and packing documents",
+      "rupert": "Available",
+      "scope": "Printable order documents",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Advertised",
+        "cin7": "Not established",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Integration / companion",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Fulfillment / shipping tracking",
+      "rupert": "Available",
+      "scope": "Tracking records and fulfillment states",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Advertised",
+        "cin7": "Advertised",
+        "inflow": "Advertised",
+        "katana": "Advertised",
+        "fishbowl": "Advertised",
+        "brightpearl": "Advertised",
+        "linnworks": "Advertised",
+        "lightspeed": "Not established",
+        "square": "Integration / companion",
+        "shopify": "Integration / companion",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Vendor directory and purchasing",
+      "rupert": "Available",
+      "scope": "PO lifecycle and receiving",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Advertised",
+        "cin7": "Integration / companion",
+        "inflow": "Advertised",
+        "katana": "Integration / companion",
+        "fishbowl": "Integration / companion",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Advertised",
+        "square": "Advertised",
+        "shopify": "Not established",
+        "netsuite": "Advertised"
+      }
+    },
+    {
+      "name": "Reorder advice / planning",
+      "rupert": "Available",
+      "scope": "Rupert uses recent sales pace, not ML forecasting",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Advertised",
+        "cin7": "Advertised",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Advertised",
+        "linnworks": "Not established",
+        "lightspeed": "Advertised",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "B2B portal / wholesale",
+      "rupert": "Available",
+      "scope": "Token-gated vendor catalog/cart/checkout",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Integration / companion",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Not established",
+        "cin7": "Integration / companion",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Integration / companion",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Expenses and payable tracking",
+      "rupert": "Available",
+      "scope": "Local expenses and vendor-payment records",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Advertised",
+        "cin7": "Integration / companion",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Financial reports / analytics",
+      "rupert": "Partial",
+      "scope": "Operational reports; no full general ledger",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Advertised",
+        "cin7": "Advertised",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Advertised",
+        "linnworks": "Advertised",
+        "lightspeed": "Advertised",
+        "square": "Advertised",
+        "shopify": "Advertised",
+        "netsuite": "Advertised"
+      }
+    },
+    {
+      "name": "HR employee records",
+      "rupert": "Available",
+      "scope": "Directory/departments/positions",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Integration / companion",
+        "dolibarr": "Advertised",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Integration / companion",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Timesheets / leave",
+      "rupert": "Available",
+      "scope": "Approval workflows and annual balances",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Integration / companion",
+        "dolibarr": "Advertised",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Integration / companion",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Payroll",
+      "rupert": "Partial",
+      "scope": "Calculations/payslips only in Rupert",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Integration / companion",
+        "dolibarr": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Integration / companion",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Projects / tasks",
+      "rupert": "Available",
+      "scope": "Local project/task lifecycle",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Roles / access controls",
+      "rupert": "Available",
+      "scope": "Tenant and role permissions",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Advertised",
+        "dolibarr": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Advertised",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "External integrations / automation",
+      "rupert": "Partial",
+      "scope": "Existing source sync, Google backup, Buzz agent; public API planned",
+      "phase": "4",
+      "competitors": {
+        "odoo": "Integration / companion",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Advertised",
+        "cin7": "Advertised",
+        "inflow": "Advertised",
+        "katana": "Advertised",
+        "fishbowl": "Advertised",
+        "brightpearl": "Advertised",
+        "linnworks": "Advertised",
+        "lightspeed": "Advertised",
+        "square": "Integration / companion",
+        "shopify": "Advertised",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Self-hosted ERP",
+      "rupert": "Available",
+      "scope": "Rupert runs in Incus; deployment model differs by vendor",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Barcode scanning and labels",
+      "rupert": "Planned",
+      "scope": "Dedicated scan workflows and printer support required",
+      "phase": "1",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Advertised",
+        "cin7": "Not established",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Advertised",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Transfers / reservations / backorders",
+      "rupert": "Planned",
+      "scope": "Rupert needs explicit movement and reservation workflows",
+      "phase": "1",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Advertised",
+        "cin7": "Not established",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Serial / lot / expiry tracking",
+      "rupert": "Planned",
+      "scope": "Traceability and expiry workflows required",
+      "phase": "2",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Advertised",
+        "cin7": "Not established",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Carrier rates and label purchase",
+      "rupert": "Planned",
+      "scope": "Rupert tracking does not buy labels",
+      "phase": "2",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Advertised",
+        "cin7": "Not established",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Integration / companion",
+        "linnworks": "Advertised",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Returns and exchanges",
+      "rupert": "Planned",
+      "scope": "Local refund records are not full reverse logistics",
+      "phase": "2",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Advertised",
+        "cin7": "Not established",
+        "inflow": "Advertised",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Advertised",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Marketplace listings / channel expansion",
+      "rupert": "Planned",
+      "scope": "Additional channel adapters and listing lifecycle",
+      "phase": "2",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Integration / companion",
+        "dolibarr": "Not established",
+        "zoho": "Integration / companion",
+        "cin7": "Integration / companion",
+        "inflow": "Integration / companion",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Integration / companion",
+        "linnworks": "Advertised",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Integration / companion",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Double-entry accounting",
+      "rupert": "Planned",
+      "scope": "Rupert account tree is not a posting engine",
+      "phase": "3",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Integration / companion",
+        "cin7": "Integration / companion",
+        "inflow": "Integration / companion",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Advertised"
+      }
+    },
+    {
+      "name": "Bank reconciliation",
+      "rupert": "Planned",
+      "scope": "Statement matching and review",
+      "phase": "3",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Advertised",
+        "zoho": "Integration / companion",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "BOM / assembly / manufacturing",
+      "rupert": "Planned",
+      "scope": "Components, production yield and cost posting",
+      "phase": "4",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Advertised",
+        "dolibarr": "Advertised",
+        "zoho": "Not established",
+        "cin7": "Advertised",
+        "inflow": "Advertised",
+        "katana": "Advertised",
+        "fishbowl": "Advertised",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Marketing / loyalty",
+      "rupert": "Planned",
+      "scope": "Consent, segments and approved outbound campaigns",
+      "phase": "4",
+      "competitors": {
+        "odoo": "Advertised",
+        "erpnext": "Not established",
+        "dolibarr": "Advertised",
+        "zoho": "Integration / companion",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Integration / companion",
+        "square": "Integration / companion",
+        "shopify": "Integration / companion",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Open-book / profit-share ledger",
+      "rupert": "Planned",
+      "scope": "Business-specific allocation and distribution rules",
+      "phase": "3",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Offline mobile operations",
+      "rupert": "Planned",
+      "scope": "Conflict-aware receive/count queue; mobile-friendly is not offline",
+      "phase": "4",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Multi-company consolidation",
+      "rupert": "Planned",
+      "scope": "Beyond tenant isolation",
+      "phase": "4",
+      "competitors": {
+        "odoo": "Integration / companion",
+        "erpnext": "Advertised",
+        "dolibarr": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    },
+    {
+      "name": "Forecast vs actual / budgets",
+      "rupert": "Planned",
+      "scope": "Financial budgets and versioned inventory forecasts",
+      "phase": "3",
+      "competitors": {
+        "odoo": "Integration / companion",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Advertised",
+        "linnworks": "Not established",
+        "lightspeed": "Advertised",
+        "square": "Not established",
+        "shopify": "Not established",
+        "netsuite": "Not established"
+      }
+    }
+  ]
+}

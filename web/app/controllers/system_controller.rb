@@ -7,6 +7,7 @@ class SystemController < AuthenticatedController
 
   def index
     @system = Rails.cache.fetch("system/health/#{Current.tenant_id}", expires_in: 60) { SystemPresenter.new }
+    @sqlite = SqliteMaintenance.report
     render('system/index')
   end
 

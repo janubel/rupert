@@ -16,6 +16,9 @@
   <div class="wrap">
     <a class="brand" href="/rupert/"><span class="mark">R</span><strong>Rupert</strong></a>
     <nav class="desktop">
+      <a href="roadmap.html">Roadmap</a>
+      <a href="competitors.html">Compare</a>
+      <a href="sqlite-incus.html">SQLite &amp; Incus</a>
       <a href="index.html">Home</a>
       <a href="modules.html">Modules</a>
       <a href="getting-started.html">Getting started</a>
@@ -38,7 +41,6 @@ SyncEngine.run! ─▶ CatalogSyncer ─▶ ShopifyProduct, ShopifyVariant, Loca
    │               LedgerImporter ─▶ LedgerEntry
    │               SquareSyncer  ─▶ SquareItem, SquareVariation
    │               AlertGenerator ─▶ StockAlert
-   │               Reconciler    ─▶ ReconcileRun / ReconcileItem
    ▼
 CanonicalOrderImporter ─▶ Core::Order, Core::OrderLine, Core::Payment,
                           Core::Customer, Core::Fulfillment

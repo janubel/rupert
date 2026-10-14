@@ -14,7 +14,7 @@ gem "sprockets-rails"
 # Use PostgreSQL as the database for Active Record
 gem "pg", "~> 1.5"
 
-# sqlite3 retained for the one-time legacy import (db:import_legacy)
+# SQLite is the recorded SER8 production adapter and supports legacy imports
 gem "sqlite3", "~> 2.1"
 
 # Use the Puma web server [https://github.com/puma/puma]

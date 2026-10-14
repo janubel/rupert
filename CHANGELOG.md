@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Publish a shared 49-feature catalog, delivery roadmap and sourced 14-competitor / 32-capability matrix on GitHub Pages, with search filters and CSV/JSON downloads.
+- Add the signed-in Features & roadmap page and SQLite configuration, library and WAL diagnostics on System health.
+- Add explicit SQLite planner maintenance tasks and a one-thread SQLite worker default, configurable with `JOB_THREADS`.
+- Reconcile documented SER8 SQLite cutover status, fix unsafe stale-database rollback guidance, and document Incus recovery, backup checks and scaling alternatives.
+- Check generated site consistency and local documentation links in CI.
+
 - Add `db:postgres_to_sqlite` and `bin/migrate-to-sqlite` to copy a live PostgreSQL database into SQLite with verified
   row counts, and SQLite support in `bin/backup.sh`. Runbook: `docs/ops/sqlite-migration.md`.
 - Reorganize `docs/` (plans, research, audit data, index) and remove dead scaffolding (`.gitmodules`, empty `extensions/`).

@@ -16,6 +16,9 @@
   <div class="wrap">
     <a class="brand" href="/rupert/"><span class="mark">R</span><strong>Rupert</strong></a>
     <nav class="desktop">
+      <a href="roadmap.html">Roadmap</a>
+      <a href="competitors.html">Compare</a>
+      <a href="sqlite-incus.html">SQLite &amp; Incus</a>
       <a href="index.html">Home</a>
       <a href="architecture.html">Architecture</a>
       <a href="getting-started.html">Getting started</a>
@@ -40,7 +43,7 @@
       <li><strong>Sales</strong> — daily sales journal in spreadsheet style: an hourly × location pivot plus every sale of the day in arrival order, with a tracking indicator per order.</li>
       <li><strong>Registers</strong> — POS cash-drawer sessions: open a register, see sales per tender, and settle with a physical cash count at end of day.</li>
       <li><strong>Customers</strong> — unified CRM across channels with Ransack search, pagination, and lifetime value. Add, edit, and view each customer's order history.</li>
-      <li><strong>Inventory</strong> — products and variants mirrored from Shopify with quantities on both sides, drift vs Square, and SKU linkage status.</li>
+      <li><strong>Inventory</strong> — products and variants with independent per-location quantities, platform totals, and SKU linkage status.</li>
       <li><strong>Inventory counts</strong> — manual count sheets with a prepared-blank workflow, then submit / approve / reject / reopen.</li>
       <li><strong>Orders</strong> — detail page per order with a printable invoice and packing slip, shipping address, line items, payments, and fulfillment tracking.</li>
     </ul>
@@ -50,7 +53,7 @@
     <h2>Operations</h2>
     <ul>
       <li><strong>Reports</strong> — sales, financial (P&amp;L), inventory, and operations reports with 7/30/90/365-day windows and CSV export.</li>
-      <li><strong>Reconcile</strong> — SKU-level drift between Shopify and Square with a generated adjustment plan and per-SKU priority policy.</li>
+      <li><strong>Reconcile</strong> — read-only SKU identity audit between Shopify and Square; independent quantities are never automatically equalized.</li>
       <li><strong>Ledger</strong> — the central transaction stream across both platforms, filterable by window and source.</li>
       <li><strong>Projects</strong> — simple project + task tracking with status transitions (start, hold, complete, archive).</li>
       <li><strong>Goals &amp; KPIs</strong> — goals with activate / achieve / abandon, each with key performance indicators and reading history.</li>

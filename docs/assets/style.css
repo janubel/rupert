@@ -205,3 +205,11 @@ footer a:hover { color: var(--teal); }
   .hero { padding: 3rem 0 2.5rem; }
   .grid-2 { grid-template-columns: 1fr; }
 }
+
+/* Keep all documentation destinations usable at narrow widths. */
+header.site .wrap { flex-wrap: wrap; }
+nav.desktop { flex-wrap: wrap; }
+@media (max-width: 800px) {
+  nav.desktop { display: flex; }
+  nav.desktop a { font-size: .8rem; padding: .35rem .5rem; }
+}

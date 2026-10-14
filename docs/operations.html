@@ -16,6 +16,9 @@
   <div class="wrap">
     <a class="brand" href="/rupert/"><span class="mark">R</span><strong>Rupert</strong></a>
     <nav class="desktop">
+      <a href="roadmap.html">Roadmap</a>
+      <a href="competitors.html">Compare</a>
+      <a href="sqlite-incus.html">SQLite &amp; Incus</a>
       <a href="index.html">Home</a>
       <a href="modules.html">Modules</a>
       <a href="architecture.html">Architecture</a>
@@ -33,7 +36,9 @@
     <h2>Rake tasks</h2>
     <pre><code>bin/rails ops:sync                  # full Shopify + Square sync
 bin/rails ops:sync_source[square]   # single source
-bin/rails ops:reconcile             # print the reconciliation plan summary
+bin/rails ops:catalog_links         # read-only catalog identity audit
+bin/rails ops:sqlite:report         # SQLite configuration and space metrics
+bin/rails ops:sqlite:optimize       # refresh planner statistics
 bin/rails test                      # page + API smoke tests</code></pre>
   </section>
 
@@ -41,7 +46,7 @@ bin/rails test                      # page + API smoke tests</code></pre>
     <h2>Scheduled work</h2>
     <p>Syncs and backups run through Solid Queue (<code>bin/jobs</code>):</p>
     <ul>
-      <li><strong>Sync tenants</strong> — every 15 minutes in production (configurable via <code>SYNC_MINUTES</code>)</li>
+      <li><strong>Sync tenants</strong> — every 15 minutes in production (schedule in <code>config/recurring.yml</code>)</li>
       <li><strong>Drive backups</strong> — every 6 hours, keeping the last 7 snapshots</li>
       <li><strong>Finished-job cleanup</strong> — hourly</li>
     </ul>
@@ -61,7 +66,7 @@ bin/rails test                      # page + API smoke tests</code></pre>
     <h2>Backups</h2>
     <p>Two backup paths exist on the Settings page:</p>
     <ul>
-      <li><strong>Database backup</strong> — download a consistent <code>pg_dump</code> snapshot, or restore from a previous upload.</li>
+      <li><strong>Database backup</strong> — download a consistent adapter-aware SQLite snapshot or PostgreSQL <code>pg_dump</code>, or restore from a previous upload.</li>
       <li><strong>Google Drive backup</strong> — connect once, then snapshots run automatically every 6 hours and keep the last 7.</li>
     </ul>
   </section>

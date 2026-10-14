@@ -1,5 +1,13 @@
 <% content_for :title, "System" %>
 <div class="space-y-6">
+  <% if @sqlite[:supported] %>
+    <section class="card card-pad">
+      <h2 class="font-display text-lg">SQLite operations</h2>
+      <p class="mt-2 text-sm text-mocha">Library <%= @sqlite[:sqlite_version] %> · journal <%= @sqlite[:journal_mode] %> · configured lock wait <%= @sqlite[:configured_timeout_ms] %> ms</p>
+      <p class="mt-2 text-sm">WAL <%= number_to_human_size(@sqlite[:wal_bytes]) %> · reusable space <%= number_to_human_size(@sqlite[:free_bytes]) %></p>
+      <p class="mt-2 text-sm"><%= link_to 'SQLite tuning, backup and scaling guide', 'https://techmore.github.io/rupert/sqlite-incus.html', class: 'underline' %></p>
+    </section>
+  <% end %>
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">System health</h1>

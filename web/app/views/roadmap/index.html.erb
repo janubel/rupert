@@ -1,0 +1,30 @@
+<% content_for :title, 'Features & roadmap' %>
+<div class="space-y-6">
+  <section>
+    <h1 class="page-title">Features &amp; roadmap</h1>
+    <p class="mt-2 text-sm text-mocha">Available means implemented in this release. Your role and configured connections determine access. Planned features are not enabled.</p>
+    <p class="mt-2 text-sm"><%= link_to 'Competitor functionality matrix', 'https://techmore.github.io/rupert/competitors.html', class: 'underline' %> · Reviewed <%= @catalog.fetch('reviewed') %></p>
+  </section>
+  <% @catalog.fetch('phases').each do |phase| %>
+    <section class="card card-pad">
+      <h2 class="font-display text-xl"><%= phase.fetch('name') %></h2>
+      <p class="mt-2 text-sm text-mocha"><%= phase.fetch('goal') %></p>
+      <p class="mt-2 text-sm"><strong>Acceptance:</strong> <%= phase.fetch('acceptance') %></p>
+    </section>
+  <% end %>
+  <section class="card overflow-x-auto">
+    <table class="w-full text-left text-sm">
+      <caption class="p-4 text-left font-semibold">Functionality inventory</caption>
+      <thead><tr><th class="p-3" scope="col">Area / feature</th><th class="p-3" scope="col">Status</th><th class="p-3" scope="col">Scope</th></tr></thead>
+      <tbody>
+        <% @catalog.fetch('features').each do |feature| %>
+          <tr class="border-t border-fog">
+            <th class="p-3 font-medium" scope="row"><%= feature.fetch('area') %> / <%= feature.fetch('name') %></th>
+            <td class="p-3"><%= feature.fetch('status') %></td>
+            <td class="p-3"><%= feature.fetch('scope') %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+</div>

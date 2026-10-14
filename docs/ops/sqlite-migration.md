@@ -2,8 +2,7 @@
 
 Status: **DONE on SER8, 2026-10-13.** 78,573 rows in 61 tables copied with every count verified; the app runs on
 SQLite (`/opt/rupert/web/storage/production.sqlite3`) and `rupert-backup.timer` snapshots it every 6 hours.
-PostgreSQL on `rupert-db` still holds the pre-cutover data and was never modified, so rolling back is just removing
-`RUPERT_DB_ADAPTER=sqlite3` from `/etc/rupert.env` and restarting.
+PostgreSQL on `rupert-db` still holds the pre-cutover data and was never modified, but it is frozen at cutover. Switching back now requires migrating/reconciling all subsequent SQLite writes; simply unsetting the adapter would lose those changes.
 
 ### What the live run taught us
 - Row-count verification caught a real bug the synthetic rehearsal could not: one row was dropped per 500-row batch
@@ -61,11 +60,9 @@ echo 'RUPERT_DB_ADAPTER=sqlite3' >> .env
 ./bin/backup.sh     # confirms the SQLite backup path works on this host
 ```
 
-## Rollback (any time)
+## Rollback
 
-Remove the `RUPERT_DB_ADAPTER=sqlite3` line from `.env` and restart. PostgreSQL still has all data up to the moment you
-stopped the app. Anything written to SQLite after cutover is not carried back, so decide within the first day.
-The safety dump `pre-sqlite-*.dump` in `/var/backups/rupert` can rebuild PostgreSQL if it is ever needed.
+The PostgreSQL copy is a pre-cutover recovery point, not a current replica. Prefer rolling back code against the current SQLite database when schema-compatible. Before any database rollback, stop writers, take a fresh consistent SQLite backup and reconcile every post-cutover business write into the target. Only then change the adapter and verify business totals. The safety dump `pre-sqlite-*.dump` can rebuild the pre-cutover state but cannot recover later writes.
 
 ## After a week
 

@@ -1,0 +1,480 @@
+{
+  "reviewed": "2026-10-14",
+  "basis": "Repository implementation, accessible prior Rupert conversations about Rails and multitenancy, existing ERP plans, and official competitor product pages. Prior conversation coverage is partial; additional requirements may need confirmation.",
+  "production": "SQLite cutover reported complete on SER8/Incus on 2026-10-13; this audit has not independently rechecked the live host.",
+  "phases": [
+    {
+      "id": "0",
+      "name": "Now \u00b7 reliable SQLite operations",
+      "goal": "Ship the feature catalog, planner maintenance and conservative worker concurrency. Reconcile production documentation.",
+      "acceptance": "Both adapter CI jobs pass; authenticated catalog renders; diagnostics contain no customer data; Pages links and mobile layout verified."
+    },
+    {
+      "id": "1",
+      "name": "Next \u00b7 inventory execution",
+      "goal": "Barcode workflows, labels, transfers, reservations and backorders.",
+      "acceptance": "Scan/receive/count/transfer scenarios pass with duplicate protection, tenant isolation, audit history and owner confirmation before platform writes."
+    },
+    {
+      "id": "2",
+      "name": "Then \u00b7 fulfillment and channels",
+      "goal": "Returns/exchanges, carrier labels, lot/serial traceability and marketplace listing adapters.",
+      "acceptance": "Sandbox round trips cover partial fulfillment, cancellation, duplicate events and failed payments; no automatic equalization of independent inventories."
+    },
+    {
+      "id": "3",
+      "name": "Then \u00b7 trusted financial operations",
+      "goal": "Double-entry ledger, reconciliation, open books, forecasts, profit sharing and payroll exports.",
+      "acceptance": "Trial balance balances, closed periods reject edits, source-to-report totals reconcile, compensation permissions pass and provider exports reconcile."
+    },
+    {
+      "id": "4",
+      "name": "Later \u00b7 broader ERP",
+      "goal": "Manufacturing, CRM/marketing, public integrations, offline mobile work and multi-company reporting.",
+      "acceptance": "Each module has an owner, data contract, migration, tenant/security tests, operational runbook and a measured capacity check before release."
+    }
+  ],
+  "features": [
+    {
+      "id": "F01",
+      "area": "Commerce",
+      "name": "Shopify + Square mirror",
+      "status": "Available",
+      "scope": "Read-only source sync; independent location stock, no automatic equalization.",
+      "evidence": "web/app/services/sync_engine.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F02",
+      "area": "Commerce",
+      "name": "SwipeSimple sales import",
+      "status": "Available",
+      "scope": "Idempotent CSV import into canonical orders; no direct API integration.",
+      "evidence": "web/app/services/swipesimple_importer.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F03",
+      "area": "Commerce",
+      "name": "Sales journal",
+      "status": "Available",
+      "scope": "Hourly/location sales pivot and order details.",
+      "evidence": "web/app/controllers/sales_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F04",
+      "area": "Commerce",
+      "name": "Register settlement",
+      "status": "Available",
+      "scope": "Cash sessions, tender totals, physical closing count.",
+      "evidence": "web/app/modules/sales/pos_session.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F05",
+      "area": "Commerce",
+      "name": "Customer directory",
+      "status": "Available",
+      "scope": "Unified customer history and search; not a marketing CRM pipeline.",
+      "evidence": "web/app/controllers/customers_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F06",
+      "area": "Commerce",
+      "name": "Invoices and packing slips",
+      "status": "Available",
+      "scope": "Printable documents for existing orders.",
+      "evidence": "web/app/controllers/orders_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F07",
+      "area": "Commerce",
+      "name": "Fulfillment and tracking",
+      "status": "Available",
+      "scope": "Record tracking and fulfillment transitions; carrier label purchasing is planned separately.",
+      "evidence": "web/app/modules/core/fulfillment.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F08",
+      "area": "Commerce",
+      "name": "Refund recording",
+      "status": "Partial",
+      "scope": "Local refund workflow; verify platform settlement separately.",
+      "evidence": "web/app/modules/core/refund.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F09",
+      "area": "Stock",
+      "name": "Location inventory",
+      "status": "Available",
+      "scope": "Per-location on-hand, platform totals, movements and PDF snapshots.",
+      "evidence": "web/app/controllers/inventory_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F10",
+      "area": "Stock",
+      "name": "Catalog identity links",
+      "status": "Available",
+      "scope": "SKU/link audit across channels; quantity differences are expected.",
+      "evidence": "web/app/controllers/reconcile_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F11",
+      "area": "Stock",
+      "name": "Count approval workflow",
+      "status": "Available",
+      "scope": "Prepare, submit, approve, reject and reopen count sheets.",
+      "evidence": "web/app/models/inventory_count.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F12",
+      "area": "Stock",
+      "name": "Reorder advice",
+      "status": "Available",
+      "scope": "Sales pace, days of cover and suggested reorder quantities; advice only.",
+      "evidence": "web/app/services/restock_advisor.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F13",
+      "area": "Stock",
+      "name": "Size families",
+      "status": "Available",
+      "scope": "Root/member derivation with explicit approval for outbound platform changes.",
+      "evidence": "web/app/controllers/size_families_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F14",
+      "area": "Purchasing",
+      "name": "Vendors and purchase orders",
+      "status": "Available",
+      "scope": "Supplier records, draft/place/receive lifecycle and partial receiving.",
+      "evidence": "web/app/controllers/purchasing/purchase_orders_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F15",
+      "area": "Wholesale",
+      "name": "Vendor catalog and cart",
+      "status": "Available",
+      "scope": "Token-gated warehouse catalog, bulk tiers, cart and checkout.",
+      "evidence": "web/app/controllers/warehouse_checkouts_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F16",
+      "area": "Wholesale",
+      "name": "Card payment integration",
+      "status": "Partial",
+      "scope": "Authorize.net integration exists; credentials and end-to-end settlement must be verified per deployment.",
+      "evidence": "web/app/services/authorize_net_client.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F17",
+      "area": "Finance",
+      "name": "Expenses and vendor payments",
+      "status": "Available",
+      "scope": "Money-out records, payable balances and reversible soft deletion.",
+      "evidence": "web/app/controllers/finance/vendor_payments_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F18",
+      "area": "Finance",
+      "name": "Chart of accounts and reporting",
+      "status": "Partial",
+      "scope": "Account classification, receivables/payables and reports; not a complete double-entry general ledger.",
+      "evidence": "web/app/modules/finance/account.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F19",
+      "area": "People",
+      "name": "Employee directory",
+      "status": "Available",
+      "scope": "Departments, positions, status lifecycle and HR records.",
+      "evidence": "web/app/modules/people/employee.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F20",
+      "area": "People",
+      "name": "Timesheets and PTO",
+      "status": "Available",
+      "scope": "Submission/approval workflows, entries, requests and balances.",
+      "evidence": "web/app/modules/people/timesheet.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F21",
+      "area": "People",
+      "name": "Payroll calculations",
+      "status": "Partial",
+      "scope": "Pay runs and payslips; no claim of tax filing, direct deposit or statutory compliance.",
+      "evidence": "web/app/modules/people/pay_run.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F22",
+      "area": "Work",
+      "name": "Projects and tasks",
+      "status": "Available",
+      "scope": "Project/task transitions and tracking.",
+      "evidence": "web/app/modules/projects/task.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F23",
+      "area": "Work",
+      "name": "Goals and KPIs",
+      "status": "Available",
+      "scope": "Goal lifecycle, KPI readings and history.",
+      "evidence": "web/app/modules/goals/kpi.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F24",
+      "area": "System",
+      "name": "Role and tenant permissions",
+      "status": "Available",
+      "scope": "Tenant-scoped roles, permissions and user overrides.",
+      "evidence": "web/app/models/user.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F25",
+      "area": "System",
+      "name": "Login and Google OAuth",
+      "status": "Available",
+      "scope": "Password login and configured Google domains.",
+      "evidence": "web/app/controllers/oauth_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F26",
+      "area": "System",
+      "name": "Audit and access history",
+      "status": "Available",
+      "scope": "Activity and access-log views.",
+      "evidence": "web/app/controllers/access_logs_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F27",
+      "area": "System",
+      "name": "Global search",
+      "status": "Available",
+      "scope": "SQLite FTS5 trigram or PostgreSQL search, tenant-scoped results.",
+      "evidence": "web/app/services/search_sql.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F28",
+      "area": "System",
+      "name": "Sync and worker monitoring",
+      "status": "Available",
+      "scope": "Sync history, system page and host freshness watcher.",
+      "evidence": "deploy/ser8/rupert-sync-watch.sh",
+      "phase": "0"
+    },
+    {
+      "id": "F29",
+      "area": "System",
+      "name": "SQLite backup and restore",
+      "status": "Available",
+      "scope": "Consistent snapshots and restore tooling; off-host recovery needs a separate drill.",
+      "evidence": "bin/backup.sh",
+      "phase": "0"
+    },
+    {
+      "id": "F30",
+      "area": "System",
+      "name": "Features and roadmap",
+      "status": "Available",
+      "scope": "Signed-in feature catalog; shared with the public Pages site.",
+      "evidence": "web/app/controllers/roadmap_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F31",
+      "area": "System",
+      "name": "SQLite planner maintenance",
+      "status": "Available",
+      "scope": "Configuration/space diagnostics and explicit bounded PRAGMA optimize.",
+      "evidence": "web/app/services/sqlite_maintenance.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F32",
+      "area": "System",
+      "name": "SQLite concurrency defaults",
+      "status": "Available",
+      "scope": "One background job thread by default on SQLite; configurable for measured workloads.",
+      "evidence": "web/config/queue.yml",
+      "phase": "0"
+    },
+    {
+      "id": "F33",
+      "area": "Stock",
+      "name": "Barcode scanning and labels",
+      "status": "Planned",
+      "scope": "Scan-to-count/receive with validation, supported label templates and audit trail.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "1"
+    },
+    {
+      "id": "F34",
+      "area": "Stock",
+      "name": "Transfers, reservations and backorders",
+      "status": "Planned",
+      "scope": "Explicit source/destination movements and available-to-promise; no cross-channel equalization.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "1"
+    },
+    {
+      "id": "F35",
+      "area": "Stock",
+      "name": "Serial, lot and expiry tracking",
+      "status": "Planned",
+      "scope": "Traceability from receipt through sale/return, expiry reporting.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "2"
+    },
+    {
+      "id": "F36",
+      "area": "Commerce",
+      "name": "Carrier rates and label purchase",
+      "status": "Planned",
+      "scope": "Rate comparison, approved label purchase, void/refund and tracking webhooks.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "2"
+    },
+    {
+      "id": "F37",
+      "area": "Commerce",
+      "name": "Returns and exchanges",
+      "status": "Planned",
+      "scope": "Return authorization, inspection, restock and separately confirmed payment settlement.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "2"
+    },
+    {
+      "id": "F38",
+      "area": "Commerce",
+      "name": "Marketplace listings and channels",
+      "status": "Planned",
+      "scope": "Amazon/eBay/Etsy/WooCommerce adapters with identity mapping and replay-safe imports.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "2"
+    },
+    {
+      "id": "F39",
+      "area": "Finance",
+      "name": "Double-entry ledger and close",
+      "status": "Planned",
+      "scope": "Balanced journal entries, period locks, trial balance and auditable source references.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "3"
+    },
+    {
+      "id": "F40",
+      "area": "Finance",
+      "name": "Bank reconciliation and accounting exports",
+      "status": "Planned",
+      "scope": "Statement matching, duplicates review and QuickBooks/Xero export or adapters.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "3"
+    },
+    {
+      "id": "F41",
+      "area": "Finance",
+      "name": "Open-book profitability",
+      "status": "Planned",
+      "scope": "Permissioned COGS/labor/margin by channel and product, traceable to source records.",
+      "evidence": "docs/plans/PUBLIX_MODEL_6PERSON.md",
+      "phase": "3"
+    },
+    {
+      "id": "F42",
+      "area": "Finance",
+      "name": "Budgets and forecast vs actual",
+      "status": "Planned",
+      "scope": "Versioned assumptions, monthly variance and explainable inventory demand forecasts.",
+      "evidence": "docs/plans/PUBLIX_MODEL_6PERSON.md",
+      "phase": "3"
+    },
+    {
+      "id": "F43",
+      "area": "People",
+      "name": "Profit-share distribution ledger",
+      "status": "Planned",
+      "scope": "Owner-approved formula versions, accruals and payout records; individual compensation stays permissioned.",
+      "evidence": "docs/plans/PUBLIX_MODEL_6PERSON.md",
+      "phase": "3"
+    },
+    {
+      "id": "F44",
+      "area": "People",
+      "name": "Shift scheduling and payroll export",
+      "status": "Planned",
+      "scope": "Shift coverage and approved payroll provider export with reconciliation.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "3"
+    },
+    {
+      "id": "F45",
+      "area": "Production",
+      "name": "BOM, kits and manufacturing",
+      "status": "Planned",
+      "scope": "Component consumption, yield, costing and assembly reversals.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "4"
+    },
+    {
+      "id": "F46",
+      "area": "CRM",
+      "name": "Leads, loyalty and marketing",
+      "status": "Planned",
+      "scope": "Lead stages, consent records, segmentation and reviewed campaign drafts.",
+      "evidence": "docs/research/SOCIAL_AUTOMATION_OPTIONS.md",
+      "phase": "4"
+    },
+    {
+      "id": "F47",
+      "area": "System",
+      "name": "Public API and integrations",
+      "status": "Planned",
+      "scope": "Scoped API credentials, idempotency keys, rate limits and versioned contracts.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "4"
+    },
+    {
+      "id": "F48",
+      "area": "System",
+      "name": "Offline mobile workflows",
+      "status": "Planned",
+      "scope": "Conflict-aware count/receive queue and explicit reconnect reconciliation.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "4"
+    },
+    {
+      "id": "F49",
+      "area": "System",
+      "name": "Multi-company consolidation",
+      "status": "Planned",
+      "scope": "Cross-company consolidation separated from existing tenant isolation.",
+      "evidence": "docs/data/product-roadmap.json",
+      "phase": "4"
+    }
+  ]
+}

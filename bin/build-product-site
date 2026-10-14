@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Generate static product pages from the same catalog used by Rails."""
+import argparse
+import csv
+import html
+import io
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+DOCS = ROOT / 'docs'
+CATALOG = json.loads((ROOT / 'web/config/product_roadmap.json').read_text())
+MATRIX = json.loads((DOCS / 'data/competitor-matrix.json').read_text())
+E = html.escape
+NAV = [('index.html', 'Home'), ('roadmap.html', 'Roadmap'), ('competitors.html', 'Compare'), ('modules.html', 'Features'), ('sqlite-incus.html', 'SQLite & Incus'), ('getting-started.html', 'Develop')]
+
+
+def page(title, body):
+    nav = ''.join(f'<a href="{url}">{label}</a>' for url, label in NAV)
+    return f'''<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{E(title)} — Rupert</title><meta name="description" content="Rupert ERP feature inventory, delivery roadmap, competitor comparison and SQLite/Incus operations.">
+<link rel="stylesheet" href="assets/style.css"><link rel="stylesheet" href="assets/product.css"></head>
+<body><a class="skip" href="#content">Skip to content</a>
+<header class="site"><div class="wrap-wide"><a class="brand" href="index.html"><span class="mark">R</span><strong>Rupert</strong></a><nav aria-label="Documentation">{nav}</nav></div></header>
+<main id="content" class="wrap-wide product-main">{body}</main>
+<footer><div class="wrap-wide"><span>Rupert · reviewed {CATALOG['reviewed']}</span><a href="https://github.com/techmore/rupert">Source on GitHub ↗</a></div></footer>
+<script src="assets/product.js" defer></script></body></html>\n'''
+
+
+def code_link(path, label='Source'):
+    return f'<a href="https://github.com/techmore/rupert/blob/main/{E(path)}">{E(label)}</a>'
+
+
+def feature_table():
+    rows = ''
+    for f in CATALOG['features']:
+        rows += f'''<tr data-feature data-search="{E((f['area']+' '+f['name']+' '+f['scope']).lower())}" data-status="{E(f['status'])}"><th scope="row"><small>{E(f['area'])} · {f['id']}</small>{E(f['name'])}</th><td><span class="status">{E(f['status'])}</span></td><td>{E(f['scope'])}</td><td>{code_link(f['evidence'])}</td></tr>'''
+    return f'''<div class="filters"><label>Find a feature <input id="feature-search" type="search" placeholder="Inventory, payroll, barcode…"></label><label>Status <select id="feature-status"><option>All</option><option>Available</option><option>Partial</option><option>Planned</option></select></label><span id="feature-count" role="status">{len(CATALOG['features'])} features</span></div>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Feature inventory"><table><caption>Implementation inventory · Available describes repository code, not verified production rollout</caption><thead><tr><th scope="col">Feature</th><th scope="col">Status</th><th scope="col">Scope and limitations</th><th scope="col">Evidence</th></tr></thead><tbody>{rows}</tbody></table></div>'''
+
+
+counts = {s: sum(f['status'] == s for f in CATALOG['features']) for s in ['Available','Partial','Planned']}
+metrics = ''.join(f'<div><strong>{n}</strong><span>{s.lower()}</span></div>' for s,n in counts.items())
+outputs = {}
+outputs['index.html'] = page('Small business operations, connected', f'''
+<section class="product-hero"><div><p class="eyebrow">Commerce → inventory → people → finance</p><h1>A clear view of<br>your whole shop.</h1><p class="lede">Rupert brings Shopify and Square into one back office, with independent location inventory, purchasing, sales, people and operational reporting.</p><div class="actions"><a class="btn btn-primary" href="roadmap.html">Explore the roadmap</a><a class="btn btn-ghost" href="competitors.html">Compare functionality</a></div></div><aside class="summary-card"><p class="eyebrow">Built for your operation</p><h2>One app.<br>Your infrastructure.</h2><p>Rails modular monolith<br>SQLite with FTS5 search<br>SER8 · Incus</p><div class="metrics">{metrics}</div><small>Implemented code is separated from partial and planned functionality.</small></aside></section>
+<section class="notice"><strong>Production record:</strong> SQLite cutover was reported complete on October 13, 2026. This review has not independently rechecked the live host. GitHub Pages hosts this documentation; the Rails application runs separately in Incus.</section>
+<section class="product-section"><p class="eyebrow">Built today</p><h2>Follow the work through the business</h2><div class="product-grid">
+<article><span class="step">01 · Sell</span><h3>Every channel, one view</h3><p>Canonical sales, customer histories, registers, invoices and fulfillment tracking.</p></article>
+<article><span class="step">02 · Stock</span><h3>Know each location</h3><p>Inventory movements, count approvals, SKU identity, reorder advice and purchase orders.</p></article>
+<article><span class="step">03 · Team</span><h3>Keep daily work moving</h3><p>Employees, timesheets, PTO, pay-run calculations, projects and goals.</p></article>
+<article><span class="step">04 · Money</span><h3>Make the numbers visible</h3><p>Expenses, payables, receivables and operational reports. Full double-entry accounting is planned.</p></article></div></section>
+<section class="product-section"><div class="section-head"><p class="eyebrow">Delivery sequence</p><h2>Reliability first. Broader ERP next.</h2><p>The roadmap names dependencies and acceptance criteria, with no invented delivery dates.</p></div><div class="product-grid"><article><h3>Now: SQLite operations</h3><p>Planner maintenance, low-contention job defaults, diagnostics, backup and restore verification.</p><a href="sqlite-incus.html">Operations and tradeoffs →</a></article><article><h3>Next: inventory execution</h3><p>Barcode counts and receiving, explicit transfers, reservations and backorders.</p><a href="roadmap.html">Full feature inventory →</a></article></div></section>
+<section class="notice"><strong>Inventory rule:</strong> Shopify and Square serve independent inventories. Rupert mirrors them; it never automatically makes their quantities equal. Outbound platform changes require explicit owner confirmation.</section>''')
+phase_html = ''.join(f'''<article class="phase" id="phase-{p['id']}"><span class="step">Phase {p['id']}</span><h2>{E(p['name'])}</h2><p>{E(p['goal'])}</p><div class="acceptance"><strong>Ready when</strong><p>{E(p['acceptance'])}</p></div></article>''' for p in CATALOG['phases'])
+outputs['roadmap.html'] = page('Features & roadmap', f'''<section class="page-intro"><p class="eyebrow">Product plan · {CATALOG['reviewed']}</p><h1>What works.<br>What comes next.</h1><p class="lede">A complete inventory within the audited Rupert scope, with implementation evidence and delivery gates. These are priorities, not promised dates.</p><div class="metrics">{metrics}</div></section>
+<section class="notice">{E(CATALOG['basis'])} No private chat contents are included. New features still require implementation, tests and deployment; listing them here does not enable them.</section>
+<div class="phase-list">{phase_html}</div><section class="product-section" id="features"><h2>Functionality inventory</h2><p>Available = implemented; Partial = narrower than the full workflow; Planned = not enabled. Access also depends on your role and configured services.</p>{feature_table()}<p><a href="data/product-roadmap.json" download>Download machine-readable catalog</a></p></section>''')
+vs = MATRIX['competitors']
+heads = ''.join(f'<th scope="col"><a href="{E(v["url"])}">{E(v["name"])}</a></th>' for v in vs)
+rows = ''
+for x in MATRIX['capabilities']:
+    cells=''.join(f'<td><a href="{E(v["url"])}" title="Evidence and edition caveats: {E(v["name"])}">{E(x["competitors"][v["id"]])}</a></td>' for v in vs)
+    rows+=f'<tr data-comparison data-search="{E((x["name"]+" "+x["scope"]).lower())}"><th scope="row">{E(x["name"])}</th><td class="rupert-cell"><strong>{E(x["rupert"])}</strong><small>{E(x["scope"])}</small><a href="roadmap.html#phase-{x["phase"]}">Roadmap phase {x["phase"]}</a></td>{cells}</tr>'
+cards=''.join(f'<article><span class="step">{E(v["category"])}</span><h3><a href="{E(v["url"])}">{E(v["name"])}</a></h3><p>{E(v["caveat"])}</p></article>' for v in vs)
+outputs['competitors.html'] = page('Competitor functionality matrix', f'''<section class="page-intro"><p class="eyebrow">{len(vs)} competitors · {len(MATRIX['capabilities'])} capabilities · reviewed {MATRIX['reviewed']}</p><h1>Compare the work,<br>not the sales pitch.</h1><p class="lede">ERP suites, inventory specialists and retail POS platforms, compared against Rupert's actual implementation.</p></section><section class="notice">{E(MATRIX['method'])}</section>
+<p class="legend"><strong>Reading the matrix:</strong> Advertised = described by the linked vendor source · Integration / companion = separate product or connector · Not established = unknown from reviewed sources. Each vendor cell links to its supporting official page; there are no inferred negative scores.</p>
+<div class="filters"><label>Find a capability <input id="matrix-search" type="search" placeholder="Shipping, payroll, purchasing…"></label><a class="btn btn-ghost" href="data/competitor-matrix.csv" download>Download CSV</a><a href="data/competitor-matrix.json" download>JSON</a></div>
+<div class="table-scroll matrix-scroll" tabindex="0" role="region" aria-label="Competitor functionality matrix"><table class="matrix"><caption>Scoped functionality comparison; confirm product, edition, region and contract before purchasing</caption><thead><tr><th scope="col">Capability</th><th scope="col">Rupert</th>{heads}</tr></thead><tbody>{rows}</tbody></table></div>
+<section class="product-section"><h2>Competitor listing and source notes</h2><p>These are relevant alternatives and benchmarks, including products Rupert already connects to. The list is not the entire ERP market. No vendor performance or pricing has been independently benchmarked.</p><div class="product-grid">{cards}</div></section>''')
+ops = (DOCS / 'ops/sqlite-incus.md').read_text()
+# Keep the human-authored runbook readable on Pages without a markdown runtime.
+import re
+blocks=[]
+for block in ops.split('\n\n'):
+    if block.startswith('# '): continue
+    if block.startswith('## '): blocks.append('<h2>'+E(block[3:])+'</h2>')
+    elif block.startswith('```'): blocks.append('<pre><code>'+E('\n'.join(block.splitlines()[1:-1]))+'</code></pre>')
+    elif block.startswith('| '):
+        lines=[line for line in block.splitlines() if not line.startswith('| ---')]
+        cells=[[c.strip() for c in line.strip('|').split('|')] for line in lines]
+        blocks.append('<div class="table-scroll"><table>'+''.join('<tr>'+''.join('<'+('th' if i==0 else 'td')+'>'+E(c)+'</'+('th' if i==0 else 'td')+'>' for c in row)+'</tr>' for i,row in enumerate(cells))+'</table></div>')
+    else:
+        text=E(block.replace('\n',' '))
+        text=re.sub(r'\[([^\]]+)\]\(([^)]+)\)',lambda m:'<a href="'+m[2]+'">'+m[1]+'</a>',text)
+        text=re.sub(r'`([^`]+)`',r'<code>\1</code>',text)
+        blocks.append('<p>'+text+'</p>')
+outputs['sqlite-incus.html'] = page('SQLite & Incus', '<section class="page-intro"><p class="eyebrow">Operating decision · 2026-10-14</p><h1>Small database.<br>Measured operations.</h1><p class="lede">SQLite on SER8 in Incus, with explicit recovery and scaling triggers.</p></section><article class="runbook">'+''.join(blocks)+'</article>')
+
+# Keep one machine-readable catalog for the app and generated public pages.
+outputs['data/product-roadmap.json'] = json.dumps(CATALOG, indent=2)+'\n'
+stream=io.StringIO(); writer=csv.writer(stream)
+writer.writerow(['Capability','Rupert','Rupert scope','Phase']+[v['name'] for v in vs])
+for x in MATRIX['capabilities']:
+    writer.writerow([x['name'],x['rupert'],x['scope'],x['phase']]+[x['competitors'][v['id']] for v in vs])
+outputs['data/competitor-matrix.csv']=stream.getvalue()
+parser=argparse.ArgumentParser();parser.add_argument('--check',action='store_true');args=parser.parse_args()
+stale=[]
+for name, content in outputs.items():
+    target=DOCS/name
+    if args.check:
+        if not target.exists() or target.read_bytes()!=content.encode():stale.append(name)
+    else:
+        target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(content.encode())
+for f in CATALOG['features']:
+    if not (ROOT/f['evidence']).is_file():raise SystemExit('Missing feature evidence: '+f['evidence'])
+if stale:raise SystemExit('Regenerate product site: '+', '.join(stale))
+print(f'Product site {"verified" if args.check else "generated"}: {len(CATALOG["features"])} features, {len(vs)} competitors, {len(MATRIX["capabilities"])} comparison rows')
