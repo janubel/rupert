@@ -369,7 +369,8 @@ class CatalogSyncer
         variant_id = variant['id']
         sku = variant['sku']
         item = variant['inventoryItem'] || {}
-        quantity = [variant['inventoryQuantity'].to_i, 0].max
+        raw_quantity = variant['inventoryQuantity'].to_i
+        quantity = [raw_quantity, 0].max
 
         level_nodes = levels_by_item_id[item['id']] || []
         if level_nodes.empty?
@@ -377,14 +378,14 @@ class CatalogSyncer
           # on the primary row so the item still surfaces in views and alerts.
           next if primary.nil?
 
-          desired << { location_id: primary.id, variant_id: variant_id, sku: sku, quantity: quantity }
+          desired << { location_id: primary.id, variant_id: variant_id, sku: sku, quantity: quantity, raw: raw_quantity }
         else
           level_nodes.each do |node|
             location = locations_by_gid[node.dig('location', 'id')]
             next if location.nil?
 
             available = Array(node['quantities']).find { |q| q['name'] == 'available' }&.dig('quantity').to_i
-            desired << { location_id: location.id, variant_id: variant_id, sku: sku, quantity: [available, 0].max }
+            desired << { location_id: location.id, variant_id: variant_id, sku: sku, quantity: [available, 0].max, raw: available }
           end
         end
       end
@@ -406,6 +407,7 @@ class CatalogSyncer
           shopifyVariantId: d[:variant_id],
           quantity: d[:quantity],
           available: d[:quantity],
+          sourceQuantity: d[:raw],
           updatedAt: now,
           tenant_id: Current.tenant_id
         }

@@ -20,6 +20,14 @@ class InventoryLevel < ApplicationRecord
     foreign_key: 'squareVariationId',
     optional: true
 
+  # Platform-reported stock below zero (oversold). `quantity` stays clamped to
+  # zero for the rest of the app; `sourceQuantity` keeps the raw figure.
+  scope :oversold, -> { where('"sourceQuantity" < 0') }
+
+  def oversold?
+    sourceQuantity.to_i.negative?
+  end
+
   def self.total_for_variant(variant_id)
     where(shopifyVariantId: variant_id).sum(:quantity)
   end

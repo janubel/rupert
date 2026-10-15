@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -59,6 +59,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_190000) do
     t.integer "quantity", default: 0
     t.string "shopifyVariantId"
     t.string "source", null: false
+    t.integer "sourceQuantity"
     t.string "squareVariationId"
     t.string "tenant_id"
     t.datetime "updatedAt", default: -> { "CURRENT_TIMESTAMP" }, null: false

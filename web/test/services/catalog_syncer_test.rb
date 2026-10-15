@@ -213,4 +213,37 @@ class CatalogSyncerTest < ActiveSupport::TestCase
 
     assert_equal(%w[l1 l2], levels[item].map { |n| n.dig('location', 'id') })
   end
+
+  test 'sync_levels_batched! keeps the raw platform quantity when stock is oversold' do
+    home = Location.create!(source: 'shopify', externalId: 'gid://shopify/Location/1', name: 'Online')
+    variant = { 'id' => 'gid://shopify/ProductVariant/7', 'title' => 'Tea', 'sku' => 'TEA-7', 'inventoryQuantity' => -3,
+                'inventoryItem' => { 'id' => 'gid://shopify/InventoryItem/7', 'tracked' => true } }
+    levels = { 'gid://shopify/InventoryItem/7' => [
+      { 'location' => { 'id' => 'gid://shopify/Location/1' }, 'quantities' => [{ 'name' => 'available', 'quantity' => -3 }] }
+    ] }
+    ShopifyProduct.create!(id: 'gid://shopify/Product/7', title: 'Tea')
+    ShopifyVariant.create!(id: variant['id'], productId: 'gid://shopify/Product/7', title: 'Tea', sku: 'TEA-7')
+
+    CatalogSyncer.send(:sync_levels_batched!, [variant], levels, { 'gid://shopify/Location/1' => home }, home, Time.current)
+
+    level = InventoryLevel.find_by!(source: 'shopify', shopifyVariantId: variant['id'])
+    assert_equal 0, level.quantity, 'mirrored count stays clamped for the rest of the app'
+    assert_equal(-3, level.sourceQuantity)
+    assert_predicate level, :oversold?
+    assert_equal [level.id], InventoryLevel.oversold.pluck(:id)
+  end
+
+  test 'sync_levels_batched! stores the variant total as raw when no location data exists' do
+    home = Location.create!(source: 'shopify', externalId: 'gid://shopify/Location/1', name: 'Online')
+    variant = { 'id' => 'gid://shopify/ProductVariant/8', 'title' => 'Tea', 'sku' => 'TEA-8', 'inventoryQuantity' => 4,
+                'inventoryItem' => { 'id' => 'gid://shopify/InventoryItem/8', 'tracked' => false } }
+    ShopifyProduct.create!(id: 'gid://shopify/Product/8', title: 'Tea')
+    ShopifyVariant.create!(id: variant['id'], productId: 'gid://shopify/Product/8', title: 'Tea', sku: 'TEA-8')
+
+    CatalogSyncer.send(:sync_levels_batched!, [variant], {}, {}, home, Time.current)
+
+    level = InventoryLevel.find_by!(source: 'shopify', shopifyVariantId: variant['id'])
+    assert_equal 4, level.sourceQuantity
+    assert_not level.oversold?
+  end
 end
