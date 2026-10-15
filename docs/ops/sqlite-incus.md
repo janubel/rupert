@@ -2,7 +2,7 @@
 
 ## Decision and evidence
 
-Keep Rupert as a Rails modular monolith in an unprivileged Incus system container on SER8, with SQLite on local persistent storage. The [cutover report](https://github.com/techmore/rupert/blob/main/docs/ops/sqlite-migration.md) records a completed 2026-10-13 migration: 78,573 rows in 61 tables, counts verified, a worker installed and six-hourly snapshots configured. These are prior operator observations, not fresh live-host measurements from this change. The code still defaults to PostgreSQL so existing development/CI users do not silently switch adapters; production selects SQLite explicitly.
+Keep Rupert as a Rails modular monolith in an unprivileged Incus system container on SER8, with SQLite on local persistent storage. The [cutover report](https://github.com/techmore/rupert/blob/main/docs/ops/sqlite-migration.md) records a completed 2026-10-13 migration: 78,573 rows in 61 tables, counts verified, a worker installed and six-hourly snapshots configured. The cutover counts are historical. A fresh live check on October 14 confirmed SQLite 3.53.2, healthy web/jobs, the one-thread worker default, and a verified local backup restore; see the [deployment receipt](https://github.com/techmore/rupert/blob/main/docs/ops/deployment-2026-10-14.md). Production load and off-host recovery remain unmeasured. The code still defaults to PostgreSQL so existing development/CI users do not silently switch adapters; production selects SQLite explicitly.
 
 GitHub Pages publishes product documentation only. It cannot host Rails, jobs or a writable SQLite database. A push/release does not deploy the ERP or change its live environment.
 

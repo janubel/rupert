@@ -1,7 +1,7 @@
 {
   "reviewed": "2026-10-14",
   "basis": "Repository implementation, accessible prior Rupert conversations about Rails and multitenancy, existing ERP plans, and official competitor product pages. Prior conversation coverage is partial; additional requirements may need confirmation.",
-  "production": "SQLite cutover reported complete on SER8/Incus on 2026-10-13; this audit has not independently rechecked the live host.",
+  "production": "Live SER8/Incus verified on 2026-10-14: SQLite 3.53.2, web and jobs active, one job thread, and a fresh backup successfully restored. Application release 11af6b8 is deployed; broader roadmap features remain planned.",
   "phases": [
     {
       "id": "0",

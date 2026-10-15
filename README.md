@@ -147,7 +147,7 @@ repository; pushing a commit or creating a GitHub release does not deploy it.
 
 The SER8-specific worker/backup units and host freshness watcher are under `deploy/`. Older droplet units are reference material; do not substitute them for the Incus layout.
 
-The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 61 tables verified). This documentation update has not independently rechecked the live host. Read [SQLite and Incus operations](docs/ops/sqlite-incus.md) and the [cutover report](docs/ops/sqlite-migration.md). The PostgreSQL copy is frozen at cutover; switching back after new SQLite writes requires reconciliation.
+The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 61 tables verified). Live hosting and the October 14 application deployment were verified; see the [deployment receipt](docs/ops/deployment-2026-10-14.md). Read [SQLite and Incus operations](docs/ops/sqlite-incus.md) and the [cutover report](docs/ops/sqlite-migration.md). The PostgreSQL copy is frozen at cutover; switching back after new SQLite writes requires reconciliation.
 
 ## Features, roadmap and comparison
 
