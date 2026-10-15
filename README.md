@@ -51,6 +51,8 @@ set in the production environment.
 
 ## Operations
 
+For the current daily-use limits and the next payment/inventory rollout gates, start with [Derrick's day-to-day pickup plan](docs/ops/day-to-day-readiness.md).
+
 ```bash
 bin/rails ops:sync                    # full Shopify + Square mirror sync
 bin/rails ops:sync_source[square]     # single source
