@@ -96,6 +96,7 @@ def render_runbook(source):
             text=E(block.replace('\n',' '))
             text=re.sub(r'\[([^\]]+)\]\(([^)]+)\)',lambda m:'<a href="'+m[2]+'">'+m[1]+'</a>',text)
             text=re.sub(r'`([^`]+)`',r'<code>\1</code>',text)
+            text=re.sub(r'\*\*([^*]+)\*\*',r'<strong>\1</strong>',text)
             blocks.append('<p>'+text+'</p>')
     return ''.join(blocks)
 outputs['sqlite-incus.html'] = page('SQLite & Incus', '<section class="page-intro"><p class="eyebrow">Operating decision · 2026-10-14</p><h1>Small database.<br>Measured operations.</h1><p class="lede">SQLite on SER8 in Incus, with explicit recovery and scaling triggers.</p></section><article class="runbook">'+render_runbook(ops)+'</article>')
