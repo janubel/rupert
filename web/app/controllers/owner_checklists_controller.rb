@@ -7,7 +7,8 @@ class OwnerChecklistsController < AuthenticatedController
   SERVICE_FIELDS = %i[name purpose login_url renewal_cadence renewal_on renewal_notes review_cadence next_review_on
     support_name support_email support_phone mfa_status vault_reference notes archived].freeze
 
-  content_security_policy do |policy|
+  # Apply before inherited authentication can halt with a login redirect.
+  content_security_policy(prepend: true) do |policy|
     policy.frame_ancestors :none
   end
 

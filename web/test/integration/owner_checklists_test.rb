@@ -15,6 +15,23 @@ class OwnerChecklistsTest < ActionDispatch::IntegrationTest
 
   teardown { Current.reset }
 
+  test 'signed out checklist routes retain privacy headers on login redirects' do
+    anonymous = open_session
+    [owner_checklists_path, new_owner_checklist_path, owner_checklist_path(@checklist),
+      print_owner_checklist_path(@checklist)].each do |path|
+      anonymous.get path
+      anonymous.assert_redirected_to login_path
+      headers = anonymous.response.headers
+      assert_equal 'no-store', headers['Cache-Control']
+      assert_equal 'no-referrer', headers['Referrer-Policy']
+      assert_equal 'DENY', headers['X-Frame-Options']
+      assert_includes headers['X-Robots-Tag'], 'noarchive'
+      assert_match(/frame-ancestors 'none'/, headers['Content-Security-Policy'])
+      assert_match(/default-src 'self' https:/, headers['Content-Security-Policy'])
+      refute_includes anonymous.response.body, @checklist.data['owner_email']
+    end
+  end
+
   test 'owner creates edits and reviews private domain metadata with privacy on all screens' do
     get owner_checklists_path
     assert_response :success
