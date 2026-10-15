@@ -1,0 +1,35 @@
+<% content_for :title, 'Stock reservations' %>
+<div class="space-y-6">
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">Stock reservations</h1>
+      <p class="mt-1 text-sm text-mocha">Local holds reduce Rupert's available-to-promise for one platform item at one location. Shopify and Square remain separate.</p>
+    </div>
+    <% if Current.user.can?('inventory.write') %><%= link_to 'Reserve stock', new_stock_reservation_path, class: 'btn-primary' %><% end %>
+  </section>
+  <div class="card card-pad text-sm text-mocha">These holds do not reserve stock in Shopify or Square. Channels can still sell it, and a later sync can reduce availability. Expired holds stop consuming local availability automatically.</div>
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="border-b border-fog bg-haze/60"><tr>
+        <% ['Reference', 'Item / platform', 'Location', 'Quantity', 'Status', 'Expiry', 'Recorded by', ''].each do |label| %><th scope="col" class="th"><%= label %></th><% end %>
+      </tr></thead>
+      <tbody class="divide-y divide-fog">
+        <% @reservations.each do |reservation| %>
+          <% pool = reservation.stock_reservation_pool %>
+          <tr>
+            <td class="td font-medium"><%= reservation.reference %></td>
+            <td class="td"><%= pool.item_label %><br><span class="text-xs text-taupe"><%= pool.source.capitalize %></span></td>
+            <td class="td"><%= pool.location_name %></td>
+            <td class="td"><%= reservation.quantity %></td>
+            <td class="td"><%= reservation.effective_status.capitalize %></td>
+            <td class="td"><%= reservation.expires_at ? l(reservation.expires_at, format: :short) : 'No expiry' %></td>
+            <td class="td text-xs"><%= reservation.created_by %><br><%= l(reservation.created_at, format: :short) %><% if reservation.released_by %><br>Released by <%= reservation.released_by %><% end %></td>
+            <td class="td"><% if reservation.effective_status == 'active' && Current.user.can?('inventory.write') %><%= button_to 'Release', release_stock_reservation_path(reservation), method: :post, class: 'btn-ghost btn-sm', data: { turbo_confirm: 'Release this local hold?' } %><% end %></td>
+          </tr>
+        <% end %>
+        <% if @reservations.empty? %><tr><td colspan="8" class="td py-8 text-center text-taupe">No reservations yet.</td></tr><% end %>
+      </tbody>
+    </table>
+  </div>
+  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+</div>

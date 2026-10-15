@@ -1,4 +1,6 @@
-# Inventory Drift Migration Plan (review before running)
+# Inventory Drift Migration Plan (historical)
+
+> **Historical plan — superseded.** The August 21 independent-inventory pivot and current [migration plan](migration_phase_plan.md) replace the equalization steps below. Shopify and Square inventory pools remain independent. Do not execute reconciliation or quantity-push instructions from this archived plan; platform writes require explicit owner approval.
 
 **Status: DRAFT — NOT executed.** Created for review before any live write to
 Shopify or Square. Applying requires explicit per-strain counts + confirmation.

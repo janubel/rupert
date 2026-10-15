@@ -1,6 +1,6 @@
 {
-  "reviewed": "2026-10-14",
-  "method": "Directional capability comparison from the linked official product pages, not a hands-on vendor certification. Advertised means the cited product family explicitly describes the capability, subject to edition, region and plan. Integration / companion means a separate product, connector, or related module. Not established means the reviewed page does not establish the feature; it is not a claim of absence. Rupert Available means code exists, not independently verified live. This is a scoped set of relevant competitors, not an exhaustive inventory of the market.",
+  "reviewed": "2026-10-15",
+  "method": "Directional capability comparison from the linked official product pages, not a hands-on vendor certification. Advertised means the cited product family explicitly describes the capability, subject to edition, region and plan. Integration / companion means a separate product, connector, or related module. Not established means the reviewed page does not establish the feature; it is not a claim of absence. Rupert Available means code exists, not independently verified live. This is a scoped set of relevant competitors, not an exhaustive inventory of the market. POS parity additions were reviewed against official vendor/manual/partner sources on 2026-10-15. Cell-specific sources and notes distinguish terminal time tracking from remote attendance, generic commission from the requested overlap formula, and offline checkout from offline inventory work. Unknown cells require vendor demonstration rather than implying absence.",
   "competitors": [
     {
       "id": "odoo",
@@ -99,6 +99,110 @@
       "category": "Commerce / POS",
       "url": "https://www.shopify.com/pos",
       "caveat": "Commerce and POS, with app ecosystem extensions; POS Pro/plan restrictions apply."
+    },
+    {
+      "id": "korona",
+      "name": "KORONA POS",
+      "category": "Retail POS benchmark",
+      "url": "https://koronapos.com/pos-system/retail-pos-system/",
+      "reviewed": "2026-10-15",
+      "caveat": "Retail POS with KORONA Studio; inventory and reporting vary by package. Tips depend on supported processor/terminal configuration. POS time tracking is documented; remote employee punches and the exact overlapping-shift commission rule are not established.",
+      "sources": [
+        {
+          "title": "Retail POS features",
+          "url": "https://koronapos.com/pos-system/retail-pos-system/"
+        },
+        {
+          "title": "Inventory, purchasing and barcodes",
+          "url": "https://koronapos.com/pos-system/retail-inventory-management-software/convenience-store-inventory-management-software/"
+        },
+        {
+          "title": "Time tracking",
+          "url": "https://manual.koronapos.com/working-times/"
+        },
+        {
+          "title": "Commission setup",
+          "url": "https://manual.koronapos.com/setting-up-commission/"
+        },
+        {
+          "title": "Tips setup",
+          "url": "https://manual.koronapos.com/tipping/"
+        },
+        {
+          "title": "End-of-day statements",
+          "url": "https://manual.koronapos.com/finish-day-end-of-day-statement/"
+        }
+      ]
+    },
+    {
+      "id": "cova",
+      "name": "Cova POS",
+      "category": "Cannabis / hemp retail POS benchmark",
+      "url": "https://www.covasoftware.com/pos",
+      "reviewed": "2026-10-15",
+      "caveat": "POS with Cova Pay and optional HR/payroll partners. Payment types, tipping, hardware and market availability depend on country/provider. KayaPush adds mobile attendance; the exact overlapping-shift commission rule is not established.",
+      "sources": [
+        {
+          "title": "POS features and ecosystem",
+          "url": "https://www.covasoftware.com/pos"
+        },
+        {
+          "title": "Reporting and closeouts",
+          "url": "https://www.covasoftware.com/cannabis-analytics-reporting"
+        },
+        {
+          "title": "US payments and tipping",
+          "url": "https://www.covasoftware.com/cannabis-payments-for-dispensaries"
+        },
+        {
+          "title": "KayaPush integration",
+          "url": "https://www.covasoftware.com/cannabis-pos-payroll-hr"
+        },
+        {
+          "title": "Partner mobile attendance",
+          "url": "https://www.kayapush.com/comparison/kayapush-vs-adp"
+        }
+      ]
+    },
+    {
+      "id": "ctrax",
+      "name": "C-Trax Serv",
+      "category": "Cannabis / hemp retail POS benchmark",
+      "url": "https://c-trax.com/",
+      "reviewed": "2026-10-15",
+      "caveat": "Public site advertises retail POS, multi-location operations, roles, analytics, tipping and PAX hardware support. Some integration descriptions are placeholders; require a working demonstration and written provider confirmation. A specific hardware support cutoff was not independently verified.",
+      "sources": [
+        {
+          "title": "Official product and supported hardware overview",
+          "url": "https://c-trax.com/"
+        }
+      ]
+    },
+    {
+      "id": "swipesimple",
+      "name": "SwipeSimple",
+      "category": "Payments / compact POS benchmark",
+      "url": "https://home.swipesimple.com/features",
+      "reviewed": "2026-10-15",
+      "caveat": "Payment acceptance, customer/item catalog, invoices and reporting; merchant provider, plan and hardware determine availability. Daily reports and batch reports use different cutoff rules. Rupert currently imports CSV sales; it does not operate a native SwipeSimple API adapter.",
+      "sources": [
+        {
+          "title": "Product features",
+          "url": "https://home.swipesimple.com/features"
+        },
+        {
+          "title": "Tip and transaction settings",
+          "url": "https://support.swipesimple.com/hc/en-us/articles/9479964055063-Account-Settings"
+        },
+        {
+          "title": "Daily and batch reports",
+          "url": "https://support.swipesimple.com/hc/en-us/articles/360011707534-Batch-Reports-Daily-Transaction-Reports"
+        },
+        {
+          "title": "Reporting dashboard and access",
+          "url": "https://support.swipesimple.com/hc/en-us/articles/9485658966167-SwipeSimple-Reporting-Dashboard-Overview"
+        }
+      ]
     }
   ],
   "capabilities": [
@@ -121,7 +225,22 @@
         "lightspeed": "Advertised",
         "square": "Advertised",
         "shopify": "Advertised",
-        "netsuite": "Advertised"
+        "netsuite": "Advertised",
+        "korona": "Advertised",
+        "cova": "Advertised",
+        "ctrax": "Advertised",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-inventory-management-software/convenience-store-inventory-management-software/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ],
+        "ctrax": [
+          "https://c-trax.com/"
+        ]
       }
     },
     {
@@ -143,7 +262,25 @@
         "lightspeed": "Advertised",
         "square": "Advertised",
         "shopify": "Advertised",
-        "netsuite": "Advertised"
+        "netsuite": "Advertised",
+        "korona": "Advertised",
+        "cova": "Advertised",
+        "ctrax": "Advertised",
+        "swipesimple": "Advertised"
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-pos-system/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ],
+        "ctrax": [
+          "https://c-trax.com/"
+        ],
+        "swipesimple": [
+          "https://home.swipesimple.com/features"
+        ]
       }
     },
     {
@@ -165,7 +302,25 @@
         "lightspeed": "Advertised",
         "square": "Integration / companion",
         "shopify": "Advertised",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Advertised",
+        "cova": "Advertised",
+        "ctrax": "Advertised",
+        "swipesimple": "Advertised"
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-pos-system/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/cannabis-analytics-reporting"
+        ],
+        "ctrax": [
+          "https://c-trax.com/"
+        ],
+        "swipesimple": [
+          "https://home.swipesimple.com/features"
+        ]
       }
     },
     {
@@ -187,7 +342,25 @@
         "lightspeed": "Advertised",
         "square": "Advertised",
         "shopify": "Advertised",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Advertised",
+        "cova": "Integration / companion",
+        "ctrax": "Advertised",
+        "swipesimple": "Advertised"
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-pos-system/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/cannabis-payments-for-dispensaries"
+        ],
+        "ctrax": [
+          "https://c-trax.com/"
+        ],
+        "swipesimple": [
+          "https://home.swipesimple.com/features"
+        ]
       }
     },
     {
@@ -209,7 +382,19 @@
         "lightspeed": "Not established",
         "square": "Integration / companion",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "swipesimple": [
+          "https://home.swipesimple.com/features"
+        ]
+      },
+      "notes": {
+        "swipesimple": "Invoices are advertised; packing documents were not established."
       }
     },
     {
@@ -231,7 +416,11 @@
         "lightspeed": "Not established",
         "square": "Integration / companion",
         "shopify": "Integration / companion",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -253,7 +442,16 @@
         "lightspeed": "Advertised",
         "square": "Advertised",
         "shopify": "Not established",
-        "netsuite": "Advertised"
+        "netsuite": "Advertised",
+        "korona": "Advertised",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-inventory-management-software/convenience-store-inventory-management-software/"
+        ]
       }
     },
     {
@@ -275,7 +473,19 @@
         "lightspeed": "Advertised",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Advertised",
+        "cova": "Advertised",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-inventory-management-software/convenience-store-inventory-management-software/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ]
       }
     },
     {
@@ -297,7 +507,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Integration / companion",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -319,7 +533,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -341,7 +559,25 @@
         "lightspeed": "Advertised",
         "square": "Advertised",
         "shopify": "Advertised",
-        "netsuite": "Advertised"
+        "netsuite": "Advertised",
+        "korona": "Advertised",
+        "cova": "Advertised",
+        "ctrax": "Advertised",
+        "swipesimple": "Advertised"
+      },
+      "sources": {
+        "korona": [
+          "https://manual.koronapos.com/organization-report/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/cannabis-analytics-reporting"
+        ],
+        "ctrax": [
+          "https://c-trax.com/"
+        ],
+        "swipesimple": [
+          "https://support.swipesimple.com/hc/en-us/articles/9485658966167-SwipeSimple-Reporting-Dashboard-Overview"
+        ]
       }
     },
     {
@@ -363,7 +599,16 @@
         "lightspeed": "Not established",
         "square": "Integration / companion",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Integration / companion",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "cova": [
+          "https://www.covasoftware.com/cannabis-pos-payroll-hr"
+        ]
       }
     },
     {
@@ -385,7 +630,19 @@
         "lightspeed": "Not established",
         "square": "Integration / companion",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Integration / companion",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "cova": [
+          "https://www.covasoftware.com/cannabis-pos-payroll-hr"
+        ]
+      },
+      "notes": {
+        "korona": "POS time tracking is documented; a full timesheet/leave workflow was not established."
       }
     },
     {
@@ -407,7 +664,16 @@
         "lightspeed": "Not established",
         "square": "Integration / companion",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Integration / companion",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "cova": [
+          "https://www.covasoftware.com/cannabis-pos-payroll-hr"
+        ]
       }
     },
     {
@@ -429,7 +695,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -451,7 +721,25 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Advertised",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Advertised",
+        "cova": "Advertised",
+        "ctrax": "Advertised",
+        "swipesimple": "Advertised"
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-pos-system/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ],
+        "ctrax": [
+          "https://c-trax.com/"
+        ],
+        "swipesimple": [
+          "https://support.swipesimple.com/hc/en-us/articles/9485658966167-SwipeSimple-Reporting-Dashboard-Overview"
+        ]
       }
     },
     {
@@ -473,7 +761,19 @@
         "lightspeed": "Advertised",
         "square": "Integration / companion",
         "shopify": "Advertised",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Advertised",
+        "cova": "Advertised",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "korona": [
+          "https://manual.koronapos.com/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ]
       }
     },
     {
@@ -495,13 +795,17 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
       "name": "Barcode scanning and labels",
-      "rupert": "Planned",
-      "scope": "Dedicated scan workflows and printer support required",
+      "rupert": "Partial",
+      "scope": "SKU and stored-barcode draft count scanning with replay/audit; barcode import, receiving and printer labels remain planned",
       "phase": "1",
       "competitors": {
         "odoo": "Not established",
@@ -517,13 +821,29 @@
         "lightspeed": "Not established",
         "square": "Advertised",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Advertised",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-inventory-management-software/convenience-store-inventory-management-software/",
+          "https://manual.koronapos.com/generating-labels-printing/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ]
+      },
+      "notes": {
+        "cova": "Scan-to-order, mobile counts and scan-to-confirm are advertised; label template scope was not established."
       }
     },
     {
       "name": "Transfers / reservations / backorders",
-      "rupert": "Planned",
-      "scope": "Rupert needs explicit movement and reservation workflows",
+      "rupert": "Partial",
+      "scope": "Local source/location-specific holds and advisory ATP; transfers/backorders and platform-enforced allocation remain planned",
       "phase": "1",
       "competitors": {
         "odoo": "Not established",
@@ -539,7 +859,23 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "notes": {
+        "korona": "Stock transfers are advertised, but the full reservation/backorder workflow was not established.",
+        "cova": "Multi-location transfers are advertised; the full reservation/backorder workflow was not established."
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-inventory-management-software/convenience-store-inventory-management-software/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ]
       }
     },
     {
@@ -561,7 +897,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -583,7 +923,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -605,7 +949,11 @@
         "lightspeed": "Not established",
         "square": "Advertised",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -627,7 +975,16 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Integration / companion",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Integration / companion",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ]
       }
     },
     {
@@ -649,7 +1006,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Advertised"
+        "netsuite": "Advertised",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -671,7 +1032,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -693,7 +1058,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -715,7 +1084,22 @@
         "lightspeed": "Integration / companion",
         "square": "Integration / companion",
         "shopify": "Integration / companion",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Advertised",
+        "cova": "Integration / companion",
+        "ctrax": "Advertised",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "korona": [
+          "https://koronapos.com/pos-system/retail-pos-system/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ],
+        "ctrax": [
+          "https://c-trax.com/"
+        ]
       }
     },
     {
@@ -737,7 +1121,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -759,7 +1147,19 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "notes": {
+        "cova": "Offline checkout is advertised; this row specifically asks for an offline receive/count queue, which was not established."
+      },
+      "sources": {
+        "cova": [
+          "https://www.covasoftware.com/pos"
+        ]
       }
     },
     {
@@ -781,7 +1181,11 @@
         "lightspeed": "Not established",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
     },
     {
@@ -803,8 +1207,249 @@
         "lightspeed": "Advertised",
         "square": "Not established",
         "shopify": "Not established",
-        "netsuite": "Not established"
+        "netsuite": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
       }
+    },
+    {
+      "name": "Remote employee clock-in/out",
+      "rupert": "Available",
+      "scope": "Linked workers clock remotely and request corrections; reviewer approval and actor/history retained",
+      "phase": "1",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "netsuite": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Integration / companion",
+        "shopify": "Integration / companion",
+        "korona": "Not established",
+        "cova": "Integration / companion",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "korona": [
+          "https://manual.koronapos.com/working-times/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/cannabis-pos-payroll-hr",
+          "https://www.kayapush.com/comparison/kayapush-vs-adp"
+        ],
+        "square": [
+          "https://squareup.com/help/us/en/article/8395-clock-in-and-out-for-team-members"
+        ],
+        "shopify": [
+          "https://apps.shopify.com/staffy",
+          "https://help.easyteam.io/en/article/easyteam-pricing-plans-and-billing-1p4sbaa/"
+        ]
+      },
+      "notes": {
+        "korona": "Terminal clock-in/out is documented; remote employee punches are not established.",
+        "cova": "KayaPush partner supports mobile attendance/geotracking; confirm permitted remote locations and purchased plan.",
+        "square": "Square Team app supports punches; Square Shifts/eligible plan and employer settings apply.",
+        "shopify": "Easyteam companion app advertises mobile/web time clock and reviewed timesheets; confirm employer location rules."
+      }
+    },
+    {
+      "name": "Overlapping-shift 1% per-person commission",
+      "rupert": "Partial",
+      "scope": "Independent 1% per-worker preview over eligible imported sales/shift intervals; final payroll policy and settlement remain pending",
+      "phase": "1",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "netsuite": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "sources": {
+        "korona": [
+          "https://manual.koronapos.com/setting-up-commission/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/cannabis-pos-payroll-hr"
+        ]
+      },
+      "notes": {
+        "korona": "General salesperson/cashier/team commissions are documented, but this exact automatic overlap rule is not established.",
+        "cova": "Sales/workforce integration is documented, but this exact commission allocation is not established.",
+        "rupert": "No shift-overlap allocation engine exists; manual payroll commissions do not implement this requirement.",
+        "ctrax": "The exact per-person shift-overlap allocation was not established in the reviewed official product material.",
+        "swipesimple": "Sales-by-user reports are documented; the exact shift-overlap allocation was not established."
+      }
+    },
+    {
+      "name": "Customer tipping at checkout",
+      "rupert": "Partial",
+      "scope": "Percentage/custom/no-tip POS quote prompt; no terminal charge, collected tip or refund settlement",
+      "phase": "1",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "netsuite": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Advertised",
+        "shopify": "Advertised",
+        "korona": "Advertised",
+        "cova": "Integration / companion",
+        "ctrax": "Advertised",
+        "swipesimple": "Advertised"
+      },
+      "sources": {
+        "korona": [
+          "https://manual.koronapos.com/tipping/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/cannabis-payments-for-dispensaries"
+        ],
+        "square": [
+          "https://squareup.com/help/us/en/article/8631-set-up-and-customize-tipping"
+        ],
+        "shopify": [
+          "https://help.shopify.com/en/manual/sell-in-person/shopify-pos/tips"
+        ],
+        "ctrax": [
+          "https://c-trax.com/"
+        ],
+        "swipesimple": [
+          "https://support.swipesimple.com/hc/en-us/articles/9479964055063-Account-Settings"
+        ]
+      },
+      "notes": {
+        "korona": "Processor/terminal activation and tip account configuration are required.",
+        "cova": "Cova Pay US advertises built-in tipping; confirm selected payment partner and hardware.",
+        "shopify": "Supported card readers and eligible credit payments; this does not establish cash-tip collection.",
+        "rupert": "Source POS tipping is separate from a native Rupert checkout prompt."
+      }
+    },
+    {
+      "name": "Daily cash/card register summary",
+      "rupert": "Partial",
+      "scope": "Event-dated cash/card/other tenders, refunds and CSV by source/location/currency; missing imports, tips, discounts and fees disclosed",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "netsuite": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Advertised",
+        "shopify": "Advertised",
+        "korona": "Advertised",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Advertised"
+      },
+      "sources": {
+        "korona": [
+          "https://manual.koronapos.com/finish-day-end-of-day-statement/",
+          "https://manual.koronapos.com/organization-report/"
+        ],
+        "cova": [
+          "https://www.covasoftware.com/cannabis-analytics-reporting",
+          "https://www.covasoftware.com/cannabis-payments-for-dispensaries"
+        ],
+        "square": [
+          "https://squareup.com/help/us/en/article/5072-summaries-and-reports-from-the-online-dashboard"
+        ],
+        "shopify": [
+          "https://help.shopify.com/en/manual/sell-in-person/shopify-pos/cash-register-management/register-sessions-in-shopify-pos"
+        ],
+        "swipesimple": [
+          "https://support.swipesimple.com/hc/en-us/articles/360011707534-Batch-Reports-Daily-Transaction-Reports"
+        ],
+        "ctrax": [
+          "https://c-trax.com/"
+        ]
+      },
+      "notes": {
+        "korona": "Business-day register closeout and payment-method totals are documented.",
+        "cova": "Daily/closeout analytics and payment reconciliation are advertised; an exact daily cash/card split per register was not established in accessible public material.",
+        "square": "Sales/payment reports support day and device filters; validate required register grouping.",
+        "shopify": "Register sessions include cash activity and all payment types; subscription/permission requirements apply.",
+        "ctrax": "Custom sales/associate analytics are advertised; exact daily cash/card register summaries are not established.",
+        "swipesimple": "Full daily reports include cash/card details; batch cutoffs and merchant-account grouping vary by provider."
+      }
+    }
+  ],
+  "integration_candidates": [
+    {
+      "id": "valmar",
+      "name": "Valmar Merchant Services",
+      "category": "Payment provider / gateway candidate",
+      "url": "https://vlmr.com/merchant-services/",
+      "reviewed": "2026-10-15",
+      "scope": "Official material describes a gateway, card/ACH services, integration tools and reconciliation exports.",
+      "caveat": "Candidate for a Rupert payment adapter, not an ERP competitor. The existing merchant account, supported products, Shopify gateway path, terminal compatibility and underwriting approval require provider confirmation; no account approval is inferred.",
+      "sources": [
+        {
+          "title": "Merchant services and gateway overview",
+          "url": "https://vlmr.com/merchant-services/"
+        }
+      ]
+    },
+    {
+      "id": "easyteam",
+      "name": "Easyteam",
+      "category": "Shopify workforce companion candidate",
+      "url": "https://apps.shopify.com/staffy",
+      "reviewed": "2026-10-15",
+      "scope": "Official app/help material describes POS/mobile/web punches, reviewed timesheets, commission plans and payroll integrations.",
+      "caveat": "Companion candidate, not an ERP competitor. Generic commission plans and single-staff sales attribution do not establish the requested 1% for every worker clocked in during each sale. Confirm exact allocation before selection.",
+      "sources": [
+        {
+          "title": "Official Shopify app listing",
+          "url": "https://apps.shopify.com/staffy"
+        },
+        {
+          "title": "Plan features and time-clock modes",
+          "url": "https://help.easyteam.io/en/article/easyteam-pricing-plans-and-billing-1p4sbaa/"
+        },
+        {
+          "title": "Sales attribution behavior",
+          "url": "https://help.easyteam.io/en/article/how-to-attribute-a-sale-to-a-staff-member-usbxrb/"
+        }
+      ]
     }
   ]
 }

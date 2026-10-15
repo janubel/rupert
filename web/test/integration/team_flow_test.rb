@@ -93,9 +93,8 @@ class TeamFlowTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
 
-    employee = User.find_by!(email: 'sneaky@example.com')
-    assert_equal 'admin', employee.role # role param stripped; default applies
-    refute employee.super_admin?
+    assert_nil User.find_by(email: 'sneaky@example.com')
+    assert_match(/allowed employee role/, flash[:alert])
   end
 
   test 'deactivated employee cannot sign in' do

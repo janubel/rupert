@@ -5,7 +5,12 @@
       <h1 class="page-title">Manual counts</h1>
       <p class="mt-1 text-sm text-mocha">Physical inventory worksheets recorded for audit. Approving a count does not change inventory — Square is the source of truth.</p>
     </div>
-    <%= link_to "New count", new_inventory_count_path, class: "btn-primary" %>
+    <% if Current.user.can?('inventory.write') %>
+      <div class="flex flex-wrap gap-2">
+        <%= link_to "Start scan count", new_inventory_count_path(prepared: 0, start_scanning: 1), class: "btn-primary" %>
+        <%= link_to "New count sheet", new_inventory_count_path, class: "btn-ghost" %>
+      </div>
+    <% end %>
   </section>
 
   <div class="flex flex-wrap items-center gap-2 text-sm">
@@ -34,7 +39,7 @@
             <tr>
               <td class="td py-8 text-center">
                 <p class="text-taupe">No counts yet.</p>
-                <%= link_to "Start a manual inventory", new_inventory_count_path, class: "btn-primary btn-sm mt-2" %>
+                <% if Current.user.can?('inventory.write') %><%= link_to "Start a manual inventory", new_inventory_count_path, class: "btn-primary btn-sm mt-2" %><% end %>
               </td>
             </tr>
           <% end %>

@@ -9,6 +9,7 @@
   </section>
 
   <%= form_tag inventory_count_path(count), method: :patch, class: "space-y-6", data: { controller: "count-sheet" } do %>
+    <%= render 'errors', count: count %>
     <div class="card card-pad space-y-4">
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
@@ -64,4 +65,3 @@
     </div>
   </template>
 </div>
-

@@ -59,7 +59,12 @@ class GoogleOauthService
       response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(request) }
       raise ExchangeError, "Google userinfo failed (#{response.code})" unless response.is_a?(Net::HTTPSuccess)
 
-      JSON.parse(response.body)
+      profile = JSON.parse(response.body)
+      unless [true, 'true'].include?(profile['email_verified']) &&
+          profile['email'].to_s.match?(URI::MailTo::EMAIL_REGEXP) && profile['sub'].present?
+        raise ExchangeError, 'Google did not return a verified account email. Verify your email with Google before signing in.'
+      end
+      profile
     end
 
     private

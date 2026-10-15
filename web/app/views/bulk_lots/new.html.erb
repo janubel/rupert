@@ -1,0 +1,18 @@
+<% content_for :title, "Receive #{@material.name}" %>
+<div class="space-y-6">
+  <h1 class="page-title">Receive <%= @material.name %></h1>
+  <p class="text-sm text-mocha">Create a lot and its initial receipt together. Later receipts, use and corrections stay in that lot's ledger.</p>
+  <% if @lot.errors.any? %><div role="alert" class="card card-pad text-rose"><%= @lot.errors.full_messages.to_sentence %></div><% end %>
+  <%= form_with model: @lot, url: bulk_material_bulk_lots_path(@material), class: 'card card-pad space-y-4' do |form| %>
+    <%= form.hidden_field :receipt_token %>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div><%= form.label :code, 'Lot / batch code', class: 'block text-sm font-medium mb-1' %><%= form.text_field :code, required: true, maxlength: 120, class: 'input' %></div>
+      <div><%= form.label :note, 'Lot note (optional)', class: 'block text-sm font-medium mb-1' %><%= form.text_field :note, maxlength: 500, class: 'input' %></div>
+      <div><%= label_tag 'bulk_lot_quantity', 'Received weight', class: 'block text-sm font-medium mb-1' %><%= text_field_tag 'bulk_lot[quantity]', @receipt_attributes[:quantity], required: true, inputmode: 'decimal', class: 'input' %></div>
+      <div><%= label_tag 'bulk_lot_unit', 'Unit', class: 'block text-sm font-medium mb-1' %><%= select_tag 'bulk_lot[unit]', options_for_select(BulkMass::FACTORS.keys, @receipt_attributes[:unit]), class: 'input' %></div>
+    </div>
+    <div><%= label_tag 'bulk_lot_reference', 'Receipt reference / supplier document', class: 'block text-sm font-medium mb-1' %><%= text_field_tag 'bulk_lot[reference]', @receipt_attributes[:reference], required: true, maxlength: 200, class: 'input' %></div>
+    <p class="text-xs text-taupe">Weights round half-up to the nearest milligram (1 oz = 28,350 mg; 1 lb = 453,592 mg). No platform inventory is changed.</p>
+    <div class="flex gap-3"><%= form.submit 'Record lot receipt', class: 'btn-primary' %><%= link_to 'Cancel', bulk_material_path(@material), class: 'btn-ghost' %></div>
+  <% end %>
+</div>

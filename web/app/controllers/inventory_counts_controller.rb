@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class InventoryCountsController < AuthenticatedController
+  before_action :require_inventory_read
   before_action :require_inventory_write, except: %i[index show]
 
   def index
@@ -28,38 +29,46 @@ class InventoryCountsController < AuthenticatedController
     @count = InventoryCount.new(count_params.merge(createdBy: Current.user.email))
     build_items(@count)
     if @count.save
-      redirect_to(inventory_count_path(@count), notice: 'Draft count created.')
+      destination = params[:start_scanning] == '1' ? scan_inventory_count_path(@count) : inventory_count_path(@count)
+      redirect_to(destination, notice: 'Draft count created.')
     else
-      @locations = Location.order(name: :asc).limit(200)
-      @skus = SkuLink.order(:sku).limit(500).pluck(:sku)
+      prepare_form
+      @prepared = false
       render(:new, status: :unprocessable_entity)
     end
   end
 
   def edit
     @count = InventoryCount.includes(items: { shopify_variant: :product }).find(params[:id])
-    @locations = Location.order(name: :asc).limit(200)
-    @skus = SkuLink.order(:sku).limit(500).pluck(:sku)
+    return unless require_draft
+
+    prepare_form
   end
 
   def update
     @count = InventoryCount.find(params[:id])
-    @count.assign_attributes(count_params)
-    @count.items.destroy_all
-    build_items(@count)
-    if @count.save
-      redirect_to(inventory_count_path(@count), notice: 'Count updated.')
-    else
-      @locations = Location.order(name: :asc).limit(200)
-      @skus = SkuLink.order(:sku).limit(500).pluck(:sku)
-      render(:edit, status: :unprocessable_entity)
+    @count.with_lock do
+      return unless require_draft
+
+      @count.assign_attributes(count_params)
+      @count.items.destroy_all
+      build_items(@count)
+      @count.save!
     end
+    redirect_to(inventory_count_path(@count), notice: 'Count updated.')
+  rescue ActiveRecord::RecordInvalid
+    prepare_form
+    render(:edit, status: :unprocessable_entity)
   end
 
   def submit
     @count = InventoryCount.find(params[:id])
-    @count.snapshot_previous!
-    @count.submit!
+    @count.with_lock do
+      return unless require_draft
+
+      @count.snapshot_previous!
+      @count.submit!
+    end
     BuzzNotifyJob.perform_later(
       "Manual count submitted for approval · #{@count.items.count} items · total qty #{@count.total_quantity}",
       tags: [%w[t inventory]]
@@ -71,7 +80,7 @@ class InventoryCountsController < AuthenticatedController
 
   def approve
     @count = InventoryCount.find(params[:id])
-    InventoryCount.transaction do
+    @count.with_lock do
       @count.approve!
       @count.apply_override!(actor: Current.user.email)
       @count.update!(approvedAt: Time.current)
@@ -87,7 +96,7 @@ class InventoryCountsController < AuthenticatedController
 
   def reject
     @count = InventoryCount.find(params[:id])
-    @count.reject!
+    @count.with_lock { @count.reject! }
     redirect_to(inventory_count_path(@count), notice: 'Count rejected.')
   rescue AASM::InvalidTransition
     redirect_to(inventory_count_path(@count), alert: 'Only pending counts can be rejected.')
@@ -95,7 +104,7 @@ class InventoryCountsController < AuthenticatedController
 
   def reopen
     @count = InventoryCount.find(params[:id])
-    @count.reopen!
+    @count.with_lock { @count.reopen! }
     redirect_to(inventory_count_path(@count), notice: 'Count reopened as a draft — edit and resubmit it.')
   rescue AASM::InvalidTransition
     redirect_to(inventory_count_path(@count), alert: 'Only rejected counts can be reopened.')
@@ -103,11 +112,33 @@ class InventoryCountsController < AuthenticatedController
 
   def destroy
     @count = InventoryCount.find(params[:id])
-    @count.destroy!
+    @count.with_lock do
+      return unless require_draft
+
+      @count.destroy!
+    end
     redirect_to(inventory_counts_path, notice: 'Draft deleted.')
   end
 
   private
+
+  def require_inventory_read
+    return if Current.user.can?('inventory.read')
+
+    redirect_to root_path, alert: "You don't have permission to view inventory counts."
+  end
+
+  def require_draft
+    return true if @count.draft?
+
+    redirect_to inventory_count_path(@count), alert: 'Only draft counts can be changed.'
+    false
+  end
+
+  def prepare_form
+    @locations = Location.order(name: :asc).limit(200)
+    @skus = SkuLink.order(:sku).limit(500).pluck(:sku)
+  end
 
   def require_inventory_write
     return if Current.user.can?('inventory.write')
@@ -142,11 +173,14 @@ class InventoryCountsController < AuthenticatedController
   end
 
   def build_items(count)
-    Array(params[:items]).each do |row|
+    rows = params[:items].is_a?(ActionController::Parameters) ? params[:items].values : Array(params[:items])
+    rows.each do |row|
+      next unless row.respond_to?(:permit)
+
       sku = row[:sku].to_s.strip
       next if sku.blank? && row[:quantity].to_s.blank?
 
-      count.items.build(sku: sku, quantity: row[:quantity].to_i)
+      count.items.build(sku: sku, quantity: row[:quantity])
     end
   end
 end

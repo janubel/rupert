@@ -1,0 +1,29 @@
+<% content_for :title, 'Daily register summary' %>
+<div class="space-y-6">
+  <section><h1 class="page-title">Daily register summary</h1><p class="mt-2 text-sm text-mocha">Recorded sales, cash/card receipts and refunds by platform, location and currency.</p></section>
+  <%= form_with url: register_summary_reports_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
+    <div><%= f.label :day, 'Day', class: 'block text-sm' %><%= f.date_field :day, value: @summary.day, required: true, class: 'input' %></div>
+    <div><%= f.label :source, 'Source (optional)', class: 'block text-sm' %><%= f.text_field :source, value: @summary.source, placeholder: 'shopify, square, swipesimple', class: 'input' %></div>
+    <div><%= f.label :location_id, 'Location ID (optional)', class: 'block text-sm' %><%= f.text_field :location_id, value: @summary.location_id, class: 'input' %></div>
+    <%= f.submit 'Show day', class: 'btn-primary' %>
+    <%= link_to 'Download CSV', register_summary_reports_path(format: :csv, day: @summary.day.iso8601, source: @summary.source, location_id: @summary.location_id), class: 'btn-ghost' %>
+  <% end %>
+  <section class="card card-pad space-y-2 text-sm text-mocha">
+    <p>Payments are dated by collection time; refunds by refund time, including returns against older orders. Sales use the order date. Day boundaries use <%= Time.zone.name %>.</p>
+    <p>Coverage is limited to records imported into Rupert. C-Trax, terminal settlement, bank deposits, discounts, collected tips and merchant fees are not fully represented. Unavailable fields stay unavailable instead of showing a false zero.</p>
+    <p>Tenders less refunds includes recorded gift-card and store-credit activity. It is an accounting comparison, not settled cash or bank deposits.</p>
+    <p><strong><%= @summary.missing_payment_orders %></strong> paid-status orders on this day have no completed payment record. Compare with source register and processor reports before closing.</p>
+  </section>
+  <section class="card overflow-x-auto"><table class="w-full text-sm">
+    <thead><tr><% ['Source / location', 'Currency', 'Orders', 'Order total', 'Tax', 'Cash', 'Card', 'Other tenders', 'Refunds', 'Tenders less refunds'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
+    <tbody class="divide-y divide-fog">
+      <% @summary.rows.each do |row| %><% tenders = row[:tenders] %>
+        <tr><td class="td"><%= row[:source] %><br><span class="text-xs text-taupe"><%= row[:location_id].presence || 'Unassigned' %></span></td><td class="td"><%= row[:currency].presence || 'Unknown' %></td><td class="td"><%= row[:orders] %></td>
+          <% [row[:order_total_cents], row[:tax_cents], tenders.fetch('cash', 0), tenders.fetch('card', 0), tenders.except('cash', 'card').values.sum, row[:refund_cents], tenders.values.sum - row[:refund_cents]].each do |cents| %><td class="td tabular-nums"><%= number_with_precision(BigDecimal(cents.to_s) / 100, precision: 2) %></td><% end %>
+        </tr>
+      <% end %>
+      <% if @summary.rows.empty? %><tr><td colspan="10" class="td py-8 text-center">No recorded activity for this day and filter.</td></tr><% end %>
+    </tbody>
+  </table></section>
+  <%= link_to 'All reports', reports_path, class: 'btn-ghost' %>
+</div>

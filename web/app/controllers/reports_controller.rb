@@ -18,6 +18,17 @@ class ReportsController < AuthenticatedController
     redirect_to(sales_reports_path)
   end
 
+  def register_summary
+    @summary = DailyRegisterSummary.new(day: params[:day].presence || Date.current.iso8601,
+      source: params[:source].presence, location_id: params[:location_id].presence)
+    respond_to do |format|
+      format.html
+      format.csv { send_data(@summary.csv, filename: "register-summary-#{@summary.day.iso8601}.csv") }
+    end
+  rescue ArgumentError
+    redirect_to(register_summary_reports_path, alert: 'Choose a valid calendar day (YYYY-MM-DD).')
+  end
+
   def sales
     @days = window_days
     since = @days.days.ago

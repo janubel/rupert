@@ -1,0 +1,95 @@
+<% content_for :title, 'POS preview' %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<div class="space-y-6" data-controller="pos-cart" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>">
+  <section>
+    <div class="flex flex-wrap items-center gap-3"><h1 class="page-title">POS preview</h1><span class="pill-clay">Cart preview</span></div>
+    <p class="mt-2 text-sm text-mocha">Choose products by image, review quantities, and preview current catalog prices. This preview creates no sale, payment, receipt or stock reservation. Taxes and final checkout are still pending.</p>
+    <p class="mt-2 text-xs text-taupe">Priced Shopify catalog · amounts use catalog currency; its currency code is not mirrored yet. Square prices are unavailable in the current mirror. Continue using your existing POS to complete sales.</p>
+  </section>
+
+  <div class="grid items-start gap-6 xl:grid-cols-3">
+    <section class="space-y-4 xl:col-span-2">
+      <%= form_tag point_of_sale_path, method: :get, class: "flex gap-2", data: { turbo: false } do %>
+        <%= search_field_tag :q, @query, placeholder: 'Search product, variant or SKU', aria: { label: 'Search POS catalog' }, class: 'input flex-1' %>
+        <%= submit_tag 'Search', class: 'btn-ghost' %>
+      <% end %>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <% @variants.each do |variant| %>
+          <% product = variant.product %>
+          <% price = catalog_price(variant) %>
+          <article class="card overflow-hidden">
+            <% if (thumbnail = safe_thumbnail(product)) %>
+              <%= image_tag thumbnail, alt: product.title, loading: 'lazy', class: 'h-40 w-full bg-haze object-contain' %>
+            <% else %>
+              <div class="grid h-40 place-items-center bg-haze text-sm text-taupe">No image</div>
+            <% end %>
+            <div class="card-pad space-y-2">
+              <h2 class="font-medium text-ink"><%= product.title %></h2>
+              <p class="text-sm text-mocha"><%= variant.title %></p>
+              <p class="font-mono text-xs text-taupe"><%= variant.sku.presence || 'No SKU' %></p>
+              <p class="font-semibold text-ink"><%= price ? number_with_precision(price, precision: 2) : 'Price unavailable' %></p>
+              <% if price && !@ambiguous_skus.include?(variant.sku) %>
+                <%= form_tag quote_point_of_sale_path, method: :post, class: 'flex items-center gap-2', data: { action: 'submit->pos-cart#add', busy: false, turbo: false } do %>
+                  <%= hidden_field_tag 'items[0][variant_id]', variant.id, id: "pos_variant_#{variant.id}" %>
+                  <%= number_field_tag 'items[0][quantity]', 1, id: "pos_quantity_#{variant.id}", min: 1, max: PointOfSaleController::MAX_QUANTITY, step: 1, required: true, aria: { label: "Quantity for #{product.title} #{variant.title}" }, class: 'input w-20' %>
+                  <%= submit_tag 'Add to preview', class: 'btn-primary btn-sm flex-1' %>
+                <% end %>
+              <% else %>
+                <p class="text-xs text-taupe"><%= @ambiguous_skus.include?(variant.sku) ? 'Conflicting SKU: resolve the catalog before adding.' : 'A supported catalog price is required.' %></p>
+              <% end %>
+            </div>
+          </article>
+        <% end %>
+      </div>
+      <% if @variants.empty? %><p class="card card-pad text-sm text-taupe">No active catalog variants match this search.</p><% end %>
+      <% if @pagy.pages > 1 %><div class="overflow-x-auto"><%== pagy_nav(@pagy) %></div><% end %>
+    </section>
+
+    <section class="card card-pad space-y-4 xl:sticky xl:top-4">
+      <h2 class="font-display text-xl text-ink">Preview cart</h2>
+      <p class="text-xs text-taupe">This tab keeps a draft cart while you search. Prices are checked by Rupert whenever the preview refreshes.</p>
+      <p role="status" aria-live="polite" class="text-sm text-mocha" data-pos-cart-target="status"><%= @quote_error %></p>
+      <%= form_tag quote_point_of_sale_path, method: :post, class: 'space-y-4', data: { pos_cart_target: 'form', action: 'submit->pos-cart#quote', busy: false, turbo: false } do %>
+        <div class="space-y-3" data-pos-cart-target="items">
+          <% (@quote&.dig(:lines) || []).each_with_index do |line, index| %>
+            <div class="rounded-xl border border-fog p-3" data-variant-id="<%= line[:variant_id] %>">
+              <% if line[:thumbnail_url] %><%= image_tag line[:thumbnail_url], alt: line[:product_title], class: 'h-16 w-16 rounded-lg object-contain' %><% end %>
+              <p class="text-sm font-medium"><%= line[:product_title] %> · <%= line[:title] %></p>
+              <%= hidden_field_tag "items[#{index}][variant_id]", line[:variant_id] %>
+              <%= number_field_tag "items[#{index}][quantity]", line[:quantity], min: 1, max: 999, step: 1, required: true, class: 'input mt-2 w-24', aria: { label: "Cart quantity for #{line[:product_title]}" } %>
+              <p class="mt-2 text-sm"><%= number_with_precision(line[:unit_price], precision: 2) %> each · <%= number_with_precision(line[:line_total], precision: 2) %></p>
+            </div>
+          <% end %>
+        </div>
+        <fieldset class="space-y-3 rounded-xl bg-haze p-3">
+          <legend class="text-sm font-semibold text-ink">Optional tip</legend>
+          <p class="text-xs text-mocha">Choose what feels right. This is a preview; no tip is collected.</p>
+          <div>
+            <%= label_tag :tip_type, 'Tip choice', class: 'mb-1 block text-sm' %>
+            <%= select_tag :tip_type, options_for_select([['No tip', 'none'], ['Percentage', 'percentage'], ['Custom amount', 'custom']], @quote&.dig(:tip_type) || 'none'), class: 'input', data: { pos_cart_target: 'tipType', action: 'change->pos-cart#tipChanged' } %>
+          </div>
+          <div data-pos-cart-target="percentageFields">
+            <%= label_tag :tip_percentage, 'Tip percentage', class: 'mb-1 block text-sm' %>
+            <% selected_percentage = (@quote&.dig(:tip_percentage) || '15').to_f.to_s.sub(/\.0\z/, '') %>
+            <% percentage_options = (%w[10 15 20] | [selected_percentage]).map { |value| ["#{value}%", value] } %>
+            <%= select_tag :tip_percentage, options_for_select(percentage_options, selected_percentage), class: 'input', data: { pos_cart_target: 'tipPercentage', action: 'change->pos-cart#tipChanged' } %>
+          </div>
+          <div data-pos-cart-target="amountFields">
+            <%= label_tag :tip_amount, 'Custom tip in catalog currency', class: 'mb-1 block text-sm' %>
+            <%= number_field_tag :tip_amount, @quote&.dig(:tip_type) == 'custom' ? @quote[:tip_amount] : '0.00', min: 0, max: 999999.99, step: '0.01', class: 'input', data: { pos_cart_target: 'tipAmount', action: 'change->pos-cart#tipChanged' } %>
+          </div>
+        </fieldset>
+        <div class="space-y-2 border-t border-fog pt-3">
+          <p class="flex justify-between text-sm"><span>Catalog subtotal</span><span data-pos-cart-target="subtotal"><%= @quote ? number_with_precision(@quote[:subtotal], precision: 2) : '—' %></span></p>
+          <p class="flex justify-between text-sm"><span>Tip preview</span><span data-pos-cart-target="tip"><%= @quote ? number_with_precision(@quote[:tip_amount], precision: 2) : '—' %></span></p>
+          <p class="flex justify-between font-semibold"><span>Preview total before tax</span><span data-pos-cart-target="previewTotal"><%= @quote ? number_with_precision(@quote[:preview_total], precision: 2) : '—' %></span></p>
+        </div>
+        <p class="text-xs text-taupe">Tax is excluded. Payment, fulfillment and final availability are pending.</p>
+        <div class="flex flex-wrap gap-2">
+          <%= submit_tag 'Refresh preview', class: 'btn-primary' %>
+          <button type="button" class="btn-ghost" data-action="pos-cart#clear">Clear cart</button>
+        </div>
+      <% end %>
+    </section>
+  </div>
+</div>

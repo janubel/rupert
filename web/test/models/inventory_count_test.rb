@@ -95,4 +95,16 @@ class InventoryCountTest < ActiveSupport::TestCase
     assert_equal 'Widget - Small', @item.inventory_title
     assert_includes @item.inventory_thumbnail, 'https://cdn.shopify.com/s/files/1/x/widget.jpg'
   end
+
+  test 'count quantities validate raw whole numbers and the shared database integer limit' do
+    [nil, '', 'not a number', '1.5', '-1', '2147483648', '999999999999999999999999999999999999'].each do |quantity|
+      @item.quantity = quantity
+      refute @item.valid?, "expected #{quantity.inspect} to be rejected"
+      assert @item.errors.added?(:quantity, :not_a_number) || @item.errors[:quantity].any?
+    end
+    [0, 2_147_483_647].each do |quantity|
+      @item.quantity = quantity
+      assert @item.valid?, @item.errors.full_messages.to_sentence
+    end
+  end
 end

@@ -40,6 +40,17 @@ Rails.application.routes.draw do
     end
   end
 
+  namespace :api do
+    namespace :v1 do
+      get :catalog, to: 'catalog#index'
+      get :inventory, to: 'inventory#index'
+      get :roadmap, to: 'roadmap#index'
+    end
+  end
+  resources :api_access_tokens, only: %i[index create] do
+    member { post :revoke }
+  end
+
   mount ShopifyApp::Engine, at: '/api'
 
   get '/search', to: 'search#index', as: :search
@@ -160,15 +171,37 @@ Rails.application.routes.draw do
   end
   resources :inventory_counts do
     member do
+      get :scan, to: 'inventory_count_scans#show'
+      get :lookup, to: 'inventory_count_scans#lookup'
+      post :record_scan, to: 'inventory_count_scans#create'
       post :submit
       post :approve
       post :reject
       post :reopen
     end
   end
+  resources :stock_reservations, only: %i[index new create] do
+    member { post :release }
+  end
+  resources :bulk_materials, only: %i[index new create show] do
+    get :export, on: :collection
+    resources :bulk_lots, only: %i[new create show] do
+      resources :bulk_movements, only: :create
+    end
+  end
+  get '/point_of_sale', to: 'point_of_sale#index', as: :point_of_sale
+  post '/point_of_sale/quote', to: 'point_of_sale#quote', as: :quote_point_of_sale
+  get '/time_clock', to: 'time_clock#index', as: :time_clock
+  post '/time_clock/clock_in', to: 'time_clock#clock_in', as: :clock_in_time_clock
+  post '/time_clock/clock_out', to: 'time_clock#clock_out', as: :clock_out_time_clock
+  post '/time_clock/shifts/:id/correction', to: 'time_clock#request_correction', as: :request_correction_time_clock
+  post '/time_clock/corrections/:id/approve', to: 'time_clock#approve_correction', as: :approve_correction_time_clock
+  post '/time_clock/corrections/:id/reject', to: 'time_clock#reject_correction', as: :reject_correction_time_clock
+  get '/time_clock/commissions', to: 'time_clock#commissions', as: :commission_preview_time_clock
   resources :reconcile, only: :index
   resources :reports, only: [:index] do
     collection do
+      get :register_summary
       get :sales
       get :financial
       get :inventory

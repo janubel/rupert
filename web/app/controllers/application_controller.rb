@@ -22,6 +22,11 @@ class ApplicationController < ActionController::Base
   end
 
   def require_login
+    if Current.user && !Current.user.active?
+      session.delete(:user_id)
+      Current.user = nil
+      return redirect_to(login_path, alert: 'This account has been deactivated. Contact an admin.')
+    end
     return redirect_to(setup_path) if Current.user.nil? && !Tenant.exists?
 
     redirect_to(login_path, alert: 'Please sign in') unless Current.user
