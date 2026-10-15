@@ -23,7 +23,7 @@ class CatalogSyncer
         nodes {
           id title tags status handle publishedAt totalInventory
           featuredImage { url altText }
-          variants(first: 100) { nodes { id title sku price inventoryQuantity inventoryItem { id tracked } } }
+          variants(first: 100) { pageInfo { hasNextPage endCursor } nodes { id title sku price inventoryQuantity inventoryItem { id tracked } } }
         }
       }
     }
@@ -36,8 +36,36 @@ class CatalogSyncer
   # cost well under the limit.
   LEVELS_BATCH = 30
 
+  # Fully paginated: a fixed `first: N` silently dropped locations (and so their
+  # stock) beyond the cap. Every connection below is followed to exhaustion.
   LOCATIONS_QUERY = <<~GRAPHQL
-    query Locations { locations(first: 10) { nodes { id name isActive } } }
+    query Locations($cursor: String) {
+      locations(first: 50, after: $cursor) { pageInfo { hasNextPage endCursor } nodes { id name isActive } }
+    }
+  GRAPHQL
+
+  # Variants beyond a product's first 100 (Shopify allows 2048 per product).
+  PRODUCT_VARIANTS_QUERY = <<~GRAPHQL
+    query ProductVariants($id: ID!, $cursor: String) {
+      product(id: $id) {
+        variants(first: 100, after: $cursor) {
+          pageInfo { hasNextPage endCursor }
+          nodes { id title sku price inventoryQuantity inventoryItem { id tracked } }
+        }
+      }
+    }
+  GRAPHQL
+
+  # Levels beyond an item's first page of locations.
+  ITEM_LEVELS_QUERY = <<~GRAPHQL
+    query ItemLevels($id: ID!, $cursor: String) {
+      inventoryItem(id: $id) {
+        inventoryLevels(first: 50, after: $cursor) {
+          pageInfo { hasNextPage endCursor }
+          nodes { location { id } quantities(names: ["available"]) { name quantity } }
+        }
+      }
+    }
   GRAPHQL
 
   # Paginates every order matching the query, so the sync captures the full
@@ -124,7 +152,28 @@ class CatalogSyncer
 
         cursor = info['endCursor']
       end
-      nodes
+      nodes.each { |product| complete_variants!(product) }
+    end
+
+    # Follows a product's variant connection past its first page so large
+    # products are never silently truncated.
+    def complete_variants!(product)
+      connection = product['variants'] || {}
+      info = connection['pageInfo'] || {}
+      return product unless info['hasNextPage'] && info['endCursor']
+
+      all = Array(connection['nodes'])
+      cursor = info['endCursor']
+      loop do
+        page = ShopifyClient.graphql(PRODUCT_VARIANTS_QUERY, { id: product['id'], cursor: cursor }).dig('product', 'variants') || {}
+        all.concat(Array(page['nodes']))
+        next_info = page['pageInfo'] || {}
+        break unless next_info['hasNextPage'] && next_info['endCursor']
+
+        cursor = next_info['endCursor']
+      end
+      product['variants'] = { 'nodes' => all, 'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } }
+      product
     end
 
     # Per-location "available" levels for the given inventory item ids, keyed
@@ -139,17 +188,30 @@ class CatalogSyncer
           item = data["v#{i}"]
           next if item.nil?
 
-          result[id] += Array(item.dig('inventoryLevels', 'nodes'))
+          levels = item['inventoryLevels'] || {}
+          result[id] += Array(levels['nodes'])
+          result[id] += remaining_levels(id, levels.dig('pageInfo', 'endCursor')) if levels.dig('pageInfo', 'hasNextPage')
         end
       end
       result
+    end
+
+    # Levels for one item beyond the first page of the batched lookup.
+    def remaining_levels(item_id, cursor)
+      nodes = []
+      while cursor
+        page = ShopifyClient.graphql(ITEM_LEVELS_QUERY, { id: item_id, cursor: cursor }).dig('inventoryItem', 'inventoryLevels') || {}
+        nodes.concat(Array(page['nodes']))
+        cursor = page.dig('pageInfo', 'hasNextPage') ? page.dig('pageInfo', 'endCursor') : nil
+      end
+      nodes
     end
 
     def levels_query(count)
       variables = (0...count).map { |i| "$v#{i}: ID!" }.join(', ')
       fields = (0...count).map do |i|
         <<~G.squish
-          v#{i}: inventoryItem(id: $v#{i}) { id inventoryLevels(first: 10) { nodes { location { id } quantities(names: ["available"]) { name quantity } } } }
+          v#{i}: inventoryItem(id: $v#{i}) { id inventoryLevels(first: 10) { pageInfo { hasNextPage endCursor } nodes { location { id } quantities(names: ["available"]) { name quantity } } } }
         G
       end.join(' ')
       "query Levels(#{variables}) { #{fields} }"
@@ -173,7 +235,17 @@ class CatalogSyncer
     end
 
     def fetch_locations
-      ShopifyClient.graphql(LOCATIONS_QUERY, {})['locations']['nodes']
+      nodes = []
+      cursor = nil
+      loop do
+        page = ShopifyClient.graphql(LOCATIONS_QUERY, { cursor: cursor })['locations']
+        nodes.concat(page['nodes'] || [])
+        info = page['pageInfo'] || {}
+        break unless info['hasNextPage'] && info['endCursor']
+
+        cursor = info['endCursor']
+      end
+      nodes
     end
 
     def sync_locations!(nodes)

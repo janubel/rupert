@@ -178,4 +178,39 @@ class CatalogSyncerTest < ActiveSupport::TestCase
     Setting.where(key: 'SHOPIFY_LOCATION_ID').delete_all
     EnvStore.instance_variable_set(:@cache, {}) if EnvStore.instance_variable_defined?(:@cache)
   end
+
+  test 'paginate_products follows variants beyond the first 100 of a product' do
+    first_variants = [{ 'id' => 'v1' }, { 'id' => 'v2' }]
+    page = { 'products' => { 'nodes' => [{ 'id' => 'p1', 'variants' => {
+      'nodes' => first_variants, 'pageInfo' => { 'hasNextPage' => true, 'endCursor' => 'vc1' } } }],
+                             'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } } }
+    more = { 'product' => { 'variants' => { 'nodes' => [{ 'id' => 'v3' }],
+                                            'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } } } }
+    ShopifyClient.stubs(:graphql).returns(page).then.returns(more)
+
+    product = CatalogSyncer.send(:paginate_products).first
+
+    assert_equal(%w[v1 v2 v3], product.dig('variants', 'nodes').map { |v| v['id'] })
+  end
+
+  test 'fetch_locations follows every page instead of stopping at a fixed count' do
+    page1 = { 'locations' => { 'nodes' => [{ 'id' => 'l1' }], 'pageInfo' => { 'hasNextPage' => true, 'endCursor' => 'c1' } } }
+    page2 = { 'locations' => { 'nodes' => [{ 'id' => 'l2' }], 'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } } }
+    ShopifyClient.stubs(:graphql).returns(page1).then.returns(page2)
+
+    assert_equal(%w[l1 l2], CatalogSyncer.send(:fetch_locations).map { |l| l['id'] })
+  end
+
+  test 'fetch_inventory_levels follows an items locations past the first page' do
+    item = 'gid://shopify/InventoryItem/1'
+    batch = { 'v0' => { 'id' => item, 'inventoryLevels' => {
+      'nodes' => [{ 'location' => { 'id' => 'l1' } }], 'pageInfo' => { 'hasNextPage' => true, 'endCursor' => 'lc1' } } } }
+    rest = { 'inventoryItem' => { 'inventoryLevels' => {
+      'nodes' => [{ 'location' => { 'id' => 'l2' } }], 'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } } } }
+    ShopifyClient.stubs(:graphql).returns(batch).then.returns(rest)
+
+    levels = CatalogSyncer.send(:fetch_inventory_levels, [item])
+
+    assert_equal(%w[l1 l2], levels[item].map { |n| n.dig('location', 'id') })
+  end
 end
