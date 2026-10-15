@@ -69,6 +69,9 @@ class ModuleRegistry
     }, permission: 'settings.read', position: 81),
     Entry.new(key: 'sync', name: 'Sync', path: -> { syncs_path }, permission: 'sync.read', position: 90),
     Entry.new(key: 'system', name: 'System', path: -> { system_path }, permission: 'system.read', position: 95),
+    Entry.new(key: 'pos_connections', name: 'POS & payments', path: lambda {
+      pos_connections_path
+    }, permission: 'settings.read', position: 94),
     Entry.new(key: 'connections', name: 'Connections', path: lambda {
       connections_path
     }, permission: 'settings.read', position: 94),
@@ -146,7 +149,7 @@ class ModuleRegistry
       { key: 'team', name: 'Team',
         modules: %w[accounts employees departments positions time_clock timesheets leave payroll permissions] },
       { key: 'system', name: 'System',
-        modules: %w[system connections sync settings warehouse activity access_log api_access_tokens roadmap] }
+        modules: %w[system connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap] }
     ].freeze
 
     def area_key_for(module_key)

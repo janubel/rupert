@@ -454,7 +454,7 @@
       "area": "System",
       "name": "Public API and integrations",
       "status": "Partial",
-      "scope": "Versioned tenant-scoped read API for catalog, inventory and roadmap; scoped, expiring, revocable hashed tokens. Write APIs, webhooks and connector-specific adapters remain planned.",
+      "scope": "Versioned tenant-scoped read API for catalog, inventory and roadmap; scoped, expiring, revocable hashed tokens. Provider setup and KORONA/Cova read checks are separate from write APIs, webhooks and business-data adapters still planned.",
       "evidence": "docs/api-v1.md",
       "phase": "1"
     },
@@ -544,8 +544,17 @@
       "area": "Commerce",
       "name": "Processor and terminal integration",
       "status": "Planned",
-      "scope": "Verify Valmar/selected gateway, supported terminal and merchant-specific approval, then sandbox sale/tip/refund/settlement round trips. Existing source mirrors and CSV imports do not prove terminal compatibility.",
-      "evidence": "docs/ops/pos-parity.md",
+      "scope": "Account/gateway preparation exists separately; payment capture and terminal execution remain planned. Confirm actual Valmar gateway, approved terminal and merchant access, then sandbox sale/tip/refund/settlement round trips.",
+      "evidence": "docs/ops/payment-integrations.md",
+      "phase": "1"
+    },
+    {
+      "id": "F58",
+      "area": "System",
+      "name": "POS and payment account setup",
+      "status": "Available",
+      "scope": "Tenant-scoped setup for the named providers, encrypted dedicated KORONA/Cova API credentials and explicit read-access checks; vendor-access tracking and existing CSV/static-token paths. No payment capture or automatic business-data import.",
+      "evidence": "web/app/controllers/pos_connections_controller.rb",
       "phase": "1"
     }
   ]

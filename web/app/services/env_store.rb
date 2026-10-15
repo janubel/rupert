@@ -63,14 +63,15 @@ module EnvStore
   end
 
   def self.all_scoped
-    RequestStore.fetch(:env_store_all) do
-      Setting.where(key: MANAGED_KEYS, tenant_id: Current.tenant_id)
-             .index_by(&:key)
+    tenant_id = Current.tenant_id
+    maps = RequestStore.fetch(:env_store_all_by_tenant) { {} }
+    maps.fetch(tenant_id) do
+      maps[tenant_id] = Setting.where(key: MANAGED_KEYS, tenant_id: tenant_id).index_by(&:key)
     end
   end
 
   def self.clear_cache!
-    RequestStore.delete(:env_store_all)
+    RequestStore.fetch(:env_store_all_by_tenant) { {} }.delete(Current.tenant_id)
   end
 
   # Write a managed key into the tenant settings (nil removes it).

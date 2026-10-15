@@ -29,7 +29,7 @@
       <h2 class="font-display text-xl text-ink">Import SwipeSimple sales (CSV)</h2>
       <p class="mt-2 text-xs text-taupe">SwipeSimple has no public API, so sales come in through the CSV export from its Reporting Dashboard. Imports are idempotent — running the same file again won't duplicate anything.</p>
 
-      <%= form_tag import_swipesimple_syncs_path, method: :post, multipart: true, class: "mt-4 space-y-3" do %>
+      <%= form_tag import_swipesimple_syncs_path, id: "swipesimple", method: :post, multipart: true, class: "mt-4 space-y-3" do %>
         <div class="flex flex-wrap items-center gap-3">
           <label class="btn-ghost cursor-pointer">
             Choose CSV file

@@ -227,6 +227,12 @@ Rails.application.routes.draw do
   end
   get '/system', to: 'system#index', as: :system
   get '/connections', to: 'connections#index', as: :connections
+  resources :pos_connections, only: %i[index show update], param: :provider do
+    member do
+      post :check_access
+      post :disconnect
+    end
+  end
   get '/activity', to: 'activity#index', as: :activity
   resources :access_logs, only: :index
   get '/live/sync_status', to: 'live#sync_status'

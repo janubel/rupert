@@ -745,7 +745,7 @@
     {
       "name": "External integrations / automation",
       "rupert": "Partial",
-      "scope": "Existing source sync, Google backup, Buzz agent; public API planned",
+      "scope": "Existing Shopify/Square source mirrors, SwipeSimple CSV, scoped Rupert read API, provider setup and KORONA/Cova read-access checks; payment capture and new automatic data adapters remain pending",
       "phase": "4",
       "competitors": {
         "odoo": "Integration / companion",
@@ -1419,12 +1419,16 @@
       "category": "Payment provider / gateway candidate",
       "url": "https://vlmr.com/merchant-services/",
       "reviewed": "2026-10-15",
-      "scope": "Official material describes a gateway, card/ACH services, integration tools and reconciliation exports.",
-      "caveat": "Candidate for a Rupert payment adapter, not an ERP competitor. The existing merchant account, supported products, Shopify gateway path, terminal compatibility and underwriting approval require provider confirmation; no account approval is inferred.",
+      "scope": "Provider setup records merchant/gateway details. Official guides cover multiple gateway paths including Authorize.net, NMI and SwipeSimple; no single API is inferred.",
+      "caveat": "The merchant account's actual gateway, API access, terminal compatibility and permitted products require confirmation. Rupert preparation does not enable processing.",
       "sources": [
         {
           "title": "Merchant services and gateway overview",
           "url": "https://vlmr.com/merchant-services/"
+        },
+        {
+          "title": "Official gateway knowledge base",
+          "url": "https://vlmr.com/knowledge-base/"
         }
       ]
     },
