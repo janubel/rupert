@@ -5,7 +5,7 @@
       <h1 class="page-title">Manual count sheet</h1>
       <p class="mt-1 text-sm text-mocha">
         <% if @prepared %>
-          Every SKU is pre-filled with its current system quantity. Fill in the <em>Counted</em> column with what's physically on hand, then submit for approval.
+          Unambiguous stored stock rows at one platform location are pre-filled. Fill in the <em>Counted</em> column with what's physically on hand, then submit for approval.
         <% else %>
           Record what's physically on hand per SKU. Approved counts are kept as audit worksheets — they do not change inventory (Square is the source of truth until Rupert takes over).
         <% end %>
@@ -13,12 +13,25 @@
     </div>
     <div class="flex items-center gap-2">
       <% if @prepared %>
-        <%= link_to "Start blank sheet", new_inventory_count_path(prepared: 0), class: "btn-ghost btn-sm" %>
+        <%= link_to "Start blank sheet", new_inventory_count_path(prepared: 0, location_id: count.locationId), class: "btn-ghost btn-sm" %>
       <% else %>
-        <%= link_to "Prepared sheet", new_inventory_count_path, class: "btn-ghost btn-sm" %>
+        <%= link_to "Prepared sheet", new_inventory_count_path(location_id: count.locationId), class: "btn-ghost btn-sm" %>
       <% end %>
     </div>
   </section>
+
+  <% if @prepared %>
+    <%= form_tag new_inventory_count_path, method: :get, class: "card card-pad flex flex-wrap items-end gap-3" do %>
+      <%= hidden_field_tag :prepared, "1" %>
+      <%= hidden_field_tag :start_scanning, params[:start_scanning] %>
+      <div class="min-w-0 flex-1">
+        <%= label_tag :location_id, "Platform location for this sheet", class: "mb-1 block text-sm font-medium text-ink" %>
+        <%= select_tag :location_id, options_for_select(@locations.map { |loc| ["#{loc.source.titleize} · #{loc.name}", loc.id] }, count.locationId), include_blank: "Choose a location", class: "input" %>
+      </div>
+      <%= submit_tag "Load location sheet", class: "btn-ghost" %>
+    <% end %>
+    <p class="rounded-xl bg-haze px-4 py-3 text-sm text-mocha">Only unambiguous rows in the selected location's stored mirror appear. Missing rows are not zero stock. Shopify mirrors may contain available stock or a legacy aggregate assigned to the primary location; Square quantities are mirrored in-stock units. Sync completeness and freshness must be checked separately.</p>
+  <% end %>
 
   <%= form_tag inventory_counts_path, method: :post, class: "space-y-6", data: { controller: "count-sheet", action: "keydown->count-sheet#advanceOnEnter" } do %>
     <%= hidden_field_tag :start_scanning, params[:start_scanning] %>
@@ -31,12 +44,17 @@
         </div>
         <div>
           <label class="mb-1 block text-sm font-medium text-ink">Location <span class="text-taupe">(optional)</span></label>
+          <% if @prepared %>
+            <%= hidden_field_tag "inventory_count[locationId]", count.locationId %>
+            <p class="text-sm text-ink"><%= count.location ? "#{count.location.source.titleize} · #{count.location.name}" : "Choose a location above and load its sheet." %></p>
+          <% else %>
           <select name="inventory_count[locationId]" class="input">
             <option value="">— no specific location —</option>
             <% @locations.each do |loc| %>
-              <option value="<%= loc.id %>" <%= "selected" if count.locationId == loc.id %>><%= loc.name %></option>
+              <option value="<%= loc.id %>" <%= "selected" if count.locationId == loc.id %>><%= loc.source.titleize %> · <%= loc.name %></option>
             <% end %>
           </select>
+          <% end %>
         </div>
         <div>
           <label class="mb-1 block text-sm font-medium text-ink">Note <span class="text-taupe">(optional)</span></label>
@@ -66,9 +84,9 @@
               <% @count.items.each_with_index do |item, index| %>
                 <tr data-row>
                   <td class="td font-mono text-xs text-mocha"><%= item.sku %></td>
-                  <td class="td text-ink"><%= item.shopify_variant&.product&.title || "—" %></td>
-                  <td class="td text-mocha"><%= item.shopify_variant&.title || "—" %></td>
-                  <td class="td text-right text-mocha"><%= item.quantity %></td>
+                  <td class="td text-ink"><%= item.shopify_variant&.product&.title || item.square_variation&.item&.name || "—" %></td>
+                  <td class="td text-mocha"><%= item.shopify_variant&.title || item.square_variation&.name || "—" %></td>
+                  <td class="td text-right text-mocha"><%= item.previousQuantity %></td>
                   <td class="td">
                     <input type="number" name="items[<%= index %>][quantity]" min="0" value="<%= item.quantity %>"
                       class="input w-24 text-right" autocomplete="off" data-count-input>
@@ -80,7 +98,7 @@
           </table>
         </div>
         <p class="border-t border-fog px-5 py-3 text-xs text-taupe">
-          Tip: press <kbd class="rounded bg-haze px-1">Enter</kbd> to jump to the next row's count. Rows left at their system quantity record no change on approval.
+          Tip: press <kbd class="rounded bg-haze px-1">Enter</kbd> to jump to the next row's count. Confirm every physical count. Submission snapshots the stored mirror again; approval records the worksheet without changing platform stock.
         </p>
       </div>
     <% else %>

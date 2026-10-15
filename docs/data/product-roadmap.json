@@ -130,7 +130,7 @@
       "area": "Stock",
       "name": "Count approval workflow",
       "status": "Available",
-      "scope": "Local prepare/submit/approve/reject/reopen audit flow. Legacy manual variance can aggregate Shopify locations and ambiguous SKUs; exact pool comparisons and source application remain pending.",
+      "scope": "Local prepare/submit/approve/reject/reopen audit flow. New comparisons snapshot one stored platform/location/item row with identity and timestamp; missing or ambiguous pools have no delta. Historical sums remain labeled unverified. Native source/location provenance, mirror completeness and source application remain pending.",
       "evidence": "web/app/models/inventory_count.rb",
       "phase": "0"
     },

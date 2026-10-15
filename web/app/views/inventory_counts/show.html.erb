@@ -38,6 +38,8 @@
     </p>
   <% end %>
 
+  <p class="text-sm text-mocha">Comparisons use the stored mirror at submission for one platform, location and item. Missing or ambiguous pools have no numerical delta. A mirror comparison does not verify current platform stock, native location provenance or sync completeness. Legacy Shopify rows may contain an aggregate assigned to the primary location.</p>
+
   <div class="card overflow-hidden">
     <div class="card-pad pb-3">
       <h2 class="font-display text-xl text-ink">Counted items</h2>
@@ -48,7 +50,7 @@
           <tr>
             <th scope="col" class="th">Item</th>
             <th scope="col" class="th text-right">Counted</th>
-            <th scope="col" class="th text-right">System</th>
+            <th scope="col" class="th text-right">Mirrored stock</th>
             <th scope="col" class="th text-right">Delta</th>
             <th scope="col" class="th">Status</th>
           </tr>
@@ -75,7 +77,13 @@
                 </div>
               </td>
               <td class="td text-right font-medium text-ink"><%= item.quantity %></td>
-              <td class="td text-right text-mocha"><%= item.previousQuantity.presence || "—" %></td>
+              <td class="td text-right text-mocha">
+                <p><%= item.previousQuantity.presence || "—" %></p>
+                <p class="mt-1 max-w-xs text-xs text-taupe"><%= item.comparison_label %></p>
+                <% if item.comparison['status'] == 'matched' %>
+                  <p class="mt-1 text-xs text-taupe">Item <%= item.comparison['source_item_id'] %> · mirror <%= item.comparison['mirrored_at'] || "time unavailable" %></p>
+                <% end %>
+              </td>
               <td class="td text-right">
                 <% if item.delta.nil? %>
                   <span class="text-taupe">—</span>

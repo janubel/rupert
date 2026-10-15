@@ -71,7 +71,7 @@ class InventoryCountsTest < ActionDispatch::IntegrationTest
     )
 
     post inventory_counts_path, params: {
-      inventory_count: { countedAt: Time.current.strftime('%Y-%m-%dT%H:%M') },
+      inventory_count: { countedAt: Time.current.strftime('%Y-%m-%dT%H:%M'), locationId: location.id },
       items: [{ sku: 'WIDGET-S', quantity: '7' }]
     }
     count = InventoryCount.last
@@ -119,7 +119,7 @@ class InventoryCountsTest < ActionDispatch::IntegrationTest
     assert_equal 0, InventoryCount.count
   end
 
-  test 'prepared sheet pre-fills every linked SKU with its system total' do
+  test 'prepared sheet pre-fills the selected location mirror' do
     @product = ShopifyProduct.create!(id: 'prod-1', title: 'Widget', tenant_id: @tenant.id)
     variant = ShopifyVariant.create!(
       title: 'Widget - Small',
@@ -142,12 +142,31 @@ class InventoryCountsTest < ActionDispatch::IntegrationTest
       tenant_id: @tenant.id
     )
 
-    get new_inventory_count_path
+    get new_inventory_count_path(location_id: location.id)
     assert_response :success
     assert_select 'table#count-table'
     assert_select "input[name='items[0][sku]'][value='WIDGET-S']"
     assert_select "input[name='items[0][quantity]'][value='10']"
     assert_select 'td', /Widget/
+  end
+
+  test 'prepared sheet requires a location and blank counts may be saved without comparisons' do
+    get new_inventory_count_path
+    assert_response :success
+    assert_select 'select[name=location_id]'
+    assert_select 'p', /Choose a location above/
+    assert_select 'input[name="items[0][quantity]"]', count: 0
+    post inventory_counts_path, params: {
+      inventory_count: { countedAt: Time.current.strftime('%Y-%m-%dT%H:%M') },
+      items: [{ sku: 'UNKNOWN-1', quantity: '3' }]
+    }
+    count = InventoryCount.last
+    post submit_inventory_count_path(count)
+    assert count.reload.pending?
+    assert_nil count.items.first.previousQuantity
+    assert_nil count.items.first.delta
+    get inventory_count_path(count)
+    assert_select 'p', /Choose a platform location to compare stock/
   end
 
   test 'prepared sheet can be toggled to a blank sheet' do

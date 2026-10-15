@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_210000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -45,6 +45,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_200000) do
     t.string "sku", null: false
     t.string "squareVariationId"
     t.string "tenant_id"
+    t.text "comparison_snapshot"
     t.index ["countId"], name: "index_InventoryCountItem_on_countId"
     t.index ["tenant_id"], name: "index_InventoryCountItem_on_tenant_id"
   end

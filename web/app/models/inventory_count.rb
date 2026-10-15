@@ -51,20 +51,11 @@ class InventoryCount < ApplicationRecord
     items.where(applied: true)
   end
 
-  # Freeze the system's current totals so the count can be compared and later
-  # applied even if the SKU link changes. Called when the count is submitted.
+  # Freeze one local mirror pool and its identity when submitted. Unknown or
+  # ambiguous pools keep a reason and no numerical variance.
   def snapshot_previous!
-    items.find_each do |item|
-      link = SkuLink.find_by(sku: item.sku)
-      item.update!(
-        shopifyVariantId: link&.shopifyVariantId,
-        squareVariationId: link&.squareVariationId,
-        previousQuantity: if link&.shopifyVariantId.presence
-                            InventoryLevel.total_for_variant(link.shopifyVariantId)
-                          else
-                            0
-                          end
-      )
+    transaction do
+      InventoryCountComparison.capture_all!(self)
     end
     self
   end
