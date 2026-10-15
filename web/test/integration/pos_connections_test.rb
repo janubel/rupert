@@ -8,6 +8,8 @@ class PosConnectionsTest < ActionDispatch::IntegrationTest
     @owner = users(:regular_user)
     Current.tenant = @tenant
     login
+    @authorize_credentials = { api_login_id: 'sandbox-login', transaction_key: 'sandbox-key-1234' }
+    @nmi_credentials = { security_key: 'private-nmi-security-key' }
     @credentials = { api_url: 'https://167.koronacloud.com/web/api/v3',
       account_id: '11111111-2222-3333-4444-555555555555', api_username: 'dedicated-read-user', api_password: 'private-api-password' }
   end
@@ -218,6 +220,187 @@ class PosConnectionsTest < ActionDispatch::IntegrationTest
     assert_nil PosConnection.unscoped.find_by(tenant_id: @tenant.id)
   end
 
+  test 'Valmar gateway selection exposes only the selected dedicated API fields' do
+    patch pos_connection_path('valmar'), params: { pos_connection: { gateway: 'authorize_net' } }
+    assert_redirected_to pos_connection_path('valmar')
+    assert_empty current_connection('valmar').credential_values
+    get pos_connection_path('valmar')
+    assert_select 'input[name="pos_connection[credential_secret][api_login_id]"][maxlength="20"]'
+    assert_select 'input[name="pos_connection[credential_secret][transaction_key]"][maxlength="16"]'
+    assert_select 'input[name="pos_connection[credential_secret][security_key]"]', count: 0
+    assert_select 'button', text: 'Check API credentials', count: 0
+    assert_includes response.body, 'verifies API authentication only'
+  end
+
+  test 'Valmar gateway and credentials save together without calls or legacy checkout changes' do
+    PaymentProviders::AuthorizeNetCheck.expects(:call).never
+    PaymentProviders::NmiCheck.expects(:call).never
+    AuthorizeNetClient.expects(:charge!).never
+    EnvStore.expects(:set).never
+    assert_no_enqueued_jobs { save_valmar }
+    assert_redirected_to pos_connection_path('valmar')
+    connection = current_connection('valmar')
+    assert_equal 'authorize_net', connection.check_kind
+    assert connection.credentials_saved?
+    assert_equal @authorize_credentials.stringify_keys, connection.credential_values
+    raw = PosConnection.connection.select_value("SELECT credentials_json FROM pos_connections WHERE id = #{connection.id}")
+    @authorize_credentials.each_value { |value| assert_not_includes raw, value }
+    get pos_connection_path('valmar')
+    assert_select 'input[type="password"]', count: 2
+    assert_select 'input[type="password"][value]', count: 0
+    assert_select 'button', text: 'Check API credentials'
+    @authorize_credentials.each_value { |value| assert_not_includes response.body, value }
+  end
+
+  test 'Valmar private API fields never appear in request instrumentation or validation responses' do
+    captured = []
+    subscriber = ActiveSupport::Notifications.subscribe('start_processing.action_controller') do |_name, _start, _finish, _id, payload|
+      captured << payload[:params] if payload[:controller] == 'PosConnectionsController'
+    end
+    save_valmar
+    save_valmar(gateway: 'nmi', credentials: @nmi_credentials)
+    serialized = captured.to_json
+    assert_includes serialized, '[FILTERED]'
+    [*@authorize_credentials.values, *@nmi_credentials.values].each { |value| assert_not_includes serialized, value }
+    get pos_connection_path('valmar')
+    assert_select 'input[type="password"]', count: 1
+    assert_select 'input[type="password"][value]', count: 0
+    assert_select 'button', text: 'Check merchant profile'
+    assert_includes response.body, 'shared NMI demo account does not support'
+    assert_not_includes response.body, @nmi_credentials[:security_key]
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
+  end
+
+  test 'Valmar Authorize net limits and vendor approval are required before credentials persist' do
+    PaymentProviders::AuthorizeNetCheck.expects(:call).never
+    [@authorize_credentials.merge(api_login_id: 'a' * 21), @authorize_credentials.merge(transaction_key: 'b' * 17)].each do |credentials|
+      assert_no_difference -> { PosConnection.unscoped.count } do
+        save_valmar(credentials: credentials)
+        assert_response :unprocessable_entity
+      end
+      credentials.each_value { |value| assert_not_includes response.body, value }
+    end
+    save_valmar(approved: false)
+    assert_response :unprocessable_entity
+    assert_nil PosConnection.unscoped.find_by(tenant_id: @tenant.id, provider: 'valmar')
+  end
+
+  test 'gateway and environment rotation discard all earlier secrets and verification' do
+    save_valmar
+    connection = current_connection('valmar')
+    connection.update!(last_check_status: 'verified', last_checked_at: Time.current)
+    patch pos_connection_path('valmar'), params: { pos_connection: { gateway: 'nmi' } }
+    assert_redirected_to pos_connection_path('valmar')
+    assert_empty connection.reload.credential_values
+    assert_nil connection.last_check_status
+    save_valmar(gateway: 'nmi', credentials: @nmi_credentials)
+    patch pos_connection_path('valmar'), params: { pos_connection: { environment: 'production',
+      credential_secret: { security_key: 'new-production-security-key' } } }
+    assert_response :redirect
+    assert_equal({ 'security_key' => 'new-production-security-key' }, connection.reload.credential_values)
+    patch pos_connection_path('valmar'), params: { pos_connection: { gateway: 'authorize_net', environment: 'sandbox',
+      credential_secret: @authorize_credentials } }
+    assert_response :redirect
+    assert_equal @authorize_credentials.stringify_keys, connection.reload.credential_values
+    patch pos_connection_path('valmar'), params: { pos_connection: { environment: 'production',
+      credential_secret: { api_login_id: 'production-login' } } }
+    assert_response :unprocessable_entity
+    assert_equal 'sandbox', connection.reload.environment
+    assert_equal @authorize_credentials.stringify_keys, connection.credential_values
+    patch pos_connection_path('valmar'), params: { pos_connection: { environment: 'production' } }
+    assert_response :redirect
+    assert_empty connection.reload.credential_values
+  end
+
+  test 'unsupported gateways cannot accept secrets or dispatch a speculative check' do
+    PaymentProviders::AuthorizeNetCheck.expects(:call).never
+    PaymentProviders::NmiCheck.expects(:call).never
+    PaymentProviders::CovaCheck.expects(:call).never
+    %w[unconfirmed other swipesimple].each do |gateway|
+      save_valmar(gateway: gateway, credentials: @authorize_credentials.merge(@nmi_credentials))
+      assert_response :redirect
+      assert_empty current_connection('valmar').credential_values
+      assert_nil current_connection('valmar').check_kind
+      post check_access_pos_connection_path('valmar')
+      assert_response :redirect
+      assert_match(/approved API credentials/, flash[:alert])
+      get pos_connection_path('valmar')
+      assert_select 'input[name*="credential_secret"]', count: 0
+    end
+  end
+
+  test 'selected gateway checker receives saved credentials and environment only' do
+    save_valmar
+    PaymentProviders::AuthorizeNetCheck.expects(:call).with(credentials: @authorize_credentials.stringify_keys, environment: 'sandbox')
+      .returns(status: 'verified', message: 'Authorize.net API credentials verified. Payments are not enabled.')
+    AuthorizeNetClient.expects(:charge!).never
+    EnvStore.expects(:set).never
+    post check_access_pos_connection_path('valmar')
+    assert_response :redirect
+    assert_equal 'API credentials checked', current_connection('valmar').status_label
+    get pos_connection_path('valmar')
+    assert_includes response.body, 'API checks do not establish payment or terminal readiness'
+    save_valmar(gateway: 'nmi', credentials: @nmi_credentials, environment: 'production')
+    PaymentProviders::NmiCheck.expects(:call).with(credentials: @nmi_credentials.stringify_keys, environment: 'production')
+      .returns(status: 'verified', message: 'NMI merchant-profile read access verified. Payments are not enabled.')
+    post check_access_pos_connection_path('valmar')
+    assert_response :redirect
+    assert_equal 'Merchant profile read access checked', current_connection('valmar').status_label
+  end
+
+  test 'gateway or environment changes during a check reject the stale result' do
+    %i[gateway environment].each do |changed|
+      save_valmar
+      stub_request(:post, 'https://apitest.authorize.net/xml/v1/request.api').to_return do
+        connection = current_connection('valmar')
+        connection.apply_setup(changed == :gateway ? { gateway: 'nmi' } : { environment: 'production' }, {})
+        connection.save!
+        { status: 200, body: { messages: { resultCode: 'Ok', message: [{ code: 'I00001' }] } }.to_json }
+      end
+      post check_access_pos_connection_path('valmar')
+      assert_response :redirect
+      assert_match(/changed during/, flash[:alert])
+      assert_empty current_connection('valmar').credential_values
+      assert_nil current_connection('valmar').last_check_status
+    end
+  end
+
+  test 'invalid edits cannot display or persist verification for unsaved gateway values' do
+    save_valmar
+    connection = current_connection('valmar')
+    connection.update!(last_check_status: 'verified', last_check_message: 'Original authentication checked.', last_checked_at: Time.current)
+    patch pos_connection_path('valmar'), params: { pos_connection: { gateway: 'nmi', credential_secret: { security_key: "invalid\nsecurity-key" } } }
+    assert_response :unprocessable_entity
+    assert_includes response.body, 'Setup changes not saved'
+    assert_not_includes response.body, 'Merchant profile read access checked'
+    assert_not_includes response.body, 'Original authentication checked.'
+    assert_select 'button', text: 'Check merchant profile', count: 0
+    assert_select 'input[placeholder="Saved · leave blank to keep"]', count: 0
+    assert_equal 'authorize_net', connection.reload.gateway
+    assert_equal @authorize_credentials.stringify_keys, connection.credential_values
+    assert_equal 'verified', connection.last_check_status
+  end
+
+  test 'Valmar checking and secret writes stay tenant scoped and permission guarded' do
+    other = Tenant.create!(name: 'Other Valmar merchant', subdomain: 'other-valmar-merchant')
+    foreign = PosConnection.unscoped.create!(tenant: other, provider: 'valmar', gateway: 'authorize_net', vendor_approved: true,
+      credentials_json: @authorize_credentials.to_json)
+    PaymentProviders::AuthorizeNetCheck.expects(:call).never
+    post check_access_pos_connection_path('valmar'), params: { tenant_id: other.id, id: foreign.id }
+    assert_response :redirect
+    assert_nil foreign.reload.last_checked_at
+    save_valmar
+    version = current_connection('valmar').lock_version
+    @owner.update_permission_overrides!(['settings.read'])
+    post check_access_pos_connection_path('valmar')
+    assert_response :redirect
+    patch pos_connection_path('valmar'), params: { pos_connection: { gateway: 'nmi', credential_secret: @nmi_credentials } }
+    assert_response :redirect
+    assert_equal version, current_connection('valmar').lock_version
+    assert_equal @authorize_credentials.stringify_keys, current_connection('valmar').credential_values
+  end
+
   private
 
   def login
@@ -227,6 +410,11 @@ class PosConnectionsTest < ActionDispatch::IntegrationTest
 
   def current_connection(provider = 'korona')
     PosConnection.unscoped.find_by!(tenant_id: @tenant.id, provider: provider)
+  end
+
+  def save_valmar(gateway: 'authorize_net', credentials: @authorize_credentials, environment: 'sandbox', approved: true)
+    patch pos_connection_path('valmar'), params: { pos_connection: { gateway: gateway, environment: environment,
+      vendor_approved: approved, credential_secret: credentials } }
   end
 
   def save_korona(credentials: @credentials, approved: true)

@@ -28,11 +28,13 @@ class PosConnectionsController < AuthenticatedController
   end
 
   def check_access
-    unless @provider[:mode] == 'api' && @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
-      return redirect_to pos_connection_path(@provider[:key]), alert: 'Save approved API credentials before checking read access.'
+    unless @connection.check_kind && @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
+      return redirect_to pos_connection_path(@provider[:key]), alert: 'Save approved API credentials before checking API access.'
     end
     setup_version = @connection.lock_version
-    result = checker.call(credentials: @connection.credential_values)
+    arguments = { credentials: @connection.credential_values }
+    arguments[:environment] = @connection.environment if %w[authorize_net nmi].include?(@connection.check_kind)
+    result = checker.call(**arguments)
     # A single conditional write avoids SQLite deferred read-to-write upgrades.
     # No database transaction is held while the provider request is in flight.
     updated = PosConnection.where(id: @connection.id, lock_version: setup_version).update_all(
@@ -84,8 +86,11 @@ class PosConnectionsController < AuthenticatedController
   end
 
   def setup_params
-    params.require(:pos_connection).permit(:environment, :account_reference, :access_requested, :vendor_approved, :lock_version,
-      *(@provider[:key] == 'valmar' ? [:gateway] : []), credential_secret: @provider[:credentials])
+    requested = params.require(:pos_connection)
+    gateway = @provider[:key] == 'valmar' ? requested.fetch(:gateway, @connection.gateway) : @connection.gateway
+    keys = PosProviderCatalog.credential_keys(@provider[:key], gateway: gateway)
+    requested.permit(:environment, :account_reference, :access_requested, :vendor_approved, :lock_version,
+      *(@provider[:key] == 'valmar' ? [:gateway] : []), credential_secret: keys)
   end
 
   def handle_busy_database(error)
@@ -95,6 +100,12 @@ class PosConnectionsController < AuthenticatedController
   end
 
   def checker
-    @provider[:key] == 'korona' ? PaymentProviders::KoronaCheck : PaymentProviders::CovaCheck
+    case @connection.check_kind
+    when 'korona' then PaymentProviders::KoronaCheck
+    when 'cova' then PaymentProviders::CovaCheck
+    when 'authorize_net' then PaymentProviders::AuthorizeNetCheck
+    when 'nmi' then PaymentProviders::NmiCheck
+    else raise ActiveRecord::RecordNotFound
+    end
   end
 end

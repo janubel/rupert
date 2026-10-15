@@ -20,10 +20,22 @@ class PosConnection < ApplicationRecord
   validates :account_reference, length: { maximum: 200 }
   validates :last_check_status, inclusion: { in: %w[verified failed] }, allow_nil: true
   validate :valid_credentials
-  before_save :invalidate_check_on_setup_change
+  before_validation :invalidate_check_on_setup_change
 
   def definition
     PosProviderCatalog.find(provider)
+  end
+
+  def credential_keys
+    PosProviderCatalog.credential_keys(provider, gateway: gateway)
+  end
+
+  def check_kind
+    PosProviderCatalog.check_kind(provider, gateway: gateway)
+  end
+
+  def gateway_details
+    PosProviderCatalog.gateway_details(provider, gateway: gateway)
   end
 
   def credential_values
@@ -36,8 +48,8 @@ class PosConnection < ApplicationRecord
   def apply_setup(attributes, submitted_credentials)
     previous = credential_values
     assign_attributes(attributes)
-    previous = {} if environment_changed?
-    supplied = submitted_credentials.to_h.stringify_keys.slice(*definition.fetch(:credentials))
+    previous = {} if environment_changed? || gateway_changed?
+    supplied = submitted_credentials.to_h.stringify_keys.slice(*credential_keys)
       .reject { |_key, value| value.blank? }
     values = previous.merge(supplied)
     values['api_url'] = values['api_url'].delete_suffix('/') if provider == 'korona' && values['api_url'].is_a?(String)
@@ -45,12 +57,26 @@ class PosConnection < ApplicationRecord
   end
 
   def credentials_saved?
-    definition && definition[:credentials].any? && definition[:credentials].all? { |key| credential_values[key].present? }
+    return false if errors.any?
+
+    credential_keys.any? && credential_keys.all? { |key| credential_values[key].present? }
   end
 
   def status_label
-    return 'Read access checked' if credentials_saved? && last_check_status == 'verified'
-    return 'Read check failed' if credentials_saved? && last_check_status == 'failed'
+    return 'Setup changes not saved' if errors.any?
+
+    if credentials_saved? && last_check_status == 'verified'
+      return 'API credentials checked' if check_kind == 'authorize_net'
+      return 'Merchant profile read access checked' if check_kind == 'nmi'
+
+      return 'Read access checked'
+    end
+    if credentials_saved? && last_check_status == 'failed'
+      return 'API credential check failed' if check_kind == 'authorize_net'
+      return 'Merchant profile check failed' if check_kind == 'nmi'
+
+      return 'Read check failed'
+    end
     return 'Credentials saved · not checked' if credentials_saved?
     return 'Waiting for vendor access' if access_requested && !vendor_approved
     return 'Setup details saved' if persisted?
@@ -70,7 +96,7 @@ class PosConnection < ApplicationRecord
 
   def valid_credentials
     values = credential_values
-    allowed = definition&.fetch(:credentials, []) || []
+    allowed = credential_keys
     if credentials_json.to_s.bytesize > 16_384 || (values.keys - allowed).any? || values.values.any? { |value| !value.is_a?(String) || !value.valid_encoding? || value.bytesize > 4096 || value.match?(/[\x00-\x1f\x7f]/) }
       errors.add(:base, 'The connection credentials are unsupported or too long.')
       return
@@ -83,6 +109,9 @@ class PosConnection < ApplicationRecord
       errors.add(:base, 'Use the exact HTTPS KORONA API endpoint shown in your API widget.') unless values['api_url'].to_s.bytesize <= 2048 && PaymentProviders::KoronaCheck::API_URL_PATTERN.match?(values['api_url'].to_s)
       errors.add(:base, 'Use a dedicated API username of at most 512 bytes without a colon.') if values['api_username'].to_s.bytesize > 512 || values['api_username'].to_s.include?(':')
       errors.add(:base, 'Use the account UUID from KORONA.') unless values['account_id'].to_s.match?(/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i)
+    elsif check_kind == 'authorize_net'
+      errors.add(:base, 'Use an Authorize.net API Login ID of at most 20 characters.') if values['api_login_id'].to_s.bytesize > 20
+      errors.add(:base, 'Use an Authorize.net transaction key of at most 16 characters.') if values['transaction_key'].to_s.bytesize > 16
     elsif provider == 'cova'
       errors.add(:base, 'Use the positive Company ID from your Cova onboarding package.') unless values['company_id'].to_s.match?(/\A[1-9][0-9]{0,9}\z/) && values['company_id'].to_i <= 2_147_483_647
     end

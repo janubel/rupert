@@ -553,7 +553,7 @@
       "area": "System",
       "name": "POS and payment account setup",
       "status": "Available",
-      "scope": "Tenant-scoped setup for the named providers, encrypted dedicated KORONA/Cova API credentials and explicit read-access checks; vendor-access tracking and existing CSV/static-token paths. No payment capture or automatic business-data import.",
+      "scope": "Tenant-scoped setup, encrypted KORONA/Cova credentials and read checks; selected Valmar Authorize.net credential validation or NMI profile check, plus vendor-access tracking and existing CSV/static-token paths. No payment capture or automatic business-data import.",
       "evidence": "web/app/controllers/pos_connections_controller.rb",
       "phase": "1"
     }

@@ -45,6 +45,39 @@ class PosProviderCatalog
       credentials: [] }
   ].freeze
 
+  VALMAR_GATEWAY_CREDENTIALS = {
+    'authorize_net' => %w[api_login_id transaction_key],
+    'nmi' => %w[security_key]
+  }.freeze
+
+  VALMAR_GATEWAY_DETAILS = {
+    'authorize_net' => {
+      name: 'Authorize.net', docs: 'https://developer.authorize.net/api/reference/index.html',
+      instructions: 'Use the API Login ID and transaction key issued for the selected sandbox or production merchant account. This check verifies API authentication only. It does not read transactions, enable checkout, send a payment or operate a terminal.'
+    },
+    'nmi' => {
+      name: 'NMI', docs: 'https://docs.nmi.com/reference/query',
+      instructions: 'Use the private API security key approved for the selected NMI merchant account. The check reads only the merchant profile through the Query API. A private key may permit other operations, so keep it secure. Use your own dedicated sandbox account; the shared NMI demo account does not support these queries.'
+    }
+  }.freeze
+
+  def self.credential_keys(provider, gateway: nil)
+    return VALMAR_GATEWAY_CREDENTIALS.fetch(gateway, []) if provider == 'valmar'
+
+    find(provider)&.fetch(:credentials, []) || []
+  end
+
+  def self.check_kind(provider, gateway: nil)
+    return gateway if provider == 'valmar' && VALMAR_GATEWAY_CREDENTIALS.key?(gateway)
+    return provider if %w[korona cova].include?(provider)
+
+    nil
+  end
+
+  def self.gateway_details(provider, gateway: nil)
+    VALMAR_GATEWAY_DETAILS[gateway] if provider == 'valmar'
+  end
+
   def self.all
     PROVIDERS
   end

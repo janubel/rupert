@@ -8,5 +8,5 @@
       <section class="card card-pad space-y-3"><p class="text-xs text-taupe"><%= provider[:relationship] %></p><h2 class="font-display text-xl"><%= provider[:name] %></h2><p class="text-sm text-mocha"><%= provider[:description] %></p><p class="pill-taupe"><%= connection.status_label %></p><%= link_to 'Review setup', pos_connection_path(provider[:key]), class: 'btn-ghost' %></section>
     <% end %>
   </div>
-  <section class="card card-pad"><p class="text-sm text-mocha">A read-access check confirms the supplied API account can read one documented resource. Payment collection, refunds, terminal commands and automatic POS imports need their own provider adapter and checkout validation. Your existing POS remains the place to complete sales.</p></section>
+  <section class="card card-pad"><p class="text-sm text-mocha">A provider check confirms only the documented operation shown on its setup page: API authentication, merchant profile access or a store/location read. Payment collection, refunds, terminal commands and automatic POS imports need their own provider adapter and checkout validation. Your existing POS remains the place to complete sales.</p></section>
 </div>
