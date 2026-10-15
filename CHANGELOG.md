@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Keep the platform-reported Shopify quantity (`InventoryLevel.sourceQuantity`) next to the clamped mirror count so oversold stock is visible; the clamped `quantity` and every existing reader are unchanged. Also regenerate `db/schema_sqlite.rb`, which was missing the per-tenant `WarehouseTier.tenantId` column.
+- Dashboard stat cards size their figures to the card so large amounts no longer overflow on phones, and the month revenue caption now shows a formatted dollar amount.
 - Follow Shopify variant, location and per-item inventory-level connections to exhaustion so products with more than 100 variants or stores with many locations are no longer silently truncated.
 - Correct inventory stock-map caching across searches and batch variant loading to remove per-product queries.
 - Add measured tenant timeline indexes for the last-sync lookup and customer list, with stable customer pagination for timestamp ties.

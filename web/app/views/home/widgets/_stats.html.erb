@@ -2,7 +2,7 @@
   <% if Current.user.can?("sales.read") %>
   <%= render "home/stat", label: "Today's sales", value: number_to_currency(presenter.today_revenue.to_i / 100.0), note: "#{presenter.today_orders} orders" %>
   <%= render "home/stat", label: "Yesterday", value: number_to_currency(presenter.yesterday_revenue.to_i / 100.0), note: vs_yesterday(presenter.today_revenue, presenter.yesterday_revenue) %>
-  <%= render "home/stat", label: "Last 7 days", value: number_to_currency(presenter.week_revenue.to_i / 100.0), note: "#{presenter.month_revenue.to_i / 100} this month" %>
+  <%= render "home/stat", label: "Last 7 days", value: number_to_currency(presenter.week_revenue.to_i / 100.0), note: "#{number_to_currency(presenter.month_revenue.to_i / 100.0, precision: 0)} this month" %>
   <% end %>
   <% if Current.user.can?("alerts.read") %>
   <%= render "home/stat", label: "Low stock alerts", value: presenter.open_alerts, note: "#{presenter.stockouts} at zero" %>
