@@ -234,6 +234,14 @@ Rails.application.routes.draw do
       post :disconnect
     end
   end
+  resources :inventory_exceptions, only: :index
+  resources :bulk_recipes, only: %i[index new create]
+  resources :bulk_consumptions, only: %i[index new create] do
+    collection do
+      post :preview
+      get :export
+    end
+  end
   get '/activity', to: 'activity#index', as: :activity
   resources :access_logs, only: :index
   get '/live/sync_status', to: 'live#sync_status'

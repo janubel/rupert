@@ -96,8 +96,23 @@ class ProductDetailFlowTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
 
-    assert_nil SkuLink.find_by(shopifyVariantId: @variant.id)
+    tombstone = SkuLink.find_by!(shopifyVariantId: @variant.id)
+    assert_nil tombstone.squareVariationId
+    assert_equal 'manual-unlink', tombstone.matchSource
+    refute tombstone.auto
+    SquareSyncer.send(:sync_links!, [{ variationId: @square_variation.id, sku: @variant.sku }])
+    assert_nil tombstone.reload.squareVariationId
     assert_select 'span.pill-taupe', /unlinked/
+  end
+
+  test 'manual link takes precedence over another variants inferred Square claim' do
+    other = ShopifyVariant.create!(id: 'automatic-claim-variant', productId: @variant.productId,
+      title: 'Other inferred item', sku: @variant.sku)
+    inferred = SkuLink.create!(shopifyVariantId: other.id, squareVariationId: @square_variation.id, sku: other.sku)
+    post link_shopify_variant_path(@variant), params: { square_variation_id: @square_variation.id }
+    assert_redirected_to shopify_variant_path(@variant)
+    assert_equal @square_variation.id, SkuLink.find_by!(shopifyVariantId: @variant.id).squareVariationId
+    assert_nil inferred.reload.squareVariationId
   end
 
   test 'inventory table links to variant detail' do

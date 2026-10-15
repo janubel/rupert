@@ -1,0 +1,22 @@
+<% content_for :title, 'Review material use' %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<div class="space-y-6">
+  <section><h1 class="page-title">Review material use</h1><p class="mt-2 text-sm text-mocha"><%= @order.display_number %> · <%= @line.name %> · <%= @line.quantity %> sold units</p><p class="font-mono text-xs text-taupe mt-2"><%= @line.source_line_id %><br><%= @line.source_variant_id %></p><p class="text-sm text-mocha mt-2">Recipe basis: imported Shopify order creation time <%= @order.occurred_at.iso8601 %>. This is not a verified payment or production timestamp; verify delayed-payment orders before recording use. Local snapshot last imported <%= @order.updated_at.iso8601 %>.</p></section>
+  <% if @recipe && !@plan %>
+    <%= form_with url: preview_bulk_consumptions_path, scope: :bulk_consumption, data: { turbo: false }, class: 'card card-pad space-y-4' do |f| %>
+      <%= f.hidden_field :order_id, value: @order.id %><%= f.hidden_field :source_line_id, value: @line.source_line_id %>
+      <p class="text-sm">Recipe v<%= @recipe.version %> · <%= @recipe.bulk_material.name %> · <%= number_with_precision(@recipe.grams, precision: 3, strip_insignificant_zeros: true) %> g per unit · effective <%= @recipe.effective_from.iso8601 %>.</p>
+      <div><%= f.label :lot_id, 'Select the actual material lot used', class: 'block text-sm' %><%= f.select :lot_id, @lots.map { |lot| ["#{lot.code} · #{bulk_mass_label(lot.balance_mg)} available", lot.id] }, { selected: @lot_id, include_blank: 'Choose lot' }, required: true, class: 'input' %></div>
+      <% if @lots_limited %><p class="text-xs text-taupe">First 200 lots shown; review the material’s lot list for additional lots.</p><% end %>
+      <%= f.submit 'Preview exact deduction', class: 'btn-primary' %>
+    <% end %>
+  <% elsif !@recipe %><section class="card card-pad">No recipe was effective for this exact variant at the imported sale time. <%= link_to 'Review recipe versions', bulk_recipes_path, class: 'underline' %></section><% end %>
+  <% if @plan %>
+    <section class="card card-pad space-y-3"><h2 class="font-display text-xl">Reviewed deduction · <%= @plan.lot.code %></h2><p><%= @plan.quantity %> units × <%= @plan.recipe.grams.to_s('F') %> g = <strong><%= bulk_mass_label(@plan.required_mg) %></strong> of <%= @plan.recipe.bulk_material.name %>.</p><p>Lot currently contains <%= bulk_mass_label(@plan.available_mg) %>. The balance and source snapshot are checked again when recorded.</p>
+      <% if @plan.shortage_mg.positive? %><p class="text-rose" role="alert">Shortage: <%= bulk_mass_label(@plan.shortage_mg) %>. Record is blocked; verify stock, receipts and the actual lot.</p>
+      <% else %><%= form_with url: bulk_consumptions_path, scope: :bulk_consumption, class: 'space-y-3' do |f| %><%= f.hidden_field :preview_token, value: @preview_token %><label class="block text-sm"><%= f.check_box :confirmed, { required: true }, '1', '0' %> I verified this exact source sale, recipe version and actual material lot.</label><p class="text-xs text-taupe">Review expires after 15 minutes. A changed selection requires another preview. This records use in Rupert’s local bulk ledger.</p><%= f.submit 'Record reviewed material use', class: 'btn-primary' %><% end %><% end %>
+      <%= link_to 'Choose another lot', new_bulk_consumption_path(order_id: @order.id, source_line_id: @line.source_line_id), class: 'btn-ghost' %>
+    </section>
+  <% end %>
+  <%= link_to 'Back to sale material use', bulk_consumptions_path, class: 'btn-ghost' %>
+</div>

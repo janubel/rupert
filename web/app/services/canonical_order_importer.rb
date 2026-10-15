@@ -8,6 +8,10 @@
 # Also provides a one-time backfill from the existing LedgerEntry mirror for
 # orders that predate the canonical store.
 class CanonicalOrderImporter
+  SHOPIFY_LINE_ID = %r{\Agid://shopify/LineItem/[1-9][0-9]{0,30}\z}
+  SHOPIFY_VARIANT_ID = %r{\Agid://shopify/ProductVariant/[1-9][0-9]{0,30}\z}
+  SOURCE_TIMESTAMP = /\A\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})\z/
+
   class << self
     def from_shopify!(nodes)
       Array(nodes).each do |node|
@@ -22,20 +26,22 @@ class CanonicalOrderImporter
           phone: node.dig('customer', 'phone')
         )
 
-        Core::Order.upsert(
-          order_attrs(node, source: 'shopify', channel: 'online', customer_id: customer&.id),
-          unique_by: %i[tenant_id source source_order_id]
-        )
-        order = Core::Order.find_by(
-          tenant_id: Current.tenant_id,
-          source: 'shopify',
-          source_order_id: node['id']
-        )
-        replace_order_lines!(order, node['lineItems'])
-        replace_payments!(order, shopify_payments(node))
-        fulfillments = node['fulfillments']
-        fulfillments = fulfillments['nodes'] if fulfillments.is_a?(Hash)
-        replace_fulfillments!(order, fulfillments)
+        Core::Order.transaction do
+          Core::Order.upsert(
+            order_attrs(node, source: 'shopify', channel: 'online', customer_id: customer&.id),
+            unique_by: %i[tenant_id source source_order_id]
+          )
+          order = Core::Order.find_by(
+            tenant_id: Current.tenant_id,
+            source: 'shopify',
+            source_order_id: node['id']
+          )
+          replace_order_lines!(order, node['lineItems'])
+          replace_payments!(order, shopify_payments(node))
+          fulfillments = node['fulfillments']
+          fulfillments = fulfillments['nodes'] if fulfillments.is_a?(Hash)
+          replace_fulfillments!(order, fulfillments)
+        end
       end
       Array(nodes).length
     end
@@ -52,17 +58,19 @@ class CanonicalOrderImporter
           last_name: nil
         )
 
-        Core::Order.upsert(
-          order_attrs(node, source: 'square', channel: 'pos', customer_id: customer&.id),
-          unique_by: %i[tenant_id source source_order_id]
-        )
-        order = Core::Order.find_by(
-          tenant_id: Current.tenant_id,
-          source: 'square',
-          source_order_id: node['id']
-        )
-        replace_order_lines!(order, node['line_items'])
-        replace_payments!(order, square_payments(node))
+        Core::Order.transaction do
+          Core::Order.upsert(
+            order_attrs(node, source: 'square', channel: 'pos', customer_id: customer&.id),
+            unique_by: %i[tenant_id source source_order_id]
+          )
+          order = Core::Order.find_by(
+            tenant_id: Current.tenant_id,
+            source: 'square',
+            source_order_id: node['id']
+          )
+          replace_order_lines!(order, node['line_items'])
+          replace_payments!(order, square_payments(node))
+        end
       end
       Array(orders).length
     end
@@ -126,10 +134,16 @@ class CanonicalOrderImporter
         Array(line_items)
               end
 
+      identities = nodes.filter_map { |item| line_identity(item, order.source) if item.is_a?(Hash) }
+      duplicates = identities.tally.select { |_id, count| count > 1 }.keys
       rows = nodes.filter_map do |item|
-        next if item.blank?
+        next unless item.is_a?(Hash) && item.present?
+
+        identity = line_identity(item, order.source)
 
         {
+          source_line_id: duplicates.include?(identity) ? nil : identity,
+          source_variant_id: variant_identity(item, order.source),
           sku: item['sku'].presence || item['variation_name'],
           name: item['title'].presence || item['name'] || 'Item',
           quantity: item['quantity'].to_i,
@@ -139,8 +153,8 @@ class CanonicalOrderImporter
             money_cents(item.dig('total_money')) || 0
         }
       end
-      return if unchanged_records?(order.order_lines, %i[sku name quantity unit_cents line_cents],
-        rows.map { |r| [r[:sku], r[:name], r[:quantity], r[:unit_cents], r[:line_cents]] })
+      columns = %i[source_line_id source_variant_id sku name quantity unit_cents line_cents]
+      return if unchanged_records?(order.order_lines, columns, rows.map { |row| columns.map { |column| row[column] } })
 
       order.order_lines.delete_all
       rows.each do |attrs|
@@ -268,6 +282,8 @@ class CanonicalOrderImporter
         tenant_id: Current.tenant_id,
         source: source || data[:source] || data['source'] || 'square',
         source_order_id: data[:sourceOrderId] || data['sourceOrderId'] || data['id'],
+        source_lines_complete: source == 'shopify' && shopify_inventory_snapshot_complete?(data),
+        source_financial_status: data['displayFinancialStatus'] || data['state'],
         order_number: data[:orderName] || data['orderName'] || data['name'] ||
           "SQ-#{data['id'].to_s.slice(0, 12)}",
         channel: channel || data[:channel] || data['channel'],
@@ -299,6 +315,55 @@ class CanonicalOrderImporter
     def address_attr(data, key)
       value = data.dig('shippingAddress', key) || data.dig('shipping_address', key)
       value.presence
+    end
+
+    # Existing snapshots remain ineligible until an explicit complete source
+    # payload is received. Never infer identity, time or refunded quantities.
+    def shopify_inventory_snapshot_complete?(data)
+      return false unless data['id'].to_s.match?(%r{\Agid://shopify/Order/[1-9][0-9]{0,30}\z})
+      return false unless data.key?('cancelledAt') && data['cancelledAt'].nil?
+      return false unless verified_source_timestamp?(data['createdAt'])
+
+      connection = data['lineItems']
+      return false unless connection.is_a?(Hash) && connection.dig('pageInfo', 'hasNextPage') == false
+
+      nodes = connection['nodes']
+      return false unless nodes.is_a?(Array) && nodes.any? && nodes.length <= 100
+      return false unless nodes.all? do |item|
+        item.is_a?(Hash) && line_identity(item, 'shopify') && variant_identity(item, 'shopify') &&
+          item['quantity'].is_a?(Integer) && item['quantity'].between?(1, 2_147_483_647) &&
+          item['currentQuantity'].is_a?(Integer) && item['currentQuantity'] == item['quantity']
+      end
+
+      nodes.pluck('id').uniq.length == nodes.length
+    end
+
+    def verified_source_timestamp?(value)
+      return false unless value.is_a?(String) && SOURCE_TIMESTAMP.match?(value) && !value.end_with?('-00:00')
+
+      DateTime.iso8601(value).offset.abs <= Rational(14, 24)
+    rescue ArgumentError
+      false
+    end
+
+    def line_identity(item, source)
+      value = source == 'shopify' ? item['id'] : item['uid']
+      return unless value.is_a?(String) && value.bytesize.between?(1, 255)
+      return value if source == 'shopify' && SHOPIFY_LINE_ID.match?(value)
+
+      value if source == 'square' && !value.match?(/[\x00-\x1f\x7f]/)
+    end
+
+    def variant_identity(item, source)
+      value = if source == 'shopify'
+        item['variant'].is_a?(Hash) ? item['variant']['id'] : nil
+      else
+        item['catalog_object_id']
+      end
+      return unless value.is_a?(String) && value.bytesize.between?(1, 255)
+      return value if source == 'shopify' && SHOPIFY_VARIANT_ID.match?(value)
+
+      value if source == 'square' && !value.match?(/[\x00-\x1f\x7f]/)
     end
 
     def normalize_fulfillment_status(raw)

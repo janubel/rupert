@@ -36,7 +36,7 @@ Shopify tenders are inferred from gateway names and order totals, and their time
 
 Actual checkout, tax/discount calculation, customer-facing terminal tipping, failed/retried payment handling, refunds and source-to-bank reconciliation remain the primary POS acceptance gate. Account connection checks do not establish those capabilities. See the [connection guide](https://techmore.github.io/rupert/payment-integrations.html) and [POS parity acceptance](https://techmore.github.io/rupert/pos-parity.html).
 
-The next bulk-material slice needs stable source order-line and variant identities, exact variant-to-material gram recipes and a reviewed, replay-safe local deduction with shortage handling. Reused SKUs cannot identify the recipe. Automatic consumption/refunds and an owner-selected Google Sheets destination remain planned.
+The Shopify bulk-material workflow now stores exact source line and variant identities, versioned gram recipes and reviewed one-time lot deductions with shortage checks. Reused SKUs never identify the recipe. Prepared SwipeSimple CSV rows are not eligible for this Shopify-only deduction workflow. Automatic consumption/refunds and an owner-selected Google Sheets destination remain planned. See the [inventory workflow guide](inventory-workflows.html).
 
 ## Vendor references
 

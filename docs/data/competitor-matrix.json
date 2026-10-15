@@ -209,7 +209,7 @@
     {
       "name": "Multi-location inventory",
       "rupert": "Available",
-      "scope": "Independent inventories and stock visibility",
+      "scope": "Independent source/location mirrors with movements and bounded exception review; stored mirrors do not prove physical stock or complete source coverage.",
       "phase": "0",
       "competitors": {
         "odoo": "Advertised",
@@ -325,8 +325,8 @@
     },
     {
       "name": "POS checkout / payment capture",
-      "rupert": "Integration / companion",
-      "scope": "Rupert mirrors Shopify/Square POS; register settlement is local",
+      "rupert": "Partial",
+      "scope": "Image catalog cart, priced quote/tip preview and local register records. Rupert does not authorize/capture payments or execute terminals; existing external POS systems complete sales.",
       "phase": "0",
       "competitors": {
         "odoo": "Advertised",
@@ -457,7 +457,7 @@
     {
       "name": "Reorder advice / planning",
       "rupert": "Available",
-      "scope": "Rupert uses recent sales pace, not ML forecasting",
+      "scope": "SKU-based sales-pace estimates require identity and source review; exception diagnostics and exact variant recipes are separate from purchasing forecasts.",
       "phase": "0",
       "competitors": {
         "odoo": "Not established",
@@ -880,8 +880,8 @@
     },
     {
       "name": "Serial / lot / expiry tracking",
-      "rupert": "Planned",
-      "scope": "Traceability and expiry workflows required",
+      "rupert": "Partial",
+      "scope": "Raw-material lot receipts, integer-milligram movements and selected-lot sale-use audits; finished-good serials, expiry/recall management and broader traceability remain planned.",
       "phase": "2",
       "competitors": {
         "odoo": "Not established",
@@ -1298,7 +1298,7 @@
       "notes": {
         "korona": "General salesperson/cashier/team commissions are documented, but this exact automatic overlap rule is not established.",
         "cova": "Sales/workforce integration is documented, but this exact commission allocation is not established.",
-        "rupert": "Independent per-worker 1% preview is implemented for eligible imported merchandise sales and overlapping shift intervals. Final compensation policy, refund reconciliation and payouts remain pending.",
+        "rupert": "Read-only per-worker overlap preview is implemented; final compensation policy and payouts remain pending.",
         "ctrax": "The exact per-person shift-overlap allocation was not established in the reviewed official product material.",
         "swipesimple": "Sales-by-user reports are documented; the exact shift-overlap allocation was not established."
       }
@@ -1410,17 +1410,77 @@
         "ctrax": "Custom sales/associate analytics are advertised; exact daily cash/card register summaries are not established.",
         "swipesimple": "Full daily reports include cash/card details; batch cutoffs and merchant-account grouping vary by provider."
       }
+    },
+    {
+      "name": "Exact variant-to-material gram recipes",
+      "rupert": "Partial",
+      "scope": "Immutable effective Shopify-variant recipes and reviewed one-time whole-line milligram deductions against a selected lot, with shortage checks and receipt CSV. Automatic Sheets/refund reconciliation and split-lot or multi-material recipes remain planned.",
+      "phase": "1",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "netsuite": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "notes": {
+        "rupert": "Recipes use exact source variant/order/line IDs, not shared SKUs. The effective basis is imported order creation time; operator verification remains required.",
+        "comparison": "This exact Shopify-variant, gram and reviewed-lot contract was not established for other vendors in this review. General BOM or inventory advertising is separate; unknown does not mean absent."
+      }
+    },
+    {
+      "name": "Inventory exception review",
+      "rupert": "Available",
+      "scope": "Bounded source/location queue for stored stock and identity issues, local hold shortages, incomplete source orders, pending counts and depleted lots. Read-only review with explicit coverage limits.",
+      "phase": "0",
+      "competitors": {
+        "odoo": "Not established",
+        "erpnext": "Not established",
+        "dolibarr": "Not established",
+        "netsuite": "Not established",
+        "zoho": "Not established",
+        "cin7": "Not established",
+        "inflow": "Not established",
+        "katana": "Not established",
+        "fishbowl": "Not established",
+        "brightpearl": "Not established",
+        "linnworks": "Not established",
+        "lightspeed": "Not established",
+        "square": "Not established",
+        "shopify": "Not established",
+        "korona": "Not established",
+        "cova": "Not established",
+        "ctrax": "Not established",
+        "swipesimple": "Not established"
+      },
+      "notes": {
+        "comparison": "Equivalent issue types, source-identity safeguards and bounded coverage were not verified for other vendors in this review; this is not a claim that they lack exception tools.",
+        "rupert": "Legacy mirror clamping/fallback and count-location aggregation require source/physical verification; the queue cannot reconstruct lost provenance."
+      }
     }
   ],
   "integration_candidates": [
     {
       "id": "valmar",
       "name": "Valmar Merchant Services",
-      "category": "Payment provider / gateway candidate",
+      "category": "Reported payment processor / gateway preparation",
       "url": "https://vlmr.com/merchant-services/",
       "reviewed": "2026-10-15",
-      "scope": "Setup records the actual gateway; documented Authorize.net credential validation and NMI profile checks are prepared. Other gateway paths require their own verified contract.",
-      "caveat": "The merchant account's actual gateway, API access, terminal compatibility and permitted products require confirmation. Rupert preparation does not enable processing.",
+      "scope": "Valmar is the business-reported processor. Rupert supports operator-selected Authorize.net credential or NMI profile checks; the actual gateway serving this merchant account has not been confirmed.",
+      "caveat": "Processor, gateway, terminal and POS are separate roles. API credentials, merchant approval and terminal compatibility must be confirmed for the actual account. Rupert setup checks do not authorize, capture or refund payments.",
       "sources": [
         {
           "title": "Merchant services and gateway overview",

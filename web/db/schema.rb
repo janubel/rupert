@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_151000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -366,6 +366,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_130000) do
     t.index ["user_id"], name: "index_api_access_tokens_on_user_id"
   end
 
+  create_table "bulk_consumptions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "source", null: false
+    t.string "source_order_id", null: false
+    t.string "source_line_id", null: false
+    t.string "source_variant_id", null: false
+    t.string "order_number"
+    t.bigint "quantity", null: false
+    t.bigint "bulk_recipe_id", null: false
+    t.bigint "bulk_lot_id", null: false
+    t.bigint "bulk_movement_id", null: false
+    t.bigint "mg_per_unit", null: false
+    t.bigint "consumed_mg", null: false
+    t.string "source_fingerprint", null: false
+    t.string "request_fingerprint", null: false
+    t.string "request_token", null: false
+    t.string "created_by", null: false
+    t.datetime "created_at", null: false
+    t.index ["bulk_movement_id"], name: "index_bulk_consumptions_on_bulk_movement_id", unique: true
+    t.index ["tenant_id", "bulk_lot_id", "created_at"], name: "idx_bulk_consumption_lot"
+    t.index ["tenant_id", "bulk_recipe_id"], name: "idx_bulk_consumption_recipe"
+    t.index ["tenant_id", "request_token"], name: "idx_bulk_consumption_request", unique: true
+    t.index ["tenant_id", "source", "source_order_id", "source_line_id"], name: "idx_bulk_consumption_source_line", unique: true
+    t.check_constraint "source::text = 'shopify'::text AND quantity > 0 AND mg_per_unit > 0 AND consumed_mg > 0", name: "bulk_consumption_positive"
+  end
+
   create_table "bulk_lots", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.bigint "bulk_material_id", null: false
@@ -405,6 +431,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_130000) do
     t.index ["tenant_id", "request_token"], name: "index_bulk_movements_on_tenant_id_and_request_token", unique: true
     t.check_constraint "delta_mg <> 0", name: "bulk_movements_nonzero"
     t.check_constraint "kind::text = 'receipt'::text AND delta_mg > 0 OR kind::text = 'consume'::text AND delta_mg < 0 OR kind::text = 'adjustment'::text", name: "bulk_movements_kind_sign"
+  end
+
+  create_table "bulk_recipes", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "source", default: "shopify", null: false
+    t.string "source_variant_id", null: false
+    t.bigint "bulk_material_id", null: false
+    t.integer "version", null: false
+    t.bigint "mg_per_unit", null: false
+    t.datetime "effective_from", null: false
+    t.string "catalog_title", null: false
+    t.string "catalog_sku"
+    t.string "created_by", null: false
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "bulk_material_id"], name: "idx_bulk_recipe_material"
+    t.index ["tenant_id", "source", "source_variant_id", "effective_from"], name: "idx_bulk_recipe_effective"
+    t.index ["tenant_id", "source", "source_variant_id", "version"], name: "idx_bulk_recipe_version", unique: true
+    t.check_constraint "source::text = 'shopify'::text AND version > 0 AND mg_per_unit > 0", name: "bulk_recipe_positive"
   end
 
   create_table "clock_corrections", force: :cascade do |t|
@@ -639,9 +683,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_130000) do
     t.string "tenant_id", null: false
     t.integer "unit_cents", default: 0
     t.datetime "updated_at", null: false
+    t.string "source_line_id"
+    t.string "source_variant_id"
     t.index "tenant_id, lower((sku)::text)", name: "index_order_lines_on_tenant_id_and_lower_sku"
+    t.index ["tenant_id", "order_id", "source_line_id"], name: "idx_order_lines_source_identity", unique: true
     t.index ["tenant_id", "order_id"], name: "index_order_lines_on_tenant_id_and_order_id"
     t.index ["tenant_id", "sku"], name: "index_order_lines_on_tenant_id_and_sku"
+    t.index ["tenant_id", "source_variant_id"], name: "idx_order_lines_source_variant"
   end
 
   create_table "orders", force: :cascade do |t|
@@ -669,6 +717,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_130000) do
     t.integer "tax_cents", default: 0
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
+    t.boolean "source_lines_complete", default: false, null: false
+    t.string "source_financial_status"
     t.index ["location_id"], name: "index_orders_on_location_id"
     t.index ["order_number"], name: "idx_trgm_orders_order_number", opclass: :gin_trgm_ops, using: :gin
     t.index ["source_order_id"], name: "idx_trgm_orders_source_order_id", opclass: :gin_trgm_ops, using: :gin
@@ -1232,8 +1282,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_130000) do
   add_foreign_key "SkuLink", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "api_access_tokens", "tenants", on_delete: :cascade
   add_foreign_key "api_access_tokens", "users", on_delete: :cascade
+  add_foreign_key "bulk_consumptions", "bulk_lots"
+  add_foreign_key "bulk_consumptions", "bulk_movements"
+  add_foreign_key "bulk_consumptions", "bulk_recipes"
   add_foreign_key "bulk_lots", "bulk_materials"
   add_foreign_key "bulk_movements", "bulk_lots"
+  add_foreign_key "bulk_recipes", "bulk_materials"
   add_foreign_key "clock_corrections", "clock_shifts"
   add_foreign_key "clock_corrections", "tenants"
   add_foreign_key "clock_corrections", "users", column: "requested_by_id", on_delete: :nullify

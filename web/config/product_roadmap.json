@@ -12,8 +12,8 @@
     {
       "id": "1",
       "name": "Next \u00b7 inventory execution",
-      "goal": "Bulk material work, scanner counts, reservations, remote time tracking and commission previews; image POS and tipping previews, followed by verified payment/terminal execution, transfers and backorders.",
-      "acceptance": "Tenant and role isolation, replay and concurrent stock checks pass; overlap commissions award 1% independently to each worker. Primary POS requires demonstrated taxes, tender/tip/refund/settlement, hardware and operator acceptance before cutover."
+      "goal": "Complete native stock coverage and exact location/identity count comparisons; extend reviewed gram recipes, lot consumption, exception review, scanner counts and reservations. Then add material/Sheets reconciliation, transfers and backorders. Payment and terminal execution have separate acceptance gates.",
+      "acceptance": "Tenant/role isolation, exact source identities, completeness, replay and concurrent stock/mapping tests pass; counts use one verified source/location pool. Overlap commissions award 1% independently to each worker. Primary POS requires demonstrated taxes, tender/tip/refund/settlement, hardware and operator acceptance before cutover."
     },
     {
       "id": "2",
@@ -67,7 +67,7 @@
       "area": "Commerce",
       "name": "Register settlement",
       "status": "Available",
-      "scope": "Cash sessions, tender totals, physical closing count.",
+      "scope": "Local cash sessions, recorded tender totals and physical closing-count audit; processor settlement, payouts and bank deposits are not performed.",
       "evidence": "web/app/modules/sales/pos_session.rb",
       "phase": "0"
     },
@@ -112,7 +112,7 @@
       "area": "Stock",
       "name": "Location inventory",
       "status": "Available",
-      "scope": "Per-location on-hand, platform totals, movements and PDF snapshots.",
+      "scope": "Stored per-location mirrors, platform totals, movements and PDF snapshots. Legacy Shopify clamping/aggregate fallback and fetch limits require source verification; complete native pool provenance remains pending.",
       "evidence": "web/app/controllers/inventory_controller.rb",
       "phase": "0"
     },
@@ -121,8 +121,8 @@
       "area": "Stock",
       "name": "Catalog identity links",
       "status": "Available",
-      "scope": "SKU/link audit across channels; quantity differences are expected.",
-      "evidence": "web/app/controllers/reconcile_controller.rb",
+      "scope": "One-to-one normalized-SKU auto matching with protected manual mappings and persistent explicit unlink decisions. Ambiguous automatic claims remain unresolved; local decisions serialize per tenant. Channel stock remains independent.",
+      "evidence": "web/app/services/square_syncer.rb",
       "phase": "0"
     },
     {
@@ -130,7 +130,7 @@
       "area": "Stock",
       "name": "Count approval workflow",
       "status": "Available",
-      "scope": "Prepare, submit, approve, reject and reopen count sheets.",
+      "scope": "Local prepare/submit/approve/reject/reopen audit flow. Legacy manual variance can aggregate Shopify locations and ambiguous SKUs; exact pool comparisons and source application remain pending.",
       "evidence": "web/app/models/inventory_count.rb",
       "phase": "0"
     },
@@ -345,8 +345,8 @@
       "id": "F35",
       "area": "Stock",
       "name": "Serial, lot and expiry tracking",
-      "status": "Planned",
-      "scope": "Traceability from receipt through sale/return, expiry reporting.",
+      "status": "Partial",
+      "scope": "Raw-material lot receipts, movements and selected-lot sale-use receipts are implemented. Finished-good serials, expiry/recall and broader receipt-to-return traceability remain planned.",
       "evidence": "docs/data/product-roadmap.json",
       "phase": "2"
     },
@@ -481,8 +481,8 @@
       "area": "Stock",
       "name": "Bulk raw material tracking",
       "status": "Partial",
-      "scope": "Lot receipts, consumption, corrections and CSV export with integer milligram balances and audit history. Next: stable source-line/variant identity and versioned gram recipes, then reviewed replay-safe sale deductions. Automatic refunds and owner-selected Google Sheets sync remain planned.",
-      "evidence": "web/app/services/bulk_ledger.rb",
+      "scope": "Integer-milligram lot ledger, exact Shopify variant recipes with immutable effective versions, reviewed one-time whole-sale-line deductions against a selected lot, shortage/replay protection and receipt CSV. Automatic consumption/refunds, split-lot or multi-material recipes and owner-selected Google Sheets sync remain planned.",
+      "evidence": "web/app/services/bulk_sale_consumption.rb",
       "phase": "1"
     },
     {
@@ -553,9 +553,18 @@
       "area": "System",
       "name": "POS and payment account setup",
       "status": "Available",
-      "scope": "Tenant-scoped setup, encrypted KORONA/Cova credentials and read checks; selected Valmar Authorize.net credential validation or NMI profile check, plus vendor-access tracking and existing CSV/static-token paths. No payment capture or automatic business-data import.",
+      "scope": "Tenant-scoped provider setup and encrypted credential/read checks for KORONA/Cova and operator-selected Authorize.net or NMI gateway paths. Valmar is the reported processor; this merchant account's actual gateway is unconfirmed. No payment capture, terminal execution or automatic business-data import.",
       "evidence": "web/app/controllers/pos_connections_controller.rb",
       "phase": "1"
+    },
+    {
+      "id": "F59",
+      "area": "Stock",
+      "name": "Inventory exception review",
+      "status": "Available",
+      "scope": "Bounded read-only queue for stored stock/identity issues, unverifiable or excess local holds, incomplete Shopify source orders, pending counts and depleted bulk lots; source/location filters, pagination and coverage limits. Does not repair stock or recover missing source provenance.",
+      "evidence": "web/app/services/inventory_exceptions.rb",
+      "phase": "0"
     }
   ]
 }

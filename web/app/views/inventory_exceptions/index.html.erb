@@ -1,0 +1,49 @@
+<% content_for :title, 'Inventory exceptions' %>
+<div class="space-y-6">
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div><h1 class="page-title">Inventory exceptions</h1><p class="mt-1 max-w-3xl text-sm text-mocha">Review shortages, uncertain stock and catalog conflicts by exact source item and location. This queue reads Rupert's local records.</p></div>
+    <div class="flex flex-wrap gap-2"><%= link_to 'Inventory', inventory_index_path, class: 'btn-ghost' %><%= link_to 'Local holds', stock_reservations_path, class: 'btn-ghost' %><%= link_to 'Manual counts', inventory_counts_path, class: 'btn-ghost' %><%= link_to 'Bulk materials', bulk_materials_path, class: 'btn-ghost' %></div>
+  </section>
+  <%= form_with url: inventory_exceptions_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
+    <div><%= f.label :source, 'Platform stock', class: 'block text-sm' %><%= f.select :source, [['All sources', ''], ['Shopify', 'shopify'], ['Square', 'square']], { selected: @queue.source }, class: 'input' %></div>
+    <div><%= f.label :location_id, 'Stock location', class: 'block text-sm' %><%= f.select :location_id, [['All locations', '']] + @locations.map { |location| ["#{location.source} · #{location.name}", location.id] }, { selected: @queue.location_id }, class: 'input' %><% if @locations_limited %><p class="mt-1 text-xs text-mocha">Location selector limited to the first 200 locations.</p><% end %></div>
+    <div><%= f.label :stale_hours, 'Flag snapshots older than (hours)', class: 'block text-sm' %><%= f.number_field :stale_hours, value: @queue.stale_hours, min: 1, max: 168, required: true, class: 'input w-28' %></div>
+    <div><%= f.label :section, 'Work type', class: 'block text-sm' %><%= f.select :section, [['All work', '']] + InventoryExceptions::SECTION_LABELS.map { |key, label| [label, key] }, { selected: @queue.section }, class: 'input' %></div>
+    <%= f.submit 'Review exceptions', class: 'btn-primary' %>
+  <% end %>
+  <section class="card card-pad space-y-2 text-sm text-mocha">
+    <p>Checked at <%= @queue.at.iso8601 %>. Shopify and Square stock remains independent; different quantities between channels are normal. Local holds are advisory and channels can still sell stock.</p>
+    <p><strong><%= @queue.summary[:shown] %></strong> exception rows found in the bounded results<%= @queue.section ? ' for this work type' : '' %>. A stock pool can have several exceptions. These counts are not a complete inventory audit or a count of unique products.</p>
+    <% if @queue.summary[:limited] %><p role="status" class="font-semibold text-clay">Results limited: additional matching records or identity members were not checked/displayed. Narrow the platform/location filter and review the coverage notes below.</p><% end %>
+    <p>The queue offers review links. It does not fix mirrors, change SKUs, reserve remote stock or apply counts. Unknown quantities remain unknown. Missing per-pool data can require source inspection even when a recent source import exists.</p>
+  </section>
+  <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <% @queue.sections.each do |group| %><%= link_to inventory_exceptions_path(source: @queue.source, location_id: @queue.location_id, stale_hours: @queue.stale_hours, section: group[:key]), class: 'card card-pad' do %><p class="text-sm font-semibold"><%= group[:label] %></p><p class="mt-1 text-2xl font-semibold"><%= group[:rows].length %><%= '+' if group[:limited] %></p><p class="mt-1 text-xs text-mocha">Bounded exception rows<%= group[:limited] ? ' · limited' : '' %></p><% end %><% end %>
+  </section>
+  <section class="card overflow-x-auto"><table class="w-full text-sm">
+    <thead><tr><% ['Priority / issue', 'Source item / location', 'Recorded stock', 'Review'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
+    <tbody class="divide-y divide-fog">
+      <% @queue.page_rows.each do |row| %><tr>
+        <td class="td align-top"><span class="<%= row[:severity] == :critical ? 'pill-rose' : row[:severity] == :warning ? 'pill-clay' : 'pill-taupe' %>"><%= row[:severity].to_s.capitalize %></span><p class="mt-2 font-semibold"><%= row[:kind] %></p><p class="mt-1 max-w-xl text-sm text-mocha"><%= row[:detail] %></p></td>
+        <td class="td align-top"><p class="font-medium"><%= row[:label] %></p><p class="mt-1 text-xs text-mocha"><%= row[:source] %></p><% if row[:item_id] %><p class="mt-1 max-w-xs break-all font-mono text-xs"><%= row[:item_id] %></p><% end %><% if row[:location_id] %><p class="mt-2"><%= row[:location_name].presence || 'Unresolved location' %></p><p class="max-w-xs break-all font-mono text-xs text-mocha"><%= row[:location_id] %></p><% end %><% if row[:observed_at] %><p class="mt-2 text-xs text-taupe"><%= row[:observed_label] %>: <%= row[:observed_at].respond_to?(:iso8601) ? row[:observed_at].iso8601 : row[:observed_at] %></p><% end %></td>
+        <td class="td align-top tabular-nums"><% if row.key?(:quantity) %><p>On hand: <strong><%= row[:quantity].nil? ? 'Unknown' : row[:quantity] %></strong></p><p>Available: <strong><%= row[:available].nil? ? 'Unknown' : row[:available] %></strong></p><% end %><% if row.key?(:held) %><p>Local holds: <strong><%= row[:held] %></strong></p><p>Shortage: <strong><%= row[:shortage].nil? ? 'Unknown' : row[:shortage] %></strong></p><% end %><% unless row.key?(:quantity) || row.key?(:held) %><span class="text-taupe">See issue details</span><% end %></td>
+        <td class="td align-top">
+          <% if row[:review_type] == :variant %><%= link_to 'Review item', shopify_variant_path(row[:review_id]), class: 'btn-ghost btn-sm' %>
+          <% elsif row[:review_type] == :reservations %><%= link_to 'Review local holds', stock_reservations_path, class: 'btn-ghost btn-sm' %>
+          <% elsif row[:review_type] == :count %><%= link_to 'Review count', inventory_count_path(row[:review_id]), class: 'btn-ghost btn-sm' %>
+          <% elsif row[:review_type] == :order %><% if Current.user.can?('sales.read') %><%= link_to 'Review source order', order_path(row[:review_id]), class: 'btn-ghost btn-sm' %><% else %><%= link_to 'Review bulk sale data', bulk_consumptions_path(from: row[:review_day], to: row[:review_day]), class: 'btn-ghost btn-sm' %><% end %>
+          <% elsif row[:review_type] == :lot %><%= link_to 'Review lot', bulk_material_bulk_lot_path(row[:material_id], row[:review_id]), class: 'btn-ghost btn-sm' %>
+          <% elsif row[:review_type] == :catalog %><% if Current.user.can?('reconcile.read') %><%= link_to 'Review catalog links', reconcile_index_path, class: 'btn-ghost btn-sm' %><% else %><%= link_to 'Review inventory', inventory_index_path, class: 'btn-ghost btn-sm' %><% end %>
+          <% else %><%= link_to 'Review inventory', inventory_index_path, class: 'btn-ghost btn-sm' %>
+          <% end %>
+        </td>
+      </tr><% end %>
+      <% if @queue.page_rows.empty? %><tr><td colspan="4" class="td py-8 text-center">No matching exception rows found in these bounded checks. This does not confirm physical stock or complete source coverage.</td></tr><% end %>
+    </tbody>
+  </table></section>
+  <% if @queue.total_pages > 1 %><nav aria-label="Exception pages" class="flex flex-wrap items-center gap-3 text-sm"><span>Page <%= @queue.page %> of <%= @queue.total_pages %> in bounded results</span><% if @queue.page > 1 %><%= link_to 'Previous', inventory_exceptions_path(source: @queue.source, location_id: @queue.location_id, stale_hours: @queue.stale_hours, section: @queue.section, page: @queue.page - 1), class: 'btn-ghost' %><% end %><% if @queue.page < @queue.total_pages %><%= link_to 'Next', inventory_exceptions_path(source: @queue.source, location_id: @queue.location_id, stale_hours: @queue.stale_hours, section: @queue.section, page: @queue.page + 1), class: 'btn-ghost' %><% end %></nav><% end %>
+  <section class="card card-pad space-y-4"><h2 class="text-lg font-semibold">Coverage and limits</h2>
+    <% @queue.sections.each do |group| %><div><h3 class="font-semibold"><%= group[:label] %><%= ' · limited' if group[:limited] %></h3><p class="mt-1 text-sm text-mocha"><%= group[:scope_note] %></p><ul class="mt-2 list-disc pl-5 text-xs text-mocha"><% group[:checks].each do |check| %><li><%= check[:label] %>: <%= check[:returned] %> matching records/groups returned<%= check[:limited] ? '; more matching records not displayed' : '' %><%= check[:sample_limited] ? '; identity member sample limited' : '' %>.</li><% end %></ul></div><% end %>
+    <p class="text-xs text-mocha">Each exception query returns at most <%= @queue.limit %> matching records/groups. Duplicate identity members are sampled, with at most <%= InventoryExceptions::MEMBER_LIMIT %> IDs shown per group. Sales attribution, supplier lead times, reorder points, automatic recipe consumption and unknown original source timestamps are outside these checks.</p>
+  </section>
+</div>

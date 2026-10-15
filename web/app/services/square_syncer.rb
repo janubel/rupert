@@ -63,34 +63,71 @@ class SquareSyncer
     end
 
     def sync_links!(catalog)
-      by_sku = {}
-      catalog.each { |v| by_sku[v[:sku].downcase] = v[:variationId] if v[:sku].present? }
-      existing_links = SkuLink.all.index_by(&:shopifyVariantId)
-      links = 0
-      ShopifyVariant.where.not(sku: [nil, '']).includes(:product).find_each do |variant|
-        # Wholesale/bulk Shopify-only products never link to Square (they're not
-        # carried there) — the wholesale tag on the product excludes them.
-        next if variant.product&.tags.to_s.split(',').map(&:strip).include?('wholesale')
+      CatalogMappingLock.synchronize do
+        normalize = ->(sku) { sku.to_s.strip.downcase.presence }
+        replaceable = ->(link) { link.auto == true && link.matchSource == 'sku' }
+        variants = ShopifyVariant.includes(:product).to_a
+        shopify_by_sku = variants.group_by { |variant| normalize.call(variant.sku) }
+        variant_ids = variants.index_by(&:id)
+        square_by_sku = catalog.group_by { |variation| normalize.call(variation[:sku]) }
+        square_skus_by_id = catalog.group_by { |variation| variation[:variationId] }
+          .transform_values { |rows| rows.map { |row| normalize.call(row[:sku]) }.uniq }
+        known_square_ids = SquareVariation.where(id: catalog.filter_map { |row| row[:variationId] }).pluck(:id).index_with(true)
+        existing_links = SkuLink.all.index_by(&:shopifyVariantId)
+        explicit_targets = existing_links.values.reject { |link| replaceable.call(link) }
+          .select { |link| link.squareVariationId.present? }.group_by(&:squareVariationId)
+        links = 0
 
-        square_id = by_sku[variant.sku.downcase]
-        next if square_id.nil?
+        variants.each do |variant|
+          link = existing_links[variant.id]
+          # A sync cannot replace a deliberate operator/audit mapping, including
+          # when the catalog SKU has subsequently changed.
+          next if link && !replaceable.call(link)
 
-        link = existing_links[variant.id]
-        links += 1
-        if link && link.sku == variant.sku && link.squareVariationId == square_id &&
-           link.matchSource == 'sku' && link.auto
-          next
+          sku = normalize.call(variant.sku)
+          candidates = Array(square_by_sku[sku]).filter_map { |row| row[:variationId].presence }.uniq
+          wholesale = variant.product&.tags.to_s.split(',').map(&:strip).include?('wholesale')
+          target = if sku && shopify_by_sku.fetch(sku).one? && candidates.one? && !wholesale &&
+                      known_square_ids.key?(candidates.first) && square_skus_by_id.fetch(candidates.first).one? &&
+                      Array(explicit_targets[candidates.first]).none? { |owner| owner.shopifyVariantId != variant.id }
+            candidates.first
+          end
+
+          if link
+            if link.squareVariationId == target && (target.nil? || link.sku == variant.sku)
+              links += 1 if target
+              next
+            end
+
+            changes = { squareVariationId: target }
+            changes[:sku] = variant.sku if variant.sku.present?
+            # Condition on the original automatic state in SQL: a manual save
+            # after the snapshot above must win over this stale sync object.
+            updated = SkuLink.where(id: link.id, auto: true, matchSource: 'sku').update_all(changes)
+            links += 1 if target && updated == 1
+          elsif target
+            begin
+              SkuLink.transaction(requires_new: true) do
+                SkuLink.create!(tenant_id: Current.tenant_id, shopifyVariantId: variant.id,
+                  squareVariationId: target, sku: variant.sku, matchSource: 'sku', auto: true,
+                  createdAt: Time.current)
+              end
+              links += 1
+            rescue ActiveRecord::RecordNotUnique
+              # A concurrently created operator link owns the unique variant key.
+              # Leave it intact; a later sync can reconsider an automatic row.
+              next
+            end
+          end
         end
 
-        link ||= SkuLink.new(shopifyVariantId: variant.id)
-        link.sku = variant.sku
-        link.squareVariationId = square_id
-        link.matchSource = 'sku'
-        link.auto = true
-        link.createdAt ||= Time.current
-        link.save!
+        # A dangling automatic mapping is unresolved, rather than a claim that
+        # the removed Shopify item still identifies a Square stock pool.
+        orphan_ids = existing_links.values.select { |link| replaceable.call(link) }
+          .reject { |link| variant_ids.key?(link.shopifyVariantId) }.map(&:id)
+        SkuLink.where(id: orphan_ids, auto: true, matchSource: 'sku').update_all(squareVariationId: nil) if orphan_ids.any?
+        links
       end
-      links
     end
 
     def sync_levels!(locations, catalog, counts, _primary)

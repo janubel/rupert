@@ -4,6 +4,7 @@
 # movements, alerts, and the SKU link to a Square variation.
 class ShopifyVariantsController < AuthenticatedController
   before_action :set_variant
+  rescue_from ActiveRecord::StatementInvalid, with: :handle_mapping_database_error
 
   def show
     authorize(:module, :inventory_read?)
@@ -19,30 +20,51 @@ class ShopifyVariantsController < AuthenticatedController
   # auto link from sync).
   def link
     authorize(:module, :inventory_write?)
-    square = SquareVariation.find_by!(tenant_id: Current.tenant_id, id: params[:square_variation_id])
-    link = SkuLink.find_or_initialize_by(shopifyVariantId: @variant.id)
-    link.tenant_id = Current.tenant_id
-    link.squareVariationId = square.id
-    link.sku = @variant.sku.presence || square.sku.presence || @variant.id
-    link.matchSource = 'manual'
-    link.auto = false
-    link.createdAt ||= Time.current
-    link.save!
+    square = nil
+    CatalogMappingLock.synchronize do
+      @variant = ShopifyVariant.find_by!(tenant_id: Current.tenant_id, id: @variant.id)
+      square = SquareVariation.find_by!(tenant_id: Current.tenant_id, id: params[:square_variation_id])
+      link = SkuLink.find_or_initialize_by(shopifyVariantId: @variant.id)
+      link.tenant_id = Current.tenant_id
+      link.squareVariationId = square.id
+      link.sku = @variant.sku.presence || square.sku.presence || @variant.id
+      link.matchSource = 'manual'
+      link.auto = false
+      link.createdAt ||= Time.current
+      link.save!
+      # An explicit identity decision wins over inferred claims by other rows.
+      # Other deliberate mappings remain visible for shared-pool review.
+      SkuLink.where(squareVariationId: square.id, auto: true, matchSource: 'sku')
+        .where.not(shopifyVariantId: @variant.id).update_all(squareVariationId: nil)
+    end
     DataCache.bump!
     redirect_to(shopify_variant_path(@variant), notice: "Linked #{@variant.title} to #{square.name}.")
   rescue ActiveRecord::RecordNotFound
     redirect_to(shopify_variant_path(@variant), alert: 'Square variation not found.')
   end
 
-  # Break the link; the next sync will re-link by SKU if SKUs still match.
+  # Persist the operator's decision so a later source sync cannot undo it.
   def unlink
     authorize(:module, :inventory_write?)
-    @variant.sku_links.destroy_all
+    CatalogMappingLock.synchronize do
+      @variant = ShopifyVariant.find_by!(tenant_id: Current.tenant_id, id: @variant.id)
+      link = SkuLink.find_or_initialize_by(shopifyVariantId: @variant.id)
+      link.assign_attributes(tenant_id: Current.tenant_id, squareVariationId: nil,
+        sku: @variant.sku.presence || @variant.id, matchSource: 'manual-unlink', auto: false)
+      link.createdAt ||= Time.current
+      link.save!
+    end
     DataCache.bump!
-    redirect_to(shopify_variant_path(@variant), notice: 'Link removed.')
+    redirect_to(shopify_variant_path(@variant), notice: 'Explicitly unlinked. Automatic syncs will keep this item unlinked until you choose a new link.')
   end
 
   private
+
+  def handle_mapping_database_error(error)
+    raise error unless %w[SQLite3::BusyException SQLite3::LockedException].include?(error.cause.class.name)
+
+    redirect_to(shopify_variant_path(@variant), alert: 'Catalog mapping is busy. Review the current link before retrying.')
+  end
 
   def set_variant
     @variant = ShopifyVariant.find_by!(tenant_id: Current.tenant_id, id: params[:id])

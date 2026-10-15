@@ -17,6 +17,10 @@ The role presets cover cashier/POS, inventory employee, reporting and admin. Sto
 
 Provider account preparation, explicit KORONA/Cova read checks and selected Valmar Authorize.net/NMI credential/profile checks are documented in the [connection guide](https://techmore.github.io/rupert/payment-integrations.html). Read-access verification does not establish checkout readiness.
 
+Exact Shopify source order/line/variant identities now support immutable gram recipe versions and reviewed one-time deductions against an actual bulk lot, with shortage/replay checks and receipt CSV. A bounded read-only inventory review queue surfaces stored stock, hold and identity issues. Manual catalog links and explicit unlinks survive sync; ambiguous automatic matches remain unresolved. See the [inventory workflow guide](https://techmore.github.io/rupert/inventory-workflows.html) for operator steps, legacy mirror/count limits and remaining automatic Sheets/refund work.
+
+Valmar is the reported processor; Authorize.net is a possible gateway, not a confirmed account relationship. Processor, gateway, terminal and POS are separate roles. Rupert's setup checks do not authorize, capture or refund payments; actual payment and terminal execution remain planned.
+
 ## Primary POS cutover gate
 
 Before replacing the current POS, demonstrate the selected merchant account/gateway and supported terminal, customer-facing tipping, taxes and discounts, failed/retried payments, refunds/tip reversals, loyalty and gift tenders, and daily source-to-bank reconciliation. The operator team must validate real checkout and register-close scenarios, retain a tested fallback, and approve cutover. A quote preview or vendor marketing page does not establish primary POS readiness.
@@ -90,4 +94,4 @@ establish those facts.
 
 ## Remaining implementation sequence
 
-First preserve reliable sales inputs and register visibility: reviewed line-item CSV imports and source-aware coverage are implemented; C-Trax/native terminal and deposit ingestion remain pending a verified account contract. Next, preserve source line/variant identity for exact bulk gram recipes and reviewed local sale deductions, with shortage and replay audits. Automatic Google Sheets updates require a selected destination and reconciliation contract. Actual checkout, taxes/discounts, tip collection, supported terminal execution and payment/refund/settlement round trips remain the primary-POS cutover gate. Existing POS operation remains required until operator acceptance passes.
+Reviewed line-item CSV inputs and source-aware register coverage are implemented. Exact source line/variant identities, immutable gram recipes, reviewed local sale deductions and bounded inventory exception review are also implemented. Automatic material/refund reconciliation and Google Sheets updates remain pending a selected destination and reconciliation contract; split-lot and multi-material recipes remain separate work. C-Trax/native terminal and deposit ingestion still require a verified account contract. Actual checkout, taxes/discounts, tip collection, supported terminal execution and payment/refund/settlement round trips remain the primary-POS cutover gate. Existing POS operation remains required until operator acceptance passes.

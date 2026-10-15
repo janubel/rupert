@@ -41,13 +41,14 @@ class CatalogSyncer
   GRAPHQL
 
   # Paginates every order matching the query, so the sync captures the full
-  # history window rather than the first page.
+  # history window rather than the first page. Keep order pages small because
+  # each exact variant identity is nested inside up to 100 line items.
   ORDERS_QUERY = <<~GRAPHQL
     query Orders($orderQuery: String!, $orderCursor: String) {
-      orders(first: 100, query: $orderQuery, sortKey: CREATED_AT, reverse: true, after: $orderCursor) {
+      orders(first: 5, query: $orderQuery, sortKey: CREATED_AT, reverse: true, after: $orderCursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
-          id name createdAt displayFinancialStatus paymentGatewayNames
+          id name createdAt cancelledAt displayFinancialStatus paymentGatewayNames
           currentTotalPriceSet { shopMoney { amount currencyCode } }
           currentTotalTaxSet { shopMoney { amount currencyCode } }
           customer { id email firstName lastName phone }
@@ -59,8 +60,10 @@ class CatalogSyncer
             trackingInfo { company number url }
           }
           lineItems(first: 100) {
+            pageInfo { hasNextPage }
             nodes {
-              title variantTitle sku quantity
+              id title variantTitle sku quantity currentQuantity
+              variant { id }
               originalUnitPriceSet { shopMoney { amount currencyCode } }
               originalTotalSet { shopMoney { amount currencyCode } }
             }

@@ -38,6 +38,23 @@ class PageGuides
         'Print an invoice or packing slip from this page for the shipping desk.'
       ]
     ),
+    'inventory_exceptions' => Guide.new(
+      key: 'inventory_exceptions', title: 'Inventory exceptions',
+      summary: 'A read-only review queue for uncertain stock, local hold shortages and catalog conflicts, organized by exact source item and location.',
+      sections: [
+        { heading: 'What needs review',
+          body: 'The queue flags negative, unknown or stale mirrored stock; local holds that exceed available capacity; duplicate SKUs or barcodes; shared or unresolved catalog identities; pending counts; depleted bulk lots; and Shopify orders with incomplete source lines. Shopify and Square hold independent stock. Different channel quantities alone are not an exception.' },
+        { heading: 'Filters and coverage',
+          body: 'Choose a platform, stock location, work type and snapshot age threshold of 1–168 hours. Stock, holds and counts use the platform/location filters. Catalog checks cover all locations, and local bulk lots cover the store because they have no platform/location assignment. Incomplete Shopify order locations are matched by source location ID. Read each coverage note before treating a filtered view as complete.' },
+        { heading: 'Reading limits and next steps',
+          body: 'The queue displays bounded query results and sampled identity members, with additional pages when needed. Counts describe returned exception rows, not a complete audit or unique product count. Unknown quantities and unverifiable hold shortages stay unknown. Follow a review link to inspect the item, catalog decision, local holds, count or lot. The queue does not change stock, SKUs or material balances, and incomplete source lines must be verified before gram deductions.' }
+      ],
+      tips: [
+        'Local holds are advisory: Shopify and Square can still sell the same stock, and a later import may reduce capacity.',
+        'Check the exact source item and location before using a physical count; legacy worksheet comparisons may span Shopify locations.',
+        'A recent mirror timestamp and an empty queue do not prove current physical stock. Limits, missing source data and upstream transformations can hide issues.'
+      ]
+    ),
     'inventory' => Guide.new(
       key: 'inventory', title: 'Inventory',
       summary: 'Your catalog mirrored from Shopify with quantities on both sides — plus size-derived products and a banner when any count is negative.',
@@ -390,6 +407,7 @@ class PageGuides
     ['/access_logs', 'access_log'],
     ['/sales/pos_sessions', 'registers'],
     ['/inventory_counts', 'inventory_counts'],
+    ['/inventory_exceptions', 'inventory_exceptions'],
     ['/people/employees', 'employees'],
     ['/people/timesheets', 'timesheets'],
     ['/people/pay_runs', 'payroll'],

@@ -31,6 +31,15 @@ class ModuleRegistry
     Entry.new(key: 'inventory', name: 'Inventory', path: lambda {
       inventory_index_path
     }, permission: 'inventory.read', position: 40),
+    Entry.new(key: 'inventory_exceptions', name: 'Inventory review', path: lambda {
+      inventory_exceptions_path
+    }, permission: 'inventory.read', position: 41),
+    Entry.new(key: 'bulk_recipes', name: 'Bulk recipes', path: lambda {
+      bulk_recipes_path
+    }, permission: 'inventory.read', position: 44),
+    Entry.new(key: 'bulk_consumptions', name: 'Sale material use', path: lambda {
+      bulk_consumptions_path
+    }, permission: 'inventory.read', position: 44),
     Entry.new(key: 'locations', name: 'Locations', path: lambda {
       locations_path
     }, permission: 'inventory.read', position: 42),
@@ -142,7 +151,7 @@ class ModuleRegistry
       { key: 'overview', name: 'Overview', modules: ['dashboard'] },
       { key: 'sell', name: 'Sell', modules: %w[sales point_of_sale registers customers] },
       { key: 'stock', name: 'Stock',
-        modules: %w[inventory locations inventory_counts stock_reservations bulk_materials alerts purchase_orders vendors reconcile sizes] },
+        modules: %w[inventory inventory_exceptions locations inventory_counts stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
       { key: 'money', name: 'Money',
         modules: %w[reports register_summary ledger finance_accounts chart_of_accounts expenses payments] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
