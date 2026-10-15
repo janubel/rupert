@@ -219,6 +219,7 @@ Rails.application.routes.draw do
   resources :syncs, only: %i[index create] do
     collection do
       post :source
+      post :preview_swipesimple
       post :import_swipesimple
       post :push_guard_approve
       post :push_guard_freeze

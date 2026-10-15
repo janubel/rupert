@@ -4,10 +4,11 @@
   <% sync = local_assigns[:sync] || @last_sync %>
   <% if sync %>
     <% synced = sync.success? %>
-    <span class="<%= synced ? "pill-fern" : "pill-clay" %>" title="<%= l(sync.startedAt, format: :short) %>">
+    <% event_at = synced && sync.finishedAt ? sync.finishedAt : sync.startedAt %>
+    <span class="<%= synced ? "pill-fern" : "pill-clay" %>" title="Latest recorded run: <%= sync.source.presence || 'Unknown source' %> · <%= sync.mode %> · <%= l(event_at, format: :short) %>">
       <span class="dot <%= synced ? "bg-fern" : "bg-clay" %>"></span>
-      <%= synced ? "Synced" : "Needs sync" %>
-      <time datetime="<%= sync.startedAt.iso8601 %>"><%= time_ago_in_words(sync.startedAt) %> ago</time>
+      <%= sync.source.presence || 'Unknown source' %> · <%= sync.mode %> · <%= sync.status %>
+      <time datetime="<%= event_at.iso8601 %>"><%= time_ago_in_words(event_at) %> ago</time>
     </span>
   <% else %>
     <span class="pill-taupe">

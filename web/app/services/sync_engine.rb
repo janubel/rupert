@@ -111,19 +111,24 @@ class SyncEngine
 
     # One-way import of a SwipeSimple CSV export (SwipeSimple has no public
     # API). Idempotent, synchronous, and recorded as a sync run.
-    def import_swipesimple_csv!(csv_text_or_path, actor: 'user', tenant: nil)
+    def import_swipesimple_csv!(csv_text_or_path, actor: 'user', tenant: nil, expected_fingerprint: nil)
       Current.tenant = tenant if tenant
       raise ArgumentError, 'No tenant in context' if Current.tenant_id.nil?
 
-      run = SyncRun.create!(mode: 'csv', status: 'running', source: 'swipesimple', actor: actor,
-        startedAt: Time.current)
-      summary = SwipesimpleImporter.import!(csv_text_or_path)
-      run.update!(status: 'success', finishedAt: Time.current, details: summary.to_h.to_json)
-      DataCache.bump!
+      recover_stale_runs!
+      run = create_run!(mode: 'csv', source: 'swipesimple', actor: actor)
+      Current.sync_run = run
+      summary = SwipesimpleImporter.import!(csv_text_or_path, expected_fingerprint: expected_fingerprint) do |result|
+        run.update!(status: 'success', finishedAt: Time.current, details: result.to_h.to_json)
+      end
+      bump_cache_logging_only
       summary
     rescue StandardError => e
-      run&.update!(status: 'failed', error: e.message.to_s[0, 2000], finishedAt: Time.current)
+      message = e.is_a?(ArgumentError) || e.is_a?(AlreadyRunning) ? e.message.to_s[0, 2000] : 'The CSV import failed. No sales were saved.'
+      run&.update!(status: 'failed', error: message, finishedAt: Time.current)
       raise
+    ensure
+      Current.sync_run = nil
     end
 
     private

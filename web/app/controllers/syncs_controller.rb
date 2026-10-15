@@ -3,15 +3,17 @@
 require 'csv'
 
 class SyncsController < AuthenticatedController
+  SWIPESIMPLE_CONTRACT = 'rupert-swipesimple-line-items-v1'
+  SWIPESIMPLE_PREVIEW_LIFETIME = 15.minutes
+
   before_action :authorize_read, only: :index
-  before_action :authorize_write, only: %i[create source import_swipesimple]
+  before_action :authorize_write, only: %i[create source preview_swipesimple import_swipesimple]
+  before_action :prevent_import_caching, only: %i[index preview_swipesimple import_swipesimple]
   before_action :authorize_push_approve, only: :push_guard_approve
   before_action :authorize_push_freeze, only: %i[push_guard_freeze push_guard_unfreeze]
 
   def index
-    @runs = SyncRun.recent(25)
-    @recent_movements = InventoryMovement.includes(:sync_run).order(createdAt: :desc).limit(12)
-    @push_guard = PlatformPushGuard.status_all
+    load_sync_history
   end
 
   def create
@@ -31,21 +33,42 @@ class SyncsController < AuthenticatedController
     end
   end
 
-  # POST /syncs/import_swipesimple — upload (or paste) a SwipeSimple CSV export.
-  def import_swipesimple
-    csv = if params[:file].present?
-      params[:file].read
-    elsif params[:text].present?
-      params[:text]
-          end
-    raise ArgumentError, 'Attach a CSV file or paste the export text.' if csv.blank?
+  def preview_swipesimple
+    preview = SwipesimpleImporter.preview(swipesimple_csv)
+    @swipesimple_preview = preview.summary
+    @swipesimple_preview_token = import_verifier.generate(
+      { 'tenant_id' => Current.tenant_id, 'user_id' => Current.user.id.to_s,
+        'fingerprint' => preview.fingerprint, 'contract' => SWIPESIMPLE_CONTRACT },
+      expires_in: SWIPESIMPLE_PREVIEW_LIFETIME, purpose: SWIPESIMPLE_CONTRACT
+    )
+    respond_to do |format|
+      format.json { render json: { preview: @swipesimple_preview, preview_token: @swipesimple_preview_token } }
+      format.html do
+        load_sync_history
+        render :index
+      end
+    end
+  rescue ArgumentError, CSV::MalformedCSVError => e
+    import_error(e)
+  end
 
-    summary = SyncEngine.import_swipesimple_csv!(csv, actor: Current.user.email)
-    notice = "Imported #{summary.orders} order(s), #{summary.lines} line(s) from SwipeSimple."
+  # Only a reviewed, unchanged file can be imported. The signed token contains
+  # a digest and access scope, never raw export contents or customer data.
+  def import_swipesimple
+    confirmation = import_verifier.verified(params[:preview_token].to_s, purpose: SWIPESIMPLE_CONTRACT)
+    unless confirmation.is_a?(Hash) && confirmation['tenant_id'] == Current.tenant_id &&
+      confirmation['user_id'] == Current.user.id.to_s && confirmation['contract'] == SWIPESIMPLE_CONTRACT
+      raise ArgumentError, 'Preview this export before importing. Previews expire after 15 minutes.'
+    end
+
+    summary = SyncEngine.import_swipesimple_csv!(swipesimple_csv, actor: Current.user.email,
+      expected_fingerprint: confirmation.fetch('fingerprint'))
+    notice = "Imported #{summary.orders} new order(s), #{summary.lines} line(s) from SwipeSimple."
+    notice += " #{summary.unchanged_orders} unchanged order(s) left intact." if summary.unchanged_orders.positive?
     notice += " #{summary.skipped_rows} blank row(s) skipped." if summary.skipped_rows.positive?
     redirect_to(syncs_path, notice: notice)
-  rescue ArgumentError, CSV::MalformedCSVError => e
-    redirect_to(syncs_path, alert: e.message)
+  rescue ArgumentError, CSV::MalformedCSVError, SyncEngine::AlreadyRunning => e
+    import_error(e)
   end
 
   # POST /syncs/push_guard_approve — the acting user records an explicit
@@ -93,6 +116,45 @@ class SyncsController < AuthenticatedController
   end
 
   private
+
+  def load_sync_history
+    @runs = SyncRun.recent(25)
+    @recent_movements = InventoryMovement.includes(:sync_run).order(createdAt: :desc).limit(12)
+  end
+
+  def prevent_import_caching
+    response.headers['Cache-Control'] = 'no-store'
+  end
+
+  def import_verifier
+    Rails.application.message_verifier('swipesimple-import-preview')
+  end
+
+  def swipesimple_csv
+    if params[:file].present? && params[:text].present?
+      raise ArgumentError, 'Choose a CSV file or paste text, rather than supplying both.'
+    end
+
+    text = if params[:file].is_a?(ActionDispatch::Http::UploadedFile)
+      raise ArgumentError, 'The export is too large.' if params[:file].size > SwipesimpleImporter::MAX_BYTES
+
+      params[:file].read(SwipesimpleImporter::MAX_BYTES + 1)
+    elsif params[:text].is_a?(String)
+      params[:text]
+    end
+    raise ArgumentError, 'Attach a CSV file or paste the export text.' if text.blank?
+    raise ArgumentError, 'The export is too large.' if text.bytesize > SwipesimpleImporter::MAX_BYTES
+
+    text
+  end
+
+  def import_error(error)
+    message = error.is_a?(CSV::MalformedCSVError) ? 'The export is not valid CSV. Check its quoting and row structure.' : error.message
+    respond_to do |format|
+      format.json { render json: { error: message }, status: :unprocessable_entity }
+      format.html { redirect_to(syncs_path(anchor: 'swipesimple'), alert: message) }
+    end
+  end
 
   def authorize_read
     authorize(:module, :sync_read?)

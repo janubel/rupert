@@ -11,11 +11,11 @@ The application now includes an image-based Shopify catalog cart and server-pric
 
 Remote clock-in/out is tied to an active worker record linked to the signed-in account. Workers request corrections from any authorized device; payroll reviewers approve or reject them with the original/requested timestamps retained. The 1% commission screen is a read-only estimate that gives each overlapping person the full percentage. It uses the imported order occurrence timestamp (some connectors use order creation time), a selected source/currency and a disclosed pre-discount item-price basis. It excludes incomplete payment coverage, recorded refunds and invalid item pricing. It does not finalize compensation or payouts.
 
-Daily register summaries use payment and refund event dates, preserve source/location/currency groups, and export CSV. Missing payment records are counted. Discounts, collected tips, merchant fees, C-Trax imports and terminal/bank reconciliation remain incomplete; unavailable values are not reported as zero. Gift/store-credit activity means tenders less refunds is not settled bank cash.
+Daily register summaries use separate order, payment and refund event dates, preserve source/location/currency groups, and export CSV. Tender/refund/net detail, missing/incomplete/excess/unknown payment coverage and source-specific import freshness are visible. Shopify tenders and their payment dates remain inferred; unsettled orders are excluded. Discounts, collected tips, merchant fees, C-Trax imports and terminal/bank reconciliation remain incomplete; unavailable values are not reported as zero. Gift/store-credit activity means tenders less refunds is not settled bank cash. The [reviewed sales import guide](https://techmore.github.io/rupert/sales-imports.html) documents the validated prepared SwipeSimple line-item CSV contract and its limits.
 
 The role presets cover cashier/POS, inventory employee, reporting and admin. Store admins can assign store roles; super-admin access remains protected. New accounts without an explicit role default to cashier. Deactivated browser sessions are rejected. The API guide documents scoped, revocable read access; it is separate from payment-provider or terminal integration.
 
-Provider account preparation and explicit KORONA/Cova read checks are documented in the [connection guide](https://techmore.github.io/rupert/payment-integrations.html). Read-access verification does not establish checkout readiness.
+Provider account preparation, explicit KORONA/Cova read checks and selected Valmar Authorize.net/NMI credential/profile checks are documented in the [connection guide](https://techmore.github.io/rupert/payment-integrations.html). Read-access verification does not establish checkout readiness.
 
 ## Primary POS cutover gate
 
@@ -87,3 +87,7 @@ The business has an October replacement decision target. Vendor support
 dates, merchant account approvals and readiness for a particular processor
 must be verified directly; roadmap entries and marketing claims do not
 establish those facts.
+
+## Remaining implementation sequence
+
+First preserve reliable sales inputs and register visibility: reviewed line-item CSV imports and source-aware coverage are implemented; C-Trax/native terminal and deposit ingestion remain pending a verified account contract. Next, preserve source line/variant identity for exact bulk gram recipes and reviewed local sale deductions, with shortage and replay audits. Automatic Google Sheets updates require a selected destination and reconciliation contract. Actual checkout, taxes/discounts, tip collection, supported terminal execution and payment/refund/settlement round trips remain the primary-POS cutover gate. Existing POS operation remains required until operator acceptance passes.

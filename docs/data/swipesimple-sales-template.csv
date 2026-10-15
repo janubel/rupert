@@ -1,0 +1,2 @@
+Order,Date,Item,SKU,Qty,Unit Price,Total,Payment,Status,Currency
+SAMPLE-1,2026-07-01T14:30:00-04:00,Sample item,SAMPLE,2,14.00,28.00,Card,Completed,USD

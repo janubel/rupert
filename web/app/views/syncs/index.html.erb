@@ -1,4 +1,5 @@
 <% content_for :title, "Sync" %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6" data-controller="live-sync">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
@@ -24,28 +25,7 @@
 
   <%= render "syncs/push_guard" %>
 
-  <% if Current.user.can?("sync.write") %>
-    <section class="card card-pad">
-      <h2 class="font-display text-xl text-ink">Import SwipeSimple sales (CSV)</h2>
-      <p class="mt-2 text-xs text-taupe">SwipeSimple has no public API, so sales come in through the CSV export from its Reporting Dashboard. Imports are idempotent — running the same file again won't duplicate anything.</p>
-
-      <%= form_tag import_swipesimple_syncs_path, id: "swipesimple", method: :post, multipart: true, class: "mt-4 space-y-3" do %>
-        <div class="flex flex-wrap items-center gap-3">
-          <label class="btn-ghost cursor-pointer">
-            Choose CSV file
-            <input type="file" name="file" accept=".csv,text/csv,text/plain" class="hidden" required>
-          </label>
-          <span class="text-xs text-taupe">or paste below</span>
-        </div>
-        <textarea name="text" rows="5" placeholder="Order,Date,Item,SKU,Qty,Unit Price,Total,Payment,Customer&#10;1001,2026-07-01,Honey Sticks,TEA-50,2,14.00,28.00,Card,Alex Morgan" aria-label="Paste SwipeSimple CSV export here" class="input !rounded-2xl font-mono text-xs"></textarea>
-        <div class="flex items-center gap-3">
-          <%= submit_tag "Import sales", class: "btn-primary btn-sm" %>
-        </div>
-      <% end %>
-
-      <p class="mt-4 text-xs text-taupe">Recognized columns (aliases accepted): <code class="rounded bg-haze px-1 py-0.5 font-mono">Order / Invoice / Receipt</code> · <code class="rounded bg-haze px-1 py-0.5 font-mono">Date / Date/Time</code> · <code class="rounded bg-haze px-1 py-0.5 font-mono">Item / Product</code> · <code class="rounded bg-haze px-1 py-0.5 font-mono">SKU</code> · <code class="rounded bg-haze px-1 py-0.5 font-mono">Qty</code> · <code class="rounded bg-haze px-1 py-0.5 font-mono">Unit Price</code> · <code class="rounded bg-haze px-1 py-0.5 font-mono">Total</code> · <code class="rounded bg-haze px-1 py-0.5 font-mono">Payment</code> · <code class="rounded bg-haze px-1 py-0.5 font-mono">Customer</code>. Rows without an order id are treated as a single-item sale.</p>
-    </section>
-  <% end %>
+  <%= render "syncs/swipesimple_import" if Current.user.can?("sync.write") %>
 
   <section class="grid gap-4 lg:grid-cols-2">
     <%= render "syncs/runs" %>

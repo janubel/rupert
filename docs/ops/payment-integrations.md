@@ -13,11 +13,13 @@ The business described C-Trax POS with a PAX terminal and Valmar processing, and
 | Valmar | Select the confirmed Authorize.net or NMI gateway, save encrypted gateway credentials and run an explicit credential/profile check. Other gateway choices retain preparation only. | Confirm the actual Valmar gateway and approved account environment. A check does not enable payment collection or a terminal. |
 | PAX | Terminal model/device reference and developer-access preparation. | Confirm installed payment application, processor and approved SDK/bridge, then use a test terminal. No terminal commands are implemented. |
 | C-Trax | Store/access preparation and official vendor documentation links. | Obtain account-specific Open API authentication, scopes, sample responses and export contract. No speculative endpoint is called. |
-| SwipeSimple | Link to the existing transaction CSV importer. | Export the supported report and reconcile imports. SwipeSimple does not publish a payments integration API. |
+| SwipeSimple | Reviewed, validated Rupert line-item CSV import with an exact-file preview and atomic replay-safe local sales. | Convert and reconcile the source report against the supported contract; transaction-only reports may lack item detail. Refunds, split tenders, tax/tips/fees and native API access are not implemented. |
 | KORONA | Encrypted dedicated API credentials and explicit organizational-unit read-access check. | Trial/merchant account, correct region endpoint, approved read permissions; catalog/sales adapters and payment/terminal validation are separate work. |
 | Cova | Encrypted approved integrator onboarding credentials and explicit company-location read-access check. | Approved intended integration use and Onboarding Package; business-data adapters and payment/terminal validation are separate work. |
 | Shopify | Existing connection settings; website payment processing stays separate. | Existing tenant client-credential setup and an explicit sync when ready. This release adds no new Shopify OAuth login. |
 | Square | Existing manual-token connection settings. | Account eligibility and a valid token. Rupert does not implement automatic OAuth login/token renewal. |
+
+See the [reviewed sales import and register report guide](https://techmore.github.io/rupert/sales-imports.html) for the supported CSV contract, sample file, preview/import workflow and source coverage limits.
 
 ## Set up an account when ready
 

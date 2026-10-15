@@ -49,7 +49,7 @@
       "area": "Commerce",
       "name": "SwipeSimple sales import",
       "status": "Available",
-      "scope": "Idempotent CSV import into canonical orders; no direct API integration.",
+      "scope": "Reviewed, tenant-scoped Rupert line-item CSV imports with explicit paid status, timestamp, currency and tender; whole-file validation, atomic writes and unchanged replay safety. Native SwipeSimple reports may need conversion; refunds, split tenders, tax/tips/fees and direct API access are not supported.",
       "evidence": "web/app/services/swipesimple_importer.rb",
       "phase": "0"
     },
@@ -481,7 +481,7 @@
       "area": "Stock",
       "name": "Bulk raw material tracking",
       "status": "Partial",
-      "scope": "Lot receipts, consumption, corrections and CSV export with integer milligram balances and audit history. Sale-to-gram recipe mapping, automatic Shopify consumption/refunds and Google Sheets sync remain planned.",
+      "scope": "Lot receipts, consumption, corrections and CSV export with integer milligram balances and audit history. Next: stable source-line/variant identity and versioned gram recipes, then reviewed replay-safe sale deductions. Automatic refunds and owner-selected Google Sheets sync remain planned.",
       "evidence": "web/app/services/bulk_ledger.rb",
       "phase": "1"
     },
@@ -535,7 +535,7 @@
       "area": "Commerce",
       "name": "Daily register summaries",
       "status": "Partial",
-      "scope": "Cash/card/other tenders and refunds by event date, source, location and currency with CSV and missing-payment coverage. C-Trax imports, terminal deposits, discounts, tips and fees require further integration.",
+      "scope": "Event-dated tender/refund/net detail, payment coverage diagnostics and source-specific import freshness with CSV by source/location/currency. Shopify tenders remain inferred; C-Trax imports, terminal deposits, discounts, collected tips and fees remain incomplete.",
       "evidence": "web/app/services/daily_register_summary.rb",
       "phase": "0"
     },

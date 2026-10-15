@@ -72,7 +72,9 @@ public GitHub Pages site, wrapped in `data` with `meta.api_version`.
 
 ## Remaining integration work
 
-The separate [POS account setup guide](https://techmore.github.io/rupert/payment-integrations.html) documents encrypted KORONA/Cova credentials, explicit read-access checks and vendor-access preparation. Those checks do not import business data or process payments.
+The separate [POS account setup guide](https://techmore.github.io/rupert/payment-integrations.html) documents encrypted KORONA/Cova credentials, selected Valmar Authorize.net/NMI credential/profile checks and vendor-access preparation. Those checks do not import business data or process payments.
+
+The separate [reviewed CSV import guide](https://techmore.github.io/rupert/sales-imports.html) describes a prepared SwipeSimple line-item sales contract; that browser workflow is not an API endpoint.
 
 This is a read integration foundation. Per-client rate limits, webhooks,
 idempotent write contracts, OpenAPI generation, source-specific marketplace or

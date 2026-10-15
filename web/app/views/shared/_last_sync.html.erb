@@ -4,7 +4,8 @@
   <% sync = local_assigns[:sync] || @last_sync %>
   <% if sync %>
     <p class="text-xs text-taupe">
-      Last <%= sync.success? ? "synced" : "sync" %> <%= time_ago_in_words(sync.startedAt) %> ago
+      <%= sync.source.presence || 'Unknown source' %> · <%= sync.mode %> ·
+      <%= sync.success? ? 'Finished' : 'Started' %> <%= time_ago_in_words(sync.success? && sync.finishedAt ? sync.finishedAt : sync.startedAt) %> ago
       <span class="<%= sync.success? ? "pill-fern" : "pill-rose" %>"><%= sync.status %></span>
     </p>
   <% else %>

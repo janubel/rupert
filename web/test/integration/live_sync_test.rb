@@ -41,6 +41,9 @@ class LiveSyncTest < ActionDispatch::IntegrationTest
     assert_select '[data-controller=live-sync]'
     assert_select '#sync-banner'
     assert_select '#sync-runs'
+    assert_select 'h2', 'Platform changes'
+    assert_select 'form[action=?]', push_guard_approve_syncs_path, count: 0
+    assert_not_includes response.body, 'Every outbound write'
   end
 
   test 'dashboard includes the live-sync controller, banner, and last-sync line' do
@@ -55,5 +58,14 @@ class LiveSyncTest < ActionDispatch::IntegrationTest
     delete logout_path
     get live_sync_status_path, headers: { 'Accept' => 'text/vnd.turbo-stream.html' }
     assert_response :redirect
+  end
+
+  test 'a CSV import pill identifies its own source instead of implying all sources refreshed' do
+    run = SyncRun.create!(mode: 'csv', source: 'swipesimple', status: 'success', actor: 'test',
+      startedAt: 10.minutes.ago, finishedAt: 2.minutes.ago)
+    get syncs_path
+    assert_response :success
+    assert_select '#header-sync-pill', text: /swipesimple.*csv.*success/m
+    assert_select '#header-sync-pill time[datetime=?]', run.finishedAt.iso8601
   end
 end

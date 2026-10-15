@@ -745,7 +745,7 @@
     {
       "name": "External integrations / automation",
       "rupert": "Partial",
-      "scope": "Existing source mirrors, SwipeSimple CSV, scoped Rupert read API and encrypted provider setup; KORONA/Cova read checks and selected Valmar Authorize.net/NMI credential/profile checks. Payment capture and new automatic data adapters remain pending.",
+      "scope": "Source mirrors, reviewed atomic SwipeSimple line-item CSV import, scoped read API and encrypted provider setup; KORONA/Cova and selected Valmar gateway checks. Native report conversion, payment capture and new automatic data adapters remain pending.",
       "phase": "4",
       "competitors": {
         "odoo": "Integration / companion",
@@ -1298,7 +1298,7 @@
       "notes": {
         "korona": "General salesperson/cashier/team commissions are documented, but this exact automatic overlap rule is not established.",
         "cova": "Sales/workforce integration is documented, but this exact commission allocation is not established.",
-        "rupert": "No shift-overlap allocation engine exists; manual payroll commissions do not implement this requirement.",
+        "rupert": "Independent per-worker 1% preview is implemented for eligible imported merchandise sales and overlapping shift intervals. Final compensation policy, refund reconciliation and payouts remain pending.",
         "ctrax": "The exact per-person shift-overlap allocation was not established in the reviewed official product material.",
         "swipesimple": "Sales-by-user reports are documented; the exact shift-overlap allocation was not established."
       }
@@ -1358,7 +1358,7 @@
     {
       "name": "Daily cash/card register summary",
       "rupert": "Partial",
-      "scope": "Event-dated cash/card/other tenders, refunds and CSV by source/location/currency; missing imports, tips, discounts and fees disclosed",
+      "scope": "Event-dated tender/refund/net breakdown, payment coverage and per-source freshness with CSV. Shopify tenders remain inferred; primary-register settlement, tips, discounts and fees are incomplete.",
       "phase": "0",
       "competitors": {
         "odoo": "Not established",
