@@ -21,6 +21,8 @@ The business described C-Trax POS with a PAX terminal and Valmar processing, and
 
 ## Set up an account when ready
 
+[Open Rupert provider setup](https://rupert.stoverparc.org/pos_connections). Sign in with your authorized Rupert account.
+
 Open **System → POS & payments** or **Connections → POS & payments**. Review the provider, record the merchant/store or terminal reference and select the actual account environment. A trial/test label does not create a sandbox; obtain the correct test credentials from the vendor. For Valmar, confirm which gateway serves the account before choosing an adapter. Recording a gateway does not configure the existing Authorize.net checkout or enable charges.
 
 Only an active workspace administrator with settings write permission can save details, check API access or remove saved credentials. The vendor access checkboxes are operator records, not automated proof of approval. Saving stays local: it does not start a sync, contact a vendor, send an access request or initiate a payment. Existing onboarding now follows the same explicit-save behavior.
