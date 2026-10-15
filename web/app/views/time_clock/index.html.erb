@@ -13,7 +13,7 @@
       <h2 class="font-display text-xl">Link your worker record</h2><p class="text-sm text-mocha">Ask an administrator to connect exactly one active Employee record to your sign-in account. Contractors can use the same time clock. Your existing shift history stays below.</p>
     <% end %>
     <% if @open_shift %>
-      <p>Clocked in <%= l(@open_shift.started_at, format: :long) %> · <%= number_with_precision(@open_shift.hours, precision: 2) %> hours so far</p>
+      <p>Clocked in <%= l(@open_shift.started_at, format: '%b %d, %Y %H:%M:%S %Z') %> · <%= number_with_precision(@open_shift.hours, precision: 2) %> hours so far</p>
       <%= button_to 'Clock out', clock_out_time_clock_path, params: { shift_id: @open_shift.id }, method: :post, class: 'btn-primary', data: { turbo: false } %>
     <% end %>
     <% if Current.user.can?('payroll.read') %><%= link_to 'Commission preview', commission_preview_time_clock_path, class: 'btn-ghost' %><% end %>
@@ -22,7 +22,7 @@
   <section class="space-y-3"><h2 class="font-display text-xl">Your latest shifts</h2>
     <% @shifts.each do |shift| %>
       <article class="card card-pad space-y-3">
-        <p class="font-medium"><%= l(shift.started_at, format: :long) %> → <%= shift.ended_at ? l(shift.ended_at, format: :long) : 'Open shift' %></p>
+        <p class="font-medium"><%= l(shift.started_at, format: '%b %d, %Y %H:%M:%S %Z') %> → <%= shift.ended_at ? l(shift.ended_at, format: '%b %d, %Y %H:%M:%S %Z') : 'Open shift' %></p>
         <p class="text-sm text-mocha"><%= number_with_precision(shift.hours, precision: 2) %> hours</p>
         <details><summary class="cursor-pointer text-sm text-olive">Request a time correction</summary>
           <%= form_with url: request_correction_time_clock_path(shift), scope: :clock_correction, data: { turbo: false }, class: 'mt-3 space-y-3' do |form| %>
@@ -39,7 +39,7 @@
   </section>
 
   <% if @pending_corrections %><section class="space-y-3"><h2 class="font-display text-xl">Pending correction review</h2><p class="text-xs text-taupe">Up to 100 pending requests shown. Approval records the reviewer and original values. A request becomes stale if the shift changes before approval.</p>
-    <% @pending_corrections.each do |correction| %><article class="card card-pad space-y-3"><p class="font-medium"><%= correction.clock_shift.employee_name %></p><p class="text-sm">Original: <%= l(correction.original_started_at, format: :long) %> → <%= correction.original_ended_at ? l(correction.original_ended_at, format: :long) : 'Open' %><br>Requested: <%= l(correction.proposed_started_at, format: :long) %> → <%= l(correction.proposed_ended_at, format: :long) %></p><p class="text-sm text-mocha"><%= correction.reason %></p><div class="flex gap-2"><%= button_to 'Approve correction', approve_correction_time_clock_path(correction), method: :post, class: 'btn-primary', data: { turbo_confirm: 'Apply these corrected shift times? This does not pay payroll.' } %><%= button_to 'Reject', reject_correction_time_clock_path(correction), method: :post, class: 'btn-ghost' %></div></article><% end %>
+    <% @pending_corrections.each do |correction| %><article class="card card-pad space-y-3"><p class="font-medium"><%= correction.clock_shift.employee_name %></p><p class="text-sm">Original: <%= l(correction.original_started_at, format: '%b %d, %Y %H:%M:%S %Z') %> → <%= correction.original_ended_at ? l(correction.original_ended_at, format: '%b %d, %Y %H:%M:%S %Z') : 'Open' %><br>Requested: <%= l(correction.proposed_started_at, format: '%b %d, %Y %H:%M:%S %Z') %> → <%= l(correction.proposed_ended_at, format: '%b %d, %Y %H:%M:%S %Z') %></p><p class="text-sm text-mocha"><%= correction.reason %></p><div class="flex gap-2"><%= button_to 'Approve correction', approve_correction_time_clock_path(correction), method: :post, class: 'btn-primary', data: { turbo_confirm: 'Apply these corrected shift times? This does not pay payroll.' } %><%= button_to 'Reject', reject_correction_time_clock_path(correction), method: :post, class: 'btn-ghost' %></div></article><% end %>
     <% if @pending_corrections.empty? %><p class="text-sm text-taupe">No corrections awaiting review.</p><% end %>
   </section><% end %>
 </div>
