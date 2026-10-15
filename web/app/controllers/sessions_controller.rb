@@ -32,7 +32,7 @@ class SessionsController < ApplicationController
     else
       User.find_by(email: params[:email].to_s.downcase)
            end
-    if user&.active? && user.authenticate(params[:password])
+    if user&.active? && user.tenant&.status == 'active' && user.authenticate(params[:password])
       reset_session # prevent session fixation
       session[:user_id] = user.id
       AccessLogger.record(

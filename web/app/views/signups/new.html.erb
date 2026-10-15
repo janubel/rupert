@@ -1,0 +1,30 @@
+<% content_for :title, 'Request a private workspace' %>
+<div class="mx-auto max-w-xl pt-10">
+  <div class="card card-pad space-y-5">
+    <h1 class="font-display text-2xl text-ink">Your company’s Rupert workspace</h1>
+    <p class="text-sm text-mocha">Use a Google account with your company email domain. We verify that email, then the platform owner reviews your request before creating a separate workspace.</p>
+    <p class="rounded-xl bg-haze p-3 text-sm text-mocha">This verifies your email access, not legal ownership of the domain. No payment account, provider connection or DNS configuration is created.</p>
+    <% if @signup.errors.any? %>
+      <div role="alert" class="rounded-xl bg-red-50 p-3 text-sm text-red-800"><%= @signup.errors.full_messages.to_sentence %></div>
+    <% end %>
+    <%= form_with scope: :workspace_signup, url: signup_path, method: :post, data: { turbo: false }, class: 'space-y-4' do |f| %>
+      <div>
+        <%= f.label :workspace_name, 'Company / workspace name', class: 'mb-1 block text-sm font-semibold' %>
+        <%= f.text_field :workspace_name, value: @signup.workspace_name, required: true, maxlength: 160, class: 'input' %>
+      </div>
+      <div>
+        <%= f.label :domain, 'Company email domain', class: 'mb-1 block text-sm font-semibold' %>
+        <%= f.text_field :domain, value: @signup.domain, placeholder: 'company.com', required: true, maxlength: 253, class: 'input', autocapitalize: 'none', spellcheck: false %>
+        <p class="mt-1 text-xs text-mocha">Your Google email must end with this exact domain. Personal email services are not eligible.</p>
+      </div>
+      <div>
+        <%= f.label :requested_subdomain, 'Workspace name in Rupert', class: 'mb-1 block text-sm font-semibold' %>
+        <%= f.text_field :requested_subdomain, value: @signup.requested_subdomain, placeholder: 'your-company', required: true, minlength: 2, maxlength: 63, pattern: '[a-z0-9][a-z0-9-]*[a-z0-9]', class: 'input', autocapitalize: 'none', spellcheck: false %>
+        <p class="mt-1 text-xs text-mocha">Choose 2–63 lowercase letters, numbers or hyphens. A requested name does not create a working hostname.</p>
+      </div>
+      <p class="text-xs text-mocha">Referral attribution: <%= WorkspaceSignup::REFERRAL_DOMAIN %>. This label grants the referrer no access to your workspace.</p>
+      <%= f.submit 'Verify company email with Google', class: 'btn-primary' %>
+    <% end %>
+    <%= link_to 'Already have an account? Sign in', login_path, class: 'text-sm underline' %>
+  </div>
+</div>

@@ -10,6 +10,12 @@ Rails.application.routes.draw do
   get '/auth/google', to: 'oauth#authorize', as: :google_auth
   get '/auth/google/callback', to: 'oauth#callback', as: :google_callback
 
+  get '/signup', to: 'signups#new', as: :signup
+  post '/signup', to: 'signups#create'
+  get '/platform', to: 'platform#index', as: :platform
+  post '/platform/signups/:id/approve', to: 'platform#approve', as: :approve_platform_signup
+  post '/platform/signups/:id/reject', to: 'platform#reject', as: :reject_platform_signup
+
   get '/setup', to: 'setup#new', as: :setup
   post '/setup', to: 'setup#create'
 

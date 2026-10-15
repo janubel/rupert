@@ -82,8 +82,9 @@ class OnboardingConnectTest < ActionDispatch::IntegrationTest
         post onboarding_connect_path, params: { shopify_client_id: 'cid', shopify_client_secret: 'secret' }
       end
     end
-    assert_redirected_to root_path
-    assert_match(/active store/, flash[:alert])
+    assert_response :forbidden
+    assert_includes response.body, 'workspace is inactive'
+    assert_nil session[:user_id]
   end
 
   test 'deactivated accounts cannot save connection details' do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_180000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1167,6 +1167,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_160000) do
     t.string "status", default: "active"
     t.string "subdomain", null: false
     t.datetime "updated_at", null: false
+    t.string "referral_domain"
+    t.index ["referral_domain"], name: "index_tenants_on_referral_domain"
     t.index ["subdomain"], name: "index_tenants_on_subdomain", unique: true
   end
 
@@ -1222,7 +1224,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_160000) do
     t.bigint "shopify_user_id"
     t.string "tenant_id"
     t.datetime "updated_at", null: false
+    t.string "referral_domain"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["referral_domain"], name: "index_users_on_referral_domain"
     t.index ["shopify_user_id"], name: "index_users_on_shopify_user_id", unique: true
     t.index ["tenant_id"], name: "index_users_on_tenant_id"
   end
@@ -1284,6 +1288,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_160000) do
     t.index ["token"], name: "index_warehouse_carts_on_token", unique: true
   end
 
+  create_table "workspace_signup_events", force: :cascade do |t|
+    t.integer "workspace_signup_id", null: false
+    t.integer "actor_id"
+    t.string "action", null: false
+    t.text "payload_json", null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_workspace_signup_events_on_actor_id"
+    t.index ["created_at", "id"], name: "index_workspace_signup_events_on_created_at_and_id"
+    t.index ["workspace_signup_id"], name: "index_workspace_signup_events_on_workspace_signup_id"
+  end
+
+  create_table "workspace_signups", force: :cascade do |t|
+    t.string "google_subject", null: false
+    t.string "applicant_name", null: false
+    t.string "email", null: false
+    t.string "domain", null: false
+    t.string "workspace_name", null: false
+    t.string "requested_subdomain", null: false
+    t.string "referral_domain", default: "herbalhealershcb.com", null: false
+    t.string "status", default: "pending", null: false
+    t.integer "reviewer_id"
+    t.datetime "reviewed_at"
+    t.string "tenant_id"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["domain"], name: "idx_workspace_signups_approved_domain", unique: true, where: "status = 'approved'"
+    t.index ["domain"], name: "index_workspace_signups_on_domain"
+    t.index ["email"], name: "index_workspace_signups_on_email", unique: true
+    t.index ["google_subject"], name: "index_workspace_signups_on_google_subject", unique: true
+    t.index ["reviewer_id"], name: "index_workspace_signups_on_reviewer_id"
+    t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
+  end
+
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade
@@ -1331,6 +1369,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_160000) do
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "stock_reservations", "stock_reservation_pools"
+  add_foreign_key "workspace_signup_events", "users", column: "actor_id", on_delete: :nullify
+  add_foreign_key "workspace_signup_events", "workspace_signups"
+  add_foreign_key "workspace_signups", "tenants"
+  add_foreign_key "workspace_signups", "users", column: "reviewer_id", on_delete: :nullify
 
   # Virtual tables defined in this database.
   # Note that virtual tables may not work with other database engines. Be careful if changing database.

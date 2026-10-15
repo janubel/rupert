@@ -27,6 +27,11 @@ class ApplicationController < ActionController::Base
       Current.user = nil
       return redirect_to(login_path, alert: 'This account has been deactivated. Contact an admin.')
     end
+    if Current.user && (Current.user.tenant&.status != 'active' || Current.tenant&.status != 'active')
+      session.delete(:user_id)
+      Current.user = nil
+      return render(plain: 'This workspace is inactive. Contact the platform administrator.', status: :forbidden)
+    end
     return redirect_to(setup_path) if Current.user.nil? && !Tenant.exists?
 
     redirect_to(login_path, alert: 'Please sign in') unless Current.user

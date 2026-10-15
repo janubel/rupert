@@ -1,0 +1,15 @@
+<% content_for :title, 'Workspace request' %>
+<div class="mx-auto max-w-xl pt-10">
+  <div class="card card-pad space-y-4">
+    <h1 class="font-display text-2xl text-ink">Workspace request <%= @signup.status %></h1>
+    <% if @signup.status == 'approved' %>
+      <p class="text-sm text-mocha">Your workspace has been approved. Sign in with the same Google account to continue.</p>
+    <% elsif @signup.status == 'rejected' %>
+      <p class="text-sm text-mocha">The platform owner did not approve this request. Submitting it again will not reopen it.</p>
+    <% else %>
+      <p class="text-sm text-mocha">Your verified company email request is waiting for platform owner review. No workspace or account has been created yet.</p>
+    <% end %>
+    <p class="text-xs text-mocha">You have not been signed in by submitting this request. No email notification is sent automatically.</p>
+    <%= link_to 'Return to sign in', login_path, class: 'btn-primary' %>
+  </div>
+</div>

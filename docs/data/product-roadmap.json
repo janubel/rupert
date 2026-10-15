@@ -574,6 +574,24 @@
       "scope": "Store-admin-only private domain/owner contacts and an encrypted service register: purposes, support contacts, renewal/review cadence and actual next dates, owner-reported MFA, ordinary HTTPS login shortcuts and vault item labels. Feature attestations require scoped evidence/dates; encrypted immutable history, stale-edit/scope protection and authenticated private printing preserve the local record. Owner attestations and manual follow-ups do not automate tests, vendor approvals, credential renewal or messages.",
       "evidence": "web/app/controllers/owner_checklists_controller.rb",
       "phase": "0"
+    },
+    {
+      "id": "F61",
+      "area": "System",
+      "name": "Private company workspace signup",
+      "status": "Available",
+      "scope": "Google-verified company-email requests enter a private platform review queue. Explicit platform-admin approval atomically creates an isolated workspace, first store administrator, allowed email domain and finance defaults; rejection and replay/version protections preserve history. New public Google accounts and approved workspaces receive the configured referral attribution. Email verification is not proof of domain ownership; domain-owner review, common consumer-domain exclusion and per-workspace credentials remain required. No DNS, provider connection or payment activation is performed.",
+      "evidence": "web/app/controllers/signups_controller.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F62",
+      "area": "System",
+      "name": "Private instance and signup dashboard",
+      "status": "Available",
+      "scope": "Fresh active platform-super-admin access to instance-wide workspace/account totals, new setup and signup review counts, referral attribution, bounded setup listings and read-only database/job diagnostics. Configured deployment label identifies the instance; backup records describe recorded uploads rather than a restore guarantee. Account and applicant details remain in the authenticated application; no host shell, Incus management socket or database SQL console is exposed.",
+      "evidence": "web/app/controllers/platform_controller.rb",
+      "phase": "0"
     }
   ]
 }
