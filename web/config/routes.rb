@@ -228,6 +228,15 @@ Rails.application.routes.draw do
   end
   get '/system', to: 'system#index', as: :system
   get '/connections', to: 'connections#index', as: :connections
+  resources :owner_checklists, only: %i[index new create show edit update] do
+    member do
+      get :print
+      get :service
+      patch :save_service
+      get :feature
+      patch :review_feature
+    end
+  end
   resources :pos_connections, only: %i[index show update], param: :provider do
     member do
       post :check_access

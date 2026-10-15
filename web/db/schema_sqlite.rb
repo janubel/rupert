@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_151000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_160000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -717,6 +717,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_151000) do
     t.index ["tenant_id", "status"], name: "index_orders_on_tenant_id_and_status"
   end
 
+  create_table "owner_checklist_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "owner_checklist_id", null: false
+    t.integer "actor_id"
+    t.text "payload_json", null: false
+    t.string "action", null: false
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "owner_checklist_id", "created_at", "id"], name: "idx_owner_checklist_events_timeline"
+  end
+
+  create_table "owner_checklists", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.text "payload_json", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.integer "created_by_id"
+    t.integer "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "created_at", "id"], name: "idx_owner_checklists_timeline"
+  end
+
   create_table "pay_rates", force: :cascade do |t|
     t.integer "annual_salary_cents", default: 0, null: false
     t.datetime "created_at", null: false
@@ -1287,6 +1308,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_151000) do
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
   add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade
   add_foreign_key "order_lines", "orders", on_delete: :cascade
+  add_foreign_key "owner_checklist_events", "owner_checklists"
+  add_foreign_key "owner_checklist_events", "users", column: "actor_id", on_delete: :nullify
+  add_foreign_key "owner_checklists", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "owner_checklists", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "payments", "orders", on_delete: :cascade
   add_foreign_key "pos_connections", "tenants"
   add_foreign_key "pos_connections", "users", column: "updated_by_id", on_delete: :nullify

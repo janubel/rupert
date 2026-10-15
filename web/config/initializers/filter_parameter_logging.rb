@@ -12,3 +12,7 @@ Rails.application.config.filter_parameters += %i[
 # Settings import/preview accepts whole .env payloads under a generic text key.
 # OAuth authorization codes also need filtering before request instrumentation.
 Rails.application.config.filter_parameters += [/\Atext\z/i, /\Acode\z/i]
+
+# Owner records contain private contacts, renewal details and test evidence.
+# Filter each complete form container before request instrumentation.
+Rails.application.config.filter_parameters += [/\Aowner_checklist\z/i, /\Aowner_service\z/i, /\Aowner_feature\z/i]

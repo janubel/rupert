@@ -1,0 +1,1 @@
+<% if @checklist.errors.any? %><div role="alert" class="rounded-xl border border-rose/30 bg-haze p-4 text-sm text-rose"><p class="font-semibold">These changes were not saved.</p><ul class="mt-2 list-disc pl-5"><% @checklist.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul></div><% end %>

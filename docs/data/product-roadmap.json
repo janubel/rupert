@@ -565,6 +565,15 @@
       "scope": "Bounded read-only queue for stored stock/identity issues, unverifiable or excess local holds, incomplete Shopify source orders, pending counts and depleted bulk lots; source/location filters, pagination and coverage limits. Does not repair stock or recover missing source provenance.",
       "evidence": "web/app/services/inventory_exceptions.rb",
       "phase": "0"
+    },
+    {
+      "id": "F60",
+      "area": "System",
+      "name": "Private owner checklist",
+      "status": "Available",
+      "scope": "Store-admin-only private domain/owner contacts and an encrypted service register: purposes, support contacts, renewal/review cadence and actual next dates, owner-reported MFA, ordinary HTTPS login shortcuts and vault item labels. Feature attestations require scoped evidence/dates; encrypted immutable history, stale-edit/scope protection and authenticated private printing preserve the local record. Owner attestations and manual follow-ups do not automate tests, vendor approvals, credential renewal or messages.",
+      "evidence": "web/app/controllers/owner_checklists_controller.rb",
+      "phase": "0"
     }
   ]
 }

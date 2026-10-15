@@ -151,8 +151,9 @@ The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 
 
 ## Features, roadmap and comparison
 
-- [Public roadmap](https://techmore.github.io/rupert/roadmap.html) — 49 features, implementation evidence, delivery phases and acceptance gates.
-- [Competitor matrix](https://techmore.github.io/rupert/competitors.html) — 14 competitors across 32 scoped capabilities, official sources and CSV/JSON downloads.
+- [Public roadmap](https://techmore.github.io/rupert/roadmap.html) — implemented scope, implementation evidence, delivery phases and acceptance gates.
+- [Competitor matrix](https://techmore.github.io/rupert/competitors.html) — scoped ERP, inventory and POS comparisons, official sources and CSV/JSON downloads.
+- [Private owner checklist guide](https://techmore.github.io/rupert/owner-checklists.html) — administrator-only local attestations, evidence/history and private printing; no checklist contents are published.
 - Signed-in **System → Features & roadmap** (`/roadmap`) shows the same catalog. Planned items are not enabled.
 - `web/config/product_roadmap.json` is the canonical catalog. Run `bin/build-product-site` after changing it; `--check` detects drift in CI.
 - `bin/rails ops:sqlite:report` reads SQLite settings/space metrics; `bin/rails ops:sqlite:optimize` explicitly refreshes planner statistics. SQLite job concurrency defaults to one thread (`JOB_THREADS` can override).

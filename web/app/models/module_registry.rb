@@ -14,6 +14,7 @@ class ModuleRegistry
 
   ENTRIES = [
     Entry.new(key: 'roadmap', name: 'Features & roadmap', path: -> { roadmap_path }, permission: nil, position: 110),
+    Entry.new(key: 'owner_checklists', name: 'Owner checklists', path: -> { owner_checklists_path }, permission: nil, position: 109),
     Entry.new(key: 'api_access_tokens', name: 'API access', path: lambda {
       api_access_tokens_path
     }, permission: 'settings.write', position: 108),
@@ -136,7 +137,11 @@ class ModuleRegistry
 
     # Nav entries visible to a user, sorted by position.
     def nav_for(user)
-      all.select { |e| e.permission.nil? || user.can?(e.permission) }.sort_by(&:position)
+      all.select do |entry|
+        next false if entry.key == 'owner_checklists' && !(user&.active? && (user.admin? || user.super_admin?))
+
+        entry.permission.nil? || user.can?(entry.permission)
+      end.sort_by(&:position)
     end
 
     def find(key)
@@ -158,7 +163,7 @@ class ModuleRegistry
       { key: 'team', name: 'Team',
         modules: %w[accounts employees departments positions time_clock timesheets leave payroll permissions] },
       { key: 'system', name: 'System',
-        modules: %w[system connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap] }
+        modules: %w[system connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap owner_checklists] }
     ].freeze
 
     def area_key_for(module_key)
