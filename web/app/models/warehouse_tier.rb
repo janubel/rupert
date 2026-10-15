@@ -1,12 +1,17 @@
 # frozen_string_literal: true
 
 # A bulk-quantity discount threshold. A nil shareId marks a global default
-# tier; otherwise the tier belongs to one WarehouseShare's custom schedule.
+# tier for the current tenant only; otherwise the tier belongs to one WarehouseShare's custom schedule.
 class WarehouseTier < ApplicationRecord
   include HasCuid
+  include TenantScoped
 
   self.table_name = 'WarehouseTier'
   self.primary_key = 'id'
+
+  # The legacy schema uses a camelCase tenantId column (see WarehouseShare).
+  alias_attribute :tenant_id, :tenantId
+  belongs_to :tenant, optional: true, foreign_key: :tenantId
 
   belongs_to :share, class_name: 'WarehouseShare', foreign_key: 'shareId', optional: true
 

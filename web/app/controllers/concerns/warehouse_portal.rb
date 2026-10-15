@@ -9,7 +9,7 @@ module WarehousePortal
   private
 
   def load_share
-    @share = WarehouseShare.unscoped.includes(:tiers).find_by(token: params[:token])
+    @share = WarehouseShare.unscoped.find_by(token: params[:token])
     return render_404 unless @share&.active?
 
     Current.tenant = @share.tenant

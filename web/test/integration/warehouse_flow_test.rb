@@ -141,4 +141,16 @@ class WarehouseFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_nil WarehouseShare.find_by(token: share.token)
   end
+
+  test 'public sale page lists only the share tenants default tiers' do
+    other = Tenant.create!(name: 'Other Co', subdomain: "other#{SecureRandom.hex(4)}")
+    Current.set(tenant: @tenant) { WarehouseTier.create!(shareId: nil, minQty: 10, discountPercent: 5) }
+    Current.set(tenant: other) { WarehouseTier.create!(shareId: nil, minQty: 99, discountPercent: 50) }
+    share = WarehouseShare.create!(name: 'Red Barn', priceMultiplier: 1, tenant: @tenant)
+
+    get warehouse_sale_path(share.token)
+    assert_response :success
+    assert_select 'span.pill-olive', /10\+ units/
+    assert_select 'span.pill-olive', text: /99\+ units/, count: 0
+  end
 end

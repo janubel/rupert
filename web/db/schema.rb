@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -301,8 +301,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_180000) do
     t.decimal "discountPercent", precision: 10, scale: 4, null: false
     t.integer "minQty", null: false
     t.string "shareId"
+    t.string "tenantId"
     t.index ["shareId", "minQty"], name: "index_WarehouseTier_on_shareId_and_minQty", unique: true
     t.index ["shareId"], name: "index_WarehouseTier_on_shareId"
+    t.index ["tenantId"], name: "index_WarehouseTier_on_tenantId"
   end
 
   create_table "access_logs", force: :cascade do |t|
@@ -1339,6 +1341,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_180000) do
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade
   add_foreign_key "SkuLink", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "SkuLink", "SquareVariation", column: "squareVariationId", on_delete: :nullify
+  add_foreign_key "WarehouseTier", "tenants", column: "tenantId"
   add_foreign_key "api_access_tokens", "tenants", on_delete: :cascade
   add_foreign_key "api_access_tokens", "users", on_delete: :cascade
   add_foreign_key "bulk_consumptions", "bulk_lots"

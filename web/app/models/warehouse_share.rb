@@ -48,9 +48,10 @@ class WarehouseShare < ApplicationRecord
   end
 
   # Bulk tier schedule: per-vendor tiers when custom, otherwise the global
-  # defaults (WarehouseTier rows with a nil shareId).
+  # defaults (this share's tenant's WarehouseTier rows with a nil shareId).
+  # Explicitly keyed by the share's tenant so it never depends on Current.tenant.
   def effective_tiers
-    (use_custom_tiers? ? tiers : WarehouseTier.where(shareId: nil)).order(:minQty)
+    (use_custom_tiers? ? tiers : WarehouseTier.unscoped.where(tenantId: tenantId, shareId: nil)).order(:minQty)
   end
 
   def tier_for(qty)
