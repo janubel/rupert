@@ -6,6 +6,7 @@
       <p class="mt-1 text-sm text-mocha">Every service Rupert talks to, whether it's set up, and where to find or renew the keys when you need them.</p>
     </div>
     <div class="flex gap-2">
+      <%= link_to "POS & payments", pos_connections_path, class: "btn-ghost btn-sm" %>
       <%= link_to "Settings", settings_path, class: "btn-ghost btn-sm" %>
       <%= link_to "Import .env", settings_path(anchor: "env"), class: "btn-ghost btn-sm" %>
     </div>
@@ -66,6 +67,6 @@
 
   <section class="card card-pad">
     <h2 class="font-display text-xl text-ink">Not managed here</h2>
-    <p class="mt-2 text-xs text-taupe">Boot-time keys (<code class="rounded bg-haze px-1 py-0.5 font-mono">SHOPIFY_API_KEY</code>, <code class="rounded bg-haze px-1 py-0.5 font-mono">SHOPIFY_API_SECRET</code>, database credentials, <code class="rounded bg-haze px-1 py-0.5 font-mono">SECRET_KEY_BASE</code>) are set by the hosting environment and can't be changed from the app. To rotate those, edit <code class="rounded bg-haze px-1 py-0.5 font-mono">/opt/rupert/.env</code> on the droplet and redeploy.</p>
+    <p class="mt-2 text-xs text-taupe">Boot-time keys (<code class="rounded bg-haze px-1 py-0.5 font-mono">SHOPIFY_API_KEY</code>, <code class="rounded bg-haze px-1 py-0.5 font-mono">SHOPIFY_API_SECRET</code>, database credentials, <code class="rounded bg-haze px-1 py-0.5 font-mono">SECRET_KEY_BASE</code>) are set by the hosting environment and can't be changed from the app. To rotate those, edit <code class="rounded bg-haze px-1 py-0.5 font-mono">/etc/rupert.env</code> on the Incus instance and redeploy.</p>
   </section>
 </div>

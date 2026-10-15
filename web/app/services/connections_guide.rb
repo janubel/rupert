@@ -25,7 +25,7 @@ class ConnectionsGuide
       keys: %w[SQUARE_APPLICATION_ID SQUARE_ACCESS_TOKEN SQUARE_ENVIRONMENT SQUARE_LOCATION_ID],
       find_url: 'https://developer.squareup.com/apps',
       find_hint: 'Square Developer Dashboard → your app → OAuth. The access token is under Authorization.',
-      renewal_note: 'Square OAuth access tokens are short-lived (about 30 days) but renew automatically while the app is used. If syncs start failing with an auth error, re-issue the token in the Developer Dashboard.'
+      renewal_note: 'This connector uses a manually supplied access token. It does not implement OAuth login or automatic token refresh. If the token expires or is revoked, replace it through the Developer Dashboard.'
     ),
     Service.new(
       key: 'google_drive',

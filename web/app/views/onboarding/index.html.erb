@@ -1,8 +1,8 @@
-<% content_for :title, "Connect your accounts" %>
+<% content_for :title, "Save connection details" %>
 <div class="mx-auto max-w-xl">
   <div class="mb-6">
-    <h1 class="page-title">Connect your accounts</h1>
-    <p class="mt-1 text-sm text-mocha">Paste the keys from your Shopify and Square developer dashboards. You can edit these anytime from Settings — values are stored encrypted.</p>
+    <h1 class="page-title">Save connection details</h1>
+    <p class="mt-1 text-sm text-mocha">Save the keys from your Shopify and Square developer dashboards for later use. Values are stored encrypted. Saving does not start a sync, test credentials or charge a payment.</p>
   </div>
 
   <%= form_with url: onboarding_connect_path, method: :post, class: "space-y-4" do %>
@@ -11,7 +11,7 @@
         <h2 class="font-semibold text-ink">Shopify</h2>
         <span class="<%= @required["SHOPIFY_CLIENT_ID"] && @required["SHOPIFY_CLIENT_SECRET"] ? "pill-fern" : "pill-clay" %>">
           <span class="dot <%= @required["SHOPIFY_CLIENT_ID"] && @required["SHOPIFY_CLIENT_SECRET"] ? "bg-fern" : "bg-clay" %>"></span>
-          <%= @required["SHOPIFY_CLIENT_ID"] && @required["SHOPIFY_CLIENT_SECRET"] ? "Connected" : "Needed" %>
+          <%= @required["SHOPIFY_CLIENT_ID"] && @required["SHOPIFY_CLIENT_SECRET"] ? "Details saved" : "Needed" %>
         </span>
       </div>
       <% shop_domain = EnvStore.fetch("SHOPIFY_SHOP_DOMAIN", "") %>
@@ -40,7 +40,7 @@
         <h2 class="font-semibold text-ink">Square</h2>
         <span class="<%= @optional["SQUARE_ACCESS_TOKEN"] ? "pill-fern" : "pill-taupe" %>">
           <span class="dot <%= @optional["SQUARE_ACCESS_TOKEN"] ? "bg-fern" : "bg-taupe" %>"></span>
-          <%= @optional["SQUARE_ACCESS_TOKEN"] ? "Connected" : "Optional" %>
+          <%= @optional["SQUARE_ACCESS_TOKEN"] ? "Details saved" : "Optional" %>
         </span>
       </div>
       <p class="text-xs text-taupe">Optional — enables Square POS catalog + order sync. Developer Dashboard → your app → Authorization.</p>
@@ -52,7 +52,7 @@
     </div>
 
     <div class="flex items-center gap-3">
-      <button type="submit" class="btn-primary">Connect and start first sync</button>
+      <button type="submit" class="btn-primary">Save connection details</button>
       <%= link_to "Advanced: paste a full .env file", settings_path, class: "btn-ghost btn-sm" %>
     </div>
   <% end %>

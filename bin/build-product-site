@@ -12,7 +12,7 @@ DOCS = ROOT / 'docs'
 CATALOG = json.loads((ROOT / 'web/config/product_roadmap.json').read_text())
 MATRIX = json.loads((DOCS / 'data/competitor-matrix.json').read_text())
 E = html.escape
-NAV = [('index.html', 'Home'), ('roadmap.html', 'Roadmap'), ('pos-parity.html', 'POS parity'), ('competitors.html', 'Compare'), ('api.html', 'API'), ('modules.html', 'Features'), ('sqlite-incus.html', 'SQLite & Incus'), ('getting-started.html', 'Develop')]
+NAV = [('index.html', 'Home'), ('roadmap.html', 'Roadmap'), ('pos-parity.html', 'POS parity'), ('competitors.html', 'Compare'), ('api.html', 'API'), ('payment-integrations.html', 'POS connections'), ('modules.html', 'Features'), ('sqlite-incus.html', 'SQLite & Incus'), ('getting-started.html', 'Develop')]
 
 
 def page(title, body):
@@ -100,7 +100,7 @@ def render_runbook(source):
     return ''.join(blocks)
 outputs['sqlite-incus.html'] = page('SQLite & Incus', '<section class="page-intro"><p class="eyebrow">Operating decision · 2026-10-14</p><h1>Small database.<br>Measured operations.</h1><p class="lede">SQLite on SER8 in Incus, with explicit recovery and scaling triggers.</p></section><article class="runbook">'+render_runbook(ops)+'</article>')
 
-for filename, title, source_path in [('pos-parity.html', 'POS parity and acceptance', 'ops/pos-parity.md'), ('api.html', 'API integration guide', 'api-v1.md'), ('inventory-workflows.html', 'Inventory workflow guide', 'ops/inventory-workflows.md')]:
+for filename, title, source_path in [('pos-parity.html', 'POS parity and acceptance', 'ops/pos-parity.md'), ('api.html', 'API integration guide', 'api-v1.md'), ('inventory-workflows.html', 'Inventory workflow guide', 'ops/inventory-workflows.md'), ('payment-integrations.html', 'POS and payment account connections', 'ops/payment-integrations.md')]:
     outputs[filename] = page(title, '<section class="page-intro"><p class="eyebrow">Operator guide · 2026-10-15</p><h1>'+E(title)+'</h1><p class="lede">Implemented scope and the acceptance checks for the remaining work.</p></section><article class="runbook">'+render_runbook((DOCS/source_path).read_text())+'</article>')
 
 # Keep one machine-readable catalog for the app and generated public pages.

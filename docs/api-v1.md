@@ -72,6 +72,8 @@ public GitHub Pages site, wrapped in `data` with `meta.api_version`.
 
 ## Remaining integration work
 
+The separate [POS account setup guide](https://techmore.github.io/rupert/payment-integrations.html) documents encrypted KORONA/Cova credentials, explicit read-access checks and vendor-access preparation. Those checks do not import business data or process payments.
+
 This is a read integration foundation. Per-client rate limits, webhooks,
 idempotent write contracts, OpenAPI generation, source-specific marketplace or
 accounting adapters and offline synchronization remain roadmap work. Choose

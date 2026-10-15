@@ -15,6 +15,8 @@ Daily register summaries use payment and refund event dates, preserve source/loc
 
 The role presets cover cashier/POS, inventory employee, reporting and admin. Store admins can assign store roles; super-admin access remains protected. New accounts without an explicit role default to cashier. Deactivated browser sessions are rejected. The API guide documents scoped, revocable read access; it is separate from payment-provider or terminal integration.
 
+Provider account preparation and explicit KORONA/Cova read checks are documented in the [connection guide](https://techmore.github.io/rupert/payment-integrations.html). Read-access verification does not establish checkout readiness.
+
 ## Primary POS cutover gate
 
 Before replacing the current POS, demonstrate the selected merchant account/gateway and supported terminal, customer-facing tipping, taxes and discounts, failed/retried payments, refunds/tip reversals, loyalty and gift tenders, and daily source-to-bank reconciliation. The operator team must validate real checkout and register-close scenarios, retain a tested fallback, and approve cutover. A quote preview or vendor marketing page does not establish primary POS readiness.

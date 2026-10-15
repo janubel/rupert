@@ -6,5 +6,9 @@
 # Use this to limit dissemination of sensitive information.
 # See the ActiveSupport::ParameterFilter documentation for supported notations and behaviors.
 Rails.application.config.filter_parameters += %i[
-  passw secret token _key crypt salt certificate otp ssn
+  passw secret token nonce _key crypt salt certificate otp ssn credential authorization client_id login_id
 ]
+
+# Settings import/preview accepts whole .env payloads under a generic text key.
+# OAuth authorization codes also need filtering before request instrumentation.
+Rails.application.config.filter_parameters += [/\Atext\z/i, /\Acode\z/i]

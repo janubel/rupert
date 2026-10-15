@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_130000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -728,6 +728,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_120000) do
     t.index ["tenant_id", "pay_run_id"], name: "index_payslips_on_tenant_id_and_pay_run_id"
   end
 
+  create_table "pos_connections", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "provider", null: false
+    t.string "environment", default: "sandbox", null: false
+    t.string "account_reference"
+    t.string "gateway", default: "unconfirmed", null: false
+    t.boolean "access_requested", default: false, null: false
+    t.boolean "vendor_approved", default: false, null: false
+    t.text "credentials_json"
+    t.string "last_check_status"
+    t.string "last_check_message"
+    t.datetime "last_checked_at"
+    t.integer "updated_by_id"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "provider"], name: "index_pos_connections_on_tenant_id_and_provider", unique: true
+    t.index ["updated_by_id"], name: "index_pos_connections_on_updated_by_id"
+    t.check_constraint "environment IN ('sandbox', 'production')", name: "pos_connection_environment"
+    t.check_constraint "last_check_status IS NULL OR last_check_status IN ('verified', 'failed')", name: "pos_connection_check_status"
+  end
+
   create_table "pos_sessions", force: :cascade do |t|
     t.integer "card_sales_cents", default: 0
     t.integer "cash_sales_cents", default: 0
@@ -1212,6 +1234,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_120000) do
   add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade
   add_foreign_key "order_lines", "orders", on_delete: :cascade
   add_foreign_key "payments", "orders", on_delete: :cascade
+  add_foreign_key "pos_connections", "tenants"
+  add_foreign_key "pos_connections", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "refunds", "orders", on_delete: :cascade
   add_foreign_key "size_changes", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "size_family_members", "size_families", column: "family_id", on_delete: :cascade
