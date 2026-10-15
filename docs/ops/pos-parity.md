@@ -19,7 +19,7 @@ Provider account preparation, explicit KORONA/Cova read checks and selected Valm
 
 Exact Shopify source order/line/variant identities now support immutable gram recipe versions and reviewed one-time deductions against an actual bulk lot, with shortage/replay checks and receipt CSV. A bounded read-only inventory review queue surfaces stored stock, hold and identity issues. Manual catalog links and explicit unlinks survive sync; ambiguous automatic matches remain unresolved. See the [inventory workflow guide](https://techmore.github.io/rupert/inventory-workflows.html) for operator steps, legacy mirror/count limits and remaining automatic Sheets/refund work.
 
-Valmar is the reported processor; Authorize.net is a possible gateway, not a confirmed account relationship. Processor, gateway, terminal and POS are separate roles. Rupert's setup checks do not authorize, capture or refund payments; actual payment and terminal execution remain planned.
+Valmar is the business-reported payment-services provider; the account's gateway, backend processor and acquiring bank require confirmation. Authorize.net is a possible gateway. Rupert's setup checks do not authorize, capture or refund payments. A separate legacy Authorize.net warehouse-checkout code path exists, but live account, terminal and settlement acceptance remains unverified. See [Payments in plain English](https://techmore.github.io/rupert/payment-basics.html) for the roles and official contact details.
 
 ## Primary POS cutover gate
 

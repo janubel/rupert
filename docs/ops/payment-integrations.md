@@ -2,6 +2,8 @@
 
 Reviewed 2026-10-15. This release prepares provider accounts for later setup. It does not claim that any account has been connected or that Rupert can replace the live payment terminal.
 
+**Start with the plain-English guide:** [who handles a payment, how Valmar and Authorize.net fit, and who to contact](https://techmore.github.io/rupert/payment-basics.html). A gateway is the secure connection from checkout; a processor runs the payment-processing systems. Confirm the existing account arrangement with Valmar before selecting a gateway or buying another service.
+
 ## Systems named in the operator requirements
 
 The business described C-Trax POS with a PAX terminal and Valmar processing, and Shopify website payments through Valmar. SwipeSimple was a proposed replacement option. KORONA and Cova were evaluation candidates. Square was a previous provider. These are business-reported relationships; they do not establish current merchant approval, supported hardware or a vendor support deadline.

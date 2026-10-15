@@ -2,6 +2,8 @@
 
 Reviewed 2026-10-15. These workflows record local work in Rupert. Shopify and Square remain independent inventory pools. They do not push platform stock, edit SKUs, collect payments or guarantee availability in another channel. Inventory read permission is required to view them; inventory write permission is required to change local records.
 
+For an everyday explanation of the separate payment setup, see [Payments in plain English](https://techmore.github.io/rupert/payment-basics.html), including Valmar and Authorize.net contacts.
+
 ## Inventory exception review
 
 Open **Stock → Inventory review** to inspect stored negative/unknown/stale stock, broken source/location/item identities, excessive or unverifiable local holds, duplicate SKUs/barcodes, unresolved/shared catalog links, incomplete Shopify source orders, pending counts and depleted bulk lots.
@@ -62,7 +64,7 @@ Stale snapshots, SKU-based historical estimates and legacy count sums require so
 
 ## Payment boundary
 
-Valmar is the business-reported processor. Authorize.net is a possible gateway path, not a confirmed fact about this merchant account; other configured gateway choices require their own account confirmation. Rupert's credential/profile checks do not authorize, capture or refund payments or execute a terminal. Continue completing sales in the existing POS until the payment and operator cutover gates pass.
+Valmar is the business-reported payment-services provider; the account's gateway, backend processor and acquiring bank require confirmation. Authorize.net is a possible gateway path, not a confirmed fact about this merchant account; other configured gateway choices require their own account confirmation. Rupert's credential/profile checks do not authorize, capture or refund payments or execute a terminal. Continue completing sales in the existing POS until the payment and operator cutover gates pass.
 
 ## Deployment
 
