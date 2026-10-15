@@ -110,4 +110,16 @@ class InventoryLocationViewTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_operator queries.length, :<=, 3, 'variant loading must not add a query for each product'
   end
+
+  test 'oversold Shopify variants are announced without changing the shown stock' do
+    get_page
+    assert_response :success
+    assert_select 'p[role=status]', text: /oversold/, count: 0
+
+    InventoryLevel.where(source: 'shopify', shopifyVariantId: @linked.id).update_all(sourceQuantity: -4)
+    get_page
+    assert_response :success
+    assert_select 'p[role=status]', text: /1\s+Shopify variant is oversold/
+    assert_select 'td', text: /^5$/
+  end
 end

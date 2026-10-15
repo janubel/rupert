@@ -14,6 +14,14 @@
     </div>
   </section>
 
+  <% if @oversold_variants.to_i.positive? %>
+    <p class="rounded-xl border border-clay/40 bg-clay/10 px-4 py-3 text-sm text-ink" role="status">
+      <strong><%= number_with_delimiter(@oversold_variants) %></strong>
+      <%= "Shopify variant".pluralize(@oversold_variants) %> <%= @oversold_variants == 1 ? "is" : "are" %> oversold: Shopify reports negative stock, shown here as 0.
+      Read-only notice; nothing is changed in Shopify.
+    </p>
+  <% end %>
+
   <%= form_tag inventory_index_path, method: :get, class: "max-w-sm" do %>
     <input type="search" name="q" value="<%= @q %>" placeholder="Search products or SKUs…" aria-label="Search products or SKUs" class="search w-full" autocomplete="off">
   <% end %>

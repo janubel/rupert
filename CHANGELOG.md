@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Stop the Sales, Reports and Settings pages from scrolling sideways on phone-width screens: filter rows wrap, the reports tab strip scrolls inside its pill, grid items may shrink so wide charts no longer stretch the page, and long redirect URLs break.
+- Show a read-only notice on Inventory when Shopify reports negative (oversold) stock for variants; displayed quantities are unchanged and nothing is written to Shopify.
 - Keep the platform-reported Shopify quantity (`InventoryLevel.sourceQuantity`) next to the clamped mirror count so oversold stock is visible; the clamped `quantity` and every existing reader are unchanged. Also regenerate `db/schema_sqlite.rb`, which was missing the per-tenant `WarehouseTier.tenantId` column.
 - Dashboard stat cards size their figures to the card so large amounts no longer overflow on phones, and the month revenue caption now shows a formatted dollar amount.
 - Follow Shopify variant, location and per-item inventory-level connections to exhaustion so products with more than 100 variants or stores with many locations are no longer silently truncated.

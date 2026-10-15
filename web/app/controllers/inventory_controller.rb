@@ -27,6 +27,7 @@ class InventoryController < AuthenticatedController
       variant_stock_map(@products)
     end
     @stock_locations = DataCache.fetch('inventory/locations') { stock_locations }
+    @oversold_variants = InventoryLevel.oversold.where(source: 'shopify').distinct.count(:shopifyVariantId)
   end
 
   # GET /inventory/movements — the full inventory movement ledger: every
