@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Phone layouts: the page guide no longer auto-opens on narrow screens (it filled the first screen), Inventory shows each variant's Shopify/POS counts under its name (the table is wider than the page at every size), and Accounts shows each person's role, status and Edit link under their name, because those columns scroll out of view.
 - Stop the Sales, Reports and Settings pages from scrolling sideways on phone-width screens: filter rows wrap, the reports tab strip scrolls inside its pill, grid items may shrink so wide charts no longer stretch the page, and long redirect URLs break.
 - Show a read-only notice on Inventory when Shopify reports negative (oversold) stock for variants; displayed quantities are unchanged and nothing is written to Shopify.
 - Keep the platform-reported Shopify quantity (`InventoryLevel.sourceQuantity`) next to the clamped mirror count so oversold stock is visible; the clamped `quantity` and every existing reader are unchanged. Also regenerate `db/schema_sqlite.rb`, which was missing the per-tenant `WarehouseTier.tenantId` column.

@@ -34,9 +34,15 @@
             <tr class="hover:bg-cream">
               <td class="td">
                 <p class="font-medium text-ink"><%= user.display_name %><% if user == Current.user %><span class="ml-1 text-xs text-taupe">(you)</span><% end %></p>
+                <%# Phones: Role, Status and Actions scroll out of view, so summarise them here. %>
+                <p class="mt-1 flex flex-wrap items-center gap-2 text-xs sm:hidden">
+                  <span class="pill-taupe whitespace-nowrap capitalize"><%= user.role.to_s.humanize %></span>
+                  <span class="<%= user.active? ? "text-fern" : "text-clay" %>"><%= user.active? ? "active" : "deactivated" %></span>
+                  <%= link_to can_manage_accounts ? "Edit" : "View", edit_user_path(user), class: "font-semibold text-olive hover:underline" %>
+                </p>
               </td>
               <td class="td text-mocha"><%= user.email %></td>
-              <td class="td"><span class="pill-taupe capitalize"><%= user.role %></span></td>
+              <td class="td"><span class="pill-taupe capitalize"><%= user.role.to_s.humanize %></span></td>
               <td class="td">
                 <% if user.active? %>
                   <span class="pill-fern"><span class="dot bg-fern"></span> active</span>

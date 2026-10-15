@@ -26,7 +26,7 @@
     <input type="search" name="q" value="<%= @q %>" placeholder="Search products or SKUs…" aria-label="Search products or SKUs" class="search w-full" autocomplete="off">
   <% end %>
 
-  <% cached_fragment("inventory/table/v2", q: @q, page: @pagy.page) do %>
+  <% cached_fragment("inventory/table/v3", q: @q, page: @pagy.page) do %>
   <div class="card overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -73,6 +73,11 @@
                     <div class="min-w-0">
                       <p class="truncate font-medium text-ink"><%= link_to variant.title, shopify_variant_path(variant), class: "hover:text-olive hover:underline" %></p>
                       <p class="truncate text-xs text-taupe"><%= product.title %></p>
+                      <%# The table is wider than the page at every size, so the stock columns scroll out of view; repeat the headline counts here. %>
+                      <p class="mt-0.5 text-xs text-ink">
+                        <span class="font-semibold"><%= shopify_qty %></span> shop<% if square_qty.nil? %> · not carried<% else %>
+                        <span class="text-fog">|</span> <span class="font-semibold"><%= square_qty %><%= info[:shared] && square_qty.positive? ? "†" : "" %></span> pos<% end %>
+                      </p>
                       <% if untracked %>
                         <span class="mt-1 inline-flex items-center gap-1">
                           <span class="pill-taupe">untracked</span>

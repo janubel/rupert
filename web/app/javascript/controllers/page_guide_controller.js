@@ -8,6 +8,10 @@ export default class extends Controller {
   static values = { autoKey: String }
 
   connect() {
+    // On phones the open panel fills the first screen and pushes the page's own
+    // content out of sight; leave it collapsed there (the button still opens it).
+    if (window.matchMedia("(max-width: 639px)").matches) return
+
     const seen = this.hasAutoKeyValue && localStorage.getItem(this.storageKey())
     if (!seen && !localStorage.getItem(this.dismissedKey())) {
       this.open()
