@@ -1,3 +1,13 @@
+<% if employee.errors.any? %>
+  <div role="alert" class="rounded-xl border border-rose p-4 text-sm text-rose">
+    <p class="font-semibold">Check the employee details:</p>
+    <ul class="mt-2 list-disc pl-5">
+      <% employee.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
 <%= form_with model: employee, url: (employee.persisted? ? people_employee_path(employee) : people_employees_path), class: "mt-6 space-y-4" do |f| %>
   <div class="grid gap-4 sm:grid-cols-3">
     <div>

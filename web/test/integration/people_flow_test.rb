@@ -273,6 +273,6 @@ class PeopleFlowTest < ActionDispatch::IntegrationTest
 
     get_page root_path
     assert_response :success
-    assert_match(/don't have access to the People modules/, response.body)
+    assert_select '[data-widget-key=people]', count: 0
   end
 end

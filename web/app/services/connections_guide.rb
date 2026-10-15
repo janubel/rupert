@@ -30,7 +30,7 @@ class ConnectionsGuide
     Service.new(
       key: 'google_drive',
       name: 'Google Drive backup',
-      description: 'Automatic database snapshots to a private Drive folder.',
+      description: 'Platform-only snapshots of the entire shared instance database to an approved private Drive folder.',
       keys: %w[GOOGLE_DRIVE_CLIENT_ID GOOGLE_DRIVE_CLIENT_SECRET GOOGLE_DRIVE_REFRESH_TOKEN
                GOOGLE_DRIVE_FOLDER_ID],
       find_url: 'https://console.cloud.google.com/apis/credentials',
@@ -69,24 +69,29 @@ class ConnectionsGuide
 
   class << self
     def services
-      SERVICES.map { |service| decorate(service) }
+      visible_services.map { |service| decorate(service) }
     end
 
     # Overall health: how many services are fully configured.
     def configured_count
-      SERVICES.count { |service| status_for(service) == :configured }
+      visible_services.count { |service| status_for(service) == :configured }
     end
 
     private
 
+    def visible_services
+      platform_admin = User.find_by(id: Current.user&.id, active: true, role: 'super_admin')
+      platform_admin ? SERVICES : SERVICES.reject { |service| service.key == 'google_drive' }
+    end
+
     def decorate(service)
       key_rows = service.keys.map do |key|
-        value = EnvStore.fetch(key, '')
+        value = EnvStore.effective(key)
         {
           key: key,
           set: value.present?,
           masked: value.present? ? EnvStore.mask(value) : nil,
-          source: Setting.exists?(key: key, tenant_id: Current.tenant_id) ? 'database' : 'environment'
+          source: Setting.exists?(key: key, tenant_id: EnvStore::PLATFORM_KEYS.include?(key) ? nil : Current.tenant_id) ? 'database' : 'environment'
         }
       end
       status = status_for(service)
@@ -104,7 +109,7 @@ class ConnectionsGuide
     end
 
     def status_for(service)
-      set_count = service.keys.count { |key| EnvStore.fetch(key, '').present? }
+      set_count = service.keys.count { |key| EnvStore.effective(key).present? }
       case set_count
       when service.keys.length then :configured
       when 0 then :missing

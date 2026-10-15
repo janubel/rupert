@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'digest'
+
 class User < ActiveRecord::Base
   has_secure_password
 
@@ -91,8 +93,7 @@ class User < ActiveRecord::Base
       'timesheets.read',
       'timesheets.write',
       'leave.read',
-      'leave.write',
-      'payroll.read'
+      'leave.write'
     ],
     'cashier' => [
       'dashboard.read',
@@ -110,11 +111,7 @@ class User < ActiveRecord::Base
       'reconcile.read',
       'reports.read',
       'ledger.read',
-      'alerts.read',
-      'hr.read',
-      'timesheets.read',
-      'leave.read',
-      'payroll.read'
+      'alerts.read'
     ],
     'inventory_employee' => %w[dashboard.read inventory.read inventory.write reconcile.read alerts.read alerts.write],
     'reporting' => %w[dashboard.read sales.read inventory.read reports.read ledger.read]
@@ -123,6 +120,16 @@ class User < ActiveRecord::Base
   def can?(permission)
     perms = effective_permissions
     perms.include?('*') || perms.include?(permission.to_s)
+  end
+
+  def permissions_signature
+    Digest::SHA256.hexdigest(effective_permissions.sort.join('|'))
+  end
+
+  # Account and role administration cannot be delegated to ordinary staff.
+  def can_manage_accounts?
+    actor = User.find_by(id: id, active: true)
+    actor && (actor.admin? || actor.super_admin?) && actor.can?('users.write')
   end
 
   def active?
@@ -140,6 +147,8 @@ class User < ActiveRecord::Base
   #   2. per-role overrides (role_permissions)       — replaces built-ins for role
   #   3. built-in ROLE_PERMISSIONS matrix
   def effective_permissions
+    @effective_permissions = nil if @effective_permissions_role != role
+    @effective_permissions_role = role
     @effective_permissions ||= if super_admin?
       ['*']
     else
@@ -161,6 +170,8 @@ class User < ActiveRecord::Base
   # Replace this user's per-employee permission overrides with the given list.
   # An empty list removes all overrides (falls back to role permissions).
   def update_permission_overrides!(permissions)
+    @effective_permissions = nil
+    user_permissions.reset
     user_permissions.delete_all
     permissions.to_a.each do |permission|
       next unless User.all_permissions.include?(permission)

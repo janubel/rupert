@@ -19,15 +19,15 @@ class DriveBackupTest < ActionDispatch::IntegrationTest
       tenant_id: tenants(:default_tenant).id, name: 'Root')
     post login_path, params: { email: 'root@example.com', password: 'password123' }
     Current.tenant = tenants(:default_tenant)
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_ID', 'client-id')
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_SECRET', 'client-secret')
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_ID', 'client-id')
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_SECRET', 'client-secret')
   end
 
   teardown do
     Current.tenant = nil
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_ID', nil)
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_SECRET', nil)
-    EnvStore.set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_ID', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_SECRET', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
   end
 
   test 'drive_status reports configuration' do
@@ -45,7 +45,7 @@ class DriveBackupTest < ActionDispatch::IntegrationTest
   end
 
   test 'drive_backup runs and returns a success link' do
-    EnvStore.set('GOOGLE_DRIVE_REFRESH_TOKEN', 'refresh-token')
+    EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', 'refresh-token')
     log = BackupLog.create!(
       status: 'success',
       startedAt: Time.current,
@@ -63,7 +63,7 @@ class DriveBackupTest < ActionDispatch::IntegrationTest
   end
 
   test 'drive_auth redirects to Google when not configured' do
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_ID', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_ID', nil)
     get drive_auth_settings_path
     assert_redirected_to settings_path
     follow_redirect!

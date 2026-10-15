@@ -1,3 +1,4 @@
+<% can_manage_accounts = Current.user.can_manage_accounts? %>
 <% content_for :title, "Permissions" %>
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
@@ -6,8 +7,10 @@
       <p class="mt-1 text-sm text-mocha">What each role can do. Super admin always has full access; overrides below replace a role's built-in defaults.</p>
     </div>
     <div class="flex gap-2">
+      <% if can_manage_accounts %>
       <%= form_tag reset_permissions_path, method: :post do %>
         <%= submit_tag "Reset to defaults", class: "btn-ghost", data: { confirm: "Clear all role overrides and use the built-in defaults?" } %>
+      <% end %>
       <% end %>
       <%= link_to "Accounts", users_path, class: "btn-ghost btn-sm" %>
     </div>
@@ -46,7 +49,7 @@
                       <% if @builtin.fetch(role, []).include?("*") %>
                         <span class="text-taupe" title="Super admin — always allowed">—</span>
                       <% else %>
-                        <input type="checkbox" name="roles[<%= role %>][<%= permission %>]" value="1" <%= checked ? "checked" : "" %> class="accent-olive">
+                        <input type="checkbox" name="roles[<%= role %>][<%= permission %>]" value="1" <%= checked ? "checked" : "" %> class="accent-olive" <%= "disabled" unless can_manage_accounts %>>
                       <% end %>
                     </td>
                   <% end %>
@@ -59,7 +62,9 @@
     </div>
 
     <div class="mt-4 flex items-center gap-3">
+      <% if can_manage_accounts %>
       <%= submit_tag "Save permissions", class: "btn-primary" %>
+      <% end %>
       <span class="text-xs text-taupe">Empty cells mean a role uses its built-in default for that permission.</span>
     </div>
   <% end %>

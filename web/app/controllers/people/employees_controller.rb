@@ -18,17 +18,17 @@ module People
       end
       @employees = @employees.includes(:department, :position).limit(200)
       @by_department = People::Employee.active.group(:department_id).count
-      @pending_leave = People::LeaveRequest.pending.count
-      @awaiting_timesheets = People::Timesheet.awaiting_review.count
+      @pending_leave = People::LeaveRequest.pending.count if Current.user.can?('leave.read')
+      @awaiting_timesheets = People::Timesheet.awaiting_review.count if Current.user.can?('timesheets.read')
     end
 
     def show
       authorize(@employee)
-      @timesheets = @employee.timesheets.recent(12)
-      @leave_balances = @employee.leave_balances.for_year(Date.current.year).ordered
-      @leave_requests = @employee.leave_requests.recent(12)
-      @pay_rates = @employee.pay_rates.recent
-      @payslips = @employee.payslips.order(id: :desc).limit(12)
+      @timesheets = @employee.timesheets.recent(12) if Current.user.can?('timesheets.read')
+      @leave_balances = @employee.leave_balances.for_year(Date.current.year).ordered if Current.user.can?('leave.read')
+      @leave_requests = @employee.leave_requests.recent(12) if Current.user.can?('leave.read')
+      @pay_rates = @employee.pay_rates.recent if Current.user.can?('payroll.read')
+      @payslips = @employee.payslips.order(id: :desc).limit(12) if Current.user.can?('payroll.read')
     end
 
     def new

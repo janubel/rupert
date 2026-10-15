@@ -592,6 +592,15 @@
       "scope": "Fresh active platform-super-admin access to instance-wide workspace/account totals, new setup and signup review counts, referral attribution, bounded setup listings and read-only database/job diagnostics. Configured deployment label identifies the instance; backup records describe recorded uploads rather than a restore guarantee. Account and applicant details remain in the authenticated application; no host shell, Incus management socket or database SQL console is exposed.",
       "evidence": "web/app/controllers/platform_controller.rb",
       "phase": "0"
+    },
+    {
+      "id": "F63",
+      "area": "System",
+      "name": "Compact role-aware navigation and access boundaries",
+      "status": "Available",
+      "scope": "Named work areas, local accessible icons, permitted-tools disclosures and role-labelled account menus reduce header clutter. Search categories, dashboard widgets/queries and cached responses follow business permissions. Reader defaults exclude personnel/payroll; employee pay/time/leave sections have separate gates. Workspace user/permission administration and host/instance utilities require their respective administrator roles; size-membership edits require settings write. Existing explicit business permission overrides remain supported.",
+      "evidence": "web/app/models/module_registry.rb",
+      "phase": "0"
     }
   ]
 }

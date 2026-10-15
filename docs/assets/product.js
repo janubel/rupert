@@ -1,4 +1,14 @@
 (() => {
+  const guides = document.querySelector('.guide-menu');
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && guides?.open) {
+      guides.open = false;
+      guides.querySelector('summary').focus();
+    }
+  });
+  document.addEventListener('click', event => {
+    if (guides?.open && !guides.contains(event.target)) guides.open = false;
+  });
   const search = document.getElementById('feature-search');
   const status = document.getElementById('feature-status');
   const count = document.getElementById('feature-count');

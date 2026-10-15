@@ -7,6 +7,9 @@ class SearchServiceCacheTest < ActiveSupport::TestCase
     @original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
     Current.reset
+    Current.tenant = tenants(:default_tenant)
+    Current.user = users(:regular_user)
+    Current.user.update!(role: 'reader')
   end
 
   teardown do
@@ -35,5 +38,18 @@ class SearchServiceCacheTest < ActiveSupport::TestCase
 
     Current.tenant = Struct.new(:id).new('tenant-b')
     assert_equal [], SearchService.search('Acme')
+  end
+
+  test 'anonymous searches never query module records or reuse an authorized cache' do
+    result = SearchService::Result.new(type: 'order', label: 'Private order', path: '/orders/1')
+    SearchService.expects(:search_orders).once.returns([result])
+    SearchService.expects(:search_customers).once.returns([])
+    SearchService.expects(:search_variants).once.returns([])
+    SearchService.expects(:search_employees).never
+    assert_equal [result], SearchService.search('Acme')
+
+    Current.user = nil
+    assert_equal [], SearchService.search('Acme')
+    assert_equal [], SearchService.search('acme')
   end
 end

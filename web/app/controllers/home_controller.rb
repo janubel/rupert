@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
-class HomeController < ApplicationController
+class HomeController < AuthenticatedController
+  before_action :require_dashboard_access
+
   def index
     return redirect_to(onboarding_path) unless OnboardingController.configured?
 
-    @widgets = DashboardWidget.entries(Current.user.dashboard_config_hash)
+    @widgets = DashboardWidget.entries(Current.user.dashboard_config_hash, user: Current.user)
     render('home/index')
   end
 
@@ -19,13 +21,19 @@ class HomeController < ApplicationController
     widgets = Array(params[:widgets])
     hidden = Array(params[:hidden])
 
-    if widgets.any? { |key| DashboardWidget.find(key).nil? }
-      return render(json: { ok: false, error: 'Unknown widget in layout' }, status: :unprocessable_entity)
+    if (widgets + hidden).any? { |key| !DashboardWidget.allowed?(key, Current.user) }
+      return render(json: { ok: false, error: 'Unknown or unavailable widget in layout' }, status: :unprocessable_entity)
     end
 
     Current.user.update!(dashboard_config: { 'widgets' => widgets, 'hidden' => hidden })
     render(json: { ok: true, widgets: widgets, hidden: hidden })
   rescue ActiveRecord::RecordInvalid => e
     render(json: { ok: false, error: e.message }, status: :unprocessable_entity)
+  end
+
+  private
+
+  def require_dashboard_access
+    head :forbidden unless Current.user&.can?('dashboard.read')
   end
 end

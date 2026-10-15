@@ -38,18 +38,22 @@
       <p class="stat-label">Hired</p>
       <p class="stat-value-sm mt-1"><%= @employee.hire_date ? l(@employee.hire_date, format: :long) : "—" %></p>
     </div>
+    <% if Current.user.can?("payroll.read") %>
     <div class="stat">
       <p class="stat-label">Pay</p>
       <p class="stat-value-sm mt-1"><%= @employee.current_pay_rate&.label || "—" %></p>
     </div>
+    <% end %>
     <div class="stat">
       <p class="stat-label">Employment</p>
       <p class="stat-value-sm mt-1 capitalize"><%= @employee.employment_type.tr("_", " ") %></p>
     </div>
+    <% if Current.user.can?("leave.read") %>
     <div class="stat">
       <p class="stat-label">PTO remaining</p>
       <p class="stat-value-sm mt-1"><%= number_with_precision(@employee.leave_balance("vacation", Date.current.year).remaining_hours, precision: 1) %>h</p>
     </div>
+    <% end %>
   </section>
 
   <div class="grid gap-6 lg:grid-cols-2">
@@ -77,6 +81,7 @@
     </section>
 
     <section class="card card-pad">
+      <% if Current.user.can?("leave.read") %>
       <h2 class="font-display text-lg text-ink">Leave balances · <%= Date.current.year %></h2>
       <% if @leave_balances.empty? %>
         <p class="mt-2 text-sm text-taupe">No balances yet — balances appear once leave is requested or set up.</p>
@@ -90,6 +95,8 @@
         <% end %>
       </div>
 
+      <% end %>
+      <% if Current.user.can?("payroll.read") %>
       <h2 class="mt-6 font-display text-lg text-ink">Pay rates</h2>
       <% if @pay_rates.empty? %>
         <p class="mt-2 text-sm text-taupe">No pay rates on file.</p>
@@ -102,9 +109,11 @@
           </li>
         <% end %>
       </ul>
+      <% end %>
     </section>
   </div>
 
+  <% if Current.user.can?("timesheets.read") %>
   <div class="card overflow-hidden">
     <div class="border-b border-fog px-5 py-3">
       <h2 class="font-display text-lg text-ink">Recent timesheets</h2>
@@ -134,6 +143,8 @@
     </div>
   </div>
 
+  <% end %>
+  <% if Current.user.can?("payroll.read") %>
   <div class="card overflow-hidden">
     <div class="border-b border-fog px-5 py-3">
       <h2 class="font-display text-lg text-ink">Recent pay</h2>
@@ -164,4 +175,5 @@
       </table>
     </div>
   </div>
+  <% end %>
 </div>

@@ -19,14 +19,18 @@
       <p class="stat-label">Active</p>
       <p class="stat-value mt-1"><%= People::Employee.active.count %></p>
     </div>
+    <% if Current.user.can?("timesheets.read") %>
     <div class="stat">
       <p class="stat-label">Awaiting timesheets</p>
       <p class="stat-value mt-1"><%= @awaiting_timesheets %></p>
     </div>
+    <% end %>
+    <% if Current.user.can?("leave.read") %>
     <div class="stat">
       <p class="stat-label">Leave pending</p>
       <p class="stat-value mt-1"><%= @pending_leave %></p>
     </div>
+    <% end %>
     <div class="stat">
       <p class="stat-label">Departments</p>
       <p class="stat-value mt-1"><%= People::Department.count %></p>

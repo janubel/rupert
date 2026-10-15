@@ -5,7 +5,7 @@
       <h1 class="page-title">Inventory</h1>
       <p class="mt-1 max-w-2xl text-sm text-mocha">Stock held at each location. Shopify and Square are separate locations with independent inventories — different numbers across columns are normal, not an error.</p>
     </div>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
       <%= link_to "Download PDF", pdf_inventory_index_path, class: "btn-ghost", data: { turbo: false }, title: "Printable snapshot with per-location stock and sync timestamps" %>
       <%= link_to "Recommend SKU download", recommended_skus_inventory_index_path, class: "btn-ghost", data: { turbo: false }, title: "Download proposed unique SKUs for every SKU shared across different products (plan only — no changes made)" %>
       <%= link_to "Movement history", movements_inventory_index_path, class: "btn-ghost" %>

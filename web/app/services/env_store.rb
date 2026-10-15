@@ -43,6 +43,30 @@ module EnvStore
     PUSH_FREEZE_SQUARE
   ].freeze
 
+  PLATFORM_KEYS = MANAGED_KEYS.grep(/\AGOOGLE_DRIVE_/).freeze
+
+  # Whole-instance backup destinations belong to the platform operator. Never
+  # consult tenant rows: they may have been configured by a store administrator.
+  def self.platform_fetch(key, default = nil)
+    raise ArgumentError, 'Key is not a platform setting' unless PLATFORM_KEYS.include?(key)
+
+    setting = Setting.find_by(key: key, tenant_id: nil)
+    setting ? setting.value : ENV.fetch(key, default)
+  end
+
+  def self.platform_set(key, value)
+    raise ArgumentError, 'Key is not a platform setting' unless PLATFORM_KEYS.include?(key)
+
+    setting = Setting.find_by(key: key, tenant_id: nil)
+    if value.nil?
+      setting&.destroy!
+    else
+      setting ||= Setting.new(key: key, tenant_id: nil)
+      setting.update!(value: value.to_s)
+    end
+    value
+  end
+
   # Settings (DB) win over ENV. ENV is only consulted as a global fallback
   # when no tenant is in context (platform/setup), so tenant credentials never
   # bleed across tenants.
@@ -90,14 +114,21 @@ module EnvStore
     value
   end
 
-  def self.import!(text)
+  def self.import!(text, allow_platform: false)
     parsed = parse(text)
+    if !allow_platform && (parsed.keys & PLATFORM_KEYS).any?
+      raise ArgumentError, 'Google Drive instance backup settings require a platform super administrator'
+    end
     parsed.each do |key, value|
       next unless MANAGED_KEYS.include?(key)
 
-      setting = Setting.find_or_initialize_by(key: key, tenant_id: Current.tenant_id)
-      setting.value = value
-      setting.save!
+      if PLATFORM_KEYS.include?(key)
+        platform_set(key, value)
+      else
+        setting = Setting.find_or_initialize_by(key: key, tenant_id: Current.tenant_id)
+        setting.value = value
+        setting.save!
+      end
     end
     clear_cache!
     parsed.keys & MANAGED_KEYS
@@ -108,7 +139,7 @@ module EnvStore
   end
 
   def self.effective(key)
-    fetch(key, '')
+    PLATFORM_KEYS.include?(key) ? platform_fetch(key, '') : fetch(key, '')
   end
 
   def self.settings_map

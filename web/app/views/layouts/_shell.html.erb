@@ -1,72 +1,56 @@
 <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:fixed focus:left-4 focus:top-3">Skip to content</a>
 <div class="min-h-full">
-  <header class="sticky top-0 z-20 border-b border-fog bg-oat/90 backdrop-blur">
-    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-3 md:pr-44">
-      <%= link_to root_path, class: "flex items-center gap-3" do %>
-        <span class="grid h-9 w-9 place-items-center rounded-xl bg-olive font-display text-lg text-cream">R</span>
-        <span class="hidden font-display text-lg text-ink sm:block">Rupert</span>
+  <header class="app-header">
+    <div class="app-header-grid">
+      <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-olive font-display text-lg text-cream">R</span><span class="app-brand-name">Rupert</span>
       <% end %>
-
       <% if Current.user %>
-        <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Module areas">
+        <nav class="area-navigation" aria-label="Module areas" style="--nav-area-count: <%= [nav_areas.size, 1].max %>">
           <% nav_areas.each do |area| %>
-            <%= link_to area[:name], safe_module_path(area[:modules].first),
-              class: "nav-pill shrink-0 #{area[:key] == active_area_key ? "nav-pill-active" : "nav-pill-idle"}",
-              aria: { current: (area[:key] == active_area_key ? "page" : nil) } %>
+            <%= link_to safe_module_path(area[:modules].first), class: "nav-area #{area[:key] == active_area_key ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { label: area[:name], current: (area[:key] == active_area_key ? 'page' : nil) }, title: area[:name] do %><%= navigation_icon(area[:key]) %><span><%= area[:name] %></span><% end %>
           <% end %>
         </nav>
-
-        <div class="flex items-center gap-3">
+        <div class="header-utilities">
           <% if Current.user.super_admin? %>
-            <%= link_to "Instance", platform_path, class: "nav-pill nav-pill-idle" %>
+            <%= link_to platform_path, class: 'nav-utility', aria: { label: 'Instance overview' }, title: 'Instance overview' do %><%= navigation_icon('platform') %><span class="nav-hint">Instance overview</span><% end %>
           <% end %>
-          <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-pill nav-pill-idle" aria-label="Search" title="Search — press /">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <span class="hidden sm:inline">Search</span>
-            <kbd class="hidden rounded bg-haze px-1.5 font-mono text-[10px] text-taupe md:inline">/</kbd>
-          </button>
-          <%= render "shared/header_sync_pill", sync: @last_sync %>
-
-          <div data-controller="dropdown" class="relative md:absolute md:right-4 md:top-1/2 md:-translate-y-1/2 md:z-30">
-            <% initials = Current.user.display_name.split(/\s+/).map { |w| w[0] }.join.upcase[0, 2] %>
-            <button type="button" data-action="dropdown#toggle" data-dropdown-target="trigger" aria-haspopup="menu" aria-expanded="false" class="flex items-center gap-2 rounded-full border border-fog bg-paper py-1 pl-1 pr-2.5 transition-colors hover:border-taupe focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive focus-visible:ring-offset-2 focus-visible:ring-offset-oat">
-              <span class="grid h-7 w-7 place-items-center rounded-full bg-olive text-xs font-semibold text-cream"><%= initials %></span>
-              <span class="hidden text-sm font-semibold text-ink sm:block"><%= Current.user.display_name %></span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-taupe" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-            </button>
-
-            <div data-dropdown-target="menu" role="menu" class="absolute right-0 top-full z-30 mt-2 hidden w-64 rounded-2xl border border-fog bg-paper py-2 shadow-[0_8px_30px_rgba(26,57,61,0.15)]">
-              <div class="flex items-center gap-3 px-4 pb-2 pt-1">
-                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-olive text-sm font-semibold text-cream"><%= initials %></span>
-                <div class="min-w-0">
-                  <p class="truncate text-sm font-semibold text-ink"><%= Current.user.display_name %></p>
-                  <p class="truncate text-xs text-mocha"><%= Current.user.email %></p>
-                </div>
-              </div>
-              <div class="mx-4 border-t border-fog"></div>
+          <% if Current.user.can?('dashboard.read') %>
+            <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
+          <% end %>
+          <%= render 'shared/header_sync_pill', sync: @last_sync %>
+          <div data-controller="dropdown" class="relative">
+            <% initials = Current.user.display_name.split(/\s+/).map { |word| word[0] }.join.upcase[0, 2] %>
+            <button type="button" data-action="dropdown#toggle" data-dropdown-target="trigger" aria-label="Account menu for <%= Current.user.display_name %>" aria-haspopup="menu" aria-expanded="false" title="<%= Current.user.display_name %> · <%= navigation_role_name(Current.user) %>" class="nav-utility"><span class="grid h-8 w-8 place-items-center rounded-full bg-olive text-xs font-semibold text-cream"><%= initials %></span><span class="nav-hint">Account · <%= navigation_role_name(Current.user) %></span></button>
+            <div data-dropdown-target="menu" role="menu" class="account-menu hidden">
+              <div class="border-b border-fog px-4 py-3"><p class="truncate text-sm font-semibold text-ink"><%= Current.user.display_name %></p><p class="truncate text-xs text-mocha"><%= Current.user.email %></p><p class="mt-2 text-xs font-semibold text-olive"><%= navigation_role_name(Current.user) %></p></div>
               <div class="p-2">
-                <%= button_to "Sign out", logout_path, method: :delete, class: "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-rose hover:bg-haze", role: "menuitem" %>
+                <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>My time clock</span><% end %>
+                <%= link_to roadmap_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('document') %><span>Features &amp; roadmap</span><% end %>
+                <%= button_to logout_path, method: :delete, class: 'nav-menu-item w-full text-rose', role: 'menuitem' do %><%= navigation_icon('logout') %><span>Sign out</span><% end %>
               </div>
             </div>
           </div>
         </div>
       <% end %>
     </div>
-  </header>
-
-  <% if Current.user && active_area_modules.length > 1 %>
-    <div class="border-b border-fog bg-cream/70">
-      <div class="mx-auto max-w-6xl overflow-x-auto px-6">
-        <nav class="flex items-center gap-1 py-1.5" aria-label="Module">
-          <% active_area_modules.each do |entry| %>
-            <%= link_to entry.name, safe_module_path(entry),
-              class: "nav-pill #{active_module_entry&.key == entry.key ? "nav-pill-active-sm" : "nav-pill-idle-sm"}",
-              aria: { current: (active_module_entry&.key == entry.key ? "page" : nil) } %>
-          <% end %>
+    <% if Current.user && active_area_modules.length > 1 %>
+      <div class="module-navigation-wrap">
+        <nav class="module-navigation" aria-label="Module">
+          <details class="module-menu" data-controller="navigation-menu">
+            <% current_entry = active_module_entry || active_area_modules.first %>
+            <% area_name = nav_areas.find { |area| area[:key] == active_area_key }&.dig(:name) %>
+            <summary class="module-menu-trigger" aria-label="<%= area_name %> tools; current page <%= current_entry.name %>"><%= navigation_icon(module_icon_key(current_entry)) %><span><%= current_entry.name %></span><%= navigation_icon('chevron') %><span class="tools-caption"><%= area_name %> tools</span></summary>
+            <div class="module-menu-panel"><p class="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-taupe"><%= area_name %> tools</p>
+              <% active_area_modules.each do |entry| %>
+                <%= link_to safe_module_path(entry), class: "nav-menu-item #{entry.key == current_entry.key ? 'nav-pill-active-sm' : ''}", aria: { current: (entry.key == current_entry.key ? 'page' : nil) } do %><%= navigation_icon(module_icon_key(entry)) %><span><%= entry.name %></span><% if entry.key == current_entry.key %><%= navigation_icon('check', css_class: 'nav-symbol ml-auto') %><% end %><% end %>
+              <% end %>
+            </div>
+          </details>
         </nav>
       </div>
-    </div>
-  <% end %>
+    <% end %>
+  </header>
 
   <main id="main" tabindex="-1" class="mx-auto max-w-6xl px-6 py-8 focus:outline-none">
     <% if (guide = PageGuides.for_path(request.path)) %>
@@ -78,7 +62,7 @@
   </main>
 </div>
 
-<% if Current.user %>
+<% if Current.user&.can?('dashboard.read') %>
   <div data-controller="search" data-action="rupert:open-search@window->search#open" class="fixed inset-0 z-50 hidden items-start justify-center px-4 pt-[12vh]">
     <div class="fixed inset-0 bg-ink/30" data-action="click->search#close"></div>
     <div class="relative w-full max-w-xl overflow-hidden rounded-2xl border border-fog bg-paper shadow-2xl" role="dialog" aria-label="Search">

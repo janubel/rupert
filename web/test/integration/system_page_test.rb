@@ -20,12 +20,20 @@ class SystemPageTest < ActionDispatch::IntegrationTest
 
   teardown { Current.tenant = nil }
 
-  test 'admin can view system health' do
+  test 'super admin can view system health' do
+    users(:regular_user).update!(role: 'super_admin')
     get system_path
     assert_response :success
     assert_select 'h1', /System health/
     assert_select 'p', /Load average|Memory|Swap|Disk/
     assert_select 'h2', %r{Web server|Background jobs|Database|Slow / stuck queries}
+  end
+
+  test 'store admin cannot view instance diagnostics despite the system permission' do
+    assert users(:regular_user).can?('system.read')
+    get system_path
+    assert_redirected_to root_path
+    assert_match(/don't have permission/, flash[:alert])
   end
 
   test 'reader cannot view system health' do

@@ -1,7 +1,7 @@
 <% content_for :title, "Dashboard" %>
-<% presenter = DashboardPresenter.new %>
-<% widgets = @widgets || DashboardWidget.entries({}) %>
-<div class="space-y-8" data-controller="live-sync" data-action="mousedown->dashboard-customizer#onMouseDown">
+<% presenter = DashboardPresenter.new(user: Current.user) %>
+<% widgets = @widgets || DashboardWidget.entries({}, user: Current.user) %>
+<div class="space-y-8" data-controller="<%= "live-sync" if Current.user.can?("sync.read") %>" data-action="mousedown->dashboard-customizer#onMouseDown">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <p class="eyebrow mb-2 text-olive"><%= l(Time.current, format: :long) %></p>
@@ -11,15 +11,17 @@
     <div class="flex flex-col items-end gap-2">
       <div class="flex items-center gap-2">
         <button type="button" data-dashboard-customizer-target="toggle" data-action="click->dashboard-customizer#toggleEditor" class="btn-ghost btn-sm">Customize</button>
+        <% if Current.user.can?("sync.write") %>
         <%= form_tag syncs_path, method: :post do %>
           <%= submit_tag "Sync now", class: "btn-primary", data: { turbo_submits_with: "Syncing…" } %>
         <% end %>
+        <% end %>
       </div>
-      <%= render "shared/last_sync", sync: presenter.last_sync %>
+      <% if Current.user.can?("sync.read") %><%= render "shared/last_sync", sync: presenter.last_sync %><% end %>
     </div>
   </section>
 
-  <%= render "syncs/banner" %>
+  <% if Current.user.can?("sync.read") %><%= render "syncs/banner" %><% end %>
 
   <section data-controller="dashboard-customizer" data-dashboard-customizer-target="panel" class="card card-pad hidden">
     <div class="flex items-baseline justify-between">
@@ -48,7 +50,7 @@
     </div>
   </section>
 
-  <% cached_fragment("dashboard/widgets", user_id: Current.user.id) do %>
+  <% cached_fragment("dashboard/widgets", user_id: Current.user.id, permissions: Current.user.permissions_signature) do %>
     <div id="dashboard-widgets" class="space-y-8">
       <% widgets.each do |widget, visible| %>
         <section data-widget-key="<%= widget.key %>" <%= visible ? "" : "hidden" %>>

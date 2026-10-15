@@ -5,6 +5,7 @@ import csv
 import html
 import io
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,17 +13,49 @@ DOCS = ROOT / 'docs'
 CATALOG = json.loads((ROOT / 'web/config/product_roadmap.json').read_text())
 MATRIX = json.loads((DOCS / 'data/competitor-matrix.json').read_text())
 E = html.escape
-NAV = [('index.html', 'Home'), ('roadmap.html', 'Roadmap'), ('pos-parity.html', 'POS parity'), ('competitors.html', 'Compare'), ('api.html', 'API'), ('payment-integrations.html', 'POS connections'), ('modules.html', 'Features'), ('sqlite-incus.html', 'SQLite & Incus'), ('getting-started.html', 'Develop')]
+GUIDES = [
+    ('Operator guides', [
+        ('navigation-access.html', 'Navigation & access levels'),
+        ('payment-basics.html', 'Payments explained & contacts'),
+        ('payment-integrations.html', 'POS & payment connections'),
+        ('inventory-workflows.html', 'Inventory workflows'),
+        ('sales-imports.html', 'Sales imports & register reports'),
+        ('owner-checklists.html', 'Private owner checklists'),
+        ('private-workspaces.html', 'Private workspaces & instance admin'),
+        ('pos-parity.html', 'POS parity & acceptance'),
+    ]),
+    ('Developer & operations', [
+        ('api.html', 'API integration'),
+        ('modules.html', 'Features & modules'),
+        ('sqlite-incus.html', 'SQLite & Incus'),
+        ('getting-started.html', 'Develop locally'),
+        ('architecture.html', 'Architecture'),
+        ('operations.html', 'Operations'),
+        ('deployment.html', 'Deployment'),
+    ]),
+]
+HOME_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg>'
+BOOK_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v15M12 5C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/></svg>'
+
+
+def navigation(current_page):
+    def link(url, label, home=False):
+        current = ' aria-current="page"' if url == current_page else ''
+        extra = ' class="nav-home" aria-label="Home" title="Home"' if home else ''
+        return f'<a href="{url}"{extra}{current}>{HOME_ICON if home else E(label)}</a>'
+    primary = link('index.html', 'Home', home=True) + link('roadmap.html', 'Roadmap') + link('competitors.html', 'Compare')
+    groups = ''.join('<section class="guide-group"><h2>'+E(title)+'</h2>'+''.join(link(url, label) for url, label in links)+'</section>' for title, links in GUIDES)
+    active = ' class="guides-current"' if any(url == current_page for _, links in GUIDES for url, _ in links) else ''
+    return f'<header class="site"><div class="wrap-wide"><a class="brand" href="index.html"><span class="mark">R</span><strong>Rupert</strong></a><nav class="product-nav" aria-label="Documentation">{primary}<details class="guide-menu"><summary{active}>{BOOK_ICON}<span>Guides</span></summary><div class="guide-panel">{groups}</div></details></nav></div></header>'
 
 
 def page(title, body):
-    nav = ''.join(f'<a href="{url}">{label}</a>' for url, label in NAV)
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{E(title)} — Rupert</title><meta name="description" content="Rupert ERP feature inventory, delivery roadmap, competitor comparison and SQLite/Incus operations.">
 <link rel="stylesheet" href="assets/style.css"><link rel="stylesheet" href="assets/product.css"></head>
 <body><a class="skip" href="#content">Skip to content</a>
-<header class="site"><div class="wrap-wide"><a class="brand" href="index.html"><span class="mark">R</span><strong>Rupert</strong></a><nav aria-label="Documentation">{nav}</nav></div></header>
+<!-- documentation navigation -->
 <main id="content" class="wrap-wide product-main">{body}</main>
 <footer><div class="wrap-wide"><span>Rupert · reviewed {CATALOG['reviewed']}</span><a href="https://github.com/techmore/rupert">Source on GitHub ↗</a></div></footer>
 <script src="assets/product.js" defer></script></body></html>\n'''
@@ -52,7 +85,7 @@ outputs['index.html'] = page('Small business operations, connected', f'''
 <article><span class="step">03 · Team</span><h3>Keep daily work moving</h3><p>Employees, timesheets, PTO, pay-run calculations, projects and goals.</p></article>
 <article><span class="step">04 · Money</span><h3>Make the numbers visible</h3><p>Expenses, payables, receivables and operational reports. Full double-entry accounting is planned.</p></article></div></section>
 <section class="product-section"><div class="section-head"><p class="eyebrow">Delivery sequence</p><h2>Reliability first. Broader ERP next.</h2><p>The roadmap names dependencies and acceptance criteria, with no invented delivery dates.</p></div><div class="product-grid"><article><h3>Now: SQLite operations</h3><p>Planner maintenance, low-contention job defaults, diagnostics, backup and restore verification.</p><a href="sqlite-incus.html">Operations and tradeoffs →</a></article><article><h3>Next: inventory execution</h3><p>Barcode counts and receiving, explicit transfers, reservations and backorders.</p><a href="roadmap.html">Full feature inventory →</a></article></div></section>
-<section class="product-section"><h2>Operator guides</h2><div class="actions"><a class="btn btn-ghost" href="private-workspaces.html">Private workspaces &amp; instance admin</a><a class="btn btn-ghost" href="payment-basics.html">Payments explained &amp; contacts</a><a class="btn btn-ghost" href="pos-parity.html">POS parity and acceptance</a><a class="btn btn-ghost" href="api.html">API integration</a><a class="btn btn-ghost" href="inventory-workflows.html">Inventory workflows</a><a class="btn btn-ghost" href="sales-imports.html">Sales imports &amp; register reports</a><a class="btn btn-ghost" href="owner-checklists.html">Private owner checklists</a></div></section><section class="notice"><strong>Inventory rule:</strong> Shopify and Square serve independent inventories. Rupert mirrors them; it never automatically makes their quantities equal. Outbound platform changes require explicit owner confirmation.</section>''')
+<section class="product-section"><h2>Operator guides</h2><div class="actions"><a class="btn btn-ghost" href="navigation-access.html">Navigation &amp; access levels</a><a class="btn btn-ghost" href="private-workspaces.html">Private workspaces &amp; instance admin</a><a class="btn btn-ghost" href="payment-basics.html">Payments explained &amp; contacts</a><a class="btn btn-ghost" href="pos-parity.html">POS parity and acceptance</a><a class="btn btn-ghost" href="api.html">API integration</a><a class="btn btn-ghost" href="inventory-workflows.html">Inventory workflows</a><a class="btn btn-ghost" href="sales-imports.html">Sales imports &amp; register reports</a><a class="btn btn-ghost" href="owner-checklists.html">Private owner checklists</a></div></section><section class="notice"><strong>Inventory rule:</strong> Shopify and Square serve independent inventories. Rupert mirrors them; it never automatically makes their quantities equal. Outbound platform changes require explicit owner confirmation.</section>''')
 phase_html = ''.join(f'''<article class="phase" id="phase-{p['id']}"><span class="step">Phase {p['id']}</span><h2>{E(p['name'])}</h2><p>{E(p['goal'])}</p><div class="acceptance"><strong>Ready when</strong><p>{E(p['acceptance'])}</p></div></article>''' for p in CATALOG['phases'])
 outputs['roadmap.html'] = page('Features & roadmap', f'''<section class="page-intro"><p class="eyebrow">Product plan · {CATALOG['reviewed']}</p><h1>What works.<br>What comes next.</h1><p class="lede">A complete inventory within the audited Rupert scope, with implementation evidence and delivery gates. These are priorities, not promised dates.</p><div class="metrics">{metrics}</div></section>
 <section class="notice">{E(CATALOG['basis'])} No private chat contents are included. New features still require implementation, tests and deployment; listing them here does not enable them.</section>
@@ -81,7 +114,6 @@ outputs['competitors.html'] = page('Competitor functionality matrix', f'''<secti
 <section class="product-section"><h2>Competitor listing and source notes</h2><p>These are relevant alternatives and benchmarks, including products Rupert already connects to. The list is not the entire ERP market. No vendor performance or pricing has been independently benchmarked.</p><div class="product-grid">{cards}</div></section><section class="product-section"><h2>Integration candidates</h2><p>Account-specific gateway and workforce companions; listed for verification, not enabled by this comparison.</p><div class="product-grid">{integration_cards}</div></section>''')
 ops = (DOCS / 'ops/sqlite-incus.md').read_text()
 # Keep the human-authored runbook readable on Pages without a markdown runtime.
-import re
 def render_runbook(source):
     blocks=[]
     for block in source.split('\n\n'):
@@ -101,9 +133,22 @@ def render_runbook(source):
     return ''.join(blocks)
 outputs['sqlite-incus.html'] = page('SQLite & Incus', '<section class="page-intro"><p class="eyebrow">Operating decision · 2026-10-14</p><h1>Small database.<br>Measured operations.</h1><p class="lede">SQLite on SER8 in Incus, with explicit recovery and scaling triggers.</p></section><article class="runbook">'+render_runbook(ops)+'</article>')
 
-for filename, title, source_path in [('pos-parity.html', 'POS parity and acceptance', 'ops/pos-parity.md'), ('api.html', 'API integration guide', 'api-v1.md'), ('inventory-workflows.html', 'Inventory workflow guide', 'ops/inventory-workflows.md'), ('payment-integrations.html', 'POS and payment account connections', 'ops/payment-integrations.md'), ('payment-basics.html', 'Payments in plain English', 'ops/payment-basics.md'), ('sales-imports.html', 'Reviewed sales imports and register reports', 'ops/swipesimple-import.md'), ('owner-checklists.html', 'Private owner checklist guide', 'ops/owner-checklists.md'), ('private-workspaces.html', 'Private workspaces and instance administration', 'ops/private-workspaces.md')]:
+for filename, title, source_path in [('navigation-access.html', 'Navigation and access levels', 'ops/navigation-access.md'), ('pos-parity.html', 'POS parity and acceptance', 'ops/pos-parity.md'), ('api.html', 'API integration guide', 'api-v1.md'), ('inventory-workflows.html', 'Inventory workflow guide', 'ops/inventory-workflows.md'), ('payment-integrations.html', 'POS and payment account connections', 'ops/payment-integrations.md'), ('payment-basics.html', 'Payments in plain English', 'ops/payment-basics.md'), ('sales-imports.html', 'Reviewed sales imports and register reports', 'ops/swipesimple-import.md'), ('owner-checklists.html', 'Private owner checklist guide', 'ops/owner-checklists.md'), ('private-workspaces.html', 'Private workspaces and instance administration', 'ops/private-workspaces.md')]:
     lede = 'Who handles your payments, what Rupert connects to and who to call.' if filename == 'payment-basics.html' else 'Implemented scope and the acceptance checks for the remaining work.'
     outputs[filename] = page(title, '<section class="page-intro"><p class="eyebrow">Operator guide · 2026-10-15</p><h1>'+E(title)+'</h1><p class="lede">'+E(lede)+'</p></section><article class="runbook">'+render_runbook((DOCS/source_path).read_text())+'</article>')
+
+# Preserve the older hand-authored pages while keeping their navigation consistent.
+for filename in ['modules.html', 'getting-started.html', 'architecture.html', 'operations.html', 'deployment.html']:
+    content = (DOCS / filename).read_text()
+    content = re.sub(r'<header class="site">.*?</header>', '<!-- documentation navigation -->', content, count=1, flags=re.S)
+    if 'assets/product.css' not in content:
+        content = content.replace('</head>', '  <link rel="stylesheet" href="assets/product.css">\n</head>')
+    if 'assets/product.js' not in content:
+        content = content.replace('</body>', '<script src="assets/product.js" defer></script>\n</body>')
+    outputs[filename] = content
+for filename in outputs:
+    if filename.endswith('.html'):
+        outputs[filename] = outputs[filename].replace('<!-- documentation navigation -->', navigation(filename))
 
 # Keep one machine-readable catalog for the app and generated public pages.
 outputs['data/product-roadmap.json'] = json.dumps(CATALOG, indent=2)+'\n'

@@ -187,8 +187,12 @@ class PlatformTest < ActionDispatch::IntegrationTest
     ENV['RUPERT_INSTANCE_LABEL'] = 'SER8 · Incus'
     finished = 5.minutes.ago
     SyncRun.create!(tenant_id: @other.id, mode: 'full', status: 'success', startedAt: 10.minutes.ago, finishedAt: finished, error: 'PRIVATE_SYNC_DETAILS')
-    BackupLog.create!(tenant_id: @other.id, status: 'success', startedAt: 10.minutes.ago, finishedAt: finished,
-      fileSize: 4096, fileName: 'PRIVATE_BACKUP_FILENAME', driveUrl: 'https://private.example.org/PRIVATE_BACKUP_LINK')
+    Current.set(tenant: nil) do
+      BackupLog.create!(tenant_id: nil, status: 'success', startedAt: 10.minutes.ago, finishedAt: finished,
+        fileSize: 4096, fileName: 'PRIVATE_BACKUP_FILENAME', driveUrl: 'https://private.example.org/PRIVATE_BACKUP_LINK')
+    end
+    BackupLog.create!(tenant_id: @other.id, status: 'success', startedAt: 1.minute.ago, finishedAt: Time.current,
+      fileSize: 9999, fileName: 'UNTRUSTED_TENANT_BACKUP')
     data = InstanceOverview.call(actor: @owner)
     assert_equal 'SER8 · Incus', data[:instance][:label]
     assert_equal ApplicationRecord.connection.adapter_name, data[:instance][:adapter]

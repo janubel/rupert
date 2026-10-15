@@ -38,6 +38,6 @@ class ApplicationController < ActionController::Base
   end
 
   def load_last_sync
-    @last_sync = Current.user ? SyncRun.order(startedAt: :desc).first : nil
+    @last_sync = Current.user&.active? && Current.user.can?('sync.read') ? SyncRun.order(startedAt: :desc).first : nil
   end
 end

@@ -16,16 +16,21 @@
         <p class="stat-label">On leave</p>
         <p class="stat-value mt-0.5"><%= People::Employee.where(status: "on_leave").count %></p>
       </div>
+      <% if Current.user.can?("leave.read") %>
       <div>
         <p class="stat-label">Leave pending</p>
         <p class="stat-value mt-0.5"><%= People::LeaveRequest.pending.count %></p>
       </div>
+      <% end %>
+      <% if Current.user.can?("timesheets.read") %>
       <div>
         <p class="stat-label">To approve</p>
         <p class="stat-value mt-0.5"><%= People::Timesheet.awaiting_review.count %></p>
       </div>
+      <% end %>
     </div>
 
+    <% if Current.user.can?("timesheets.read") %>
     <div class="mt-4">
       <h3 class="text-sm font-display text-ink">Timesheets awaiting review</h3>
       <% People::Timesheet.awaiting_review.includes(:employee).recent(4).each do |timesheet| %>
@@ -38,6 +43,7 @@
         <p class="py-2 text-sm text-taupe">No timesheets waiting — all caught up.</p>
       <% end %>
     </div>
+    <% end %>
   <% else %>
     <p class="mt-4 text-sm text-taupe">You don't have access to the People modules. Ask a manager or admin to grant it.</p>
   <% end %>

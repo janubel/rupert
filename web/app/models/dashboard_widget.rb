@@ -33,11 +33,27 @@ class DashboardWidget
 
   # Returns an array of [Widget, visible] pairs honoring a saved config hash.
   # Any registered widget missing from the config is appended in default order.
-  def self.entries(config = {})
+  PERMISSIONS = {
+    'stats' => %w[sales.read inventory.read alerts.read],
+    'today_channels' => %w[sales.read],
+    'attention' => %w[inventory.read alerts.read],
+    'stock_alerts' => %w[alerts.read],
+    'revenue' => %w[sales.read],
+    'sync_history' => %w[sync.read],
+    'goals' => %w[projects.read],
+    'people' => %w[hr.read]
+  }.freeze
+
+  def self.allowed?(key, user)
+    find(key) && PERMISSIONS.fetch(key.to_s).any? { |permission| user&.can?(permission) }
+  end
+
+  def self.entries(config = {}, user: nil)
     order = Array(config['widgets']).presence || default_order
     hidden = Array(config['hidden'])
     ordered = order.filter_map { |key| find(key) }
     ordered.concat(all.reject { |widget| order.include?(widget.key) })
+    ordered.select! { |widget| allowed?(widget.key, user) } if user
     ordered.map { |widget| [widget, !hidden.include?(widget.key)] }
   end
 end

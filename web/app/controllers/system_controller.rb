@@ -14,7 +14,8 @@ class SystemController < AuthenticatedController
   private
 
   def require_system_access
-    return if Current.user&.can?('system.read')
+    actor = User.find_by(id: Current.user&.id, active: true)
+    return if actor&.super_admin? && actor.can?('system.read')
 
     redirect_to(root_path, alert: "You don't have permission to view system health.")
   end

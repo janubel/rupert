@@ -3,20 +3,20 @@
 class SettingsController < AuthenticatedController
   before_action :authorize_read, only: %i[show env drive_status drive_logs backup]
   before_action :authorize_write, except: %i[show env drive_status drive_logs backup]
-  before_action :authorize_super_admin, only: %i[backup restore drive_backup env_export]
+  before_action :authorize_super_admin, only: %i[backup restore drive_backup new_env_export env_export drive_auth drive_oauth_callback drive_disconnect drive_status drive_logs]
 
   def show; end
 
   # GET /settings/env.json — masked view of managed env keys
   def env
     render(json: {
-             keys: EnvStore::MANAGED_KEYS.map do |key|
-               value = EnvStore.fetch(key, '')
+             keys: visible_env_keys.map do |key|
+               value = EnvStore.effective(key)
                {
                  key: key,
                  set: value.present?,
                  masked: value.present? ? EnvStore.mask(value) : nil,
-                 source: Setting.exists?(key: key, tenant_id: Current.tenant_id) ? 'database' : 'environment'
+                 source: Setting.exists?(key: key, tenant_id: EnvStore::PLATFORM_KEYS.include?(key) ? nil : Current.tenant_id) ? 'database' : 'environment'
                }
              end
            })
@@ -28,7 +28,8 @@ class SettingsController < AuthenticatedController
     text = params[:text].presence || (params[:file].read if params[:file].present?)
     raise ArgumentError, 'Provide .env text or a file' if text.blank?
 
-    known = EnvStore.parse(text).keys & EnvStore::MANAGED_KEYS
+    reject_unauthorized_platform_keys!(text)
+    known = EnvStore.parse(text).keys & visible_env_keys
     changes = known.map { |key| preview_entry(key) }
     render(json: {
              keys: changes,
@@ -49,7 +50,7 @@ class SettingsController < AuthenticatedController
            end
     raise ArgumentError, 'Provide .env text or a file' if text.blank?
 
-    imported = EnvStore.import!(text)
+    imported = EnvStore.import!(text, allow_platform: platform_admin?)
     render(json: { ok: true, imported: imported })
   rescue ArgumentError, ActiveRecord::RecordInvalid => e
     render(json: { ok: false, error: e.message }, status: :unprocessable_entity)
@@ -99,7 +100,7 @@ class SettingsController < AuthenticatedController
 
   # GET /settings/drive_logs — recent backup attempts (JSON)
   def drive_logs
-    rows = BackupLog.recent(10).map do |log|
+    rows = BackupLog.unscoped.where(tenant_id: nil).order(startedAt: :desc).limit(10).map do |log|
       {
         status: log.status,
         fileName: log.fileName,
@@ -116,6 +117,8 @@ class SettingsController < AuthenticatedController
   def drive_auth
     state = SecureRandom.hex(16)
     session[:drive_oauth_state] = state
+    session[:drive_oauth_actor_id] = Current.user.id
+    session[:drive_oauth_tenant_id] = Current.tenant_id
     redirect_to(
       GoogleDriveBackupService.auth_url(redirect_uri: drive_oauth_callback_settings_url, state: state),
       allow_other_host: true
@@ -126,18 +129,23 @@ class SettingsController < AuthenticatedController
 
   # GET /settings/drive_oauth_callback — exchange the code, store refresh token
   def drive_oauth_callback
-    return redirect_to(settings_path, alert: 'Google Drive authorization was declined.') if params[:error].present?
-    if session[:drive_oauth_state].blank? || session[:drive_oauth_state] != params[:state]
+    if params[:error].present?
+      clear_drive_oauth_state
+      return redirect_to(settings_path, alert: 'Google Drive authorization was declined.')
+    end
+    if session[:drive_oauth_state].blank? || session[:drive_oauth_state] != params[:state] ||
+        session[:drive_oauth_actor_id] != Current.user.id || session[:drive_oauth_tenant_id] != Current.tenant_id
+      clear_drive_oauth_state
       return redirect_to(settings_path, alert: 'Google Drive authorization failed state check. Try again.')
     end
 
     GoogleDriveBackupService.exchange_code!(params[:code], redirect_uri: drive_oauth_callback_settings_url)
-    session.delete(:drive_oauth_state)
+    clear_drive_oauth_state
     redirect_to(settings_path, notice: 'Connected to Google Drive.')
   rescue GoogleDriveBackupService::NotConfiguredError,
          GoogleDriveBackupService::NotConnectedError,
          Signet::AuthorizationError => e
-    session.delete(:drive_oauth_state)
+    clear_drive_oauth_state
     redirect_to(settings_path, alert: e.message)
   end
 
@@ -154,13 +162,19 @@ class SettingsController < AuthenticatedController
   # POST /settings/drive_disconnect — forget the refresh token
   def drive_disconnect
     GoogleDriveBackupService.disconnect!
+    clear_drive_oauth_state
     redirect_to(settings_path, notice: 'Disconnected from Google Drive.')
   end
 
   # POST /settings/oauth_credentials — save Google sign-in client id/secret
   def oauth_credentials
     EnvStore.set('GOOGLE_OAUTH_CLIENT_ID', params[:client_id].to_s.strip) if params.key?(:client_id)
-    EnvStore.set('GOOGLE_OAUTH_CLIENT_SECRET', params[:client_secret].to_s.strip) if params.key?(:client_secret)
+    secret = params[:client_secret].to_s.strip
+    if params[:clear_client_secret] == '1'
+      EnvStore.set('GOOGLE_OAUTH_CLIENT_SECRET', nil)
+    elsif secret.present?
+      EnvStore.set('GOOGLE_OAUTH_CLIENT_SECRET', secret)
+    end
     redirect_to(settings_path, notice: 'Google sign-in credentials saved.')
   end
 
@@ -235,11 +249,11 @@ class SettingsController < AuthenticatedController
   private
 
   def preview_entry(key)
-    current = EnvStore.fetch(key, '')
+    current = EnvStore.effective(key)
     {
       key: key,
       currently_set: current.present?,
-      from_env_file: !Setting.exists?(key: key, tenant_id: Current.tenant_id) && current.present?
+      from_env_file: !Setting.exists?(key: key, tenant_id: EnvStore::PLATFORM_KEYS.include?(key) ? nil : Current.tenant_id) && current.present?
     }
   end
 
@@ -251,7 +265,27 @@ class SettingsController < AuthenticatedController
     authorize(:module, :settings_write?)
   end
 
+  def clear_drive_oauth_state
+    session.delete(:drive_oauth_state)
+    session.delete(:drive_oauth_actor_id)
+    session.delete(:drive_oauth_tenant_id)
+  end
+
+  def platform_admin?
+    User.find_by(id: Current.user&.id, active: true)&.super_admin? || false
+  end
+
+  def visible_env_keys
+    platform_admin? ? EnvStore::MANAGED_KEYS : EnvStore::MANAGED_KEYS - EnvStore::PLATFORM_KEYS
+  end
+
+  def reject_unauthorized_platform_keys!(text)
+    return if platform_admin? || (EnvStore.parse(text).keys & EnvStore::PLATFORM_KEYS).empty?
+
+    raise ArgumentError, 'Google Drive instance backup settings require a platform super administrator'
+  end
+
   def authorize_super_admin
-    redirect_to(settings_path, alert: 'Only the super admin can do that.') unless Current.user.super_admin?
+    redirect_to(settings_path, alert: 'Only the super admin can do that.') unless platform_admin?
   end
 end

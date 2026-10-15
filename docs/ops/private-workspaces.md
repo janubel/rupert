@@ -34,7 +34,7 @@ The instance section shows its configured deployment label, database adapter/sch
 
 Job counts and recent heartbeat records describe the queue database at page generation time. Recent heartbeats are not verified operating-system process counts. The dashboard also shows the latest recorded successful sync and completed backup upload when present. An upload record is not proof of a tested restore; separate private backups and Incus snapshots are not discovered here. Opening the dashboard runs no sync, provider check, backup or host command.
 
-The existing super-admin backup/restore controls remain available through Settings. Platform super-admin is Rupert's highest application role; it is not a new operating-system login, SQL console or database password. No Incus socket or container-management API is exposed through the application.
+Whole-database backup/restore and Google Drive backup configuration, consent, status and history are platform-administrator controls in Settings. These snapshots contain all workspaces. Existing workspace-owned Drive connections are ignored; a platform administrator must explicitly configure and authorize the instance destination, or supply trusted host configuration. Scheduled Drive uploads run once per instance, never once per workspace. Platform super-admin is Rupert's highest application role; it is not a new operating-system login, SQL console or database password. No Incus socket or container-management API is exposed through the application.
 
 ## Privacy and recovery
 

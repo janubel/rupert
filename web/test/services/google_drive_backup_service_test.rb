@@ -5,10 +5,10 @@ require 'test_helper'
 class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
   setup do
     Current.tenant = tenants(:default_tenant)
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_ID', 'client-id')
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_SECRET', 'client-secret')
-    EnvStore.set('GOOGLE_DRIVE_REFRESH_TOKEN', 'refresh-token')
-    EnvStore.set('GOOGLE_DRIVE_FOLDER_ID', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_ID', 'client-id')
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_SECRET', 'client-secret')
+    EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', 'refresh-token')
+    EnvStore.platform_set('GOOGLE_DRIVE_FOLDER_ID', nil)
 
     @snapshot = Rails.root.join('tmp', 'backups', "test-snapshot-#{SecureRandom.hex(8)}.dump")
     FileUtils.mkdir_p(@snapshot.dirname)
@@ -19,16 +19,16 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
   teardown do
     Current.tenant = nil
     FileUtils.rm_f(@snapshot)
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_ID', nil)
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_SECRET', nil)
-    EnvStore.set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_ID', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_SECRET', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
   end
 
   test 'configured? and connected? reflect stored credentials' do
     assert GoogleDriveBackupService.configured?
     assert GoogleDriveBackupService.connected?
 
-    EnvStore.set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
     refute GoogleDriveBackupService.connected?
     assert GoogleDriveBackupService.configured?
   end
@@ -44,8 +44,16 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
     assert_includes url, 'scope=https://www.googleapis.com/auth/drive.file'
   end
 
+  test 'Google consent uses platform credentials despite legacy tenant credentials' do
+    EnvStore.set('GOOGLE_DRIVE_CLIENT_ID', 'untrusted-tenant-id')
+    EnvStore.set('GOOGLE_DRIVE_CLIENT_SECRET', 'untrusted-tenant-secret')
+    url = GoogleDriveBackupService.auth_url(redirect_uri: 'https://x/cb')
+    assert_includes url, 'client_id=client-id'
+    refute_includes url, 'untrusted-tenant'
+  end
+
   test 'auth_url raises when credentials are missing' do
-    EnvStore.set('GOOGLE_DRIVE_CLIENT_ID', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_ID', nil)
     assert_raises(GoogleDriveBackupService::NotConfiguredError) do
       GoogleDriveBackupService.auth_url(redirect_uri: 'https://x/cb')
     end
@@ -66,6 +74,8 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
     log = GoogleDriveBackupService.backup!(actor: 'test')
 
     assert log.success?
+    assert_nil log.tenant_id
+    assert_equal tenants(:default_tenant), Current.tenant
     assert_equal 'success', log.status
     assert_equal 'FILE1', log.driveFileId
     assert_includes log.driveUrl, 'FILE1'
@@ -83,13 +93,13 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
 
     assert_raises(StandardError) { GoogleDriveBackupService.backup!(actor: 'test') }
 
-    log = BackupLog.recent(1).first
+    log = BackupLog.unscoped.where(tenant_id: nil).order(startedAt: :desc).first
     assert_equal 'failed', log.status
     assert_includes log.error, 'upload exploded'
   end
 
   test 'backup! raises NotConnected when no refresh token is stored' do
-    EnvStore.set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
     assert_raises(GoogleDriveBackupService::NotConnectedError) do
       GoogleDriveBackupService.backup!
     end
@@ -97,9 +107,9 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
 
   test 'retention defaults to 7 and respects the setting' do
     assert_equal 7, GoogleDriveBackupService.retention
-    EnvStore.set('GOOGLE_DRIVE_RETENTION', '14')
+    EnvStore.platform_set('GOOGLE_DRIVE_RETENTION', '14')
     assert_equal 14, GoogleDriveBackupService.retention
   ensure
-    EnvStore.set('GOOGLE_DRIVE_RETENTION', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_RETENTION', nil)
   end
 end

@@ -48,7 +48,7 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     assert_select 'h1', /Connections/
     assert_select 'h2', /Shopify/
     assert_select 'h2', /Square/
-    assert_select 'h2', /Google Drive backup/
+    assert_select 'h2', text: /Google Drive backup/, count: 0
     assert_select 'h2', /Buzz agent/
     assert_select 'h2', /Sync schedule/
 
@@ -57,6 +57,27 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     assert_select 'p', /SHOPIFY_CLIENT_ID/
     assert_select 'p', /SQUARE_ACCESS_TOKEN/
     assert_select 'p', /not set/
+  end
+
+  test 'only the platform operator sees Drive keys and legacy tenant configuration is ignored' do
+    drive = ConnectionsGuide::SERVICES.find { |service| service.key == 'google_drive' }
+    drive.keys.each { |key| EnvStore.set(key, 'untrusted-tenant-value') }
+    user = User.find_by!(email: 'conn@example.com')
+    user.update!(role: 'super_admin')
+    get_page connections_path
+    assert_response :success
+    card = css_select('section.card').find { |node| node.text.include?('Google Drive backup') }
+    assert card
+    assert_includes card.text, 'Not configured'
+    refute_includes card.text, 'untr'
+    drive.keys.each { |key| EnvStore.platform_set(key, 'approved-platform-value') }
+    get_page connections_path
+    assert_response :success
+    card = css_select('section.card').find { |node| node.text.include?('Google Drive backup') }
+    assert_includes card.text, 'Configured'
+    assert_includes card.text, 'appr••••alue'
+    assert_includes card.text, 'database'
+    refute_includes card.text, 'untr'
   end
 
   test 'a configured service shows its status and key source' do

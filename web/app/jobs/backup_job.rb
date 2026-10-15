@@ -1,19 +1,14 @@
 # frozen_string_literal: true
 
-# Scheduled Google Drive backups, one per connected tenant.
+# One whole-instance backup to the platform operator's approved destination.
 class BackupJob < ApplicationJob
   queue_as :default
 
   def perform
-    Tenant.where(status: 'active').find_each do |tenant|
-      Current.tenant = tenant
-      next unless GoogleDriveBackupService.connected?
-
-      GoogleDriveBackupService.backup!(actor: 'scheduler')
-    rescue GoogleDriveBackupService::NotConnectedError
-      nil
+    Current.set(tenant: nil, user: nil) do
+      GoogleDriveBackupService.backup!(actor: 'scheduler') if GoogleDriveBackupService.connected?
     end
-  ensure
-    Current.tenant = nil
+  rescue GoogleDriveBackupService::NotConnectedError
+    nil
   end
 end

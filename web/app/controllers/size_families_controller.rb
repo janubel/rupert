@@ -5,7 +5,7 @@
 class SizeFamiliesController < AuthenticatedController
   before_action :authorize_read, only: :index
   before_action :authorize_manage,
-    except: %i[index derive derive_all approve_all approve add_member remove_member]
+    except: %i[index derive derive_all approve_all approve]
   before_action :authorize_apply, only: %i[derive derive_all approve_all approve]
   before_action :set_family,
     only: %i[edit update destroy derive set_root approve_all add_member remove_member approve]

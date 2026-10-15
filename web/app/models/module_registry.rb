@@ -18,12 +18,12 @@ class ModuleRegistry
     Entry.new(key: 'api_access_tokens', name: 'API access', path: lambda {
       api_access_tokens_path
     }, permission: 'settings.write', position: 108),
-    Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: nil, position: 10),
+    Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: 'dashboard.read', position: 10),
     Entry.new(key: 'platform', name: 'Instance overview', path: -> { platform_path }, permission: nil, position: 89),
     Entry.new(key: 'sales', name: 'Sales', path: -> { sales_path }, permission: 'sales.read', position: 20),
     Entry.new(key: 'point_of_sale', name: 'POS preview', path: lambda {
       point_of_sale_path
-    }, permission: 'sales.write', position: 22),
+    }, permission: %w[sales.read sales.write inventory.read], position: 22),
     Entry.new(key: 'registers', name: 'Registers', path: lambda {
       sales_pos_sessions_path
     }, permission: 'sales.read', position: 25),
@@ -60,7 +60,7 @@ class ModuleRegistry
     Entry.new(key: 'reconcile', name: 'Catalog Links', path: lambda {
       reconcile_index_path
     }, permission: 'reconcile.read', position: 50),
-    Entry.new(key: 'sizes', name: 'Sizes', path: -> { size_families_path }, permission: 'reconcile.read', position: 51),
+    Entry.new(key: 'sizes', name: 'Sizes', path: -> { size_families_path }, permission: 'settings.read', position: 51),
     Entry.new(key: 'reports', name: 'Reports', path: -> { reports_path }, permission: 'reports.read', position: 55),
     Entry.new(key: 'register_summary', name: 'Daily register summary', path: lambda {
       register_summary_reports_path
@@ -138,11 +138,13 @@ class ModuleRegistry
 
     # Nav entries visible to a user, sorted by position.
     def nav_for(user)
+      return [] unless user&.active?
+
       all.select do |entry|
-        next false if entry.key == 'platform' && !(user&.active? && user.super_admin?)
+        next false if %w[platform system].include?(entry.key) && !user.super_admin?
         next false if entry.key == 'owner_checklists' && !(user&.active? && (user.admin? || user.super_admin?))
 
-        entry.permission.nil? || user.can?(entry.permission)
+        Array(entry.permission).all? { |permission| user.can?(permission) }
       end.sort_by(&:position)
     end
 
@@ -178,6 +180,10 @@ class ModuleRegistry
       AREAS.filter_map do |area|
         modules = visible.select { |entry| area[:modules].include?(entry.key) }
         next if modules.empty?
+        # Personal time and help remain in the account menu when they are the
+        # only destinations in an otherwise unavailable staff/admin area.
+        next if area[:key] == 'team' && modules.all? { |entry| entry.key == 'time_clock' }
+        next if area[:key] == 'system' && modules.all? { |entry| entry.key == 'roadmap' }
 
         { key: area[:key], name: area[:name], modules: modules }
       end

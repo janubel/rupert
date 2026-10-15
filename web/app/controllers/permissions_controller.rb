@@ -48,6 +48,8 @@ class PermissionsController < AuthenticatedController
   end
 
   def authorize_write
+    raise Pundit::NotAuthorizedError unless Current.user&.can_manage_accounts?
+
     authorize(:module, :users_write?)
   end
 end

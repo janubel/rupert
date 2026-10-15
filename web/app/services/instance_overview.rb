@@ -109,7 +109,7 @@ class InstanceOverview
   end
 
   def last_backup
-    row = BackupLog.unscoped.where(status: 'success').where.not(finishedAt: nil)
+    row = BackupLog.unscoped.where(tenant_id: nil, status: 'success').where.not(finishedAt: nil)
       .order(finishedAt: :desc, id: :desc).pick(:finishedAt, :fileSize)
     row && { finished_at: row[0], bytes: row[1] }
   end

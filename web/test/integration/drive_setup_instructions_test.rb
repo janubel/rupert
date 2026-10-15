@@ -20,7 +20,8 @@ class DriveSetupInstructionsTest < ActionDispatch::IntegrationTest
 
   teardown { Current.tenant = nil }
 
-  test 'drive setup shows easy instructions with direct links' do
+  test 'drive setup shows easy instructions with direct links for the platform operator' do
+    users(:regular_user).update!(role: 'super_admin')
     get settings_path
     assert_response :success
     assert_select "a[href='https://console.cloud.google.com/']"

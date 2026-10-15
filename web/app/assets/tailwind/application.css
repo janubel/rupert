@@ -232,3 +232,33 @@
     display: none !important;
   }
 }
+
+/* Compact role-filtered navigation: named areas, labelled icon utilities. */
+.app-header { position:sticky;top:0;z-index:20;border-bottom:1px solid var(--color-fog);background:color-mix(in srgb,var(--color-oat) 96%,white); }
+.app-header-grid { max-width:72rem;margin:auto;padding:.65rem 1.5rem;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:1rem; }
+.app-brand { display:flex;align-items:center;gap:.6rem;min-height:44px; }
+.app-brand-name { font:1.15rem var(--font-display); }
+.area-navigation { display:flex;justify-content:center;gap:.2rem;min-width:0; }
+.nav-area { display:flex;align-items:center;justify-content:center;gap:.35rem;min-height:44px;padding:.4rem .55rem;border-radius:999px;white-space:nowrap;font-size:.9rem;font-weight:600; }
+.nav-symbol { flex:none;width:20px;height:20px; }
+.header-utilities { display:flex;align-items:center;gap:.15rem; }
+.nav-utility { position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border-radius:999px;color:var(--color-mocha); }
+.nav-utility:hover { background:var(--color-haze);color:var(--color-ink); }
+.nav-utility:focus-visible,.nav-area:focus-visible,.module-menu-trigger:focus-visible,.nav-menu-item:focus-visible,.app-brand:focus-visible { outline:2px solid var(--color-olive);outline-offset:3px; }
+.nav-hint { display:none;position:absolute;right:0;top:calc(100% + 5px);z-index:50;width:max-content;max-width:min(20rem,calc(100vw - 2rem));padding:.5rem .7rem;border:1px solid var(--color-fog);border-radius:.65rem;background:var(--color-paper);color:var(--color-ink);font-size:.8rem;font-weight:500;line-height:1.5;box-shadow:0 4px 14px #1a393d18;pointer-events:none; }
+.nav-utility:hover .nav-hint,.nav-utility:focus-visible .nav-hint { display:block; }
+.sync-status-dot { position:absolute;right:8px;bottom:8px;width:6px;height:6px;border-radius:999px;outline:2px solid var(--color-oat); }
+.account-menu { position:absolute;right:0;top:calc(100% + 5px);z-index:40;width:min(17rem,calc(100vw - 2rem));border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px #1a393d26; }
+.module-navigation-wrap { border-top:1px solid var(--color-fog);background:var(--color-cream); }
+.module-navigation { max-width:72rem;margin:auto;padding:.15rem 1.5rem; }
+.module-menu { position:relative;width:fit-content;max-width:100%; }
+.module-menu-trigger { display:flex;align-items:center;gap:.5rem;min-height:44px;padding:.35rem .6rem;border-radius:.6rem;font-weight:600;font-size:.9rem;cursor:pointer;list-style:none; }
+.module-menu-trigger::-webkit-details-marker { display:none; }
+.module-menu-trigger:hover,.module-menu[open] .module-menu-trigger { background:var(--color-haze); }
+.module-menu-trigger > span:first-of-type { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.tools-caption { margin-left:.5rem;font-size:.75rem;font-weight:400;color:var(--color-taupe); }
+.module-menu-panel { position:absolute;left:0;top:calc(100% + 4px);z-index:40;width:min(23rem,calc(100vw - 2rem));max-height:60vh;overflow:auto;padding:.65rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px #1a393d26; }
+.nav-menu-item { display:flex;align-items:center;gap:.65rem;min-height:44px;padding:.55rem .75rem;border-radius:.6rem;font-size:.9rem;text-align:left; }
+.nav-menu-item:hover { background:var(--color-haze); }
+@media(max-width:1050px) { .app-brand-name { display:none; }.nav-area { gap:.25rem;padding:.35rem .4rem;font-size:.82rem; } }
+@media(max-width:760px) { .app-header-grid { grid-template-columns:auto auto;gap:.25rem;padding:.35rem 1rem; }.header-utilities { justify-self:end; }.area-navigation { grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(var(--nav-area-count,7),minmax(44px,1fr));overflow-x:auto;gap:.1rem;justify-content:start; }.nav-area { flex-direction:column;gap:.15rem;min-width:0;padding:.35rem .1rem;border-radius:.7rem;font-size:.7rem; }.area-navigation .nav-symbol { width:18px;height:18px; }.module-navigation { padding:.1rem 1rem; }.tools-caption { display:none; } }

@@ -153,12 +153,12 @@ class PageGuides
     ),
     'settings' => Guide.new(
       key: 'settings', title: 'Settings',
-      summary: "Your store's configuration — business details, Google sign-in, size families, warehouse links, Drive backups, and the Buzz agent.",
+      summary: "Your store's configuration — business details, Google sign-in, size families, warehouse links and the Buzz agent. Platform administrators also manage instance backups.",
       sections: [
-        { heading: "What's here", body: 'Business name and invoice prefix; Google OAuth (allowed domains + client credentials); size families (root gram products); the wholesale Warehouse link; Google Drive backup connection; and the Buzz agent identity.' }
+        { heading: "What's here", body: 'Business name and invoice prefix; Google OAuth (allowed domains + client credentials); size families (root gram products); the wholesale Warehouse link; and the Buzz agent identity. Google Drive backup controls are restricted to the platform super administrator.' }
       ],
       tips: [
-        'Connect Google Drive here to enable off-site backups — Rupert dumps your database every 6 hours.',
+        'Only the platform super administrator configures Google Drive backups. Every 6 hours, Rupert can copy the entire shared instance database to that approved destination; store credentials cannot authorize this.',
         'Add every staff email domain to Google sign-in; new people on an allowed domain get a reader account automatically.',
         'Environment secrets (Square/Shopify tokens) live in the .env card and are encrypted at rest.'
       ]

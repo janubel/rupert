@@ -29,6 +29,7 @@ module People
     validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
     validates :employment_type, inclusion: { in: EMPLOYMENT_TYPES }
     validate :termination_after_hire
+    validate :associations_belong_to_workspace
 
     scope :ordered, -> { order(:last_name, :first_name) }
     scope :active, -> { where(status: 'active') }
@@ -78,6 +79,16 @@ module People
     end
 
     private
+
+    def associations_belong_to_workspace
+      { user: User, department: People::Department, position: People::Position }.each do |association, model|
+        foreign_key = "#{association}_id"
+        next if self[foreign_key].blank?
+        next if model.unscoped.exists?(id: self[foreign_key], tenant_id: tenant_id)
+
+        errors.add(association, 'must belong to this workspace')
+      end
+    end
 
     def termination_after_hire
       return if hire_date.nil? || termination_date.nil?

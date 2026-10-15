@@ -12,15 +12,15 @@ class SearchService
       term = query.to_s.strip
       return [] if term.length < 2
 
-      can_read_hr = Current.user&.can?('hr.read') || false
+      user = Current.user
       user_key = Current.user&.id || 'anonymous'
-      key = "global_search/#{Current.tenant_id || 'no-tenant'}/#{user_key}/hr#{can_read_hr ? 1 : 0}/#{Digest::SHA256.hexdigest(term.downcase)}/#{limit}"
+      key = "global_search/#{Current.tenant_id || 'no-tenant'}/#{user_key}/permissions-#{user&.permissions_signature || 'none'}/#{Digest::SHA256.hexdigest(term.downcase)}/#{limit}"
       DataCache.fetch(key, ttl: 2.minutes) do
         results = []
-        results.concat(search_orders(term))
-        results.concat(search_customers(term))
-        results.concat(search_variants(term))
-        results.concat(search_employees(term)) if can_read_hr
+        results.concat(search_orders(term)) if user&.can?('sales.read')
+        results.concat(search_customers(term)) if user&.can?('customers.read')
+        results.concat(search_variants(term)) if user&.can?('inventory.read')
+        results.concat(search_employees(term)) if user&.can?('hr.read')
         results.first(limit)
       end
     end

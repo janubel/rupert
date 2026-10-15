@@ -30,7 +30,13 @@ module ApplicationHelper
 
   def active_module_entry
     @active_module_entry ||= ModuleRegistry.nav_for(Current.user)
-                                           .max_by { |entry| module_match_strength(safe_module_path(entry)) }
+      .select { |entry| module_match_strength(safe_module_path(entry)).positive? }
+      .max_by { |entry| module_match_strength(safe_module_path(entry)) }
+  end
+
+  def navigation_start_path
+    entry = ModuleRegistry.nav_for(Current.user).first
+    entry ? safe_module_path(entry) : root_path
   end
 
   def active_area_key
