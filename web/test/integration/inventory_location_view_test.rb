@@ -70,4 +70,44 @@ class InventoryLocationViewTest < ActionDispatch::IntegrationTest
     assert_select 'span.pill-taupe', text: 'unlinked'
     assert_select 'td', text: /not carried/
   end
+
+  test 'stock quantities stay correct when searches share a page number' do
+    previous_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    coffee = ShopifyProduct.create!(id: 'gid://shopify/Product/2', title: 'Coffee', status: 'ACTIVE')
+    variant = ShopifyVariant.create!(productId: coffee.id, title: 'Coffee / 50g', sku: 'COFFEE-50', tracked: true)
+    InventoryLevel.create!(source: 'shopify', locationId: @online.id, shopifyVariantId: variant.id,
+      quantity: 9, available: 9)
+
+    get_page(params: { q: 'Tea' })
+    assert_response :success
+    get_page(params: { q: 'Coffee' })
+    assert_response :success
+    assert_select 'tbody tr', text: /COFFEE-50/ do
+      assert_select 'td', text: /^9$/
+    end
+
+    get_page
+    assert_select 'tbody tr', text: /COFFEE-50/ do
+      assert_select 'td', text: /^9$/
+    end
+  ensure
+    Rails.cache = previous_cache
+  end
+
+  test 'variant query count stays bounded across a page of products' do
+    10.times do |number|
+      product = ShopifyProduct.create!(id: "gid://shopify/Product/batch-#{number}", title: "Batch #{number}")
+      ShopifyVariant.create!(productId: product.id, title: "Batch #{number}", sku: "BATCH-#{number}", tracked: true)
+    end
+    queries = []
+    collector = lambda do |*args|
+      payload = args.last
+      queries << payload[:sql] if payload[:sql].match?(/SELECT .*FROM "ShopifyVariant"/) && !payload[:cached]
+    end
+    ActiveSupport::Notifications.subscribed(collector, 'sql.active_record') { get_page }
+
+    assert_response :success
+    assert_operator queries.length, :<=, 3, 'variant loading must not add a query for each product'
+  end
 end

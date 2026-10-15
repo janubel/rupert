@@ -34,6 +34,10 @@ The report reads adapter/version, PRAGMAs, page/free space and WAL size without 
 
 Keep write transactions short. Do API/network work before entering write transactions. Prefer tenant-scoped pagination and existing composite indexes; use `EXPLAIN QUERY PLAN` on real slow queries before adding indexes. Preserve the existing FTS5 path for three-or-more-character substring search and test two-character fallback separately. Do not run blanket VACUUM or forced TRUNCATE checkpoints on every request.
 
+## Measured query improvements
+
+The [October 14 performance receipt](https://github.com/techmore/rupert/blob/main/docs/ops/sqlite-performance-2026-10-14.md) records isolated snapshot measurements, exact query plans, result equality and synthetic write/contention checks. The changes remove per-product inventory queries, prevent search-cache mixups and add only the two indexes with clear measured benefits. These results are component timings, not HTTP latency or production throughput claims.
+
 ## Measurement and release gates
 
 Capture a baseline and candidate on the same sanitized snapshot and SER8 allocation. Exercise dashboard, location inventory, customer/SKU search, receiving and sync concurrently. Record p50/p95 request duration, sync duration, oldest ready job, failed-job count, SQLite busy errors, RSS, database/WAL bytes and query plans. Proposed initial gates: no errors or row-count drift; no more than 10% p95 or sync-duration regression; sync finishes before the next 15-minute schedule; backlog drains; no persistent WAL growth across two idle intervals. These are acceptance targets, not measured results.

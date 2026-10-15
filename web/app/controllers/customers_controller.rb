@@ -7,7 +7,7 @@ class CustomersController < AuthenticatedController
     authorize(:module, :customers_read?)
 
     @q = Core::Customer.ransack(params[:q])
-    @pagy, @customers = pagy(@q.result.order(created_at: :desc), items: 25)
+    @pagy, @customers = pagy(@q.result.order(created_at: :desc, id: :desc), items: 25)
     # One grouped SUM + one grouped COUNT for the page instead of a lifetime-
     # value query and an orders COUNT per row (the view calls orders.size).
     ids = @customers.map(&:id)

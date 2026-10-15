@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Correct inventory stock-map caching across searches and batch variant loading to remove per-product queries.
+- Add measured tenant timeline indexes for the last-sync lookup and customer list, with stable customer pagination for timestamp ties.
+- Publish isolated SER8 SQLite read/write, inventory-query and WAL contention measurements with reproducible research harnesses.
+
 - Publish a shared 49-feature catalog, delivery roadmap and sourced 14-competitor / 32-capability matrix on GitHub Pages, with search filters and CSV/JSON downloads.
 - Add the signed-in Features & roadmap page and SQLite configuration, library and WAL diagnostics on System health.
 - Add explicit SQLite planner maintenance tasks and a one-thread SQLite worker default, configurable with `JOB_THREADS`.

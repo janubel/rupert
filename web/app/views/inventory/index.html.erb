@@ -18,7 +18,7 @@
     <input type="search" name="q" value="<%= @q %>" placeholder="Search products or SKUs…" aria-label="Search products or SKUs" class="search w-full" autocomplete="off">
   <% end %>
 
-  <% cached_fragment("inventory/table", q: @q, page: @pagy.page) do %>
+  <% cached_fragment("inventory/table/v2", q: @q, page: @pagy.page) do %>
   <div class="card overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">

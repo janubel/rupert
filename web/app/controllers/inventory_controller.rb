@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'csv'
+require 'digest'
 
 class InventoryController < AuthenticatedController
   before_action :authorize_read, only: %i[index movements pdf recommended_skus]
@@ -21,7 +22,8 @@ class InventoryController < AuthenticatedController
     # changes on sync/mutation, so it's cached behind the DataCache version
     # (the view fragment already is).
     @pagy, @products = pagy(scope, items: 40)
-    @variant_qtys = DataCache.fetch("inventory/stock_map/#{@pagy.page}") do
+    @products = @products.preload(:variants)
+    @variant_qtys = DataCache.fetch("inventory/stock_map/#{@pagy.page}/#{Digest::SHA256.hexdigest(@q)}") do
       variant_stock_map(@products)
     end
     @stock_locations = DataCache.fetch('inventory/locations') { stock_locations }
@@ -110,7 +112,7 @@ class InventoryController < AuthenticatedController
     shared_square_variations = SkuLink.linked.group(:squareVariationId).count
                                       .select { |_, n| n > 1 }.keys.to_set
 
-    variants = ShopifyVariant.where(productId: products.map(&:id)).to_a
+    variants = products.flat_map { |product| product.variants.to_a }
     links_by_variant = SkuLink.where(shopifyVariantId: variants.map(&:id))
                               .linked.includes(:square_variation).index_by(&:shopifyVariantId)
     square_variation_ids = links_by_variant.values.filter_map(&:squareVariationId)

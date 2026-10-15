@@ -1,0 +1,821 @@
+{
+  "reviewed": "2026-10-14",
+  "baseline_release": "6c65ab86da6462f60decb1575b58933ef60c91d6",
+  "query_candidates": {
+    "recorded_at": "2026-10-15T00:11:20Z",
+    "sqlite_version": "3.53.2",
+    "repetitions": 60,
+    "warmups": 5,
+    "table_counts": {
+      "orders": 2671,
+      "customers": 1356,
+      "ShopifyProduct": 259,
+      "ShopifyVariant": 842,
+      "InventoryMovement": 2923,
+      "SyncRun": 3675
+    },
+    "method": "Single-process warm SQL timings on separate copies of one live snapshot, local storage, no production queries or writes during measurements. Not HTTP latency or a concurrent load test. Every query result was compared by digest across candidates; no row contents or search values are exported.",
+    "results": {
+      "baseline": {
+        "inventory_page": {
+          "p50_ms": 0.044,
+          "p95_ms": 0.0948,
+          "rows": 40,
+          "plan": [
+            "SCAN ShopifyProduct USING INDEX index_ShopifyProduct_on_title"
+          ]
+        },
+        "customers_page": {
+          "p50_ms": 0.1976,
+          "p95_ms": 0.2148,
+          "rows": 25,
+          "plan": [
+            "SEARCH customers USING INDEX index_customers_on_tenant_id_and_phone (tenant_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "customer_history": {
+          "p50_ms": 0.0717,
+          "p95_ms": 0.1024,
+          "rows": 33,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_customer_id (tenant_id=? AND customer_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "dashboard_30d_total": {
+          "p50_ms": 0.0505,
+          "p95_ms": 0.0535,
+          "rows": 1,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_occurred_at (tenant_id=? AND occurred_at>?)"
+          ]
+        },
+        "dashboard_30d_sources": {
+          "p50_ms": 0.5238,
+          "p95_ms": 0.5446,
+          "rows": 2,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_source_and_source_order_id (tenant_id=?)"
+          ]
+        },
+        "movements_all_sources": {
+          "p50_ms": 0.0633,
+          "p95_ms": 0.1041,
+          "rows": 50,
+          "plan": [
+            "SEARCH InventoryMovement USING INDEX index_InventoryMovement_on_createdAt (createdAt>?)"
+          ]
+        },
+        "latest_sync": {
+          "p50_ms": 0.7006,
+          "p95_ms": 0.7169,
+          "rows": 1,
+          "plan": [
+            "SCAN SyncRun",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "sku_fts": {
+          "p50_ms": 0.0238,
+          "p95_ms": 0.0254,
+          "rows": 8,
+          "plan": [
+            "SEARCH ShopifyVariant USING INTEGER PRIMARY KEY (rowid=?)",
+            "LIST SUBQUERY 1",
+            "SCAN rupert_shopifyvariant_fts VIRTUAL TABLE INDEX 0:M2",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        }
+      },
+      "customers_created": {
+        "inventory_page": {
+          "p50_ms": 0.0419,
+          "p95_ms": 0.0744,
+          "rows": 40,
+          "plan": [
+            "SCAN ShopifyProduct USING INDEX index_ShopifyProduct_on_title"
+          ]
+        },
+        "customers_page": {
+          "p50_ms": 0.0313,
+          "p95_ms": 0.034,
+          "rows": 25,
+          "plan": [
+            "SEARCH customers USING INDEX bench_customers_created (tenant_id=?)"
+          ]
+        },
+        "customer_history": {
+          "p50_ms": 0.0696,
+          "p95_ms": 0.0751,
+          "rows": 33,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_customer_id (tenant_id=? AND customer_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "dashboard_30d_total": {
+          "p50_ms": 0.0504,
+          "p95_ms": 0.056,
+          "rows": 1,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_occurred_at (tenant_id=? AND occurred_at>?)"
+          ]
+        },
+        "dashboard_30d_sources": {
+          "p50_ms": 0.5235,
+          "p95_ms": 0.7707,
+          "rows": 2,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_source_and_source_order_id (tenant_id=?)"
+          ]
+        },
+        "movements_all_sources": {
+          "p50_ms": 0.0674,
+          "p95_ms": 0.1166,
+          "rows": 50,
+          "plan": [
+            "SEARCH InventoryMovement USING INDEX index_InventoryMovement_on_createdAt (createdAt>?)"
+          ]
+        },
+        "latest_sync": {
+          "p50_ms": 0.7153,
+          "p95_ms": 0.7258,
+          "rows": 1,
+          "plan": [
+            "SCAN SyncRun",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "sku_fts": {
+          "p50_ms": 0.0241,
+          "p95_ms": 0.026,
+          "rows": 8,
+          "plan": [
+            "SEARCH ShopifyVariant USING INTEGER PRIMARY KEY (rowid=?)",
+            "LIST SUBQUERY 1",
+            "SCAN rupert_shopifyvariant_fts VIRTUAL TABLE INDEX 0:M2",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        }
+      },
+      "orders_customer_time": {
+        "inventory_page": {
+          "p50_ms": 0.0446,
+          "p95_ms": 0.0843,
+          "rows": 40,
+          "plan": [
+            "SCAN ShopifyProduct USING INDEX index_ShopifyProduct_on_title"
+          ]
+        },
+        "customers_page": {
+          "p50_ms": 0.1942,
+          "p95_ms": 0.2068,
+          "rows": 25,
+          "plan": [
+            "SEARCH customers USING INDEX index_customers_on_tenant_id_and_phone (tenant_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "customer_history": {
+          "p50_ms": 0.0584,
+          "p95_ms": 0.1232,
+          "rows": 33,
+          "plan": [
+            "SEARCH orders USING INDEX bench_orders_customer_time (tenant_id=? AND customer_id=?)"
+          ]
+        },
+        "dashboard_30d_total": {
+          "p50_ms": 0.0507,
+          "p95_ms": 0.0541,
+          "rows": 1,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_occurred_at (tenant_id=? AND occurred_at>?)"
+          ]
+        },
+        "dashboard_30d_sources": {
+          "p50_ms": 0.5212,
+          "p95_ms": 0.528,
+          "rows": 2,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_source_and_source_order_id (tenant_id=?)"
+          ]
+        },
+        "movements_all_sources": {
+          "p50_ms": 0.0608,
+          "p95_ms": 0.0964,
+          "rows": 50,
+          "plan": [
+            "SEARCH InventoryMovement USING INDEX index_InventoryMovement_on_createdAt (createdAt>?)"
+          ]
+        },
+        "latest_sync": {
+          "p50_ms": 0.7027,
+          "p95_ms": 0.7139,
+          "rows": 1,
+          "plan": [
+            "SCAN SyncRun",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "sku_fts": {
+          "p50_ms": 0.0238,
+          "p95_ms": 0.028,
+          "rows": 8,
+          "plan": [
+            "SEARCH ShopifyVariant USING INTEGER PRIMARY KEY (rowid=?)",
+            "LIST SUBQUERY 1",
+            "SCAN rupert_shopifyvariant_fts VIRTUAL TABLE INDEX 0:M2",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        }
+      },
+      "orders_status_time": {
+        "inventory_page": {
+          "p50_ms": 0.043,
+          "p95_ms": 0.1125,
+          "rows": 40,
+          "plan": [
+            "SCAN ShopifyProduct USING INDEX index_ShopifyProduct_on_title"
+          ]
+        },
+        "customers_page": {
+          "p50_ms": 0.1987,
+          "p95_ms": 0.2323,
+          "rows": 25,
+          "plan": [
+            "SEARCH customers USING INDEX index_customers_on_tenant_id_and_phone (tenant_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "customer_history": {
+          "p50_ms": 0.0696,
+          "p95_ms": 0.075,
+          "rows": 33,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_customer_id (tenant_id=? AND customer_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "dashboard_30d_total": {
+          "p50_ms": 0.0476,
+          "p95_ms": 0.0485,
+          "rows": 1,
+          "plan": [
+            "SEARCH orders USING INDEX bench_orders_status_time (tenant_id=? AND status=? AND occurred_at>?)"
+          ]
+        },
+        "dashboard_30d_sources": {
+          "p50_ms": 0.5195,
+          "p95_ms": 0.5244,
+          "rows": 2,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_source_and_source_order_id (tenant_id=?)"
+          ]
+        },
+        "movements_all_sources": {
+          "p50_ms": 0.0643,
+          "p95_ms": 0.4872,
+          "rows": 50,
+          "plan": [
+            "SEARCH InventoryMovement USING INDEX index_InventoryMovement_on_createdAt (createdAt>?)"
+          ]
+        },
+        "latest_sync": {
+          "p50_ms": 0.7085,
+          "p95_ms": 0.824,
+          "rows": 1,
+          "plan": [
+            "SCAN SyncRun",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "sku_fts": {
+          "p50_ms": 0.025,
+          "p95_ms": 0.0268,
+          "rows": 8,
+          "plan": [
+            "SEARCH ShopifyVariant USING INTEGER PRIMARY KEY (rowid=?)",
+            "LIST SUBQUERY 1",
+            "SCAN rupert_shopifyvariant_fts VIRTUAL TABLE INDEX 0:M2",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        }
+      },
+      "products_title": {
+        "inventory_page": {
+          "p50_ms": 0.0472,
+          "p95_ms": 0.0963,
+          "rows": 40,
+          "plan": [
+            "SEARCH ShopifyProduct USING INDEX bench_products_title (tenant_id=?)"
+          ]
+        },
+        "customers_page": {
+          "p50_ms": 0.1967,
+          "p95_ms": 0.2152,
+          "rows": 25,
+          "plan": [
+            "SEARCH customers USING INDEX index_customers_on_tenant_id_and_phone (tenant_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "customer_history": {
+          "p50_ms": 0.0706,
+          "p95_ms": 0.1321,
+          "rows": 33,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_customer_id (tenant_id=? AND customer_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "dashboard_30d_total": {
+          "p50_ms": 0.0505,
+          "p95_ms": 0.0551,
+          "rows": 1,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_occurred_at (tenant_id=? AND occurred_at>?)"
+          ]
+        },
+        "dashboard_30d_sources": {
+          "p50_ms": 0.5207,
+          "p95_ms": 0.5365,
+          "rows": 2,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_source_and_source_order_id (tenant_id=?)"
+          ]
+        },
+        "movements_all_sources": {
+          "p50_ms": 0.0604,
+          "p95_ms": 0.1227,
+          "rows": 50,
+          "plan": [
+            "SEARCH InventoryMovement USING INDEX index_InventoryMovement_on_createdAt (createdAt>?)"
+          ]
+        },
+        "latest_sync": {
+          "p50_ms": 0.7118,
+          "p95_ms": 0.7229,
+          "rows": 1,
+          "plan": [
+            "SCAN SyncRun",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "sku_fts": {
+          "p50_ms": 0.0245,
+          "p95_ms": 0.0274,
+          "rows": 8,
+          "plan": [
+            "SEARCH ShopifyVariant USING INTEGER PRIMARY KEY (rowid=?)",
+            "LIST SUBQUERY 1",
+            "SCAN rupert_shopifyvariant_fts VIRTUAL TABLE INDEX 0:M2",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        }
+      },
+      "movements_time": {
+        "inventory_page": {
+          "p50_ms": 0.0423,
+          "p95_ms": 0.1185,
+          "rows": 40,
+          "plan": [
+            "SCAN ShopifyProduct USING INDEX index_ShopifyProduct_on_title"
+          ]
+        },
+        "customers_page": {
+          "p50_ms": 0.1991,
+          "p95_ms": 0.2161,
+          "rows": 25,
+          "plan": [
+            "SEARCH customers USING INDEX index_customers_on_tenant_id_and_phone (tenant_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "customer_history": {
+          "p50_ms": 0.0714,
+          "p95_ms": 0.1343,
+          "rows": 33,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_customer_id (tenant_id=? AND customer_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "dashboard_30d_total": {
+          "p50_ms": 0.05,
+          "p95_ms": 0.0512,
+          "rows": 1,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_occurred_at (tenant_id=? AND occurred_at>?)"
+          ]
+        },
+        "dashboard_30d_sources": {
+          "p50_ms": 0.5199,
+          "p95_ms": 0.5261,
+          "rows": 2,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_source_and_source_order_id (tenant_id=?)"
+          ]
+        },
+        "movements_all_sources": {
+          "p50_ms": 0.0661,
+          "p95_ms": 0.4319,
+          "rows": 50,
+          "plan": [
+            "SEARCH InventoryMovement USING INDEX bench_movements_time (tenant_id=? AND createdAt>?)"
+          ]
+        },
+        "latest_sync": {
+          "p50_ms": 0.6994,
+          "p95_ms": 0.7141,
+          "rows": 1,
+          "plan": [
+            "SCAN SyncRun",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "sku_fts": {
+          "p50_ms": 0.0238,
+          "p95_ms": 0.0254,
+          "rows": 8,
+          "plan": [
+            "SEARCH ShopifyVariant USING INTEGER PRIMARY KEY (rowid=?)",
+            "LIST SUBQUERY 1",
+            "SCAN rupert_shopifyvariant_fts VIRTUAL TABLE INDEX 0:M2",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        }
+      },
+      "sync_started": {
+        "inventory_page": {
+          "p50_ms": 0.0456,
+          "p95_ms": 0.1055,
+          "rows": 40,
+          "plan": [
+            "SCAN ShopifyProduct USING INDEX index_ShopifyProduct_on_title"
+          ]
+        },
+        "customers_page": {
+          "p50_ms": 0.2055,
+          "p95_ms": 0.225,
+          "rows": 25,
+          "plan": [
+            "SEARCH customers USING INDEX index_customers_on_tenant_id_and_phone (tenant_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "customer_history": {
+          "p50_ms": 0.0739,
+          "p95_ms": 0.1156,
+          "rows": 33,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_customer_id (tenant_id=? AND customer_id=?)",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        },
+        "dashboard_30d_total": {
+          "p50_ms": 0.0535,
+          "p95_ms": 0.0582,
+          "rows": 1,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_occurred_at (tenant_id=? AND occurred_at>?)"
+          ]
+        },
+        "dashboard_30d_sources": {
+          "p50_ms": 0.5266,
+          "p95_ms": 0.537,
+          "rows": 2,
+          "plan": [
+            "SEARCH orders USING INDEX index_orders_on_tenant_id_and_source_and_source_order_id (tenant_id=?)"
+          ]
+        },
+        "movements_all_sources": {
+          "p50_ms": 0.0611,
+          "p95_ms": 0.0803,
+          "rows": 50,
+          "plan": [
+            "SEARCH InventoryMovement USING INDEX index_InventoryMovement_on_createdAt (createdAt>?)"
+          ]
+        },
+        "latest_sync": {
+          "p50_ms": 0.0125,
+          "p95_ms": 0.0129,
+          "rows": 1,
+          "plan": [
+            "SEARCH SyncRun USING INDEX bench_sync_started (tenant_id=?)"
+          ]
+        },
+        "sku_fts": {
+          "p50_ms": 0.0238,
+          "p95_ms": 0.0257,
+          "rows": 8,
+          "plan": [
+            "SEARCH ShopifyVariant USING INTEGER PRIMARY KEY (rowid=?)",
+            "LIST SUBQUERY 1",
+            "SCAN rupert_shopifyvariant_fts VIRTUAL TABLE INDEX 0:M2",
+            "USE TEMP B-TREE FOR ORDER BY"
+          ]
+        }
+      }
+    }
+  },
+  "confirmation": {
+    "method": "WAL and synchronous=NORMAL; five alternating baseline/candidate rounds; 100 warmed read samples and 100 autocommit inserts per table/round, isolated copied databases only. Inserts clone an existing row with a new primary/unique key; no record values exported.",
+    "reads": {
+      "baseline": [
+        {
+          "customers_page": {
+            "p50_ms": 0.2099,
+            "p95_ms": 0.252
+          },
+          "latest_sync": {
+            "p50_ms": 0.7015,
+            "p95_ms": 0.7343
+          }
+        },
+        {
+          "customers_page": {
+            "p50_ms": 0.2135,
+            "p95_ms": 0.2619
+          },
+          "latest_sync": {
+            "p50_ms": 0.7216,
+            "p95_ms": 0.7432
+          }
+        },
+        {
+          "customers_page": {
+            "p50_ms": 0.2116,
+            "p95_ms": 0.2386
+          },
+          "latest_sync": {
+            "p50_ms": 0.7317,
+            "p95_ms": 0.8384
+          }
+        },
+        {
+          "customers_page": {
+            "p50_ms": 0.2092,
+            "p95_ms": 0.2344
+          },
+          "latest_sync": {
+            "p50_ms": 0.7155,
+            "p95_ms": 0.735
+          }
+        },
+        {
+          "customers_page": {
+            "p50_ms": 0.214,
+            "p95_ms": 0.2353
+          },
+          "latest_sync": {
+            "p50_ms": 0.7032,
+            "p95_ms": 0.7207
+          }
+        }
+      ],
+      "candidate": [
+        {
+          "customers_page": {
+            "p50_ms": 0.0292,
+            "p95_ms": 0.0505
+          },
+          "latest_sync": {
+            "p50_ms": 0.0078,
+            "p95_ms": 0.0082
+          }
+        },
+        {
+          "customers_page": {
+            "p50_ms": 0.0297,
+            "p95_ms": 0.0439
+          },
+          "latest_sync": {
+            "p50_ms": 0.0074,
+            "p95_ms": 0.008
+          }
+        },
+        {
+          "customers_page": {
+            "p50_ms": 0.0295,
+            "p95_ms": 0.0448
+          },
+          "latest_sync": {
+            "p50_ms": 0.0075,
+            "p95_ms": 0.0086
+          }
+        },
+        {
+          "customers_page": {
+            "p50_ms": 0.0297,
+            "p95_ms": 0.0447
+          },
+          "latest_sync": {
+            "p50_ms": 0.0074,
+            "p95_ms": 0.008
+          }
+        },
+        {
+          "customers_page": {
+            "p50_ms": 0.0289,
+            "p95_ms": 0.0382
+          },
+          "latest_sync": {
+            "p50_ms": 0.0075,
+            "p95_ms": 0.0078
+          }
+        }
+      ]
+    },
+    "writes": {
+      "baseline": {
+        "customers": [
+          {
+            "p50_ms": 0.044,
+            "p95_ms": 0.0817
+          },
+          {
+            "p50_ms": 0.0423,
+            "p95_ms": 0.0704
+          },
+          {
+            "p50_ms": 0.0367,
+            "p95_ms": 0.0648
+          },
+          {
+            "p50_ms": 0.041,
+            "p95_ms": 0.0719
+          },
+          {
+            "p50_ms": 0.0408,
+            "p95_ms": 0.0669
+          }
+        ],
+        "SyncRun": [
+          {
+            "p50_ms": 0.0372,
+            "p95_ms": 0.0661
+          },
+          {
+            "p50_ms": 0.0379,
+            "p95_ms": 0.0662
+          },
+          {
+            "p50_ms": 0.0391,
+            "p95_ms": 0.0688
+          },
+          {
+            "p50_ms": 0.0379,
+            "p95_ms": 0.0655
+          },
+          {
+            "p50_ms": 0.0375,
+            "p95_ms": 0.0669
+          }
+        ]
+      },
+      "candidate": {
+        "customers": [
+          {
+            "p50_ms": 0.0458,
+            "p95_ms": 0.0684
+          },
+          {
+            "p50_ms": 0.0433,
+            "p95_ms": 0.0692
+          },
+          {
+            "p50_ms": 0.0411,
+            "p95_ms": 0.0654
+          },
+          {
+            "p50_ms": 0.0427,
+            "p95_ms": 0.069
+          },
+          {
+            "p50_ms": 0.039,
+            "p95_ms": 0.0636
+          }
+        ],
+        "SyncRun": [
+          {
+            "p50_ms": 0.0457,
+            "p95_ms": 0.0807
+          },
+          {
+            "p50_ms": 0.0447,
+            "p95_ms": 0.0717
+          },
+          {
+            "p50_ms": 0.04,
+            "p95_ms": 0.0619
+          },
+          {
+            "p50_ms": 0.0411,
+            "p95_ms": 0.0696
+          },
+          {
+            "p50_ms": 0.0397,
+            "p95_ms": 0.0606
+          }
+        ]
+      }
+    }
+  },
+  "inventory": {
+    "method": "Seven cold-object/warm-database inventory assembly trials on a private snapshot; first two discarded. Includes stock-map calculation and variant traversal, not HTTP rendering. Query cache disabled; result digest identical.",
+    "results": {
+      "baseline": [
+        {
+          "elapsed_ms": 15.718,
+          "select_queries": 50,
+          "variant_queries": 41,
+          "products": 40
+        },
+        {
+          "elapsed_ms": 15.71,
+          "select_queries": 50,
+          "variant_queries": 41,
+          "products": 40
+        },
+        {
+          "elapsed_ms": 14.63,
+          "select_queries": 50,
+          "variant_queries": 41,
+          "products": 40
+        },
+        {
+          "elapsed_ms": 37.859,
+          "select_queries": 50,
+          "variant_queries": 41,
+          "products": 40
+        },
+        {
+          "elapsed_ms": 15.724,
+          "select_queries": 50,
+          "variant_queries": 41,
+          "products": 40
+        }
+      ],
+      "candidate": [
+        {
+          "elapsed_ms": 8.03,
+          "select_queries": 10,
+          "variant_queries": 1,
+          "products": 40
+        },
+        {
+          "elapsed_ms": 23.143,
+          "select_queries": 10,
+          "variant_queries": 1,
+          "products": 40
+        },
+        {
+          "elapsed_ms": 9.146,
+          "select_queries": 10,
+          "variant_queries": 1,
+          "products": 40
+        },
+        {
+          "elapsed_ms": 8.312,
+          "select_queries": 10,
+          "variant_queries": 1,
+          "products": 40
+        },
+        {
+          "elapsed_ms": 8.63,
+          "select_queries": 10,
+          "variant_queries": 1,
+          "products": 40
+        }
+      ]
+    }
+  },
+  "contention": {
+    "method": "Synthetic WAL/NORMAL database, Rails-style Ruby busy handler (5000 ms), 300 total transactions with 1 ms deliberate lock hold, four concurrent readers. One and three writer connections; not an application or production load test.",
+    "results": {
+      "1": {
+        "writer_connections": 1,
+        "reader_connections": 4,
+        "transactions": 300,
+        "busy_errors": 0,
+        "elapsed_ms": 347.43,
+        "write_p95_ms": 1.14,
+        "write_max_ms": 11.586,
+        "read_p95_ms": 0.007,
+        "final_counter": 300
+      },
+      "3": {
+        "writer_connections": 3,
+        "reader_connections": 4,
+        "transactions": 300,
+        "busy_errors": 0,
+        "elapsed_ms": 342.18,
+        "write_p95_ms": 1.119,
+        "write_max_ms": 228.776,
+        "read_p95_ms": 0.008,
+        "final_counter": 300
+      }
+    }
+  }
+}

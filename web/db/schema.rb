@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_14_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -277,6 +277,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_230000) do
     t.index ["startedAt"], name: "index_SyncRun_on_startedAt"
     t.index ["status", "finishedAt"], name: "idx_sync_runs_status_finished_at"
     t.index ["status"], name: "index_SyncRun_on_status"
+    t.index ["tenant_id", "startedAt"], name: "idx_sync_runs_tenant_started_at"
     t.index ["tenant_id"], name: "index_SyncRun_on_running_per_tenant", unique: true, where: "((status)::text = 'running'::text)"
     t.index ["tenant_id"], name: "index_SyncRun_on_tenant_id"
   end
@@ -365,6 +366,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_230000) do
     t.index ["first_name"], name: "idx_trgm_customers_first_name", opclass: :gin_trgm_ops, using: :gin
     t.index ["last_name"], name: "idx_trgm_customers_last_name", opclass: :gin_trgm_ops, using: :gin
     t.index ["phone"], name: "idx_trgm_customers_phone", opclass: :gin_trgm_ops, using: :gin
+    t.index ["tenant_id", "created_at", "id"], name: "idx_customers_tenant_created_id"
     t.index ["tenant_id", "email"], name: "index_customers_on_tenant_id_and_email"
     t.index ["tenant_id", "external_id", "source"], name: "index_customers_on_tenant_id_and_external_id_and_source", unique: true
     t.index ["tenant_id", "phone"], name: "index_customers_on_tenant_id_and_phone"
