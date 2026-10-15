@@ -14,8 +14,14 @@ class ModuleRegistry
 
   ENTRIES = [
     Entry.new(key: 'roadmap', name: 'Features & roadmap', path: -> { roadmap_path }, permission: nil, position: 110),
+    Entry.new(key: 'api_access_tokens', name: 'API access', path: lambda {
+      api_access_tokens_path
+    }, permission: 'settings.write', position: 108),
     Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: nil, position: 10),
     Entry.new(key: 'sales', name: 'Sales', path: -> { sales_path }, permission: 'sales.read', position: 20),
+    Entry.new(key: 'point_of_sale', name: 'POS preview', path: lambda {
+      point_of_sale_path
+    }, permission: 'sales.write', position: 22),
     Entry.new(key: 'registers', name: 'Registers', path: lambda {
       sales_pos_sessions_path
     }, permission: 'sales.read', position: 25),
@@ -31,6 +37,12 @@ class ModuleRegistry
     Entry.new(key: 'inventory_counts', name: 'Counts', path: lambda {
       inventory_counts_path
     }, permission: 'inventory.read', position: 44),
+    Entry.new(key: 'stock_reservations', name: 'Reservations', path: lambda {
+      stock_reservations_path
+    }, permission: 'inventory.read', position: 44),
+    Entry.new(key: 'bulk_materials', name: 'Bulk materials', path: lambda {
+      bulk_materials_path
+    }, permission: 'inventory.read', position: 44),
     Entry.new(key: 'warehouse', name: 'Warehouse', path: lambda {
       warehouse_path
     }, permission: 'settings.read', position: 43),
@@ -39,6 +51,10 @@ class ModuleRegistry
     }, permission: 'reconcile.read', position: 50),
     Entry.new(key: 'sizes', name: 'Sizes', path: -> { size_families_path }, permission: 'reconcile.read', position: 51),
     Entry.new(key: 'reports', name: 'Reports', path: -> { reports_path }, permission: 'reports.read', position: 55),
+    Entry.new(key: 'register_summary', name: 'Daily register summary', path: lambda {
+      register_summary_reports_path
+    }, permission: 'reports.read', position: 56),
+    Entry.new(key: 'time_clock', name: 'Time clock', path: -> { time_clock_path }, permission: nil, position: 88),
     Entry.new(key: 'ledger', name: 'Ledger', path: -> { ledger_index_path }, permission: 'ledger.read', position: 60),
     Entry.new(key: 'projects', name: 'Projects', path: lambda {
       projects_projects_path
@@ -121,16 +137,16 @@ class ModuleRegistry
     # Every registered module must appear in exactly one area.
     AREAS = [
       { key: 'overview', name: 'Overview', modules: ['dashboard'] },
-      { key: 'sell', name: 'Sell', modules: %w[sales registers customers] },
+      { key: 'sell', name: 'Sell', modules: %w[sales point_of_sale registers customers] },
       { key: 'stock', name: 'Stock',
-        modules: %w[inventory locations inventory_counts alerts purchase_orders vendors reconcile sizes] },
+        modules: %w[inventory locations inventory_counts stock_reservations bulk_materials alerts purchase_orders vendors reconcile sizes] },
       { key: 'money', name: 'Money',
-        modules: %w[reports ledger finance_accounts chart_of_accounts expenses payments] },
+        modules: %w[reports register_summary ledger finance_accounts chart_of_accounts expenses payments] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
       { key: 'team', name: 'Team',
-        modules: %w[accounts employees departments positions timesheets leave payroll permissions] },
+        modules: %w[accounts employees departments positions time_clock timesheets leave payroll permissions] },
       { key: 'system', name: 'System',
-        modules: %w[system connections sync settings warehouse activity access_log roadmap] }
+        modules: %w[system connections sync settings warehouse activity access_log api_access_tokens roadmap] }
     ].freeze
 
     def area_key_for(module_key)

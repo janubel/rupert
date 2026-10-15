@@ -5,6 +5,7 @@ class User < ActiveRecord::Base
 
   belongs_to :tenant, optional: true
   has_many :user_permissions, dependent: :destroy
+  has_many :api_access_tokens, dependent: :destroy
 
   serialize :dashboard_config, coder: JSON
 
@@ -23,6 +24,8 @@ class User < ActiveRecord::Base
       admin: 'admin',
       manager: 'manager',
       cashier: 'cashier',
+      inventory_employee: 'inventory_employee',
+      reporting: 'reporting',
       reader: 'reader'
     },
     default: :admin
@@ -112,7 +115,9 @@ class User < ActiveRecord::Base
       'timesheets.read',
       'leave.read',
       'payroll.read'
-    ]
+    ],
+    'inventory_employee' => %w[dashboard.read inventory.read inventory.write reconcile.read alerts.read alerts.write],
+    'reporting' => %w[dashboard.read sales.read inventory.read reports.read ledger.read]
   }.freeze
 
   def can?(permission)

@@ -1,0 +1,8 @@
+<% if count.errors.any? %>
+  <div class="flash flash-alert" role="alert">
+    <p class="font-medium">The worksheet was not saved.</p>
+    <ul class="list-disc pl-5">
+      <% count.errors.full_messages.each do |message| %><li><%= message %></li><% end %>
+    </ul>
+  </div>
+<% end %>

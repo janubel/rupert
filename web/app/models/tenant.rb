@@ -6,6 +6,7 @@ class Tenant < ApplicationRecord
 
   has_many :users, dependent: :destroy
   has_many :settings, dependent: :destroy
+  has_many :api_access_tokens, dependent: :destroy
 
   before_create :generate_id
 

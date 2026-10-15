@@ -1,0 +1,45 @@
+<% content_for :title, 'Time clock' %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<div class="space-y-6">
+  <section><h1 class="page-title">Time clock</h1><p class="mt-2 text-sm text-mocha">Clock your own work from this device, including remote work. Times display in <%= Time.zone.name %>. Corrections require review; these records do not automatically change payroll.</p></section>
+  <section class="card card-pad space-y-4">
+    <% if @worker %>
+      <h2 class="font-display text-xl"><%= @worker.name %> · <%= @worker.employment_type.humanize %></h2>
+      <% unless @open_shift %>
+        <p class="text-sm text-mocha">You are clocked out.</p>
+        <%= button_to 'Clock in', clock_in_time_clock_path, params: { request_token: SecureRandom.uuid }, method: :post, class: 'btn-primary', data: { turbo: false } %>
+      <% end %>
+    <% else %>
+      <h2 class="font-display text-xl">Link your worker record</h2><p class="text-sm text-mocha">Ask an administrator to connect exactly one active Employee record to your sign-in account. Contractors can use the same time clock. Your existing shift history stays below.</p>
+    <% end %>
+    <% if @open_shift %>
+      <p>Clocked in <%= l(@open_shift.started_at, format: :long) %> · <%= number_with_precision(@open_shift.hours, precision: 2) %> hours so far</p>
+      <%= button_to 'Clock out', clock_out_time_clock_path, params: { shift_id: @open_shift.id }, method: :post, class: 'btn-primary', data: { turbo: false } %>
+    <% end %>
+    <% if Current.user.can?('payroll.read') %><%= link_to 'Commission preview', commission_preview_time_clock_path, class: 'btn-ghost' %><% end %>
+  </section>
+
+  <section class="space-y-3"><h2 class="font-display text-xl">Your latest shifts</h2>
+    <% @shifts.each do |shift| %>
+      <article class="card card-pad space-y-3">
+        <p class="font-medium"><%= l(shift.started_at, format: :long) %> → <%= shift.ended_at ? l(shift.ended_at, format: :long) : 'Open shift' %></p>
+        <p class="text-sm text-mocha"><%= number_with_precision(shift.hours, precision: 2) %> hours</p>
+        <details><summary class="cursor-pointer text-sm text-olive">Request a time correction</summary>
+          <%= form_with url: request_correction_time_clock_path(shift), scope: :clock_correction, data: { turbo: false }, class: 'mt-3 space-y-3' do |form| %>
+            <div class="grid gap-3 sm:grid-cols-2"><div><%= form.label :proposed_started_at, 'Correct clock-in', class: 'block text-sm mb-1' %><%= form.datetime_local_field :proposed_started_at, value: shift.started_at.in_time_zone.strftime('%Y-%m-%dT%H:%M:%S'), step: 1, required: true, class: 'input' %></div><div><%= form.label :proposed_ended_at, 'Correct clock-out', class: 'block text-sm mb-1' %><%= form.datetime_local_field :proposed_ended_at, value: shift.ended_at&.in_time_zone&.strftime('%Y-%m-%dT%H:%M:%S'), step: 1, required: true, class: 'input' %></div></div>
+            <div><%= form.label :reason, 'Reason for correction', class: 'block text-sm mb-1' %><%= form.text_area :reason, required: true, maxlength: 1000, class: 'input', rows: 2 %></div>
+            <%= form.submit 'Request review', class: 'btn-ghost' %>
+          <% end %>
+        </details>
+        <% shift.corrections.sort_by(&:created_at).reverse.each do |correction| %><p class="text-xs text-taupe"><%= correction.status.capitalize %> correction: <%= l(correction.proposed_started_at, format: :short) %> → <%= l(correction.proposed_ended_at, format: :short) %> · <%= correction.reason %><% if correction.reviewed_at %> · reviewed <%= l(correction.reviewed_at, format: :short) %><% end %></p><% end %>
+      </article>
+    <% end %>
+    <% if @shifts.empty? %><p class="card card-pad text-sm text-taupe">No shifts recorded yet.</p><% end %>
+    <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  </section>
+
+  <% if @pending_corrections %><section class="space-y-3"><h2 class="font-display text-xl">Pending correction review</h2><p class="text-xs text-taupe">Up to 100 pending requests shown. Approval records the reviewer and original values. A request becomes stale if the shift changes before approval.</p>
+    <% @pending_corrections.each do |correction| %><article class="card card-pad space-y-3"><p class="font-medium"><%= correction.clock_shift.employee_name %></p><p class="text-sm">Original: <%= l(correction.original_started_at, format: :long) %> → <%= correction.original_ended_at ? l(correction.original_ended_at, format: :long) : 'Open' %><br>Requested: <%= l(correction.proposed_started_at, format: :long) %> → <%= l(correction.proposed_ended_at, format: :long) %></p><p class="text-sm text-mocha"><%= correction.reason %></p><div class="flex gap-2"><%= button_to 'Approve correction', approve_correction_time_clock_path(correction), method: :post, class: 'btn-primary', data: { turbo_confirm: 'Apply these corrected shift times? This does not pay payroll.' } %><%= button_to 'Reject', reject_correction_time_clock_path(correction), method: :post, class: 'btn-ghost' %></div></article><% end %>
+    <% if @pending_corrections.empty? %><p class="text-sm text-taupe">No corrections awaiting review.</p><% end %>
+  </section><% end %>
+</div>

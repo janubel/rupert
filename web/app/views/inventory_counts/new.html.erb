@@ -21,6 +21,8 @@
   </section>
 
   <%= form_tag inventory_counts_path, method: :post, class: "space-y-6", data: { controller: "count-sheet", action: "keydown->count-sheet#advanceOnEnter" } do %>
+    <%= hidden_field_tag :start_scanning, params[:start_scanning] %>
+    <%= render 'errors', count: count %>
     <div class="card card-pad space-y-4">
       <div class="grid gap-4 sm:grid-cols-3">
         <div>
@@ -97,7 +99,7 @@
     <% end %>
 
     <div class="flex items-center gap-3">
-      <%= submit_tag "Save draft", class: "btn-primary" %>
+      <%= submit_tag params[:start_scanning] == '1' ? "Start scanning" : "Save draft", class: "btn-primary" %>
       <%= link_to "Cancel", inventory_counts_path, class: "btn-ghost" %>
     </div>
   <% end %>
@@ -118,4 +120,3 @@
     </template>
   <% end %>
 </div>
-

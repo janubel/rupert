@@ -1,36 +1,37 @@
 # frozen_string_literal: true
 
-# Employee directory + role assignment. Super-admin only: employees can manage
-# their team but never their own role or access.
+# Store admins manage tenant employee roles. Only super admins can assign or
+# modify a super admin account.
 class UsersController < AuthenticatedController
   before_action :authorize_read, only: %i[index edit]
   before_action :authorize_write, except: %i[index edit]
   before_action :set_user, only: %i[edit update destroy deactivate activate update_permissions]
   before_action :guard_super_admin, only: %i[update destroy deactivate activate update_permissions]
+  before_action :guard_role_assignment, only: %i[create update]
 
   def index
     @users = User.where(tenant_id: Current.tenant_id).ordered
-    @roles = User.roles.keys
+    @roles = assignable_roles
   end
 
   def new
     @user = User.new(tenant_id: Current.tenant_id, role: 'cashier')
-    @roles = User.roles.keys
+    @roles = assignable_roles
   end
 
   def create
-    @user = User.new(user_params.merge(tenant_id: Current.tenant_id))
+    @user = User.new({ role: 'cashier' }.merge(user_params).merge(tenant_id: Current.tenant_id))
     if @user.save
       ActivityLogger.log('employee_added', subject: @user, details: @user.role)
       redirect_to(users_path, notice: "#{@user.display_name} added.")
     else
-      @roles = User.roles.keys
+      @roles = assignable_roles
       render(:new, status: :unprocessable_entity)
     end
   end
 
   def edit
-    @roles = User.roles.keys
+    @roles = assignable_roles
     @catalog = User.permission_catalog
   end
 
@@ -49,7 +50,7 @@ class UsersController < AuthenticatedController
       ActivityLogger.log('employee_updated', subject: @user, details: @user.role)
       redirect_to(users_path, notice: "#{@user.display_name} updated.")
     else
-      @roles = User.roles.keys
+      @roles = assignable_roles
       render(:edit, status: :unprocessable_entity)
     end
   end
@@ -98,8 +99,19 @@ class UsersController < AuthenticatedController
   end
 
   def user_params
-    permitted = %i[name email password active]
-    permitted << :role if Current.user.super_admin?
-    params.require(:user).permit(*permitted)
+    permitted = params.require(:user).permit(:name, :email, :password, :active, :role)
+    permitted.delete(:role) if permitted[:role].blank?
+    permitted
+  end
+
+  def assignable_roles
+    Current.user.super_admin? ? User.roles.keys : User.roles.keys.excluding('super_admin')
+  end
+
+  def guard_role_assignment
+    role = params.dig(:user, :role)
+    return if role.blank? || assignable_roles.include?(role)
+
+    redirect_to users_path, alert: 'Choose an allowed employee role. Only a super admin can assign the super admin role.'
   end
 end

@@ -14,9 +14,11 @@ class InventoryCount < ApplicationRecord
 
   has_many :items, class_name: 'InventoryCountItem', foreign_key: 'countId',
     dependent: :destroy, inverse_of: :count
+  has_many :scan_receipts, class_name: 'InventoryCountScanReceipt', foreign_key: :count_id, dependent: :destroy
   belongs_to :location, class_name: 'Location', foreign_key: 'locationId', optional: true
 
   validates :countedAt, presence: true
+  validate :location_belongs_to_tenant
 
   scope :recent, ->(limit = 30) { order(countedAt: :desc).limit(limit) }
   scope :by_status, ->(status) { status.present? ? where(status: status) : all }
@@ -76,5 +78,13 @@ class InventoryCount < ApplicationRecord
 
     update!(appliedAt: Time.current)
     true
+  end
+
+  private
+
+  def location_belongs_to_tenant
+    return if locationId.blank? || Location.unscoped.exists?(id: locationId, tenant_id: tenant_id)
+
+    errors.add(:locationId, 'must belong to this workspace')
   end
 end

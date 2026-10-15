@@ -12,14 +12,15 @@
       </p>
     </div>
     <div class="flex flex-wrap gap-2">
-      <% if count.draft? %>
+      <% if count.draft? && Current.user.can?('inventory.write') %>
+        <%= link_to "Scan count", scan_inventory_count_path(count), class: "btn-primary" %>
         <%= link_to "Edit", edit_inventory_count_path(count), class: "btn-ghost" %>
         <%= button_to "Submit for approval", submit_inventory_count_path(count), method: :post, class: "btn-primary", data: { turbo: false } %>
         <%= button_to "Delete", inventory_count_path(count), method: :delete, class: "btn-ghost", data: { confirm: "Delete this draft count?" } %>
-      <% elsif count.pending? %>
+      <% elsif count.pending? && Current.user.can?('inventory.write') %>
         <%= button_to "Approve count", approve_inventory_count_path(count), method: :post, class: "btn-primary", data: { confirm: "Approve this count? It is recorded for audit and does not change inventory — Square is the source of truth." } %>
         <%= button_to "Reject", reject_inventory_count_path(count), method: :post, class: "btn-ghost", data: { turbo: false } %>
-      <% elsif count.rejected? %>
+      <% elsif count.rejected? && Current.user.can?('inventory.write') %>
         <%= button_to "Reopen as draft", reopen_inventory_count_path(count), method: :post, class: "btn-ghost", data: { turbo: false } %>
       <% end %>
     </div>

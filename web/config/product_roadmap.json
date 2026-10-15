@@ -1,7 +1,7 @@
 {
-  "reviewed": "2026-10-14",
-  "basis": "Repository implementation, accessible prior Rupert conversations about Rails and multitenancy, existing ERP plans, and official competitor product pages. Prior conversation coverage is partial; additional requirements may need confirmation.",
-  "production": "Live SER8/Incus verified on 2026-10-14: SQLite 3.53.2, web and jobs active, one job thread, and a fresh backup successfully restored. The roadmap page and SQLite tooling are deployed; broader roadmap features remain planned.",
+  "reviewed": "2026-10-15",
+  "basis": "Verified implementation evidence plus sanitized requirements from the August 27\u201328 and October 12 operator discussions and POS comparison. Private chat text, attachments, customer records and credentials are excluded. Available describes implemented scope; partial entries name the missing production workflow.",
+  "production": "SER8/Incus runs SQLite 3.53.2 with conservative job concurrency. This catalog describes code scope; deployment and recovery verification are recorded in the repository release receipts.",
   "phases": [
     {
       "id": "0",
@@ -12,8 +12,8 @@
     {
       "id": "1",
       "name": "Next \u00b7 inventory execution",
-      "goal": "Barcode workflows, labels, transfers, reservations and backorders.",
-      "acceptance": "Scan/receive/count/transfer scenarios pass with duplicate protection, tenant isolation, audit history and owner confirmation before platform writes."
+      "goal": "Bulk material work, scanner counts, reservations, remote time tracking and commission previews; image POS and tipping previews, followed by verified payment/terminal execution, transfers and backorders.",
+      "acceptance": "Tenant and role isolation, replay and concurrent stock checks pass; overlap commissions award 1% independently to each worker. Primary POS requires demonstrated taxes, tender/tip/refund/settlement, hardware and operator acceptance before cutover."
     },
     {
       "id": "2",
@@ -327,18 +327,18 @@
       "id": "F33",
       "area": "Stock",
       "name": "Barcode scanning and labels",
-      "status": "Planned",
-      "scope": "Scan-to-count/receive with validation, supported label templates and audit trail.",
-      "evidence": "docs/data/product-roadmap.json",
+      "status": "Partial",
+      "scope": "Exact SKU and stored-barcode scan-to-count, replay-safe draft entry and audit receipts. Barcode import, receiving, labels and camera/offline support remain planned.",
+      "evidence": "web/app/services/inventory_count_scan.rb",
       "phase": "1"
     },
     {
       "id": "F34",
       "area": "Stock",
       "name": "Transfers, reservations and backorders",
-      "status": "Planned",
-      "scope": "Explicit source/destination movements and available-to-promise; no cross-channel equalization.",
-      "evidence": "docs/data/product-roadmap.json",
+      "status": "Partial",
+      "scope": "Tenant/location/source-specific local reservations and advisory available-to-promise, expiry and release. Transfers, backorders and source-enforced allocation remain planned.",
+      "evidence": "web/app/services/stock_reservation_service.rb",
       "phase": "1"
     },
     {
@@ -453,17 +453,17 @@
       "id": "F47",
       "area": "System",
       "name": "Public API and integrations",
-      "status": "Planned",
-      "scope": "Scoped API credentials, idempotency keys, rate limits and versioned contracts.",
-      "evidence": "docs/data/product-roadmap.json",
-      "phase": "4"
+      "status": "Partial",
+      "scope": "Versioned tenant-scoped read API for catalog, inventory and roadmap; scoped, expiring, revocable hashed tokens. Write APIs, webhooks and connector-specific adapters remain planned.",
+      "evidence": "docs/api-v1.md",
+      "phase": "1"
     },
     {
       "id": "F48",
       "area": "System",
-      "name": "Offline mobile workflows",
+      "name": "Native and offline mobile workflows",
       "status": "Planned",
-      "scope": "Conflict-aware count/receive queue and explicit reconnect reconciliation.",
+      "scope": "Optional native client and conflict-aware offline count/receive queue. Responsive web access exists; no native or offline client is enabled.",
       "evidence": "docs/data/product-roadmap.json",
       "phase": "4"
     },
@@ -475,6 +475,78 @@
       "scope": "Cross-company consolidation separated from existing tenant isolation.",
       "evidence": "docs/data/product-roadmap.json",
       "phase": "4"
+    },
+    {
+      "id": "F50",
+      "area": "Stock",
+      "name": "Bulk raw material tracking",
+      "status": "Partial",
+      "scope": "Lot receipts, consumption, corrections and CSV export with integer milligram balances and audit history. Sale-to-gram recipe mapping, automatic Shopify consumption/refunds and Google Sheets sync remain planned.",
+      "evidence": "web/app/services/bulk_ledger.rb",
+      "phase": "1"
+    },
+    {
+      "id": "F51",
+      "area": "Commerce",
+      "name": "Image-based POS cart",
+      "status": "Partial",
+      "scope": "Searchable product images, cart and server-priced quote preview. Tax calculation, completed sales, receipts, hardware and payment settlement are not enabled.",
+      "evidence": "web/app/controllers/point_of_sale_controller.rb",
+      "phase": "1"
+    },
+    {
+      "id": "F52",
+      "area": "People",
+      "name": "POS, inventory and reporting roles",
+      "status": "Available",
+      "scope": "Cashier/POS, inventory employee, reporting and admin presets; tenant-scoped role assignment, protected super-admin role and deactivated-session rejection.",
+      "evidence": "web/app/models/user.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F53",
+      "area": "People",
+      "name": "Remote clock-in and corrections",
+      "status": "Available",
+      "scope": "Linked active workers clock in/out remotely and request time corrections; permissioned reviewers approve/reject with audit history. No automatic timesheet or payroll posting.",
+      "evidence": "web/app/services/time_clock_service.rb",
+      "phase": "1"
+    },
+    {
+      "id": "F54",
+      "area": "People",
+      "name": "Overlapping-shift commission preview",
+      "status": "Partial",
+      "scope": "A separate 1% estimate for every worker present at an eligible sale, including overlaps; selected source/currency and disclosed imported-data basis. Final policy, refund reconciliation and payouts remain pending.",
+      "evidence": "web/app/services/commission_preview.rb",
+      "phase": "1"
+    },
+    {
+      "id": "F55",
+      "area": "Commerce",
+      "name": "Customer tipping",
+      "status": "Partial",
+      "scope": "No-tip, percentage and custom-amount quote prompts with decimal validation. No collected tips, terminal tipping, payment settlement or tip refunds are enabled.",
+      "evidence": "web/app/controllers/point_of_sale_controller.rb",
+      "phase": "1"
+    },
+    {
+      "id": "F56",
+      "area": "Commerce",
+      "name": "Daily register summaries",
+      "status": "Partial",
+      "scope": "Cash/card/other tenders and refunds by event date, source, location and currency with CSV and missing-payment coverage. C-Trax imports, terminal deposits, discounts, tips and fees require further integration.",
+      "evidence": "web/app/services/daily_register_summary.rb",
+      "phase": "0"
+    },
+    {
+      "id": "F57",
+      "area": "Commerce",
+      "name": "Processor and terminal integration",
+      "status": "Planned",
+      "scope": "Verify Valmar/selected gateway, supported terminal and merchant-specific approval, then sandbox sale/tip/refund/settlement round trips. Existing source mirrors and CSV imports do not prove terminal compatibility.",
+      "evidence": "docs/ops/pos-parity.md",
+      "phase": "1"
     }
   ]
 }

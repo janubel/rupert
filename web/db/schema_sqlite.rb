@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_14_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_120000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -345,6 +345,105 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_200000) do
     t.index ["tenant_id", "subject_type", "subject_id"], name: "idx_on_tenant_id_subject_type_subject_id_034734a708"
   end
 
+  create_table "api_access_tokens", id: :string, force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "user_id", null: false
+    t.string "name", null: false
+    t.string "token_digest", null: false
+    t.string "token_hint", null: false
+    t.text "scopes", null: false
+    t.datetime "expires_at"
+    t.datetime "revoked_at"
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["tenant_id", "created_at"], name: "idx_api_tokens_tenant_created"
+    t.index ["token_digest"], name: "index_api_access_tokens_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_api_access_tokens_on_user_id"
+  end
+
+  create_table "bulk_lots", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "bulk_material_id", null: false
+    t.string "code", null: false
+    t.string "note"
+    t.string "receipt_token", null: false
+    t.bigint "balance_mg", default: 0, null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "bulk_material_id", "code"], name: "idx_bulk_lots_material_code", unique: true
+    t.index ["tenant_id", "receipt_token"], name: "index_bulk_lots_on_tenant_id_and_receipt_token", unique: true
+    t.check_constraint "balance_mg >= 0", name: "bulk_lots_nonnegative_balance"
+  end
+
+  create_table "bulk_materials", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "name", null: false
+    t.string "unit", default: "g", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "name"], name: "index_bulk_materials_on_tenant_id_and_name", unique: true
+  end
+
+  create_table "bulk_movements", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "bulk_lot_id", null: false
+    t.string "kind", null: false
+    t.bigint "delta_mg", null: false
+    t.string "input_quantity", null: false
+    t.string "input_unit", null: false
+    t.string "reference", null: false
+    t.string "request_token", null: false
+    t.string "created_by", null: false
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "bulk_lot_id", "created_at", "id"], name: "idx_bulk_movements_lot_timeline"
+    t.index ["tenant_id", "request_token"], name: "index_bulk_movements_on_tenant_id_and_request_token", unique: true
+    t.check_constraint "(kind = 'receipt' AND delta_mg > 0) OR (kind = 'consume' AND delta_mg < 0) OR kind = 'adjustment'", name: "bulk_movements_kind_sign"
+    t.check_constraint "delta_mg <> 0", name: "bulk_movements_nonzero"
+  end
+
+  create_table "clock_corrections", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "clock_shift_id", null: false
+    t.integer "requested_by_id"
+    t.integer "reviewed_by_id"
+    t.datetime "original_started_at", null: false
+    t.datetime "original_ended_at"
+    t.datetime "proposed_started_at", null: false
+    t.datetime "proposed_ended_at", null: false
+    t.text "reason", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "reviewed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["clock_shift_id"], name: "index_clock_corrections_on_clock_shift_id"
+    t.index ["requested_by_id"], name: "index_clock_corrections_on_requested_by_id"
+    t.index ["reviewed_by_id"], name: "index_clock_corrections_on_reviewed_by_id"
+    t.index ["tenant_id", "status", "created_at"], name: "idx_clock_correction_review"
+    t.check_constraint "proposed_ended_at > proposed_started_at", name: "clock_correction_positive_interval"
+    t.check_constraint "status IN ('pending', 'approved', 'rejected')", name: "clock_correction_status"
+  end
+
+  create_table "clock_shifts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "user_id"
+    t.integer "employee_id"
+    t.string "employee_key", null: false
+    t.string "employee_name", null: false
+    t.string "employment_type", null: false
+    t.string "request_token", null: false
+    t.datetime "started_at", null: false
+    t.datetime "ended_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["employee_id"], name: "index_clock_shifts_on_employee_id"
+    t.index ["tenant_id", "request_token"], name: "idx_clock_shift_request", unique: true
+    t.index ["tenant_id", "started_at", "ended_at"], name: "idx_clock_shift_window"
+    t.index ["tenant_id", "user_id"], name: "idx_clock_one_open_shift", unique: true, where: "ended_at IS NULL AND user_id IS NOT NULL"
+    t.index ["user_id"], name: "index_clock_shifts_on_user_id"
+    t.check_constraint "ended_at IS NULL OR ended_at > started_at", name: "clock_positive_interval"
+  end
+
   create_table "customers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email"
@@ -449,6 +548,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_200000) do
     t.string "unit"
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "status"], name: "index_goals_on_tenant_id_and_status"
+  end
+
+  create_table "inventory_count_scan_receipts", id: :string, force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "count_id", null: false
+    t.string "request_token", null: false
+    t.string "fingerprint", null: false
+    t.string "created_by", null: false
+    t.text "result", null: false
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "count_id", "request_token"], name: "idx_count_scan_receipts_request", unique: true
   end
 
   create_table "kpi_readings", force: :cascade do |t|
@@ -907,6 +1017,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_200000) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "stock_reservation_pools", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "source", null: false
+    t.string "location_id", null: false
+    t.string "source_item_id", null: false
+    t.string "location_name", null: false
+    t.string "item_label", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.index ["tenant_id", "source", "location_id", "source_item_id"], name: "idx_reservation_pool_identity", unique: true
+    t.check_constraint "source IN ('shopify', 'square')", name: "stock_reservation_pools_source"
+  end
+
+  create_table "stock_reservations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "stock_reservation_pool_id", null: false
+    t.integer "quantity", null: false
+    t.string "reference", null: false
+    t.string "request_token", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "expires_at"
+    t.string "created_by", null: false
+    t.string "released_by"
+    t.datetime "released_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stock_reservation_pool_id", "status", "expires_at"], name: "idx_reservations_pool_active"
+    t.index ["tenant_id", "created_at", "id"], name: "idx_reservations_tenant_created"
+    t.index ["tenant_id", "request_token"], name: "idx_reservations_request_token", unique: true
+    t.check_constraint "quantity > 0", name: "stock_reservations_positive_quantity"
+    t.check_constraint "status IN ('active', 'released')", name: "stock_reservations_status"
+  end
+
   create_table "tasks", force: :cascade do |t|
     t.string "assignee_id"
     t.datetime "completed_at"
@@ -1054,8 +1196,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_200000) do
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade
   add_foreign_key "SkuLink", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "SkuLink", "SquareVariation", column: "squareVariationId", on_delete: :nullify
+  add_foreign_key "api_access_tokens", "tenants"
+  add_foreign_key "api_access_tokens", "users"
+  add_foreign_key "bulk_lots", "bulk_materials"
+  add_foreign_key "bulk_movements", "bulk_lots"
+  add_foreign_key "clock_corrections", "clock_shifts"
+  add_foreign_key "clock_corrections", "tenants"
+  add_foreign_key "clock_corrections", "users", column: "requested_by_id", on_delete: :nullify
+  add_foreign_key "clock_corrections", "users", column: "reviewed_by_id", on_delete: :nullify
+  add_foreign_key "clock_shifts", "employees", on_delete: :nullify
+  add_foreign_key "clock_shifts", "tenants"
+  add_foreign_key "clock_shifts", "users", on_delete: :nullify
   add_foreign_key "departments", "employees", column: "manager_id"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
+  add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade
   add_foreign_key "order_lines", "orders", on_delete: :cascade
   add_foreign_key "payments", "orders", on_delete: :cascade
   add_foreign_key "refunds", "orders", on_delete: :cascade
@@ -1073,6 +1227,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_200000) do
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "stock_reservations", "stock_reservation_pools"
 
   # Virtual tables defined in this database.
   # Note that virtual tables may not work with other database engines. Be careful if changing database.

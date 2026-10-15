@@ -302,13 +302,13 @@ class PageGuides
     ),
     'inventory_counts' => Guide.new(
       key: 'inventory_counts', title: 'Inventory counts',
-      summary: "Physical count sheets — record what's actually on the shelf and push it back as the truth.",
+      summary: "Physical count sheets record what is on the shelf for review and approval.",
       sections: [
-        { heading: "What you're seeing", body: 'Count sheets in draft/submitted/approved states. A count records what you physically have per SKU; approving it becomes the authoritative inventory.' }
+        { heading: "What you're seeing", body: 'Count sheets in draft/submitted/approved states. Approval preserves the reviewed physical count as an audit record; it does not change Shopify or Square quantities.' }
       ],
       tips: [
         'Run a count before trusting the mirror after a big discrepancy.',
-        'Counting the root item of a size family resets its gram bank — do that before deriving sizes.'
+        'Review prepared quantities before scanning: use Set total for the first physical count of each SKU.'
       ]
     ),
     'projects' => Guide.new(

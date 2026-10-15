@@ -1,0 +1,60 @@
+<% content_for :title, 'API integrations' %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<div class="space-y-6">
+  <section>
+    <h1 class="page-title">API integrations</h1>
+    <p class="mt-2 text-sm text-mocha">Connect your tools to Rupert's versioned read API. Each token belongs to this store, has selected read scopes, and can be revoked here.</p>
+  </section>
+
+  <% if @issued_secret %>
+    <section class="card card-pad space-y-3" aria-label="New API token">
+      <h2 class="font-display text-xl text-ink">Copy your token now</h2>
+      <p class="text-sm text-mocha">This is the only time Rupert displays the full token. Store it in your integration's secret manager. Anyone holding it can use its selected scopes until it expires or is revoked.</p>
+      <%= text_area_tag :issued_token, @issued_secret, readonly: true, rows: 2, class: 'input font-mono text-sm', aria: { label: 'New API bearer token' }, autocomplete: 'off', spellcheck: false %>
+      <%= link_to 'Done — hide token', api_access_tokens_path, class: 'btn-primary' %>
+    </section>
+  <% end %>
+
+  <section class="card card-pad space-y-3">
+    <h2 class="font-display text-xl text-ink">Create a read token</h2>
+    <% if @token.errors.any? %><p role="alert" class="text-sm text-rose"><%= @token.errors.full_messages.to_sentence %></p><% end %>
+    <%= form_with model: @issued_secret ? ApiAccessToken.new(expires_at: 90.days.from_now) : @token, url: api_access_tokens_path, data: { turbo: false }, class: 'space-y-4' do |form| %>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div><%= form.label :name, 'Integration name', class: 'block text-sm font-medium mb-1' %><%= form.text_field :name, required: true, maxlength: 100, placeholder: 'e.g. Reporting dashboard', class: 'input' %></div>
+        <div><%= form.label :expires_at, 'Expires at (optional)', class: 'block text-sm font-medium mb-1' %><%= form.datetime_local_field :expires_at, class: 'input' %></div>
+      </div>
+      <fieldset class="space-y-2">
+        <legend class="mb-2 text-sm font-medium">Allowed reads</legend>
+        <% ApiAccessToken::SCOPES.each do |scope, permission| %>
+          <% next if permission && !Current.user.can?(permission) %>
+          <label class="flex items-center gap-2 text-sm"><%= check_box_tag 'api_access_token[scopes][]', scope, @token.scopes.to_a.include?(scope), id: "api_scope_#{scope.tr(':', '_')}" %><span class="font-mono"><%= scope %></span></label>
+        <% end %>
+      </fieldset>
+      <%= form.submit 'Create API token', class: 'btn-primary' %>
+    <% end %>
+  </section>
+
+  <section class="card card-pad space-y-3">
+    <h2 class="font-display text-xl text-ink">Use the API</h2>
+    <p class="text-sm text-mocha">Send <code>Authorization: Bearer YOUR_TOKEN</code> over HTTPS. Browser login cookies do not authenticate API requests. Responses contain only this token's store. No endpoint changes Shopify or Square.</p>
+    <pre class="overflow-x-auto rounded-lg bg-haze p-3 text-xs"><code>curl -H 'Authorization: Bearer YOUR_TOKEN' '<%= request.base_url %>/api/v1/catalog?source=shopify&amp;per_page=50'
+curl -H 'Authorization: Bearer YOUR_TOKEN' '<%= request.base_url %>/api/v1/catalog?source=square'
+curl -H 'Authorization: Bearer YOUR_TOKEN' '<%= request.base_url %>/api/v1/inventory?page=1&amp;per_page=50'
+curl -H 'Authorization: Bearer YOUR_TOKEN' '<%= request.base_url %>/api/v1/roadmap'</code></pre>
+    <p class="text-xs text-taupe">Catalog defaults to Shopify; request Square separately. List responses include data and pagination meta. Follow meta.next_page while present. per_page is 1–100 (default 50), page is 1–1000. Inventory supports source and location_id filters. 401 means invalid, expired, revoked or inactive owner; 403 means the scope or owner's current permission is missing.</p>
+  </section>
+
+  <section class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="border-b border-fog bg-haze/60"><tr><% ['Integration', 'Scopes', 'Status', 'Expires', 'Issued by', ''].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
+      <tbody class="divide-y divide-fog">
+        <% @tokens.each do |token| %>
+          <tr><td class="td"><%= token.name %><br><code class="text-xs text-taupe"><%= token.token_hint %></code></td><td class="td text-xs"><%= token.scopes.join(', ') %></td><td class="td"><%= token.display_status %></td><td class="td"><%= token.expires_at ? l(token.expires_at, format: :short) : 'No expiry' %></td><td class="td text-xs"><%= token.user.email %></td><td class="td"><% unless token.revoked_at %><%= button_to 'Revoke', revoke_api_access_token_path(token), method: :post, class: 'btn-ghost btn-sm', data: { turbo_confirm: 'Revoke this API token immediately?' } %><% end %></td></tr>
+        <% end %>
+        <% if @tokens.empty? %><tr><td colspan="6" class="td py-8 text-center text-taupe">No API tokens yet.</td></tr><% end %>
+      </tbody>
+    </table>
+    <p class="px-4 py-3 text-xs text-taupe">Only token hashes are stored. Revocation takes effect on the next API request.</p>
+  </section>
+  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+</div>
