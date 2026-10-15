@@ -5,7 +5,7 @@
       <h1 class="page-title">Sales</h1>
       <p class="mt-1 text-sm text-mocha">Daily sales journal — where each sale came in, in the order it happened.</p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <div class="flex items-center gap-1 rounded-full border border-fog bg-paper p-1">
         <% (["all"] + @sources).each do |s| %>
           <%= link_to s == "all" ? "All" : s.capitalize,
@@ -13,7 +13,7 @@
                 class: "nav-pill #{@source == s ? "nav-pill-active-sm" : "nav-pill-idle-sm"}" %>
         <% end %>
       </div>
-      <%= form_tag sales_path, method: :get, class: "flex items-center gap-2" do %>
+      <%= form_tag sales_path, method: :get, class: "flex flex-wrap items-center gap-2" do %>
         <%= hidden_field_tag :source, (@source == "all" ? nil : @source) %>
         <%= text_field_tag :date, @date.iso8601, type: "date", class: "select" %>
         <%= submit_tag "Jump to day", class: "btn-ghost btn-sm" %>
