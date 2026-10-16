@@ -8,6 +8,7 @@ class SyncEngineTest < ActiveSupport::TestCase
   end
 
   teardown do
+    travel_back
     SyncRun.delete_all
     Current.tenant = nil
   end
@@ -134,6 +135,7 @@ class SyncEngineTest < ActiveSupport::TestCase
   end
 
   test 'incremental runs fetch only the watermark window plus refresh tail' do
+    travel_to Time.zone.local(2026, 10, 16, 12)
     Setting.create!(key: 'sync_watermark_shopify', value: 2.hours.ago.iso8601, tenant_id: Current.tenant_id)
 
     captured_since = nil
