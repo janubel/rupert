@@ -135,10 +135,12 @@ class MoneyReconciliationReport
           @warnings << "C-Trax #{metric.downcase} has missing source amounts; no total is inferred."
           next
         end
-        add('C-Trax', store, currency, metric, BigDecimal(values.sum.to_s) / 100, checks.sum { |check| check.orders.size },
+        count = metric == 'Source refund total' ? nil : checks.sum { |check| check.orders.size }
+        add('C-Trax', store, currency, metric, BigDecimal(values.sum.to_s) / 100, count,
           "Native store-day snapshots in #{timezone}; #{days.size} stored date(s); coverage and bank receipt require review")
       end
       @warnings << 'C-Trax native controls or source review remain unresolved.' unless checks.all?(&:matched?) && days.all?(&:reviewed?)
+      @warnings << 'C-Trax stored dates cover only part of this period; absent dates are not zero-sales days.' if days.map(&:business_date).uniq.size < (to - from).to_i + 1
     end
     @warnings << 'No C-Trax retail day snapshot is stored for this period; current stock does not establish historical sales.' if snapshots.empty?
   end
