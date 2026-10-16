@@ -101,6 +101,10 @@ class PosConnection < ApplicationRecord
   private
 
   def valid_reporting_setup
+    if provider == 'ctrax'
+      errors.add(:base, 'Save approved C-Trax read credentials before enabling daily sales pulls.') if reporting_enabled && (!vendor_approved || !credentials_saved?)
+      return
+    end
     if provider == 'swipesimple'
       if credential_values.any? || reporting_enabled
         errors.add(:account_reference, 'must be the numeric SwipeSimple company ID') unless account_reference.to_s.match?(/\A[1-9][0-9]{0,19}\z/)

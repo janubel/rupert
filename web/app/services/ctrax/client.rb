@@ -73,6 +73,41 @@ module Ctrax
       @master_products
     end
 
+    def use_store(store_id)
+      authorize_store!(store_id)
+      metadata = request("/api/v1/stores/#{store_id}")
+      timezone = metadata['timezone_identifier']
+      raise Error, :response unless timezone.is_a?(String) && ActiveSupport::TimeZone[timezone]
+
+      @store_timezone = timezone
+      timezone
+    end
+
+    def daily_orders(store_id, date)
+      authorize_store!(store_id)
+      paged("/api/v1/stores/#{store_id}/orders", include_extended_details: 1,
+        completed_between: "#{date.iso8601} 00:00:00->#{(date + 1).iso8601} 00:00:00", override_timezone: 'store')
+    end
+
+    def register_sessions(store_id, date)
+      authorize_store!(store_id)
+      # Include earlier openings: a session may cross midnight or stay open.
+      paged('/api/v1/registerSessions', store_id: store_id, opened_on_or_before: "#{date + 1} 00:00:00")
+    end
+
+    def cash_drops(session_id)
+      raise Error, :invalid unless session_id.to_s.match?(/\A[1-9][0-9]{0,18}\z/)
+
+      paged("/api/v1/registerSessions/#{session_id}/cashDrops")
+    end
+
+    def sales_summary(store_id, date)
+      authorize_store!(store_id)
+      request('/api/v2/analytics/reports/sales.general.summary', params: {
+        store_id: store_id, start_date: date.iso8601, end_date: date.iso8601, format: 'raw_json'
+      })
+    end
+
     def stock(store_id)
       authorize_store!(store_id)
       rows = []
@@ -120,6 +155,34 @@ module Ctrax
 
     private
 
+    def paged(path, parameters = {})
+      rows = []
+      total = last = nil
+      (1..MAX_PAGES).each do |page|
+        document = request(path, params: parameters.merge(page: page, per_page: 50))
+        data = document['data']
+        unless data.is_a?(Array) && data.size <= 50 && data.all? { |row| row.is_a?(Hash) } &&
+               document['current_page'] == page && document['total'].is_a?(Integer) &&
+               document['total'].between?(0, MAX_ROWS) && document['last_page'].is_a?(Integer) &&
+               document['last_page'].between?(1, MAX_PAGES)
+          raise Error, :response
+        end
+        total ||= document['total']
+        last ||= document['last_page']
+        raise Error, :response unless total == document['total'] && last == document['last_page'] && page <= last
+
+        rows.concat(data)
+        next unless page == last
+
+        ids = rows.map { |row| row['id'].to_s }
+        raise Error, :response unless rows.size == total && ids.uniq.size == ids.size &&
+                                      ids.all? { |id| id.match?(/\A[1-9][0-9]{0,18}\z/) }
+
+        return rows
+      end
+      raise Error, :limit
+    end
+
     def authorize_store!(id)
       raise Error, :forbidden unless stores.any? { |store| store[:id] == id.to_s }
     end
@@ -131,6 +194,8 @@ module Ctrax
       uri = URI(@credentials.fetch('api_url') + path)
       uri.query = URI.encode_www_form(params) if params.any?
       headers = { 'Accept' => 'application/json', 'Accept-Encoding' => 'identity' }
+      headers['X-Store-Timezone'] = @store_timezone if @store_timezone
+      headers['X-Client-Timezone'] = @store_timezone if @store_timezone
       headers['Authorization'] = "Bearer #{@token}" unless login
       request = login ? Net::HTTP::Post.new(uri.request_uri, headers) : Net::HTTP::Get.new(uri.request_uri, headers)
       if login

@@ -550,6 +550,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.check_constraint "ended_at IS NULL OR ended_at > started_at", name: "clock_positive_interval"
   end
 
+  create_table "ctrax_days", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "api_origin", null: false
+    t.string "store_id", null: false
+    t.date "business_date", null: false
+    t.string "timezone", null: false
+    t.string "currency", default: "USD", null: false
+    t.text "orders_json", null: false
+    t.text "sessions_json", null: false
+    t.text "controls_json", null: false
+    t.string "source_digest", null: false
+    t.datetime "captured_at", null: false
+    t.integer "reviewed_by_id"
+    t.string "reviewed_digest"
+    t.datetime "reviewed_at"
+    t.string "review_note", limit: 1000
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reviewed_by_id"], name: "index_ctrax_days_on_reviewed_by_id"
+    t.index ["tenant_id", "location_id", "business_date"], name: "idx_on_tenant_id_location_id_business_date_9a513d6082", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_days_on_tenant_id"
+  end
+
+  create_table "ctrax_image_links", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "variant_id", null: false
+    t.string "shopify_product_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "location_id", "variant_id"], name: "idx_on_tenant_id_location_id_variant_id_a6f332d264", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_image_links_on_tenant_id"
+  end
+
   create_table "ctrax_stock_snapshots", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "location_id", null: false
@@ -771,26 +806,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.index ["tenant_id", "status"], name: "index_leave_requests_on_tenant_id_and_status"
   end
 
-  create_table "money_reconciliations", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.string "period_kind", null: false
-    t.date "period_from", null: false
-    t.date "period_to", null: false
-    t.datetime "generated_at", null: false
-    t.text "payload_json", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_money_reconciliation_period", unique: true
-  end
-
-  create_table "oauth_allowed_domains", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.string "domain", null: false
-    t.string "tenant_id"
-    t.datetime "updated_at", null: false
-    t.index ["tenant_id", "domain"], name: "index_oauth_allowed_domains_on_tenant_id_and_domain", unique: true
-  end
-
   create_table "marketing_campaigns", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "name", null: false
@@ -889,6 +904,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.index ["tenant_id", "status", "created_at"], name: "index_marketing_threads_on_tenant_id_and_status_and_created_at"
     t.index ["tenant_id", "url"], name: "index_marketing_threads_on_tenant_id_and_url", unique: true
     t.index ["tenant_id"], name: "index_marketing_threads_on_tenant_id"
+  end
+
+  create_table "money_reconciliations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "period_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.datetime "generated_at", null: false
+    t.text "payload_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_money_reconciliation_period", unique: true
+  end
+
+  create_table "oauth_allowed_domains", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "domain", null: false
+    t.string "tenant_id"
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "domain"], name: "index_oauth_allowed_domains_on_tenant_id_and_domain", unique: true
   end
 
   create_table "order_lines", force: :cascade do |t|
@@ -1053,6 +1088,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.index ["updated_by_id"], name: "index_pos_connections_on_updated_by_id"
     t.check_constraint "environment IN ('sandbox', 'production')", name: "pos_connection_environment"
     t.check_constraint "last_check_status IS NULL OR last_check_status IN ('verified', 'failed')", name: "pos_connection_check_status"
+  end
+
+  create_table "pos_display_sessions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "user_id", null: false
+    t.string "location_id", null: false
+    t.text "display_token", null: false
+    t.string "token_digest", null: false
+    t.text "draft_json", default: "{}", null: false
+    t.string "draft_digest"
+    t.integer "cart_revision", default: 0, null: false
+    t.integer "confirmed_revision"
+    t.integer "chosen_tip_cents"
+    t.boolean "demo", default: false, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "closed_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id"], name: "index_pos_display_sessions_on_tenant_id"
+    t.index ["token_digest"], name: "index_pos_display_sessions_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_pos_display_sessions_on_user_id"
   end
 
   create_table "pos_sessions", force: :cascade do |t|
@@ -1641,6 +1698,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
   add_foreign_key "clock_shifts", "employees", on_delete: :nullify
   add_foreign_key "clock_shifts", "tenants"
   add_foreign_key "clock_shifts", "users", on_delete: :nullify
+  add_foreign_key "ctrax_days", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "ctrax_days", "tenants"
+  add_foreign_key "ctrax_days", "users", column: "reviewed_by_id"
+  add_foreign_key "ctrax_image_links", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "ctrax_image_links", "ShopifyProduct", column: "shopify_product_id", on_delete: :cascade
+  add_foreign_key "ctrax_image_links", "tenants"
   add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_stock_snapshots", "tenants"
   add_foreign_key "daily_reconciliation_reviews", "tenants"
@@ -1650,6 +1713,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
   add_foreign_key "google_login_identities", "users", on_delete: :cascade
   add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade
   add_foreign_key "iris_reports", "tenants"
+  add_foreign_key "marketing_campaigns", "tenants"
+  add_foreign_key "marketing_communities", "marketing_campaigns", column: "campaign_id"
+  add_foreign_key "marketing_communities", "tenants"
+  add_foreign_key "marketing_offers", "marketing_communities", column: "community_id"
+  add_foreign_key "marketing_offers", "tenants"
+  add_foreign_key "marketing_offers", "users", column: "verified_by_id"
+  add_foreign_key "marketing_replies", "marketing_offers", column: "offer_id"
+  add_foreign_key "marketing_replies", "marketing_threads", column: "thread_id"
+  add_foreign_key "marketing_replies", "tenants"
+  add_foreign_key "marketing_review_events", "marketing_replies", column: "reply_id"
+  add_foreign_key "marketing_review_events", "tenants"
+  add_foreign_key "marketing_review_events", "users", column: "actor_id"
+  add_foreign_key "marketing_threads", "marketing_communities", column: "community_id"
+  add_foreign_key "marketing_threads", "tenants"
   add_foreign_key "order_lines", "orders", on_delete: :cascade
   add_foreign_key "owner_checklist_events", "owner_checklists"
   add_foreign_key "owner_checklist_events", "users", column: "actor_id", on_delete: :nullify
@@ -1661,6 +1738,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
   add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
   add_foreign_key "reconciliation_documents", "tenants"
   add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
+  add_foreign_key "pos_display_sessions", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "pos_display_sessions", "tenants"
+  add_foreign_key "pos_display_sessions", "users"
   add_foreign_key "refunds", "orders", on_delete: :cascade
   add_foreign_key "size_changes", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "size_family_members", "size_families", column: "family_id", on_delete: :cascade
@@ -1689,18 +1769,4 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
   create_virtual_table "rupert_customers_fts", "fts5", ["\"email\"", "\"phone\"", "\"first_name\"", "\"last_name\"", "tokenize='trigram'", "content='customers'", "content_rowid='id'"]
   create_virtual_table "rupert_orders_fts", "fts5", ["\"order_number\"", "\"source_order_id\"", "tokenize='trigram'", "content='orders'", "content_rowid='id'"]
   create_virtual_table "rupert_shopifyvariant_fts", "fts5", ["\"sku\"", "\"title\"", "tokenize='trigram'", "content='ShopifyVariant'", "content_rowid='rowid'"]
-  add_foreign_key "marketing_campaigns", "tenants"
-  add_foreign_key "marketing_communities", "marketing_campaigns", column: "campaign_id"
-  add_foreign_key "marketing_communities", "tenants"
-  add_foreign_key "marketing_offers", "marketing_communities", column: "community_id"
-  add_foreign_key "marketing_offers", "tenants"
-  add_foreign_key "marketing_offers", "users", column: "verified_by_id"
-  add_foreign_key "marketing_replies", "marketing_offers", column: "offer_id"
-  add_foreign_key "marketing_replies", "marketing_threads", column: "thread_id"
-  add_foreign_key "marketing_replies", "tenants"
-  add_foreign_key "marketing_review_events", "marketing_replies", column: "reply_id"
-  add_foreign_key "marketing_review_events", "tenants"
-  add_foreign_key "marketing_review_events", "users", column: "actor_id"
-  add_foreign_key "marketing_threads", "marketing_communities", column: "community_id"
-  add_foreign_key "marketing_threads", "tenants"
 end

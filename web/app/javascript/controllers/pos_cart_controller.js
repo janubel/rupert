@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["form", "items", "status", "subtotal", "tip", "previewTotal", "tipType", "tipPercentage", "tipAmount", "percentageFields", "amountFields"]
-  static values = { cartKey: String, initialQuote: Object }
+  static values = { cartKey: String, initialQuote: Object, clearUrl: String }
 
   connect() {
     this.cart = new Map()
@@ -17,6 +17,7 @@ export default class extends Controller {
       this.updateTipInputs()
       this.persist()
       this.render(initial)
+      if (this.hasClearUrlValue && this.cart.size) this.refresh()
     } else {
       try {
         const saved = JSON.parse(sessionStorage.getItem(this.cartKeyValue) || "[]")
@@ -108,6 +109,7 @@ export default class extends Controller {
   }
 
   invalidate() {
+    this.dispatch("changing")
     this.abort?.abort()
     ++this.sequence
     this.subtotalTarget.textContent = "—"
@@ -139,12 +141,23 @@ export default class extends Controller {
   }
 
   async refresh() {
+    this.dispatch("changing")
     this.abort?.abort()
     const sequence = ++this.sequence
     this.subtotalTarget.textContent = "—"
     this.tipTarget.textContent = "—"
     this.previewTotalTarget.textContent = "—"
     if (!this.cart.size) {
+      if (this.hasClearUrlValue) {
+        try {
+          const cleared = await fetch(this.clearUrlValue, { method: "POST", headers: { "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || "" } })
+          if (!cleared.ok) throw new Error()
+        } catch (_) {
+          this.statusTarget.textContent = "Customer cart could not be cleared. Close the customer screen before proceeding."
+          return
+        }
+      }
+      this.dispatch("checked", { detail: { revision: null } })
       this.render([])
       this.statusTarget.textContent = "Choose products to build a preview."
       return
@@ -167,6 +180,7 @@ export default class extends Controller {
       const result = await response.json()
       if (sequence !== this.sequence) return
       if (!response.ok) throw new Error(result.error || "The preview could not be checked.")
+      this.dispatch("checked", { detail: { revision: result.display_revision } })
       this.lines = result.lines
       this.render(result.lines)
       this.subtotalTarget.textContent = this.amount(result.subtotal)

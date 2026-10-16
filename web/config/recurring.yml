@@ -5,6 +5,10 @@ production:
     class: DailyReconciliationArchiveJob
     queue: default
     schedule: "15 7 * * * America/New_York"
+  ctrax_sales:
+    class: CtraxSalesSyncJob
+    queue: default
+    schedule: '5,35 * * * *'
   iris_daily_deposits_web:
     class: IrisDailyDepositsWebJob
     queue: default
