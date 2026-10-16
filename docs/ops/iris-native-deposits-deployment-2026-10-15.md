@@ -17,7 +17,7 @@ The current format was checked against the real downloaded file privately. Nativ
 - On SER8, production configuration and a private cloned database were used for migration/loader/assets/form/import rehearsal. All existing table counts were preserved; integrity and foreign-key checks passed. This feature needs no new migration.
 - After promotion and host-side restart, web/jobs are active and public HTTPS `/up` returns 200. The production checkout is clean at the recorded revision. The new native form and existing monthly form render with an existing authorized account context. A synthetic native importer smoke check ran inside a rolled-back production transaction; no smoke report was retained and canonical order count was unchanged. This rendering check does not claim a new browser login or full authenticated browser upload.
 
-GitHub runs for the deployed revision: [release branch CI](https://github.com/techmore/rupert/actions/runs/38838180840) and [PR CI](https://github.com/techmore/rupert/actions/runs/38838186263). These external runs were still running during deployment verification; the local and SER8 checks above completed successfully.
+GitHub runs for the deployed revision: [release branch CI](https://github.com/techmore/rupert/actions/runs/38838180840) and [PR CI](https://github.com/techmore/rupert/actions/runs/38838186263). The release branch CI completed successfully for both PostgreSQL and SQLite, with product-site consistency also passing. The local and SER8 checks above completed successfully.
 
 ## Recovery
 
