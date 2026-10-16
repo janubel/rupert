@@ -43,6 +43,21 @@ production:
     queue: default
     args: [weekly]
     schedule: "15 8 * * 1 America/New_York"
+  money_reconciliation_daily:
+    class: MoneyReconciliationJob
+    queue: default
+    args: [daily]
+    schedule: "20 0 * * * America/New_York"
+  money_reconciliation_weekly:
+    class: MoneyReconciliationJob
+    queue: default
+    args: [weekly]
+    schedule: "25 0 * * 1 America/New_York"
+  money_reconciliation_monthly:
+    class: MoneyReconciliationJob
+    queue: default
+    args: [monthly]
+    schedule: "30 0 1 * * America/New_York"
   drive_backups:
     class: BackupJob
     queue: default

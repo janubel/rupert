@@ -19,6 +19,7 @@
         <%= text_field_tag :to, @to_date&.iso8601, type: "date", class: "select", title: "End date" %>
         <%= submit_tag "Refresh", class: "btn-ghost btn-sm" %>
       <% end %>
+      <%= link_to "Money reconciliation", money_reconciliations_path, class: "btn-ghost btn-sm" %>
       <%= link_to "CSV", url_for(action: params[:action], format: :csv, days: @days, from: @to_date ? @range.to_date.iso8601 : nil, to: @to_date&.iso8601), class: "btn-ghost btn-sm", data: { turbo: false } %>
     </div>
   </section>
