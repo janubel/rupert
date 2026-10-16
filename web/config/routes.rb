@@ -6,6 +6,7 @@ Rails.application.routes.draw do
     collection do
       post :archive
       post :review
+      post :withdraw
       get 'native_document/:source/:id', action: :native_document, as: :native_document
     end
   end

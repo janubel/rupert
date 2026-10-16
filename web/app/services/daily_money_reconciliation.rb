@@ -19,7 +19,7 @@ class DailyMoneyReconciliation
 
   def controls
     superseded = documents.filter_map(&:supersedes_id)
-    documents.select { |doc| doc.kind == 'register_control' && !superseded.include?(doc.id) }
+    documents.select { |doc| doc.kind == 'register_control' && !doc.metadata['withdrawn'] && !superseded.include?(doc.id) }
   end
 
   def comparisons

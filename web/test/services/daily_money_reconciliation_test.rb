@@ -74,6 +74,17 @@ class DailyMoneyReconciliationTest < ActiveSupport::TestCase
     assert_equal [old.id, corrected.id], report.documents.map(&:id)
   end
 
+  test 'withdrawing an accidental duplicate resolves the conflict while preserving both files' do
+    original = evidence
+    duplicate = evidence(bytes: 'duplicate report')
+    withdrawal = evidence(bytes: duplicate.original_bytes, metadata: duplicate.metadata.merge('withdrawn' => true, 'note' => 'Duplicate control'), supersedes_id: duplicate.id)
+    report = DailyMoneyReconciliation.new(day: @day)
+    assert_equal [original.id], report.controls.map(&:id)
+    assert_equal 3, report.documents.size
+    assert_equal duplicate.original_bytes, withdrawal.original_bytes
+    refute report.comparisons.any? { |row| row[:status] == 'Conflicting controls' }
+  end
+
   test 'tenant isolation covers document reads replays and correction targets' do
     own = evidence
     Current.tenant = Tenant.create!(name: 'Evidence foreign', subdomain: 'evidence-foreign')

@@ -3,7 +3,7 @@
 class DailyReconciliationsController < AuthenticatedController
   before_action :private_response
   before_action -> { authorize(:module, :reports_read?) }
-  before_action -> { authorize(:module, :reports_write?) }, only: %i[create archive review]
+  before_action -> { authorize(:module, :reports_write?) }, only: %i[create archive review withdraw]
   rescue_from ReconciliationEvidence::Error, with: :invalid_evidence
 
   def index
@@ -53,6 +53,18 @@ class DailyReconciliationsController < AuthenticatedController
     report = DailyMoneyReconciliation.new(day: selected_day)
     doc = report.archive!(actor: Current.user)
     redirect_to daily_reconciliations_path(day: report.day.iso8601), notice: "Daily report archived as evidence ##{doc.id}."
+  end
+
+  def withdraw
+    previous = ReconciliationDocument.find(params[:evidence_id])
+    reason = params[:reason].to_s.strip
+    unless previous.kind == 'register_control' && !previous.metadata['withdrawn'] && reason.length.between?(1, 4000)
+      raise ReconciliationEvidence::Error, 'Choose a register control and explain why it should be withdrawn.'
+    end
+    ReconciliationEvidence.retain!(bytes: previous.original_bytes, filename: previous.filename, source: previous.source,
+      kind: previous.kind, from: previous.period_from.iso8601, to: previous.period_to.iso8601,
+      metadata: previous.metadata.merge('withdrawn' => true, 'note' => reason), supersedes_id: previous.id, actor: Current.user)
+    redirect_to daily_reconciliations_path(day: previous.period_from.iso8601), notice: 'Control withdrawn from comparisons; original evidence and explanation retained.'
   end
 
   def review

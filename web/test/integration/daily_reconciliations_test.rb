@@ -47,6 +47,10 @@ class DailyReconciliationsTest < ActionDispatch::IntegrationTest
     doc = ReconciliationDocument.last
     assert_equal 1234, doc.metadata['cash']
     assert_equal "total,12.34\n", doc.original_bytes
+    post withdraw_daily_reconciliations_path, params: { evidence_id: doc.id, reason: 'Mistaken control; file retained' }
+    assert_redirected_to daily_reconciliations_path(day: '2026-10-14')
+    assert_empty DailyMoneyReconciliation.new(day: '2026-10-14').controls
+    assert_equal "total,12.34\n", doc.reload.original_bytes
   ensure
     file&.close!
   end
@@ -60,6 +64,8 @@ class DailyReconciliationsTest < ActionDispatch::IntegrationTest
     post review_daily_reconciliations_path
     assert_redirected_to root_path
     post daily_reconciliations_path
+    assert_redirected_to root_path
+    post withdraw_daily_reconciliations_path
     assert_redirected_to root_path
   end
 

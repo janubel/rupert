@@ -67,7 +67,7 @@
   <section class="card overflow-x-auto"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">Retained documents covering this day</caption>
     <thead><tr><% ['Evidence', 'Source / kind', 'Period', 'Retained at', 'Correction', 'SHA-256'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
-    <tbody><% @report.documents.each do |doc| %><tr><td class="td"><%= link_to "##{doc.id} #{doc.filename}", document_daily_reconciliation_path(doc), class: 'underline' %><details class="mt-2 text-xs"><summary>Source context and entered amounts</summary><% doc.metadata.each do |key, value| %><p><strong><%= key.humanize %>:</strong> <%= ReconciliationEvidence::AMOUNTS.include?(key) ? money.call(value) : (value.presence || 'Unavailable') %></p><% end %></details></td><td class="td"><%= doc.source %> / <%= doc.kind.humanize %></td><td class="td"><%= doc.period_from %> – <%= doc.period_to %></td><td class="td"><%= doc.created_at.iso8601 %></td><td class="td"><%= doc.supersedes_id ? "Replaces control ##{doc.supersedes_id}; original retained" : 'Original' %></td><td class="td break-all text-xs"><%= doc.sha256 %></td></tr><% end %>
+    <tbody><% @report.documents.each do |doc| %><tr><td class="td"><%= link_to "##{doc.id} #{doc.filename}", document_daily_reconciliation_path(doc), class: 'underline' %><details class="mt-2 text-xs"><summary>Source context and entered amounts</summary><% doc.metadata.each do |key, value| %><p><strong><%= key.humanize %>:</strong> <%= ReconciliationEvidence::AMOUNTS.include?(key) ? money.call(value) : (value.presence || 'Unavailable') %></p><% end %></details></td><td class="td"><%= doc.source %> / <%= doc.kind.humanize %></td><td class="td"><%= doc.period_from %> – <%= doc.period_to %></td><td class="td"><%= doc.created_at.iso8601 %></td><td class="td"><%= doc.supersedes_id ? "#{doc.metadata['withdrawn'] ? 'Withdraws' : 'Replaces'} control ##{doc.supersedes_id}; original retained" : 'Original' %></td><td class="td break-all text-xs"><%= doc.sha256 %></td></tr><% end %>
       <% if @report.documents.empty? %><tr><td class="td" colspan="6">No retained documents cover this day.</td></tr><% end %></tbody>
   </table><p class="p-4 text-xs">Documents and reviews are retained without automatic deletion. Corrections preserve both versions. Encrypted originals are part of the database backup; preserve its encryption keys when restoring.</p></section>
   <% if can_write %>
@@ -87,6 +87,14 @@
         <div><%= f.label :note, 'Source context / explanation', class: 'block text-sm' %><%= f.text_area :note, maxlength: 4000, class: 'input' %></div>
         <div><%= label_tag :file, 'Original document · CSV, PDF, PNG, JPEG, JSON or TXT · up to 8 MiB', class: 'block text-sm' %><%= file_field_tag :file, required: true, accept: '.csv,.pdf,.png,.jpg,.jpeg,.json,.txt', class: 'input' %></div>
         <%= f.submit 'Retain document', class: 'btn-primary' %>
+      <% end %>
+    </section>
+    <section class="card card-pad space-y-3"><h2 class="font-semibold">Withdraw a mistaken control</h2>
+      <p class="text-sm">Use this for an accidental duplicate or a control that should not be compared. Its original file, totals and your explanation remain in the vault.</p>
+      <%= form_with url: withdraw_daily_reconciliations_path, class: 'space-y-3' do |f| %>
+        <div><%= f.label :evidence_id, 'Current register control evidence ID', class: 'block text-sm' %><%= f.number_field :evidence_id, min: 1, required: true, class: 'input' %></div>
+        <div><%= f.label :reason, 'Reason for withdrawal', class: 'block text-sm' %><%= f.text_area :reason, required: true, maxlength: 4000, class: 'input' %></div>
+        <%= f.submit 'Withdraw control and keep evidence', class: 'btn-ghost' %>
       <% end %>
     </section>
     <section class="card card-pad space-y-4"><h2 class="font-semibold">Archive and review this report</h2>
