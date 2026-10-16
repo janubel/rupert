@@ -20,6 +20,8 @@ Daily reconciliation CSV and daily/weekly/monthly source summaries remain availa
 
 The [October 16 deployment receipt](financial-close-deployment-2026-10-16.md) records the live release, employee-source preservation, exact CI, browser rehearsals and encrypted recovery verification.
 
+The [close-blocker UX deployment receipt](financial-close-blockers-deployment-2026-10-16.md) records actionable missing reports and overdue follow-ups, cash shortfall navigation, changed-result safeguards and the subsequent verified release.
+
 The close workspace puts actionable blockers first: missing source/currency/location controls, comparison/coverage/import checks, open follow-ups and missing/stale/Needs attention review. Current review is explicitly required for any package; other unresolved checks block a complete close while allowing an explained exception package. Missing-report actions preserve exact scope and reuse an existing open request. The first overdue follow-ups expose next steps and progress actions. Reference stages remain in an expandable workflow section.
 
 Cash shortfall results show the amount below the entered reserve (or zero), with a direct jump to opening cash or the affected week. Editing any assumption marks the displayed calculation as stale and disables CSV/retention until recalculation. Server-side amount, scope and baseline checks remain authoritative.
