@@ -59,6 +59,22 @@ class InventoryLocationViewTest < ActionDispatch::IntegrationTest
     assert_equal 1, CSV.parse(response.body).size
   end
 
+  test 'name package review shows both source names and evidence without a quantity delta' do
+    @variant.product.update!(title: 'Chamomile Tea Indoor')
+    @variant.update!(title: '30 Count', sku: nil)
+    CtraxStockSnapshot.first.update!(records_json: [{ 'id' => 'tea-name-review', 'name' => 'Tea Chamomile 30ct', 'quantity' => '2', 'manage_stock' => true }])
+    get stock_comparison_path, params: { filter: 'candidates', q: 'Tea Chamomile' }
+    assert_response :success
+    assert_includes response.body, 'Name/package candidate'
+    assert_includes response.body, 'Tea Chamomile 30ct'
+    assert_includes response.body, 'Matching evidence'
+    assert_includes response.body, 'quantity difference withheld'
+    get stock_comparison_path(format: :csv), params: { filter: 'candidates', q: 'Tea Chamomile' }
+    csv = CSV.parse(response.body)
+    assert_equal 2, csv.size
+    assert_nil csv.last[11]
+  end
+
   test 'workspace selection and permissions are enforced for both formats' do
     other = Tenant.create!(name: 'Private other', subdomain: 'private-stock-view')
     location = Location.unscoped.create!(tenant_id: other.id, source: 'ctrax', externalId: 'private/1', name: 'PRIVATE-STOCK')
