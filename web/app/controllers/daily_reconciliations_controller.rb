@@ -7,16 +7,17 @@ class DailyReconciliationsController < AuthenticatedController
   rescue_from ReconciliationEvidence::Error, with: :invalid_evidence
 
   def index
-    @report = DailyMoneyReconciliation.new(day: selected_day)
-    @locations = Location.select(:id, :name, :source).order(:name)
-    @drive_connection = RetentionDriveConnection.first
-    @drive_copies = @drive_connection ? RetentionDriveItem.where(generation: @drive_connection.generation, item_key: @report.documents.map { |doc| "document:#{doc.id}" }).index_by(&:item_key) : {}
-    @drive_verified = @drive_connection ? RetentionDriveItem.where(generation: @drive_connection.generation, status: 'verified').where.not('item_key LIKE ?', 'folder:%').count : 0
-    @archives = ReconciliationDocument.covering(@report.day).where(kind: 'daily_archive').select(:id, :created_at, :metadata_json).order(id: :desc).limit(20)
-    @reviews = DailyReconciliationReview.where(day: @report.day).includes(:reviewed_by).order(id: :desc).limit(20)
-    # Existing native exports remain available without copying or reinterpreting them.
-    @swipesimple_exports = SwipesimpleExport.select(:id, :kind, :exported_at).order(id: :desc).limit(20)
-    @authorize_exports = AuthorizeNetPortalExport.select(:id, :kind, :exported_at).order(id: :desc).limit(20)
+    if params[:correct].present?
+      authorize(:module, :reports_write?)
+      @correction = ReconciliationDocument.find(params[:correct])
+      unless @correction.kind == 'register_control' && !@correction.metadata['withdrawn'] && !ReconciliationDocument.exists?(supersedes_id: @correction.id)
+        raise ReconciliationEvidence::Error, 'This control already has a correction or withdrawal. Choose its current version.'
+      end
+      @evidence_values = @correction.metadata.slice('currency', 'location_id').merge('source' => @correction.source,
+        'kind' => @correction.kind, 'period_from' => @correction.period_from.iso8601, 'period_to' => @correction.period_to.iso8601,
+        'supersedes_id' => @correction.id)
+    end
+    load_page(@correction ? @correction.period_from.iso8601 : selected_day)
     respond_to do |format|
       format.html
       format.csv { send_data(@report.csv, type: 'text/csv', filename: "daily-reconciliation-#{@report.day}.csv") }
@@ -24,13 +25,15 @@ class DailyReconciliationsController < AuthenticatedController
   end
 
   def create
+    @evidence_values = params.fetch(:evidence, ActionController::Parameters.new).permit(:source, :kind, :period_from, :period_to, :currency, :location_id, :note, :supersedes_id, *ReconciliationEvidence::AMOUNTS).to_h
     file = params[:file]
     raise ReconciliationEvidence::Error, 'Attach a document no larger than 8 MiB.' unless file.is_a?(ActionDispatch::Http::UploadedFile) && file.size <= ReconciliationEvidence::MAX_BYTES
-    values = params.require(:evidence).permit(:source, :kind, :period_from, :period_to, :currency, :location_id, :note, :supersedes_id, *ReconciliationEvidence::AMOUNTS).to_h
+    values = @evidence_values
     if values['source'] == 'rupert' || %w[daily_archive period_archive].include?(values['kind'])
       raise ReconciliationEvidence::Error, 'Use the report archive action to retain generated Rupert reports.'
     end
-    metadata = values.slice('currency', 'location_id', 'note').transform_values(&:strip)
+    context = values['supersedes_id'].present? ? ReconciliationDocument.find(values['supersedes_id']).metadata.slice('merchant', 'api_origin', 'report_kind') : {}
+    metadata = context.merge(values.slice('currency', 'location_id', 'note').transform_values(&:strip))
     raise ReconciliationEvidence::Error, 'Notes must be no longer than 4000 characters.' if metadata['note'].to_s.length > 4000
     ReconciliationEvidence::AMOUNTS.each { |key| metadata[key] = ReconciliationEvidence.cents(values[key]) }
     doc = ReconciliationEvidence.retain!(bytes: file.read(ReconciliationEvidence::MAX_BYTES + 1), filename: file.original_filename,
@@ -60,7 +63,9 @@ class DailyReconciliationsController < AuthenticatedController
   end
 
   def withdraw
+    @withdraw_values = params.permit(:evidence_id, :reason).to_h
     previous = ReconciliationDocument.find(params[:evidence_id])
+    @return_day = previous.period_from.iso8601
     reason = params[:reason].to_s.strip
     unless previous.kind == 'register_control' && !previous.metadata['withdrawn'] && reason.length.between?(1, 4000)
       raise ReconciliationEvidence::Error, 'Choose a register control and explain why it should be withdrawn.'
@@ -72,6 +77,7 @@ class DailyReconciliationsController < AuthenticatedController
   end
 
   def review
+    @review_values = params.permit(:status, :notes).to_h
     report = DailyMoneyReconciliation.new(day: selected_day)
     raise ReconciliationEvidence::Error, 'The report changed. Reload it before recording your review.' unless params[:report_digest] == report.digest
     DailyReconciliationReview.create!(day: report.day, report_digest: report.digest, status: params[:status], notes: params[:notes], reviewed_by: Current.user)
@@ -81,6 +87,21 @@ class DailyReconciliationsController < AuthenticatedController
   end
 
   private
+
+  def load_page(day)
+    @report = DailyMoneyReconciliation.new(day: day)
+    @locations = Location.select(:id, :name, :source).order(:name).to_a
+    @locations_by_id = @locations.index_by(&:id)
+    @successors = ReconciliationDocument.where(supersedes_id: @report.documents.map(&:id)).select(:id, :supersedes_id, :metadata_json, :period_from).index_by(&:supersedes_id)
+    @drive_connection = RetentionDriveConnection.first
+    @drive_copies = @drive_connection ? RetentionDriveItem.where(generation: @drive_connection.generation, item_key: @report.documents.map { |doc| "document:#{doc.id}" }).index_by(&:item_key) : {}
+    @drive_verified = @drive_connection ? RetentionDriveItem.where(generation: @drive_connection.generation, status: 'verified').where.not('item_key LIKE ?', 'folder:%').count : 0
+    @archives = ReconciliationDocument.covering(@report.day).where(kind: 'daily_archive').select(:id, :created_at, :metadata_json).order(id: :desc).limit(20)
+    @reviews = DailyReconciliationReview.where(day: @report.day).includes(:reviewed_by).order(id: :desc).limit(20)
+    # Existing native exports remain available without copying or reinterpreting them.
+    @swipesimple_exports = SwipesimpleExport.select(:id, :kind, :exported_at).order(id: :desc).limit(20)
+    @authorize_exports = AuthorizeNetPortalExport.select(:id, :kind, :exported_at).order(id: :desc).limit(20)
+  end
 
   def selected_day
     params[:day].presence || Date.current.iso8601
@@ -92,6 +113,27 @@ class DailyReconciliationsController < AuthenticatedController
   end
 
   def invalid_evidence(error)
-    redirect_to daily_reconciliations_path, alert: error.message
+    day = safe_return_day
+    if %w[create review withdraw].include?(action_name)
+      @form_error = error.message
+      @error_section = { 'create' => 'upload-document', 'review' => 'review-history', 'withdraw' => 'withdraw-control' }.fetch(action_name)
+      load_page(day)
+      render :index, status: :unprocessable_entity
+    else
+      redirect_to daily_reconciliations_path(day: day), alert: error.message
+    end
+  end
+
+  def safe_return_day
+    candidates = [@correction&.period_from&.iso8601, @return_day, @evidence_values&.dig('period_from'), params[:day], Date.current.iso8601]
+    candidates.each do |value|
+      next if value.blank?
+
+      begin
+        return ReconciliationEvidence.dates(value, value).first.iso8601
+      rescue ReconciliationEvidence::Error
+        next
+      end
+    end
   end
 end
