@@ -16,11 +16,15 @@ module People
           SearchSql.contains_any(%w[first_name last_name employee_number email]), *Array.new(4, "%#{@q}%")
         )
       end
-      @employees = @employees.where(source: params[:source]) if Directories::Sync::PAIRS.key?(params[:source])
+      if Directories::Sync::PAIRS.key?(params[:source])
+        @employees = @employees.where(source: params[:source]).or(
+          @employees.where(id: EmployeeSourceIdentity.where(source: params[:source]).select(:employee_id))
+        )
+      end
       @employees = @employees.where(user_id: nil) if params[:login] == 'missing'
       @employees = @employees.where.not(user_id: nil) if params[:login] == 'linked'
       @missing_logins = People::Employee.active.where(user_id: nil).count
-      @pagy, @employees = pagy(@employees.includes(:department, :position, :user).order(:id), items: 50)
+      @pagy, @employees = pagy(@employees.includes(:department, :position, :user, :source_identities).order(:id), items: 50)
       @by_department = People::Employee.active.group(:department_id).count
       @pending_leave = People::LeaveRequest.pending.count if Current.user.can?('leave.read')
       @awaiting_timesheets = People::Timesheet.awaiting_review.count if Current.user.can?('timesheets.read')
@@ -40,6 +44,21 @@ module People
       else
         redirect_to(people_employees_path, alert: 'Configure an authorized directory connection first.')
       end
+    end
+
+    def consolidation
+      authorize(:module, :hr_write?)
+      raise Pundit::NotAuthorizedError unless Current.user.can_manage_accounts?
+      @employees = People::Employee.includes(:source_identities, :user).ordered
+    end
+
+    def consolidate
+      authorize(:module, :hr_write?)
+      raise Pundit::NotAuthorizedError unless Current.user.can_manage_accounts?
+      employee = EmployeeConsolidation.call(primary_id: params[:primary_id], duplicate_ids: params[:duplicate_ids], reason: params[:reason])
+      redirect_to people_employee_path(employee), notice: 'Profiles consolidated. Source identities and HR history were retained; old setup links and app sessions were revoked.'
+    rescue EmployeeConsolidation::Error, ActiveRecord::RecordInvalid => error
+      redirect_to consolidation_people_employees_path, alert: error.message
     end
 
     def show
@@ -88,9 +107,13 @@ module People
           alert: 'Terminate the employee instead of deleting the record.')
       end
 
-      @employee.destroy
+      unless @employee.destroy
+        return redirect_to people_employee_path(@employee), alert: @employee.errors.full_messages.to_sentence
+      end
       ActivityLogger.log('employee_record_removed', subject: @employee)
       redirect_to(people_employees_path, notice: 'Employee record removed.')
+    rescue ActiveRecord::DeleteRestrictionError
+      redirect_to people_employee_path(@employee), alert: 'Retain employees with linked source identities and their history.'
     end
 
     # POST /people/employees/:id/transition?event=place_on_leave|return_to_work|terminate|rehire
@@ -113,7 +136,12 @@ module People
     private
 
     def set_employee
-      @employee = People::Employee.find_by!(tenant_id: Current.tenant_id, id: params[:id])
+      record = People::Employee.unscoped.find_by!(tenant_id: Current.tenant_id, id: params[:id])
+      if record.merged_into_id
+        redirect_to people_employee_path(record.merged_into_id), status: :see_other
+      else
+        @employee = record
+      end
     end
 
     def set_org_data

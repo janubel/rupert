@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_045000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -730,6 +730,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
     t.index ["token_digest"], name: "index_employee_app_sessions_on_token_digest", unique: true
   end
 
+  create_table "employee_source_identities", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "employee_id", null: false
+    t.string "source", null: false
+    t.string "external_id", null: false
+    t.string "first_name"
+    t.string "last_name"
+    t.string "email"
+    t.string "phone"
+    t.boolean "source_active"
+    t.datetime "source_synced_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["employee_id"], name: "index_employee_source_identities_on_employee_id"
+    t.index ["tenant_id", "source", "external_id"], name: "idx_employee_native_identity", unique: true
+  end
+
   create_table "employees", force: :cascade do |t|
     t.text "address"
     t.datetime "created_at", null: false
@@ -756,6 +773,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
     t.date "termination_date"
     t.datetime "updated_at", null: false
     t.bigint "user_id"
+    t.bigint "merged_into_id"
+    t.datetime "merged_at"
+    t.text "merge_snapshot"
+    t.index ["merged_into_id"], name: "index_employees_on_merged_into_id"
     t.index ["tenant_id", "department_id"], name: "index_employees_on_tenant_id_and_department_id"
     t.index ["tenant_id", "employee_number"], name: "index_employees_on_tenant_id_and_employee_number", unique: true
     t.index ["tenant_id", "position_id"], name: "index_employees_on_tenant_id_and_position_id"
@@ -2158,6 +2179,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
   add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
   add_foreign_key "directory_sync_states", "tenants"
   add_foreign_key "departments", "employees", column: "manager_id"
+  add_foreign_key "employee_source_identities", "employees"
+  add_foreign_key "employees", "employees", column: "merged_into_id"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
   add_foreign_key "ctrax_days", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_days", "tenants"
