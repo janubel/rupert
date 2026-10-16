@@ -14,11 +14,11 @@ class EmployeeDirectoryPaginationTest < ActionDispatch::IntegrationTest
     get people_employees_path, params: { source: 'square', login: 'missing' }
     assert_response :success
     assert_select 'tbody tr', count: 50
-    first = css_select('tbody a').map { |a| a['href'] }
+    first = css_select('tbody tr td:first-child a').map { |a| a['href'] }
     get people_employees_path, params: { source: 'square', login: 'missing', page: 2 }
     assert_response :success
     assert_select 'tbody tr', count: 2
-    second = css_select('tbody a').map { |a| a['href'] }
+    second = css_select('tbody tr td:first-child a').map { |a| a['href'] }
     assert_empty first & second
     assert_equal 52, (first + second).uniq.size
     refute_includes response.body, 'Foreign Employee'
