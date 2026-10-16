@@ -15,6 +15,7 @@
 # linked identity matching the account email grants only that account access.
 class OauthController < ApplicationController
   include DriveOauthCallback
+  include RetentionDriveOauthCallback
   class AccountInAnotherTenant < StandardError; end
 
   content_security_policy(prepend: true) { |policy| policy.frame_ancestors :none }
@@ -43,6 +44,7 @@ class OauthController < ApplicationController
     response.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive')
     # Backup consent reuses the registered callback, without signing in or provisioning users.
     return complete_drive_oauth if params[:state].to_s.start_with?('drive:')
+    return complete_retention_drive_oauth if params[:state].to_s.start_with?('retention:')
 
     info = nil
     tested_domain = params[:hd].presence

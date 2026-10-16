@@ -8,6 +8,9 @@ class DailyReconciliationsController < AuthenticatedController
 
   def index
     @report = DailyMoneyReconciliation.new(day: selected_day)
+    @drive_connection = RetentionDriveConnection.first
+    @drive_copies = @drive_connection ? RetentionDriveItem.where(generation: @drive_connection.generation, item_key: @report.documents.map { |doc| "document:#{doc.id}" }).index_by(&:item_key) : {}
+    @drive_verified = @drive_connection ? RetentionDriveItem.where(generation: @drive_connection.generation, status: 'verified').where.not('item_key LIKE ?', 'folder:%').count : 0
     @archives = ReconciliationDocument.covering(@report.day).where(kind: 'daily_archive').select(:id, :created_at, :metadata_json).order(id: :desc).limit(20)
     @reviews = DailyReconciliationReview.where(day: @report.day).includes(:reviewed_by).order(id: :desc).limit(20)
     # Existing native exports remain available without copying or reinterpreting them.

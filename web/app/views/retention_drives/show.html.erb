@@ -1,0 +1,37 @@
+<% content_for :title, 'Google Drive document retention' %>
+<% connected = @connection&.connected? && @connection.enabled %>
+<div class="mx-auto max-w-5xl space-y-6">
+  <%= link_to '← Daily reconciliation', daily_reconciliations_path, class: 'text-sm font-semibold text-olive hover:underline' %>
+  <header class="space-y-2"><p class="text-xs font-semibold uppercase tracking-widest text-mocha">Document retention</p><h1 class="page-title">Your originals, organized in Drive</h1><p class="text-mocha">Keep an automatic second copy of reports, invoices and every archived reconciliation.</p></header>
+  <section class="card card-pad space-y-4" aria-labelledby="drive-connection-title">
+    <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 id="drive-connection-title" class="font-display text-xl"><%= connected ? 'Automatic retention is connected' : 'Connect your retention folder' %></h2><p class="mt-1 text-sm text-mocha"><%= connected ? @connection.account_email : 'Choose the Google account that should own this workspace’s documents.' %></p></div><span class="badge"><%= connected ? 'Every 15 minutes' : 'Connection needed' %></span></div>
+    <% if @connection&.last_error.present? %><div role="status" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><strong>Needs attention</strong><p class="mt-1"><%= @connection.last_error %></p></div><% end %>
+    <p class="text-sm">Rupert copies original file bytes without converting them. Each copy is downloaded and checked before it is marked Copied. Corrections and earlier report versions keep their own files.</p>
+    <div class="flex flex-wrap gap-3">
+      <% if connected %>
+        <% if @root&.drive_url %><%= link_to 'Open retention folder ↗', @root.drive_url, target: '_blank', rel: 'noopener noreferrer', class: 'btn-primary' %><% end %>
+        <% if Current.user.can?('reports.write') %><%= button_to 'Sync now / retry', sync_retention_drive_path, class: 'btn-ghost' %><% end %>
+      <% end %>
+      <% if Current.user.can?('reports.write') && Current.user.can?('settings.write') %>
+        <% if RetentionDrive.configured? %><%= link_to connected ? 'Reconnect Google Drive' : 'Connect Google Drive', connect_retention_drive_path, class: connected ? 'btn-ghost' : 'btn-primary', data: { turbo: false } %><% else %><p class="text-sm">The platform administrator needs to configure the Google Drive app in Settings.</p><% end %>
+      <% elsif !connected %><p class="text-sm">Ask a workspace administrator to connect the destination account.</p><% end %>
+    </div>
+    <p class="text-xs text-mocha">Only this workspace’s retained files are copied. Whole-instance database backups have their own connection and schedule. Rupert does not share or delete retention files.</p>
+  </section>
+  <section class="grid gap-4 sm:grid-cols-3" aria-label="Copy progress">
+    <% [['Copied and verified', @counts.fetch('verified', 0)], ['Awaiting copy', [@total - @counts.fetch('verified', 0) - @counts.fetch('failed', 0), 0].max], ['Needs retry', @counts.fetch('failed', 0)]].each do |label, count| %>
+      <div class="card card-pad"><p class="text-sm text-mocha"><%= label %></p><p class="mt-2 font-display text-3xl tabular-nums"><%= count %></p></div>
+    <% end %>
+  </section>
+  <section class="card card-pad space-y-4"><h2 class="font-display text-xl">A folder structure you can browse</h2>
+    <div class="rounded-xl bg-cream p-4 font-mono text-sm leading-7 break-words">Rupert Document Retention — <%= Current.tenant.name %><br><span class="pl-4">Year / Month / Source / Originals</span><br><span class="pl-4">Year / Month / Source / Native Exports</span><br><span class="pl-4">Year / Month / Rupert / Report Archives</span><br><span class="pl-4">Year / Month / Ctrax / Source Snapshots</span></div>
+    <p class="text-sm text-mocha">Documents use the start of their covered period. Native SwipeSimple and Authorize.net exports use their received export date; that date does not establish their transaction coverage. C-Trax JSON files are normalized source snapshots. All earlier versions stay available.</p>
+    <p class="text-sm">Existing files backfill automatically in batches of 25. New retained invoices, reports, native exports and archives enter the same queue. Upload any invoice that Rupert has not received from a source on the daily reconciliation page.</p>
+    <% if @connection&.last_synced_at %><p class="text-xs text-mocha">Last sync pass: <%= @connection.last_synced_at.in_time_zone.strftime('%b %-d, %Y at %-I:%M %p %Z') %>. Refresh this page to see current progress.</p><% end %>
+  </section>
+  <section class="card overflow-x-auto"><table class="w-full text-sm"><caption class="p-4 text-left font-semibold">Recent copies and retries</caption><thead><tr><th class="th">Document</th><th class="th">Folder</th><th class="th">Status</th><th class="th">Drive copy</th></tr></thead><tbody>
+    <% @recent.each do |item| %><tr><td class="td break-words"><%= item.display_name.presence || item.item_key %></td><td class="td"><%= item.folder_path.presence || 'Waiting for sync' %></td><td class="td"><%= item.status == 'verified' ? 'Copied · checksum verified' : item.status.humanize %><% if item.last_error.present? %><p class="mt-1 text-xs"><%= item.last_error %></p><% end %></td><td class="td"><% if item.drive_url %><%= link_to 'Open original ↗', item.drive_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% else %>Pending verification<% end %></td></tr><% end %>
+    <% if @recent.empty? %><tr><td class="td" colspan="4"><%= connected ? 'The first copy pass is queued. Your originals are already safe in Rupert.' : 'Connect Google Drive to copy existing and future retained files automatically.' %></td></tr><% end %>
+  </tbody></table></section>
+  <details class="card card-pad"><summary class="cursor-pointer font-semibold">Connection and recovery options</summary><div class="mt-4 space-y-3 text-sm"><p>Disconnecting stops future uploads and removes Rupert’s saved retention token. Existing files remain in both places. Reconnecting the same Google account resumes its copy history.</p><p>If Google blocks access while the OAuth app is in Testing, its developer must approve your account as a test user or finish production setup. Testing refresh tokens for Drive expire after seven days. Existing originals remain safe in Rupert while consent is repaired.</p><% if connected && Current.user.can?('settings.write') && Current.user.can?('reports.write') %><%= button_to 'Disconnect automatic retention', disconnect_retention_drive_path, class: 'btn-ghost' %><% end %></div></details>
+</div>
