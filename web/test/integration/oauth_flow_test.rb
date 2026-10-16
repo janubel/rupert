@@ -36,7 +36,7 @@ class OauthFlowTest < ActionDispatch::IntegrationTest
     assert_equal sean.id, session[:user_id]
   end
 
-  test 'callback auto-provisions a reader for a new allowed-domain user' do
+  test 'callback auto-provisions an employee for a new allowed-domain user' do
     host! "#{@tenant.subdomain}.example.com"
     GoogleOauthService.stubs(:auth_url).returns('https://accounts.google.com/')
     get google_auth_path
@@ -47,10 +47,10 @@ class OauthFlowTest < ActionDispatch::IntegrationTest
                       .returns('email' => 'new.person@cybersecuritypilot.org', 'name' => 'New Person')
 
     get google_callback_path, params: { code: 'code123', state: state }
-    assert_redirected_to(root_path)
+    assert_redirected_to(employee_app_path)
     created = User.find_by(email: 'new.person@cybersecuritypilot.org')
     assert_not_nil created
-    assert_equal 'reader', created.role
+    assert_equal 'employee', created.role
     assert_equal session[:user_id], created.id
   end
 

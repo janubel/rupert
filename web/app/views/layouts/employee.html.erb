@@ -23,15 +23,16 @@
       <% end %>
     </div>
     <% if Current.user %>
-      <nav aria-label="My workspace" class="mx-auto flex max-w-3xl grid <%= @preview ? 'grid-cols-5' : 'grid-cols-4' %> gap-1 px-4 pb-3 sm:flex sm:px-6">
+      <nav aria-label="My workspace" class="mx-auto flex max-w-3xl flex-wrap gap-1 px-4 pb-3 sm:flex sm:px-6">
         <% links = @preview ? [['Today', employee_app_path(preview: 1)], ['Timesheets', employee_preview_timesheets_path], ['Pay', employee_preview_pay_path], ['Time off', employee_preview_time_off_path], ['Reports', employee_preview_reports_path]] : [['Today', employee_app_path], ['Timesheets', people_timesheets_path], ['Time off', employee_time_off_path], ['Reports', employee_reports_path]] %>
+        <% links.unshift(['POS', ctrax_pos_path]) if !@preview && Current.user.can_use_pos? %>
         <% links.each do |label, path| %>
           <%= link_to label, path, class: "rounded-full px-1 py-2 text-center text-xs whitespace-nowrap sm:px-3 sm:text-sm #{request.path == path.split('?').first ? 'bg-olive text-white' : 'text-mocha hover:bg-haze'}", aria: { current: request.path == path.split('?').first ? 'page' : nil } %>
         <% end %>
       </nav>
     <% end %>
   </header>
-  <main id="main" class="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-8" tabindex="-1">
+  <main id="main" class="mx-auto <%= %w[ctrax_pos point_of_sale].include?(controller_path) ? 'max-w-7xl' : 'max-w-3xl' %> space-y-6 px-4 py-6 sm:px-6 sm:py-8" tabindex="-1">
     <% if notice %><p role="status" class="flash flash-notice"><%= notice %></p><% end %>
     <% if alert %><p role="alert" class="flash flash-alert"><%= alert %></p><% end %>
     <% if @preview %><p role="status" class="rounded-xl border border-olive/30 bg-olive/10 p-3 text-sm"><strong>Employee preview</strong> · Example data only. Browse freely; saving, clocking and sending are disabled. <%= link_to 'Close preview', employee_app_path, class: 'underline' %></p><% end %>

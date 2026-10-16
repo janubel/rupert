@@ -44,7 +44,7 @@ class ApiAccessToken < ApplicationRecord
   end
 
   def usable?
-    revoked_at.nil? && (expires_at.nil? || expires_at > Time.current) && user&.active? &&
+    !user&.employee? && revoked_at.nil? && (expires_at.nil? || expires_at > Time.current) && user&.active? &&
       tenant&.status == 'active' && (user.super_admin? || user.tenant_id == tenant_id)
   end
 

@@ -6,12 +6,46 @@ class ApplicationController < ActionController::Base
   before_action :set_current_context
   before_action :load_last_sync
   before_action :require_login
+  before_action :restrict_employee_workspace
 
   private
 
   # A preview flag must never fall through to a real write, even for a linked admin.
   def reject_preview_mutation
     head :forbidden if params[:preview].to_s == '1' && !request.get? && !request.head?
+  end
+
+  # Deny unlisted modules even if a new controller omits its permission check.
+  def restrict_employee_workspace
+    return unless Current.user&.employee?
+    if controller_path == 'home' && action_name == 'index'
+      return redirect_to ctrax_pos_path
+    end
+
+    allowed = case controller_path
+    when 'sessions', 'oauth', 'employee_app', 'employee_workspace', 'employee_preview', 'customer_displays'
+      true
+    when 'employee_access'
+      %w[edit update].include?(action_name)
+    when 'people/timesheets'
+      %w[index show new create edit update destroy submit reopen import_shifts add_entry update_entry remove_entry].include?(action_name)
+    when 'time_clock'
+      %w[index clock_in clock_out request_correction].include?(action_name)
+    when 'point_of_sale', 'ctrax_pos'
+      %w[index quote].include?(action_name)
+    when 'pos_displays', 'pos_checkouts'
+      true
+    else
+      false
+    end
+    return if allowed
+
+    response.headers['Cache-Control'] = 'no-store'
+    if request.format.html?
+      redirect_to employee_app_path, alert: 'Your account can use POS and your own time records.'
+    else
+      head :forbidden
+    end
   end
 
   def workspace_layout

@@ -16,7 +16,7 @@ class PosDisplaySession < ApplicationRecord
   end
 
   def active?
-    closed_at.nil? && expires_at > Time.current && tenant&.status == 'active' && user&.active? && %w[sales.read sales.write inventory.read].all? { |permission| user.can?(permission) }
+    closed_at.nil? && expires_at > Time.current && tenant&.status == 'active' && user&.can_use_pos?
   end
 
   def draft

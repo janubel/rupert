@@ -2,7 +2,7 @@
 
 class PosCheckoutsController < AuthenticatedController
   before_action do
-    raise Pundit::NotAuthorizedError unless %w[sales.read sales.write inventory.read].all? { |p| Current.user.can?(p) }
+    raise Pundit::NotAuthorizedError unless Current.user.can_use_pos?
     response.headers['Cache-Control'] = 'no-store'
   end
   rescue_from Pos::Error, Ctrax::Client::Error do |error|

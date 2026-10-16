@@ -66,7 +66,7 @@ class PointOfSaleController < AuthenticatedController
 
   def authorize_preview
     return if Current.user.active? && Current.tenant&.status == 'active' &&
-      %w[sales.read sales.write inventory.read].all? { |permission| Current.user.can?(permission) }
+      Current.user.can_use_pos?
 
     respond_to do |format|
       format.json { render json: { error: "You don't have permission to use the POS preview." }, status: :forbidden }
