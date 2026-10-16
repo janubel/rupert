@@ -14,6 +14,7 @@
       </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+      <% if Current.user.can_manage_accounts? && @employee.square_timecards.exists? %><%= link_to 'Square hours', people_square_timesheets_path(employee_id: @employee.id), class: 'btn-ghost btn-sm' %><% end %>
       <%= link_to "Back to employees", people_employees_path, class: "btn-ghost btn-sm" %>
       <% if Current.user.can?("hr.write") %>
         <% if @employee.may_place_on_leave? %>

@@ -5,7 +5,7 @@
 class EmployeeConsolidation
   class Error < StandardError; end
   HISTORY = [People::Timesheet, People::LeaveBalance, People::LeaveRequest, People::PayRate, People::Payslip,
-    EmployeeAccessGrant, EmployeeAppSession, EmployeeWorkReport].freeze
+    EmployeeAccessGrant, EmployeeAppSession, EmployeeWorkReport, SquareTimecard].freeze
   HR_FIELDS = %w[user_id department_id position_id employee_number legal_name address date_of_birth hire_date
     termination_date emergency_contact_name emergency_contact_phone].freeze
 
@@ -54,7 +54,12 @@ class EmployeeConsolidation
     ids = records.map(&:id)
     sheets = People::Timesheet.where(employee_id: ids).to_a
     raise Error, 'Overlapping timesheets must be reviewed first.' if sheets.combination(2).any? { |a, b| a.employee_id != b.employee_id && a.period_start <= b.period_end && b.period_start <= a.period_end }
+    imported = SquareTimecard.counted.where('payable_seconds > 0').where(employee_id: ids).to_a
+    raise Error, 'Overlapping Square timecards must be reviewed first.' if imported.combination(2).any? { |a, b| a.employee_id != b.employee_id && a.started_at < b.ended_at && b.started_at < a.ended_at }
+    entries = People::TimesheetEntry.joins(:timesheet).where(timesheets: { employee_id: ids }, work_type: %w[regular overtime]).includes(:timesheet).to_a
+    raise Error, 'Square history and local timesheet dates must be reviewed first.' if imported.any? { |card| entries.any? { |entry| entry.timesheet.employee_id != card.employee_id && entry.worked_on.in_time_zone < card.ended_at && (entry.worked_on + 1).in_time_zone > card.started_at } }
     shifts = ClockShift.where(employee_id: ids).to_a
+    raise Error, 'Square history and clock shifts overlap; review them first.' if imported.any? { |card| shifts.any? { |shift| shift.employee_id != card.employee_id && shift.started_at < card.ended_at && (!shift.ended_at || shift.ended_at > card.started_at) } }
     raise Error, 'Overlapping shifts must be reviewed first.' if shifts.combination(2).any? { |a, b| a.employee_id != b.employee_id && (!a.ended_at || b.started_at < a.ended_at) && (!b.ended_at || a.started_at < b.ended_at) }
     raise Error, 'Pay rates on multiple profiles must be reviewed first.' if People::PayRate.where(employee_id: ids).distinct.count(:employee_id) > 1
     [[People::LeaveBalance, %i[leave_type year]], [People::Payslip, [:pay_run_id]]].each do |model, keys|
