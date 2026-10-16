@@ -13,6 +13,9 @@ class EmployeeWorkSummary
 
     @employee, @from, @to = employee, from, to
     @entries = employee.timesheet_entries.where(worked_on: from..to).includes(:timesheet).order(:worked_on, :id).to_a
+    imported = SquareTimecardDay.joins(:square_timecard).where(square_timecards: { employee_id: employee.id, tenant_id: Current.tenant_id })
+      .merge(SquareTimecard.counted).where(worked_on: from..to).includes(:square_timecard).to_a
+    @entries = (@entries + imported).sort_by { |entry| [entry.worked_on, entry.id] }
     @shifts = ClockShift.where(employee_id: employee.id, user_id: employee.user_id)
       .where('started_at < ? AND (ended_at IS NULL OR ended_at > ?)', (to + 1).in_time_zone, from.in_time_zone).order(:started_at).to_a
     @requests = employee.leave_requests.where('starts_on <= ? AND ends_on >= ?', to, from).order(:starts_on, :id).to_a
@@ -42,6 +45,8 @@ class EmployeeWorkSummary
   end
 
   def estimated_cents(entry)
+    return entry.estimated_cents if entry.is_a?(SquareTimecardDay)
+
     rate = rate_for(entry.worked_on)
     return unless rate&.pay_type == 'hourly' && rate.hourly_rate_cents.positive?
 

@@ -28,6 +28,7 @@ class ClockShift < ApplicationRecord
     raise ActiveRecord::RecordNotFound unless Current.tenant_id.present?
 
     transaction do
+      Tenant.where(id: Current.tenant_id).update_all('updated_at = updated_at')
       locked = People::Employee.where(id: employee_key).update_all('updated_at = updated_at')
       Tenant.where(id: Current.tenant_id).update_all('updated_at = updated_at') if locked.zero?
       yield
@@ -61,6 +62,9 @@ class ClockShift < ApplicationRecord
     scope = scope.where('ended_at IS NULL OR ended_at > ?', started_at)
     scope = scope.where('started_at < ?', ended_at) if ended_at
     errors.add(:base, 'This interval overlaps another shift for this worker') if scope.exists?
+    if employee_id && SquareTimecard.overlapping(employee_id, started_at, ended_at).exists?
+      errors.add(:base, 'This interval overlaps imported Square hours; request a correction for review')
+    end
   end
 
   def linked_worker

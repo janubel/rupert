@@ -44,7 +44,7 @@
       <% end %>
     </div>
     <% if (rate = @summary.rate_for(Date.current)) %><p class="text-sm text-mocha">Pay cycle: <%= rate.pay_frequency.humanize %> · Your manager confirms payment dates.</p><% end %>
-    <p class="text-xs text-mocha"><%= @summary.gross_cents.nil? ? 'An hourly pay estimate needs a pay rate for every recorded day. Salary pay appears in your finalized payslips.' : 'Before deductions, based on your timesheet entries. Submitted hours still need review.' %></p>
+    <p class="text-xs text-mocha"><%= @summary.gross_cents.nil? ? 'An hourly pay estimate needs a pay rate for every recorded day. Salary pay appears in your finalized payslips.' : 'Before deductions, based on recorded hours. Rupert timesheets still need review; Square history does not confirm payment.' %></p>
     <% unless @preview %>
       <div class="flex flex-wrap items-center gap-3"><%= button_to @timesheet ? 'Open this week’s timesheet' : 'Start this week’s timesheet', employee_week_path, class: 'btn-primary', data: { turbo: false } %><%= link_to 'All my timesheets', people_timesheets_path, class: 'text-sm text-olive underline' %></div>
       <% if @summary.clock_hours.positive? %><p class="text-sm text-mocha"><%= number_with_precision(@summary.clock_hours, precision: 2) %>h clocked this week. Import finished shifts into your draft timesheet to include them.</p><% end %>
