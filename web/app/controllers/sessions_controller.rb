@@ -35,6 +35,7 @@ class SessionsController < ApplicationController
     if user&.active? && user.tenant&.status == 'active' && user.authenticate(params[:password])
       reset_session # prevent session fixation
       session[:user_id] = user.id
+      session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(user.password_digest) if user.employee?
       AccessLogger.record(
         source: 'password',
         status: 'success',
@@ -42,7 +43,7 @@ class SessionsController < ApplicationController
         user: user,
         domain: user.email.to_s.split('@').last
       )
-      redirect_to(root_path, notice: 'Signed in')
+      redirect_to(user.employee? ? people_timesheets_path : root_path, notice: 'Signed in')
     else
       AccessLogger.record(
         source: 'password',

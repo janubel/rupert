@@ -11,24 +11,32 @@ module People
 
     # Rebuilds the payslips for a draft pay run. Returns the payslips.
     def self.generate!(pay_run)
-      pay_run.payslips.destroy_all
+      raise ActiveRecord::RecordNotFound unless pay_run.tenant_id == Current.tenant_id
 
-      approved_hours(pay_run).each do |employee_id, (hours, overtime)|
-        employee = People::Employee.find(employee_id)
-        rate = employee.current_pay_rate
-        next if rate.nil?
+      pay_run.class.transaction do
+        Tenant.where(id: Current.tenant_id).update_all('updated_at = updated_at')
+        pay_run.reload
+        raise ArgumentError, 'Only draft pay runs can be regenerated' unless pay_run.draft?
 
-        pay_run.payslips.create!(
-          employee: employee,
-          pay_rate: rate,
-          hours: hours,
-          gross_cents: gross_for(employee, hours, overtime, pay_run),
-          deductions_cents: 0,
-          net_cents: 0
-        )
+        pay_run.payslips.destroy_all
+
+        approved_hours(pay_run).each do |employee_id, (hours, overtime)|
+          employee = People::Employee.find(employee_id)
+          rate = employee.current_pay_rate
+          next if rate.nil?
+
+          pay_run.payslips.create!(
+            employee: employee,
+            pay_rate: rate,
+            hours: hours,
+            gross_cents: gross_for(employee, hours, overtime, pay_run),
+            deductions_cents: 0,
+            net_cents: 0
+          )
+        end
+        apply_default_deductions(pay_run)
+        pay_run.payslips
       end
-      apply_default_deductions(pay_run)
-      pay_run.payslips
     end
 
     # Applies the default tax estimate to every payslip that has none.
@@ -63,6 +71,7 @@ module People
       rows = People::Timesheet.approved
                               .where('period_start <= ? AND period_end >= ?', pay_run.period_end, pay_run.period_start)
                               .joins(:entries)
+                              .where(timesheet_entries: { worked_on: pay_run.period_start..pay_run.period_end, tenant_id: Current.tenant_id })
                               .group('timesheets.employee_id', 'timesheet_entries.work_type')
                               .sum('timesheet_entries.hours')
 

@@ -26,3 +26,5 @@ Rails.application.config.filter_parameters += [/\Aswipesimple_export\z/i, /\Afil
 Rails.application.config.filter_parameters += %i[report_file merchant_number account_reference]
 
 Rails.application.config.filter_parameters += %i[gateway_id exported_at records_json payload invoice_number order_reference evidence_note]
+
+Rails.application.config.filter_parameters += %i[timesheet timesheet_entry clock_correction]

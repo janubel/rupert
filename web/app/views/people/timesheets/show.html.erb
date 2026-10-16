@@ -4,24 +4,31 @@
     <div>
       <h1 class="page-title"><%= @timesheet.period_label %></h1>
       <p class="mt-1 text-sm text-mocha">
-        <%= link_to @timesheet.employee.name, people_employee_path(@timesheet.employee), class: "text-olive hover:underline" %>
+        <%= @timesheet.employee.name %>
         <span class="text-taupe">·</span>
         <span class="<%= @timesheet.approved? ? "pill-fern" : @timesheet.submitted? ? "pill-olive" : @timesheet.rejected? ? "pill-rose" : "pill-taupe" %>"><%= @timesheet.status %></span>
         <% if @timesheet.reviewer %><span class="text-taupe">· reviewed by <%= @timesheet.reviewer.display_name %></span><% end %>
       </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <% if Current.user.can?("timesheets.write") %>
-        <% if @timesheet.draft? %>
-          <%= button_to "Submit for review", submit_people_timesheet_path(@timesheet), method: :post, class: "btn-primary btn-sm", data: { confirm: "Submit this timesheet?" } %>
-          <%= link_to "Edit", edit_people_timesheet_path(@timesheet), class: "btn-ghost btn-sm" %>
-          <%= button_to "Delete", people_timesheet_path(@timesheet), method: :delete, class: "btn-ghost btn-sm", data: { confirm: "Delete this draft?" } %>
-        <% elsif @timesheet.submitted? %>
-          <%= button_to "Approve", approve_people_timesheet_path(@timesheet), method: :post, class: "btn-primary btn-sm" %>
-          <%= button_to "Reject", reject_people_timesheet_path(@timesheet), method: :post, class: "btn-ghost btn-sm", data: { confirm: "Reject this timesheet?" } %>
-        <% elsif @timesheet.approved? || @timesheet.rejected? %>
-          <%= button_to "Reopen", reopen_people_timesheet_path(@timesheet), method: :post, class: "btn-ghost btn-sm" %>
+      <%= link_to 'Back to timesheets', people_timesheets_path, class: 'btn-ghost btn-sm' %>
+      <%= link_to 'Download CSV', people_timesheet_path(@timesheet, format: :csv), class: 'btn-ghost btn-sm' %>
+      <% if policy(@timesheet).update? && @timesheet.draft? %>
+        <%= button_to 'Submit for review', submit_people_timesheet_path(@timesheet), class: 'btn-primary btn-sm' %>
+        <%= button_to 'Import clock shifts', import_shifts_people_timesheet_path(@timesheet), class: 'btn-ghost btn-sm' %>
+        <%= link_to 'Edit period / notes', edit_people_timesheet_path(@timesheet), class: 'btn-ghost btn-sm' %>
+        <%= button_to 'Delete draft', people_timesheet_path(@timesheet), method: :delete, class: 'btn-ghost btn-sm', data: { turbo_confirm: 'Delete this draft and its entries?' } %>
+      <% end %>
+      <% if policy(@timesheet).approve? && @timesheet.submitted? %>
+        <%= form_with url: approve_people_timesheet_path(@timesheet), class: 'flex flex-wrap gap-2' do |f| %>
+          <%= f.label :review_note, 'Review comment', class: 'sr-only' %>
+          <%= f.text_field :review_note, maxlength: 4000, placeholder: 'Review comment', class: 'input' %>
+          <%= f.submit 'Approve', class: 'btn-primary btn-sm' %>
+          <%= f.submit 'Return for correction', formaction: reject_people_timesheet_path(@timesheet), class: 'btn-ghost btn-sm' %>
         <% end %>
+      <% end %>
+      <% if policy(@timesheet).reopen? && (@timesheet.approved? || @timesheet.rejected?) %>
+        <%= button_to 'Reopen for editing', reopen_people_timesheet_path(@timesheet), class: 'btn-ghost btn-sm' unless @timesheet.payroll_locked? %>
       <% end %>
     </div>
   </section>
@@ -46,7 +53,7 @@
       <h2 class="font-display text-lg text-ink">Entries</h2>
     </div>
 
-    <% if @timesheet.draft? && Current.user.can?("timesheets.write") %>
+    <% if @timesheet.draft? && policy(@timesheet).update? %>
       <div class="border-b border-fog bg-haze/40 px-5 py-3">
         <p class="text-xs text-taupe">Add a day's hours to this draft.</p>
         <%= form_with model: [@timesheet, @entry], url: add_entry_people_timesheet_path(@timesheet), method: :post, class: "mt-2 flex flex-wrap items-end gap-2" do |f| %>
@@ -56,12 +63,13 @@
           </div>
           <div>
             <%= f.label :hours, "Hours", class: "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-mocha" %>
-            <%= f.number_field :hours, step: 0.25, min: 0.25, max: 24, value: 8, class: "input w-24" %>
+            <%= f.number_field :hours, step: 0.25, min: 0.25, max: 24, value: @entry.hours.positive? ? @entry.hours : 8, class: "input w-24" %>
           </div>
           <div>
             <%= f.label :work_type, "Type", class: "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-mocha" %>
             <%= f.select :work_type, People::TimesheetEntry::WORK_TYPES.map { |t| [t.titleize, t] }, {}, class: "select w-auto" %>
           </div>
+          <div><%= f.label :notes, "Entry notes", class: "block text-xs" %><%= f.text_field :notes, maxlength: 1000, class: "input" %></div>
           <%= f.submit "Add entry", class: "btn-primary btn-sm" %>
         <% end %>
         <% if @entry.errors.any? %>
@@ -77,7 +85,7 @@
             <th scope="col" class="th">Date</th>
             <th scope="col" class="th">Type</th>
             <th scope="col" class="th text-right">Hours</th>
-            <% if @timesheet.draft? && Current.user.can?("timesheets.write") %><th scope="col" class="th"></th><% end %>
+            <% if @timesheet.draft? && policy(@timesheet).update? %><th scope="col" class="th"></th><% end %>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
@@ -87,10 +95,20 @@
           <% @timesheet.entries.ordered.each do |entry| %>
             <tr class="hover:bg-cream">
               <td class="td text-mocha"><%= l(entry.worked_on, format: :long) %></td>
-              <td class="td"><span class="pill-taupe capitalize"><%= entry.work_type %></span></td>
+              <td class="td"><span class="pill-taupe capitalize"><%= entry.work_type %></span><p class="text-xs"><%= entry.notes %></p></td>
               <td class="td text-right font-medium text-ink"><%= number_with_precision(entry.hours, precision: 2) %></td>
-              <% if @timesheet.draft? && Current.user.can?("timesheets.write") %>
-                <td class="td text-right"><%= button_to "Remove", remove_entry_people_timesheet_path(@timesheet, entry_id: entry.id), method: :post, class: "text-xs font-semibold text-rose hover:underline" %></td>
+              <% if @timesheet.draft? && policy(@timesheet).update? %>
+                <td class="td text-right">
+                  <details><summary class="text-xs text-olive">Edit entry</summary>
+                    <%= form_with url: update_entry_people_timesheet_path(@timesheet, entry_id: entry.id), method: :patch, scope: :timesheet_entry, class: 'space-y-2' do |f| %>
+                      <%= f.label :worked_on, 'Date', for: "date-#{entry.id}" %><%= f.date_field :worked_on, id: "date-#{entry.id}", value: entry.worked_on, required: true, class: 'input' %>
+                      <%= f.label :hours, 'Hours', for: "hours-#{entry.id}" %><%= f.number_field :hours, id: "hours-#{entry.id}", value: entry.hours, min: 0.01, max: 24, step: 0.01, required: true, class: 'input' %>
+                      <%= f.label :work_type, 'Type', for: "type-#{entry.id}" %><%= f.select :work_type, People::TimesheetEntry::WORK_TYPES, { selected: entry.work_type }, id: "type-#{entry.id}", class: 'select' %>
+                      <%= f.label :notes, 'Notes', for: "notes-#{entry.id}" %><%= f.text_field :notes, id: "notes-#{entry.id}", value: entry.notes, maxlength: 1000, class: 'input' %>
+                      <%= f.submit 'Save entry', class: 'btn-primary btn-sm' %>
+                    <% end %>
+                  </details>
+                  <%= button_to "Remove", remove_entry_people_timesheet_path(@timesheet, entry_id: entry.id), method: :post, class: "text-xs font-semibold text-rose hover:underline" %></td>
               <% end %>
             </tr>
           <% end %>
@@ -105,4 +123,13 @@
       <p class="mt-1 whitespace-pre-wrap text-sm text-mocha"><%= @timesheet.notes %></p>
     </section>
   <% end %>
+  <% if @timesheet.review_note.present? %>
+    <section class="card card-pad"><h2 class="font-display text-lg">Review comment</h2><p class="whitespace-pre-wrap"><%= @timesheet.review_note %></p></section>
+  <% end %>
+  <section class="card card-pad space-y-2">
+    <h2 class="font-display text-lg">History</h2>
+    <% @timesheet.events.includes(:user).order(:id).each do |event| %>
+      <p class="text-sm"><%= l(event.created_at, format: :short) %> · <%= event.action.humanize %> · <%= event.user&.display_name || 'Former account' %></p>
+    <% end %>
+  </section>
 </div>

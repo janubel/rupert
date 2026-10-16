@@ -22,6 +22,10 @@ class ApplicationController < ActionController::Base
   end
 
   def require_login
+    if Current.user&.employee? && session[:employee_password_fingerprint] != Digest::SHA256.hexdigest(Current.user.password_digest)
+      reset_session
+      Current.user = nil
+    end
     if Current.user && !Current.user.active?
       session.delete(:user_id)
       Current.user = nil

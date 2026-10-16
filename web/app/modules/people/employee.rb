@@ -28,6 +28,7 @@ module People
     validates :employee_number, presence: true, uniqueness: { scope: :tenant_id }, allow_nil: true
     validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
     validates :employment_type, inclusion: { in: EMPLOYMENT_TYPES }
+    validates :user_id, uniqueness: { scope: :tenant_id }, allow_nil: true, if: :user_id_changed?
     validate :termination_after_hire
     validate :associations_belong_to_workspace
 

@@ -118,6 +118,7 @@ class OauthController < ApplicationController
 
     reset_session # prevent session fixation
     session[:user_id] = user.id
+    session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(user.password_digest) if user.employee?
     AccessLogger.record(source: 'google', status: 'success', request: request, user: user, email: email,
       domain: tested_domain)
     redirect_to(root_path, notice: 'Signed in with Google.')
