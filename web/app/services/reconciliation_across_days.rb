@@ -30,6 +30,12 @@ class ReconciliationAcrossDays
     days.count { |row| row[:counts].values.any?(&:positive?) || row[:follow_ups].positive? }
   end
 
+  def untracked_reports
+    @untracked_reports ||= days.reverse.flat_map do |entry|
+      entry[:missing].reject { |row| row[:request_id] }.map { |row| row.merge(day: entry[:day]) }
+    end
+  end
+
   private
 
   def active
