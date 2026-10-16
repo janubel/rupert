@@ -16,9 +16,9 @@ class ExpandedDirectorySyncTest < ActiveSupport::TestCase
   end
 
   test 'Square consumes all native customer pages and retains CRM annotations on refresh' do
-    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true' })
+    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true', sort_field: 'CREATED_AT', sort_order: 'ASC' })
       .to_return(square_response(customers: [{ id: 'square-1', given_name: 'Native' }], count: 2, cursor: 'NEXT'))
-    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true', cursor: 'NEXT' })
+    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true', sort_field: 'CREATED_AT', sort_order: 'ASC', cursor: 'NEXT' })
       .to_return(square_response(customers: [{ id: 'square-2', given_name: 'Second' }], count: 2))
     assert_equal 2, Directories::Sync.call(provider: 'square', kind: 'customers')
     customer = Core::Customer.find_by!(source: 'square', external_id: 'square-1')
@@ -29,14 +29,14 @@ class ExpandedDirectorySyncTest < ActiveSupport::TestCase
   end
 
   test 'Square wrong counts repeated cursors and late access failures cannot publish partial results' do
-    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true' })
+    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true', sort_field: 'CREATED_AT', sort_order: 'ASC' })
       .to_return(square_response(customers: [{ id: 'square-1' }], count: 2, cursor: 'NEXT'))
-    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true', cursor: 'NEXT' })
+    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true', sort_field: 'CREATED_AT', sort_order: 'ASC', cursor: 'NEXT' })
       .to_return(square_response(customers: [{ id: 'square-2' }], count: 2, cursor: 'NEXT'))
     assert_no_difference 'Core::Customer.count' do
       assert_raises(Directories::Sync::Error) { Directories::Sync.call(provider: 'square', kind: 'customers') }
     end
-    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true', cursor: 'NEXT' }).to_return(status: 403, body: 'PRIVATE')
+    stub_request(:get, 'https://connect.squareup.com/v2/customers').with(query: { limit: '100', count: 'true', sort_field: 'CREATED_AT', sort_order: 'ASC', cursor: 'NEXT' }).to_return(status: 403, body: 'PRIVATE')
     assert_no_difference 'Core::Customer.count' do
       assert_raises(Directories::Sync::Error) { Directories::Sync.call(provider: 'square', kind: 'customers') }
     end

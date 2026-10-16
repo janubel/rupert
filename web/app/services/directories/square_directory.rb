@@ -12,7 +12,7 @@ module Directories
         raise Sync::Error if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
 
         if kind == 'customers'
-          query = { limit: 100, count: true }
+          query = { limit: 100, count: true, sort_field: 'CREATED_AT', sort_order: 'ASC' }
           query[:cursor] = cursor if cursor
           document = SquareClient.request("/customers?#{query.to_query}")
           count = document.fetch('count')
