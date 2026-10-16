@@ -79,7 +79,7 @@ export default class extends Controller {
   }
   async configurePayment(checkout) {
     this.paymentReady = false
-    const response = await fetch(this.configUrlValue, { cache: "no-store" })
+    const response = await fetch(this.configUrlValue, { cache: "no-store", signal: this.abort.signal })
     if (!response.ok) throw new Error("The payment form is unavailable. Ask the cashier to check setup.")
     const config = await response.json()
     this.demoPayment = config.demo
@@ -88,13 +88,17 @@ export default class extends Controller {
       this.payTarget.setAttribute("data-apiLoginID", config.login_id)
       this.payTarget.setAttribute("data-clientKey", config.client_key)
       this.payTarget.setAttribute("data-responseHandler", "rupertPosPaymentResponse")
-      this.payTarget.setAttribute("data-acceptUIFormBtnTxt", `Pay ${this.money(config.total_cents)}`)
-      this.payTarget.setAttribute("data-acceptUIFormHeaderTxt", `Payment · ${this.money(config.total_cents)}`)
+      this.payTarget.setAttribute("data-acceptUIFormBtnTxt", "Use this card")
+      this.payTarget.setAttribute("data-acceptUIFormHeaderTxt", "Secure card details")
       this.payTarget.setAttribute("data-billingAddressOptions", '{"show":true,"required":true}')
       if (this.loadedScript && this.loadedScript !== config.script_url) throw new Error("Gateway environment changed. Reload the customer screen.")
       if (!this.loadedScript) {
         await new Promise((resolve, reject) => {
-          const script = document.createElement("script"); script.src = config.script_url; script.onload = resolve; script.onerror = () => reject(new Error("Secure payment form could not load.")); document.head.append(script)
+          const script = document.createElement("script"); script.src = config.script_url
+          const timer = setTimeout(() => { script.remove(); reject(new Error("Secure payment form could not load.")) }, 8000)
+          script.onload = () => { clearTimeout(timer); resolve() }
+          script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error("Secure payment form could not load.")) }
+          document.head.append(script)
         })
         this.loadedScript = config.script_url
       }
