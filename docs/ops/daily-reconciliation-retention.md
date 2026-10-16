@@ -27,6 +27,14 @@ Use **Record progress** to change status, assignment or due date, link matching 
 
 Requests and history are tenant scoped and are not automatically pruned. Reading requires `reports.read`; creating/updating additionally requires `reports.write`. History snapshots are append-only through the application, and current-record changes and history writes commit together. They are included in the consistent database/configuration backup; keep Rails encryption keys for restoration. Follow-up status changes are separate from the financial report fingerprint and do not modify canonical transactions or source-control amounts.
 
+## Across-day review
+
+**Money → Reconciliation across days** at `/reconciliation_follow_ups/overview` shows seven Eastern business dates ending yesterday by default. Select an ending date, move a week or include today. Counts show missing register-control scopes, differences/unavailable/conflicting comparisons and open requests covering each day. Open the daily report for currency-separated amounts. Missing-control prompts reuse an existing open request with the exact source/day/currency/location when one exists. Closed requests do not remove a control gap. These are live local calculations; no provider fetch or automatic report request occurs.
+
+Monthly requests appear on each covered date but remain one request. The next-follow-ups section includes the earliest due open/waiting items across all dates, including outside the visible week. No-control/no-request dates do not establish that all reports arrived, and this overview does not certify review completeness. Explicitly track other expected invoices and statements.
+
+Queue shortcuts show all-date counts for overdue, due today, unassigned and report requests without a linked original. Combine purpose, source, owner, evidence, status and covered-date filters for the list. Cards expose urgency, owner, latest progress note and whether evidence is linked; a retained file can exist without being linked to its request. The disconnected Drive page offers links back to this local workflow while consent remains pending.
+
 ## Automatic retention
 
 `DailyReconciliationArchiveJob` runs at **07:15 America/New_York daily**. It revisits each of the previous seven calendar/business-report dates to capture late imports. Each changed report becomes a new encrypted CSV archive; unchanged snapshots replay to the existing archive. Days older than seven dates can be archived manually. The job reads local data and performs no provider operations or messaging.

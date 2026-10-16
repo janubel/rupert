@@ -9,14 +9,19 @@ class ReconciliationFollowUpsController < AuthenticatedController
   end
 
   def index
-    @status = %w[active open waiting closed overdue all].include?(params[:status]) ? params[:status] : 'active'
+    @status = %w[active open waiting closed overdue today all].include?(params[:status]) ? params[:status] : 'active'
     @source = ReconciliationDocument::SOURCES.excluding('rupert').include?(params[:source]) ? params[:source] : nil
     @owner_filter = %w[mine unassigned].include?(params[:owner]) ? params[:owner] : nil
+    @category = ReconciliationFollowUp::CATEGORIES.key?(params[:category]) ? params[:category] : nil
+    @evidence_filter = params[:evidence] == 'missing' ? 'missing' : nil
     scope = ReconciliationFollowUp.all
     scope = scope.where(source: @source) if @source
     scope = scope.where(owner_id: @owner_filter == 'mine' ? Current.user.id : nil) if @owner_filter
-    scope = scope.active if %w[active overdue].include?(@status)
+    scope = scope.where(category: @category) if @category
+    scope = scope.where(document_id: nil) if @evidence_filter
+    scope = scope.active if %w[active overdue today].include?(@status)
     scope = scope.where('due_on < ?', Date.current) if @status == 'overdue'
+    scope = scope.where(due_on: Date.current) if @status == 'today'
     scope = scope.where(status: @status) if ReconciliationFollowUp::STATUSES.key?(@status)
     if params[:day].present?
       @day = ReconciliationEvidence.dates(params[:day], params[:day]).first
@@ -24,9 +29,22 @@ class ReconciliationFollowUpsController < AuthenticatedController
     end
     @open_count = ReconciliationFollowUp.active.count
     @overdue_count = ReconciliationFollowUp.active.where('due_on < ?', Date.current).count
+    @today_count = ReconciliationFollowUp.active.where(due_on: Date.current).count
+    @unassigned_count = ReconciliationFollowUp.active.where(owner_id: nil).count
+    @missing_file_count = ReconciliationFollowUp.active.where(category: 'missing_report', document_id: nil).count
     @pagy, @follow_ups = pagy(scope.includes(:owner).order(Arel.sql("CASE WHEN status = 'closed' THEN 1 ELSE 0 END"), :due_on, :id), items: 25)
   rescue ReconciliationEvidence::Error
     redirect_to reconciliation_follow_ups_path, alert: 'Choose a valid business day.'
+  end
+
+  def overview
+    @overview = ReconciliationAcrossDays.new(ending_on: params[:ending_on].presence || Date.yesterday.iso8601)
+    @overdue_count = ReconciliationFollowUp.active.where('due_on < ?', Date.current).count
+    @today_count = ReconciliationFollowUp.active.where(due_on: Date.current).count
+    @next_follow_ups = ReconciliationFollowUp.active.includes(:owner).order(:due_on, :id).limit(4)
+    @locations_by_id = Location.select(:id, :name).index_by(&:id)
+  rescue ReconciliationEvidence::Error
+    redirect_to overview_reconciliation_follow_ups_path, alert: 'Choose a valid ending business day.'
   end
 
   def new

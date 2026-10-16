@@ -45,6 +45,15 @@ module ReconciliationHelper
     @entered_values&.key?(key.to_s) ? @entered_values[key.to_s] : record.public_send(key)
   end
 
+  def reconciliation_due_label(item)
+    return 'Closed by reviewer' if item.status == 'closed'
+    return "#{pluralize((Date.current - item.due_on).to_i, 'day')} overdue" if item.overdue?
+    return 'Due today' if item.due_on == Date.current
+    return 'Due tomorrow' if item.due_on == Date.tomorrow
+
+    'Due'
+  end
+
   def reconciliation_form_value(key, default = nil)
     @evidence_values&.key?(key.to_s) ? @evidence_values[key.to_s] : default
   end

@@ -7,7 +7,9 @@ Rails.application.routes.draw do
     post :disconnect
   end
 
-  resources :reconciliation_follow_ups, only: %i[index new create show update]
+  resources :reconciliation_follow_ups, only: %i[index new create show update] do
+    get :overview, on: :collection
+  end
   resources :reconciliation_documents, only: :index
 
   resources :daily_reconciliations, only: %i[index create] do

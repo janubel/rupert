@@ -14,6 +14,32 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
   end
   teardown { Current.reset }
 
+  test 'across day overview is read only and queue shortcuts combine purpose evidence and due date' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      item = ReconciliationFollowUp.create!(@values.merge(created_by: @user, due_on: Date.current))
+      ReconciliationFollowUp.create!(@values.merge(category: 'difference', title: 'Different investigation', due_on: Date.current, submission_key: SecureRandom.uuid))
+      assert_no_difference ['ReconciliationDocument.count', 'ReconciliationFollowUp.count', 'ReconciliationFollowUpEvent.count'] do
+        get overview_reconciliation_follow_ups_path(ending_on: '2026-10-15')
+        assert_response :success
+        assert_select 'article[aria-label^="Business date"]', count: 7
+        assert_includes response.body, 'This view does not certify a day as complete.'
+        assert_includes response.body, 'October statement needed'
+      end
+      get reconciliation_follow_ups_path(status: 'today', category: 'missing_report', evidence: 'missing', owner: 'mine', day: '2026-10-12')
+      assert_response :success
+      assert_includes response.body, 'October statement needed'
+      refute_includes response.body, 'Different investigation'
+      assert_includes response.body, 'Due today'
+      assert_includes response.body, 'Ask the bookkeeper for the original.'
+      doc = ReconciliationEvidence.retain!(bytes: 'statement', filename: 'statement.txt', source: 'bank', kind: 'bank_statement', from: '2026-10-01', to: '2026-10-31')
+      item.update!(document: doc, notes: 'Original linked; needs review.')
+      get reconciliation_follow_ups_path(category: 'missing_report', evidence: 'missing')
+      refute_includes response.body, 'October statement needed'
+      get overview_reconciliation_follow_ups_path(ending_on: 'invalid')
+      assert_redirected_to overview_reconciliation_follow_ups_path
+    end
+  end
+
   test 'report request replay is idempotent and retains encrypted progress history with stale update protection' do
     assert_difference ['ReconciliationFollowUp.count', 'ReconciliationFollowUpEvent.count'], 1 do
       post reconciliation_follow_ups_path, params: { follow_up: @values }
