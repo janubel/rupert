@@ -38,3 +38,5 @@ The archive CSV includes source-separated totals, coverage, freshness, controls/
 Apply `20261016040100_create_reconciliation_evidence` on the current SER8 release, preserving all existing integrations and encryption configuration. Rehearse on a consistent private database copy, verify unchanged existing-table counts and integrity, build assets, then promote code/schema and restart web/jobs through the established Incus workflow. Verify the authenticated page, an exact archive download and the recurring schedule. Rolling back code is additive-schema compatible; retain new evidence tables and do not restore an older database over subsequent business writes.
 
 The [October 15 SER8 deployment receipt](daily-reconciliation-deployment-2026-10-15.md) records validation, native-file retention, archive initialization and the encrypted backup/restore checks.
+
+The [October 16 document-library UX receipt](reconciliation-library-deployment-2026-10-16.md) records searchable retention, correction/error flows, combined validation and the pending Drive status.
