@@ -10,6 +10,7 @@ jobs:
       - run: python3 bin/check-doc-links
       - run: node web/test/javascript/nmi_fields_test.mjs
       - run: node web/test/javascript/reconciliation_follow_up_form_test.mjs
+      - run: node web/test/javascript/cash_forecast_form_test.mjs
   CI:
     name: CI (${{ matrix.adapter }})
     runs-on: ubuntu-latest

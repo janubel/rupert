@@ -217,6 +217,29 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_select 'a', text: /Track.*missing report/, count: 0
   end
 
+  test 'cash checklist wires only active required entries and preserves incomplete scenario inputs for readers' do
+    @user.update!(role: 'reporting')
+    get cash_forecast_path(day: @day)
+    assert_response :success
+    assert_select '[aria-label="Cash plan input checklist"]'
+    assert_select '#cash-plan-checklist button[type="button"][data-action="cash-forecast-form#jumpMissing"]', text: 'Review next missing entry'
+    assert_select '[data-cash-forecast-form-target~="entry"]:not([disabled])', count: 20
+    values = @forecast_values.deep_dup
+    values[:weeks]['1'][:payments] = ''
+    values[:weeks]['2'][:receipts] = '77.00'
+    assert_no_enqueued_jobs do
+      assert_no_difference ['ReconciliationDocument.count', 'ActionMailer::Base.deliveries.size'] do
+        post cash_forecast_path, params: { intent: 'preview', forecast: values }
+      end
+    end
+    assert_response :unprocessable_entity
+    assert_select '[role="alert"]', text: /Week 2 payments/
+    assert_select '[data-cash-forecast-form-target~="entry"]:not([disabled])', count: 12
+    assert_select '#forecast_weeks_2_receipts[value="77.00"][data-entry-label="Week 3 bank receipts"]'
+    assert_select '#forecast_weeks_4_receipts[disabled]'
+    assert_select 'button', text: 'Retain scenario version', count: 0
+  end
+
   test 'forecast keeps exact cents one currency explicit inputs and immutable retained scenarios' do
     baseline = DailyMoneyReconciliation.new(day: @day).digest
     assert_no_enqueued_jobs do
@@ -229,6 +252,8 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_select '[aria-label="Cash shortfall action"]', text: /CAD 9\.99 below your reserve/
     assert_select 'a[href="#cash-week-3"]', text: 'Review week 3 cash plan'
     assert_select '#forecast-results', text: /20\.01/
+    assert_select '#forecast-results [data-cash-forecast-form-target="changed"][hidden]', text: /previous inputs/
+    assert_select '#forecast-results a[href="#cash-plan-checklist"]', text: 'Review cash plan entries'
     assert_select '[aria-label="Forecast baseline close status"]', text: /Review not recorded/
     assert_select 'a[href=?]', overview_reconciliation_follow_ups_path(ending_on: @day, anchor: 'business-days'), text: 'Compare close dates'
     assert_select '[data-cash-forecast-form-baseline-date-value=?]', @day
