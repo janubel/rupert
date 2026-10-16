@@ -1,24 +1,27 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["items", "subtotal", "choices", "custom", "confirm", "status"]
-  static values = { stateUrl: String, tipUrl: String }
-  connect() { this.revision = null; this.poll(); this.timer = setInterval(() => this.poll(), 1500) }
-  disconnect() { clearInterval(this.timer); this.abort?.abort() }
+  static targets = ["items", "subtotal", "tax", "choices", "custom", "confirm", "status", "payment", "pay", "receipt"]
+  static values = { stateUrl: String, tipUrl: String, configUrl: String, payUrl: String }
+  connect() {
+    this.revision = null
+    window.rupertPosPaymentResponse = response => this.cardResponse(response)
+    this.poll(); this.timer = setInterval(() => this.poll(), 1500)
+  }
+  disconnect() { clearInterval(this.timer); clearTimeout(this.timeout); this.abort?.abort(); delete window.rupertPosPaymentResponse }
   money(cents) { return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(cents / 100) }
   async poll() {
     if (this.polling) return
     this.polling = true
     try {
-      this.abort = new AbortController()
-      this.timeout = setTimeout(() => this.abort.abort(), 8000)
+      this.abort = new AbortController(); this.timeout = setTimeout(() => this.abort.abort(), 8000)
       const response = await fetch(this.stateUrlValue, { cache: "no-store", signal: this.abort.signal })
       if (!response.ok) throw new Error(response.status === 410 ? "This customer screen has closed. Ask the cashier to pair it again." : "Connection interrupted. Please wait before confirming.")
       const state = await response.json()
       if (!state.active) throw new Error("This customer screen has closed.")
       this.connected = true
       if (this.revision !== state.cart_revision) {
-        this.revision = state.cart_revision
+        this.revision = state.cart_revision; this.configuredCheckout = null
         this.element.querySelectorAll('input[name="choice"]').forEach(input => input.checked = false)
         this.customTarget.hidden = true
         this.customTarget.querySelector('input').required = false
@@ -31,14 +34,32 @@ export default class extends Controller {
         })
       }
       this.subtotalTarget.textContent = this.money(state.subtotal_cents)
-      this.hasCart = state.lines.length > 0
-      this.confirmed = state.confirmed
-      this.choicesTarget.disabled = state.confirmed || !this.hasCart
-      this.confirmTarget.disabled = state.confirmed || !this.hasCart
+      this.taxTarget.textContent = state.tax_verified ? this.money(state.tax_cents) : "Needs source verification"
+      this.hasCart = state.lines.length > 0; this.confirmed = state.confirmed
+      const frozen = !!state.checkout && state.checkout.status !== "cancelled"
+      this.choicesTarget.disabled = state.confirmed || !this.hasCart || frozen || this.submitting
+      this.confirmTarget.disabled = state.confirmed || !this.hasCart || frozen || this.submitting
       this.confirmTarget.textContent = state.confirmed ? "Choice confirmed" : "Confirm my choice"
-      this.statusTarget.textContent = state.confirmed ? `Thank you. Your tip choice of ${this.money(state.tip_cents)} is confirmed.` : this.hasCart ? "Your tip choice stays private until you confirm." : "Waiting for the cashier’s cart…"
+      this.paymentTarget.hidden = true; this.receiptTarget.hidden = true
+      if (state.checkout?.status === "paid") {
+        this.receiptTarget.hidden = false
+        this.receiptTarget.textContent = `${state.checkout.demo ? "Demo receipt · " : "Receipt · "}${state.checkout.reference} · Paid ${this.money(state.checkout.total_cents)} · Tip ${this.money(state.checkout.tip_cents)}${state.checkout.tender === "cash" ? ` · Change ${this.money(state.checkout.change_cents)}` : ""}${state.checkout.inventory_pending ? " · Stock update pending" : ""}`
+        this.statusTarget.textContent = state.checkout.demo ? "Demonstration complete. No money was collected." : "Thank you. Your payment is complete."
+      } else if (["processing", "unknown"].includes(state.checkout?.status)) {
+        this.statusTarget.textContent = "Verifying your payment. Please do not submit another payment."
+      } else if (state.checkout?.tender === "card" && ["ready", "declined"].includes(state.checkout.status)) {
+        this.paymentTarget.hidden = false
+        this.payTarget.textContent = `${state.checkout.demo ? "Simulate payment" : "Pay"} ${this.money(state.checkout.total_cents)}`
+        this.payTarget.disabled = true
+        this.statusTarget.textContent = state.checkout.status === "declined" ? "Payment declined. No paid receipt was issued. You can try a new card." : "Review the total, then pay securely."
+        if (this.configuredCheckout !== state.checkout.reference) await this.configurePayment(state.checkout)
+        this.payTarget.disabled = this.submitting || !this.paymentReady
+      } else {
+        this.statusTarget.textContent = state.confirmed ? `Your tip choice of ${this.money(state.tip_cents)} is confirmed. Waiting for the cashier.` : this.hasCart ? "Your tip choice stays private until you confirm." : "Waiting for the cashier’s cart…"
+      }
     } catch (error) {
-      this.connected = false; this.confirmTarget.disabled = true; this.statusTarget.textContent = error.name === "AbortError" ? "Connection interrupted. Please wait before confirming." : error.message
+      this.connected = false; this.confirmTarget.disabled = true; this.payTarget.disabled = true
+      this.statusTarget.textContent = error.name === "AbortError" ? "Connection interrupted. Please wait before confirming." : error.message
     } finally { clearTimeout(this.timeout); this.polling = false }
   }
   choiceChanged(event) {
@@ -52,10 +73,52 @@ export default class extends Controller {
     this.confirmTarget.disabled = true
     const form = new FormData(event.target)
     try {
-      const response = await fetch(this.tipUrlValue, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify({ cart_revision: this.revision, choice: form.get("choice"), amount: form.get("amount") }) })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || "Confirmation could not be saved.")
+      await this.post(this.tipUrlValue, { cart_revision: this.revision, choice: form.get("choice"), amount: form.get("amount") })
       this.poll()
     } catch (error) { this.statusTarget.textContent = error.message; this.confirmTarget.disabled = !this.connected }
+  }
+  async configurePayment(checkout) {
+    this.paymentReady = false
+    const response = await fetch(this.configUrlValue, { cache: "no-store" })
+    if (!response.ok) throw new Error("The payment form is unavailable. Ask the cashier to check setup.")
+    const config = await response.json()
+    this.demoPayment = config.demo
+    this.payTarget.classList.toggle("AcceptUI", !config.demo)
+    if (!config.demo) {
+      this.payTarget.setAttribute("data-apiLoginID", config.login_id)
+      this.payTarget.setAttribute("data-clientKey", config.client_key)
+      this.payTarget.setAttribute("data-responseHandler", "rupertPosPaymentResponse")
+      this.payTarget.setAttribute("data-acceptUIFormBtnTxt", `Pay ${this.money(config.total_cents)}`)
+      this.payTarget.setAttribute("data-acceptUIFormHeaderTxt", `Payment · ${this.money(config.total_cents)}`)
+      this.payTarget.setAttribute("data-billingAddressOptions", '{"show":true,"required":true}')
+      if (this.loadedScript && this.loadedScript !== config.script_url) throw new Error("Gateway environment changed. Reload the customer screen.")
+      if (!this.loadedScript) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script"); script.src = config.script_url; script.onload = resolve; script.onerror = () => reject(new Error("Secure payment form could not load.")); document.head.append(script)
+        })
+        this.loadedScript = config.script_url
+      }
+    }
+    this.configuredCheckout = checkout.reference; this.paymentReady = true
+  }
+  async demoPay() { if (this.demoPayment && !this.submitting) await this.submitPayment({}) }
+  async cardResponse(response) {
+    if (response?.messages?.resultCode !== "Ok" || response?.opaqueData?.dataDescriptor !== "COMMON.ACCEPT.INAPP.PAYMENT") {
+      this.statusTarget.textContent = "Card details could not be tokenized. No payment was submitted."; return
+    }
+    await this.submitPayment({ payment_nonce: response.opaqueData.dataValue })
+  }
+  async submitPayment(body) {
+    if (this.submitting || !this.connected) return
+    this.submitting = true; this.payTarget.disabled = true; this.statusTarget.textContent = "Verifying payment. Please wait…"
+    try { await this.post(this.payUrlValue, body) }
+    catch (error) { this.statusTarget.textContent = error.message }
+    finally { this.submitting = false; this.poll() }
+  }
+  async post(url, body) {
+    const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify(body) })
+    const result = await response.json()
+    if (!response.ok) throw new Error(result.error || "The request could not be verified. Check payment status before trying again.")
+    return result
   }
 }

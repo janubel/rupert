@@ -12,6 +12,34 @@ class CustomerDisplaysController < ApplicationController
     render json: @display.public_state
   end
 
+  def payment_config
+    checkout = @display.current_checkout
+    return head(:conflict) unless checkout && checkout.tender == 'card' && %w[ready declined].include?(checkout.status)
+    return render(json: { demo: true, total_cents: checkout.total_cents }) if checkout.demo?
+
+    setting = PosSetting.find_by!(location: checkout.location)
+    return head(:conflict) unless setting.card_enabled && setting.verified_at && setting.gateway_id == checkout.gateway_id && setting.environment == checkout.environment
+    render json: { demo: false, login_id: setting.credentials.fetch('api_login_id'), client_key: setting.public_client_key,
+      script_url: setting.environment == 'sandbox' ? 'https://jstest.authorize.net/v3/AcceptUI.js' : 'https://js.authorize.net/v3/AcceptUI.js', total_cents: checkout.total_cents }
+  end
+
+  def pay
+    checkout = @display.current_checkout
+    return head(:conflict) unless checkout && checkout.tender == 'card'
+    if checkout.demo?
+      checkout.with_lock do
+        raise Pos::Error, 'This demo checkout is no longer ready.' unless checkout.paid? || %w[ready declined].include?(checkout.status)
+        Pos::Checkout.finalize!(checkout) unless checkout.paid?
+      end
+    else
+      Pos::CardPayment.call(checkout, nonce: params[:payment_nonce])
+      PosInventoryJob.perform_later(checkout.id) if checkout.reload.paid?
+    end
+    render json: checkout.reload.receipt
+  rescue Pos::Error => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   def tip
     result = @display.choose_tip!(revision: params[:cart_revision], choice: params[:choice], amount: params[:amount])
     case result

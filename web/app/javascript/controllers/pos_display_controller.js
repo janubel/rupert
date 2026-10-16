@@ -31,8 +31,9 @@ export default class extends Controller {
       const state = await response.json()
       if (generation !== this.generation || this.suspended) return
       const current = this.revision == null || state.cart_revision === this.revision
-      this.statusTarget.textContent = !state.active ? "Customer screen closed. Pair a new screen." : !current ? "Cart changed in another window. Check this cart again." : state.confirmed ? "Customer confirmed their tip choice." : "Customer choosing privately…"
-      this.totalTarget.textContent = state.active && current && state.confirmed ? `Confirmed tip ${this.money(state.tip_cents)} · preview total before tax ${this.money(state.subtotal_cents + state.tip_cents)}` : ""
+      this.element.dispatchEvent(new CustomEvent("pos-display:state", { detail: { checkout: current ? state.checkout : null }, bubbles: true }))
+      this.statusTarget.textContent = !state.active ? "Customer screen closed. Pair a new screen." : !current ? "Cart changed in another window. Check this cart again." : state.checkout?.status === "paid" ? "Paid receipt created." : ["processing", "unknown"].includes(state.checkout?.status) ? "Payment is being verified. Do not collect another payment." : state.confirmed ? "Customer confirmed their tip choice." : "Customer choosing privately…"
+      this.totalTarget.textContent = state.active && current && state.confirmed ? `Confirmed tip ${this.money(state.tip_cents)} · total ${this.money(state.checkout?.total_cents ?? state.subtotal_cents + (state.tax_cents || 0) + state.tip_cents)}` : ""
     } catch (error) {
       if (generation === this.generation && !this.suspended) {
         this.statusTarget.textContent = "Customer screen connection interrupted. Confirmation cannot be verified."

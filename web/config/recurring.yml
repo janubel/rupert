@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 production:
+  pos_payment_reconciliation:
+    class: PosPaymentReconciliationJob
+    queue: default
+    schedule: '*/2 * * * *'
+  pos_inventory:
+    class: PosInventoryJob
+    queue: default
+    schedule: '* * * * *'
   source_directories:
     class: DirectorySyncJob
     queue: default

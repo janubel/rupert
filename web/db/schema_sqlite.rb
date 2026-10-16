@@ -1001,6 +1001,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.datetime "updated_at", null: false
     t.boolean "source_lines_complete", default: false, null: false
     t.string "source_financial_status"
+    t.integer "tip_cents", default: 0, null: false
     t.index ["location_id"], name: "index_orders_on_location_id"
     t.index ["tenant_id", "customer_id"], name: "index_orders_on_tenant_id_and_customer_id"
     t.index ["tenant_id", "occurred_at"], name: "index_orders_on_tenant_id_and_occurred_at"
@@ -1091,6 +1092,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["tenant_id", "pay_run_id"], name: "index_payslips_on_tenant_id_and_pay_run_id"
   end
 
+  create_table "pos_checkouts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.integer "user_id", null: false
+    t.integer "pos_display_session_id", null: false
+    t.integer "pos_session_id"
+    t.integer "cart_revision", null: false
+    t.string "reference", null: false
+    t.string "status", default: "ready", null: false
+    t.string "tender", null: false
+    t.boolean "demo", default: false, null: false
+    t.text "lines_json", null: false
+    t.integer "subtotal_cents", null: false
+    t.integer "tax_cents", null: false
+    t.integer "tip_cents", null: false
+    t.integer "total_cents", null: false
+    t.integer "cash_received_cents"
+    t.integer "change_cents"
+    t.integer "order_id"
+    t.datetime "paid_at"
+    t.string "gateway_id"
+    t.string "environment"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_pos_checkouts_on_order_id"
+    t.index ["pos_display_session_id"], name: "index_pos_checkouts_on_pos_display_session_id"
+    t.index ["pos_session_id"], name: "index_pos_checkouts_on_pos_session_id"
+    t.index ["reference"], name: "index_pos_checkouts_on_reference", unique: true
+    t.index ["tenant_id", "pos_display_session_id", "cart_revision"], name: "idx_pos_checkout_revision", unique: true
+    t.index ["user_id"], name: "index_pos_checkouts_on_user_id"
+  end
+
   create_table "pos_connections", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "provider", null: false
@@ -1141,6 +1175,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["user_id"], name: "index_pos_display_sessions_on_user_id"
   end
 
+  create_table "pos_payment_attempts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "pos_checkout_id", null: false
+    t.string "invoice", null: false
+    t.string "nonce_digest", null: false
+    t.string "status", default: "submitting", null: false
+    t.string "transaction_id"
+    t.datetime "submitted_at", null: false
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice"], name: "index_pos_payment_attempts_on_invoice", unique: true
+    t.index ["pos_checkout_id"], name: "index_pos_payment_attempts_on_pos_checkout_id"
+    t.index ["tenant_id", "nonce_digest"], name: "index_pos_payment_attempts_on_tenant_id_and_nonce_digest", unique: true
+  end
+
   create_table "pos_sessions", force: :cascade do |t|
     t.integer "card_sales_cents", default: 0
     t.integer "cash_sales_cents", default: 0
@@ -1161,6 +1211,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.integer "variance_cents"
     t.index ["tenant_id", "opened_at"], name: "index_pos_sessions_on_tenant_id_and_opened_at"
     t.index ["tenant_id", "status"], name: "index_pos_sessions_on_tenant_id_and_status"
+  end
+
+  create_table "pos_settings", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.boolean "cash_enabled", default: false, null: false
+    t.boolean "stock_writes_enabled", default: false, null: false
+    t.boolean "card_enabled", default: false, null: false
+    t.string "environment", default: "sandbox", null: false
+    t.string "gateway_id"
+    t.text "credentials_json", default: "{}", null: false
+    t.string "public_client_key"
+    t.datetime "verified_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "location_id"], name: "index_pos_settings_on_tenant_id_and_location_id", unique: true
+  end
+
+  create_table "pos_stock_allocations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.integer "pos_checkout_id", null: false
+    t.string "variant_id", null: false
+    t.integer "quantity", null: false
+    t.string "status", default: "held", null: false
+    t.string "source_adjustment_id"
+    t.datetime "submitted_at"
+    t.datetime "applied_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "source_quantity_before"
+    t.index ["pos_checkout_id", "variant_id"], name: "index_pos_stock_allocations_on_pos_checkout_id_and_variant_id", unique: true
+    t.index ["pos_checkout_id"], name: "index_pos_stock_allocations_on_pos_checkout_id"
+    t.index ["tenant_id", "location_id", "variant_id"], name: "idx_pos_stock_pool"
   end
 
   create_table "positions", force: :cascade do |t|
@@ -1743,11 +1828,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
   add_foreign_key "owner_checklists", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "owner_checklists", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "payments", "orders", on_delete: :cascade
+  add_foreign_key "pos_checkouts", "Location", column: "location_id"
+  add_foreign_key "pos_checkouts", "orders"
+  add_foreign_key "pos_checkouts", "pos_display_sessions"
+  add_foreign_key "pos_checkouts", "pos_sessions"
+  add_foreign_key "pos_checkouts", "tenants"
+  add_foreign_key "pos_checkouts", "users"
   add_foreign_key "pos_connections", "tenants"
   add_foreign_key "pos_connections", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "pos_display_sessions", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "pos_display_sessions", "tenants"
   add_foreign_key "pos_display_sessions", "users"
+  add_foreign_key "pos_payment_attempts", "pos_checkouts"
+  add_foreign_key "pos_payment_attempts", "tenants"
+  add_foreign_key "pos_settings", "Location", column: "location_id"
+  add_foreign_key "pos_settings", "tenants"
+  add_foreign_key "pos_stock_allocations", "Location", column: "location_id"
+  add_foreign_key "pos_stock_allocations", "pos_checkouts"
+  add_foreign_key "pos_stock_allocations", "tenants"
   add_foreign_key "refunds", "orders", on_delete: :cascade
   add_foreign_key "size_changes", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "size_family_members", "size_families", column: "family_id", on_delete: :cascade

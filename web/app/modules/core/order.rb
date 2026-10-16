@@ -84,7 +84,7 @@ module Core
     end
 
     def balance_due_cents
-      [gross_cents - total_paid_cents, 0].max
+      [gross_cents + tip_cents.to_i - total_paid_cents, 0].max
     end
 
     def refunded?
