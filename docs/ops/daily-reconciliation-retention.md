@@ -64,3 +64,5 @@ The [October 15 SER8 deployment receipt](daily-reconciliation-deployment-2026-10
 The [October 16 document-library UX receipt](reconciliation-library-deployment-2026-10-16.md) records searchable retention, correction/error flows, combined validation and the pending Drive status.
 
 The [October 16 attention and follow-up receipt](reconciliation-follow-ups-deployment-2026-10-16.md) records the deployed difference-first view and report-request queue. Apply the additional additive migration `20261017050000_create_reconciliation_follow_ups` for its requests and encrypted history, preserving both tables on code rollback.
+
+The [October 16 across-day UX receipt](reconciliation-across-days-deployment-2026-10-16.md) records the seven-date overview, request/evidence shortcuts and combined release validation.
