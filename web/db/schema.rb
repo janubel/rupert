@@ -1407,9 +1407,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_010000) do
   add_foreign_key "SkuLink", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "WarehouseTier", "tenants", column: "tenantId"
   add_foreign_key "api_access_tokens", "tenants", on_delete: :cascade
-  add_foreign_key "api_access_tokens", "users",  add_foreign_key "authorize_net_batches", "tenants"
+  add_foreign_key "api_access_tokens", "users", on_delete: :cascade
+  add_foreign_key "authorize_net_batches", "tenants"
   add_foreign_key "authorize_net_transactions", "tenants"
- on_delete: :cascade
   add_foreign_key "bulk_consumptions", "bulk_lots"
   add_foreign_key "bulk_consumptions", "bulk_movements"
   add_foreign_key "bulk_consumptions", "bulk_recipes"
