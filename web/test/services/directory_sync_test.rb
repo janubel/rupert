@@ -66,7 +66,7 @@ class DirectorySyncTest < ActiveSupport::TestCase
 
   test 'employee imports do not create logins pay rates or invent employment terms' do
     stub_request(:get, "#{@origin}/api/v1/users").with(query: { store_id: '7', page: '1', per_page: '100' })
-      .to_return(page([customer(9).except(:phone_number).merge(deleted_at: nil, is_superuser: true, password: 'PRIVATE')]))
+      .to_return(page([customer(9).except(:phone_number).merge(deleted_at: nil, is_superuser: false, password: 'PRIVATE')]))
     assert_no_difference ['User.count', 'People::PayRate.count'] do
       assert_equal 1, Directories::Sync.call(provider: 'ctrax', kind: 'employees')
     end
@@ -143,5 +143,11 @@ class DirectorySyncTest < ActiveSupport::TestCase
         assert_raises(Directories::Sync::Error) { Directories::Sync.call(provider: 'ctrax', kind: 'customers') }
       end
     end
+  end
+  test 'platform support superusers are excluded from the store employee roster' do
+    stub_request(:get, "#{@origin}/api/v1/users").with(query: { store_id: '7', page: '1', per_page: '100' })
+      .to_return(page([customer(1).merge(is_superuser: false), customer(2).merge(is_superuser: true)]))
+    assert_equal 1, Directories::Sync.call(provider: 'ctrax', kind: 'employees')
+    assert_equal ['fixture.api.cannatrax.net/1'], People::Employee.where(source: 'ctrax').pluck(:external_id)
   end
 end

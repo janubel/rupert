@@ -5,7 +5,7 @@ The Customers and Team → Employees pages show source status, the last successf
 ## Sources
 
 - C-Trax customers: `GET /api/v1/customers?page=N&per_page=100` after a fresh C-Trax user login.
-- C-Trax staff: `GET /api/v1/users?store_id=ID&page=N&per_page=100` for each accessible store. The native portal labels these employees. Matching native IDs across accessible stores are deduplicated only when their identity fields agree.
+- C-Trax staff: `GET /api/v1/users?store_id=ID&page=N&per_page=100` for each accessible store. The native portal labels these employees. Matching native IDs across accessible stores are deduplicated only when their identity fields agree. C-Trax platform/support accounts explicitly flagged `is_superuser: true` are excluded from the store employee roster.
 - Shopify customers: Admin GraphQL 2026-07 `customers(first:100, after:cursor, sortKey:ID)` using the existing `read_customers` access. This imports the full directory, including customers without an imported order. Fields follow the [official customers query](https://shopify.dev/docs/api/admin-graphql/2026-07/queries/customers).
 
 The C-Trax methods follow the observed Serv 2.0 portal contract, not a claimed supported partner API. Existing client TLS, origin, byte and time limits apply. Shopify rejects repeated cursors, duplicate/invalid native IDs and more than 200 pages; it has a three-minute read budget between requests. Failed or incomplete reads retain the previous directory and successful read count. The source does not offer a transactional remote snapshot; concurrent changes may require retrying.
