@@ -17,7 +17,9 @@ module People
         )
       end
       if Directories::Sync::PAIRS.key?(params[:source])
-        @employees = @employees.where(id: EmployeeSourceIdentity.where(source: params[:source]).select(:employee_id))
+        @employees = @employees.where(source: params[:source]).or(
+          @employees.where(id: EmployeeSourceIdentity.where(source: params[:source]).select(:employee_id))
+        )
       end
       @employees = @employees.where(user_id: nil) if params[:login] == 'missing'
       @employees = @employees.where.not(user_id: nil) if params[:login] == 'linked'
@@ -105,9 +107,13 @@ module People
           alert: 'Terminate the employee instead of deleting the record.')
       end
 
-      @employee.destroy
+      unless @employee.destroy
+        return redirect_to people_employee_path(@employee), alert: @employee.errors.full_messages.to_sentence
+      end
       ActivityLogger.log('employee_record_removed', subject: @employee)
       redirect_to(people_employees_path, notice: 'Employee record removed.')
+    rescue ActiveRecord::DeleteRestrictionError
+      redirect_to people_employee_path(@employee), alert: 'Retain employees with linked source identities and their history.'
     end
 
     # POST /people/employees/:id/transition?event=place_on_leave|return_to_work|terminate|rehire

@@ -13,7 +13,7 @@ module People
     # Original profiles remain as private audit records after consolidation.
     default_scope { where(merged_into_id: nil) }
     has_many :source_identities, class_name: 'EmployeeSourceIdentity', dependent: :restrict_with_exception
-    has_many :merged_profiles, -> { unscope(where: :merged_into_id) }, class_name: 'People::Employee', foreign_key: :merged_into_id, dependent: :restrict_with_exception
+    before_destroy :protect_consolidation_history, prepend: true
 
     EMPLOYMENT_TYPES = %w[unspecified full_time part_time contractor seasonal].freeze
 
@@ -85,6 +85,13 @@ module People
     end
 
     private
+
+    def protect_consolidation_history
+      return unless self.class.unscoped.where(tenant_id: tenant_id, merged_into_id: id).exists?
+
+      errors.add(:base, 'This employee has consolidated profiles; retain the record and its history.')
+      throw :abort
+    end
 
     def associations_belong_to_workspace
       { user: User, department: People::Department, position: People::Position }.each do |association, model|

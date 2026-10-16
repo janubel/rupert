@@ -53,6 +53,9 @@ class EmployeeConsolidationTest < ActiveSupport::TestCase
     refute EmployeeAccessGrant.lookup(secret).usable?
     refute session.reload.usable?
     assert ActivityLog.find_by!(action: 'employee_profiles_consolidated').details.include?(@duplicate.id.to_s)
+    @primary.terminate!
+    assert_not @primary.destroy
+    assert People::Employee.unscoped.exists?(@duplicate.id)
   end
 
   test 'directory refresh resolves merged source identities and keeps curated HR contact details' do
