@@ -27,6 +27,10 @@ and `User.permission_catalog`.
 | Orders | Detail page per order: invoice + packing slip, line items, payments, fulfillment tracking, refunds. |
 | Reconcile | SKU-level drift plan between Shopify and Square with per-SKU priority policy. |
 
+## Marketing
+
+The optional Marketing workspace provides group topic-search links, manual thread intake and relevance triage, existing group-code records with dated merchant evidence, versioned reply review, approved copy and manual publication/removal history. It uses separate `marketing.read`, `marketing.write`, and `marketing.review` permissions and starts disabled per workspace. See the [operator guide](ops/community-marketing.md). Automated source retrieval, code activation and influencer management are later phases.
+
 ## Operations
 
 | Module | Purpose |
