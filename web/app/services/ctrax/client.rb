@@ -24,7 +24,10 @@ module Ctrax
     }.freeze
 
     class Error < StandardError
+      attr_reader :reason
+
       def initialize(reason)
+        @reason = reason
         super(MESSAGES.fetch(reason))
       end
     end

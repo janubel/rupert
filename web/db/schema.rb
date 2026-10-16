@@ -1626,6 +1626,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["user_id"], name: "index_pos_display_sessions_on_user_id"
   end
 
+  create_table "sync_attempts", force: :cascade do |t|
+    t.string "tenant_id"
+    t.string "source", null: false
+    t.string "operation", null: false
+    t.string "status", null: false
+    t.string "error_category"
+    t.string "active_job_id"
+    t.datetime "queued_at", null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active_job_id"], name: "index_sync_attempts_on_active_job_id"
+    t.index ["tenant_id", "source", "operation", "queued_at"], name: "idx_sync_attempts_source_history"
+  end
+
   create_table "tenants", id: :string, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -1805,6 +1821,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
+  add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade

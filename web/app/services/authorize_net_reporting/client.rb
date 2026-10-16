@@ -8,7 +8,14 @@ require 'openssl'
 module AuthorizeNetReporting
   # Deliberately independent of AuthorizeNetClient, which can charge payments.
   class Client
-    class Error < StandardError; end
+    class Error < StandardError
+      attr_reader :reason
+
+      def initialize(message, reason: nil)
+        @reason = reason
+        super(message)
+      end
+    end
     ENDPOINTS = PaymentProviders::AuthorizeNetCheck::ENDPOINTS
     TOKEN_ENDPOINTS = {
       'sandbox' => 'https://accesstest.authorize.net/oauth/v1/token',
@@ -32,14 +39,14 @@ module AuthorizeNetReporting
       @environment = connection.environment
       @credentials = connection.credential_values
       @version = connection.lock_version
-      raise Error, 'Save approved reporting credentials and a valid environment first.' unless
+      raise Error.new('Save approved reporting credentials and a valid environment first.', reason: :invalid) unless
         ENDPOINTS.key?(@environment) && connection.vendor_approved && connection.credentials_saved?
     end
 
     def merchant
       doc = request('getMerchantDetailsRequest')
       id!(doc['gatewayId'])
-      raise Error, 'Gateway ID does not match the configured merchant reference.' unless doc['gatewayId'].to_s == @connection.account_reference
+      raise Error.new('Gateway ID does not match the configured merchant reference.', reason: :identity) unless doc['gatewayId'].to_s == @connection.account_reference
       doc
     end
 
@@ -61,27 +68,27 @@ module AuthorizeNetReporting
         rows = list!(doc['transactions'])
         if page == 1
           value = doc['totalNumInResultSet']
-          raise Error, 'Reporting returned an invalid result count.' unless value.to_s.match?(/\A[0-9]+\z/)
+          raise Error.new('Reporting returned an invalid result count.', reason: :response) unless value.to_s.match?(/\A[0-9]+\z/)
           total = value.to_i
         end
         rows.each do |row|
           id = id!(row['transId'])
-          raise Error, 'Reporting pages changed or repeated; retry reconciliation.' if seen.key?(id)
+          raise Error.new('Reporting pages changed or repeated; retry reconciliation.', reason: :response) if seen.key?(id)
           seen[id] = row
         end
         if rows.size < PAGE_SIZE
-          raise Error, 'Reporting pages were incomplete; retry reconciliation.' unless seen.size == total
+          raise Error.new('Reporting pages were incomplete; retry reconciliation.', reason: :response) unless seen.size == total
           return seen.values
         end
         return seen.values if seen.size == total
       end
-      raise Error, 'Reporting exceeded the page limit. No import was completed.'
+      raise Error.new('Reporting exceeded the page limit. No import was completed.', reason: :limit)
     end
 
     def detail(id)
       doc = request('getTransactionDetailsRequest', transId: id!(id))
       row = doc['transaction']
-      raise Error, 'Reporting returned mismatched transaction details.' unless row.is_a?(Hash) && row['transId'].to_s == id.to_s
+      raise Error.new('Reporting returned mismatched transaction details.', reason: :response) unless row.is_a?(Hash) && row['transId'].to_s == id.to_s
       row
     end
 
@@ -94,7 +101,7 @@ module AuthorizeNetReporting
       entries = messages.is_a?(Hash) ? messages['message'] : nil
       if messages.is_a?(Hash) && messages['resultCode'] == 'Error' && entries.is_a?(Array)
         code = entries.filter_map { |entry| entry['code'] if entry.is_a?(Hash) }.find { |value| ACCESS_ERRORS.key?(value) }
-        raise Error, ACCESS_ERRORS.fetch(code) if code
+        raise Error.new(ACCESS_ERRORS.fetch(code), reason: code == 'E00011' ? :forbidden : :unauthorized) if code
       end
       unless messages.is_a?(Hash) && messages['resultCode'] == 'Ok' && entries.is_a?(Array) && entries.any? &&
           entries.all? { |m| m.is_a?(Hash) && %w[I00001 I00004].include?(m['code']) }
@@ -106,13 +113,13 @@ module AuthorizeNetReporting
     private
 
     def id!(value)
-      raise Error, 'Reporting returned an invalid source ID.' unless value.to_s.match?(/\A[0-9]{1,30}\z/) && value.to_i.positive?
+      raise Error.new('Reporting returned an invalid source ID.', reason: :response) unless value.to_s.match?(/\A[0-9]{1,30}\z/) && value.to_i.positive?
       value.to_s
     end
 
     def list!(value)
       return [] if value.nil?
-      raise Error, 'Reporting returned an invalid list.' unless value.is_a?(Array) && value.all? { |v| v.is_a?(Hash) }
+      raise Error.new('Reporting returned an invalid list.', reason: :response) unless value.is_a?(Array) && value.all? { |v| v.is_a?(Hash) }
       value
     end
 
@@ -123,14 +130,14 @@ module AuthorizeNetReporting
           client_secret: @credentials.fetch('client_secret'), refresh_token: @credentials.fetch('refresh_token'))
         token = decode(exchange(TOKEN_ENDPOINTS.fetch(@environment), form, content_type: 'application/x-www-form-urlencoded'))
         # The token endpoint is authoritative for granted scopes; do not decode an unverified JWT.
-        raise Error, 'OAuth must grant exactly the read scope.' unless token['scope'].to_s.split == ['read']
-        raise Error, 'OAuth did not return a usable access token.' unless token['access_token'].is_a?(String) && token['access_token'].present?
+        raise Error.new('OAuth must grant exactly the read scope.', reason: :forbidden) unless token['scope'].to_s.split == ['read']
+        raise Error.new('OAuth did not return a usable access token.', reason: :unauthorized) unless token['access_token'].is_a?(String) && token['access_token'].present?
         # Authorize.net documents refresh-token renewal. Save rotation encrypted,
         # guarded against an operator changing/removing credentials in flight.
         if token['refresh_token'].present? && token['refresh_token'] != @credentials['refresh_token']
           fresh = PosConnection.find(@connection.id)
           fresh.with_lock do
-            raise Error, 'Reporting setup changed; retry with the current credentials.' unless fresh.lock_version == @version && fresh.credential_values == @credentials
+            raise Error.new('Reporting setup changed; retry with the current credentials.', reason: :changed) unless fresh.lock_version == @version && fresh.credential_values == @credentials
             @credentials = @credentials.merge('refresh_token' => token.fetch('refresh_token'))
             fresh.update!(credentials_json: JSON.generate(@credentials))
             @connection.reload
@@ -147,12 +154,12 @@ module AuthorizeNetReporting
 
     def decode(body)
       body = body.b.delete_prefix("\xEF\xBB\xBF".b).force_encoding(Encoding::UTF_8)
-      raise Error, 'Reporting returned an invalid response.' unless body.valid_encoding?
+      raise Error.new('Reporting returned an invalid response.', reason: :response) unless body.valid_encoding?
       doc = JSON.parse(body, max_nesting: 40, decimal_class: BigDecimal)
-      raise Error, 'Reporting returned an invalid response.' unless doc.is_a?(Hash)
+      raise Error.new('Reporting returned an invalid response.', reason: :response) unless doc.is_a?(Hash)
       doc
     rescue JSON::ParserError, EncodingError
-      raise Error, 'Reporting returned an invalid response.'
+      raise Error.new('Reporting returned an invalid response.', reason: :response)
     end
 
     def exchange(url, body, content_type: 'application/json')
@@ -170,10 +177,13 @@ module AuthorizeNetReporting
       output = +''
       http.start do |session|
         session.request(req) do |res|
-          raise Error, 'Reporting request failed. Check access and try again.' unless res.code == '200'
-          raise Error, 'Reporting response exceeded the size limit.' if res['Content-Length'].to_i > MAX_BYTES
+          if res.code != '200'
+            reason = SyncFailure.http_reason(res.code)
+            raise Error.new('Reporting request failed. Check access and try again.', reason: reason)
+          end
+          raise Error.new('Reporting response exceeded the size limit.', reason: :limit) if res['Content-Length'].to_i > MAX_BYTES
           res.read_body do |chunk|
-            raise Error, 'Reporting response exceeded the size limit.' if output.bytesize + chunk.bytesize > MAX_BYTES
+            raise Error.new('Reporting response exceeded the size limit.', reason: :limit) if output.bytesize + chunk.bytesize > MAX_BYTES
             output << chunk
           end
         end
@@ -181,7 +191,7 @@ module AuthorizeNetReporting
       output
     rescue Timeout::Error, SocketError, IOError, SystemCallError, OpenSSL::SSL::SSLError,
         Net::HTTPBadResponse, Net::ProtocolError
-      raise Error, 'Authorize.net reporting could not be reached securely. Try again later.'
+      raise Error.new('Authorize.net reporting could not be reached securely. Try again later.', reason: :network)
     end
   end
 end
