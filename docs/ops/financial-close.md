@@ -17,3 +17,5 @@ The close action verifies included original checksums and atomically retains the
 Reading requires reports.read; retaining close/forecast versions additionally requires reports.write. Report readers may preview/download scenarios. Employee-only roles retain their fixed self-service boundary. Entire close/forecast form containers are filtered from request logs; responses use no-store/nosniff and writes use CSRF protection. Scenario amounts are POST fields rather than URL parameters. Originals, packages, scenarios and encrypted history remain in consistent database/configuration backups; saved Rails encryption keys are required for restoration.
 
 Daily reconciliation CSV and daily/weekly/monthly source summaries remain available from the close workspace. Source summaries preserve separate currencies and evidence layers; they are not substituted for bank reconciliation or a complete accounting P&L.
+
+The [October 16 deployment receipt](financial-close-deployment-2026-10-16.md) records the live release, employee-source preservation, exact CI, browser rehearsals and encrypted recovery verification.
