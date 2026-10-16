@@ -3,6 +3,7 @@
 require 'test_helper'
 
 class ReconciliationAcrossDaysTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
   setup { Current.tenant = tenants(:default_tenant) }
   teardown { Current.reset }
 
