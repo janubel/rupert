@@ -47,16 +47,39 @@ class RetentionDriveTest < ActiveSupport::TestCase
     Current.tenant = @tenant
     @connection = RetentionDriveConnection.create!(refresh_token: 'private-refresh', account_email: 'owner@example.com', generation: 'account-one', enabled: true)
     @drive = FakeDrive.new
-    client = mock('oauth')
-    client.stubs(:refresh_token=)
-    client.stubs(:fetch_access_token!)
-    RetentionDrive.stubs(:oauth_client).returns(client)
+    @client = mock('oauth')
+    @client.stubs(:refresh_token=)
+    @client.stubs(:fetch_access_token!)
+    RetentionDrive.stubs(:oauth_client).returns(@client)
     RetentionDrive.stubs(:service).returns(@drive)
   end
   teardown { Current.reset }
 
   def original(name = 'invoice.pdf')
     ReconciliationEvidence.retain!(bytes: "%PDF-1.4\nInvoice original #{name}\n", filename: name, source: 'bank', kind: 'invoice', from: '2026-10-14', to: '2026-10-14')
+  end
+
+  test 'consent stores only tenant credentials and leaves platform backups unchanged' do
+    EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', 'backup-owner-token')
+    @client.expects(:redirect_uri=).with('https://example.com/auth/google/callback')
+    @client.expects(:code=).with('approved-code')
+    @client.stubs(:refresh_token).returns('fresh-retention-token')
+    profile = Struct.new(:permission_id, :email_address).new('verified-account', 'owner@example.com')
+    @drive.stubs(:get_about).with(fields: 'user(emailAddress,permissionId)').returns(Struct.new(:user).new(profile))
+    row = RetentionDrive.exchange_code!('approved-code', redirect_uri: 'https://example.com/auth/google/callback')
+    assert_equal @tenant.id, row.tenant_id
+    assert_equal 'fresh-retention-token', row.refresh_token
+    assert_equal Digest::SHA256.hexdigest('verified-account'), row.generation
+    assert row.enabled
+    assert_equal 'backup-owner-token', EnvStore.platform_fetch('GOOGLE_DRIVE_REFRESH_TOKEN')
+  end
+
+  test 'real SDK client accepts bounded network options without an external request' do
+    RetentionDrive.unstub(:service)
+    service = RetentionDrive.service(Signet::OAuth2::Client.new)
+    assert_equal 10, service.client_options.open_timeout_sec
+    assert_equal 60, service.client_options.read_timeout_sec
+    assert_equal 1, service.request_options.retries
   end
 
   test 'original bytes are organized verified and replayed without duplicates or local mutations' do
