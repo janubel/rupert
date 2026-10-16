@@ -1,22 +1,32 @@
 <% content_for :title, 'POS checkout setup' %>
 <div class="mx-auto max-w-2xl space-y-5">
-  <header><h1 class="page-title">Checkout · <%= @location.name %></h1><p class="mt-2 text-sm">Configure real cash checkout, C-Trax stock deductions and the existing Authorize.net account for this store.</p></header>
+  <header><h1 class="page-title">Checkout · <%= @location.name %></h1><p class="mt-2 text-sm">Configure real cash checkout, C-Trax stock deductions and a card gateway for this store.</p></header>
   <% if @setting.errors.any? %><div role="alert" class="card card-pad"><%= @setting.errors.full_messages.to_sentence %></div><% end %>
   <%= form_with model: @setting, url: pos_setting_path(@location.id), method: :patch, class: 'card card-pad space-y-4', data: { turbo: false } do |form| %>
     <%= form.hidden_field :lock_version %>
     <label class="flex gap-2"><%= form.check_box :cash_enabled %><span>Enable real cash sales and receipts</span></label>
     <label class="flex gap-2"><%= form.check_box :stock_writes_enabled %><span>Deduct C-Trax stock for paid Rupert sales using the saved C-Trax account</span></label>
     <p class="text-xs text-taupe">Only verified paid sales can deduct their exact native variants. Uncertain write outcomes remain pending for review and are never blindly repeated. Sales are recorded in Rupert, separately from C-Trax’s own order journal.</p>
-    <h2 class="font-display text-xl">Authorize.net card checkout</h2>
-    <p class="text-sm">Use the merchant account approved for this store. Card details are collected inside Authorize.net’s hosted form; Rupert receives a one-use token. This is a browser card checkout, rather than a PAX terminal integration.</p>
-    <%= form.label :environment, 'Gateway environment' %><%= form.select :environment, [['Sandbox · test payments', 'sandbox'], ['Production · real charges', 'production']], {}, class: 'input w-full' %>
+    <h2 class="font-display text-xl">Card checkout</h2>
+    <%= form.label :gateway_provider, 'Payment gateway' %><%= form.select :gateway_provider, [['Authorize.net', 'authorize_net'], ['NMI · sandbox only', 'nmi']], {}, class: 'input w-full' %>
+    <p class="text-sm">Save the gateway choice first to display its credential fields. NMI live payments are disabled pending Next Stage confirmation.</p>
+    <p class="text-sm">Use the merchant account approved for this store. Card details are collected inside the selected gateway’s hosted fields; Rupert receives a one-use token. This is a browser card checkout. Terminal support requires a separate integration.</p>
+    <% environments = @setting.gateway_provider == 'nmi' ? [['Sandbox · test payments', 'sandbox']] : [['Sandbox · test payments', 'sandbox'], ['Production · real charges', 'production']] %>
+    <%= form.label :environment, 'Gateway environment' %><%= form.select :environment, environments, {}, class: 'input w-full' %>
     <%= form.label :gateway_id, 'Existing Gateway ID' %><%= form.text_field :gateway_id, class: 'input w-full', autocomplete: 'off' %>
+    <% if @setting.gateway_provider == 'nmi' %>
+      <p class="text-sm">Use a dedicated NMI sandbox merchant. Sandbox receipts never create live sales, register revenue or stock deductions. The company check compares the profile name, not the operator-entered Gateway ID. Card payment permissions and the public key are tested by sandbox checkout.</p>
+      <label for="nmi_company">Expected sandbox merchant company</label><%= password_field_tag 'credentials[merchant_company]', nil, id: 'nmi_company', autocomplete: 'new-password', class: 'input w-full', placeholder: 'Exact company shown in the sandbox profile' %>
+      <label for="nmi_private">Sandbox private API security key</label><%= password_field_tag 'credentials[security_key]', nil, id: 'nmi_private', autocomplete: 'new-password', class: 'input w-full' %>
+      <label for="nmi_public">Sandbox public tokenization key</label><%= password_field_tag 'credentials[tokenization_key]', nil, id: 'nmi_public', autocomplete: 'new-password', class: 'input w-full' %>
+    <% else %>
     <label for="pos_gateway_login">API Login ID</label><%= password_field_tag 'credentials[api_login_id]', nil, id: 'pos_gateway_login', autocomplete: 'new-password', class: 'input w-full', placeholder: 'Leave blank to keep saved value' %>
     <label for="pos_gateway_key">Transaction Key</label><%= password_field_tag 'credentials[transaction_key]', nil, id: 'pos_gateway_key', autocomplete: 'new-password', class: 'input w-full', placeholder: 'Leave blank to keep saved value' %>
-    <label class="flex gap-2"><%= form.check_box :card_enabled %><span>Enable card charges for this verified gateway and store</span></label>
+    <% end %>
+    <label class="flex gap-2"><%= form.check_box :card_enabled %><span><%= @setting.gateway_provider == 'nmi' ? 'Enable sandbox card tests only' : 'Enable card charges for this verified gateway and store' %></span></label>
     <p class="text-xs text-taupe">Credentials are encrypted and never redisplayed. Changing the account, environment or credentials disables card charges until checked again. Reporting-only OAuth credentials cannot charge payments.</p>
     <%= form.submit 'Save checkout setup', class: 'btn-primary' %>
   <% end %>
-  <% if @setting.persisted? %><%= button_to 'Check gateway identity and hosted form key', verify_pos_setting_path(@location.id), method: :post, class: 'btn-ghost', data: { turbo: false } %><p class="text-sm"><%= @setting.verified_at ? "Gateway verified #{l(@setting.verified_at, format: :short)}" : 'Card gateway has not been verified.' %></p><% end %>
+  <% if @setting.persisted? %><%= button_to 'Check gateway profile / hosted form setup', verify_pos_setting_path(@location.id), method: :post, class: 'btn-ghost', data: { turbo: false } %><p class="text-sm"><%= @setting.verified_at ? "Gateway profile checked #{l(@setting.verified_at, format: :short)}" : 'Card gateway has not been verified.' %></p><% end %>
   <%= link_to 'Return to cashier', ctrax_pos_path(location_id: @location.id), class: 'btn-ghost' %>
 </div>

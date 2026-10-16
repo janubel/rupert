@@ -14,6 +14,9 @@ module Pos
       digest = display.draft_digest
       location = display.location
       setting = PosSetting.find_by(location: location)
+      if tender == 'card' && setting&.gateway_provider == 'nmi' && !setting.nmi_sandbox?
+        raise Error, 'NMI production payments are disabled pending Next Stage confirmation.'
+      end
       unless display.demo?
         raise Error, 'Enable this store’s checkout in POS setup first.' unless setting && (tender == 'cash' ? setting.cash_enabled : setting.card_enabled && setting.verified_at)
         setting_version = setting.lock_version
@@ -47,8 +50,10 @@ module Pos
           pos_session: register, cart_revision: display.cart_revision, reference: SecureRandom.hex(16), tender: tender,
           demo: display.demo?, lines_json: quote['lines'], subtotal_cents: quote['subtotal_cents'], tax_cents: quote['tax_cents'],
           tip_cents: display.chosen_tip_cents, total_cents: quote['total_before_tip_cents'] + display.chosen_tip_cents,
-          gateway_id: tender == 'card' ? setting&.gateway_id : nil, environment: tender == 'card' ? setting&.environment : nil)
-        unless checkout.demo?
+          gateway_id: tender == 'card' ? setting&.gateway_id : nil, environment: tender == 'card' ? setting&.environment : nil,
+          gateway_provider: tender == 'card' ? setting&.gateway_provider || 'authorize_net' : 'authorize_net',
+          gateway_fingerprint: tender == 'card' ? setting&.payment_fingerprint : nil)
+        unless checkout.demo? || checkout.sandbox_payment?
           records = snapshot.reload.records.index_by { |r| r['id'] }
           checkout.lines.each do |line|
             record = records.fetch(line['variant_id'])
@@ -96,7 +101,7 @@ module Pos
     def self.finalize!(checkout, transaction_id: nil)
       # Caller locks checkout. All durable local sale effects commit atomically.
       return checkout if checkout.paid?
-      unless checkout.demo?
+      unless checkout.demo? || checkout.sandbox_payment?
         register = checkout.pos_session
         register.lock!
         raise Error, 'Register closed before payment completed; reconcile this payment.' unless register.status == 'open'
@@ -115,7 +120,8 @@ module Pos
         checkout.pos_stock_allocations.update_all(status: 'pending', updated_at: Time.current)
       end
       checkout.update!(status: 'paid', paid_at: Time.current)
-      ActivityLogger.log('pos_checkout_paid', subject: checkout, details: "#{checkout.tender}#{' demo' if checkout.demo?}")
+      event = checkout.sandbox_payment? ? 'pos_sandbox_checkout_completed' : 'pos_checkout_paid'
+      ActivityLogger.log(event, subject: checkout, details: "#{checkout.tender}#{' demo' if checkout.demo?}")
       checkout
     end
 

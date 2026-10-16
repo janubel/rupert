@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1294,6 +1294,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.integer "lock_version", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "gateway_provider", default: "authorize_net", null: false
+    t.string "gateway_fingerprint"
     t.index ["order_id"], name: "index_pos_checkouts_on_order_id"
     t.index ["pos_display_session_id"], name: "index_pos_checkouts_on_pos_display_session_id"
     t.index ["pos_session_id"], name: "index_pos_checkouts_on_pos_session_id"
@@ -1404,6 +1406,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.integer "lock_version", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "gateway_provider", default: "authorize_net", null: false
     t.index ["tenant_id", "location_id"], name: "index_pos_settings_on_tenant_id_and_location_id", unique: true
   end
 
