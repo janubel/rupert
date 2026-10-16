@@ -310,6 +310,15 @@ Rails.application.routes.draw do
     end
   end
   resources :ctrax_stock, only: :index
+  get '/pos_settings/:location_id', to: 'pos_settings#show', as: :pos_setting
+  patch '/pos_settings/:location_id', to: 'pos_settings#update'
+  post '/pos_settings/:location_id/verify', to: 'pos_settings#verify', as: :verify_pos_setting
+  resources :pos_checkouts, only: %i[create show] do
+    post :cancel, on: :member
+    post :reconcile, on: :member
+  end
+  get '/customer_display/payment_config', to: 'customer_displays#payment_config', as: :customer_payment_config
+  post '/customer_display/pay', to: 'customer_displays#pay', as: :customer_pay
   resources :ctrax_days, only: %i[index show create] do
     member { post :review }
   end
@@ -410,6 +419,12 @@ Rails.application.routes.draw do
     end
     resources :engagements, only: %i[show edit update] do
       post :copy, on: :member
+      resources :shopify_discounts, only: %i[new create show] do
+        member do
+          post :activate
+          post :refresh
+        end
+      end
       resources :offers, controller: 'influencer_offers', only: %i[new create edit update] do
         member do
           post :verify

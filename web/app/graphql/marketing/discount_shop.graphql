@@ -1,0 +1,4 @@
+query RupertDiscountShop {
+  shop { id myshopifyDomain primaryDomain { url } currencyCode }
+  currentAppInstallation { accessScopes { handle } }
+}

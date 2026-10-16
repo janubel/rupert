@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class PosDisplaysController < AuthenticatedController
+  rescue_from Pos::Error do |error|
+    render json: { error: error.message }, status: :conflict
+  end
   before_action do
     authorize(:module, :sales_write?)
     authorize(:module, :sales_read?)
@@ -15,11 +18,12 @@ class PosDisplaysController < AuthenticatedController
       record = snapshot.records.find { |row| row['price_cents'].is_a?(Integer) && row['price_cents'].positive? && !row['variable_price'] && row['listed'] != false }
       if record
         amount = (BigDecimal(record['price_cents'].to_s) / 100).to_s('F')
-        display.publish!({ 'source' => 'ctrax', 'currency_code' => 'USD', 'preview' => true,
-          'subtotal' => amount, 'preview_total' => amount, 'tip_type' => 'none', 'tip_amount' => '0',
-          'lines' => [{ 'variant_id' => record['id'], 'sku' => record['sku'], 'product_title' => record['product_name'] || record['name'],
-            'title' => record['name'], 'quantity' => 1, 'unit_price' => amount, 'line_total' => amount,
-            'thumbnail_url' => Ctrax::CatalogImages.new(snapshot.location).url(record) }] })
+        quote = { source: 'ctrax', currency_code: 'USD', preview: true,
+          subtotal: amount, lines: [{ variant_id: record['id'], sku: record['sku'], product_title: record['product_name'] || record['name'],
+            title: record['name'], quantity: 1, unit_price: amount, line_total: amount,
+            thumbnail_url: Ctrax::CatalogImages.new(snapshot.location).url(record) }] }
+        Pos::Quote.decorate!(quote, snapshot, demo: true)
+        display.publish!(quote.deep_stringify_keys)
       end
       redirect_to demo_pos_display_path(display)
     else
@@ -29,7 +33,7 @@ class PosDisplaysController < AuthenticatedController
 
   def show
     display = PosDisplaySession.find_by!(id: params[:id], user_id: Current.user.id)
-    render json: display.public_state.slice(:active, :confirmed, :cart_revision, :subtotal_cents, :tip_cents, :demo)
+    render json: display.public_state.slice(:active, :confirmed, :cart_revision, :subtotal_cents, :tip_cents, :demo, :checkout, :tax_cents, :tax_verified)
   end
 
   def clear

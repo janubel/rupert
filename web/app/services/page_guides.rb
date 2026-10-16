@@ -14,9 +14,9 @@ class PageGuides
       sections: [
         { heading: 'Directory and follow-up', body: 'Add a prospect, audience topics and relationship owner. Update stages and follow-up dates as you work. Contact details and conversations require the separate Marketing contacts permission. No outreach is sent automatically.' },
         { heading: 'Collaborations and gifts', body: 'Connect a prospect to a Marketing campaign. Propose products from the mirrored Shopify catalog, record estimated costs, approve the gift and confirm recipient details. Record actual shipment and delivery evidence; this workflow does not reserve stock, create orders or change inventory.' },
-        { heading: 'Offers and documentation', body: 'Record existing merchant codes with expiry and full terms. Review merchant evidence before sharing a code/referral link. Save briefs, instructions, disclosure and permission records as versioned documents. Campaign links do not yet measure conversions or commissions.' }
+        { heading: 'Offers and documentation', body: 'Create a Shopify discount draft, review its store, dates and full terms, then explicitly create the code. Marketing discounts and review access are required. Copying verifies Shopify and supplies a link that applies the code. Existing-code records and versioned campaign documents remain available; links do not measure conversions or commissions.' }
       ],
-      tips: ['Do not contact blocks new offer sharing and product handoffs.', 'Document edits create a new revision and reset review.', 'Set temporary-code expiry in the merchant store as well as Rupert.']
+      tips: ['Do not contact blocks new offer sharing and product handoffs.', 'Document edits create a new revision and reset review.', 'Shopify-created codes enforce their saved expiry; existing-code records need matching expiry in the merchant store.']
     ),
     'marketing' => Guide.new(
       key: 'marketing', title: 'Community marketing',

@@ -2,6 +2,7 @@
 
 class CtraxPosController < PointOfSaleController
   before_action :load_store
+  rescue_from Pos::Error, with: :invalid_quote
 
   def index
     load_catalog
@@ -27,6 +28,10 @@ class CtraxPosController < PointOfSaleController
     else
       @snapshots.first
     end
+    @unfinished_checkouts = PosCheckout.where(location_id: @snapshot&.location_id, status: %w[ready processing unknown declined]).order(updated_at: :desc).limit(10)
+    @unfinished_checkouts = @unfinished_checkouts.where(user_id: Current.user.id) unless Current.user.admin? || Current.user.super_admin?
+    @pos_setting = PosSetting.find_by(location_id: @snapshot&.location_id)
+    @registers = Sales::PosSession.where(location_id: @snapshot&.location_id, status: 'open').order(:opened_at)
     @images = Ctrax::CatalogImages.new(@snapshot&.location)
     @display = PosDisplaySession.find_by(id: params[:display_id], user_id: Current.user.id) if params[:display_id].present?
     if params[:display_id].present? && (!@display || !@display.active? || @display.location_id != @snapshot&.location_id)
@@ -54,7 +59,7 @@ class CtraxPosController < PointOfSaleController
   def quoted_tip(_subtotal) = { type: 'none', percentage: nil, amount: BigDecimal('0') }
 
   def quote_lines(rows)
-    raise QuoteError, 'Refresh C-Trax stock before using this catalog.' unless @snapshot && @snapshot.captured_at >= 60.minutes.ago
+    raise QuoteError, 'Refresh C-Trax stock before using this catalog.' unless @snapshot && (@display&.demo? || @snapshot.captured_at >= 60.minutes.ago)
 
     catalog = @snapshot.records.index_by { |row| row['id'] }
     rows.map do |row|
@@ -71,6 +76,7 @@ class CtraxPosController < PointOfSaleController
   end
 
   def publish_display(quote)
+    Pos::Quote.decorate!(quote, @snapshot, demo: @display&.demo?)
     return unless @display
 
     @display.publish!(quote.deep_stringify_keys)

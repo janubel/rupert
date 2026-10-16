@@ -1,0 +1,22 @@
+<% content_for :title, 'POS checkout setup' %>
+<div class="mx-auto max-w-2xl space-y-5">
+  <header><h1 class="page-title">Checkout · <%= @location.name %></h1><p class="mt-2 text-sm">Configure real cash checkout, C-Trax stock deductions and the existing Authorize.net account for this store.</p></header>
+  <% if @setting.errors.any? %><div role="alert" class="card card-pad"><%= @setting.errors.full_messages.to_sentence %></div><% end %>
+  <%= form_with model: @setting, url: pos_setting_path(@location.id), method: :patch, class: 'card card-pad space-y-4', data: { turbo: false } do |form| %>
+    <%= form.hidden_field :lock_version %>
+    <label class="flex gap-2"><%= form.check_box :cash_enabled %><span>Enable real cash sales and receipts</span></label>
+    <label class="flex gap-2"><%= form.check_box :stock_writes_enabled %><span>Deduct C-Trax stock for paid Rupert sales using the saved C-Trax account</span></label>
+    <p class="text-xs text-taupe">Only verified paid sales can deduct their exact native variants. Uncertain write outcomes remain pending for review and are never blindly repeated. Sales are recorded in Rupert, separately from C-Trax’s own order journal.</p>
+    <h2 class="font-display text-xl">Authorize.net card checkout</h2>
+    <p class="text-sm">Use the merchant account approved for this store. Card details are collected inside Authorize.net’s hosted form; Rupert receives a one-use token. This is a browser card checkout, rather than a PAX terminal integration.</p>
+    <%= form.label :environment, 'Gateway environment' %><%= form.select :environment, [['Sandbox · test payments', 'sandbox'], ['Production · real charges', 'production']], {}, class: 'input w-full' %>
+    <%= form.label :gateway_id, 'Existing Gateway ID' %><%= form.text_field :gateway_id, class: 'input w-full', autocomplete: 'off' %>
+    <label for="pos_gateway_login">API Login ID</label><%= password_field_tag 'credentials[api_login_id]', nil, id: 'pos_gateway_login', autocomplete: 'new-password', class: 'input w-full', placeholder: 'Leave blank to keep saved value' %>
+    <label for="pos_gateway_key">Transaction Key</label><%= password_field_tag 'credentials[transaction_key]', nil, id: 'pos_gateway_key', autocomplete: 'new-password', class: 'input w-full', placeholder: 'Leave blank to keep saved value' %>
+    <label class="flex gap-2"><%= form.check_box :card_enabled %><span>Enable card charges for this verified gateway and store</span></label>
+    <p class="text-xs text-taupe">Credentials are encrypted and never redisplayed. Changing the account, environment or credentials disables card charges until checked again. Reporting-only OAuth credentials cannot charge payments.</p>
+    <%= form.submit 'Save checkout setup', class: 'btn-primary' %>
+  <% end %>
+  <% if @setting.persisted? %><%= button_to 'Check gateway identity and hosted form key', verify_pos_setting_path(@location.id), method: :post, class: 'btn-ghost', data: { turbo: false } %><p class="text-sm"><%= @setting.verified_at ? "Gateway verified #{l(@setting.verified_at, format: :short)}" : 'Card gateway has not been verified.' %></p><% end %>
+  <%= link_to 'Return to cashier', ctrax_pos_path(location_id: @location.id), class: 'btn-ghost' %>
+</div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -875,6 +875,96 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id", "status"], name: "index_leave_requests_on_tenant_id_and_status"
   end
 
+  create_table "marketing_campaigns", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "name", null: false
+    t.string "storefront_url", null: false
+    t.text "topics", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id"], name: "index_marketing_campaigns_on_tenant_id"
+  end
+
+  create_table "marketing_cms_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "actor_id", null: false
+    t.string "subject_type", null: false
+    t.bigint "subject_id", null: false
+    t.string "action", null: false
+    t.text "payload_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "subject_type", "subject_id"], name: "marketing_cms_history"
+    t.index ["tenant_id"], name: "index_marketing_cms_events_on_tenant_id"
+  end
+
+  create_table "marketing_communities", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "campaign_id", null: false
+    t.string "name", null: false
+    t.string "url", null: false
+    t.text "include_terms", null: false
+    t.text "exclude_terms"
+    t.text "promotion_rules", null: false
+    t.string "rules_url", null: false
+    t.datetime "rules_checked_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_marketing_communities_on_campaign_id"
+    t.index ["tenant_id"], name: "index_marketing_communities_on_tenant_id"
+  end
+
+  create_table "marketing_document_revisions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "document_id", null: false
+    t.bigint "actor_id", null: false
+    t.integer "number", null: false
+    t.string "title", null: false
+    t.string "kind", null: false
+    t.text "body", null: false
+    t.text "source_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["document_id", "number"], name: "index_marketing_document_revisions_on_document_id_and_number", unique: true
+    t.index ["document_id"], name: "index_marketing_document_revisions_on_document_id"
+    t.index ["tenant_id"], name: "index_marketing_document_revisions_on_tenant_id"
+  end
+
+  create_table "marketing_documents", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "engagement_id", null: false
+    t.string "title", null: false
+    t.string "kind", null: false
+    t.string "visibility", default: "internal", null: false
+    t.string "status", default: "draft", null: false
+    t.bigint "reviewed_by_id"
+    t.datetime "reviewed_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["engagement_id"], name: "index_marketing_documents_on_engagement_id"
+    t.index ["tenant_id"], name: "index_marketing_documents_on_tenant_id"
+  end
+
+  create_table "marketing_engagements", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "influencer_id", null: false
+    t.integer "campaign_id", null: false
+    t.string "title", null: false
+    t.string "status", default: "draft", null: false
+    t.text "deliverables"
+    t.datetime "due_at"
+    t.string "destination_url", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_marketing_engagements_on_campaign_id"
+    t.index ["influencer_id"], name: "index_marketing_engagements_on_influencer_id"
+    t.index ["tenant_id"], name: "index_marketing_engagements_on_tenant_id"
+  end
+
   create_table "marketing_influencers", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "name", null: false
@@ -897,23 +987,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id"], name: "index_marketing_influencers_on_tenant_id"
   end
 
-  create_table "marketing_engagements", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.integer "influencer_id", null: false
-    t.integer "campaign_id", null: false
-    t.string "title", null: false
-    t.string "status", default: "draft", null: false
-    t.text "deliverables"
-    t.datetime "due_at"
-    t.string "destination_url", null: false
-    t.integer "lock_version", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["campaign_id"], name: "index_marketing_engagements_on_campaign_id"
-    t.index ["influencer_id"], name: "index_marketing_engagements_on_influencer_id"
-    t.index ["tenant_id"], name: "index_marketing_engagements_on_tenant_id"
-  end
-
   create_table "marketing_interactions", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.integer "influencer_id", null: false
@@ -925,116 +998,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.datetime "updated_at", null: false
     t.index ["influencer_id"], name: "index_marketing_interactions_on_influencer_id"
     t.index ["tenant_id"], name: "index_marketing_interactions_on_tenant_id"
-  end
-
-  create_table "marketing_product_gifts", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.integer "engagement_id", null: false
-    t.string "status", default: "proposed", null: false
-    t.string "currency", default: "USD", null: false
-    t.integer "shipping_cost_cents"
-    t.text "note"
-    t.text "shipping_details"
-    t.datetime "recipient_confirmed_at"
-    t.string "carrier"
-    t.text "tracking_number"
-    t.text "tracking_url"
-    t.datetime "shipped_at"
-    t.datetime "delivered_at"
-    t.datetime "returned_at"
-    t.integer "lock_version", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["engagement_id"], name: "index_marketing_product_gifts_on_engagement_id"
-    t.index ["tenant_id"], name: "index_marketing_product_gifts_on_tenant_id"
-  end
-
-  create_table "marketing_product_gift_items", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.integer "product_gift_id", null: false
-    t.string "source_variant_id", null: false
-    t.string "product_name", null: false
-    t.string "sku"
-    t.integer "quantity", null: false
-    t.integer "unit_cost_cents"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["product_gift_id", "source_variant_id"], name: "marketing_gift_variant", unique: true
-    t.index ["product_gift_id"], name: "index_marketing_product_gift_items_on_product_gift_id"
-    t.index ["tenant_id"], name: "index_marketing_product_gift_items_on_tenant_id"
-  end
-
-  create_table "marketing_documents", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.integer "engagement_id", null: false
-    t.string "title", null: false
-    t.string "kind", null: false
-    t.string "visibility", default: "internal", null: false
-    t.string "status", default: "draft", null: false
-    t.bigint "reviewed_by_id"
-    t.datetime "reviewed_at"
-    t.integer "lock_version", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["engagement_id"], name: "index_marketing_documents_on_engagement_id"
-    t.index ["tenant_id"], name: "index_marketing_documents_on_tenant_id"
-  end
-
-  create_table "marketing_document_revisions", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.integer "document_id", null: false
-    t.bigint "actor_id", null: false
-    t.integer "number", null: false
-    t.string "title", null: false
-    t.string "kind", null: false
-    t.text "body", null: false
-    t.text "source_url"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["document_id", "number"], name: "index_marketing_document_revisions_on_document_id_and_number", unique: true
-    t.index ["document_id"], name: "index_marketing_document_revisions_on_document_id"
-    t.index ["tenant_id"], name: "index_marketing_document_revisions_on_tenant_id"
-  end
-
-  create_table "marketing_cms_events", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.bigint "actor_id", null: false
-    t.string "subject_type", null: false
-    t.bigint "subject_id", null: false
-    t.string "action", null: false
-    t.text "payload_json", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["tenant_id", "subject_type", "subject_id"], name: "marketing_cms_history"
-    t.index ["tenant_id"], name: "index_marketing_cms_events_on_tenant_id"
-  end
-
-  create_table "marketing_campaigns", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.string "name", null: false
-    t.string "storefront_url", null: false
-    t.text "topics", null: false
-    t.integer "lock_version", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["tenant_id"], name: "index_marketing_campaigns_on_tenant_id"
-  end
-
-  create_table "marketing_communities", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.integer "campaign_id", null: false
-    t.string "name", null: false
-    t.string "url", null: false
-    t.text "include_terms", null: false
-    t.text "exclude_terms"
-    t.text "promotion_rules", null: false
-    t.string "rules_url", null: false
-    t.datetime "rules_checked_at"
-    t.integer "lock_version", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["campaign_id"], name: "index_marketing_communities_on_campaign_id"
-    t.index ["tenant_id"], name: "index_marketing_communities_on_tenant_id"
   end
 
   create_table "marketing_offers", force: :cascade do |t|
@@ -1058,6 +1021,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id", "merchant_host", "code"], name: "marketing_offer_codes", unique: true
     t.index ["tenant_id"], name: "index_marketing_offers_on_tenant_id"
     t.check_constraint "(community_id IS NOT NULL AND engagement_id IS NULL) OR (community_id IS NULL AND engagement_id IS NOT NULL)", name: "marketing_offer_recipient"
+  end
+
+  create_table "marketing_product_gift_items", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "product_gift_id", null: false
+    t.string "source_variant_id", null: false
+    t.string "product_name", null: false
+    t.string "sku"
+    t.integer "quantity", null: false
+    t.integer "unit_cost_cents"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_gift_id", "source_variant_id"], name: "marketing_gift_variant", unique: true
+    t.index ["product_gift_id"], name: "index_marketing_product_gift_items_on_product_gift_id"
+    t.index ["tenant_id"], name: "index_marketing_product_gift_items_on_tenant_id"
+  end
+
+  create_table "marketing_product_gifts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "engagement_id", null: false
+    t.string "status", default: "proposed", null: false
+    t.string "currency", default: "USD", null: false
+    t.integer "shipping_cost_cents"
+    t.text "note"
+    t.text "shipping_details"
+    t.datetime "recipient_confirmed_at"
+    t.string "carrier"
+    t.text "tracking_number"
+    t.text "tracking_url"
+    t.datetime "shipped_at"
+    t.datetime "delivered_at"
+    t.datetime "returned_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["engagement_id"], name: "index_marketing_product_gifts_on_engagement_id"
+    t.index ["tenant_id"], name: "index_marketing_product_gifts_on_tenant_id"
   end
 
   create_table "marketing_replies", force: :cascade do |t|
@@ -1090,6 +1090,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.datetime "updated_at", null: false
     t.index ["reply_id"], name: "index_marketing_review_events_on_reply_id"
     t.index ["tenant_id"], name: "index_marketing_review_events_on_tenant_id"
+  end
+
+  create_table "marketing_shopify_discounts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "offer_id", null: false
+    t.string "shop_domain", null: false
+    t.string "shop_id", null: false
+    t.string "currency", null: false
+    t.string "request_key", null: false
+    t.text "request_json", null: false
+    t.string "status", default: "draft", null: false
+    t.string "remote_id"
+    t.string "remote_status"
+    t.text "remote_json"
+    t.text "last_error"
+    t.bigint "approved_by_id"
+    t.datetime "attempted_at"
+    t.datetime "checked_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["offer_id"], name: "index_marketing_shopify_discounts_on_offer_id", unique: true
+    t.index ["request_key"], name: "index_marketing_shopify_discounts_on_request_key", unique: true
+    t.index ["tenant_id"], name: "index_marketing_shopify_discounts_on_tenant_id"
+    t.index ["tenant_id", "shop_domain", "remote_id"], name: "marketing_shopify_remote_discount", unique: true
+    t.check_constraint "status IN ('draft', 'creating', 'created', 'uncertain', 'failed', 'blocked')", name: "marketing_shopify_discount_status"
   end
 
   create_table "marketing_threads", force: :cascade do |t|
@@ -1178,6 +1204,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.datetime "updated_at", null: false
     t.boolean "source_lines_complete", default: false, null: false
     t.string "source_financial_status"
+    t.integer "tip_cents", default: 0, null: false
     t.index ["location_id"], name: "index_orders_on_location_id"
     t.index ["tenant_id", "customer_id"], name: "index_orders_on_tenant_id_and_customer_id"
     t.index ["tenant_id", "occurred_at"], name: "index_orders_on_tenant_id_and_occurred_at"
@@ -1268,6 +1295,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id", "pay_run_id"], name: "index_payslips_on_tenant_id_and_pay_run_id"
   end
 
+  create_table "pos_checkouts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.integer "user_id", null: false
+    t.integer "pos_display_session_id", null: false
+    t.integer "pos_session_id"
+    t.integer "cart_revision", null: false
+    t.string "reference", null: false
+    t.string "status", default: "ready", null: false
+    t.string "tender", null: false
+    t.boolean "demo", default: false, null: false
+    t.text "lines_json", null: false
+    t.integer "subtotal_cents", null: false
+    t.integer "tax_cents", null: false
+    t.integer "tip_cents", null: false
+    t.integer "total_cents", null: false
+    t.integer "cash_received_cents"
+    t.integer "change_cents"
+    t.integer "order_id"
+    t.datetime "paid_at"
+    t.string "gateway_id"
+    t.string "environment"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_pos_checkouts_on_order_id"
+    t.index ["pos_display_session_id"], name: "index_pos_checkouts_on_pos_display_session_id"
+    t.index ["pos_session_id"], name: "index_pos_checkouts_on_pos_session_id"
+    t.index ["reference"], name: "index_pos_checkouts_on_reference", unique: true
+    t.index ["tenant_id", "pos_display_session_id", "cart_revision"], name: "idx_pos_checkout_revision", unique: true
+    t.index ["user_id"], name: "index_pos_checkouts_on_user_id"
+  end
+
   create_table "pos_connections", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "provider", null: false
@@ -1318,6 +1378,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["user_id"], name: "index_pos_display_sessions_on_user_id"
   end
 
+  create_table "pos_payment_attempts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "pos_checkout_id", null: false
+    t.string "invoice", null: false
+    t.string "nonce_digest", null: false
+    t.string "status", default: "submitting", null: false
+    t.string "transaction_id"
+    t.datetime "submitted_at", null: false
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice"], name: "index_pos_payment_attempts_on_invoice", unique: true
+    t.index ["pos_checkout_id"], name: "index_pos_payment_attempts_on_pos_checkout_id"
+    t.index ["tenant_id", "nonce_digest"], name: "index_pos_payment_attempts_on_tenant_id_and_nonce_digest", unique: true
+  end
+
   create_table "pos_sessions", force: :cascade do |t|
     t.integer "card_sales_cents", default: 0
     t.integer "cash_sales_cents", default: 0
@@ -1338,6 +1414,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.integer "variance_cents"
     t.index ["tenant_id", "opened_at"], name: "index_pos_sessions_on_tenant_id_and_opened_at"
     t.index ["tenant_id", "status"], name: "index_pos_sessions_on_tenant_id_and_status"
+  end
+
+  create_table "pos_settings", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.boolean "cash_enabled", default: false, null: false
+    t.boolean "stock_writes_enabled", default: false, null: false
+    t.boolean "card_enabled", default: false, null: false
+    t.string "environment", default: "sandbox", null: false
+    t.string "gateway_id"
+    t.text "credentials_json", default: "{}", null: false
+    t.string "public_client_key"
+    t.datetime "verified_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "location_id"], name: "index_pos_settings_on_tenant_id_and_location_id", unique: true
+  end
+
+  create_table "pos_stock_allocations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.integer "pos_checkout_id", null: false
+    t.string "variant_id", null: false
+    t.integer "quantity", null: false
+    t.string "status", default: "held", null: false
+    t.string "source_adjustment_id"
+    t.datetime "submitted_at"
+    t.datetime "applied_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "source_quantity_before"
+    t.index ["pos_checkout_id", "variant_id"], name: "index_pos_stock_allocations_on_pos_checkout_id_and_variant_id", unique: true
+    t.index ["pos_checkout_id"], name: "index_pos_stock_allocations_on_pos_checkout_id"
+    t.index ["tenant_id", "location_id", "variant_id"], name: "idx_pos_stock_pool"
   end
 
   create_table "positions", force: :cascade do |t|
@@ -1734,6 +1845,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id", "identity"], name: "idx_swipesimple_tenant_identity"
   end
 
+  create_table "sync_attempts", force: :cascade do |t|
+    t.string "tenant_id"
+    t.string "source", null: false
+    t.string "operation", null: false
+    t.string "status", null: false
+    t.string "error_category"
+    t.string "active_job_id"
+    t.datetime "queued_at", null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active_job_id"], name: "index_sync_attempts_on_active_job_id"
+    t.index ["tenant_id", "source", "operation", "queued_at"], name: "idx_sync_attempts_source_history"
+  end
+
   create_table "tasks", force: :cascade do |t|
     t.string "assignee_id"
     t.datetime "completed_at"
@@ -1751,22 +1878,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id", "status"], name: "index_tasks_on_tenant_id_and_status"
   end
 
-  create_table "sync_attempts", force: :cascade do |t|
-    t.string "tenant_id"
-    t.string "source", null: false
-    t.string "operation", null: false
-    t.string "status", null: false
-    t.string "error_category"
-    t.string "active_job_id"
-    t.datetime "queued_at", null: false
-    t.datetime "started_at"
-    t.datetime "finished_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["active_job_id"], name: "index_sync_attempts_on_active_job_id"
-    t.index ["tenant_id", "source", "operation", "queued_at"], name: "idx_sync_attempts_source_history"
-  end
-
   create_table "tenants", id: :string, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -1778,17 +1889,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.string "referral_domain"
     t.index ["referral_domain"], name: "index_tenants_on_referral_domain"
     t.index ["subdomain"], name: "index_tenants_on_subdomain", unique: true
-  end
-
-  create_table "timesheet_events", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.bigint "timesheet_id", null: false
-    t.bigint "user_id"
-    t.string "action", null: false
-    t.text "details"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_events_on_tenant_id_and_timesheet_id"
   end
 
   create_table "timesheet_entries", force: :cascade do |t|
@@ -1803,6 +1903,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.bigint "clock_shift_id"
     t.index ["tenant_id", "clock_shift_id", "worked_on"], name: "idx_timesheet_shift_day", unique: true
     t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_entries_on_tenant_id_and_timesheet_id"
+  end
+
+  create_table "timesheet_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "timesheet_id", null: false
+    t.bigint "user_id"
+    t.string "action", null: false
+    t.text "details"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_events_on_tenant_id_and_timesheet_id"
   end
 
   create_table "timesheets", force: :cascade do |t|
@@ -1946,7 +2057,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
-  add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade
@@ -1993,17 +2103,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade
   add_foreign_key "iris_reports", "tenants"
   add_foreign_key "marketing_campaigns", "tenants"
+  add_foreign_key "marketing_cms_events", "tenants"
+  add_foreign_key "marketing_cms_events", "users", column: "actor_id"
   add_foreign_key "marketing_communities", "marketing_campaigns", column: "campaign_id"
   add_foreign_key "marketing_communities", "tenants"
+  add_foreign_key "marketing_document_revisions", "marketing_documents", column: "document_id"
+  add_foreign_key "marketing_document_revisions", "tenants"
+  add_foreign_key "marketing_document_revisions", "users", column: "actor_id"
+  add_foreign_key "marketing_documents", "marketing_engagements", column: "engagement_id"
+  add_foreign_key "marketing_documents", "tenants"
+  add_foreign_key "marketing_documents", "users", column: "reviewed_by_id"
+  add_foreign_key "marketing_engagements", "marketing_campaigns", column: "campaign_id"
+  add_foreign_key "marketing_engagements", "marketing_influencers", column: "influencer_id"
+  add_foreign_key "marketing_engagements", "tenants"
+  add_foreign_key "marketing_influencers", "tenants"
+  add_foreign_key "marketing_influencers", "users", column: "owner_id"
+  add_foreign_key "marketing_interactions", "marketing_influencers", column: "influencer_id"
+  add_foreign_key "marketing_interactions", "tenants"
+  add_foreign_key "marketing_interactions", "users", column: "actor_id"
   add_foreign_key "marketing_offers", "marketing_communities", column: "community_id"
+  add_foreign_key "marketing_offers", "marketing_engagements", column: "engagement_id"
   add_foreign_key "marketing_offers", "tenants"
   add_foreign_key "marketing_offers", "users", column: "verified_by_id"
+  add_foreign_key "marketing_product_gift_items", "marketing_product_gifts", column: "product_gift_id"
+  add_foreign_key "marketing_product_gift_items", "tenants"
+  add_foreign_key "marketing_product_gifts", "marketing_engagements", column: "engagement_id"
+  add_foreign_key "marketing_product_gifts", "tenants"
   add_foreign_key "marketing_replies", "marketing_offers", column: "offer_id"
   add_foreign_key "marketing_replies", "marketing_threads", column: "thread_id"
   add_foreign_key "marketing_replies", "tenants"
   add_foreign_key "marketing_review_events", "marketing_replies", column: "reply_id"
   add_foreign_key "marketing_review_events", "tenants"
   add_foreign_key "marketing_review_events", "users", column: "actor_id"
+  add_foreign_key "marketing_shopify_discounts", "marketing_offers", column: "offer_id"
+  add_foreign_key "marketing_shopify_discounts", "tenants"
+  add_foreign_key "marketing_shopify_discounts", "users", column: "approved_by_id"
   add_foreign_key "marketing_threads", "marketing_communities", column: "community_id"
   add_foreign_key "marketing_threads", "tenants"
   add_foreign_key "order_lines", "orders", on_delete: :cascade
@@ -2012,11 +2146,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   add_foreign_key "owner_checklists", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "owner_checklists", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "payments", "orders", on_delete: :cascade
+  add_foreign_key "pos_checkouts", "Location", column: "location_id"
+  add_foreign_key "pos_checkouts", "orders"
+  add_foreign_key "pos_checkouts", "pos_display_sessions"
+  add_foreign_key "pos_checkouts", "pos_sessions"
+  add_foreign_key "pos_checkouts", "tenants"
+  add_foreign_key "pos_checkouts", "users"
   add_foreign_key "pos_connections", "tenants"
   add_foreign_key "pos_connections", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "pos_display_sessions", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "pos_display_sessions", "tenants"
   add_foreign_key "pos_display_sessions", "users"
+  add_foreign_key "pos_payment_attempts", "pos_checkouts"
+  add_foreign_key "pos_payment_attempts", "tenants"
+  add_foreign_key "pos_settings", "Location", column: "location_id"
+  add_foreign_key "pos_settings", "tenants"
+  add_foreign_key "pos_stock_allocations", "Location", column: "location_id"
+  add_foreign_key "pos_stock_allocations", "pos_checkouts"
+  add_foreign_key "pos_stock_allocations", "tenants"
   add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
   add_foreign_key "reconciliation_documents", "tenants"
   add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
@@ -2040,6 +2187,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   add_foreign_key "stock_reservations", "stock_reservation_pools"
   add_foreign_key "swipesimple_exports", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "swipesimple_report_rows", "swipesimple_exports"
+  add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
   add_foreign_key "workspace_signup_events", "users", column: "actor_id", on_delete: :nullify
   add_foreign_key "workspace_signup_events", "workspace_signups"
   add_foreign_key "workspace_signups", "tenants"
@@ -2050,25 +2198,4 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   create_virtual_table "rupert_customers_fts", "fts5", ["\"email\"", "\"phone\"", "\"first_name\"", "\"last_name\"", "tokenize='trigram'", "content='customers'", "content_rowid='id'"]
   create_virtual_table "rupert_orders_fts", "fts5", ["\"order_number\"", "\"source_order_id\"", "tokenize='trigram'", "content='orders'", "content_rowid='id'"]
   create_virtual_table "rupert_shopifyvariant_fts", "fts5", ["\"sku\"", "\"title\"", "tokenize='trigram'", "content='ShopifyVariant'", "content_rowid='rowid'"]
-  add_foreign_key "marketing_cms_events", "tenants"
-  add_foreign_key "marketing_cms_events", "users", column: "actor_id"
-  add_foreign_key "marketing_document_revisions", "marketing_documents", column: "document_id"
-  add_foreign_key "marketing_document_revisions", "tenants"
-  add_foreign_key "marketing_document_revisions", "users", column: "actor_id"
-  add_foreign_key "marketing_documents", "marketing_engagements", column: "engagement_id"
-  add_foreign_key "marketing_documents", "tenants"
-  add_foreign_key "marketing_documents", "users", column: "reviewed_by_id"
-  add_foreign_key "marketing_engagements", "marketing_campaigns", column: "campaign_id"
-  add_foreign_key "marketing_engagements", "marketing_influencers", column: "influencer_id"
-  add_foreign_key "marketing_engagements", "tenants"
-  add_foreign_key "marketing_influencers", "tenants"
-  add_foreign_key "marketing_influencers", "users", column: "owner_id"
-  add_foreign_key "marketing_interactions", "marketing_influencers", column: "influencer_id"
-  add_foreign_key "marketing_interactions", "tenants"
-  add_foreign_key "marketing_interactions", "users", column: "actor_id"
-  add_foreign_key "marketing_offers", "marketing_engagements", column: "engagement_id"
-  add_foreign_key "marketing_product_gift_items", "marketing_product_gifts", column: "product_gift_id"
-  add_foreign_key "marketing_product_gift_items", "tenants"
-  add_foreign_key "marketing_product_gifts", "marketing_engagements", column: "engagement_id"
-  add_foreign_key "marketing_product_gifts", "tenants"
 end

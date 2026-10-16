@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1074,6 +1074,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id"], name: "index_marketing_review_events_on_tenant_id"
   end
 
+  create_table "marketing_shopify_discounts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "offer_id", null: false
+    t.string "shop_domain", null: false
+    t.string "shop_id", null: false
+    t.string "currency", null: false
+    t.string "request_key", null: false
+    t.text "request_json", null: false
+    t.string "status", default: "draft", null: false
+    t.string "remote_id"
+    t.string "remote_status"
+    t.text "remote_json"
+    t.text "last_error"
+    t.bigint "approved_by_id"
+    t.datetime "attempted_at"
+    t.datetime "checked_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["offer_id"], name: "index_marketing_shopify_discounts_on_offer_id", unique: true
+    t.index ["request_key"], name: "index_marketing_shopify_discounts_on_request_key", unique: true
+    t.index ["tenant_id"], name: "index_marketing_shopify_discounts_on_tenant_id"
+    t.index ["tenant_id", "shop_domain", "remote_id"], name: "marketing_shopify_remote_discount", unique: true
+    t.check_constraint "status IN ('draft', 'creating', 'created', 'uncertain', 'failed', 'blocked')", name: "marketing_shopify_discount_status"
+  end
+
   create_table "marketing_threads", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.bigint "community_id", null: false
@@ -1148,6 +1174,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id", "order_number"], name: "index_orders_on_tenant_id_and_order_number"
     t.index ["tenant_id", "source", "source_order_id"], name: "index_orders_on_tenant_id_and_source_and_source_order_id", unique: true
     t.index ["tenant_id", "status"], name: "index_orders_on_tenant_id_and_status"
+    t.integer "tip_cents", default: 0, null: false
   end
 
   create_table "owner_checklist_events", force: :cascade do |t|
@@ -1958,6 +1985,90 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
+  create_table "pos_settings", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.boolean "cash_enabled", default: false, null: false
+    t.boolean "stock_writes_enabled", default: false, null: false
+    t.boolean "card_enabled", default: false, null: false
+    t.string "environment", default: "sandbox", null: false
+    t.string "gateway_id"
+    t.text "credentials_json", default: "{}", null: false
+    t.string "public_client_key"
+    t.datetime "verified_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "location_id"], name: "index_pos_settings_on_tenant_id_and_location_id", unique: true
+  end
+
+  create_table "pos_checkouts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "pos_display_session_id", null: false
+    t.bigint "pos_session_id"
+    t.integer "cart_revision", null: false
+    t.string "reference", null: false
+    t.string "status", default: "ready", null: false
+    t.string "tender", null: false
+    t.boolean "demo", default: false, null: false
+    t.text "lines_json", null: false
+    t.integer "subtotal_cents", null: false
+    t.integer "tax_cents", null: false
+    t.integer "tip_cents", null: false
+    t.integer "total_cents", null: false
+    t.integer "cash_received_cents"
+    t.integer "change_cents"
+    t.bigint "order_id"
+    t.datetime "paid_at"
+    t.string "gateway_id"
+    t.string "environment"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_pos_checkouts_on_order_id"
+    t.index ["pos_display_session_id"], name: "index_pos_checkouts_on_pos_display_session_id"
+    t.index ["pos_session_id"], name: "index_pos_checkouts_on_pos_session_id"
+    t.index ["reference"], name: "index_pos_checkouts_on_reference", unique: true
+    t.index ["tenant_id", "pos_display_session_id", "cart_revision"], name: "idx_pos_checkout_revision", unique: true
+    t.index ["user_id"], name: "index_pos_checkouts_on_user_id"
+  end
+
+  create_table "pos_stock_allocations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.bigint "pos_checkout_id", null: false
+    t.string "variant_id", null: false
+    t.integer "quantity", null: false
+    t.string "status", default: "held", null: false
+    t.string "source_adjustment_id"
+    t.datetime "submitted_at"
+    t.datetime "applied_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "source_quantity_before"
+    t.index ["pos_checkout_id", "variant_id"], name: "index_pos_stock_allocations_on_pos_checkout_id_and_variant_id", unique: true
+    t.index ["pos_checkout_id"], name: "index_pos_stock_allocations_on_pos_checkout_id"
+    t.index ["tenant_id", "location_id", "variant_id"], name: "idx_pos_stock_pool"
+  end
+
+  create_table "pos_payment_attempts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "pos_checkout_id", null: false
+    t.string "invoice", null: false
+    t.string "nonce_digest", null: false
+    t.string "status", default: "submitting", null: false
+    t.string "transaction_id"
+    t.datetime "submitted_at", null: false
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice"], name: "index_pos_payment_attempts_on_invoice", unique: true
+    t.index ["pos_checkout_id"], name: "index_pos_payment_attempts_on_pos_checkout_id"
+    t.index ["tenant_id", "nonce_digest"], name: "index_pos_payment_attempts_on_tenant_id_and_nonce_digest", unique: true
+  end
+
   add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify
@@ -2049,8 +2160,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   add_foreign_key "marketing_review_events", "marketing_replies", column: "reply_id"
   add_foreign_key "marketing_review_events", "tenants"
   add_foreign_key "marketing_review_events", "users", column: "actor_id"
+  add_foreign_key "marketing_shopify_discounts", "marketing_offers", column: "offer_id"
+  add_foreign_key "marketing_shopify_discounts", "tenants"
+  add_foreign_key "marketing_shopify_discounts", "users", column: "approved_by_id"
   add_foreign_key "marketing_threads", "marketing_communities", column: "community_id"
   add_foreign_key "marketing_threads", "tenants"
+  add_foreign_key "pos_checkouts", "Location", column: "location_id"
+  add_foreign_key "pos_checkouts", "orders"
+  add_foreign_key "pos_checkouts", "pos_display_sessions"
+  add_foreign_key "pos_checkouts", "pos_sessions"
+  add_foreign_key "pos_checkouts", "tenants"
+  add_foreign_key "pos_checkouts", "users"
+  add_foreign_key "pos_payment_attempts", "pos_checkouts"
+  add_foreign_key "pos_payment_attempts", "tenants"
+  add_foreign_key "pos_settings", "Location", column: "location_id"
+  add_foreign_key "pos_settings", "tenants"
+  add_foreign_key "pos_stock_allocations", "Location", column: "location_id"
+  add_foreign_key "pos_stock_allocations", "pos_checkouts"
+  add_foreign_key "pos_stock_allocations", "tenants"
   add_foreign_key "marketing_cms_events", "tenants"
   add_foreign_key "marketing_cms_events", "users", column: "actor_id"
   add_foreign_key "marketing_document_revisions", "marketing_documents", column: "document_id"

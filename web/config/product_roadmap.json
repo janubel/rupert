@@ -490,8 +490,8 @@
       "area": "Commerce",
       "name": "Image-based POS cart",
       "status": "Partial",
-      "scope": "Shopify preview plus C-Trax native store catalog/prices and exact website image links; paired cashier/customer tip screens and web demo. Private, explicit tip confirmation is tied to the cart revision. Tax, terminal payment, collected tips, refunds and receipts remain in C-Trax; this preview creates no source sale or stock change.",
-      "evidence": "web/app/controllers/point_of_sale_controller.rb",
+      "scope": "C-Trax native catalog with exact website image links; paired private tip confirmation, real cash sales/change/receipts/register totals, native item tax checks, local stock allocations and paid-sale stock outbox. Optional verified Authorize.net hosted-card checkout with read-only recovery; live card activation requires merchant credentials. Demo simulates both tenders. Discounts, split tenders, refunds, source order creation and PAX/TRX terminals remain outside scope.",
+      "evidence": "docs/ctrax-retail.md",
       "phase": "1"
     },
     {
@@ -643,7 +643,7 @@
       "area": "Marketing",
       "name": "Influencer collaborations and product gifting",
       "status": "Available",
-      "scope": "Tenant-scoped influencer directory, relationship/follow-up and encrypted contact logs; campaign collaborations, reviewed product-gift proposals and manual shipment history; expiring existing merchant-code records, UTM referral URLs and versioned documents. Separate contacts permission, stale-edit protection and encrypted audit evidence. No outreach sending, platform discount activation, inventory/order writes, click/conversion tracking or commissions.",
+      "scope": "Tenant-scoped influencer directory and encrypted contacts; collaborations, reviewed product gifts and manual shipment history; explicitly reviewed Shopify percentage/fixed code creation with expiry, usage limits, exact store/terms readback and recoverable creation intents; discount-applying UTM referral links, existing-code records and versioned documents. Separate contacts/discount permissions and encrypted audits. Shopify app access is required. No outreach, inventory/order writes, conversion tracking or commissions.",
       "evidence": "web/app/services/marketing/gift_workflow.rb",
       "phase": "4"
     }
