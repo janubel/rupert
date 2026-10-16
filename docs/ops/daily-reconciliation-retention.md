@@ -54,3 +54,5 @@ Apply `20261016040100_create_reconciliation_evidence` on the current SER8 releas
 The [October 15 SER8 deployment receipt](daily-reconciliation-deployment-2026-10-15.md) records validation, native-file retention, archive initialization and the encrypted backup/restore checks.
 
 The [October 16 document-library UX receipt](reconciliation-library-deployment-2026-10-16.md) records searchable retention, correction/error flows, combined validation and the pending Drive status.
+
+The [October 16 attention and follow-up receipt](reconciliation-follow-ups-deployment-2026-10-16.md) records the deployed difference-first view and report-request queue. Apply the additional additive migration `20261017050000_create_reconciliation_follow_ups` for its requests and encrypted history, preserving both tables on code rollback.

@@ -1,0 +1,26 @@
+# Reconciliation attention and report follow-ups — October 16, 2026
+
+[PR #62](https://github.com/techmore/rupert/pull/62) deployed application revision `77544e22969dc8eee49251abdbd4a25baa637c3d` to SER8. It preserves the complete prior release `340275b6bfef59e4df14122e3e3fd541194ef71a`, including stock matching and the employee consolidation in `ce3d1f19c7ba6f1d166614b8ae30a05e5c824404`. The subsequent receipt commit changes documentation only.
+
+## Daily attention and follow-through
+
+**What needs attention** now leads the daily page with separate counts for differences, unavailable comparisons, conflicting controls and missing register controls. Signed amounts explain whether Rupert is above or below the source. Known differences sort first, by currency and then largest absolute difference within that currency; currencies are never summed. Comparison filters keep matching metrics available, and CSV exports remain complete.
+
+Recorded activity without a current control offers **Find retained reports**, **Add control** and **Request report** with the exact source/day/currency/location context. These prompts describe observed pools, not every report that a business might expect. Other invoices, statements and monthly reports can be tracked explicitly.
+
+**Money → Report requests & follow-ups** adds a durable cross-date queue with owners, due dates, overdue filtering, open/waiting/closed status and an encrypted progress history. Requests can link a matching retained file or open an upload with the requested context. Uploading or linking never automatically closes a request, certifies a match or marks a business day reviewed. A reviewer supplies the closing explanation. The document library and daily page link to the same queue.
+
+Current edits and encrypted append-only history commit together. Stale edits preserve entered text and show current history; duplicate creation submissions reuse their request. Scope stays fixed, matching evidence is tenant/source/kind/period bound, and register-control evidence also matches currency/location. Platform reviewers retain attribution in an authorized workspace while assigned owners remain local report readers. Requests and history are excluded from automatic pruning.
+
+## Validation and recovery
+
+- Exact deployed-revision [CI](https://github.com/techmore/rupert/actions/runs/38855376634) passed: PostgreSQL **1,295 tests / 9,381 assertions**, zero failures/errors and two adapter-specific skips; SQLite **1,295 tests / 9,396 assertions**, zero failures/errors/skips. RuboCop inspected **682 files** without offenses. Product-site, documentation and [employee-mobile checks](https://github.com/techmore/rupert/actions/runs/38855376676) passed.
+- Migration `20261017050000_create_reconciliation_follow_ups` creates two additive tables. A consistent private production-copy rehearsal verified migration/assets, real-data daily/library rendering, archive byte/checksum replay, retained period versions, original decryption and synthetic follow-up creation/progress/encrypted history. Temporary records rolled back; existing table counts stayed unchanged. No test follow-ups were created in production.
+- Synthetic desktop and phone checks covered currency-separated signed differences, unavailable/conflicting values, missing-control requests, progress history and requested upload context. Live authenticated read-only checks verified the daily attention page, queue, prefilled request and required single-day register-control fields. Daily/queue pages fit a 390px phone without page-wide overflow. Desktop attention anchors clear the fixed header.
+- Promotion selected exactly one verified release asset manifest, privately preserving the previous manifest and retaining older fingerprinted files. Source was clean at the deployed revision, public health returned HTTP 200 and web/jobs were active after restart.
+- All **42 eligible local originals/report versions** passed checksum verification. A consistent database/configuration backup passed integrity and saved-key restoration of vault/native originals, follow-up history queries, library queries and report generation. The encrypted off-host checkpoint passed decryption and every archive-member checksum and was pushed to the owner-verified private backup repository.
+- The coordinated employee verification confirmed the original setup links remained unused/usable and existing employee/authentication records were preserved. Private links and employee details stay outside public Git.
+
+**Google Drive remains pending at the owner's request.** No consent attempt, credential change, retention refresh token, cloud folder or verified upload was introduced by this pass. Originals remain encrypted and available in Rupert. The private activation note and earlier OAuth tester restriction still apply; see the [Drive checkpoint](drive-retention-deployment-2026-10-16.md).
+
+See the [daily workflow guide](daily-reconciliation-retention.md) and [earlier document-library receipt](reconciliation-library-deployment-2026-10-16.md). Retain additive tables on code rollback; do not restore an older database over later business writes. Private originals, financial amounts, runtime configuration and encryption keys remain outside public Git.
