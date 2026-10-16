@@ -6,13 +6,15 @@ class SquareTimecardImport
   class Error < StandardError; end
   RELEVANT = %w[id team_member_id location_id timezone start_at end_at status wage breaks].freeze
 
-  def initialize(actor: Current.user, rows: nil)
+  def initialize(actor: Current.user, rows: nil, sync_configuration: nil)
     @actor, @rows = actor, rows
+    @sync_configuration = sync_configuration
   end
 
   # Dry-run is the default. A complete source read precedes every publication.
   def call(apply: false)
     authorize!
+    @read_started_at = Time.current
     if @rows.nil?
       @reader = SquareTimecardReader.new
       @rows = @reader.call
@@ -27,7 +29,11 @@ class SquareTimecardImport
       raise ActiveRecord::RecordNotFound unless Tenant.where(id: Current.tenant_id).update_all('updated_at = updated_at') == 1
 
       authorize!
+      SquareTimecardSync.verify!(@sync_configuration) if @sync_configuration
       @reader&.verify_connection!
+      if SquareTimecard.where('last_seen_at > ?', @read_started_at).exists?
+        raise Error, 'A newer Square read was already published. Existing hours retained; retry the read.'
+      end
       plan = build_plan
       now = Time.current
       stats = result(plan)
@@ -42,7 +48,7 @@ class SquareTimecardImport
 
   def authorize!
     @actor = User.find_by(id: @actor&.id, active: true)
-    raise Pundit::NotAuthorizedError unless @actor&.active? && @actor.can_manage_accounts? && @actor.can?('timesheets.write') && Current.tenant&.status == 'active' && (@actor.super_admin? || @actor.tenant_id == Current.tenant_id)
+    raise Pundit::NotAuthorizedError unless @actor&.active? && @actor.can_manage_accounts? && @actor.can?('timesheets.write') && Tenant.exists?(id: Current.tenant_id, status: 'active') && (@actor.super_admin? || @actor.tenant_id == Current.tenant_id)
   end
 
   def build_plan

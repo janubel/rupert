@@ -8,7 +8,7 @@ class SourceHealth
     'swipesimple' => [['web', 'Website exports', 60.minutes]],
     'authorize_net' => [['reporting', 'Reporting API', 10.minutes]],
     'shopify' => [['catalog', 'Catalog and orders', 60.minutes]],
-    'square' => [['catalog', 'Catalog and orders', 60.minutes]],
+    'square' => [['catalog', 'Catalog and orders', 60.minutes], ['timecards', 'Employee hours', 30.minutes]],
     'bank' => [['reporting', 'Processor reports', 36.hours]],
     'google_backup' => [['backup', 'Verified backup', 8.hours]]
   }.freeze
@@ -113,12 +113,14 @@ class SourceHealth
     when 'ctrax' then operation == 'stock' ? @connection&.hourly_sync_enabled : @connection&.reporting_enabled
     when 'swipesimple', 'authorize_net', 'bank' then @connection&.reporting_enabled
     when 'shopify' then @source[:ready]
-    when 'square' then EnvStore.fetch('SQUARE_ACCESS_TOKEN', '').present?
+    when 'square' then operation == 'timecards' ? SquareTimecardSync.enabled? : EnvStore.fetch('SQUARE_ACCESS_TOKEN', '').present?
     when 'google_backup' then GoogleDriveBackupService.connected?
     end
   end
 
   def legacy_success(operation)
+    return SquareTimecard.maximum(:last_seen_at) if @source[:key] == 'square' && operation == 'timecards'
+
     case @source[:key]
     when 'ctrax'
       operation == 'stock' ? CtraxStockSnapshot.minimum(:captured_at) : CtraxDay.maximum(:captured_at)
@@ -130,6 +132,8 @@ class SourceHealth
   end
 
   def source_time(operation)
+    return SquareTimecard.maximum(:source_updated_at) if @source[:key] == 'square' && operation == 'timecards'
+
     return nil if @source[:key] == 'google_backup'
     return CtraxDay.maximum(:captured_at) if @source[:key] == 'ctrax' && operation == 'sales'
 
@@ -137,6 +141,10 @@ class SourceHealth
   end
 
   def coverage(operation)
+    if @source[:key] == 'square' && operation == 'timecards'
+      return 'Complete timecard search. Closed matched shifts count once; open, unmatched and overlapping work waits for review. Corrections retain original hours; history does not establish payroll payment.'
+    end
+
     case @source[:key]
     when 'ctrax'
       if operation == 'stock'

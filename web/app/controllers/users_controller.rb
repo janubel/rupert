@@ -52,7 +52,8 @@ class UsersController < AuthenticatedController
   def update
     if @user.update(user_params)
       ActivityLogger.log('employee_updated', subject: @user, details: @user.role)
-      redirect_to(users_path, notice: "#{@user.display_name} updated.")
+      employee = People::Employee.find_by(id: params[:return_employee_id], user_id: @user.id) if params[:return_employee_id].present?
+      redirect_to(employee ? people_employee_path(employee, anchor: 'access') : users_path, notice: "#{@user.display_name} updated.")
     else
       @roles = assignable_roles
       render(:edit, status: :unprocessable_entity)
