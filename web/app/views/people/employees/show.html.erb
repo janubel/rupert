@@ -44,14 +44,25 @@
     </section>
   <% end %>
 
-  <% if Current.user.can_manage_accounts? && Current.user.can?('hr.write') && @employee.active? %>
-    <section class="card card-pad space-y-3">
+    <section id="access" class="card card-pad space-y-3">
       <h2 class="font-display text-lg">Employee web &amp; app access</h2>
-      <p class="text-sm"><%= @employee.user ? "Linked to #{@employee.user.email} (#{@employee.user.role.humanize})" : 'No login linked. Add an email address to create employee access.' %></p>
-      <%= button_to 'Create private setup / reset link', employee_access_path(employee_id: @employee.id), method: :post, class: 'btn-primary btn-sm' if @employee.email.present? && (!@employee.user || @employee.user.employee?) %>
-      <%= link_to 'App installation', employee_app_path, class: 'btn-ghost btn-sm' %>
+      <p class="text-sm"><%= @employee.user ? "Linked to #{@employee.user.email}" : 'No login linked.' %></p>
+      <%= render 'access_badges', employee: @employee %>
+      <p class="text-xs text-mocha">Badges show current tab access. Own records stay limited to this employee; POS checkout does not grant company sales history or reconciliation.</p>
+      <% if (account = @employee.user) && Current.user.can_manage_accounts? && (Current.user.super_admin? || !account.super_admin?) %>
+        <%= form_with model: account, url: user_path(account), class: 'flex flex-wrap items-end gap-3' do |f| %>
+          <%= hidden_field_tag :return_employee_id, @employee.id %>
+          <div><%= f.label :role, 'Permission level', class: 'block text-sm mb-1' %><%= f.select :role, (Current.user.super_admin? ? User.roles.keys : User.roles.keys.excluding('super_admin')).map { |role| [role.humanize, role] }, {}, class: 'select' %></div>
+          <div><%= f.label :active, 'Login status', class: 'block text-sm mb-1' %><%= f.select :active, [['Enabled', true], ['Disabled', false]], {}, class: 'select' %></div>
+          <%= f.submit 'Save access level', class: 'btn-primary btn-sm' %>
+        <% end %>
+        <p class="text-xs text-mocha">Employee access includes POS and personal time records. Other roles may expose company data. Individual overrides can replace a role’s defaults.</p>
+        <%= link_to 'Edit individual permissions', edit_user_path(account), class: 'text-sm text-olive underline' %>
+      <% end %>
+      <% if Current.user.can_manage_accounts? && Current.user.can?('hr.write') && @employee.active? %>
+        <%= button_to 'Create private setup / reset link', employee_access_path(employee_id: @employee.id), method: :post, class: 'btn-ghost btn-sm' if @employee.email.present? && (!@employee.user || @employee.user.employee?) %>
+      <% end %>
     </section>
-  <% end %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">

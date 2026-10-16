@@ -2,7 +2,11 @@
 
 Square history is read through `POST /v2/labor/timecards/search` with `TIMECARDS_READ`. No Square create, update or delete endpoint is used. The complete paginated read must finish before the tenant-serialized publication. A changed connection, duplicate source ID, pagination cycle or partial response prevents publication.
 
-Run `TENANT_ID=... ACTOR_ID=... bundle exec rails square:timecards` to inspect matches without writes. Add `APPLY=1` to import locally. The actor must be an active account administrator with timesheet-write access in the tenant. This is an operator-initiated import, not a recurring job.
+Run `TENANT_ID=... ACTOR_ID=... bundle exec rails square:timecards` to inspect matches without writes. Add `APPLY=1` to import locally. The actor must be an active account administrator with timesheet-write access in the tenant.
+
+Automatic refresh runs on the server through Solid Queue every 15 minutes. It is disabled until an authorized administrator opts that tenant in with `TENANT_ID=... ACTOR_ID=... ENABLED=1 bundle exec rails square:timecards_schedule`; use `ENABLED=0` to disable. Only the tenant ID is queued; the encrypted tenant setting records the authorizing account and a configuration version. Each publication rechecks the active account, tenant, schedule version and Square connection. Revocation or disabling during a read prevents publication. A per-tenant job concurrency limit avoids overlapping scheduled reads, and a read older than an already-published refresh is rejected under the tenant writer lock. No employee account or HR setting is changed by scheduling.
+
+Sync-attempt receipts record queued/running/succeeded/failed status without source payloads or credentials. Employee home and history show the last successful refresh and a safe failure notice. Failed/incomplete reads retain prior hours and the next scheduled run retries normally. Closed new shifts are counted once; open shifts wait until closed. Source corrections remain flagged for review with original imported hours retained.
 
 Native timecard IDs are unique per tenant. Team-member IDs resolve only through retained Square employee source identities, including consolidated profiles. Names and email addresses are never used to guess identity. Inactive historical employees can receive history without activation, accounts or invitations.
 

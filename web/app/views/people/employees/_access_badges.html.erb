@@ -1,0 +1,10 @@
+<% review = EmployeeAccessReview.new(employee) %>
+<div class="space-y-2" aria-label="Access for <%= employee.name %>">
+  <span class="<%= employee.user&.active? ? 'pill-olive' : 'pill-taupe' %>"><%= review.status %></span>
+  <div class="flex flex-wrap gap-2">
+    <% (local_assigns[:compact] ? review.summary : review.tabs).each do |tab| %>
+      <span class="pill-fern"><%= tab[:name] %> · <%= tab[:level] %></span>
+    <% end %>
+  </div>
+  <% unless employee.user&.active? %><p class="text-xs text-mocha">No tabs available until an active login is linked.</p><% end %>
+</div>

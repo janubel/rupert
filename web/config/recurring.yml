@@ -21,6 +21,10 @@ production:
     class: DirectorySyncJob
     queue: default
     schedule: every 30 minutes
+  square_timecards:
+    class: SquareTimecardSyncJob
+    queue: default
+    schedule: every 15 minutes
   ctrax_sales:
     class: CtraxSalesSyncJob
     queue: default

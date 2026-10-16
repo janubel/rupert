@@ -68,12 +68,13 @@
             <th scope="col" class="th">Department</th>
             <th scope="col" class="th">Position</th>
             <th scope="col" class="th">Web login</th>
+            <th scope="col" class="th">Access &amp; tabs</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @employees.empty? %>
-            <tr><td colspan="5" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No employees yet — add the first one." %></td></tr>
+            <tr><td colspan="6" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No employees yet — add the first one." %></td></tr>
           <% end %>
           <% @employees.each do |employee| %>
             <tr class="hover:bg-cream">
@@ -85,6 +86,7 @@
               <td class="td text-mocha"><%= employee.department&.name || "—" %></td>
               <td class="td text-mocha"><%= employee.position&.name || "—" %></td>
               <td class="td text-mocha"><%= employee.user ? (employee.user.active? ? "Login linked" : "Login disabled") : "Needs login" %></td>
+              <td class="td"><%= render 'access_badges', employee: employee, compact: true %><%= link_to 'Review access', people_employee_path(employee, anchor: 'access'), class: 'mt-2 inline-block text-xs text-olive underline' %></td>
               <td class="td">
                 <span class="<%= employee.active? ? "pill-fern" : employee.on_leave? ? "pill-olive" : "pill-rose" %>">
                   <span class="dot <%= employee.active? ? "bg-fern" : employee.on_leave? ? "bg-olive" : "bg-rose" %>"></span>
