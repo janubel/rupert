@@ -150,7 +150,7 @@ class SyncEngineTest < ActiveSupport::TestCase
 
     # since = watermark - 48h tail -> about 50 hours ago, not the 30-day default.
     assert_not_nil captured_since
-    assert_operator Time.zone.parse(captured_since), :>, 3.days.ago
+    assert_equal((2.hours.ago - SyncEngine::REFRESH_TAIL).strftime('%Y-%m-%d'), captured_since)
   end
 
   test 'explicit history_days bypasses the watermark (manual backfill)' do

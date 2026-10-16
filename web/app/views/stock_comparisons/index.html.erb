@@ -1,0 +1,55 @@
+<% content_for :title, 'Shopify & C-Trax stock' %>
+<div class="space-y-6">
+  <section class="space-y-3">
+    <h1 class="page-title">Shopify &amp; C-Trax stock</h1>
+    <p class="max-w-3xl text-sm text-mocha">Two views of shared stock. Compare one Shopify location with one C-Trax store; quantities are never added together. This page is read-only.</p>
+    <div class="flex flex-wrap gap-2">
+      <%= link_to 'Download comparison CSV', stock_comparison_path(request.query_parameters.except('page').merge(format: :csv)), class: 'btn-ghost' %>
+      <%= link_to 'Physical count worksheets', inventory_counts_path, class: 'btn-ghost' %>
+      <%= link_to 'Source reads', syncs_path, class: 'btn-ghost' if Current.user.can?('sync.write') %>
+    </div>
+  </section>
+  <section class="card card-pad space-y-3">
+    <%= form_tag stock_comparison_path, method: :get, class: 'flex flex-wrap items-end gap-3' do %>
+      <label class="block text-sm">Shopify location
+        <%= select_tag :shopify_location_id, options_for_select(@comparison.shopify_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.shopify&.location_id), include_blank: 'Choose location', class: 'input mt-1' %>
+      </label>
+      <label class="block text-sm">C-Trax store
+        <%= select_tag :ctrax_location_id, options_for_select(@comparison.ctrax_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.ctrax&.location_id), include_blank: 'Choose store', class: 'input mt-1' %>
+      </label>
+      <label class="block text-sm">Show
+        <%= select_tag :filter, options_for_select([['All items', 'all'], ['Needs attention', 'attention'], ['No unambiguous match', 'unmatched']], @comparison.filter), class: 'input mt-1' %>
+      </label>
+      <label class="block text-sm">Search <%= text_field_tag :q, @comparison.query, class: 'input mt-1', placeholder: 'Item, SKU or native ID' %></label>
+      <%= submit_tag 'Compare', class: 'btn-primary' %>
+    <% end %>
+    <p class="text-xs text-taupe">Shopify stock read: <%= @comparison.shopify&.captured_at&.iso8601 || 'Not selected / not imported' %> · C-Trax stock read: <%= @comparison.ctrax&.captured_at&.iso8601 || 'Not selected / not imported' %></p>
+    <p class="text-xs text-taupe">Catalog read: <%= @comparison.catalog_read_at&.iso8601 || 'Awaiting a complete Shopify read' %> · <%= @comparison.historical_catalog_count %> historical variants absent from that read are excluded. Only current active tracked Shopify variants appear.</p>
+    <% unless @comparison.shopify && @comparison.ctrax %><p role="status" class="text-sm text-clay">Choose both sources after their stock reads complete. Missing stock stays unknown.</p><% end %>
+  </section>
+  <% summary = @comparison.summary %>
+  <section class="grid gap-3 sm:grid-cols-4">
+    <% [['Comparison rows', summary[:rows]], ['Identity pairs / candidates', summary[:paired]], ['Unknown stock rows', summary[:unknown]], ['Negative stock rows', summary[:negative]]].each do |label, value| %>
+      <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value"><%= value %></p></div>
+    <% end %>
+  </section>
+  <p class="max-w-4xl text-sm text-mocha">Shopify on-hand includes committed units; available is shown separately. Signed source values are preserved. A unique SKU is a comparison candidate, not an approved mapping. No current match does not mean an item is not carried. Unknown, fractional, untracked or over-one-hour-old observations have no numerical difference. Physical stock and package/unit equivalence still require evidence.</p>
+  <div class="card overflow-hidden"><div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead><tr><th class="th">Item / identity</th><th class="th text-right">Shopify on hand</th><th class="th text-right">Available</th><th class="th text-right">Committed</th><th class="th text-right">C-Trax stock</th><th class="th text-right">C-Trax − on hand</th><th class="th">Review</th></tr></thead>
+      <tbody class="divide-y divide-fog">
+        <% @rows.each do |row| %>
+          <tr>
+            <td class="td"><p class="font-medium"><% if row[:shopify_id] %><%= link_to row[:label], shopify_variant_path(row[:shopify_id]), class: 'hover:underline' %><% else %><%= row[:label] %><% end %></p><p class="text-xs text-taupe"><%= row[:sku].presence || 'No SKU' %> · <%= row[:identity] %></p><p class="text-xs text-taupe">Shopify: <%= row[:shopify_id] || 'No match' %><br>C-Trax: <%= row[:ctrax_id] || 'No match' %></p></td>
+            <% [:on_hand, :available, :committed, :ctrax_quantity, :difference].each do |key| %>
+              <td class="td text-right"><%= row[key].nil? ? 'Unknown / unavailable' : (row[key].is_a?(BigDecimal) ? row[key].to_s('F').delete_suffix('.0') : row[key]) %></td>
+            <% end %>
+            <td class="td"><%= row[:issues].any? ? row[:issues].join(' · ') : (row[:difference]&.nonzero? ? 'Counts differ; verify baseline' : 'No stock exception in these reads') %><%= ' · Not listed for sale' if row[:ctrax_id] && !row[:listed] %></td>
+          </tr>
+        <% end %>
+        <% if @rows.empty? %><tr><td colspan="7" class="empty-row">No current records match these filters. Complete source reads from Source reads.</td></tr><% end %>
+      </tbody>
+    </table>
+  </div></div>
+  <% if @pagy.pages > 1 %><div class="text-sm"><%== pagy_nav(@pagy) %></div><% end %>
+</div>

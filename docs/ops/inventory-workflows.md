@@ -1,6 +1,6 @@
 # Inventory workflow operations
 
-Reviewed 2026-10-15. These workflows record local work in Rupert. Shopify and Square remain independent inventory pools. They do not push platform stock, edit SKUs, collect payments or guarantee availability in another channel. Inventory read permission is required to view them; inventory write permission is required to change local records.
+Reviewed 2026-10-16. Shopify and C-Trax mostly share physical stock, with Square disabled. Stock → Stock comparison is the current read-only operational view; see [comparison and catalog freshness](shared-stock-comparison.md). Local counts, holds and bulk workflows do not push platform stock or guarantee availability in another channel. Legacy Shopify/Square catalog links and reservation pools do not establish shared Shopify/C-Trax allocation.
 
 For an everyday explanation of the separate payment setup, see [Payments in plain English](https://techmore.github.io/rupert/payment-basics.html), including Valmar and Authorize.net contacts.
 
@@ -20,7 +20,7 @@ Automatic matching requires a nonblank normalized SKU to identify exactly one Sh
 
 ## Scanner counts
 
-Open **Stock → Counts**, create or open a draft worksheet, and choose **Scan items**. A keyboard-wedge scanner enters a SKU or barcode already stored in Rupert. Unknown or ambiguous codes require review. The catalog importer currently imports SKUs but does not populate the Shopify barcode field, so SKU scanning is the immediately supported workflow.
+Open **Stock → Counts**, create or open a draft worksheet, and choose **Scan items**. A keyboard-wedge scanner enters a SKU or barcode already stored in Rupert. Unknown or ambiguous codes require review. The importer now retains native SKUs and barcodes when Shopify supplies them; missing or ambiguous codes still need exact native-identity worksheets.
 
 Prepared worksheets require a platform location and include only unambiguous stored rows for that location. Choose the location and use **Load location sheet** before saving. Sheets start with mirrored quantities filled in; oversold stock starts at zero in the physical-count input. Missing or ambiguous rows are omitted, not treated as zero. Review the count before adding units, or explicitly set the physically counted total. Each intentional scan receives a new request token; retrying it returns the prior result without adding units twice. Scanner receipts retain the actor and result.
 

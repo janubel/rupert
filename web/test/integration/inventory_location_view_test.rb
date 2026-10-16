@@ -4,122 +4,71 @@ require 'test_helper'
 
 class InventoryLocationViewTest < ActionDispatch::IntegrationTest
   setup do
-    @tenant = tenants(:default_tenant)
-    Current.tenant = @tenant
-    Shop.create!(shopify_domain: 'm11u0i-sb.myshopify.com', shopify_token: 'test-token')
-    EnvStore.set('SHOPIFY_CLIENT_ID', 'test-client-id')
-    EnvStore.set('SHOPIFY_CLIENT_SECRET', 'test-client-secret')
+    Current.tenant = tenants(:default_tenant)
+    @at = Time.current.change(usec: 0)
+    product = ShopifyProduct.create!(id: 'view-product', title: 'Current tea', status: 'ACTIVE', catalog_present: true, catalog_read_at: @at)
+    @variant = ShopifyVariant.create!(id: 'view-variant', product: product, title: '30 count', sku: 'TEA-30', tracked: true,
+      catalog_present: true, catalog_read_at: @at, inventoryQuantity: 3)
+    online = Location.create!(source: 'shopify', externalId: 'view-online', name: 'Online stock')
+    retail = Location.create!(source: 'ctrax', externalId: 'fixture/view', name: 'Retail stock')
+    ShopifyStockSnapshot.create!(location: online, shop_domain: 'fixture.myshopify.com', captured_at: @at,
+      records_json: [{ 'id' => @variant.id, 'on_hand' => 5, 'available' => 3, 'committed' => 2 }])
+    CtraxStockSnapshot.create!(location: retail, api_origin: 'https://fixture.api.cannatrax.net', store_id: '1', captured_at: @at,
+      records_json: [{ 'id' => 'view-native', 'name' => 'Retail tea', 'sku' => 'TEA-30', 'quantity' => '-3', 'manage_stock' => true }])
+    Location.create!(source: 'square', externalId: 'old-square', name: 'OLD-SQUARE-STOCK')
     post login_path, params: { email: 'admin@example.com', password: 'password' }
-
-    @product = ShopifyProduct.create!(id: 'gid://shopify/Product/1', title: 'Tea', status: 'ACTIVE',
-      tenant_id: @tenant.id)
-    @online = Location.create!(source: 'shopify', externalId: 'gid://shopify/Location/1', name: 'Online store',
-      active: true, tenant_id: @tenant.id)
-    @rig = Location.create!(source: 'shopify', externalId: 'gid://shopify/Location/2', name: 'Market rig',
-      active: true, tenant_id: @tenant.id)
-    @home = Location.create!(source: 'square', externalId: 'sq-home', name: 'Home shop', active: true,
-      tenant_id: @tenant.id)
-
-    @item = SquareItem.create!(id: 'si1', name: 'Tea Item', tenant_id: @tenant.id)
-    @variation = SquareVariation.create!(id: 'sv1', itemId: @item.id, sku: 'TEA-50', name: 'Tea 50g',
-      tenant_id: @tenant.id)
-
-    @linked = ShopifyVariant.create!(productId: @product.id, title: 'Tea / 50g', sku: 'TEA-50',
-      inventoryQuantity: 7, tracked: true, tenant_id: @tenant.id)
-    SkuLink.create!(sku: 'TEA-50', shopifyVariantId: @linked.id, squareVariationId: @variation.id,
-      tenant_id: @tenant.id)
-    InventoryLevel.create!(source: 'shopify', locationId: @online.id, shopifyVariantId: @linked.id, quantity: 5,
-      available: 5, tenant_id: @tenant.id)
-    InventoryLevel.create!(source: 'shopify', locationId: @rig.id, shopifyVariantId: @linked.id, quantity: 2,
-      available: 2, tenant_id: @tenant.id)
-    InventoryLevel.create!(source: 'square', locationId: @home.id, squareVariationId: @variation.id, quantity: 4,
-      available: 4, tenant_id: @tenant.id)
-
-    @unlinked = ShopifyVariant.create!(productId: @product.id, title: 'Tea / 100g', sku: 'TEA-100',
-      inventoryQuantity: 3, tracked: true, tenant_id: @tenant.id)
-    InventoryLevel.create!(source: 'shopify', locationId: @online.id, shopifyVariantId: @unlinked.id, quantity: 3,
-      available: 3, tenant_id: @tenant.id)
   end
 
-  teardown do
-    Current.tenant = nil
+  teardown { Current.reset }
+
+  test 'inventory entry point opens the shared read-only comparison and preserves search' do
+    get inventory_index_path, params: { q: 'Tea' }
+    assert_response :success
+    assert_select 'h1', 'Shopify & C-Trax stock'
+    assert_includes response.body, 'Online stock'
+    assert_includes response.body, 'Retail stock'
+    assert_not_includes response.body, 'OLD-SQUARE-STOCK'
+    assert_select 'th', text: 'Committed'
+    assert_select 'td', text: '-3'
+    assert_select 'td', text: '-8'
+    assert_select 'form[action=?][method=post]', stock_comparison_path, count: 0
   end
 
-  def get_page(params: {})
-    get inventory_index_path, params: params.merge(shop: 'm11u0i-sb.myshopify.com', embedded: '1', host: 'test-host')
+  test 'view and CSV do not contact providers or write counts' do
+    ShopifyClient.expects(:graphql).never
+    Ctrax::StockSync.expects(:call).never
+    InventoryWriter.expects(:adjust_shopify!).never
+    InventoryWriter.expects(:physical_count!).never
+    get stock_comparison_path
+    assert_response :success
+    assert_equal 'no-store', response.headers['Cache-Control']
+    get stock_comparison_path(format: :csv)
+    assert_response :success
+    assert_equal 'text/csv', response.media_type
+    assert_includes response.body, 'Shopify on hand'
+    assert_includes response.body, 'SKU candidate'
+    assert_equal 3, @variant.reload.inventoryQuantity
+    assert_equal '-3', CtraxStockSnapshot.first.records.first['quantity']
   end
 
-  test 'renders one stock column per active location plus totals and identity status' do
-    get_page
-
+  test 'search and attention filters apply consistently to HTML and CSV' do
+    get stock_comparison_path, params: { q: 'absent item', filter: 'attention' }
     assert_response :success
-    assert_select 'h1', 'Inventory'
-
-    # A column header per location, labeled with its source.
-    assert_select 'th', text: /Online store/
-    assert_select 'th', text: /Market rig/
-    assert_select 'th', text: /Home shop/
-
-    # Per-location quantities for the linked variant.
-    assert_select 'td', text: /^5$/
-    assert_select 'td', text: /^2$/
-    assert_select 'td', text: /^4$/
-
-    # Identity chips, not a linked/unlinked binary.
-    assert_select 'span.pill-fern', text: 'matched'
-    assert_select 'span.pill-taupe', text: 'unlinked'
-    assert_select 'td', text: /not carried/
+    assert_includes response.body, 'No current records match'
+    get stock_comparison_path(format: :csv), params: { q: 'absent item', filter: 'attention' }
+    assert_equal 1, CSV.parse(response.body).size
   end
 
-  test 'stock quantities stay correct when searches share a page number' do
-    previous_cache = Rails.cache
-    Rails.cache = ActiveSupport::Cache::MemoryStore.new
-    coffee = ShopifyProduct.create!(id: 'gid://shopify/Product/2', title: 'Coffee', status: 'ACTIVE')
-    variant = ShopifyVariant.create!(productId: coffee.id, title: 'Coffee / 50g', sku: 'COFFEE-50', tracked: true)
-    InventoryLevel.create!(source: 'shopify', locationId: @online.id, shopifyVariantId: variant.id,
-      quantity: 9, available: 9)
-
-    get_page(params: { q: 'Tea' })
+  test 'workspace selection and permissions are enforced for both formats' do
+    other = Tenant.create!(name: 'Private other', subdomain: 'private-stock-view')
+    location = Location.unscoped.create!(tenant_id: other.id, source: 'ctrax', externalId: 'private/1', name: 'PRIVATE-STOCK')
+    get stock_comparison_path, params: { ctrax_location_id: location.id }
+    assert_response :not_found
+    get stock_comparison_path
     assert_response :success
-    get_page(params: { q: 'Coffee' })
-    assert_response :success
-    assert_select 'tbody tr', text: /COFFEE-50/ do
-      assert_select 'td', text: /^9$/
-    end
-
-    get_page
-    assert_select 'tbody tr', text: /COFFEE-50/ do
-      assert_select 'td', text: /^9$/
-    end
-  ensure
-    Rails.cache = previous_cache
-  end
-
-  test 'variant query count stays bounded across a page of products' do
-    10.times do |number|
-      product = ShopifyProduct.create!(id: "gid://shopify/Product/batch-#{number}", title: "Batch #{number}")
-      ShopifyVariant.create!(productId: product.id, title: "Batch #{number}", sku: "BATCH-#{number}", tracked: true)
-    end
-    queries = []
-    collector = lambda do |*args|
-      payload = args.last
-      queries << payload[:sql] if payload[:sql].match?(/SELECT .*FROM "ShopifyVariant"/) && !payload[:cached]
-    end
-    ActiveSupport::Notifications.subscribed(collector, 'sql.active_record') { get_page }
-
-    assert_response :success
-    assert_operator queries.length, :<=, 3, 'variant loading must not add a query for each product'
-  end
-
-  test 'oversold Shopify variants are announced without changing the shown stock' do
-    get_page
-    assert_response :success
-    assert_select 'p[role=status]', text: /oversold/, count: 0
-
-    InventoryLevel.where(source: 'shopify', shopifyVariantId: @linked.id).update_all(sourceQuantity: -4)
-    get_page
-    assert_response :success
-    assert_select 'p[role=status]', text: /1\s+Shopify variant is oversold/
-    assert_select 'td', text: /^5$/
+    assert_not_includes response.body, 'PRIVATE-STOCK'
+    users(:regular_user).update_permission_overrides!(%w[settings.read])
+    get stock_comparison_path(format: :csv)
+    assert_redirected_to root_path
   end
 end

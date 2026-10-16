@@ -25,8 +25,8 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
   test 'stock tools use one disclosure with labelled links and current page' do
     get inventory_index_path
     assert_select 'nav[aria-label="Module"] details[data-controller="navigation-menu"]', count: 1
-    assert_select 'nav[aria-label="Module"] summary[aria-label="Stock tools; current page Inventory"]'
-    assert_select 'nav[aria-label="Module"] .module-menu-panel a[aria-current="page"]', text: 'Inventory'
+    assert_select 'nav[aria-label="Module"] summary[aria-label="Stock tools; current page Stock comparison"]'
+    assert_select 'nav[aria-label="Module"] .module-menu-panel a[aria-current="page"]', text: 'Stock comparison'
     assert_select 'nav[aria-label="Module"] .module-menu-panel a', text: 'Locations'
     assert_select 'nav[aria-label="Module"] > a', count: 0
   end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_033100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -209,6 +209,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   end
 
   create_table "ShopifyProduct", id: :string, force: :cascade do |t|
+    t.boolean "catalog_present"
+    t.datetime "catalog_read_at"
     t.string "featuredImageUrl"
     t.string "handle"
     t.datetime "publishedAt"
@@ -224,6 +226,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   end
 
   create_table "ShopifyVariant", id: :string, force: :cascade do |t|
+    t.boolean "catalog_present"
+    t.datetime "catalog_read_at"
     t.string "barcode"
     t.float "compareAtPrice"
     t.string "inventoryItemId"
@@ -1504,6 +1508,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["expires_at"], name: "index_solid_queue_semaphores_on_expires_at"
     t.index ["key", "value"], name: "index_solid_queue_semaphores_on_key_and_value"
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
+  end
+
+  create_table "shopify_stock_snapshots", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "shop_domain", null: false
+    t.datetime "captured_at", null: false
+    t.text "records_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "location_id"], name: "index_shopify_stock_snapshots_on_tenant_id_and_location_id", unique: true
+    t.index ["tenant_id"], name: "index_shopify_stock_snapshots_on_tenant_id"
   end
 
   create_table "stock_reservation_pools", force: :cascade do |t|

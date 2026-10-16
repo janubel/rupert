@@ -45,7 +45,7 @@ class SourceSyncStatus
       'Live'
     end
     { key: 'shopify', label: 'Shopify', badge: badge, last_at: last_at,
-      detail: "#{ShopifyProduct.count} products · #{ShopifyVariant.count} variants",
+      detail: "#{ShopifyProduct.active.where(catalog_present: true).count} current active products · #{ShopifyVariant.current_catalog.tracked.count} tracked variants",
       schedule: 'Every 15 minutes', mode: 'catalog', ready: configured }
   end
 
