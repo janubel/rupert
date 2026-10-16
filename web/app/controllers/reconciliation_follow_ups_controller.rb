@@ -32,6 +32,15 @@ class ReconciliationFollowUpsController < AuthenticatedController
       @day = ReconciliationEvidence.dates(params[:day], params[:day]).first
       scope = scope.covering(@day)
     end
+    @queue_filters = { status: @status, source: @source, owner: @owner_filter, category: @category,
+      evidence: @evidence_filter, original: @original&.id, day: @day&.iso8601 }.compact
+    active_view = scope.active
+    overdue_view = active_view.where('due_on < ?', Date.current)
+    missing_view = active_view.where(category: 'missing_report', document_id: nil)
+    @view_overdue_count = overdue_view.count
+    @view_missing_count = missing_view.count
+    @view_next_overdue = overdue_view.includes(:owner).order(:due_on, :id).first
+    @view_next_missing = missing_view.includes(:owner).order(:due_on, :id).first
     @open_count = ReconciliationFollowUp.active.count
     @overdue_count = ReconciliationFollowUp.active.where('due_on < ?', Date.current).count
     @today_count = ReconciliationFollowUp.active.where(due_on: Date.current).count
