@@ -60,9 +60,11 @@ module Sales
     # Pull sales for this session's window and location from the canonical
     # order stream, grouped by payment method.
     def refresh_from_orders!
-      orders = Core::Order.where('occurred_at >= ?', opened_at)
+      orders = ::Core::Order.where('occurred_at >= ?', opened_at)
       orders = orders.where('occurred_at < ?', closed_at) if closed_at
-      orders = orders.where(location_id: location_id) if location_id.present?
+      orders = orders.where(location_id: [location_id, location&.externalId].compact) if location_id.present?
+      # Two open drawers at one store must not both count the same Rupert sale.
+      orders = orders.where.not(source: 'rupert_pos').or(orders.where(id: PosCheckout.where(pos_session_id: id).select(:order_id)))
 
       tenders = orders.joins(:payments).group('payments.method').sum('payments.amount_cents')
       self.cash_sales_cents = tenders['cash'].to_i
@@ -73,11 +75,17 @@ module Sales
     end
 
     def settle!(counted_cents: nil, notes: nil)
-      self.counted_cash_cents = counted_cents
-      self.notes = notes if notes
-      self.variance_cents = variance_cents
-      self.closed_at = Time.current
-      close!
+      self.class.transaction do
+        # Use the same store lock as checkout preparation before checking holds.
+        Location.where(id: location_id).update_all(active: location.active) if location
+        lock!
+        raise Pos::Error, 'Finish or cancel outstanding checkouts before closing the register.' if PosCheckout.where(pos_session_id: id, status: %w[ready processing unknown declined]).exists?
+        self.counted_cash_cents = counted_cents
+        self.notes = notes if notes
+        self.variance_cents = variance_cents
+        self.closed_at = Time.current
+        close!
+      end
     end
   end
 end

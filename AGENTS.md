@@ -21,7 +21,7 @@ Use the [Shopify AI Toolkit](https://shopify.dev/docs/apps/build/ai-toolkit) for
 
 ## C-Trax integration context
 
-- Read `docs/ctrax-retail.md` and `docs/ops/ctrax-retail-deployment-2026-10-15.md` for daily order/register imports and the paired cashier/customer tip preview. Real reads have succeeded; preview tips do not execute terminal payments.
+- Read `docs/ctrax-retail.md` and `docs/ops/ctrax-retail-deployment-2026-10-15.md` for daily order/register imports and paired cashier/customer checkout. Real cash checkout and private tip receipts are implemented; optional hosted-card charges require verified merchant credentials. The web demo simulates both tenders and does not mutate source stock. No PAX/TRX terminal execution is implemented.
 - The owner selected C-Trax as the retail physical-count reference on 2026-10-15. Read `docs/ctrax.md` before changing its connector.
 - C-Trax user authentication and TRX merchant credentials are separate. Never use a merchant client ID/token/algorithm as guessed stock API authentication.
 - Keep native store/variant IDs when source SKUs are absent. Preserve signed stock, distinguish missing stock from zero, and never write counts back to a platform without owner authorization.

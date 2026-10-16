@@ -162,6 +162,33 @@ class CtraxStockSyncTest < ActiveSupport::TestCase
     assert_not_requested :get, /productVariants/
   end
 
+  test 'store tax relationships apply independently of master product prices and explicit empty differs from missing' do
+    first = variant(1).merge(tax_status: 'taxable', attribute_store_overrides: { tax_rates: [{ rate_mbp: 600_000 }, { rate_mbp: 100_000 }] })
+    second = variant(2).merge(tax_status: 'taxable', attribute_store_overrides: { tax_rates: [] })
+    third = variant(3).merge(tax_status: 'none')
+    fourth = variant(4).merge(tax_status: 'taxable')
+    stub_stock([first, second, third, fourth])
+    Ctrax::StockSync.call(connection: @connection)
+    records = CtraxStockSnapshot.first.records
+    assert_equal [600_000, 100_000], records[0]['tax_rates_mbp']
+    assert_equal 700_000, records[0]['tax_rate_mbp']
+    assert_equal 0, records[1]['tax_rate_mbp']
+    assert_equal 0, records[2]['tax_rate_mbp']
+    assert_nil records[3]['tax_rate_mbp']
+  end
+
+  test 'stock mutation uses native remove contract with exact marker and no guessed order creation' do
+    marker = "Rupert POS #{'a' * 32} variant 1"
+    stub_request(:post, "#{@origin}/api/v1/stores/7/productVariants/1/inventoryAdjustments")
+      .with(body: { action: 'remove', quantity: 2, reason: 'other', comments: marker }.to_json)
+      .to_return(status: 201, headers: { 'Content-Type' => 'application/json' }, body: { stock: { store_id: 7, product_variant_id: 1, quantity: 2 } }.to_json)
+    client = Ctrax::Client.new(@credentials)
+    reply = client.remove_stock('7', '1', quantity: 2, reference: marker)
+    assert_equal 2, reply.dig('stock', 'quantity')
+    assert_raises(Ctrax::Client::Error) { client.remove_stock('7', '1', quantity: -2, reference: marker) }
+    assert_not_requested :post, /orders/
+  end
+
   private
 
   def stub_login

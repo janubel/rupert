@@ -186,7 +186,7 @@ export default class extends Controller {
       this.subtotalTarget.textContent = this.amount(result.subtotal)
       this.tipTarget.textContent = this.amount(result.tip_amount)
       this.previewTotalTarget.textContent = this.amount(result.preview_total)
-      this.statusTarget.textContent = "Preview checked. Complete the sale in your existing POS."
+      this.statusTarget.textContent = result.checkout ? "Prices and tax checked. Ask the customer to confirm their tip, then complete checkout." : "Preview checked. Complete the sale in your existing POS."
     } catch (error) {
       if (error.name === "AbortError" || sequence !== this.sequence) return
       this.statusTarget.textContent = error.message === "Failed to fetch" || error instanceof SyntaxError
