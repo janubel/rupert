@@ -10,6 +10,11 @@ module People
 
     self.table_name = 'employees'
 
+    # Original profiles remain as private audit records after consolidation.
+    default_scope { where(merged_into_id: nil) }
+    has_many :source_identities, class_name: 'EmployeeSourceIdentity', dependent: :restrict_with_exception
+    has_many :merged_profiles, -> { unscope(where: :merged_into_id) }, class_name: 'People::Employee', foreign_key: :merged_into_id, dependent: :restrict_with_exception
+
     EMPLOYMENT_TYPES = %w[unspecified full_time part_time contractor seasonal].freeze
 
     belongs_to :user, optional: true

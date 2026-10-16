@@ -55,17 +55,21 @@ module Directories
       state.with_lock do
         raise Error unless state.attempt_token == token && Tenant.exists?(id: Current.tenant_id, status: 'active') && fingerprint == credentials_fingerprint && self.class.available?(@provider)
 
+        Tenant.where(id: Current.tenant_id).update_all('updated_at = updated_at') if @kind == 'employees'
+
         records.each do |attributes|
-          model = @kind == 'customers' ? Core::Customer : People::Employee
-          record = model.find_or_initialize_by(source: @provider, external_id: attributes.fetch(:external_id))
-          record.employment_type = 'unspecified' if @kind == 'employees' && record.new_record?
-          record.assign_attributes(attributes.merge(source_synced_at: started))
-          record.save!
+          if @kind == 'employees'
+            publish_employee(attributes, started)
+          else
+            record = Core::Customer.find_or_initialize_by(source: @provider, external_id: attributes.fetch(:external_id))
+            record.update!(attributes.merge(source_synced_at: started))
+          end
         end
         # Absence from a source roster is not an HR termination or a deletion.
         if @kind == 'employees'
-          People::Employee.where(source: @provider).where.not(external_id: records.map { |row| row[:external_id] })
-            .update_all(source_active: false)
+          EmployeeSourceIdentity.where(source: @provider).where.not(external_id: records.map { |row| row[:external_id] })
+            .update_all(source_active: false, source_synced_at: started)
+          People::Employee.where(source: @provider).where.not(external_id: records.map { |row| row[:external_id] }).update_all(source_active: false)
         end
         state.update!(status: 'success', record_count: records.size, finished_at: Time.current,
           last_success_at: started, error: nil)
@@ -82,6 +86,21 @@ module Directories
     end
 
     private
+
+    def publish_employee(attributes, started)
+      identity = EmployeeSourceIdentity.find_or_initialize_by(source: @provider, external_id: attributes.fetch(:external_id))
+      if identity.new_record?
+        employee = People::Employee.find_or_initialize_by(source: @provider, external_id: attributes.fetch(:external_id))
+        employee.assign_attributes(attributes.merge(employment_type: 'unspecified')) if employee.new_record?
+        employee.save!
+        identity.employee = employee
+      end
+      identity.update!(attributes.merge(source_synced_at: started))
+      # Native snapshots refresh; manually curated names, contact details, HR
+      # terms and login emails on the canonical person remain under HR control.
+      People::Employee.where(id: identity.employee_id, source: @provider, external_id: identity.external_id)
+        .update_all(source_active: attributes[:source_active], source_synced_at: started)
+    end
 
     def credentials_fingerprint
       EnvStore.clear_cache!

@@ -99,3 +99,11 @@ IDs belonging to another worker or workspace return 404. Missing, revoked, expir
 - [Expo SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/)
 - [Expo internal distribution](https://docs.expo.dev/build/internal-distribution/)
 - [Apple app review](https://developer.apple.com/app-store/review/guidelines/)
+
+### Consolidated employee directory
+
+Administrators with HR write and account management permission can use **Employees → Consolidate profiles** after confirming two app accounts belong to the same person. Choose the primary name and contact details and record the identity evidence. Source identities are stored separately from the canonical employee; directory refreshes update those snapshots without overwriting curated HR details or creating the merged profiles again. Source filters include every linked app.
+
+Original employee rows remain private audit records with a canonical pointer. Old employee URLs redirect to the primary profile. Consolidation moves timesheets, entries through their parent timesheets, leave, pay history, department manager assignments and shifts; it revokes outstanding setup links and app sessions. Conflicting linked accounts, HR details, overlapping time records, duplicate leave balances or duplicate payslips stop the transaction for review. Pay rates on more than one profile also require review before consolidation. No upstream app data is changed.
+
+Private setup links last 24 hours, work once, and replace any previous unconsumed link for that employee. Shared employee emails, explicitly inactive source accounts and existing unlinked accounts require review before provisioning. Existing privileged accounts retain their roles and use their existing login; employee setup links cannot reset administrator accounts. Generate links only for confirmed current staff, and share each link directly with its intended employee. Link creation does not send email. Keep link exports private and outside Git. A source that does not supply activity status requires an employment decision by the administrator.

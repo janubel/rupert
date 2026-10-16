@@ -33,6 +33,16 @@
     </div>
   </section>
 
+  <% if @employee.source_identities.any? %>
+    <section class="card card-pad space-y-2">
+      <h2 class="font-display text-lg">Linked app profiles</h2>
+      <% @employee.source_identities.order(:source, :id).each do |identity| %>
+        <p class="text-sm"><strong><%= directory_label(identity.source) %></strong> · <%= [identity.first_name, identity.last_name].compact.join(' ') %> · <%= identity.email %> · <%= identity.source_active.nil? ? 'Status not supplied' : identity.source_active ? 'Active source account' : 'Inactive source account' %></p>
+      <% end %>
+      <p class="text-xs text-taupe">Source contact details refresh independently of this employee’s name, login, and HR details.</p>
+    </section>
+  <% end %>
+
   <% if Current.user.can_manage_accounts? && Current.user.can?('hr.write') && @employee.active? %>
     <section class="card card-pad space-y-3">
       <h2 class="font-display text-lg">Employee web &amp; app access</h2>
