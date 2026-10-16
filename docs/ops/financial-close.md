@@ -36,4 +36,6 @@ Use the date-focus shortcuts to show overdue work, missing register reports, mis
 
 The [next-action deployment receipt](financial-close-next-action-deployment-2026-10-16.md) records the combined employee-source validation, live checks and encrypted recovery checkpoint.
 
-Missing-report next actions on date cards and forecast baselines show the exact source/currency/location/date scope, with direct find/upload/tracking links and reuse of an existing request. Overdue next actions expose linked-original state and evidence actions. Progress opened from a selected close date can save and return to that same close workspace; the date must fall within the request's covered period, and validation errors preserve the context. These shortcuts retain the existing report-reader/writer and employee access boundaries.
+Missing-report next actions on date cards and forecast baselines show the exact source/currency/location/date scope, with direct find/upload/tracking links and reuse of an existing request. Overdue next actions expose linked-original state and evidence actions. Progress opened through an overdue next-action link can save and return to the selected close workspace; the date must fall within the request's covered period, and validation errors preserve the context. These shortcuts retain the existing report-reader/writer and employee access boundaries.
+
+The [exact-action deployment receipt](financial-close-exact-actions-deployment-2026-10-16.md) records the live source, access-data preservation and recovery checks.
