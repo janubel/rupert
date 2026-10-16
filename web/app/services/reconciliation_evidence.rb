@@ -41,7 +41,7 @@ class ReconciliationEvidence
       if supersedes_id.present?
         previous = ReconciliationDocument.find_by(id: supersedes_id)
         unless previous && previous.kind == kind && previous.source == source && previous.period_from == first && previous.period_to == last &&
-            previous.metadata.slice('currency', 'location_id', 'merchant', 'api_origin', 'report_kind') == meta.slice('currency', 'location_id', 'merchant', 'api_origin', 'report_kind') &&
+            identity_context(previous.metadata) == identity_context(meta) &&
             !ReconciliationDocument.exists?(supersedes_id: previous.id)
           raise Error, 'Choose the current document in the same source, period, currency and location to correct.'
         end
@@ -50,6 +50,10 @@ class ReconciliationEvidence
         filename: name, content_type: type, byte_size: bytes.bytesize, content_base64: Base64.strict_encode64(bytes.b),
         sha256: sha, fingerprint: fingerprint, metadata_json: meta.to_json, uploaded_by: actor, supersedes_id: supersedes_id.presence)
     end
+  end
+
+  def self.identity_context(metadata)
+    %w[currency location_id merchant api_origin report_kind].to_h { |key| [key, metadata[key].presence] }
   end
 
   def self.dates(from, to)

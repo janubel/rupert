@@ -7,6 +7,8 @@ Rails.application.routes.draw do
     post :disconnect
   end
 
+  resources :reconciliation_documents, only: :index
+
   resources :daily_reconciliations, only: %i[index create] do
     member { get :document }
     collection do

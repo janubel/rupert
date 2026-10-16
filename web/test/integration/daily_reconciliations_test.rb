@@ -32,7 +32,8 @@ class DailyReconciliationsTest < ActionDispatch::IntegrationTest
     assert_no_difference 'DailyReconciliationReview.count' do
       post review_daily_reconciliations_path, params: { day: '2026-10-14', report_digest: 'old', status: 'reviewed', notes: 'Stale' }
     end
-    assert_match(/changed/, flash[:alert])
+    assert_response :unprocessable_entity
+    assert_select '[role="alert"]', /changed/
   end
 
   test 'upload retains exact bytes and does not create sales' do
