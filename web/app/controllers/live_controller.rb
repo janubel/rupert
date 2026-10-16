@@ -27,6 +27,15 @@ class LiveController < AuthenticatedController
       turbo_stream.replace('header-sync-pill', partial: 'shared/header_sync_pill')
     ]
     streams << turbo_stream.replace('source-sync-status', partial: 'home/source_sync_status') if params[:source_status] == '1'
+    if params[:dashboard] == '1' && Current.user.can?('dashboard.read')
+      presenter = DashboardPresenter.new(user: Current.user)
+      %w[stats today_channels revenue].each do |key|
+        next unless DashboardWidget.allowed?(key, Current.user)
+
+        widget = DashboardWidget.find(key)
+        streams << turbo_stream.update("dashboard-widget-#{key}", partial: widget.partial, locals: { presenter: presenter })
+      end
+    end
     streams
   end
 

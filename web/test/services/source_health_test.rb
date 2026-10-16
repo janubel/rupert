@@ -121,7 +121,7 @@ class SourceHealthTest < ActiveSupport::TestCase
     sources = SourceSyncStatus.all(include_platform: false)
     ctrax = sources.find { |source| source[:key] == 'ctrax' }
     assert_equal 'Credentials unreadable', ctrax[:badge]
-    assert_equal 5, sources.size
+    assert_equal 6, sources.size
     assert sources.any? { |source| source[:key] == 'shopify' }
     refute_includes sources.to_json, 'private-error'
     state = SourceHealth.for(ctrax).first

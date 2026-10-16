@@ -27,7 +27,7 @@ class SalesController < AuthenticatedController
       :location).order(occurred_at: :asc)
     @day_total_cents = @day_sales.sum(:gross_cents)
     @locations = Location.order(:name).pluck(:name, :id)
-    presenter = DashboardPresenter.new
+    presenter = DashboardPresenter.new(user: Current.user, include_ctrax: false)
     @revenue_series = presenter.revenue_series(days: @window_days, source: source_scope)
     @hourly_series = presenter.hourly_series(days: @window_days, source: source_scope)
     @source_breakdown = presenter.source_breakdown(days: @window_days)

@@ -33,9 +33,9 @@ class PageGuides
       summary: "Your at-a-glance store health: today's money, sales volume, and anything needing attention like inventory drift or low stock.",
       sections: [
         { heading: "What you're seeing",
-          body: 'The top cards summarize today and yesterday: gross revenue, sales volume, and attention items. Charts show the trend over the last 30 days. The attention rail lists real problems — SKUs where Shopify and Square disagree, or items near/out of stock — so you act on the exceptions, not the whole list.' },
+          body: 'Sales cards and charts use paid canonical orders and completed native C-Trax orders. Each native C-Trax order is counted once by source, store and order ID. Source pull times and latest sale dates describe different kinds of coverage; a recent pull can contain older sales.' },
         { heading: 'How to read the numbers',
-          body: "Revenue is gross sales (before returns), from orders mirrored by the sync. Volume is order count, not items. 'vs yesterday' compares the same hour-of-day, so morning vs morning. A clay SKU in attention means its SKU differs between Shopify and Square — worth a look on Catalog Links." }
+          body: "Sales are recorded USD totals from paid and fulfilled orders plus completed C-Trax sales. C-Trax tips remain separate. Payment reports, invoices and deposits are never added. Refunds require separate source review. Yesterday is the whole previous day; the last 7 and 30 days include today. Missing imports do not prove zero activity." }
       ],
       tips: [
         "Check the attention rail first every morning — it's ordered by severity.",
