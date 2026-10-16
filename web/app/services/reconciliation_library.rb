@@ -5,7 +5,7 @@ class ReconciliationLibrary
   Error = Class.new(ArgumentError)
   PAGE_SIZE = 24
   CATEGORIES = { 'all' => 'All documents', 'invoices' => 'Invoices', 'controls' => 'Register controls',
-    'source_files' => 'Source files', 'archives' => 'Report archives', 'native_exports' => 'Native exports' }.freeze
+    'source_files' => 'Reports & statements', 'archives' => 'Report archives', 'native_exports' => 'Native exports' }.freeze
   SOURCE_NAMES = { 'shopify' => 'Shopify', 'square' => 'Square', 'swipesimple' => 'SwipeSimple', 'ctrax' => 'C-Trax',
     'cash_app' => 'Cash App', 'authorize_net' => 'Authorize.net', 'iris' => 'NAB / IRIS', 'bank' => 'Bank', 'other' => 'Other', 'rupert' => 'Rupert' }.freeze
   Entry = Struct.new(:record, :rank, :retained_at, :key, keyword_init: true)
@@ -60,7 +60,7 @@ class ReconciliationLibrary
       vault = vault.where(source: filters['source']) if filters['source'].present?
       vault = vault.where('period_to >= ?', @from) if @from
       vault = vault.where('period_from <= ?', @to) if @to
-      kinds = { 'invoices' => ['invoice'], 'controls' => ['register_control'], 'source_files' => ['source_export'],
+      kinds = { 'invoices' => ['invoice'], 'controls' => ['register_control'], 'source_files' => %w[source_export gateway_report processor_report bank_statement fee_statement],
         'archives' => %w[daily_archive period_archive], 'native_exports' => [] }[filters['category']]
       vault = vault.where(kind: kinds) if kinds
       if filters['q'].present?

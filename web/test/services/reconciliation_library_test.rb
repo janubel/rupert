@@ -20,6 +20,8 @@ class ReconciliationLibraryTest < ActiveSupport::TestCase
     retain(name: 'September.txt', from: '2026-09-01', to: '2026-09-30')
     retain(name: 'other.txt', kind: 'source_export')
     retain(name: 'OctoberXInvoice.txt', kind: 'source_export')
+    statement = retain(name: 'bank-statement.txt', kind: 'bank_statement')
+    assert_includes ReconciliationLibrary.new(category: 'source_files').page.map { |entry| entry.record.id }, statement.id
     library = ReconciliationLibrary.new(q: 'INVOICE', category: 'invoices', from: '2026-10-14', to: '2026-10-15')
     assert_equal [invoice.id], library.page.map { |entry| entry.record.id }
     assert_equal 1, library.total
