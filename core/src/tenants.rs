@@ -5,7 +5,8 @@ use moka::sync::Cache;
 use parking_lot::Mutex;
 use rusqlite::Connection;
 use std::{path::PathBuf, sync::{Arc, OnceLock, atomic::{AtomicBool, Ordering}}, time::Duration};
-use tokio::sync::oneshot;
+use tokio::sync::{Semaphore, broadcast, oneshot};
+use std::{collections::HashSet, sync::atomic::AtomicUsize};
 use crate::{Adjust, Item};
 
 /// Tunables, read once from the environment so one binary can be A/B tested.
@@ -26,6 +27,8 @@ pub struct TenantDb {
     path: PathBuf,
     queue: Mutex<Vec<Pending>>,
     flushing: AtomicBool,
+    pub bus: broadcast::Sender<Arc<crate::feed::Ev>>,
+    pub sse_clients: AtomicUsize,
 }
 
 fn tune(c: &Connection) -> rusqlite::Result<()> {
@@ -37,11 +40,11 @@ fn tune(c: &Connection) -> rusqlite::Result<()> {
 }
 
 impl TenantDb {
-    fn open(path: PathBuf) -> rusqlite::Result<Self> {
+    fn open(path: PathBuf, bus: broadcast::Sender<Arc<crate::feed::Ev>>) -> rusqlite::Result<Self> {
         let w = Connection::open(&path)?;
         tune(&w)?;
         migrate::apply(&w, migrate::TENANT)?;
-        Ok(Self { writer: Mutex::new(w), readers: Mutex::new(Vec::new()), path, queue: Mutex::new(Vec::new()), flushing: AtomicBool::new(false) })
+        Ok(Self { writer: Mutex::new(w), readers: Mutex::new(Vec::new()), path, queue: Mutex::new(Vec::new()), flushing: AtomicBool::new(false), bus, sse_clients: AtomicUsize::new(0) })
     }
     /// Borrow a read connection (WAL allows readers concurrent with the writer).
     pub fn with_reader<T>(&self, f: impl FnOnce(&Connection) -> rusqlite::Result<T>) -> rusqlite::Result<T> {
@@ -81,6 +84,7 @@ impl TenantDb {
                 if self.queue.lock().is_empty() || self.flushing.swap(true, Ordering::AcqRel) { return; }
                 continue;
             }
+            let mut evs: Vec<crate::feed::Ev> = Vec::new();
             let results = {
                 let mut c = self.writer.lock();
                 (|| -> rusqlite::Result<Vec<Result<Item, u16>>> {
@@ -95,12 +99,14 @@ impl TenantDb {
                             .execute((&p.a.sku, p.a.delta, &p.a.reason, now))?;
                         let item = tx.prepare_cached("SELECT sku,name,qty FROM inventory_items WHERE sku=?1")?
                             .query_row([&p.a.sku], |r| Ok(Item { sku: r.get(0)?, name: r.get(1)?, qty: r.get(2)? }))?;
+                        evs.push(crate::feed::emit(&tx, "inventory.adjusted", Some(&p.a.sku), &serde_json::json!({ "delta": p.a.delta, "qty": item.qty, "reason": p.a.reason }))?);
                         out.push(Ok(item));
                     }
                     tx.commit()?;
                     Ok(out)
                 })()
             };
+            if results.is_ok() { for e in evs { let _ = self.bus.send(Arc::new(e)); } }
             match results {
                 Ok(rs) => for (p, r) in batch.into_iter().zip(rs) { let _ = p.tx.send(r); },
                 Err(_) => for p in batch { let _ = p.tx.send(Err(500)); },
@@ -114,6 +120,12 @@ pub struct Registry {
     open: Cache<String, Arc<TenantDb>>,
     pub central: Mutex<Connection>,
     pub auth: crate::auth::AuthState,
+    pub master: Option<[u8; 32]>,
+    pub sync_running: Mutex<HashSet<(String, String)>>,
+    pub sync_sem: Arc<Semaphore>,
+    pub sse_total: AtomicUsize,
+    pub sse_max: usize,
+    buses: Cache<String, broadcast::Sender<Arc<crate::feed::Ev>>>,
 }
 
 impl Registry {
@@ -127,11 +139,21 @@ impl Registry {
             open: Cache::builder().max_capacity(max_open).time_to_idle(Duration::from_secs(300)).build(),
             central: Mutex::new(central),
             auth: crate::auth::AuthState::new(),
+            master: std::env::var("RUPERT_MASTER_KEY").ok().and_then(|v| {
+                use base64::{Engine, engine::general_purpose::STANDARD};
+                STANDARD.decode(v.trim()).ok()?.try_into().ok()
+            }),
+            sync_running: Mutex::new(HashSet::new()),
+            sync_sem: Arc::new(Semaphore::new(std::env::var("RUPERT_SYNC_CONCURRENCY").ok().and_then(|v| v.parse().ok()).unwrap_or(2))),
+            sse_total: AtomicUsize::new(0),
+            sse_max: std::env::var("RUPERT_SSE_MAX").ok().and_then(|v| v.parse().ok()).unwrap_or(1000),
+            buses: Cache::builder().max_capacity(10_000).time_to_idle(Duration::from_secs(3600)).build(),
         })
     }
     pub fn db(&self, tenant: &str) -> rusqlite::Result<Arc<TenantDb>> {
         if let Some(d) = self.open.get(tenant) { return Ok(d); }
-        let d = Arc::new(TenantDb::open(self.dir.join("tenants").join(format!("{tenant}.db")))?);
+        let bus = self.buses.get_with(tenant.to_string(), || broadcast::channel(256).0);
+        let d = Arc::new(TenantDb::open(self.dir.join("tenants").join(format!("{tenant}.db")), bus)?);
         self.open.insert(tenant.to_string(), d.clone());
         Ok(d)
     }

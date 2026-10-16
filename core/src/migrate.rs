@@ -10,6 +10,21 @@ pub const TENANT: &[&str] = &[
         id INTEGER PRIMARY KEY, sku TEXT NOT NULL, delta INTEGER NOT NULL,
         reason TEXT NOT NULL, at INTEGER NOT NULL);
      CREATE INDEX movements_sku ON movements(sku, id);",
+    // 2: read-only mirrors of Shopify/Square, sync history, change feed, sealed connections.
+    "CREATE TABLE shopify_variants (id TEXT PRIMARY KEY, product_id TEXT NOT NULL, title TEXT NOT NULL, sku TEXT,
+        price REAL, inventory_item_id TEXT, qty INTEGER NOT NULL DEFAULT 0, tracked INTEGER NOT NULL DEFAULT 0,
+        synced_run INTEGER NOT NULL) WITHOUT ROWID;
+     CREATE INDEX shopify_variants_sku ON shopify_variants(sku);
+     CREATE TABLE square_variations (id TEXT PRIMARY KEY, item_id TEXT NOT NULL, name TEXT NOT NULL, sku TEXT,
+        qty INTEGER NOT NULL DEFAULT 0, synced_run INTEGER NOT NULL) WITHOUT ROWID;
+     CREATE INDEX square_variations_sku ON square_variations(sku);
+     CREATE TABLE square_counts (variation_id TEXT NOT NULL, location_id TEXT NOT NULL, qty INTEGER NOT NULL,
+        synced_run INTEGER NOT NULL, PRIMARY KEY (variation_id, location_id)) WITHOUT ROWID;
+     CREATE TABLE sync_runs (id INTEGER PRIMARY KEY, source TEXT NOT NULL, status TEXT NOT NULL,
+        started_at INTEGER NOT NULL, finished_at INTEGER, details TEXT, error TEXT);
+     CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, kind TEXT NOT NULL,
+        key TEXT, data TEXT NOT NULL);
+     CREATE TABLE connections (provider TEXT PRIMARY KEY, sealed BLOB NOT NULL, updated_at INTEGER NOT NULL) WITHOUT ROWID;",
 ];
 
 pub const CENTRAL: &[&str] = &[

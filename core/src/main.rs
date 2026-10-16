@@ -1,9 +1,13 @@
 mod auth;
+mod crypto;
+mod feed;
 mod migrate;
+mod sync;
 mod tenants;
+mod upstream;
 
 use auth::Principal;
-use axum::{Json, Router, extract::{Query, State}, http::StatusCode, response::{IntoResponse, Response}, routing::{get, post}};
+use axum::{Json, Router, extract::{Query, State}, http::StatusCode, response::{IntoResponse, Response}, routing::{get, post, put}};
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tenants::Registry;
@@ -112,6 +116,14 @@ async fn main() {
         .route("/api/v1/item", get(get_item).post(put_item))
         .route("/api/v1/adjust", post(adjust))
         .route("/dev/seed", post(seed))
+        .route("/api/v1/events", get(feed::stream))
+        .route("/api/v1/events/recent", get(feed::recent))
+        .route("/api/v1/catalog", get(sync::catalog))
+        .route("/api/v1/inventory", get(sync::inventory))
+        .route("/api/v1/connections", get(sync::list_connections))
+        .route("/api/v1/connections/{provider}", put(sync::put_connection).delete(sync::delete_connection))
+        .route("/api/v1/sync/runs", get(sync::runs))
+        .route("/api/v1/sync/{source}", post(sync::trigger))
         .merge(auth::routes())
         .with_state(app);
     let addr = std::env::var("RUPERT_LISTEN").unwrap_or_else(|_| "127.0.0.1:8799".into());

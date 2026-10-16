@@ -168,3 +168,85 @@ exposed (cache TTL 5 s applies if added), rate limits are per process, no
 CSRF token beyond SameSite=Lax plus JSON-only bodies, `catalog:read` and
 `roadmap:read` endpoints do not exist yet, and the invite token is returned to
 the inviter instead of emailed.
+
+## Milestone 3: read-only mirror sync + realtime feed (2026-10-16)
+
+Code: `src/upstream.rs` (clients + allowlist), `src/sync.rs` (connections, sync
+runs, ingest, mirror reads), `src/feed.rs` (outbox + SSE), `src/crypto.rs`
+(sealed credentials), tenant migration 2. Tests: `cargo test` (4 unit tests:
+sealing, GraphQL mutation guard, Square allowlist, shop-domain validation),
+`tests/smoke.py` (41 checks) and `tests/sync_smoke.py` (44 checks against mock
+Shopify and Square servers; 12 of 12 consecutive clean runs after the fix below).
+
+**Nothing writes to Shopify or Square.** The Shopify client rejects any GraphQL
+containing `mutation`/`subscription`; the Square client only allows
+`GET /locations`, `GET /catalog/list` and `POST /inventory/counts/batch-retrieve`
+(a read). Both checks run before every request, and the integration test fails if
+the mock ever sees another call or a mutation body. Real-store use still needs the
+owner to supply credentials and say go; no live credentials were used.
+
+- **Connections:** owners (signed in, not tokens) store Shopify
+  (`shop_domain`, `client_id`, `client_secret`) or Square (`access_token`,
+  `environment`) credentials. They are sealed with AES-256-GCM, key derived per
+  tenant from `RUPERT_MASTER_KEY` (base64, 32 bytes) via HKDF, and bound to
+  tenant and provider as associated data. Responses never include secrets; the
+  test also greps the data directory for plaintext. Shop domains must match
+  `*.myshopify.com` (no arbitrary URLs, so no SSRF). Upstream base URLs can be
+  overridden only when `RUPERT_DEV=1`.
+- **Sync:** `POST /api/v1/sync/{shopify|square}` (manager+, scope `sync:run`) returns
+  202 and runs in the background; one run per tenant+source (409 otherwise),
+  process-wide concurrency `RUPERT_SYNC_CONCURRENCY` (default 2). Pages are
+  streamed and committed per page, so memory does not grow with catalog size.
+  Cursor pagination is followed to the end, including Shopify variants beyond 100
+  per product. Bounded retry covers 429/503 (Retry-After, max 10 s) and stale
+  pooled connections. History: `GET /api/v1/sync/runs`.
+- **Safety:** a run that returns zero variants never deletes a populated mirror
+  (fails with "refusing ..."). Stale rows are removed only after a fully
+  successful pass.
+- **Mirror reads:** `GET /api/v1/catalog` and `/api/v1/inventory` follow the
+  paging contract in `docs/api-v1.md` (`page` 1-1000, `per_page` 1-100, `meta`
+  with `has_more`/`next_page`). Square quantity is the sum of IN_STOCK counts over
+  ACTIVE locations. Per-location Shopify levels and orders are not mirrored yet.
+- **Realtime:** every mirror change, sync result and POS-side adjust appends to the
+  tenant's `events` outbox in the same transaction, then is broadcast.
+  `GET /api/v1/events` is SSE with `id:` per event; reconnect with `Last-Event-ID`
+  (or `?since=`) and the server replays missed events from the outbox before
+  following live ones, so drops and slow consumers lose nothing. Unchanged re-syncs
+  emit only `sync.finished`. `GET /api/v1/events/recent` is the polling form.
+  Streams close after 10 minutes (clients reconnect), which bounds how long a
+  revoked token can keep a stream. Limits: 50 streams per tenant, 1000 total
+  (`RUPERT_SSE_MAX`). The outbox is pruned to the latest 10,000 rows per sync.
+
+Bug found by the mock and fixed: a pooled keep-alive connection closed by the
+server made the next POST fail with "Peer disconnected" (3 failures in 8 runs);
+real upstreams close idle connections too. Reads are safe to retry, so the client
+now retries network errors up to 3 times.
+
+Measurements (same harness as above, medians of 5 runs of 6 s, 32 connections,
+loopback, shared laptop):
+
+| Run | RSS after 500 tenants | Read rps / p99 | Write rps / p99 |
+| --- | --- | --- | --- |
+| milestone 2 (auth) | 40 MB | 99-101k / 1.95 ms | 75-82k / 2.1-2.2 ms |
+| milestone 3, run 1 | 42 MB | 88.7k / 2.70 ms | 50.8k / 3.32 ms |
+| milestone 3, run 2 | 43 MB | 87.0k / 2.64 ms | 33.2k / 3.96 ms |
+
+Reads are about 12% lower and writes 35-55% lower than milestone 2. The write cost
+is expected (each adjust now also inserts an event row and serialises JSON); the
+spread between the two runs shows how noisy this machine is, so treat it as a
+range. The read drop is not explained and was not investigated; it may be noise
+from the desktop session.
+
+**SSE memory (open problem).** 1000 simultaneous streams across 50 tenants raised
+server RSS from 6 MB to about 95-127 MB (~90-120 KB per stream). Isolation: 1000
+plain keep-alive connections after one request cost ~27 KB each, so about 60 KB
+per stream is in the SSE task/channel path, plus ~20 MB from per-tenant reader
+connections (`RUPERT_READERS=8` vs 1). Arena tuning did not help; fewer tokio
+workers helped a little. Fan-out was correct (20 of 20 listeners of one tenant
+received an adjust). Next experiments: smaller mpsc buffers, a shared per-tenant
+fan-out task instead of one task per client, hyper buffer limits via a hand-built
+accept loop. Until then keep `RUPERT_SSE_MAX` conservative.
+
+Not done: Shopify per-location levels and orders, Square orders, scheduled
+(automatic) syncs, webhooks, mirror search, SKU linking between Shopify and Square,
+and no real-store run (needs owner credentials and approval).

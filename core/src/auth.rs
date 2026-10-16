@@ -23,7 +23,7 @@ use sha2::{Digest, Sha256};
 use std::{net::SocketAddr, sync::{Arc, atomic::{AtomicU32, Ordering}}, time::Duration};
 use tokio::sync::Semaphore;
 
-pub const SCOPES: &[&str] = &["catalog:read", "inventory:read", "inventory:write", "roadmap:read"];
+pub const SCOPES: &[&str] = &["catalog:read", "inventory:read", "inventory:write", "roadmap:read", "sync:run"];
 const SESSION_SECS: i64 = 14 * 86400;
 const COOKIE: &str = "rupert_session";
 
@@ -90,7 +90,7 @@ fn rank(role: &str) -> u8 {
 // ---------- responses ----------
 
 type R = Result<Response, Response>;
-fn err(code: u16, msg: &str) -> Response {
+pub(crate) fn err(code: u16, msg: &str) -> Response {
     (StatusCode::from_u16(code).unwrap(), Json(json!({ "error": msg }))).into_response()
 }
 fn unauth() -> Response {
@@ -138,7 +138,7 @@ async fn verify_async(reg: &Arc<Registry>, pw: String, hash: String) -> bool {
     tokio::task::spawn_blocking(move || verify_pw(&pw, &hash)).await.unwrap_or(false)
 }
 
-fn audit(c: &Connection, tenant: Option<&str>, user: Option<i64>, action: &str, detail: &str) {
+pub(crate) fn audit(c: &Connection, tenant: Option<&str>, user: Option<i64>, action: &str, detail: &str) {
     let _ = c.execute("INSERT INTO audit(at,tenant_id,user_id,action,detail) VALUES (?1,?2,?3,?4,?5)",
         params![crate::now(), tenant, user, action, detail]);
 }
