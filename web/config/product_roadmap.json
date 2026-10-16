@@ -601,6 +601,15 @@
       "scope": "Named work areas, local accessible icons, permitted-tools disclosures and role-labelled account menus reduce header clutter. Search categories, dashboard widgets/queries and cached responses follow business permissions. Reader defaults exclude personnel/payroll; employee pay/time/leave sections have separate gates. Workspace user/permission administration and host/instance utilities require their respective administrator roles; size-membership edits require settings write. Existing explicit business permission overrides remain supported.",
       "evidence": "web/app/models/module_registry.rb",
       "phase": "0"
+    },
+    {
+      "id": "F64",
+      "area": "Finance",
+      "name": "Long-term Valmar and Authorize.net integrations",
+      "status": "Planned",
+      "scope": "Owner direction recorded October 15, 2026: probably retain Valmar and Authorize.net as long-term Rupert integrations. Confirm account/gateway mapping and supported read access; reconcile SwipeSimple operational evidence with gateway payments and processor deposits without double counting. Hourly SwipeSimple intake stays disabled until a supported vendor feed is verified. C-Trax remains the retail inventory reference. This objective does not activate payments or change merchant settings.",
+      "evidence": "docs/ops/swipesimple-integration-research.md",
+      "phase": "3"
     }
   ]
 }

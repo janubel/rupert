@@ -185,3 +185,4 @@ records; no longer written), `Location`,
   and SKU writes always require owner sign-off first.
 
 - [SwipeSimple reporting investigation and hourly SER8 CSV intake](docs/ops/swipesimple-reporting.md) — verified native formats, encrypted source provenance, invoice identity limits, operational setup and remaining vendor access requirements.
+- [SwipeSimple integration research and long-term Valmar / Authorize.net objective](docs/ops/swipesimple-integration-research.md) — supported-feed options, ACH/reporting gaps, QuickBooks and partner-access limits, source evidence and the vendor questionnaire; roadmap F64 records the owner's direction.
