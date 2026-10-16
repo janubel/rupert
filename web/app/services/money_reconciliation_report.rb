@@ -94,10 +94,15 @@ class MoneyReconciliationReport
   def shopify
     orders = Core::Order.where(source: 'shopify', status: %w[paid fulfilled refunded], occurred_at: @range)
     orders.group(:currency).count.each do |currency, count|
-      gross = orders.where(currency: currency).sum(:gross_cents)
+      scoped = orders.where(currency: currency)
+      if scoped.where(gross_cents: nil).exists?
+        @warnings << 'Shopify recorded sales include missing amounts; no sales total is inferred.'
+        next
+      end
+      gross = scoped.sum(:gross_cents)
       add('Shopify', 'Online orders', currency, 'Recorded sales', BigDecimal(gross.to_s) / 100, count, 'Sale date; includes tax and recorded shipping')
     end
-    refunds = Core::Refund.joins(:order).where(orders: { source: 'shopify' }, refunded_at: @range)
+    refunds = Core::Refund.joins(:order).where(orders: { tenant_id: Current.tenant_id, source: 'shopify' }, refunded_at: @range)
     refunds.group('orders.currency').count.each do |currency, count|
       add('Shopify', 'Online orders', currency, 'Recorded refunds', BigDecimal(refunds.where(orders: { currency: currency }).sum(:amount_cents).to_s) / 100, count, 'Refund date; local recorded evidence')
     end

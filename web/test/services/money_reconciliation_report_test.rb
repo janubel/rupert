@@ -117,6 +117,21 @@ class MoneyReconciliationReportTest < ActiveSupport::TestCase
     assert_equal '-12.50', cells[8]
   end
 
+  test 'missing canonical amounts and malformed cross-tenant refund links do not produce financial totals' do
+    own = order('missing-amount', '2026-10-15T15:00:00Z', 1000)
+    own.update_columns(gross_cents: nil)
+    missing = report.payload
+    refute missing['rows'].any? { |row| row['source'] == 'Shopify' && row['metric'] == 'Recorded sales' }
+    assert missing['warnings'].any? { |warning| warning.include?('missing amounts') }
+    tenant = Current.tenant
+    Current.tenant = Tenant.create!(name: 'Foreign refunds', subdomain: 'foreign-refunds')
+    foreign = order('foreign', '2026-10-15T15:00:00Z', 90000)
+    Current.tenant = tenant
+    Core::Refund.new(tenant_id: tenant.id, order_id: foreign.id, method: 'cash', amount_cents: 90000,
+      refunded_at: Time.iso8601('2026-10-15T17:00:00Z')).save!(validate: false)
+    refute report.payload['rows'].any? { |row| row['metric'] == 'Recorded refunds' }
+  end
+
   test 'scheduled jobs save the previous complete periods without notifications or source writes' do
     BuzzAgent.expects(:notify).never
     %w[daily weekly monthly].each { |kind| MoneyReconciliationJob.perform_now(kind) }
