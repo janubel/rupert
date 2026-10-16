@@ -47,6 +47,9 @@ module IrisReporting
       payload = { 'source' => 'native_daily_deposits_csv', 'coverage' => 'export_records_only', 'currency' => nil,
         'data' => rows, 'totals' => { 'amount' => sum.to_s('F'), 'transactions' => transactions, 'records' => expected } }
       IrisReport.transaction do
+        ReconciliationEvidence.retain!(bytes: text, filename: 'iris-daily-deposits.csv', source: 'iris', kind: 'processor_report',
+          from: month.iso8601, to: month.end_of_month.iso8601,
+          metadata: { 'api_origin' => origin, 'merchant' => merchant, 'coverage' => 'export_records_only', 'currency' => nil })
         report = IrisReport.find_or_initialize_by(api_origin: origin, merchant_number: merchant, report_kind: 'daily_deposits_csv',
           window_from: month, window_to: month.end_of_month)
         report.update!(status: 'complete', payload_json: payload.to_json, source_digest: Digest::SHA256.hexdigest(text), observed_at: Time.current)

@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  resources :daily_reconciliations, only: %i[index create] do
+    member { get :document }
+    collection do
+      post :archive
+      post :review
+      get 'native_document/:source/:id', action: :native_document, as: :native_document
+    end
+  end
   root to: 'home#index'
   post '/source_syncs/:source', to: 'source_syncs#create', as: :source_sync
   resources :authorize_net_portal_exports, only: %i[index create] do

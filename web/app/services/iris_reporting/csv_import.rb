@@ -38,6 +38,8 @@ module IrisReporting
       IrisReport.transaction do
         groups.each do |period, group|
           date = Date.iso8601("#{period}-01")
+          ReconciliationEvidence.retain!(bytes: text, filename: "iris-#{kind}.csv", source: 'iris', kind: 'source_export',
+            from: date.iso8601, to: date.end_of_month.iso8601, metadata: { 'api_origin' => origin, 'merchant' => merchant, 'report_kind' => kind })
           identity = { api_origin: origin, merchant_number: merchant, report_kind: kind,
             window_from: date, window_to: date.end_of_month }
           IrisReport.find_or_initialize_by(identity).update!(status: 'complete', payload_json: { 'data' => group }.to_json,
