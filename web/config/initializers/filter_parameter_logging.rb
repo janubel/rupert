@@ -22,3 +22,5 @@ Rails.application.config.filter_parameters += [/\Aworkspace_signup\z/i]
 
 # Native source documents and their full context must never reach request logs.
 Rails.application.config.filter_parameters += [/\Aswipesimple_export\z/i, /\Afile\z/i, :original_csv, :reference_number, :source_number]
+
+Rails.application.config.filter_parameters += %i[timesheet timesheet_entry clock_correction]

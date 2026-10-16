@@ -1,0 +1,32 @@
+<% content_for :title, 'Employee app' %>
+<%= link_to "Privacy & support", employee_privacy_path, class: "text-olive underline" %>
+<div class="mx-auto max-w-3xl space-y-6" data-controller="employee-install">
+  <section class="card card-pad space-y-4">
+    <p class="text-sm font-semibold uppercase tracking-wide text-olive">Rupert · Employee access</p>
+    <h1 class="page-title">Your time, in one place</h1>
+    <p class="text-mocha">Clock in, record hours, submit timesheets, and track review comments from your phone or computer.</p>
+    <div class="flex flex-wrap gap-3">
+      <%= link_to Current.user ? 'My timesheets' : 'Employee sign in', Current.user ? people_timesheets_path : login_path, class: 'btn-primary' %>
+      <%= link_to 'My time clock', time_clock_path, class: 'btn-ghost' if Current.user %>
+      <button type="button" data-employee-install-target="button" data-action="employee-install#install" hidden class="btn-ghost">Install Rupert</button>
+    </div>
+    <p class="text-sm">New employee or forgot your password? Ask your administrator for a private setup link.</p>
+  </section>
+  <section class="grid gap-4 sm:grid-cols-2">
+    <div class="card card-pad space-y-2"><h2 class="font-display text-xl">iPhone &amp; iPad</h2><p>Open this page in Safari. Tap Share, then Add to Home Screen and Open as Web App.</p></div>
+    <div class="card card-pad space-y-2"><h2 class="font-display text-xl">Android &amp; desktop</h2><p>Open this page in Chrome or Edge and choose Install app or Add to Home screen from the browser menu.</p></div>
+  </section>
+  <section class="card card-pad space-y-2"><h2 class="font-display text-xl">Native employee app</h2>
+    <% %w[EMPLOYEE_IOS_DOWNLOAD_URL EMPLOYEE_ANDROID_DOWNLOAD_URL].each do |key| %>
+      <% url = ENV[key].to_s; if url.start_with?('https://') %><%= link_to key.include?('IOS') ? 'Download for iPhone' : 'Download for Android', url, class: 'btn-ghost', rel: 'noopener noreferrer' %><% end %>
+    <% end %>
+    <p>Use the native app distribution link supplied by your administrator. Enter this Rupert instance’s address and your employee email and password.</p>
+    <p class="text-sm text-mocha">An internet connection is required to save hours. Wait for confirmation before closing the app.</p>
+  </section>
+  <% if Current.user %>
+    <section class="card card-pad space-y-3"><h2 class="font-display text-xl">Signed-in devices</h2>
+      <% if @sessions.empty? %><p>No active native app sessions.</p><% end %>
+      <% @sessions.each do |record| %><div class="flex flex-wrap justify-between gap-2"><p><%= record.device_name %> · expires <%= l(record.expires_at, format: :short) %></p><%= button_to 'Sign out device', revoke_employee_device_path(record), class: 'btn-ghost btn-sm' %></div><% end %>
+    </section>
+  <% end %>
+</div>
