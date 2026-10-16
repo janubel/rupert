@@ -30,6 +30,8 @@ class ReconciliationDocumentsController < AuthenticatedController
     end
     if @report_request
       load_close_context(@report_request)
+    elsif params[:control_for].present?
+      load_close_context(from: params[:close_day], to: params[:close_day])
     else
       load_close_context(from: @library.filters['from'], to: @library.filters['to'])
     end
@@ -45,6 +47,7 @@ class ReconciliationDocumentsController < AuthenticatedController
       @request_context.merge!(period_from: from, period_to: to)
     end
     @request_context[:close_day] = @close_day.iso8601 if @close_day
+    load_missing_control_context
     @request_match_count = @report_request ? @entries.count { |entry| entry.rank.zero? && @report_request.document_matches?(entry.record) } : 0
     ids = @entries.select { |entry| entry.rank.zero? }.map { |entry| entry.record.id }
     @document_follow_ups = @entries.select { |entry| entry.rank.zero? }.to_h do |entry|
@@ -53,5 +56,25 @@ class ReconciliationDocumentsController < AuthenticatedController
     @successors = ReconciliationDocument.where(supersedes_id: ids).select(:id, :supersedes_id, :metadata_json, :period_from).index_by(&:supersedes_id)
     connection = RetentionDriveConnection.first
     @drive_copies = connection ? RetentionDriveItem.where(generation: connection.generation, item_key: @entries.map(&:key)).index_by(&:item_key) : {}
+  end
+
+  def load_missing_control_context
+    return if @report_request || params[:control_for].blank?
+
+    @control_scope_changed = true
+    return unless @close_day && params[:control_for].to_s.match?(/\A[0-9a-f]{64}\z/)
+
+    @library_context[:control_for] = params[:control_for]
+    workflow = FinancialCloseWorkflow.new(day: @close_day.iso8601)
+    row = workflow.attention.missing_controls.find { |item| workflow.attention.control_key(item) == params[:control_for] }
+    return unless row && ReconciliationDocument::SOURCES.excluding('rupert').include?(row[:source]) && row[:currency].to_s.match?(/\A[A-Z]{3}\z/)
+
+    @control_scope_changed = false
+    if (@report_request = workflow.missing_control_request(row))
+      @library_context = { follow_up: @report_request.id, close_day: @close_day.iso8601 }
+    else
+      @missing_control = row
+      @request_context = helpers.reconciliation_follow_up_context(row, @close_day, category: 'missing_report')
+    end
   end
 end

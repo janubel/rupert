@@ -26,6 +26,10 @@ class ReconciliationAttention
   end
 
   def control_key(row)
+    self.class.control_key(row)
+  end
+
+  def self.control_key(row)
     Digest::SHA256.hexdigest([row[:source], row[:currency], row[:location_id].presence].to_json)
   end
 

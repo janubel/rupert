@@ -147,6 +147,76 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'missing report search preserves server-derived control scope and reuses a request created after the prompt' do
+    location = Location.create!(source: 'square', externalId: 'scope-store', name: 'Scope store')
+    order = Core::Order.create!(source: 'square', source_order_id: 'control-search-order', location_id: location.id, currency: 'EUR', occurred_at: Time.zone.parse("#{@day} 12:00"), gross_cents: 1000, tax_cents: 0)
+    order.mark_paid!
+    workflow = FinancialCloseWorkflow.new(day: @day)
+    row = workflow.attention.missing_controls.find { |item| item[:location_id] == location.id }
+    key = workflow.attention.control_key(row)
+    search = { source: 'square', from: @day, to: @day, close_day: @day, control_for: key, q: 'absent', currency: 'USD', location_id: 'wrong-location' }
+    assert_no_enqueued_jobs do
+      assert_no_difference ['ReconciliationFollowUp.count', 'ReconciliationFollowUpEvent.count', 'ActionMailer::Base.deliveries.size'] do
+        get reconciliation_documents_path(search)
+        assert_response :success
+        assert_select '[aria-label="Missing register report search"]', text: /Square · EUR · Oct 14, 2026/
+        assert_select '[aria-label="Missing register report search"]', text: /Scope store/
+        assert_select 'form input[name="control_for"][value=?]', key
+        tracking = css_select('[aria-label="Missing register report search"] a').find { |link| link.text == 'Track this missing report' }['href']
+        get tracking
+        assert_select 'select[name="follow_up[document_kind]"] option[selected][value="register_control"]'
+        assert_select 'input[name="follow_up[currency]"][value="EUR"]'
+        assert_select 'select[name="follow_up[location_id]"] option[selected][value=?]', location.id
+        assert_select 'input[name="follow_up[period_from]"][value=?]', @day
+        assert_select 'input[name="close_day"][value=?]', @day
+        get reconciliation_documents_path(search.merge(from: '2026-10-15', to: '2026-10-15'))
+        assert_select '[aria-label="Missing register report search"]', text: /Square · EUR · Oct 14, 2026/
+        assert_select 'input[name="close_day"][value=?]', @day
+        get overview_reconciliation_follow_ups_path(ending_on: @day)
+        assert_select '#report-gaps a[href=?]', reconciliation_documents_path(source: 'square', from: @day, to: @day, close_day: @day, control_for: key), text: 'Find retained reports'
+      end
+    end
+    item = ReconciliationFollowUp.create!(category: 'missing_report', source: 'square', document_kind: 'register_control', currency: 'EUR', location_id: location.id,
+      period_from: @day, period_to: @day, due_on: Date.current - 1, title: 'Existing scoped request', notes: 'Original needed.', submission_key: SecureRandom.uuid)
+    get reconciliation_documents_path(search)
+    assert_select '[aria-label="Report request being resolved"]', text: /Existing scoped request/
+    assert_select '[aria-label="Missing register report search"]', count: 0
+    assert_select 'a', text: 'Track this missing report', count: 0
+    assert_select 'input[name="follow_up"][value=?]', item.id.to_s
+    assert_select 'input[name="control_for"]', count: 0
+    @user.update!(role: 'reporting')
+    get reconciliation_documents_path(search)
+    assert_select 'a', text: 'Add missing original', count: 0
+  end
+
+  test 'stale invalid and foreign missing-control searches cannot create a scoped request' do
+    order = Core::Order.create!(source: 'square', source_order_id: 'stale-control-search', currency: 'USD', occurred_at: Time.zone.parse("#{@day} 12:00"), gross_cents: 1000, tax_cents: 0)
+    order.mark_paid!
+    row = FinancialCloseWorkflow.new(day: @day).attention.missing_controls.first
+    key = ReconciliationAttention.control_key(row)
+    search = { from: @day, to: @day, close_day: @day, control_for: key, q: 'absent' }
+    ['invalid', 'f' * 64].each do |value|
+      get reconciliation_documents_path(search.merge(control_for: value))
+      assert_select '[aria-label="Missing register report search"]', text: /Review the latest close checks/
+      assert_select 'a', text: /Track.*missing report/, count: 0
+    end
+    @user.update!(role: 'reporting')
+    get reconciliation_documents_path(search)
+    assert_select '[aria-label="Missing register report search"]', text: /Square · USD/
+    assert_select 'a', text: 'Add this control', count: 0
+    assert_select 'a', text: /Track.*missing report/, count: 0
+    @user.update!(role: 'admin')
+    ReconciliationEvidence.retain!(bytes: 'Synthetic current control', filename: 'current-control.txt', source: 'square', kind: 'register_control', from: @day, to: @day, metadata: { 'currency' => 'USD', 'cash' => 0 })
+    get reconciliation_documents_path(search)
+    assert_select '[aria-label="Missing register report search"]', text: /no longer available/
+    assert_select 'a', text: /Track.*missing report/, count: 0
+    other = Tenant.create!(name: 'Foreign scope', subdomain: 'foreign-control-scope')
+    @user.update!(tenant: other)
+    get reconciliation_documents_path(search)
+    assert_select '[aria-label="Missing register report search"]', text: /Review the latest close checks/
+    assert_select 'a', text: /Track.*missing report/, count: 0
+  end
+
   test 'forecast keeps exact cents one currency explicit inputs and immutable retained scenarios' do
     baseline = DailyMoneyReconciliation.new(day: @day).digest
     assert_no_enqueued_jobs do

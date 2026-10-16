@@ -58,6 +58,11 @@ module ReconciliationHelper
       title: "#{reconciliation_source(row[:source])} #{category == 'missing_report' ? 'register report needed' : "#{row[:metric].to_s.humanize.downcase} review"}" }
   end
 
+  def reconciliation_missing_control_search(row, day)
+    { source: ReconciliationLibrary::SOURCE_NAMES.key?(row[:source]) ? row[:source] : nil,
+      from: day.iso8601, to: day.iso8601, close_day: day.iso8601, control_for: ReconciliationAttention.control_key(row) }
+  end
+
   def reconciliation_library_request_context(item, close_day = nil)
     { source: item.source, from: item.period_from.iso8601, to: item.period_to.iso8601,
       follow_up: item.id, close_day: close_day&.iso8601 }.compact
