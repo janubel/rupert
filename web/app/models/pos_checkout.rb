@@ -20,11 +20,13 @@ class PosCheckout < ApplicationRecord
     errors.add(:total_cents, 'must equal subtotal, tax and tip') unless total_cents == subtotal_cents.to_i + tax_cents.to_i + tip_cents.to_i
   end
   def lines = lines_json || []
+  validates :gateway_provider, inclusion: { in: %w[authorize_net nmi] }
+  def sandbox_payment? = tender == 'card' && gateway_provider == 'nmi' && environment == 'sandbox'
   def paid? = status == 'paid'
   def unresolved? = %w[processing unknown].include?(status)
 
   def receipt
-    { id: id, reference: reference, status: status, demo: demo?, tender: tender, subtotal_cents: subtotal_cents,
+    { id: id, reference: reference, status: status, demo: demo?, sandbox: sandbox_payment?, tender: tender, subtotal_cents: subtotal_cents,
       tax_cents: tax_cents, tip_cents: tip_cents, total_cents: total_cents, cash_received_cents: cash_received_cents,
       change_cents: change_cents, paid_at: paid_at&.iso8601,
       inventory_pending: pos_stock_allocations.where.not(status: %w[applied released]).exists? }
