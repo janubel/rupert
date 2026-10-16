@@ -19,6 +19,8 @@ Retain native Square JSON evidence using `ReconciliationEvidence.retain!` with s
 
 ## Verification and recovery
 
+Canonical orders and retained original documents are not pruned by `DataRetention`. The derived `LedgerEntry` mirror has an existing 365-day window; use canonical orders and originals for long-term history rather than treating that mirror as a permanent archive.
+
 Record counts and earliest/latest dates per source, the exact queried windows, pagination completion, permission/retention limits and failed windows. Compare stable account/role/login records and previously retained source IDs against the checkpoint. Repeating a canonical order import must not increase order counts or gross totals for identical input. Check original-document checksums through the application's decrypting accessors.
 
 After the backfill, take another consistent database/configuration checkpoint. Restore it into an isolated database; run integrity and foreign-key checks, load the saved encryption configuration and read encrypted attributes. Do not restore over production as a test. Check the storage driver’s online snapshot behavior before creating an instance snapshot: a file-copy snapshot can freeze the running application. Use the online consistent database backup for recovery verification when availability is required. Encrypt the recovery archive before copying it off SER8, verify decryption and every member checksum, and use the existing owner-verified private backup destination.
