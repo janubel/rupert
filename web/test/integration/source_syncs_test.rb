@@ -12,11 +12,11 @@ class SourceSyncsTest < ActionDispatch::IntegrationTest
 
   teardown { Current.reset }
 
-  test 'dashboard and live refresh show six honest source badges' do
+  test 'dashboard and live refresh show seven honest source badges' do
     OnboardingController.stubs(:configured?).returns(true)
     get root_path
     assert_response :success
-    assert_select '#source-sync-status [data-source]', count: 6
+    assert_select '#source-sync-status [data-source]', count: 7
     assert_select '[data-source=shopify]', text: /Shopify.*Every 15 minutes/m
     assert_select '[data-source=bank]', text: /NAB \/ IRIS/
     assert_select '[data-source=google_backup]', text: /Every 6 hours/
@@ -45,6 +45,50 @@ class SourceSyncsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'data-source="shopify"'
     assert_includes response.body, 'Every 15 minutes'
+  end
+
+  test 'Square shows a successful pull separately from an older stored sale' do
+    Current.tenant = @tenant
+    EnvStore.set('SQUARE_ACCESS_TOKEN', 'private-square-fixture')
+    Setting.create!(key: 'sync_watermark_square', tenant_id: @tenant.id, value: 2.minutes.ago.iso8601)
+    order = Core::Order.new(source: 'square', source_order_id: 'old-square-sale',
+      occurred_at: 20.days.ago, gross_cents: 1000, currency: 'USD')
+    order[:status] = 'paid'
+    order.save!
+    OnboardingController.stubs(:configured?).returns(true)
+    get root_path
+    assert_response :success
+    assert_select '[data-source=square]', text: /Live.*Last successful pull:.*Latest stored sale:/m
+    assert_select '[data-source=square] form[action=?]', source_syncs_path(source: 'square')
+    assert_select '[data-sales-source=square]', text: /No sales imported for today/
+    refute_includes response.body, 'private-square-fixture'
+  end
+
+  test 'sales readers see source timestamps without settings or source write controls' do
+    Current.tenant = @tenant
+    users(:regular_user).update_permission_overrides!(%w[dashboard.read sales.read])
+    Setting.create!(key: 'sync_watermark_shopify', tenant_id: @tenant.id, value: Time.current.iso8601)
+    OnboardingController.stubs(:configured?).returns(true)
+    get root_path
+    assert_response :success
+    assert_select '[data-sales-source=shopify] time[datetime]'
+    assert_select '#source-sync-status', count: 0
+    assert_select 'nav[aria-label="Daily work"] a[href=?]', ctrax_days_path
+    assert_select 'nav[aria-label="Daily work"] a[href=?]', ctrax_pos_path, count: 0
+  end
+
+  test 'dashboard refresh updates sales in place and respects delegated widget permissions' do
+    Current.tenant = @tenant
+    users(:regular_user).update_permission_overrides!(%w[dashboard.read sales.read sync.read])
+    get '/live/sync_status', params: { source_status: '1', dashboard: '1' }
+    assert_response :success
+    assert_includes response.body, 'target="dashboard-widget-today_channels"'
+    assert_includes response.body, 'data-sales-source="ctrax"'
+    refute_includes response.body, 'Website products'
+    users(:regular_user).update_permission_overrides!(%w[sync.read])
+    get '/live/sync_status', params: { dashboard: '1' }
+    assert_response :success
+    refute_includes response.body, 'dashboard-widget-'
   end
 
   test 'Shopify card action uses the existing tenant-scoped read sync' do

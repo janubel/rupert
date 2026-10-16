@@ -9,7 +9,7 @@ class SourceSyncStatus
   end
 
   def all(include_platform: true)
-    keys = %i[ctrax swipesimple authorize_net shopify bank]
+    keys = %i[shopify ctrax square swipesimple authorize_net bank]
     keys << :google_backup if include_platform
     keys.map { |key| read_status(key) }
   end
@@ -20,17 +20,25 @@ class SourceSyncStatus
     send(key)
   rescue ActiveRecord::Encryption::Errors::Decryption
     label = { ctrax: 'C-Trax', swipesimple: 'SwipeSimple', authorize_net: 'Authorize.net',
-      shopify: 'Shopify', bank: 'Bank · NAB / IRIS', google_backup: 'Google Drive backup' }.fetch(key)
+      shopify: 'Shopify', square: 'Square', bank: 'Bank · NAB / IRIS', google_backup: 'Google Drive backup' }.fetch(key)
     { key: key.to_s, label: label, badge: 'Credentials unreadable', last_at: nil,
       detail: 'Ask the platform operator to restore the original encryption keys.',
       schedule: 'Saved schedule unchanged · access cannot be diagnosed', mode: 'unknown', ready: false }
   end
 
   def shopify
-    configured = %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].all? { |key| EnvStore.fetch(key, '').present? }
-    value = Setting.find_by(key: 'sync_watermark_shopify', tenant_id: Current.tenant_id)&.value
+    platform('shopify', %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN])
+  end
+
+  def square
+    platform('square', %w[SQUARE_ACCESS_TOKEN])
+  end
+
+  def platform(source, credential_keys)
+    configured = credential_keys.all? { |key| EnvStore.fetch(key, '').present? }
+    value = Setting.find_by(key: "sync_watermark_#{source}", tenant_id: Current.tenant_id)&.value
     last_at = Time.zone.parse(value) if value.present?
-    run = SyncRun.where(source: %w[all shopify]).order(startedAt: :desc).first
+    run = SyncRun.where(source: ['all', source]).order(startedAt: :desc).first
     badge = if !configured
       'Needs access'
     elsif run&.status == 'running' && run.startedAt > SyncEngine::STALE_RUN_AFTER.ago
@@ -44,9 +52,10 @@ class SourceSyncStatus
     else
       'Live'
     end
-    { key: 'shopify', label: 'Shopify', badge: badge, last_at: last_at,
-      detail: "#{ShopifyProduct.active.where(catalog_present: true).count} current active products · #{ShopifyVariant.current_catalog.tracked.count} tracked variants",
-      schedule: 'Every 15 minutes', mode: 'catalog', ready: configured }
+    latest_sale = Core::Order.where(source: source).maximum(:occurred_at)
+    { key: source, label: source.capitalize, badge: badge, last_at: last_at,
+      detail: source == 'shopify' ? "#{ShopifyProduct.active.where(catalog_present: true).count} current active products · #{ShopifyVariant.current_catalog.tracked.count} tracked variants" : 'Catalog and native order history',
+      latest_sale_at: latest_sale, schedule: 'Every 15 minutes', mode: 'catalog', ready: configured }
   end
 
   def bank
@@ -117,7 +126,19 @@ class SourceSyncStatus
     else
       'Live'
     end
+    latest_date = CtraxDay.maximum(:business_date)
+    sales_at = latest_date && CtraxDay.where(business_date: latest_date).minimum(:captured_at)
+    sales_badge = if sales_at.nil?
+      'Awaiting pull'
+    elsif latest_date < Date.current
+      'Missing today'
+    elsif sales_at < FRESH_FOR.ago
+      'Stale'
+    else
+      'Live'
+    end
     { key: 'ctrax', label: 'C-Trax', badge: badge, last_at: last_at,
+      sales_last_at: sales_at, sales_badge: sales_badge, sales_date: latest_date,
       detail: "#{snapshots.size} stores · #{snapshots.sum { |snapshot| snapshot.records.size }} variants",
       schedule: connection&.hourly_sync_enabled ? 'Every 30 minutes' : 'Automatic stock pulls paused',
       mode: 'stock', ready: connection&.vendor_approved && connection.credentials_saved? }

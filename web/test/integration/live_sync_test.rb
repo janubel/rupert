@@ -38,7 +38,7 @@ class LiveSyncTest < ActionDispatch::IntegrationTest
   test 'sync page includes the live-sync controller and banner' do
     get syncs_path
     assert_response :success
-    assert_select '[data-controller=live-sync]'
+    assert_select '[data-controller~=live-sync]'
     assert_select '#sync-banner'
     assert_select '#sync-runs'
     assert_select 'h2', 'Platform changes'
@@ -49,7 +49,7 @@ class LiveSyncTest < ActionDispatch::IntegrationTest
   test 'dashboard includes the live-sync controller, banner, and last-sync line' do
     get root_path
     assert_response :success
-    assert_select '[data-controller=live-sync]'
+    assert_select '[data-controller~=live-sync]'
     assert_select '#sync-banner'
     assert_select '#last-sync'
   end
