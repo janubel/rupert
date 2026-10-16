@@ -2,6 +2,8 @@
 
 Open **Marketing → Influencers → a collaboration → Create Shopify code**. Marketing must be enabled and the collaboration Active with a contactable influencer.
 
+See the [October 16 SER8 deployment record](shopify-influencer-discounts-deployment-2026-10-16.md) for validation and remaining Shopify permission setup.
+
 ## Connection and access
 
 Save this workspace's Shopify shop domain, client ID and client secret in **System → Connections**. The creator captures tenant credentials and never falls back to a global/default shop. The connected app needs Shopify's `write_discounts` permission, including its corresponding read access. Declaring the scope in this repository does not change a merchant installation: grant the connected app access in Shopify and complete the required installation/authorization step. Each operation obtains a fresh client-credentials token; no credentials enter offer records or error messages.

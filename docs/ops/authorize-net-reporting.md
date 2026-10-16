@@ -1,5 +1,7 @@
 # Authorize.net read-only reconciliation
 
+**Live setup and additional history pulls remain paused by the owner, reaffirmed October 16, 2026.** The controls below describe a later authorized resume. See the [API investigation and implementation record](https://github.com/techmore/rupert/blob/main/docs/ops/authorize-net-api-investigation.md) for portal verification versus server API authentication and remaining gaps.
+
 Investigated 2026-10-15. This draft implements gateway reporting in Rupert. Authenticated portal reporting was inspected: settlement reports and transaction detail screens were accessible. This establishes portal visibility only. Live reporting API access remains **unverified** because the existing Transaction Key has not been supplied. No live reporting API calls, merchant setting changes or payment operations were performed. API Login IDs, merchant identifiers, private transaction samples and credentials are excluded from this public guide. C-Trax remains the retail inventory reference.
 
 ## Access and credentials
