@@ -22,6 +22,8 @@ class ModuleRegistry
     Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: 'dashboard.read', position: 10),
     Entry.new(key: 'platform', name: 'Instance overview', path: -> { platform_path }, permission: nil, position: 89),
     Entry.new(key: 'sales', name: 'Sales', path: -> { sales_path }, permission: 'sales.read', position: 20),
+    Entry.new(key: 'ctrax_pos', name: 'C-Trax retail', path: -> { ctrax_pos_path }, permission: %w[sales.read sales.write inventory.read], position: 21),
+    Entry.new(key: 'ctrax_days', name: 'C-Trax daily close', path: -> { ctrax_days_path }, permission: 'sales.read', position: 24),
     Entry.new(key: 'point_of_sale', name: 'POS preview', path: lambda {
       point_of_sale_path
     }, permission: %w[sales.read sales.write inventory.read], position: 22),
@@ -161,7 +163,7 @@ class ModuleRegistry
     # Every registered module must appear in exactly one area.
     AREAS = [
       { key: 'overview', name: 'Overview', modules: ['dashboard'] },
-      { key: 'sell', name: 'Sell', modules: %w[sales point_of_sale registers customers] },
+      { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos point_of_sale ctrax_days registers customers] },
       { key: 'marketing', name: 'Marketing', modules: %w[marketing] },
       { key: 'stock', name: 'Stock',
         modules: %w[inventory inventory_exceptions locations inventory_counts stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },

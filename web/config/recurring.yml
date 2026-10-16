@@ -5,6 +5,10 @@ production:
     class: DirectorySyncJob
     queue: default
     schedule: every 30 minutes
+  ctrax_sales:
+    class: CtraxSalesSyncJob
+    queue: default
+    schedule: '5,35 * * * *'
   iris_daily_deposits_web:
     class: IrisDailyDepositsWebJob
     queue: default
