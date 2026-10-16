@@ -26,6 +26,7 @@ class ReconciliationDocumentsController < AuthenticatedController
 
       @library = ReconciliationLibrary.new
     end
+    @follow_up_count = ReconciliationFollowUp.active.count
     @entries = @library.page
     ids = @entries.select { |entry| entry.rank.zero? }.map { |entry| entry.record.id }
     @successors = ReconciliationDocument.where(supersedes_id: ids).select(:id, :supersedes_id, :metadata_json, :period_from).index_by(&:supersedes_id)

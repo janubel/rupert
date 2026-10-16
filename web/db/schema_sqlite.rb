@@ -1588,6 +1588,46 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_050000) do
     t.index ["uploaded_by_id"], name: "index_reconciliation_documents_on_uploaded_by_id"
   end
 
+  create_table "reconciliation_follow_up_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "reconciliation_follow_up_id", null: false
+    t.text "details_json", null: false
+    t.datetime "created_at", null: false
+    t.index ["reconciliation_follow_up_id"], name: "idx_reconciliation_follow_up_history"
+    t.index ["tenant_id"], name: "index_reconciliation_follow_up_events_on_tenant_id"
+  end
+
+  create_table "reconciliation_follow_ups", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "category", null: false
+    t.string "source", null: false
+    t.string "document_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.string "currency"
+    t.string "location_id"
+    t.string "metric"
+    t.string "report_digest"
+    t.text "title", null: false
+    t.text "notes", null: false
+    t.string "status", default: "open", null: false
+    t.date "due_on", null: false
+    t.integer "owner_id"
+    t.integer "created_by_id"
+    t.integer "document_id"
+    t.string "submission_key", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_reconciliation_follow_ups_on_created_by_id"
+    t.index ["document_id"], name: "index_reconciliation_follow_ups_on_document_id"
+    t.index ["owner_id"], name: "index_reconciliation_follow_ups_on_owner_id"
+    t.index ["tenant_id", "period_from", "period_to"], name: "idx_reconciliation_follow_up_period"
+    t.index ["tenant_id", "status", "due_on"], name: "idx_reconciliation_follow_up_queue"
+    t.index ["tenant_id", "submission_key"], name: "idx_reconciliation_follow_up_submission", unique: true
+    t.index ["tenant_id"], name: "index_reconciliation_follow_ups_on_tenant_id"
+  end
+
   create_table "refunds", force: :cascade do |t|
     t.integer "amount_cents", default: 0, null: false
     t.datetime "created_at", null: false
@@ -2245,6 +2285,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_050000) do
   add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
   add_foreign_key "reconciliation_documents", "tenants"
   add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
+  add_foreign_key "reconciliation_follow_up_events", "reconciliation_follow_ups"
+  add_foreign_key "reconciliation_follow_up_events", "tenants"
+  add_foreign_key "reconciliation_follow_ups", "reconciliation_documents", column: "document_id"
+  add_foreign_key "reconciliation_follow_ups", "tenants"
+  add_foreign_key "reconciliation_follow_ups", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "reconciliation_follow_ups", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "refunds", "orders", on_delete: :cascade
   add_foreign_key "retention_drive_connections", "tenants"
   add_foreign_key "retention_drive_items", "tenants"

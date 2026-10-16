@@ -1,0 +1,106 @@
+# frozen_string_literal: true
+
+require 'test_helper'
+
+class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
+  setup do
+    @tenant = tenants(:default_tenant)
+    Current.tenant = @tenant
+    @user = User.create!(tenant: @tenant, email: 'follow-up-reviewer@example.com', name: 'Follow-up reviewer', role: 'admin', password: 'password123')
+    post login_path, params: { email: @user.email, password: 'password123' }
+    Current.tenant = @tenant
+    @values = { category: 'missing_report', source: 'bank', document_kind: 'bank_statement', period_from: '2026-10-01', period_to: '2026-10-31',
+      title: 'October statement needed', notes: 'Ask the bookkeeper for the original.', due_on: '2026-10-15', owner_id: @user.id, submission_key: SecureRandom.uuid }
+  end
+  teardown { Current.reset }
+
+  test 'report request replay is idempotent and retains encrypted progress history with stale update protection' do
+    assert_difference ['ReconciliationFollowUp.count', 'ReconciliationFollowUpEvent.count'], 1 do
+      post reconciliation_follow_ups_path, params: { follow_up: @values }
+    end
+    item = ReconciliationFollowUp.last
+    assert_redirected_to reconciliation_follow_up_path(item)
+    assert_no_difference 'ReconciliationFollowUp.count' do
+      post reconciliation_follow_ups_path, params: { follow_up: @values }
+    end
+    patch reconciliation_follow_up_path(item), params: { follow_up: { title: 'Statement from bank', status: 'waiting', notes: 'Requested original from bookkeeper.', due_on: '2026-10-20', lock_version: 0 } }
+    assert_response :redirect
+    assert_equal 'waiting', item.reload.status
+    assert_equal 2, item.events.count
+    assert_equal 'October statement needed', item.events.first.details['title']
+    assert_equal 'Statement from bank', item.events.last.details['title']
+    patch reconciliation_follow_up_path(item), params: { follow_up: { status: 'closed', notes: 'Do not lose my closing note.', lock_version: 0 } }
+    assert_response :unprocessable_entity
+    assert_select 'textarea[name="follow_up[notes]"]', 'Do not lose my closing note.'
+    assert_equal 'waiting', item.reload.status
+    assert_equal 2, item.events.count
+    raw = ActiveRecord::Base.connection.select_one("SELECT title, notes FROM reconciliation_follow_ups WHERE id = #{item.id}")
+    refute_includes raw['title'], 'Statement from bank'
+    refute_includes raw['notes'], 'bookkeeper'
+    event = item.events.first
+    assert_equal @values[:notes], event.details['notes']
+    refute event.update(details_json: '{}')
+    assert_raises(ActiveRecord::RecordNotDestroyed) { item.destroy! }
+  end
+
+  test 'invalid assignments evidence and due dates preserve entered text without changing history' do
+    item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+    other = Tenant.create!(name: 'Other followups', subdomain: 'other-followups')
+    foreign_user = User.create!(tenant: other, email: 'foreign-followup@example.com', name: 'Foreign private owner', role: 'admin', password: 'password123')
+    patch reconciliation_follow_up_path(item), params: { follow_up: { owner_id: foreign_user.id, due_on: '', status: 'closed', notes: 'Keep this reason', lock_version: 0 } }
+    assert_response :unprocessable_entity
+    assert_select 'textarea[name="follow_up[notes]"]', 'Keep this reason'
+    refute_includes response.body, 'Foreign private owner'
+    assert_equal 'open', item.reload.status
+    assert_equal 1, item.events.count
+    doc = ReconciliationEvidence.retain!(bytes: 'invoice', filename: 'invoice.txt', source: 'bank', kind: 'invoice', from: '2026-10-01', to: '2026-10-31')
+    patch reconciliation_follow_up_path(item), params: { follow_up: { document_id: doc.id, notes: 'Wrong kind', lock_version: 0 } }
+    assert_response :unprocessable_entity
+    assert_nil item.reload.document_id
+    get daily_reconciliations_path(request: item.id)
+    assert_response :success
+    assert_select 'input[name="request_id"][value=?]', item.id.to_s
+    assert_select 'select[name="evidence[source]"] option[selected][value="bank"]'
+    assert_select 'input[name="evidence[period_to]"][value="2026-10-31"]'
+  end
+
+  test 'matching retained file can be linked but upload and closing do not certify source totals' do
+    item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+    doc = ReconciliationEvidence.retain!(bytes: 'statement', filename: 'statement.txt', source: 'bank', kind: 'bank_statement', from: '2026-10-01', to: '2026-10-31')
+    get reconciliation_follow_up_path(item)
+    assert_select 'select[name="follow_up[document_id]"] option[value=?]', doc.id.to_s
+    assert_equal 'open', item.reload.status
+    patch reconciliation_follow_up_path(item), params: { follow_up: { status: 'closed', notes: 'Original reviewed and retained; remaining questions documented.', document_id: doc.id, lock_version: 0 } }
+    assert_response :redirect
+    assert_equal 'closed', item.reload.status
+    assert_equal doc.id, item.document_id
+    assert_equal 2, item.events.count
+    assert_equal 0, DailyReconciliationReview.count
+    DataRetention.prune_all!(now: Time.zone.parse('2040-01-01'))
+    assert ReconciliationFollowUp.exists?(item.id)
+    assert_equal 2, item.events.count
+  end
+
+  test 'queue shows overdue and assigned filters across dates and isolates tenants and readers' do
+    item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      get reconciliation_follow_ups_path(status: 'overdue', owner: 'mine')
+      assert_response :success
+      assert_includes response.body, 'October statement needed'
+      assert_includes response.body, 'Overdue'
+    end
+    @user.update!(role: 'reporting')
+    get reconciliation_follow_up_path(item)
+    assert_response :success
+    assert_select 'input[value="Save progress"]', count: 0
+    patch reconciliation_follow_up_path(item), params: { follow_up: { status: 'closed', notes: 'No permission', lock_version: 0 } }
+    assert_response :redirect
+    assert_equal 'open', item.reload.status
+    other = Tenant.create!(name: 'Hidden followups', subdomain: 'hidden-followups')
+    @user.update!(tenant: other)
+    get reconciliation_follow_ups_path
+    refute_includes response.body, 'October statement needed'
+    get reconciliation_follow_up_path(item)
+    assert_response :not_found
+  end
+end

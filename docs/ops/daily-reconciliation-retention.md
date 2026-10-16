@@ -13,6 +13,20 @@ Open **Money → Daily reconciliation & documents** at `/daily_reconciliations`.
 
 The existing **Daily / weekly / monthly source summary** is linked in both directions. Saving or refreshing that report, including its automatic closes, retains encrypted CSV and JSON versions in the same vault. The current summary can refresh while earlier versions remain downloadable.
 
+## Differences and report follow-ups
+
+The daily page starts with **What needs attention**: signed monetary differences, unavailable comparisons, conflicting controls and recorded activity without a current register control. Known differences appear first, grouped by currency and descending absolute difference within each currency. The direction is always **Rupert minus source**; amounts in different currencies are never summed. Filters show differences, unavailable values, conflicts, matched metrics or all metrics; the CSV remains complete.
+
+Missing-control prompts come only from observed source/currency/location pools without a current control. **Add control** opens the original-file form with that exact day and scope. **Request report** creates a prefilled request. These prompts do not infer an exhaustive list of expected invoices or processor/bank reports. Use **Track another expected report** for those expectations, including monthly reports and statements.
+
+**Money → Report requests & follow-ups** at `/reconciliation_follow_ups` keeps requests and difference investigations visible across dates. Choose an active report reader as owner, a due date and a concrete next step. The default queue shows open/waiting items earliest due first; filters include overdue, closed, source, owner and covered business day. Due dates use Rupert's Eastern date. These are local Rupert records, with no automatic messages or reminders.
+
+Use **Record progress** to change status, assignment or due date, link matching vault evidence, add a progress/closing note or rename a follow-up. Each successful change keeps an encrypted history snapshot, including earlier titles, notes, assignments, evidence IDs and actor names. Source, document kind, period, currency/location and original purpose stay fixed; create a new request for a different scope. Optimistic locking rejects stale edits while preserving entered text for comparison with the latest history. Duplicate creation submissions reuse their saved request.
+
+**Add original report** opens the attachment form with the requested context and returns to the follow-up after retention. Select its evidence and record progress to link it. Matching files must belong to the workspace, have the requested source/kind and cover the whole period; register controls also require the exact currency/location. The chooser shows the latest 100 matching vault files. Existing native CSVs still require manual coverage checks before retaining a covered vault original for linkage. Linking or uploading never closes a request automatically. **Closed by reviewer** records an explained decision, rather than certifying that a variance is fixed or a business day is complete. A changed report is flagged on a difference investigation.
+
+Requests and history are tenant scoped and are not automatically pruned. Reading requires `reports.read`; creating/updating additionally requires `reports.write`. History snapshots are append-only through the application, and current-record changes and history writes commit together. They are included in the consistent database/configuration backup; keep Rails encryption keys for restoration. Follow-up status changes are separate from the financial report fingerprint and do not modify canonical transactions or source-control amounts.
+
 ## Automatic retention
 
 `DailyReconciliationArchiveJob` runs at **07:15 America/New_York daily**. It revisits each of the previous seven calendar/business-report dates to capture late imports. Each changed report becomes a new encrypted CSV archive; unchanged snapshots replay to the existing archive. Days older than seven dates can be archived manually. The job reads local data and performs no provider operations or messaging.
@@ -38,3 +52,5 @@ The archive CSV includes source-separated totals, coverage, freshness, controls/
 Apply `20261016040100_create_reconciliation_evidence` on the current SER8 release, preserving all existing integrations and encryption configuration. Rehearse on a consistent private database copy, verify unchanged existing-table counts and integrity, build assets, then promote code/schema and restart web/jobs through the established Incus workflow. Verify the authenticated page, an exact archive download and the recurring schedule. Rolling back code is additive-schema compatible; retain new evidence tables and do not restore an older database over subsequent business writes.
 
 The [October 15 SER8 deployment receipt](daily-reconciliation-deployment-2026-10-15.md) records validation, native-file retention, archive initialization and the encrypted backup/restore checks.
+
+The [October 16 document-library UX receipt](reconciliation-library-deployment-2026-10-16.md) records searchable retention, correction/error flows, combined validation and the pending Drive status.

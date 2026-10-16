@@ -27,6 +27,24 @@ module ReconciliationHelper
     doc.supersedes_id ? 'Correction retained' : 'Original retained'
   end
 
+  def reconciliation_difference(cents)
+    return 'Unavailable' if cents.nil?
+    return '0.00' if cents.zero?
+
+    "#{cents.positive? ? '+' : '−'}#{reconciliation_money(cents.abs)}"
+  end
+
+  def reconciliation_follow_up_context(row, day, category: 'difference')
+    { category: category, source: row[:source], currency: row[:currency], location_id: row[:location_id],
+      document_kind: 'register_control', period_from: day.iso8601, period_to: day.iso8601,
+      metric: ReconciliationEvidence::AMOUNTS.include?(row[:metric]) ? row[:metric] : nil,
+      title: "#{reconciliation_source(row[:source])} #{category == 'missing_report' ? 'register report needed' : "#{row[:metric].to_s.humanize.downcase} review"}" }
+  end
+
+  def reconciliation_follow_up_value(record, key)
+    @entered_values&.key?(key.to_s) ? @entered_values[key.to_s] : record.public_send(key)
+  end
+
   def reconciliation_form_value(key, default = nil)
     @evidence_values&.key?(key.to_s) ? @evidence_values[key.to_s] : default
   end
