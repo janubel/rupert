@@ -86,7 +86,7 @@ class ModuleRegistry
     Entry.new(key: 'pos_connections', name: 'POS & payments', path: lambda {
       pos_connections_path
     }, permission: 'settings.read', position: 94),
-    Entry.new(key: 'connections', name: 'Connections', path: lambda {
+    Entry.new(key: 'connections', name: 'Credentials & sync', path: lambda {
       connections_path
     }, permission: 'settings.read', position: 94),
     Entry.new(key: 'settings', name: 'Settings', path: lambda {
