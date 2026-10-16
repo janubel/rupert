@@ -15,6 +15,17 @@ class CustomersController < AuthenticatedController
     @order_counts = Core::Order.where(customer_id: ids).group(:customer_id).count
   end
 
+  def sync_directory
+    authorize(:module, :customers_write?)
+    authorize(:module, :sync_write?)
+    Directories::Sync::PAIRS.each do |provider, kinds|
+      next unless kinds.include?('customers') && Directories::Sync.available?(provider)
+
+      DirectorySyncJob.perform_later(Current.tenant_id, provider, 'customers', manual: true)
+    end
+    redirect_to(customers_path, notice: 'Customer directory sync queued. Refresh to see the latest read status.')
+  end
+
   def show
     authorize(@customer)
     @orders = @customer.orders.order(occurred_at: :desc).limit(50)

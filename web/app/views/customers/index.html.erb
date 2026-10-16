@@ -3,12 +3,17 @@
   <section class="flex items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Customers</h1>
-      <p class="mt-1 text-sm text-mocha">One unified view of every customer across channels.</p>
+      <p class="mt-1 text-sm text-mocha">Customer profiles from your connected sources.</p>
     </div>
+    <% if Current.user.can?("customers.write") && Current.user.can?("sync.write") %>
+      <%= button_to "Sync customers now", sync_directory_customers_path, class: "btn-ghost btn-sm" %>
+    <% end %>
     <% if Current.user.can?("customers.write") %>
       <%= link_to "Add customer", new_customer_path, class: "btn-primary" %>
     <% end %>
   </section>
+
+  <%= render "shared/directory_sync_status", kind: "customers" %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">

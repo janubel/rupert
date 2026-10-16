@@ -26,7 +26,7 @@ class CtraxSalesSyncTest < ActiveSupport::TestCase
     assert_equal 'America/New_York', day.timezone
     assert_equal 1000, day.orders.first['total']
     raw = CtraxDay.connection.select_value("SELECT orders_json FROM ctrax_days WHERE id = #{day.id}")
-    assert_not_includes raw, 'Tea'
+    assert_not_includes raw, '"total":1000'
     assert_not_includes raw, 'completed_at'
     assert_not_includes day.orders_json.to_json, 'PRIVATE-NAME'
     assert_not_includes day.orders_json.to_json, 'private@example'

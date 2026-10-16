@@ -5,6 +5,10 @@ production:
     class: DailyReconciliationArchiveJob
     queue: default
     schedule: "15 7 * * * America/New_York"
+  source_directories:
+    class: DirectorySyncJob
+    queue: default
+    schedule: every 30 minutes
   ctrax_sales:
     class: CtraxSalesSyncJob
     queue: default

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -593,6 +593,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.string "last_name"
     t.text "notes"
     t.string "phone"
+    t.datetime "source_synced_at"
     t.string "source", null: false
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
@@ -630,6 +631,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.index ["tenant_id", "name"], name: "index_departments_on_tenant_id_and_name", unique: true
   end
 
+  create_table "directory_sync_states", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "provider", null: false
+    t.string "kind", null: false
+    t.string "status", default: "pending", null: false
+    t.string "attempt_token"
+    t.integer "record_count"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "last_success_at"
+    t.string "error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "provider", "kind"], name: "idx_directory_sync_identity", unique: true
+  end
+
   create_table "employees", force: :cascade do |t|
     t.text "address"
     t.datetime "created_at", null: false
@@ -640,6 +657,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.string "emergency_contact_phone"
     t.string "employee_number"
     t.string "employment_type", default: "full_time"
+    t.string "external_id"
     t.string "first_name", null: false
     t.date "hire_date"
     t.string "last_name", null: false
@@ -647,6 +665,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.text "notes"
     t.string "phone"
     t.bigint "position_id"
+    t.string "source"
+    t.boolean "source_active"
+    t.datetime "source_synced_at"
     t.string "status", default: "active", null: false
     t.string "tenant_id", null: false
     t.date "termination_date"
@@ -655,6 +676,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.index ["tenant_id", "department_id"], name: "index_employees_on_tenant_id_and_department_id"
     t.index ["tenant_id", "employee_number"], name: "index_employees_on_tenant_id_and_employee_number", unique: true
     t.index ["tenant_id", "position_id"], name: "index_employees_on_tenant_id_and_position_id"
+    t.index ["tenant_id", "source", "external_id"], name: "idx_employees_source_identity", unique: true
     t.index ["tenant_id", "status"], name: "index_employees_on_tenant_id_and_status"
     t.index ["tenant_id", "user_id"], name: "index_employees_on_tenant_id_and_user_id"
   end
@@ -1024,6 +1046,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "employee_id"], name: "index_payslips_on_tenant_id_and_employee_id"
     t.index ["tenant_id", "pay_run_id"], name: "index_payslips_on_tenant_id_and_pay_run_id"
+  end
+
+  create_table "ctrax_days", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "api_origin", null: false
+    t.string "store_id", null: false
+    t.date "business_date", null: false
+    t.string "timezone", null: false
+    t.string "currency", default: "USD", null: false
+    t.text "orders_json", null: false
+    t.text "sessions_json", null: false
+    t.text "controls_json", null: false
+    t.string "source_digest", null: false
+    t.datetime "captured_at", null: false
+    t.integer "reviewed_by_id"
+    t.string "reviewed_digest"
+    t.datetime "reviewed_at"
+    t.string "review_note", limit: 1000
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reviewed_by_id"], name: "index_ctrax_days_on_reviewed_by_id"
+    t.index ["tenant_id", "location_id", "business_date"], name: "idx_on_tenant_id_location_id_business_date_9a513d6082", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_days_on_tenant_id"
   end
 
   create_table "ctrax_stock_snapshots", force: :cascade do |t|
@@ -1691,6 +1737,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
   add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
   add_foreign_key "reconciliation_documents", "tenants"
   add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
+  add_foreign_key "directory_sync_states", "tenants"
   add_foreign_key "departments", "employees", column: "manager_id"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
   add_foreign_key "ctrax_days", "Location", column: "location_id", on_delete: :cascade
