@@ -24,6 +24,11 @@ pub fn emit(c: &Connection, kind: &str, key: Option<&str>, data: &Value) -> rusq
     Ok(Ev { id: c.last_insert_rowid(), at, kind: kind.into(), key: key.map(String::from), data: data.clone() })
 }
 
+/// `emit` unless the tenant has realtime switched off (then no row is written and `None` returned).
+pub fn emit_if(on: bool, c: &Connection, kind: &str, key: Option<&str>, data: &Value) -> rusqlite::Result<Option<Ev>> {
+    if on { emit(c, kind, key, data).map(Some) } else { Ok(None) }
+}
+
 pub fn prune(c: &Connection, keep: i64) {
     let _ = c.execute("DELETE FROM events WHERE id <= (SELECT max(id) FROM events) - ?1", [keep]);
 }
@@ -36,12 +41,15 @@ fn since(db: &TenantDb, after: i64, limit: i64) -> rusqlite::Result<Vec<Ev>> {
     })
 }
 
+fn disabled() -> Response { (StatusCode::CONFLICT, Json(json!({ "error": "realtime is disabled for this tenant" }))).into_response() }
+
 #[derive(Deserialize)]
 pub struct SinceQ { since: Option<i64>, limit: Option<i64> }
 
 pub async fn recent(State(reg): State<Arc<Registry>>, p: Principal, Query(q): Query<SinceQ>) -> Result<Json<Value>, Response> {
     p.require("inventory:read", "staff")?;
     let db = reg.db(&p.tenant_id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    if !db.realtime() { return Err(disabled()); }
     let (after, limit) = (q.since.unwrap_or(0).max(0), q.limit.unwrap_or(100).clamp(1, 500));
     let rows = tokio::task::spawn_blocking(move || since(&db, after, limit)).await.ok().and_then(Result::ok).ok_or_else(|| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     Ok(Json(json!({ "data": rows, "meta": { "last_id": rows.last().map(|e| e.id) } })))
@@ -70,6 +78,7 @@ async fn replay(db: &Arc<TenantDb>, last: &mut i64, tx: &mpsc::Sender<Result<Eve
 pub async fn stream(State(reg): State<Arc<Registry>>, p: Principal, headers: HeaderMap, Query(q): Query<SinceQ>) -> Result<impl IntoResponse, Response> {
     p.require("inventory:read", "staff")?;
     let db = reg.db(&p.tenant_id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    if !db.realtime() { return Err(disabled()); }
     if db.sse_clients.fetch_add(1, Ordering::Relaxed) >= PER_TENANT_CLIENTS || reg.sse_total.fetch_add(1, Ordering::Relaxed) >= reg.sse_max {
         db.sse_clients.fetch_sub(1, Ordering::Relaxed);
         reg.sse_total.fetch_sub(1, Ordering::Relaxed);
@@ -99,4 +108,28 @@ pub async fn stream(State(reg): State<Arc<Registry>>, p: Principal, headers: Hea
         }
     });
     Ok(Sse::new(ReceiverStream::new(out)).keep_alive(KeepAlive::new().interval(Duration::from_secs(15))))
+}
+
+// ---------- per-tenant settings ----------
+
+pub async fn get_settings(State(reg): State<Arc<Registry>>, p: Principal) -> Result<Json<Value>, Response> {
+    p.require("inventory:read", "staff")?;
+    let db = reg.db(&p.tenant_id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    Ok(Json(json!({ "realtime": db.realtime() })))
+}
+
+#[derive(Deserialize)]
+pub struct SettingsBody { realtime: bool }
+
+pub async fn put_settings(State(reg): State<Arc<Registry>>, p: Principal, Json(b): Json<SettingsBody>) -> Result<Json<Value>, Response> {
+    if p.token_id.is_some() { return Err((StatusCode::FORBIDDEN, Json(json!({ "error": "settings are managed by signed-in owners" }))).into_response()); }
+    p.require("settings:write", "owner")?;
+    let db = reg.db(&p.tenant_id).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    let (d2, r2, p2) = (db.clone(), reg.clone(), p.clone());
+    tokio::task::spawn_blocking(move || {
+        d2.set_realtime(b.realtime).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+        crate::auth::audit(&r2.central.lock(), Some(&p2.tenant_id), Some(p2.user_id), "setting_realtime", if b.realtime { "on" } else { "off" });
+        Ok::<(), Response>(())
+    }).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())??;
+    Ok(Json(json!({ "realtime": db.realtime() })))
 }

@@ -321,3 +321,42 @@ absolute level of the same binary drifted between 52k and 113k across sessions):
 Not done: Shopify per-location levels and orders, Square orders, scheduled
 (automatic) syncs, webhooks, mirror search, SKU linking between Shopify and Square,
 and no real-store run (needs owner credentials and approval).
+
+### Per-tenant realtime switch (2026-10-16)
+
+The `events` outbox is now optional per tenant. Stored in the tenant's own database
+(`settings` table, migration 4), cached in an atomic on the open tenant, default on
+(`RUPERT_REALTIME_DEFAULT=0|1` sets the default for tenants with no stored setting; a stored
+setting always wins and survives restarts).
+
+- `GET /api/v1/settings` (staff+) returns `{"realtime": bool}`.
+- `PUT /api/v1/settings {"realtime": bool}` is owner-only and session-only (tokens get 403).
+- **Off:** no `events` rows are written (inventory adjusts, mirror sync, sync results), nothing is
+  broadcast, `GET /api/v1/events` and `/events/recent` return 409. Adjusts, `movements` rows, syncs
+  and the mirror reads are unaffected; sync status stays available at `/api/v1/sync/runs`.
+- **Turning it on** writes one `realtime.enabled` marker. Changes made while it was off are not in
+  the outbox, so clients that see the marker (or got a 409 earlier) must resync from
+  `/api/v1/catalog` and `/api/v1/inventory` instead of replaying. Streams already open when it is
+  switched off stay connected but receive nothing until it is on again.
+- Tests: `tests/sync_smoke.py` is now 56 checks (owner-only toggle, adjust and sync still work
+  while off, zero event rows written, 409 on both feed endpoints, marker on enable); a manual
+  check confirmed 5000 concurrent adjusts with realtime off give 5000 movement rows, 0 events and
+  the exact quantity drop, and that a stored `0` beats `RUPERT_REALTIME_DEFAULT=1` after restart.
+
+A/B against milestone 2, interleaved on the same machine, 3 rounds, medians of 5 x 6 s per cell
+(then median of the three rounds), fresh data copy per run:
+
+| Build | Read rps / p99 | Write rps / p99 | RSS after 500 tenants | Peak RSS |
+| --- | --- | --- | --- | --- |
+| milestone 2 (no outbox) | 90.7k / 2.59 ms | 56.7k / 2.36 ms | 47 MB | 67 MB |
+| current, realtime ON | 88.6k / 2.62 ms | 42.2k / 2.98 ms | 44 MB | 65 MB |
+| current, realtime OFF | 86.9k / 2.72 ms | 57.1k / 2.37 ms | 44 MB | 63 MB |
+
+Per-round writes: M2 59.7k, 56.7k, 56.7k; ON 40.6k, 42.6k, 42.2k; OFF 54.8k, 61.8k, 57.1k.
+
+- Realtime OFF restores milestone-2 write performance (57.1k vs 56.7k, inside round-to-round
+  noise). Realtime ON costs about 26% of writes (42.2k vs 56.7k) and ~0.6 ms of write p99.
+- Reads are within noise of each other (one OFF round measured 77k; the other two 87k and 90k),
+  so no read difference is claimed.
+- Absolute numbers differ from the previous session's table (this machine drifts between
+  sessions); only the within-session ordering is meaningful.

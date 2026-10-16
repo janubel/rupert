@@ -10,12 +10,12 @@ use std::{collections::HashSet, sync::atomic::{AtomicI64, AtomicUsize}};
 use crate::{Adjust, Item};
 
 /// Tunables, read once from the environment so one binary can be A/B tested.
-pub struct Cfg { pub cache_kb: i64, pub mmap_mb: i64, pub readers: usize }
+pub struct Cfg { pub cache_kb: i64, pub mmap_mb: i64, pub readers: usize, pub realtime_default: bool }
 pub fn cfg() -> &'static Cfg {
     static C: OnceLock<Cfg> = OnceLock::new();
     C.get_or_init(|| {
         let e = |k: &str, d: i64| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
-        Cfg { cache_kb: e("RUPERT_CACHE_KB", 512), mmap_mb: e("RUPERT_MMAP_MB", 0), readers: e("RUPERT_READERS", 8) as usize }
+        Cfg { cache_kb: e("RUPERT_CACHE_KB", 512), mmap_mb: e("RUPERT_MMAP_MB", 0), readers: e("RUPERT_READERS", 8) as usize, realtime_default: e("RUPERT_REALTIME_DEFAULT", 1) == 1 }
     })
 }
 
@@ -31,6 +31,8 @@ pub struct TenantDb {
     pub sse_clients: AtomicUsize,
     /// Highest event id published on this tenant; lets a new stream start "now" without a DB read.
     pub last_event: AtomicI64,
+    /// Per-tenant realtime outbox switch. Off: no `events` rows, no broadcasts, SSE refuses.
+    realtime: AtomicBool,
 }
 
 fn tune(c: &Connection) -> rusqlite::Result<()> {
@@ -47,7 +49,8 @@ impl TenantDb {
         tune(&w)?;
         migrate::apply(&w, migrate::TENANT)?;
         let last = w.query_row("SELECT coalesce(max(id),0) FROM events", [], |r| r.get::<_, i64>(0))?;
-        Ok(Self { writer: Mutex::new(w), readers: Mutex::new(Vec::new()), path, queue: Mutex::new(Vec::new()), flushing: AtomicBool::new(false), bus, sse_clients: AtomicUsize::new(0), last_event: AtomicI64::new(last) })
+        let rt = w.query_row("SELECT value FROM settings WHERE key='realtime'", [], |r| r.get::<_, String>(0)).map(|v| v == "1").unwrap_or(cfg().realtime_default);
+        Ok(Self { writer: Mutex::new(w), readers: Mutex::new(Vec::new()), path, queue: Mutex::new(Vec::new()), flushing: AtomicBool::new(false), bus, sse_clients: AtomicUsize::new(0), last_event: AtomicI64::new(last), realtime: AtomicBool::new(rt) })
     }
     /// Borrow a read connection (WAL allows readers concurrent with the writer).
     pub fn with_reader<T>(&self, f: impl FnOnce(&Connection) -> rusqlite::Result<T>) -> rusqlite::Result<T> {
@@ -64,6 +67,24 @@ impl TenantDb {
         let mut pool = self.readers.lock();
         if pool.len() < cfg().readers { pool.push(c); }
         r
+    }
+
+    pub fn realtime(&self) -> bool { self.realtime.load(Ordering::Relaxed) }
+
+    /// Persist and apply the realtime switch. Turning it on writes one `realtime.enabled`
+    /// marker so reconnecting clients know events may be missing from the gap and should resync.
+    pub fn set_realtime(&self, on: bool) -> rusqlite::Result<()> {
+        let mut evs = Vec::new();
+        {
+            let mut c = self.writer.lock();
+            let tx = c.transaction()?;
+            tx.execute("INSERT INTO settings VALUES ('realtime', ?1) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [if on { "1" } else { "0" }])?;
+            if on && !self.realtime() { evs.push(crate::feed::emit(&tx, "realtime.enabled", None, &serde_json::json!({}))?); }
+            tx.commit()?;
+        }
+        self.realtime.store(on, Ordering::Relaxed);
+        self.publish(evs);
+        Ok(())
     }
 
     /// Broadcast committed events and advance the "now" cursor.
@@ -107,7 +128,7 @@ impl TenantDb {
                             .execute((&p.a.sku, p.a.delta, &p.a.reason, now))?;
                         let item = tx.prepare_cached("SELECT sku,name,qty FROM inventory_items WHERE sku=?1")?
                             .query_row([&p.a.sku], |r| Ok(Item { sku: r.get(0)?, name: r.get(1)?, qty: r.get(2)? }))?;
-                        evs.push(crate::feed::emit(&tx, "inventory.adjusted", Some(&p.a.sku), &serde_json::json!({ "delta": p.a.delta, "qty": item.qty, "reason": p.a.reason }))?);
+                        evs.extend(crate::feed::emit_if(self.realtime(), &tx, "inventory.adjusted", Some(&p.a.sku), &serde_json::json!({ "delta": p.a.delta, "qty": item.qty, "reason": p.a.reason }))?);
                         out.push(Ok(item));
                     }
                     tx.commit()?;

@@ -140,7 +140,7 @@ fn run(reg: &Registry, tenant: &str, source: &str, run_id: i64) -> Result<Value,
         let mut c = db.writer.lock();
         if let Ok(tx) = c.transaction() {
             let _ = tx.execute("UPDATE sync_runs SET status=?2, finished_at=?3, details=?4, error=?5 WHERE id=?1", params![run_id, status, crate::now(), details, error]);
-            if let Ok(e) = feed::emit(&tx, "sync.finished", Some(source), &json!({ "run_id": run_id, "status": status, "error": error })) { evs.push(e); }
+            if let Ok(Some(e)) = feed::emit_if(db.realtime(), &tx, "sync.finished", Some(source), &json!({ "run_id": run_id, "status": status, "error": error })) { evs.push(e); }
             feed::prune(&tx, 10_000);
             let _ = tx.commit();
         }
@@ -165,10 +165,10 @@ fn sync_shopify(db: &TenantDb, run_id: i64, mut client: Shopify) -> Result<Value
                     ON CONFLICT(id) DO UPDATE SET product_id=excluded.product_id,title=excluded.title,sku=excluded.sku,price=excluded.price,inventory_item_id=excluded.inventory_item_id,qty=excluded.qty,tracked=excluded.tracked,synced_run=excluded.synced_run")
                     .and_then(|mut s| s.execute(params![v.id, v.product_id, v.title, v.sku, v.price, v.inventory_item_id, v.qty, v.tracked, run_id])).map_err(|e| e.to_string())?;
                 match old {
-                    None => { added += 1; evs.push(feed::emit(&tx, "mirror.variant.added", Some(&v.id), &json!({ "source": "shopify", "sku": v.sku, "title": v.title, "qty": v.qty })).map_err(|e| e.to_string())?); }
+                    None => { added += 1; evs.extend(feed::emit_if(db.realtime(), &tx, "mirror.variant.added", Some(&v.id), &json!({ "source": "shopify", "sku": v.sku, "title": v.title, "qty": v.qty })).map_err(|e| e.to_string())?); }
                     Some((t, sku, price, qty)) if t != v.title || sku != v.sku || price != v.price || qty != v.qty => {
                         changed += 1;
-                        evs.push(feed::emit(&tx, "mirror.variant.changed", Some(&v.id), &json!({ "source": "shopify", "sku": v.sku, "qty": { "from": qty, "to": v.qty }, "price": { "from": price, "to": v.price }, "title_changed": t != v.title, "sku_changed": sku != v.sku })).map_err(|e| e.to_string())?);
+                        evs.extend(feed::emit_if(db.realtime(), &tx, "mirror.variant.changed", Some(&v.id), &json!({ "source": "shopify", "sku": v.sku, "qty": { "from": qty, "to": v.qty }, "price": { "from": price, "to": v.price }, "title_changed": t != v.title, "sku_changed": sku != v.sku })).map_err(|e| e.to_string())?);
                     }
                     _ => {}
                 }
@@ -194,7 +194,7 @@ fn remove_stale(db: &TenantDb, table: &str, source: &str, run_id: i64) -> Result
         let tx = c.transaction().map_err(|e| e.to_string())?;
         let stale: Vec<(String, Option<String>)> = tx.prepare(&format!("SELECT id,sku FROM {table} WHERE synced_run<>?1")).and_then(|mut s| s.query_map([run_id], |r| Ok((r.get(0)?, r.get(1)?))).map(|i| i.flatten().collect())).map_err(|e| e.to_string())?;
         n = stale.len() as i64;
-        for (id, sku) in &stale { evs.push(feed::emit(&tx, "mirror.variant.removed", Some(id), &json!({ "source": source, "sku": sku })).map_err(|e| e.to_string())?); }
+        for (id, sku) in &stale { evs.extend(feed::emit_if(db.realtime(), &tx, "mirror.variant.removed", Some(id), &json!({ "source": source, "sku": sku })).map_err(|e| e.to_string())?); }
         tx.execute(&format!("DELETE FROM {table} WHERE synced_run<>?1"), [run_id]).map_err(|e| e.to_string())?;
         tx.commit().map_err(|e| e.to_string())?;
     }
@@ -222,7 +222,7 @@ fn sync_square(db: &TenantDb, run_id: i64, client: Square) -> Result<Value, Stri
                 tx.prepare_cached("INSERT INTO square_variations(id,item_id,name,sku,qty,synced_run) VALUES (?1,?2,?3,?4,0,?5)
                     ON CONFLICT(id) DO UPDATE SET item_id=excluded.item_id,name=excluded.name,sku=excluded.sku,synced_run=excluded.synced_run")
                     .and_then(|mut s| s.execute(params![v.id, v.item_id, v.name, v.sku, run_id])).map_err(|e| e.to_string())?;
-                if !existed { added += 1; evs.push(feed::emit(&tx, "mirror.variant.added", Some(&v.id), &json!({ "source": "square", "sku": v.sku, "title": v.name })).map_err(|e| e.to_string())?); }
+                if !existed { added += 1; evs.extend(feed::emit_if(db.realtime(), &tx, "mirror.variant.added", Some(&v.id), &json!({ "source": "square", "sku": v.sku, "title": v.name })).map_err(|e| e.to_string())?); }
             }
             tx.commit().map_err(|e| e.to_string())?;
         }
@@ -254,7 +254,7 @@ fn sync_square(db: &TenantDb, run_id: i64, client: Square) -> Result<Value, Stri
         for (id, sku, from, to) in diffs {
             tx.execute("UPDATE square_variations SET qty=?2 WHERE id=?1", params![id, to]).map_err(|e| e.to_string())?;
             changed += 1;
-            evs.push(feed::emit(&tx, "mirror.variant.changed", Some(&id), &json!({ "source": "square", "sku": sku, "qty": { "from": from, "to": to } })).map_err(|e| e.to_string())?);
+            evs.extend(feed::emit_if(db.realtime(), &tx, "mirror.variant.changed", Some(&id), &json!({ "source": "square", "sku": sku, "qty": { "from": from, "to": to } })).map_err(|e| e.to_string())?);
         }
         tx.execute("DELETE FROM square_counts WHERE synced_run<>?1", [run_id]).map_err(|e| e.to_string())?;
         tx.commit().map_err(|e| e.to_string())?;

@@ -31,6 +31,8 @@ pub const TENANT: &[&str] = &[
      INSERT INTO events_new SELECT id,at,kind,key,data FROM events;
      DROP TABLE events;
      ALTER TABLE events_new RENAME TO events;",
+    // 4: per-tenant settings (realtime outbox on/off).
+    "CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;",
 ];
 
 pub const CENTRAL: &[&str] = &[

@@ -209,6 +209,29 @@ try:
     call("POST", "/api/v1/sync/square", tok=OWN); wait_run(OWN, 6)
     s, iv = call("GET", "/api/v1/inventory?source=square&per_page=100", tok=OWN); check("square qty updated", {r["sku"]: r["quantity"] for r in iv["data"]}["S-2"], 9)
 
+    # per-tenant realtime switch: off = no event rows, feed endpoints refuse, everything else works
+    import sqlite3
+    tid = a["tenant_id"]
+    def ecount():
+        c = sqlite3.connect(f"{data}/tenants/{tid}.db"); n = c.execute("select count(*) from events").fetchone()[0]; c.close(); return n
+    check("settings default on", call("GET", "/api/v1/settings", tok=OWN)[1], {"realtime": True})
+    check("staff cannot change settings", call("PUT", "/api/v1/settings", {"realtime": False}, tok=STAFF)[0], 403)
+    check("token cannot change settings", call("PUT", "/api/v1/settings", {"realtime": False}, tok=SYNCTOK)[0], 403)
+    check("owner turns realtime off", call("PUT", "/api/v1/settings", {"realtime": False}, tok=OWN)[1], {"realtime": False})
+    n0 = ecount()
+    check("adjust still works while off", call("POST", "/api/v1/adjust", {"sku": "LOC-1", "delta": -1, "reason": "off"}, tok=OWN)[0], 200)
+    done_before = len([r for r in call("GET", "/api/v1/sync/runs", tok=OWN)[1]["data"] if r["status"] != "running"])
+    S["throttled"] = True; call("POST", "/api/v1/sync/shopify", tok=OWN); run = wait_run(OWN, done_before + 1)
+    check("sync still works while off", (run or {}).get("status"), "ok")
+    check("no event rows written while off", ecount(), n0)
+    check("recent refuses while off", call("GET", "/api/v1/events/recent", tok=OWN)[0], 409)
+    conn = http.client.HTTPConnection("127.0.0.1", PORT, timeout=5); conn.request("GET", "/api/v1/events", headers={"Authorization": "Bearer " + OWN})
+    check("stream refuses while off", conn.getresponse().status, 409); conn.close()
+    check("owner turns realtime on", call("PUT", "/api/v1/settings", {"realtime": True}, tok=OWN)[1], {"realtime": True})
+    s, rec = call("GET", "/api/v1/events/recent?since=%d&limit=50" % 0, tok=OWN)
+    check("enable writes one marker event", (ecount() - n0, rec["data"][-1]["kind"] if rec.get("data") else None), (1, "realtime.enabled"))
+    check("setting survives (re-read)", call("GET", "/api/v1/settings", tok=OWN)[1], {"realtime": True})
+
     # read-only guarantee: only allowlisted upstream calls were made, no mutations
     allowed = {("POST", "/admin/oauth/access_token"), ("POST", "/admin/api/2026-07/graphql.json"), ("GET", "/v2/locations"), ("GET", "/v2/catalog/list"), ("POST", "/v2/inventory/counts/batch-retrieve")}
     bad = [(m, p) for m, p, b in S["log"] if (m, p) not in allowed]

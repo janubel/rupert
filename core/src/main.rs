@@ -124,6 +124,7 @@ async fn run() {
         .route("/dev/seed", post(seed))
         .route("/api/v1/events", get(feed::stream))
         .route("/api/v1/events/recent", get(feed::recent))
+        .route("/api/v1/settings", get(feed::get_settings).put(feed::put_settings))
         .route("/api/v1/catalog", get(sync::catalog))
         .route("/api/v1/inventory", get(sync::inventory))
         .route("/api/v1/connections", get(sync::list_connections))
