@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -691,6 +691,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
     t.index ["tenant_id", "count_id", "request_token"], name: "idx_count_scan_receipts_request", unique: true
   end
 
+  create_table "money_reconciliations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "period_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.datetime "generated_at", null: false
+    t.text "payload_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_money_reconciliation_period", unique: true
+  end
+
   create_table "iris_reports", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "api_origin", null: false
@@ -764,6 +776,106 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
     t.string "tenant_id"
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "domain"], name: "index_oauth_allowed_domains_on_tenant_id_and_domain", unique: true
+  end
+
+  create_table "marketing_campaigns", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "name", null: false
+    t.string "storefront_url", null: false
+    t.text "topics", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id"], name: "index_marketing_campaigns_on_tenant_id"
+  end
+
+  create_table "marketing_communities", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "campaign_id", null: false
+    t.string "name", null: false
+    t.string "url", null: false
+    t.text "include_terms", null: false
+    t.text "exclude_terms"
+    t.text "promotion_rules", null: false
+    t.string "rules_url", null: false
+    t.datetime "rules_checked_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_marketing_communities_on_campaign_id"
+    t.index ["tenant_id"], name: "index_marketing_communities_on_tenant_id"
+  end
+
+  create_table "marketing_offers", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "community_id", null: false
+    t.string "merchant_host", null: false
+    t.string "code", null: false
+    t.text "terms", null: false
+    t.string "destination_url", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.string "evidence_url"
+    t.datetime "verified_at"
+    t.bigint "verified_by_id"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["community_id"], name: "index_marketing_offers_on_community_id"
+    t.index ["tenant_id", "merchant_host", "code"], name: "marketing_offer_codes", unique: true
+    t.index ["tenant_id"], name: "index_marketing_offers_on_tenant_id"
+  end
+
+  create_table "marketing_replies", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "thread_id", null: false
+    t.integer "offer_id", null: false
+    t.text "body", null: false
+    t.string "affiliation", null: false
+    t.string "status", default: "draft", null: false
+    t.text "snapshot_json"
+    t.string "snapshot_digest"
+    t.string "published_url"
+    t.datetime "published_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["offer_id"], name: "index_marketing_replies_on_offer_id"
+    t.index ["tenant_id", "status", "updated_at"], name: "index_marketing_replies_on_tenant_id_and_status_and_updated_at"
+    t.index ["tenant_id"], name: "index_marketing_replies_on_tenant_id"
+    t.index ["thread_id"], name: "index_marketing_replies_on_thread_id", unique: true
+  end
+
+  create_table "marketing_review_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "reply_id", null: false
+    t.bigint "actor_id", null: false
+    t.string "action", null: false
+    t.text "payload_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reply_id"], name: "index_marketing_review_events_on_reply_id"
+    t.index ["tenant_id"], name: "index_marketing_review_events_on_tenant_id"
+  end
+
+  create_table "marketing_threads", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "community_id", null: false
+    t.string "url", null: false
+    t.string "title", null: false
+    t.text "excerpt", null: false
+    t.string "status", default: "new", null: false
+    t.string "availability", default: "open", null: false
+    t.text "triage_note"
+    t.datetime "checked_at"
+    t.datetime "snoozed_until"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["community_id"], name: "index_marketing_threads_on_community_id"
+    t.index ["tenant_id", "status", "created_at"], name: "index_marketing_threads_on_tenant_id_and_status_and_created_at"
+    t.index ["tenant_id", "url"], name: "index_marketing_threads_on_tenant_id_and_url", unique: true
+    t.index ["tenant_id"], name: "index_marketing_threads_on_tenant_id"
   end
 
   create_table "order_lines", force: :cascade do |t|
@@ -1536,4 +1648,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
   create_virtual_table "rupert_customers_fts", "fts5", ["\"email\"", "\"phone\"", "\"first_name\"", "\"last_name\"", "tokenize='trigram'", "content='customers'", "content_rowid='id'"]
   create_virtual_table "rupert_orders_fts", "fts5", ["\"order_number\"", "\"source_order_id\"", "tokenize='trigram'", "content='orders'", "content_rowid='id'"]
   create_virtual_table "rupert_shopifyvariant_fts", "fts5", ["\"sku\"", "\"title\"", "tokenize='trigram'", "content='ShopifyVariant'", "content_rowid='rowid'"]
+  add_foreign_key "marketing_campaigns", "tenants"
+  add_foreign_key "marketing_communities", "marketing_campaigns", column: "campaign_id"
+  add_foreign_key "marketing_communities", "tenants"
+  add_foreign_key "marketing_offers", "marketing_communities", column: "community_id"
+  add_foreign_key "marketing_offers", "tenants"
+  add_foreign_key "marketing_offers", "users", column: "verified_by_id"
+  add_foreign_key "marketing_replies", "marketing_offers", column: "offer_id"
+  add_foreign_key "marketing_replies", "marketing_threads", column: "thread_id"
+  add_foreign_key "marketing_replies", "tenants"
+  add_foreign_key "marketing_review_events", "marketing_replies", column: "reply_id"
+  add_foreign_key "marketing_review_events", "tenants"
+  add_foreign_key "marketing_review_events", "users", column: "actor_id"
+  add_foreign_key "marketing_threads", "marketing_communities", column: "community_id"
+  add_foreign_key "marketing_threads", "tenants"
 end
