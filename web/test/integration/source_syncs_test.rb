@@ -12,17 +12,46 @@ class SourceSyncsTest < ActionDispatch::IntegrationTest
 
   teardown { Current.reset }
 
-  test 'dashboard and live refresh show three honest source badges' do
+  test 'dashboard and live refresh show six honest source badges' do
     OnboardingController.stubs(:configured?).returns(true)
     get root_path
     assert_response :success
-    assert_select '#source-sync-status [data-source]', count: 3
+    assert_select '#source-sync-status [data-source]', count: 6
+    assert_select '[data-source=shopify]', text: /Shopify.*Every 15 minutes/m
+    assert_select '[data-source=bank]', text: /NAB \/ IRIS/
+    assert_select '[data-source=google_backup]', text: /Every 6 hours/
     assert_select '[data-source=swipesimple]', text: /Needs login/
     assert_select '[data-source=authorize_net]', text: /Portal sign-in/
     get '/live/sync_status', params: { source_status: '1' }
     assert_response :success
     assert_includes response.body, 'source-sync-status'
     refute_includes response.body, 'transaction_key'
+  end
+
+  test 'Shopify card shows its successful source read even if a later adapter failed' do
+    Current.tenant = @tenant
+    { 'SHOPIFY_CLIENT_ID' => 'fixture-client', 'SHOPIFY_CLIENT_SECRET' => 'private-fixture-secret',
+      'SHOPIFY_SHOP_DOMAIN' => 'fixture.myshopify.com' }.each { |key, value| EnvStore.set(key, value) }
+    started = 2.minutes.ago.change(usec: 123_456)
+    SyncRun.create!(source: 'all', mode: 'scheduled', status: 'failed', startedAt: started, finishedAt: started + 10.seconds)
+    Setting.create!(key: 'sync_watermark_shopify', tenant_id: @tenant.id, value: started.iso8601)
+    OnboardingController.stubs(:configured?).returns(true)
+    get root_path
+    assert_response :success
+    assert_select '[data-source=shopify]', text: /Live/
+    assert_select '[data-source=shopify] form[action=?]', source_syncs_path(source: 'shopify')
+    refute_includes response.body, 'private-fixture-secret'
+    get '/live/sync_status', params: { source_status: '1' }
+    assert_response :success
+    assert_includes response.body, 'data-source="shopify"'
+    assert_includes response.body, 'Every 15 minutes'
+  end
+
+  test 'Shopify card action uses the existing tenant-scoped read sync' do
+    assert_enqueued_with(job: SyncJob, args: [{ tenant_id: @tenant.id, mode: 'manual', source: 'shopify', actor: users(:regular_user).email }]) do
+      post source_syncs_path, params: { source: 'shopify' }
+    end
+    assert_redirected_to syncs_path
   end
 
   test 'manual C-Trax sync works with its schedule paused and contains no credentials in queue' do

@@ -1,11 +1,11 @@
 <section id="source-sync-status" aria-label="Source sync status" class="space-y-3">
   <div class="flex flex-wrap items-baseline justify-between gap-2">
     <h2 class="font-display text-xl text-ink">Source connections</h2>
-    <p class="text-xs text-taupe">30-minute schedule · badges show actual source freshness</p>
+    <p class="text-xs text-taupe">Badges show actual source freshness · schedules shown per connection</p>
   </div>
-  <div class="grid gap-4 md:grid-cols-3">
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
     <% SourceSyncStatus.all.each do |source| %>
-      <% syncing = %w[Live Syncing Files\ current].include?(source[:badge]) %>
+      <% syncing = %w[Live Healthy Syncing Files\ current].include?(source[:badge]) %>
       <article class="<%= class_names('card card-pad', syncing ? 'source-sync-active' : 'source-sync-inactive') %>" data-source="<%= source[:key] %>">
         <div class="flex items-center justify-between gap-3">
           <h3 class="font-display text-lg text-ink"><%= source[:label] %></h3>
@@ -13,11 +13,17 @@
         </div>
         <p class="mt-3 text-sm text-mocha"><%= source[:detail] %></p>
         <p class="mt-1 text-xs text-taupe"><%= source[:schedule] %></p>
-        <p class="mt-2 text-xs text-mocha">Last source read: <% if source[:last_at] %><time datetime="<%= source[:last_at].iso8601 %>"><%= l(source[:last_at].in_time_zone, format: :short) %></time><% else %>None yet<% end %></p>
+        <p class="mt-2 text-xs text-mocha"><%= source[:mode] == 'backup' ? 'Last successful backup:' : 'Last source read:' %> <% if source[:last_at] %><time datetime="<%= source[:last_at].iso8601 %>"><%= l(source[:last_at].in_time_zone, format: :short) %></time><% else %>None yet<% end %></p>
         <div class="mt-4 flex flex-wrap gap-2">
           <% permitted = Current.user.can?('sync.write') && (source[:key] != 'ctrax' || Current.user.can?('inventory.write')) %>
           <% if permitted && source[:ready] %>
-            <%= button_to(source[:mode] == 'portal' ? 'Import portal export' : 'Sync now', source_sync_path(source[:key]), class: 'btn-primary btn-sm', form: { data: { turbo: false } }) %>
+            <% sync_path = source[:key] == 'shopify' ? source_syncs_path(source: 'shopify') : source_sync_path(source[:key]) %>
+            <%= button_to(source[:mode] == 'portal' ? 'Import portal export' : 'Sync now', sync_path, class: 'btn-primary btn-sm', form: { data: { turbo: false } }) %>
+          <% end %>
+          <% if source[:key] == 'bank' && Current.user.can?('settings.read') %>
+            <%= link_to 'Deposit reports & imports', pos_connection_path('iris_reporting'), class: 'btn-ghost btn-sm' %>
+          <% elsif source[:key] == 'google_backup' && Current.user.super_admin? %>
+            <%= link_to 'Backup settings', settings_path(anchor: 'drive'), class: 'btn-ghost btn-sm' %>
           <% end %>
           <% if source[:key] == 'swipesimple' && Current.user.can?('settings.read') %>
             <%= link_to 'Login & schedule', pos_connection_path('swipesimple'), class: 'btn-ghost btn-sm' %>
