@@ -1,10 +1,13 @@
+<% content_for :title, "Open Rupert register" %>
 <div class="space-y-6">
+  <%= render "shared/retail_navigation" %>
   <section>
     <h1 class="page-title">Open register</h1>
-    <p class="mt-1 text-sm text-mocha">Start a POS shift for the day.</p>
+    <p class="mt-1 text-sm text-mocha">Start a Rupert checkout shift and enter the cash physically in its drawer.</p>
   </section>
   <div class="card card-pad max-w-2xl">
-    <%= form_with model: @session, url: sales_pos_sessions_path, class: "space-y-4" do |f| %>
+    <%= render "shared/form_errors", model: @session %>
+    <%= form_with model: @session, scope: :pos_session, url: sales_pos_sessions_path, class: "space-y-4" do |f| %>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <%= f.label :name, "Register name", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
@@ -12,13 +15,13 @@
         </div>
         <div>
           <%= f.label :location_id, "Location", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-          <%= f.collection_select :location_id, Location.order(:name), :externalId, :name, { include_blank: "No location" }, class: "select w-full" %>
+          <%= f.collection_select :location_id, Location.order(:name), :id, :name, { include_blank: "No location" }, class: "select w-full" %>
         </div>
         <div>
-          <%= f.label :opening_cash, "Opening cash", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
+          <%= f.label :opening_cash, "Opening cash (USD)", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
           <div class="relative">
             <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-mocha">$</span>
-            <%= f.number_field :opening_cash, value: 0, min: 0, step: "0.01", class: "input pl-7" %>
+            <%= f.number_field :opening_cash, value: 0, min: 0, max: 999999.99, step: "0.01", inputmode: "decimal", class: "input pl-7" %>
           </div>
         </div>
       </div>

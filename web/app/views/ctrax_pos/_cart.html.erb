@@ -1,24 +1,33 @@
-      <section class="card card-pad space-y-4 xl:sticky xl:top-4"><h2 class="font-display text-xl">Cashier cart</h2><p class="text-xs text-taupe">USD · prices from the last C-Trax stock read. Stock is not reserved.</p><p role="status" aria-live="polite" class="text-sm" data-pos-cart-target="status"><%= @quote_error %></p>
-        <%= form_tag quote_ctrax_pos_path(@snapshot.location_id, display_id: @display&.id), method: :post, class: 'space-y-4', data: { pos_cart_target: 'form', action: 'submit->pos-cart#quote', turbo: false, busy: false } do %>
-          <div class="space-y-3" data-pos-cart-target="items"></div>
-          <%= hidden_field_tag :tip_type, 'none', data: { pos_cart_target: 'tipType' } %><span hidden data-pos-cart-target="percentageFields"><%= select_tag :tip_percentage, options_for_select([['15%', '15']]), data: { pos_cart_target: 'tipPercentage' } %></span><span hidden data-pos-cart-target="amountFields"><%= hidden_field_tag :tip_amount, '0', data: { pos_cart_target: 'tipAmount' } %></span>
-          <div class="flex justify-between"><span>Subtotal before tax</span><strong data-pos-cart-target="subtotal">—</strong></div><span hidden data-pos-cart-target="tip">—</span><span hidden data-pos-cart-target="previewTotal">—</span>
-          <% if @display %><div class="rounded-xl bg-haze p-3"><p class="text-sm font-medium" data-pos-display-target="status" role="status" aria-live="polite">Customer screen paired. Tip choice stays private until confirmed.</p><p class="mt-2 text-sm" data-pos-display-target="total"></p></div><% else %><p class="text-sm text-mocha">Pair a customer screen to let the customer choose a tip privately.</p><% end %>
-          <div class="flex gap-2"><%= submit_tag 'Check cart', class: 'btn-primary' %><button type="button" class="btn-ghost" data-action="pos-cart#clear">Clear</button></div>
+<section id="retail-cart" class="card card-pad retail-cart min-w-0 space-y-4" tabindex="-1" aria-label="Cashier cart">
+  <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="font-display text-xl">Cashier cart</h2><a href="#retail-catalog" class="text-sm font-semibold text-olive-deep underline">Back to products</a></div>
+  <p class="text-xs text-mocha">USD · source prices are checked before checkout. Adding items does not reserve stock.</p>
+  <p role="status" aria-live="polite" class="text-sm" data-pos-cart-target="status"><%= @quote_error %></p>
+  <%= form_tag quote_ctrax_pos_path(@snapshot.location_id, display_id: @display&.id), method: :post, class: 'space-y-4', data: { pos_cart_target: 'form', action: 'submit->pos-cart#quote', turbo: false, busy: false } do %>
+    <div class="space-y-3" data-pos-cart-target="items"></div>
+    <%= hidden_field_tag :tip_type, 'none', data: { pos_cart_target: 'tipType' } %>
+    <span hidden data-pos-cart-target="percentageFields"><%= select_tag :tip_percentage, options_for_select([['15%', '15']]), data: { pos_cart_target: 'tipPercentage' } %></span>
+    <span hidden data-pos-cart-target="amountFields"><%= hidden_field_tag :tip_amount, '0', data: { pos_cart_target: 'tipAmount' } %></span>
+    <div class="flex justify-between gap-3 rounded-xl bg-haze p-3"><span>Subtotal before tax</span><strong class="retail-money" data-pos-cart-target="subtotal">—</strong></div>
+    <span hidden data-pos-cart-target="tip">—</span><span hidden data-pos-cart-target="previewTotal">—</span>
+    <% if @display %><div class="rounded-xl border border-fog bg-haze p-3"><p class="text-sm font-semibold" data-pos-display-target="status" role="status" aria-live="polite">Customer screen paired. Waiting for the customer’s private confirmation.</p><p class="retail-money mt-2 text-sm" data-pos-display-target="total"></p></div><% else %><p class="text-sm text-mocha">Pair a customer screen to confirm the tip and continue to payment.</p><% end %>
+    <div class="flex flex-wrap gap-2"><%= submit_tag 'Check cart', class: 'btn-primary' %><button type="button" class="btn-ghost" data-action="pos-cart#clear">Clear cart</button></div>
+  <% end %>
+  <% if @display %>
+    <section class="space-y-3 border-t border-fog pt-4" data-controller="pos-checkout" data-pos-checkout-url-value="<%= pos_checkouts_path %>" data-pos-checkout-display-id-value="<%= @display.id %>" data-pos-checkout-demo-value="<%= @display.demo? %>">
+      <h3 class="font-display text-lg">Checkout<%= ' · Demo' if @display.demo? %></h3>
+      <p class="text-sm text-mocha">Confirm the customer’s tip choice first. Tax and source prices are rechecked before payment.</p>
+      <%= form_tag pos_checkouts_path, method: :post, data: { action: 'submit->pos-checkout#submit', busy: false, turbo: false }, class: 'space-y-3' do %>
+        <%= hidden_field_tag :display_id, @display.id %>
+        <% unless @display.demo? %>
+          <div><%= label_tag :register_id, 'Open Rupert register', class: 'mb-1 block text-sm font-semibold' %><%= select_tag :register_id, options_for_select(@registers.map { |register| [register.name, register.id] }), include_blank: 'Choose register', required: true, class: 'input' %></div>
+          <% if retail_business_access?('sales.write') %><%= link_to 'Open a register', new_sales_pos_session_path(location_id: @snapshot.location_id), target: '_blank', rel: 'noopener noreferrer', class: 'text-sm font-semibold text-olive-deep underline' %><% elsif @registers.empty? %><p class="text-sm text-clay">Ask a manager to open a register for this store.</p><% end %>
         <% end %>
-        <% if @display %>
-          <section class="space-y-3 border-t border-fog pt-4" data-controller="pos-checkout" data-pos-checkout-url-value="<%= pos_checkouts_path %>" data-pos-checkout-display-id-value="<%= @display.id %>">
-            <h3 class="font-semibold">Checkout<%= ' · Demo' if @display.demo? %></h3>
-            <p class="text-xs text-taupe">Customer must confirm their private tip choice before checkout. Tax and prices are rechecked before payment.</p>
-            <%= form_tag pos_checkouts_path, method: :post, data: { action: 'submit->pos-checkout#submit', busy: false, turbo: false }, class: 'space-y-3' do %>
-              <%= hidden_field_tag :display_id, @display.id %>
-              <% unless @display.demo? %><%= label_tag :register_id, 'Open register' %><%= select_tag :register_id, options_for_select(@registers.map { |register| [register.name, register.id] }), include_blank: 'Choose register', required: true, class: 'input w-full' %><% if Current.user.can?('sales.write') %><%= link_to 'Open a register', new_sales_pos_session_path(location_id: @snapshot.location_id), target: '_blank', class: 'text-xs underline' %><% elsif @registers.empty? %><p class="text-xs">Ask an administrator to open a register.</p><% end %><% end %>
-              <%= label_tag :tender, 'Payment method' %><%= select_tag :tender, options_for_select([['Cash', 'cash'], ['Card · customer pays privately', 'card']]), class: 'input w-full', data: { action: 'change->pos-checkout#tenderChanged', pos_checkout_target: 'tender' } %>
-              <div data-pos-checkout-target="cashFields"><%= label_tag :cash_received, 'Cash physically received (USD)' %><%= number_field_tag :cash_received, nil, min: 0, max: 999999.99, step: 0.01, required: true, class: 'input w-full', data: { pos_checkout_target: 'cash' } %></div>
-              <%= submit_tag(@display.demo? ? 'Run demo checkout' : 'Complete cash sale / send card checkout', class: 'btn-primary w-full', data: { pos_checkout_target: 'submit' }) %>
-            <% end %>
-            <p role="status" aria-live="polite" class="text-sm" data-pos-checkout-target="status"></p>
-            <div data-pos-checkout-target="result"></div>
-          </section>
-        <% end %>
-      </section>
+        <div><%= label_tag :tender, 'Payment method', class: 'mb-1 block text-sm font-semibold' %><%= select_tag :tender, options_for_select([['Cash', 'cash'], ['Card · private customer checkout', 'card']]), class: 'input', data: { action: 'change->pos-checkout#tenderChanged', pos_checkout_target: 'tender' } %></div>
+        <div data-pos-checkout-target="cashFields"><%= label_tag :cash_received, 'Cash physically received (USD)', class: 'mb-1 block text-sm font-semibold' %><%= number_field_tag :cash_received, nil, min: 0, max: 999999.99, step: 0.01, required: true, inputmode: 'decimal', placeholder: '0.00', class: 'input', data: { pos_checkout_target: 'cash' } %></div>
+        <%= submit_tag(@display.demo? ? 'Run demo cash checkout' : 'Complete cash sale', class: 'btn-primary w-full justify-center', data: { pos_checkout_target: 'submit' }) %>
+      <% end %>
+      <p role="status" aria-live="polite" class="text-sm" data-pos-checkout-target="status"></p>
+      <div class="space-y-3" data-pos-checkout-target="result"></div>
+    </section>
+  <% end %>
+</section>

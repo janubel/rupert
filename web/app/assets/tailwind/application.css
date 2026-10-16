@@ -315,3 +315,30 @@
 @media(max-width:640px) {
   input,select,textarea { font-size:16px !important; }
 }
+
+/* Retail screens share navigation, money alignment and compact catalog cards. */
+.retail-navigation { display:flex;gap:.35rem;overflow-x:auto;padding:.25rem 0; }
+.retail-workspace { padding-bottom:4.5rem; }
+.retail-pos-grid { display:grid;align-items:start;gap:1.25rem; }
+.retail-product-grid { display:grid;gap:.8rem;grid-template-columns:repeat(2,minmax(0,1fr)); }
+.retail-product-card { display:flex;flex-direction:column;min-width:0; }
+.retail-product-image { height:7rem;width:100%;object-fit:contain;background:var(--color-haze); }
+.retail-product-body { display:flex;flex:1;flex-direction:column;gap:.6rem;padding:.85rem; }
+.retail-product-actions { margin-top:auto;display:flex;flex-wrap:wrap;gap:.5rem; }
+.retail-product-actions .input { width:4.5rem;min-width:0;flex:1; }
+.retail-product-actions .btn-primary { justify-content:center;flex:1; }
+.retail-cart-link { position:fixed;right:1rem;bottom:max(1rem,env(safe-area-inset-bottom));z-index:30;box-shadow:0 4px 16px #1a393d30; }
+.retail-cart { scroll-margin-top:10rem; }
+.retail-anchor { scroll-margin-top:10rem; }
+.retail-money { font-variant-numeric:tabular-nums;overflow-wrap:anywhere; }
+.retail-notes { min-height:8rem;border-radius:1rem; }
+.retail-table-region { max-width:100%;overflow-x:auto;border-radius:.75rem; }
+.retail-table-region:focus-visible { outline:2px solid var(--color-olive);outline-offset:3px; }
+.retail-checks-table { min-width:32rem; }
+@media(min-width:768px) { .retail-product-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(min-width:1024px) {
+  .retail-pos-grid { grid-template-columns:minmax(0,1.85fr) minmax(19rem,1fr); }
+  .retail-cart { position:sticky;top:8rem; }
+  .retail-cart-link { display:none; }
+  .retail-workspace { padding-bottom:0; }
+}

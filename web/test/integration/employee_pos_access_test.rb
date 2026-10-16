@@ -50,6 +50,25 @@ class EmployeePosAccessTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test 'employee cashier keeps the shared cart without financial administration links' do
+    Current.tenant = @tenant
+    display = PosDisplaySession.create!(user: @user, location: @location)
+    get ctrax_pos_path(location_id: @location.id, display_id: display.id)
+    assert_response :success
+    assert_select 'nav[aria-label="Retail workspace"] a[aria-current="page"]', 'Retail POS'
+    assert_select '#retail-cart form input[value="Complete cash sale"]'
+    assert_select 'select[name=register_id][required]'
+    assert_includes response.body, 'Ask a manager to open a register'
+    [ctrax_days_path, sales_pos_sessions_path, new_sales_pos_session_path, pos_setting_path(@location.id)].each do |path|
+      assert_select 'a[href=?]', path, count: 0
+    end
+    get customer_display_path(display_token: display.display_token)
+    assert_response :success
+    assert_select 'header img[width="40"][height="40"]'
+    assert_select 'nav[aria-label="Retail workspace"]', count: 0
+    assert_select '[data-customer-tip-target=choice][checked]', count: 0
+  end
+
   test 'direct URLs exports mutations and leaked generic tokens cannot expand employee access' do
     @user.update!(role: 'admin')
     token, secret = ApiAccessToken.issue(attributes: { name: 'Old business token', scopes: ['roadmap:read', 'inventory:read'] }, user: @user, tenant: @tenant)

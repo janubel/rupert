@@ -19,6 +19,22 @@ class PosCheckoutIntegrationTest < ActionDispatch::IntegrationTest
   end
   teardown { Current.reset }
 
+  test 'admins see a card processing banner linking to gateway setup until the gateway is verified' do
+    get ctrax_pos_path
+    assert_select '[data-card-processing-banner] a[href=?]', pos_setting_path(@location.id), text: 'Click here to resolve'
+    get pos_setting_path(@location.id)
+    assert_select '[data-card-processing-banner]', false
+    PosSetting.where(location: @location).update_all(card_enabled: true, verified_at: Time.current)
+    get ctrax_pos_path
+    assert_select '[data-card-processing-banner]', false
+  end
+
+  test 'header shows the signed in role and how the session was validated' do
+    get ctrax_pos_path
+    assert_select '[data-access-level]', text: 'Store administrator'
+    assert_select '[data-signin-method]', text: 'Signed in with password'
+  end
+
   test 'cash end to end ignores submitted amounts and issues one receipt with private confirmed tip' do
     post pos_checkouts_path, params: { display_id: @display.id, tender: 'cash', register_id: @register.id, cash_received: '20', total_cents: 1, tip_cents: 90000 }, as: :json
     assert_response :success
@@ -28,9 +44,10 @@ class PosCheckoutIntegrationTest < ActionDispatch::IntegrationTest
     checkout = PosCheckout.last
     get pos_checkout_path(checkout)
     assert_response :success
-    assert_includes response.body, 'Receipt · Paid'
+    assert_select 'h1', 'Receipt'
+    assert_select 'header .pill-fern', 'Paid'
     assert_includes response.body, 'Stock updates'
-    assert_select 'strong', '$11.66'
+    assert_select '[aria-label="Receipt totals"] dd', '$11.66'
     customer = ActionDispatch::Integration::Session.new(Rails.application)
     customer.get customer_display_state_path(display_token: @display.display_token)
     assert_equal 'paid', customer.response.parsed_body.dig('checkout', 'status')

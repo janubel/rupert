@@ -1,21 +1,76 @@
 <% content_for :title, 'C-Trax retail' %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
-<div class="space-y-5" data-action="pos-cart:changing->pos-display#pending pos-cart:checked->pos-display#checked" data-controller="pos-cart<%= ' pos-display' if @display %>" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>" <% if @display %>data-pos-cart-clear-url-value="<%= clear_pos_display_path(@display) %>" data-pos-display-status-url-value="<%= pos_display_path(@display) %>" data-pos-display-clear-url-value="<%= clear_pos_display_path(@display) %>"<% end %>>
-  <header class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="page-title">C-Trax retail</h1><p class="mt-1 text-sm text-mocha">Cashier catalog · retail stock and prices · website product images</p></div><%= link_to 'Daily sales & register close', ctrax_days_path, class: 'btn-ghost' if Current.user.can?('sales.read') %></header>
-  <p class="rounded-xl bg-haze p-3 text-sm">Build the sale, let the customer confirm a tip privately, then take cash or send secure card checkout to the customer screen. Paid sales receive a Rupert receipt and a tracked C-Trax stock deduction.</p>
-  <% if @unfinished_checkouts.any? %><section class="card card-pad space-y-2"><h2 class="font-semibold">Unfinished checkouts</h2><% @unfinished_checkouts.each do |checkout| %><p class="text-sm"><%= link_to "#{checkout.reference} · #{checkout.status.humanize}", pos_checkout_path(checkout), class: 'underline' %></p><% end %></section><% end %>
+<% image_options = @images.products.sort_by(&:title).map { |p| [p.title, p.id] } if retail_business_access?('inventory.write') %>
+<% stock_fresh = @snapshot && @snapshot.captured_at >= 60.minutes.ago %>
+<div class="retail-workspace space-y-5" data-action="pos-cart:changing->pos-display#pending pos-cart:checked->pos-display#checked" data-controller="pos-cart<%= ' pos-display' if @display %>" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>" <% if @display %>data-pos-cart-clear-url-value="<%= clear_pos_display_path(@display) %>" data-pos-display-status-url-value="<%= pos_display_path(@display) %>" data-pos-display-clear-url-value="<%= clear_pos_display_path(@display) %>"<% end %>>
+  <%= render 'shared/retail_navigation' %>
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <div><p class="eyebrow text-olive-deep">Sell · retail workspace</p><h1 class="page-title mt-2">C-Trax retail</h1><p class="mt-2 text-sm text-mocha">Find products, check your cart, then let the customer confirm their tip privately.</p></div>
+    <% if @snapshot %><a href="#retail-cart" class="btn-ghost">Review cart · <span data-pos-cart-target="count">0</span> items</a><% end %>
+  </header>
+  <% if @unfinished_checkouts.any? %>
+    <section class="flash flash-alert space-y-2" aria-label="Unfinished checkouts"><h2 class="font-semibold">Resume an unfinished checkout</h2><p>Check the receipt before collecting another payment.</p><div class="flex flex-wrap gap-2"><% @unfinished_checkouts.each do |checkout| %><%= link_to "#{checkout.reference} · #{checkout.status.humanize}", pos_checkout_path(checkout), class: 'btn-ghost btn-sm' %><% end %></div></section>
+  <% end %>
   <% if @snapshot %>
-    <div class="flex flex-wrap items-center gap-3"><span class="pill"><%= @snapshot.location.name %></span><span class="text-xs text-taupe"><%= @snapshot.records.size %> native variants · stock read <%= l @snapshot.captured_at, format: :short %></span><% if Current.user.can?('settings.write') && Current.user.can?('inventory.write') %><%= link_to 'POS checkout setup', pos_setting_path(@snapshot.location_id), class: 'btn-ghost' %><% end %><%= link_to 'Refresh connection', pos_connection_path('ctrax'), class: 'text-sm underline' if Current.user.can?('settings.read') %></div>
-    <div class="flex flex-wrap gap-2"><%= button_to 'Pair customer screen', pos_displays_path(location_id: @snapshot.location_id), method: :post, class: 'btn-primary', data: { turbo: false } %><%= button_to 'Demo both screens', pos_displays_path(location_id: @snapshot.location_id, demo: '1'), method: :post, class: 'btn-ghost', data: { turbo: false } %><% if @display %><%= link_to 'Open customer screen', customer_display_path(display_token: @display.display_token), target: '_blank', rel: 'noopener noreferrer', class: 'btn-primary' %><%= button_to 'Close customer screen', pos_display_path(@display), method: :delete, class: 'btn-ghost', data: { turbo: false } %><% end %></div>
-    <div class="grid items-start gap-5 xl:grid-cols-3">
-      <section class="space-y-4 xl:col-span-2">
-        <%= form_tag ctrax_pos_path, method: :get, class: 'flex flex-wrap gap-2', data: { turbo: false } do %><%= hidden_field_tag :display_id, @display&.id %><%= hidden_field_tag :location_id, @snapshot.location_id if @display %><%= select_tag :location_id, options_for_select(@snapshots.map { |s| [s.location.name, s.location_id] }, @snapshot.location_id), disabled: @display.present?, class: 'input', aria: { label: 'C-Trax store' } %><%= search_field_tag :q, @query, placeholder: 'Search product, SKU or barcode', class: 'input flex-1', aria: { label: 'Search C-Trax products' } %><%= select_tag :category, options_for_select([['All categories', '']] + @categories.map { |c| [c, c] }, @category), class: 'input', aria: { label: 'Product category' } %><%= submit_tag 'Search', class: 'btn-ghost' %><% end %>
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><% @records.each do |record| %><article class="card overflow-hidden"><% if (image = @images.url(record)) %><%= image_tag image, alt: record['product_name'] || record['name'], loading: 'lazy', referrerpolicy: 'no-referrer', class: 'h-40 w-full bg-haze object-contain' %><% else %><div class="grid h-40 place-items-center bg-haze text-sm text-taupe">Website image not linked</div><% end %><div class="card-pad space-y-2"><p class="text-xs text-taupe"><%= record['category'].presence || 'Uncategorized' %></p><h2 class="font-semibold"><%= record['product_name'].presence || record['name'] %></h2><p class="text-sm"><%= record['name'] %></p><p class="text-xs text-mocha">Stock: <%= record['manage_stock'] ? (record['quantity'].nil? ? 'Unknown' : record['quantity']) : 'Not tracked' %> · #<%= record['id'] %></p><p class="font-semibold"><%= record['variable_price'] ? 'Variable price' : ctrax_money(record['price_cents']) %></p><% if record['price_cents'].is_a?(Integer) && !record['variable_price'] %><%= form_tag quote_ctrax_pos_path(@snapshot.location_id, display_id: @display&.id), method: :post, class: 'flex gap-2', data: { action: 'submit->pos-cart#add', turbo: false, busy: false } do %><%= hidden_field_tag 'items[0][variant_id]', record['id'], id: "ctrax_variant_#{record['id']}" %><%= number_field_tag 'items[0][quantity]', 1, min: 1, max: 999, class: 'input w-20', aria: { label: "Quantity for #{record['name']}" } %><%= submit_tag 'Add', class: 'btn-primary' %><% end %><% end %>
-          <% if Current.user.can?('inventory.write') %><details class="text-xs"><summary class="cursor-pointer text-taupe">Website image link</summary><%= form_tag ctrax_pos_image_path(@snapshot.location_id, record['id']), method: :post, class: 'mt-2 space-y-2' do %><%= select_tag :product_id, options_for_select(@images.products.sort_by(&:title).map { |p| [p.title, p.id] }, @images.product_for(record)&.id), include_blank: 'Select website product', required: true, class: 'input w-full', aria: { label: "Website image for #{record['name']}" } %><%= submit_tag 'Link image', class: 'btn-ghost' %><% end %></details><% end %>
-        </div></article><% end %></div>
-        <nav class="flex justify-between text-sm"><% if @page > 1 %><%= link_to 'Previous', ctrax_pos_path(location_id: @snapshot.location_id, q: @query, category: @category, page: @page - 1, display_id: @display&.id), class: 'btn-ghost' %><% end %><span><%= @total %> products · page <%= @page %></span><% if @page * 24 < @total %><%= link_to 'Next', ctrax_pos_path(location_id: @snapshot.location_id, q: @query, category: @category, page: @page + 1, display_id: @display&.id), class: 'btn-ghost' %><% end %></nav>
+    <section class="card card-pad space-y-3" aria-label="Retail source and customer screen">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div><p class="font-semibold"><%= @snapshot.location.name %> <span class="<%= stock_fresh ? 'pill-fern' : 'pill-clay' %>"><%= stock_fresh ? 'Stock read current' : 'Stock read stale' %></span></p><p class="mt-1 text-xs text-mocha"><%= @snapshot.records.size %> native variants · Last stock pull: <time datetime="<%= @snapshot.captured_at.iso8601 %>"><%= retail_source_time(@snapshot.captured_at) %></time></p></div>
+        <% if retail_business_access?('settings.read') || retail_business_access?('settings.write') %>
+          <details><summary class="disclosure-trigger text-sm font-semibold text-olive-deep">Store setup</summary><div class="mt-2 flex flex-wrap gap-2">
+            <% if retail_business_access?('settings.write') && Current.user.can?('inventory.write') %><%= link_to 'POS checkout setup', pos_setting_path(@snapshot.location_id), class: 'btn-ghost btn-sm' %><% end %>
+            <% if retail_business_access?('settings.read') %><%= link_to 'C-Trax connection', pos_connection_path('ctrax'), class: 'btn-ghost btn-sm' %><% end %>
+          </div></details>
+        <% end %>
+      </div>
+      <% unless stock_fresh %><p class="text-sm text-clay">A new stock read is required to check this cart. <%= retail_business_access?('settings.read') ? 'Refresh the C-Trax connection before continuing.' : 'Ask a manager to refresh the C-Trax stock read.' %></p><% end %>
+      <div class="flex flex-wrap items-center gap-2">
+        <% if @display %>
+          <span class="pill-fern">Customer screen paired</span>
+          <%= link_to 'Open customer screen', customer_display_path(display_token: @display.display_token), target: '_blank', rel: 'noopener noreferrer', class: 'btn-primary' %>
+          <%= button_to 'Close customer screen', pos_display_path(@display), method: :delete, class: 'btn-ghost', data: { turbo: false } %>
+        <% else %>
+          <%= button_to 'Pair customer screen', pos_displays_path(location_id: @snapshot.location_id), method: :post, class: 'btn-primary', data: { turbo: false } %>
+        <% end %>
+        <%= button_to 'Demo both screens', pos_displays_path(location_id: @snapshot.location_id, demo: '1'), method: :post, class: 'btn-ghost', data: { turbo: false } %>
+      </div>
+      <p class="text-xs text-mocha"><%= @display ? 'Open the customer screen on a separate display. The customer’s tip stays private until confirmed.' : 'Pair a screen before checkout. The demo simulates payment and does not create a live sale.' %></p>
+    </section>
+    <div class="retail-pos-grid">
+      <section id="retail-catalog" class="retail-anchor min-w-0 space-y-4" aria-label="Product catalog">
+        <%= form_tag ctrax_pos_path, method: :get, class: 'card card-pad grid gap-3 sm:grid-cols-2', data: { turbo: false } do %>
+          <%= hidden_field_tag :display_id, @display&.id, id: 'catalog_display_id' %><%= hidden_field_tag :location_id, @snapshot.location_id, id: 'catalog_location_id' if @display %>
+          <div><%= label_tag :location_id, 'Store', class: 'mb-1 block text-sm font-semibold' %><%= select_tag :location_id, options_for_select(@snapshots.map { |s| [s.location.name, s.location_id] }, @snapshot.location_id), disabled: @display.present?, class: 'input', aria: { label: 'C-Trax store' } %></div>
+          <div><%= label_tag :category, 'Category', class: 'mb-1 block text-sm font-semibold' %><%= select_tag :category, options_for_select([['All categories', '']] + @categories.map { |c| [c, c] }, @category), class: 'input', aria: { label: 'Product category' } %></div>
+          <div class="sm:col-span-2"><%= label_tag :q, 'Find a product', class: 'mb-1 block text-sm font-semibold' %><div class="flex gap-2"><%= search_field_tag :q, @query, placeholder: 'Name, SKU or barcode', class: 'input min-w-0 flex-1', aria: { label: 'Search C-Trax products' } %><%= submit_tag 'Search', class: 'btn-primary' %></div></div>
+          <% if @query.present? || @category.present? %><%= link_to 'Clear filters', ctrax_pos_path(location_id: @snapshot.location_id, display_id: @display&.id), class: 'text-sm font-semibold text-olive-deep underline' %><% end %>
+        <% end %>
+        <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="font-display text-xl">Products</h2><p class="text-sm text-mocha"><%= @total %> results · page <%= @page %></p></div>
+        <% if @records.empty? %><div class="card card-pad"><h3 class="font-semibold">No products match these filters</h3><p class="mt-2 text-sm text-mocha">Try a different name, SKU, barcode, or category.</p></div><% end %>
+        <div class="retail-product-grid">
+          <% @records.each do |record| %>
+            <article class="card retail-product-card overflow-hidden" aria-label="<%= record['name'] %>">
+              <% if (image = @images.url(record)) %><%= image_tag image, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', class: 'retail-product-image' %><% else %><div class="retail-product-image grid place-items-center text-xs text-taupe">Image not linked</div><% end %>
+              <div class="retail-product-body">
+                <p class="text-xs text-taupe"><%= record['category'].presence || 'Uncategorized' %></p>
+                <h3 class="font-semibold leading-snug"><%= record['product_name'].presence || record['name'] %></h3><p class="text-sm text-mocha"><%= record['name'] %></p>
+                <p class="text-xs text-mocha">Stock: <%= record['manage_stock'] ? (record['quantity'].nil? ? 'Unknown' : record['quantity']) : 'Not tracked' %></p>
+                <p class="retail-money text-lg font-semibold text-olive-deep"><%= record['variable_price'] ? 'Variable price' : ctrax_money(record['price_cents']) %></p>
+                <% if record['price_cents'].is_a?(Integer) && !record['variable_price'] %>
+                  <%= form_tag quote_ctrax_pos_path(@snapshot.location_id, display_id: @display&.id), method: :post, class: 'retail-product-actions', data: { action: 'submit->pos-cart#add', turbo: false, busy: false } do %>
+                    <%= hidden_field_tag 'items[0][variant_id]', record['id'], id: "ctrax_variant_#{record['id']}" %>
+                    <%= number_field_tag 'items[0][quantity]', 1, id: "ctrax_quantity_#{record['id']}", min: 1, max: 999, class: 'input', aria: { label: "Quantity for #{record['name']}" } %>
+                    <%= submit_tag 'Add', class: 'btn-primary', disabled: !stock_fresh, aria: { label: "Add #{record['name']} to cart" } %>
+                  <% end %>
+                <% else %><p class="text-xs text-clay">Review this price in C-Trax.</p><% end %>
+                <% if retail_business_access?('inventory.write') %><details class="text-xs"><summary class="disclosure-trigger text-taupe">Website image link</summary><%= form_tag ctrax_pos_image_path(@snapshot.location_id, record['id']), method: :post, class: 'mt-2 space-y-2' do %><%= select_tag :product_id, options_for_select(image_options, @images.product_for(record)&.id), id: "ctrax_image_product_#{record['id']}", include_blank: 'Select website product', required: true, class: 'input w-full', aria: { label: "Website image for #{record['name']}" } %><%= submit_tag 'Link image', class: 'btn-ghost' %><% end %></details><% end %>
+              </div>
+            </article>
+          <% end %>
+        </div>
+        <nav aria-label="Catalog pages" class="flex flex-wrap items-center justify-between gap-2 text-sm"><% if @page > 1 %><%= link_to 'Previous', ctrax_pos_path(location_id: @snapshot.location_id, q: @query, category: @category, page: @page - 1, display_id: @display&.id), class: 'btn-ghost' %><% end %><% if @page * 24 < @total %><%= link_to 'Next', ctrax_pos_path(location_id: @snapshot.location_id, q: @query, category: @category, page: @page + 1, display_id: @display&.id), class: 'btn-ghost' %><% end %></nav>
       </section>
       <%= render 'cart' %>
     </div>
-  <% else %><section class="card card-pad"><h2 class="font-display text-xl">Connect the retail catalog</h2><p class="mt-2 text-sm">A successful C-Trax stock read supplies this cashier view.</p><% if Current.user.can?('settings.read') %><%= link_to 'C-Trax setup', pos_connection_path('ctrax'), class: 'btn-primary mt-3' %><% else %><p class="mt-3 text-sm">Ask an administrator to connect the retail catalog.</p><% end %></section><% end %>
+    <a href="#retail-cart" class="btn-primary retail-cart-link">Review cart · <span data-pos-cart-target="count" aria-live="polite">0</span> items</a>
+  <% else %><section class="card card-pad"><h2 class="font-display text-xl">Connect the retail catalog</h2><p class="mt-2 text-sm">A successful C-Trax stock read supplies this cashier view.</p><% if retail_business_access?('settings.read') %><%= link_to 'C-Trax setup', pos_connection_path('ctrax'), class: 'btn-primary mt-3' %><% else %><p class="mt-3 text-sm">Ask an administrator to connect the retail catalog.</p><% end %></section><% end %>
 </div>
