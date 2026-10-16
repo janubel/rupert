@@ -4,9 +4,9 @@
 class PosProviderCatalog
   PROVIDERS = [
     { key: 'iris_reporting', name: 'NAB / IRIS merchant reporting', relationship: 'Processor deposits and reconciliation', mode: 'api',
-      description: 'Read deposits, batches and transaction reports; import monthly Health Center summaries.',
+      description: 'Pull native Daily Deposits CSV with a NAB website login, or read reports with approved API access.',
       website: 'https://nabankco.iriscrm.com/merchant-portal', docs: 'https://nabankco.iriscrm.com/api',
-      instructions: 'Use an API token issued for your IRIS tenant and authorized merchant IDs. Tokens inherit the issuing user’s permissions. A merchant portal password is not an API token. If API Settings is absent, NAB must enable appropriate reporting access or provide an approved integration user. Enter comma-separated merchant IDs to keep multiple accounts separate. Monthly CSV imports are available without API access.',
+      instructions: 'Use an API token issued for your IRIS tenant and authorized merchant IDs. Tokens inherit the issuing user’s permissions. A merchant portal password is not an API token. If API Settings is absent, NAB must enable appropriate reporting access or provide an approved integration user. Enter comma-separated merchant IDs to keep multiple accounts separate. For native Daily Deposits, choose website login and authorize read-only exports instead. Rupert creates its own server session, checks merchant identity and CSV totals, and pauses on sign-in verification. CSV uploads remain available without credentials.',
       credentials: %w[api_url api_token] },
     { key: 'authorize_net_reporting', name: 'Authorize.net reporting', relationship: 'Payment reconciliation', mode: 'api',
       description: 'Read transaction status, refunds, voids and settlement batches without processing payments.',

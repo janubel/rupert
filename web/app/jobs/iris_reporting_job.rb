@@ -8,7 +8,7 @@ class IrisReportingJob < ApplicationJob
     tenants = tenants.where(id: tenant_id) if tenant_id
     tenants.find_each do |tenant|
       Current.set(tenant: tenant) do
-        connections = PosConnection.where(provider: 'iris_reporting', vendor_approved: true)
+        connections = PosConnection.where(provider: 'iris_reporting', vendor_approved: true, reporting_auth_mode: 'api_key')
         connections = connection_id ? connections.where(id: connection_id) : connections.where(reporting_enabled: true)
         connection = connections.first
         next unless connection&.credentials_saved?

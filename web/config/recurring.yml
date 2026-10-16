@@ -5,6 +5,10 @@ production:
     class: DailyReconciliationArchiveJob
     queue: default
     schedule: "15 7 * * * America/New_York"
+  iris_daily_deposits_web:
+    class: IrisDailyDepositsWebJob
+    queue: default
+    schedule: "45 6 * * * America/New_York"
   swipesimple_web_pull:
     class: SwipesimpleWebSyncJob
     queue: default
