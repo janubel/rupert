@@ -38,7 +38,7 @@ class RetentionDriveTest < ActiveSupport::TestCase
       end
       metadata = file[:metadata]
       Google::Apis::DriveV3::File.new(id: id, mime_type: metadata.mime_type, parents: metadata.parents,
-        app_properties: metadata.app_properties, size: file[:bytes]&.bytesize, md5_checksum: file[:bytes] && Digest::MD5.hexdigest(file[:bytes]), trashed: false)
+        app_properties: metadata.app_properties, size: file[:bytes]&.bytesize, md5_checksum: file[:bytes] && Digest::MD5.hexdigest(file[:bytes]), trashed: false, shared: metadata.shared || false)
     end
   end
 
@@ -135,6 +135,19 @@ class RetentionDriveTest < ActiveSupport::TestCase
     @connection.update!(enabled: true, sync_lease_token: 'other-worker', sync_lease_at: Time.current)
     RetentionDrive.new(@connection).sync!
     assert_empty @drive.files
+  end
+
+  test 'a shared retention folder stops new uploads without changing its permissions' do
+    original
+    RetentionDrive.new(@connection).sync!
+    folder = RetentionDriveItem.find_by!(item_key: 'folder:root')
+    @drive.files.fetch(folder.remote_id).fetch(:metadata).shared = true
+    doc = original('another-invoice.pdf')
+    RetentionDrive.new(@connection.reload).sync!
+    item = RetentionDriveItem.find_by!(item_key: "document:#{doc.id}")
+    assert_equal 'failed', item.status
+    assert_nil item.drive_url
+    assert_nil item.remote_id
   end
 
   test 'all pending originals enter the manifest while a pass respects its batch bound' do

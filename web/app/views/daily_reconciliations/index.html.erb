@@ -116,18 +116,18 @@
   </section>
   <% if can_write %>
     <section id="upload-document" class="card card-pad scroll-mt-32 space-y-4"><h2 class="font-display text-xl">Add a report, invoice or statement</h2><p class="text-sm text-mocha">Start with the original file and its covered dates. Source totals are optional unless you choose Register control.</p>
-      <%= form_with url: daily_reconciliations_path, multipart: true, scope: :evidence, class: 'space-y-4' do |f| %>
+      <%= form_with url: daily_reconciliations_path, multipart: true, scope: :evidence, class: 'space-y-4', data: { controller: 'reconciliation-form' } do |f| %>
         <div class="grid gap-4 md:grid-cols-2">
-          <div><%= f.label :source, 'Source', class: 'block text-sm' %><%= f.select :source, ReconciliationDocument::SOURCES.excluding('rupert').map { |s| [s.humanize, s] }, {}, class: 'input' %></div>
-          <div><%= f.label :kind, 'Document kind', class: 'block text-sm' %><%= f.select :kind, ReconciliationDocument::KINDS.excluding('daily_archive', 'period_archive').map { |s| [s.humanize, s] }, { selected: 'source_export' }, class: 'input' %></div>
+          <div><%= f.label :source, 'Source', class: 'block text-sm' %><%= f.select :source, ReconciliationDocument::SOURCES.excluding('rupert').map { |s| [s.humanize, s] }, { selected: 'other' }, class: 'input' %></div>
+          <div><%= f.label :kind, 'Document kind', class: 'block text-sm' %><%= f.select :kind, ReconciliationDocument::KINDS.excluding('daily_archive', 'period_archive').map { |s| [s.humanize, s] }, { selected: 'source_export' }, class: 'input', data: { reconciliation_form_target: 'kind', action: 'change->reconciliation-form#update' } %></div>
           <div><%= f.label :period_from, 'Period starts', class: 'block text-sm' %><%= f.date_field :period_from, value: @report.day, required: true, class: 'input' %></div>
           <div><%= f.label :period_to, 'Period ends', class: 'block text-sm' %><%= f.date_field :period_to, value: @report.day, required: true, class: 'input' %></div>
         </div>
         <div><%= label_tag :file, 'Original document · CSV, PDF, PNG, JPEG, JSON or TXT · up to 8 MiB', class: 'block text-sm' %><%= file_field_tag :file, required: true, accept: '.csv,.pdf,.png,.jpg,.jpeg,.json,.txt', class: 'input' %></div>
         <div><%= f.label :note, 'Source context / explanation', class: 'block text-sm' %><%= f.text_area :note, maxlength: 4000, class: 'input' %></div>
-        <details class="rounded-xl border border-haze p-4"><summary class="cursor-pointer font-semibold text-sm">Source totals & corrections</summary><div class="mt-4 space-y-4"><div class="grid gap-4 md:grid-cols-2">
-          <div><%= f.label :currency, 'Currency (required for controls)', class: 'block text-sm' %><%= f.text_field :currency, placeholder: 'USD', maxlength: 3, class: 'input' %></div>
-          <div><%= f.label :location_id, 'Exact Rupert location ID (blank = Unassigned only)', class: 'block text-sm' %><%= f.text_field :location_id, class: 'input' %></div>
+        <details class="rounded-xl border border-haze p-4" data-reconciliation-form-target="totals"><summary class="cursor-pointer font-semibold text-sm">Source totals & corrections</summary><div class="mt-4 space-y-4"><div class="grid gap-4 md:grid-cols-2">
+          <div><%= f.label :currency, 'Currency (required for controls)', class: 'block text-sm' %><%= f.text_field :currency, placeholder: 'USD', maxlength: 3, pattern: '[A-Z]{3}', class: 'input', data: { reconciliation_form_target: 'currency' } %></div>
+          <div><%= f.label :location_id, 'Location to compare', class: 'block text-sm' %><%= f.select :location_id, (@locations || []).map { |location| ["#{location.name} · #{location.source}", location.id] }, { include_blank: 'Unassigned records only' }, class: 'input' %></div>
         </div>
         <p class="text-sm">Choose Register control to compare totals from a single-day report. Enter only amounts that share the metric definition and scope above: order total by order date, cash/card receipts by payment date, refunds by refund date. Refund amounts are positive. Leave missing amounts blank. Other document kinds are retained as supporting evidence.</p>
         <div class="grid gap-4 md:grid-cols-3"><% ReconciliationEvidence::AMOUNTS.each do |key| %><div><%= f.label key, "#{key.humanize} (currency units)", class: 'block text-sm' %><%= f.text_field key, placeholder: '123.45 or blank', class: 'input' %></div><% end %></div>

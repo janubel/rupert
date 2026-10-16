@@ -190,7 +190,7 @@ class RetentionDrive
       end
       remote = @drive.get_file(item.remote_id, fields: remote_fields)
     end
-    unless !remote.trashed && remote.mime_type == FOLDER_MIME && remote.app_properties == properties(item) && (!parent || remote.parents&.include?(parent))
+    unless !remote.trashed && !remote.shared && remote.mime_type == FOLDER_MIME && remote.app_properties == properties(item) && (!parent || remote.parents&.include?(parent))
       raise Error, 'Retention folder changed or is unavailable. Restore its original location before retrying.'
     end
     item.update!(status: 'verified', display_name: name, verified_at: Time.current)
@@ -198,7 +198,7 @@ class RetentionDrive
   end
 
   def verify!(item, remote, bytes, parent)
-    unless !remote.trashed && remote.parents&.include?(parent) && remote.app_properties == properties(item) &&
+    unless !remote.trashed && !remote.shared && remote.parents&.include?(parent) && remote.app_properties == properties(item) &&
         remote.size.to_i == bytes.bytesize && remote.md5_checksum == Digest::MD5.hexdigest(bytes)
       raise Error, 'Drive copy did not pass identity, location, size or checksum verification.'
     end
@@ -222,7 +222,7 @@ class RetentionDrive
   end
 
   def remote_fields
-    'id,size,md5Checksum,mimeType,parents,trashed,appProperties'
+    'id,size,md5Checksum,mimeType,parents,trashed,shared,appProperties'
   end
 
   def properties(item)

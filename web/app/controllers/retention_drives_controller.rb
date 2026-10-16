@@ -20,6 +20,7 @@ class RetentionDrivesController < AuthenticatedController
     session[:retention_drive_oauth] = { state: state, actor: Current.user.id, tenant: Current.tenant_id, started_at: Time.current.to_i }
     redirect_to RetentionDrive.auth_url(redirect_uri: google_callback_url, state: state), allow_other_host: true
   rescue GoogleDriveBackupService::NotConfiguredError, RetentionDrive::Error
+    session.delete(:retention_drive_oauth)
     redirect_to retention_drive_path, alert: 'The platform administrator needs to finish Google Drive app setup first.'
   end
 

@@ -8,6 +8,7 @@ class DailyReconciliationsController < AuthenticatedController
 
   def index
     @report = DailyMoneyReconciliation.new(day: selected_day)
+    @locations = Location.select(:id, :name, :source).order(:name)
     @drive_connection = RetentionDriveConnection.first
     @drive_copies = @drive_connection ? RetentionDriveItem.where(generation: @drive_connection.generation, item_key: @report.documents.map { |doc| "document:#{doc.id}" }).index_by(&:item_key) : {}
     @drive_verified = @drive_connection ? RetentionDriveItem.where(generation: @drive_connection.generation, status: 'verified').where.not('item_key LIKE ?', 'folder:%').count : 0
