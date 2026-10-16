@@ -11,7 +11,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3 border-t border-fog pt-3"><p class="text-sm text-mocha">Viewing <strong class="text-ink"><%= @date.strftime('%A, %b %-d, %Y') %></strong> · Each store uses its own source timezone.</p>
       <% if @connection&.credentials_saved? && retail_business_access?('sales.write') && Current.user.can?('sync.write') %><%= button_to "Pull #{@date.strftime('%b %-d')} from C-Trax", ctrax_days_path(date: @date), method: :post, class: 'btn-ghost', data: { turbo: false } %><% end %>
     </div>
-    <% if @connection&.last_report_message.present? %><p role="status" class="text-sm text-mocha"><%= @connection.last_report_message %></p><% end %>
+    <% if @connection&.last_report_message.present? %><p role="status" class="text-sm text-mocha">Connection’s last reported pull: <%= @connection.last_report_message %></p><% end %>
   </section>
   <% if @days.empty? %>
     <section class="card card-pad space-y-3"><h2 class="font-display text-xl">No stored sales for this date</h2><p class="text-sm text-mocha">Pull this business date to read source orders, register sessions, and report controls. Missing imports do not mean zero sales.</p><% if retail_business_access?('settings.read') %><%= link_to 'C-Trax connection', pos_connection_path('ctrax'), class: 'btn-ghost' %><% else %><p class="text-sm text-mocha">Ask a manager with sync access to pull this business date.</p><% end %></section>

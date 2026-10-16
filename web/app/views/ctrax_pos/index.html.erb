@@ -62,7 +62,7 @@
                     <%= submit_tag 'Add', class: 'btn-primary', disabled: !stock_fresh, aria: { label: "Add #{record['name']} to cart" } %>
                   <% end %>
                 <% else %><p class="text-xs text-clay">Review this price in C-Trax.</p><% end %>
-                <% if retail_business_access?('inventory.write') %><details class="text-xs"><summary class="disclosure-trigger text-taupe">Website image link</summary><%= form_tag ctrax_pos_image_path(@snapshot.location_id, record['id']), method: :post, class: 'mt-2 space-y-2' do %><%= select_tag :product_id, options_for_select(image_options, @images.product_for(record)&.id), include_blank: 'Select website product', required: true, class: 'input w-full', aria: { label: "Website image for #{record['name']}" } %><%= submit_tag 'Link image', class: 'btn-ghost' %><% end %></details><% end %>
+                <% if retail_business_access?('inventory.write') %><details class="text-xs"><summary class="disclosure-trigger text-taupe">Website image link</summary><%= form_tag ctrax_pos_image_path(@snapshot.location_id, record['id']), method: :post, class: 'mt-2 space-y-2' do %><%= select_tag :product_id, options_for_select(image_options, @images.product_for(record)&.id), id: "ctrax_image_product_#{record['id']}", include_blank: 'Select website product', required: true, class: 'input w-full', aria: { label: "Website image for #{record['name']}" } %><%= submit_tag 'Link image', class: 'btn-ghost' %><% end %></details><% end %>
               </div>
             </article>
           <% end %>

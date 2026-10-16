@@ -27,6 +27,8 @@ class RetailWorkspaceTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Stock: -2'
     assert_includes response.body, 'Stock: Unknown'
     assert_select '[data-pos-cart-target=count]', count: 2
+    ids = Nokogiri::HTML(response.body).css('[id]').map { |node| node['id'] }
+    assert_equal ids.uniq, ids
     assert_equal 'no-store', response.headers['Cache-Control']
     get ctrax_pos_path, params: { q: 'not-in-the-fixture' }
     assert_select 'h3', 'No products match these filters'
@@ -53,6 +55,8 @@ class RetailWorkspaceTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select '[aria-label="Daily sales summary"]', text: /Recorded sales.*\$10.00.*Tax included.*\$1.00.*Tips.*\$2.00.*Completed orders.*1/m
     assert_select '[role=region][tabindex="0"][aria-label="Daily source checks"] table caption'
+    assert_select 'th[scope=row]', 'Card terminal tender'
+    assert_not_includes response.body, 'standaloneCardTerminal tender'
     assert_select 'section#close-registers'
     assert_select 'form[action=?] input[name=source_digest]', review_ctrax_day_path(day)
     assert_select 'textarea.retail-notes'

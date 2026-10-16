@@ -27,6 +27,10 @@ module RetailWorkspaceHelper
     'Unknown time'
   end
 
+  def retail_check_label(value)
+    value.end_with?(' tender') ? "#{retail_tender_label(value.delete_suffix(' tender'))} tender" : value
+  end
+
   def retail_tender_label(value)
     { 'cash' => 'Cash', 'credit' => 'Card', 'standaloneCardTerminal' => 'Card terminal',
       'gift_card' => 'Gift card', 'loyalty' => 'Loyalty' }.fetch(value, value.to_s.humanize)
