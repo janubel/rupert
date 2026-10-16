@@ -51,6 +51,10 @@ class DailyMoneyReconciliation
     @iris ||= IrisReport.where('window_from <= ? AND window_to >= ?', day, day).order(observed_at: :desc).limit(50).to_a
   end
 
+  def ctrax
+    @ctrax ||= CtraxDay.includes(:location).where(business_date: day).order(:location_id).to_a
+  end
+
   def gateway
     @gateway ||= AuthorizeNetTransaction.where(settled_at: day.beginning_of_day...(day + 1).beginning_of_day)
       .group(:environment, :gateway_id, :currency, :payment_status, :transaction_type)
@@ -71,6 +75,7 @@ class DailyMoneyReconciliation
       coverage: register.coverage, freshness: register.source_freshness, comparisons: comparisons,
       swipesimple: swipesimple, gateway_settlement_observations: gateway, portal_observations: portal,
       swipesimple_export_ids: SwipesimpleDailyReport.new(day: day.iso8601).transactions.distinct.pluck(:swipesimple_export_id).sort,
+      ctrax: ctrax.map { |snapshot| [snapshot.id, snapshot.location_id, snapshot.currency, snapshot.source_digest, snapshot.reviewed?] },
       iris: iris.map { |report| [report.id, report.report_kind, report.status, report.window_from, report.window_to, report.observed_at, Digest::SHA256.hexdigest(report.payload_json)] },
       documents: documents.map { |doc| [doc.id, doc.fingerprint] } }
   end
@@ -116,6 +121,12 @@ class DailyMoneyReconciliation
       portal.each { |row| csv << %w[gateway_id transaction_id currency status transaction_type submitted_at settled_at settlement_cents export_id].map { |key| safe(row[key]) } }
       csv << ['IRIS snapshot ID', 'Kind', 'Status', 'From', 'To', 'Observed at', 'Overlapping snapshots must not be summed; batch amounts are not net bank funding']
       iris.each { |row| csv << [row.id, row.report_kind, row.status, row.window_from, row.window_to, row.observed_at.iso8601] }
+      csv << ['C-Trax snapshot ID', 'Location', 'Store timezone', 'Currency', 'Check', 'Recorded', 'Source control', 'Difference', 'Unit']
+      ctrax.each do |snapshot|
+        detail = Ctrax::Reconciliation.new(snapshot)
+        detail.checks.each { |check| csv << [snapshot.id, safe(snapshot.location_id), safe(snapshot.timezone), snapshot.currency, check[:label], amount(check[:actual]), amount(check[:expected]), amount(check[:delta]), check[:monetary] ? 'integer cents' : 'count'] }
+        detail.warnings.each { |warning| csv << [snapshot.id, safe(snapshot.location_id), safe(snapshot.timezone), snapshot.currency, warning] }
+      end
       csv << ['Evidence ID', 'Source', 'Kind', 'From', 'To', 'Filename', 'SHA256', 'Supersedes ID', 'Source context and entered amounts (integer cents)']
       documents.each { |doc| csv << [doc.id, doc.source, doc.kind, doc.period_from, doc.period_to, safe(doc.filename), doc.sha256, doc.supersedes_id, safe(doc.metadata.to_json)] }
       csv << ['Source import status does not prove this day is complete. Tips, fees and deposits require source evidence when unavailable in canonical records.']

@@ -32,6 +32,15 @@ class CtraxSalesSyncTest < ActiveSupport::TestCase
     assert_not_includes day.orders_json.to_json, 'private@example'
     result = Ctrax::Reconciliation.new(day)
     assert result.matched?
+    assert_equal 1, ReconciliationDocument.count
+    retained = ReconciliationDocument.first.original_bytes
+    assert_includes retained, 'orders_json'
+    refute_includes retained, 'PRIVATE-NAME'
+    refute_includes retained, 'private@example'
+    daily = DailyMoneyReconciliation.new(day: '2026-10-15')
+    assert_equal [day.id], daily.ctrax.map(&:id)
+    assert_includes daily.csv, 'C-Trax snapshot ID'
+
     assert_equal 0, result.session_rows.first['variance']
     assert_requested :get, "#{@origin}/api/v1/stores/7/orders", headers: { 'X-Store-Timezone' => 'America/New_York' },
       query: { page: '1', per_page: '50', include_extended_details: '1', override_timezone: 'store', completed_between: '2026-10-15 00:00:00->2026-10-16 00:00:00' }
@@ -44,11 +53,13 @@ class CtraxSalesSyncTest < ActiveSupport::TestCase
     day.update!(reviewed_at: Time.current, reviewed_digest: day.source_digest, reviewed_by: users(:regular_user))
     sync
     assert_equal 1, CtraxDay.count
+    assert_equal 1, ReconciliationDocument.count
     assert day.reload.reviewed?
     @order[:total] = 1100
     stub_sources
     sync
     assert_not day.reload.reviewed?
+    assert_equal 2, ReconciliationDocument.count
     assert_not Ctrax::Reconciliation.new(day).matched?
   end
 

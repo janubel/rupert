@@ -40,6 +40,17 @@
     <p class="text-xs text-mocha">Latest import completion is not confirmation that every transaction for this day was imported.</p>
   </section>
   <section class="card overflow-x-auto"><table class="w-full text-sm">
+    <caption class="p-4 text-left font-semibold">C-Trax store-day controls — native orders and register evidence</caption>
+    <thead><tr><% ['Store / timezone', 'Currency', 'Check', 'Recorded', 'Source control', 'Difference', 'Review'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
+    <tbody><% @report.ctrax.each do |snapshot| %><% detail = Ctrax::Reconciliation.new(snapshot) %>
+      <% detail.checks.each do |check| %><tr><td class="td"><%= snapshot.location.name %><br><%= snapshot.timezone %></td><td class="td"><%= snapshot.currency %></td><td class="td"><%= check[:label] %></td>
+        <% [:actual, :expected, :delta].each do |key| %><td class="td"><%= check[:monetary] ? money.call(check[key]) : (check[key].nil? ? 'Unavailable' : check[key]) %></td><% end %>
+        <td class="td"><%= snapshot.reviewed? ? 'Current source review' : 'Needs source review' %></td></tr><% end %>
+      <% detail.warnings.each do |warning| %><tr><td class="td" colspan="7"><%= warning %></td></tr><% end %>
+      <% if Current.user.can?('sales.read') %><tr><td class="td" colspan="7"><%= link_to 'Open C-Trax receipts and cash-session checks', ctrax_day_path(snapshot), class: 'underline' %></td></tr><% end %>
+    <% end %><% if @report.ctrax.empty? %><tr><td class="td" colspan="7">No stored C-Trax day for this date. Native store-day boundaries use the store timezone shown here.</td></tr><% end %></tbody>
+  </table></section>
+  <section class="card overflow-x-auto"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">SwipeSimple native observations — separate from canonical sales</caption>
     <thead><tr><% ['Merchant account', 'Currency', 'Tender', 'Sales', 'Refunds', 'Net', 'Sale tips', 'Refund tips', 'Excluded rows'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
     <tbody><% @report.swipesimple.each do |row| %><tr><td class="td"><%= row[:account] %></td><td class="td"><%= row[:currency] %></td><td class="td"><%= row[:tender].presence || 'Unknown' %></td>
