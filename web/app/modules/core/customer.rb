@@ -48,7 +48,8 @@ module Core
     end
 
     def name
-      preferred_name.presence || [first_name, last_name].compact.join(' ').presence || email || phone || 'Unnamed customer'
+      local_name = preferred_name if has_attribute?(:preferred_name)
+      local_name.presence || [first_name, last_name].compact.join(' ').presence || email || phone || 'Unnamed customer'
     end
 
     def tag_list

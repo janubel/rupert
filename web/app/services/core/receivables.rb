@@ -12,9 +12,10 @@ module Core
       def by_customer
         rows = Core::Customer.joins(:orders)
                              .where(orders: { status: %w[paid fulfilled] })
-                             .group('customers.id', 'customers.first_name', 'customers.last_name', 'customers.email', 'customers.phone')
+                             .group('customers.id', 'customers.preferred_name', 'customers.first_name', 'customers.last_name', 'customers.email', 'customers.phone')
                              .select(
                                'customers.id',
+                               'customers.preferred_name',
                                'customers.first_name',
                                'customers.last_name',
                                'customers.email',
