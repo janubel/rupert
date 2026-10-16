@@ -64,6 +64,8 @@ The search rechecks for an active request covering that pool and reuses it when 
 
 The [exact-control search deployment receipt](financial-close-control-search-deployment-2026-10-16.md) records scope continuity, request reuse and unchanged access checks.
 
-The cash-plan input checklist shows how many required entries are filled for the active forecast length and jumps directly to the next blank field. Its expandable list names each missing weekly receipt/payment, opening cash or scenario assumption. Explicit 0 counts as entered; whitespace does not. Inactive weeks are excluded, while their typed values remain available when the horizon expands again. Entry completion does not validate amounts or approve a close: calculate still runs the server checks.
+The cash-plan input checklist shows how many required entries are filled for the active forecast length and jumps directly to the next blank field. Its expandable list names each missing weekly receipt/payment, opening cash or scenario assumption. Explicit 0 counts as entered; whitespace does not. Inactive weeks are excluded from the checklist. Changing the horizon within the current form preserves their typed values; calculation uses only the selected weeks. Entry completion does not validate amounts or approve a close: calculate still runs the server checks.
 
 Editing a calculated plan shows a stale-results notice beside the totals as well as in the form, with a direct return to the checklist. Downloads and retention remain disabled until recalculation. The checklist performs no requests, storage writes, calculations or financial mutations; existing close-date context, original-report actions, forecast assumptions and access boundaries remain intact.
+
+The [cash-checklist deployment receipt](financial-close-cash-checklist-deployment-2026-10-16.md) records input guidance, stale-result checks and preserved access.
