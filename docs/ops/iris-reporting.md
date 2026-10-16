@@ -2,6 +2,8 @@
 
 Investigated October 15, 2026, America/New_York. This integration preserves processor reports for reconciliation in Rupert; C-Trax remains the retail inventory reference.
 
+The SER8 release is deployed, with six real monthly table-summary snapshots imported. See [deployment verification and remaining API access requirement](iris-deployment-2026-10-15.md). The native export format and live API authentication remain unverified.
+
 ## Verified evidence and limits
 
 - The signed-in NAB merchant portal exposes deposits, batches, authorizations, financials, retrievals, chargebacks and statements. Two merchant accounts were visible. Their identifiers and real financial records are deliberately excluded from public source.
