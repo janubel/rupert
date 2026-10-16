@@ -14,7 +14,9 @@ class DailyMoneyReconciliation
   end
 
   def documents
-    @documents ||= ReconciliationDocument.covering(day).where.not(kind: 'daily_archive').order(:id).to_a
+    @documents ||= ReconciliationDocument.covering(day).where.not(kind: 'daily_archive')
+      .select(:id, :tenant_id, :source, :kind, :period_from, :period_to, :metadata_json, :filename,
+        :sha256, :fingerprint, :supersedes_id, :created_at).order(:id).to_a
   end
 
   def controls

@@ -8,11 +8,11 @@ class DailyReconciliationsController < AuthenticatedController
 
   def index
     @report = DailyMoneyReconciliation.new(day: selected_day)
-    @archives = ReconciliationDocument.covering(@report.day).where(kind: 'daily_archive').order(id: :desc).limit(20)
+    @archives = ReconciliationDocument.covering(@report.day).where(kind: 'daily_archive').select(:id, :created_at, :metadata_json).order(id: :desc).limit(20)
     @reviews = DailyReconciliationReview.where(day: @report.day).includes(:reviewed_by).order(id: :desc).limit(20)
     # Existing native exports remain available without copying or reinterpreting them.
-    @swipesimple_exports = SwipesimpleExport.order(id: :desc).limit(20)
-    @authorize_exports = AuthorizeNetPortalExport.order(id: :desc).limit(20)
+    @swipesimple_exports = SwipesimpleExport.select(:id, :kind, :exported_at).order(id: :desc).limit(20)
+    @authorize_exports = AuthorizeNetPortalExport.select(:id, :kind, :exported_at).order(id: :desc).limit(20)
     respond_to do |format|
       format.html
       format.csv { send_data(@report.csv, type: 'text/csv', filename: "daily-reconciliation-#{@report.day}.csv") }
