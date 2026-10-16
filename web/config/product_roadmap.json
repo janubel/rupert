@@ -637,6 +637,15 @@
       "scope": "One permission-scoped setup desk for source health, credential completeness, named encrypted workspace forms, provider checks and explicit source reads. Saved secrets remain hidden; stale/expired/foreign forms are rejected, and platform backups stay restricted. Shared structured diagnostics, stale-source alerts, credential ownership/rotation records and provider-approved unattended feeds are planned separately. Opening or saving setup starts no sync and changes no schedule.",
       "evidence": "docs/ops/master-credentials-and-sync.md",
       "phase": "1"
+    },
+    {
+      "id": "F68",
+      "area": "Marketing",
+      "name": "Influencer collaborations and product gifting",
+      "status": "Available",
+      "scope": "Tenant-scoped influencer directory, relationship/follow-up and encrypted contact logs; campaign collaborations, reviewed product-gift proposals and manual shipment history; expiring existing merchant-code records, UTM referral URLs and versioned documents. Separate contacts permission, stale-edit protection and encrypted audit evidence. No outreach sending, platform discount activation, inventory/order writes, click/conversion tracking or commissions.",
+      "evidence": "web/app/services/marketing/gift_workflow.rb",
+      "phase": "4"
     }
   ]
 }
