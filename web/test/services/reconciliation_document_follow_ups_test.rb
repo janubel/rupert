@@ -11,7 +11,7 @@ class ReconciliationDocumentFollowUpsTest < ActiveSupport::TestCase
     values = { category: 'missing_report', source: 'bank', document_kind: 'bank_statement', title: 'Statement needed', notes: 'Find the original.',
       period_from: '2026-10-01', period_to: '2026-10-31', due_on: '2026-11-02', submission_key: SecureRandom.uuid }
     match = ReconciliationFollowUp.create!(values)
-    [ { period_from: '2026-09-30' }, { period_to: '2026-11-01' }, { source: 'square' }, { document_kind: 'invoice' } ].each do |changes|
+    [{ period_from: '2026-09-30' }, { period_to: '2026-11-01' }, { source: 'square' }, { document_kind: 'invoice' }].each do |changes|
       ReconciliationFollowUp.create!(values.merge(changes).merge(submission_key: SecureRandom.uuid))
     end
     doc.stubs(:original_bytes).raises('Original bytes must not be loaded')
