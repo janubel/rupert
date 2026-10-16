@@ -3,6 +3,8 @@ import { Alert, AppState, KeyboardAvoidingView, Linking, Platform, Pressable, Re
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
+// Expo's native fetch enforces redirect:error on both iOS and Android.
+import { fetch } from 'expo/fetch';
 import { instanceOrigin, localDay, weekBounds } from './src/validation.mjs';
 
 type Login = { origin: string; token: string };
@@ -44,7 +46,7 @@ function EmployeeApp() {
     const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 20000);
     try {
       const response = await fetch(`${credentials.origin}/api/v1/employee/${path}`, {
-        method, redirect: 'error', signal: controller.signal,
+        method, credentials: 'omit', redirect: 'error', signal: controller.signal,
         headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${credentials.token}` },
         ...(body ? { body: JSON.stringify(body) } : {})
       });
@@ -53,7 +55,7 @@ function EmployeeApp() {
       if (!response.ok) throw new Error(data.message || data.error || 'Request failed.');
       return data;
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') throw new Error('Connection timed out. Refresh to check whether the change was saved before retrying.');
+      if (controller.signal.aborted) throw new Error('Connection timed out. Refresh to check whether the change was saved before retrying.');
       throw error;
     } finally { clearTimeout(timeout); }
   }
@@ -73,7 +75,7 @@ function EmployeeApp() {
     const cleanOrigin = instanceOrigin(origin);
     const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 20000);
     try {
-      const response = await fetch(`${cleanOrigin}/api/v1/employee/session`, { method: 'POST', redirect: 'error', signal: controller.signal,
+      const response = await fetch(`${cleanOrigin}/api/v1/employee/session`, { method: 'POST', credentials: 'omit', redirect: 'error', signal: controller.signal,
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ email: email.trim(), password, device_name: `${Platform.OS === 'ios' ? 'iPhone / iPad' : 'Android'} app` }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || (response.status === 429 ? 'Too many attempts. Try again in 15 minutes.' : 'Check your email and password.'));
