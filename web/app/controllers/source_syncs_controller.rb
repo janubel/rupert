@@ -5,6 +5,18 @@ class SourceSyncsController < AuthenticatedController
 
   def create
     case params[:source]
+    when 'bank'
+      return head(:forbidden) unless Current.user.can?('settings.write')
+
+      connection = PosConnection.find_by(provider: 'iris_reporting', vendor_approved: true)
+      return redirect_to(pos_connection_path('iris_reporting'), notice: 'Save authorized NAB reporting credentials to pull deposits.') unless connection&.credentials_saved?
+
+      if connection.reporting_auth_mode == 'web'
+        IrisDailyDepositsWebJob.perform_later(connection.id, manual: true, setup_version: connection.lock_version)
+      else
+        IrisReportingJob.perform_later(tenant_id: Current.tenant_id, connection_id: connection.id, setup_version: connection.lock_version)
+      end
+      redirect_to root_path, notice: 'NAB reporting pull queued.'
     when 'ctrax'
       return head(:forbidden) unless Current.user.can?('inventory.write')
 

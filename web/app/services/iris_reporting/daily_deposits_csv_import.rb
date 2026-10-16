@@ -13,6 +13,17 @@ module IrisReporting
 
     def self.call(text:, merchant:, period:, origin: 'https://nabankco.iriscrm.com')
       raise Client::Error, :invalid unless Current.tenant&.status == 'active' && Client.merchants(merchant) == [merchant] && Client::ORIGIN_PATTERN.match?(origin)
+      payload = parse(text: text, period: period)
+      month = Date.iso8601("#{period}-01")
+      IrisReport.transaction do
+        report = IrisReport.find_or_initialize_by(api_origin: origin, merchant_number: merchant, report_kind: 'daily_deposits_csv',
+          window_from: month, window_to: month.end_of_month)
+        report.update!(status: 'complete', payload_json: payload.to_json, source_digest: Digest::SHA256.hexdigest(text), observed_at: Time.current)
+        report
+      end
+    end
+
+    def self.parse(text:, period:)
       raise Client::Error, :response unless text.is_a?(String) && text.valid_encoding? && text.bytesize.between?(1, MAX_BYTES)
       raise Client::Error, :response unless period.to_s.match?(/\A20[0-9]{2}-(?:0[1-9]|1[0-2])\z/)
 
@@ -27,7 +38,7 @@ module IrisReporting
       raise Client::Error, :response unless expected <= MAX_ROWS && csv.shift == HEADER
 
       total = csv.pop
-      raise Client::Error, :response unless total.size == 4 && total[0] == 'Monthly Total' && total[3].blank? && csv.size == expected
+      raise Client::Error, :response unless total.size.between?(4, HEADER.size) && total[0] == 'Monthly Total' && total.drop(3).all?(&:blank?) && csv.size == expected
 
       rows = csv.map do |row|
         raise Client::Error, :response unless row.size == HEADER.size && row.compact.all? { |v| v.bytesize <= 100 && !v.match?(/[\x00-\x1f\x7f]/) }
@@ -46,12 +57,7 @@ module IrisReporting
 
       payload = { 'source' => 'native_daily_deposits_csv', 'coverage' => 'export_records_only', 'currency' => nil,
         'data' => rows, 'totals' => { 'amount' => sum.to_s('F'), 'transactions' => transactions, 'records' => expected } }
-      IrisReport.transaction do
-        report = IrisReport.find_or_initialize_by(api_origin: origin, merchant_number: merchant, report_kind: 'daily_deposits_csv',
-          window_from: month, window_to: month.end_of_month)
-        report.update!(status: 'complete', payload_json: payload.to_json, source_digest: Digest::SHA256.hexdigest(text), observed_at: Time.current)
-        report
-      end
+      payload
     rescue CSV::MalformedCSVError, ArgumentError, TypeError, EncodingError
       raise Client::Error, :response
     end

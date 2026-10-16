@@ -39,6 +39,34 @@ class IrisReportingIntegrationTest < ActionDispatch::IntegrationTest
     assert_no_enqueued_jobs { post import_reporting_pos_connection_path('iris_reporting'), params: { from: 'invalid' } }
   end
 
+  test 'website setup saves encrypted credentials and queues only scoped native export jobs' do
+    assert_no_enqueued_jobs do
+      patch @path, params: { pos_connection: { reporting_auth_mode: 'web', environment: 'production', account_reference: '12345',
+        vendor_approved: true, reporting_enabled: true, credential_secret: { web_username: 'synthetic-nab-user', web_password: 'synthetic-private-password' } } }
+    end
+    assert_redirected_to @path
+    connection = PosConnection.find_by!(provider: 'iris_reporting')
+    assert_equal 'web', connection.reporting_auth_mode
+    assert_equal 'synthetic-nab-user', connection.credential_values['web_username']
+    get @path
+    assert_response :success
+    assert_includes response.body, 'Pull Daily Deposits now'
+    assert_includes response.body, 'NAB website username'
+    assert_select 'input[type=password][value]', count: 0
+    refute_includes response.body, 'synthetic-private-password'
+    assert_enqueued_with(job: IrisDailyDepositsWebJob, args: [connection.id, { manual: true, setup_version: connection.lock_version }]) do
+      post import_reporting_pos_connection_path('iris_reporting')
+    end
+    assert_enqueued_with(job: IrisDailyDepositsWebJob, args: [connection.id, { manual: true, setup_version: connection.lock_version }]) do
+      post source_sync_path('bank')
+    end
+    assert_no_enqueued_jobs do
+      patch @path, params: { pos_connection: { reporting_auth_mode: 'api_key', reporting_enabled: false } }
+    end
+    assert_empty connection.reload.credential_values
+    assert_equal 'api_key', connection.reporting_auth_mode
+  end
+
   test 'read permissions cannot save tokens or import CSV' do
     @owner.update_permission_overrides!(['settings.read'])
     get @path

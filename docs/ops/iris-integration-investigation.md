@@ -4,7 +4,7 @@ Investigated October 15, 2026, America/New_York. This records the available inte
 
 ## Finding and recommendation
 
-The supported tenant REST API is the best route to unattended reporting. Rupert already implements encrypted, tenant-scoped report snapshots and an opt-in daily worker. Account access is still the gate: the authenticated merchant user exposes User Settings only, with no API Settings tab or approved API token. Public API documentation proves a contract exists; it does not prove that this account is entitled to use it.
+The supported tenant REST API remains the preferred vendor contract for broad unattended reporting. A subsequent implementation also verified a fresh-login website route for native Daily Deposits, documented in the operating runbook. Rupert already implements encrypted, tenant-scoped report snapshots and an opt-in daily worker. Account access is still the gate: the authenticated merchant user exposes User Settings only, with no API Settings tab or approved API token. Public API documentation proves a contract exists; it does not prove that this account is entitled to use it.
 
 A **native Daily Deposits CSV was successfully downloaded and inspected** during this extended investigation. Its preamble, columns, record count and aggregate totals were validated privately. This is a different report from Health Center monthly summaries, and it is now supported by a separate native Daily Deposits importer with explicit merchant/month context. The monthly-summary parser remains separate. Native Sales Health and Transaction Health bytes remain unverified. The six previously imported monthly snapshots remain explicitly visible-table transcriptions.
 
@@ -27,13 +27,13 @@ Private exports, document bytes, merchant identifiers and provenance remain outs
 | Route | Suitability | Current status / next gate |
 | --- | --- | --- |
 | Tenant REST reporting | Preferred for independent daily imports, pagination and source IDs. | Implemented subset; approved reporting user/token and real response validation required. |
-| Native Daily Deposits CSV | Manual batch-summary reconciliation without API access. | Download verified; separate native parser/report kind implemented and tested; see the operating runbook. |
+| Native Daily Deposits CSV | Batch-summary reconciliation without REST API access. | Native parser and independent website login/download worker implemented; explicit merchant identity, row/count/total verification; see the operating runbook. |
 | Health Center monthly CSV | Monthly sales/returns/case summaries. | Menus and visible matrices verified; native download bytes not delivered. Existing importer accepts documented synthetic template and observed matrix only. |
 | XLS | Possible manual source if vendor supplies a workbook. | Menu visible; workbook bytes, sheets, date types and formulas unverified; no parser. |
 | Statements | Potential independent source for monthly fees, adjustments and reconciliation. | REST list/download documented; no real statement inspected or fee parser implemented. |
 | Subscriptions/webhooks | Possible timely chargeback/retrieval status notifications. | Events published; no receiver/registration; authentication and delivery guarantees unresolved. |
 | Scheduled email, SFTP or vendor file feed | Could remove interactive export dependency. | No supported report-file delivery contract verified. Deposit email alerts do not establish attached CSV delivery. |
-| Browser-only Health GraphQL | Explains interactive export behavior. | Public UI bundle names export operations returning a URL that the UI opens. No supported server-to-server contract or credential path established; not used by the worker. |
+| Website GraphQL | Interactive website export machinery, distinct from the REST API. | Daily Deposits flow now verified using a new server login and downloaded native CSV; Health Center automation remains unverified. Not a vendor-supported integration contract. |
 | NMI Gateway / NMI Payments APIs | Conditional alternatives for separately provisioned accounts. | Distinct credentials/products; an IRIS merchant login does not prove eligibility. |
 
 The publicly served [Health Insights UI bundle](https://cdn.iriscrm.com/assets/main/7e65daba/build/assets/HealthInsightsPage-DY9R5sA-.js) contains `healthInsightExportMonthlySales` and `healthInsightExportTransactionHealth` operations whose results include `export_url`. This explains an interactive export path, not an approved backend API. Daily Deposits and PDF downloads succeeded while both Health Center CSV attempts still delivered no file; the exact Health Center failure is unresolved.
@@ -91,7 +91,7 @@ The public subscription schema and examples do not establish a webhook signing s
 
 ## Gaps before unattended production acceptance
 
-The deployed code stores source observations, not an accounting ledger. Its rolling 31-date schedule does not establish coverage of older cases that change later. Different windows overlap and cannot be summed. Optional denial means unavailable, not zero activity. Missing currency/tips/fees remain unknown; UI dollar formatting is not an API currency contract.
+The deployed code stores source observations, not an accounting ledger. Native Daily Deposits website automation subsequently adds independent login/export validation and a daily current/previous-month refresh; it does not establish REST entitlement or automate case/statement reports. Its rolling 31-date schedule does not establish coverage of older cases that change later. Different windows overlap and cannot be summed. Optional denial means unavailable, not zero activity. Missing currency/tips/fees remain unknown; UI dollar formatting is not an API currency contract.
 
 The client stops on 429 and retains prior snapshots; it does not currently schedule a precise `Retry-After` retry. Error state is stored on the connection; no dedicated IRIS alert, freshness dashboard or snapshot retention policy has been implemented. Each new rolling window creates another snapshot identity, so storage growth needs an explicit retention decision. These are operational improvements after access is proven. Batch pagination checks do not independently prove that each nested transaction array is complete. Raw source date/status semantics also need real processor validation. If the vendor migrates the tenant away from `iriscrm.com`, review the supported origin contract before changing Rupert's allowlist.
 

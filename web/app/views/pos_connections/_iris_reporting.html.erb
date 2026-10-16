@@ -12,7 +12,10 @@
       <div><%= label_tag :daily_report_file, 'Native Daily Deposits CSV (maximum 1 MiB)' %><%= file_field_tag :report_file, id: 'daily_report_file', accept: '.csv,text/csv', required: true, class: 'input' %></div>
       <%= submit_tag 'Import Daily Deposits CSV', class: 'btn-primary' %>
     <% end %>
-    <% if @connection.credentials_saved? %>
+    <% if @connection.credentials_saved? && @connection.reporting_auth_mode == 'web' %>
+      <%= button_to 'Pull Daily Deposits now', import_reporting_pos_connection_path('iris_reporting'), method: :post, class: 'btn-primary', data: { turbo: false } %>
+      <p class="text-xs text-taupe">Reads fresh current and previous month exports using the saved NAB login. No payments or merchant settings are changed.</p>
+    <% elsif @connection.credentials_saved? %>
       <%= form_with url: import_reporting_pos_connection_path('iris_reporting'), method: :post, data: { turbo: false }, class: 'flex flex-wrap gap-3 items-end' do %>
         <div><%= label_tag :from, 'First source reporting date' %><%= date_field_tag :from, nil, class: 'input' %></div>
         <div><%= label_tag :to, 'Last source reporting date' %><%= date_field_tag :to, nil, class: 'input' %></div>
