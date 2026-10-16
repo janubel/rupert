@@ -10,8 +10,9 @@
     <h2 class="font-display text-xl">Card checkout</h2>
     <%= form.label :gateway_provider, 'Payment gateway' %><%= form.select :gateway_provider, [['Authorize.net', 'authorize_net'], ['NMI · sandbox only', 'nmi']], {}, class: 'input w-full' %>
     <p class="text-sm">Save the gateway choice first to display its credential fields. NMI live payments are disabled pending Next Stage confirmation.</p>
-    <p class="text-sm">Use the merchant account approved for this store. Card details are collected inside Authorize.net’s hosted form; Rupert receives a one-use token. This is a browser card checkout, rather than a PAX terminal integration.</p>
-    <%= form.label :environment, 'Gateway environment' %><%= form.select :environment, [['Sandbox · test payments', 'sandbox'], ['Production · real charges', 'production']], {}, class: 'input w-full' %>
+    <p class="text-sm">Use the merchant account approved for this store. Card details are collected inside the selected gateway’s hosted fields; Rupert receives a one-use token. This is a browser card checkout. Terminal support requires a separate integration.</p>
+    <% environments = @setting.gateway_provider == 'nmi' ? [['Sandbox · test payments', 'sandbox']] : [['Sandbox · test payments', 'sandbox'], ['Production · real charges', 'production']] %>
+    <%= form.label :environment, 'Gateway environment' %><%= form.select :environment, environments, {}, class: 'input w-full' %>
     <%= form.label :gateway_id, 'Existing Gateway ID' %><%= form.text_field :gateway_id, class: 'input w-full', autocomplete: 'off' %>
     <% if @setting.gateway_provider == 'nmi' %>
       <p class="text-sm">Use a dedicated NMI sandbox merchant. Sandbox receipts never create live sales, register revenue or stock deductions. The company check compares the profile name, not the operator-entered Gateway ID. Card payment permissions and the public key are tested by sandbox checkout.</p>
