@@ -2,6 +2,13 @@
   <section class="space-y-3 border-t border-taupe/20 pt-3" data-sync-operation="<%= health[:operation] %>">
     <div class="flex flex-wrap items-center justify-between gap-2"><h4 class="text-sm font-semibold"><%= health[:label] %></h4><span class="<%= health[:alert] ? 'pill-rose' : 'pill-taupe' %>"><%= health[:state] %></span></div>
     <div <%= 'role=alert' if health[:alert] %> class="text-sm text-mocha"><strong><%= health[:reason] %>.</strong> <%= health[:action] %></div>
+    <% if (access = health[:access]) %>
+      <div class="text-xs text-mocha" data-sync-access="<%= access[:ready] ? 'present' : 'missing' %>">
+        <strong>Current read setup: <%= access[:state] %>.</strong>
+        <% if access[:missing_fields].any? %><p>Missing: <%= access[:missing_fields].join(', ') %>.</p><% end %>
+        <p><%= access[:state] == health[:state] ? 'Setup is separate from schedule opt-in and previous read results.' : access[:action] %></p>
+      </div>
+    <% end %>
     <dl class="grid gap-2 text-xs text-mocha">
       <% { 'Last attempt' => health[:last_attempt_at], 'Last successful acquisition' => health[:last_success_at], 'Legacy success evidence · connector timestamp' => health[:legacy_at], 'Stored source / export timestamp' => health[:source_at], 'Source event coverage watermark' => health[:source_event_at] }.each do |label, time| %>
         <div><dt class="font-semibold"><%= label %></dt><dd><% if time %><time datetime="<%= time.iso8601 %>"><%= l(time.in_time_zone, format: :short) %></time><% else %>Not recorded<% end %></dd></div>

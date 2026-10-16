@@ -28,8 +28,7 @@ class SourceSyncStatus
 
   def shopify
     configured = %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].all? { |key| EnvStore.fetch(key, '').present? }
-    value = Setting.find_by(key: 'sync_watermark_shopify', tenant_id: Current.tenant_id)&.value
-    last_at = Time.zone.parse(value) if value.present?
+    last_at = CatalogSyncHistory.watermark('shopify')
     run = SyncRun.where(source: %w[all shopify]).order(startedAt: :desc).first
     badge = if !configured
       'Needs access'
