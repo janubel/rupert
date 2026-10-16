@@ -294,3 +294,24 @@
     min-width: 0;
   }
 }
+
+/* Shared interaction standards for management, employee and retail screens. */
+@layer base {
+  button, a, summary, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  a:focus-visible, summary:focus-visible, button:focus-visible {
+    outline: 2px solid var(--color-olive-deep);
+    outline-offset: 3px;
+  }
+  [hidden] { display: none !important; }
+}
+.workspace-header { border-bottom:1px solid var(--color-fog);background:var(--color-paper); }
+.workspace-navigation { display:flex;gap:.35rem;overflow-x:auto; }
+.workspace-nav-link { min-height:44px;flex:none;justify-content:center;white-space:nowrap; }
+.disclosure-trigger { min-height:44px;cursor:pointer;padding:.65rem 0; }
+@media(pointer:coarse) {
+  .btn,.btn-primary,.btn-ghost,.select,.input,.search { min-height:44px; }
+  input[type=checkbox],input[type=radio] { min-width:20px;min-height:20px; }
+}
+@media(max-width:640px) {
+  input,select,textarea { font-size:16px !important; }
+}

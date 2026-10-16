@@ -1,13 +1,13 @@
-<section class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+<section class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
   <% if Current.user.can?("sales.read") %>
   <%= render "home/stat", label: "Today's sales", value: number_to_currency(presenter.today_revenue.to_i / 100.0), note: "#{presenter.today_orders} orders" %>
   <%= render "home/stat", label: "Yesterday", value: number_to_currency(presenter.yesterday_revenue.to_i / 100.0), note: vs_yesterday(presenter.today_revenue, presenter.yesterday_revenue) %>
-  <%= render "home/stat", label: "Last 7 days", value: number_to_currency(presenter.week_revenue.to_i / 100.0), note: "#{number_to_currency(presenter.month_revenue.to_i / 100.0, precision: 0)} this month" %>
+  <%= render "home/stat", label: "Last 7 days", value: number_to_currency(presenter.week_revenue.to_i / 100.0), note: "#{number_to_currency(presenter.month_revenue.to_i / 100.0, precision: 0)} last 30 days" %>
   <% end %>
   <% if Current.user.can?("alerts.read") %>
-  <%= render "home/stat", label: "Low stock alerts", value: presenter.open_alerts, note: "#{presenter.stockouts} at zero" %>
+  <%= render "home/stat", label: "Stored stock alerts", value: presenter.open_alerts, note: "#{presenter.stockouts} at zero" %>
   <% end %>
   <% if Current.user.can?("inventory.read") %>
-  <%= render "home/stat", label: "Active products", value: presenter.product_count, note: "#{presenter.linked_count} linked to Square" %>
+  <%= render "home/stat", label: "Website products", value: presenter.product_count, note: "#{presenter.linked_count} stored Square links" %>
   <% end %>
 </section>

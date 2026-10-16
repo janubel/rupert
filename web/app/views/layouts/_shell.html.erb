@@ -54,7 +54,7 @@
     <% end %>
   </header>
 
-  <main id="main" tabindex="-1" class="mx-auto max-w-6xl px-6 py-8 focus:outline-none">
+  <main id="main" tabindex="-1" class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 focus:outline-none">
     <% if (guide = PageGuides.for_path(request.path)) %>
       <%= render "shared/page_guide", guide: guide %>
     <% end %>
