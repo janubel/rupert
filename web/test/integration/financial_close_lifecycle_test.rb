@@ -33,6 +33,8 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Review not recorded'
     assert_select '[aria-label="Checks needing action"]', text: /Required for any package/
     assert_select 'input[value="Verify originals & retain close package"][disabled]'
+    assert_select 'a[href=?]', financial_close_path(day: '2026-10-13'), text: 'Previous day'
+    assert_select 'a[href=?]', financial_close_path(day: '2026-10-15'), text: 'Next day'
     assert_no_difference 'ReconciliationDocument.count' do
       post financial_close_path, params: { close: close_values }
     end
@@ -145,6 +147,9 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_select '[aria-label="Cash shortfall action"]', text: /CAD 9\.99 below your reserve/
     assert_select 'a[href="#cash-week-3"]', text: 'Review week 3 cash plan'
     assert_select '#forecast-results', text: /20\.01/
+    assert_select '[aria-label="Forecast baseline close status"]', text: /Review not recorded/
+    assert_select 'a[href=?]', overview_reconciliation_follow_ups_path(ending_on: @day, anchor: 'business-days'), text: 'Compare close dates'
+    assert_select '[data-cash-forecast-form-baseline-date-value=?]', @day
     assert_select 'input[name="forecast[weeks][0][receipts]"][value="10"]'
     assert_difference 'ReconciliationDocument.count', 1 do
       post cash_forecast_path, params: { intent: 'retain', forecast: @forecast_values.merge(baseline_digest: baseline) }
@@ -170,6 +175,27 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     post cash_forecast_path, params: { intent: 'retain', forecast: @forecast_values.merge(baseline_digest: 'stale') }
     assert_response :unprocessable_entity
     assert_includes response.body, 'baseline report changed'
+  end
+
+  test 'across dates exposes close and overdue actions with the selected date for report readers' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      ReconciliationFollowUp.create!(category: 'missing_report', source: 'bank', document_kind: 'bank_statement', period_from: @day, period_to: @day,
+        title: 'Overdue original for close', notes: 'Local next step only.', due_on: @day, submission_key: SecureRandom.uuid)
+      @user.update!(role: 'reporting')
+      assert_no_enqueued_jobs do
+        assert_no_difference ['ReconciliationDocument.count', 'ReconciliationFollowUpEvent.count', 'ActionMailer::Base.deliveries.size'] do
+          get overview_reconciliation_follow_ups_path(ending_on: @day)
+        end
+      end
+      assert_response :success
+      assert_select '[aria-label="Close status for 2026-10-14"]' do
+        assert_select 'a[href=?]', financial_close_path(day: @day), text: 'Open financial close'
+        assert_select 'a[href=?]', cash_forecast_path(day: @day), text: 'Plan cash from this date'
+        assert_select 'a[href=?]', reconciliation_follow_ups_path(day: @day, status: 'overdue'), text: 'Overdue follow-ups · 1'
+      end
+      get cash_forecast_path(day: @day)
+      assert_select '[aria-label="Forecast baseline close status"] a[href=?]', reconciliation_follow_ups_path(day: @day, status: 'overdue'), text: 'Work 1 overdue follow-up'
+    end
   end
 
   test 'readers can preview but cannot retain and employees and foreign tenants cannot reach financial evidence' do
