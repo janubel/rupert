@@ -91,6 +91,13 @@ class CtraxSalesSyncTest < ActiveSupport::TestCase
     assert_nil result.checks.find { |row| row[:label] == 'cash tender' }[:delta]
   end
 
+  test 'store-local fall DST day includes the twenty-fifth hour' do
+    @order[:completed_at] = '2026-11-02T04:30:00Z'
+    stub_sources
+    Ctrax::SalesSync.call(connection: @connection.reload, date: '2026-11-01')
+    assert_equal ['41'], CtraxDay.first.orders.pluck('id')
+  end
+
   test 'foreign tenant connection cannot issue business reads' do
     Current.tenant = Tenant.create!(name: 'Other', subdomain: 'ctrax-sales-other')
     assert_raises(Ctrax::Client::Error) { sync }

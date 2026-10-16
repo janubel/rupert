@@ -17,6 +17,7 @@ export default class extends Controller {
       this.updateTipInputs()
       this.persist()
       this.render(initial)
+      if (this.hasClearUrlValue && this.cart.size) this.refresh()
     } else {
       try {
         const saved = JSON.parse(sessionStorage.getItem(this.cartKeyValue) || "[]")

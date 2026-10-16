@@ -28,6 +28,10 @@ class CtraxPosTest < ActionDispatch::IntegrationTest
     get demo_pos_display_path(display)
     assert_select 'iframe', count: 2
     assert_select 'iframe[title="Customer tipping demo"]'
+    get ctrax_pos_path(location_id: @location.id, display_id: display.id)
+    assert_response :success
+    assert_select 'h1', 'Cashier cart'
+    assert_select 'nav', count: 0
   end
 
   test 'server prices cart and keeps choice private until customer confirmation' do

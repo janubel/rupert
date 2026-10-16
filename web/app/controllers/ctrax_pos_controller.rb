@@ -3,6 +3,11 @@
 class CtraxPosController < PointOfSaleController
   before_action :load_store
 
+  def index
+    load_catalog
+    render :demo, layout: 'pos_demo' if @display&.demo?
+  end
+
   def image
     return head(:forbidden) unless Current.user.can?('inventory.write')
     raise ActiveRecord::RecordNotFound unless @snapshot && @snapshot.records.any? { |r| r['id'] == params[:variant_id] }
