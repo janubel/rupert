@@ -12,7 +12,7 @@ module Ctrax
                         loyalty_payments_amount_sum gift_card_payments_amount_sum cash_refunds_amount_sum].freeze
 
     def self.call(connection:, date:, currency: 'USD')
-      new(connection, date, currency).call
+      SyncObservability.observe('ctrax', 'sales') { new(connection, date, currency).call }
     end
 
     def initialize(connection, date, currency)
@@ -78,6 +78,9 @@ module Ctrax
 
           day.update!(store[:payload].merge(api_origin: origin, store_id: store[:id],
             source_digest: store[:digest], captured_at: started))
+          ReconciliationEvidence.retain!(bytes: JSON.generate(store[:payload]), filename: 'ctrax-day-snapshot.json', source: 'ctrax', kind: 'source_export',
+            from: @date.iso8601, to: @date.iso8601, metadata: { 'api_origin' => origin, 'store_id' => store[:id],
+              'location_id' => location.id, 'currency' => @currency, 'source_digest' => store[:digest], 'coverage' => 'normalized_source_snapshot' })
         end
         @connection.update!(last_report_status: 'verified', last_reported_at: Time.current,
           last_report_message: "C-Trax daily read completed for #{@date}: #{snapshots.sum { |s| s[:payload][:orders_json].size }} orders.")

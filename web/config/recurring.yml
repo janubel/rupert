@@ -9,6 +9,14 @@ production:
     class: PosInventoryJob
     queue: default
     schedule: '* * * * *'
+  retention_drive:
+    class: RetentionDriveJob
+    queue: default
+    schedule: every 15 minutes
+  daily_reconciliation_archive:
+    class: DailyReconciliationArchiveJob
+    queue: default
+    schedule: "15 7 * * * America/New_York"
   source_directories:
     class: DirectorySyncJob
     queue: default

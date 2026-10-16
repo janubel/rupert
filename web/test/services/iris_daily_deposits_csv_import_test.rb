@@ -11,6 +11,8 @@ class IrisDailyDepositsCsvImportTest < ActiveSupport::TestCase
       report = import
       assert_equal report.id, import.id
       assert_equal 1, IrisReport.count
+      assert_equal 1, ReconciliationDocument.count
+      assert_equal csv, ReconciliationDocument.first.original_bytes
       assert_equal 'daily_deposits_csv', report.report_kind
       assert_equal [Date.new(2026, 10, 1), Date.new(2026, 10, 31)], [report.window_from, report.window_to]
       assert_equal Digest::SHA256.hexdigest(csv), report.source_digest
@@ -36,6 +38,8 @@ class IrisDailyDepositsCsvImportTest < ActiveSupport::TestCase
     assert_equal first.id, import(text: corrected).id
     assert_equal '11.0', first.reload.payload['totals']['amount']
     assert_equal 3, IrisReport.count
+    assert_equal 4, ReconciliationDocument.count
+    assert ReconciliationDocument.all.any? { |doc| doc.original_bytes == corrected }
     Current.tenant = Tenant.create!(name: 'Other deposits', subdomain: 'other-deposits', status: 'active')
     assert_equal 0, IrisReport.count
     import

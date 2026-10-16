@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -636,6 +636,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["tenant_id", "phone"], name: "index_customers_on_tenant_id_and_phone"
   end
 
+  create_table "daily_reconciliation_reviews", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.date "day", null: false
+    t.string "report_digest", null: false
+    t.string "status", null: false
+    t.text "notes", null: false
+    t.integer "reviewed_by_id"
+    t.datetime "created_at", null: false
+    t.index ["reviewed_by_id"], name: "index_daily_reconciliation_reviews_on_reviewed_by_id"
+    t.index ["tenant_id", "day"], name: "idx_daily_reconciliation_review_day"
+    t.index ["tenant_id"], name: "index_daily_reconciliation_reviews_on_tenant_id"
+  end
+
   create_table "departments", force: :cascade do |t|
     t.string "code"
     t.datetime "created_at", null: false
@@ -661,6 +674,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "provider", "kind"], name: "idx_directory_sync_identity", unique: true
+  end
+
+  create_table "employee_access_grants", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "employee_id", null: false
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token_digest"], name: "index_employee_access_grants_on_token_digest", unique: true
+  end
+
+  create_table "employee_app_sessions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "employee_id", null: false
+    t.string "token_digest", null: false
+    t.string "password_fingerprint", null: false
+    t.string "device_name", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "user_id"], name: "index_employee_app_sessions_on_tenant_id_and_user_id"
+    t.index ["token_digest"], name: "index_employee_app_sessions_on_token_digest", unique: true
   end
 
   create_table "employees", force: :cascade do |t|
@@ -1302,6 +1342,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["tenant_id", "vendor_id"], name: "index_purchase_orders_on_tenant_id_and_vendor_id"
   end
 
+  create_table "reconciliation_documents", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "source", null: false
+    t.string "kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.text "metadata_json", null: false
+    t.text "content_base64", null: false
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.string "sha256", null: false
+    t.string "fingerprint", null: false
+    t.integer "byte_size", null: false
+    t.integer "uploaded_by_id"
+    t.bigint "supersedes_id"
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "fingerprint"], name: "idx_reconciliation_evidence_replay", unique: true
+    t.index ["tenant_id", "period_from", "period_to"], name: "idx_reconciliation_evidence_period"
+    t.index ["tenant_id", "supersedes_id"], name: "idx_reconciliation_evidence_correction", unique: true
+    t.index ["tenant_id"], name: "index_reconciliation_documents_on_tenant_id"
+    t.index ["uploaded_by_id"], name: "index_reconciliation_documents_on_uploaded_by_id"
+  end
+
   create_table "refunds", force: :cascade do |t|
     t.integer "amount_cents", default: 0, null: false
     t.datetime "created_at", null: false
@@ -1316,6 +1379,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["discarded_at"], name: "index_refunds_on_discarded_at"
     t.index ["tenant_id", "order_id"], name: "index_refunds_on_tenant_id_and_order_id"
     t.index ["tenant_id", "refunded_at"], name: "index_refunds_on_tenant_id_and_refunded_at"
+  end
+
+  create_table "retention_drive_connections", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.text "refresh_token"
+    t.text "account_email"
+    t.string "generation"
+    t.boolean "enabled", default: false, null: false
+    t.string "sync_lease_token"
+    t.datetime "sync_lease_at"
+    t.datetime "last_synced_at"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id"], name: "index_retention_drive_connections_on_tenant_id", unique: true
+  end
+
+  create_table "retention_drive_items", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "generation", null: false
+    t.string "item_key", null: false
+    t.string "remote_id"
+    t.string "status", default: "pending", null: false
+    t.string "sha256"
+    t.bigint "byte_size"
+    t.text "display_name"
+    t.text "folder_path"
+    t.text "last_error"
+    t.datetime "last_attempt_at"
+    t.datetime "verified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "generation", "item_key"], name: "index_retention_drive_items_identity", unique: true
+    t.index ["tenant_id", "generation", "status"], name: "index_retention_drive_items_status"
   end
 
   create_table "role_permissions", force: :cascade do |t|
@@ -1602,6 +1699,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["tenant_id", "status"], name: "index_tasks_on_tenant_id_and_status"
   end
 
+  create_table "sync_attempts", force: :cascade do |t|
+    t.string "tenant_id"
+    t.string "source", null: false
+    t.string "operation", null: false
+    t.string "status", null: false
+    t.string "error_category"
+    t.string "active_job_id"
+    t.datetime "queued_at", null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active_job_id"], name: "index_sync_attempts_on_active_job_id"
+    t.index ["tenant_id", "source", "operation", "queued_at"], name: "idx_sync_attempts_source_history"
+  end
+
   create_table "tenants", id: :string, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -1615,6 +1728,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["subdomain"], name: "index_tenants_on_subdomain", unique: true
   end
 
+  create_table "timesheet_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "timesheet_id", null: false
+    t.bigint "user_id"
+    t.string "action", null: false
+    t.text "details"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_events_on_tenant_id_and_timesheet_id"
+  end
+
   create_table "timesheet_entries", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.decimal "hours", precision: 6, scale: 2, default: "0.0", null: false
@@ -1623,6 +1747,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.datetime "updated_at", null: false
     t.string "work_type", default: "regular", null: false
     t.date "worked_on", null: false
+    t.text "notes"
+    t.bigint "clock_shift_id"
+    t.index ["tenant_id", "clock_shift_id", "worked_on"], name: "idx_timesheet_shift_day", unique: true
     t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_entries_on_tenant_id_and_timesheet_id"
   end
 
@@ -1637,6 +1764,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.string "status", default: "draft", null: false
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
+    t.datetime "submitted_at"
+    t.text "review_note"
     t.index ["tenant_id", "employee_id", "period_start"], name: "index_timesheets_on_tenant_id_and_employee_id_and_period_start", unique: true
     t.index ["tenant_id", "status"], name: "index_timesheets_on_tenant_id_and_status"
   end
@@ -1765,6 +1894,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
+  add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade
@@ -1802,6 +1932,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
   add_foreign_key "ctrax_image_links", "tenants"
   add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_stock_snapshots", "tenants"
+  add_foreign_key "daily_reconciliation_reviews", "tenants"
+  add_foreign_key "daily_reconciliation_reviews", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "departments", "employees", column: "manager_id"
   add_foreign_key "directory_sync_states", "tenants"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
@@ -1846,7 +1978,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
   add_foreign_key "pos_stock_allocations", "Location", column: "location_id"
   add_foreign_key "pos_stock_allocations", "pos_checkouts"
   add_foreign_key "pos_stock_allocations", "tenants"
+  add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
+  add_foreign_key "reconciliation_documents", "tenants"
+  add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
   add_foreign_key "refunds", "orders", on_delete: :cascade
+  add_foreign_key "retention_drive_connections", "tenants"
+  add_foreign_key "retention_drive_items", "tenants"
   add_foreign_key "size_changes", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "size_family_members", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

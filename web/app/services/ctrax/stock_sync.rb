@@ -5,7 +5,7 @@ require 'bigdecimal'
 module Ctrax
   class StockSync
     def self.call(connection:)
-      new(connection).call
+      SyncObservability.observe('ctrax', 'stock') { new(connection).call }
     end
 
     def initialize(connection)

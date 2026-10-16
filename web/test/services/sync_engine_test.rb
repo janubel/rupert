@@ -8,7 +8,6 @@ class SyncEngineTest < ActiveSupport::TestCase
   end
 
   teardown do
-    travel_back
     SyncRun.delete_all
     Current.tenant = nil
   end
@@ -135,8 +134,9 @@ class SyncEngineTest < ActiveSupport::TestCase
   end
 
   test 'incremental runs fetch only the watermark window plus refresh tail' do
-    travel_to Time.zone.local(2026, 10, 16, 12)
-    Setting.create!(key: 'sync_watermark_shopify', value: 2.hours.ago.iso8601, tenant_id: Current.tenant_id)
+    travel_to Time.zone.local(2026, 10, 16, 0, 30)
+    watermark = 2.hours.ago
+    Setting.create!(key: 'sync_watermark_shopify', value: watermark.iso8601, tenant_id: Current.tenant_id)
 
     captured_since = nil
     CatalogSyncer.stubs(:sync!).with do |args|
@@ -150,9 +150,9 @@ class SyncEngineTest < ActiveSupport::TestCase
 
     SyncEngine.run!(mode: 'scheduled', actor: 'scheduler')
 
-    # since = watermark - 48h tail -> about 50 hours ago, not the 30-day default.
-    assert_not_nil captured_since
-    assert_operator Time.zone.parse(captured_since), :>, 3.days.ago
+    # Shopify accepts a calendar-date cutoff, so the 48h tail rounds down to that date.
+    assert_equal (watermark - 48.hours).strftime('%Y-%m-%d'), captured_since
+    assert_equal '2026-10-13', captured_since
   end
 
   test 'explicit history_days bypasses the watermark (manual backfill)' do

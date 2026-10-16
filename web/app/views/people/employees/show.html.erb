@@ -33,6 +33,15 @@
     </div>
   </section>
 
+  <% if Current.user.can_manage_accounts? && Current.user.can?('hr.write') && @employee.active? %>
+    <section class="card card-pad space-y-3">
+      <h2 class="font-display text-lg">Employee web &amp; app access</h2>
+      <p class="text-sm"><%= @employee.user ? "Linked to #{@employee.user.email} (#{@employee.user.role.humanize})" : 'No login linked. Add an email address to create employee access.' %></p>
+      <%= button_to 'Create private setup / reset link', employee_access_path(employee_id: @employee.id), method: :post, class: 'btn-primary btn-sm' if @employee.email.present? && (!@employee.user || @employee.user.employee?) %>
+      <%= link_to 'App installation', employee_app_path, class: 'btn-ghost btn-sm' %>
+    </section>
+  <% end %>
+
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
       <p class="stat-label">Hired</p>

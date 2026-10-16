@@ -68,6 +68,8 @@ class IrisWebReportingTest < ActiveSupport::TestCase
       2.times { assert_equal({ snapshots: 2 }, IrisReporting::WebSync.call(connection: @connection.reload)) }
     end
     assert_equal 2, IrisReport.count
+    assert_equal 2, ReconciliationDocument.count
+    assert_equal [csv(9), csv(10)].sort, ReconciliationDocument.all.map(&:original_bytes).sort
     assert_equal ['daily_deposits_csv'], IrisReport.distinct.pluck(:report_kind)
     assert_equal 'complete', @connection.reload.last_report_status
     assert_equal 'verified', @connection.last_check_status

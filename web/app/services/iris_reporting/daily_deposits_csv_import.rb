@@ -16,6 +16,9 @@ module IrisReporting
       payload = parse(text: text, period: period)
       month = Date.iso8601("#{period}-01")
       IrisReport.transaction do
+        ReconciliationEvidence.retain!(bytes: text, filename: 'iris-daily-deposits.csv', source: 'iris', kind: 'processor_report',
+          from: month.iso8601, to: month.end_of_month.iso8601,
+          metadata: { 'api_origin' => origin, 'merchant' => merchant, 'coverage' => 'export_records_only', 'currency' => nil })
         report = IrisReport.find_or_initialize_by(api_origin: origin, merchant_number: merchant, report_kind: 'daily_deposits_csv',
           window_from: month, window_to: month.end_of_month)
         report.update!(status: 'complete', payload_json: payload.to_json, source_digest: Digest::SHA256.hexdigest(text), observed_at: Time.current)

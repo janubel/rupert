@@ -15,6 +15,7 @@
 # linked identity matching the account email grants only that account access.
 class OauthController < ApplicationController
   include DriveOauthCallback
+  include RetentionDriveOauthCallback
   class AccountInAnotherTenant < StandardError; end
 
   content_security_policy(prepend: true) { |policy| policy.frame_ancestors :none }
@@ -43,6 +44,7 @@ class OauthController < ApplicationController
     response.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive')
     # Backup consent reuses the registered callback, without signing in or provisioning users.
     return complete_drive_oauth if params[:state].to_s.start_with?('drive:')
+    return complete_retention_drive_oauth if params[:state].to_s.start_with?('retention:')
 
     info = nil
     tested_domain = params[:hd].presence
@@ -118,9 +120,10 @@ class OauthController < ApplicationController
 
     reset_session # prevent session fixation
     session[:user_id] = user.id
+    session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(user.password_digest) if user.employee?
     AccessLogger.record(source: 'google', status: 'success', request: request, user: user, email: email,
       domain: tested_domain)
-    redirect_to(root_path, notice: 'Signed in with Google.')
+    redirect_to(user.employee? ? people_timesheets_path : root_path, notice: 'Signed in with Google.')
   rescue GoogleOauthService::NotConfiguredError, GoogleOauthService::ExchangeError => e
     clear_oauth_intent
     AccessLogger.record(source: 'google', status: 'failure', request: request, email: info&.dig('email'),

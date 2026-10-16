@@ -4,7 +4,7 @@ class TimeClockService
   class Error < StandardError; end
 
   def self.worker_for(user)
-    workers = People::Employee.active.where(user_id: user.id).limit(2).to_a
+    workers = People::Employee.where(tenant_id: Current.tenant_id, user_id: user.id, status: 'active').limit(2).to_a
     workers.one? ? workers.first : nil
   end
 

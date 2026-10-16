@@ -3,55 +3,48 @@
 module People
   class TimesheetPolicy < ApplicationPolicy
     def index?
-      module?('timesheets.read')
+      user&.can?('timesheets.read') || worker.present?
     end
 
     def show?
-      index? && tenant?
+      tenant? && (user.can?('timesheets.read') || own?)
     end
 
     def create?
-      module?('timesheets.write')
+      user&.can?('timesheets.write') || worker.present?
     end
-
-    def new?
-      create?
-    end
-
+    alias new? create?
     def update?
-      module?('timesheets.write') && tenant?
+      tenant? && (user.can?('timesheets.write') || own?)
     end
-
-    def edit?
-      update?
-    end
-
-    def destroy?
-      module?('timesheets.write') && tenant?
-    end
-
-    def submit?
-      module?('timesheets.write') && tenant?
-    end
-
+    alias edit? update?
+    alias destroy? update?
+    alias submit? update?
+    alias add_entry? update?
+    alias update_entry? update?
+    alias remove_entry? update?
+    alias import_shifts? update?
     def approve?
-      module?('timesheets.write') && tenant?
+      tenant? && user.can?('timesheets.write') && record.employee.user_id != user.id
     end
-
-    def reject?
-      module?('timesheets.write') && tenant?
-    end
-
+    alias reject? approve?
     def reopen?
-      module?('timesheets.write') && tenant?
+      tenant? && (user.can?('timesheets.write') || (own? && record.rejected?))
     end
 
-    def add_entry?
-      module?('timesheets.write') && tenant?
+    def worker
+      TimeClockService.worker_for(user) if user&.active?
     end
 
-    def remove_entry?
-      module?('timesheets.write') && tenant?
+    def own?
+      worker && record.employee_id == worker.id
+    end
+
+    def self.visible_to(user)
+      scope = People::Timesheet.all
+      return scope if user.can?('timesheets.read')
+      worker = TimeClockService.worker_for(user)
+      worker ? scope.where(employee_id: worker.id) : scope.none
     end
   end
 end

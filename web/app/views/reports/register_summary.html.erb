@@ -1,6 +1,7 @@
 <% content_for :title, 'Daily register summary' %>
 <% money = ->(cents) { cents.nil? ? 'Unavailable' : number_with_precision(BigDecimal(cents.to_s) / 100, precision: 2) } %>
 <div class="space-y-6">
+  <%= link_to 'Reconcile totals and retain source documents', daily_reconciliations_path(day: @summary.day.iso8601), class: 'btn-ghost' %>
   <section><h1 class="page-title">Daily register summary</h1><p class="mt-2 text-sm text-mocha">Recorded sales, tenders and refunds by platform, location and currency.</p></section>
   <%= form_with url: register_summary_reports_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
     <div><%= f.label :day, 'Day', class: 'block text-sm' %><%= f.date_field :day, value: @summary.day, required: true, class: 'input' %></div>

@@ -1,0 +1,14 @@
+<% content_for :title, 'Employee app privacy' %>
+<section class="card card-pad mx-auto max-w-3xl space-y-4">
+  <h1 class="page-title">Employee app privacy</h1>
+  <p>Rupert Employee connects to the Rupert instance chosen by your organization. That organization operates the service and controls employee accounts and employment records.</p>
+  <h2 class="font-display text-xl">Information used</h2>
+  <p>Your account email, employee record, clock times, time corrections, timesheet hours, notes, and review history are stored on that instance. Sign-in attempts record an IP address and device/browser information to protect accounts. Native app sessions include a device label and expiration date.</p>
+  <h2 class="font-display text-xl">Who can access it</h2>
+  <p>You can access your own employee time records. Authorized managers and administrators can review timesheets and use approved hours for payroll. Rupert Employee does not include advertising or analytics SDKs or request access to your location, contacts, photos, camera, or microphone.</p>
+  <h2 class="font-display text-xl">Devices and retention</h2>
+  <p>The native app stores its sign-in token using the device's secure credential storage. Web sign-in uses the instance's browser session cookie. The web app does not cache timesheets for offline use. Employment and audit records stay on your organization's instance according to its retention policy.</p>
+  <h2 class="font-display text-xl">Your choices and support</h2>
+  <p>Sign out in the app, or revoke a native device session from the Employee app page. Ask your organization's administrator to correct records, reset access, explain retention, or handle an account or data deletion request. Deleting the app does not delete employment records from the instance.</p>
+  <%= link_to 'Back to employee app', employee_app_path, class: 'btn-ghost' %>
+</section>
