@@ -35,7 +35,7 @@ production:
   authorize_net_reporting:
     class: AuthorizeNetReportingJob
     queue: default
-    schedule: every 30 minutes
+    schedule: every 5 minutes
   daily_store_close:
     class: OperationsBriefJob
     queue: default

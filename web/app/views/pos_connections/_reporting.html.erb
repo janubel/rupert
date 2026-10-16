@@ -1,3 +1,5 @@
+<div data-controller="live-report" data-live-report-interval-value="30000">
+<%= turbo_frame_tag 'authorize-payment-report', src: (pos_connection_path(@provider[:key], report_date: @report_date) unless turbo_frame_request?) do %>
 <section class="card card-pad space-y-4">
   <h2 class="font-display text-xl">Payment reconciliation</h2>
   <p class="text-sm text-mocha">Payment observations do not create retail sales or change inventory. C-Trax remains the retail inventory reference. Refunds retain their original transaction link; voids retain their source status. Tips and customer surcharges are shown only when returned. Processing fees are unavailable. Currency stays unknown when the gateway enables multiple currencies.</p>
@@ -8,7 +10,7 @@
       <div><%= label_tag :to, 'Last UTC date (optional)' %><%= date_field_tag :to, nil, class: 'input' %></div>
       <%= submit_tag 'Import reporting data', class: 'btn-primary' %>
     <% end %>
-    <p class="text-xs text-taupe">Defaults to the previous 7 days. Each window must be at most 31 days. Imports run in the job queue; refresh to see completion or failure. Replays update existing source transactions. An unobserved void or decline that has left the unsettled list may be missing; compare portal exports for a complete historical audit.</p>
+    <p class="text-xs text-taupe">Defaults to the previous 7 days. Each window must be at most 31 days. Imports run in the job queue; this report refreshes every 30 seconds. Source availability and queue delays still apply. Replays update existing source transactions. An unobserved void or decline that has left the unsettled list may be missing; compare portal exports for a complete historical audit.</p>
   <% end %>
   <%= form_with url: pos_connection_path(@provider[:key]), method: :get, data: { turbo: false }, class: 'flex flex-wrap gap-3 items-end' do %>
     <div><%= label_tag :report_date, 'Reporting day (UTC)' %><%= date_field_tag :report_date, @report_date, class: 'input' %></div><%= submit_tag 'View day', class: 'btn-ghost' %>
@@ -29,3 +31,6 @@
     <% (@report_batches || []).each do |row| %><tr><td><%= row.source_batch_id %></td><td><%= row.settled_at&.utc&.iso8601 %><br><%= row.settlement_state %></td><td><%= row.payment_method %></td><td><%= row.statistics.to_json %></td></tr><% end %>
   </tbody></table></div>
 </section>
+
+<% end %>
+</div>

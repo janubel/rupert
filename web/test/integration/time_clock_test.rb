@@ -142,6 +142,14 @@ class TimeClockTest < ActionDispatch::IntegrationTest
     assert_equal Time.zone.parse('2026-10-10 12:00:00'), shift2.reload.started_at
   end
 
+  test 'refreshing commission frame does not reference its own source again' do
+    login(@admin)
+    get commission_preview_time_clock_path, headers: { 'Turbo-Frame' => 'commission-preview' }
+    assert_response :success
+    assert_select 'turbo-frame#commission-preview[src]', count: 0
+    assert_select 'turbo-frame#commission-preview h1', text: 'Commission preview'
+  end
+
   test 'commission preview requires payroll read and validates window' do
     get commission_preview_time_clock_path
     assert_response :redirect
