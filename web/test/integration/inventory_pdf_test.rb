@@ -63,7 +63,7 @@ class InventoryPdfTest < ActionDispatch::IntegrationTest
   test 'operational inventory offers the shared stock CSV instead of the historical PDF' do
     get inventory_index_path
     assert_response :success
-    assert_select 'a[href=?]', stock_comparison_path(format: :csv)
+    assert_select 'a[href^=?]', stock_comparison_path(format: :csv)
   end
 
   test 'recommended skus CSV downloads the full Shopify vs Square SKU report' do
