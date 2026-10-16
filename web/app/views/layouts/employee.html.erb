@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <%= render "layouts/favicon" %>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title><%= [content_for(:title), 'Rupert'].compact.join(' · ') %></title>
   <meta name="turbo-cache-control" content="no-cache">
   <meta name="theme-color" content="#108184">
   <link rel="manifest" href="/employee/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/employee/icon-192.png">
   <%= csrf_meta_tags %><%= csp_meta_tag %>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,7 +20,10 @@
   <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:fixed focus:left-4 focus:top-3">Skip to content</a>
   <header class="workspace-header">
     <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-      <%= link_to 'Rupert', employee_app_path(preview: @preview ? 1 : nil), class: 'app-brand text-lg font-semibold text-olive-deep', aria: { label: 'My time home' } %>
+      <%= link_to employee_app_path(preview: @preview ? 1 : nil), class: 'app-brand text-lg font-semibold text-olive-deep', aria: { label: 'My time home' } do %>
+        <img src="/icon.png?v=rupert-dog-1" width="40" height="40" alt="" style="width:40px;height:40px;object-fit:contain;flex-shrink:0">
+        <span>Rupert</span>
+      <% end %>
       <% if Current.user %>
         <div class="flex items-center gap-3 text-sm"><span><%= Current.user.display_name %></span><% unless @preview %><%= button_to 'Sign out', logout_path, method: :delete, class: 'text-mocha underline' %><% end %></div>
       <% end %>
