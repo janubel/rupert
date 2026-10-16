@@ -31,3 +31,5 @@ Across days now shows each date's close-check count, current/missing/stale revie
 The forecast baseline panel links to close evidence, comparison across dates and overdue work. Changing the entered close date hides the previous baseline status and asks for calculation to refresh it, while preserving entered cash assumptions. Open close checks do not prevent manual scenario planning or replace the reviewer’s close decision.
 
 The [across-date close deployment receipt](financial-close-across-days-deployment-2026-10-16.md) records verification and recovery for these changes.
+
+Use the date-focus shortcuts to show overdue work, missing register reports, missing/stale reviews or changed close packages within the selected seven dates. Focus counts describe dates, not distinct requests; the global priority queue remains across all dates. The next action on each date and forecast baseline goes directly to the earliest overdue follow-up with its owner and latest note, or to the leading close check when no overdue work remains. These are navigation shortcuts: they do not change progress, send reminders or certify a close.

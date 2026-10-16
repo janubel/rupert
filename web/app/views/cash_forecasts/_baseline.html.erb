@@ -4,6 +4,7 @@
     <h2 class="font-display text-xl">Close baseline · <%= day.strftime('%b %-d, %Y') %></h2>
     <p class="text-sm font-semibold <%= 'text-amber-950' if status[:checks].positive? %>"><%= status[:review] %> · <%= pluralize(status[:checks], 'close check') %> needing action · <%= pluralize(@baseline.open_follow_ups.size, 'open follow-up') %> · <%= overdue %> overdue</p>
     <p class="text-sm text-mocha">You can plan cash while close checks remain open. Resolve or document those exceptions in financial close. Opening cash remains the amount you enter.</p>
+    <%= render 'financial_close/next_action', status: status, day: day %>
     <div class="flex flex-wrap gap-2"><%= link_to 'Inspect baseline evidence', financial_close_path(day: day.iso8601, anchor: 'close-blockers'), class: 'btn-ghost btn-sm' %><%= link_to 'Compare close dates', overview_reconciliation_follow_ups_path(ending_on: day.iso8601, anchor: 'business-days'), class: 'btn-ghost btn-sm' %><% if overdue.positive? %><%= link_to "Work #{pluralize(overdue, 'overdue follow-up')}", reconciliation_follow_ups_path(day: day.iso8601, status: 'overdue'), class: 'btn-primary btn-sm' %><% end %></div>
   </div>
   <p hidden role="status" data-cash-forecast-form-target="baselineChanged" class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">Close date changed. Calculate the scenario to refresh its baseline review and follow-up status. Your entered cash plan stays below.</p>

@@ -69,6 +69,7 @@ class FinancialCloseWorkflow
   def status_summary
     package = packages.first
     { checks: blockers.size,
+      next_overdue: open_follow_ups.find(&:overdue?), next_blocker: blockers.first,
       review: !review ? 'Review not recorded' : !review_current? ? 'Changed since review' : review.status.humanize,
       package_id: package&.id, disposition: package&.metadata&.fetch('disposition', nil),
       package_current: package && package.metadata['workflow_digest'] == digest }

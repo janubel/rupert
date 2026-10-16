@@ -179,7 +179,7 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
 
   test 'across dates exposes close and overdue actions with the selected date for report readers' do
     travel_to Time.zone.parse('2026-10-16 12:00') do
-      ReconciliationFollowUp.create!(category: 'missing_report', source: 'bank', document_kind: 'bank_statement', period_from: @day, period_to: @day,
+      item = ReconciliationFollowUp.create!(category: 'missing_report', source: 'bank', document_kind: 'bank_statement', period_from: @day, period_to: @day,
         title: 'Overdue original for close', notes: 'Local next step only.', due_on: @day, submission_key: SecureRandom.uuid)
       @user.update!(role: 'reporting')
       assert_no_enqueued_jobs do
@@ -188,6 +188,13 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
         end
       end
       assert_response :success
+      get overview_reconciliation_follow_ups_path(ending_on: @day, focus: 'overdue')
+      assert_select 'article[aria-label^="Business date"]', count: 1
+      assert_select '[aria-label="Next close action for 2026-10-14"]' do
+        assert_select 'a[href=?]', reconciliation_follow_up_path(item), text: 'Open this follow-up'
+        assert_select 'a', text: 'Record progress on this follow-up', count: 0
+      end
+      assert_select 'a[aria-current="page"]', text: 'Overdue work · 1'
       assert_select '[aria-label="Close status for 2026-10-14"]' do
         assert_select 'a[href=?]', financial_close_path(day: @day), text: 'Open financial close'
         assert_select 'a[href=?]', cash_forecast_path(day: @day), text: 'Plan cash from this date'
@@ -195,6 +202,15 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
       end
       get cash_forecast_path(day: @day)
       assert_select '[aria-label="Forecast baseline close status"] a[href=?]', reconciliation_follow_ups_path(day: @day, status: 'overdue'), text: 'Work 1 overdue follow-up'
+      assert_select '[aria-label="Forecast baseline close status"] a[href=?]', reconciliation_follow_up_path(item), text: 'Open this follow-up'
+      get overview_reconciliation_follow_ups_path(ending_on: @day, focus: 'changed')
+      assert_select 'article[aria-label^="Business date"]', count: 0
+      assert_includes response.body, 'No dates match this focus'
+      @user.update!(role: 'admin')
+      get overview_reconciliation_follow_ups_path(ending_on: @day, focus: 'overdue')
+      assert_select '[aria-label="Next close action for 2026-10-14"] a[href=?]', reconciliation_follow_up_path(item, anchor: 'record-progress'), text: 'Record progress on this follow-up'
+      get overview_reconciliation_follow_ups_path(ending_on: @day, focus: 'invalid')
+      assert_select 'article[aria-label^="Business date"]', count: 7
     end
   end
 

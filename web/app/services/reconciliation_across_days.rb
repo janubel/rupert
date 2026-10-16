@@ -3,6 +3,8 @@
 # A bounded, live view of local controls and saved requests. It does not fetch
 # providers, decrypt file bodies, infer report expectations or certify review.
 class ReconciliationAcrossDays
+  FOCUS = { 'all' => 'All dates', 'overdue' => 'Overdue work', 'missing' => 'Missing reports',
+    'review' => 'Missing / stale reviews', 'changed' => 'Changed close packages' }.freeze
   attr_reader :ending_on
 
   def initialize(ending_on: Date.yesterday.iso8601)
@@ -29,6 +31,18 @@ class ReconciliationAcrossDays
 
   def days_needing_attention
     days.count { |row| row[:counts].values.any?(&:positive?) || row[:follow_ups].positive? }
+  end
+
+  def focused_days(focus = 'all')
+    days.select do |entry|
+      case focus
+      when 'overdue' then entry[:overdue].positive?
+      when 'missing' then entry[:counts][:missing_controls].positive?
+      when 'review' then ['Review not recorded', 'Changed since review'].include?(entry[:close][:review])
+      when 'changed' then entry[:close][:package_id].present? && !entry[:close][:package_current]
+      else true
+      end
+    end
   end
 
   def untracked_reports
