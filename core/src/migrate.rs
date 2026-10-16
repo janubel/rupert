@@ -25,6 +25,12 @@ pub const TENANT: &[&str] = &[
      CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, kind TEXT NOT NULL,
         key TEXT, data TEXT NOT NULL);
      CREATE TABLE connections (provider TEXT PRIMARY KEY, sealed BLOB NOT NULL, updated_at INTEGER NOT NULL) WITHOUT ROWID;",
+    // 3: the outbox does not need AUTOINCREMENT (pruning always keeps the newest rows, so ids
+    // never repeat); dropping it removes a sqlite_sequence write from every event insert.
+    "CREATE TABLE events_new (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, kind TEXT NOT NULL, key TEXT, data TEXT NOT NULL);
+     INSERT INTO events_new SELECT id,at,kind,key,data FROM events;
+     DROP TABLE events;
+     ALTER TABLE events_new RENAME TO events;",
 ];
 
 pub const CENTRAL: &[&str] = &[

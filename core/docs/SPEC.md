@@ -279,9 +279,44 @@ same machine (2 rounds each, medians of 5 runs per round):
 
 Reads are unchanged. Writes are ~35% lower: each adjust now also inserts an `events`
 row and serialises its JSON inside the same transaction, which is the price of the
-replayable realtime feed. Two things could buy it back if writes become the
-bottleneck (neither tried): batch the event rows in one multi-row insert per group
-commit, or make the outbox optional per tenant.
+replayable realtime feed.
+
+### Follow-up: trying to win the write cost back (2026-10-16)
+
+Tried, in order, each A/B'd interleaved against milestone 2 on the same machine
+(medians of 5 x 6 s per cell, write rps; **compare within a session only**, the
+absolute level of the same binary drifted between 52k and 113k across sessions):
+
+| Variant | Write rps (per round) |
+| --- | --- |
+| milestone 2 (no outbox) | 52.5k, 56.5k / 55.6k, 58.9k / 81.8k, 66.9k, 65.1k |
+| milestone 3, per-row event insert (AUTOINCREMENT) | 33.1k, 32.9k / 33.1k, 33.5k / 37.7k, 36.7k, 40.5k |
+| A: one multi-row `INSERT ... RETURNING` for events per group commit | 27.9k, 28.2k |
+| B: A + `UPDATE ... RETURNING` + multi-row movements insert | 21.6k, 23.1k / 23.3k, 22.3k |
+| C: constant SQL via `json_each` (events and movements) | 20.1k, 19.9k |
+| **D: per-row insert, no AUTOINCREMENT (shipped as migration 3)** | **39.0k, 42.5k, 43.9k** |
+
+- **Batching the event rows made writes slower, not faster** (about 15-40% below the
+  per-row version in every round). My hypothesis that varying-length SQL defeated the
+  statement cache was wrong: the constant-SQL `json_each` form was slower still. I did
+  not profile further, so the real reason (JSON build/parse per batch is the likely
+  cost) is unconfirmed. All batching code was reverted.
+- **Dropping `AUTOINCREMENT` helps:** 3 of 3 rounds, median 37.7k -> 42.5k (~+12%). The
+  outbox never reuses ids because pruning keeps the newest rows, so the per-insert
+  `sqlite_sequence` write was pure overhead. Migration 3 rebuilds the table in place;
+  verified against a data directory created by the old schema (version 2 -> 3, existing
+  events kept, 20,000 concurrent adjusts still exactly accounted for).
+- Net: writes remain ~36% below the no-outbox baseline (median 42.5k vs 66.9k in the last
+  session). Reads are unchanged in every comparison.
+- New test `tests/adjust_consistency.py`: 20,000 concurrent adjusts on one SKU must
+  produce exactly that many quantity drops, `movements` rows and `events` rows, with
+  unique event ids. It passes for every variant above, so the batching variants were
+  slower but not incorrect.
+- A first A/B round was run while a previous benchmark was still going and collided with
+  it (leftover server on the port); that round was discarded and re-run clean.
+- Untried ideas: make the outbox optional per tenant (the cost is paid even with no
+  subscribers), write events from a separate connection after commit (weaker durability),
+  or store compact non-JSON payloads.
 
 Not done: Shopify per-location levels and orders, Square orders, scheduled
 (automatic) syncs, webhooks, mirror search, SKU linking between Shopify and Square,
