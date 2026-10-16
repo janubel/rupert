@@ -1,0 +1,14 @@
+<section class="card p-4" aria-label="Directory sync status">
+  <p class="text-sm font-semibold text-ink">Source directories · every 30 minutes</p>
+  <% Directories::Sync::PAIRS.each do |provider, kinds| %>
+    <% next unless kinds.include?(kind) %>
+    <% state = DirectorySyncState.find_by(provider: provider, kind: kind) %>
+    <p class="mt-2 text-sm text-mocha">
+      <span class="pill-taupe"><%= provider == 'ctrax' ? 'C-Trax' : 'Shopify' %> · <%= state&.status || 'Not synced' %></span>
+      <% if state&.last_success_at %>
+        <%= number_with_delimiter(state.record_count) %> records · last successful read <%= state.last_success_at.in_time_zone('America/New_York').strftime('%b %-d, %-I:%M %p %Z') %>
+      <% end %>
+      <% if state&.error.present? %><span class="text-rose"><%= state.error %></span><% end %>
+    </p>
+  <% end %>
+</section>

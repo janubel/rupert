@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 production:
+  source_directories:
+    class: DirectorySyncJob
+    queue: default
+    schedule: every 30 minutes
   iris_daily_deposits_web:
     class: IrisDailyDepositsWebJob
     queue: default

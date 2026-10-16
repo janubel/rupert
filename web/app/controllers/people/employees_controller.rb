@@ -22,6 +22,17 @@ module People
       @awaiting_timesheets = People::Timesheet.awaiting_review.count if Current.user.can?('timesheets.read')
     end
 
+    def sync_directory
+      authorize(:module, :hr_write?)
+      authorize(:module, :sync_write?)
+      if Directories::Sync.available?('ctrax')
+        DirectorySyncJob.perform_later(Current.tenant_id, 'ctrax', 'employees', manual: true)
+        redirect_to(people_employees_path, notice: 'C-Trax employee directory sync queued. Refresh to see the latest read status.')
+      else
+        redirect_to(people_employees_path, alert: 'Configure the authorized C-Trax connection first.')
+      end
+    end
+
     def show
       authorize(@employee)
       @timesheets = @employee.timesheets.recent(12) if Current.user.can?('timesheets.read')

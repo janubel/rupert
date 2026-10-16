@@ -84,37 +84,36 @@ class DriveBackupTest < ActionDispatch::IntegrationTest
     GoogleOauthService.expects(:exchange_code!).never
     GoogleDriveBackupService.expects(:exchange_code!).with('drive-code', redirect_uri: google_callback_url)
     assert_no_difference 'User.count' do
-      get google_callback_path, params: {state: state, code: 'drive-code'}
+      get google_callback_path, params: { state: state, code: 'drive-code' }
     end
     assert_redirected_to settings_path
     assert_equal 'Connected to Google Drive.', flash[:notice]
     GoogleDriveBackupService.expects(:exchange_code!).never
-    get google_callback_path, params: {state: state, code: 'drive-code'}
+    get google_callback_path, params: { state: state, code: 'drive-code' }
     assert_match(/state check/, flash[:alert])
   end
 
   test 'backup callback rejects tampering, expiry and revoked platform access' do
     state = begin_drive_consent
     GoogleDriveBackupService.expects(:exchange_code!).never
-    get google_callback_path, params: {state: state + 'x', code: 'bad'}
+    get google_callback_path, params: { state: state + 'x', code: 'bad' }
     assert_match(/state check/, flash[:alert])
     state = begin_drive_consent
     travel 11.minutes do
-      get google_callback_path, params: {state: state, code: 'expired'}
+      get google_callback_path, params: { state: state, code: 'expired' }
       assert_match(/state check/, flash[:alert])
     end
     state = begin_drive_consent
     User.find_by!(email: 'root@example.com').update!(active: false)
-    get google_callback_path, params: {state: state, code: 'revoked'}
+    get google_callback_path, params: { state: state, code: 'revoked' }
     assert_redirected_to login_path
   end
 
   test 'declined backup consent cannot exchange a code' do
     state = begin_drive_consent
     GoogleDriveBackupService.expects(:exchange_code!).never
-    get google_callback_path, params: {state: state, error: 'access_denied'}
+    get google_callback_path, params: { state: state, error: 'access_denied' }
     assert_redirected_to settings_path
     assert_match(/declined/, flash[:alert])
   end
-
 end

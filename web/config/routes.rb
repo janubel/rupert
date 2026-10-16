@@ -78,7 +78,9 @@ Rails.application.routes.draw do
       post :refund
     end
   end
-  resources :customers, only: %i[index show new create edit update]
+  resources :customers, only: %i[index show new create edit update] do
+    post :sync_directory, on: :collection
+  end
   namespace :projects do
     resources :projects, only: %i[index show new create edit update destroy] do
       member { post :transition }
@@ -142,6 +144,7 @@ Rails.application.routes.draw do
   end
   namespace :people do
     resources :employees, only: %i[index show new create edit update destroy] do
+      post :sync_directory, on: :collection
       member { post :transition }
     end
     resources :departments, only: %i[index new create edit update]

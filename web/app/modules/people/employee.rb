@@ -10,7 +10,7 @@ module People
 
     self.table_name = 'employees'
 
-    EMPLOYMENT_TYPES = %w[full_time part_time contractor seasonal].freeze
+    EMPLOYMENT_TYPES = %w[unspecified full_time part_time contractor seasonal].freeze
 
     belongs_to :user, optional: true
     belongs_to :department, class_name: 'People::Department', optional: true
