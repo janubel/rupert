@@ -20,7 +20,7 @@
       <% if @connection.credential_keys.any? %>
         <fieldset class="space-y-3"><legend class="font-medium">Dedicated integration credentials</legend><p class="text-xs text-taupe">Stored encrypted. Saved values are never filled back into this form. Leave fields blank to keep existing values; use Remove saved credentials to clear them. Saving does not contact the vendor.</p>
           <% @connection.credential_keys.each do |key| %>
-            <% label = { 'api_url' => 'API endpoint URL', 'account_id' => 'Account UUID', 'company_id' => 'Company ID', 'client_id' => 'Client ID', 'client_secret' => 'Client secret', 'api_username' => 'API username', 'api_password' => 'API password', 'api_login_id' => 'API Login ID', 'transaction_key' => 'Transaction key', 'security_key' => 'Private API security key' }.fetch(key) %>
+            <% label = { 'api_url' => 'API endpoint URL', 'account_id' => 'Account UUID', 'company_id' => 'Company ID', 'client_id' => 'Client ID', 'client_secret' => 'Client secret', 'api_username' => 'API username', 'api_password' => 'API password', 'api_login_id' => 'API Login ID', 'transaction_key' => 'Transaction key', 'client_key' => 'Public client key', 'security_key' => 'Private API security key' }.fetch(key) %>
             <div><%= label_tag "pos_credential_#{key}", label, class: 'block text-sm mb-1' %><%= password_field_tag "pos_connection[credential_secret][#{key}]", nil, id: "pos_credential_#{key}", autocomplete: 'new-password', maxlength: { 'api_login_id' => 20, 'transaction_key' => 16 }.fetch(key, 4096), class: 'input', placeholder: @connection.errors.empty? && @connection.credential_values[key].present? ? 'Saved · leave blank to keep' : 'Not saved' %></div>
           <% end %>
         </fieldset>

@@ -57,6 +57,24 @@ class ConnectionsGuide
       renewal_note: "Rotate the transaction key any time from the Merchant Interface. Keep AUTHORIZE_NET_SANDBOX=1 until you're ready to take real charges."
     ),
     Service.new(
+      key: 'apple_pay',
+      name: 'Apple Pay',
+      description: 'Apple Pay button on warehouse checkout. Payments still run through Authorize.net.',
+      keys: %w[APPLE_PAY_MERCHANT_ID APPLE_PAY_DISPLAY_NAME APPLE_PAY_IDENTITY_CERT APPLE_PAY_IDENTITY_KEY],
+      find_url: 'https://developer.apple.com/account/resources/identifiers/list/merchant',
+      find_hint: 'Apple Developer → Identifiers → Merchant IDs. Create a Merchant ID, add your checkout domain, download the domain-association file into web/public/.well-known/, and create a Merchant Identity Certificate (paste its PEM certificate and private key). Separately, in the Authorize.net Merchant Interface (Account → Digital Payment Solutions → Apple Pay) generate the Payment Processing certificate request and upload Apple\'s signed certificate back.',
+      renewal_note: 'Apple certificates expire after about 25 months. Renew both the Merchant Identity and Payment Processing certificates before then or the button stops working.'
+    ),
+    Service.new(
+      key: 'google_pay',
+      name: 'Google Pay',
+      description: 'Google Pay button on warehouse checkout. Payments still run through Authorize.net.',
+      keys: %w[GOOGLE_PAY_MERCHANT_ID GOOGLE_PAY_MERCHANT_NAME],
+      find_url: 'https://pay.google.com/business/console',
+      find_hint: 'Google Pay & Wallet Console → your business profile → Merchant ID. Test mode (Authorize.net sandbox) needs no merchant ID; production needs Google to approve a screenshot of the checkout. No Authorize.net setup is needed: Rupert tells Google to use gateway authorizenet with your API Login ID.',
+      renewal_note: nil
+    ),
+    Service.new(
       key: 'sync',
       name: 'Sync schedule',
       description: 'How often syncs run and how much history they pull. No secrets.',

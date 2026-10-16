@@ -10,10 +10,18 @@
   </header>
 
   <%= form_tag warehouse_checkout_submit_path(@share.token), method: :post,
-        data: { turbo: false, controller: "accept-payment",
+        data: { turbo: false, controller: "accept-payment#{' apple-pay' if @apple_pay}#{' google-pay' if @google_pay}",
                 accept_payment_login_id_value: @login_id,
                 accept_payment_client_key_value: @client_key,
                 accept_payment_sandbox_value: AuthorizeNetClient.sandbox?,
+                apple_pay_session_url_value: warehouse_apple_pay_session_path(@share.token),
+                apple_pay_total_value: format("%.2f", @cart.total_cents / 100.0),
+                apple_pay_label_value: @share.name,
+                google_pay_login_id_value: @login_id,
+                google_pay_total_value: format("%.2f", @cart.total_cents / 100.0),
+                google_pay_environment_value: (AuthorizeNetClient.sandbox? ? "TEST" : "PRODUCTION"),
+                google_pay_merchant_id_value: EnvStore.fetch("GOOGLE_PAY_MERCHANT_ID", ""),
+                google_pay_merchant_name_value: EnvStore.fetch("GOOGLE_PAY_MERCHANT_NAME", "").presence || @share.name,
                 action: "submit->accept-payment#submit" } do %>
     <div class="grid gap-4 lg:grid-cols-5">
       <div class="space-y-4 lg:col-span-3">
@@ -59,6 +67,15 @@
 
         <div class="card card-pad">
           <h2 class="font-display text-xl text-ink">Payment</h2>
+          <% if @google_pay %>
+            <div hidden data-google-pay-target="wrapper" class="mt-4"><div data-google-pay-target="button"></div></div>
+          <% end %>
+          <% if @apple_pay %>
+            <div hidden data-apple-pay-target="wrapper" class="mt-4">
+              <button type="button" data-apple-pay-target="button" data-action="apple-pay#pay" aria-label="Pay with Apple Pay" style="-webkit-appearance:-apple-pay-button;-apple-pay-button-type:buy;-apple-pay-button-style:black;height:44px;width:100%;border-radius:12px;"></button>
+              <p class="mt-2 text-center text-xs text-taupe">or pay with a card</p>
+            </div>
+          <% end %>
           <div class="mt-4 space-y-3">
             <div>
               <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha">Card number</label>
