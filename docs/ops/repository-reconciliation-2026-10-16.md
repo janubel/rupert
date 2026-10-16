@@ -47,6 +47,8 @@ Before cleanup, every fetched ref and all 31 open PR head/base identities were p
 
 ## Verification and publication
 
-Check both database CI suites, product-site generation, local documentation links and mobile CI. Before reconciling the server checkout, recheck main and the exact running revision under `/var/lock/rupert-deploy.lock`. Require zero application/mobile/deployment/tool/workflow differences from the live baseline, and fast-forward only. Do not run asset builds, migrations, service restarts or instance snapshots for this documentation/Git-history reconciliation.
+Check both database CI suites, product-site generation, local documentation links and mobile CI. Before reconciling the server checkout, recheck main and the exact running revision under `/var/lock/rupert-deploy.lock`. Require zero application/mobile/deployment differences from the observed live tree (including its captured checksum drift); review the CI-only workflow/validation tool separately. Fast-forward only. Do not run asset builds, migrations, service restarts or instance snapshots for this documentation/Git-history reconciliation.
 
 If SER8 advances during review, incorporate and validate that newer release before publication; never replace it with this older checkpoint. Keep distinct undeployed PRs open as drafts, with their original branches intact.
+
+The CI compatibility repair checks every installed declared package against its manifest range and SDK-controlled packages against the installed Expo compatibility map. A mismatch or missing dependency fails; self-checks cover both. Expo Doctor continues its other checks, and vulnerability auditing remains online. Dependency versions and application source are unchanged.
