@@ -27,7 +27,7 @@ module People
 
     def show
       authorize(@timesheet)
-      @entry = @timesheet.entries.new(worked_on: [Date.current, @timesheet.period_end].min)
+      @entry = People::TimesheetEntry.new(timesheet: @timesheet, worked_on: [Date.current, @timesheet.period_end].min)
       respond_to do |format|
         format.html
         format.csv do

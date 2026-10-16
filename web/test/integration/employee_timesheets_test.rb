@@ -306,6 +306,7 @@ class EmployeeTimesheetsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'input[name="timesheet_entry[worked_on]"]'
     assert_select 'input[name="timesheet_entry[hours]"]'
+    assert_select 'td.empty-row', text: 'No entries yet.'
     sign_in(@admin)
     get new_people_employee_path
     assert_response :success
