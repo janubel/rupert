@@ -1,6 +1,6 @@
 # Main / SER8 repository reconciliation — October 16, 2026
 
-The initial baseline was the clean SER8 dog-favicon release `2617ab03a11ebeb48327643160f4ec86f83e6024`. During review, SER8 advanced to dog-header release `0cd3be6031f5ebe96ba0679bc8f02ab4691a7d3b`; its history and exact application files are included too. The observed worktree removed only the Bundler 4.0.16 checksum entry from `web/Gemfile.lock`; the original patch is preserved and this non-version change is incorporated so the checkout can become clean without discarding it. The previous main tip is `d63b99e8e294c9d6acbe07e56beab48079df9c3a`. Both original histories remain parents of the reconciliation.
+The initial baseline was the clean SER8 dog-favicon release `2617ab03a11ebeb48327643160f4ec86f83e6024`. During review, SER8 advanced to dog-header release `0cd3be6031f5ebe96ba0679bc8f02ab4691a7d3b`; its history and exact application files are included too. SER8 then advanced to `e9a495987cc01224e0488b2317c0f043dbc845f2` (C-Trax dashboard and workspace UX, PR #90), which is also included as a merge parent. The observed worktree removed only the Bundler 4.0.16 checksum entry from `web/Gemfile.lock`; the original patch is preserved and this non-version change is incorporated so the checkout can become clean without discarding it. The previous main tip is `d63b99e8e294c9d6acbe07e56beab48079df9c3a`. Both original histories remain parents of the reconciliation.
 
 Application and mobile application sources match the observed running tree. CI-only SDK compatibility checks are made reproducible against the installed Expo SDK manifest, while security auditing remains online; no mobile dependency versions are changed. Main-only NMI research, transaction-history operations and unique deployment/investigation documents are retained as documentation. Historical investigation notes are explicitly identified. This does not activate paused provider access, change credentials, run migrations or restart production services.
 
@@ -12,7 +12,7 @@ Before cleanup, every fetched ref and all 31 open PR head/base identities were p
 
 | PR | Original head | Disposition |
 | --- | --- | --- |
-| [#90](https://github.com/techmore/rupert/pull/90) | `e9a495987cc0` | Newly opened dashboard work; preserve its branch and keep open unless a subsequent verified deployment includes it. |
+| [#90](https://github.com/techmore/rupert/pull/90) | `e9a495987cc0` | Dashboard work deployed during reconciliation; include its full history and resolve after main consolidation. |
 | [#89](https://github.com/techmore/rupert/pull/89) | `1b2cdf10bb7b` | Historical-record operations guide retained; merge its original history. |
 | [#88](https://github.com/techmore/rupert/pull/88) | `15aa91cab546` | Included in running release ancestry; resolve after main consolidation. |
 | [#87](https://github.com/techmore/rupert/pull/87) | `711793b6f132` | Included in running release ancestry; resolve after main consolidation. |
