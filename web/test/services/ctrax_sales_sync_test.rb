@@ -44,6 +44,10 @@ class CtraxSalesSyncTest < ActiveSupport::TestCase
     retail = period['rows'].find { |row| row['source'] == 'C-Trax' && row['metric'] == 'Recorded order total' }
     assert_equal '10.0', retail['amount']
     assert_equal 'USD', retail['currency']
+    CtraxDay.create!(day.attributes.except('id', 'created_at', 'updated_at').merge('business_date' => Date.new(2026, 10, 16)))
+    overlapping = MoneyReconciliationReport.new(kind: 'weekly', date: '2026-10-15').payload
+    refute overlapping['rows'].any? { |row| row['source'] == 'C-Trax' }
+    assert overlapping['warnings'].any? { |warning| warning.include?('order IDs repeat') }
 
     assert_equal 0, result.session_rows.first['variance']
     assert_requested :get, "#{@origin}/api/v1/stores/7/orders", headers: { 'X-Store-Timezone' => 'America/New_York' },

@@ -122,6 +122,11 @@ class MoneyReconciliationReport
     snapshots = CtraxDay.where(business_date: from..to).to_a
     snapshots.group_by { |day| [day.api_origin, day.store_id, day.currency, day.timezone] }.each do |(_origin, store, currency, timezone), days|
       checks = days.map { |day| Ctrax::Reconciliation.new(day) }
+      identities = checks.flat_map { |check| check.orders.map { |row| row['id'] } }
+      if identities.uniq.size != identities.size
+        @warnings << 'C-Trax source order IDs repeat across stored dates; no period total is inferred. Review the original day snapshots.'
+        next
+      end
       metrics = {
         'Recorded order total' => checks.map { |check| check.sum(check.orders, 'total') },
         'Recorded tax' => checks.map { |check| check.sum(check.orders, 'tax') },
