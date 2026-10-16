@@ -9,12 +9,17 @@ class ReconcileController < AuthenticatedController
   before_action :authorize_read
 
   def index
-    @summary = DataCache.fetch('catalog/summary') { CatalogLinks.summary }
+    response.headers['Cache-Control'] = 'private, no-store'
+    @summary = DataCache.fetch('catalog/summary/v2') { CatalogLinks.summary }
+    @query = params[:q].to_s.strip.first(150)
+    @status = %w[matched mismatched].include?(params[:status]) ? params[:status] : 'all'
     # Pagy paginates relations; CatalogLinks.rows is a sorted Struct array, so
     # slice it manually against a count-only Pagy. Rows are cached behind the
     # DataCache version — this audit only changes on sync, but building 563
     # rows costs ~250ms of AR allocation on every request otherwise.
-    rows = DataCache.fetch('catalog/rows') { CatalogLinks.rows }
+    rows = DataCache.fetch('catalog/rows/v2') { CatalogLinks.rows }
+    rows = rows.select { |row| row.status == @status } unless @status == 'all'
+    rows = rows.select { |row| [row.sku, row.square_sku, row.shopify_title, row.product_title, row.square_name].join(' ').downcase.include?(@query.downcase) } if @query.present?
     @pagy = Pagy.new(count: rows.length, page: params[:page], items: 50)
     @rows = rows[@pagy.offset, @pagy.items] || []
     @size_groups = size_family_groups

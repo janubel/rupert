@@ -1,11 +1,12 @@
 <% content_for :title, "Catalog Links" %>
-<div class="space-y-6">
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :stock %>
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Catalog Links</h1>
-      <p class="mt-1 max-w-2xl text-sm text-mocha">Which sellable items are the same across Shopify and Square. This is an identity audit only — Shopify and Square are separate locations with independent inventories, so different quantities are normal and never auto-corrected.</p>
+      <p class="mt-1 max-w-2xl text-sm text-mocha">Review which sellable items are linked across Shopify and Square. Financial reconciliation lives in Money → Financial close. This is an identity audit only — Shopify and Square are separate locations with independent inventories, so different quantities are normal and never auto-corrected.</p>
     </div>
-    <%= link_to "Download PDF snapshot", pdf_inventory_index_path, class: "btn-ghost", data: { turbo: false } %>
+    <% if retail_business_access?('inventory.read') %><%= link_to 'Compare Shopify & C-Trax stock', inventory_index_path, class: 'btn-ghost' %><% end %>
   </section>
 
   <section class="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -28,14 +29,78 @@
     </div>
   </section>
 
-  <% if @size_groups.any? %>
+  <section class="card card-pad space-y-3" aria-label="Catalog link filters">
+    <h2 class="font-display text-xl">Find an identity link</h2>
+    <%= form_tag reconcile_index_path, method: :get, class: 'operations-filters' do %><div class="min-w-0"><%= label_tag :q, 'Product or either source SKU', class: 'field-label' %><%= search_field_tag :q, @query, maxlength: 150, placeholder: 'Product name or SKU', class: 'input' %></div><div><%= label_tag :status, 'Link status', class: 'field-label' %><%= select_tag :status, options_for_select([['All linked items', 'all'], ['SKU mismatches', 'mismatched'], ['Matched SKUs', 'matched']], @status), class: 'input' %></div><%= submit_tag 'Find links', class: 'btn-primary' %><%= link_to 'Clear filters', reconcile_index_path, class: 'btn-ghost' %><% end %>
+    <p role="status" class="text-sm text-mocha"><%= @pagy.count %> matching links · mismatches first. Summary cards above describe all catalog links.</p>
+  </section>
+  <section>
+    <div class="flex flex-wrap items-end justify-between gap-2">
+      <h2 class="font-display text-2xl text-ink">Linked items</h2>
+      <p class="text-xs text-taupe">Mismatches first. Quantities shown per platform are independent on purpose.</p>
+    </div>
+    <div class="card mt-3 overflow-hidden">
+      <div class="operations-table-region" role="region" tabindex="0" aria-label="Reconcile table">
+        <table class="operations-table w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr>
+              <th scope="col" class="th">SKU</th>
+              <th scope="col" class="th">Shopify</th>
+              <th scope="col" class="th">Square</th>
+              <th scope="col" class="th text-right">Shopify qty</th>
+              <th scope="col" class="th text-right">Square qty</th>
+              <th scope="col" class="th text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-fog">
+            <% if @rows.empty? %>
+              <tr>
+                <td colspan="6" class="empty-row">No links match this search and status. Clear the filters or review source imports.</td>
+              </tr>
+            <% end %>
+            <% @rows.each do |row| %>
+              <tr class="hover:bg-cream">
+                <td class="td font-mono text-xs text-mocha">
+                  <%= row.sku %>
+                  <% if row.status == "mismatched" %>
+                    <span class="ml-1 text-[10px] text-clay">↔ <%= row.square_sku.presence || "no Square SKU" %></span>
+                  <% end %>
+                </td>
+                <td class="td">
+                  <p class="font-medium text-ink"><%= row.shopify_title %></p>
+                  <p class="text-xs text-taupe"><%= row.product_title %></p>
+                </td>
+                <td class="td text-mocha"><%= row.square_name %></td>
+                <td class="td text-right text-mocha"><%= row.shopify_qty.nil? ? "Unknown" : row.shopify_qty %></td>
+                <td class="td text-right text-mocha"><%= row.square_qty.nil? ? "Unknown" : row.square_qty %></td>
+                <td class="td text-right">
+                  <% if row.status == "matched" %>
+                    <span class="pill-fern">matched</span>
+                  <% else %>
+                    <span class="pill-clay">mismatched</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <% if @pagy.pages > 1 %>
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-taupe">
+        <span>Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %> linked items.</span>
+        <%== pagy_nav(@pagy) %>
+      </div>
+    <% end %>
+  </section>
+  <details class="card card-pad"><summary class="disclosure-trigger font-semibold">Size families · reference</summary><p class="mb-4 text-sm text-mocha">This audit reads identity links. Review size changes in the dedicated Sizes workspace.</p>  <% if @size_groups.any? %>
     <section>
       <div class="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 class="font-display text-2xl text-ink">Size families</h2>
-          <p class="mt-1 text-sm text-mocha">Each root product with the sizes derived from its gram bank. Sizes are managed on the <a href="<%= size_families_path %>" class="font-semibold text-olive hover:underline">Sizes</a> page, not here.</p>
+          <p class="mt-1 text-sm text-mocha">Each root product with the sizes derived from its gram bank. Sizes are managed on the <span class="font-semibold">Sizes</span> page, not here.</p>
         </div>
-        <a href="<%= size_families_path %>" class="btn-ghost btn-sm">Manage on Sizes</a>
+        <% if retail_business_access?('inventory.read') %><%= link_to 'Review size families', size_families_path, class: 'btn-ghost btn-sm' %><% end %>
       </div>
 
       <% @size_groups.each do |group| %>
@@ -53,8 +118,8 @@
             <% end %>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+          <div class="operations-table-region" role="region" tabindex="0" aria-label="Reconcile table">
+            <table class="operations-table w-full text-sm">
               <thead class="border-b border-fog bg-haze/60">
                 <tr>
                   <th scope="col" class="th">Derives from</th>
@@ -71,7 +136,7 @@
                     <td class="td font-semibold text-ink">Root</td>
                     <td class="td font-mono text-xs text-ink"><%= group[:root_item][:sku] %></td>
                     <td class="td text-right text-mocha">1g</td>
-                    <td class="td text-right font-semibold text-ink"><%= group[:root_item][:current] || "—" %></td>
+                    <td class="td text-right font-semibold text-ink"><%= group[:root_item][:current].nil? ? "Unknown" : group[:root_item][:current] %></td>
                     <td class="td text-right text-taupe">—</td>
                     <td class="td text-right"><span class="pill-olive">root</span></td>
                   </tr>
@@ -81,7 +146,7 @@
                     <td class="td text-taupe"><%= group[:family].name %></td>
                     <td class="td font-mono text-xs text-ink"><%= m[:member].sku %></td>
                     <td class="td text-right font-medium text-ink"><%= m[:member].grams %>g</td>
-                    <td class="td text-right text-mocha"><%= m[:current].nil? ? "—" : m[:current] %></td>
+                    <td class="td text-right text-mocha"><%= m[:current].nil? ? "Unknown" : m[:current] %></td>
                     <td class="td text-right font-semibold text-olive"><%= m[:target].nil? ? "—" : m[:target] %></td>
                     <td class="td text-right">
                       <% if m[:pending] %>
@@ -104,104 +169,5 @@
     </section>
   <% end %>
 
-  <% pending_sizes = SizeChange.pending %>
-  <% if pending_sizes.any? %>
-    <div class="card overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-fog bg-haze/60 px-4 py-3">
-        <div>
-          <h2 class="font-display text-lg text-ink">Pending size changes (<%= pending_sizes.count %>)</h2>
-          <p class="text-xs text-taupe">Derived sizes from your size families awaiting approval before writing to Square.</p>
-        </div>
-        <%= link_to "Review all", size_families_path, class: "btn-ghost btn-sm" %>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
-            <tr>
-              <th scope="col" class="th">Family</th>
-              <th scope="col" class="th">SKU</th>
-              <th scope="col" class="th text-right">Grams</th>
-              <th scope="col" class="th text-right">Root</th>
-              <th scope="col" class="th text-right">Target</th>
-              <th scope="col" class="th text-right"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-fog">
-            <% pending_sizes.order(:sku).each do |change| %>
-              <tr class="hover:bg-cream">
-                <td class="td text-mocha"><%= change.family.name %></td>
-                <td class="td font-mono text-xs text-ink"><%= change.sku %></td>
-                <td class="td text-right text-mocha"><%= change.grams %></td>
-                <td class="td text-right text-mocha"><%= number_with_precision(change.root_grams, precision: 1) %></td>
-                <td class="td text-right font-semibold text-olive"><%= change.target_quantity %></td>
-                <td class="td text-right">
-                  <%= button_to "Approve", approve_size_family_path(change.family, change_id: change.id), method: :post, class: "btn-primary btn-sm", data: { confirm: "Write #{change.sku} to #{change.target_quantity} on Square?" } %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  <% end %>
-
-  <section>
-    <div class="flex flex-wrap items-end justify-between gap-2">
-      <h2 class="font-display text-2xl text-ink">Linked items</h2>
-      <p class="text-xs text-taupe">Mismatches first. Quantities shown per platform are independent on purpose.</p>
-    </div>
-    <div class="card mt-3 overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
-            <tr>
-              <th scope="col" class="th">SKU</th>
-              <th scope="col" class="th">Shopify</th>
-              <th scope="col" class="th">Square</th>
-              <th scope="col" class="th text-right">Shopify qty</th>
-              <th scope="col" class="th text-right">Square qty</th>
-              <th scope="col" class="th text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-fog">
-            <% if @rows.empty? %>
-              <tr>
-                <td colspan="6" class="empty-row">No SKU links yet — run a sync first.</td>
-              </tr>
-            <% end %>
-            <% @rows.each do |row| %>
-              <tr class="hover:bg-cream">
-                <td class="td font-mono text-xs text-mocha">
-                  <%= row.sku %>
-                  <% if row.status == "mismatched" %>
-                    <span class="ml-1 text-[10px] text-clay">↔ <%= row.square_sku.presence || "no Square SKU" %></span>
-                  <% end %>
-                </td>
-                <td class="td">
-                  <p class="font-medium text-ink"><%= row.shopify_title %></p>
-                  <p class="text-xs text-taupe"><%= row.product_title %></p>
-                </td>
-                <td class="td text-mocha"><%= row.square_name %></td>
-                <td class="td text-right text-mocha"><%= row.shopify_qty %></td>
-                <td class="td text-right text-mocha"><%= row.square_qty %></td>
-                <td class="td text-right">
-                  <% if row.status == "matched" %>
-                    <span class="pill-fern">matched</span>
-                  <% else %>
-                    <span class="pill-clay">mismatched</span>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <% if @pagy.pages > 1 %>
-      <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-taupe">
-        <span>Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %> linked items.</span>
-        <%== pagy_nav(@pagy) %>
-      </div>
-    <% end %>
-  </section>
+</details>
 </div>

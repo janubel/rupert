@@ -1,95 +1,20 @@
-<% content_for :title, "Accounts" %>
-<% cached_fragment("finance/accounts") do %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title">Accounts</h1>
-    <p class="mt-1 text-sm text-mocha">Payables — what the shop owes vendors — and receivables — what customers owe the shop.</p>
+<% content_for :title, 'Finance overview' %>
+<div class="operations-workspace space-y-6">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+  <%= render 'shared/operations_navigation', workspace: :finance %>
+  <header class="operations-header"><div><p class="eyebrow text-olive-deep">Money · balances and next steps</p><h1 class="page-title mt-2">Finance overview</h1><p class="mt-2 max-w-3xl text-sm text-mocha">Review recorded vendor balances and customer receivables, then open the close workspace for source evidence and bank checks.</p></div><% if retail_business_access?('reports.read') %><%= link_to 'Review today’s close', financial_close_path(day: Date.current), class: 'btn-primary' %><% end %></header>
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-3" aria-label="Vendor balance summary">
+    <% [['Vendor balances due', @payables_total, "#{@payables_count} vendors with a positive balance"], ['Vendor credits / prepayments', @credits_total, 'Shown separately from balances due'], ['Ordered, not received', @committed_total, 'Purchase commitments; separate from received goods']].each do |label, value, detail| %><div class="stat min-w-0"><p class="stat-label"><%= label %> · USD</p><p class="stat-value retail-money mt-2"><%= operations_money(value) %></p><p class="mt-2 text-xs text-mocha"><%= detail %></p></div><% end %>
   </section>
-
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-2">
-    <div class="stat">
-      <p class="stat-label">Accounts payable</p>
-      <p class="stat-value mt-1 <%= @payables_total.positive? ? "text-clay" : "text-ink" %>"><%= number_to_currency(@payables_total / 100.0) %></p>
-      <p class="mt-1 text-xs text-taupe"><%= @payables.sum { |r| r[:owed_cents].positive? ? 1 : 0 } %> vendor(s) with balances</p>
-    </div>
-    <div class="stat">
-      <p class="stat-label">Accounts receivable</p>
-      <p class="stat-value mt-1 <%= @receivables_total.positive? ? "text-clay" : "text-ink" %>"><%= number_to_currency(@receivables_total / 100.0) %></p>
-      <p class="mt-1 text-xs text-taupe"><%= @receivables.length %> customer(s) with balances</p>
-    </div>
+  <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Finance actions">
+    <% if retail_business_access?('finance.write') %><%= link_to new_finance_expense_path, class: 'card card-pad operations-task' do %><h2 class="font-semibold">Record an expense</h2><p class="mt-2 text-sm text-mocha">Categorize an existing business payment with its date and reference.</p><% end %><%= link_to new_finance_vendor_payment_path, class: 'card card-pad operations-task' do %><h2 class="font-semibold">Record a vendor payment</h2><p class="mt-2 text-sm text-mocha">Update the local payable record after payment has been made.</p><% end %><% end %>
+    <% if retail_business_access?('reports.read') %><%= link_to financial_close_path(day: Date.current), class: 'card card-pad operations-task' do %><h2 class="font-semibold">Reconcile and close a day</h2><p class="mt-2 text-sm text-mocha">Inspect source checks, missing originals, follow-ups and the current review.</p><% end %><% end %>
   </section>
-
-  <div class="grid gap-4 lg:grid-cols-2">
-    <div class="card overflow-hidden">
-      <div class="border-b border-fog px-5 py-3">
-        <h2 class="font-display text-lg text-ink">Payables</h2>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
-            <tr>
-              <th scope="col" class="th">Vendor</th>
-              <th scope="col" class="th text-right">Received</th>
-              <th scope="col" class="th text-right">Paid</th>
-              <th scope="col" class="th text-right">Owed</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-fog">
-            <% if @payables.empty? %>
-              <tr><td colspan="4" class="empty-row">No vendor balances.</td></tr>
-            <% end %>
-            <% @payables.each do |row| %>
-              <tr class="hover:bg-cream">
-                <td class="td font-medium text-ink"><%= link_to row[:vendor].name, row[:vendor], class: "hover:text-olive hover:underline" %></td>
-                <td class="td text-right text-mocha"><%= number_to_currency(row[:owed_cents].to_i / 100.0) %></td>
-                <td class="td text-right text-mocha"><%= number_to_currency(row[:paid_cents] / 100.0) %></td>
-                <td class="td text-right">
-                  <% if row[:balance_cents].positive? %>
-                    <span class="font-semibold text-clay"><%= number_to_currency(row[:balance_cents].to_i / 100.0) %></span>
-                  <% else %>
-                    <span class="text-fern">paid</span>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-      <% if Current.user.can?("finance.write") %>
-        <div class="border-t border-fog px-5 py-3">
-          <%= link_to "Record payment", new_finance_vendor_payment_path, class: "text-xs font-semibold text-olive hover:underline" %>
-        </div>
-      <% end %>
-    </div>
-
-    <div class="card overflow-hidden">
-      <div class="border-b border-fog px-5 py-3">
-        <h2 class="font-display text-lg text-ink">Receivables</h2>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
-            <tr>
-              <th scope="col" class="th">Customer</th>
-              <th scope="col" class="th text-right">Orders</th>
-              <th scope="col" class="th text-right">Balance</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-fog">
-            <% if @receivables.empty? %>
-              <tr><td colspan="3" class="empty-row">No customer balances.</td></tr>
-            <% end %>
-            <% @receivables.each do |row| %>
-              <tr class="hover:bg-cream">
-                <td class="td font-medium text-ink"><%= row[:customer].name %></td>
-                <td class="td text-right text-mocha"><%= row[:order_count] %></td>
-                <td class="td text-right font-semibold text-clay"><%= number_to_currency(row[:balance_cents] / 100.0) %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+  <p class="text-sm text-mocha">Balances use Rupert’s recorded purchase orders, canonical orders and completed payments. They are not bank balances. Local expenses and vendor payments are separate registers; the overview does not add them together.</p>
+  <nav aria-label="Balance sections" class="flex flex-wrap gap-2"><a href="#vendor-balances" class="btn-ghost">Vendor balances</a><a href="#customer-balances" class="btn-ghost">Customer receivables</a></nav>
+  <section id="vendor-balances" tabindex="-1" class="card overflow-hidden"><div class="card-pad"><h2 class="font-display text-xl">Vendor balances</h2><p class="mt-2 text-sm text-mocha">Received goods less recorded payments · USD. Credits do not reduce another vendor’s balance.</p></div><div class="operations-table-region" role="region" tabindex="0" aria-label="Vendor balances"><table class="operations-table w-full text-sm"><caption class="sr-only">Vendor balances, credits and purchase commitments in USD</caption><thead><tr><% ['Vendor', 'Received goods', 'Recorded payments', 'Balance due', 'Credit / prepayment', 'Not received', 'Action'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead><tbody class="divide-y divide-fog">
+    <% @payables.each do |row| %><tr><th scope="row" class="td text-left"><%= retail_business_access?('purchasing.read') ? link_to(row[:vendor].name, row[:vendor], class: 'font-semibold text-olive-deep underline') : row[:vendor].name %></th><% [row[:owed_cents], row[:paid_cents], row[:balance_cents], [row[:paid_cents] - row[:owed_cents], 0].max, row[:committed_cents]].each do |value| %><td class="td retail-money whitespace-nowrap"><%= operations_money(value) %></td><% end %><td class="td"><% if retail_business_access?('finance.write') %><%= link_to 'Record payment', new_finance_vendor_payment_path(vendor_id: row[:vendor].id), class: 'btn-ghost btn-sm', aria: { label: "Record payment for #{row[:vendor].name}" } %><% else %><span class="text-xs text-mocha">View only</span><% end %></td></tr><% end %>
+    <% if @payables.empty? %><tr><td colspan="7" class="empty-row">No received goods, purchase commitments or vendor payments recorded yet.</td></tr><% end %>
+  </tbody></table></div></section>
+  <section id="customer-balances" tabindex="-1" class="space-y-4"><div><h2 class="font-display text-xl">Customer receivables</h2><p class="mt-2 text-sm text-mocha">Paid/fulfilled canonical order gross less completed payments, grouped by customer and currency. Missing invoices and unimported payments require source review. Any missing order amount keeps that customer/currency balance Unknown.</p></div><div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><% @receivable_groups.each do |currency, rows| %><div class="stat"><p class="stat-label"><%= currency.presence || 'Unknown currency' %> · balance due</p><p class="stat-value retail-money mt-2"><%= operations_money(rows.any? { |row| row[:balance_cents].nil? } ? nil : rows.sum { |row| row[:balance_cents] }, currency: currency) %></p><p class="mt-2 text-xs text-mocha"><%= rows.size %> customer balances</p></div><% end %></div><div class="card operations-table-region" role="region" tabindex="0" aria-label="Customer receivables"><table class="operations-table w-full text-sm"><thead><tr><% ['Customer', 'Currency', 'Recorded orders', 'Balance due'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead><tbody class="divide-y divide-fog"><% @receivables.each do |row| %><tr><th scope="row" class="td text-left"><%= row[:customer].name %></th><td class="td"><%= row[:currency].presence || 'Unknown' %></td><td class="td"><%= row[:order_count] %></td><td class="td retail-money whitespace-nowrap"><%= operations_money(row[:balance_cents], currency: row[:currency]) %></td></tr><% end %><% if @receivables.empty? %><tr><td colspan="4" class="empty-row">No positive customer balances in the recorded order/payment scope.</td></tr><% end %></tbody></table></div><% if @receivables_count > @receivables.size %><p class="text-xs text-mocha">Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @receivables_count %> balances. Currency summaries include every recorded balance.</p><% end %><%== pagy_nav(@pagy) if @pagy.pages > 1 %></section>
 </div>
-<% end %>

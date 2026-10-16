@@ -1,12 +1,14 @@
 <% content_for :title, "Expenses" %>
-<div class="space-y-6">
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+  <%= render 'shared/operations_navigation', workspace: :finance %>
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Expenses</h1>
       <p class="mt-1 text-sm text-mocha">Money out across the last <%= @range_days %> days.</p>
     </div>
     <div class="flex gap-2">
-      <%= link_to "Export CSV", finance_expenses_path(category: @category, days: @range_days, format: :csv), class: "btn-ghost btn-sm", data: { turbo: false } %>
+      <%= link_to "Export CSV", finance_expenses_path(category: @category, days: @range_days, include_deleted: (@include_deleted ? 1 : nil), format: :csv), class: "btn-ghost btn-sm", data: { turbo: false } %>
       <% if Current.user.can?("finance.write") %>
         <%= link_to "Record expense", new_finance_expense_path, class: "btn-primary" %>
       <% end %>
@@ -15,9 +17,9 @@
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
-      <p class="stat-label">Total</p>
+      <p class="stat-label">Active expenses · USD</p>
       <p class="stat-value mt-1"><%= number_to_currency(@total_cents / 100.0) %></p>
-      <p class="mt-1 text-xs text-taupe"><%= @expenses.length %> entries</p>
+      <p class="mt-1 text-xs text-taupe"><%= @entry_count %> active entries</p>
     </div>
     <% @by_category.first(3).each do |category, cents| %>
       <div class="stat">
@@ -27,18 +29,19 @@
     <% end %>
   </section>
 
-  <%= form_tag finance_expenses_path, method: :get, class: "flex flex-wrap items-center gap-3" do %>
-    <%= select_tag :category, options_for_select([["All categories", "all"]] + Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, @category), class: "select" %>
-    <%= select_tag :days, options_for_select([["Last 30 days", 30], ["Last 90 days", 90], ["Last year", 365]], @range_days), class: "select" %>
+  <%= form_tag finance_expenses_path, method: :get, class: "card card-pad operations-filters" do %>
+    <%= select_tag :category, options_for_select([["All categories", "all"]] + Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, @category), class: "select", aria: { label: "Expense category" } %>
+    <%= select_tag :days, options_for_select([["Last 30 days", 30], ["Last 90 days", 90], ["Last year", 365]], @range_days), class: "select", aria: { label: "Date range" } %>
     <label class="flex items-center gap-1.5 text-sm text-mocha">
-      <%= check_box_tag :include_deleted, "1", @include_deleted %> show deleted
+      <%= check_box_tag :include_deleted, "1", @include_deleted %> include removed history
     </label>
     <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
   <% end %>
 
+  <p class="text-sm text-mocha"><%= @from %> through <%= @through %> · USD. Summary totals exclude removed records. <%= @removed_count %> removed entries included in this view. This register records existing payments; no money is transferred.</p>
   <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    <div class="operations-table-region" role="region" tabindex="0" aria-label="Finance record table">
+      <table class="operations-table w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <th scope="col" class="th">Date</th>
@@ -61,12 +64,13 @@
               <td class="td text-mocha capitalize"><%= expense.method %></td>
               <td class="td text-right font-medium text-ink"><%= number_to_currency(expense.amount_cents / 100.0) %></td>
               <td class="td text-right">
+                <% if expense.discarded? %><span class="pill-taupe">Removed</span><% end %>
                 <% if Current.user.can?("finance.write") %>
                   <% if expense.discarded? %>
                     <%= button_to "Restore", restore_finance_expense_path(expense), method: :post, class: "text-xs font-semibold text-fern hover:underline" %>
                   <% else %>
                     <%= link_to "Edit", edit_finance_expense_path(expense), class: "text-xs font-semibold text-olive hover:underline" %>
-                    <%= button_to "Delete", finance_expense_path(expense), method: :delete, class: "ml-2 text-xs font-semibold text-rose hover:underline", data: { confirm: "Delete this expense?" } %>
+                    <%= button_to "Delete", finance_expense_path(expense), method: :delete, class: "ml-2 text-xs font-semibold text-rose hover:underline", data: { turbo_confirm: "Delete this expense?" } %>
                   <% end %>
                 <% end %>
               </td>
@@ -76,4 +80,5 @@
       </table>
     </div>
   </div>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
 </div>

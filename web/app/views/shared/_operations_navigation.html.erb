@@ -1,0 +1,6 @@
+<% links = operations_links(workspace, day: local_assigns[:day]) %>
+<% if links.any? %>
+  <nav class="operations-navigation" aria-label="<%= workspace.to_s.humanize %> workspace">
+    <% links.each do |label, path, active| %><%= link_to label, path, class: "nav-pill workspace-nav-link #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: active ? 'page' : nil } %><% end %>
+  </nav>
+<% end %>

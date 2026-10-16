@@ -9,7 +9,6 @@ module Purchasing
       # Per-vendor AP: received PO value minus payments made.
       def by_vendor
         rows = Purchasing::Vendor.left_joins(:purchase_orders)
-                                 .where(purchase_orders: { status: %w[ordered received] })
                                  .group('vendors.id', 'vendors.name')
                                  .select(
                                    'vendors.id',

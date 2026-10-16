@@ -1,9 +1,10 @@
 <% content_for :title, "Inventory counts" %>
-<div class="space-y-6">
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :stock %>
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Manual counts</h1>
-      <p class="mt-1 text-sm text-mocha">Physical inventory worksheets recorded for audit. Approving a count does not change inventory — Square is the source of truth.</p>
+      <p class="mt-1 text-sm text-mocha">Physical count worksheets retained for review. C-Trax is the retail physical-count reference. Approval records the count in Rupert without changing platform inventory.</p>
     </div>
     <% if Current.user.can?('inventory.write') %>
       <div class="flex flex-wrap gap-2">
@@ -21,7 +22,7 @@
   </div>
 
   <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
+    <div class="operations-table-region" role="region" tabindex="0" aria-label="Inventory Counts table">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
@@ -37,7 +38,7 @@
         <tbody class="divide-y divide-fog">
           <% if @counts.empty? %>
             <tr>
-              <td class="td py-8 text-center">
+              <td colspan="7" class="td py-8 text-center">
                 <p class="text-taupe">No counts yet.</p>
                 <% if Current.user.can?('inventory.write') %><%= link_to "Start a manual inventory", new_inventory_count_path, class: "btn-primary btn-sm mt-2" %><% end %>
               </td>

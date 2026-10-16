@@ -1,6 +1,6 @@
 <%# Collapsible in-app help: the icon was static, so the rich PageGuides
     content was never visible. Now a labeled button toggles the panel. %>
-<div data-controller="page-guide" data-page-guide-auto-key-value="<%= request.path %>" class="mb-6">
+<div data-controller="page-guide" data-page-guide-auto-key-value="<%= request.path %>" data-page-guide-auto-open-value="<%= !operations_workspace_page? %>" class="mb-6">
   <div class="flex justify-end">
     <button type="button" data-action="click->page-guide#toggle" data-page-guide-target="trigger"
       aria-expanded="false" aria-controls="page-guide-panel"

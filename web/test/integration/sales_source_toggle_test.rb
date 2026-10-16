@@ -43,8 +43,9 @@ class SalesSourceToggleTest < ActionDispatch::IntegrationTest
 
   test 'hourly by location table titles each location column even with no 9am sales' do
     location = Location.create!(source: 'square', externalId: 'loc-1', name: 'Front Counter', tenant_id: @tenant.id)
-    Core::Order.create!(source: 'square', source_order_id: 'sq2', occurred_at: Time.current.change(hour: 11),
+    order = Core::Order.create!(source: 'square', source_order_id: 'sq2', occurred_at: Time.current.change(hour: 11),
       gross_cents: 2000, order_number: 'SQ2', location_id: location.externalId, tenant_id: @tenant.id)
+    order.mark_paid!
 
     get sales_path
     assert_response :success

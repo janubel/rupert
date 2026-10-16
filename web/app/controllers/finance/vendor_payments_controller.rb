@@ -8,12 +8,16 @@ module Finance
     def index
       authorize(:module, :finance_read?)
       @range_days = params[:days].present? ? params[:days].to_i.clamp(7, 365) : 90
-      since = @range_days.days.ago.to_date
-      scope = Finance::VendorPayment.since(since)
-      scope = scope.with_discarded if params[:include_deleted] == '1'
-      @payments = scope.recent(200).includes(:vendor)
+      @from = Date.current - (@range_days - 1)
+      @through = Date.current
+      active = Finance::VendorPayment.where(paid_on: @from..@through)
       @include_deleted = params[:include_deleted] == '1'
-      @total_cents = @payments.sum(:amount_cents)
+      @total_cents = active.sum(:amount_cents)
+      @entry_count = active.count
+      scope = @include_deleted ? active.with_discarded : active
+      @removed_count = scope.count - @entry_count
+      response.headers['Cache-Control'] = 'private, no-store'
+      @pagy, @payments = pagy(scope.includes(:vendor).order(paid_on: :desc, created_at: :desc), items: 50)
     end
 
     def new
@@ -64,10 +68,6 @@ module Finance
 
     def payment_params
       params.require(:vendor_payment).permit(:vendor_id, :amount, :paid_on, :method, :reference, :notes)
-            .tap do |p|
-              amount = p.delete(:amount)
-              p[:amount_cents] = (amount.to_f * 100).round if amount.present?
-            end
     end
   end
 end

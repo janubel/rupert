@@ -9,19 +9,23 @@ module Finance
       authorize(:module, :finance_read?)
       @category = params[:category].presence || 'all'
       @range_days = params[:days].present? ? params[:days].to_i.clamp(7, 365) : 90
-      since = @range_days.days.ago.to_date
-
-      scope = Finance::Expense.by_category(@category).since(since)
-      scope = scope.with_discarded if params[:include_deleted] == '1'
-      @expenses = scope.recent(200).includes(:vendor)
+      @from = Date.current - (@range_days - 1)
+      @through = Date.current
+      active = Finance::Expense.where(incurred_on: @from..@through)
+      @category = Finance::Expense::CATEGORIES.include?(params[:category]) ? params[:category] : 'all'
+      active = active.by_category(@category)
+      @by_category = active.group(:category).sum(:amount_cents).sort_by { |_key, value| -value }.first(3)
       @include_deleted = params[:include_deleted] == '1'
-      @total_cents = @expenses.sum(:amount_cents)
-      @by_category = Finance::Expense.since(since).group(:category).sum(:amount_cents)
-                                     .sort_by { |_k, v| -v }.first(8)
-
-      return unless params[:format] == 'csv'
-
-      send_data(expenses_csv(@expenses), filename: "expenses-#{@range_days}d.csv")
+      @total_cents = active.sum(:amount_cents)
+      @entry_count = active.count
+      scope = @include_deleted ? active.with_discarded : active
+      @removed_count = scope.count - @entry_count
+      response.headers['Cache-Control'] = 'private, no-store'
+      if request.format.csv?
+        send_data expenses_csv(scope.includes(:vendor).order(incurred_on: :desc, created_at: :desc)), filename: "expenses-#{@range_days}d.csv"
+        return
+      end
+      @pagy, @expenses = pagy(scope.includes(:vendor).order(incurred_on: :desc, created_at: :desc), items: 50)
     end
 
     def new
@@ -82,7 +86,7 @@ module Finance
     def expenses_csv(expenses)
       require 'csv'
       CSV.generate do |csv|
-        csv << %w[Date Payee Category Method Amount Vendor Reference Notes]
+        csv << %w[Date Payee Category Method Amount Vendor Reference Notes State]
         expenses.each do |expense|
           csv << [
             expense.incurred_on,
@@ -92,7 +96,8 @@ module Finance
             expense.amount_cents / 100.0,
             expense.vendor&.name,
             expense.reference,
-            expense.notes
+            expense.notes,
+            expense.discarded? ? 'Removed' : 'Active'
           ]
         end
       end
@@ -104,10 +109,6 @@ module Finance
 
     def expense_params
       params.require(:expense).permit(:payee, :category, :amount, :incurred_on, :method, :reference, :notes, :vendor_id)
-            .tap do |p|
-              amount = p.delete(:amount)
-              p[:amount_cents] = (amount.to_f * 100).round if amount.present?
-            end
     end
   end
 end

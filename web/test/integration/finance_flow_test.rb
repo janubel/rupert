@@ -87,9 +87,9 @@ class FinanceFlowTest < ActionDispatch::IntegrationTest
 
     get_page finance_accounts_path
     assert_response :success
-    assert_select 'h1', /Accounts/
-    assert_select 'td', /Supply Co/
-    assert_select 'td', /Ada/
+    assert_select 'h1', 'Finance overview'
+    assert_select 'th[scope=row]', /Supply Co/
+    assert_select 'th[scope=row]', /Ada/
   end
 
   test 'recording a vendor payment reduces the payable balance' do

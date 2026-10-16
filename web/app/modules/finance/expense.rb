@@ -6,6 +6,7 @@ module Finance
   class Expense < ApplicationRecord
     include Discard::Model
     include TenantScoped
+    include FinanceAmount
 
     self.table_name = 'expenses'
 
@@ -31,7 +32,7 @@ module Finance
     belongs_to :vendor, class_name: 'Purchasing::Vendor', optional: true
 
     validates :category, inclusion: { in: CATEGORIES }
-    validates :amount_cents, numericality: { greater_than: 0 }
+    validates :amount_cents, numericality: { greater_than: 0, less_than_or_equal_to: 2_147_483_647 }
     validates :incurred_on, presence: true
 
     scope :by_category, ->(category) { category.present? && category != 'all' ? where(category: category) : all }

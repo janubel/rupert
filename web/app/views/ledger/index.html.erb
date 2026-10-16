@@ -1,68 +1,10 @@
-<% content_for :title, "Ledger" %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title">Ledger</h1>
-    <p class="mt-1 text-sm text-mocha">Central transaction ledger across Shopify and Square.</p>
-  </section>
-
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-3">
-    <div class="stat">
-      <p class="stat-label">Total · <%= @window_days %> days</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@total_cents / 100.0) %></p>
-      <p class="mt-1 text-xs text-taupe"><%= @entries.length %> shown</p>
-    </div>
-    <% @groups.each do |source, gross, count| %>
-      <div class="stat">
-        <p class="stat-label capitalize"><%= source %></p>
-        <p class="stat-value mt-1"><%= number_to_currency(gross.to_i / 100.0) %></p>
-        <p class="mt-1 text-xs text-taupe"><%= count %> orders</p>
-      </div>
-    <% end %>
-  </section>
-
-  <%= form_tag ledger_index_path, method: :get, class: "flex flex-wrap items-center gap-3" do %>
-    <%= select_tag :window, options_for_select([["Last 7 days", 7], ["Last 30 days", 30], ["Last 90 days", 90], ["Last year", 365]], @window_days), class: "select" %>
-    <%= select_tag :source, options_for_select([["All sources", "all"], ["Shopify", "shopify"], ["Square", "square"]], @source), class: "select" %>
-    <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
-  <% end %>
-
-  <% cached_fragment("ledger/table", source: @source, window: @window_days) do %>
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
-          <tr>
-            <th scope="col" class="th">Date</th>
-            <th scope="col" class="th">Source</th>
-            <th scope="col" class="th">Order</th>
-            <th scope="col" class="th text-right">Gross</th>
-            <th scope="col" class="th">Status</th>
-            <th scope="col" class="th text-right">Lines</th>
-            <th scope="col" class="th">Summary</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-fog">
-          <% if @entries.empty? %>
-            <tr>
-              <td class="empty-row">No ledger entries in this range.</td>
-            </tr>
-          <% end %>
-          <% @entries.each do |entry| %>
-            <tr class="hover:bg-cream">
-              <td class="td whitespace-nowrap text-mocha"><%= l(entry.occurredAt, format: :short) %></td>
-              <td class="td"><span class="pill-taupe capitalize"><%= entry.source %></span></td>
-              <td class="td font-medium text-ink"><%= entry.orderName.presence || entry.sourceOrderId.first(12) %></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(entry.grossCents / 100.0) %></td>
-              <td class="td">
-                <span class="<%= %w[PAID COMPLETED CLOSED].include?(entry.status) ? "pill-fern" : "pill-taupe" %>"><%= entry.status %></span>
-              </td>
-              <td class="td text-right text-mocha"><%= entry.lineItems %></td>
-              <td class="td max-w-[220px] truncate text-xs text-taupe"><%= entry.summary.presence || "—" %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <% end %>
+<% content_for :title, 'Ledger' %>
+<div class="operations-workspace space-y-6">
+  <%= render 'shared/operations_navigation', workspace: :money %><%= render 'shared/operations_navigation', workspace: :finance %>
+  <header><p class="eyebrow text-olive-deep">Money · source mirror</p><h1 class="page-title mt-2">Ledger</h1><p class="mt-2 text-sm text-mocha">Imported order observations by source and currency. These records can describe sales already shown elsewhere; they are not additional revenue or confirmed bank funding.</p></header>
+  <%= form_tag ledger_index_path, method: :get, class: 'card card-pad operations-filters' do %><div><%= label_tag :window, 'Date range', class: 'field-label' %><%= select_tag :window, options_for_select([7,30,90,365].map { |days| ["#{days} days", days] } | [["#{@window_days} days", @window_days]], @window_days), class: 'input' %></div><div><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', 'all']] + @sources.map { |source| [operations_source_name(source), source] }, @source), class: 'input' %></div><%= submit_tag 'Update ledger view', class: 'btn-primary' %><% end %>
+  <p class="text-sm text-mocha"><%= @from %> through today · <%= @pagy.count %> recorded entries. Currencies remain separate.</p>
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-3" aria-label="Ledger totals by currency"><% @currency_totals.each do |currency, cents| %><div class="stat"><p class="stat-label"><%= currency.presence || 'Unknown currency' %> · recorded gross</p><p class="stat-value retail-money mt-2"><%= operations_money(cents, currency: currency) %></p></div><% end %></section>
+  <div class="card operations-table-region" role="region" tabindex="0" aria-label="Source ledger entries"><table class="operations-table w-full text-sm"><thead><tr><% ['Date', 'Source', 'Order', 'Recorded gross', 'Status', 'Items', 'Source summary'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead><tbody class="divide-y divide-fog"><% @entries.each do |entry| %><tr><td class="td whitespace-nowrap"><%= retail_source_time(entry.occurredAt) %></td><td class="td"><%= operations_source_name(entry.source) %></td><td class="td"><%= entry.orderName.presence || entry.sourceOrderId %></td><td class="td retail-money whitespace-nowrap"><%= operations_money(entry.grossCents, currency: entry.currency) %></td><td class="td"><span class="pill-taupe"><%= entry.status %></span></td><td class="td"><%= entry.lineItems %></td><td class="td"><%= entry.summary.presence || 'Not recorded' %></td></tr><% end %><% if @entries.empty? %><tr><td colspan="7" class="empty-row">No source ledger records match this period and source.</td></tr><% end %></tbody></table></div>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
 </div>

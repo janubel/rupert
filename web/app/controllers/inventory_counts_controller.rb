@@ -5,7 +5,7 @@ class InventoryCountsController < AuthenticatedController
   before_action :require_inventory_write, except: %i[index show]
 
   def index
-    @counts = InventoryCount.by_status(params[:status]).recent(30)
+    @counts = InventoryCount.includes(:location, :items).by_status(params[:status]).recent(30)
   end
 
   def show
