@@ -10,7 +10,7 @@ class AuthorizeNetWebhooksController < ActionController::API
 
   def create
     response.headers['Cache-Control'] = 'no-store'
-    connection = PosConnection.unscoped.find_by(id: params[:connection_id], provider: 'authorize_net_reporting')
+    connection = PosConnection.unscoped.find_by(id: request.path_parameters[:connection_id], provider: 'authorize_net_reporting')
     return head(:not_found) unless connection && Tenant.where(id: connection.tenant_id, status: 'active').exists?
 
     Current.set(tenant: Tenant.find(connection.tenant_id)) do
