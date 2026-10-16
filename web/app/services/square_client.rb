@@ -5,7 +5,14 @@ require 'net/http'
 # Port of the legacy Square client (legacy/local-console.mjs) — catalog,
 # inventory counts, orders, and locations against the Square v2 REST API.
 class SquareClient
-  class Error < StandardError; end
+  class Error < StandardError
+    attr_reader :reason
+
+    def initialize(message, reason: nil)
+      @reason = reason
+      super(message)
+    end
+  end
 
   SQUARE_VERSION = '2026-07-15'
   PAGE_SIZE = 1000
@@ -40,14 +47,12 @@ class SquareClient
 
       payload = begin
         JSON.parse(response.body)
-      rescue JSON::ParserError => e
-        Rails.logger.warn("SquareClient: unparseable response body for #{method} #{pathname}: #{e.message}")
-        {}
+      rescue JSON::ParserError
+        Rails.logger.warn('SquareClient returned an unparseable response.')
+        raise Error.new('Square returned invalid JSON.', reason: :response)
       end
       unless response.is_a?(Net::HTTPSuccess)
-        detail = Array(payload['errors']).map { |e| e['detail'] || 'unknown error' }.join('; ')
-        detail = "HTTP #{response.code}" if detail.blank?
-        raise Error, "Square #{method} #{pathname} failed: #{detail}"
+        raise Error.new("Square request failed (HTTP #{response.code}).", reason: SyncFailure.http_reason(response.code))
       end
       payload
     end

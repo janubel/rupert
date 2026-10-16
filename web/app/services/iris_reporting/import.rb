@@ -17,6 +17,10 @@ module IrisReporting
     }.freeze
 
     def self.call(connection:, from: Date.current - 30, to: Date.current)
+      SyncObservability.observe('bank', 'reporting') { read(connection: connection, from: from, to: to) }
+    end
+
+    def self.read(connection:, from:, to:)
       raise Client::Error, :invalid unless connection.tenant_id == Current.tenant_id && connection.provider == 'iris_reporting' && connection.vendor_approved && connection.credentials_saved? && connection.environment == 'production'
 
       version = connection.lock_version

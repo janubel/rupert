@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1328,6 +1328,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["tenant_id", "refunded_at"], name: "index_refunds_on_tenant_id_and_refunded_at"
   end
 
+  create_table "retention_drive_connections", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.text "refresh_token"
+    t.text "account_email"
+    t.string "generation"
+    t.boolean "enabled", default: false, null: false
+    t.string "sync_lease_token"
+    t.datetime "sync_lease_at"
+    t.datetime "last_synced_at"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id"], name: "index_retention_drive_connections_on_tenant_id", unique: true
+  end
+
+  create_table "retention_drive_items", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "generation", null: false
+    t.string "item_key", null: false
+    t.string "remote_id"
+    t.string "status", default: "pending", null: false
+    t.string "sha256"
+    t.bigint "byte_size"
+    t.text "display_name"
+    t.text "folder_path"
+    t.text "last_error"
+    t.datetime "last_attempt_at"
+    t.datetime "verified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "generation", "item_key"], name: "index_retention_drive_items_identity", unique: true
+    t.index ["tenant_id", "generation", "status"], name: "index_retention_drive_items_status"
+  end
+
   create_table "role_permissions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "enabled", default: true, null: false
@@ -1612,6 +1646,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["tenant_id", "status"], name: "index_tasks_on_tenant_id_and_status"
   end
 
+  create_table "sync_attempts", force: :cascade do |t|
+    t.string "tenant_id"
+    t.string "source", null: false
+    t.string "operation", null: false
+    t.string "status", null: false
+    t.string "error_category"
+    t.string "active_job_id"
+    t.datetime "queued_at", null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active_job_id"], name: "index_sync_attempts_on_active_job_id"
+    t.index ["tenant_id", "source", "operation", "queued_at"], name: "idx_sync_attempts_source_history"
+  end
+
   create_table "tenants", id: :string, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -1791,6 +1841,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
+  add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade
@@ -1869,6 +1920,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
   add_foreign_key "reconciliation_documents", "tenants"
   add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
   add_foreign_key "refunds", "orders", on_delete: :cascade
+  add_foreign_key "retention_drive_connections", "tenants"
+  add_foreign_key "retention_drive_items", "tenants"
   add_foreign_key "size_changes", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "size_family_members", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

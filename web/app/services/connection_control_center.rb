@@ -5,6 +5,7 @@ class ConnectionControlCenter
   SOURCE_SETUP = { 'ctrax' => 'ctrax', 'swipesimple' => 'swipesimple',
     'authorize_net' => 'authorize_net_reporting', 'bank' => 'iris_reporting' }.freeze
   NEXT_STEPS = {
+    'Credentials unreadable' => 'Ask the platform operator to restore the original encryption keys. Keep saved credentials and schedules unchanged.',
     'Needs access' => 'Open setup, obtain the correct account access, save credentials, then check read access.',
     'Needs login' => 'Open login setup, restore website sign-in and complete any additional verification with the vendor.',
     'Needs connection' => 'Ask the platform operator to complete the approved backup connection.',
@@ -32,7 +33,8 @@ class ConnectionControlCenter
   def self.sources
     SourceSyncStatus.all(include_platform: platform_admin?).map do |source|
       source.slice(:key, :label, :badge, :last_at, :schedule, :ready, :mode).merge(
-        next_step: NEXT_STEPS.fetch(source[:badge], 'Open setup and review the source before retrying.'))
+        next_step: NEXT_STEPS.fetch(source[:badge], 'Open setup and review the source before retrying.'),
+        diagnostics: SourceHealth.for(source))
     end
   end
 

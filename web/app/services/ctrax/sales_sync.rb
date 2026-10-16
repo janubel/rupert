@@ -12,7 +12,7 @@ module Ctrax
                         loyalty_payments_amount_sum gift_card_payments_amount_sum cash_refunds_amount_sum].freeze
 
     def self.call(connection:, date:, currency: 'USD')
-      new(connection, date, currency).call
+      SyncObservability.observe('ctrax', 'sales') { new(connection, date, currency).call }
     end
 
     def initialize(connection, date, currency)
