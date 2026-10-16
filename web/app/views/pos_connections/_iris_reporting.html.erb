@@ -1,0 +1,34 @@
+<section class="card card-pad space-y-4">
+  <h2 class="font-display text-xl">IRIS merchant reports</h2>
+  <p class="text-sm text-mocha">Deposits and batch transactions remain separate source reports. Monthly Health Center summaries do not create sales or change inventory. Report windows can overlap; never add their totals together. Currency, tips and processing fees stay unknown when the source does not supply them.</p>
+  <% if @connection.last_report_status %><p role="status"><%= @connection.last_report_status %>: <%= @connection.last_report_message %></p><% end %>
+  <% if Current.user.can?('settings.write') %>
+    <% if @connection.credentials_saved? %>
+      <%= form_with url: import_reporting_pos_connection_path('iris_reporting'), method: :post, data: { turbo: false }, class: 'flex flex-wrap gap-3 items-end' do %>
+        <div><%= label_tag :from, 'First source reporting date' %><%= date_field_tag :from, nil, class: 'input' %></div>
+        <div><%= label_tag :to, 'Last source reporting date' %><%= date_field_tag :to, nil, class: 'input' %></div>
+        <%= submit_tag 'Import IRIS reports', class: 'btn-primary' %>
+      <% end %>
+      <p class="text-xs text-taupe">Defaults to the previous 31 dates. Each window can cover at most 90 dates. The worker uses an API token; your browser login is not reused.</p>
+    <% end %>
+    <h3 class="font-medium">Import a monthly Health Center summary</h3>
+    <p class="text-sm text-mocha">Use Export → CSV in the Health Center. The importer accepts the documented period/metric/value template or an English monthly table matrix. XLS files are not accepted. For a matrix, specify the year of the final month. Unknown layouts are rejected without changing saved reports. No API token is needed for this import.</p>
+    <%= form_with url: import_iris_csv_pos_connection_path('iris_reporting'), method: :post, multipart: true, data: { turbo: false }, class: 'space-y-3' do %>
+      <div><%= label_tag :merchant_number, 'Merchant ID shown on the exported report' %><%= text_field_tag :merchant_number, nil, required: true, maxlength: 30, class: 'input' %></div>
+      <div><%= label_tag :report_kind, 'Report' %><%= select_tag :report_kind, options_for_select([['Sales Health Center', 'sales_health_csv'], ['Transaction Health Center', 'transaction_health_csv']]), class: 'input' %></div>
+      <div><%= label_tag :report_year, 'Year of final month (monthly table matrix)' %><%= number_field_tag :report_year, nil, min: 2000, max: 2100, class: 'input' %></div>
+      <div><%= label_tag :report_file, 'CSV report (maximum 1 MiB)' %><%= file_field_tag :report_file, accept: '.csv,text/csv', required: true, class: 'input' %></div>
+      <%= submit_tag 'Import monthly summary', class: 'btn-primary' %>
+    <% end %>
+  <% end %>
+  <h3 class="font-medium">Latest saved report windows</h3>
+  <p class="text-xs text-taupe">Showing the latest 30 snapshots, with a preview of up to 8,000 characters each. An unavailable report means that access, processor support or complete metadata is missing, not that its amount is zero. Statement snapshots contain metadata only.</p>
+  <div class="overflow-x-auto"><table class="min-w-full text-sm"><thead><tr><th>Merchant / report</th><th>Window</th><th>Status / observed</th><th>Report data</th></tr></thead><tbody>
+    <% (@iris_reports || []).each do |report| %><tr>
+      <td><%= report.merchant_number %><br><%= report.report_kind.humanize %></td>
+      <td><%= report.window_from %>–<%= report.window_to %></td>
+      <td><%= report.status %><br><%= report.observed_at.utc.iso8601 %></td>
+      <td><details><summary>View source report preview</summary><pre class="whitespace-pre-wrap break-all"><%= JSON.pretty_generate(report.payload).truncate(8000) %></pre></details></td>
+    </tr><% end %>
+  </tbody></table></div>
+</section>

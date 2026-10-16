@@ -58,7 +58,7 @@ class PosConnection < ApplicationRecord
                                     .reject { |_key, value| value.blank? }
     values = previous.merge(supplied)
     values['api_url'] = values['api_url'].delete_suffix('/') if %w[korona
-                                                                   ctrax].include?(provider) && values['api_url'].is_a?(String)
+                                                                   ctrax iris_reporting].include?(provider) && values['api_url'].is_a?(String)
     self.credentials_json = JSON.generate(values)
   end
 
@@ -95,6 +95,16 @@ class PosConnection < ApplicationRecord
   private
 
   def valid_reporting_setup
+    if provider == 'iris_reporting'
+      begin
+        IrisReporting::Client.merchants(account_reference) if account_reference.present? || credential_values.any? || reporting_enabled
+      rescue IrisReporting::Client::Error
+        errors.add(:account_reference, 'must contain up to 10 distinct numeric merchant IDs separated by commas')
+      end
+      errors.add(:environment, 'must be production for IRIS') unless environment == 'production'
+      errors.add(:base, 'Save approved IRIS API credentials before enabling scheduled reports.') if reporting_enabled && (!vendor_approved || !credentials_saved?)
+      return
+    end
     return unless provider == 'authorize_net_reporting'
     if credential_values.any? || reporting_enabled
       errors.add(:account_reference, 'must be the numeric Authorize.net Gateway ID') unless account_reference.to_s.match?(/\A[1-9][0-9]{0,29}\z/)
@@ -129,7 +139,9 @@ class PosConnection < ApplicationRecord
 
     errors.add(:base, 'Confirm approved API read access before saving credentials.') unless vendor_approved
     errors.add(:base, 'Provide all required API credential fields.') unless allowed.all? { |key| values[key].present? }
-    if provider == 'ctrax'
+    if provider == 'iris_reporting'
+      errors.add(:base, 'Use an HTTPS IRIS tenant origin and an API token, without spaces or control characters.') unless IrisReporting::Client.valid_credentials?(values)
+    elsif provider == 'ctrax'
       unless Ctrax::Client.valid_credentials?(values)
         errors.add(:base,
           'Use a C-Trax API origin such as https://your-store.api.cannatrax.net and valid C-Trax user credentials.')

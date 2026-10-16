@@ -12,6 +12,7 @@ class PosConnectionsController < AuthenticatedController
   end
 
   def show
+    return load_iris_reports if @provider[:key] == 'iris_reporting'
     return unless @provider[:key] == 'authorize_net_reporting'
     scope = { environment: @connection.environment, gateway_id: @connection.account_reference }
     @report_date = params[:report_date].present? ? Date.iso8601(params[:report_date]) : Time.current.utc.to_date
@@ -31,6 +32,7 @@ class PosConnectionsController < AuthenticatedController
   end
 
   def import_reporting
+    return import_iris_reporting if @provider[:key] == 'iris_reporting'
     raise ActiveRecord::RecordNotFound unless @provider[:key] == 'authorize_net_reporting'
     unless @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
       return redirect_to pos_connection_path(@provider[:key]), alert: 'Save approved reporting credentials before importing.'
@@ -43,6 +45,21 @@ class PosConnectionsController < AuthenticatedController
     redirect_to pos_connection_path(@provider[:key]), notice: 'Reporting import queued. Refresh this page to see the result.'
   rescue ArgumentError
     redirect_to pos_connection_path(@provider[:key]), alert: 'Enter valid UTC dates for a reporting window of at most 31 days.'
+  end
+
+  def import_iris_csv
+    raise ActiveRecord::RecordNotFound unless @provider[:key] == 'iris_reporting'
+    file = params[:report_file]
+    raise IrisReporting::Client::Error, :response unless file.respond_to?(:read)
+
+    text = file.read(IrisReporting::CsvImport::MAX_BYTES + 1).force_encoding(Encoding::UTF_8)
+    count = IrisReporting::CsvImport.call(text: text, merchant: params[:merchant_number].to_s,
+      kind: params[:report_kind].to_s, year: params[:report_year],
+      origin: @connection.credential_values['api_url'].presence || 'https://nabankco.iriscrm.com')
+    ActivityLogger.log('iris_summary_imported', subject: @connection.persisted? ? @connection : nil, details: "#{count} monthly summaries")
+    redirect_to pos_connection_path('iris_reporting'), notice: "Imported #{count} monthly IRIS summaries. No sales or inventory changed."
+  rescue IrisReporting::Client::Error => e
+    redirect_to pos_connection_path('iris_reporting'), alert: "#{e.message} Use the documented CSV template or supported English monthly matrix."
   end
 
   def update
@@ -67,14 +84,16 @@ class PosConnectionsController < AuthenticatedController
   end
 
   def check_access
-    unless (@connection.check_kind || @provider[:key] == 'authorize_net_reporting') && @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
+    unless (@connection.check_kind || %w[authorize_net_reporting iris_reporting].include?(@provider[:key])) && @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
       return redirect_to pos_connection_path(@provider[:key]), alert: 'Save approved API credentials before checking API access.'
     end
 
     setup_version = @connection.lock_version
     arguments = { credentials: @connection.credential_values }
     arguments[:environment] = @connection.environment if %w[authorize_net nmi].include?(@connection.check_kind)
-    result = if @provider[:key] == 'authorize_net_reporting'
+    result = if @provider[:key] == 'iris_reporting'
+      IrisReporting::Check.call(connection: @connection)
+    elsif @provider[:key] == 'authorize_net_reporting'
       AuthorizeNetReporting::Check.call(connection: @connection)
     else
       checker.call(**arguments)
@@ -136,6 +155,25 @@ class PosConnectionsController < AuthenticatedController
 
   private
 
+  def load_iris_reports
+    @iris_reports = IrisReport.order(observed_at: :desc).limit(30)
+  end
+
+  def import_iris_reporting
+    unless @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
+      return redirect_to pos_connection_path('iris_reporting'), alert: 'Save approved IRIS API credentials before importing.'
+    end
+    from = params[:from].present? ? Date.iso8601(params[:from]) : Date.current - 30
+    to = params[:to].present? ? Date.iso8601(params[:to]) : Date.current
+    raise ArgumentError unless from <= to && (to - from).to_i <= 89
+
+    IrisReportingJob.perform_later(tenant_id: Current.tenant_id, connection_id: @connection.id,
+      setup_version: @connection.lock_version, from: from.iso8601, to: to.iso8601)
+    redirect_to pos_connection_path('iris_reporting'), notice: 'IRIS reporting import queued. Refresh to see the result.'
+  rescue ArgumentError
+    redirect_to pos_connection_path('iris_reporting'), alert: 'Choose valid source reporting dates covering at most 90 dates.'
+  end
+
   def authorize_access
     authorize(:module, action_name.in?(%w[index show]) ? :settings_read? : :settings_write?)
     return if Current.user.active? && Current.tenant&.status == 'active'
@@ -153,7 +191,7 @@ class PosConnectionsController < AuthenticatedController
     @provider = PosProviderCatalog.find(params[:provider])
     raise ActiveRecord::RecordNotFound unless @provider
 
-    @connection = PosConnection.find_by(provider: @provider[:key]) || PosConnection.new(provider: @provider[:key])
+    @connection = PosConnection.find_by(provider: @provider[:key]) || PosConnection.new(provider: @provider[:key], environment: @provider[:key] == 'iris_reporting' ? 'production' : 'sandbox')
   end
 
   def setup_params
@@ -167,7 +205,8 @@ class PosConnectionsController < AuthenticatedController
     requested.permit(:environment, :account_reference, :access_requested, :vendor_approved, :lock_version,
       *(@provider[:key] == 'ctrax' ? [:hourly_sync_enabled] : []),
       *(@provider[:key] == 'valmar' ? [:gateway] : []),
-      *(@provider[:key] == 'authorize_net_reporting' ? [:reporting_auth_mode, :reporting_enabled] : []), credential_secret: keys)
+      *(@provider[:key] == 'authorize_net_reporting' ? [:reporting_auth_mode, :reporting_enabled] : []),
+      *(@provider[:key] == 'iris_reporting' ? [:reporting_enabled] : []), credential_secret: keys)
   end
 
   def handle_busy_database(error)

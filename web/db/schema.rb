@@ -10,10 +10,27 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_021000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
+
+  create_table "iris_reports", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "api_origin", null: false
+    t.string "merchant_number", null: false
+    t.string "report_kind", null: false
+    t.date "window_from", null: false
+    t.date "window_to", null: false
+    t.string "status", null: false
+    t.text "payload_json", null: false
+    t.string "source_digest"
+    t.datetime "observed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "api_origin", "merchant_number", "report_kind", "window_from", "window_to"], name: "idx_iris_report_window", unique: true
+    t.index ["tenant_id"], name: "index_iris_reports_on_tenant_id"
+  end
 
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
@@ -1502,4 +1519,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_020000) do
   add_foreign_key "workspace_signup_events", "workspace_signups"
   add_foreign_key "workspace_signups", "tenants"
   add_foreign_key "workspace_signups", "users", column: "reviewer_id", on_delete: :nullify
+  add_foreign_key "iris_reports", "tenants"
+
 end

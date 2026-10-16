@@ -251,6 +251,7 @@ Rails.application.routes.draw do
     member do
       post :check_access
       post :import_reporting
+      post :import_iris_csv
       post :disconnect
       post :sync_stock
     end

@@ -20,6 +20,10 @@ production:
     class: FulfillmentMonitorJob
     queue: default
     schedule: every 30 minutes
+  iris_reporting:
+    class: IrisReportingJob
+    queue: default
+    schedule: "45 6 * * * America/New_York"
   authorize_net_reporting:
     class: AuthorizeNetReportingJob
     queue: default

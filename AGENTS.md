@@ -1,5 +1,9 @@
 # Shopify app development
 
+## NAB / IRIS reporting continuity
+
+Read `docs/ops/iris-reporting.md` before continuing IRIS work. Use its verified tenant OpenAPI contract, not the older SDK deposit examples. The merchant portal login has no visible API Settings tab; live API access and native CSV bytes remain unverified. Store secrets only in encrypted connection settings. Keep real MIDs, statements, report exports and session data out of public Git. Reports and monthly summaries are separate tenant-scoped snapshots; never sum overlapping windows or create duplicate sales from them.
+
 This app is scaffolded from a Shopify app template. See the README for framework-specific details.
 
 Use the [Shopify AI Toolkit](https://shopify.dev/docs/apps/build/ai-toolkit) for all Shopify API and platform work. If missing, install it in the agent host per that page (or `npx skills add Shopify/shopify-ai-toolkit --list` for skill-compatible hosts) — do not add tooling to this repo.

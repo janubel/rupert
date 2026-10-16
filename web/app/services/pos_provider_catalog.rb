@@ -3,6 +3,11 @@
 # Verified connection methods. Merchant login never implies API or terminal access.
 class PosProviderCatalog
   PROVIDERS = [
+    { key: 'iris_reporting', name: 'NAB / IRIS merchant reporting', relationship: 'Processor deposits and reconciliation', mode: 'api',
+      description: 'Read deposits, batches and transaction reports; import monthly Health Center summaries.',
+      website: 'https://nabankco.iriscrm.com/merchant-portal', docs: 'https://nabankco.iriscrm.com/api',
+      instructions: 'Use an API token issued for your IRIS tenant and authorized merchant IDs. Tokens inherit the issuing user’s permissions. A merchant portal password is not an API token. If API Settings is absent, NAB must enable appropriate reporting access or provide an approved integration user. Enter comma-separated merchant IDs to keep multiple accounts separate. Monthly CSV imports are available without API access.',
+      credentials: %w[api_url api_token] },
     { key: 'authorize_net_reporting', name: 'Authorize.net reporting', relationship: 'Payment reconciliation', mode: 'api',
       description: 'Read transaction status, refunds, voids and settlement batches without processing payments.',
       website: 'https://account.authorize.net/', docs: 'https://developer.authorize.net/api/reference/features/transaction-reporting.html',

@@ -10,7 +10,24 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_021000) do
+  create_table "iris_reports", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "api_origin", null: false
+    t.string "merchant_number", null: false
+    t.string "report_kind", null: false
+    t.date "window_from", null: false
+    t.date "window_to", null: false
+    t.string "status", null: false
+    t.text "payload_json", null: false
+    t.string "source_digest"
+    t.datetime "observed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "api_origin", "merchant_number", "report_kind", "window_from", "window_to"], name: "idx_iris_report_window", unique: true
+    t.index ["tenant_id"], name: "index_iris_reports_on_tenant_id"
+  end
+
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1502,4 +1519,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_020000) do
   create_virtual_table "rupert_customers_fts", "fts5", ["\"email\"", "\"phone\"", "\"first_name\"", "\"last_name\"", "tokenize='trigram'", "content='customers'", "content_rowid='id'"]
   create_virtual_table "rupert_orders_fts", "fts5", ["\"order_number\"", "\"source_order_id\"", "tokenize='trigram'", "content='orders'", "content_rowid='id'"]
   create_virtual_table "rupert_shopifyvariant_fts", "fts5", ["\"sku\"", "\"title\"", "tokenize='trigram'", "content='ShopifyVariant'", "content_rowid='rowid'"]
+  add_foreign_key "iris_reports", "tenants"
+
 end
