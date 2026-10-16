@@ -6,6 +6,9 @@ module Marketing
 
     def self.write(offer, attributes:, actor:, version: nil, verify: false)
       actor = CmsWriter.authorize!(actor, verify ? 'marketing.review' : 'marketing.write')
+      if offer.persisted? && offer.shopify_discount
+        raise ReplyWorkflow::Invalid, 'This offer is managed in Shopify. Use Check Shopify result; prepare a new draft to change its terms.'
+      end
       Offer.transaction do
         engagement = Engagement.find(offer.engagement_id)
         engagement.influencer.lock!
@@ -27,6 +30,8 @@ module Marketing
 
     def self.copy(offer, actor:)
       actor = CmsWriter.authorize!(actor)
+      ShopifyDiscountWorkflow.refresh(offer.shopify_discount, actor: actor) if offer.shopify_discount
+      offer.reload
       Offer.transaction do
         offer.engagement.influencer.lock!
         offer.engagement.lock!

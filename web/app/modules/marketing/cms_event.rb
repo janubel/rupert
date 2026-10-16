@@ -6,7 +6,7 @@ module Marketing
     encrypts :payload_json
     belongs_to :actor, class_name: 'User'
     validates :subject_type, :subject_id, :action, :payload_json, presence: true
-    validates :subject_type, inclusion: { in: %w[Marketing::Influencer Marketing::Engagement Marketing::ProductGift Marketing::Document Marketing::Offer] }
+    validates :subject_type, inclusion: { in: %w[Marketing::Influencer Marketing::Engagement Marketing::ProductGift Marketing::Document Marketing::Offer Marketing::ShopifyDiscount] }
     before_update { raise ActiveRecord::ReadOnlyRecord }
     before_destroy { raise ActiveRecord::ReadOnlyRecord }
   end

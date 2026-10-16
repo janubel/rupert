@@ -7,7 +7,7 @@ module Marketing
     def show
       @engagement = Engagement.find(params[:id])
       @gifts = @engagement.product_gifts.order(created_at: :desc).limit(31).to_a
-      @offers = @engagement.offers.order(created_at: :desc).limit(31).to_a
+      @offers = @engagement.offers.includes(:shopify_discount).order(created_at: :desc).limit(31).to_a
       scope = @engagement.documents
       scope = scope.where(visibility: 'internal') unless Current.user.can?('marketing.contacts')
       @documents = scope.order(updated_at: :desc).limit(31).to_a
