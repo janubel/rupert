@@ -610,6 +610,15 @@
       "scope": "Owner direction recorded October 15, 2026: probably retain Valmar and Authorize.net as long-term Rupert integrations. Confirm account/gateway mapping and supported read access; reconcile SwipeSimple operational evidence with gateway payments and processor deposits without double counting. Hourly SwipeSimple intake stays disabled until a supported vendor feed is verified. C-Trax remains the retail inventory reference. This objective does not activate payments or change merchant settings.",
       "evidence": "docs/ops/swipesimple-integration-research.md",
       "phase": "3"
+    },
+    {
+      "id": "F65",
+      "area": "Marketing",
+      "name": "Community thread and reply review",
+      "status": "Available",
+      "scope": "Optional tenant-scoped topic-search links and manual thread intake/triage; existing group-code records with dated merchant evidence, versioned reply approval, eligibility checks and manual publication/removal history. No automated crawling/posting, merchant code activation, influencer CMS or conversion attribution.",
+      "evidence": "web/app/services/marketing/reply_workflow.rb",
+      "phase": "4"
     }
   ]
 }

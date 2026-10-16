@@ -332,6 +332,24 @@ Rails.application.routes.draw do
 
   get '/w/:token/orders/:order_number', to: 'warehouse_orders#show', as: :warehouse_order
 
+  get '/marketing', to: 'marketing/workspace#index', as: :marketing
+  post '/marketing/toggle', to: 'marketing/workspace#toggle', as: :marketing_toggle
+  namespace :marketing do
+    resources :campaigns, only: %i[new create edit update]
+    resources :communities, only: %i[new create edit update] do
+      post :check_rules, on: :member
+    end
+    resources :offers, only: %i[new create edit update] do
+      post :verify, on: :member
+    end
+    resources :threads, only: %i[new create edit update] do
+      post :check_context, on: :member
+    end
+    resources :replies, only: %i[new create show update] do
+      post :transition, on: :member
+    end
+  end
+
   get '/up', to: proc { [200, { 'content-type' => 'text/plain' }, ['OK']] }
 
   # Unknown paths get a real 404 (rendering the dashboard for any URL made
