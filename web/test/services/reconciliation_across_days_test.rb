@@ -3,6 +3,7 @@
 require 'test_helper'
 
 class ReconciliationAcrossDaysTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
   setup { Current.tenant = tenants(:default_tenant) }
   teardown { Current.reset }
 
@@ -41,6 +42,41 @@ class ReconciliationAcrossDaysTest < ActiveSupport::TestCase
     overview = ReconciliationAcrossDays.new(ending_on: '2026-10-15')
     assert_equal 0, overview.days.sum { |row| row[:follow_ups] }
     assert_raises(ReconciliationEvidence::Error) { ReconciliationAcrossDays.new(ending_on: '2026-13-40') }
+  end
+
+  test 'close dates distinguish review freshness package freshness and overdue covered work without writes' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      day = Date.new(2026, 10, 14)
+      actor = users(:regular_user)
+      item = request(source: 'bank', kind: 'bank_statement', from: day.beginning_of_month, to: day.end_of_month)
+      item.update!(due_on: day, notes: 'Original still needed.')
+      workflow = FinancialCloseWorkflow.new(day: day.iso8601)
+      DailyReconciliationReview.create!(day: day, report_digest: workflow.report.digest, status: 'needs_attention', notes: 'Exception recorded.', reviewed_by: actor)
+      workflow = FinancialCloseWorkflow.new(day: day.iso8601)
+      package = workflow.retain!({ 'workflow_digest' => workflow.digest, 'disposition' => 'with_exceptions', 'notes' => 'Statement outstanding.' }.merge(FinancialCloseWorkflow::CHECKS.keys.to_h { |key| [key, '1'] }), actor: actor)
+      row = ReconciliationAcrossDays.new(ending_on: day.iso8601).days.first
+      assert_equal 1, row[:overdue]
+      assert_equal 'Needs attention', row[:close][:review]
+      assert_equal package.id, row[:close][:package_id]
+      assert row[:close][:package_current]
+      item.update!(notes: 'New next step recorded.')
+      assert_no_enqueued_jobs do
+        assert_no_difference ['ReconciliationDocument.count', 'ReconciliationFollowUpEvent.count', 'ActionMailer::Base.deliveries.size'] do
+          row = ReconciliationAcrossDays.new(ending_on: day.iso8601).days.first
+          refute row[:close][:package_current]
+          assert_equal 'Needs attention', row[:close][:review]
+        end
+      end
+      ReconciliationEvidence.retain!(bytes: 'New evidence', filename: 'new-statement.txt', source: 'bank', kind: 'bank_statement', from: day.iso8601, to: day.iso8601)
+      assert_equal 'Changed since review', ReconciliationAcrossDays.new(ending_on: day.iso8601).days.first[:close][:review]
+      foreign = Tenant.create!(name: 'Other close dates', subdomain: 'other-close-dates')
+      Current.set(tenant: foreign) do
+        row = ReconciliationAcrossDays.new(ending_on: day.iso8601).days.first
+        assert_nil row[:close][:package_id]
+        assert_equal 'Review not recorded', row[:close][:review]
+        assert_equal 0, row[:overdue]
+      end
+    end
   end
 
   private

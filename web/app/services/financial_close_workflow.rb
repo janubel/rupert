@@ -66,6 +66,14 @@ class FinancialCloseWorkflow
     end
   end
 
+  def status_summary
+    package = packages.first
+    { checks: blockers.size,
+      review: !review ? 'Review not recorded' : !review_current? ? 'Changed since review' : review.status.humanize,
+      package_id: package&.id, disposition: package&.metadata&.fetch('disposition', nil),
+      package_current: package && package.metadata['workflow_digest'] == digest }
+  end
+
   def evidence_payload
     @evidence_payload ||= { version: 1, day: day.iso8601, timezone: Time.zone.name,
       report_digest: report.digest, report: report.payload, issues: issues,

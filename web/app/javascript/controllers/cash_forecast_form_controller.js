@@ -1,18 +1,20 @@
 import { Controller } from '@hotwired/stimulus'
 
 export default class extends Controller {
-  static targets = ['horizon', 'week', 'asOf', 'changed', 'output']
-  static values = { calculated: Boolean }
+  static targets = ['horizon', 'week', 'asOf', 'changed', 'output', 'baselineStatus', 'baselineChanged']
+  static values = { calculated: Boolean, baselineDate: String }
 
   connect() { this.update() }
 
   markChanged() {
+    this.updateBaseline()
     if (!this.calculatedValue) return
     this.changedTargets.forEach((notice) => { notice.hidden = false })
     this.outputTargets.forEach((button) => { button.disabled = true })
   }
 
   update() {
+    this.updateBaseline()
     const horizon = Number(this.horizonTarget.value)
     const date = /^\d{4}-\d{2}-\d{2}$/.test(this.asOfTarget.value) ? new Date(`${this.asOfTarget.value}T12:00:00Z`) : null
     const format = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -31,5 +33,11 @@ export default class extends Controller {
         input.required = active
       })
     })
+  }
+
+  updateBaseline() {
+    const changed = this.asOfTarget.value !== this.baselineDateValue
+    this.baselineStatusTargets.forEach((status) => { status.hidden = changed })
+    this.baselineChangedTargets.forEach((notice) => { notice.hidden = !changed })
   }
 }
