@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class SettingsController < AuthenticatedController
+  include DriveOauthCallback
   before_action :authorize_read, only: %i[show env drive_status drive_logs backup]
   before_action :authorize_write, except: %i[show env drive_status drive_logs backup]
   before_action :authorize_super_admin, only: %i[backup restore drive_backup new_env_export env_export drive_auth drive_oauth_callback drive_disconnect drive_status drive_logs]
@@ -115,12 +116,13 @@ class SettingsController < AuthenticatedController
 
   # GET /settings/drive_auth — send the user to Google's consent screen
   def drive_auth
-    state = SecureRandom.hex(16)
+    state = "drive:#{SecureRandom.hex(24)}"
     session[:drive_oauth_state] = state
     session[:drive_oauth_actor_id] = Current.user.id
     session[:drive_oauth_tenant_id] = Current.tenant_id
+    session[:drive_oauth_started_at] = Time.current.to_i
     redirect_to(
-      GoogleDriveBackupService.auth_url(redirect_uri: drive_oauth_callback_settings_url, state: state),
+      GoogleDriveBackupService.auth_url(redirect_uri: google_callback_url, state: state),
       allow_other_host: true
     )
   rescue GoogleDriveBackupService::NotConfiguredError => e
@@ -129,24 +131,7 @@ class SettingsController < AuthenticatedController
 
   # GET /settings/drive_oauth_callback — exchange the code, store refresh token
   def drive_oauth_callback
-    if params[:error].present?
-      clear_drive_oauth_state
-      return redirect_to(settings_path, alert: 'Google Drive authorization was declined.')
-    end
-    if session[:drive_oauth_state].blank? || session[:drive_oauth_state] != params[:state] ||
-        session[:drive_oauth_actor_id] != Current.user.id || session[:drive_oauth_tenant_id] != Current.tenant_id
-      clear_drive_oauth_state
-      return redirect_to(settings_path, alert: 'Google Drive authorization failed state check. Try again.')
-    end
-
-    GoogleDriveBackupService.exchange_code!(params[:code], redirect_uri: drive_oauth_callback_settings_url)
-    clear_drive_oauth_state
-    redirect_to(settings_path, notice: 'Connected to Google Drive.')
-  rescue GoogleDriveBackupService::NotConfiguredError,
-         GoogleDriveBackupService::NotConnectedError,
-         Signet::AuthorizationError => e
-    clear_drive_oauth_state
-    redirect_to(settings_path, alert: e.message)
+    complete_drive_oauth
   end
 
   # POST /settings/drive_backup — run a backup right now
@@ -265,11 +250,6 @@ class SettingsController < AuthenticatedController
     authorize(:module, :settings_write?)
   end
 
-  def clear_drive_oauth_state
-    session.delete(:drive_oauth_state)
-    session.delete(:drive_oauth_actor_id)
-    session.delete(:drive_oauth_tenant_id)
-  end
 
   def platform_admin?
     User.find_by(id: Current.user&.id, active: true)&.super_admin? || false

@@ -70,6 +70,14 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
     GoogleDriveBackupService.stubs(:ensure_folder!).returns('FOLDER1')
     GoogleDriveBackupService.stubs(:prune_old!).returns(nil)
 
+    bytes = File.binread(@snapshot)
+    drive.define_singleton_method(:get_file) do |_id, **opts|
+      if opts[:download_dest]
+        File.binwrite(opts[:download_dest], bytes)
+      else
+        Struct.new(:size, :md5_checksum).new(bytes.bytesize, Digest::MD5.hexdigest(bytes))
+      end
+    end
     expected_size = File.size(@snapshot)
     log = GoogleDriveBackupService.backup!(actor: 'test')
 
@@ -112,4 +120,23 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
   ensure
     EnvStore.platform_set('GOOGLE_DRIVE_RETENTION', nil)
   end
+  test 'corrupt downloaded backup fails before pruning and never reports success' do
+    drive = Object.new
+    drive.expects(:create_file).returns(Struct.new(:id).new('FILE1'))
+    bytes = File.binread(@snapshot)
+    drive.define_singleton_method(:get_file) do |_id, **opts|
+      if opts[:download_dest]
+        File.binwrite(opts[:download_dest], 'corrupt')
+      else
+        Struct.new(:size, :md5_checksum).new(bytes.bytesize, Digest::MD5.hexdigest(bytes))
+      end
+    end
+    GoogleDriveBackupService.stubs(:drive_service).returns(drive)
+    GoogleDriveBackupService.stubs(:ensure_folder!).returns('FOLDER1')
+    GoogleDriveBackupService.expects(:prune_old!).never
+    assert_raises(GoogleDriveBackupService::NotConnectedError) { GoogleDriveBackupService.backup! }
+    assert_equal 'failed', BackupLog.unscoped.where(tenant_id: nil).order(startedAt: :desc).first.status
+    refute File.exist?(@snapshot)
+  end
+
 end
