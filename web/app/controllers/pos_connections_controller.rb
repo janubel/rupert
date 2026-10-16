@@ -69,6 +69,9 @@ class PosConnectionsController < AuthenticatedController
   end
 
   def update
+    if @provider[:key] == 'ctrax' && ActiveModel::Type::Boolean.new.cast(params.dig(:pos_connection, :reporting_enabled)) && !Current.user.can?('sales.write')
+      return head(:forbidden)
+    end
     if @provider[:key] == 'ctrax' && ActiveModel::Type::Boolean.new.cast(params.dig(:pos_connection,
       :hourly_sync_enabled)) && !Current.user.can?('inventory.write')
       return render plain: 'Inventory write permission is required for hourly sync.', status: :forbidden
@@ -211,7 +214,7 @@ class PosConnectionsController < AuthenticatedController
       PosProviderCatalog.credential_keys(@provider[:key], gateway: gateway)
     end
     requested.permit(:environment, :account_reference, :access_requested, :vendor_approved, :lock_version,
-      *(@provider[:key] == 'ctrax' ? [:hourly_sync_enabled] : []),
+      *(@provider[:key] == 'ctrax' ? %i[hourly_sync_enabled reporting_enabled] : []),
       *(@provider[:key] == 'valmar' ? [:gateway] : []),
       *(@provider[:key] == 'authorize_net_reporting' ? [:reporting_auth_mode, :reporting_enabled] : []),
       *(%w[iris_reporting swipesimple].include?(@provider[:key]) ? [:reporting_enabled] : []), credential_secret: keys)

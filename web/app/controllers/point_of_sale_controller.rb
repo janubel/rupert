@@ -23,26 +23,17 @@ class PointOfSaleController < AuthenticatedController
     ids = rows.map { |row| row[:variant_id].to_s }
     raise QuoteError, 'Each cart row must identify a different catalog variant.' unless ids.uniq.size == ids.size
 
-    variants = ShopifyVariant.includes(:product).where(id: ids).index_by(&:id)
-    raise QuoteError, 'One or more selected items are unavailable to this store.' unless variants.size == ids.size
-
-    duplicate_skus = ShopifyVariant.where(sku: variants.values.map(&:sku).reject(&:blank?))
-      .group(:sku).having('COUNT(*) > 1').pluck(:sku)
-    lines = rows.map do |row|
-      variant = variants.fetch(row[:variant_id].to_s)
-      raise QuoteError, 'A selected SKU identifies multiple variants. Resolve the catalog conflict first.' if duplicate_skus.include?(variant.sku)
-
-      quoted_line(variant, row[:quantity])
-    end
+    lines = quote_lines(rows)
     subtotal = lines.sum { |line| BigDecimal(line[:line_total]) }
     tip = quoted_tip(subtotal)
     @quote = {
-      source: 'shopify', preview: true, currency_code: nil, currency_label: 'Shopify catalog currency',
+      source: quote_source, preview: true, currency_code: quote_currency, currency_label: quote_currency || 'Shopify catalog currency',
       lines: lines, subtotal: subtotal.to_s('F'),
       tip_type: tip[:type], tip_percentage: tip[:percentage], tip_amount: tip[:amount].to_s('F'),
       preview_total: (subtotal + tip[:amount]).to_s('F'),
       tax_calculated: false, payment_processed: false, stock_reserved: false, sale_created: false
     }
+    publish_display(@quote)
     respond_to do |format|
       format.json { render json: @quote }
       format.html do
@@ -53,6 +44,25 @@ class PointOfSaleController < AuthenticatedController
   end
 
   private
+
+  def quote_source = 'shopify'
+  def quote_currency = nil
+  def publish_display(_quote); end
+
+  def quote_lines(rows)
+    ids = rows.map { |row| row[:variant_id].to_s }
+    variants = ShopifyVariant.includes(:product).where(id: ids).index_by(&:id)
+    raise QuoteError, 'One or more selected items are unavailable to this store.' unless variants.size == ids.size
+
+    duplicates = ShopifyVariant.where(sku: variants.values.map(&:sku).reject(&:blank?))
+      .group(:sku).having('COUNT(*) > 1').pluck(:sku)
+    rows.map do |row|
+      variant = variants.fetch(row[:variant_id].to_s)
+      raise QuoteError, 'A selected SKU identifies multiple variants. Resolve the catalog conflict first.' if duplicates.include?(variant.sku)
+
+      quoted_line(variant, row[:quantity])
+    end
+  end
 
   def authorize_preview
     return if Current.user.active? && Current.tenant&.status == 'active' &&

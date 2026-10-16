@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_050000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -550,6 +550,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
     t.check_constraint "ended_at IS NULL OR ended_at > started_at", name: "clock_positive_interval"
   end
 
+  create_table "ctrax_days", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "api_origin", null: false
+    t.string "store_id", null: false
+    t.date "business_date", null: false
+    t.string "timezone", null: false
+    t.string "currency", default: "USD", null: false
+    t.text "orders_json", null: false
+    t.text "sessions_json", null: false
+    t.text "controls_json", null: false
+    t.string "source_digest", null: false
+    t.datetime "captured_at", null: false
+    t.integer "reviewed_by_id"
+    t.string "reviewed_digest"
+    t.datetime "reviewed_at"
+    t.string "review_note", limit: 1000
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reviewed_by_id"], name: "index_ctrax_days_on_reviewed_by_id"
+    t.index ["tenant_id", "location_id", "business_date"], name: "idx_on_tenant_id_location_id_business_date_9a513d6082", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_days_on_tenant_id"
+  end
+
+  create_table "ctrax_image_links", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "variant_id", null: false
+    t.string "shopify_product_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "location_id", "variant_id"], name: "idx_on_tenant_id_location_id_variant_id_a6f332d264", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_image_links_on_tenant_id"
+  end
+
   create_table "ctrax_stock_snapshots", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "location_id", null: false
@@ -928,6 +963,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
     t.index ["updated_by_id"], name: "index_pos_connections_on_updated_by_id"
     t.check_constraint "environment IN ('sandbox', 'production')", name: "pos_connection_environment"
     t.check_constraint "last_check_status IS NULL OR last_check_status IN ('verified', 'failed')", name: "pos_connection_check_status"
+  end
+
+  create_table "pos_display_sessions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "user_id", null: false
+    t.string "location_id", null: false
+    t.text "display_token", null: false
+    t.string "token_digest", null: false
+    t.text "draft_json", default: "{}", null: false
+    t.string "draft_digest"
+    t.integer "cart_revision", default: 0, null: false
+    t.integer "confirmed_revision"
+    t.integer "chosen_tip_cents"
+    t.boolean "demo", default: false, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "closed_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id"], name: "index_pos_display_sessions_on_tenant_id"
+    t.index ["token_digest"], name: "index_pos_display_sessions_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_pos_display_sessions_on_user_id"
   end
 
   create_table "pos_sessions", force: :cascade do |t|
@@ -1493,6 +1550,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
   add_foreign_key "clock_shifts", "employees", on_delete: :nullify
   add_foreign_key "clock_shifts", "tenants"
   add_foreign_key "clock_shifts", "users", on_delete: :nullify
+  add_foreign_key "ctrax_days", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "ctrax_days", "tenants"
+  add_foreign_key "ctrax_days", "users", column: "reviewed_by_id"
+  add_foreign_key "ctrax_image_links", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "ctrax_image_links", "ShopifyProduct", column: "shopify_product_id", on_delete: :cascade
+  add_foreign_key "ctrax_image_links", "tenants"
   add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_stock_snapshots", "tenants"
   add_foreign_key "departments", "employees", column: "manager_id"
@@ -1508,6 +1571,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
   add_foreign_key "payments", "orders", on_delete: :cascade
   add_foreign_key "pos_connections", "tenants"
   add_foreign_key "pos_connections", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "pos_display_sessions", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "pos_display_sessions", "tenants"
+  add_foreign_key "pos_display_sessions", "users"
   add_foreign_key "refunds", "orders", on_delete: :cascade
   add_foreign_key "size_changes", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "size_family_members", "size_families", column: "family_id", on_delete: :cascade

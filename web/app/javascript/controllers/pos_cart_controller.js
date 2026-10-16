@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["form", "items", "status", "subtotal", "tip", "previewTotal", "tipType", "tipPercentage", "tipAmount", "percentageFields", "amountFields"]
-  static values = { cartKey: String, initialQuote: Object }
+  static values = { cartKey: String, initialQuote: Object, clearUrl: String }
 
   connect() {
     this.cart = new Map()
@@ -145,6 +145,15 @@ export default class extends Controller {
     this.tipTarget.textContent = "—"
     this.previewTotalTarget.textContent = "—"
     if (!this.cart.size) {
+      if (this.hasClearUrlValue) {
+        try {
+          const cleared = await fetch(this.clearUrlValue, { method: "POST", headers: { "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || "" } })
+          if (!cleared.ok) throw new Error()
+        } catch (_) {
+          this.statusTarget.textContent = "Customer cart could not be cleared. Close the customer screen before proceeding."
+          return
+        }
+      }
       this.render([])
       this.statusTarget.textContent = "Choose products to build a preview."
       return

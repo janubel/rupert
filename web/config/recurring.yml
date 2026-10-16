@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 production:
+  ctrax_sales:
+    class: CtraxSalesSyncJob
+    queue: default
+    schedule: '5,35 * * * *'
   swipesimple_web_pull:
     class: SwipesimpleWebSyncJob
     queue: default

@@ -75,7 +75,15 @@ module Ctrax
         'id' => row.fetch('id').to_s, 'sku' => sku,
         'barcode' => text(effective.call('barcode'), 255),
         'name' => text(row['full_name'] || row['attribute_name'], 1000),
-        'quantity' => quantity, 'manage_stock' => manage_stock == true
+        'quantity' => quantity, 'manage_stock' => manage_stock == true,
+        'product_name' => text(row.dig('product', 'name'), 1000),
+        'category' => text(row.dig('product', 'category', 'name'), 500),
+        'product_id' => row['product_id']&.to_s,
+        'website_product_id' => row.dig('product', 'shopify_product_identifier')&.to_s,
+        'website_variant_id' => row['shopify_product_variant_identifier']&.to_s,
+        'price_cents' => minor_units(effective.call('is_promo_pricing_enabled') == true ? effective.call('promo_price') : effective.call('regular_price')),
+        'variable_price' => effective.call('has_variable_pricing') == true,
+        'listed' => effective.call('is_listed_for_sale') != false
       }
     rescue KeyError, TypeError
       raise Client::Error, :response
@@ -86,6 +94,10 @@ module Ctrax
       raise Client::Error, :response unless value.is_a?(String) && value.valid_encoding? && value.bytesize <= maximum
 
       value.presence
+    end
+
+    def minor_units(value)
+      value.to_i if value && value.to_s.match?(/\A\d{1,9}\z/)
     end
   end
 end

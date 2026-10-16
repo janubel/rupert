@@ -261,6 +261,21 @@ Rails.application.routes.draw do
     end
   end
   resources :ctrax_stock, only: :index
+  resources :ctrax_days, only: %i[index show create] do
+    member { post :review }
+  end
+  get '/ctrax_pos', to: 'ctrax_pos#index', as: :ctrax_pos
+  post '/ctrax_pos/:location_id/quote', to: 'ctrax_pos#quote', as: :quote_ctrax_pos
+  post '/ctrax_pos/:location_id/images/:variant_id', to: 'ctrax_pos#image', as: :ctrax_pos_image
+  resources :pos_displays, only: %i[create show destroy] do
+    member do
+      get :demo
+      post :clear
+    end
+  end
+  get '/customer_display', to: 'customer_displays#show', as: :customer_display
+  get '/customer_display/state', to: 'customer_displays#state', as: :customer_display_state
+  post '/customer_display/tip', to: 'customer_displays#tip', as: :customer_display_tip
   resources :inventory_exceptions, only: :index
   resources :bulk_recipes, only: %i[index new create]
   resources :bulk_consumptions, only: %i[index new create] do
