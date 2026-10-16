@@ -77,4 +77,56 @@ class ReconciliationWorkflowUxTest < ActionDispatch::IntegrationTest
     get reconciliation_documents_path
     assert_redirected_to root_path
   end
+
+  test 'original cards surface overdue matches with safe review and scoped queue actions' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      values = { category: 'missing_report', source: 'bank', document_kind: 'register_control', currency: 'USD',
+        period_from: '2026-10-14', period_to: '2026-10-14', title: 'Missing register report', notes: 'Check for the original.',
+        due_on: '2026-10-15', submission_key: SecureRandom.uuid, created_by: @user }
+      items = 4.times.map { |i| ReconciliationFollowUp.create!(values.merge(title: "Missing register report #{i}", submission_key: SecureRandom.uuid)) }
+      ReconciliationFollowUp.create!(values.merge(title: 'Wrong currency', currency: 'CAD', submission_key: SecureRandom.uuid))
+      ReconciliationFollowUp.create!(values.merge(title: 'Other location', location_id: 'different', submission_key: SecureRandom.uuid))
+      ReconciliationFollowUp.create!(values.merge(title: 'Already closed', status: 'closed', submission_key: SecureRandom.uuid))
+      ReconciliationFollowUp.create!(values.merge(title: 'Outside coverage', period_from: '2026-10-13', period_to: '2026-10-13', submission_key: SecureRandom.uuid))
+      assert_no_enqueued_jobs do
+        assert_no_difference ['ReconciliationFollowUpEvent.count', 'ActionMailer::Base.deliveries.size'] do
+          get reconciliation_documents_path(q: 'daily-control')
+          assert_response :success
+          assert_select "#evidence-#{@doc.id} h2", text: '4 matching open follow-ups'
+          assert_select "#evidence-#{@doc.id} a", text: 'Review & link this original', count: 3
+          assert_includes response.body, '1 day overdue'
+          assert_select 'a[href=?]', reconciliation_follow_ups_path(original: @doc.id), text: 'See all 4 matching follow-ups'
+          get reconciliation_follow_ups_path(original: @doc.id)
+          assert_response :success
+          items.each { |item| assert_includes response.body, item.title }
+          ['Wrong currency', 'Other location', 'Already closed', 'Outside coverage'].each { |title| refute_includes response.body, title }
+          assert_select 'input[name="original"][value=?]', @doc.id.to_s
+          get reconciliation_follow_up_path(items.first, evidence: @doc.id)
+          assert_select 'select[name="follow_up[document_id]"] option[selected][value=?]', @doc.id.to_s
+          assert_nil items.first.reload.document_id
+          assert_equal 'open', items.first.status
+        end
+      end
+      items.first.update!(document_id: @doc.id, notes: 'File reviewed; questions remain.')
+      get reconciliation_documents_path(q: 'daily-control')
+      assert_includes response.body, 'This original is linked'
+      @user.update!(role: 'reporting')
+      get reconciliation_documents_path(q: 'daily-control')
+      assert_select 'a', text: 'Review & link this original', count: 0
+      assert_select 'a', text: 'View follow-up', count: 3
+      foreign = Tenant.create!(name: 'Foreign original match', subdomain: 'foreign-original-match')
+      @user.update!(tenant: foreign)
+      get reconciliation_follow_ups_path(original: @doc.id)
+      assert_response :not_found
+    end
+  end
+
+  test 'empty library search carries source and coverage into local missing report tracking' do
+    get reconciliation_documents_path(source: 'bank', from: '2026-10-01', to: '2026-10-31', q: 'not-present')
+    assert_select 'a[href=?]', new_reconciliation_follow_up_path(source: 'bank', period_from: '2026-10-01', period_to: '2026-10-31'), text: 'Track missing report'
+    assert_includes response.body, 'No email or message is sent.'
+    @user.update!(role: 'reporting')
+    get reconciliation_documents_path(q: 'not-present')
+    assert_select 'a', text: 'Track missing report', count: 0
+  end
 end

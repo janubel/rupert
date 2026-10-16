@@ -55,7 +55,7 @@ class ReconciliationLibrary
 
   def relations
     @relations ||= begin
-      vault = ReconciliationDocument.select(:id, :source, :kind, :filename, :period_from, :period_to,
+      vault = ReconciliationDocument.select(:id, :tenant_id, :source, :kind, :filename, :period_from, :period_to,
         :created_at, :metadata_json, :supersedes_id, :sha256, :byte_size)
       vault = vault.where(source: filters['source']) if filters['source'].present?
       vault = vault.where('period_to >= ?', @from) if @from
