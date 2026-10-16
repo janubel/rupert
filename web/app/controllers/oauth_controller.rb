@@ -107,7 +107,7 @@ class OauthController < ApplicationController
     session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(user.password_digest) if user.employee?
     AccessLogger.record(source: 'google', status: 'success', request: request, user: user, email: email,
       domain: tested_domain)
-    redirect_to(root_path, notice: 'Signed in with Google.')
+    redirect_to(user.employee? ? people_timesheets_path : root_path, notice: 'Signed in with Google.')
   rescue GoogleOauthService::NotConfiguredError, GoogleOauthService::ExchangeError => e
     clear_oauth_intent
     AccessLogger.record(source: 'google', status: 'failure', request: request, email: info&.dig('email'),
