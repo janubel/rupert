@@ -83,7 +83,7 @@ class NavigationAccessBoundariesTest < ActionDispatch::IntegrationTest
       assert_select '[data-widget-key=sync_history]', count: 0
       assert_select 'input[value="Sync now"]', count: 0
       assert_select 'p', text: "Today's sales", count: 0
-      assert_select 'p', text: 'Active products'
+      assert_select 'p', text: 'Website products'
 
       post customize_dashboard_path, params: { widgets: ['revenue'] }
       assert_response :unprocessable_entity
