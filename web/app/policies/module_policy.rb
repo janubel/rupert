@@ -8,6 +8,7 @@ class ModulePolicy < ApplicationPolicy
     marketing_read
     marketing_write
     marketing_review
+    marketing_contacts
     dashboard_read
     sales_read
     sales_write

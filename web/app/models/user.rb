@@ -41,6 +41,7 @@ class User < ActiveRecord::Base
       'marketing.read',
       'marketing.write',
       'marketing.review',
+      'marketing.contacts',
       'dashboard.read',
       'sales.read',
       'sales.write',
@@ -202,7 +203,7 @@ class User < ActiveRecord::Base
   def self.permission_catalog
     [
       { area: 'Overview', permissions: ['dashboard.read'] },
-      { area: 'Marketing', permissions: ['marketing.read', 'marketing.write', 'marketing.review'] },
+      { area: 'Marketing', permissions: ['marketing.read', 'marketing.write', 'marketing.review', 'marketing.contacts'] },
       {
         area: 'Commerce',
         permissions: ['sales.read', 'sales.write', 'customers.read', 'customers.write', 'inventory.read',

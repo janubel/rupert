@@ -1,0 +1,3 @@
+<section class="card card-pad space-y-3"><h2 class="font-semibold">Activity history</h2><p class="text-xs text-mocha">Latest 20 events. Private details require contacts access.</p>
+  <% influencer_cms_events(record).each do |event| %><div><p class="text-sm"><%= event.action.humanize %> · actor <%= event.actor_id %> · <%= event.created_at.to_fs(:short) %></p><% if Current.user.can?('marketing.contacts') %><details><summary class="text-xs">Details</summary><pre class="whitespace-pre-wrap break-words text-xs"><%= JSON.pretty_generate(JSON.parse(event.payload_json)) %></pre></details><% end %></div><% end %>
+</section>

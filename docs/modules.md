@@ -29,7 +29,9 @@ and `User.permission_catalog`.
 
 ## Marketing
 
-The optional Marketing workspace provides group topic-search links, manual thread intake and relevance triage, existing group-code records with dated merchant evidence, versioned reply review, approved copy and manual publication/removal history. It uses separate `marketing.read`, `marketing.write`, and `marketing.review` permissions and starts disabled per workspace. See the [operator guide](ops/community-marketing.md). Automated source retrieval, code activation and influencer management are later phases.
+The optional Marketing workspace provides group topic-search links, manual thread intake and relevance triage, existing group-code records with dated merchant evidence, versioned reply review, approved copy and manual publication/removal history. It uses separate `marketing.read`, `marketing.write`, and `marketing.review` permissions and starts disabled per workspace. See the [operator guide](ops/community-marketing.md).
+
+The [Influencer CMS](ops/influencer-cms.md) adds prospect/relationship tracking, campaign collaborations, product-gift approval and manual shipment records, temporary merchant-code records, UTM referral links and versioned documents. Private contacts, addresses, conversations and restricted documents require `marketing.contacts`. Automatic source retrieval, code activation, product fulfillment and sales attribution remain later phases.
 
 ## Operations
 

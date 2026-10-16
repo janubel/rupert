@@ -8,6 +8,16 @@ class PageGuides
   Guide = Struct.new(:key, :title, :summary, :sections, :tips, keyword_init: true)
 
   GUIDES = {
+    'influencers' => Guide.new(
+      key: 'influencers', title: 'Influencer collaborations',
+      summary: 'Track prospects, campaign collaborations, product gifts, temporary code records and documents.',
+      sections: [
+        { heading: 'Directory and follow-up', body: 'Add a prospect, audience topics and relationship owner. Update stages and follow-up dates as you work. Contact details and conversations require the separate Marketing contacts permission. No outreach is sent automatically.' },
+        { heading: 'Collaborations and gifts', body: 'Connect a prospect to a Marketing campaign. Propose products from the mirrored Shopify catalog, record estimated costs, approve the gift and confirm recipient details. Record actual shipment and delivery evidence; this workflow does not reserve stock, create orders or change inventory.' },
+        { heading: 'Offers and documentation', body: 'Record existing merchant codes with expiry and full terms. Review merchant evidence before sharing a code/referral link. Save briefs, instructions, disclosure and permission records as versioned documents. Campaign links do not yet measure conversions or commissions.' }
+      ],
+      tips: ['Do not contact blocks new offer sharing and product handoffs.', 'Document edits create a new revision and reset review.', 'Set temporary-code expiry in the merchant store as well as Rupert.']
+    ),
     'marketing' => Guide.new(
       key: 'marketing', title: 'Community marketing',
       summary: 'Find topic discussions, save thread context and review replies with existing group offers.',

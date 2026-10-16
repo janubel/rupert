@@ -7,6 +7,7 @@ class DirectorySyncJob < ApplicationJob
     unless tenant_id
       Tenant.where(status: 'active').find_each do |tenant|
         Current.set(tenant: tenant) do
+          EnvStore.clear_cache!
           Directories::Sync::PAIRS.each do |source, kinds|
             next unless Directories::Sync.available?(source)
             next if source == 'ctrax' && !PosConnection.find_by(provider: source)&.hourly_sync_enabled
@@ -21,6 +22,7 @@ class DirectorySyncJob < ApplicationJob
     return unless tenant
 
     Current.set(tenant: tenant) do
+      EnvStore.clear_cache!
       return unless Directories::Sync.available?(provider)
       return if provider == 'ctrax' && !manual && !PosConnection.find_by(provider: provider)&.hourly_sync_enabled
 
