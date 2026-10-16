@@ -19,6 +19,22 @@ class PosCheckoutIntegrationTest < ActionDispatch::IntegrationTest
   end
   teardown { Current.reset }
 
+  test 'admins see a card processing banner linking to gateway setup until the gateway is verified' do
+    get ctrax_pos_path
+    assert_select '[data-card-processing-banner] a[href=?]', pos_setting_path(@location.id), text: 'Click here to resolve'
+    get pos_setting_path(@location.id)
+    assert_select '[data-card-processing-banner]', false
+    PosSetting.where(location: @location).update_all(card_enabled: true, verified_at: Time.current)
+    get ctrax_pos_path
+    assert_select '[data-card-processing-banner]', false
+  end
+
+  test 'header shows the signed in role and how the session was validated' do
+    get ctrax_pos_path
+    assert_select '[data-access-level]', text: 'Store administrator'
+    assert_select '[data-signin-method]', text: 'Signed in with password'
+  end
+
   test 'cash end to end ignores submitted amounts and issues one receipt with private confirmed tip' do
     post pos_checkouts_path, params: { display_id: @display.id, tender: 'cash', register_id: @register.id, cash_received: '20', total_cents: 1, tip_cents: 90000 }, as: :json
     assert_response :success

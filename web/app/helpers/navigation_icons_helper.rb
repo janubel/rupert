@@ -50,6 +50,12 @@ module NavigationIconsHelper
     MODULE_ICON_KEYS.fetch(entry.key, ModuleRegistry.area_key_for(entry.key) || 'document')
   end
 
+  # How this browser session was validated, from the login path that created it.
+  def navigation_signin_method
+    { 'google' => 'Signed in with Google (verified account)', 'password' => 'Signed in with password',
+      'employee_invite' => 'Signed in with employee invite link' }.fetch(session[:auth_method].to_s, 'Sign-in method not recorded for this session')
+  end
+
   def navigation_role_name(user)
     { 'super_admin' => 'Platform administrator', 'admin' => 'Store administrator',
       'manager' => 'Manager', 'cashier' => 'Cashier', 'inventory_employee' => 'Inventory staff',
