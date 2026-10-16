@@ -10,6 +10,7 @@ class EmployeeAppController < ApplicationController
   before_action -> { require_login if Current.user }, only: :show
 
   def privacy
+    @preview = params[:preview] == '1' && Current.user&.can_manage_accounts?
   end
 
   def show
@@ -17,11 +18,10 @@ class EmployeeAppController < ApplicationController
     return unless Current.user
 
     @preview = params[:preview] == '1' && Current.user.can_manage_accounts?
-    @worker = TimeClockService.worker_for(Current.user, include_on_leave: true)
     if @preview
       @summary = EmployeeWorkSummary.preview
       @worker = @summary.employee
-    elsif @worker
+    elsif (@worker = TimeClockService.worker_for(Current.user, include_on_leave: true))
       @summary = EmployeeWorkSummary.new(employee: @worker, from: Date.current.beginning_of_week, to: Date.current.end_of_week)
       @open_shift = ClockShift.open.find_by(employee_id: @worker.id, user_id: Current.user.id)
       @timesheet = @worker.timesheets.where('period_start <= ? AND period_end >= ?', Date.current, Date.current).first

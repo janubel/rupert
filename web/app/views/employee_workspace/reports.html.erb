@@ -1,9 +1,9 @@
 <% content_for :title, 'My reports' %>
 <section><h1 class="page-title">My reports</h1><p class="mt-1 text-sm text-mocha">Your hours and pay, for the dates you choose.</p></section>
-<%= form_with url: employee_reports_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
+<%= form_with url: personal_reports_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
   <div><%= f.label :from, 'From', class: 'block text-sm mb-1' %><%= f.date_field :from, value: @from, required: true, class: 'input' %></div>
   <div><%= f.label :to, 'To', class: 'block text-sm mb-1' %><%= f.date_field :to, value: @to, required: true, class: 'input' %></div>
-  <%= f.submit 'Show report', class: 'btn-primary' %><%= link_to 'Download my hours', employee_reports_path(format: :csv, from: @from, to: @to), class: 'btn-ghost' %>
+  <%= f.submit 'Show report', class: 'btn-primary' %><%= link_to 'Download my hours', personal_reports_path(format: :csv, from: @from, to: @to), class: 'btn-ghost' %>
 <% end %>
 <section class="grid grid-cols-2 gap-3"><div class="card card-pad"><p class="text-sm text-mocha">Timesheet hours</p><p class="mt-1 text-3xl font-semibold"><%= number_with_precision(@summary.hours, precision: 2, strip_insignificant_zeros: true) %>h</p></div><div class="card card-pad"><p class="text-sm text-mocha">Estimated gross pay</p><p class="mt-1 text-3xl font-semibold"><%= @summary.gross_cents.nil? ? '—' : number_to_currency(@summary.gross_cents / 100.0) %></p></div></section>
 <p class="text-xs text-mocha">Estimates use the hourly rate effective on each recorded day, with marked overtime at 1.5×. They include draft hours and exclude deductions, commissions and clock time not yet imported. Missing rates and salary periods have no hourly estimate.</p>
@@ -13,27 +13,25 @@
     <article class="card card-pad"><h3 class="font-semibold"><%= l(day, format: :long) %></h3><% entries.each do |entry| %><p class="mt-2 flex flex-wrap justify-between gap-2 text-sm"><span><%= entry.work_type.humanize %> · <%= entry.timesheet.status.humanize %></span><span><%= number_with_precision(entry.hours, precision: 2) %>h · <%= @summary.estimated_cents(entry).nil? ? 'Rate not set' : number_to_currency(@summary.estimated_cents(entry) / 100.0) %></span></p><% end %></article>
   <% end %>
 </section>
-<section class="space-y-3"><div class="flex flex-wrap justify-between gap-2"><h2 class="text-lg font-semibold">My time off</h2><%= link_to 'Download my time off', employee_reports_path(format: :csv, kind: 'time_off', from: @from, to: @to), class: 'text-sm text-olive underline' %></div>
+<section class="space-y-3"><div class="flex flex-wrap justify-between gap-2"><h2 class="text-lg font-semibold">My time off</h2><%= link_to 'Download my time off', personal_reports_path(format: :csv, kind: 'time_off', from: @from, to: @to), class: 'text-sm text-olive underline' %></div>
   <% if @summary.requests.empty? %><p class="card card-pad text-sm text-mocha">No time-off requests in this period.</p><% end %>
   <% @summary.requests.each do |leave| %><p class="card card-pad text-sm"><%= leave.leave_type.humanize %> · <%= leave.starts_on.strftime('%b %-d') %> – <%= leave.ends_on.strftime('%b %-d, %Y') %> · <%= leave.status.humanize %></p><% end %>
 </section>
-<section class="space-y-3"><h2 class="text-lg font-semibold">My payslips</h2>
-  <% if @payslips.empty? %><p class="card card-pad text-sm text-mocha">No finalized payslips in this period. Your manager will confirm payment timing.</p><% end %>
-  <% @payslips.each do |slip| %>
-    <article class="card card-pad space-y-3"><div class="flex flex-wrap justify-between gap-2"><h3 class="font-semibold"><%= slip.pay_run.period_label %></h3><span class="pill-olive"><%= slip.pay_run.paid? ? 'Paid' : 'Finalized · not marked paid' %></span></div><dl class="grid grid-cols-3 gap-2 text-sm"><div><dt class="text-mocha">Gross</dt><dd class="font-semibold"><%= number_to_currency(slip.gross_cents / 100.0) %></dd></div><div><dt class="text-mocha">Deductions</dt><dd class="font-semibold"><%= number_to_currency(slip.deductions_cents / 100.0) %></dd></div><div><dt class="text-mocha">Net</dt><dd class="font-semibold"><%= number_to_currency(slip.net_cents / 100.0) %></dd></div></dl><% if slip.pay_run.paid_on %><p class="text-sm text-mocha">Recorded payment date: <%= l(slip.pay_run.paid_on, format: :long) %></p><% end %></article>
-  <% end %>
-</section>
+<%= render 'employee_workspace/payslips' %>
 
-<section id="problems" class="card card-pad space-y-4"><h2 class="text-lg font-semibold">Report a problem</h2><p class="text-sm text-mocha">Something wrong with your hours, pay or time off? Tell your administrator here. For a clock time that needs changing, <%= link_to 'request a clock correction', time_clock_path, class: 'text-olive underline' %>.</p>
+<section id="problems" class="card card-pad space-y-4"><h2 class="text-lg font-semibold">Report a problem</h2><p class="text-sm text-mocha">Something wrong with your hours, pay or time off? Tell your administrator here. For a clock time that needs changing, <%= link_to 'request a clock correction', personal_time_clock_path, class: 'text-olive underline' %>.</p>
   <% if @work_report.errors.any? %><p role="alert" class="text-sm text-rose"><%= @work_report.errors.full_messages.to_sentence %></p><% end %>
-  <%= form_with model: @work_report, scope: :work_report, url: employee_problem_path, class: 'space-y-3' do |f| %>
+  <%= form_with model: @work_report, scope: :work_report, url: (@preview ? employee_preview_reports_path(preview: 1) : employee_problem_path), class: 'space-y-3' do |f| %>
+    <fieldset <%= 'disabled' if @preview %> class="space-y-3">
     <%= f.hidden_field :request_key %>
     <div><%= f.label :kind, 'What is this about?', class: 'block text-sm mb-1' %><%= f.select :kind, EmployeeWorkReport::KINDS.map { |kind, label| [label, kind] }, {}, class: 'select w-full' %></div>
     <div><%= f.label :details, 'What happened?', class: 'block text-sm mb-1' %><%= f.text_area :details, rows: 3, maxlength: 2000, required: true, class: 'input w-full' %></div>
     <%= f.submit 'Save problem report', class: 'btn-primary' %>
+    </fieldset>
+    <% if @preview %><p class="text-sm text-mocha">Example form · Saving is disabled in preview.</p><% end %>
   <% end %>
 </section>
 <section class="space-y-3"><h2 class="text-lg font-semibold">My problem reports</h2>
   <% if @work_reports.empty? %><p class="card card-pad text-sm text-mocha">No problem reports yet.</p><% end %>
-  <% @work_reports.each do |report| %><article class="card card-pad space-y-3"><div class="flex flex-wrap justify-between gap-2"><h3 class="font-semibold"><%= EmployeeWorkReport::KINDS.fetch(report.kind) %></h3><span class="pill-olive"><%= report.status.humanize %></span></div><p class="text-xs text-mocha">#<%= report.id %> · <%= l(report.created_at, format: :short) %></p><p class="whitespace-pre-wrap text-sm"><%= report.details %></p><% if report.response.present? %><p class="rounded-xl bg-haze p-3 text-sm whitespace-pre-wrap"><strong>Response:</strong> <%= report.response %></p><% if report.reviewed_at %><p class="text-xs text-mocha">Updated <%= l(report.reviewed_at, format: :short) %></p><% end %><% end %></article><% end %>
+  <% @work_reports.each do |report| %><article class="card card-pad space-y-3"><div class="flex flex-wrap justify-between gap-2"><h3 class="font-semibold"><%= EmployeeWorkReport::KINDS.fetch(report.kind) %></h3><span class="pill-olive"><%= report.status.humanize %></span></div><p class="text-xs text-mocha"><%= @preview ? 'Example' : "##{report.id}" %> · <%= l(report.created_at, format: :short) %></p><p class="whitespace-pre-wrap text-sm"><%= report.details %></p><% if report.response.present? %><p class="rounded-xl bg-haze p-3 text-sm whitespace-pre-wrap"><strong>Response:</strong> <%= report.response %></p><% if report.reviewed_at %><p class="text-xs text-mocha">Updated <%= l(report.reviewed_at, format: :short) %></p><% end %><% end %></article><% end %>
 </section>

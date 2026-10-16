@@ -17,15 +17,16 @@
   <a href="#main" class="sr-only focus:not-sr-only">Skip to content</a>
   <header class="border-b border-fog bg-paper">
     <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-      <%= link_to 'Rupert', employee_app_path, class: 'text-lg font-semibold text-olive', aria: { label: 'My time home' } %>
+      <%= link_to 'Rupert', employee_app_path(preview: @preview ? 1 : nil), class: 'text-lg font-semibold text-olive', aria: { label: 'My time home' } %>
       <% if Current.user %>
-        <div class="flex items-center gap-3 text-sm"><span><%= Current.user.display_name %></span><%= button_to 'Sign out', logout_path, method: :delete, class: 'text-mocha underline' %></div>
+        <div class="flex items-center gap-3 text-sm"><span><%= Current.user.display_name %></span><% unless @preview %><%= button_to 'Sign out', logout_path, method: :delete, class: 'text-mocha underline' %><% end %></div>
       <% end %>
     </div>
-    <% if Current.user && !@preview %>
-      <nav aria-label="My workspace" class="mx-auto flex max-w-3xl grid grid-cols-4 gap-1 px-4 pb-3 sm:flex sm:px-6">
-        <% [['Today', employee_app_path], ['Timesheets', people_timesheets_path], ['Time off', employee_time_off_path], ['Reports', employee_reports_path]].each do |label, path| %>
-          <%= link_to label, path, class: "rounded-full px-1 py-2 text-center text-xs whitespace-nowrap sm:px-3 sm:text-sm #{request.path == path ? 'bg-olive text-white' : 'text-mocha hover:bg-haze'}", aria: { current: request.path == path ? 'page' : nil } %>
+    <% if Current.user %>
+      <nav aria-label="My workspace" class="mx-auto flex max-w-3xl grid <%= @preview ? 'grid-cols-5' : 'grid-cols-4' %> gap-1 px-4 pb-3 sm:flex sm:px-6">
+        <% links = @preview ? [['Today', employee_app_path(preview: 1)], ['Timesheets', employee_preview_timesheets_path], ['Pay', employee_preview_pay_path], ['Time off', employee_preview_time_off_path], ['Reports', employee_preview_reports_path]] : [['Today', employee_app_path], ['Timesheets', people_timesheets_path], ['Time off', employee_time_off_path], ['Reports', employee_reports_path]] %>
+        <% links.each do |label, path| %>
+          <%= link_to label, path, class: "rounded-full px-1 py-2 text-center text-xs whitespace-nowrap sm:px-3 sm:text-sm #{request.path == path.split('?').first ? 'bg-olive text-white' : 'text-mocha hover:bg-haze'}", aria: { current: request.path == path.split('?').first ? 'page' : nil } %>
         <% end %>
       </nav>
     <% end %>
@@ -33,10 +34,11 @@
   <main id="main" class="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-8" tabindex="-1">
     <% if notice %><p role="status" class="flash flash-notice"><%= notice %></p><% end %>
     <% if alert %><p role="alert" class="flash flash-alert"><%= alert %></p><% end %>
+    <% if @preview %><p role="status" class="rounded-xl border border-olive/30 bg-olive/10 p-3 text-sm"><strong>Employee preview</strong> · Example data only. Browse freely; saving, clocking and sending are disabled. <%= link_to 'Close preview', employee_app_path, class: 'underline' %></p><% end %>
     <%= yield %>
   </main>
   <footer class="mx-auto flex max-w-3xl flex-wrap gap-4 px-4 pb-8 text-xs text-mocha sm:px-6">
-    <%= link_to 'Privacy & support', employee_privacy_path, class: 'underline' %>
+    <%= link_to 'Privacy & support', employee_privacy_path(preview: @preview ? 1 : nil), class: 'underline' %>
     <%= link_to 'Signed-in devices', employee_devices_path, class: 'underline' if Current.user && !@preview %>
     <% if Current.user&.can_manage_accounts? %><%= link_to 'Back to management', root_path, class: 'underline' %><% end %>
   </footer>
