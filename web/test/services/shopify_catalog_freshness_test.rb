@@ -43,6 +43,17 @@ class ShopifyCatalogFreshnessTest < ActiveSupport::TestCase
     assert_equal ['new-variant'], ShopifyVariant.current_catalog.pluck(:id)
   end
 
+  test 'a native unlisted product does not block a complete catalog read' do
+    @nodes.first['status'] = 'UNLISTED'
+    stub_reads
+    CatalogSyncer.sync!
+    assert_equal 'UNLISTED', @product.reload.status
+    assert @product.catalog_present
+    refute @old.reload.catalog_present
+    assert_equal 19, @old.inventoryQuantity
+    assert_empty ShopifyVariant.current_catalog
+  end
+
   test 'incomplete pagination never retires the previous catalog' do
     @nodes.first['variants']['pageInfo'] = { 'hasNextPage' => true, 'endCursor' => nil }
     stub_reads

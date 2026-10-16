@@ -156,7 +156,7 @@ class CatalogSyncer
       variants = products.flat_map { |p| p.fetch('variants').fetch('nodes') }
       variant_ids = variants.map { |v| v['id'] }
       unless ids.all?(&:present?) && ids.uniq.size == ids.size &&
-          products.all? { |p| %w[ACTIVE ARCHIVED DRAFT].include?(p['status']) } &&
+          products.all? { |p| %w[ACTIVE ARCHIVED DRAFT UNLISTED].include?(p['status']) } &&
           variant_ids.all?(&:present?) && variant_ids.uniq.size == variant_ids.size &&
           variants.all? { |v| v.dig('inventoryItem', 'id').present? }
         raise ShopifyClient::Error, 'Shopify returned inconsistent catalog identities'
