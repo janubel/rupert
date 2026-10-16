@@ -250,7 +250,6 @@ class SettingsController < AuthenticatedController
     authorize(:module, :settings_write?)
   end
 
-
   def platform_admin?
     User.find_by(id: Current.user&.id, active: true)&.super_admin? || false
   end
