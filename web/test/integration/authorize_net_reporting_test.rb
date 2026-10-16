@@ -38,6 +38,27 @@ class AuthorizeNetReportingIntegrationTest < ActionDispatch::IntegrationTest
     refute connection.reporting_enabled
   end
 
+  test 'existing webhook signature is encrypted optional blank-retained and removed on disconnect' do
+    patch @path, params: { pos_connection: { account_reference: '12345', environment: 'sandbox', vendor_approved: true,
+      credential_secret: { api_login_id: 'synthetic', transaction_key: 'synthetic-key', signature_key: 'a1' * 64 } } }
+    assert_response :redirect
+    Current.tenant = @tenant
+    connection = PosConnection.find_by!(provider: 'authorize_net_reporting')
+    raw = PosConnection.connection.select_value("SELECT credentials_json FROM pos_connections WHERE id = #{connection.id}")
+    refute_includes raw, 'a1' * 64
+    get @path
+    assert_response :success
+    assert_not_includes response.body, 'a1' * 64
+    assert_select 'input[name="pos_connection[credential_secret][signature_key]"][value]', count: 0
+    patch @path, params: { pos_connection: { credential_secret: { signature_key: '' } } }
+    assert_equal 'a1' * 64, connection.reload.credential_values['signature_key']
+    patch @path, params: { pos_connection: { credential_secret: { signature_key: 'invalid' } } }
+    assert_response :unprocessable_entity
+    assert_equal 'a1' * 64, connection.reload.credential_values['signature_key']
+    post disconnect_pos_connection_path('authorize_net_reporting')
+    assert_empty connection.reload.credential_values
+  end
+
   test 'method changes clear old secrets and expose only chosen fields' do
     patch @path, params: { pos_connection: { reporting_auth_mode: 'oauth' } }
     assert_response :redirect

@@ -210,6 +210,7 @@ class PosConnectionsController < AuthenticatedController
     else
       PosProviderCatalog.credential_keys(@provider[:key], gateway: gateway)
     end
+    keys += ['signature_key'] if @provider[:key] == 'authorize_net_reporting'
     requested.permit(:environment, :account_reference, :access_requested, :vendor_approved, :lock_version,
       *(@provider[:key] == 'ctrax' ? [:hourly_sync_enabled] : []),
       *(@provider[:key] == 'valmar' ? [:gateway] : []),

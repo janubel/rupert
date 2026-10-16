@@ -1,4 +1,5 @@
 <% content_for :title, 'Commission preview' %>
+<div data-controller="live-report" data-live-report-interval-value="30000"><%= turbo_frame_tag 'commission-preview', src: request.fullpath do %>
 <div class="space-y-6">
   <section><h1 class="page-title">Commission preview</h1><p class="mt-2 text-sm text-mocha">Estimate 1% for each person working at the time of a sale, including overlapping shifts. The percentage is never divided between workers. This preview does not finalize payroll or send payments.</p></section>
   <%= form_with url: commission_preview_time_clock_path, method: :get, class: 'card card-pad grid gap-3 sm:grid-cols-5' do %>
@@ -12,3 +13,5 @@
   <% end %>
   <%= link_to 'Back to time clock', time_clock_path, class: 'btn-ghost' %>
 </div>
+
+<% end %></div>
