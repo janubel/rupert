@@ -38,6 +38,10 @@ class UsersController < AuthenticatedController
   # Replace an employee's per-person permission overrides. Empty selection
   # clears them, falling back to the role's permissions.
   def update_permissions
+    if @user.employee?
+      return redirect_to(edit_user_path(@user), alert: 'Employee access is fixed to their own time records.')
+    end
+
     raw = params[:permissions]
     permissions = raw.is_a?(ActionController::Parameters) ? raw.to_unsafe_h.keys : []
     @user.update_permission_overrides!(permissions)

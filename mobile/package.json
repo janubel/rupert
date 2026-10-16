@@ -9,7 +9,10 @@
     "export": "expo export --platform ios --output-dir dist/ios && expo export --platform android --output-dir dist/android",
     "test": "node --test tests/*.test.mjs",
     "check:dependencies": "expo install --check",
-    "check": "npm run check:dependencies && npm run typecheck && npm test"
+    "check": "npm run check:dependencies && npm run verify:security && npm run typecheck && npm test && npm run audit:security",
+    "postinstall": "node scripts/security-backports.mjs --apply",
+    "verify:security": "node scripts/security-backports.mjs",
+    "audit:security": "node scripts/audit-security.mjs"
   },
   "dependencies": {
     "expo": "~58.0.12",
@@ -23,5 +26,10 @@
   "devDependencies": {
     "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "11.1.1"
+    }
   }
 }

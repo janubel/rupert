@@ -8,9 +8,7 @@ Use Node 24 and the committed lockfile:
 
 ```sh
 npm ci
-npx expo install --check
-npm run typecheck
-npm test
+npm run check
 npm run export
 npx expo start
 ```
@@ -50,13 +48,15 @@ After acceptance, configure `EMPLOYEE_IOS_DOWNLOAD_URL` / `EMPLOYEE_ANDROID_DOWN
 
 Use designated test accounts on an HTTPS staging instance. Test real iPhone and Android builds for login, revoked/expired sessions, cold starts, background/foreground, clock-in/out retries, draft creation, entries, import, submit, rejected-sheet correction, and sign-out. Reviewers use the web review workspace. Check poor connectivity: an unconfirmed mutation should be refreshed and verified before retrying. The UI never claims an offline entry was saved.
 
-The October 16, 2026 audit of the Expo 58.0.12 lockfile reports 22 dependency findings (15 high, seven moderate), including `braces`, `node-forge`, and the older `uuid` used by `xcode`. The reported remediation proposes incompatible Expo 44 / React Native 0.72 downgrades. No forced downgrade or unverified override is applied. Review supported upstream patches and rerun `npm audit` before signed distribution. This source/build preparation does not constitute security clearance for release.
+The October 16, 2026 security update fixes the transitive UUID advisory with an `xcode`-scoped override to CommonJS-compatible UUID 11.1.1. The remaining two underlying advisories have no published fixed npm version: `braces` 3.0.3 and `node-forge` 1.4.0 receive narrow, source-hashed backports during `npm ci`. Expo and React Native keep their supported versions. See [security backports](security/README.md) for provenance, regression coverage and removal instructions.
+
+`npm run check` verifies the actual patched files and rejects any new/unexplained advisory. Raw `npm audit` still reports 15 high findings because it identifies upstream versions, including their dependent packages; the report is retained in `dist/dependency-security.json` with the two verified backports. These are not hidden findings or a claim that the registry audit is clean. Run the checks again immediately before signing, and complete real-device acceptance.
 
 See [employee timesheets](../docs/employee-timesheets.md) for account provisioning, web installation, server deployment, and the full API contract.
 
 ## Prepared signing handoff (October 16, 2026)
 
-The supported SDK 58 patch and lockfile now use Expo **58.0.12**. `npm run check` runs the online Expo compatibility check, TypeScript validation and employee input-boundary tests. CI additionally runs Expo Doctor and exports **iOS and Android with Hermes bytecode** on x86-64 Ubuntu. Its `employee-native-js-exports-<commit>` artifact contains JavaScript/assets for verification; it is not an installable or signed app. Dependency checks remain enabled.
+The supported SDK 58 patch and lockfile now use Expo **58.0.12**. `npm run check` runs the online Expo compatibility check, TypeScript validation, employee boundaries, exploit regression tests, verified security backports and the fail-closed advisory gate. CI additionally runs Expo Doctor and exports **iOS and Android with Hermes bytecode** on x86-64 Ubuntu. Its `employee-native-js-exports-<commit>` artifact contains JavaScript/assets for verification; it is not an installable or signed app. Dependency checks remain enabled.
 
 All EAS profiles prefill the employee app with `https://rupert.stoverparc.org`. The instance field stays editable, and this public URL contains no employee identity or credentials. For a separate staging build, change the selected profile's `EXPO_PUBLIC_RUPERT_URL` before building. The development profile uses the EAS `development` environment, preview uses `preview`, and store builds use `production`.
 
@@ -83,6 +83,6 @@ Production explicitly uses store distribution, physical iOS devices, Android App
 6. After real-device acceptance, use `npx eas-cli@25.0.0 submit --platform ios --profile production` for TestFlight/App Store Connect and the corresponding `--platform android` command for Google Play. The first Play upload may need to be made manually in Play Console. Android submission is configured as an internal-track draft; review and release it manually in Play Console when intended. Confirm the target app interactively; submission is separate from building.
 7. Complete the organization's listing, support contact, screenshots, privacy/data declarations and reviewer test access. Then set the approved HTTPS distribution links on the Rupert instance as described above.
 
-Signing, cloud builds, credential creation, account connection and store submission are deferred. The existing web accounts, emailed setup links and held profiles do not need to change for this mobile preparation. Review the dependency advisories noted above and rerun validation immediately before signing; a prepared source tree does not replace signed-device acceptance.
+Signing, cloud builds, credential creation, account connection and store submission are deferred. The existing web accounts, emailed setup links and held profiles do not need to change for this mobile preparation. Rerun security and compatibility validation immediately before signing; a prepared source tree does not replace signed-device acceptance.
 
 Official references: [Expo CLI dependency checks](https://docs.expo.dev/more/expo-cli/), [EAS build profiles](https://docs.expo.dev/eas/json/), [remote version management](https://docs.expo.dev/build-reference/app-versions/), [Android submission](https://docs.expo.dev/submit/android/).

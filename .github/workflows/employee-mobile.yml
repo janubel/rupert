@@ -20,7 +20,7 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
-      - name: Validate SDK compatibility, TypeScript and employee input boundaries
+      - name: Validate SDK compatibility, security backports, audit and employee boundaries
         run: npm run check
       - name: Validate Expo app configuration
         run: npx --yes expo-doctor@1.21.4
