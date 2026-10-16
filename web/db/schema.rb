@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1436,6 +1436,46 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
     t.index ["tenant_id", "vendor_id"], name: "index_purchase_orders_on_tenant_id_and_vendor_id"
   end
 
+  create_table "reconciliation_follow_up_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "reconciliation_follow_up_id", null: false
+    t.text "details_json", null: false
+    t.datetime "created_at", null: false
+    t.index ["reconciliation_follow_up_id"], name: "idx_reconciliation_follow_up_history"
+    t.index ["tenant_id"], name: "index_reconciliation_follow_up_events_on_tenant_id"
+  end
+
+  create_table "reconciliation_follow_ups", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "category", null: false
+    t.string "source", null: false
+    t.string "document_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.string "currency"
+    t.string "location_id"
+    t.string "metric"
+    t.string "report_digest"
+    t.text "title", null: false
+    t.text "notes", null: false
+    t.string "status", default: "open", null: false
+    t.date "due_on", null: false
+    t.bigint "owner_id"
+    t.bigint "created_by_id"
+    t.bigint "document_id"
+    t.string "submission_key", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_reconciliation_follow_ups_on_created_by_id"
+    t.index ["document_id"], name: "index_reconciliation_follow_ups_on_document_id"
+    t.index ["owner_id"], name: "index_reconciliation_follow_ups_on_owner_id"
+    t.index ["tenant_id", "period_from", "period_to"], name: "idx_reconciliation_follow_up_period"
+    t.index ["tenant_id", "status", "due_on"], name: "idx_reconciliation_follow_up_queue"
+    t.index ["tenant_id", "submission_key"], name: "idx_reconciliation_follow_up_submission", unique: true
+    t.index ["tenant_id"], name: "index_reconciliation_follow_ups_on_tenant_id"
+  end
+
   create_table "reconciliation_documents", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "source", null: false
@@ -2153,6 +2193,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
   add_foreign_key "clock_shifts", "users", on_delete: :nullify
   add_foreign_key "daily_reconciliation_reviews", "tenants"
   add_foreign_key "daily_reconciliation_reviews", "users", column: "reviewed_by_id", on_delete: :nullify
+  add_foreign_key "reconciliation_follow_up_events", "reconciliation_follow_ups"
+  add_foreign_key "reconciliation_follow_up_events", "tenants"
+  add_foreign_key "reconciliation_follow_ups", "reconciliation_documents", column: "document_id"
+  add_foreign_key "reconciliation_follow_ups", "tenants"
+  add_foreign_key "reconciliation_follow_ups", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "reconciliation_follow_ups", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
   add_foreign_key "reconciliation_documents", "tenants"
   add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
