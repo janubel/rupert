@@ -52,6 +52,12 @@ class GoogleDriveBackupService
 
     # Snapshot + upload + verified download + prune. Returns the BackupLog record.
     def backup!(actor: 'manual')
+      Current.set(tenant: nil) do
+        SyncObservability.observe('google_backup', 'backup') { perform_backup!(actor: actor) }
+      end
+    end
+
+    def perform_backup!(actor:)
       raise NotConnectedError, 'Google Drive is not connected' unless connected?
 
       log = Current.set(tenant: nil) { BackupLog.create!(status: 'running', startedAt: Time.current, tenant_id: nil) }

@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  resource :retention_drive, only: :show do
+    get :connect
+    post :sync
+    post :disconnect
+  end
+
   resources :daily_reconciliations, only: %i[index create] do
     member { get :document }
     collection do

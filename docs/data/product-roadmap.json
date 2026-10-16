@@ -634,7 +634,7 @@
       "area": "System",
       "name": "Master credentials and sync repair",
       "status": "Partial",
-      "scope": "One permission-scoped setup desk for source health, credential completeness, named encrypted workspace forms, provider checks and explicit source reads. Saved secrets remain hidden; stale/expired/foreign forms are rejected, and platform backups stay restricted. Shared structured diagnostics, stale-source alerts, credential ownership/rotation records and provider-approved unattended feeds are planned separately. Opening or saving setup starts no sync and changes no schedule.",
+      "scope": "One permission-scoped setup desk with encrypted named forms, credential completeness, explicit checks/reads and structured source-attempt receipts. Separate acquisition/source timestamps, typed failure repair guidance, C-Trax stock/sales channels, safe queue/worker evidence and in-page stale/failure alerts. Historical unknowns remain unknown; verified event coverage, outbound alerts and ownership/rotation remain planned. No automatic credential or source-schedule changes.",
       "evidence": "docs/ops/master-credentials-and-sync.md",
       "phase": "1"
     },

@@ -5,7 +5,14 @@ require 'net/http'
 # Port of the legacy Shopify client (legacy/local-console.mjs) — client
 # credentials token exchange plus Admin GraphQL, used by the sync engine.
 class ShopifyClient
-  class Error < StandardError; end
+  class Error < StandardError
+    attr_reader :reason
+
+    def initialize(message, reason: nil)
+      @reason = reason
+      super(message)
+    end
+  end
 
   API_VERSION = '2026-07'
   TOKEN_TTL = 10 * 60 # seconds
@@ -31,11 +38,11 @@ class ShopifyClient
             }
           )
           unless response.is_a?(Net::HTTPSuccess)
-            raise Error, "Token exchange failed (#{response.code}): #{response.body.to_s[0, 500]}"
+            raise Error.new("Token exchange failed (HTTP #{response.code}).", reason: SyncFailure.http_reason(response.code))
           end
 
           payload = JSON.parse(response.body)
-          raise Error, 'Token exchange returned no access_token' if payload['access_token'].blank?
+          raise Error.new('Token exchange returned no access_token', reason: :response) if payload['access_token'].blank?
 
           @tokens[Current.tenant_id] = { token: payload['access_token'], at: Time.now }
         end
@@ -50,11 +57,23 @@ class ShopifyClient
         { 'X-Shopify-Access-Token' => token }
       )
       unless response.is_a?(Net::HTTPSuccess)
-        raise Error, "GraphQL failed (#{response.code}): #{response.body.to_s[0, 500]}"
+        raise Error.new("GraphQL failed (HTTP #{response.code}).", reason: SyncFailure.http_reason(response.code))
       end
 
       payload = JSON.parse(response.body)
-      raise Error, payload['errors'].map { |e| e['message'] }.join('; ') if payload['errors'].present?
+      if payload['errors'].present?
+        codes = Array(payload['errors']).filter_map { |entry| entry.dig('extensions', 'code') if entry.is_a?(Hash) }
+        reason = if codes.include?('ACCESS_DENIED')
+          :access
+        elsif codes.include?('THROTTLED')
+          :rate_limit
+        elsif codes.include?('INTERNAL_SERVER_ERROR')
+          :vendor
+        else
+          :response
+        end
+        raise Error.new('Shopify returned a GraphQL error; previous source data was retained.', reason: reason)
+      end
 
       payload['data']
     end
