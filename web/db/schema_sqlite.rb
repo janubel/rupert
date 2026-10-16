@@ -618,6 +618,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["tenant_id"], name: "index_ctrax_stock_snapshots_on_tenant_id"
   end
 
+  create_table "customer_follow_ups", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "customer_id", null: false
+    t.bigint "author_id", null: false
+    t.bigint "owner_id"
+    t.string "title", null: false
+    t.date "due_on", null: false
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_follow_ups_on_customer_id"
+    t.index ["tenant_id", "completed_at", "due_on"], name: "idx_customer_follow_ups_due"
+  end
+
+  create_table "customer_interactions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "customer_id", null: false
+    t.bigint "author_id", null: false
+    t.string "kind", default: "note", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_interactions_on_customer_id"
+    t.index ["tenant_id", "customer_id", "created_at"], name: "idx_customer_interactions_timeline"
+  end
+
   create_table "customers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email"
@@ -630,9 +656,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
     t.datetime "source_synced_at"
+    t.string "crm_status", default: "customer", null: false
+    t.string "tags"
+    t.string "preferred_name"
+    t.bigint "owner_id"
     t.index ["tenant_id", "created_at", "id"], name: "idx_customers_tenant_created_id"
+    t.index ["tenant_id", "crm_status"], name: "index_customers_on_tenant_id_and_crm_status"
     t.index ["tenant_id", "email"], name: "index_customers_on_tenant_id_and_email"
     t.index ["tenant_id", "external_id", "source"], name: "index_customers_on_tenant_id_and_external_id_and_source", unique: true
+    t.index ["tenant_id", "owner_id"], name: "index_customers_on_tenant_id_and_owner_id"
     t.index ["tenant_id", "phone"], name: "index_customers_on_tenant_id_and_phone"
   end
 
@@ -1593,17 +1625,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["subdomain"], name: "index_tenants_on_subdomain", unique: true
   end
 
-  create_table "timesheet_events", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.bigint "timesheet_id", null: false
-    t.bigint "user_id"
-    t.string "action", null: false
-    t.text "details"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_events_on_tenant_id_and_timesheet_id"
-  end
-
   create_table "timesheet_entries", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.decimal "hours", precision: 6, scale: 2, default: "0.0", null: false
@@ -1616,6 +1637,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.bigint "clock_shift_id"
     t.index ["tenant_id", "clock_shift_id", "worked_on"], name: "idx_timesheet_shift_day", unique: true
     t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_entries_on_tenant_id_and_timesheet_id"
+  end
+
+  create_table "timesheet_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "timesheet_id", null: false
+    t.bigint "user_id"
+    t.string "action", null: false
+    t.text "details"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_events_on_tenant_id_and_timesheet_id"
   end
 
   create_table "timesheets", force: :cascade do |t|
@@ -1796,6 +1828,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
   add_foreign_key "ctrax_image_links", "tenants"
   add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_stock_snapshots", "tenants"
+  add_foreign_key "customer_follow_ups", "customers"
+  add_foreign_key "customer_follow_ups", "tenants"
+  add_foreign_key "customer_interactions", "customers"
+  add_foreign_key "customer_interactions", "tenants"
   add_foreign_key "daily_reconciliation_reviews", "tenants"
   add_foreign_key "daily_reconciliation_reviews", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "departments", "employees", column: "manager_id"
@@ -1826,12 +1862,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
   add_foreign_key "payments", "orders", on_delete: :cascade
   add_foreign_key "pos_connections", "tenants"
   add_foreign_key "pos_connections", "users", column: "updated_by_id", on_delete: :nullify
-  add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
-  add_foreign_key "reconciliation_documents", "tenants"
-  add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
   add_foreign_key "pos_display_sessions", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "pos_display_sessions", "tenants"
   add_foreign_key "pos_display_sessions", "users"
+  add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
+  add_foreign_key "reconciliation_documents", "tenants"
+  add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
   add_foreign_key "refunds", "orders", on_delete: :cascade
   add_foreign_key "size_changes", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "size_family_members", "size_families", column: "family_id", on_delete: :cascade
