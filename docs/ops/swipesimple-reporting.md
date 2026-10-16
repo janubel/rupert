@@ -1,6 +1,6 @@
 # SwipeSimple read-only reporting and SER8 hourly intake
 
-Investigated October 15, 2026. Implementation is proposed in a draft PR; this document is not a deployment receipt. Live merchant inspection and SER8 inspection were read-only. No charges, refunds, invoices, receipt deliveries, merchant settings, stock updates or production migrations were performed.
+Investigated October 15, 2026; status updated October 16. The owner subsequently authorized merging [PR #47](https://github.com/techmore/rupert/pull/47), deploying to SER8 and importing the downloaded native files. That release and validation are recorded in the [deployment receipt](https://github.com/techmore/rupert/blob/codex/ser8-swipesimple-release/docs/ops/deployment-swipesimple-2026-10-15.md). Manual native CSV imports are working; hourly intake remains disabled pending a supported vendor feed. No merchant payment operation, invoice/receipt delivery, merchant-setting change or inventory write was performed. See the [expanded integration research](swipesimple-integration-research.md) for current options, ACH gaps and the long-term Valmar/Authorize.net objective.
 
 ## Verified access and the remaining vendor dependency
 
@@ -9,7 +9,7 @@ The authenticated merchant portal exposes Transactions, Invoices, Reports and Ac
 | Access path | Evidence | Conclusion |
 | --- | --- | --- |
 | Public reporting API | [Official public API statement](https://support.swipesimple.com/hc/en-us/articles/27117544574487-Does-SwipeSimple-have-a-public-API-for-integrations), reviewed October 15 | No public API offered. Merchant login does not establish API entitlement. |
-| Partner API | [CardFlight partner model](https://www.cardflight.com/partners) describes RAMP onboarding APIs and portfolio management | This is reseller/partner capability. Merchant reporting API authorization, endpoint contract and credentials were not established for this account. |
+| Partner API | Current [reseller resources](https://home.swipesimple.com/resellers) and [Partner Content Hub](https://home.swipesimple.com/content-hub) provide partner routes, not a merchant reporting specification | Earlier RAMP/onboarding references do not establish current reporting access. Merchant reporting authorization, endpoint contract and credentials were not established for this account. |
 | Native transaction export | [Official export instructions](https://support.swipesimple.com/hc/en-us/articles/360011804593-How-do-I-export-my-transactions) and actual authenticated CSV | Supported fallback; maximum 10,000 transactions per vendor export. Filters affect export contents. |
 | Native invoice export | [Official invoice guide](https://support.swipesimple.com/hc/en-us/articles/360019039554-Invoices-on-Web-How-To-Guide) and actual authenticated CSV | Supported. Invoice numbers demonstrably repeat, so a number is not a unique vendor invoice ID. |
 | Scheduled reporting | [Official batch/daily report guide](https://support.swipesimple.com/hc/en-us/articles/360011707534-Batch-Reports-Daily-Transaction-Reports); live Reports settings expose recipients | Daily/batch email reporting is supported. An hourly machine-readable feed, attachment schema, SFTP delivery or webhook was not established. Recipient configuration was not changed. |
@@ -81,11 +81,11 @@ This importer writes only `swipesimple_exports` and `swipesimple_report_rows`. I
 
 ## SER8 target and hourly intake
 
-Read-only Tailscale SSH inspection confirmed the existing SER8 host and running `rupert` Incus instance. Web/jobs were active; the production checkout was clean. The worker uses `User=rupert`, `Group=rupert`, `WorkingDirectory=/opt/rupert/web`; the active SQLite file is `/opt/rupert/web/storage/production.sqlite3`. `RUPERT_SWIPESIMPLE_INBOX` was not configured. The new code is not installed on SER8 by this investigation.
+Tailscale SSH inspection confirmed the existing SER8 host and running `rupert` Incus instance. The owner-authorized release installed this reporting code and imported the native files; see the linked deployment receipt for the release revision and validation. Existing integrations were preserved in the combined release. `RUPERT_SWIPESIMPLE_INBOX` remains unconfigured, and the job returns `disabled`. No vendor producer is installed.
 
-The existing Solid Queue worker is the intended scheduler. The proposed `config/recurring.yml` entry invokes `SwipesimpleInboxJob` **every hour at minute 20**. Keep the existing 15-minute source sync schedule for other integrations. No desktop Codex reminder or second production scheduler is required. With the inbox variable absent, the job returns `disabled` and performs no intake.
+The existing Solid Queue worker is the intended scheduler. The `config/recurring.yml` entry invokes `SwipesimpleInboxJob` **every hour at minute 20**. Preserve the existing schedules for other integrations. No desktop Codex reminder or second production scheduler is required. With the inbox variable absent, the job returns `disabled` and performs no intake.
 
-After separate release approval and normal backup/migration checks, configure an app-owned persistent directory such as `/opt/rupert/web/storage/swipesimple-inbox` (mode 0700), and set in the protected deployment environment:
+Only after a supported producer is verified and hourly activation is authorized, configure an app-owned persistent directory such as `/opt/rupert/web/storage/swipesimple-inbox` (mode 0700), and set in the protected deployment environment:
 
 ```text
 RUPERT_SWIPESIMPLE_INBOX=/opt/rupert/web/storage/swipesimple-inbox
@@ -118,7 +118,7 @@ Monitor **both** job failures and source freshness. Check the newest receipt's e
 
 ## Release and rollback checklist
 
-- Review/merge the draft PR only under the normal release process; this request explicitly stops before merge/deployment.
+- Initial deployment/import is complete under the owner's subsequent authorization. Review future changes and activation through the normal release process.
 - Preserve a consistent production SQLite backup and existing encryption/configuration keys. Rehearse migration/rollback on a separate copy, retain preexisting business data, and confirm schema/foreign-key integrity.
 - Apply the two-table migration only after approval. Start with manual exports and compare counts/tenders/tips/statuses privately against the same vendor range.
 - Enable the hourly inbox only when an approved producer is actually delivering verified files. Observe at least two arrivals and verify newest export time advances; an hourly scheduler alone is not acceptance.
@@ -128,4 +128,4 @@ Monitor **both** job failures and source freshness. Check the newest receipt's e
 
 The implementation has dedicated service, controller and job tests for actual vendor-format shapes with fictional data, encrypted provenance, exact replay, overlapping transactions, Sale/Refund identity collision, duplicate invoice numbers, complete/empty invoice snapshots, newer/older status selection, daily totals, missing tips, uncertain tenders, tenant/user authorization, private downloads, token expiry/context tampering, strict parsing and inbox integrity/path defenses.
 
-The official merchant exports were additionally previewed privately. The read-only SER8 check verified target identity and active services. Neither test execution nor vendor-format validation proves production installation, bank settlement, API entitlement or automatic file delivery. Final test/lint results are recorded in the draft PR.
+The official merchant exports were previewed and then imported privately under the owner's deployment authorization. The linked release receipt records production installation, encrypted original-byte checks, replay checks and independent source-to-daily-total reconciliation. Neither that verification nor fixture tests establish bank settlement, API entitlement, all-time completeness or automatic file delivery. Test/lint results are recorded in the implementation PR and release receipt.
