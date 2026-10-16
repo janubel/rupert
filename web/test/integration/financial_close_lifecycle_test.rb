@@ -31,6 +31,8 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_select 'h1', 'Financial close'
     assert_select 'div[aria-label="Financial close lifecycle"] section', count: 6
     assert_includes response.body, 'Review not recorded'
+    assert_select '[aria-label="Checks needing action"]', text: /Required for any package/
+    assert_select 'input[value="Verify originals & retain close package"][disabled]'
     assert_no_difference 'ReconciliationDocument.count' do
       post financial_close_path, params: { close: close_values }
     end
@@ -84,6 +86,10 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_equal 1, data['issues']['open_follow_ups']
     assert_equal item.id, data['follow_ups'].first['id']
     assert_equal 'open', item.reload.status
+    get financial_close_path(day: @day)
+    assert_select '[aria-label="Priority follow-ups blocking close"]', text: /Additional statement needed/
+    assert_select 'option[value="complete"][disabled]'
+    assert_includes response.body, 'You can retain a package with documented exceptions'
     item.update!(notes: 'New next step changes package currency, not report totals.', due_on: '2026-10-16')
     get financial_close_path(day: @day)
     assert_includes response.body, 'Evidence or follow-up progress changed since this version'
@@ -101,6 +107,32 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_select 'textarea[name="close[notes]"]', values[:notes]
   end
 
+  test 'missing control actions pin the exact pool and reuse its existing overdue request' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      order = Core::Order.create!(source: 'square', source_order_id: 'close-blocker-order', currency: 'USD', occurred_at: Time.zone.parse("#{@day} 12:00"), gross_cents: 1000, tax_cents: 0)
+      order.mark_paid!
+      order.payments.create!(method: 'card', amount_cents: 1000, paid_at: order.occurred_at)
+      item = ReconciliationFollowUp.create!(category: 'missing_report', source: 'square', currency: 'USD', document_kind: 'register_control', period_from: @day, period_to: @day,
+        title: 'Square original needed', notes: 'Retain the exact source report.', due_on: @day, submission_key: SecureRandom.uuid)
+      workflow = FinancialCloseWorkflow.new(day: @day)
+      row = workflow.attention.missing_controls.first
+      assert_no_enqueued_jobs do
+        assert_no_difference ['ReconciliationFollowUp.count', 'ReconciliationFollowUpEvent.count', 'ActionMailer::Base.deliveries.size'] do
+          get financial_close_path(day: @day)
+        end
+      end
+      assert_select '[aria-label="Missing reports blocking close"]' do
+        assert_select 'a[href=?]', daily_reconciliations_path(day: @day, control_for: workflow.attention.control_key(row), anchor: 'upload-document'), text: 'Add this control'
+        assert_select 'a[href=?]', reconciliation_follow_up_path(item, anchor: 'record-progress'), text: "Overdue request ##{item.id}"
+        assert_select 'a', text: 'Track this missing report', count: 0
+      end
+      @user.update!(role: 'reporting')
+      get financial_close_path(day: @day)
+      assert_select 'a', text: 'Add this control', count: 0
+      assert_select 'a[href=?]', reconciliation_follow_up_path(item), text: "Overdue request ##{item.id}"
+    end
+  end
+
   test 'forecast keeps exact cents one currency explicit inputs and immutable retained scenarios' do
     baseline = DailyMoneyReconciliation.new(day: @day).digest
     assert_no_enqueued_jobs do
@@ -110,6 +142,8 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     end
     assert_response :success
     assert_includes response.body, 'Week 3'
+    assert_select '[aria-label="Cash shortfall action"]', text: /CAD 9\.99 below your reserve/
+    assert_select 'a[href="#cash-week-3"]', text: 'Review week 3 cash plan'
     assert_select '#forecast-results', text: /20\.01/
     assert_select 'input[name="forecast[weeks][0][receipts]"][value="10"]'
     assert_difference 'ReconciliationDocument.count', 1 do

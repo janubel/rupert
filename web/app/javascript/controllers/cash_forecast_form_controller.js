@@ -1,9 +1,16 @@
 import { Controller } from '@hotwired/stimulus'
 
 export default class extends Controller {
-  static targets = ['horizon', 'week', 'asOf']
+  static targets = ['horizon', 'week', 'asOf', 'changed', 'output']
+  static values = { calculated: Boolean }
 
   connect() { this.update() }
+
+  markChanged() {
+    if (!this.calculatedValue) return
+    this.changedTargets.forEach((notice) => { notice.hidden = false })
+    this.outputTargets.forEach((button) => { button.disabled = true })
+  }
 
   update() {
     const horizon = Number(this.horizonTarget.value)

@@ -36,6 +36,10 @@ class CashForecastScenario
     ([{ week: 0, to: as_of, closing_cents: opening_cents }] + rows).find { |row| row[:closing_cents] < (reserve_cents || 0) }
   end
 
+  def shortfall_cents
+    first_shortfall ? (reserve_cents || 0) - first_shortfall[:closing_cents] : 0
+  end
+
   def payload(baseline_digest:)
     { version: 1, type: 'manual_cash_forecast', as_of: as_of, currency: currency, horizon_weeks: horizon,
       opening_cents: opening_cents, opening_basis: basis, minimum_reserve_cents: reserve_cents, assumptions: notes,

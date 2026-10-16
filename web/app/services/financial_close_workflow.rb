@@ -41,6 +41,31 @@ class FinancialCloseWorkflow
     review_current? && review.status == 'reviewed' && issues.values.all?(&:zero?)
   end
 
+  def blockers
+    labels = { missing_controls: ['Missing register reports', 'Retain a control for each recorded source, currency and location.'],
+      conflicts: ['Conflicting controls', 'Inspect competing originals and correct or withdraw the applicable control.'],
+      variances: ['Source differences', 'Compare the signed difference and document its resolution or next step.'],
+      unavailable: ['Unavailable comparisons', 'Check the original and canonical coverage; unavailable amounts are not zero.'],
+      coverage: ['Payment / record coverage flags', 'Inspect incomplete payments, unknown amounts and missing event dates.'],
+      unconfirmed_imports: ['Unconfirmed source imports', 'Check source-confirmed import history and the expected covered dates.'],
+      open_follow_ups: ['Open follow-ups', 'Record the next step, owner, due date and any retained original.'] }
+    result = labels.filter_map do |key, (title, detail)|
+      { key: key, title: title, detail: detail, count: issues[key], required: false } if issues[key].positive?
+    end
+    unless review_current? && review.status == 'reviewed'
+      title = !review ? 'Review not recorded' : !review_current? ? 'Evidence changed since review' : 'Review marked Needs attention'
+      result << { key: :review, title: title, detail: review_current? ? 'A complete close needs Reviewed; an exception package can retain this current review.' : 'Record a review against the current evidence before retaining any close package.', count: nil, required: !review_current? }
+    end
+    result
+  end
+
+  def missing_control_request(row)
+    open_follow_ups.find do |item|
+      item.category == 'missing_report' && item.document_kind == 'register_control' && item.period_from == day && item.period_to == day &&
+        item.source == row[:source] && item.currency == row[:currency] && item.location_id.presence == row[:location_id].presence
+    end
+  end
+
   def evidence_payload
     @evidence_payload ||= { version: 1, day: day.iso8601, timezone: Time.zone.name,
       report_digest: report.digest, report: report.payload, issues: issues,
