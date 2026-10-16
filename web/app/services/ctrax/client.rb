@@ -194,7 +194,6 @@ module Ctrax
       raise Error, :limit
     end
 
-
     def paged(path, parameters = {})
       rows = []
       total = last = nil
