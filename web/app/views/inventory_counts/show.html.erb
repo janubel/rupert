@@ -18,7 +18,7 @@
         <%= button_to "Submit for approval", submit_inventory_count_path(count), method: :post, class: "btn-primary", data: { turbo: false } %>
         <%= button_to "Delete", inventory_count_path(count), method: :delete, class: "btn-ghost", data: { confirm: "Delete this draft count?" } %>
       <% elsif count.pending? && Current.user.can?('inventory.write') %>
-        <%= button_to "Approve count", approve_inventory_count_path(count), method: :post, class: "btn-primary", data: { confirm: "Approve this count? It is recorded for audit and does not change inventory — Square is the source of truth." } %>
+        <%= button_to "Approve count", approve_inventory_count_path(count), method: :post, class: "btn-primary", data: { confirm: "Approve this count? It is recorded for audit and does not change platform inventory." } %>
         <%= button_to "Reject", reject_inventory_count_path(count), method: :post, class: "btn-ghost", data: { turbo: false } %>
       <% elsif count.rejected? && Current.user.can?('inventory.write') %>
         <%= button_to "Reopen as draft", reopen_inventory_count_path(count), method: :post, class: "btn-ghost", data: { turbo: false } %>
@@ -32,9 +32,7 @@
 
   <% if count.approved? %>
     <p class="flash flash-notice">
-      Approved <%= l(count.approvedAt, format: :long) %> as an audit record. Overrides are disabled until
-      Rupert becomes the source of truth — Square is the source of truth today, so counted quantities do
-      not change inventory.
+      Approved <%= l(count.approvedAt, format: :long) %> as an audit record. Counted quantities do not change platform inventory.
     </p>
   <% end %>
 
@@ -98,7 +96,7 @@
                   <span class="pill-fern">applied</span>
                 <% elsif count.approved? %>
                   <span class="pill-taupe">recorded</span>
-                <% elsif item.shopifyVariantId.present? || item.squareVariationId.present? %>
+                <% elsif item.shopifyVariantId.present? || item.squareVariationId.present? || item.comparison['status'] == 'matched' %>
                   <span class="pill-taupe">linked</span>
                 <% else %>
                   <span class="pill-rose">unlinked</span>

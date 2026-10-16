@@ -13,11 +13,11 @@ class PosProviderCatalog
       website: 'https://www.pax.us/', docs: 'https://www.paxstore.us/developer',
       instructions: 'Confirm the terminal model, installed payment application and processor with Valmar. Obtain the approved SDK/bridge and test terminal from PAX or the processor. This screen does not send terminal commands.',
       credentials: [] },
-    { key: 'ctrax', name: 'C-Trax', relationship: 'Current POS described by the business', mode: 'vendor',
-      description: 'Prepare access to existing POS data and register reports.',
+    { key: 'ctrax', name: 'C-Trax', relationship: 'Retail inventory reference', mode: 'api',
+      description: 'Read store stock from C-Trax for physical inventory counts.',
       website: 'https://www.c-trax.com/', docs: 'https://www.c-trax.com/dispensary-analytics/',
-      instructions: 'Request the account-specific API documentation, credentials, permitted read scopes and sample exports from C-Trax. Public Open API marketing does not specify the authentication contract. Confirm terminal support dates directly.',
-      credentials: [] },
+      instructions: 'Use a C-Trax user authorized to read your stores. Enter the HTTPS API origin from your portal configuration and that user’s login. This connector uses the Serv 2.0 portal API; vendor-supported partner access has not yet been established. TRX merchant Client ID, Password/Token and Algorithm belong to payment processing and do not authenticate inventory reads. Stock sync never changes C-Trax inventory or payment settings.',
+      credentials: %w[api_url api_username api_password] },
     { key: 'swipesimple', name: 'SwipeSimple', relationship: 'Processor-proposed replacement option', mode: 'csv',
       description: 'Import a transaction export through the existing SwipeSimple CSV importer.',
       website: 'https://swipesimple.com/', docs: 'https://support.swipesimple.com/hc/en-us/articles/27117544574487-Does-SwipeSimple-have-a-public-API-for-integrations',
@@ -69,7 +69,7 @@ class PosProviderCatalog
 
   def self.check_kind(provider, gateway: nil)
     return gateway if provider == 'valmar' && VALMAR_GATEWAY_CREDENTIALS.key?(gateway)
-    return provider if %w[korona cova].include?(provider)
+    return provider if %w[korona cova ctrax].include?(provider)
 
     nil
   end

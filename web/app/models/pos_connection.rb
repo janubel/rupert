@@ -7,7 +7,8 @@ class PosConnection < ApplicationRecord
   include TenantScoped
 
   GATEWAYS = %w[unconfirmed authorize_net nmi swipesimple other].freeze
-  SETUP_FIELDS = %w[environment account_reference gateway access_requested vendor_approved credentials_json].freeze
+  SETUP_FIELDS = %w[environment account_reference gateway access_requested vendor_approved credentials_json
+                    hourly_sync_enabled].freeze
 
   encrypts :credentials_json
   belongs_to :updated_by, class_name: 'User', optional: true
@@ -50,9 +51,10 @@ class PosConnection < ApplicationRecord
     assign_attributes(attributes)
     previous = {} if environment_changed? || gateway_changed?
     supplied = submitted_credentials.to_h.stringify_keys.slice(*credential_keys)
-      .reject { |_key, value| value.blank? }
+                                    .reject { |_key, value| value.blank? }
     values = previous.merge(supplied)
-    values['api_url'] = values['api_url'].delete_suffix('/') if provider == 'korona' && values['api_url'].is_a?(String)
+    values['api_url'] = values['api_url'].delete_suffix('/') if %w[korona
+                                                                   ctrax].include?(provider) && values['api_url'].is_a?(String)
     self.credentials_json = JSON.generate(values)
   end
 
@@ -97,23 +99,49 @@ class PosConnection < ApplicationRecord
   def valid_credentials
     values = credential_values
     allowed = credential_keys
-    if credentials_json.to_s.bytesize > 16_384 || (values.keys - allowed).any? || values.values.any? { |value| !value.is_a?(String) || !value.valid_encoding? || value.bytesize > 4096 || value.match?(/[\x00-\x1f\x7f]/) }
+    if credentials_json.to_s.bytesize > 16_384 || (values.keys - allowed).any? || values.values.any? do |value|
+      !value.is_a?(String) || !value.valid_encoding? || value.bytesize > 4096 || value.match?(/[\x00-\x1f\x7f]/)
+    end
       errors.add(:base, 'The connection credentials are unsupported or too long.')
       return
     end
     return if values.empty?
 
-    errors.add(:base, 'Confirm approved dedicated API access before saving credentials.') unless vendor_approved
+    errors.add(:base, 'Confirm approved API read access before saving credentials.') unless vendor_approved
     errors.add(:base, 'Provide all required API credential fields.') unless allowed.all? { |key| values[key].present? }
-    if provider == 'korona'
-      errors.add(:base, 'Use the exact HTTPS KORONA API endpoint shown in your API widget.') unless values['api_url'].to_s.bytesize <= 2048 && PaymentProviders::KoronaCheck::API_URL_PATTERN.match?(values['api_url'].to_s)
-      errors.add(:base, 'Use a dedicated API username of at most 512 bytes without a colon.') if values['api_username'].to_s.bytesize > 512 || values['api_username'].to_s.include?(':')
-      errors.add(:base, 'Use the account UUID from KORONA.') unless values['account_id'].to_s.match?(/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i)
+    if provider == 'ctrax'
+      unless Ctrax::Client.valid_credentials?(values)
+        errors.add(:base,
+          'Use a C-Trax API origin such as https://your-store.api.cannatrax.net and valid C-Trax user credentials.')
+      end
+    elsif provider == 'korona'
+      unless values['api_url'].to_s.bytesize <= 2048 && PaymentProviders::KoronaCheck::API_URL_PATTERN.match?(values['api_url'].to_s)
+        errors.add(:base,
+          'Use the exact HTTPS KORONA API endpoint shown in your API widget.')
+      end
+      if values['api_username'].to_s.bytesize > 512 || values['api_username'].to_s.include?(':')
+        errors.add(:base,
+          'Use a dedicated API username of at most 512 bytes without a colon.')
+      end
+      unless values['account_id'].to_s.match?(/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i)
+        errors.add(:base,
+          'Use the account UUID from KORONA.')
+      end
     elsif check_kind == 'authorize_net'
-      errors.add(:base, 'Use an Authorize.net API Login ID of at most 20 characters.') if values['api_login_id'].to_s.bytesize > 20
-      errors.add(:base, 'Use an Authorize.net transaction key of at most 16 characters.') if values['transaction_key'].to_s.bytesize > 16
+      if values['api_login_id'].to_s.bytesize > 20
+        errors.add(:base,
+          'Use an Authorize.net API Login ID of at most 20 characters.')
+      end
+      if values['transaction_key'].to_s.bytesize > 16
+        errors.add(:base,
+          'Use an Authorize.net transaction key of at most 16 characters.')
+      end
     elsif provider == 'cova'
-      errors.add(:base, 'Use the positive Company ID from your Cova onboarding package.') unless values['company_id'].to_s.match?(/\A[1-9][0-9]{0,9}\z/) && values['company_id'].to_i <= 2_147_483_647
+      unless values['company_id'].to_s.match?(/\A[1-9][0-9]{0,9}\z/) && values['company_id'].to_i <= 2_147_483_647
+        errors.add(:base,
+          'Use the positive Company ID from your Cova onboarding package.')
+      end
     end
+    errors.add(:base, 'Hourly stock sync is only supported for C-Trax.') if hourly_sync_enabled && provider != 'ctrax'
   end
 end

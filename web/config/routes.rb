@@ -247,8 +247,10 @@ Rails.application.routes.draw do
     member do
       post :check_access
       post :disconnect
+      post :sync_stock
     end
   end
+  resources :ctrax_stock, only: :index
   resources :inventory_exceptions, only: :index
   resources :bulk_recipes, only: %i[index new create]
   resources :bulk_consumptions, only: %i[index new create] do

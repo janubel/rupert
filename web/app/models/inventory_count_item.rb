@@ -14,7 +14,8 @@ class InventoryCountItem < ApplicationRecord
   belongs_to :square_variation, class_name: 'SquareVariation', foreign_key: 'squareVariationId', optional: true
 
   validates :sku, presence: true
-  validates :quantity, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 2_147_483_647 }
+  validates :quantity,
+    numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 2_147_483_647 }
 
   def delta
     return nil if previousQuantity.nil? || comparison['status'] != 'matched'
@@ -36,10 +37,14 @@ class InventoryCountItem < ApplicationRecord
   # Resolves the linked Shopify variant (snapshotted id, or by sku for drafts)
   # so the count sheet can show a product name and thumbnail.
   def resolved_variant
+    return nil if comparison['source'] == 'ctrax' || count.location&.source == 'ctrax'
+
     @resolved_variant ||= shopify_variant || ShopifyVariant.find_by(sku: sku)
   end
 
   def inventory_title
+    return comparison['product_name'] if comparison['source'] == 'ctrax'
+
     resolved_variant&.title
   end
 

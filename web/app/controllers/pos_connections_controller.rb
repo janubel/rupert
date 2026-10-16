@@ -14,23 +14,32 @@ class PosConnectionsController < AuthenticatedController
   def show; end
 
   def update
+    if @provider[:key] == 'ctrax' && ActiveModel::Type::Boolean.new.cast(params.dig(:pos_connection,
+      :hourly_sync_enabled)) && !Current.user.can?('inventory.write')
+      return render plain: 'Inventory write permission is required for hourly sync.', status: :forbidden
+    end
+
     attributes = setup_params.except(:credential_secret).to_h
     @connection.apply_setup(attributes, setup_params[:credential_secret] || {})
     @connection.updated_by = Current.user
     if @connection.save
       ActivityLogger.log('pos_connection_saved', subject: @connection, details: @provider[:key])
-      redirect_to pos_connection_path(@provider[:key]), notice: 'Setup saved. No sync, account check or payment was started.'
+      redirect_to pos_connection_path(@provider[:key]),
+        notice: 'Setup saved. No sync, account check or payment was started.'
     else
       render :show, status: :unprocessable_entity
     end
   rescue ActiveRecord::StaleObjectError, ActiveRecord::RecordNotUnique
-    redirect_to pos_connection_path(@provider[:key]), alert: 'This setup changed in another session. Reload and review it before saving.'
+    redirect_to pos_connection_path(@provider[:key]),
+      alert: 'This setup changed in another session. Reload and review it before saving.'
   end
 
   def check_access
     unless @connection.check_kind && @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
-      return redirect_to pos_connection_path(@provider[:key]), alert: 'Save approved API credentials before checking API access.'
+      return redirect_to pos_connection_path(@provider[:key]),
+        alert: 'Save approved API credentials before checking API access.'
     end
+
     setup_version = @connection.lock_version
     arguments = { credentials: @connection.credential_values }
     arguments[:environment] = @connection.environment if %w[authorize_net nmi].include?(@connection.check_kind)
@@ -42,25 +51,51 @@ class PosConnectionsController < AuthenticatedController
       last_checked_at: Time.current, updated_at: Time.current, lock_version: setup_version + 1
     )
     if updated.zero?
-      return redirect_to pos_connection_path(@provider[:key]), alert: 'Setup changed during the check. Check the current credentials again.'
+      return redirect_to pos_connection_path(@provider[:key]),
+        alert: 'Setup changed during the check. Check the current credentials again.'
     end
+
     @connection.reload
     ActivityLogger.log('pos_connection_checked', subject: @connection, details: "#{@provider[:key]}:#{result[:status]}")
-    redirect_to pos_connection_path(@provider[:key]), (result[:status] == 'verified' ? { notice: result.fetch(:message) } : { alert: result.fetch(:message) })
+    redirect_to pos_connection_path(@provider[:key]),
+      (result[:status] == 'verified' ? { notice: result.fetch(:message) } : { alert: result.fetch(:message) })
   end
 
   def disconnect
     if @connection.persisted?
       updated = PosConnection.where(id: @connection.id, lock_version: @connection.lock_version).update_all(
-        credentials_json: '{}', last_check_status: nil, last_check_message: nil, last_checked_at: nil,
+        credentials_json: '{}', hourly_sync_enabled: false, last_check_status: nil, last_check_message: nil, last_checked_at: nil,
         updated_by_id: Current.user.id, updated_at: Time.current, lock_version: @connection.lock_version + 1
       )
-      return redirect_to pos_connection_path(@provider[:key]), alert: 'Setup changed. Review it and remove the current credentials again.' if updated.zero?
+      if updated.zero?
+        return redirect_to pos_connection_path(@provider[:key]),
+          alert: 'Setup changed. Review it and remove the current credentials again.'
+      end
 
       @connection.reload
     end
-    ActivityLogger.log('pos_connection_credentials_removed', subject: @connection, details: @provider[:key]) if @connection.persisted?
-    redirect_to pos_connection_path(@provider[:key]), notice: 'Saved API credentials removed from Rupert. The vendor account and its permissions were not changed.'
+    if @connection.persisted?
+      ActivityLogger.log('pos_connection_credentials_removed', subject: @connection,
+        details: @provider[:key])
+    end
+    redirect_to pos_connection_path(@provider[:key]),
+      notice: 'Saved API credentials removed from Rupert. The vendor account and its permissions were not changed.'
+  end
+
+  def sync_stock
+    raise ActiveRecord::RecordNotFound unless @provider[:key] == 'ctrax'
+    unless Current.user.can?('inventory.write')
+      return render plain: 'Inventory write permission is required.',
+        status: :forbidden
+    end
+
+    result = Ctrax::StockSync.call(connection: @connection)
+    ActivityLogger.log('ctrax_stock_synced', subject: @connection,
+      details: "#{result[:stores]} stores, #{result[:variants]} variants")
+    redirect_to ctrax_stock_index_path,
+      notice: "C-Trax stock synced: #{result[:stores]} stores, #{result[:variants]} variants."
+  rescue Ctrax::Client::Error => e
+    redirect_to pos_connection_path('ctrax'), alert: e.message
   end
 
   private
@@ -90,6 +125,7 @@ class PosConnectionsController < AuthenticatedController
     gateway = @provider[:key] == 'valmar' ? requested.fetch(:gateway, @connection.gateway) : @connection.gateway
     keys = PosProviderCatalog.credential_keys(@provider[:key], gateway: gateway)
     requested.permit(:environment, :account_reference, :access_requested, :vendor_approved, :lock_version,
+      *(@provider[:key] == 'ctrax' ? [:hourly_sync_enabled] : []),
       *(@provider[:key] == 'valmar' ? [:gateway] : []), credential_secret: keys)
   end
 
@@ -101,6 +137,7 @@ class PosConnectionsController < AuthenticatedController
 
   def checker
     case @connection.check_kind
+    when 'ctrax' then PaymentProviders::CtraxCheck
     when 'korona' then PaymentProviders::KoronaCheck
     when 'cova' then PaymentProviders::CovaCheck
     when 'authorize_net' then PaymentProviders::AuthorizeNetCheck

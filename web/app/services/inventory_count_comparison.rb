@@ -21,6 +21,10 @@ class InventoryCountComparison
   def initialize(count, skus = nil)
     @count = count
     @location = Location.find_by(id: count.locationId, tenant_id: count.tenant_id)
+    if @location&.source == 'ctrax'
+      @ctrax = Ctrax::CountComparison.new(count)
+      return
+    end
     return unless @location && %w[shopify square].include?(@location.source)
 
     @shopify = @location.source == 'shopify'
@@ -44,6 +48,8 @@ class InventoryCountComparison
   end
 
   def attributes_for(item)
+    return @ctrax.attributes_for(item) if @ctrax
+
     metadata = {
       'status' => 'unavailable', 'captured_at' => Time.current.iso8601(6),
       'location_id' => @count.locationId, 'location_name' => @location&.name,
@@ -56,8 +62,12 @@ class InventoryCountComparison
 
     ids = @ids_by_sku.fetch(item.sku, [])
     return unavailable.call('SKU does not identify one item in this platform.') unless ids.one?
-    return unavailable.call('Multiple worksheet SKUs identify the same platform stock pool.') if @shared_ids.include?(ids.first)
-    return unavailable.call('The scanned item identity changed. Review this row before submitting.') if item[@key].present? && item[@key] != ids.first
+    if @shared_ids.include?(ids.first)
+      return unavailable.call('Multiple worksheet SKUs identify the same platform stock pool.')
+    end
+    if item[@key].present? && item[@key] != ids.first
+      return unavailable.call('The scanned item identity changed. Review this row before submitting.')
+    end
 
     source_item = @source_items[ids.first]
     return unavailable.call('The linked platform item is no longer in this workspace catalog.') unless source_item
@@ -67,6 +77,7 @@ class InventoryCountComparison
     unless levels.one? && levels.first[@opposite].nil? && !levels.first.quantity.nil?
       return unavailable.call('No unambiguous stored stock row exists for this platform, location and item.')
     end
+
     level = levels.first
     # Existing Shopify mirrors can contain the legacy primary-location
     # aggregate fallback; row identity does not prove native location provenance.
@@ -78,6 +89,8 @@ class InventoryCountComparison
   end
 
   def prepared_items
+    return @ctrax.prepared_items if @ctrax
+
     return [] unless @ids_by_sku
 
     @ids_by_sku.keys.sort.filter_map do |sku|

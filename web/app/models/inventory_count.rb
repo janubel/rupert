@@ -3,7 +3,7 @@
 # A manual physical inventory worksheet. The counter records the actual on-hand
 # quantity per SKU; approving a count records it as an audit worksheet for the
 # future, when Rupert becomes the source of truth. Until then it never mutates
-# mirrored inventory — Square is the source of truth today (see #apply_override!).
+# mirrored inventory. Select the source/store whose stock is being counted.
 class InventoryCount < ApplicationRecord
   include HasCuid
   include TenantScoped
@@ -60,10 +60,7 @@ class InventoryCount < ApplicationRecord
     self
   end
 
-  # Record-only for now. Square is the source of truth until this app takes
-  # over (the roadmap goal), so approving a count is captured as an audit
-  # record/worksheet and never mutates mirrored inventory. When Rupert becomes
-  # the source of truth, re-enable applying counted quantities here.
+  # Approval records the worksheet; it never mutates mirrored platform stock.
   def apply_override!(actor: 'user')
     return false unless approved?
 

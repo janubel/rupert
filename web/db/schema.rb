@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -815,7 +815,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_210000) do
     t.index ["tenant_id", "pay_run_id"], name: "index_payslips_on_tenant_id_and_pay_run_id"
   end
 
+  create_table "ctrax_stock_snapshots", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "api_origin", null: false
+    t.string "store_id", null: false
+    t.text "records_json", null: false
+    t.datetime "captured_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "location_id"], name: "index_ctrax_stock_snapshots_on_tenant_id_and_location_id", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_stock_snapshots_on_tenant_id"
+  end
+
   create_table "pos_connections", force: :cascade do |t|
+    t.boolean "hourly_sync_enabled", default: false, null: false
     t.string "tenant_id", null: false
     t.string "provider", null: false
     t.string "environment", default: "sandbox", null: false
@@ -1368,6 +1382,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_210000) do
   add_foreign_key "owner_checklists", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "owner_checklists", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "payments", "orders", on_delete: :cascade
+  add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "ctrax_stock_snapshots", "tenants"
   add_foreign_key "pos_connections", "tenants"
   add_foreign_key "pos_connections", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "refunds", "orders", on_delete: :cascade

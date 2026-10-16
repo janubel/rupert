@@ -10,3 +10,10 @@ Use the [Shopify AI Toolkit](https://shopify.dev/docs/apps/build/ai-toolkit) for
 - **ALWAYS ASK before any data-mutating action on Shopify or Square** — creating/updating products, pushing inventory, or writing SKUs. Do not apply without explicit owner sign-off first. Syncs (read-only mirrors into the local DB) are fine to run without asking.
 - **Square can still be frozen any time for maintenance via `ops:push_guard:freeze[square,reason]`** — this now records state for awareness but no longer blocks writes; check `ops:push_guard:status`.
 - **SKU changes require explicit owner sign-off before writing** to Shopify or Square. You may plan and inspect freely, but never write SKUs without asking.
+
+## C-Trax integration context
+
+- The owner selected C-Trax as the retail physical-count reference on 2026-10-15. Read `docs/ctrax.md` before changing its connector.
+- C-Trax user authentication and TRX merchant credentials are separate. Never use a merchant client ID/token/algorithm as guessed stock API authentication.
+- Keep native store/variant IDs when source SKUs are absent. Preserve signed stock, distinguish missing stock from zero, and never write counts back to a platform without owner authorization.
+- Real exports, private deployment/access notes, credentials and browser sessions do not belong in this public repository. Keep private backups in an owner-verified private destination. Do not extract hidden browser session storage or cookies.

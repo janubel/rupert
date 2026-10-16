@@ -87,7 +87,7 @@ class InventoryCountsController < AuthenticatedController
     end
     DataCache.bump!
     redirect_to(inventory_count_path(@count),
-      notice: 'Count approved and recorded — overrides are disabled (Square is the source of truth).')
+      notice: 'Count approved and recorded. Platform inventory was not changed.')
   rescue AASM::InvalidTransition
     redirect_to(inventory_count_path(@count), alert: 'Only pending counts can be approved.')
   rescue StandardError => e
@@ -164,6 +164,13 @@ class InventoryCountsController < AuthenticatedController
       next if sku.blank? && row[:quantity].to_s.blank?
 
       count.items.build(sku: sku, quantity: row[:quantity])
+    end
+    return unless count.location&.source == 'ctrax'
+
+    comparison = Ctrax::CountComparison.new(count)
+    count.items.each do |item|
+      item.sku = comparison.canonical_key(item.sku)
+      item.assign_attributes(comparison.attributes_for(item))
     end
   end
 end

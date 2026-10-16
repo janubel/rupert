@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_220000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -492,6 +492,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_210000) do
     t.check_constraint "ended_at IS NULL OR ended_at > started_at", name: "clock_positive_interval"
   end
 
+  create_table "ctrax_stock_snapshots", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "api_origin", null: false
+    t.string "store_id", null: false
+    t.text "records_json", null: false
+    t.datetime "captured_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "location_id"], name: "index_ctrax_stock_snapshots_on_tenant_id_and_location_id", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_stock_snapshots_on_tenant_id"
+  end
+
   create_table "customers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email"
@@ -819,6 +832,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_210000) do
     t.integer "lock_version", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "hourly_sync_enabled", default: false, null: false
     t.index ["tenant_id", "provider"], name: "index_pos_connections_on_tenant_id_and_provider", unique: true
     t.index ["updated_by_id"], name: "index_pos_connections_on_updated_by_id"
     t.check_constraint "environment IN ('sandbox', 'production')", name: "pos_connection_environment"
@@ -1347,6 +1361,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_210000) do
   add_foreign_key "clock_shifts", "employees", on_delete: :nullify
   add_foreign_key "clock_shifts", "tenants"
   add_foreign_key "clock_shifts", "users", on_delete: :nullify
+  add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "ctrax_stock_snapshots", "tenants"
   add_foreign_key "departments", "employees", column: "manager_id"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
   add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade

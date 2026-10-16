@@ -7,7 +7,7 @@
         <% if @prepared %>
           Unambiguous stored stock rows at one platform location are pre-filled. Fill in the <em>Counted</em> column with what's physically on hand, then submit for approval.
         <% else %>
-          Record what's physically on hand per SKU. Approved counts are kept as audit worksheets — they do not change inventory (Square is the source of truth until Rupert takes over).
+          Record what's physically on hand per item. Approved counts are kept as audit worksheets and do not change platform inventory. Choose a C-Trax store for the retail stock reference.
         <% end %>
       </p>
     </div>
@@ -84,8 +84,8 @@
               <% @count.items.each_with_index do |item, index| %>
                 <tr data-row>
                   <td class="td font-mono text-xs text-mocha"><%= item.sku %></td>
-                  <td class="td text-ink"><%= item.shopify_variant&.product&.title || item.square_variation&.item&.name || "—" %></td>
-                  <td class="td text-mocha"><%= item.shopify_variant&.title || item.square_variation&.name || "—" %></td>
+                  <td class="td text-ink"><%= item.comparison['product_name'] || item.shopify_variant&.product&.title || item.square_variation&.item&.name || "—" %></td>
+                  <td class="td text-mocha"><%= item.comparison['source_sku'] || item.shopify_variant&.title || item.square_variation&.name || "—" %></td>
                   <td class="td text-right text-mocha"><%= item.previousQuantity %></td>
                   <td class="td">
                     <input type="number" name="items[<%= index %>][quantity]" min="0" value="<%= item.quantity %>"
