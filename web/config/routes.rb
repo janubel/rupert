@@ -209,6 +209,7 @@ Rails.application.routes.draw do
   post '/time_clock/corrections/:id/reject', to: 'time_clock#reject_correction', as: :reject_correction_time_clock
   get '/time_clock/commissions', to: 'time_clock#commissions', as: :commission_preview_time_clock
   resources :reconcile, only: :index
+  resources :money_reconciliations, only: %i[index create]
   resources :reports, only: [:index] do
     collection do
       get :register_summary
@@ -346,6 +347,24 @@ Rails.application.routes.draw do
   post '/w/:token/checkout', to: 'warehouse_checkouts#create', as: :warehouse_checkout_submit
 
   get '/w/:token/orders/:order_number', to: 'warehouse_orders#show', as: :warehouse_order
+
+  get '/marketing', to: 'marketing/workspace#index', as: :marketing
+  post '/marketing/toggle', to: 'marketing/workspace#toggle', as: :marketing_toggle
+  namespace :marketing do
+    resources :campaigns, only: %i[new create edit update]
+    resources :communities, only: %i[new create edit update] do
+      post :check_rules, on: :member
+    end
+    resources :offers, only: %i[new create edit update] do
+      post :verify, on: :member
+    end
+    resources :threads, only: %i[new create edit update] do
+      post :check_context, on: :member
+    end
+    resources :replies, only: %i[new create show update] do
+      post :transition, on: :member
+    end
+  end
 
   get '/up', to: proc { [200, { 'content-type' => 'text/plain' }, ['OK']] }
 

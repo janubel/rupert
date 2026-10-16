@@ -490,7 +490,7 @@
       "area": "Commerce",
       "name": "Image-based POS cart",
       "status": "Partial",
-      "scope": "Searchable product images, cart and server-priced quote preview. Tax calculation, completed sales, receipts, hardware and payment settlement are not enabled.",
+      "scope": "Shopify preview plus C-Trax native store catalog/prices and exact website image links; paired cashier/customer tip screens and web demo. Private, explicit tip confirmation is tied to the cart revision. Tax, terminal payment, collected tips, refunds and receipts remain in C-Trax; this preview creates no source sale or stock change.",
       "evidence": "web/app/controllers/point_of_sale_controller.rb",
       "phase": "1"
     },
@@ -610,6 +610,24 @@
       "scope": "Owner direction recorded October 15, 2026: probably retain Valmar and Authorize.net as long-term Rupert integrations. Confirm account/gateway mapping and supported read access; reconcile SwipeSimple operational evidence with gateway payments and processor deposits without double counting. Hourly SwipeSimple intake stays disabled until a supported vendor feed is verified. C-Trax remains the retail inventory reference. This objective does not activate payments or change merchant settings.",
       "evidence": "docs/ops/swipesimple-integration-research.md",
       "phase": "3"
+    },
+    {
+      "id": "F65",
+      "area": "Marketing",
+      "name": "Community thread and reply review",
+      "status": "Available",
+      "scope": "Optional tenant-scoped topic-search links and manual thread intake/triage; existing group-code records with dated merchant evidence, versioned reply approval, eligibility checks and manual publication/removal history. No automated crawling/posting, merchant code activation, influencer CMS or conversion attribution.",
+      "evidence": "web/app/services/marketing/reply_workflow.rb",
+      "phase": "4"
+    },
+    {
+      "id": "F66",
+      "area": "Commerce",
+      "name": "C-Trax daily sales and register reconciliation",
+      "status": "Partial",
+      "scope": "Encrypted native store/day order, payment and per-unit line snapshots; independent source report checks, conservative register cash variance, CSV and digest-bound local review. Opt-in scheduled today/yesterday reads. Detailed refunds, cash-tip drawer handling, settlement and terminal execution remain unverified or separate.",
+      "evidence": "web/app/services/ctrax/sales_sync.rb",
+      "phase": "1"
     }
   ]
 }

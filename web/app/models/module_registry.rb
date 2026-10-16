@@ -13,6 +13,7 @@ class ModuleRegistry
   Entry = Struct.new(:key, :name, :path, :permission, :position, keyword_init: true)
 
   ENTRIES = [
+    Entry.new(key: 'marketing', name: 'Marketing', path: -> { marketing_path }, permission: 'marketing.read', position: 35),
     Entry.new(key: 'roadmap', name: 'Features & roadmap', path: -> { roadmap_path }, permission: nil, position: 110),
     Entry.new(key: 'owner_checklists', name: 'Owner checklists', path: -> { owner_checklists_path }, permission: nil, position: 109),
     Entry.new(key: 'api_access_tokens', name: 'API access', path: lambda {
@@ -146,6 +147,8 @@ class ModuleRegistry
         next false if %w[platform system].include?(entry.key) && !user.super_admin?
         next false if entry.key == 'owner_checklists' && !(user&.active? && (user.admin? || user.super_admin?))
 
+        next false if entry.key == 'marketing' && !FeatureFlag.enabled?(:marketing) && !user.can_manage_accounts?
+
         Array(entry.permission).all? { |permission| user.can?(permission) }
       end.sort_by(&:position)
     end
@@ -161,6 +164,7 @@ class ModuleRegistry
     AREAS = [
       { key: 'overview', name: 'Overview', modules: ['dashboard'] },
       { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos point_of_sale ctrax_days registers customers] },
+      { key: 'marketing', name: 'Marketing', modules: %w[marketing] },
       { key: 'stock', name: 'Stock',
         modules: %w[inventory inventory_exceptions locations inventory_counts stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
       { key: 'money', name: 'Money',

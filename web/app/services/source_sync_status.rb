@@ -8,10 +8,79 @@ class SourceSyncStatus
   end
 
   def all
-    [ctrax, swipesimple, authorize_net]
+    [ctrax, swipesimple, authorize_net, shopify, bank, google_backup]
   end
 
   private
+
+  def shopify
+    configured = %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].all? { |key| EnvStore.fetch(key, '').present? }
+    value = Setting.find_by(key: 'sync_watermark_shopify', tenant_id: Current.tenant_id)&.value
+    last_at = Time.zone.parse(value) if value.present?
+    run = SyncRun.where(source: %w[all shopify]).order(startedAt: :desc).first
+    badge = if !configured
+      'Needs access'
+    elsif run&.status == 'running' && run.startedAt > SyncEngine::STALE_RUN_AFTER.ago
+      'Syncing'
+    elsif run&.failed? && (last_at.nil? || last_at.to_i < run.startedAt.to_i)
+      'Error'
+    elsif last_at.nil?
+      'Awaiting pull'
+    elsif last_at < FRESH_FOR.ago
+      'Stale'
+    else
+      'Live'
+    end
+    { key: 'shopify', label: 'Shopify', badge: badge, last_at: last_at,
+      detail: "#{ShopifyProduct.count} products · #{ShopifyVariant.count} variants",
+      schedule: 'Every 15 minutes', mode: 'catalog', ready: configured }
+  end
+
+  def bank
+    connection = PosConnection.find_by(provider: 'iris_reporting')
+    latest = IrisReport.order(observed_at: :desc).first
+    api = connection&.vendor_approved && connection.credentials_saved?
+    last_at = api ? connection.last_reported_at : latest&.observed_at
+    badge = if !api
+      latest ? 'Portal imports' : 'Needs access'
+    elsif connection.last_report_status == 'failed'
+      'Error'
+    elsif !connection.reporting_enabled
+      'Paused'
+    elsif last_at.nil?
+      'Awaiting pull'
+    elsif last_at < 36.hours.ago
+      'Stale'
+    else
+      'Live'
+    end
+    { key: 'bank', label: 'Bank · NAB / IRIS', badge: badge, last_at: last_at,
+      detail: "#{IrisReport.count} processor deposit and summary snapshots",
+      schedule: api && connection.reporting_enabled ? 'Daily at 6:45 a.m. Eastern' : 'Portal CSV imports · API access needed for automatic pulls',
+      mode: 'bank', ready: false }
+  end
+
+  def google_backup
+    connected = GoogleDriveBackupService.connected?
+    logs = BackupLog.unscoped.where(tenant_id: nil)
+    latest = logs.order(startedAt: :desc).first
+    last_at = logs.where(status: 'success').order(finishedAt: :desc).first&.finishedAt
+    badge = if !connected
+      'Needs connection'
+    elsif latest&.status == 'running'
+      'Backing up'
+    elsif latest&.status == 'failed'
+      'Error'
+    elsif last_at.nil?
+      'Awaiting backup'
+    elsif last_at < 8.hours.ago
+      'Stale'
+    else
+      'Healthy'
+    end
+    { key: 'google_backup', label: 'Google Drive backup', badge: badge, last_at: last_at,
+      detail: 'Automatic off-server database backup', schedule: 'Every 6 hours', mode: 'backup', ready: false }
+  end
 
   def ctrax
     connection = PosConnection.find_by(provider: 'ctrax')

@@ -1,0 +1,43 @@
+<% content_for :title, 'Money reconciliation' %>
+<div class="space-y-6">
+  <section class="space-y-3">
+    <%= link_to 'Dashboard', root_path, class: 'text-sm text-olive' %>
+    <h1 class="page-title">Money reconciliation</h1>
+    <p class="text-sm text-mocha">Daily, weekly and monthly review of orders, payments and NAB deposit evidence. Periods use Eastern time; weeks run Monday through Sunday.</p>
+    <%= form_tag money_reconciliations_path, method: :get, class: 'flex flex-wrap items-end gap-3' do %>
+      <div><%= label_tag :kind, 'Period', class: 'block text-sm mb-1' %><%= select_tag :kind, options_for_select([['Daily', 'daily'], ['Weekly', 'weekly'], ['Monthly', 'monthly']], @report.kind), class: 'select' %></div>
+      <div><%= label_tag :date, 'Date within period', class: 'block text-sm mb-1' %><%= date_field_tag :date, @report.from, class: 'input', min: '2000-01-01', max: '2099-12-31' %></div>
+      <%= submit_tag 'View report', class: 'btn-primary' %>
+      <%= link_to 'Download CSV', money_reconciliations_path(kind: @report.kind, date: @report.from, saved: @saved&.id, format: :csv), class: 'btn-ghost', data: { turbo: false } %>
+    <% end %>
+    <% if Current.user.can?('sync.write') %><%= button_to 'Save / refresh this review', money_reconciliations_path(kind: @report.kind, date: @report.from), class: 'btn-ghost btn-sm', form: { data: { turbo: false } } %><% end %>
+  </section>
+  <section class="card card-pad space-y-2">
+    <div class="flex flex-wrap justify-between gap-2"><h2 class="font-display text-xl"><%= @payload['from'] %> through <%= @payload['to'] %></h2><span class="pill-taupe"><%= @payload['status'] %></span></div>
+    <p class="text-xs text-taupe"><%= @saved ? 'Saved close / review' : 'Current source evidence' %> · generated <%= l(Time.iso8601(@payload['generated_at']).in_time_zone('America/New_York'), format: :short) %></p>
+    <ul class="list-disc space-y-1 pl-5 text-sm text-mocha"><% @payload['warnings'].each do |warning| %><li><%= warning %></li><% end %></ul>
+  </section>
+  <section class="card overflow-hidden">
+    <div class="overflow-x-auto"><table class="w-full text-sm">
+      <thead><tr><% ['Source / account', 'Measure', 'Currency', 'Records', 'Amount', 'Evidence'].each do |heading| %><th class="th" scope="col"><%= heading %></th><% end %></tr></thead>
+      <tbody class="divide-y divide-fog"><% @payload['rows'].each do |row| %><tr>
+        <td class="td"><strong><%= row['source'] %></strong><br><span class="text-xs text-taupe"><%= row['account'] %></span></td>
+        <td class="td"><%= row['metric'] %></td><td class="td"><%= row['currency'].presence || 'Unconfirmed' %></td>
+        <td class="td"><%= row['count'] || '—' %></td><td class="td font-mono"><%= row['amount'] %></td><td class="td text-xs"><%= row['basis'] %></td>
+      </tr><% end %>
+      <% if @payload['rows'].empty? %><tr><td colspan="6" class="empty-row">No source money observations are stored for this period. Review the missing coverage above.</td></tr><% end %>
+      </tbody></table></div>
+  </section>
+  <section class="card card-pad space-y-3">
+    <h2 class="font-display text-xl">Source freshness</h2>
+    <% @payload['sources'].each do |source| %><p class="text-sm"><strong><%= source['label'] %></strong> · <%= source['badge'] %> · <%= source['last_at'] ? l(Time.iso8601(source['last_at']).in_time_zone('America/New_York'), format: :short) : 'No successful read yet' %></p><% end %>
+    <p class="text-xs text-taupe">Source status is recorded when this review is generated. C-Trax stock and backup health are operational context.</p>
+    <%= link_to 'NAB / IRIS deposits and imports', pos_connection_path('iris_reporting'), class: 'btn-ghost btn-sm' if Current.user.can?('settings.read') %>
+  </section>
+  <section class="card card-pad space-y-3">
+    <h2 class="font-display text-xl">Saved reviews</h2>
+    <p class="text-sm text-mocha">Automatic closes: daily at 12:20 a.m.; Monday at 12:25 a.m.; first of each month at 12:30 a.m. Eastern. Each saves the previous completed period. Late data can be reviewed and refreshed above.</p>
+    <% @history.each do |report| %><p class="text-sm"><%= link_to "#{report.period_kind.capitalize} · #{report.period_from} through #{report.period_to}", money_reconciliations_path(saved: report.id), class: 'text-olive underline' %></p><% end %>
+    <% if @history.empty? %><p class="text-sm text-taupe">No saved reviews yet.</p><% end %>
+  </section>
+</div>

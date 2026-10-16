@@ -8,6 +8,16 @@ class PageGuides
   Guide = Struct.new(:key, :title, :summary, :sections, :tips, keyword_init: true)
 
   GUIDES = {
+    'marketing' => Guide.new(
+      key: 'marketing', title: 'Community marketing',
+      summary: 'Find topic discussions, save thread context and review replies with existing group offers.',
+      sections: [
+        { heading: 'Find and triage', body: 'Create a campaign and group with topic terms and promotion rules. Open the group topic search, save a discussion URL and excerpt, then mark it relevant and confirm current context.' },
+        { heading: 'Review an offer and reply', body: 'Record an existing merchant code and full terms. A reviewer confirms merchant evidence for 24 hours and group rules for 30 days. Save and submit a reply with clear brand affiliation; approve the exact revision before copying it.' },
+        { heading: 'Manual publication', body: 'Publish the approved text yourself and record its URL. Changed context or offers require another review. Rupert does not crawl sources, post replies or create merchant codes in this phase.' }
+      ],
+      tips: ['Thread context expires after 7 days. Confirm it again when needed.', 'Keep a useful contribution in each reply and follow group promotion rules.', 'An approved draft is not evidence of publication or sales.']
+    ),
     'dashboard' => Guide.new(
       key: 'dashboard', title: 'Dashboard',
       summary: "Your at-a-glance store health: today's money, sales volume, and anything needing attention like inventory drift or low stock.",
