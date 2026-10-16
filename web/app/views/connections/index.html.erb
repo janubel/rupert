@@ -1,72 +1,75 @@
-<% content_for :title, "Connections" %>
+<% content_for :title, 'Master credentials & sync' %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Connections</h1>
-      <p class="mt-1 text-sm text-mocha">Every service Rupert talks to, whether it's set up, and where to find or renew the keys when you need them.</p>
-    </div>
-    <div class="flex gap-2">
-      <%= link_to "POS & payments", pos_connections_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "Settings", settings_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "Import .env", settings_path(anchor: "env"), class: "btn-ghost btn-sm" %>
+    <div><h1 class="page-title">Master credentials &amp; sync</h1><p class="mt-2 text-sm text-mocha">Set up connections, find what stopped working, and choose the next repair step.</p></div>
+    <div class="flex flex-wrap gap-2">
+      <%= link_to 'Credential setup', '#credentials', class: 'btn-primary btn-sm' %>
+      <%= link_to 'Improvement plan', '#improvements', class: 'btn-ghost btn-sm' %>
+      <% if Current.user.can?('sync.read') %><%= link_to 'Sync history', syncs_path, class: 'btn-ghost btn-sm' %><% end %>
+      <% if Current.user.can?('system.read') %><%= link_to 'Worker status', system_path, class: 'btn-ghost btn-sm' %><% end %>
     </div>
   </section>
-
-  <section class="rounded-xl border border-fog bg-cream px-4 py-3 text-sm text-mocha">
-    <span class="font-semibold text-ink"><%= @configured %> of <%= @services.length %> services configured.</span>
-    Keys are stored encrypted and shown masked — raw values never leave the server.
+  <section class="card card-pad text-sm text-mocha">
+    <p><strong class="text-ink">Save credentials → check access → read once → review freshness.</strong> Choose automatic schedules on each provider's setup page after a successful read.</p>
+    <p class="mt-2">Saved credentials and a successful check do not prove that new data is arriving. Credential completeness and source freshness are shown separately.</p>
+    <p class="mt-2">Saved secrets stay hidden. Only people with settings-write permission can replace them; platform backup credentials remain with the platform operator. Opening this page starts no checks or syncs.</p>
   </section>
-
-  <div class="grid gap-6 lg:grid-cols-2">
-    <% @services.each do |service| %>
-      <section class="card card-pad flex flex-col">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <h2 class="font-display text-xl text-ink"><%= service[:name] %></h2>
-            <p class="mt-0.5 text-sm text-mocha"><%= service[:description] %></p>
+  <section aria-label="Sync health" class="space-y-3">
+    <h2 class="font-display text-xl">Sync health &amp; repair</h2>
+    <% if @status_notice %><p role="alert" class="flash flash-alert"><%= @status_notice %></p><% end %>
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <% @sync_sources.each do |source| %>
+        <% active = SourceSyncStatus::ACTIVE_BADGES.include?(source[:badge]) %>
+        <article class="card card-pad <%= active ? 'source-sync-active' : 'source-sync-inactive' %> space-y-3" data-connection-source="<%= source[:key] %>">
+          <div class="flex items-start justify-between gap-3"><h3 class="font-display text-lg"><%= source[:label] %></h3><span class="<%= active ? 'pill-fern' : 'pill-rose' %>"><%= source[:badge] %></span></div>
+          <p class="text-sm text-mocha"><%= source[:next_step] %></p>
+          <p class="text-xs text-taupe"><%= source[:schedule] %></p>
+          <p class="text-xs text-mocha">Last source evidence: <% if source[:last_at] %><time datetime="<%= source[:last_at].iso8601 %>"><%= l(source[:last_at].in_time_zone, format: :short) %></time><% else %>None recorded<% end %></p>
+          <div class="flex flex-wrap gap-2">
+            <%= link_to 'Review setup', connection_source_setup_path(source), class: 'btn-ghost btn-sm' %>
+            <% if connection_source_can_sync?(source) %>
+              <% action = source[:key] == 'shopify' ? source_syncs_path(source: 'shopify') : source_sync_path(source[:key]) %>
+              <%= button_to source[:mode] == 'portal' ? 'Import portal export' : 'Read source now', action, method: :post, class: 'btn-primary btn-sm', form: { data: { turbo: false } } %>
+            <% end %>
           </div>
-          <span class="<%= service[:status] == :configured ? "pill-fern" : service[:status] == :partial ? "pill-olive" : "pill-taupe" %> shrink-0">
-            <span class="dot <%= service[:status] == :configured ? "bg-fern" : service[:status] == :partial ? "bg-olive" : "bg-taupe" %>"></span>
-            <%= service[:status_label] %>
-          </span>
-        </div>
-
-        <div class="mt-4 space-y-2">
-          <% service[:keys].each do |key| %>
-            <div class="flex items-center justify-between gap-3 rounded-xl bg-haze px-3 py-2 text-sm">
-              <div class="min-w-0">
-                <p class="truncate font-mono text-xs text-ink"><%= key[:key] %></p>
-                <p class="text-[11px] text-taupe"><%= key[:set] ? "#{key[:masked]} · #{key[:source]}" : "not set" %></p>
-              </div>
-              <span class="<%= key[:set] ? "dot bg-fern" : "dot bg-taupe" %> shrink-0" title="<%= key[:set] ? "Set" : "Missing" %>"></span>
-            </div>
-          <% end %>
-        </div>
-
-        <div class="mt-4 flex-1 space-y-3 text-xs text-mocha">
-          <div class="flex gap-2">
-            <span class="mt-0.5 font-semibold text-olive">Where to find it</span>
-            <span>
-              <% if service[:find_url] %>
-                <%= link_to service[:find_hint], service[:find_url], target: "_blank", rel: "noopener", class: "font-semibold text-olive hover:underline" %>
-              <% else %>
-                <%= service[:find_hint] %>
-              <% end %>
-            </span>
+        </article>
+      <% end %>
+    </div>
+  </section>
+  <section id="credentials" class="space-y-3">
+    <h2 class="font-display text-xl">Credential setup</h2>
+    <p class="text-sm text-mocha">Each connection keeps its existing credential store. “Configured” means required fields are present, not that vendor access has been checked. Blank secret fields keep their saved values.</p>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <% @services.each do |service| %>
+        <section class="card card-pad space-y-3" data-credential-service="<%= service[:key] %>">
+          <div class="flex flex-wrap items-start justify-between gap-2"><h3 class="font-display text-lg"><%= service[:name] %></h3><span class="pill-taupe"><%= service[:state] %></span></div>
+          <p class="text-sm text-mocha"><%= service[:description] %></p>
+          <% if service[:checked_at] %><p class="text-xs text-taupe">Last access check: <time datetime="<%= service[:checked_at].iso8601 %>"><%= l(service[:checked_at].in_time_zone, format: :short) %></time></p><% end %>
+          <div class="flex flex-wrap gap-2">
+            <%= link_to Current.user.can?('settings.write') ? 'Manage setup' : 'View setup', connection_service_setup_path(service), class: 'btn-ghost btn-sm' %>
+            <% if service[:checkable] && Current.user.can?('settings.write') %><%= button_to 'Check read access', check_access_pos_connection_path(service[:key]), method: :post, class: 'btn-primary btn-sm', form: { data: { turbo: false } } %><% end %>
+            <% if service[:key] == 'square' && service[:state] == 'Configured' && Current.user.can?('sync.write') %><%= button_to 'Read Square now', source_syncs_path(source: 'square'), method: :post, class: 'btn-primary btn-sm', form: { data: { turbo: false } } %><% end %>
           </div>
-          <% if service[:renewal_note] %>
-            <div class="flex gap-2">
-              <span class="mt-0.5 font-semibold text-olive">Renewing</span>
-              <span><%= service[:renewal_note] %></span>
-            </div>
-          <% end %>
-        </div>
-      </section>
-    <% end %>
-  </div>
-
-  <section class="card card-pad">
-    <h2 class="font-display text-xl text-ink">Not managed here</h2>
-    <p class="mt-2 text-xs text-taupe">Boot-time keys (<code class="rounded bg-haze px-1 py-0.5 font-mono">SHOPIFY_API_KEY</code>, <code class="rounded bg-haze px-1 py-0.5 font-mono">SHOPIFY_API_SECRET</code>, database credentials, <code class="rounded bg-haze px-1 py-0.5 font-mono">SECRET_KEY_BASE</code>) are set by the hosting environment and can't be changed from the app. To rotate those, edit <code class="rounded bg-haze px-1 py-0.5 font-mono">/etc/rupert.env</code> on the Incus instance and redeploy.</p>
+          <details class="text-sm text-mocha">
+            <summary class="cursor-pointer font-semibold text-ink">Required access &amp; troubleshooting</summary>
+            <ul class="mt-3 space-y-2"><% service[:fields].each do |field| %><li><span class="font-medium"><%= field[:label] %></span>: <%= field[:unreadable] ? 'Unreadable — restore encryption keys' : field[:set] ? 'Saved' : field[:optional] ? 'Optional · not set' : 'Missing · not set' %><% if field[:set] %> · <%= field[:source] %><% end %></li><% end %></ul>
+            <p class="mt-3"><%= service[:find_hint] %></p>
+            <% if service[:find_url] %><p class="mt-2"><%= link_to 'Open provider setup', service[:find_url], target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></p><% end %>
+            <% if service[:renewal_note] %><p class="mt-3"><strong>Renewal:</strong> <%= service[:renewal_note] %></p><% end %>
+          </details>
+        </section>
+      <% end %>
+    </div>
+  </section>
+  <section id="improvements" class="card card-pad space-y-4">
+    <h2 class="font-display text-xl">Sync improvement plan</h2>
+    <ol class="space-y-4 text-sm text-mocha">
+      <li><strong class="text-ink">1. One setup desk — available in this change.</strong> Named credential forms, saved-field indicators, explicit access checks, source reads and repair guidance. Existing permissions and schedules stay in place.</li>
+      <li><strong class="text-ink">2. Explain every failure — next.</strong> Give every connector the same last-attempt, last-success, error category, next retry and job status. Separate vendor access blocks from bad credentials and worker failures. Add stale-source alerts and verified receipt coverage.</li>
+      <li><strong class="text-ink">3. Make maintenance predictable — planned.</strong> Record a responsible person, review dates and vault references; coordinate shared-key rotation, verify recovery and add provider-approved automatic feeds. Require a successful read and reconciliation before activating a new schedule.</li>
+    </ol>
+    <p class="text-sm text-mocha">If a check succeeds but data stays stale, review the last job in Sync history and ask the platform operator to inspect Worker status. A reporting login does not grant payment-write access or make manual portal data automatic.</p>
+    <p class="text-xs text-taupe">Platform operators manage hosting, encryption and database credentials separately. Restore existing encryption keys from the protected backup if stored credentials become unreadable.</p>
   </section>
 </div>

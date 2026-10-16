@@ -2,13 +2,16 @@
 
 class SourceSyncStatus
   FRESH_FOR = 60.minutes
+  ACTIVE_BADGES = ['Live', 'Healthy', 'Syncing', 'Files current', 'Backing up'].freeze
 
-  def self.all
-    new.all
+  def self.all(include_platform: true)
+    new.all(include_platform: include_platform)
   end
 
-  def all
-    [ctrax, swipesimple, authorize_net, shopify, bank, google_backup]
+  def all(include_platform: true)
+    sources = [ctrax, swipesimple, authorize_net, shopify, bank]
+    sources << google_backup if include_platform
+    sources
   end
 
   private

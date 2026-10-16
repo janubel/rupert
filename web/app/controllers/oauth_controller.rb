@@ -11,7 +11,8 @@
 # OauthAllowedDomain list. Unknown domains are rejected; known domains with an
 # existing Rupert account sign in, and known domains without one get a reader
 # account auto-provisioned. Explicit Google login aliases use their canonical
-# account's allowed domain and never create another account.
+# account's allowed domain and never create another account. An explicitly
+# linked identity matching the account email grants only that account access.
 class OauthController < ApplicationController
   include DriveOauthCallback
   class AccountInAnotherTenant < StandardError; end
@@ -79,7 +80,8 @@ class OauthController < ApplicationController
     end
     tenant = resolve_tenant(email, linked_user: identity&.user)
     allowed_email = identity ? identity.user.email : email
-    unless tenant&.status == 'active' && OauthAllowedDomain.allowed?(allowed_email, tenant: tenant)
+    approved_account = identity&.exact_account_email?
+    unless tenant&.status == 'active' && (approved_account || OauthAllowedDomain.allowed?(allowed_email, tenant: tenant))
       AccessLogger.record(
         source: 'google',
         status: 'failure',

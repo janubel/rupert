@@ -255,6 +255,8 @@ Rails.application.routes.draw do
   end
   get '/system', to: 'system#index', as: :system
   get '/connections', to: 'connections#index', as: :connections
+  get '/connections/:service/edit', to: 'connections#edit', as: :edit_connection
+  patch '/connections/:service', to: 'connections#update', as: :connection
   resources :owner_checklists, only: %i[index new create show edit update] do
     member do
       get :print

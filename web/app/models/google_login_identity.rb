@@ -14,6 +14,12 @@ class GoogleLoginIdentity < ApplicationRecord
   validates :google_subject, uniqueness: true, allow_nil: true
   validate :email_does_not_belong_to_another_account
 
+  # A same-email link is explicit approval for this existing account, rather
+  # than permission to provision every account on its public email domain.
+  def exact_account_email?
+    email == user.email.to_s.downcase
+  end
+
   # Pin the first verified Google identity atomically. Future mailbox changes
   # must not silently give a different Google identity the linked permissions.
   def verify_subject!(subject)
