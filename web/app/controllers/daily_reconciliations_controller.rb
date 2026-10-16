@@ -113,6 +113,7 @@ class DailyReconciliationsController < AuthenticatedController
     @comparison_rows = @comparison_rows.sort_by { |row| ReconciliationAttention.sort_key(row) }
     @day_follow_ups = ReconciliationFollowUp.covering(@report.day).active.includes(:owner).order(:due_on, :id).limit(6)
     @follow_up_open_count = ReconciliationFollowUp.active.count
+    @follow_up_overdue_count = ReconciliationFollowUp.active.where('due_on < ?', Date.current).count
     @locations = Location.select(:id, :name, :source).order(:name).to_a
     @locations_by_id = @locations.index_by(&:id)
     @successors = ReconciliationDocument.where(supersedes_id: @report.documents.map(&:id)).select(:id, :supersedes_id, :metadata_json, :period_from).index_by(&:supersedes_id)

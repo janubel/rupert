@@ -33,6 +33,10 @@ Requests and history are tenant scoped and are not automatically pruned. Reading
 
 Monthly requests appear on each covered date but remain one request. The next-follow-ups section includes the earliest due open/waiting items across all dates, including outside the visible week. No-control/no-request dates do not establish that all reports arrived, and this overview does not certify review completeness. Explicitly track other expected invoices and statements.
 
+The overview puts the earliest due open follow-ups above the calendar and highlights overdue cards. **Register reports to request** lists observed control gaps without an existing open request, oldest date first, with the first three visible and the remainder in a keyboard-accessible disclosure. Search retained reports before creating a request. Each source/currency/location/date is a separate report scope. Creating an exact-scope open request removes its gap from this action list while the missing-control indicator remains until a control is supplied.
+
+Follow-up cards offer **Record progress** directly at its form, **Find retained original** and **Add original** with preserved request context, or **Download linked original** once evidence is linked. Read-only users keep viewing/downloading actions. The daily attention section flags all-date overdue follow-ups; the document library offers overdue, due-today and unlinked-original shortcuts. These actions do not send report requests, close work or change evidence automatically.
+
 Queue shortcuts show all-date counts for overdue, due today, unassigned and report requests without a linked original. Combine purpose, source, owner, evidence, status and covered-date filters for the list. Cards expose urgency, owner, latest progress note and whether evidence is linked; a retained file can exist without being linked to its request. The disconnected Drive page offers links back to this local workflow while consent remains pending.
 
 ## Automatic retention

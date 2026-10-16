@@ -23,12 +23,14 @@ class ReconciliationAcrossDaysTest < ActiveSupport::TestCase
     assert_equal 1, row[:counts][:missing_controls]
     assert_equal 0, row[:untracked]
     assert_equal control.id, row[:missing].first[:request_id]
+    assert_empty overview.untracked_reports
     assert_equal 2, row[:follow_ups]
     assert_equal 7, overview.days_needing_attention
     assert_equal before, [Core::Order.count, ReconciliationDocument.count, ReconciliationFollowUpEvent.count]
     control.update!(status: 'closed', notes: 'Closed request does not provide a control.')
     row = ReconciliationAcrossDays.new(ending_on: '2026-10-15').days.find { |entry| entry[:day] == day }
     assert_equal 1, row[:untracked]
+    assert_equal [day], ReconciliationAcrossDays.new(ending_on: '2026-10-15').untracked_reports.map { |gap| gap[:day] }
     assert_nil row[:missing].first[:request_id]
     assert_equal 1, row[:follow_ups]
     assert monthly.persisted?

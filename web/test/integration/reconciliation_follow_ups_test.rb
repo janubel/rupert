@@ -14,6 +14,33 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
   end
   teardown { Current.reset }
 
+  test 'overdue actions lead the overview and original actions respect read access and linked evidence' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      overdue = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+      assert_no_difference ['ReconciliationFollowUp.count', 'ReconciliationFollowUpEvent.count'] do
+        get overview_reconciliation_follow_ups_path
+        assert_response :success
+        assert_operator response.body.index('id="priority-follow-ups"'), :<, response.body.index('id="report-gaps"')
+        assert_operator response.body.index('id="report-gaps"'), :<, response.body.index('id="business-days"')
+        assert_select '#priority-follow-ups a[href=?]', reconciliation_follow_up_path(overdue, anchor: 'record-progress'), text: 'Record progress'
+        assert_select '#priority-follow-ups a[href=?]', daily_reconciliations_path(request: overdue.id, anchor: 'upload-document'), text: 'Add original'
+      end
+      get reconciliation_follow_up_path(overdue, anchor: 'record-progress')
+      assert_select '#record-progress textarea[name="follow_up[notes]"]'
+      get daily_reconciliations_path(day: '2026-10-14')
+      assert_select 'a[href=?]', reconciliation_follow_ups_path(status: 'overdue'), text: 'Work overdue follow-ups'
+      get reconciliation_documents_path
+      assert_select 'section[aria-label="Report follow-up actions"] a[href=?]', reconciliation_follow_ups_path(status: 'overdue'), text: 'Overdue follow-ups · 1'
+      doc = ReconciliationEvidence.retain!(bytes: 'original', filename: 'statement.txt', source: 'bank', kind: 'bank_statement', from: '2026-10-01', to: '2026-10-31')
+      overdue.update!(document: doc, notes: 'Original retained; investigate remaining questions.')
+      @user.update!(role: 'reporting')
+      get reconciliation_follow_ups_path
+      assert_select 'a[href=?]', document_daily_reconciliation_path(doc.id), text: 'Download linked original'
+      assert_select 'a', text: 'Record progress', count: 0
+      assert_select 'a', text: 'Add original', count: 0
+    end
+  end
+
   test 'across day overview is read only and queue shortcuts combine purpose evidence and due date' do
     travel_to Time.zone.parse('2026-10-16 12:00') do
       item = ReconciliationFollowUp.create!(@values.merge(created_by: @user, due_on: Date.current))
