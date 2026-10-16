@@ -108,6 +108,8 @@ class EmployeePreviewTest < ActionDispatch::IntegrationTest
         public_send(method, path, params: { preview: 1, employee_id: @worker.id, leave_request: { leave_type: 'personal', starts_on: Date.current, ends_on: Date.current, hours: 4 } })
         assert_response :forbidden
       end
+      post clock_in_time_clock_path, params: { preview: 1, request_token: 'forged-json-preview' }, as: :json
+      assert_response :forbidden
       [employee_preview_time_off_path, employee_preview_reports_path, employee_preview_timesheet_path('current')].each do |path|
         post path
         assert_response :not_found

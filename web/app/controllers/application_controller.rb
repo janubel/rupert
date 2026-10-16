@@ -11,7 +11,7 @@ class ApplicationController < ActionController::Base
 
   # A preview flag must never fall through to a real write, even for a linked admin.
   def reject_preview_mutation
-    head :forbidden if params[:preview] == '1' && !request.get? && !request.head?
+    head :forbidden if params[:preview].to_s == '1' && !request.get? && !request.head?
   end
 
   def workspace_layout
