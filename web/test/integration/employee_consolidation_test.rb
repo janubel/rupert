@@ -33,4 +33,24 @@ class EmployeeConsolidationIntegrationTest < ActionDispatch::IntegrationTest
     Current.tenant = @user.tenant
     assert_nil @duplicate.reload.merged_into_id
   end
+
+  test 'fresh employee setup renders the linked account and completes web login' do
+    @primary.update!(email: 'new-employee-consolidation@example.com')
+    post employee_access_path(employee_id: @primary.id)
+    assert_response :success
+    assert_select '#setup-link'
+    assert_equal 'no-store', response.headers['Cache-Control']
+    link = css_select('#setup-link').first['value']
+    token = URI.decode_www_form(URI(link).query).to_h.fetch('token')
+    assert_equal @primary.email, @primary.reload.user.email
+    delete logout_path
+    get employee_setup_path, params: { token: token }
+    assert_response :success
+    patch employee_setup_path, params: { token: token, password: 'employee-password123', password_confirmation: 'employee-password123' }
+    assert_redirected_to people_timesheets_path
+    get people_timesheets_path
+    assert_response :success
+    get employee_setup_path, params: { token: token }
+    assert_response :gone
+  end
 end
