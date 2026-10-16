@@ -6,6 +6,7 @@
       <p class="mt-1 text-sm text-mocha">The team directory with their department, position, and employment status.</p>
     </div>
     <div class="flex flex-wrap gap-2">
+      <%= link_to 'Employee problem reports', people_work_reports_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
       <%= link_to "Departments", people_departments_path, class: "btn-ghost btn-sm" %>
       <%= link_to "Positions", people_positions_path, class: "btn-ghost btn-sm" %>
       <% if Current.user.can?("hr.write") && Current.user.can?("sync.write") %>

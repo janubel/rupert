@@ -19,7 +19,7 @@ class EmployeeFinancialAccessTest < ActionDispatch::IntegrationTest
     %w[sales.read reports.read reconcile.read inventory.read users.write].each { |permission| refute @employee_user.can?(permission) }
     refute @employee_user.can_manage_accounts?
     post login_path, params: { email: @employee_user.email, password: 'password123' }
-    assert_redirected_to people_timesheets_path
+    assert_redirected_to employee_app_path
     get people_timesheets_path
     assert_response :success
     assert_select 'a[href=?]', sales_path, count: 0

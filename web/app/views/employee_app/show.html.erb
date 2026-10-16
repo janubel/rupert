@@ -1,32 +1,60 @@
-<% content_for :title, 'Employee app' %>
-<%= link_to "Privacy & support", employee_privacy_path, class: "text-olive underline" %>
-<div class="mx-auto max-w-3xl space-y-6" data-controller="employee-install">
+<% content_for :title, 'My time' %>
+<% if !Current.user %>
   <section class="card card-pad space-y-4">
-    <p class="text-sm font-semibold uppercase tracking-wide text-olive">Rupert · Employee access</p>
-    <h1 class="page-title">Your time, in one place</h1>
-    <p class="text-mocha">Clock in, record hours, submit timesheets, and track review comments from your phone or computer.</p>
-    <div class="flex flex-wrap gap-3">
-      <%= link_to Current.user ? 'My timesheets' : 'Employee sign in', Current.user ? people_timesheets_path : login_path, class: 'btn-primary' %>
-      <%= link_to 'My time clock', time_clock_path, class: 'btn-ghost' if Current.user %>
-      <button type="button" data-employee-install-target="button" data-action="employee-install#install" hidden class="btn-ghost">Install Rupert</button>
-    </div>
-    <p class="text-sm">New employee or forgot your password? Ask your administrator for a private setup link.</p>
+    <h1 class="page-title">My time</h1>
+    <p class="text-mocha">Your hours, pay and time off, together.</p>
+    <%= link_to 'Sign in', login_path, class: 'btn-primary' %>
+    <p class="text-sm text-mocha">First time here or need a new password? Ask your manager for a private sign-in link.</p>
   </section>
-  <section class="grid gap-4 sm:grid-cols-2">
-    <div class="card card-pad space-y-2"><h2 class="font-display text-xl">iPhone &amp; iPad</h2><p>Open this page in Safari. Tap Share, then Add to Home Screen and Open as Web App.</p></div>
-    <div class="card card-pad space-y-2"><h2 class="font-display text-xl">Android &amp; desktop</h2><p>Open this page in Chrome or Edge and choose Install app or Add to Home screen from the browser menu.</p></div>
-  </section>
-  <section class="card card-pad space-y-2"><h2 class="font-display text-xl">Native employee app</h2>
-    <% %w[EMPLOYEE_IOS_DOWNLOAD_URL EMPLOYEE_ANDROID_DOWNLOAD_URL].each do |key| %>
-      <% url = ENV[key].to_s; if url.start_with?('https://') %><%= link_to key.include?('IOS') ? 'Download for iPhone' : 'Download for Android', url, class: 'btn-ghost', rel: 'noopener noreferrer' %><% end %>
+<% elsif !@worker %>
+  <section class="card card-pad space-y-4">
+    <h1 class="page-title">My time</h1>
+    <p>Ask an administrator to link your employee record to see your hours, pay and time off.</p>
+    <% if Current.user.can_manage_accounts? %>
+      <%= link_to 'Preview employee view', employee_app_path(preview: 1), class: 'btn-primary' %>
+      <p class="text-sm text-mocha">Preview uses example data and makes no changes.</p>
     <% end %>
-    <p>Use the native app distribution link supplied by your administrator. Enter this Rupert instance’s address and your employee email and password.</p>
-    <p class="text-sm text-mocha">An internet connection is required to save hours. Wait for confirmation before closing the app.</p>
   </section>
-  <% if Current.user %>
-    <section class="card card-pad space-y-3"><h2 class="font-display text-xl">Signed-in devices</h2>
-      <% if @sessions.empty? %><p>No active native app sessions.</p><% end %>
-      <% @sessions.each do |record| %><div class="flex flex-wrap justify-between gap-2"><p><%= record.device_name %> · expires <%= l(record.expires_at, format: :short) %></p><%= button_to 'Sign out device', revoke_employee_device_path(record), class: 'btn-ghost btn-sm' %></div><% end %>
-    </section>
-  <% end %>
-</div>
+<% else %>
+  <% if @preview %><p role="status" class="rounded-xl border border-olive/30 bg-olive/10 p-3 text-sm"><strong>Employee preview</strong> · Example data. Actions are disabled. <%= link_to 'Close preview', employee_app_path, class: 'underline' %></p><% end %>
+  <section class="flex flex-wrap items-end justify-between gap-3">
+    <div><p class="text-sm text-mocha"><%= Date.current.strftime('%A, %B %-d') %></p><h1 class="page-title">Hi, <%= @worker.first_name %></h1></div>
+    <% unless @preview %><%= link_to 'My time clock', time_clock_path, class: 'text-sm text-olive underline' %><% end %>
+  </section>
+  <section class="card card-pad flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-semibold"><%= @open_shift ? 'You’re clocked in' : @worker.on_leave? ? 'You’re on leave' : 'Ready for your day?' %></h2>
+      <% if @open_shift %>
+        <p class="mt-1 text-2xl font-semibold tabular-nums" data-controller="elapsed-time" data-elapsed-time-start-value="<%= @open_shift.started_at.iso8601 %>"><span data-elapsed-time-target="duration"><%= number_with_precision(@open_shift.hours, precision: 2) %>h</span></p>
+        <p class="text-sm text-mocha">Since <%= l(@open_shift.started_at, format: '%-I:%M %p %Z') %></p>
+      <% else %><p class="mt-1 text-sm text-mocha"><%= @worker.on_leave? ? 'Your time records and time-off requests are still here.' : 'Clock in when you start working.' %></p><% end %>
+    </div>
+    <% if @preview %><button type="button" disabled class="btn-primary opacity-60">Clock in</button>
+    <% elsif @open_shift %><%= button_to 'Clock out', clock_out_time_clock_path, params: { shift_id: @open_shift.id }, class: 'btn-primary', data: { turbo: false } %>
+    <% elsif @worker.active? %><%= button_to 'Clock in', clock_in_time_clock_path, params: { request_token: SecureRandom.uuid }, class: 'btn-primary', data: { turbo: false } %><% end %>
+  </section>
+  <section class="card card-pad space-y-5">
+    <div class="flex flex-wrap justify-between gap-2"><h2 class="text-lg font-semibold">This week</h2><span class="text-sm text-mocha"><%= @summary.from.strftime('%b %-d') %> – <%= @summary.to.strftime('%b %-d') %></span></div>
+    <div class="grid grid-cols-2 gap-4">
+      <div><p class="text-sm text-mocha">Timesheet hours</p><p class="mt-1 text-3xl font-semibold tabular-nums"><%= number_with_precision(@summary.hours, precision: 2, strip_insignificant_zeros: true) %><span class="text-lg"> h</span></p></div>
+      <div><p class="text-sm text-mocha">Estimated gross pay</p><p class="mt-1 text-3xl font-semibold tabular-nums"><%= @summary.gross_cents.nil? ? '—' : number_to_currency(@summary.gross_cents / 100.0) %></p></div>
+    </div>
+    <div class="grid grid-cols-7 gap-1 text-center">
+      <% (@summary.from..@summary.to).each do |day| %>
+        <div class="rounded-xl px-1 py-3 <%= day == Date.current ? 'bg-olive/10' : 'bg-haze/50' %>"><p class="text-xs text-mocha"><%= day.strftime('%a') %></p><p class="mt-1 font-semibold"><%= day.day %></p><p class="mt-1 text-xs"><%= @summary.daily_hours(day).positive? ? "#{number_with_precision(@summary.daily_hours(day), precision: 2, strip_insignificant_zeros: true)}h" : '—' %></p></div>
+      <% end %>
+    </div>
+    <% if (rate = @summary.rate_for(Date.current)) %><p class="text-sm text-mocha">Pay cycle: <%= rate.pay_frequency.humanize %> · Your manager confirms payment dates.</p><% end %>
+    <p class="text-xs text-mocha"><%= @summary.gross_cents.nil? ? 'An hourly pay estimate needs a pay rate for every recorded day. Salary pay appears in your finalized payslips.' : 'Before deductions, based on your timesheet entries. Submitted hours still need review.' %></p>
+    <% unless @preview %>
+      <div class="flex flex-wrap items-center gap-3"><%= button_to @timesheet ? 'Open this week’s timesheet' : 'Start this week’s timesheet', employee_week_path, class: 'btn-primary', data: { turbo: false } %><%= link_to 'All my timesheets', people_timesheets_path, class: 'text-sm text-olive underline' %></div>
+      <% if @summary.clock_hours.positive? %><p class="text-sm text-mocha"><%= number_with_precision(@summary.clock_hours, precision: 2) %>h clocked this week. Import finished shifts into your draft timesheet to include them.</p><% end %>
+      <% if @timesheet&.review_note.present? %><p class="rounded-xl bg-haze p-3 text-sm"><strong>Review comment:</strong> <%= @timesheet.review_note %></p><% end %>
+    <% else %><button type="button" disabled class="btn-primary opacity-60">Open this week’s timesheet</button><% end %>
+  </section>
+  <section class="grid gap-3 sm:grid-cols-2">
+    <div class="card card-pad space-y-2"><h2 class="font-semibold">Time off</h2><p class="text-sm text-mocha"><%= @next_leave ? "#{@next_leave.leave_type.titleize} · #{@next_leave.starts_on.strftime('%b %-d')} – #{@next_leave.ends_on.strftime('%b %-d')} · #{@next_leave.status.humanize}" : 'Plan a vacation, request a day off or check your calendar.' %></p><% unless @preview %><%= link_to 'Calendar & requests', employee_time_off_path, class: 'text-sm text-olive underline' %><% end %></div>
+    <div class="card card-pad space-y-2"><h2 class="font-semibold">My reports</h2><p class="text-sm text-mocha">Check hours, estimated pay and finalized payslips. Download your hours when you need them.</p><% unless @preview %><%= link_to 'View my reports', employee_reports_path, class: 'text-sm text-olive underline' %><% end %></div>
+  </section>
+  <% unless @preview %><p class="text-sm text-mocha">Need help with time or pay? <%= link_to 'Report a problem or correction', employee_reports_path(anchor: 'problems'), class: 'text-olive underline' %>.</p><% end %>
+<% end %>

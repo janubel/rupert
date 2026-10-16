@@ -1,10 +1,14 @@
 <%= form_with model: timesheet, scope: :timesheet, url: (timesheet.persisted? ? people_timesheet_path(timesheet) : people_timesheets_path), class: "mt-6 space-y-4" do |f| %>
   <% if timesheet.errors.any? %><p role="alert" class="text-rose"><%= timesheet.errors.full_messages.to_sentence %></p><% end %>
   <div class="grid gap-4 sm:grid-cols-3">
+    <% if Current.user.employee? %>
+      <%= f.hidden_field :employee_id, value: @employees.first&.id %>
+    <% else %>
     <div>
       <%= f.label :employee_id, "Employee", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.select :employee_id, @employees.map { |e| [e.name, e.id] }, { include_blank: "Select employee…" }, class: "select w-full", required: true, disabled: timesheet.persisted? %>
     </div>
+    <% end %>
     <div>
       <%= f.label :period_start, "Week starts", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.date_field :period_start, class: "input" %>

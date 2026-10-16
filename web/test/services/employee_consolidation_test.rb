@@ -32,6 +32,7 @@ class EmployeeConsolidationTest < ActiveSupport::TestCase
       employee_name: @duplicate.name, employment_type: 'unspecified', started_at: 3.hours.ago, ended_at: 2.hours.ago, request_token: 'a' * 32)
     sheet = People::Timesheet.create!(employee: @duplicate, period_start: Date.current.beginning_of_week, period_end: Date.current.end_of_week)
     entry = sheet.entries.create!(worked_on: Date.current, hours: 2, work_type: 'regular')
+    report = @duplicate.work_reports.create!(requester: user, kind: 'time', details: 'Check recorded hours', request_key: SecureRandom.uuid)
     balance = @duplicate.leave_balances.create!(leave_type: 'vacation', year: Date.current.year, accrued_hours: 8)
     assert_difference 'People::Employee.count', -1 do
       assert_no_difference ['People::Employee.unscoped.count', 'EmployeeSourceIdentity.count', 'People::Timesheet.count'] do
@@ -42,6 +43,7 @@ class EmployeeConsolidationTest < ActiveSupport::TestCase
     assert_equal @primary.id, sheet.reload.employee_id
     assert_equal sheet.id, entry.reload.timesheet_id
     assert_equal @primary.id, balance.reload.employee_id
+    assert_equal @primary.id, report.reload.employee_id
     assert_equal [@primary.id, @primary.id.to_s], shift.reload.attributes.values_at('employee_id', 'employee_key')
     assert_equal %w[ctrax square], @primary.source_identities.order(:source).pluck(:source)
     original = People::Employee.unscoped.find(@duplicate.id)

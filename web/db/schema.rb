@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_050123) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -745,6 +745,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_050123) do
     t.datetime "updated_at", null: false
     t.index ["employee_id"], name: "index_employee_source_identities_on_employee_id"
     t.index ["tenant_id", "source", "external_id"], name: "idx_employee_native_identity", unique: true
+  end
+
+  create_table "employee_work_reports", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "employee_id", null: false
+    t.bigint "requester_id"
+    t.string "kind", null: false
+    t.text "details", null: false
+    t.string "status", default: "open", null: false
+    t.text "response"
+    t.bigint "reviewer_id"
+    t.datetime "reviewed_at"
+    t.string "request_key", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["employee_id"], name: "index_employee_work_reports_on_employee_id"
+    t.index ["requester_id"], name: "index_employee_work_reports_on_requester_id"
+    t.index ["reviewer_id"], name: "index_employee_work_reports_on_reviewer_id"
+    t.index ["tenant_id", "employee_id", "request_key"], name: "idx_employee_work_report_request", unique: true
+    t.index ["tenant_id", "status", "created_at"], name: "idx_employee_work_report_queue"
+    t.index ["tenant_id"], name: "index_employee_work_reports_on_tenant_id"
   end
 
   create_table "employees", force: :cascade do |t|
@@ -2229,6 +2251,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_050123) do
   add_foreign_key "directory_sync_states", "tenants"
   add_foreign_key "departments", "employees", column: "manager_id"
   add_foreign_key "employee_source_identities", "employees"
+  add_foreign_key "employee_work_reports", "employees"
+  add_foreign_key "employee_work_reports", "tenants"
+  add_foreign_key "employee_work_reports", "users", column: "requester_id", on_delete: :nullify
+  add_foreign_key "employee_work_reports", "users", column: "reviewer_id", on_delete: :nullify
   add_foreign_key "employees", "employees", column: "merged_into_id"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
   add_foreign_key "ctrax_days", "Location", column: "location_id", on_delete: :cascade
