@@ -1,10 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["tender", "cashFields", "cash", "submit", "status", "result"]
-  static values = { url: String, displayId: Number }
+  static values = { url: String, displayId: Number, demo: Boolean }
   connect() { this.tenderChanged(); this.stateListener = event => this.renderCheckout(event.detail.checkout); this.element.closest('[data-controller~="pos-display"]')?.addEventListener('pos-display:state', this.stateListener) }
   disconnect() { this.element.closest('[data-controller~="pos-display"]')?.removeEventListener('pos-display:state', this.stateListener) }
-  tenderChanged() { const cash = this.tenderTarget.value === "cash"; this.cashFieldsTarget.hidden = !cash; this.cashTarget.required = cash }
+  tenderChanged() { const cash = this.tenderTarget.value === "cash"; this.cashFieldsTarget.hidden = !cash; this.cashTarget.required = cash; this.submitTarget.value = this.demoValue ? (cash ? "Run demo cash checkout" : "Send demo card checkout") : (cash ? "Complete cash sale" : "Send card checkout") }
   async submit(event) {
     event.preventDefault()
     if (!event.target.reportValidity() || this.submitting) return

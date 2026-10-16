@@ -91,7 +91,7 @@ class ErpPagesFlowTest < ActionDispatch::IntegrationTest
   test 'pos sessions page renders' do
     get_page sales_pos_sessions_path
     assert_response :success
-    assert_select 'h1', /Registers/
+    assert_select 'h1', 'Rupert registers'
   end
 
   test 'create a project and transition it' do

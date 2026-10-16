@@ -52,7 +52,14 @@ module Sales
 
     def close
       authorize(@session)
-      counted = params[:counted_cents].to_i
+      counted = if params.key?(:counted_cash)
+        Pos::Checkout.money(params[:counted_cash])
+      else
+        raw = params[:counted_cents].to_s
+        raise Pos::Error, 'Enter the cash physically counted in the drawer.' unless raw.match?(/\A\d{1,8}\z/)
+
+        raw.to_i
+      end
       @session.settle!(counted_cents: counted, notes: params[:notes])
       DataCache.bump!
       redirect_to(@session, notice: 'Register settled and closed.')

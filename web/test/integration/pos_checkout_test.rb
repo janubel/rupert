@@ -28,9 +28,10 @@ class PosCheckoutIntegrationTest < ActionDispatch::IntegrationTest
     checkout = PosCheckout.last
     get pos_checkout_path(checkout)
     assert_response :success
-    assert_includes response.body, 'Receipt · Paid'
+    assert_select 'h1', 'Receipt'
+    assert_select 'header .pill-fern', 'Paid'
     assert_includes response.body, 'Stock updates'
-    assert_select 'strong', '$11.66'
+    assert_select '[aria-label="Receipt totals"] dd', '$11.66'
     customer = ActionDispatch::Integration::Session.new(Rails.application)
     customer.get customer_display_state_path(display_token: @display.display_token)
     assert_equal 'paid', customer.response.parsed_body.dig('checkout', 'status')

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["form", "items", "status", "subtotal", "tip", "previewTotal", "tipType", "tipPercentage", "tipAmount", "percentageFields", "amountFields"]
+  static targets = ["form", "items", "status", "subtotal", "tip", "previewTotal", "tipType", "tipPercentage", "tipAmount", "percentageFields", "amountFields", "count"]
   static values = { cartKey: String, initialQuote: Object, clearUrl: String }
 
   connect() {
@@ -196,12 +196,13 @@ export default class extends Controller {
   }
 
   render(lines) {
+    if (this.hasCountTarget) this.countTargets.forEach(target => { target.textContent = Array.from(this.cart.values()).reduce((total, quantity) => total + quantity, 0) })
     const byId = new Map(lines.map(line => [line.variant_id, line]))
     this.itemsTarget.replaceChildren()
     if (!this.cart.size) {
       const empty = document.createElement("p")
       empty.className = "text-sm text-taupe"
-      empty.textContent = "Your preview cart is empty."
+      empty.textContent = "Your cart is empty. Add a product to begin."
       this.itemsTarget.append(empty)
       return
     }
@@ -241,6 +242,7 @@ export default class extends Controller {
       const remove = document.createElement("button")
       remove.type = "button"
       remove.textContent = "Remove"
+      remove.setAttribute("aria-label", `Remove ${line?.product_title || "item"} from cart`)
       remove.className = "btn-ghost btn-sm"
       remove.dataset.action = "pos-cart#remove"
       row.append(title, hidden, input, price, remove)
