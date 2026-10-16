@@ -191,7 +191,7 @@ class RetentionDrive
       remote = @drive.get_file(item.remote_id, fields: remote_fields)
     end
     unless !remote.trashed && !remote.shared && remote.mime_type == FOLDER_MIME && remote.app_properties == properties(item) && (!parent || remote.parents&.include?(parent))
-      raise Error, 'Retention folder changed or is unavailable. Restore its original location before retrying.'
+      raise Error, 'Retention folder is shared, moved or unavailable. Keep it private and restore its original location before retrying.'
     end
     item.update!(status: 'verified', display_name: name, verified_at: Time.current)
     @folders[key] = item.remote_id

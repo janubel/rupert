@@ -7,6 +7,14 @@ class RetentionDriveItem < ApplicationRecord
   validates :tenant_id, :generation, :item_key, presence: true
   validates :status, inclusion: { in: %w[pending verified failed] }
 
+  def title
+    return display_name if display_name.present?
+
+    prefix, id = item_key.split(':', 2)
+    label = { 'document' => 'Retained document', 'swipesimple' => 'SwipeSimple export', 'authorize_net' => 'Authorize.net export' }.fetch(prefix, 'Folder')
+    "#{label} ##{id}"
+  end
+
   def folder?
     item_key.start_with?('folder:')
   end
