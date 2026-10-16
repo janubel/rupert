@@ -86,6 +86,14 @@ class StockComparisonTest < ActiveSupport::TestCase
     assert report.rows.all? { |r| r[:difference].nil? }
   end
 
+  test 'a conflicting native product link prevents a SKU candidate' do
+    @c.update!(records_json: [@c.records.first.merge('website_product_id' => 'another-product')])
+    assert_equal 2, report.rows.size
+    assert report.rows.none? { |r| r[:paired] }
+    assert report.rows.all? { |r| r[:difference].nil? }
+    assert_includes report.rows.find { |r| r[:shopify_id] }[:issues], 'Conflicting source product ID'
+  end
+
   test 'CSV export is inert and includes source timestamps and negative quantities' do
     @product.update!(title: '=HYPERLINK("bad")')
     @c.update!(records_json: [@c.records.first.merge('quantity' => '-3')])

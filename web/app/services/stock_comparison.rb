@@ -105,7 +105,13 @@ class StockComparison
       elsif sku && s_by_sku[sku].one? && c_by_sku.fetch(sku, []).one?
         record = c_by_sku[sku].first
         # A conflicting native linkage cannot be replaced by text matching.
-        record['website_variant_id'].present? ? [nil, 'Conflicting source ID'] : [record, 'SKU candidate']
+        if record['website_variant_id'].present?
+          [nil, 'Conflicting source ID']
+        elsif record['website_product_id'].present? && native_id(record['website_product_id']) != native_id(variant.productId)
+          [nil, 'Conflicting source product ID']
+        else
+          [record, 'SKU candidate']
+        end
       else
         [nil, sku && c_by_sku.fetch(sku, []).any? ? 'Ambiguous SKU' : 'No current match']
       end
