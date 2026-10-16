@@ -37,6 +37,8 @@ Choose **Marketing readers** or **Restricted contacts access**. Restricted title
 
 ## Controls and release
 
+See the [October 16 SER8 deployment record](influencer-cms-deployment-2026-10-16.md) for the deployed revision, validation and recovery checkpoint.
+
 Profiles, collaborations, gifts, documents, offers and audit records are tenant-scoped. Ownership/association checks reject foreign workspace IDs. Read/write/review/contacts permissions apply to direct routes as well as navigation. Private form containers are filtered from request logs. Contacts, addresses, tracking details, interaction bodies, document content/source links and CMS audit payloads are encrypted. The UI shows only audit metadata to readers without contacts access. No export or public contact/document endpoint is added.
 
 The migration adds eight CMS tables and an optional collaboration reference on existing offers. Existing community offers retain their recipient and reviewed reply fingerprints; new influencer offers cannot be attached to community reply drafts. Rehearse migration/rollback/reapply against a production copy before live release, preserve all prior-table counts, and deploy on top of the latest SER8 revision. After collecting influencer records, compatible code rollback should keep the new tables; reverting the migration would discard those records and cannot preserve influencer-only offers.
