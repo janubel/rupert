@@ -2,7 +2,7 @@
 
 The dashboard contains six cards: C-Trax, SwipeSimple, Authorize.net, Shopify, Bank · NAB / IRIS and Google Drive backup. The **Daily / weekly / monthly reconciliation** link opens `/money_reconciliations`. The existing inventory-reconciliation report remains available separately.
 
-Choose a calendar date and Daily, Weekly or Monthly. Weeks start Monday. All period boundaries use America/New_York, including daylight-saving transitions. The report presents source evidence for the entire chosen period, with a CSV download and an administrator/operator action to save or refresh the review. Saved reviews have encrypted payloads, tenant-scoped access, provenance timestamps and one current record per tenant/period. Refreshing replaces that period's review; it never creates or changes source sales, payments, deposits or inventory.
+Choose a calendar date and Daily, Weekly or Monthly. Weeks start Monday. All period boundaries use America/New_York, including daylight-saving transitions. The report presents source evidence for the entire chosen period, with a CSV download and an administrator/operator action to save or refresh the review. Saved reviews have encrypted payloads, tenant-scoped access, provenance timestamps and one current record per tenant/period. Refreshing replaces that period's current review and retains immutable encrypted CSV and JSON versions in the [document vault](daily-reconciliation-retention.md); it never creates or changes source sales, payments, deposits or inventory. Unchanged source data reuses the same archived evidence.
 
 ## Automatic closes
 

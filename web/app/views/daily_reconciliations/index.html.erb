@@ -10,6 +10,7 @@
     <%= link_to 'Next day', daily_reconciliations_path(day: (@report.day + 1).iso8601), class: 'btn-ghost' %>
     <%= link_to 'Download reconciliation CSV', daily_reconciliations_path(format: :csv, day: @report.day.iso8601), class: 'btn-ghost' %>
     <%= link_to 'Detailed register coverage', register_summary_reports_path(day: @report.day.iso8601), class: 'btn-ghost' %>
+    <%= link_to 'Daily / weekly / monthly source summary', money_reconciliations_path(date: @report.day.iso8601), class: 'btn-ghost' %>
   <% end %>
   <section class="card card-pad space-y-2 text-sm">
     <p>Day boundaries use <%= Time.zone.name %>. Order totals use order dates, tenders use payment dates, and refunds use refund dates. Source, currency and location stay separate.</p>
@@ -74,7 +75,7 @@
       <%= form_with url: daily_reconciliations_path, multipart: true, scope: :evidence, class: 'space-y-4' do |f| %>
         <div class="grid gap-4 md:grid-cols-2">
           <div><%= f.label :source, 'Source', class: 'block text-sm' %><%= f.select :source, ReconciliationDocument::SOURCES.excluding('rupert').map { |s| [s.humanize, s] }, {}, class: 'input' %></div>
-          <div><%= f.label :kind, 'Document kind', class: 'block text-sm' %><%= f.select :kind, ReconciliationDocument::KINDS.excluding('daily_archive').map { |s| [s.humanize, s] }, {}, class: 'input' %></div>
+          <div><%= f.label :kind, 'Document kind', class: 'block text-sm' %><%= f.select :kind, ReconciliationDocument::KINDS.excluding('daily_archive', 'period_archive').map { |s| [s.humanize, s] }, {}, class: 'input' %></div>
           <div><%= f.label :period_from, 'Period starts', class: 'block text-sm' %><%= f.date_field :period_from, value: @report.day, required: true, class: 'input' %></div>
           <div><%= f.label :period_to, 'Period ends', class: 'block text-sm' %><%= f.date_field :period_to, value: @report.day, required: true, class: 'input' %></div>
           <div><%= f.label :currency, 'Currency (required for controls)', class: 'block text-sm' %><%= f.text_field :currency, placeholder: 'USD', maxlength: 3, class: 'input' %></div>

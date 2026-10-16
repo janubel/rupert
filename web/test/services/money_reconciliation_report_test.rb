@@ -92,6 +92,22 @@ class MoneyReconciliationReportTest < ActiveSupport::TestCase
     assert_empty report.payload['rows']
   end
 
+  test 'refresh preserves prior period CSV and JSON evidence and replays unchanged source data' do
+    order('original', '2026-10-15T15:00:00Z', 1000)
+    report.save!
+    originals = ReconciliationDocument.where(kind: 'period_archive').order(:id).to_a
+    assert_equal 2, originals.size
+    assert_includes originals.find { |doc| doc.filename.end_with?('.json') }.original_bytes, 'Review required'
+    report.save!
+    assert_equal 2, ReconciliationDocument.where(kind: 'period_archive').count
+    order('late-sale', '2026-10-15T17:00:00Z', 500)
+    report.save!
+    assert_equal 4, ReconciliationDocument.where(kind: 'period_archive').count
+    assert_equal 1, MoneyReconciliation.count
+    assert_includes originals.find { |doc| doc.filename.end_with?('.csv') }.original_bytes, '10.0'
+    assert_equal 4, DailyMoneyReconciliation.new(day: '2026-10-15').documents.size
+  end
+
   test 'CSV quotes untrusted formula text while preserving signed numeric amounts' do
     document = report.payload
     document['rows'] = [{ 'source' => 'SwipeSimple', 'account' => '-SUM(1)', 'currency' => 'USD',

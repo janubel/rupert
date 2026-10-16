@@ -23,6 +23,9 @@ class DailyReconciliationsController < AuthenticatedController
     file = params[:file]
     raise ReconciliationEvidence::Error, 'Attach a document no larger than 8 MiB.' unless file.is_a?(ActionDispatch::Http::UploadedFile) && file.size <= ReconciliationEvidence::MAX_BYTES
     values = params.require(:evidence).permit(:source, :kind, :period_from, :period_to, :currency, :location_id, :note, :supersedes_id, *ReconciliationEvidence::AMOUNTS).to_h
+    if values['source'] == 'rupert' || %w[daily_archive period_archive].include?(values['kind'])
+      raise ReconciliationEvidence::Error, 'Use the report archive action to retain generated Rupert reports.'
+    end
     metadata = values.slice('currency', 'location_id', 'note').transform_values(&:strip)
     raise ReconciliationEvidence::Error, 'Notes must be no longer than 4000 characters.' if metadata['note'].to_s.length > 4000
     ReconciliationEvidence::AMOUNTS.each { |key| metadata[key] = ReconciliationEvidence.cents(values[key]) }

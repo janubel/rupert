@@ -62,6 +62,12 @@ class MoneyReconciliationReport
       raise ArgumentError, 'An active workspace is required.' unless locked == 1
       report = MoneyReconciliation.find_or_initialize_by(period_kind: kind, period_from: from)
       report.update!(period_to: to, generated_at: Time.current, payload_json: payload.to_json)
+      snapshot = payload.except('generated_at').to_json
+      evidence_context = { 'period_kind' => kind, 'report_digest' => Digest::SHA256.hexdigest(snapshot) }
+      ReconciliationEvidence.retain!(bytes: csv, filename: "money-reconciliation-#{kind}-#{from}.csv", source: 'rupert', kind: 'period_archive',
+        from: from.iso8601, to: to.iso8601, metadata: evidence_context, actor: Current.user)
+      ReconciliationEvidence.retain!(bytes: snapshot, filename: "money-reconciliation-#{kind}-#{from}.json", source: 'rupert', kind: 'period_archive',
+        from: from.iso8601, to: to.iso8601, metadata: evidence_context, actor: Current.user)
       report
     end
   end

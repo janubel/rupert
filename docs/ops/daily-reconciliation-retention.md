@@ -11,6 +11,8 @@ Open **Money → Daily reconciliation & documents** at `/daily_reconciliations`.
 5. Read the variance as **Rupert minus source**. A matched recorded total means only that the specified totals agree. It does not certify completeness, fees, net settlement or bank receipt. Multiple active controls for the same pool are flagged as conflicting; do not add them together. To correct a control, upload its replacement and enter the previous evidence ID. Both originals remain. Correct each conflicting control explicitly.
 6. Keep a permanent report version and enter **Needs attention** or **Reviewed** notes. Reviewed records a human assessment and can include unresolved differences; it is not an automatic balance assertion. Reviews bind to a report fingerprint. A changed report is visibly flagged and stale form submissions are rejected. Reviews and documents are append-only through the application.
 
+The existing **Daily / weekly / monthly source summary** is linked in both directions. Saving or refreshing that report, including its automatic closes, retains encrypted CSV and JSON versions in the same vault. The current summary can refresh while earlier versions remain downloadable.
+
 ## Automatic retention
 
 `DailyReconciliationArchiveJob` runs at **07:15 America/New_York daily**. It revisits each of the previous seven calendar/business-report dates to capture late imports. Each changed report becomes a new encrypted CSV archive; unchanged snapshots replay to the existing archive. Days older than seven dates can be archived manually. The job reads local data and performs no provider operations or messaging.

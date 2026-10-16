@@ -4,6 +4,7 @@
     <%= link_to 'Dashboard', root_path, class: 'text-sm text-olive' %>
     <h1 class="page-title">Money reconciliation</h1>
     <p class="text-sm text-mocha">Daily, weekly and monthly review of orders, payments and NAB deposit evidence. Periods use Eastern time; weeks run Monday through Sunday.</p>
+    <%= link_to 'Daily controls, original documents and report archive', daily_reconciliations_path(day: @report.from.iso8601), class: 'btn-ghost' %>
     <%= form_tag money_reconciliations_path, method: :get, class: 'flex flex-wrap items-end gap-3' do %>
       <div><%= label_tag :kind, 'Period', class: 'block text-sm mb-1' %><%= select_tag :kind, options_for_select([['Daily', 'daily'], ['Weekly', 'weekly'], ['Monthly', 'monthly']], @report.kind), class: 'select' %></div>
       <div><%= label_tag :date, 'Date within period', class: 'block text-sm mb-1' %><%= date_field_tag :date, @report.from, class: 'input', min: '2000-01-01', max: '2099-12-31' %></div>

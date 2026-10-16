@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_040100) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -580,6 +580,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_040000) do
     t.index ["tenant_id", "phone"], name: "index_customers_on_tenant_id_and_phone"
   end
 
+  create_table "daily_reconciliation_reviews", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.date "day", null: false
+    t.string "report_digest", null: false
+    t.string "status", null: false
+    t.text "notes", null: false
+    t.integer "reviewed_by_id"
+    t.datetime "created_at", null: false
+    t.index ["reviewed_by_id"], name: "index_daily_reconciliation_reviews_on_reviewed_by_id"
+    t.index ["tenant_id", "day"], name: "idx_daily_reconciliation_review_day"
+    t.index ["tenant_id"], name: "index_daily_reconciliation_reviews_on_tenant_id"
+  end
+
   create_table "departments", force: :cascade do |t|
     t.string "code"
     t.datetime "created_at", null: false
@@ -691,18 +704,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_040000) do
     t.index ["tenant_id", "count_id", "request_token"], name: "idx_count_scan_receipts_request", unique: true
   end
 
-  create_table "money_reconciliations", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.string "period_kind", null: false
-    t.date "period_from", null: false
-    t.date "period_to", null: false
-    t.datetime "generated_at", null: false
-    t.text "payload_json", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_money_reconciliation_period", unique: true
-  end
-
   create_table "iris_reports", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "api_origin", null: false
@@ -768,6 +769,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_040000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "employee_id", "status"], name: "index_leave_requests_on_tenant_id_and_employee_id_and_status"
     t.index ["tenant_id", "status"], name: "index_leave_requests_on_tenant_id_and_status"
+  end
+
+  create_table "money_reconciliations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "period_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.datetime "generated_at", null: false
+    t.text "payload_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_money_reconciliation_period", unique: true
   end
 
   create_table "oauth_allowed_domains", force: :cascade do |t|
@@ -1016,6 +1029,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_040000) do
     t.index ["tenant_id", "order_number"], name: "index_purchase_orders_on_tenant_id_and_order_number", unique: true
     t.index ["tenant_id", "status"], name: "index_purchase_orders_on_tenant_id_and_status"
     t.index ["tenant_id", "vendor_id"], name: "index_purchase_orders_on_tenant_id_and_vendor_id"
+  end
+
+  create_table "reconciliation_documents", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "source", null: false
+    t.string "kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.text "metadata_json", null: false
+    t.text "content_base64", null: false
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.string "sha256", null: false
+    t.string "fingerprint", null: false
+    t.integer "byte_size", null: false
+    t.integer "uploaded_by_id"
+    t.bigint "supersedes_id"
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "fingerprint"], name: "idx_reconciliation_evidence_replay", unique: true
+    t.index ["tenant_id", "period_from", "period_to"], name: "idx_reconciliation_evidence_period"
+    t.index ["tenant_id", "supersedes_id"], name: "idx_reconciliation_evidence_correction", unique: true
+    t.index ["tenant_id"], name: "index_reconciliation_documents_on_tenant_id"
+    t.index ["uploaded_by_id"], name: "index_reconciliation_documents_on_uploaded_by_id"
   end
 
   create_table "refunds", force: :cascade do |t|
@@ -1507,6 +1543,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_040000) do
   add_foreign_key "clock_shifts", "users", on_delete: :nullify
   add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_stock_snapshots", "tenants"
+  add_foreign_key "daily_reconciliation_reviews", "tenants"
+  add_foreign_key "daily_reconciliation_reviews", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "departments", "employees", column: "manager_id"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
   add_foreign_key "google_login_identities", "users", on_delete: :cascade
@@ -1520,6 +1558,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_040000) do
   add_foreign_key "payments", "orders", on_delete: :cascade
   add_foreign_key "pos_connections", "tenants"
   add_foreign_key "pos_connections", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
+  add_foreign_key "reconciliation_documents", "tenants"
+  add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
   add_foreign_key "refunds", "orders", on_delete: :cascade
   add_foreign_key "size_changes", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "size_family_members", "size_families", column: "family_id", on_delete: :cascade

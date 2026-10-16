@@ -11,7 +11,7 @@ class ReconciliationDocument < ApplicationRecord
   belongs_to :uploaded_by, class_name: 'User', optional: true
   belongs_to :supersedes, class_name: 'ReconciliationDocument', optional: true
   SOURCES = %w[shopify square swipesimple ctrax cash_app authorize_net iris bank other rupert].freeze
-  KINDS = %w[register_control gateway_report processor_report bank_statement invoice fee_statement source_export daily_archive other].freeze
+  KINDS = %w[register_control gateway_report processor_report bank_statement invoice fee_statement source_export daily_archive period_archive other].freeze
   validates :tenant_id, :filename, :sha256, :fingerprint, :period_from, :period_to, presence: true
   validates :source, inclusion: { in: SOURCES }
   validates :kind, inclusion: { in: KINDS }
