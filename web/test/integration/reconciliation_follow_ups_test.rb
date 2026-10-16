@@ -378,6 +378,79 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
     assert_equal 2, item.events.count
   end
 
+  test 'selected queue survives progress validation and saving returns to its latest matching work without messages' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+      queue = { status: 'overdue', source: 'bank', owner: 'mine', category: 'missing_report', evidence: 'missing', day: '2026-10-14' }
+      get reconciliation_follow_ups_path(queue)
+      assert_select 'a[href=?]', reconciliation_follow_up_path(item, close_day: '2026-10-14', queue: queue, anchor: 'record-progress'), text: 'Record progress'
+      assert_select 'a[href=?]', overview_reconciliation_follow_ups_path(ending_on: '2026-10-14'), text: 'Across days'
+      get reconciliation_follow_up_path(item, close_day: '2026-10-14', queue: queue)
+      assert_select 'a[href=?]', reconciliation_follow_ups_path(queue), text: 'Back to selected queue'
+      queue.each { |key, value| assert_select 'input[name=?][value=?]', "queue[#{key}]", value }
+      assert_select 'form[data-busy="false"] button[name="return_to"][value="queue"]', text: 'Save and return to selected queue'
+      assert_no_enqueued_jobs do
+        assert_no_difference ['ActionMailer::Base.deliveries.size', 'ReconciliationDocument.count'] do
+          assert_no_difference 'ReconciliationFollowUpEvent.count' do
+            patch reconciliation_follow_up_path(item), params: { queue: queue, close_day: '2026-10-14', return_to: 'queue', follow_up: { notes: '', lock_version: item.lock_version } }
+          end
+          assert_response :unprocessable_entity
+          assert_select 'input[name="queue[day]"][value="2026-10-14"]'
+          assert_select 'button[value="queue"]'
+          assert_difference 'ReconciliationFollowUpEvent.count', 1 do
+            patch reconciliation_follow_up_path(item), params: { queue: queue, close_day: '2026-10-14', return_to: 'queue', follow_up: { status: 'waiting', due_on: Date.tomorrow.iso8601, notes: 'Synthetic next check tomorrow.', lock_version: item.lock_version } }
+          end
+          assert_redirected_to reconciliation_follow_ups_path(queue)
+          follow_redirect!
+          assert_select 'section[aria-label="Priorities in this filtered view"] article p.font-display', text: '0', count: 2
+          assert_includes response.body, 'request may no longer match its filters'
+        end
+      end
+      assert_equal 'waiting', item.reload.status
+      assert_equal Date.tomorrow, item.due_on
+    end
+  end
+
+  test 'selected queue survives normal saves invalid changes and stale forms with entered notes preserved' do
+    item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+    doc = ReconciliationEvidence.retain!(bytes: 'Synthetic queue original', filename: 'queue-original.txt', source: 'bank', kind: 'bank_statement', from: '2026-10-01', to: '2026-10-31')
+    queue = { status: 'active', source: 'bank', original: doc.id, day: '2026-10-14' }
+    patch reconciliation_follow_up_path(item), params: { queue: queue, close_day: '2026-10-14', follow_up: { notes: 'Synthetic saved progress.', lock_version: item.lock_version } }
+    assert_redirected_to reconciliation_follow_up_path(item, close_day: '2026-10-14', queue: queue)
+    stale_version = item.reload.lock_version
+    item.update!(notes: 'Synthetic concurrent update.')
+    patch reconciliation_follow_up_path(item), params: { queue: queue, return_to: 'queue', follow_up: { notes: 'Keep my draft on conflict.', lock_version: stale_version } }
+    assert_response :unprocessable_entity
+    assert_select 'textarea[name="follow_up[notes]"]', text: 'Keep my draft on conflict.'
+    assert_select 'input[name="queue[original]"][value=?]', doc.id.to_s
+    patch reconciliation_follow_up_path(item), params: { queue: queue, return_to: 'queue', follow_up: { due_on: '', notes: 'Keep this invalid date draft.', lock_version: item.reload.lock_version } }
+    assert_response :unprocessable_entity
+    assert_select 'textarea[name="follow_up[notes]"]', text: 'Keep this invalid date draft.'
+    assert_select 'a[href=?]', reconciliation_follow_ups_path(queue), text: 'Back to selected queue'
+    assert_equal 'Synthetic concurrent update.', item.reload.notes
+  end
+
+  test 'queue return accepts only validated local filters and tenant originals and does not grant readers progress controls' do
+    item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+    other = Tenant.create!(name: 'Foreign queue original', subdomain: 'foreign-queue-original')
+    foreign = Current.set(tenant: other) do
+      ReconciliationEvidence.retain!(bytes: 'Synthetic private original', filename: 'foreign-queue.txt', source: 'bank', kind: 'bank_statement', from: '2026-10-01', to: '2026-10-31')
+    end
+    ['https://example.com', { day: 'bad-date' }, { original: foreign.id }].each do |queue|
+      get reconciliation_follow_up_path(item, queue: queue)
+      assert_response :success
+      assert_select 'section[aria-label="Return to your selected follow-up queue"]', count: 0
+      assert_select 'button[value="queue"]', count: 0
+      refute_includes response.body, foreign.filename
+    end
+    @user.update!(role: 'reporting')
+    get reconciliation_follow_up_path(item, queue: { status: 'evil', source: 'evil', owner: 'evil', url: 'https://example.com', page: 9, day: '2026-10-14' })
+    assert_select 'a[href=?]', reconciliation_follow_ups_path(status: 'active', day: '2026-10-14'), text: 'Back to selected queue'
+    assert_select 'button[value="queue"]', count: 0
+    refute_includes response.body, 'https://example.com'
+    assert_equal 1, item.events.count
+  end
+
   test 'filtered priorities count every page and day navigation preserves the selected scope without writes' do
     travel_to Time.zone.parse('2026-10-16 12:00') do
       requests = 26.times.map do |number|
@@ -393,7 +466,7 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select 'section[aria-label="Priorities in this filtered view"]' do
         assert_select 'article p.font-display', text: '26', count: 2
-        assert_select 'a[href=?]', reconciliation_follow_up_path(requests.first, close_day: '2026-10-14', anchor: 'record-progress'), text: 'Work earliest due', count: 2
+        assert_select 'a[href=?]', reconciliation_follow_up_path(requests.first, close_day: '2026-10-14', queue: filters, anchor: 'record-progress'), text: 'Work earliest due', count: 2
         assert_select 'a[href=?]', reconciliation_follow_ups_path(filters.merge(day: '2026-10-13')), text: 'Previous day'
         assert_select 'a[href=?]', reconciliation_follow_ups_path(filters.merge(day: '2026-10-15')), text: 'Next day'
         assert_select 'a[href=?]', reconciliation_follow_ups_path(filters.except(:day)), text: 'All dates with these filters'

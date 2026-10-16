@@ -10,16 +10,13 @@ class ReconciliationFollowUpsController < AuthenticatedController
   end
 
   def index
-    @status = %w[active open waiting closed overdue today all].include?(params[:status]) ? params[:status] : 'active'
-    @source = ReconciliationDocument::SOURCES.excluding('rupert').include?(params[:source]) ? params[:source] : nil
-    @owner_filter = %w[mine unassigned].include?(params[:owner]) ? params[:owner] : nil
-    @category = ReconciliationFollowUp::CATEGORIES.key?(params[:category]) ? params[:category] : nil
-    @evidence_filter = params[:evidence] == 'missing' ? 'missing' : nil
+    selection = ReconciliationFollowUpQueue.new(params.permit(*ReconciliationFollowUpQueue::KEYS).to_h)
+    @status, @source, @owner_filter = selection.status, selection.source, selection.owner
+    @category, @evidence_filter = selection.category, selection.evidence
+    @original, @day = selection.original, selection.day
+    @queue_filters = selection.filters
     scope = ReconciliationFollowUp.all
-    if params[:original].present?
-      @original = ReconciliationDocument.find(params[:original])
-      scope = scope.merge(ReconciliationDocumentFollowUps.scope_for(@original))
-    end
+    scope = scope.merge(ReconciliationDocumentFollowUps.scope_for(@original)) if @original
     scope = scope.where(source: @source) if @source
     scope = scope.where(owner_id: @owner_filter == 'mine' ? Current.user.id : nil) if @owner_filter
     scope = scope.where(category: @category) if @category
@@ -28,12 +25,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
     scope = scope.where('due_on < ?', Date.current) if @status == 'overdue'
     scope = scope.where(due_on: Date.current) if @status == 'today'
     scope = scope.where(status: @status) if ReconciliationFollowUp::STATUSES.key?(@status)
-    if params[:day].present?
-      @day = ReconciliationEvidence.dates(params[:day], params[:day]).first
-      scope = scope.covering(@day)
-    end
-    @queue_filters = { status: @status, source: @source, owner: @owner_filter, category: @category,
-      evidence: @evidence_filter, original: @original&.id, day: @day&.iso8601 }.compact
+    scope = scope.covering(@day) if @day
     active_view = scope.active
     overdue_view = active_view.where('due_on < ?', Date.current)
     missing_view = active_view.where(category: 'missing_report', document_id: nil)
@@ -105,6 +97,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
   def update
     @follow_up = ReconciliationFollowUp.find(params[:id])
     load_close_context
+    load_return_queue
     values = params.require(:follow_up).permit(:title, :status, :due_on, :owner_id, :notes, :document_id, :lock_version)
     unless values[:lock_version].to_s.match?(/\A\d+\z/) && values[:notes].present?
       @entered_values = values.to_h
@@ -119,12 +112,15 @@ class ReconciliationFollowUpsController < AuthenticatedController
         @next_overdue = next_overdue
         next_day = @close_day if @next_overdue && @close_day&.between?(@next_overdue.period_from, @next_overdue.period_to)
         @next_overdue ? reconciliation_follow_up_path(@next_overdue, close_day: next_day&.iso8601, anchor: 'record-progress') : reconciliation_follow_ups_path(status: 'overdue')
+      elsif params[:return_to] == 'queue' && @return_queue_filters
+        reconciliation_follow_ups_path(@return_queue_filters)
       elsif params[:return_to] == 'overdue'
         reconciliation_follow_ups_path(status: 'overdue')
       else
-        reconciliation_follow_up_path(@follow_up, close_day: @close_day&.iso8601)
+        reconciliation_follow_up_path(@follow_up, close_day: @close_day&.iso8601, queue: @return_queue_filters)
       end
       notice = 'Progress saved in Rupert. Earlier notes and assignments are retained. No email or message was sent.'
+      notice += ' Your selected queue now reflects this saved status, owner, due date and evidence; the request may no longer match its filters.' if params[:return_to] == 'queue' && @return_queue_filters
       notice += ' No other overdue follow-ups were found; the queue reflects your saved status and due date.' if params[:return_to] == 'next_overdue' && @next_overdue.nil?
       redirect_to destination, notice: notice
     else
@@ -145,6 +141,16 @@ class ReconciliationFollowUpsController < AuthenticatedController
 
   private
 
+  def load_return_queue
+    @return_queue_filters = nil
+    return unless params[:queue].is_a?(ActionController::Parameters)
+
+    values = params[:queue].permit(*ReconciliationFollowUpQueue::KEYS).to_h
+    @return_queue_filters = ReconciliationFollowUpQueue.new(values).filters if values.present?
+  rescue ReconciliationEvidence::Error, ActiveRecord::RecordNotFound
+    @return_queue_filters = nil
+  end
+
   def next_overdue
     ReconciliationFollowUp.active.where('due_on < ?', Date.current).where.not(id: @follow_up.id).includes(:owner).order(:due_on, :id).first
   end
@@ -156,6 +162,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
 
   def show_options
     load_close_context
+    load_return_queue
     form_options
     @next_overdue = next_overdue if @follow_up.overdue?
     @events_pagy, @events = pagy(@follow_up.events.order(id: :desc), items: 15, page_param: :history_page)

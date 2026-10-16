@@ -12,7 +12,7 @@
       <article class="min-w-0 rounded-xl border p-4 space-y-2 <%= count.positive? ? 'border-amber-300 bg-amber-50' : 'border-fog' %>">
         <h3 class="text-sm font-semibold"><%= label %></h3><p class="font-display text-2xl"><%= count %></p>
         <% if item %><p class="break-words text-sm font-semibold"><%= item.title %></p><p class="text-xs"><%= reconciliation_due_label(item) %> · <%= item.owner&.display_name || 'Needs an owner' %> · <%= reconciliation_source(item.source) %></p>
-          <div class="flex flex-wrap gap-2"><%= link_to Current.user.can?('reports.write') ? 'Work earliest due' : 'Review earliest due', reconciliation_follow_up_path(item, close_day: @day&.iso8601, anchor: Current.user.can?('reports.write') ? 'record-progress' : nil), class: 'btn-primary btn-sm' %><% unless item.document_id %><%= link_to 'Find retained original', reconciliation_documents_path(reconciliation_library_request_context(item, @day)), class: 'btn-ghost btn-sm' %><% end %></div>
+          <div class="flex flex-wrap gap-2"><%= link_to Current.user.can?('reports.write') ? 'Work earliest due' : 'Review earliest due', reconciliation_follow_up_path(item, close_day: @day&.iso8601, queue: @queue_filters, anchor: Current.user.can?('reports.write') ? 'record-progress' : nil), class: 'btn-primary btn-sm' %><% unless item.document_id %><%= link_to 'Find retained original', reconciliation_documents_path(reconciliation_library_request_context(item, @day)), class: 'btn-ghost btn-sm' %><% end %></div>
         <% else %><p class="text-xs text-mocha">None among the open or waiting requests in this view. Other dates or filters may still have work.</p><% end %>
       </article>
     <% end %>
