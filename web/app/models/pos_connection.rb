@@ -95,6 +95,14 @@ class PosConnection < ApplicationRecord
   private
 
   def valid_reporting_setup
+    if provider == 'swipesimple'
+      if credential_values.any? || reporting_enabled
+        errors.add(:account_reference, 'must be the numeric SwipeSimple company ID') unless account_reference.to_s.match?(/\A[1-9][0-9]{0,19}\z/)
+      end
+      errors.add(:environment, 'must be production for SwipeSimple Web') unless environment == 'production'
+      errors.add(:base, 'Save an authorized website login before enabling scheduled pulls.') if reporting_enabled && (!vendor_approved || !credentials_saved?)
+      return
+    end
     if provider == 'iris_reporting'
       begin
         IrisReporting::Client.merchants(account_reference) if account_reference.present? || credential_values.any? || reporting_enabled
@@ -137,9 +145,11 @@ class PosConnection < ApplicationRecord
     end
     return if values.empty?
 
-    errors.add(:base, 'Confirm approved API read access before saving credentials.') unless vendor_approved
-    errors.add(:base, 'Provide all required API credential fields.') unless allowed.all? { |key| values[key].present? }
-    if provider == 'iris_reporting'
+    errors.add(:base, provider == 'swipesimple' ? 'Authorize website read access before saving credentials.' : 'Confirm approved API read access before saving credentials.') unless vendor_approved
+    errors.add(:base, 'Provide all required credential fields.') unless allowed.all? { |key| values[key].present? }
+    if provider == 'swipesimple'
+      errors.add(:base, 'Enter a valid SwipeSimple account email.') unless values['web_email'].to_s.match?(/\A[^\s@]+@[^\s@]+\.[^\s@]+\z/)
+    elsif provider == 'iris_reporting'
       errors.add(:base, 'Use an HTTPS IRIS tenant origin and an API token, without spaces or control characters.') unless IrisReporting::Client.valid_credentials?(values)
     elsif provider == 'ctrax'
       unless Ctrax::Client.valid_credentials?(values)

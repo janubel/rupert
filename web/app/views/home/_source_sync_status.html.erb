@@ -19,6 +19,9 @@
           <% if permitted && source[:ready] %>
             <%= button_to(source[:mode] == 'portal' ? 'Import portal export' : 'Sync now', source_sync_path(source[:key]), class: 'btn-primary btn-sm', form: { data: { turbo: false } }) %>
           <% end %>
+          <% if source[:key] == 'swipesimple' && Current.user.can?('settings.read') %>
+            <%= link_to 'Login & schedule', pos_connection_path('swipesimple'), class: 'btn-ghost btn-sm' %>
+          <% end %>
           <% if source[:key] == 'swipesimple' && Current.user.can?('sync.write') %>
             <%= link_to 'Import CSV', swipesimple_reports_path(anchor: 'import'), class: 'btn-ghost btn-sm' %>
             <%= link_to 'Open exports', 'https://swipesimple.com/transactions', class: 'btn-ghost btn-sm', target: '_blank', rel: 'noopener noreferrer' %>

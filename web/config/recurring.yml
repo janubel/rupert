@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 production:
-  swipesimple_csv_intake:
-    class: SwipesimpleInboxJob
+  swipesimple_web_pull:
+    class: SwipesimpleWebSyncJob
     queue: default
     schedule: every 30 minutes
   ctrax_stock:

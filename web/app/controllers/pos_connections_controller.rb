@@ -90,14 +90,16 @@ class PosConnectionsController < AuthenticatedController
   end
 
   def check_access
-    unless (@connection.check_kind || %w[authorize_net_reporting iris_reporting].include?(@provider[:key])) && @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
+    unless (@connection.check_kind || %w[authorize_net_reporting iris_reporting swipesimple].include?(@provider[:key])) && @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
       return redirect_to pos_connection_path(@provider[:key]), alert: 'Save approved API credentials before checking API access.'
     end
 
     setup_version = @connection.lock_version
     arguments = { credentials: @connection.credential_values }
     arguments[:environment] = @connection.environment if %w[authorize_net nmi].include?(@connection.check_kind)
-    result = if @provider[:key] == 'iris_reporting'
+    result = if @provider[:key] == 'swipesimple'
+      SwipesimpleWeb::Check.call(connection: @connection)
+    elsif @provider[:key] == 'iris_reporting'
       IrisReporting::Check.call(connection: @connection)
     elsif @provider[:key] == 'authorize_net_reporting'
       AuthorizeNetReporting::Check.call(connection: @connection)
@@ -197,7 +199,7 @@ class PosConnectionsController < AuthenticatedController
     @provider = PosProviderCatalog.find(params[:provider])
     raise ActiveRecord::RecordNotFound unless @provider
 
-    @connection = PosConnection.find_by(provider: @provider[:key]) || PosConnection.new(provider: @provider[:key], environment: @provider[:key] == 'iris_reporting' ? 'production' : 'sandbox')
+    @connection = PosConnection.find_by(provider: @provider[:key]) || PosConnection.new(provider: @provider[:key], environment: %w[iris_reporting swipesimple].include?(@provider[:key]) ? 'production' : 'sandbox')
   end
 
   def setup_params
@@ -212,7 +214,7 @@ class PosConnectionsController < AuthenticatedController
       *(@provider[:key] == 'ctrax' ? [:hourly_sync_enabled] : []),
       *(@provider[:key] == 'valmar' ? [:gateway] : []),
       *(@provider[:key] == 'authorize_net_reporting' ? [:reporting_auth_mode, :reporting_enabled] : []),
-      *(@provider[:key] == 'iris_reporting' ? [:reporting_enabled] : []), credential_secret: keys)
+      *(%w[iris_reporting swipesimple].include?(@provider[:key]) ? [:reporting_enabled] : []), credential_secret: keys)
   end
 
   def handle_busy_database(error)

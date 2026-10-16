@@ -24,12 +24,32 @@ class PosConnectionsTest < ActionDispatch::IntegrationTest
     assert_equal 'no-store', response.headers['Cache-Control']
     assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'
     get pos_connection_path('swipesimple')
-    assert_select 'a[href=?]', syncs_path(anchor: 'swipesimple')
+    assert_select 'a[href=?]', swipesimple_reports_path(anchor: 'import')
     assert_includes response.body, 'does not publish a payments integration API'
     get pos_connection_path('valmar')
     assert_select 'select[name="pos_connection[gateway]"]'
     assert_select 'input[name*="credential_secret"]', count: 0
     assert_select 'button', text: 'Check read access', count: 0
+  end
+
+  test 'SwipeSimple setup saves encrypted website login and schedule without contacting the vendor' do
+    assert_no_enqueued_jobs do
+      patch pos_connection_path('swipesimple'), params: { pos_connection: {
+        environment: 'production', account_reference: '42', vendor_approved: '1', reporting_enabled: '1',
+        credential_secret: { web_email: 'read@example.invalid', web_password: 'private-web-password' } } }
+    end
+    assert_redirected_to pos_connection_path('swipesimple')
+    Current.tenant = @tenant
+    connection = PosConnection.find_by!(provider: 'swipesimple')
+    assert connection.reporting_enabled
+    assert connection.credentials_saved?
+    raw = PosConnection.connection.select_value("SELECT credentials_json FROM pos_connections WHERE id = #{connection.id}")
+    refute_includes raw, 'private-web-password'
+    follow_redirect!
+    assert_select 'input[name="pos_connection[reporting_enabled]"]'
+    assert_select 'input[type="password"][value]', count: 0
+    refute_includes response.body, 'private-web-password'
+    assert_includes response.body, 'Pull fresh website exports every 30 minutes'
   end
 
   test 'saving is local and credentials stay encrypted and never redisplay' do

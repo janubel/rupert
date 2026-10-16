@@ -40,21 +40,28 @@ class SourceSyncStatus
     exports = SwipesimpleExport.select(:id, :kind, :exported_at).to_a
     latest = exports.group_by(&:kind).transform_values { |rows| rows.max_by { |row| [row.exported_at, row.id] } }
     last_at = latest.values.map(&:exported_at).min
-    delivery = ENV['RUPERT_SWIPESIMPLE_INBOX'].present?
-    badge = if !delivery
-      'Needs feed'
-    elsif latest.size < 2
-      'Awaiting files'
-    elsif last_at < FRESH_FOR.ago
-      'Stale export'
+    connection = PosConnection.find_by(provider: 'swipesimple')
+    access = connection&.vendor_approved && connection.credentials_saved?
+    badge = if !access || connection.last_report_status == 'needs_login'
+      'Needs login'
+    elsif connection.last_report_status == 'running'
+      'Syncing'
+    elsif connection.last_report_status == 'failed'
+      'Error'
+    elsif !connection.reporting_enabled
+      'Paused'
+    elsif connection.last_reported_at.nil?
+      'Awaiting pull'
+    elsif connection.last_reported_at < FRESH_FOR.ago
+      'Stale'
     else
-      'Files current'
+      'Live'
     end
     rows = SwipesimpleReportRow.latest.group('swipesimple_exports.kind').count
-    { key: 'swipesimple', label: 'SwipeSimple', badge: badge, last_at: last_at,
+    { key: 'swipesimple', label: 'SwipeSimple', badge: badge, last_at: connection&.last_reported_at || last_at,
       detail: "#{rows.fetch('transactions', 0)} transactions · #{rows.fetch('invoices', 0)} invoices",
-      schedule: delivery ? 'Delivery checks every 30 minutes' : '30-minute checks await vendor delivery',
-      mode: 'csv', ready: true }
+      schedule: connection&.reporting_enabled ? 'Website pulls every 30 minutes' : 'Automatic website pulls paused',
+      mode: 'web', ready: access }
   end
 
   def authorize_net

@@ -17,7 +17,7 @@ class SourceSyncsTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
     assert_select '#source-sync-status [data-source]', count: 3
-    assert_select '[data-source=swipesimple]', text: /Needs feed/
+    assert_select '[data-source=swipesimple]', text: /Needs login/
     assert_select '[data-source=authorize_net]', text: /Portal sign-in/
     get '/live/sync_status', params: { source_status: '1' }
     assert_response :success
@@ -36,18 +36,24 @@ class SourceSyncsTest < ActionDispatch::IntegrationTest
     refute_includes enqueued_jobs.inspect, 'private-password'
   end
 
-  test 'SwipeSimple on demand opens upload when there is no vendor feed' do
+  test 'SwipeSimple on demand opens login setup when credentials are absent' do
     previous = ENV.delete('RUPERT_SWIPESIMPLE_INBOX')
     assert_no_enqueued_jobs { post source_sync_path('swipesimple') }
-    assert_redirected_to swipesimple_reports_path(anchor: 'import')
+    assert_redirected_to pos_connection_path('swipesimple')
   ensure
     ENV['RUPERT_SWIPESIMPLE_INBOX'] = previous
   end
 
-  test 'SwipeSimple delivery checks are restricted to the requesting tenant' do
+  test 'SwipeSimple on demand uses website credentials even with an inbox and paused schedule' do
+    Current.tenant = @tenant
+    connection = PosConnection.create!(provider: 'swipesimple', environment: 'production', account_reference: '42',
+      vendor_approved: true, reporting_enabled: false, credentials_json: { web_email: 'read@example.invalid', web_password: 'private-web-login' }.to_json)
     previous = ENV['RUPERT_SWIPESIMPLE_INBOX']
     ENV['RUPERT_SWIPESIMPLE_INBOX'] = '/private-inbox'
-    assert_enqueued_with(job: SwipesimpleInboxJob, args: [{ tenant_id: @tenant.id }]) { post source_sync_path('swipesimple') }
+    assert_enqueued_with(job: SwipesimpleWebSyncJob, args: [connection.id, { manual: true }]) { post source_sync_path('swipesimple') }
+    assert_redirected_to root_path
+    refute_includes enqueued_jobs.inspect, 'private-web-login'
+    assert_equal @tenant.id, connection.tenant_id
   ensure
     ENV['RUPERT_SWIPESIMPLE_INBOX'] = previous
   end

@@ -14,12 +14,11 @@ class SourceSyncsController < AuthenticatedController
       CtraxStockSyncJob.perform_later(connection.id, manual: true)
       redirect_to root_path, notice: 'C-Trax stock pull queued. The badge updates after the vendor read completes.'
     when 'swipesimple'
-      if ENV['RUPERT_SWIPESIMPLE_INBOX'].present?
-        SwipesimpleInboxJob.perform_later(tenant_id: Current.tenant_id)
-        redirect_to root_path, notice: 'SwipeSimple delivery check queued. Fresh vendor files are required to update source data.'
-      else
-        redirect_to swipesimple_reports_path(anchor: 'import'), notice: 'Import a fresh SwipeSimple export below. Automatic vendor delivery is not configured.'
-      end
+      connection = PosConnection.find_by(provider: 'swipesimple', vendor_approved: true)
+      return redirect_to(pos_connection_path('swipesimple'), notice: 'Save the SwipeSimple website login to pull fresh exports.') unless connection&.credentials_saved?
+
+      SwipesimpleWebSyncJob.perform_later(connection.id, manual: true)
+      redirect_to root_path, notice: 'Fresh SwipeSimple website pull queued. The badge updates after both exports are saved.'
     when 'authorize_net'
       connection = PosConnection.find_by(provider: 'authorize_net_reporting', vendor_approved: true)
       return redirect_to(authorize_net_portal_exports_path) unless connection&.credentials_saved?
