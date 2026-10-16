@@ -3,7 +3,7 @@
 module IrisReporting
   class WebSync
     def self.call(connection:)
-      new(connection).call
+      SyncObservability.observe('bank', 'web') { new(connection).call }
     end
 
     def initialize(connection)

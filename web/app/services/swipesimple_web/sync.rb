@@ -3,7 +3,7 @@
 module SwipesimpleWeb
   class Sync
     def self.call(connection:)
-      new(connection).call
+      SyncObservability.observe('swipesimple', 'web') { new(connection).call }
     end
 
     def initialize(connection)

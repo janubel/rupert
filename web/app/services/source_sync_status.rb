@@ -2,19 +2,29 @@
 
 class SourceSyncStatus
   FRESH_FOR = 60.minutes
-  ACTIVE_BADGES = ['Live', 'Healthy', 'Syncing', 'Files current', 'Backing up'].freeze
+  ACTIVE_BADGES = ['Live', 'Healthy', 'Syncing', 'Files current', 'Backing up', 'Recent API read'].freeze
 
   def self.all(include_platform: true)
     new.all(include_platform: include_platform)
   end
 
   def all(include_platform: true)
-    sources = [ctrax, swipesimple, authorize_net, shopify, bank]
-    sources << google_backup if include_platform
-    sources
+    keys = %i[ctrax swipesimple authorize_net shopify bank]
+    keys << :google_backup if include_platform
+    keys.map { |key| read_status(key) }
   end
 
   private
+
+  def read_status(key)
+    send(key)
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    label = { ctrax: 'C-Trax', swipesimple: 'SwipeSimple', authorize_net: 'Authorize.net',
+      shopify: 'Shopify', bank: 'Bank · NAB / IRIS', google_backup: 'Google Drive backup' }.fetch(key)
+    { key: key.to_s, label: label, badge: 'Credentials unreadable', last_at: nil,
+      detail: 'Ask the platform operator to restore the original encryption keys.',
+      schedule: 'Saved schedule unchanged · access cannot be diagnosed', mode: 'unknown', ready: false }
+  end
 
   def shopify
     configured = %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].all? { |key| EnvStore.fetch(key, '').present? }

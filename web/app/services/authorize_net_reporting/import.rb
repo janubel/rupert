@@ -15,12 +15,14 @@ module AuthorizeNetReporting
       chargeReturnedItemsAmount chargeReturnedItemsCount refundReturnedItemsAmount refundReturnedItemsCount].freeze
 
     def self.call(connection:, from: 7.days.ago, to: Time.current, transaction_id: nil)
-      new(connection).call(from: from, to: to, transaction_id: transaction_id)
+      SyncObservability.observe('authorize_net', transaction_id ? 'events' : 'reporting') do
+        new(connection).call(from: from, to: to, transaction_id: transaction_id)
+      end
     end
 
     def initialize(connection)
       @connection = connection
-      raise Client::Error, 'Reporting connection belongs to another workspace.' unless connection.tenant_id == Current.tenant_id && connection.provider == 'authorize_net_reporting'
+      raise Client::Error.new('Reporting connection belongs to another workspace.', reason: :invalid) unless connection.tenant_id == Current.tenant_id && connection.provider == 'authorize_net_reporting'
       @client = Client.new(connection)
     end
 
@@ -41,7 +43,7 @@ module AuthorizeNetReporting
       # Revisit observed unsettled/auth transactions even after they disappear from lists (e.g. voids).
       pending = transaction_id ? [] : AuthorizeNetTransaction.where(**scope).where.not(payment_status: AuthorizeNetTransaction::FINAL_STATUSES).pluck(:source_transaction_id)
       ids = (summaries.map { |row| row.fetch('transId').to_s } + pending).uniq
-      raise Client::Error, 'Reporting exceeded the transaction limit. Use a smaller window.' if ids.size > 20_000
+      raise Client::Error.new('Reporting exceeded the transaction limit. Use a smaller window.', reason: :limit) if ids.size > 20_000
       observed_at = Time.current
       rows = ids.map do |id|
         detail = @client.detail(id)
@@ -55,7 +57,7 @@ module AuthorizeNetReporting
       version = @connection.lock_version
       fresh = PosConnection.find(@connection.id)
       fresh.with_lock do
-        raise Client::Error, 'Reporting setup changed during import; retry.' unless fresh.lock_version == version
+        raise Client::Error.new('Reporting setup changed during import; retry.', reason: :changed) unless fresh.lock_version == version
         normalized_batches.each do |attrs|
           record = AuthorizeNetBatch.find_or_initialize_by(**scope, source_batch_id: attrs.delete(:source_batch_id))
           record.update!(attrs) unless record.observed_at && record.observed_at > observed_at
@@ -76,14 +78,14 @@ module AuthorizeNetReporting
       @connection.reload
       { transactions: rows.size, batches: batches.size }
     rescue KeyError, ArgumentError, TypeError
-      raise Client::Error, 'Reporting data did not match the verified contract. No import was completed.'
+      raise Client::Error.new('Reporting data did not match the verified contract. No import was completed.', reason: :response)
     end
 
     private
 
     def normalize(row, currency:, observed_at:)
       attrs = TRANSACTION_FIELDS.to_h { |source, target| [target, row[source]] }
-      raise Client::Error, 'Reporting omitted transaction type or status.' unless attrs[:transaction_type].is_a?(String) && attrs[:transaction_type].present? && attrs[:payment_status].is_a?(String) && attrs[:payment_status].present?
+      raise Client::Error.new('Reporting omitted transaction type or status.', reason: :response) unless attrs[:transaction_type].is_a?(String) && attrs[:transaction_type].present? && attrs[:payment_status].is_a?(String) && attrs[:payment_status].present?
       batch = row['batch'] || {}
       attrs.merge(source_transaction_id: row.fetch('transId').to_s,
         submitted_at: utc_time(row.fetch('submitTimeUTC')), source_batch_id: batch['batchId']&.to_s,
@@ -96,7 +98,7 @@ module AuthorizeNetReporting
 
     def normalize_batch(batch, observed_at:)
       stats = batch['statistics'] || []
-      raise Client::Error, 'Reporting returned invalid batch statistics.' unless stats.is_a?(Array) && stats.all? { |s| s.is_a?(Hash) }
+      raise Client::Error.new('Reporting returned invalid batch statistics.', reason: :response) unless stats.is_a?(Array) && stats.all? { |s| s.is_a?(Hash) }
       { source_batch_id: batch.fetch('batchId').to_s, settlement_state: batch.fetch('settlementState'),
         settled_at: batch['settlementTimeUTC'] && utc_time(batch['settlementTimeUTC']),
         payment_method: batch['paymentMethod'], statistics: stats.map { |s| s.slice(*STAT_FIELDS).transform_values(&:to_s) }, observed_at: observed_at }
@@ -104,7 +106,7 @@ module AuthorizeNetReporting
 
     def invoice_number(value)
       return if value.nil? || value == ''
-      raise Client::Error, 'Reporting returned an invalid invoice reference.' unless value.is_a?(String) && value.bytesize <= 100 && value.valid_encoding? && !value.match?(/[\x00-\x1f\x7f]/)
+      raise Client::Error.new('Reporting returned an invalid invoice reference.', reason: :response) unless value.is_a?(String) && value.bytesize <= 100 && value.valid_encoding? && !value.match?(/[\x00-\x1f\x7f]/)
 
       value
     end
@@ -118,7 +120,7 @@ module AuthorizeNetReporting
 
     def amount(value)
       number = BigDecimal(value.to_s)
-      raise Client::Error, 'Reporting returned an invalid monetary amount.' unless number.finite? && number >= 0 && number < 10**15 && number == number.round(4)
+      raise Client::Error.new('Reporting returned an invalid monetary amount.', reason: :response) unless number.finite? && number >= 0 && number < 10**15 && number == number.round(4)
       number
     end
   end
