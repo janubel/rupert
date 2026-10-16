@@ -58,15 +58,9 @@ recorded failure retains its own status and support reference while current
 missing setup remains visible alongside it. Previous successful acquisitions
 are retained when credentials are later removed.
 
-Google Drive instance backup distinguishes missing OAuth client fields from
-**Authorization required** when the client exists but backup consent does not.
-The platform operator completes the existing Backup consent flow. No folder ID
-is required to diagnose read setup: the backup service creates its folder after
-authorization. Document-retention Drive is a separate consent flow; this change
-neither diagnoses its vendor denial from saved text nor activates it. Google
-backup diagnostics remain restricted to the platform operator. Unreadable saved
-credentials require restoration of the original encryption keys and must not be
-described as missing fields.
+Unreadable saved credentials require restoration of the original encryption
+keys and must not be described as missing fields. Backup-specific setup and
+consent diagnostics are deferred; their existing behavior is unchanged.
 
 ## Legacy catalog evidence
 

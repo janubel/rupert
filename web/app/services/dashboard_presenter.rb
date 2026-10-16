@@ -4,9 +4,8 @@
 # cached in DataCache (version-keyed, invalidated on sync / manual mutations);
 # cheap counters and the always-live "recent" lists stay fresh per request.
 class DashboardPresenter
-  # Canonical revenue truth: Core::Order (paid/fulfilled), matching reports.
-  # LedgerEntry remains only the raw transaction mirror for the Ledger page.
-  PAID_STATUSES = %w[paid fulfilled].freeze
+  # Sales totals combine canonical orders with native C-Trax completed orders.
+  # Payment reports and ledger mirrors never contribute to these totals.
 
   attr_reader :product_count,
     :variant_count,
@@ -17,10 +16,11 @@ class DashboardPresenter
     :recent_syncs,
     :recent_alerts
 
-  def initialize(user: nil)
+  def initialize(user: nil, include_ctrax: true)
     @user = user
-    @product_count = can_read?('inventory.read') ? DataCache.fetch('dashboard/product_count') { ShopifyProduct.count } : 0
-    @variant_count = can_read?('inventory.read') ? DataCache.fetch('dashboard/variant_count') { ShopifyVariant.count } : 0
+    @include_ctrax = include_ctrax
+    @product_count = can_read?('inventory.read') ? DataCache.fetch('dashboard/current_product_count') { ShopifyProduct.active.where(catalog_present: true).count } : 0
+    @variant_count = can_read?('inventory.read') ? DataCache.fetch('dashboard/current_variant_count') { ShopifyVariant.current_catalog.count } : 0
     @sku_link_count = can_read?('inventory.read') ? DataCache.fetch('dashboard/sku_link_count') { SkuLink.count } : 0
     @open_alerts = can_read?('alerts.read') ? DataCache.fetch('dashboard/open_alerts') { StockAlert.open.count } : 0
     @stockouts = can_read?('alerts.read') ? DataCache.fetch('dashboard/stockouts') { StockAlert.open.where('quantity <= 0').count } : 0
@@ -50,106 +50,79 @@ class DashboardPresenter
     end
   end
 
-  def today_revenue
-    return 0 unless can_read?('sales.read')
+  def sales(days: 30)
+    @sales ||= {}
+    @sales[days] ||= DashboardSales.new(days: days, now: @now ||= Time.current, include_ctrax: @include_ctrax)
+  end
 
-    @today_revenue ||= DataCache.fetch('dashboard/today_revenue') { today_orders_scope.sum(:gross_cents) }
+  def sales_warnings
+    can_read?('sales.read') ? sales.warnings : []
+  end
+
+  def today_revenue
+    can_read?('sales.read') ? sales.gross(since: today_start) : 0
   end
 
   def today_orders
-    return 0 unless can_read?('sales.read')
-
-    @today_orders ||= DataCache.fetch('dashboard/today_orders') { today_orders_scope.count }
+    can_read?('sales.read') ? sales.count(since: today_start) : 0
   end
 
   def today_groups
     return [] unless can_read?('sales.read')
 
-    @today_groups ||= DataCache.fetch('dashboard/today_groups') do
-      today_orders_scope.group(:source)
-                        .pluck(:source, Arel.sql('SUM("gross_cents") AS gross'), Arel.sql('COUNT(*) AS count'))
-    end
+    # Keep the selling channels visible even on days with no imported sales.
+    actual = sales.groups(since: today_start).index_by(&:first)
+    (%w[shopify ctrax square] | actual.keys).map { |source| actual.fetch(source, [source, 0, 0]) }
   end
 
   def yesterday_revenue
-    return 0 unless can_read?('sales.read')
-
-    @yesterday_revenue ||= DataCache.fetch('dashboard/yesterday_revenue') do
-      Core::Order.where(occurred_at: (today_start - 1.day)...today_start, status: PAID_STATUSES).sum(:gross_cents)
-    end
+    can_read?('sales.read') ? sales.gross(since: today_start - 1.day, before: today_start) : 0
   end
 
   def week_revenue
-    return 0 unless can_read?('sales.read')
-
-    @week_revenue ||= DataCache.fetch('dashboard/week_revenue') do
-      Core::Order.since(7.days.ago).where(status: PAID_STATUSES).sum(:gross_cents)
-    end
+    can_read?('sales.read') ? sales.gross(since: today_start - 6.days) : 0
   end
 
   def month_revenue
-    return 0 unless can_read?('sales.read')
-
-    @month_revenue ||= DataCache.fetch('dashboard/month_revenue') do
-      Core::Order.since(30.days.ago).where(status: PAID_STATUSES).sum(:gross_cents)
-    end
+    can_read?('sales.read') ? sales.gross : 0
   end
 
   def ledger_groups
-    return [] unless can_read?('sales.read')
-
-    @ledger_groups ||= DataCache.fetch('dashboard/ledger_groups') do
-      Core::Order.since(30.days.ago).where(status: PAID_STATUSES).group(:source)
-                 .pluck(:source, Arel.sql('SUM("gross_cents") AS gross'), Arel.sql('COUNT(*) AS count'))
-    end
+    can_read?('sales.read') ? sales.groups : []
   end
 
-  # Revenue per day over the last N days, for chartkick line/area charts.
   def revenue_series(days: 30, source: nil)
-    return {} unless can_read?('sales.read')
-
-    key = "dashboard/revenue_series/#{days}/#{source || 'all'}"
-    DataCache.fetch(key, ttl: 10.minutes) do
-      scope = Core::Order.since(days.days.ago)
-      scope = scope.where(source: source) if source.present?
-      scope.group_by_day(:occurred_at, default_value: 0, range: days.days.ago..Time.current).sum(:gross_cents)
-           .transform_values { |cents| (cents / 100.0).round(2) }
-    end
+    can_read?('sales.read') ? sales(days: days).daily(source: source) : {}
   end
 
-  # Sales count per day over the last N days.
   def sales_volume_series(days: 30, source: nil)
-    return {} unless can_read?('sales.read')
-
-    key = "dashboard/sales_volume/#{days}/#{source || 'all'}"
-    DataCache.fetch(key, ttl: 10.minutes) do
-      scope = Core::Order.since(days.days.ago)
-      scope = scope.where(source: source) if source.present?
-      scope.group_by_day(:occurred_at, default_value: 0, range: days.days.ago..Time.current).count
-    end
+    can_read?('sales.read') ? sales(days: days).daily(metric: :count, source: source) : {}
   end
 
-  # Gross per hour across all days in range — powers the POS daily shape.
   def hourly_series(days: 30, source: nil)
-    return {} unless can_read?('sales.read')
-
-    key = "dashboard/hourly_series/#{days}/#{source || 'all'}"
-    DataCache.fetch(key, ttl: 10.minutes) do
-      scope = Core::Order.since(days.days.ago)
-      scope = scope.where(source: source) if source.present?
-      scope.group_by_hour_of_day(:occurred_at, range: days.days.ago..Time.current).sum(:gross_cents)
-           .transform_values { |cents| (cents / 100.0).round(2) }
-    end
+    can_read?('sales.read') ? sales(days: days).hourly(source: source) : {}
   end
 
-  # Gross per channel/source over the last N days.
   def source_breakdown(days: 30)
     return {} unless can_read?('sales.read')
 
-    key = "dashboard/source_breakdown/#{days}"
-    DataCache.fetch(key, ttl: 10.minutes) do
-      Core::Order.since(days.days.ago).group(:source).sum(:gross_cents)
-                 .transform_keys(&:capitalize).transform_values { |cents| cents / 100.0 }
+    sales(days: days).groups.to_h { |source, cents, _count| [DashboardSales::LABELS.fetch(source, source.humanize), cents / 100.0] }
+  end
+
+  def sales_freshness
+    return {} unless can_read?('sales.read')
+
+    @sales_freshness ||= begin
+      values = Setting.where(key: %w[sync_watermark_shopify sync_watermark_square]).pluck(:key, :value).to_h
+      result = %w[shopify square].index_with do |source|
+        value = values["sync_watermark_#{source}"]
+        { pulled_at: value.present? ? Time.zone.parse(value) : nil,
+          latest_sale_at: Core::Order.where(source: source).maximum(:occurred_at) }
+      end
+      latest_date = CtraxDay.maximum(:business_date)
+      result['ctrax'] = { pulled_at: latest_date && CtraxDay.where(business_date: latest_date).minimum(:captured_at),
+                          business_date: latest_date }
+      result
     end
   end
 
@@ -166,10 +139,6 @@ class DashboardPresenter
   end
 
   def today_start
-    Time.current.beginning_of_day
-  end
-
-  def today_orders_scope
-    @today_orders_scope ||= Core::Order.where(occurred_at: today_start..Time.current, status: PAID_STATUSES)
+    (@now ||= Time.current).beginning_of_day
   end
 end

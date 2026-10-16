@@ -15,6 +15,9 @@ module People
 
     validates :leave_type, inclusion: { in: LEAVE_TYPES }
     validates :starts_on, :ends_on, presence: true
+    validates :reason, length: { maximum: 2000 }
+    validates :hours, numericality: { greater_than: 0 }, allow_nil: true
+    validate :employee_in_workspace
     validate :ends_after_starts
 
     scope :recent, ->(limit = 200) { order(starts_on: :desc).limit(limit) }
@@ -49,6 +52,11 @@ module People
     end
 
     private
+
+    def employee_in_workspace
+      errors.add(:employee, 'must belong to this workspace') unless employee && employee.tenant_id == tenant_id
+      errors.add(:hours, 'cannot exceed 24 hours per requested day') if hours && starts_on && ends_on && hours > days * 24
+    end
 
     def ends_after_starts
       return if starts_on.nil? || ends_on.nil?

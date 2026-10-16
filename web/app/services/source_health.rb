@@ -8,7 +8,7 @@ class SourceHealth
     'swipesimple' => [['web', 'Website exports', 60.minutes]],
     'authorize_net' => [['reporting', 'Reporting API', 10.minutes]],
     'shopify' => [['catalog', 'Catalog and orders', 60.minutes]],
-    'square' => [['catalog', 'Catalog and orders', 60.minutes]],
+    'square' => [['catalog', 'Catalog and orders', 60.minutes], ['timecards', 'Employee hours', 30.minutes]],
     'bank' => [['reporting', 'Processor reports', 36.hours]],
     'google_backup' => [['backup', 'Verified backup', 8.hours]]
   }.freeze
@@ -47,6 +47,7 @@ class SourceHealth
     raise ActiveRecord::Encryption::Errors::Decryption if @source[:badge] == 'Credentials unreadable'
 
     access = SourceReadAccess.for(@source[:key], connection: @connection)
+    access_missing = access && !access[:ready]
     category = latest&.error_category
     category = 'worker' if %w[queued running].include?(latest&.status) && queue[:state] == 'Failed in worker'
     failure_current = category && latest && (!success || (order_key(latest) <=> order_key(success)).positive?)
@@ -57,7 +58,7 @@ class SourceHealth
       latest.started_at < 45.minutes.ago ? 'Read stalled' : 'Reading'
     elsif latest&.status == 'queued'
       latest.queued_at < 15.minutes.ago && !queue[:retry_at] ? 'Queue delayed' : 'Queued'
-    elsif !access[:ready]
+    elsif access_missing
       access[:state]
     elsif !enabled
       'Automatic reads paused'
@@ -76,16 +77,16 @@ class SourceHealth
     end
     # Legacy badges identify symptoms but cannot establish an exact failure
     # reason or attempt timestamp. Never classify saved free-text messages.
-    if latest.nil? && access[:ready] && %w[Error Needs\ login].include?(@source[:badge])
+    if latest.nil? && (!access || access[:ready]) && %w[Error Needs\ login].include?(@source[:badge])
       state = 'Legacy failure · cause unknown'
       category = 'unknown'
     end
     title, action = guidance(state, category)
-    title, action = access.values_at(:reason, :action) if state == access[:state]
+    title, action = access.values_at(:reason, :action) if access && state == access[:state]
     {
       operation: operation, label: label, state: state, category: category,
       reason: title, action: action, enabled: enabled, access: access,
-      alert: !access[:ready] || ['Failed', 'Read stalled', 'Queue delayed', 'Stale', 'Partial acquisition', 'Saved credentials unreadable', 'Historical evidence stale', 'Legacy failure · cause unknown'].include?(state),
+      alert: access_missing || ['Failed', 'Read stalled', 'Queue delayed', 'Stale', 'Partial acquisition', 'Saved credentials unreadable', 'Historical evidence stale', 'Legacy failure · cause unknown'].include?(state),
       last_attempt_at: latest&.started_at, queued_at: latest&.queued_at,
       last_success_at: success_at, legacy_at: legacy_at, source_at: source_time(operation),
       source_event_at: nil, coverage: coverage(operation),
@@ -115,12 +116,14 @@ class SourceHealth
     when 'ctrax' then operation == 'stock' ? @connection&.hourly_sync_enabled : @connection&.reporting_enabled
     when 'swipesimple', 'authorize_net', 'bank' then @connection&.reporting_enabled
     when 'shopify' then @source[:ready]
-    when 'square' then EnvStore.fetch('SQUARE_ACCESS_TOKEN', '').present?
+    when 'square' then operation == 'timecards' ? SquareTimecardSync.enabled? : EnvStore.fetch('SQUARE_ACCESS_TOKEN', '').present?
     when 'google_backup' then GoogleDriveBackupService.connected?
     end
   end
 
   def legacy_success(operation)
+    return SquareTimecard.maximum(:last_seen_at) if @source[:key] == 'square' && operation == 'timecards'
+
     case @source[:key]
     when 'ctrax'
       operation == 'stock' ? CtraxStockSnapshot.minimum(:captured_at) : CtraxDay.maximum(:captured_at)
@@ -132,6 +135,8 @@ class SourceHealth
   end
 
   def source_time(operation)
+    return SquareTimecard.maximum(:source_updated_at) if @source[:key] == 'square' && operation == 'timecards'
+
     return nil if @source[:key] == 'google_backup'
     return CtraxDay.maximum(:captured_at) if @source[:key] == 'ctrax' && operation == 'sales'
 
@@ -139,6 +144,10 @@ class SourceHealth
   end
 
   def coverage(operation)
+    if @source[:key] == 'square' && operation == 'timecards'
+      return 'Complete timecard search. Closed matched shifts count once; open, unmatched and overlapping work waits for review. Corrections retain original hours; history does not establish payroll payment.'
+    end
+
     case @source[:key]
     when 'ctrax'
       if operation == 'stock'

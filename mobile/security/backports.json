@@ -1,0 +1,61 @@
+{
+  "advisories": {
+    "braces": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "node-forge": "https://github.com/advisories/GHSA-86w9-cpqp-85rv"
+  },
+  "changes": [
+    {
+      "package": "braces",
+      "version": "3.0.3",
+      "path": "lib/security-depth.js",
+      "before_sha256": null,
+      "after_sha256": "bab390d90165ded7f22677f99980037b5ee70b8690c39c4fcd629a2fcd25650b",
+      "content": "'use strict';\n\n// GHSA-vfj7-8cjw-p6xm: check depth before any recursive brace AST walker.\n// Parent/prev links are intentionally excluded; nodes is the tree edge.\nmodule.exports = ast => {\n  const pending = [{ node: ast, depth: 0 }];\n  const active = new WeakSet();\n  while (pending.length) {\n    const { node, depth, leave } = pending.pop();\n    if (!node || typeof node !== 'object') continue;\n    if (leave) { active.delete(node); continue; }\n    if (depth > 256) throw new SyntaxError('Brace pattern exceeds maximum nesting depth (256)');\n    if (active.has(node)) throw new SyntaxError('Cyclic brace AST');\n    active.add(node);\n    pending.push({ node, leave: true });\n    if (Array.isArray(node.nodes)) {\n      for (let i = node.nodes.length - 1; i >= 0; i--) pending.push({ node: node.nodes[i], depth: depth + 1 });\n    }\n  }\n};\n"
+    },
+    {
+      "package": "braces",
+      "version": "3.0.3",
+      "path": "lib/compile.js",
+      "before_sha256": "dc98f22eee3d511785d92a00758d5f0d48efed5f5813bdecc2de430c529b5c9f",
+      "after_sha256": "a1b277632609b0e83ae90edef29afce6f1633ab06c137de09f1e68092a64b316",
+      "find": "const compile = (ast, options = {}) => {",
+      "replace": "const compile = (ast, options = {}) => {\n  require('./security-depth')(ast);"
+    },
+    {
+      "package": "braces",
+      "version": "3.0.3",
+      "path": "lib/expand.js",
+      "before_sha256": "41ccc196ebfa7b7781a634e721eb744e4e7bcb54cba427a7e3d6806a1b9e58f7",
+      "after_sha256": "7f5dad59b68fdec42ad50e914bc6743fa701e2c468d56e60b9fe658039e32119",
+      "find": "const expand = (ast, options = {}) => {",
+      "replace": "const expand = (ast, options = {}) => {\n  require('./security-depth')(ast);"
+    },
+    {
+      "package": "braces",
+      "version": "3.0.3",
+      "path": "lib/stringify.js",
+      "before_sha256": "379f22d77bfa1478341ccd49c5e4267464aabcbba03558bab332aac23fc6f23a",
+      "after_sha256": "3311a8cdb1473e2e52560aac8d718504d69d40fed2724fc9debc2e5e80ff9897",
+      "find": "module.exports = (ast, options = {}) => {",
+      "replace": "module.exports = (ast, options = {}) => {\n  require('./security-depth')(ast);"
+    },
+    {
+      "package": "node-forge",
+      "version": "1.4.0",
+      "path": "lib/rsa.js",
+      "before_sha256": "fd4740238145ec26470eb3f06a627c72039538ce1307dbdce40521f94dfd0a50",
+      "after_sha256": "c30072d1621153aa8ff9544442225e32b5573b5ef1fcba2b0742e7b8bb472c2a",
+      "find": "            obj.value.length !== 2) {",
+      "replace": "            obj.value.length !== 2 ||\n            obj.value[0].value.length < 1 ||\n            obj.value[0].value.length > 2 ||\n            ('parameters' in capture && capture.parameters !== '')) {"
+    },
+    {
+      "package": "braces",
+      "version": "3.0.3",
+      "path": "lib/parse.js",
+      "before_sha256": "e572166565f15fa6ad9865ae49d678218e32aabfd1b3720f6d0d43d39800d310",
+      "after_sha256": "c4e8f82890f9175ee71620f538463e40d249525efd3fe223bb9d531e7b37e289",
+      "find": "  while (index < length) {\n    block = stack[stack.length - 1];",
+      "replace": "  while (index < length) {\n    if (stack.length > 256) throw new SyntaxError('Brace pattern exceeds maximum nesting depth (256)');\n    block = stack[stack.length - 1];"
+    }
+  ]
+}

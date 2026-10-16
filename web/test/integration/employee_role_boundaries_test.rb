@@ -18,7 +18,7 @@ class EmployeeRoleBoundariesTest < ActionDispatch::IntegrationTest
     assert_redirected_to users_path
 
     post users_path, params: { user: { email: 'default-role@example.com', password: 'password123' } }
-    assert_equal 'cashier', User.find_by!(email: 'default-role@example.com').role
+    assert_equal 'employee', User.find_by!(email: 'default-role@example.com').role
 
     employee = User.find_by!(email: 'stock-role@example.com')
     %w[super_admin unknown_role].each do |role|

@@ -14,6 +14,9 @@ Thumbs.db
 # Build output
 build/
 dist/
+!web/public/dist/
+web/public/dist/*
+!web/public/dist/.keep
 legacy/build/
 legacy/node_modules/
 .turbo/

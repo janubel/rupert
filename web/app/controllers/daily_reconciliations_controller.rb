@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class DailyReconciliationsController < AuthenticatedController
+  include ReconciliationCloseContext
   before_action :private_response
   before_action -> { authorize(:module, :reports_read?) }
   before_action -> { authorize(:module, :reports_write?) }, only: %i[create archive review withdraw]
@@ -16,8 +17,20 @@ class DailyReconciliationsController < AuthenticatedController
       @evidence_values = @correction.metadata.slice('currency', 'location_id').merge('source' => @correction.source,
         'kind' => @correction.kind, 'period_from' => @correction.period_from.iso8601, 'period_to' => @correction.period_to.iso8601,
         'supersedes_id' => @correction.id)
+    elsif params[:request].present?
+      authorize(:module, :reports_write?)
+      @request = ReconciliationFollowUp.find(params[:request])
+      @evidence_values = @request.attributes.slice('source', 'period_from', 'period_to', 'currency', 'location_id').merge('kind' => @request.document_kind)
     end
-    load_page(@correction ? @correction.period_from.iso8601 : selected_day)
+    load_close_context(@request)
+    load_page(@correction&.period_from&.iso8601 || @request&.period_from&.iso8601 || selected_day)
+    if params[:control_for].present?
+      row = @report.register.rows.find { |item| @attention.control_key(item) == params[:control_for] }
+      if row && ReconciliationDocument::SOURCES.include?(row[:source])
+        @evidence_values = { 'source' => row[:source], 'kind' => 'register_control', 'currency' => row[:currency], 'location_id' => row[:location_id],
+          'period_from' => @report.day.iso8601, 'period_to' => @report.day.iso8601 }
+      end
+    end
     respond_to do |format|
       format.html
       format.csv { send_data(@report.csv, type: 'text/csv', filename: "daily-reconciliation-#{@report.day}.csv") }
@@ -25,11 +38,13 @@ class DailyReconciliationsController < AuthenticatedController
   end
 
   def create
+    @request = ReconciliationFollowUp.find(params[:request_id]) if params[:request_id].present?
+    load_close_context(@request)
     @evidence_values = params.fetch(:evidence, ActionController::Parameters.new).permit(:source, :kind, :period_from, :period_to, :currency, :location_id, :note, :supersedes_id, *ReconciliationEvidence::AMOUNTS).to_h
     file = params[:file]
     raise ReconciliationEvidence::Error, 'Attach a document no larger than 8 MiB.' unless file.is_a?(ActionDispatch::Http::UploadedFile) && file.size <= ReconciliationEvidence::MAX_BYTES
     values = @evidence_values
-    if values['source'] == 'rupert' || %w[daily_archive period_archive].include?(values['kind'])
+    if values['source'] == 'rupert' || ReconciliationDocument::GENERATED_KINDS.include?(values['kind'])
       raise ReconciliationEvidence::Error, 'Use the report archive action to retain generated Rupert reports.'
     end
     context = values['supersedes_id'].present? ? ReconciliationDocument.find(values['supersedes_id']).metadata.slice('merchant', 'api_origin', 'report_kind') : {}
@@ -39,7 +54,11 @@ class DailyReconciliationsController < AuthenticatedController
     doc = ReconciliationEvidence.retain!(bytes: file.read(ReconciliationEvidence::MAX_BYTES + 1), filename: file.original_filename,
       source: values['source'], kind: values['kind'], from: values['period_from'], to: values['period_to'], metadata: metadata,
       actor: Current.user, supersedes_id: values['supersedes_id'])
-    redirect_to daily_reconciliations_path(day: doc.period_from.iso8601), notice: "Evidence ##{doc.id} retained with its original bytes and checksum."
+    if @request
+      redirect_to reconciliation_follow_up_path(@request, evidence: doc.id, close_day: @close_day&.iso8601, anchor: 'record-progress'), notice: 'Original retained in Rupert. Review the suggested evidence and save a progress note to link it. Uploading does not change the follow-up status.'
+    else
+      redirect_to daily_reconciliations_path(day: doc.period_from.iso8601), notice: "Evidence ##{doc.id} retained with its original bytes and checksum."
+    end
   end
 
   def document
@@ -90,6 +109,14 @@ class DailyReconciliationsController < AuthenticatedController
 
   def load_page(day)
     @report = DailyMoneyReconciliation.new(day: day)
+    @attention = ReconciliationAttention.new(@report)
+    @comparison_filter = %w[attention all matched variances unavailable conflicts].include?(params[:comparison]) ? params[:comparison] : 'attention'
+    selected_status = { 'matched' => 'Matched recorded total', 'variances' => 'Variance', 'unavailable' => 'Unavailable in canonical records', 'conflicts' => 'Conflicting controls' }[@comparison_filter]
+    @comparison_rows = @report.comparisons.select { |row| @comparison_filter == 'all' || (selected_status ? row[:status] == selected_status : row[:status] != 'Matched recorded total') }
+    @comparison_rows = @comparison_rows.sort_by { |row| ReconciliationAttention.sort_key(row) }
+    @day_follow_ups = ReconciliationFollowUp.covering(@report.day).active.includes(:owner).order(:due_on, :id).limit(6)
+    @follow_up_open_count = ReconciliationFollowUp.active.count
+    @follow_up_overdue_count = ReconciliationFollowUp.active.where('due_on < ?', Date.current).count
     @locations = Location.select(:id, :name, :source).order(:name).to_a
     @locations_by_id = @locations.index_by(&:id)
     @successors = ReconciliationDocument.where(supersedes_id: @report.documents.map(&:id)).select(:id, :supersedes_id, :metadata_json, :period_from).index_by(&:supersedes_id)
@@ -125,7 +152,7 @@ class DailyReconciliationsController < AuthenticatedController
   end
 
   def safe_return_day
-    candidates = [@correction&.period_from&.iso8601, @return_day, @evidence_values&.dig('period_from'), params[:day], Date.current.iso8601]
+    candidates = [@correction&.period_from&.iso8601, @request&.period_from&.iso8601, @return_day, @evidence_values&.dig('period_from'), params[:day], Date.current.iso8601]
     candidates.each do |value|
       next if value.blank?
 

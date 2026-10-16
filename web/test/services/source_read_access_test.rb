@@ -42,17 +42,8 @@ class SourceReadAccessTest < ActiveSupport::TestCase
     assert_equal before, connection.attributes
   end
 
-  test 'backup client setup is separate from consent and a folder is created after authorization' do
-    access = SourceReadAccess.for('google_backup')
-    assert_equal 'Missing access', access[:state]
-    assert_equal ['Backup OAuth client ID', 'Backup OAuth client secret'], access[:missing_fields]
-    %w[GOOGLE_DRIVE_CLIENT_ID GOOGLE_DRIVE_CLIENT_SECRET].each do |key|
-      EnvStore.stubs(:platform_fetch).with(key, '').returns('synthetic-private-value')
-    end
-    access = SourceReadAccess.for('google_backup')
-    assert_equal 'Authorization required', access[:state]
-    assert_includes access[:action], 'Backup settings'
-    EnvStore.stubs(:platform_fetch).with('GOOGLE_DRIVE_REFRESH_TOKEN', '').returns('synthetic-private-refresh')
-    assert SourceReadAccess.for('google_backup')[:ready]
+  test 'backup setup is outside this source-reader projection' do
+    EnvStore.expects(:platform_fetch).never
+    assert_nil SourceReadAccess.for('google_backup')
   end
 end

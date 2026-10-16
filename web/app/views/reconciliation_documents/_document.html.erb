@@ -8,6 +8,27 @@
   <p class="text-xs text-mocha">Evidence #<%= doc.id %> · retained <%= doc.created_at.in_time_zone.strftime('%b %-d at %-I:%M %p %Z') %></p>
   <% if successor %><p class="text-sm"><%= link_to "#{successor.metadata['withdrawn'] ? 'Withdrawal' : 'Newer version'} ##{successor.id} →", daily_reconciliations_path(day: successor.period_from.iso8601, anchor: "evidence-#{successor.id}"), class: 'text-olive underline' %> · this version stays available</p><% elsif doc.supersedes_id %><p class="text-xs text-mocha">Previous evidence #<%= doc.supersedes_id %> is preserved.</p><% end %>
   <div class="flex flex-wrap gap-2"><%= link_to 'Download original', document_daily_reconciliation_path(doc), class: 'btn-ghost btn-sm' %><%= link_to 'View covered day', daily_reconciliations_path(day: doc.period_from.iso8601, anchor: "evidence-#{doc.id}"), class: 'btn-ghost btn-sm' %><% if can_correct %><%= link_to 'Correct this control', daily_reconciliations_path(day: doc.period_from.iso8601, correct: doc.id, anchor: 'upload-document'), class: 'btn-ghost btn-sm' %><% end %></div>
+  <% if (item = local_assigns[:report_request]) %>
+    <section class="rounded-xl border border-fog bg-paper p-3 space-y-2" aria-label="This original and your request">
+      <% if item.document_matches?(doc) %><p class="text-sm font-semibold"><%= item.document_id == doc.id ? 'This original is already linked to your request' : 'Coverage matches your request' %></p><p class="text-xs text-mocha">Review the contents before saving. A matching covered period does not confirm the report's amounts.</p><% if Current.user.can?('reports.write') && item.status != 'closed' && item.document_id != doc.id %><%= link_to 'Review & use for this request', reconciliation_follow_up_path(item, evidence: doc.id, close_day: local_assigns[:close_day]&.iso8601, anchor: 'record-progress'), class: 'btn-primary btn-sm' %><% else %><%= link_to 'Return to this request', reconciliation_follow_up_path(item, close_day: local_assigns[:close_day]&.iso8601), class: 'btn-ghost btn-sm' %><% end %>
+      <% else %><p class="text-xs text-mocha">This file does not match the request's full source, kind, covered period or control scope. It cannot be selected for this request.</p><% end %>
+    </section>
+  <% end %>
+  <% if !local_assigns[:report_request] && (matches = local_assigns[:follow_ups]) && matches.total.positive? %>
+    <section class="rounded-xl border border-fog p-3 space-y-3" aria-label="Matching follow-ups for evidence <%= doc.id %>">
+      <h2 class="text-sm font-semibold"><%= pluralize(matches.total, 'matching open follow-up') %></h2>
+      <% matches.items.each do |item| %>
+        <div class="rounded-lg p-3 space-y-2 <%= item.overdue? ? 'border border-amber-300 bg-amber-50' : 'bg-haze' %>">
+          <p class="text-xs font-semibold"><%= reconciliation_due_label(item) %> · <%= item.due_on.strftime('%b %-d, %Y') %><%= item.document_id == doc.id ? ' · This original is linked' : (item.document_id ? ' · Another original is linked' : ' · No original linked') %></p>
+          <p class="break-words text-sm font-semibold"><%= item.title %></p>
+          <% if Current.user.can?('reports.write') && item.document_id != doc.id %><%= link_to 'Review & link this original', reconciliation_follow_up_path(item, evidence: doc.id, anchor: 'record-progress'), class: 'btn-ghost btn-sm' %>
+          <% else %><%= link_to 'View follow-up', reconciliation_follow_up_path(item), class: 'btn-ghost btn-sm' %><% end %>
+        </div>
+      <% end %>
+      <% if matches.total > matches.items.size %><%= link_to "See all #{matches.total} matching follow-ups", reconciliation_follow_ups_path(original: doc.id), class: 'block text-sm font-semibold text-olive underline' %><% end %>
+      <p class="text-xs text-mocha">Coverage matches this file. Review its contents before linking; save a progress note to confirm. Nothing is sent to anyone.</p>
+    </section>
+  <% end %>
   <p class="text-xs text-mocha"><% if copy&.drive_url %><%= link_to 'Copied to Drive · verified ↗', copy.drive_url, target: '_blank', rel: 'noopener noreferrer', class: 'font-semibold text-olive underline' %><% elsif copy&.status == 'failed' %>Drive copy needs retry · original retained here<% else %>Encrypted original retained in Rupert<% end %></p>
   <details class="border-t border-haze pt-3 text-xs"><summary class="cursor-pointer font-semibold">Source details & checksum</summary><div class="mt-3 space-y-2"><% doc.metadata.each do |key, value| %><p class="break-words"><strong><%= key.humanize %>:</strong> <%= ReconciliationEvidence::AMOUNTS.include?(key) ? reconciliation_money(value) : (value.presence || 'Unavailable') %></p><% end %><p class="break-all font-mono">SHA-256: <%= doc.sha256 %></p></div></details>
 </article>

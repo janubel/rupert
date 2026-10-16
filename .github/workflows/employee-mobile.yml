@@ -1,9 +1,9 @@
 name: Employee mobile
 on:
   push:
-    paths: ['mobile/**', '.github/workflows/employee-mobile.yml']
+    paths: ['mobile/**', 'bin/check-mobile-sdk.mjs', '.github/workflows/employee-mobile.yml']
   pull_request:
-    paths: ['mobile/**', '.github/workflows/employee-mobile.yml']
+    paths: ['mobile/**', 'bin/check-mobile-sdk.mjs', '.github/workflows/employee-mobile.yml']
 permissions:
   contents: read
 jobs:
@@ -20,7 +20,26 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
-      - run: npx expo install --check
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run export
+      - name: Validate SDK compatibility, security backports, audit and employee boundaries
+        run: |
+          node ../bin/check-mobile-sdk.mjs --self-test
+          node ../bin/check-mobile-sdk.mjs
+          npm run verify:security
+          npm run typecheck
+          npm test
+          npm run audit:security
+      - name: Validate Expo app configuration
+        # SDK compatibility is checked against the installed manifest above.
+        # Doctor's remote latest-patch recommendation is not a locked-build test.
+        env:
+          EXPO_DOCTOR_SKIP_DEPENDENCY_VERSION_CHECK: '1'
+        run: npx --yes expo-doctor@1.21.4
+      - name: Export both native platforms with Hermes
+        run: npm run export
+      - name: Retain unsigned JavaScript export verification artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: employee-native-js-exports-${{ github.sha }}
+          path: mobile/dist/
+          if-no-files-found: error
+          retention-days: 14

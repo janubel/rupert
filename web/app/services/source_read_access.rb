@@ -26,9 +26,10 @@ class SourceReadAccess
   end
 
   def call
+    return unless %w[shopify square ctrax swipesimple authorize_net bank].include?(@source)
+
     case @source
     when 'shopify', 'square' then managed_access
-    when 'google_backup' then backup_access
     else provider_access
     end
   end
@@ -75,16 +76,5 @@ class SourceReadAccess
     missing(absent, PROVIDER_ACTIONS.fetch(@source),
       state: approval_only ? 'Read authorization required' : 'Missing access',
       reason: approval_only ? 'Rupert read authorization has not been confirmed' : 'Required read setup is missing')
-  end
-
-  def backup_access
-    fields = { 'GOOGLE_DRIVE_CLIENT_ID' => 'Backup OAuth client ID', 'GOOGLE_DRIVE_CLIENT_SECRET' => 'Backup OAuth client secret' }
-    absent = fields.filter_map { |key, label| label if EnvStore.platform_fetch(key, '').blank? }
-    return missing(absent, 'The platform operator must complete the existing Google Drive backup client setup.') if absent.any?
-    return ready if EnvStore.platform_fetch('GOOGLE_DRIVE_REFRESH_TOKEN', '').present?
-
-    # The backup service creates a folder after consent; no folder ID is required here.
-    missing(['Google Drive backup authorization'], 'The platform operator must complete Connect Google Drive from Backup settings and verify a backup. Document-retention Drive has a separate consent flow.',
-      state: 'Authorization required', reason: 'Google Drive backup consent is incomplete')
   end
 end

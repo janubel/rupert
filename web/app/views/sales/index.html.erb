@@ -3,7 +3,7 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Sales</h1>
-      <p class="mt-1 text-sm text-mocha">Daily sales journal — where each sale came in, in the order it happened.</p>
+      <p class="mt-1 text-sm text-mocha">Order journal — imported and Rupert orders, including their current status.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
       <div class="flex items-center gap-1 rounded-full border border-fog bg-paper p-1">
@@ -15,6 +15,7 @@
       </div>
       <%= form_tag sales_path, method: :get, class: "flex flex-wrap items-center gap-2" do %>
         <%= hidden_field_tag :source, (@source == "all" ? nil : @source) %>
+        <%= label_tag :date, "Business date", class: "text-sm text-mocha" %>
         <%= text_field_tag :date, @date.iso8601, type: "date", class: "select" %>
         <%= submit_tag "Jump to day", class: "btn-ghost btn-sm" %>
       <% end %>
@@ -29,6 +30,11 @@
         <%= link_to "Invoices", sales_print_path(date: @date, doc: "invoice"), class: "nav-pill nav-pill-idle-sm", title: "Batch print this day's invoices" %>
       </div>
     </div>
+  </section>
+
+  <section class="card card-pad flex flex-wrap items-center justify-between gap-3" aria-label="Sales coverage">
+    <p class="max-w-2xl text-sm text-mocha">Native C-Trax orders are included in dashboard sales and reviewed in daily close. This journal contains canonical orders; its charts show paid and fulfilled orders. Payment and deposit reports are separate.</p>
+    <div class="flex flex-wrap gap-2"><%= link_to 'Dashboard sales', dashboard_path, class: 'btn-ghost btn-sm' if Current.user.can?('dashboard.read') %><%= link_to 'C-Trax daily close', ctrax_days_path(date: @date), class: 'btn-ghost btn-sm' %></div>
   </section>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">

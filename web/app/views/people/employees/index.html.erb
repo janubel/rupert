@@ -6,19 +6,21 @@
       <p class="mt-1 text-sm text-mocha">The team directory with their department, position, and employment status.</p>
     </div>
     <div class="flex flex-wrap gap-2">
+      <%= link_to 'Employee problem reports', people_work_reports_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
       <%= link_to "Departments", people_departments_path, class: "btn-ghost btn-sm" %>
       <%= link_to "Positions", people_positions_path, class: "btn-ghost btn-sm" %>
       <% if Current.user.can?("hr.write") && Current.user.can?("sync.write") %>
         <%= button_to "Sync employees now", sync_directory_people_employees_path, class: "btn-ghost btn-sm" %>
       <% end %>
       <% if Current.user.can?("hr.write") %>
+        <%= link_to 'Consolidate profiles', consolidation_people_employees_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
         <%= link_to "Add employee", new_people_employee_path, class: "btn-primary" %>
       <% end %>
     </div>
   </section>
 
   <%= render "shared/directory_sync_status", kind: "employees" %>
-  <p class="text-xs text-taupe">Native staff accounts remain separate. Confirm identity, employment type, and payroll details before creating a web login.</p>
+  <p class="text-xs text-taupe">Each employee can have accounts in several apps. Consolidated profiles retain every source identity. Confirm employment type and payroll details before payroll.</p>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
@@ -66,23 +68,25 @@
             <th scope="col" class="th">Department</th>
             <th scope="col" class="th">Position</th>
             <th scope="col" class="th">Web login</th>
+            <th scope="col" class="th">Access &amp; tabs</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @employees.empty? %>
-            <tr><td colspan="5" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No employees yet — add the first one." %></td></tr>
+            <tr><td colspan="6" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No employees yet — add the first one." %></td></tr>
           <% end %>
           <% @employees.each do |employee| %>
             <tr class="hover:bg-cream">
               <td class="td">
                 <p class="font-medium text-ink"><%= link_to employee.name, people_employee_path(employee), class: "hover:text-olive hover:underline" %></p>
-                <% if employee.source.present? %><p class="text-xs text-taupe"><%= directory_label(employee.source) %> · source account <%= employee.source_active.nil? ? 'status not supplied' : employee.source_active ? 'active' : 'inactive' %> · <%= employee.employment_type.tr('_', ' ') %></p><% end %>
+                <% employee.source_identities.each do |identity| %><p class="text-xs text-taupe"><%= directory_label(identity.source) %> · <%= identity.source_active.nil? ? 'status not supplied' : identity.source_active ? 'active' : 'inactive' %></p><% end %>
                 <p class="text-xs text-taupe"><%= employee.employee_number.presence || employee.email %></p>
               </td>
               <td class="td text-mocha"><%= employee.department&.name || "—" %></td>
               <td class="td text-mocha"><%= employee.position&.name || "—" %></td>
               <td class="td text-mocha"><%= employee.user ? (employee.user.active? ? "Login linked" : "Login disabled") : "Needs login" %></td>
+              <td class="td"><%= render 'access_badges', employee: employee, compact: true %><%= link_to 'Review access', people_employee_path(employee, anchor: 'access'), class: 'mt-2 inline-block text-xs text-olive underline' %></td>
               <td class="td">
                 <span class="<%= employee.active? ? "pill-fern" : employee.on_leave? ? "pill-olive" : "pill-rose" %>">
                   <span class="dot <%= employee.active? ? "bg-fern" : employee.on_leave? ? "bg-olive" : "bg-rose" %>"></span>

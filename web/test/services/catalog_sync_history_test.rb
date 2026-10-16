@@ -3,8 +3,14 @@
 require 'test_helper'
 
 class CatalogSyncHistoryTest < ActiveSupport::TestCase
-  setup { Current.user = users(:regular_user) }
-  teardown { Current.reset }
+  setup do
+    travel_to Time.current.change(usec: 0)
+    Current.user = users(:regular_user)
+  end
+  teardown do
+    travel_back
+    Current.reset
+  end
 
   def historical_run(source, status: 'success', at: 5.minutes.ago)
     SyncRun.create!(source: source, status: status, mode: 'scheduled', actor: 'test', startedAt: at - 1.minute, finishedAt: at)
@@ -45,5 +51,25 @@ class CatalogSyncHistoryTest < ActiveSupport::TestCase
     Current.tenant = Tenant.create!(name: 'Other history', subdomain: 'other-history', status: 'active')
     assert_nil CatalogSyncHistory.legacy_success('shopify')
     assert_nil CatalogSyncHistory.watermark('shopify')
+  end
+
+  test 'an unrelated combined failure cannot invent a failed Square read' do
+    EnvStore.stubs(:fetch).returns('synthetic-present')
+    historical_run('all', status: 'failed')
+    sources = SourceSyncStatus.all(include_platform: false)
+    assert_equal 'Error', sources.find { |source| source[:key] == 'shopify' }[:badge]
+    square = sources.find { |source| source[:key] == 'square' }
+    assert_equal 'Awaiting pull', square[:badge]
+    refute_equal 'Legacy failure · cause unknown', SourceHealth.for(square).first[:state]
+    historical_run('square', status: 'failed', at: 1.minute.ago)
+    assert_equal 'Error', SourceSyncStatus.all(include_platform: false).find { |source| source[:key] == 'square' }[:badge]
+  end
+
+  test 'malformed Square acquisition timestamps leave both source cards readable' do
+    EnvStore.stubs(:fetch).returns('synthetic-present')
+    Setting.create!(key: 'sync_watermark_square', value: 'not-a-time', tenant_id: Current.tenant_id)
+    square = SourceSyncStatus.all(include_platform: false).find { |source| source[:key] == 'square' }
+    assert_nil square[:last_at]
+    assert_equal 'Awaiting pull', square[:badge]
   end
 end

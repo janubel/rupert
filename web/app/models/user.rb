@@ -32,7 +32,7 @@ class User < ActiveRecord::Base
       reader: 'reader',
       employee: 'employee'
     },
-    default: :admin
+    default: :employee
 
   # Permission matrix. "*" grants everything.
   ROLE_PERMISSIONS = {
@@ -102,7 +102,7 @@ class User < ActiveRecord::Base
       'leave.read',
       'leave.write'
     ],
-    'employee' => %w[timesheets.self],
+    'employee' => %w[pos.use timesheets.self],
     'cashier' => [
       'dashboard.read',
       'sales.read',
@@ -131,6 +131,11 @@ class User < ActiveRecord::Base
     perms.include?('*') || perms.include?(permission.to_s)
   end
 
+  # POS access does not grant sales history, reports or inventory management.
+  def can_use_pos?
+    active? && (can?('pos.use') || %w[sales.read sales.write inventory.read].all? { |permission| can?(permission) })
+  end
+
   def permissions_signature
     Digest::SHA256.hexdigest(effective_permissions.sort.join('|'))
   end
@@ -156,6 +161,10 @@ class User < ActiveRecord::Base
   #   2. per-role overrides (role_permissions)       — replaces built-ins for role
   #   3. built-in ROLE_PERMISSIONS matrix
   def effective_permissions
+    # Employee sign-in is a self-service boundary, including when stale or
+    # mistaken person/role overrides contain wider permissions or a wildcard.
+    return ROLE_PERMISSIONS.fetch('employee') if employee?
+
     @effective_permissions = nil if @effective_permissions_role != role
     @effective_permissions_role = role
     @effective_permissions ||= if super_admin?
@@ -179,6 +188,9 @@ class User < ActiveRecord::Base
   # Replace this user's per-employee permission overrides with the given list.
   # An empty list removes all overrides (falls back to role permissions).
   def update_permission_overrides!(permissions)
+    if employee? && (permissions.to_a - ROLE_PERMISSIONS.fetch('employee')).any?
+      raise ArgumentError, 'Employee access is limited to POS and their own time records.'
+    end
     @effective_permissions = nil
     user_permissions.reset
     user_permissions.delete_all
@@ -207,7 +219,7 @@ class User < ActiveRecord::Base
       { area: 'Marketing', permissions: ['marketing.read', 'marketing.write', 'marketing.review', 'marketing.contacts', 'marketing.discounts'] },
       {
         area: 'Commerce',
-        permissions: ['sales.read', 'sales.write', 'customers.read', 'customers.write', 'inventory.read',
+        permissions: ['pos.use', 'sales.read', 'sales.write', 'customers.read', 'customers.write', 'inventory.read',
                       'inventory.write']
       },
       {

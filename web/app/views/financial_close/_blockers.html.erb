@@ -1,0 +1,18 @@
+<% day = workflow.day; blockers = workflow.blockers %>
+<section id="close-blockers" class="space-y-4 scroll-mt-48" aria-label="Close blockers">
+  <div class="card card-pad space-y-3 <%= blockers.empty? ? 'border-emerald-200 bg-emerald-50' : 'border-amber-300 bg-amber-50' %>">
+    <h2 class="font-display text-2xl"><%= blockers.empty? ? 'Recorded checks clear · finish the reviewer checklist' : "#{pluralize(blockers.size, 'check')} before a complete close" %></h2>
+    <p class="text-sm"><% if !workflow.review_current? %>A current review is required before retaining any close package. Resolve the evidence below, then record your review.<% elsif blockers.any? %>You can retain a package with documented exceptions after completing the checklist. These items stay open until resolved.<% else %>Confirm originals, bank checks and retention requirements, then retain the close package.<% end %></p>
+    <% if blockers.any? %><%= link_to "Start: #{blockers.first[:title]}", financial_close_blocker_path(blockers.first[:key], day), class: 'btn-primary' %><% else %><%= link_to(can_write ? 'Complete close checklist' : 'Inspect retained close versions', can_write ? '#retain-close' : '#close-history', class: 'btn-primary') %><% end %>
+    <p class="text-xs text-mocha">Counts describe checks and may overlap. Google Drive remains pending; local originals stay available.</p>
+  </div>
+  <div class="grid gap-3 md:grid-cols-2" aria-label="Checks needing action">
+    <% blockers.each do |blocker| %><article class="card card-pad space-y-3 min-w-0"><div class="flex flex-wrap justify-between gap-2"><h3 class="font-semibold"><%= blocker[:title] %><%= blocker[:count] ? " · #{blocker[:count]}" : '' %></h3><span class="text-xs font-semibold text-mocha"><%= blocker[:required] ? 'Required for any package' : 'Blocks complete close' %></span></div><p class="text-sm text-mocha"><%= blocker[:detail] %></p><%= link_to financial_close_action_label(blocker[:key]), financial_close_blocker_path(blocker[:key], day), class: 'btn-ghost btn-sm', aria: { label: "Open #{blocker[:title]}" } %></article><% end %>
+  </div>
+  <% if workflow.attention.missing_controls.any? %><section id="close-missing-reports" class="space-y-3 scroll-mt-48" aria-label="Missing reports blocking close"><h3 class="font-display text-xl">Which register reports are missing?</h3>
+    <% workflow.attention.missing_controls.first(4).each do |row| %>
+      <div class="card card-pad"><%= render 'financial_close/missing_report', row: row, request: workflow.missing_control_request(row), control_key: workflow.attention.control_key(row), day: day, can_write: can_write %></div>
+    <% end %><% if workflow.attention.missing_controls.size > 4 %><%= link_to 'See every missing register scope', daily_reconciliations_path(day: day.iso8601, anchor: 'missing-controls'), class: 'text-sm font-semibold text-olive underline' %><% end %>
+  </section><% end %>
+  <% if workflow.open_follow_ups.any? %><section id="close-follow-ups" class="space-y-3 scroll-mt-48" aria-label="Priority follow-ups blocking close"><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-display text-xl">Next follow-ups for this date</h3><%= link_to "All #{workflow.open_follow_ups.size} open follow-ups", reconciliation_follow_ups_path(day: day.iso8601), class: 'text-sm text-olive underline' %></div><div class="grid gap-3 md:grid-cols-2"><% workflow.open_follow_ups.first(3).each do |item| %><%= render 'reconciliation_follow_ups/card', item: item, heading_tag: :h4, close_day: day %><% end %></div></section><% end %>
+</section>

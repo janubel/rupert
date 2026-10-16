@@ -1,0 +1,13 @@
+# Live shift commission estimates and Authorize.net events — October 15, 2026
+
+SER8 application code `4886be5320bee236f137ac0db651586caad865fb` was promoted at approximately 10:52 PM America/New_York on October 15. The previous release was `31a6fac3dd52c8c3dc64b0560d3db8b345fff9cb`. Promotion preserved the existing marketing and native NAB reporting changes. No schema changes, merchant settings, key rotations, checkout operations or payroll postings were performed.
+
+A consistent private SQLite backup passed integrity and foreign-key checks before promotion; private configuration and the previous release ID were retained alongside it. Code advancement required an unchanged, clean live checkout and a fast-forward from the verified previous release. Dependencies, eager loading, assets and migration status were checked. Activation used the established host-side Incus restart workflow.
+
+After activation, web and jobs were active with zero restart counts. Public health and the new refresh-controller asset returned HTTP 200. The commission endpoint redirected signed-out requests to login. An unconfigured callback rejected a request with HTTP 404. Production eager loading succeeded, the commission widget was registered, the five-minute reporting schedule loaded and the commission service computed against local production data. Job administration showed two failed jobs; this record does not attribute those historical failures to the release.
+
+The live prerequisite check found no saved Authorize.net reporting API connection and no recorded clock shifts. Existing manual exports do not establish live gateway reporting, item-sale attribution or commission completeness. Save the existing credentials through the encrypted connection form, verify read access, configure signed payment callbacks and record worker shifts before claiming complete real-time coverage. Authorize.net observations remain separate from sales and do not award a second commission.
+
+Validation included a full SQLite run of 978 tests / 7,063 assertions before the final integration and refresh fixes; changed Ruby files passed configured RuboCop. Follow-up checks passed 17 tests / 140 assertions for financial frame refresh and 40 tests / 358 assertions after merging the newest native NAB connector, including its reporting tests. Generated documentation, local links and eager loading passed. Browser verification exercised the dashboard, source selection and corrected commission frame using synthetic local fixtures. Live signed-in browser access and actual Authorize.net delivery remain unverified.
+
+See [Authorize.net reporting and setup](authorize-net-reporting.md) and [PR #63](https://github.com/techmore/rupert/pull/63).

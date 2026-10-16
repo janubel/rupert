@@ -33,9 +33,9 @@ class PageGuides
       summary: "Your at-a-glance store health: today's money, sales volume, and anything needing attention like inventory drift or low stock.",
       sections: [
         { heading: "What you're seeing",
-          body: 'The top cards summarize today and yesterday: gross revenue, sales volume, and attention items. Charts show the trend over the last 30 days. The attention rail lists real problems — SKUs where Shopify and Square disagree, or items near/out of stock — so you act on the exceptions, not the whole list.' },
+          body: 'Sales cards and charts use paid canonical orders and completed native C-Trax orders. Each native C-Trax order is counted once by source, store and order ID. Source pull times and latest sale dates describe different kinds of coverage; a recent pull can contain older sales.' },
         { heading: 'How to read the numbers',
-          body: "Revenue is gross sales (before returns), from orders mirrored by the sync. Volume is order count, not items. 'vs yesterday' compares the same hour-of-day, so morning vs morning. A clay SKU in attention means its SKU differs between Shopify and Square — worth a look on Catalog Links." }
+          body: "Sales are recorded USD totals from paid and fulfilled orders plus completed C-Trax sales. C-Trax tips remain separate. Payment reports, invoices and deposits are never added. Refunds require separate source review. Yesterday is the whole previous day; the last 7 and 30 days include today. Missing imports do not prove zero activity." }
       ],
       tips: [
         "Check the attention rail first every morning — it's ordered by severity.",
@@ -80,10 +80,10 @@ class PageGuides
       summary: 'Read-only Shopify and C-Trax observations of shared stock, with current catalog coverage and source read times.',
       sections: [
         { heading: 'Read the source states', body: 'Select one Shopify location and one C-Trax store. Shopify on-hand, available and committed quantities are separate. C-Trax retains signed stock. These are observations of shared stock; never add their quantities together.' },
-        { heading: 'Review identities and exceptions', body: 'Unique native variant IDs take precedence. Unique SKUs are candidates, not approved mappings. Duplicate or conflicting identities stay unpaired. Unknown stock is not zero; no current match does not mean not carried.' }
+        { heading: 'Review identities and exceptions', body: 'Unique native variant IDs take precedence. Unique SKU/barcode identifiers are candidates, not approved mappings. Exact product words and explicit packages can suggest additional candidates, with both source names and matching evidence. These name/package candidates have no quantity difference. Duplicate or conflicting identities stay unresolved. Historical Shopify candidates explain unmatched C-Trax items without restoring old stock. Unknown stock is not zero; no current match does not mean not carried.' }
       ],
       tips: [
-        'Search by item, SKU or native ID. Attention and unmatched filters also apply to the CSV export.',
+        'Search either source name, SKU, barcode, native ID or investigation note. Attention, unmatched, product/package, saved-findings and historical filters also apply to CSV.',
         'Older-than-one-hour, unknown, fractional or untracked observations have no numerical difference.',
         'Current active tracked Shopify variants are shown; archived, absent and unverified historical records are excluded. This page never changes stock, SKUs or mappings.'
       ]
@@ -177,7 +177,7 @@ class PageGuides
       ],
       tips: [
         'Only the platform super administrator configures Google Drive backups. Every 6 hours, Rupert can copy the entire shared instance database to that approved destination; store credentials cannot authorize this.',
-        'Add every staff email domain to Google sign-in; new people on an allowed domain get a reader account automatically.',
+        'Add every staff email domain to Google sign-in; new people on an allowed domain get a employee account automatically.',
         'Environment secrets (Square/Shopify tokens) live in the .env card and are encrypted at rest.'
       ]
     ),

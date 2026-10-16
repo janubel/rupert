@@ -16,9 +16,11 @@ module People
     validates :pay_type, inclusion: { in: PAY_TYPES }
     validates :pay_frequency, inclusion: { in: PAY_FREQUENCIES }
     validates :effective_on, presence: true
+    validates :hourly_rate_cents, :annual_salary_cents, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 2_000_000_000, only_integer: true }
+    validate :ended_after_effective
     validate :one_rate_kind
 
-    scope :current, -> { where('ended_on IS NULL OR ended_on >= ?', Date.current) }
+    scope :current, -> { where('effective_on <= ? AND (ended_on IS NULL OR ended_on >= ?)', Date.current, Date.current) }
     scope :recent, -> { order(effective_on: :desc) }
 
     def rate_cents
@@ -34,6 +36,10 @@ module People
     end
 
     private
+
+    def ended_after_effective
+      errors.add(:ended_on, 'must not be before the effective date') if ended_on && effective_on && ended_on < effective_on
+    end
 
     def one_rate_kind
       if pay_type == 'hourly' && annual_salary_cents.positive?

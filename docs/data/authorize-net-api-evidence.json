@@ -1,0 +1,1100 @@
+{
+  "reviewed_on": "2026-10-15",
+  "activation_state": "paused_by_owner",
+  "application_code_reviewed": "06f08218eb57379910409c78323b18f5bcda083f",
+  "schema": {
+    "url": "https://api.authorize.net/xml/v1/schema/AnetApiSchema.xsd",
+    "sha256": "c9c76cdbeba1f030bb453cdeec963457b9f85c6799db9b3888b0ade1a635a1fa",
+    "bytes": 212164,
+    "note": "Derived names/types only; no merchant response or credentials. Field occurrences are local XSD declarations, not a flattened validation contract; ancestors, choice groups and type inheritance must also be considered."
+  },
+  "top_level_request_elements": [
+    "ARBCancelSubscriptionRequest",
+    "ARBCreateSubscriptionRequest",
+    "ARBGetSubscriptionListRequest",
+    "ARBGetSubscriptionRequest",
+    "ARBGetSubscriptionStatusRequest",
+    "ARBUpdateSubscriptionRequest",
+    "authenticateTestRequest",
+    "createCustomerPaymentProfileRequest",
+    "createCustomerProfileFromTransactionRequest",
+    "createCustomerProfileRequest",
+    "createCustomerProfileTransactionRequest",
+    "createCustomerShippingAddressRequest",
+    "createTransactionRequest",
+    "decryptPaymentDataRequest",
+    "deleteCustomerPaymentProfileRequest",
+    "deleteCustomerProfileRequest",
+    "deleteCustomerShippingAddressRequest",
+    "getADDetailsRequest",
+    "getAUJobDetailsRequest",
+    "getAUJobSummaryRequest",
+    "getBatchStatisticsRequest",
+    "getCustomerPaymentProfileListRequest",
+    "getCustomerPaymentProfileNonceRequest",
+    "getCustomerPaymentProfileRequest",
+    "getCustomerProfileIdsRequest",
+    "getCustomerProfileRequest",
+    "getCustomerShippingAddressRequest",
+    "getHostedPaymentPageRequest",
+    "getHostedProfilePageRequest",
+    "getMerchantDetailsRequest",
+    "getSettledBatchListRequest",
+    "getTransactionDetailsRequest",
+    "getTransactionListForCustomerRequest",
+    "getTransactionListRequest",
+    "getTransactionSummaryRequest",
+    "getUnsettledTransactionListRequest",
+    "isAliveRequest",
+    "logoutRequest",
+    "mobileDeviceLoginPinRequest",
+    "mobileDeviceLoginVerifyChallengeRequest",
+    "mobileDeviceLoginVerifyPinRequest",
+    "mobileDeviceMfaLoginRequest",
+    "mobileDeviceRegistrationRequest",
+    "saveDeviceSNRequest",
+    "securePaymentContainerRequest",
+    "sendCustomerTransactionReceiptRequest",
+    "updateCustomerPaymentProfileRequest",
+    "updateCustomerProfileRequest",
+    "updateCustomerShippingAddressRequest",
+    "updateHeldTransactionRequest",
+    "updateMerchantDetailsRequest",
+    "updateSplitTenderGroupRequest",
+    "validateCustomerPaymentProfileRequest"
+  ],
+  "selected_contracts": {
+    "TransactionGroupStatusEnum": {
+      "schema_kind": "simpleType",
+      "fields": [],
+      "enumeration_values": [
+        "any",
+        "pendingApproval"
+      ]
+    },
+    "orderType": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "invoiceNumber",
+          "minOccurs": "0"
+        },
+        {
+          "name": "description",
+          "minOccurs": "0"
+        },
+        {
+          "name": "discountAmount",
+          "minOccurs": "0",
+          "type": "xs:decimal"
+        },
+        {
+          "name": "taxIsAfterDiscount",
+          "type": "xs:boolean",
+          "minOccurs": "0"
+        },
+        {
+          "name": "totalTaxTypeCode",
+          "minOccurs": "0"
+        },
+        {
+          "name": "purchaserVATRegistrationNumber",
+          "minOccurs": "0"
+        },
+        {
+          "name": "merchantVATRegistrationNumber",
+          "minOccurs": "0"
+        },
+        {
+          "name": "vatInvoiceReferenceNumber",
+          "minOccurs": "0"
+        },
+        {
+          "name": "purchaserCode",
+          "minOccurs": "0"
+        },
+        {
+          "name": "summaryCommodityCode",
+          "minOccurs": "0"
+        },
+        {
+          "name": "purchaseOrderDateUTC",
+          "minOccurs": "0",
+          "type": "xs:date"
+        },
+        {
+          "name": "supplierOrderReference",
+          "minOccurs": "0"
+        },
+        {
+          "name": "authorizedContactName",
+          "minOccurs": "0"
+        },
+        {
+          "name": "cardAcceptorRefNumber",
+          "minOccurs": "0"
+        },
+        {
+          "name": "amexDataTAA1",
+          "minOccurs": "0"
+        },
+        {
+          "name": "amexDataTAA2",
+          "minOccurs": "0"
+        },
+        {
+          "name": "amexDataTAA3",
+          "minOccurs": "0"
+        },
+        {
+          "name": "amexDataTAA4",
+          "minOccurs": "0"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "orderExType": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "purchaseOrderNumber",
+          "minOccurs": "0"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "merchantAuthenticationType": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "name",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "transactionKey"
+        },
+        {
+          "name": "sessionToken",
+          "type": "xs:string",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "password"
+        },
+        {
+          "name": "impersonationAuthentication",
+          "type": "anet:impersonationAuthenticationType",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "fingerPrint",
+          "type": "anet:fingerPrintType",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "clientKey",
+          "type": "xs:string",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "maxOccurs": "1",
+          "minOccurs": "0",
+          "name": "accessToken",
+          "type": "xs:string"
+        },
+        {
+          "name": "activationCode",
+          "type": "xs:string",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "mobileDeviceId",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "encPassword",
+          "type": "xs:string",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "encMobileDeviceId",
+          "type": "xs:string",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "lineItemType": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "itemId"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "description",
+          "minOccurs": "0"
+        },
+        {
+          "name": "quantity"
+        },
+        {
+          "name": "unitPrice"
+        },
+        {
+          "name": "taxable",
+          "minOccurs": "0",
+          "type": "xs:boolean"
+        },
+        {
+          "name": "unitOfMeasure",
+          "minOccurs": "0"
+        },
+        {
+          "name": "typeOfSupply",
+          "minOccurs": "0"
+        },
+        {
+          "name": "taxRate",
+          "minOccurs": "0"
+        },
+        {
+          "name": "taxAmount",
+          "minOccurs": "0"
+        },
+        {
+          "name": "nationalTax",
+          "minOccurs": "0",
+          "type": "xs:decimal"
+        },
+        {
+          "name": "localTax",
+          "minOccurs": "0",
+          "type": "xs:decimal"
+        },
+        {
+          "name": "vatRate",
+          "minOccurs": "0"
+        },
+        {
+          "name": "alternateTaxId",
+          "minOccurs": "0"
+        },
+        {
+          "name": "alternateTaxType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "alternateTaxTypeApplied",
+          "minOccurs": "0"
+        },
+        {
+          "name": "alternateTaxRate",
+          "minOccurs": "0"
+        },
+        {
+          "name": "alternateTaxAmount",
+          "minOccurs": "0",
+          "type": "xs:decimal"
+        },
+        {
+          "name": "totalAmount",
+          "minOccurs": "0"
+        },
+        {
+          "name": "commodityCode",
+          "minOccurs": "0"
+        },
+        {
+          "name": "productCode",
+          "minOccurs": "0"
+        },
+        {
+          "name": "productSKU",
+          "minOccurs": "0"
+        },
+        {
+          "name": "discountRate",
+          "minOccurs": "0"
+        },
+        {
+          "name": "discountAmount",
+          "minOccurs": "0"
+        },
+        {
+          "name": "taxIncludedInTotal",
+          "minOccurs": "0",
+          "type": "xs:boolean"
+        },
+        {
+          "name": "taxIsAfterDiscount",
+          "minOccurs": "0",
+          "type": "xs:boolean"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "transactionSummaryType": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "transId",
+          "type": "anet:numericString"
+        },
+        {
+          "name": "submitTimeUTC",
+          "type": "xs:dateTime"
+        },
+        {
+          "name": "submitTimeLocal",
+          "type": "xs:dateTime"
+        },
+        {
+          "name": "transactionStatus",
+          "type": "xs:string"
+        },
+        {
+          "name": "invoiceNumber",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "firstName",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "lastName",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "accountType",
+          "type": "xs:string"
+        },
+        {
+          "name": "accountNumber",
+          "type": "xs:string"
+        },
+        {
+          "name": "settleAmount",
+          "type": "xs:decimal"
+        },
+        {
+          "name": "marketType",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "product",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "mobileDeviceId",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "subscription",
+          "type": "anet:subscriptionPaymentType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "hasReturnedItems",
+          "type": "xs:boolean",
+          "minOccurs": "0"
+        },
+        {
+          "name": "fraudInformation",
+          "type": "anet:fraudInformationType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "profile",
+          "type": "anet:customerProfileIdType",
+          "minOccurs": "0"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "transactionDetailsType": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "transId",
+          "type": "anet:numericString"
+        },
+        {
+          "name": "refTransId",
+          "type": "anet:numericString",
+          "minOccurs": "0"
+        },
+        {
+          "name": "splitTenderId",
+          "type": "anet:numericString",
+          "minOccurs": "0"
+        },
+        {
+          "name": "submitTimeUTC",
+          "type": "xs:dateTime"
+        },
+        {
+          "name": "submitTimeLocal",
+          "type": "xs:dateTime"
+        },
+        {
+          "name": "transactionType",
+          "type": "xs:string"
+        },
+        {
+          "name": "transactionStatus",
+          "type": "xs:string"
+        },
+        {
+          "name": "responseCode",
+          "type": "xs:int"
+        },
+        {
+          "name": "responseReasonCode",
+          "type": "xs:int"
+        },
+        {
+          "name": "subscription",
+          "type": "anet:subscriptionPaymentType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "responseReasonDescription",
+          "type": "xs:string"
+        },
+        {
+          "name": "authCode",
+          "minOccurs": "0"
+        },
+        {
+          "name": "AVSResponse",
+          "minOccurs": "0"
+        },
+        {
+          "name": "cardCodeResponse",
+          "minOccurs": "0"
+        },
+        {
+          "name": "CAVVResponse",
+          "minOccurs": "0"
+        },
+        {
+          "name": "FDSFilterAction",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "FDSFilters",
+          "type": "anet:ArrayOfFDSFilter",
+          "minOccurs": "0"
+        },
+        {
+          "name": "batch",
+          "type": "anet:batchDetailsType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "order",
+          "type": "anet:orderExType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "requestedAmount",
+          "minOccurs": "0"
+        },
+        {
+          "name": "authAmount"
+        },
+        {
+          "name": "settleAmount"
+        },
+        {
+          "name": "tax",
+          "type": "anet:extendedAmountType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "shipping",
+          "type": "anet:extendedAmountType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "duty",
+          "type": "anet:extendedAmountType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "lineItems",
+          "type": "anet:ArrayOfLineItem",
+          "minOccurs": "0"
+        },
+        {
+          "name": "prepaidBalanceRemaining",
+          "minOccurs": "0"
+        },
+        {
+          "name": "taxExempt",
+          "type": "xs:boolean",
+          "minOccurs": "0"
+        },
+        {
+          "name": "payment",
+          "type": "anet:paymentMaskedType"
+        },
+        {
+          "name": "customer",
+          "type": "anet:customerDataType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "billTo",
+          "type": "anet:customerAddressType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "shipTo",
+          "type": "anet:nameAndAddressType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "recurringBilling",
+          "type": "xs:boolean",
+          "minOccurs": "0"
+        },
+        {
+          "name": "customerIP",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "product",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "entryMode",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "marketType",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "mobileDeviceId",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "customerSignature",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "returnedItems",
+          "type": "anet:ArrayOfReturnedItem",
+          "minOccurs": "0"
+        },
+        {
+          "name": "solution",
+          "type": "anet:solutionType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "emvDetails",
+          "minOccurs": "0"
+        },
+        {
+          "name": "tag",
+          "minOccurs": "1",
+          "maxOccurs": "unbounded"
+        },
+        {
+          "name": "tagId",
+          "type": "xs:string"
+        },
+        {
+          "name": "data",
+          "type": "xs:string"
+        },
+        {
+          "name": "profile",
+          "type": "anet:customerProfileIdType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "surcharge",
+          "type": "anet:extendedAmountType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "employeeId",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "tip",
+          "type": "anet:extendedAmountType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "otherTax",
+          "minOccurs": "0",
+          "type": "anet:otherTaxType"
+        },
+        {
+          "name": "shipFrom",
+          "minOccurs": "0",
+          "type": "anet:nameAndAddressType"
+        },
+        {
+          "name": "networkTransId",
+          "type": "anet:networkTransId",
+          "minOccurs": "0"
+        },
+        {
+          "name": "originalNetworkTransId",
+          "type": "anet:networkTransId",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "originalAuthAmount",
+          "minOccurs": "0"
+        },
+        {
+          "name": "authorizationIndicator",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "merchantAdvice",
+          "type": "anet:merchantAdviceType",
+          "minOccurs": "0"
+        },
+        {
+          "name": "tapToPhone",
+          "type": "xs:boolean"
+        },
+        {
+          "name": "debtRepaymentIndicator",
+          "type": "xs:boolean"
+        },
+        {
+          "name": "purchaseLevel",
+          "minOccurs": "0"
+        },
+        {
+          "name": "aftInformation",
+          "type": "anet:aftInfoBasicType",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "discount",
+          "type": "anet:extendedAmountType",
+          "minOccurs": "0"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "batchDetailsType": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "batchId",
+          "type": "anet:numericString"
+        },
+        {
+          "name": "settlementTimeUTC",
+          "type": "xs:dateTime",
+          "minOccurs": "0"
+        },
+        {
+          "name": "settlementTimeLocal",
+          "type": "xs:dateTime",
+          "minOccurs": "0"
+        },
+        {
+          "name": "settlementState",
+          "type": "xs:string"
+        },
+        {
+          "name": "paymentMethod",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "marketType",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "product",
+          "type": "xs:string",
+          "minOccurs": "0"
+        },
+        {
+          "name": "statistics",
+          "type": "anet:ArrayOfBatchStatisticType",
+          "minOccurs": "0"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "batchStatisticType": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "accountType",
+          "type": "xs:string"
+        },
+        {
+          "name": "chargeAmount",
+          "type": "xs:decimal"
+        },
+        {
+          "name": "chargeCount",
+          "type": "xs:int"
+        },
+        {
+          "name": "refundAmount",
+          "type": "xs:decimal"
+        },
+        {
+          "name": "refundCount",
+          "type": "xs:int"
+        },
+        {
+          "name": "voidCount",
+          "type": "xs:int"
+        },
+        {
+          "name": "declineCount",
+          "type": "xs:int"
+        },
+        {
+          "name": "errorCount",
+          "type": "xs:int"
+        },
+        {
+          "name": "returnedItemAmount",
+          "type": "xs:decimal",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "returnedItemCount",
+          "type": "xs:int",
+          "minOccurs": "0"
+        },
+        {
+          "name": "chargebackAmount",
+          "type": "xs:decimal",
+          "minOccurs": "0"
+        },
+        {
+          "name": "chargebackCount",
+          "type": "xs:int",
+          "minOccurs": "0"
+        },
+        {
+          "name": "correctionNoticeCount",
+          "type": "xs:int",
+          "minOccurs": "0"
+        },
+        {
+          "name": "chargeChargeBackAmount",
+          "type": "xs:decimal",
+          "minOccurs": "0"
+        },
+        {
+          "name": "chargeChargeBackCount",
+          "type": "xs:int",
+          "minOccurs": "0"
+        },
+        {
+          "name": "refundChargeBackAmount",
+          "type": "xs:decimal",
+          "minOccurs": "0"
+        },
+        {
+          "name": "refundChargeBackCount",
+          "type": "xs:int",
+          "minOccurs": "0"
+        },
+        {
+          "name": "chargeReturnedItemsAmount",
+          "type": "xs:decimal",
+          "minOccurs": "0"
+        },
+        {
+          "name": "chargeReturnedItemsCount",
+          "type": "xs:int",
+          "minOccurs": "0"
+        },
+        {
+          "name": "refundReturnedItemsAmount",
+          "type": "xs:decimal",
+          "minOccurs": "0"
+        },
+        {
+          "name": "refundReturnedItemsCount",
+          "type": "xs:int",
+          "minOccurs": "0"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "getTransactionDetailsRequest": {
+      "schema_kind": "element",
+      "fields": [
+        {
+          "name": "transId",
+          "type": "anet:numericString"
+        },
+        {
+          "name": "transrefId"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "getTransactionDetailsResponse": {
+      "schema_kind": "element",
+      "fields": [
+        {
+          "name": "transaction",
+          "type": "anet:transactionDetailsType"
+        },
+        {
+          "name": "clientId",
+          "minOccurs": "0"
+        },
+        {
+          "name": "transrefId",
+          "minOccurs": "0"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "getSettledBatchListRequest": {
+      "schema_kind": "element",
+      "fields": [
+        {
+          "name": "includeStatistics",
+          "type": "xs:boolean",
+          "minOccurs": "0"
+        },
+        {
+          "name": "firstSettlementDate",
+          "type": "xs:dateTime",
+          "minOccurs": "0"
+        },
+        {
+          "name": "lastSettlementDate",
+          "type": "xs:dateTime",
+          "minOccurs": "0"
+        },
+        {
+          "name": "posRedirectToMint",
+          "type": "xs:boolean",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "getTransactionListRequest": {
+      "schema_kind": "element",
+      "fields": [
+        {
+          "name": "batchId",
+          "type": "anet:numericString",
+          "minOccurs": "0"
+        },
+        {
+          "name": "sorting",
+          "type": "anet:TransactionListSorting",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "paging",
+          "type": "anet:Paging",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "posRedirectToMint",
+          "type": "xs:boolean",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "getUnsettledTransactionListRequest": {
+      "schema_kind": "element",
+      "fields": [
+        {
+          "name": "status",
+          "type": "anet:TransactionGroupStatusEnum",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "sorting",
+          "type": "anet:TransactionListSorting",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "paging",
+          "type": "anet:Paging",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "posRedirectToMint",
+          "type": "xs:boolean",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "TransactionListSorting": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "orderBy",
+          "type": "anet:TransactionListOrderFieldEnum",
+          "minOccurs": "1",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "orderDescending",
+          "type": "xs:boolean",
+          "minOccurs": "1",
+          "maxOccurs": "1"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "Paging": {
+      "schema_kind": "complexType",
+      "fields": [
+        {
+          "name": "limit",
+          "minOccurs": "1",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "offset",
+          "minOccurs": "1",
+          "maxOccurs": "1"
+        }
+      ],
+      "enumeration_values": []
+    },
+    "getMerchantDetailsResponse": {
+      "schema_kind": "element",
+      "fields": [
+        {
+          "name": "isTestMode",
+          "type": "xs:boolean",
+          "minOccurs": "0"
+        },
+        {
+          "name": "processors",
+          "type": "anet:ArrayOfProcessorType"
+        },
+        {
+          "name": "merchantName",
+          "type": "xs:string"
+        },
+        {
+          "name": "gatewayId",
+          "type": "anet:numericString"
+        },
+        {
+          "name": "marketTypes",
+          "type": "anet:ArrayOfMarketType"
+        },
+        {
+          "name": "productCodes",
+          "type": "anet:ArrayOfProductCode"
+        },
+        {
+          "name": "paymentMethods",
+          "type": "anet:ArrayOfPaymentMethod"
+        },
+        {
+          "name": "currencies",
+          "type": "anet:ArrayOfCurrencyCode"
+        },
+        {
+          "name": "publicClientKey",
+          "type": "xs:string",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "businessInformation",
+          "type": "anet:customerAddressType",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "merchantTimeZone",
+          "minOccurs": "0",
+          "maxOccurs": "1"
+        },
+        {
+          "name": "contactDetails",
+          "type": "anet:ArrayOfContactDetail",
+          "minOccurs": "0"
+        }
+      ],
+      "enumeration_values": []
+    }
+  },
+  "limits": {
+    "vendor_page_size_max": 1000,
+    "vendor_page_number_min": 1,
+    "vendor_page_number_max": 100000,
+    "rupert_page_limit": 100,
+    "rupert_transaction_detail_limit": 20000,
+    "rupert_default_overlap_days": 7,
+    "rupert_schedule_minutes_when_enabled": 5,
+    "rupert_commission_frame_seconds": 30
+  },
+  "unverified": [
+    "Merchant reporting API entitlement",
+    "Existing production integration keys",
+    "Actual OAuth application registration and read grant",
+    "Actual signed callback key representation and delivery",
+    "Shopify Payment ID to gateway ID mapping for this store",
+    "Optional detail fields populated by this merchant/processor",
+    "Net bank funding and transaction processing fees",
+    "Account-specific rate limits"
+  ]
+}

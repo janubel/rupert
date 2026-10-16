@@ -14,7 +14,7 @@ class DailyMoneyReconciliation
   end
 
   def documents
-    @documents ||= ReconciliationDocument.covering(day).where.not(kind: 'daily_archive')
+    @documents ||= ReconciliationDocument.covering(day).where.not(kind: %w[daily_archive close_package cash_forecast])
       .select(:id, :tenant_id, :source, :kind, :period_from, :period_to, :metadata_json, :filename,
         :sha256, :fingerprint, :supersedes_id, :created_at).order(:id).to_a
   end

@@ -1,12 +1,17 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  resource :financial_close, only: %i[show create], controller: 'financial_close'
+  resource :cash_forecast, only: %i[show create]
   resource :retention_drive, only: :show do
     get :connect
     post :sync
     post :disconnect
   end
 
+  resources :reconciliation_follow_ups, only: %i[index new create show update] do
+    get :overview, on: :collection
+  end
   resources :reconciliation_documents, only: :index
 
   resources :daily_reconciliations, only: %i[index create] do
@@ -24,7 +29,24 @@ Rails.application.routes.draw do
     get :document, on: :member
   end
 
+  resources :square_timesheets, path: 'people/square_timesheets', controller: 'people/square_timesheets', only: %i[index show], as: :people_square_timesheets
+
   get '/employee', to: 'employee_app#show', as: :employee_app
+  scope '/employee/preview', controller: :employee_preview, as: :employee_preview do
+    get '/timesheets', action: :timesheets, as: :timesheets
+    get '/timesheets/:id', action: :timesheet, as: :timesheet
+    get '/pay', action: :pay, as: :pay
+    get '/time-clock', action: :time_clock, as: :time_clock
+    get '/time-off', action: :time_off, as: :time_off
+    get '/reports', action: :reports, as: :reports
+  end
+  get '/employee/reports', to: 'employee_workspace#reports', as: :employee_reports
+  get '/employee/time-off', to: 'employee_workspace#time_off', as: :employee_time_off
+  post '/employee/time-off', to: 'employee_workspace#request_time_off'
+  post '/employee/time-off/:id/cancel', to: 'employee_workspace#cancel_time_off', as: :cancel_employee_time_off
+  post '/employee/problems', to: 'employee_workspace#report_problem', as: :employee_problem
+  post '/employee/week', to: 'employee_app#week', as: :employee_week
+  get '/employee/devices', to: 'employee_app#devices', as: :employee_devices
   post '/employee/devices/:id/revoke', to: 'employee_app#revoke', as: :revoke_employee_device
   get '/employee/privacy', to: 'employee_app#privacy', as: :employee_privacy
   get '/employee/manifest.webmanifest', to: 'employee_app#manifest', as: :employee_manifest
@@ -81,6 +103,7 @@ Rails.application.routes.draw do
       post 'employee/session', to: 'employee_sessions#create'
       get 'employee/session', to: 'employee_sessions#show'
       delete 'employee/session', to: 'employee_sessions#destroy'
+      resources :employee_square_timecards, path: 'employee/square_timecards', only: %i[index show]
       resources :employee_timesheets, path: 'employee/timesheets', only: %i[index show create update destroy] do
         member do
           post 'actions/:event', to: 'employee_timesheets#transition'
@@ -188,8 +211,13 @@ Rails.application.routes.draw do
     end
   end
   namespace :people do
+    resources :work_reports, only: %i[index update]
     resources :employees, only: %i[index show new create edit update destroy] do
+      post :add_pay_rate, on: :member
+      post :set_leave_allowance, on: :member
       post :sync_directory, on: :collection
+      get :consolidation, on: :collection
+      post :consolidate, on: :collection
       member { post :transition }
     end
     resources :departments, only: %i[index new create edit update]

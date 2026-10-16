@@ -1,14 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
+import { mountNmiFields } from "lib/nmi_fields"
 
 export default class extends Controller {
-  static targets = ["items", "subtotal", "tax", "choices", "custom", "confirm", "status", "payment", "pay", "receipt"]
+  static targets = ["items", "subtotal", "tax", "choices", "custom", "confirm", "status", "payment", "pay", "receipt", "nmiFields"]
   static values = { stateUrl: String, tipUrl: String, configUrl: String, payUrl: String }
   connect() {
     this.revision = null
     window.rupertPosPaymentResponse = response => this.cardResponse(response)
     this.poll(); this.timer = setInterval(() => this.poll(), 1500)
   }
-  disconnect() { clearInterval(this.timer); clearTimeout(this.timeout); this.abort?.abort(); delete window.rupertPosPaymentResponse }
+  disconnect() { this.connected = false; this.paymentAbort?.abort(); this.nmi?.destroy(); clearInterval(this.timer); clearTimeout(this.timeout); this.abort?.abort(); delete window.rupertPosPaymentResponse }
   money(cents) { return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(cents / 100) }
   async poll() {
     if (this.polling) return
@@ -21,7 +22,7 @@ export default class extends Controller {
       if (!state.active) throw new Error("This customer screen has closed.")
       this.connected = true
       if (this.revision !== state.cart_revision) {
-        this.revision = state.cart_revision; this.configuredCheckout = null
+        this.revision = state.cart_revision; this.configuredCheckout = null; this.paymentAbort?.abort(); this.nmi?.destroy(); this.nmi = null; this.nmiFieldsTarget.hidden = true
         this.element.querySelectorAll('input[name="choice"]').forEach(input => input.checked = false)
         this.customTarget.hidden = true
         this.customTarget.querySelector('input').required = false
@@ -41,19 +42,20 @@ export default class extends Controller {
       this.confirmTarget.disabled = state.confirmed || !this.hasCart || frozen || this.submitting
       this.confirmTarget.textContent = state.confirmed ? "Choice confirmed" : "Confirm my choice"
       this.paymentTarget.hidden = true; this.receiptTarget.hidden = true
+      if (!state.checkout || !["ready", "declined"].includes(state.checkout.status)) { this.paymentAbort?.abort(); this.nmi?.destroy(); this.nmi = null; this.nmiFieldsTarget.hidden = true; this.configuredCheckout = null }
       if (state.checkout?.status === "paid") {
         this.receiptTarget.hidden = false
-        this.receiptTarget.textContent = `${state.checkout.demo ? "Demo receipt · " : "Receipt · "}${state.checkout.reference} · Paid ${this.money(state.checkout.total_cents)} · Tip ${this.money(state.checkout.tip_cents)}${state.checkout.tender === "cash" ? ` · Change ${this.money(state.checkout.change_cents)}` : ""}${state.checkout.inventory_pending ? " · Stock update pending" : ""}`
-        this.statusTarget.textContent = state.checkout.demo ? "Demonstration complete. No money was collected." : "Thank you. Your payment is complete."
+        this.receiptTarget.textContent = `${state.checkout.sandbox ? "Sandbox receipt · " : (state.checkout.demo ? "Demo receipt · " : "Receipt · ")}${state.checkout.reference} · Paid ${this.money(state.checkout.total_cents)} · Tip ${this.money(state.checkout.tip_cents)}${state.checkout.tender === "cash" ? ` · Change ${this.money(state.checkout.change_cents)}` : ""}${state.checkout.inventory_pending ? " · Stock update pending" : ""}`
+        this.statusTarget.textContent = state.checkout.sandbox ? "Sandbox test complete. No live money, sales or stock movement." : (state.checkout.demo ? "Demonstration complete. No money was collected." : "Thank you. Your payment is complete.")
       } else if (["processing", "unknown"].includes(state.checkout?.status)) {
         this.statusTarget.textContent = "Verifying your payment. Please do not submit another payment."
       } else if (state.checkout?.tender === "card" && ["ready", "declined"].includes(state.checkout.status)) {
         this.paymentTarget.hidden = false
-        this.payTarget.textContent = `${state.checkout.demo ? "Simulate payment" : "Pay"} ${this.money(state.checkout.total_cents)}`
+        this.payTarget.textContent = `${state.checkout.sandbox ? "Sandbox pay" : (state.checkout.demo ? "Simulate payment" : "Pay")} ${this.money(state.checkout.total_cents)}`
         this.payTarget.disabled = true
         this.statusTarget.textContent = state.checkout.status === "declined" ? "Payment declined. No paid receipt was issued. You can try a new card." : "Review the total, then pay securely."
         if (this.configuredCheckout !== state.checkout.reference) await this.configurePayment(state.checkout)
-        this.payTarget.disabled = this.submitting || !this.paymentReady
+        this.payTarget.disabled = this.submitting || this.tokenizing || !this.paymentReady
       } else {
         this.statusTarget.textContent = state.confirmed ? `Your tip choice of ${this.money(state.tip_cents)} is confirmed. Waiting for the cashier.` : this.hasCart ? "Your tip choice stays private until you confirm." : "Waiting for the cashier’s cart…"
       }
@@ -83,6 +85,21 @@ export default class extends Controller {
     if (!response.ok) throw new Error("The payment form is unavailable. Ask the cashier to check setup.")
     const config = await response.json()
     this.demoPayment = config.demo
+    this.paymentAbort?.abort(); this.nmi?.destroy(); this.nmi = null
+    this.nmiFieldsTarget.hidden = config.provider !== "nmi"
+    this.payTarget.classList.remove("AcceptUI")
+    if (config.provider === "nmi") {
+      const reference = checkout.reference
+      this.configuredCheckout = reference
+      this.paymentAbort = new AbortController()
+      this.nmi = await mountNmiFields(config, {
+        signal: this.paymentAbort.signal,
+        onReady: () => { if (this.configuredCheckout === reference) { this.paymentReady = true; this.payTarget.disabled = this.submitting || !this.connected } },
+        onError: message => { if (this.configuredCheckout === reference) { this.tokenizing = false; this.statusTarget.textContent = message; this.payTarget.disabled = this.submitting || !this.connected } },
+        onToken: token => { if (this.configuredCheckout === reference && this.tokenizing) { this.tokenizing = false; this.submitPayment({ payment_nonce: token, checkout_reference: reference }) } }
+      })
+      return
+    }
     this.payTarget.classList.toggle("AcceptUI", !config.demo)
     if (!config.demo) {
       this.payTarget.setAttribute("data-apiLoginID", config.login_id)
@@ -105,7 +122,11 @@ export default class extends Controller {
     }
     this.configuredCheckout = checkout.reference; this.paymentReady = true
   }
-  async demoPay() { if (this.demoPayment && !this.submitting) await this.submitPayment({}) }
+  async demoPay() {
+    if (this.submitting || this.tokenizing || !this.connected || !this.paymentReady) return
+    if (this.nmi) { this.tokenizing = true; this.payTarget.disabled = true; this.nmi.pay() }
+    else if (this.demoPayment) await this.submitPayment({})
+  }
   async cardResponse(response) {
     if (response?.messages?.resultCode !== "Ok" || response?.opaqueData?.dataDescriptor !== "COMMON.ACCEPT.INAPP.PAYMENT") {
       this.statusTarget.textContent = "Card details could not be tokenized. No payment was submitted."; return

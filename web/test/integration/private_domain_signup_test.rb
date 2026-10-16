@@ -102,13 +102,13 @@ class PrivateDomainSignupTest < ActionDispatch::IntegrationTest
     assert_equal user.id, session[:user_id]
   end
 
-  test 'unique active domain may create reader with referral but ambiguous domain cannot' do
+  test 'unique active domain may create employee with referral but ambiguous domain cannot' do
     tenant = Tenant.create!(name: 'Allowed company', subdomain: "allowed#{SecureRandom.hex(4)}")
     OauthAllowedDomain.create!(tenant_id: tenant.id, domain: @domain)
     get google_auth_path
     finish_signup
     user = User.find_by!(email: @info['email'])
-    assert user.reader?
+    assert user.employee?
     assert_equal tenant.id, user.tenant_id
     assert_equal WorkspaceSignup::REFERRAL_DOMAIN, user.referral_domain
     delete logout_path

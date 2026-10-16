@@ -7,7 +7,7 @@ class SyncAttempt < ApplicationRecord
   OPERATIONS = {
     'ctrax' => %w[stock sales], 'swipesimple' => %w[web], 'bank' => %w[web reporting],
     'authorize_net' => %w[reporting events], 'shopify' => %w[catalog],
-    'square' => %w[catalog], 'google_backup' => %w[backup]
+    'square' => %w[catalog timecards], 'google_backup' => %w[backup]
   }.freeze
   STATUSES = %w[queued running succeeded failed skipped].freeze
 

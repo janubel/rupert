@@ -1,0 +1,20 @@
+<% can_write = Current.user.can?('reports.write'); item = status[:next_overdue]; blocker = status[:next_blocker] %>
+<div class="rounded-xl border <%= item ? 'border-amber-300 bg-amber-50' : 'border-fog bg-paper' %> p-4 space-y-2" aria-label="Next close action for <%= day.iso8601 %>">
+  <% if item %>
+    <p class="text-xs font-semibold uppercase tracking-wide text-mocha">Overdue · next action</p><p class="font-semibold break-words"><%= item.title %></p>
+    <p class="text-sm"><%= reconciliation_due_label(item) %> · <%= item.owner&.display_name || 'Needs an owner' %></p>
+    <p class="text-sm text-mocha break-words"><%= truncate(item.notes, length: 180) %></p>
+    <% if can_write %><p class="text-xs text-mocha">Record this step, then continue to the next overdue follow-up across dates from the progress form.</p><% end %>
+    <p class="text-xs font-semibold"><%= item.document_id ? 'Original linked · review before resolving' : 'No original linked to this follow-up' %></p>
+    <div class="flex flex-wrap gap-2"><%= link_to(can_write ? 'Record progress on this follow-up' : 'Open this follow-up', reconciliation_follow_up_path(item, close_day: day.iso8601, anchor: can_write ? 'record-progress' : nil), class: 'btn-primary btn-sm') %>
+    <% if item.document_id %><%= link_to 'Review linked original', document_daily_reconciliation_path(item.document_id), class: 'btn-ghost btn-sm' %><% else %><%= link_to 'Find retained original', reconciliation_documents_path(reconciliation_library_request_context(item, day)), class: 'btn-ghost btn-sm' %><% if can_write %><%= link_to 'Add original', daily_reconciliations_path(request: item.id, close_day: day.iso8601, anchor: 'upload-document'), class: 'btn-ghost btn-sm' %><% end %><% end %></div>
+  <% elsif blocker %>
+    <p class="text-xs font-semibold uppercase tracking-wide text-mocha">Next close check</p><p class="font-semibold"><%= blocker[:title] %><%= blocker[:count] ? " · #{blocker[:count]}" : '' %></p>
+    <% if blocker[:key] == :missing_controls && (missing = status[:missing_control]) %>
+      <%= render 'financial_close/missing_report', row: missing[:row], request: missing[:request], control_key: missing[:key], day: day, can_write: can_write %>
+    <% else %><%= link_to financial_close_action_label(blocker[:key]), financial_close_blocker_path(blocker[:key], day), class: 'btn-primary btn-sm', aria: { label: "Work #{blocker[:title]} for #{day.iso8601}" } %><% end %>
+  <% else %>
+    <p class="text-sm">Recorded checks are clear. The reviewer checklist and explanation still need confirmation.</p>
+    <%= link_to(can_write ? 'Finish reviewer checklist' : 'Inspect close versions', financial_close_path(day: day.iso8601, anchor: can_write ? 'retain-close' : 'close-history'), class: 'btn-primary btn-sm') %>
+  <% end %>
+</div>

@@ -132,7 +132,7 @@ class SourceHealthTest < ActiveSupport::TestCase
     sources = SourceSyncStatus.all(include_platform: false)
     ctrax = sources.find { |source| source[:key] == 'ctrax' }
     assert_equal 'Credentials unreadable', ctrax[:badge]
-    assert_equal 5, sources.size
+    assert_equal 6, sources.size
     assert sources.any? { |source| source[:key] == 'shopify' }
     refute_includes sources.to_json, 'private-error'
     state = SourceHealth.for(ctrax).first
@@ -195,5 +195,14 @@ class SourceHealthTest < ActiveSupport::TestCase
     receipt('failed', time: 1.minute.ago, category: 'entitlement')
     assert_equal 'Failed', health[:state]
     assert_equal 'entitlement', health[:category]
+  end
+
+  test 'queued reads retain their receipt when current credentials are removed' do
+    EnvStore.stubs(:fetch).with('SQUARE_ACCESS_TOKEN', '').returns('')
+    queued = SyncAttempt.create!(source: 'square', operation: 'catalog', status: 'queued', queued_at: 1.minute.ago)
+    state = health(source: 'square')
+    assert_equal 'Queued', state[:state]
+    assert_equal "SYNC-#{queued.id}", state[:reference]
+    assert_equal ['Access token'], state.dig(:access, :missing_fields)
   end
 end

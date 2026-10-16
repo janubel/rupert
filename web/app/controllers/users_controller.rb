@@ -15,12 +15,12 @@ class UsersController < AuthenticatedController
   end
 
   def new
-    @user = User.new(tenant_id: Current.tenant_id, role: 'cashier')
+    @user = User.new(tenant_id: Current.tenant_id, role: 'employee')
     @roles = assignable_roles
   end
 
   def create
-    @user = User.new({ role: 'cashier' }.merge(user_params).merge(tenant_id: Current.tenant_id))
+    @user = User.new({ role: 'employee' }.merge(user_params).merge(tenant_id: Current.tenant_id))
     if @user.save
       ActivityLogger.log('employee_added', subject: @user, details: @user.role)
       redirect_to(users_path, notice: "#{@user.display_name} added.")
@@ -38,6 +38,10 @@ class UsersController < AuthenticatedController
   # Replace an employee's per-person permission overrides. Empty selection
   # clears them, falling back to the role's permissions.
   def update_permissions
+    if @user.employee?
+      return redirect_to(edit_user_path(@user), alert: 'Employee access is fixed to POS and their own time records.')
+    end
+
     raw = params[:permissions]
     permissions = raw.is_a?(ActionController::Parameters) ? raw.to_unsafe_h.keys : []
     @user.update_permission_overrides!(permissions)
@@ -48,7 +52,8 @@ class UsersController < AuthenticatedController
   def update
     if @user.update(user_params)
       ActivityLogger.log('employee_updated', subject: @user, details: @user.role)
-      redirect_to(users_path, notice: "#{@user.display_name} updated.")
+      employee = People::Employee.find_by(id: params[:return_employee_id], user_id: @user.id) if params[:return_employee_id].present?
+      redirect_to(employee ? people_employee_path(employee, anchor: 'access') : users_path, notice: "#{@user.display_name} updated.")
     else
       @roles = assignable_roles
       render(:edit, status: :unprocessable_entity)

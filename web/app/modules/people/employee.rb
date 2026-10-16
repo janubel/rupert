@@ -10,12 +10,20 @@ module People
 
     self.table_name = 'employees'
 
+    # Original profiles remain as private audit records after consolidation.
+    default_scope { where(merged_into_id: nil) }
+    has_many :source_identities, class_name: 'EmployeeSourceIdentity', dependent: :restrict_with_exception
+    before_destroy :protect_consolidation_history, prepend: true
+
     EMPLOYMENT_TYPES = %w[unspecified full_time part_time contractor seasonal].freeze
 
     belongs_to :user, optional: true
     belongs_to :department, class_name: 'People::Department', optional: true
     belongs_to :position, class_name: 'People::Position', optional: true
+    has_many :work_reports, class_name: 'EmployeeWorkReport', dependent: :restrict_with_exception
     has_many :pay_rates, class_name: 'People::PayRate', dependent: :destroy
+    has_many :square_timecards, dependent: :restrict_with_exception
+    has_many :square_timecard_days, through: :square_timecards, source: :days
     has_many :timesheets, class_name: 'People::Timesheet', dependent: :destroy
     has_many :timesheet_entries, through: :timesheets, source: :entries
     has_many :leave_balances, class_name: 'People::LeaveBalance', dependent: :destroy
@@ -66,7 +74,7 @@ module People
     end
 
     def current_pay_rate
-      pay_rates.where('ended_on IS NULL OR ended_on >= ?', Date.current).order(effective_on: :desc).first
+      pay_rates.where('effective_on <= ? AND (ended_on IS NULL OR ended_on >= ?)', Date.current, Date.current).order(effective_on: :desc, id: :desc).first
     end
 
     def on_payroll?
@@ -80,6 +88,13 @@ module People
     end
 
     private
+
+    def protect_consolidation_history
+      return unless self.class.unscoped.where(tenant_id: tenant_id, merged_into_id: id).exists?
+
+      errors.add(:base, 'This employee has consolidated profiles; retain the record and its history.')
+      throw :abort
+    end
 
     def associations_belong_to_workspace
       { user: User, department: People::Department, position: People::Position }.each do |association, model|

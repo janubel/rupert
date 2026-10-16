@@ -11,36 +11,35 @@ export default class extends Controller {
   }
 
   toggleEditor() {
-    this.setCustomizing(!this.panelTarget.classList.contains("hidden"))
+    this.setCustomizing(this.panelTarget.classList.contains("hidden"))
   }
 
   setCustomizing(on) {
     this.panelTarget.classList.toggle("hidden", !on)
     this.toggleTarget.textContent = on ? "Hide editor" : "Customize"
+    this.toggleTarget.setAttribute("aria-expanded", String(on))
   }
 
-  setCustomizingValue(value) {
-    this.setCustomizing(value === "true" || value === true)
+  closeEditor() {
+    this.setCustomizing(false)
+    this.toggleTarget.focus()
   }
 
-  // Delegated handlers (listeners bound once in connect — works with dynamic
-  // reordering because each element keeps its data-move / data-visible attrs).
+  onClick(event) {
+    const button = event.target.closest("[data-move]")
+    if (button) this.moveRow(button.dataset.move, button.dataset.dir)
+  }
 
-  onMouseDown(e) {
-    const btn = e.target.closest("[data-move]")
-    if (btn) {
-      e.preventDefault() // don't move focus to the button
-      this.moveRow(btn.dataset.move, btn.dataset.dir)
-      return
-    }
-    const cb = e.target.closest("[data-visible]")
-    if (cb) {
-      // Let the checkbox toggle normally, then sync the preview section.
-      this.sectionFor(cb.dataset.visible).hidden = !cb.checked
+  onChange(event) {
+    const checkbox = event.target.closest("[data-visible]")
+    if (checkbox) {
+      const section = this.sectionFor(checkbox.dataset.visible)
+      if (section) section.hidden = !checkbox.checked
     }
   }
 
   moveRow(key, dir) {
+    const focused = document.activeElement
     const row = this.listTarget.querySelector(`[data-editor-key="${key}"]`)
     if (!row) return
     const section = this.sectionFor(key)
@@ -51,6 +50,7 @@ export default class extends Controller {
       const secSibling = dir === "up" ? section.previousElementSibling : section.nextElementSibling
       if (secSibling) section.parentNode.insertBefore(section, dir === "up" ? secSibling : secSibling.nextSibling)
     }
+    if (focused && row.contains(focused)) focused.focus()
   }
 
   sectionFor(key) {
@@ -75,9 +75,14 @@ export default class extends Controller {
 
   saveLayout(body) {
     this.statusTarget.textContent = "Saving…"
+    this.saveTarget.disabled = this.resetTarget.disabled = true
     fetch("/dashboard/customize", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || "",
+      },
       body: JSON.stringify(body),
     })
       .then((r) => r.json().then((b) => ({ ok: r.ok, body: b })))
@@ -86,5 +91,6 @@ export default class extends Controller {
         else this.statusTarget.textContent = "Error: " + (res.body.error || "could not save")
       })
       .catch(() => { this.statusTarget.textContent = "Error: could not save" })
+      .finally(() => { this.saveTarget.disabled = this.resetTarget.disabled = false })
   }
 }

@@ -19,8 +19,15 @@ class CustomerDisplaysController < ApplicationController
 
     setting = PosSetting.find_by!(location: checkout.location)
     return head(:conflict) unless setting.card_enabled && setting.verified_at && setting.gateway_id == checkout.gateway_id && setting.environment == checkout.environment
+    if checkout.gateway_provider == 'nmi'
+      gateway = Pos::NmiGateway.new(setting)
+      gateway.assert_checkout!(checkout)
+      return render json: { demo: false, provider: 'nmi', sandbox: true, tokenization_key: setting.credentials.fetch('tokenization_key'), script_url: Pos::NmiGateway::SCRIPT_URL, total_cents: checkout.total_cents }
+    end
     render json: { demo: false, login_id: setting.credentials.fetch('api_login_id'), client_key: setting.public_client_key,
       script_url: setting.environment == 'sandbox' ? 'https://jstest.authorize.net/v3/AcceptUI.js' : 'https://js.authorize.net/v3/AcceptUI.js', total_cents: checkout.total_cents }
+  rescue Pos::Error, KeyError
+    render json: { error: 'Sandbox payment setup is unavailable.' }, status: :conflict
   end
 
   def pay
@@ -32,8 +39,11 @@ class CustomerDisplaysController < ApplicationController
         Pos::Checkout.finalize!(checkout) unless checkout.paid?
       end
     else
+      if checkout.gateway_provider == 'nmi' && params[:checkout_reference] != checkout.reference
+        raise Pos::Error, 'The checkout changed. Reload the payment form.'
+      end
       Pos::CardPayment.call(checkout, nonce: params[:payment_nonce])
-      PosInventoryJob.perform_later(checkout.id) if checkout.reload.paid?
+      PosInventoryJob.perform_later(checkout.id) if checkout.reload.paid? && !checkout.sandbox_payment?
     end
     render json: checkout.reload.receipt
   rescue Pos::Error => e

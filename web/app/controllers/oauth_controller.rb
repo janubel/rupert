@@ -9,7 +9,7 @@
 #
 # Domain enforcement: the user's email domain must be in the tenant's
 # OauthAllowedDomain list. Unknown domains are rejected; known domains with an
-# existing Rupert account sign in, and known domains without one get a reader
+# existing Rupert account sign in, and known domains without one get a employee
 # account auto-provisioned. Explicit Google login aliases use their canonical
 # account's allowed domain and never create another account. An explicitly
 # linked identity matching the account email grants only that account access.
@@ -123,7 +123,7 @@ class OauthController < ApplicationController
     session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(user.password_digest) if user.employee?
     AccessLogger.record(source: 'google', status: 'success', request: request, user: user, email: email,
       domain: tested_domain)
-    redirect_to(user.employee? ? people_timesheets_path : root_path, notice: 'Signed in with Google.')
+    redirect_to(user.employee? ? employee_app_path : root_path, notice: 'Signed in with Google.')
   rescue GoogleOauthService::NotConfiguredError, GoogleOauthService::ExchangeError => e
     clear_oauth_intent
     AccessLogger.record(source: 'google', status: 'failure', request: request, email: info&.dig('email'),
@@ -153,7 +153,7 @@ class OauthController < ApplicationController
     session.delete(:workspace_signup_intent)
   end
 
-  # Root sign-in follows the globally unique exact account first. New readers
+  # Root sign-in follows the globally unique exact account first. New employees
   # need one unambiguous active tenant domain; never pick an arbitrary store.
   def resolve_tenant(email, linked_user: nil)
     existing = linked_user || User.find_by(email: email)
@@ -181,7 +181,7 @@ class OauthController < ApplicationController
     user = tenant.users.new(
       email: email,
       name: info['name'].presence || email.split('@').first.titleize,
-      role: 'reader',
+      role: 'employee',
       referral_domain: WorkspaceSignup::REFERRAL_DOMAIN,
       password: SecureRandom.hex(24)
     )

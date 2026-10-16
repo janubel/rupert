@@ -1,0 +1,5 @@
+<% content_for :title, 'My pay' %>
+<section><h1 class="page-title">My pay</h1><p class="mt-1 text-sm text-mocha">Estimated earnings and finalized payslips.</p></section>
+<section class="card card-pad space-y-3"><h2 class="text-lg font-semibold">This week</h2><p class="text-3xl font-semibold"><%= number_to_currency(@summary.gross_cents / 100.0) %></p><p class="text-sm text-mocha">Estimated gross · <%= number_with_precision(@summary.hours, precision: 2, strip_insignificant_zeros: true) %>h · <%= @examples.rate.label %></p><p class="text-xs text-mocha">Before deductions. Draft hours still need review; your manager confirms payment dates. All amounts here are examples.</p><%= link_to 'View hours and pay report', employee_preview_reports_path, class: 'text-sm text-olive underline' %></section>
+<%= render 'employee_workspace/payslips' %>
+<%= link_to 'Report a pay problem', employee_preview_reports_path(anchor: 'problems'), class: 'text-sm text-olive underline' %>
