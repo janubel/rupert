@@ -10,6 +10,34 @@ Reviewed 2026-10-15. This release prepares provider accounts for later setup. It
 
 The business described C-Trax POS with a PAX terminal and Valmar processing, and Shopify website payments through Valmar. SwipeSimple was a proposed replacement option. KORONA and Cova were evaluation candidates. Square was a previous provider. These are business-reported relationships; they do not establish current merchant approval, supported hardware or a vendor support deadline.
 
+## Deep Run Hemp: historical NMI checkout evidence
+
+Email evidence reviewed October 16, 2026 establishes that Deep Run Hemp's separate WooCommerce store completed a card sale through NMI on July 23, 2026. This is historical store evidence; it does not establish a live Rupert connection or identify the gateway serving the separate Valmar account described above.
+
+| Date | Evidence | What it establishes |
+| --- | --- | --- |
+| June 16, 2026 | Andre's "Host my own store" email | General application guidance named business information, bank statements, product details and the website. It is not Next Stage's original underwriting checklist or proof of which documents were submitted. |
+| July 21, 2026 | "Fw: Approval Notification - Deep Run Hemp", forwarding Next Stage Payments underwriting | The merchant account was approved. NMI activation and an API key for the website developer were the next steps. |
+| July 22, 2026 | "Fw: Deep Run Hemp - NMI Gateway", forwarding Next Stage support and technical guidance | The intended stack was DigitalOcean, WooCommerce and NMI, with the integration requirements below. |
+| July 23, 2026 | Matching "Deep Run Hemp Transaction Receipt" and "Your Deep Run Hemp order has been received!" emails | The gateway receipt reports a completed card sale, and the matching store confirmation explicitly names "Credit Card (NMI)". Together they demonstrate that NMI checkout was working for at least one sale on that date. |
+| October 14, 2026 | Andre's "Crypto gateway" email | Alternative crypto gateways were being explored. The email does not say NMI failed, was replaced or was disconnected. |
+
+Next Stage's July 22 setup guidance requested:
+
+| Requirement | July 22 guidance |
+| --- | --- |
+| Credentials | NMI API Key and Security Key obtained from the merchant dashboard for the developer's integration. Preserve the provider's historical wording; confirm the exact credential fields required by the chosen plugin rather than assuming two distinct keys are always necessary. |
+| Plugin | An installed and activated third-party NMI payment gateway plugin for WooCommerce. |
+| SSL | A valid SSL certificate on the DigitalOcean server. |
+| Caching | Cache exclusions for WooCommerce /cart/ and /checkout/ so checkout sessions can work. |
+| Server | Outbound HTTPS on port 443 and an active PHP cURL extension. |
+
+The broader email search found no Authorize.net setup tied to Deep Run Hemp and no original Next Stage application packet. March DashNex/Cloudflare access and purchase failures predate this WooCommerce evidence and should not be treated as a later NMI failure.
+
+**Status:** merchant approval confirmed; historical NMI store checkout demonstrated; current account health, bank settlement, refunds, tipping, terminal compatibility and Rupert integration remain unverified. Next Stage supplied the approval and integration support, but these emails do not identify the backend processor or acquiring bank. Preserve store orders, gateway transactions and processor deposits as related evidence, not additional sales to sum together.
+
+Before using this history for Rupert's payment work, confirm the merchant/business and account environment, approved integration access, current credentials and supported payment features. Match historical gateway activity to settlement evidence separately. Keep original emails, private source links, customer/order details, gateway identifiers and credentials outside public Git; this section deliberately records only the sanitized findings.
+
 ## Implemented connection paths
 
 | Provider | Rupert setup now | What remains before operational use |

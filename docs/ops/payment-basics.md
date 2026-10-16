@@ -37,6 +37,12 @@ The business reports using Valmar for its payment services. Valmar calls itself 
 
 Authorize.net is a possible gateway for that account, not a confirmed connection. Ask Valmar first. There may already be an account that Rupert can connect to; do not assume two new subscriptions are needed.
 
+## Deep Run Hemp's separate NMI history
+
+Emails reviewed October 16, 2026 show a separate arrangement for Deep Run Hemp: Next Stage Payments confirmed merchant approval on July 21, supplied WooCommerce/NMI integration guidance on July 22, and matching gateway/store receipts demonstrate a completed NMI card sale on July 23. The store confirmation explicitly names "Credit Card (NMI)". NMI checkout therefore worked for at least one historical store sale; the emails do not establish current availability, bank settlement or a completed Rupert integration.
+
+Next Stage was the account approval and integration support contact in those emails. This does not confirm Next Stage's backend processor/acquiring bank or establish that Deep Run Hemp used the Valmar/Authorize.net arrangement discussed above. For the application-document limits, setup requirements, source chronology and remaining verification, see [Deep Run Hemp's historical NMI evidence in the payment setup guide](https://techmore.github.io/rupert/payment-integrations.html).
+
 ## Who to contact
 
 Public contact details checked 2026-10-15. These are company contacts, not a verified account representative for the shop.
