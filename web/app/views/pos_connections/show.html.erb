@@ -1,6 +1,7 @@
 <% content_for :title, "#{@provider[:name]} setup" %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
+  <%= link_to 'Master credentials & sync', connections_path, class: 'text-sm text-olive' %>
   <section><%= link_to 'POS & payment connections', pos_connections_path, class: 'text-sm text-olive' %><h1 class="page-title mt-3"><%= @provider[:name] %> setup</h1><p class="mt-2 text-sm text-mocha"><%= @provider[:description] %></p><p class="pill-taupe mt-3"><%= @connection.status_label %></p></section>
   <section class="card card-pad space-y-3"><p class="text-sm"><%= @provider[:instructions] %></p><div class="flex flex-wrap gap-3"><%= link_to 'Open vendor site', @provider[:website], target: '_blank', rel: 'noopener noreferrer', class: 'btn-ghost' %><%= link_to 'Connection documentation', @provider[:docs], target: '_blank', rel: 'noopener noreferrer', class: 'btn-ghost' %>
     <% if @provider[:mode] == 'existing' %><%= link_to 'Existing connection settings', settings_path(anchor: 'env'), class: 'btn-ghost' %><% end %>
