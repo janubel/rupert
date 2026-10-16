@@ -33,7 +33,7 @@ class CatalogSyncHistoryTest < ActiveSupport::TestCase
   end
 
   test 'malformed and future watermarks cannot invent fresh evidence or break source cards' do
-    %w[not-a-time tomorrow 2026-02-30T00:00:00Z].each do |value|
+    %w[not-a-time tomorrow 2026-02-30T00:00:00Z 2026-10-16T10:00:00+99:99 2026-10-16T10:00:00+00:99].each do |value|
       setting = Setting.find_or_initialize_by(key: 'sync_watermark_shopify', tenant_id: Current.tenant_id)
       setting.update!(value: value)
       assert_nil CatalogSyncHistory.watermark('shopify')
@@ -71,5 +71,11 @@ class CatalogSyncHistoryTest < ActiveSupport::TestCase
     square = SourceSyncStatus.all(include_platform: false).find { |source| source[:key] == 'square' }
     assert_nil square[:last_at]
     assert_equal 'Awaiting pull', square[:badge]
+  end
+
+  test 'valid fractional seconds and timezone offsets retain the acquisition instant' do
+    time = 10.minutes.ago.change(usec: 123_000)
+    Setting.create!(key: 'sync_watermark_shopify', value: time.getlocal('+05:30').iso8601(3), tenant_id: Current.tenant_id)
+    assert_equal time, CatalogSyncHistory.watermark('shopify')
   end
 end

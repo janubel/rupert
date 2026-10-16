@@ -6,7 +6,7 @@
 class CatalogSyncHistory
   def self.watermark(source)
     value = Setting.find_by(key: "sync_watermark_#{source}", tenant_id: Current.tenant_id)&.value
-    return unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/)
+    return unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)\z/)
 
     time = DateTime.iso8601(value).to_time
     time if time <= Time.current
