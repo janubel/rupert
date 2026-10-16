@@ -55,3 +55,5 @@ The [request-search deployment receipt](financial-close-request-search-deploymen
 Overdue progress forms preview the next overdue request across all dates, including its due age, owner, covered period and linked-original state. **Save and work next overdue** saves only the current request and selects the earliest-due remaining item from the latest workspace queue, excluding the saved request. A changed or resolved preview target is not forced open. The selected close date carries forward only if the next request covers it. Blank notes, invalid changes and stale versions stay on the current form with entered text preserved.
 
 If there is no other overdue request, **Save and check overdue queue** returns to the queue after saving. This does not imply that the current request is resolved: a still-overdue item remains visible. Existing save, return-to-close and return-to-queue choices remain available. No automatic notes, evidence links, status changes to other requests, messages or emails are created.
+
+The [next-overdue deployment receipt](financial-close-next-overdue-deployment-2026-10-16.md) records the release, continuation checks and unchanged access data.
