@@ -4,7 +4,7 @@
 
 Read `docs/ops/iris-reporting.md` before continuing IRIS work. Use its verified tenant OpenAPI contract, not the older SDK deposit examples. The merchant portal login has no visible API Settings tab; live API access and native Health Center CSV bytes remain unverified. Store secrets only in encrypted connection settings. Keep real MIDs, statements, report exports and session data out of public Git. Reports and monthly summaries are separate tenant-scoped snapshots; never sum overlapping windows or create duplicate sales from them.
 
-Also read `docs/ops/iris-integration-investigation.md`. A native Daily Deposits CSV and the funding reference PDF were downloaded and inspected privately; Health Center native bytes remain unverified. The current monthly importer does not accept Daily Deposits files. Do not interpret that download as API entitlement or native Health Center compatibility.
+Also read `docs/ops/iris-integration-investigation.md`. A native Daily Deposits CSV and the funding reference PDF were downloaded and inspected privately; Health Center native bytes remain unverified. Daily Deposits files have a separate native importer, explicit merchant/month context and `daily_deposits_csv` snapshot kind; do not send them to the monthly-summary parser. Do not interpret that download as API entitlement or native Health Center compatibility.
 
 This app is scaffolded from a Shopify app template. See the README for framework-specific details.
 

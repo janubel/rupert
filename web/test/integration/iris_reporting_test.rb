@@ -73,4 +73,33 @@ class IrisReportingIntegrationTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Sales health csv'
     assert_includes response.body, 'gross_sales'
   end
+
+  test 'native daily deposits upload works without API access and rejects mismatched context without mutations' do
+    get @path
+    assert_select 'input[name=report_period][type=month][required]'
+    assert_select 'button, input[type=submit]', value: 'Import Daily Deposits CSV'
+    Tempfile.create(['iris-native-synthetic', '.csv']) do |file|
+      file.write("Daily Deposits\nRecords exported: 1\n\nDate,Amount,Transactions,Batch,Terminal Number,Type\n10/1/2026,12.34,1,000001,,0\nMonthly Total,12.34,1,\n")
+      file.flush
+      params = { merchant_number: '12345', report_kind: 'daily_deposits_csv', report_period: '2026-10' }
+      assert_no_difference ['Core::Order.unscoped.count', 'AuthorizeNetTransaction.unscoped.count'] do
+        2.times do
+          post import_iris_csv_pos_connection_path('iris_reporting'), params: params.merge(report_file: Rack::Test::UploadedFile.new(file.path, 'text/csv'))
+          assert_redirected_to @path
+        end
+      end
+      assert_equal 1, IrisReport.count
+      assert_equal 'daily_deposits_csv', IrisReport.first.report_kind
+      assert_nil PosConnection.find_by(provider: 'iris_reporting')
+      post import_iris_csv_pos_connection_path('iris_reporting'), params: params.merge(report_period: '2026-09', report_file: Rack::Test::UploadedFile.new(file.path, 'text/csv'))
+      follow_redirect!
+      assert_includes response.body, 'matching report month'
+      assert_equal 1, IrisReport.count
+      @owner.update_permission_overrides!(['settings.read'])
+      IrisReporting::DailyDepositsCsvImport.expects(:call).never
+      post import_iris_csv_pos_connection_path('iris_reporting'), params: params.merge(report_file: Rack::Test::UploadedFile.new(file.path, 'text/csv'))
+      assert_response :redirect
+      assert_equal 1, IrisReport.count
+    end
+  end
 end

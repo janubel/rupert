@@ -6,7 +6,7 @@ Investigated October 15, 2026, America/New_York. This records the available inte
 
 The supported tenant REST API is the best route to unattended reporting. Rupert already implements encrypted, tenant-scoped report snapshots and an opt-in daily worker. Account access is still the gate: the authenticated merchant user exposes User Settings only, with no API Settings tab or approved API token. Public API documentation proves a contract exists; it does not prove that this account is entitled to use it.
 
-A **native Daily Deposits CSV was successfully downloaded and inspected** during this extended investigation. Its preamble, columns, record count and aggregate totals were validated privately. This is a different report from Health Center monthly summaries, and the deployed monthly-summary importer does not accept it. Native Sales Health and Transaction Health bytes remain unverified. The six previously imported monthly snapshots remain explicitly visible-table transcriptions.
+A **native Daily Deposits CSV was successfully downloaded and inspected** during this extended investigation. Its preamble, columns, record count and aggregate totals were validated privately. This is a different report from Health Center monthly summaries, and it is now supported by a separate native Daily Deposits importer with explicit merchant/month context. The monthly-summary parser remains separate. Native Sales Health and Transaction Health bytes remain unverified. The six previously imported monthly snapshots remain explicitly visible-table transcriptions.
 
 The TSYS funding reference PDF also downloaded successfully. It provides operational context, not credentials, a merchant-specific funding agreement or evidence of TSYS API entitlement. No API token, webhook, account setting or payment operation was created.
 
@@ -27,7 +27,7 @@ Private exports, document bytes, merchant identifiers and provenance remain outs
 | Route | Suitability | Current status / next gate |
 | --- | --- | --- |
 | Tenant REST reporting | Preferred for independent daily imports, pagination and source IDs. | Implemented subset; approved reporting user/token and real response validation required. |
-| Native Daily Deposits CSV | Manual batch-summary reconciliation without API access. | Download verified; separate parser/report kind needed before import. |
+| Native Daily Deposits CSV | Manual batch-summary reconciliation without API access. | Download verified; separate native parser/report kind implemented and tested; see the operating runbook. |
 | Health Center monthly CSV | Monthly sales/returns/case summaries. | Menus and visible matrices verified; native download bytes not delivered. Existing importer accepts documented synthetic template and observed matrix only. |
 | XLS | Possible manual source if vendor supplies a workbook. | Menu visible; workbook bytes, sheets, date types and formulas unverified; no parser. |
 | Statements | Potential independent source for monthly fees, adjustments and reconciliation. | REST list/download documented; no real statement inspected or fee parser implemented. |
@@ -77,9 +77,9 @@ The native Daily Deposits download has this structure:
 4. Six-cell data records.
 5. A shorter `Monthly Total` aggregate row.
 
-The private sample's count and amount totals agree with its records, and its complete rows are unique. The observed type is a numeric-looking value whose business meaning is not documented; do not translate it into payment/refund/void status. The file does not carry sufficient verified merchant, currency or period metadata to safely infer those values. Explicit operator source context is needed. This is a batch/deposit summary, not a per-payment export. The generic example in [synthetic shape fixture](../data/iris-daily-deposits-shape.csv) is deliberately invented and **not supported by the current monthly importer**.
+The private sample's count and amount totals agree with its records, and its complete rows are unique. The observed type is a numeric-looking value whose business meaning is not documented; do not translate it into payment/refund/void status. The file does not carry sufficient verified merchant, currency or period metadata to safely infer those values. Explicit operator source context is needed. This is a batch/deposit summary, not a per-payment export. The generic example in [synthetic shape fixture](../data/iris-daily-deposits-shape.csv) is deliberately invented and accepted by the new native importer; it does not belong in the monthly-summary parser.
 
-A future parser should identify the report/version, validate the declared count and totals, exclude aggregate rows, preserve batch and terminal references as strings, handle missing versus zero, retain signed decimal amounts and reject ambiguous dates/types. It needs its own snapshot kind, explicit MID/period context and provenance. Do not turn its rows into sales or coerce it into a Health Center summary. Additional months, returns, adjustments, empty reports and each merchant must be examined privately before compatibility is claimed.
+The native parser validates the title/header, declared count and totals, excludes aggregate rows from data, preserves batch and terminal references as strings, distinguishes missing values, retains signed decimal amounts and rejects dates outside the explicitly selected month. It uses its own snapshot kind, explicit MID/period context and digest provenance; source type strings remain uninterpreted. Do not turn its rows into sales or coerce it into a Health Center summary. Additional months, returns, adjustments, empty reports and each merchant must be examined privately before compatibility is claimed.
 
 The portal's TSYS funding PDF describes morning and overnight ACH cycles and batch cutoffs. It also acknowledges receiving-bank availability. Its missed-morning-cutoff description conflicts with its next-day example, and it uses EST/PST labels without resolving daylight-saving behavior. The time-zone chart needs clarification before use in code. No funding SLA, holiday/calendar rule, processor assignment or automated deposit-date prediction can be derived reliably from this reference alone. Dejavoo quick-reference titles concern terminal operation/dual pricing; they are not an API specification or proof of tip/fee semantics.
 
@@ -103,7 +103,7 @@ Acceptance should establish:
 - **Replay and recovery:** same-window replay, overlapping windows, interrupted reads, concurrent setup changes, stale credentials, 429 handling, missed schedules, catch-up windows, encrypted backup/restore and a visible freshness/failure signal. Decide a bounded older-case refresh/backfill policy.
 - **Files:** real native Health CSV/XLS bytes before parser claims; separate Daily Deposits parser tests; every merchant and representative edge periods; statement parsing only after source inspection and review. Keep all real samples private and use synthetic test fixtures.
 
-Existing synthetic automated tests cover the implemented storage/client/import/scheduler and summary CSV boundaries; see the deployment record for the tested revision. This documentation investigation does not change runtime code or prove any of the outstanding live API tests.
+Existing synthetic automated tests cover the implemented storage/client/import/scheduler and summary CSV boundaries; see the deployment record for the tested revision. The subsequent native Daily Deposits importer adds runtime support for the inspected file format and was tested privately against the real download in a rolled-back transaction. It does not prove any of the outstanding live API tests.
 
 ## Precise vendor questions (prepared, not sent)
 

@@ -3,6 +3,15 @@
   <p class="text-sm text-mocha">Deposits and batch transactions remain separate source reports. Monthly Health Center summaries do not create sales or change inventory. Report windows can overlap; never add their totals together. Currency, tips and processing fees stay unknown when the source does not supply them.</p>
   <% if @connection.last_report_status %><p role="status"><%= @connection.last_report_status %>: <%= @connection.last_report_message %></p><% end %>
   <% if Current.user.can?('settings.write') %>
+    <h3 class="font-medium">Import a native Daily Deposits CSV</h3>
+    <p class="text-sm text-mocha">In NAB, open Deposits → Daily Deposits → Export → CSV. Upload the original file and confirm the merchant and source month. Record count and monthly totals must match. The snapshot includes only exported rows; a current month may be incomplete. Currency and deposit type meaning stay unknown. No API token is needed.</p>
+    <%= form_with url: import_iris_csv_pos_connection_path('iris_reporting'), method: :post, multipart: true, data: { turbo: false }, class: 'space-y-3' do %>
+      <%= hidden_field_tag :report_kind, 'daily_deposits_csv' %>
+      <div><%= label_tag :daily_merchant_number, 'Merchant ID selected in NAB' %><%= text_field_tag :merchant_number, nil, id: 'daily_merchant_number', required: true, maxlength: 30, class: 'input' %></div>
+      <div><%= label_tag :report_period, 'Source report month' %><%= month_field_tag :report_period, nil, required: true, class: 'input' %></div>
+      <div><%= label_tag :daily_report_file, 'Native Daily Deposits CSV (maximum 1 MiB)' %><%= file_field_tag :report_file, id: 'daily_report_file', accept: '.csv,text/csv', required: true, class: 'input' %></div>
+      <%= submit_tag 'Import Daily Deposits CSV', class: 'btn-primary' %>
+    <% end %>
     <% if @connection.credentials_saved? %>
       <%= form_with url: import_reporting_pos_connection_path('iris_reporting'), method: :post, data: { turbo: false }, class: 'flex flex-wrap gap-3 items-end' do %>
         <div><%= label_tag :from, 'First source reporting date' %><%= date_field_tag :from, nil, class: 'input' %></div>
