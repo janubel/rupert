@@ -5,10 +5,11 @@
 class StockIdentityMatcher
   Match = Struct.new(:record, :identity, :evidence, :issues, :priority, keyword_init: true)
 
-  def initialize(catalog:, records:, historical: [])
+  def initialize(catalog:, records:, historical: [], findings: nil)
     @catalog = catalog
     @records = records
     @historical = historical
+    @findings = findings
     @variant_evidence = (catalog + historical).index_with { |v| StockIdentityEvidence.new(variant_name(v)) }
     @record_evidence = records.index_with { |r| StockIdentityEvidence.new(r['name'], product_name: r['product_name']) }
     @variant_aliases = catalog.index_with { |v| StockIdentityEvidence.aliases(v.sku, v.barcode) }
@@ -26,7 +27,10 @@ class StockIdentityMatcher
 
   def matches
     @matches ||= begin
-      proposals = @catalog.index_with { |v| propose(v) }
+      proposals = @catalog.index_with do |variant|
+        match = propose(variant)
+        match.record ? match : investigated(variant, match)
+      end
       proposals.values.select(&:record).group_by { |m| m.record.fetch('id') }.each_value do |claims|
         next if claims.one?
 
@@ -67,6 +71,25 @@ class StockIdentityMatcher
   def record_evidence(record) = @record_evidence.fetch(record)
 
   private
+
+  def investigated(variant, original)
+    proposal = @findings&.candidate_for(variant.id)
+    return original unless proposal
+    allowed = ['No unique identifier; explicit package missing', 'No compatible current C-Trax candidate']
+    allowed << 'Ambiguous identifiers' if proposal['kind'] == 'identifier'
+    return original unless allowed.include?(original.identity)
+
+    record = @records.find { |r| r['id'] == proposal['ctrax_id'] }
+    return original unless record && !source_conflict?(variant, record)
+    left = @variant_evidence.fetch(variant)
+    right = @record_evidence.fetch(record)
+    return original if left.package_conflict?(right) || left.descriptor_conflict?(right)
+
+    identity = "Investigated #{proposal.fetch('kind')} candidate"
+    match = candidate(variant, record, identity, 2, [proposal.fetch('evidence'), 'Dated source investigation; not an approved stock mapping'])
+    match.issues << 'Package equivalence unverified; quantity difference withheld' if proposal['kind'] == 'family'
+    match
+  end
 
   def native_id(value) = value.to_s.split('/').last.presence
   def variant_name(variant) = [variant.product&.title, variant.title].compact.join(' · ')

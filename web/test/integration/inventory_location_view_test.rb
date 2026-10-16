@@ -87,4 +87,29 @@ class InventoryLocationViewTest < ActionDispatch::IntegrationTest
     get stock_comparison_path(format: :csv)
     assert_redirected_to root_path
   end
+
+  test 'saved source findings are searchable escaped and exported without provider or stock writes' do
+    @variant.update!(sku: nil)
+    note = '=HYPERLINK("https://invalid.example") <script>private source-copy finding</script>'
+    StockIdentityFindings.publish!(shopify: ShopifyStockSnapshot.first, ctrax: CtraxStockSnapshot.first, reviewed_at: @at.iso8601,
+      notes: [{ 'shopify_id' => @variant.id, 'ctrax_id' => 'view-native', 'severity' => 'warning', 'text' => note }],
+      candidates: [{ 'shopify_id' => @variant.id, 'ctrax_id' => 'view-native', 'kind' => 'family', 'evidence' => 'Source description supports this product family; package unverified' }])
+    ShopifyClient.expects(:graphql).never
+    Ctrax::StockSync.expects(:call).never
+    InventoryWriter.expects(:adjust_shopify!).never
+    get stock_comparison_path, params: { filter: 'findings', q: 'private source-copy' }
+    assert_response :success
+    assert_includes response.body, 'Saved stock investigation'
+    assert_includes response.body, 'Investigated family candidate'
+    assert_includes response.body, 'Investigation findings'
+    assert_select 'script', text: 'private source-copy finding', count: 0
+    get stock_comparison_path(format: :csv), params: { filter: 'findings', q: 'private source-copy' }
+    csv = CSV.parse(response.body)
+    assert_equal 2, csv.size
+    assert_nil csv.last[11]
+    assert_equal "'#{note}", csv.last[csv.first.index('Investigation findings')]
+    assert_equal 3, @variant.reload.inventoryQuantity
+    assert_nil @variant.sku
+    assert_equal '-3', CtraxStockSnapshot.first.records.first['quantity']
+  end
 end

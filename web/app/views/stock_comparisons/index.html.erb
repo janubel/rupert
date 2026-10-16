@@ -18,7 +18,7 @@
         <%= select_tag :ctrax_location_id, options_for_select(@comparison.ctrax_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.ctrax&.location_id), include_blank: 'Choose store', class: 'input mt-1' %>
       </label>
       <label class="block text-sm">Show
-        <%= select_tag :filter, options_for_select([['All items', 'all'], ['Needs attention', 'attention'], ['No current pair', 'unmatched'], ['Name/package candidates', 'candidates'], ['Historical Shopify candidates', 'historical']], @comparison.filter), class: 'input mt-1' %>
+        <%= select_tag :filter, options_for_select([['All items', 'all'], ['Needs attention', 'attention'], ['No current pair', 'unmatched'], ['Product/package candidates', 'candidates'], ['Saved investigation findings', 'findings'], ['Historical Shopify candidates', 'historical']], @comparison.filter), class: 'input mt-1' %>
       </label>
       <label class="block text-sm">Search <%= text_field_tag :q, @comparison.query, class: 'input mt-1', placeholder: 'Item, SKU or native ID' %></label>
       <%= submit_tag 'Compare', class: 'btn-primary' %>
@@ -28,6 +28,14 @@
     <% unless @comparison.shopify && @comparison.ctrax %><p role="status" class="text-sm text-clay">Choose both sources after their stock reads complete. Missing stock stays unknown.</p><% end %>
   </section>
   <% summary = @comparison.summary %>
+  <% if @comparison.findings.reviewed_at || @comparison.findings.status %>
+    <section class="card card-pad space-y-2" aria-label="Saved stock investigation">
+      <h2 class="font-semibold">Saved stock investigation</h2>
+      <p class="text-sm text-mocha"><%= @comparison.findings.reviewed_at ? "Source evidence checked #{@comparison.findings.reviewed_at.iso8601}." : '' %> <%= @comparison.findings.status %>.</p>
+      <p class="text-sm text-mocha"><%= summary[:findings] %> rows have dated findings; <%= summary[:investigated_candidates] %> additional candidate links are supported by that investigation. These links show the two observations together and always withhold a quantity difference. Package, formula and source-copy uncertainties remain flagged beside each item.</p>
+      <%= link_to 'Show investigation findings', stock_comparison_path(request.query_parameters.slice('q', 'shopify_location_id', 'ctrax_location_id').merge(filter: 'findings')), class: 'btn-ghost' %>
+    </section>
+  <% end %>
   <section class="grid gap-3 sm:grid-cols-4">
     <% [['Comparison rows', summary[:rows]], ['Identity pairs / candidates', summary[:paired]], ['Unknown stock rows', summary[:unknown]], ['Negative stock rows', summary[:negative]]].each do |label, value| %>
       <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value"><%= value %></p></div>
@@ -45,7 +53,7 @@
             <% [:on_hand, :available, :committed, :ctrax_quantity, :difference].each do |key| %>
               <td class="td text-right"><%= row[key].nil? ? 'Unknown / unavailable' : (row[key].is_a?(BigDecimal) ? row[key].to_s('F').delete_suffix('.0') : row[key]) %></td>
             <% end %>
-            <td class="td"><%= row[:issues].any? ? row[:issues].join(' · ') : (row[:difference]&.nonzero? ? 'Counts differ; verify baseline' : 'No stock exception in these reads') %><%= ' · Not listed for sale' if row[:ctrax_id] && !row[:listed] %><% if row[:evidence].any? || row[:historical].any? %><details class="mt-2"><summary class="cursor-pointer">Matching evidence</summary><p class="text-xs text-taupe"><%= row[:evidence].join(' · ') %></p><% row[:historical].each do |old| %><p class="text-xs"><%= link_to old[:label], shopify_variant_path(old[:id]), class: 'hover:underline' %> · <%= old[:status] || 'Unknown status' %> · <%= old[:present] == false || old[:product_present] == false ? 'Absent from complete catalog read' : (old[:present].nil? || old[:product_present].nil? ? 'Catalog presence not verified' : 'Present') %></p><% end %></details><% end %></td>
+            <td class="td"><%= row[:issues].any? ? row[:issues].join(' · ') : (row[:difference]&.nonzero? ? 'Counts differ; verify baseline' : 'No stock exception in these reads') %><%= ' · Not listed for sale' if row[:ctrax_id] && !row[:listed] %><% if row[:evidence].any? || row[:historical].any? %><details class="mt-2"><summary class="cursor-pointer">Matching evidence</summary><p class="text-xs text-taupe"><%= row[:evidence].join(' · ') %></p><% row[:historical].each do |old| %><p class="text-xs"><%= link_to old[:label], shopify_variant_path(old[:id]), class: 'hover:underline' %> · <%= old[:status] || 'Unknown status' %> · <%= old[:present] == false || old[:product_present] == false ? 'Absent from complete catalog read' : (old[:present].nil? || old[:product_present].nil? ? 'Catalog presence not verified' : 'Present') %></p><% end %></details><% end %><% if row[:finding_notes].any? %><details class="mt-2"><summary class="cursor-pointer">Investigation findings (<%= row[:finding_notes].size %>)</summary><% row[:finding_notes].each do |note| %><p class="mt-2 text-xs <%= note[:severity] == 'warning' ? 'text-clay' : 'text-mocha' %>"><%= note[:text] %></p><p class="text-xs text-taupe">Observed <%= note[:reviewed_at]&.iso8601 %><%= ' · Needs a fresh source review; kept as history' unless note[:current] %></p><% end %></details><% end %></td>
           </tr>
         <% end %>
         <% if @rows.empty? %><tr><td colspan="7" class="empty-row">No current records match these filters. Complete source reads from Source reads.</td></tr><% end %>
