@@ -16,7 +16,7 @@ module People
 
     def show
       authorize(@leave_request)
-      @balance = @leave_request.employee.leave_balance(@leave_request.leave_type, Date.current.year)
+      @balance = @leave_request.employee.leave_balances.find_by(leave_type: @leave_request.leave_type, year: @leave_request.starts_on.year)
     end
 
     def new
@@ -49,31 +49,12 @@ module People
       redirect_to(people_leave_requests_path, notice: 'Leave request removed.')
     end
 
-    def approve
-      authorize(:module, :leave_write?)
-      @leave_request.approve! if @leave_request.may_approve?
-      @leave_request.update!(reviewed_by: Current.user.id, reviewed_at: Time.current)
-      apply_balance(@leave_request) if @leave_request.approved?
-      ActivityLogger.log('leave_approved', subject: @leave_request)
-      redirect_to(people_leave_request_path(@leave_request), notice: 'Leave approved.')
-    end
-
-    def deny
-      authorize(:module, :leave_write?)
-      @leave_request.deny! if @leave_request.may_deny?
-      @leave_request.update!(reviewed_by: Current.user.id, reviewed_at: Time.current)
-      ActivityLogger.log('leave_denied', subject: @leave_request)
-      redirect_to(people_leave_request_path(@leave_request), notice: 'Leave denied.')
-    end
-
-    def cancel
-      authorize(:module, :leave_write?)
-      if @leave_request.may_cancel?
-        @leave_request.cancel!
-        revert_balance(@leave_request)
+    %i[approve deny cancel].each do |event|
+      define_method(event) do
+        authorize(:module, :leave_write?)
+        LeaveRequestWorkflow.change(@leave_request, event)
+        redirect_to people_leave_request_path(@leave_request), notice: 'Leave request updated.'
       end
-      ActivityLogger.log('leave_cancelled', subject: @leave_request)
-      redirect_to(people_leave_request_path(@leave_request), notice: 'Leave request cancelled.')
     end
 
     private
@@ -84,26 +65,6 @@ module People
 
     def leave_request_params
       params.require(:leave_request).permit(:employee_id, :leave_type, :starts_on, :ends_on, :hours, :reason)
-    end
-
-    # Approval consumes the employee's balance for the requested period.
-    def apply_balance(request)
-      return if request.leave_type == 'unpaid'
-
-      balance = request.employee.leave_balance(request.leave_type, request.starts_on.year)
-      used = request.hours.presence || request.days * 8
-      balance.used_hours = (balance.used_hours || 0) + used
-      balance.save!
-    end
-
-    # Cancelling an approved request gives the hours back.
-    def revert_balance(request)
-      return if request.leave_type == 'unpaid'
-
-      balance = request.employee.leave_balance(request.leave_type, request.starts_on.year)
-      used = request.hours.presence || request.days * 8
-      balance.used_hours = [balance.used_hours.to_f - used, 0].max
-      balance.save!
     end
   end
 end

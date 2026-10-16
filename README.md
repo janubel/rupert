@@ -153,6 +153,7 @@ The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 
 
 ## Features, roadmap and comparison
 
+- [Master credentials and sync repair](docs/ops/master-credentials-and-sync.md) — central setup, safe credential forms, troubleshooting and the prioritized improvement plan.
 - [Public roadmap](https://techmore.github.io/rupert/roadmap.html) — implemented scope, implementation evidence, delivery phases and acceptance gates.
 - [Competitor matrix](https://techmore.github.io/rupert/competitors.html) — scoped ERP, inventory and POS comparisons, official sources and CSV/JSON downloads.
 - [Private owner checklist guide](https://techmore.github.io/rupert/owner-checklists.html) — administrator-only local attestations, evidence/history and private printing; no checklist contents are published.
@@ -190,3 +191,7 @@ records; no longer written), `Location`,
 ## Employee timesheets
 
 [Employee web/app access and timesheets](docs/employee-timesheets.md) covers setup links, employee permissions, approvals, clock imports, CSV exports, mobile APIs, and deployment. [Native app build and distribution](mobile/README.md) covers iPhone/Android signing and release preparation. The instance serves the installable employee web app at `/employee`.
+
+## Influencer marketing
+
+Use Marketing → Influencers for collaboration, gifting and document records. [Create temporary Shopify codes](docs/ops/shopify-influencer-discounts.md) with reviewed terms and discount-applying referral links. The connected Shopify app needs `write_discounts`; creating a code requires explicit operator confirmation. See the [CMS guide](docs/ops/influencer-cms.md).

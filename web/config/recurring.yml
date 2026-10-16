@@ -1,10 +1,46 @@
 # frozen_string_literal: true
 
 production:
-  swipesimple_csv_intake:
-    class: SwipesimpleInboxJob
+  pos_payment_reconciliation:
+    class: PosPaymentReconciliationJob
     queue: default
-    schedule: every hour at minute 20
+    schedule: '*/2 * * * *'
+  pos_inventory:
+    class: PosInventoryJob
+    queue: default
+    schedule: '* * * * *'
+  retention_drive:
+    class: RetentionDriveJob
+    queue: default
+    schedule: every 15 minutes
+  daily_reconciliation_archive:
+    class: DailyReconciliationArchiveJob
+    queue: default
+    schedule: "15 7 * * * America/New_York"
+  source_directories:
+    class: DirectorySyncJob
+    queue: default
+    schedule: every 30 minutes
+  square_timecards:
+    class: SquareTimecardSyncJob
+    queue: default
+    schedule: every 15 minutes
+  ctrax_sales:
+    class: CtraxSalesSyncJob
+    queue: default
+    schedule: '5,35 * * * *'
+  iris_daily_deposits_web:
+    class: IrisDailyDepositsWebJob
+    queue: default
+    schedule: "45 6 * * * America/New_York"
+  swipesimple_web_pull:
+    class: SwipesimpleWebSyncJob
+    queue: default
+    schedule: every 30 minutes
+  ctrax_stock:
+    class: CtraxStockSyncJob
+    queue: default
+    schedule: every 30 minutes
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
@@ -16,6 +52,14 @@ production:
     class: FulfillmentMonitorJob
     queue: default
     schedule: every 30 minutes
+  iris_reporting:
+    class: IrisReportingJob
+    queue: default
+    schedule: "45 6 * * * America/New_York"
+  authorize_net_reporting:
+    class: AuthorizeNetReportingJob
+    queue: default
+    schedule: every 5 minutes
   daily_store_close:
     class: OperationsBriefJob
     queue: default
@@ -31,6 +75,21 @@ production:
     queue: default
     args: [weekly]
     schedule: "15 8 * * 1 America/New_York"
+  money_reconciliation_daily:
+    class: MoneyReconciliationJob
+    queue: default
+    args: [daily]
+    schedule: "20 0 * * * America/New_York"
+  money_reconciliation_weekly:
+    class: MoneyReconciliationJob
+    queue: default
+    args: [weekly]
+    schedule: "25 0 * * 1 America/New_York"
+  money_reconciliation_monthly:
+    class: MoneyReconciliationJob
+    queue: default
+    args: [monthly]
+    schedule: "30 0 1 * * America/New_York"
   drive_backups:
     class: BackupJob
     queue: default

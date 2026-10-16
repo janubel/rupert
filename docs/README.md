@@ -1,6 +1,13 @@
 # Rupert docs
 
+NAB / IRIS deposits, transactions and Health Center summaries: [integration, access and ongoing operation](ops/iris-reporting.md).
+Expanded NAB / IRIS evidence, endpoint inventory, native exports and remaining access questions: [integration investigation](ops/iris-integration-investigation.md).
+
 Start here to resume operator rollout: [Derrick's day-to-day readiness and pickup plan](ops/day-to-day-readiness.md). It separates usable daily review workflows from the payment and inventory gates that still block replacing the current systems.
+
+Marketing operators: [Community thread and reply review](ops/community-marketing.md) explains topic search, manual intake, group-code evidence, reply approval and manual publication.
+
+Influencer operators: [Influencer CMS](ops/influencer-cms.md) covers prospects, collaborations, product gifts, temporary code records, referral URLs, private contacts and versioned documents.
 
 | Where | What |
 | --- | --- |
@@ -14,3 +21,11 @@ Start here to resume operator rollout: [Derrick's day-to-day readiness and picku
 Product pages: `roadmap.html`, `competitors.html`, and `sqlite-incus.html`. Edit the catalog at `web/config/product_roadmap.json`, the matrix at `docs/data/competitor-matrix.json`, or the runbook at `docs/ops/sqlite-incus.md`, then run `bin/build-product-site`. CI runs `--check` to detect drift. Matrix cells link to official source pages; "Not established" is an unknown, not an absence claim.
 
 The current operating decision and restore/scaling guidance are in `ops/sqlite-incus.md`; cutover evidence is in `ops/sqlite-migration.md`. SER8-specific units and a host freshness watcher are under `deploy/`.
+
+- [Dashboard source status and 30-minute reads](ops/source-sync-status.md)
+
+## Repository continuity
+
+- [Main / SER8 reconciliation and preserved PR work](ops/repository-reconciliation-2026-10-16.md).
+- [Historical record backfills and recovery checks](ops/historical-records.md).
+- [Community and influencer implementation plan (historical)](plans/community-and-influencer-marketing.md).

@@ -1,0 +1,5 @@
+<% if SquareTimecardSync.enabled? %>
+  <% attempts = SyncAttempt.where(source: 'square', operation: 'timecards') %>
+  <% latest = attempts.order(id: :desc).first; success = attempts.where(status: 'succeeded').order(finished_at: :desc).first %>
+  <p class="text-xs text-mocha" role="status">Square hours update every 15 minutes after a shift closes.<% if success&.finished_at %> Last synced <%= l(success.finished_at.in_time_zone, format: '%b %-d, %-I:%M %p %Z') %>.<% else %> Waiting for the first automatic refresh.<% end %><% if latest&.status == 'failed' %> The latest refresh failed; previous hours are retained.<% elsif latest&.status == 'running' %> Refresh in progress.<% end %></p>
+<% end %>

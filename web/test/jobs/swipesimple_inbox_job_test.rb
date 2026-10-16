@@ -38,6 +38,12 @@ class SwipesimpleInboxJobTest < ActiveSupport::TestCase
     assert_nil Current.tenant
   end
 
+  test 'on-demand checks leave another workspace delivery pending' do
+    write_manifest(tenant_id: 'another-workspace')
+    assert_equal 0, SwipesimpleInboxJob.new.perform(tenant_id: tenants(:default_tenant).id)[:imported]
+    assert File.exist?(File.join(@directory, 'source.ready.json'))
+  end
+
   test 'tampered files traversal symlinks and missing tenants cannot import' do
     File.write(File.join(@directory, 'source.csv'), @csv)
     [{ sha256: '0' * 64 }, { csv: '../secret.csv' }, { tenant_id: 'missing' }].each do |change|

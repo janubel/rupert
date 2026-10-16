@@ -6,13 +6,21 @@
       <p class="mt-1 text-sm text-mocha">The team directory with their department, position, and employment status.</p>
     </div>
     <div class="flex flex-wrap gap-2">
+      <%= link_to 'Employee problem reports', people_work_reports_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
       <%= link_to "Departments", people_departments_path, class: "btn-ghost btn-sm" %>
       <%= link_to "Positions", people_positions_path, class: "btn-ghost btn-sm" %>
+      <% if Current.user.can?("hr.write") && Current.user.can?("sync.write") %>
+        <%= button_to "Sync employees now", sync_directory_people_employees_path, class: "btn-ghost btn-sm" %>
+      <% end %>
       <% if Current.user.can?("hr.write") %>
+        <%= link_to 'Consolidate profiles', consolidation_people_employees_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
         <%= link_to "Add employee", new_people_employee_path, class: "btn-primary" %>
       <% end %>
     </div>
   </section>
+
+  <%= render "shared/directory_sync_status", kind: "employees" %>
+  <p class="text-xs text-taupe">Each employee can have accounts in several apps. Consolidated profiles retain every source identity. Confirm employment type and payroll details before payroll.</p>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
@@ -37,6 +45,7 @@
     </div>
   </section>
 
+  <p class="text-sm"><%= @missing_logins %> active employee records need a login. <%= link_to 'Review employees without logins', people_employees_path(login: 'missing'), class: 'font-semibold hover:underline' %></p>
   <%= form_tag people_employees_path, method: :get, class: "flex flex-wrap gap-2" do %>
     <input type="search" name="q" value="<%= params[:q] %>" placeholder="Search name, employee #, email…" aria-label="Search employees" class="search w-full sm:max-w-xs" autocomplete="off">
     <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
@@ -45,6 +54,9 @@
         <option value="<%= status %>" <%= @status == status.to_s ? "selected" : "" %>><%= status.to_s.titleize %></option>
       <% end %>
     </select>
+    <%= select_tag :source, options_for_select([['All sources', '']] + Directories::Sync::PAIRS.keys.map { |v| [directory_label(v), v] }, params[:source]), class: 'select w-auto', aria: { label: 'Source filter' } %>
+    <%= select_tag :login, options_for_select([['All logins', ''], ['Needs login', 'missing'], ['Linked login', 'linked']], params[:login]), class: 'select w-auto', aria: { label: 'Login filter' } %>
+    <%= submit_tag 'Filter', class: 'btn-ghost btn-sm' %>
   <% end %>
 
   <div class="card overflow-hidden">
@@ -55,23 +67,26 @@
             <th scope="col" class="th">Employee</th>
             <th scope="col" class="th">Department</th>
             <th scope="col" class="th">Position</th>
-            <th scope="col" class="th">Hired</th>
+            <th scope="col" class="th">Web login</th>
+            <th scope="col" class="th">Access &amp; tabs</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @employees.empty? %>
-            <tr><td colspan="5" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No employees yet — add the first one." %></td></tr>
+            <tr><td colspan="6" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No employees yet — add the first one." %></td></tr>
           <% end %>
           <% @employees.each do |employee| %>
             <tr class="hover:bg-cream">
               <td class="td">
                 <p class="font-medium text-ink"><%= link_to employee.name, people_employee_path(employee), class: "hover:text-olive hover:underline" %></p>
+                <% employee.source_identities.each do |identity| %><p class="text-xs text-taupe"><%= directory_label(identity.source) %> · <%= identity.source_active.nil? ? 'status not supplied' : identity.source_active ? 'active' : 'inactive' %></p><% end %>
                 <p class="text-xs text-taupe"><%= employee.employee_number.presence || employee.email %></p>
               </td>
               <td class="td text-mocha"><%= employee.department&.name || "—" %></td>
               <td class="td text-mocha"><%= employee.position&.name || "—" %></td>
-              <td class="td text-mocha"><%= employee.hire_date ? l(employee.hire_date, format: :short) : "—" %></td>
+              <td class="td text-mocha"><%= employee.user ? (employee.user.active? ? "Login linked" : "Login disabled") : "Needs login" %></td>
+              <td class="td"><%= render 'access_badges', employee: employee, compact: true %><%= link_to 'Review access', people_employee_path(employee, anchor: 'access'), class: 'mt-2 inline-block text-xs text-olive underline' %></td>
               <td class="td">
                 <span class="<%= employee.active? ? "pill-fern" : employee.on_leave? ? "pill-olive" : "pill-rose" %>">
                   <span class="dot <%= employee.active? ? "bg-fern" : employee.on_leave? ? "bg-olive" : "bg-rose" %>"></span>
@@ -83,5 +98,6 @@
         </tbody>
       </table>
     </div>
+    <div class="p-4"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
   </div>
 </div>

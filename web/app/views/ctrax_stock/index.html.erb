@@ -1,0 +1,15 @@
+<% content_for :title, 'C-Trax stock' %>
+<div class="space-y-6">
+  <section class="space-y-3"><h1 class="page-title">C-Trax stock</h1><p class="text-sm text-mocha">Retail count reference. Negative stock is preserved; missing stock remains unknown. Each read replaces the local store snapshot after every page has been validated. C-Trax can change while pages are being read.</p><div class="flex flex-wrap gap-3"><%= link_to 'C-Trax connection', pos_connection_path('ctrax'), class: 'btn-ghost' if Current.user.can?('settings.read') %><%= link_to 'Inventory counts', inventory_counts_path, class: 'btn-ghost' %></div></section>
+  <% if @snapshots.empty? %><section class="card card-pad"><p>No C-Trax stock has been imported. Configure the connection, check access, then choose Sync stock.</p></section><% end %>
+  <% @snapshots.each do |snapshot| %>
+    <section class="card card-pad space-y-3">
+      <h2 class="font-display text-xl"><%= snapshot.location.name %></h2>
+      <p class="text-xs text-taupe">Store <%= snapshot.store_id %> · read started <%= l(snapshot.captured_at, format: :long) %> · <%= snapshot.records.size %> variants</p>
+      <% if Current.user.can?('inventory.write') %><%= link_to 'Prepare physical count', new_inventory_count_path(location_id: snapshot.location_id), class: 'btn-primary' %><% end %>
+      <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th class="th">Variant</th><th class="th">SKU</th><th class="th">C-Trax ID</th><th class="th text-right">Stock</th></tr></thead><tbody>
+        <% snapshot.records.each do |record| %><tr><td class="td"><%= record['name'].presence || "Variant #{record['id']}" %></td><td class="td"><%= record['sku'].presence || 'Missing SKU' %></td><td class="td"><%= record['id'] %></td><td class="td text-right"><%= record['quantity'].nil? ? 'Unknown' : record['quantity'] %><%= ' · stock tracking unverified/off' unless record['manage_stock'] %></td></tr><% end %>
+      </tbody></table></div>
+    </section>
+  <% end %>
+</div>

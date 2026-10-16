@@ -8,6 +8,26 @@ class PageGuides
   Guide = Struct.new(:key, :title, :summary, :sections, :tips, keyword_init: true)
 
   GUIDES = {
+    'influencers' => Guide.new(
+      key: 'influencers', title: 'Influencer collaborations',
+      summary: 'Track prospects, campaign collaborations, product gifts, temporary code records and documents.',
+      sections: [
+        { heading: 'Directory and follow-up', body: 'Add a prospect, audience topics and relationship owner. Update stages and follow-up dates as you work. Contact details and conversations require the separate Marketing contacts permission. No outreach is sent automatically.' },
+        { heading: 'Collaborations and gifts', body: 'Connect a prospect to a Marketing campaign. Propose products from the mirrored Shopify catalog, record estimated costs, approve the gift and confirm recipient details. Record actual shipment and delivery evidence; this workflow does not reserve stock, create orders or change inventory.' },
+        { heading: 'Offers and documentation', body: 'Create a Shopify discount draft, review its store, dates and full terms, then explicitly create the code. Marketing discounts and review access are required. Copying verifies Shopify and supplies a link that applies the code. Existing-code records and versioned campaign documents remain available; links do not measure conversions or commissions.' }
+      ],
+      tips: ['Do not contact blocks new offer sharing and product handoffs.', 'Document edits create a new revision and reset review.', 'Shopify-created codes enforce their saved expiry; existing-code records need matching expiry in the merchant store.']
+    ),
+    'marketing' => Guide.new(
+      key: 'marketing', title: 'Community marketing',
+      summary: 'Find topic discussions, save thread context and review replies with existing group offers.',
+      sections: [
+        { heading: 'Find and triage', body: 'Create a campaign and group with topic terms and promotion rules. Open the group topic search, save a discussion URL and excerpt, then mark it relevant and confirm current context.' },
+        { heading: 'Review an offer and reply', body: 'Record an existing merchant code and full terms. A reviewer confirms merchant evidence for 24 hours and group rules for 30 days. Save and submit a reply with clear brand affiliation; approve the exact revision before copying it.' },
+        { heading: 'Manual publication', body: 'Publish the approved text yourself and record its URL. Changed context or offers require another review. Rupert does not crawl sources, post replies or create merchant codes in this phase.' }
+      ],
+      tips: ['Thread context expires after 7 days. Confirm it again when needed.', 'Keep a useful contribution in each reply and follow group promotion rules.', 'An approved draft is not evidence of publication or sales.']
+    ),
     'dashboard' => Guide.new(
       key: 'dashboard', title: 'Dashboard',
       summary: "Your at-a-glance store health: today's money, sales volume, and anything needing attention like inventory drift or low stock.",
@@ -56,18 +76,16 @@ class PageGuides
       ]
     ),
     'inventory' => Guide.new(
-      key: 'inventory', title: 'Inventory',
-      summary: 'Your catalog mirrored from Shopify with quantities on both sides — plus size-derived products and a banner when any count is negative.',
+      key: 'inventory', title: 'Stock comparison',
+      summary: 'Read-only Shopify and C-Trax observations of shared stock, with current catalog coverage and source read times.',
       sections: [
-        { heading: "What you're seeing",
-          body: "One row per product variant: its Shopify and Square counts side by side. These are two different locations with two different inventories — different numbers are normal, not an error. A 'size 5g' badge means the variant derives from a root gram bank and is managed on the Sizes page. The red banner lists negative counts — oversold or non-inventory SKUs — with one-click corrections." },
-        { heading: 'How to read the numbers',
-          body: 'Shopify is your online stock; Square is what you hold for in-person sales. Compare each against its own reorder point, not against the other column. Search by product title or SKU; the page shows the first 40 matches.' }
+        { heading: 'Read the source states', body: 'Select one Shopify location and one C-Trax store. Shopify on-hand, available and committed quantities are separate. C-Trax retains signed stock. These are observations of shared stock; never add their quantities together.' },
+        { heading: 'Review identities and exceptions', body: 'Unique native variant IDs take precedence. Unique SKU/barcode identifiers are candidates, not approved mappings. Exact product words and explicit packages can suggest additional candidates, with both source names and matching evidence. These name/package candidates have no quantity difference. Duplicate or conflicting identities stay unresolved. Historical Shopify candidates explain unmatched C-Trax items without restoring old stock. Unknown stock is not zero; no current match does not mean not carried.' }
       ],
       tips: [
-        "When the negative-count banner appears, fix items individually (Set to 0 / Untrack) so you don't guess.",
-        'Size-derived SKUs are marked — manage their root grams on the Sizes page, not by editing here.',
-        "Unlinked variants (no Square link) show 'unlinked'; run a sync after creating new SKUs to link them."
+        'Search either source name, SKU, barcode, native ID or investigation note. Attention, unmatched, product/package, saved-findings and historical filters also apply to CSV.',
+        'Older-than-one-hour, unknown, fractional or untracked observations have no numerical difference.',
+        'Current active tracked Shopify variants are shown; archived, absent and unverified historical records are excluded. This page never changes stock, SKUs or mappings.'
       ]
     ),
     'reconcile' => Guide.new(
@@ -159,7 +177,7 @@ class PageGuides
       ],
       tips: [
         'Only the platform super administrator configures Google Drive backups. Every 6 hours, Rupert can copy the entire shared instance database to that approved destination; store credentials cannot authorize this.',
-        'Add every staff email domain to Google sign-in; new people on an allowed domain get a reader account automatically.',
+        'Add every staff email domain to Google sign-in; new people on an allowed domain get a employee account automatically.',
         'Environment secrets (Square/Shopify tokens) live in the .env card and are encrypted at rest.'
       ]
     ),
@@ -276,13 +294,13 @@ class PageGuides
       ]
     ),
     'connections' => Guide.new(
-      key: 'connections', title: 'Connections',
-      summary: 'The integrations powering Rupert — Shopify, Square, Google Drive, Buzz — and their status.',
+      key: 'connections', title: 'Master credentials & sync',
+      summary: 'One setup desk for saved credentials, source freshness, access checks and repair steps.',
       sections: [
-        { heading: "What you're seeing", body: "Each connected service and whether it's healthy. Reconnect or check credentials here when a sync fails." }
+        { heading: "What you're seeing", body: 'Credential completeness and actual source freshness are separate. Open a connection to replace credentials, explicitly check access, then run a read. Saved secrets stay hidden; backup setup remains with the platform operator.' }
       ],
       tips: [
-        "If a sync fails, check Connections first — it's usually a revoked token, not a code bug."
+        'If access checks pass but data stays stale, review Sync history and Worker status. Do not replace credentials or enable a schedule merely because a source is stale.'
       ]
     ),
     'system' => Guide.new(
@@ -421,6 +439,7 @@ class PageGuides
     ['/finance', 'finance'],
     ['/purchasing', 'purchasing'],
     ['/sales', 'sales'],
+    ['/stock_comparison', 'inventory'],
     ['/inventory', 'inventory'],
     ['/reconcile', 'reconcile'],
     ['/warehouse', 'warehouse'],

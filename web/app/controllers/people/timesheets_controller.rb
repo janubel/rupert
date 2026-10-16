@@ -19,6 +19,7 @@ module People
       if request.format.csv?
         return send_data TimesheetCsv.generate(scope), filename: 'timesheets.csv', type: 'text/csv'
       end
+      @square_history = SquareTimecard.visible_to(Current.user)
       @awaiting = scope.awaiting_review.count
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee), items: 30)
     rescue Date::Error

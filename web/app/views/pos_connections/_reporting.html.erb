@@ -1,0 +1,37 @@
+<div data-controller="live-report" data-live-report-interval-value="30000">
+<%= turbo_frame_tag 'authorize-payment-report', src: (pos_connection_path(@provider[:key], report_date: @report_date) unless turbo_frame_request?) do %>
+<section class="card card-pad space-y-4">
+  <h2 class="font-display text-xl">Payment reconciliation</h2>
+  <%= link_to 'Match payments to sales for commissions', authorize_net_sale_links_path, class: 'btn-ghost', data: { turbo_frame: '_top' } if Current.user.can?('payroll.read') %>
+  <p class="text-sm text-mocha">Payment observations do not create retail sales or change inventory. C-Trax remains the retail inventory reference. Refunds retain their original transaction link; voids retain their source status. Tips and customer surcharges are shown only when returned. Processing fees are unavailable. Currency stays unknown when the gateway enables multiple currencies.</p>
+  <% if @connection.last_report_status %><p role="status"><%= @connection.last_report_status %>: <%= @connection.last_report_message %><% if @connection.last_reported_at %> Last completed <%= @connection.last_reported_at.utc.iso8601 %>.<% end %></p><% end %>
+  <% if Current.user.can?('settings.write') && @connection.credentials_saved? %>
+    <%= form_with url: import_reporting_pos_connection_path(@provider[:key]), method: :post, data: { turbo: false }, class: 'flex flex-wrap gap-3 items-end' do %>
+      <div><%= label_tag :from, 'First UTC date (optional)' %><%= date_field_tag :from, nil, class: 'input' %></div>
+      <div><%= label_tag :to, 'Last UTC date (optional)' %><%= date_field_tag :to, nil, class: 'input' %></div>
+      <%= submit_tag 'Import reporting data', class: 'btn-primary' %>
+    <% end %>
+    <p class="text-xs text-taupe">Defaults to the previous 7 days. Each window must be at most 31 days. Imports run in the job queue; this report refreshes every 30 seconds. Source availability and queue delays still apply. Replays update existing source transactions. An unobserved void or decline that has left the unsettled list may be missing; compare portal exports for a complete historical audit.</p>
+  <% end %>
+  <%= form_with url: pos_connection_path(@provider[:key]), method: :get, data: { turbo: false }, class: 'flex flex-wrap gap-3 items-end' do %>
+    <div><%= label_tag :report_date, 'Reporting day (UTC)' %><%= date_field_tag :report_date, @report_date, class: 'input' %></div><%= submit_tag 'View day', class: 'btn-ghost' %>
+  <% end %>
+  <p class="text-sm">Settled amounts for this UTC day, grouped by currency and latest status: <% (@report_totals || {}).each do |(currency, status), total| %><span><%= currency || 'Currency unknown' %> · <%= status %>: <%= total.to_s('F') %>; </span><% end %></p>
+  <p class="text-sm">Current statuses of payments submitted this UTC day: <%= (@report_status_counts || {}).to_json %></p>
+  <p class="text-xs text-taupe">Showing up to 100 of <%= @report_transaction_count || 0 %> transactions submitted or settled this UTC day, and up to 30 batches settled this day. Totals include all imported rows with a known currency for the settlement day; unknown currency amounts are excluded. Void execution timestamps are not provided; status counts use submission day. Amounts are source amounts, not net bank deposits. Refund amounts remain positive and are identified by type/status.</p>
+  <div class="overflow-x-auto"><table class="min-w-full text-sm"><thead><tr><th>Source transaction / original</th><th>Submitted UTC</th><th>Type / status</th><th>Authorized / settled</th><th>Tip / customer surcharge</th><th>Batch / settlement</th></tr></thead><tbody>
+    <% (@report_transactions || []).each do |row| %><tr>
+      <td><%= row.source_transaction_id %><br><%= row.reference_transaction_id %></td>
+      <td><%= row.submitted_at.utc.iso8601 %></td><td><%= row.transaction_type %><br><%= row.payment_status %></td>
+      <td><%= row.currency || 'Currency unknown' %><br><%= row.authorized_amount.to_s('F') %> / <%= row.settled_amount.to_s('F') %></td>
+      <td><%= row.tip_amount&.to_s('F') || 'Unknown' %> / <%= row.surcharge_amount&.to_s('F') || 'Unknown' %></td>
+      <td><%= row.source_batch_id %><br><%= row.settlement_state %><br><%= row.settled_at&.utc&.iso8601 %></td>
+    </tr><% end %>
+  </tbody></table></div>
+  <div class="overflow-x-auto"><table class="min-w-full text-sm"><thead><tr><th>Source batch</th><th>Settlement UTC / status</th><th>Payment method</th><th>Source statistics</th></tr></thead><tbody>
+    <% (@report_batches || []).each do |row| %><tr><td><%= row.source_batch_id %></td><td><%= row.settled_at&.utc&.iso8601 %><br><%= row.settlement_state %></td><td><%= row.payment_method %></td><td><%= row.statistics.to_json %></td></tr><% end %>
+  </tbody></table></div>
+</section>
+
+<% end %>
+</div>

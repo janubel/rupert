@@ -13,7 +13,7 @@ class InventoryCountsController < AuthenticatedController
   end
 
   def new
-    @count = InventoryCount.new(countedAt: Time.current, locationId: params[:location_id])
+    @count = InventoryCount.new(countedAt: Time.current, locationId: params[:location_id], tenant_id: Current.tenant_id)
     @locations = Location.order(name: :asc).limit(200)
     @skus = SkuLink.order(:sku).limit(500).pluck(:sku)
     @prepared = params[:prepared] != '0'
@@ -87,7 +87,7 @@ class InventoryCountsController < AuthenticatedController
     end
     DataCache.bump!
     redirect_to(inventory_count_path(@count),
-      notice: 'Count approved and recorded — overrides are disabled (Square is the source of truth).')
+      notice: 'Count approved and recorded. Platform inventory was not changed.')
   rescue AASM::InvalidTransition
     redirect_to(inventory_count_path(@count), alert: 'Only pending counts can be approved.')
   rescue StandardError => e
@@ -150,26 +150,9 @@ class InventoryCountsController < AuthenticatedController
     params.require(:inventory_count).permit(:locationId, :note, :countedAt)
   end
 
-  # A "prepared sheet": every SKU with a Shopify variant and its current system
-  # total, so a counter only has to fill in the manual override column (what's
-  # actually on hand) and submit the whole sheet at once. Includes SKUs that
-  # aren't yet linked to Square so the sheet is complete.
+  # Prepare only unambiguous stored pools at the selected platform location.
   def prepared_sheet_items
-    links = SkuLink.includes(shopify_variant: :product).order(:sku).to_a
-    totals = InventoryLevel.where(shopifyVariantId: links.map(&:shopifyVariantId).compact)
-                           .group(:shopifyVariantId).sum(:quantity)
-
-    links.filter_map do |link|
-      variant = link.shopify_variant
-      next if variant.nil?
-
-      InventoryCountItem.new(
-        sku: link.sku,
-        shopifyVariantId: link.shopifyVariantId,
-        squareVariationId: link.squareVariationId,
-        quantity: totals[link.shopifyVariantId].to_i
-      )
-    end
+    InventoryCountComparison.prepared_items(@count)
   end
 
   def build_items(count)
@@ -181,6 +164,13 @@ class InventoryCountsController < AuthenticatedController
       next if sku.blank? && row[:quantity].to_s.blank?
 
       count.items.build(sku: sku, quantity: row[:quantity])
+    end
+    return unless count.location&.source == 'ctrax'
+
+    comparison = Ctrax::CountComparison.new(count)
+    count.items.each do |item|
+      item.sku = comparison.canonical_key(item.sku)
+      item.assign_attributes(comparison.attributes_for(item))
     end
   end
 end

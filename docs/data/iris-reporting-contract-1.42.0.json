@@ -1,0 +1,1525 @@
+{
+  "investigated_on": "2026-10-15",
+  "source": "https://nabankco.iriscrm.com/api/v1.yaml",
+  "source_sha256": "502128c9e400214c1357cc9bcedc88885900e018c7ddc97b8aec77db9a2c8271",
+  "openapi_version": "3.0.3",
+  "api_version": "1.42.0",
+  "base_url": "https://nabankco.iriscrm.com/api/v1",
+  "authentication": {
+    "type": "apiKey",
+    "in": "header",
+    "name": "X-API-KEY"
+  },
+  "live_authentication_verified": false,
+  "scope": "Selected public reporting contract, not a complete API mirror. No actual merchant data. implemented means called by Rupert, not live compatibility.",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/merchants",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100,
+              500,
+              1000
+            ]
+          }
+        },
+        {
+          "name": "sort_by",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "mid",
+              "name",
+              "closed",
+              "opened",
+              "created",
+              "modified",
+              "first_batch",
+              "last_batch",
+              "processor",
+              "group",
+              "datasource",
+              "deactivated",
+              "vim",
+              "status",
+              "active"
+            ]
+          }
+        },
+        {
+          "name": "sort_dir",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        {
+          "name": "group",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "processor",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "datasource",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "mid",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "name",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "vim",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              true,
+              false
+            ]
+          }
+        },
+        {
+          "name": "active",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              true,
+              false
+            ]
+          }
+        },
+        {
+          "name": "status",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "Open",
+              "Closed"
+            ]
+          }
+        },
+        {
+          "name": "date_filter",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "opened",
+              "closed",
+              "created",
+              "modified",
+              "first_batch",
+              "last_batch",
+              "deactivated"
+            ]
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01T12:04:40+05:00"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01T12:04:40+05:00"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/users",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "year",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "month",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/equipment",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/deposits/{year}/{month}/{day}",
+      "implemented": true,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "year",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "month",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "day",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "default": 1
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date",
+            "example": "2019-01-01"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/transactions",
+      "implemented": true,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100
+            ]
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/authorizations",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100
+            ]
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2021-01-01"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2021-12-01"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/authorizations/{batchId}/transactions",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "batchId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100
+            ]
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/chargebacks",
+      "implemented": true,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100
+            ]
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/chargebacks/{caseNumber}",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "caseNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/retrievals",
+      "implemented": true,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100
+            ]
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/retrievals/{caseNumber}",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "caseNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/statements",
+      "implemented": true,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100
+            ]
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/statements/{statementId}",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "statementId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/chargebacks/{caseNumber}/files",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "caseNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/chargebacks/{caseNumber}/files/{fileId}",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "caseNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "fileId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/retrievals/{caseNumber}/files",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "caseNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/retrievals/{caseNumber}/files/{fileId}",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "caseNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "fileId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/memos",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100,
+              500,
+              1000
+            ]
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01T12:04:40+05:00"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2019-01-01T12:04:40+05:00"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/reporting/transactions",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-01-01"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-01-31"
+          }
+        },
+        {
+          "name": "transaction_id",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "example": 12345
+          }
+        },
+        {
+          "name": "min_amount",
+          "in": "query",
+          "schema": {
+            "type": "number",
+            "format": "float",
+            "example": 10.0
+          }
+        },
+        {
+          "name": "max_amount",
+          "in": "query",
+          "schema": {
+            "type": "number",
+            "format": "float",
+            "example": 1000.0
+          }
+        },
+        {
+          "name": "types",
+          "in": "query",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "payment",
+                "refund",
+                "other"
+              ]
+            }
+          }
+        },
+        {
+          "name": "sort_dir",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 1
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100,
+              500,
+              1000
+            ],
+            "default": 100
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/reporting/deposits",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "status",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed",
+              "released"
+            ]
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-01-01"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-01-31"
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 1,
+            "description": "Page (1-based)"
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+          }
+        },
+        {
+          "name": "sort_by",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "id",
+              "created",
+              "status"
+            ],
+            "default": "created"
+          }
+        },
+        {
+          "name": "sort_dir",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        },
+        {
+          "name": "search",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "minLength": 3
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "POST",
+      "path": "/merchants/{merchantNumber}/reporting/deposits",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/reporting/deposits/{depositId}",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "depositId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "POST",
+      "path": "/merchants/{merchantNumber}/reporting/deposits/{depositId}",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "depositId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "GET",
+      "path": "/merchants/{merchantNumber}/reporting/deposits/{depositId}/transactions",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "depositId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "start_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-01-01"
+          }
+        },
+        {
+          "name": "end_date",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-01-31"
+          }
+        },
+        {
+          "name": "search",
+          "in": "query",
+          "schema": {
+            "type": "string",
+            "maxLength": 255
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "default": 1
+          }
+        },
+        {
+          "name": "per_page",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "enum": [
+              10,
+              25,
+              50,
+              100,
+              500,
+              1000
+            ],
+            "default": 1000
+          }
+        }
+      ],
+      "responses": {}
+    },
+    {
+      "method": "POST",
+      "path": "/merchants/{merchantNumber}/reporting/deposits/{depositId}/transactions",
+      "implemented": false,
+      "parameters": [
+        {
+          "name": "merchantNumber",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "depositId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "responses": {}
+    }
+  ],
+  "schema_shapes": {
+    "MonetaryBatch": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "reference_number": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string"
+        },
+        "count": {
+          "type": "string"
+        },
+        "terminal_number": {
+          "type": "string"
+        },
+        "transactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "date": {
+                "type": "string",
+                "format": "date"
+              },
+              "type": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "string"
+              },
+              "cardholder": {
+                "type": "string"
+              },
+              "auth_code": {
+                "type": "string"
+              },
+              "pos_entry_mode": {
+                "type": "string"
+              },
+              "invoice_number": {
+                "type": "string"
+              },
+              "void_reject_chargeback": {
+                "type": "boolean"
+              },
+              "reject_description": {
+                "type": "string"
+              },
+              "card_type": {
+                "type": "string"
+              },
+              "purchase_id": {
+                "type": "string"
+              },
+              "extra": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Deposits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "transactions": {
+            "type": "integer"
+          },
+          "batch": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ReportingTransaction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "payment",
+            "refund",
+            "other"
+          ]
+        },
+        "amount": {
+          "type": "number",
+          "format": "float"
+        },
+        "card_type": {
+          "type": "string"
+        },
+        "card_last4": {
+          "type": "string"
+        },
+        "auth_code": {
+          "type": "string"
+        },
+        "pos_entry_mode": {
+          "type": "string"
+        },
+        "invoice_number": {
+          "type": "string"
+        },
+        "purchase_id": {
+          "type": "string"
+        }
+      }
+    },
+    "DepositRecord": {
+      "type": "object",
+      "properties": {
+        "created": {
+          "type": "string",
+          "format": "date"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "failed",
+            "released"
+          ]
+        },
+        "transactions_count": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number",
+          "format": "float"
+        },
+        "method": {
+          "type": "string"
+        }
+      }
+    },
+    "DepositSummary": {
+      "type": "object",
+      "properties": {
+        "reference_number": {
+          "type": "string"
+        },
+        "created": {
+          "type": "string",
+          "format": "date"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "failed",
+            "released"
+          ]
+        },
+        "statistic": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/DepositTypeStatistic"
+          }
+        }
+      }
+    },
+    "DepositTypeStatistic": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "fee",
+            "refunds",
+            "reserve"
+          ]
+        },
+        "total_amount": {
+          "type": "number",
+          "format": "float"
+        },
+        "transactions_count": {
+          "type": "integer",
+          "nullable": true
+        }
+      }
+    },
+    "DepositTransaction": {
+      "type": "object",
+      "properties": {
+        "created": {
+          "type": "string",
+          "format": "date"
+        },
+        "transaction_type": {
+          "type": "string"
+        },
+        "payment_method": {
+          "type": "string"
+        },
+        "authorization_number": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number",
+          "format": "float"
+        }
+      }
+    },
+    "Meta": {
+      "type": "object",
+      "properties": {
+        "current_page": {
+          "type": "integer"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "last_page": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "per_page": {
+          "type": "integer"
+        },
+        "to": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "subscription_events": [
+    "subscription.test",
+    "api.updated",
+    "lead.created",
+    "lead.updated",
+    "lead.deleted",
+    "lead.restored",
+    "lead.status.updated",
+    "lead.note.added",
+    "lead.user.assigned",
+    "lead.user.unassigned",
+    "lead.document.uploaded",
+    "lead.document.deleted",
+    "lead.email.received",
+    "lead.signature.generated",
+    "lead.signature.opened",
+    "lead.signature.signed",
+    "turboapp.submitted",
+    "turboapp.updated",
+    "turboapp.approved",
+    "turboapp.declined",
+    "turboapp.equipment.created",
+    "turboapp.equipment.updated",
+    "residuals.report.published",
+    "residuals.lineitem.added",
+    "chargeback.added",
+    "chargeback.updated",
+    "chargeback.reminder",
+    "retrieval.added",
+    "retrieval.updated",
+    "retrieval.reminder",
+    "merchant.user.assigned",
+    "merchant.user.unassigned",
+    "merchant.nmi.gateway-boarded",
+    "ticket.created",
+    "ticket.updated",
+    "ticket.type.updated",
+    "ticket.resolved",
+    "ticket.status.changed",
+    "ticket.commented",
+    "ticket.comment.edited",
+    "ticket.checklist.updated"
+  ],
+  "webhook_authentication_and_delivery_verified": false
+}

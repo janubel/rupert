@@ -3,14 +3,15 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Timesheets</h1>
-      <p class="mt-1 text-sm text-mocha">Hours by week per employee, submitted for review.</p>
+      <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? 'Your hours by week, submitted for review.' : 'Hours by week per employee, submitted for review.' %></p>
     </div>
     <% if policy(People::Timesheet).create? %>
       <%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %>
     <% end %>
-    <%= link_to "Employee app & installation", employee_app_path, class: "btn-ghost btn-sm" %>
+    <%= link_to "My time home", employee_app_path, class: "btn-ghost btn-sm" %>
   </section>
 
+  <% if @square_history.exists? %><section class="card card-pad space-y-2"><h2 class="text-lg font-semibold">Square timecards</h2><p class="text-sm text-mocha">Imported Square history is read only. It appears in your hours reports and calendar, and is kept separate from new Rupert timesheets and payroll.</p><%= link_to 'View Square history', people_square_timesheets_path, class: 'text-sm text-olive underline' %></section><% end %>
   <% if @awaiting.positive? %>
     <div class="rounded-xl border border-olive/30 bg-olive/10 px-4 py-2.5 text-sm text-olive"><%= @awaiting %> timesheet<%= @awaiting == 1 ? "" : "s" %> awaiting review.</div>
   <% end %>
@@ -23,7 +24,7 @@
       <% end %>
     </select>
     <input type="date" name="period" value="<%= params[:period] %>" class="input w-auto" title="Week of" aria-label="Week of">
-    <%= link_to 'Export filtered CSV', people_timesheets_path(format: :csv, status: @status, period: @period), class: 'btn-ghost btn-sm' %>
+    <%= link_to 'Export Rupert CSV', people_timesheets_path(format: :csv, status: @status, period: @period), class: 'btn-ghost btn-sm' %>
     <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
   <% end %>
 

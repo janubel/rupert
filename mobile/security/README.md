@@ -1,0 +1,17 @@
+# Expo-compatible security backports
+
+Expo 58.0.12 / React Native 0.88.0 stay on the SDK-supported dependency matrix. Never run `npm audit fix --force`: its proposed SDK downgrades are incompatible with this app. Signing, account connection, cloud builds and store submission remain deferred.
+
+| Underlying advisory | Remediation |
+| --- | --- |
+| [UUID buffer bounds, GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) | Override only `xcode`'s UUID dependency to fixed 11.1.1. Its CommonJS `v4()` API remains supported. Tests cover Xcode project UUID generation and v3/v5 short-buffer rejection. |
+| [braces recursion, GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) | Upstream 3.0.3 has no published fix. Locally bound parser nesting and all three recursive AST walkers (compile, expand, stringify) to 256 levels. Iterative validation rejects cycles while ignoring normal `parent`/`prev` links. Tests reject deep balanced/unbalanced strings, deep ASTs and cycles, and preserve normal brace/glob results. |
+| [node-forge DigestInfo validation, GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv) | Upstream 1.4.0 has no published fix. Reject extra DigestAlgorithm children and nonempty NULL parameters in RSA PKCS#1 v1.5 verification. Ephemeral-key regression tests reject signed malformed ASN.1, accept valid signatures with optional NULL and reject a wrong digest. |
+
+These are local backports, not newly published upstream releases. Sources: [braces report](https://github.com/micromatch/braces/issues/70), [forge report](https://github.com/digitalbazaar/forge/issues/1149) and [upstream nested-length proposal](https://github.com/digitalbazaar/forge/pull/1152). The additional empty-NULL check prevents ignored bytes inside that primitive. This change does not redesign the cryptographic library.
+
+`backports.json` records exact upstream versions, before/after SHA-256 hashes and minimal replacement text. `postinstall` validates all sources before writing; repeated application is idempotent. Unknown versions or modified sources fail closed. Do not skip install scripts. `verify:security` also fails if any reviewed patched file is missing or altered, so bypassing postinstall cannot pass `npm run check`.
+
+`audit:security` verifies source hashes, fetches the current npm advisory graph, and permits only the exact two advisory URLs above and packages whose findings resolve to those verified backports. New advisories, unexplained findings and audit network failures fail the check. The full raw registry report and the disposition are retained in `dist/dependency-security.json` and in CI's unsigned export artifact. As of this update, raw npm audit still reports 15 high findings from the two upstream versions and their dependents. The verified patched-source gate reports zero unremediated advisories; it does not alter package versions or suppress npm's report.
+
+Before signing, run `npm ci`, `npm run check`, Expo Doctor and both normal Hermes exports. Recheck upstream releases: once a compatible fixed version exists, replace its backport with the supported dependency update, remove its manifest entries and advisory allowance together, then rerun the exploit regressions, Expo compatibility, native prebuild and both platform exports. Never add a new allowance without a reviewed source fix and meaningful regression coverage.

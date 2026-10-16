@@ -14,7 +14,8 @@ class DataRetention
     'InventoryMovement' => [180.days, 'createdAt'],
     'LedgerEntry' => [365.days, 'occurredAt'],
     'AccessLog' => [90.days, 'created_at'],
-    'ActivityLog' => [90.days, 'created_at']
+    'ActivityLog' => [90.days, 'created_at'],
+    'SyncAttempt' => [90.days, 'queued_at']
   }.freeze
 
   BATCH_SIZE = 5_000

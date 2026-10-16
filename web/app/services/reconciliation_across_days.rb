@@ -1,0 +1,65 @@
+# frozen_string_literal: true
+
+# A bounded, live view of local controls and saved requests. It does not fetch
+# providers, decrypt file bodies, infer report expectations or certify review.
+class ReconciliationAcrossDays
+  FOCUS = { 'all' => 'All dates', 'overdue' => 'Overdue work', 'missing' => 'Missing reports',
+    'review' => 'Missing / stale reviews', 'changed' => 'Changed close packages' }.freeze
+  attr_reader :ending_on
+
+  def initialize(ending_on: Date.yesterday.iso8601)
+    @ending_on = ReconciliationEvidence.dates(ending_on, ending_on).first
+  end
+
+  def starting_on
+    ending_on - 6
+  end
+
+  def days
+    @days ||= (starting_on..ending_on).to_a.reverse.map do |day|
+      workflow = FinancialCloseWorkflow.new(day: day.iso8601)
+      attention = workflow.attention
+      missing = attention.missing_controls.map do |row|
+        row.merge(request_id: requests[[day, row[:source], row[:currency], row[:location_id].presence]])
+      end
+      { day: day, counts: attention.counts, missing: missing,
+        untracked: missing.count { |row| row[:request_id].nil? },
+        follow_ups: workflow.open_follow_ups.size, overdue: workflow.open_follow_ups.count(&:overdue?),
+        close: workflow.status_summary }
+    end
+  end
+
+  def days_needing_attention
+    days.count { |row| row[:counts].values.any?(&:positive?) || row[:follow_ups].positive? }
+  end
+
+  def focused_days(focus = 'all')
+    days.select do |entry|
+      case focus
+      when 'overdue' then entry[:overdue].positive?
+      when 'missing' then entry[:counts][:missing_controls].positive?
+      when 'review' then ['Review not recorded', 'Changed since review'].include?(entry[:close][:review])
+      when 'changed' then entry[:close][:package_id].present? && !entry[:close][:package_current]
+      else true
+      end
+    end
+  end
+
+  def untracked_reports
+    @untracked_reports ||= days.reverse.flat_map do |entry|
+      entry[:missing].reject { |row| row[:request_id] }.map { |row| row.merge(day: entry[:day]) }
+    end
+  end
+
+  private
+
+  def active
+    ReconciliationFollowUp.active.where('period_from <= ? AND period_to >= ?', ending_on, starting_on)
+  end
+
+  def requests
+    @requests ||= active.where(category: 'missing_report', document_kind: 'register_control')
+      .order(:due_on, :id).pluck(:period_from, :source, :currency, :location_id, :id)
+      .each_with_object({}) { |(day, source, currency, location, id), result| result[[day, source, currency, location.presence]] ||= id }
+  end
+end

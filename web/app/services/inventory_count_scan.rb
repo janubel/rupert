@@ -25,10 +25,17 @@ class InventoryCountScan
     if matches.any? { |variant| variant.sku.blank? }
       raise Error.new('A barcode match has no SKU. Resolve the catalog conflict before scanning.', status: :conflict)
     end
+
     skus = (matches.map(&:sku) + SquareVariation.where(sku: code).pluck(:sku) +
       SkuLink.where(sku: code).pluck(:sku)).reject(&:blank?).uniq
-    raise Error.new('No known SKU matches this code. Check the barcode or use the manual sheet.', status: :not_found) if skus.empty?
-    raise Error.new('This code matches multiple SKUs. Resolve the catalog conflict before scanning.', status: :conflict) if skus.many?
+    if skus.empty?
+      raise Error.new('No known SKU matches this code. Check the barcode or use the manual sheet.',
+        status: :not_found)
+    end
+    if skus.many?
+      raise Error.new('This code matches multiple SKUs. Resolve the catalog conflict before scanning.',
+        status: :conflict)
+    end
 
     sku = skus.first
     shopify = ShopifyVariant.includes(:product).where(sku: sku).to_a
@@ -37,7 +44,8 @@ class InventoryCountScan
     shopify_ids = (shopify.map(&:id) + links.map(&:shopifyVariantId)).compact.uniq
     square_ids = (square.map(&:id) + links.map(&:squareVariationId)).compact.uniq
     if shopify_ids.many? || square_ids.many?
-      raise Error.new('This SKU identifies multiple variants. Resolve the catalog conflict before scanning.', status: :conflict)
+      raise Error.new('This SKU identifies multiple variants. Resolve the catalog conflict before scanning.',
+        status: :conflict)
     end
 
     variant = ShopifyVariant.includes(:product).find_by(id: shopify_ids.first) if shopify_ids.any?
@@ -59,6 +67,7 @@ class InventoryCountScan
     unless quantity.to_s.match?(/\A\d+\z/) && quantity.to_i <= MAX_QUANTITY
       raise Error, 'Quantity must be a whole number between 0 and 2147483647.'
     end
+
     units = quantity.to_i
     raise Error, 'Add at least one unit, or choose set total to record zero.' if mode == 'increment' && units.zero?
 
@@ -66,24 +75,41 @@ class InventoryCountScan
     count.with_lock do
       receipt = count.scan_receipts.find_by(request_token: request_token)
       if receipt
-        raise Error.new('This scan request was already used for a different entry. Reload the scanner.', status: :conflict) unless receipt.fingerprint == fingerprint
+        unless receipt.fingerprint == fingerprint
+          raise Error.new('This scan request was already used for a different entry. Reload the scanner.',
+            status: :conflict)
+        end
 
         return receipt.result.symbolize_keys
       end
-      raise Error.new('Only draft counts can be changed. Reopen a rejected count first.', status: :conflict) unless count.draft?
-
-      match = resolve!(code)
-      existing = count.items.where(sku: match[:sku]).to_a
-      if existing.many?
-        raise Error.new('This worksheet has duplicate rows for this SKU. Combine them in Edit before scanning.', status: :conflict)
+      unless count.draft?
+        raise Error.new('Only draft counts can be changed. Reopen a rejected count first.',
+          status: :conflict)
       end
+
+      ctrax = Ctrax::CountComparison.new(count) if count.location&.source == 'ctrax'
+      match = ctrax ? ctrax.resolve!(code.to_s.strip) : resolve!(code)
+      existing = if ctrax
+        count.items.select { |row| ctrax.canonical_key(row.sku) == match[:sku] }
+      else
+        count.items.where(sku: match[:sku]).to_a
+                 end
+      if existing.many?
+        raise Error.new('This worksheet has duplicate rows for this SKU. Combine them in Edit before scanning.',
+          status: :conflict)
+      end
+
       item = existing.first || count.items.build(sku: match[:sku])
       total = mode == 'set' ? units : item.quantity.to_i + units
       raise Error, 'The counted quantity is too large.' if total > MAX_QUANTITY
 
-      item.update!(match.slice(:shopifyVariantId, :squareVariationId).merge(quantity: total))
+      attributes = match.slice(:shopifyVariantId, :squareVariationId).merge(quantity: total)
+      attributes[:sku] = match[:sku] if ctrax
+      attributes.merge!(ctrax.attributes_for(item)) if ctrax
+      item.update!(attributes)
       result = match.merge(quantity: item.quantity, total_quantity: count.total_quantity, item_count: count.items.count)
-      count.scan_receipts.create!(request_token: request_token, fingerprint: fingerprint, result: result, created_by: actor)
+      count.scan_receipts.create!(request_token: request_token, fingerprint: fingerprint, result: result,
+        created_by: actor)
       result
     end
   end

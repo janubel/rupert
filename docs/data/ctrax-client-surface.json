@@ -1,0 +1,2098 @@
+{
+  "schema_version": 1,
+  "observed_date": "2026-10-15",
+  "admin_version": "2.0.86",
+  "evidence_level": "observed_public_client_not_supported_partner_contract",
+  "api_origin_template": "https://<tenant>.api.cannatrax.net",
+  "scope": "Public admin core plus 75 business/navigation chunks referenced by that core; not the iOS application or backend source.",
+  "limitations": [
+    "Paths and methods are client observations, not endpoint probes or successful account reads.",
+    "No live authenticated import succeeded; account_verified is false throughout.",
+    "Query lists are observed call-site parameters, not exhaustive accepted schemas.",
+    "GET does not establish absence of side effects or permission to collect secrets.",
+    "Excluded write routes are inventoried for boundaries, never invoked by Rupert research."
+  ],
+  "assets": [
+    {
+      "asset": "assets/AddInventoryComponent.676f1f8d.js",
+      "sha256": "64e39b4fd8899ac29caced9b0a4579dcbcf5d47ce04b9a3ccc6550a6632dec9b",
+      "bytes": 13402
+    },
+    {
+      "asset": "assets/CategoriesList.09d6c186.js",
+      "sha256": "4f9d8d09d8dab7093c79db08d7704be017e2940d2ccec2606e21008e1e708c0a",
+      "bytes": 6502
+    },
+    {
+      "asset": "assets/Category.bc2fb3fb.js",
+      "sha256": "34b60076ff2d54a0229c2d7539b1919f5fc7c9b6e0112d48b23a6f6fce8a63f2",
+      "bytes": 2593
+    },
+    {
+      "asset": "assets/CategoryView.8f04d868.js",
+      "sha256": "d0518e73a7f2d7a8028150e8b4693b9658c9673f3108272d024730ab7305f801",
+      "bytes": 3427
+    },
+    {
+      "asset": "assets/CouponFormComponent.fd7a790d.js",
+      "sha256": "af9726580fa552655827acba50d305867af457fe930ff2960bd3b2b7169a22af",
+      "bytes": 18703
+    },
+    {
+      "asset": "assets/CouponView.5b6f4a28.js",
+      "sha256": "aa2d74af5eed7396c6b544086575ae495f3474cc11eb534eea55b664c22f0ba6",
+      "bytes": 5519
+    },
+    {
+      "asset": "assets/Coupons.c29d5140.js",
+      "sha256": "2fa32b6966a0b6f72fd67511214d22c01112b2385d2f029cb78a0c0d643ad791",
+      "bytes": 3546
+    },
+    {
+      "asset": "assets/CouponsList.6cec4ceb.js",
+      "sha256": "087276523ed5948f4fb50da7dd8b4e759656a6725ddafdc16771f89474d424c7",
+      "bytes": 6221
+    },
+    {
+      "asset": "assets/CouponsOrders.66f6b0cb.js",
+      "sha256": "3cd7c118d800a643ad5ba586e30b5a21823047acc32c85117de3ee06d7edf208",
+      "bytes": 4624
+    },
+    {
+      "asset": "assets/CsvExportButton.f810eb70.js",
+      "sha256": "f702e777cd853125d7e88c4e7cbb961186ef23a5e4c47e1fdfa12ec971e711e5",
+      "bytes": 1640
+    },
+    {
+      "asset": "assets/CtraxNavigationList.f9a341f6.js",
+      "sha256": "f46c0e3f503307792156c25621cab44845eac92679ae930f79f0c8b4580a2bc8",
+      "bytes": 1039
+    },
+    {
+      "asset": "assets/Customers.9651e800.js",
+      "sha256": "f69444f7c481fc4d7fe2154f798161d5a8b392ae9a651c936eb925a24b49b438",
+      "bytes": 5111
+    },
+    {
+      "asset": "assets/CustomersList.dba079b7.js",
+      "sha256": "003c9058d65c0c7f318815ea92897858b904aaeff12ded8a3c5b7e2928135f97",
+      "bytes": 14589
+    },
+    {
+      "asset": "assets/CustomersMerge.583f44e4.js",
+      "sha256": "4447a162f7cdfaf0436c12accb054f9222d384ba9f46ec315f19625d0e44b0e1",
+      "bytes": 9775
+    },
+    {
+      "asset": "assets/CustomersView.49aa2443.js",
+      "sha256": "0343d68e0b3f20222ade0bd12e288e00bacf552ed45ba049b2cf3a4bf76908b4",
+      "bytes": 16916
+    },
+    {
+      "asset": "assets/LoginPage.7f0cabc5.js",
+      "sha256": "dbbbd9d68e35a0b204d50bcbe0576ac031fffb1c21abb2af8cf9885643a55d03",
+      "bytes": 2186
+    },
+    {
+      "asset": "assets/Loyalty.ea53b413.js",
+      "sha256": "615fc3477e9d694781139051ebeafa7f03031970b5f20b2eaf1ec944b0d6797b",
+      "bytes": 5210
+    },
+    {
+      "asset": "assets/LoyaltyLinks.d2036f42.js",
+      "sha256": "cd05a13bb817c88f088ce924b1afb0ba8ec552053127b6664e3a97ad4c2136e3",
+      "bytes": 1068
+    },
+    {
+      "asset": "assets/LoyaltyRedemptions.72b9c46d.js",
+      "sha256": "e9b2c66906a8a8510a5445ee838b63ae899ba242bbb0dcd26a1e8379603916c8",
+      "bytes": 2632
+    },
+    {
+      "asset": "assets/LoyaltyTiers.5585b9e4.js",
+      "sha256": "eaba6328eaf0da3b57b4f3479bff9aeb3fe728c8a7bfb9d86de8572dba970413",
+      "bytes": 9536
+    },
+    {
+      "asset": "assets/MainLayout.d3f13ac9.js",
+      "sha256": "885dd19d84b42029fd79970061f952b72f568bf8f7529e4f77e035a2f9c48b83",
+      "bytes": 124076
+    },
+    {
+      "asset": "assets/Merchants.0c241292.js",
+      "sha256": "2452121c00d4aa351372b2f61c1875b1a72003a47767a3ef8e7dd95ab3bcbe2d",
+      "bytes": 1197
+    },
+    {
+      "asset": "assets/Order.19281cd4.js",
+      "sha256": "65442c2d92a9cb3e61b911bfe87ce96aff3496386983d24df4ec11721f810a4c",
+      "bytes": 2168
+    },
+    {
+      "asset": "assets/OrderListComponent.841ff5fa.js",
+      "sha256": "0ee3f6534cf06331138b521b157267e85600eb7d125c767d07501ba97b9565a3",
+      "bytes": 18849
+    },
+    {
+      "asset": "assets/OrderView.ad1b69f2.js",
+      "sha256": "23f16a6d4943419daa7711279538345075e22374a7e2eaaefb0eeeddc5ac61af",
+      "bytes": 9287
+    },
+    {
+      "asset": "assets/OrdersList.94d78239.js",
+      "sha256": "b75c00d0937bb085f37c6eba9bf5692cc7f2473c986287919aec90c128326d2d",
+      "bytes": 1662
+    },
+    {
+      "asset": "assets/PasswordReset.f7073ff3.js",
+      "sha256": "3374da57dbe2c14b0f4239ee5a83ee52728e559431cc16b7a99426abe51dcbc2",
+      "bytes": 3653
+    },
+    {
+      "asset": "assets/Product.326bdc52.js",
+      "sha256": "8fdc71b997e966fcd1c1bbe3a5901e3d7e8b0c25d2fe4878d94452452e99ed08",
+      "bytes": 1576
+    },
+    {
+      "asset": "assets/ProductVariantView.ca295532.js",
+      "sha256": "b30c25c98f4b4891a51cdde143c8357736a1517483d0b2595f874dcd9c3e0bbd",
+      "bytes": 4826
+    },
+    {
+      "asset": "assets/ProductView.aa187454.js",
+      "sha256": "28b8a155005a9884b1155fce30b8dd452953188b1e56da4096777fc64f3c9bc0",
+      "bytes": 9704
+    },
+    {
+      "asset": "assets/ProductsList.151f7844.js",
+      "sha256": "532b4256f49ac4f1415e77f86064ae82aaf5ed08094ccbe8f9599e90d11b14ce",
+      "bytes": 12017
+    },
+    {
+      "asset": "assets/Registers.db1c7d4f.js",
+      "sha256": "cef52ba0628df6a9b32418d2b3b081d1430c70348d2500b92e0c22ba7f15aeea",
+      "bytes": 5078
+    },
+    {
+      "asset": "assets/RegistersCreate.dc6fac0e.js",
+      "sha256": "c3c594c526e53ae935ca16f1bb472cbc8d09cdd7d8aed0562ced09251d395f08",
+      "bytes": 1351
+    },
+    {
+      "asset": "assets/RegistersList.7245c7a4.js",
+      "sha256": "c9e8b6c3d2ce423259463b34d107865790546c3e8aa44d70e5dd6862fa84f517",
+      "bytes": 2356
+    },
+    {
+      "asset": "assets/RegistersShow.f7434268.js",
+      "sha256": "8b5f0a9d616f546dcddc2b765bbe65092afa348bda3236afaa25830b05c7bbcb",
+      "bytes": 11488
+    },
+    {
+      "asset": "assets/ReportTableComponent.105d0ed3.js",
+      "sha256": "27c30093842ed8e5f16090943fe2d42f3b91a463459de8c31c2f074b5c15075c",
+      "bytes": 2778
+    },
+    {
+      "asset": "assets/Reports.7b6be033.js",
+      "sha256": "4decba009c071878e9bea2229a6835d38dd3f796f30137ee421817da1235049a",
+      "bytes": 18229
+    },
+    {
+      "asset": "assets/ReportsCoupons.5d942fad.js",
+      "sha256": "7c3549136c4eda8dcd667164b5cf08598ac8291c5d613e276a58ac42854baaf7",
+      "bytes": 4568
+    },
+    {
+      "asset": "assets/ReportsCustom.2ce96c53.js",
+      "sha256": "dfbd62d54c5cc7cb8233f106b70caf7d25ee4e2b884f9fd2e16153104951a0ec",
+      "bytes": 4555
+    },
+    {
+      "asset": "assets/ReportsGeneralSales.19fa77c6.js",
+      "sha256": "e96a11bf6714f5889c415bd7d5f3a4943fc300efd0cf03a46223370b2e855483",
+      "bytes": 5880
+    },
+    {
+      "asset": "assets/ReportsList.6b2e80d3.js",
+      "sha256": "34cdafb708ce8d4d0540fdb2a61310869242c8607ace643e874076663f684c9e",
+      "bytes": 822
+    },
+    {
+      "asset": "assets/ReportsProductSales.e2ea3b3c.js",
+      "sha256": "81501e3067ebbc48237adb6d9bcf09937503d02ac8e821213380f279d9e5a47c",
+      "bytes": 12799
+    },
+    {
+      "asset": "assets/ReportsProfitSummary.668cbc76.js",
+      "sha256": "1052b557b577c43de5311cfc8e15de81d9d1f6d83d042123f1a18a0352d2cdc2",
+      "bytes": 6511
+    },
+    {
+      "asset": "assets/ReportsRegisterSessions.80a3d363.js",
+      "sha256": "bd6f1505bdc7984a3e8360f1eeb30d3ca57ce01617dcc6a0ae0e334e9fa8f26f",
+      "bytes": 5870
+    },
+    {
+      "asset": "assets/ReportsUsers.911c7d5e.js",
+      "sha256": "aeb09c8e2701bd938b5664a7815d50276ef0d874b48afe2e3fd201358925832a",
+      "bytes": 7164
+    },
+    {
+      "asset": "assets/StoreDashboard.b730b737.js",
+      "sha256": "04c28e5e5aa242c114327814c4193c713c20bc688ccfc3596ad3f2be6543ef5b",
+      "bytes": 17011
+    },
+    {
+      "asset": "assets/Taxes.2b51df0e.js",
+      "sha256": "d860e551481d82c131f2f7fe7cd1c9d45e8fca04c394d82ee33bf780fb2d4e93",
+      "bytes": 2065
+    },
+    {
+      "asset": "assets/TaxesLinks.57eecc85.js",
+      "sha256": "c662a34c7c377f11aafa622f936099e2df4ef16bb9136806fcaa2876c378b13a",
+      "bytes": 727
+    },
+    {
+      "asset": "assets/TaxesRates.25515887.js",
+      "sha256": "ba5312ca95ff705aecb2a7ca3150c11fe7d013bb46d2c9bd16651e8b9fd709b9",
+      "bytes": 9051
+    },
+    {
+      "asset": "assets/UnauthenticatedLayout.be1390f6.js",
+      "sha256": "4ae5bab50ce5261f207b9297259475e4ae8104ad6ddd1479c75d87381ba6d31e",
+      "bytes": 812
+    },
+    {
+      "asset": "assets/User.c996b297.js",
+      "sha256": "722fc58de9de4a541cd87f46c4230e9fd7017da2f6e3700ef462cdbc18fba8ab",
+      "bytes": 4319
+    },
+    {
+      "asset": "assets/UsersChangePassword.205ac70b.js",
+      "sha256": "12e19b6c44a8061c65c73d0f50e45ae2f605bb9273c690cda7fdbaf11e444005",
+      "bytes": 2941
+    },
+    {
+      "asset": "assets/UsersCreate.eeb5b8c6.js",
+      "sha256": "f3707baba3cfb3692d200cc8b6ab30e11d4c36ec8b67d5c0b1b4daed75a28a4d",
+      "bytes": 5350
+    },
+    {
+      "asset": "assets/UsersList.22f226c4.js",
+      "sha256": "729e8c0f3a4f74a065f53b90cfc285582a3b07c9f7070e9434878c324fce2709",
+      "bytes": 3309
+    },
+    {
+      "asset": "assets/UsersPermissions.be7a3159.js",
+      "sha256": "5f505fdec368a42a56447cc11c362a7cd5d5b1f942fcf5687fad6ffc63976637",
+      "bytes": 3305
+    },
+    {
+      "asset": "assets/UsersProfile.7dce79f9.js",
+      "sha256": "467e8935f39f625dd52f1909425df120d8b872092b0bcec284f198060c50a1e3",
+      "bytes": 2332
+    },
+    {
+      "asset": "assets/UsersResetPIN.16d56aef.js",
+      "sha256": "7469118d761029a53d572d3d8073c50dcdfe940cbaf90c06c2be338efc9eb5da",
+      "bytes": 1383
+    },
+    {
+      "asset": "assets/UsersSettingsList.6c6caaa1.js",
+      "sha256": "7a066b1e36c2be015050d4478723bb5824eaf3b21101b6837d7c419c94a346b6",
+      "bytes": 3006
+    },
+    {
+      "asset": "assets/UsersSettingsPointOfSale.43cc9c26.js",
+      "sha256": "ab92577236baa1dea6bd79999f29bb519c8da87cb8c6ce30e72d520ed0d7564d",
+      "bytes": 20350
+    },
+    {
+      "asset": "assets/UsersSettingsSquareMerchantAccounts.96018369.js",
+      "sha256": "97281ee306de6639f88b30666a883d06fb11775176368ef4f9b4508765085308",
+      "bytes": 8401
+    },
+    {
+      "asset": "assets/UsersSettingsTrxMerchantAccounts.e18a6a02.js",
+      "sha256": "428e6857ffc4a808e055fe8f190ce52d141f925ed383e86b1a30246e5edf5b1f",
+      "bytes": 13424
+    },
+    {
+      "asset": "assets/UsersView.46d5c4fa.js",
+      "sha256": "a200756c4dfbbb247db24e391e96d5982450f82c55d3aced969a83ab6d1cec88",
+      "bytes": 16928
+    },
+    {
+      "asset": "assets/Variant.9d238e48.js",
+      "sha256": "713310b99129acd77b1f6fef544ceaff464ee2c2268bef3819625e88b384777c",
+      "bytes": 8045
+    },
+    {
+      "asset": "assets/calculations.4fd51dcf.js",
+      "sha256": "965481edb08621a349f81332d4b1ba598724510d6f0213bbf59522a26109ff75",
+      "bytes": 3454
+    },
+    {
+      "asset": "assets/constants.e0ba03f3.js",
+      "sha256": "51ecf36979e25e9ebb05a9ee86f04cbd87d99ae3ec7985a444a626a9af875b21",
+      "bytes": 224
+    },
+    {
+      "asset": "assets/couponsOrderListTableColumns.50db4c7b.js",
+      "sha256": "6cea5c3bd241dffa499c6013b890b9865f2c407b392e2d5f215588482f98fa1f",
+      "bytes": 980
+    },
+    {
+      "asset": "assets/ctrax.e66eaa24.js",
+      "sha256": "74259e480c0b629824b6eada321b3b8480f19f94e52b0197c706d706f758b864",
+      "bytes": 7730
+    },
+    {
+      "asset": "assets/exports.848a171d.js",
+      "sha256": "77851d71f694ecb333d214977500947eaced46b75777d3eb8476d1bc6252fb58",
+      "bytes": 1711
+    },
+    {
+      "asset": "assets/featureFlags.e48f7c0b.js",
+      "sha256": "1987a914eac48174f598660161e512a3a0572587b566bb26750c6b589601bd6d",
+      "bytes": 138
+    },
+    {
+      "asset": "assets/formatters.2f69c48d.js",
+      "sha256": "8c563fcddef67087dac5fde2cbbf25afdfb2a97f54613c827f0339f1578fa4f5",
+      "bytes": 1484
+    },
+    {
+      "asset": "assets/index.1da034ae.js",
+      "sha256": "e80ccc50d0c85a624820c6511d6a6d7b2750ece81721cca9df743e113370c028",
+      "bytes": 342178
+    },
+    {
+      "asset": "assets/pagination.1670e3d0.js",
+      "sha256": "636e5ea89d3d719e7958f763c0d317230a1969e7ca2fd562dc61e7b99016265e",
+      "bytes": 1626
+    },
+    {
+      "asset": "assets/permissions.64cfb915.js",
+      "sha256": "fa9826f95ca93fff25234c0c9dea85cee7355acca64ef99cd13f9f700c50d1e4",
+      "bytes": 312
+    },
+    {
+      "asset": "assets/products.abe16415.js",
+      "sha256": "33c60f2ae1ce39bd042ab2858432d407a4b259e03e8867396d7c7642692a5a6d",
+      "bytes": 963
+    },
+    {
+      "asset": "assets/registers.e9101239.js",
+      "sha256": "3c16e4fc3806dc7e0792a8f3b6e52826cd29131f0ee693e27a2b75a6f2b7e448",
+      "bytes": 879
+    },
+    {
+      "asset": "assets/settings.32cd5927.js",
+      "sha256": "f7f8b10c8ebcfdd914a0cda95b7174f195eca36dcb2efd52bb9d283c12951d70",
+      "bytes": 203
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path_template": "/api/v1/acl/data",
+      "area": "access_control",
+      "evidence": [
+        {
+          "asset": "assets/UsersCreate.eeb5b8c6.js",
+          "character_offset": 1203
+        },
+        {
+          "asset": "assets/permissions.64cfb915.js",
+          "character_offset": 75
+        },
+        {
+          "asset": "assets/index.1da034ae.js",
+          "character_offset": 175454
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "withPermissionRoleIds"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/roles/{role_id}/permissions/{permission_id}",
+      "area": "access_control",
+      "evidence": [
+        {
+          "asset": "assets/permissions.64cfb915.js",
+          "character_offset": 238
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/users",
+      "area": "access_control",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 274
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "page",
+        "per_page"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/users",
+      "area": "access_control",
+      "evidence": [
+        {
+          "asset": "assets/UsersCreate.eeb5b8c6.js",
+          "character_offset": 1355
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "DELETE",
+      "path_template": "/api/v1/users/{user_id}",
+      "area": "access_control",
+      "evidence": [
+        {
+          "asset": "assets/UsersView.46d5c4fa.js",
+          "character_offset": 5592
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/users/{user_id}",
+      "area": "access_control",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 328
+        },
+        {
+          "asset": "assets/UsersView.46d5c4fa.js",
+          "character_offset": 5264
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/users/{user_id}",
+      "area": "access_control",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 387
+        },
+        {
+          "asset": "assets/UsersView.46d5c4fa.js",
+          "character_offset": 5771
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/users/{user_id}/permissions/{permission_id}",
+      "area": "access_control",
+      "evidence": [
+        {
+          "asset": "assets/permissions.64cfb915.js",
+          "character_offset": 155
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/users/{user_id}/roles",
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "area": "access_control",
+      "account_verified": false,
+      "evidence": [
+        {
+          "asset": "assets/UsersView.46d5c4fa.js",
+          "character_offset": 16592,
+          "kind": "generic_form_method_and_destination_properties"
+        }
+      ],
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "DELETE",
+      "path_template": "/api/v1/users/{user_id}/roles/{role_id}",
+      "area": "access_control",
+      "evidence": [
+        {
+          "asset": "assets/UsersView.46d5c4fa.js",
+          "character_offset": 5949
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/auth/login",
+      "area": "authentication",
+      "evidence": [
+        {
+          "asset": "assets/index.1da034ae.js",
+          "character_offset": 169769
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_body_parameters": [
+        "username",
+        "password"
+      ],
+      "rupert_policy": "implemented_fresh_login"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/auth/newPin",
+      "area": "authentication",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 814
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/auth/refreshToken",
+      "area": "authentication",
+      "evidence": [
+        {
+          "asset": "assets/index.1da034ae.js",
+          "character_offset": 170801
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "observed_refresh_not_used"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/auth/requestPasswordReset",
+      "area": "authentication",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 568
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/auth/resetPassword",
+      "area": "authentication",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 658
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/auth/updatePassword",
+      "area": "authentication",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 450
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/auth/user",
+      "area": "authentication",
+      "evidence": [
+        {
+          "asset": "assets/index.1da034ae.js",
+          "character_offset": 170207
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/product/{product_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/products.abe16415.js",
+          "character_offset": 613
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/productCategories",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/products.abe16415.js",
+          "character_offset": 793
+        },
+        {
+          "asset": "assets/Category.bc2fb3fb.js",
+          "character_offset": 633
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "page",
+        "per_page"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/productCategories",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/Category.bc2fb3fb.js",
+          "character_offset": 702
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "DELETE",
+      "path_template": "/api/v1/productCategories/{category_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/Category.bc2fb3fb.js",
+          "character_offset": 768
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/productCategories/{category_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/Category.bc2fb3fb.js",
+          "character_offset": 528
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/productCategories/{category_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/Category.bc2fb3fb.js",
+          "character_offset": 845
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/products",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/products.abe16415.js",
+          "character_offset": 554
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "category"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/products",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/products.abe16415.js",
+          "character_offset": 736
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "DELETE",
+      "path_template": "/api/v1/products/{product_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/products.abe16415.js",
+          "character_offset": 873
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/products/{product_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/products.abe16415.js",
+          "character_offset": 671
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/products/{product_id}/variants",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/Variant.9d238e48.js",
+          "character_offset": 756
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "DELETE",
+      "path_template": "/api/v1/products/{product_id}/variants/{variant_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/Variant.9d238e48.js",
+          "character_offset": 838
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/products/{product_id}/variants/{variant_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/Variant.9d238e48.js",
+          "character_offset": 666
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/productVariants",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/products.abe16415.js",
+          "character_offset": 452
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "page",
+        "per_page",
+        "is_listed_for_sale",
+        "has_cost",
+        "category_ids",
+        "search"
+      ],
+      "rupert_policy": "implemented_stock_read"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/productVariants/{variant_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/index.1da034ae.js",
+          "character_offset": 251502
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/products/{product_id}",
+      "area": "catalog",
+      "evidence": [
+        {
+          "asset": "assets/index.1da034ae.js",
+          "character_offset": 251427
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/coupons",
+      "area": "coupons",
+      "evidence": [
+        {
+          "asset": "assets/Coupons.c29d5140.js",
+          "character_offset": 448
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "page",
+        "per_page",
+        "name"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/stores/{store_id}/coupons",
+      "area": "coupons",
+      "evidence": [
+        {
+          "asset": "assets/Coupons.c29d5140.js",
+          "character_offset": 523
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "DELETE",
+      "path_template": "/api/v1/stores/{store_id}/coupons/{coupon_id}",
+      "area": "coupons",
+      "evidence": [
+        {
+          "asset": "assets/Coupons.c29d5140.js",
+          "character_offset": 675
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/coupons/{coupon_id}",
+      "area": "coupons",
+      "evidence": [
+        {
+          "asset": "assets/Coupons.c29d5140.js",
+          "character_offset": 305
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/stores/{store_id}/coupons/{coupon_id}",
+      "area": "coupons",
+      "evidence": [
+        {
+          "asset": "assets/Coupons.c29d5140.js",
+          "character_offset": 595
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/customers",
+      "area": "customers",
+      "evidence": [
+        {
+          "asset": "assets/Customers.9651e800.js",
+          "character_offset": 400
+        },
+        {
+          "asset": "assets/Customers.9651e800.js",
+          "character_offset": 613
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "page",
+        "per_page",
+        "search"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/customers",
+      "area": "customers",
+      "evidence": [
+        {
+          "asset": "assets/Customers.9651e800.js",
+          "character_offset": 673
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/customers/merge",
+      "area": "customers",
+      "evidence": [
+        {
+          "asset": "assets/Customers.9651e800.js",
+          "character_offset": 797
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "DELETE",
+      "path_template": "/api/v1/customers/{customer_id}",
+      "area": "customers",
+      "evidence": [
+        {
+          "asset": "assets/Customers.9651e800.js",
+          "character_offset": 730
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/customers/{customer_id}",
+      "area": "customers",
+      "evidence": [
+        {
+          "asset": "assets/Customers.9651e800.js",
+          "character_offset": 282
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/customers/{customer_id}",
+      "area": "customers",
+      "evidence": [
+        {
+          "asset": "assets/Customers.9651e800.js",
+          "character_offset": 462
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/customers/{customer_id}/loyaltyAdjustments",
+      "area": "customers",
+      "evidence": [
+        {
+          "asset": "assets/Loyalty.ea53b413.js",
+          "character_offset": 299
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/productVariants/{variant_id}/inventoryAdjustments",
+      "area": "inventory_history",
+      "evidence": [
+        {
+          "asset": "assets/Variant.9d238e48.js",
+          "character_offset": 558
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "sort_by"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/stores/{store_id}/productVariants/{variant_id}/inventoryAdjustments",
+      "area": "inventory_history",
+      "evidence": [
+        {
+          "asset": "assets/Variant.9d238e48.js",
+          "character_offset": 378
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v2/analytics/reports/products.inventory.history",
+      "area": "inventory_history",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 2498
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "product_variant_id",
+        "start_date",
+        "end_date",
+        "format"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/laborShifts",
+      "area": "labor",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 2724
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "is_in_progress",
+        "page",
+        "per_page",
+        "time_frame"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/loyalty/earningRules",
+      "area": "loyalty",
+      "evidence": [
+        {
+          "asset": "assets/Loyalty.ea53b413.js",
+          "character_offset": 526
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/loyalty/earningRules/{rule_id}",
+      "area": "loyalty",
+      "evidence": [
+        {
+          "asset": "assets/Loyalty.ea53b413.js",
+          "character_offset": 594
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/loyalty/pointsToDollarsRewards/{reward_id}",
+      "area": "loyalty",
+      "evidence": [
+        {
+          "asset": "assets/Loyalty.ea53b413.js",
+          "character_offset": 672
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/loyalty/redeemedRewards",
+      "area": "loyalty",
+      "evidence": [
+        {
+          "asset": "assets/Loyalty.ea53b413.js",
+          "character_offset": 819
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "page",
+        "per_page",
+        "search",
+        "customer_id"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/loyalty/rewards",
+      "area": "loyalty",
+      "evidence": [
+        {
+          "asset": "assets/Loyalty.ea53b413.js",
+          "character_offset": 397
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/loyalty/tiers",
+      "area": "loyalty",
+      "evidence": [
+        {
+          "asset": "assets/Loyalty.ea53b413.js",
+          "character_offset": 236
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/loyalty/tiers/{tier_id}",
+      "area": "loyalty",
+      "evidence": [
+        {
+          "asset": "assets/Loyalty.ea53b413.js",
+          "character_offset": 458
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/paymentVendors/square/authorizationUrl",
+      "area": "merchant_configuration",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 858
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/paymentVendors/square/merchantAccounts",
+      "area": "merchant_configuration",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 1018
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/paymentVendors/square/merchantAccounts/{merchant_account_id}/syncLocations",
+      "area": "merchant_configuration",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 1091
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/stores/{store_id}/paymentVendors/square/attachMerchantAccount",
+      "area": "merchant_configuration",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 1190
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/paymentVendors/square/connectionStatus",
+      "area": "merchant_configuration",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 931
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/paymentVendors/trx/connectionStatus",
+      "area": "merchant_configuration",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 1430
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "implemented_counts_only_diagnostic"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/stores/{store_id}/paymentVendors/trx/merchantAccounts/{merchant_account_id}/unlink",
+      "area": "merchant_configuration",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 1517
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/stores/{store_id}/paymentVendors/trx/updateApiCredentials",
+      "area": "merchant_configuration",
+      "evidence": [
+        {
+          "asset": "assets/User.c996b297.js",
+          "character_offset": 1340
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/orders",
+      "area": "orders",
+      "evidence": [
+        {
+          "asset": "assets/Order.19281cd4.js",
+          "character_offset": 321
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "include_extended_details",
+        "page",
+        "per_page",
+        "customer_id",
+        "register_transaction_identifier",
+        "completed_between",
+        "status",
+        "override_timezone"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/orders/search/byCoupon",
+      "area": "orders",
+      "evidence": [
+        {
+          "asset": "assets/Coupons.c29d5140.js",
+          "character_offset": 1136
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "coupon_id",
+        "store_id",
+        "completed_after",
+        "completed_before",
+        "completed_on_or_after",
+        "completed_on_or_before"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/orders/{order_id}",
+      "area": "orders",
+      "evidence": [
+        {
+          "asset": "assets/Order.19281cd4.js",
+          "character_offset": 429
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "include_extended_details"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/registerSessions",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 2973
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "opened_on_or_after",
+        "opened_on_or_before",
+        "register_id",
+        "store_id",
+        "page",
+        "per_page"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/registerSessions/{session_id}",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 3037
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/registerSessions/{session_id}/cashDrops",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/registers.e9101239.js",
+          "character_offset": 436
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/registers/{register_id}/sessions",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/registers.e9101239.js",
+          "character_offset": 259
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "page",
+        "per_page",
+        "include_summaries"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/registers/{register_id}/sessions/{session_id}",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/registers.e9101239.js",
+          "character_offset": 346
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/registers",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/registers.e9101239.js",
+          "character_offset": 130
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "page",
+        "per_page"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/stores/{store_id}/registers",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/registers.e9101239.js",
+          "character_offset": 686
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/registers/{register_id}",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/registers.e9101239.js",
+          "character_offset": 517
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/stores/{store_id}/registers/{register_id}",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/registers.e9101239.js",
+          "character_offset": 766
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/registers/{register_id}/activationCode",
+      "area": "registers",
+      "evidence": [
+        {
+          "asset": "assets/registers.e9101239.js",
+          "character_offset": 594
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "exclude_secret_bearing_read"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/analytics/dataExport/custom",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/Reports.7b6be033.js",
+          "character_offset": 7760
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/analytics/reports/dashboard/profits",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 1995
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date",
+        "type"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/analytics/reports/dashboard/report",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 926
+        },
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 1400
+        },
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 1749
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date",
+        "type",
+        "page",
+        "per_page"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/analytics/reports/products.sales",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 2216
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "category_id",
+        "date",
+        "format",
+        "page",
+        "per_page"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/analytics/reports/sales.products",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 1908
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date",
+        "format",
+        "page",
+        "per_page"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/analytics/reports/sales.total",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 764
+        },
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 1066
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "interval",
+        "format"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v2/analytics/reports/coupons.usage.summary",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 1226
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date",
+        "format",
+        "page",
+        "per_page"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v2/analytics/reports/oneOff/grossSalesByWeekday",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 226
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date",
+        "weekday",
+        "format"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v2/analytics/reports/oneOff/grossSalesByYearMonth",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 448
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date",
+        "format"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v2/analytics/reports/sales.general.byCategory",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 1572
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date",
+        "format",
+        "page",
+        "per_page"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v2/analytics/reports/sales.general.summary",
+      "area": "reports",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 618
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date",
+        "format"
+      ],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/settings",
+      "area": "settings",
+      "evidence": [
+        {
+          "asset": "assets/settings.32cd5927.js",
+          "character_offset": 81
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "exclude_secret_bearing_read"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/settings/{setting_key}/value",
+      "area": "settings",
+      "evidence": [
+        {
+          "asset": "assets/settings.32cd5927.js",
+          "character_offset": 143
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/stores",
+      "area": "stores",
+      "evidence": [
+        {
+          "asset": "assets/index.1da034ae.js",
+          "character_offset": 251585
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}",
+      "area": "stores",
+      "evidence": [
+        {
+          "asset": "assets/UsersView.46d5c4fa.js",
+          "character_offset": 6483
+        },
+        {
+          "asset": "assets/index.1da034ae.js",
+          "character_offset": 251365
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/stores/{store_id}",
+      "area": "stores",
+      "evidence": [
+        {
+          "asset": "assets/index.1da034ae.js",
+          "character_offset": 251641
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/chat/context",
+      "area": "support_service",
+      "evidence": [
+        {
+          "asset": "assets/MainLayout.d3f13ac9.js",
+          "character_offset": 109734
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://support.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "excluded_support_service"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/chat/identity",
+      "area": "support_service",
+      "evidence": [
+        {
+          "asset": "assets/MainLayout.d3f13ac9.js",
+          "character_offset": 109382
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://support.cannatrax.net",
+      "rupert_policy": "excluded_support_service"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/chat/messages",
+      "area": "support_service",
+      "evidence": [
+        {
+          "asset": "assets/MainLayout.d3f13ac9.js",
+          "character_offset": 110064
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://support.cannatrax.net",
+      "rupert_policy": "excluded_support_service"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/realtime/auth",
+      "area": "support_service",
+      "evidence": [
+        {
+          "asset": "assets/MainLayout.d3f13ac9.js",
+          "character_offset": 110727
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://support.cannatrax.net",
+      "rupert_policy": "excluded_support_service"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/stores/{store_id}/masterProductList/productVariants/{variant_id}/taxRates",
+      "area": "taxes",
+      "evidence": [
+        {
+          "asset": "assets/Variant.9d238e48.js",
+          "character_offset": 5340
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/taxRates",
+      "area": "taxes",
+      "evidence": [
+        {
+          "asset": "assets/Taxes.2b51df0e.js",
+          "character_offset": 202
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "POST",
+      "path_template": "/api/v1/stores/{store_id}/taxRates",
+      "area": "taxes",
+      "evidence": [
+        {
+          "asset": "assets/Taxes.2b51df0e.js",
+          "character_offset": 395
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "DELETE",
+      "path_template": "/api/v1/stores/{store_id}/taxRates/{tax_rate_id}",
+      "area": "taxes",
+      "evidence": [
+        {
+          "asset": "assets/Taxes.2b51df0e.js",
+          "character_offset": 327
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v1/stores/{store_id}/taxRates/{tax_rate_id}",
+      "area": "taxes",
+      "evidence": [
+        {
+          "asset": "assets/Taxes.2b51df0e.js",
+          "character_offset": 262
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [],
+      "rupert_policy": "not_implemented"
+    },
+    {
+      "method": "PUT",
+      "path_template": "/api/v1/stores/{store_id}/taxRates/{tax_rate_id}",
+      "area": "taxes",
+      "evidence": [
+        {
+          "asset": "assets/Taxes.2b51df0e.js",
+          "character_offset": 459
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "rupert_policy": "excluded_upstream_write"
+    },
+    {
+      "method": "GET",
+      "path_template": "/api/v2/analytics/reports/oneOff/employeeTips",
+      "area": "tips",
+      "evidence": [
+        {
+          "asset": "assets/calculations.4fd51dcf.js",
+          "character_offset": 3156
+        }
+      ],
+      "account_verified": false,
+      "origin_template": "https://<tenant>.api.cannatrax.net",
+      "observed_query_parameters": [
+        "store_id",
+        "start_date",
+        "end_date"
+      ],
+      "rupert_policy": "not_implemented"
+    }
+  ]
+}

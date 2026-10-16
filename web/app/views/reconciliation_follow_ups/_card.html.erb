@@ -1,0 +1,16 @@
+<% close_context = local_assigns[:close_day]&.iso8601 %>
+<article class="card card-pad min-w-0 space-y-3 <%= item.overdue? ? 'border-amber-300 bg-amber-50' : '' %>">
+  <div class="flex flex-wrap justify-between gap-2"><p class="text-xs font-semibold uppercase tracking-wide text-mocha"><%= reconciliation_source(item.source) %> · <%= ReconciliationFollowUp::CATEGORIES[item.category] %></p><span class="rounded-full border px-3 py-1 text-xs font-semibold <%= item.overdue? ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-fog bg-haze' %>"><%= item.overdue? ? 'Overdue' : ReconciliationFollowUp::STATUSES[item.status] %></span></div>
+  <%= content_tag(local_assigns[:heading_tag] || :h2, class: "break-words font-display text-xl") do %><%= link_to item.title, reconciliation_follow_up_path(item, close_day: close_context, queue: local_assigns[:queue_filters]), class: 'text-olive underline underline-offset-4' %><% end %>
+  <p class="text-sm font-semibold"><%= reconciliation_due_label(item) %> · <%= item.due_on.strftime('%b %-d, %Y') %></p>
+  <p class="text-sm"><%= item.owner&.display_name || 'Needs an owner' %> · <%= ReconciliationFollowUp::STATUSES[item.status] %></p>
+  <p class="text-xs text-mocha"><%= item.period_from.strftime('%b %-d, %Y') %><%= item.period_to != item.period_from ? " – #{item.period_to.strftime('%b %-d, %Y')}" : '' %> · <%= item.document_kind.humanize %><%= item.currency.present? ? " · #{item.currency}" : '' %></p>
+  <p class="text-xs font-semibold"><%= item.document_id ? 'Retained evidence linked' : 'No original linked to this follow-up' %></p>
+  <div class="rounded-xl bg-haze p-3"><p class="text-xs font-semibold text-mocha">Latest next step / progress note</p><p class="mt-1 break-words whitespace-pre-line text-sm"><%= truncate(item.notes, length: 240) %></p></div>
+  <div class="flex flex-wrap gap-2">
+    <% if Current.user.can?('reports.write') && item.status != 'closed' %><%= link_to 'Record progress', reconciliation_follow_up_path(item, close_day: close_context, queue: local_assigns[:queue_filters], anchor: 'record-progress'), class: 'btn-primary btn-sm' %><% else %><%= link_to 'Open follow-up', reconciliation_follow_up_path(item, close_day: close_context, queue: local_assigns[:queue_filters]), class: 'btn-ghost btn-sm' %><% end %>
+    <% if item.document_id %><%= link_to 'Download linked original', document_daily_reconciliation_path(item.document_id), class: 'btn-ghost btn-sm' %>
+    <% else %><%= link_to 'Find retained original', reconciliation_documents_path(reconciliation_library_request_context(item, local_assigns[:close_day])), class: 'btn-ghost btn-sm' %><% if Current.user.can?('reports.write') && item.status != 'closed' %><%= link_to 'Add original', daily_reconciliations_path(request: item.id, close_day: close_context, anchor: 'upload-document'), class: 'btn-ghost btn-sm' %><% end %><% end %>
+    <%= link_to 'Review covered day', daily_reconciliations_path(day: item.period_from.iso8601), class: 'text-xs text-olive underline self-center' %>
+  </div>
+</article>

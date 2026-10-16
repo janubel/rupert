@@ -9,9 +9,13 @@
 #
 # Domain enforcement: the user's email domain must be in the tenant's
 # OauthAllowedDomain list. Unknown domains are rejected; known domains with an
-# existing Rupert account sign in, and known domains without one get a reader
-# account auto-provisioned.
+# existing Rupert account sign in, and known domains without one get a employee
+# account auto-provisioned. Explicit Google login aliases use their canonical
+# account's allowed domain and never create another account. An explicitly
+# linked identity matching the account email grants only that account access.
 class OauthController < ApplicationController
+  include DriveOauthCallback
+  include RetentionDriveOauthCallback
   class AccountInAnotherTenant < StandardError; end
 
   content_security_policy(prepend: true) { |policy| policy.frame_ancestors :none }
@@ -38,6 +42,10 @@ class OauthController < ApplicationController
     response.set_header('Cache-Control', 'no-store')
     response.set_header('Referrer-Policy', 'no-referrer')
     response.set_header('X-Robots-Tag', 'noindex, nofollow, noarchive')
+    # Backup consent reuses the registered callback, without signing in or provisioning users.
+    return complete_drive_oauth if params[:state].to_s.start_with?('drive:')
+    return complete_retention_drive_oauth if params[:state].to_s.start_with?('retention:')
+
     info = nil
     tested_domain = params[:hd].presence
     if params[:error].present?
@@ -68,8 +76,14 @@ class OauthController < ApplicationController
 
     email = info['email'].to_s.downcase
     tested_domain ||= email.split('@').last
-    tenant = resolve_tenant(email)
-    unless tenant&.status == 'active' && OauthAllowedDomain.allowed?(email, tenant: tenant)
+    identity = GoogleLoginIdentity.find_by(email: email)
+    if identity && User.where(email: email).where.not(id: identity.user_id).exists?
+      raise GoogleOauthService::ExchangeError, 'This Google email has conflicting account links. Contact an admin.'
+    end
+    tenant = resolve_tenant(email, linked_user: identity&.user)
+    allowed_email = identity ? identity.user.email : email
+    approved_account = identity&.exact_account_email?
+    unless tenant&.status == 'active' && (approved_account || OauthAllowedDomain.allowed?(allowed_email, tenant: tenant))
       AccessLogger.record(
         source: 'google',
         status: 'failure',
@@ -89,7 +103,7 @@ class OauthController < ApplicationController
       raise GoogleOauthService::ExchangeError, 'This Google identity does not match the approved workspace owner. Contact the platform owner.'
     end
 
-    user = find_or_create_user!(email, info, tenant)
+    user = identity ? identity.user : find_or_create_user!(email, info, tenant)
     unless user&.active?
       AccessLogger.record(
         source: 'google',
@@ -102,12 +116,14 @@ class OauthController < ApplicationController
       return redirect_to(login_path, alert: 'This account has been deactivated. Contact an admin.')
     end
 
+    identity&.verify_subject!(info['sub'])
+
     reset_session # prevent session fixation
     session[:user_id] = user.id
     session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(user.password_digest) if user.employee?
     AccessLogger.record(source: 'google', status: 'success', request: request, user: user, email: email,
       domain: tested_domain)
-    redirect_to(user.employee? ? people_timesheets_path : root_path, notice: 'Signed in with Google.')
+    redirect_to(user.employee? ? employee_app_path : root_path, notice: 'Signed in with Google.')
   rescue GoogleOauthService::NotConfiguredError, GoogleOauthService::ExchangeError => e
     clear_oauth_intent
     AccessLogger.record(source: 'google', status: 'failure', request: request, email: info&.dig('email'),
@@ -137,10 +153,10 @@ class OauthController < ApplicationController
     session.delete(:workspace_signup_intent)
   end
 
-  # Root sign-in follows the globally unique exact account first. New readers
+  # Root sign-in follows the globally unique exact account first. New employees
   # need one unambiguous active tenant domain; never pick an arbitrary store.
-  def resolve_tenant(email)
-    existing = User.find_by(email: email)
+  def resolve_tenant(email, linked_user: nil)
+    existing = linked_user || User.find_by(email: email)
     if Current.tenant
       raise AccountInAnotherTenant, email if existing && existing.tenant_id != Current.tenant.id
 
@@ -165,7 +181,7 @@ class OauthController < ApplicationController
     user = tenant.users.new(
       email: email,
       name: info['name'].presence || email.split('@').first.titleize,
-      role: 'reader',
+      role: 'employee',
       referral_domain: WorkspaceSignup::REFERRAL_DOMAIN,
       password: SecureRandom.hex(24)
     )

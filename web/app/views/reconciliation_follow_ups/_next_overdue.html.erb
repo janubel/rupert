@@ -1,0 +1,7 @@
+<section class="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" aria-label="Continue overdue follow-ups across days">
+  <h3 class="text-sm font-semibold">Save this step, then work the next overdue item</h3>
+  <% if item %><div class="space-y-1"><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Next overdue · all dates</p><p class="break-words font-semibold"><%= item.title %></p><p class="text-sm"><%= reconciliation_due_label(item) %> · <%= item.owner&.display_name || 'Needs an owner' %></p><p class="text-xs text-mocha"><%= reconciliation_source(item.source) %> · <%= item.period_from.strftime('%b %-d, %Y') %><%= item.period_to != item.period_from ? " – #{item.period_to.strftime('%b %-d, %Y')}" : '' %> · <%= item.document_id ? 'Original linked' : 'Original not linked' %></p></div>
+  <% else %><p class="text-sm">No other overdue follow-ups are currently waiting. After saving, return to the queue to check your updated status and due date.</p><% end %>
+  <%= form.button(item ? 'Save and work next overdue' : 'Save and check overdue queue', type: 'submit', name: 'return_to', value: 'next_overdue', class: 'btn-primary') %>
+  <p class="text-xs text-mocha">Saves only this follow-up and your note. The next item is selected from the latest queue, earliest due first. Other requests stay unchanged. Nothing is sent to anyone.</p>
+</section>

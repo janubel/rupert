@@ -4,6 +4,9 @@ module Sales
   # POS cash-drawer management: open a register shift, see sales per tender,
   # and settle with a physical cash count at end of day.
   class PosSessionsController < AuthenticatedController
+    rescue_from Pos::Error do |error|
+      redirect_to sales_pos_session_path(@session), alert: error.message
+    end
     before_action :set_session, only: %i[show close reopen refresh]
 
     def index
@@ -16,8 +19,10 @@ module Sales
     def show
       authorize(@session)
       @orders = Core::Order.where('occurred_at >= ?', @session.opened_at)
-                           .where(location_id: @session.location_id)
-                           .order(occurred_at: :desc).limit(100)
+                           .where(location_id: [@session.location_id, @session.location&.externalId].compact)
+      @orders = @orders.where.not(source: 'rupert_pos').or(@orders.where(id: PosCheckout.where(pos_session_id: @session.id).select(:order_id)))
+      @orders = @orders.where('occurred_at < ?', @session.closed_at) if @session.closed_at
+      @orders = @orders.order(occurred_at: :desc).limit(100)
     end
 
     def new

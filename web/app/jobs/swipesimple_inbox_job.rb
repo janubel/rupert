@@ -5,7 +5,7 @@
 class SwipesimpleInboxJob < ApplicationJob
   queue_as :default
 
-  def perform
+  def perform(tenant_id: nil)
     previous_tenant = Current.tenant
     directory = ENV['RUPERT_SWIPESIMPLE_INBOX'].presence
     return { status: 'disabled', imported: 0 } unless directory
@@ -22,6 +22,7 @@ class SwipesimpleInboxJob < ApplicationJob
       manifests.each do |path|
         manifest = JSON.parse(read_regular_file(path, 16 * 1024))
         raise SwipesimpleReportImporter::Error, 'Invalid SwipeSimple inbox manifest.' unless manifest.is_a?(Hash)
+        next if tenant_id && manifest['tenant_id'] != tenant_id
 
         tenant = Tenant.find_by(id: manifest['tenant_id'], status: 'active')
         raise SwipesimpleReportImporter::Error, 'SwipeSimple inbox workspace is unavailable.' unless tenant

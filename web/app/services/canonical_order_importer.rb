@@ -50,13 +50,13 @@ class CanonicalOrderImporter
       Array(orders).each do |node|
         next if node.blank?
 
-        customer = upsert_customer!(
-          source: 'square',
-          external_id: node['customer_id'].presence || node['id'],
-          email: nil,
-          first_name: nil,
-          last_name: nil
-        )
+        customer = if node['customer_id'].present?
+          upsert_customer!(source: 'square', external_id: node['customer_id'], email: nil, first_name: nil, last_name: nil)
+        else
+          # Preserve historical order-linked profiles without inventing a new
+          # customer identity for every anonymous sale.
+          Core::Customer.find_by(source: 'square', external_id: node['id'])
+        end
 
         Core::Order.transaction do
           Core::Order.upsert(
@@ -105,6 +105,10 @@ class CanonicalOrderImporter
 
     def upsert_customer!(source:, external_id:, email:, first_name:, last_name:, phone: nil)
       return if external_id.blank?
+
+      existing = Core::Customer.find_by(source: source, external_id: external_id)
+      # Order payloads can contain partial or historical customer information.
+      return existing if existing&.source_synced_at
 
       Core::Customer.upsert(
         {

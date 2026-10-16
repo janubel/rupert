@@ -21,7 +21,7 @@
           <select name="inventory_count[locationId]" class="input">
             <option value="">— no specific location —</option>
             <% @locations.each do |loc| %>
-              <option value="<%= loc.id %>" <%= "selected" if count.locationId == loc.id %>><%= loc.name %></option>
+              <option value="<%= loc.id %>" <%= "selected" if count.locationId == loc.id %>><%= loc.source.titleize %> · <%= loc.name %></option>
             <% end %>
           </select>
         </div>

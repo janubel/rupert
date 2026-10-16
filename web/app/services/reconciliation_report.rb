@@ -25,7 +25,7 @@ class ReconciliationReport
   def matched_rows
     @matched_rows ||= SkuLink.linked
                              .joins(shopify_variant: :product)
-                             .where('"ShopifyProduct"."status" = ?', 'ACTIVE')
+                             .merge(ShopifyProduct.active)
                              .includes(shopify_variant: :product, square_variation: :item)
                              .order(:sku)
                              .filter_map do |link|
@@ -75,7 +75,7 @@ class ReconciliationReport
   def shopify_only_rows
     @shopify_only_rows ||= begin
       linked = SkuLink.where.not(shopifyVariantId: nil).pluck(:shopifyVariantId)
-      ShopifyVariant.joins(:product).where('"ShopifyProduct"."status" = ?', 'ACTIVE')
+      ShopifyVariant.joins(:product).merge(ShopifyProduct.active)
                     .where.not(id: linked).includes(:product).order(:sku).filter_map do |variant|
         next if variant.sku.blank?
 
