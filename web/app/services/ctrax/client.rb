@@ -143,6 +143,16 @@ module Ctrax
       raise Error, :limit
     end
 
+    def customers
+      stores
+      directory('/api/v1/customers')
+    end
+
+    def employees(store_id)
+      authorize_store!(store_id)
+      directory('/api/v1/users', store_id: store_id)
+    end
+
     # This endpoint may contain merchant secrets. Return counts only; never
     # persist, log or render the raw merchant response.
     def merchant_summary(store_id)
@@ -154,6 +164,35 @@ module Ctrax
     end
 
     private
+
+    def directory(path, **params)
+      rows = []
+      total = last = nil
+      (1..MAX_PAGES).each do |page|
+        document = request(path, params: params.merge(page: page, per_page: 100))
+        data = document['data']
+        current_total, current_last = document.values_at('total', 'last_page')
+        unless data.is_a?(Array) && data.size <= 100 && data.all? { |row| row.is_a?(Hash) } &&
+            document['current_page'] == page && current_total.is_a?(Integer) && current_total.between?(0, MAX_ROWS) &&
+            current_last.is_a?(Integer) && current_last.between?(1, MAX_PAGES)
+          raise Error, :response
+        end
+        total ||= current_total
+        last ||= current_last
+        raise Error, :response unless total == current_total && last == current_last && page <= last
+
+        rows.concat(data)
+        raise Error, :limit if rows.size > MAX_ROWS
+        next unless page == last
+
+        ids = rows.map { |row| row['id'].to_s }
+        unless rows.size == total && ids.uniq.size == ids.size && ids.all? { |id| id.match?(/\A[1-9][0-9]{0,18}\z/) }
+          raise Error, :response
+        end
+        return rows
+      end
+      raise Error, :limit
+    end
 
     def paged(path, parameters = {})
       rows = []

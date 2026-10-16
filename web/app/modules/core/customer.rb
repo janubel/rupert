@@ -9,7 +9,7 @@ module Core
 
     self.table_name = 'customers'
 
-    SOURCES = %w[shopify square pos manual].freeze
+    SOURCES = %w[shopify square ctrax pos manual].freeze
 
     has_many :orders, class_name: 'Core::Order', foreign_key: :customer_id
 

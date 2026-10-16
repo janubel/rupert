@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_020000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -609,6 +609,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.string "source", null: false
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
+    t.datetime "source_synced_at"
     t.index ["tenant_id", "created_at", "id"], name: "idx_customers_tenant_created_id"
     t.index ["tenant_id", "email"], name: "index_customers_on_tenant_id_and_email"
     t.index ["tenant_id", "external_id", "source"], name: "index_customers_on_tenant_id_and_external_id_and_source", unique: true
@@ -624,6 +625,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "name"], name: "index_departments_on_tenant_id_and_name", unique: true
+  end
+
+  create_table "directory_sync_states", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "provider", null: false
+    t.string "kind", null: false
+    t.string "status", default: "pending", null: false
+    t.string "attempt_token"
+    t.integer "record_count"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "last_success_at"
+    t.string "error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "provider", "kind"], name: "idx_directory_sync_identity", unique: true
   end
 
   create_table "employees", force: :cascade do |t|
@@ -648,9 +665,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.date "termination_date"
     t.datetime "updated_at", null: false
     t.bigint "user_id"
+    t.string "source"
+    t.string "external_id"
+    t.datetime "source_synced_at"
+    t.boolean "source_active"
     t.index ["tenant_id", "department_id"], name: "index_employees_on_tenant_id_and_department_id"
     t.index ["tenant_id", "employee_number"], name: "index_employees_on_tenant_id_and_employee_number", unique: true
     t.index ["tenant_id", "position_id"], name: "index_employees_on_tenant_id_and_position_id"
+    t.index ["tenant_id", "source", "external_id"], name: "idx_employees_source_identity", unique: true
     t.index ["tenant_id", "status"], name: "index_employees_on_tenant_id_and_status"
     t.index ["tenant_id", "user_id"], name: "index_employees_on_tenant_id_and_user_id"
   end
@@ -1671,6 +1693,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
   add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_stock_snapshots", "tenants"
   add_foreign_key "departments", "employees", column: "manager_id"
+  add_foreign_key "directory_sync_states", "tenants"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
   add_foreign_key "google_login_identities", "users", on_delete: :cascade
   add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade
