@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_220000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1145,6 +1145,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_200000) do
     t.check_constraint "status IN ('active', 'released')", name: "stock_reservations_status"
   end
 
+  create_table "swipesimple_exports", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "merchant_account", null: false
+    t.string "kind", null: false
+    t.string "currency", null: false
+    t.string "source_timezone", null: false
+    t.string "fingerprint", null: false
+    t.string "sha256", null: false
+    t.datetime "exported_at", null: false
+    t.text "original_csv", null: false
+    t.integer "imported_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["imported_by_id"], name: "index_swipesimple_exports_on_imported_by_id"
+    t.index ["tenant_id", "fingerprint"], name: "index_swipesimple_exports_on_tenant_id_and_fingerprint", unique: true
+    t.index ["tenant_id", "merchant_account", "kind", "exported_at", "id"], name: "idx_swipesimple_snapshot_scope"
+  end
+
+  create_table "swipesimple_report_rows", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "swipesimple_export_id", null: false
+    t.string "identity", null: false
+    t.text "source_number", null: false
+    t.string "transaction_type"
+    t.string "status", null: false
+    t.string "tender"
+    t.integer "amount_cents", null: false
+    t.integer "tip_cents"
+    t.datetime "occurred_at", null: false
+    t.text "reference_number"
+    t.date "due_on"
+    t.datetime "last_sent_at"
+    t.integer "source_row", null: false
+    t.index ["swipesimple_export_id", "identity"], name: "idx_swipesimple_export_identity", unique: true
+    t.index ["swipesimple_export_id"], name: "index_swipesimple_report_rows_on_swipesimple_export_id"
+    t.index ["tenant_id", "identity"], name: "idx_swipesimple_tenant_identity"
+  end
+
   create_table "tasks", force: :cascade do |t|
     t.string "assignee_id"
     t.datetime "completed_at"
@@ -1373,6 +1411,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_200000) do
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "stock_reservations", "stock_reservation_pools"
+  add_foreign_key "swipesimple_exports", "users", column: "imported_by_id", on_delete: :nullify
+  add_foreign_key "swipesimple_report_rows", "swipesimple_exports"
   add_foreign_key "workspace_signup_events", "users", column: "actor_id", on_delete: :nullify
   add_foreign_key "workspace_signup_events", "workspace_signups"
   add_foreign_key "workspace_signups", "tenants"

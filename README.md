@@ -183,3 +183,5 @@ records; no longer written), `Location`,
   The sync is a read-only mirror; nothing equalizes quantities across them.
   Outbound stock writes happen only through explicit, owner-approved flows,
   and SKU writes always require owner sign-off first.
+
+- [SwipeSimple reporting investigation and hourly SER8 CSV intake](docs/ops/swipesimple-reporting.md) — verified native formats, encrypted source provenance, invoice identity limits, operational setup and remaining vendor access requirements.

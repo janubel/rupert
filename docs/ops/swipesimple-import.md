@@ -2,6 +2,8 @@
 
 Reviewed 2026-10-15. [Open Rupert Sync](https://rupert.stoverparc.org/syncs#swipesimple) or [open daily register reports](https://rupert.stoverparc.org/reports/register_summary). Sign in with the relevant store permissions.
 
+For native vendor transaction/invoice exports, payment results, refunds and tip reporting, see [SwipeSimple read-only reporting and hourly SER8 intake](https://github.com/techmore/rupert/blob/main/docs/ops/swipesimple-reporting.md). The prepared item CSV below remains a separate workflow.
+
 ## Supported CSV contract
 
 Rupert accepts a prepared line-item sales CSV, rather than assuming every native SwipeSimple report has the same columns. SwipeSimple's transaction exports may lack item details. Verify and convert the source report into this contract before importing; do not infer item prices or payment completion from a transaction total alone. [Download the fictional sample](https://techmore.github.io/rupert/data/swipesimple-sales-template.csv).

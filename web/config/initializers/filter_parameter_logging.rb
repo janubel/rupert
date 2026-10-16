@@ -19,3 +19,6 @@ Rails.application.config.filter_parameters += [/\Aowner_checklist\z/i, /\Aowner_
 
 # Workspace applications contain private organization and applicant references.
 Rails.application.config.filter_parameters += [/\Aworkspace_signup\z/i]
+
+# Native source documents and their full context must never reach request logs.
+Rails.application.config.filter_parameters += [/\Aswipesimple_export\z/i, /\Afile\z/i, :original_csv, :reference_number, :source_number]

@@ -1,4 +1,5 @@
 <section class="card card-pad" id="swipesimple">
+  <p><%= link_to 'Import native SwipeSimple transactions and invoices / daily totals', swipesimple_reports_path, class: 'btn-ghost btn-sm' %></p>
   <h2 class="font-display text-xl text-ink">Review SwipeSimple sales CSV</h2>
   <p class="mt-2 text-sm text-mocha">Prepare a line-item CSV in Rupert’s supported format, then review it before importing. Native SwipeSimple exports may need conversion; a transaction report alone does not establish item quantities or prices.</p>
   <p class="mt-2 text-xs text-taupe">Required: Order, Date, Item, Qty, Unit Price, Payment, Status and Currency. Use an ISO timestamp with seconds and its UTC offset, such as <code>2026-07-01T14:30:00-04:00</code>. Each order needs one known tender and an explicit paid/completed/approved status. Declines, voids, refunds, authorizations, split tenders and changed existing orders require separate reconciliation.</p>
