@@ -92,6 +92,22 @@ class MoneyReconciliationReportTest < ActiveSupport::TestCase
     assert_empty report.payload['rows']
   end
 
+  test 'refresh preserves prior period CSV and JSON evidence and replays unchanged source data' do
+    order('original', '2026-10-15T15:00:00Z', 1000)
+    report.save!
+    originals = ReconciliationDocument.where(kind: 'period_archive').order(:id).to_a
+    assert_equal 2, originals.size
+    assert_includes originals.find { |doc| doc.filename.end_with?('.json') }.original_bytes, 'Review required'
+    report.save!
+    assert_equal 2, ReconciliationDocument.where(kind: 'period_archive').count
+    order('late-sale', '2026-10-15T17:00:00Z', 500)
+    report.save!
+    assert_equal 4, ReconciliationDocument.where(kind: 'period_archive').count
+    assert_equal 1, MoneyReconciliation.count
+    assert_includes originals.find { |doc| doc.filename.end_with?('.csv') }.original_bytes, '10.0'
+    assert_equal 4, DailyMoneyReconciliation.new(day: '2026-10-15').documents.size
+  end
+
   test 'CSV quotes untrusted formula text while preserving signed numeric amounts' do
     document = report.payload
     document['rows'] = [{ 'source' => 'SwipeSimple', 'account' => '-SUM(1)', 'currency' => 'USD',
@@ -99,6 +115,21 @@ class MoneyReconciliationReportTest < ActiveSupport::TestCase
     cells = CSV.parse(report.csv(document))[1]
     assert_equal "'-SUM(1)", cells[4]
     assert_equal '-12.50', cells[8]
+  end
+
+  test 'missing canonical amounts and malformed cross-tenant refund links do not produce financial totals' do
+    own = order('missing-amount', '2026-10-15T15:00:00Z', 1000)
+    own.update_columns(gross_cents: nil)
+    missing = report.payload
+    refute missing['rows'].any? { |row| row['source'] == 'Shopify' && row['metric'] == 'Recorded sales' }
+    assert missing['warnings'].any? { |warning| warning.include?('missing amounts') }
+    tenant = Current.tenant
+    Current.tenant = Tenant.create!(name: 'Foreign refunds', subdomain: 'foreign-refunds')
+    foreign = order('foreign', '2026-10-15T15:00:00Z', 90000)
+    Current.tenant = tenant
+    Core::Refund.new(tenant_id: tenant.id, order_id: foreign.id, method: 'cash', amount_cents: 90000,
+      refunded_at: Time.iso8601('2026-10-15T17:00:00Z')).save!(validate: false)
+    refute report.payload['rows'].any? { |row| row['metric'] == 'Recorded refunds' }
   end
 
   test 'scheduled jobs save the previous complete periods without notifications or source writes' do

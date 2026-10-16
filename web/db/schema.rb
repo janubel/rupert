@@ -627,6 +627,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["tenant_id", "phone"], name: "index_customers_on_tenant_id_and_phone"
   end
 
+  create_table "daily_reconciliation_reviews", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.date "day", null: false
+    t.string "report_digest", null: false
+    t.string "status", null: false
+    t.text "notes", null: false
+    t.bigint "reviewed_by_id"
+    t.datetime "created_at", null: false
+    t.index ["reviewed_by_id"], name: "index_daily_reconciliation_reviews_on_reviewed_by_id"
+    t.index ["tenant_id", "day"], name: "idx_daily_reconciliation_review_day"
+    t.index ["tenant_id"], name: "index_daily_reconciliation_reviews_on_tenant_id"
+  end
+
   create_table "departments", force: :cascade do |t|
     t.string "code"
     t.datetime "created_at", null: false
@@ -1223,6 +1236,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
     t.index ["tenant_id", "vendor_id"], name: "index_purchase_orders_on_tenant_id_and_vendor_id"
   end
 
+  create_table "reconciliation_documents", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "source", null: false
+    t.string "kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.text "metadata_json", null: false
+    t.text "content_base64", null: false
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.string "sha256", null: false
+    t.string "fingerprint", null: false
+    t.integer "byte_size", null: false
+    t.bigint "uploaded_by_id"
+    t.bigint "supersedes_id"
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "fingerprint"], name: "idx_reconciliation_evidence_replay", unique: true
+    t.index ["tenant_id", "period_from", "period_to"], name: "idx_reconciliation_evidence_period"
+    t.index ["tenant_id", "supersedes_id"], name: "idx_reconciliation_evidence_correction", unique: true
+    t.index ["tenant_id"], name: "index_reconciliation_documents_on_tenant_id"
+    t.index ["uploaded_by_id"], name: "index_reconciliation_documents_on_uploaded_by_id"
+  end
+
   create_table "refunds", force: :cascade do |t|
     t.integer "amount_cents", default: 0, null: false
     t.datetime "created_at", null: false
@@ -1764,6 +1800,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
   add_foreign_key "clock_shifts", "employees", on_delete: :nullify
   add_foreign_key "clock_shifts", "tenants"
   add_foreign_key "clock_shifts", "users", on_delete: :nullify
+  add_foreign_key "daily_reconciliation_reviews", "tenants"
+  add_foreign_key "daily_reconciliation_reviews", "users", column: "reviewed_by_id", on_delete: :nullify
+  add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
+  add_foreign_key "reconciliation_documents", "tenants"
+  add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify
   add_foreign_key "directory_sync_states", "tenants"
   add_foreign_key "departments", "employees", column: "manager_id"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade

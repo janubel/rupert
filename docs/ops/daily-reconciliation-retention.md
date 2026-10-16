@@ -1,0 +1,38 @@
+# Daily reconciliation and document retention
+
+Open **Money → Daily reconciliation & documents** at `/daily_reconciliations`. This extends the daily register report with source controls, retained originals, source observations, report archives and review notes. All dates use Rupert's Eastern business timezone.
+
+## Daily workflow
+
+1. Pick a business day. Review recorded order totals, tax in the CSV/detailed register report, cash/card receipts, refunds, payment coverage issues and import freshness. An absent import is not a zero-sales day. Orders, tenders and refunds use their respective event dates.
+2. Review SwipeSimple native transaction observations, Authorize.net API settlements, Authorize.net portal observations and NAB/IRIS snapshots separately. These may describe the same money; they are never summed into sales. API and portal evidence remain separate. IRIS windows may overlap and batch amounts do not establish net bank funding.
+3. Retain the original daily report, invoice, bank statement, fee statement or screenshot. Supply its source and covered dates. Supported files: UTF-8 CSV/TXT/JSON, PDF, PNG and JPEG, up to 8 MiB. PDFs/images are retained as attachments; there is no automatic OCR or extraction. No vendor login is needed to retain a document.
+4. To compare a source report, select **Register control**, a single day, explicit three-letter currency and exact Rupert location ID. Blank location means the unassigned pool only, not all locations. Enter matching-definition order totals, cash/card receipts and positive refunds from the source. Amounts use currency units with at most two decimals. Missing fields stay blank/unknown. Tips, fees and deposits are retained as observations and remain unavailable for comparison when canonical fields do not exist. C-Trax has separate native day/control checks; Cash App evidence can be retained even when no canonical importer is available.
+5. Read the variance as **Rupert minus source**. A matched recorded total means only that the specified totals agree. It does not certify completeness, fees, net settlement or bank receipt. Multiple active controls for the same pool are flagged as conflicting; do not add them together. To correct a control, upload its replacement and enter the previous evidence ID. Both originals remain. Withdraw an accidental duplicate with its evidence ID and a reason to remove it from comparisons while retaining the original file, totals and explanation.
+6. Keep a permanent report version and enter **Needs attention** or **Reviewed** notes. Reviewed records a human assessment and can include unresolved differences; it is not an automatic balance assertion. Reviews bind to a report fingerprint. A changed report is visibly flagged and stale form submissions are rejected. Reviews and documents are append-only through the application.
+
+The existing **Daily / weekly / monthly source summary** is linked in both directions. Saving or refreshing that report, including its automatic closes, retains encrypted CSV and JSON versions in the same vault. The current summary can refresh while earlier versions remain downloadable.
+
+## Automatic retention
+
+`DailyReconciliationArchiveJob` runs at **07:15 America/New_York daily**. It revisits each of the previous seven calendar/business-report dates to capture late imports. Each changed report becomes a new encrypted CSV archive; unchanged snapshots replay to the existing archive. Days older than seven dates can be archived manually. The job reads local data and performs no provider operations or messaging.
+
+C-Trax daily source pulls also retain versioned normalized JSON snapshots containing the already-filtered orders, sessions and controls. These are explicitly normalized source snapshots, not original native export bytes. Its store-day checks and cash-session drill-down are available on the daily page with the store timezone shown separately.
+
+New native IRIS Daily Deposits and monthly Health CSV imports retain exact source bytes in the document vault in the same database transaction as parsed snapshots. Corrections preserve earlier bytes even though the existing parsed snapshot is replaced. A multi-month Health file is attached to each covered month. Replays are deduplicated by source, kind, period, original SHA-256 and metadata. Existing SwipeSimple and Authorize.net portal originals remain in their current encrypted tables and can be downloaded from the shared library with reports-read permission. The native library shows the newest 20 exports per source across dates, with day-specific Authorize.net observations linking their original export even when older.
+
+Historical IRIS originals were not retained by previous importer versions and cannot be reconstructed from parsed snapshots. Reupload an available original or retain it directly. This workflow does not fabricate a native document from parsed data, certify API entitlement, or enable unavailable source integrations.
+
+## Storage, access and recovery
+
+Original file bytes are Base64 encoded then Rails-encrypted in `reconciliation_documents`, together with encrypted metadata. Downloads verify SHA-256 and byte size and use attachment disposition, no-store and nosniff headers. Filenames, source, period, checksums and retention timestamps are indexed metadata rather than secrets. Tenant scopes cover files, reviews and all report observations. Reading/exporting requires `reports.read`; uploading, archiving and reviewing additionally require `reports.write`. Existing source-import permissions continue to apply to imports.
+
+There is **no automatic deletion** for documents, report archives or review notes, including when the nightly `DataRetention` service prunes derived mirrors/logs. This is an operational retention behavior, not a jurisdiction-specific legal retention period. There are no document deletion or replacement routes. Correct a document by adding a version. Protect administrative SQL/backup access separately; application callbacks are not protection against database administrators.
+
+Evidence is stored inside Rupert's database and therefore included in consistent database backups. Preserve Rails encryption keys alongside backups in the established private backup process. The optional existing Google Drive backup stores the database, not a browsable folder of individual reports; this change does not create a Drive/Dropbox integration. Monitor database/backup size as source files accumulate. Keep off-host copies and test restoration and document decryption.
+
+The archive CSV includes source-separated totals, coverage, freshness, controls/variances, native SwipeSimple totals/tips, gateway and portal observations, IRIS snapshot references, and retained document IDs/checksums/context. It is a reproducible report snapshot, not a bank ledger posting. No canonical sales, payments, inventory or external systems are changed by reconciliation.
+
+## Deployment
+
+Apply `20261016040100_create_reconciliation_evidence` on the current SER8 release, preserving all existing integrations and encryption configuration. Rehearse on a consistent private database copy, verify unchanged existing-table counts and integrity, build assets, then promote code/schema and restart web/jobs through the established Incus workflow. Verify the authenticated page, an exact archive download and the recurring schedule. Rolling back code is additive-schema compatible; retain new evidence tables and do not restore an older database over subsequent business writes.

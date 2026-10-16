@@ -65,6 +65,7 @@ class ModuleRegistry
     }, permission: 'reconcile.read', position: 50),
     Entry.new(key: 'sizes', name: 'Sizes', path: -> { size_families_path }, permission: 'settings.read', position: 51),
     Entry.new(key: 'reports', name: 'Reports', path: -> { reports_path }, permission: 'reports.read', position: 55),
+    Entry.new(key: 'daily_reconciliation', name: 'Daily reconciliation & documents', path: -> { daily_reconciliations_path }, permission: 'reports.read', position: 56),
     Entry.new(key: 'register_summary', name: 'Daily register summary', path: lambda {
       register_summary_reports_path
     }, permission: 'reports.read', position: 56),
@@ -168,7 +169,7 @@ class ModuleRegistry
       { key: 'stock', name: 'Stock',
         modules: %w[inventory inventory_exceptions locations inventory_counts stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
       { key: 'money', name: 'Money',
-        modules: %w[reports register_summary ledger finance_accounts chart_of_accounts expenses payments] },
+        modules: %w[reports daily_reconciliation register_summary ledger finance_accounts chart_of_accounts expenses payments] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
       { key: 'team', name: 'Team',
         modules: %w[accounts employees departments positions time_clock timesheets leave payroll permissions] },

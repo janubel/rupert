@@ -44,6 +44,7 @@ class MoneyReconciliationReport
         'Gateway totals use settlement dates; order totals use sale dates. Fees and funding delays require source evidence.'
       ]
       shopify
+      ctrax
       swipesimple
       authorize_net
       iris
@@ -62,6 +63,12 @@ class MoneyReconciliationReport
       raise ArgumentError, 'An active workspace is required.' unless locked == 1
       report = MoneyReconciliation.find_or_initialize_by(period_kind: kind, period_from: from)
       report.update!(period_to: to, generated_at: Time.current, payload_json: payload.to_json)
+      snapshot = payload.except('generated_at').to_json
+      evidence_context = { 'period_kind' => kind, 'report_digest' => Digest::SHA256.hexdigest(snapshot) }
+      ReconciliationEvidence.retain!(bytes: csv, filename: "money-reconciliation-#{kind}-#{from}.csv", source: 'rupert', kind: 'period_archive',
+        from: from.iso8601, to: to.iso8601, metadata: evidence_context, actor: Current.user)
+      ReconciliationEvidence.retain!(bytes: snapshot, filename: "money-reconciliation-#{kind}-#{from}.json", source: 'rupert', kind: 'period_archive',
+        from: from.iso8601, to: to.iso8601, metadata: evidence_context, actor: Current.user)
       report
     end
   end
@@ -87,10 +94,15 @@ class MoneyReconciliationReport
   def shopify
     orders = Core::Order.where(source: 'shopify', status: %w[paid fulfilled refunded], occurred_at: @range)
     orders.group(:currency).count.each do |currency, count|
-      gross = orders.where(currency: currency).sum(:gross_cents)
+      scoped = orders.where(currency: currency)
+      if scoped.where(gross_cents: nil).exists?
+        @warnings << 'Shopify recorded sales include missing amounts; no sales total is inferred.'
+        next
+      end
+      gross = scoped.sum(:gross_cents)
       add('Shopify', 'Online orders', currency, 'Recorded sales', BigDecimal(gross.to_s) / 100, count, 'Sale date; includes tax and recorded shipping')
     end
-    refunds = Core::Refund.joins(:order).where(orders: { source: 'shopify' }, refunded_at: @range)
+    refunds = Core::Refund.joins(:order).where(orders: { tenant_id: Current.tenant_id, source: 'shopify' }, refunded_at: @range)
     refunds.group('orders.currency').count.each do |currency, count|
       add('Shopify', 'Online orders', currency, 'Recorded refunds', BigDecimal(refunds.where(orders: { currency: currency }).sum(:amount_cents).to_s) / 100, count, 'Refund date; local recorded evidence')
     end
@@ -109,6 +121,38 @@ class MoneyReconciliationReport
     end
     @warnings << 'SwipeSimple invoices are not added to transaction receipts; paid invoice and payment evidence can overlap.'
     @warnings << 'SwipeSimple exports do not establish complete coverage for this period.' if rows.empty?
+  end
+
+  def ctrax
+    snapshots = CtraxDay.where(business_date: from..to).to_a
+    snapshots.group_by { |day| [day.api_origin, day.store_id, day.currency, day.timezone] }.each do |(_origin, store, currency, timezone), days|
+      checks = days.map { |day| Ctrax::Reconciliation.new(day) }
+      identities = checks.flat_map { |check| check.orders.map { |row| row['id'] } }
+      if identities.uniq.size != identities.size
+        @warnings << 'C-Trax source order IDs repeat across stored dates; no period total is inferred. Review the original day snapshots.'
+        next
+      end
+      metrics = {
+        'Recorded order total' => checks.map { |check| check.sum(check.orders, 'total') },
+        'Recorded tax' => checks.map { |check| check.sum(check.orders, 'tax') },
+        'Recorded tips' => checks.map { |check| check.sum(check.orders, 'tip') },
+        'Cash receipts' => checks.map { |check| check.sum(check.payments.select { |row| row['type'] == 'cash' }, 'amount') },
+        'Card receipts' => checks.map { |check| check.sum(check.payments.select { |row| %w[credit standaloneCardTerminal].include?(row['type']) }, 'amount') },
+        'Source refund total' => days.map { |day| day.controls['refunds_totals_sum'] }
+      }
+      metrics.each do |metric, values|
+        if values.any?(&:nil?)
+          @warnings << "C-Trax #{metric.downcase} has missing source amounts; no total is inferred."
+          next
+        end
+        count = metric == 'Source refund total' ? nil : checks.sum { |check| check.orders.size }
+        add('C-Trax', store, currency, metric, BigDecimal(values.sum.to_s) / 100, count,
+          "Native store-day snapshots in #{timezone}; #{days.size} stored date(s); coverage and bank receipt require review")
+      end
+      @warnings << 'C-Trax native controls or source review remain unresolved.' unless checks.all?(&:matched?) && days.all?(&:reviewed?)
+      @warnings << 'C-Trax stored dates cover only part of this period; absent dates are not zero-sales days.' if days.map(&:business_date).uniq.size < (to - from).to_i + 1
+    end
+    @warnings << 'No C-Trax retail day snapshot is stored for this period; current stock does not establish historical sales.' if snapshots.empty?
   end
 
   def authorize_net
@@ -170,6 +214,6 @@ class MoneyReconciliationReport
     end
     @warnings << 'No native Daily Deposits or API deposit snapshot covers this period. Import the matching NAB export to review deposits.' if deposit_count.zero?
     @warnings << 'Monthly NAB summaries cannot establish daily/weekly deposits or actual bank statement receipt.'
-    @warnings << 'C-Trax supplies current stock counts; historical sales or cash cannot be inferred from its stock snapshot.'
+    @warnings << 'C-Trax stock snapshots are separate from its native daily retail reports; stock does not establish sales.'
   end
 end

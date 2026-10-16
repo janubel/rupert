@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 production:
+  daily_reconciliation_archive:
+    class: DailyReconciliationArchiveJob
+    queue: default
+    schedule: "15 7 * * * America/New_York"
   source_directories:
     class: DirectorySyncJob
     queue: default
