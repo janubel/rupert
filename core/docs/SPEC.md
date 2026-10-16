@@ -113,3 +113,58 @@ traffic), no auth, no TLS, no SSE feed, no checkpoint tuning, WAL growth under
 sustained writes unmeasured, a failing item in a batch fails the whole batch.
 Storage was ~64 MB for 500 tenants x 2000 items including WAL (rough, not a
 per-row figure).
+
+## Milestone 2: auth, memberships, invites, API tokens (2026-10-16)
+
+Implemented in `src/auth.rs`, central migration 2 in `src/migrate.rs`,
+black-box test in `tests/smoke.py` (41 checks, all passing; run
+`python3 -I tests/smoke.py`).
+
+- **Signup** (self-service): creates user, tenant, `<subdomain>.<RUPERT_BASE_DOMAIN>`
+  domain and an owner membership in one transaction, returns a session.
+- **Passwords:** Argon2id (19 MiB, t=2, p=1), concurrency capped (default 2)
+  so a login burst cannot inflate RSS; unknown users are verified against a
+  dummy hash so timing does not reveal accounts. One verify measured ~18 ms.
+- **Sessions:** `rsess_` secrets, SHA-256 digest stored, 14-day expiry,
+  HttpOnly + SameSite=Lax (+ Secure unless `RUPERT_COOKIE_SECURE=0`), tenant
+  chosen by Host and checked against a membership.
+- **API tokens:** same format as Rails (`rupert_` + 43 base64url chars,
+  SHA-256 digest, shown once). Scopes: `catalog:read`, `inventory:read`,
+  `inventory:write` (new), `roadmap:read`. Tokens carry their tenant; the Host
+  header cannot change it. Effective rights = token scopes AND the owner's
+  current role. Tokens cannot mint tokens or invites. Revocation invalidates
+  the principal cache immediately (single process).
+- **Roles:** owner > manager > staff. Managers invite staff and create tokens;
+  only owners invite managers; nobody can mint an owner via invite.
+- **Invites:** `rinv_` secret, digest stored, 7 days, single use (claimed
+  atomically); an existing account must supply its password to accept.
+- **Abuse limits:** in-memory per-IP and per-email limits (signup 5/min,
+  login 20/min per IP and 10/min per email, accept 10/min). Behind a proxy set
+  `RUPERT_TRUST_PROXY=1` (uses the rightmost `X-Forwarded-For`).
+- **Audit:** signup, login, failed login, token create/revoke, invite
+  create/accept are recorded in the central `audit` table.
+- **Dev seed** (`/dev/seed`, deterministic tokens) only exists when
+  `RUPERT_DEV=1`; otherwise it returns 404.
+
+Cost of auth on the hot path (same benchmark as above, medians of 5 runs,
+bearer token per request, principal cache with 5 s TTL):
+
+| Run | RSS after 500 tenants | Read rps / p99 | Write rps / p99 |
+| --- | --- | --- | --- |
+| auth on, run 1 | 40 MB | 100.8k / 1.95 ms | 82.3k / 2.13 ms |
+| auth on, run 2 | 40 MB | 99.2k / 1.98 ms | 75.2k / 2.23 ms |
+
+Authentication added no measurable read cost (the earlier unauthenticated
+default was 97k rps). Write throughput came out higher than before; I have not
+isolated why (run-to-run noise and the removed Host-to-tenant lookup are both
+candidates), so do not read it as an auth speed-up. RSS is ~5 MB higher than
+without auth, partly the principal cache and Argon2 state. Peak RSS with a
+fresh server and one login was 26 MB.
+
+Not done / known gaps: no password reset or email verification, no TOTP/MFA
+(needed before multi-customer hosting and for PCI-adjacent operator access),
+no bcrypt import of Rails password digests, role/ownership changes are not
+exposed (cache TTL 5 s applies if added), rate limits are per process, no
+CSRF token beyond SameSite=Lax plus JSON-only bodies, `catalog:read` and
+`roadmap:read` endpoints do not exist yet, and the invite token is returned to
+the inviter instead of emailed.

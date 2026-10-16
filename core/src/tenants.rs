@@ -9,12 +9,12 @@ use tokio::sync::oneshot;
 use crate::{Adjust, Item};
 
 /// Tunables, read once from the environment so one binary can be A/B tested.
-pub struct Cfg { pub cache_kb: i64, pub mmap_mb: i64, pub readers: usize, pub group_commit: bool }
+pub struct Cfg { pub cache_kb: i64, pub mmap_mb: i64, pub readers: usize }
 pub fn cfg() -> &'static Cfg {
     static C: OnceLock<Cfg> = OnceLock::new();
     C.get_or_init(|| {
         let e = |k: &str, d: i64| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
-        Cfg { cache_kb: e("RUPERT_CACHE_KB", 512), mmap_mb: e("RUPERT_MMAP_MB", 0), readers: e("RUPERT_READERS", 8) as usize, group_commit: e("RUPERT_GROUP_COMMIT", 1) == 1 }
+        Cfg { cache_kb: e("RUPERT_CACHE_KB", 512), mmap_mb: e("RUPERT_MMAP_MB", 0), readers: e("RUPERT_READERS", 8) as usize }
     })
 }
 
@@ -112,8 +112,8 @@ impl TenantDb {
 pub struct Registry {
     dir: PathBuf,
     open: Cache<String, Arc<TenantDb>>,
-    pub hosts: Cache<String, Option<String>>, // host -> tenant id (negative results cached too)
     pub central: Mutex<Connection>,
+    pub auth: crate::auth::AuthState,
 }
 
 impl Registry {
@@ -121,18 +121,12 @@ impl Registry {
         std::fs::create_dir_all(dir.join("tenants")).ok();
         let central = Connection::open(dir.join("central.db"))?;
         tune(&central)?;
-        migrate::apply(&central, migrate::CENTRAL)?;
+        migrate::apply(&central, &migrate::central())?;
         Ok(Self {
             dir,
             open: Cache::builder().max_capacity(max_open).time_to_idle(Duration::from_secs(300)).build(),
-            hosts: Cache::builder().max_capacity(100_000).time_to_live(Duration::from_secs(60)).build(),
             central: Mutex::new(central),
-        })
-    }
-    pub fn tenant_for_host(&self, host: &str) -> Option<String> {
-        let host = host.split(':').next().unwrap_or(host).to_ascii_lowercase();
-        self.hosts.get_with(host.clone(), || {
-            self.central.lock().query_row("SELECT tenant_id FROM domains WHERE host=?1", [&host], |r| r.get(0)).ok()
+            auth: crate::auth::AuthState::new(),
         })
     }
     pub fn db(&self, tenant: &str) -> rusqlite::Result<Arc<TenantDb>> {
@@ -144,7 +138,7 @@ impl Registry {
     pub fn create_tenant(&self, id: &str, name: &str, host: &str) -> rusqlite::Result<()> {
         let now = crate::now();
         let c = self.central.lock();
-        c.execute("INSERT OR IGNORE INTO tenants VALUES (?1,?2,?3)", (id, name, now))?;
+        c.execute("INSERT OR IGNORE INTO tenants(id,name,created_at) VALUES (?1,?2,?3)", (id, name, now))?;
         c.execute("INSERT OR REPLACE INTO domains VALUES (?1,?2)", (host, id))?;
         drop(c);
         self.db(id).map(|_| ())
