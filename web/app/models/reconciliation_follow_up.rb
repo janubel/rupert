@@ -61,7 +61,8 @@ class ReconciliationFollowUp < ApplicationRecord
       candidate = User.active.find_by(id: owner_id, tenant_id: tenant_id)
       errors.add(:owner, 'must be an active report reader in this workspace') unless candidate&.can?('reports.read')
     end
-    errors.add(:created_by, 'must belong to this workspace') if created_by_id && !User.exists?(id: created_by_id, tenant_id: tenant_id)
+    creator = User.find_by(id: created_by_id) if created_by_id
+    errors.add(:created_by, 'must belong to this workspace or be a platform administrator') if created_by_id && !(creator && (creator.tenant_id == tenant_id || creator.super_admin?))
     if document_id.present?
       candidate = ReconciliationDocument.find_by(id: document_id, tenant_id: tenant_id)
       errors.add(:document, 'must match this source, kind, covered period and control scope') unless period_from && period_to && document_matches?(candidate)
@@ -69,9 +70,10 @@ class ReconciliationFollowUp < ApplicationRecord
   end
 
   def retain_history
+    actor = Current.user if Current.user && (Current.user.tenant_id == tenant_id || Current.user.super_admin?)
     events.create!(tenant_id: tenant_id, details_json: {
       title: title, status: status, notes: notes, due_on: due_on.iso8601, owner_id: owner_id, owner_name: owner&.display_name,
-      document_id: document_id, actor_id: Current.user&.tenant_id == tenant_id ? Current.user.id : nil, actor_name: Current.user&.tenant_id == tenant_id ? Current.user.display_name : 'System', version: lock_version
+      document_id: document_id, actor_id: actor&.id, actor_name: actor&.display_name || 'System', version: lock_version
     }.to_json)
   end
 end

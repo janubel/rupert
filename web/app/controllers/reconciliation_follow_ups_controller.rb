@@ -32,7 +32,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
   def new
     values = params.permit(:category, :source, :document_kind, :period_from, :period_to, :currency, :location_id, :metric, :title).to_h
     @follow_up = ReconciliationFollowUp.new({ category: 'missing_report', source: 'other', document_kind: 'source_export',
-      period_from: Date.current, period_to: Date.current, due_on: Date.current + 1, owner_id: Current.user.id, submission_key: SecureRandom.uuid }.merge(values))
+      period_from: Date.current, period_to: Date.current, due_on: Date.current + 1, owner_id: Current.user.tenant_id == Current.tenant_id ? Current.user.id : nil, submission_key: SecureRandom.uuid }.merge(values))
     form_options
   end
 

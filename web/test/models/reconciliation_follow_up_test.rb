@@ -32,4 +32,16 @@ class ReconciliationFollowUpTest < ActiveSupport::TestCase
     assert_equal 'Ask for the original report.', @item.notes
     assert_equal 1, @item.events.count
   end
+  test 'platform administrators retain actor attribution when working in another authorized workspace' do
+    other = Tenant.create!(name: 'Platform home', subdomain: 'platform-home')
+    actor = User.create!(tenant: other, email: 'platform-reviewer@example.com', name: 'Platform reviewer', role: 'super_admin', password: 'password123')
+    workspace = Current.tenant
+    Current.user = actor
+    Current.tenant = workspace
+    values = @item.attributes.slice('category', 'source', 'document_kind', 'period_from', 'period_to', 'currency', 'title', 'notes', 'due_on')
+    cross_workspace = ReconciliationFollowUp.create!(values.merge(created_by: actor, submission_key: SecureRandom.uuid))
+    assert_equal actor.id, cross_workspace.events.first.details['actor_id']
+    assert_equal 'Platform reviewer', cross_workspace.events.first.details['actor_name']
+    refute cross_workspace.update(owner: actor, notes: 'Cross-workspace ownership is not offered.')
+  end
 end
