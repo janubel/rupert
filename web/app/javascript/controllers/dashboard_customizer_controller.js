@@ -39,6 +39,7 @@ export default class extends Controller {
   }
 
   moveRow(key, dir) {
+    const focused = document.activeElement
     const row = this.listTarget.querySelector(`[data-editor-key="${key}"]`)
     if (!row) return
     const section = this.sectionFor(key)
@@ -49,6 +50,7 @@ export default class extends Controller {
       const secSibling = dir === "up" ? section.previousElementSibling : section.nextElementSibling
       if (secSibling) section.parentNode.insertBefore(section, dir === "up" ? secSibling : secSibling.nextSibling)
     }
+    if (focused && row.contains(focused)) focused.focus()
   }
 
   sectionFor(key) {
