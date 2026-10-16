@@ -17,9 +17,9 @@ class SalesSourceToggleTest < ActionDispatch::IntegrationTest
   end
 
   test 'sales page shows a source toggle with all available sources' do
-    Core::Order.create!(source: 'shopify', source_order_id: 's1', occurred_at: Time.current - 1.hour,
+    Core::Order.create!(source: 'shopify', source_order_id: 's1', occurred_at: Time.current,
       gross_cents: 1000, order_number: 'S1', tenant_id: @tenant.id)
-    Core::Order.create!(source: 'square', source_order_id: 'sq1', occurred_at: Time.current - 1.hour,
+    Core::Order.create!(source: 'square', source_order_id: 'sq1', occurred_at: Time.current,
       gross_cents: 2000, order_number: 'SQ1', tenant_id: @tenant.id)
 
     get sales_path
@@ -30,9 +30,9 @@ class SalesSourceToggleTest < ActionDispatch::IntegrationTest
   end
 
   test 'the toggle filters the daily breakdown by source' do
-    Core::Order.create!(source: 'shopify', source_order_id: 's1', occurred_at: Time.current - 1.hour,
+    Core::Order.create!(source: 'shopify', source_order_id: 's1', occurred_at: Time.current,
       gross_cents: 1000, order_number: 'S1', tenant_id: @tenant.id)
-    Core::Order.create!(source: 'square', source_order_id: 'sq1', occurred_at: Time.current - 1.hour,
+    Core::Order.create!(source: 'square', source_order_id: 'sq1', occurred_at: Time.current,
       gross_cents: 2000, order_number: 'SQ1', tenant_id: @tenant.id)
 
     get sales_path, params: { source: 'square' }

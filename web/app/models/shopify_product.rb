@@ -12,7 +12,7 @@ class ShopifyProduct < ApplicationRecord
     dependent: :destroy,
     inverse_of: :product
 
-  scope :active, -> { where(status: 'ACTIVE') }
+  scope :active, -> { where(status: 'ACTIVE', catalog_present: [nil, true]) }
   scope :search, lambda { |q|
     return all if q.blank?
 

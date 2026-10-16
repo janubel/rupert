@@ -40,7 +40,7 @@ class ModuleNavTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "nav[aria-label='Module'] a", text: 'Locations'
     assert_select "nav[aria-label='Module'] a", text: 'Alerts'
-    assert_select "nav[aria-label='Module'] a.nav-pill-active-sm", text: 'Inventory'
+    assert_select "nav[aria-label='Module'] a.nav-pill-active-sm", text: 'Stock comparison'
   end
 
   test 'single-module areas do not render a second bar' do

@@ -76,18 +76,16 @@ class PageGuides
       ]
     ),
     'inventory' => Guide.new(
-      key: 'inventory', title: 'Inventory',
-      summary: 'Your catalog mirrored from Shopify with quantities on both sides — plus size-derived products and a banner when any count is negative.',
+      key: 'inventory', title: 'Stock comparison',
+      summary: 'Read-only Shopify and C-Trax observations of shared stock, with current catalog coverage and source read times.',
       sections: [
-        { heading: "What you're seeing",
-          body: "One row per product variant: its Shopify and Square counts side by side. These are two different locations with two different inventories — different numbers are normal, not an error. A 'size 5g' badge means the variant derives from a root gram bank and is managed on the Sizes page. The red banner lists negative counts — oversold or non-inventory SKUs — with one-click corrections." },
-        { heading: 'How to read the numbers',
-          body: 'Shopify is your online stock; Square is what you hold for in-person sales. Compare each against its own reorder point, not against the other column. Search by product title or SKU; the page shows the first 40 matches.' }
+        { heading: 'Read the source states', body: 'Select one Shopify location and one C-Trax store. Shopify on-hand, available and committed quantities are separate. C-Trax retains signed stock. These are observations of shared stock; never add their quantities together.' },
+        { heading: 'Review identities and exceptions', body: 'Unique native variant IDs take precedence. Unique SKUs are candidates, not approved mappings. Duplicate or conflicting identities stay unpaired. Unknown stock is not zero; no current match does not mean not carried.' }
       ],
       tips: [
-        "When the negative-count banner appears, fix items individually (Set to 0 / Untrack) so you don't guess.",
-        'Size-derived SKUs are marked — manage their root grams on the Sizes page, not by editing here.',
-        "Unlinked variants (no Square link) show 'unlinked'; run a sync after creating new SKUs to link them."
+        'Search by item, SKU or native ID. Attention and unmatched filters also apply to the CSV export.',
+        'Older-than-one-hour, unknown, fractional or untracked observations have no numerical difference.',
+        'Current active tracked Shopify variants are shown; archived, absent and unverified historical records are excluded. This page never changes stock, SKUs or mappings.'
       ]
     ),
     'reconcile' => Guide.new(
@@ -441,6 +439,7 @@ class PageGuides
     ['/finance', 'finance'],
     ['/purchasing', 'purchasing'],
     ['/sales', 'sales'],
+    ['/stock_comparison', 'inventory'],
     ['/inventory', 'inventory'],
     ['/reconcile', 'reconcile'],
     ['/warehouse', 'warehouse'],

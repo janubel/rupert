@@ -116,8 +116,10 @@ class ProductDetailFlowTest < ActionDispatch::IntegrationTest
   end
 
   test 'inventory table links to variant detail' do
+    @variant.product.update!(catalog_present: true)
+    @variant.update!(catalog_present: true)
     get_page inventory_index_path
     assert_response :success
-    assert_select "a[href='#{shopify_variant_path(@variant)}']", text: '50g'
+    assert_select "a[href='#{shopify_variant_path(@variant)}']", text: /50g/
   end
 end

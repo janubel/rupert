@@ -66,7 +66,7 @@ class CatalogLinks
         matched: matched,
         mismatched: linked - matched,
         shopify_only: ShopifyVariant.joins(:product)
-                                    .where('"ShopifyProduct"."status" = ?', 'ACTIVE')
+                                    .merge(ShopifyProduct.active)
                                     .where.not(sku: [nil, ''])
                                     .where.not(id: linked_shopify_ids).count,
         square_only: SquareVariation.where.not(sku: [nil, ''])

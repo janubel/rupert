@@ -80,7 +80,7 @@ class PointOfSaleController < AuthenticatedController
 
   def load_catalog
     @query = params[:q].to_s.strip.first(200)
-    scope = ShopifyVariant.where(productId: ShopifyProduct.active.select(:id)).includes(:product)
+    scope = ShopifyVariant.where(catalog_present: [nil, true]).where(productId: ShopifyProduct.active.select(:id)).includes(:product)
     if @query.present?
       term = "%#{ActiveRecord::Base.sanitize_sql_like(@query.downcase)}%"
       products = ShopifyProduct.active.where('LOWER(title) LIKE ?', term).select(:id)
@@ -106,7 +106,7 @@ class PointOfSaleController < AuthenticatedController
   end
 
   def quoted_line(variant, quantity)
-    unless variant.product && variant.product.status == 'ACTIVE'
+    unless variant.product && variant.product.status == 'ACTIVE' && variant.catalog_present != false && variant.product.catalog_present != false
       raise QuoteError, 'A selected product is inactive or unavailable. Remove it and refresh the catalog.'
     end
     unless quantity.to_s.match?(/\A[1-9]\d{0,2}\z/) && quantity.to_i <= MAX_QUANTITY

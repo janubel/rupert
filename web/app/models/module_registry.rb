@@ -34,7 +34,7 @@ class ModuleRegistry
     Entry.new(key: 'customers', name: 'Customer CRM', path: lambda {
       customers_path
     }, permission: 'customers.read', position: 30),
-    Entry.new(key: 'inventory', name: 'Inventory', path: lambda {
+    Entry.new(key: 'inventory', name: 'Stock comparison', path: lambda {
       inventory_index_path
     }, permission: 'inventory.read', position: 40),
     Entry.new(key: 'inventory_exceptions', name: 'Inventory review', path: lambda {

@@ -151,6 +151,7 @@ Rails.application.routes.draw do
     end
   end
 
+  get 'stock_comparison', to: 'inventory#index'
   resources :inventory, only: :index do
     collection do
       get :pdf

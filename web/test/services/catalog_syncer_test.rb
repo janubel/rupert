@@ -41,9 +41,9 @@ class CatalogSyncerTest < ActiveSupport::TestCase
   end
 
   test 'paginate_products walks all pages instead of truncating at 250' do
-    page1 = { 'products' => { 'nodes' => [{ 'id' => 'p1' }, { 'id' => 'p2' }],
+    page1 = { 'products' => { 'nodes' => [{ 'id' => 'p1', 'variants' => { 'nodes' => [], 'pageInfo' => { 'hasNextPage' => false } } }, { 'id' => 'p2', 'variants' => { 'nodes' => [], 'pageInfo' => { 'hasNextPage' => false } } }],
                               'pageInfo' => { 'hasNextPage' => true, 'endCursor' => 'c1' } } }
-    page2 = { 'products' => { 'nodes' => [{ 'id' => 'p3' }],
+    page2 = { 'products' => { 'nodes' => [{ 'id' => 'p3', 'variants' => { 'nodes' => [], 'pageInfo' => { 'hasNextPage' => false } } }],
                               'pageInfo' => { 'hasNextPage' => false, 'endCursor' => 'c2' } } }
 
     ShopifyClient.stubs(:graphql)

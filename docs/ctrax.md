@@ -2,7 +2,7 @@
 
 See [retail screens, private tipping and daily register reconciliation](ctrax-retail.md) for the paired POS preview and sales/report importer.
 
-The owner selected C-Trax inventory as the retail physical-count reference. C-Trax stock is kept separately from Shopify and Square. Approving a physical count records an audit worksheet and does not modify any platform's stock.
+The owner selected C-Trax as the retail physical-count reference and identified Shopify/C-Trax as mostly shared stock, with Square disabled. Rupert retains separate observations and compares them in [Stock comparison](ops/shared-stock-comparison.md), without adding the two views of shared stock. Approving a physical count records an audit worksheet and does not modify any platform's stock.
 
 ## Set up
 
