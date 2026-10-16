@@ -10,7 +10,15 @@ When identifiers do not resolve, exact normalized product words and an explicit 
 
 Name/package candidates show both original source names and observations, with **no quantity difference** until equivalence is established. Identifier pairs with conflicting explicit packages also withhold a difference. Matching evidence is available per row and in CSV. Historical Shopify candidates explain unmatched C-Trax records but never restore an absent/archived/draft item to current stock. Every candidate remains a read-only suggestion; no persistent mapping is saved. Alternative bulk sizes may draw from the same gram pool; do not sum their sellable quantities.
 
-Search (both source names, identifiers and barcodes), attention, unmatched, name/package and historical filters apply to HTML and CSV. Each HTML page contains up to 50 rows. Counters count comparison rows, not physical units. CSV text is escaped against spreadsheet formulas. No current match does not mean not carried.
+Search (both source names, identifiers, barcodes and investigation notes), attention, unmatched, product/package, saved-findings and historical filters apply to HTML and CSV. Each HTML page contains up to 50 rows. Counters count comparison rows, not physical units. CSV text is escaped against spreadsheet formulas. No current match does not mean not carried.
+
+## Saved investigation findings
+
+Account-specific source evidence stays outside public Git. A private reviewed import can publish dated notes and one-to-one candidate proposals through `StockIdentityFindings.publish!`. The encrypted tenant setting binds both source locations, Shopify shop domain, C-Trax API origin/store and each observed variant's catalog identity. Import validates the current source identities before saving; the release's private import also checks them against the original native investigation. It does not edit catalog records, source quantities, SKUs or approved inventory mappings. This adds no migration or provider call to the comparison.
+
+The page and CSV show notes beside affected items, including source-copy inconsistencies, different package sizes, historical leads and unresolved formulas. Supported product-family aliases can show two observations together as **Investigated family candidates** even when one source omits package details; the missing package remains explicitly unverified. An explicitly investigated identifier proposal can distinguish one flavor/package from another sharing a SKU. Uninvestigated duplicate identifiers remain unresolved. Current native source-ID conflicts, explicit package/potency conflicts, conflicting valid barcodes and stronger competing claims still prevent a weaker investigated link. No fuzzy or merchant-specific rules are embedded in code.
+
+All investigated candidates withhold quantity differences and remain unapproved. Saved candidate links stop applying if a bound catalog identity or price changes, the source scope changes, or seven days pass without fresh source review. Dated notes remain visible as history when their identity changes or review expires; they cannot establish a current match. A new source review is required to republish proposals. Quantity-only refreshes do not invalidate identity evidence. Importing or viewing findings never writes counts or SKUs, and Square is excluded.
 
 ## Catalog freshness
 

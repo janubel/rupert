@@ -83,7 +83,7 @@ class PageGuides
         { heading: 'Review identities and exceptions', body: 'Unique native variant IDs take precedence. Unique SKU/barcode identifiers are candidates, not approved mappings. Exact product words and explicit packages can suggest additional candidates, with both source names and matching evidence. These name/package candidates have no quantity difference. Duplicate or conflicting identities stay unresolved. Historical Shopify candidates explain unmatched C-Trax items without restoring old stock. Unknown stock is not zero; no current match does not mean not carried.' }
       ],
       tips: [
-        'Search either source name, SKU, barcode or native ID. Attention, unmatched, name/package and historical filters also apply to CSV.',
+        'Search either source name, SKU, barcode, native ID or investigation note. Attention, unmatched, product/package, saved-findings and historical filters also apply to CSV.',
         'Older-than-one-hour, unknown, fractional or untracked observations have no numerical difference.',
         'Current active tracked Shopify variants are shown; archived, absent and unverified historical records are excluded. This page never changes stock, SKUs or mappings.'
       ]
