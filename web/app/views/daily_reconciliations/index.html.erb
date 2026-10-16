@@ -28,13 +28,13 @@
     <%= link_to 'Register detail ↗', register_summary_reports_path(day: @report.day.iso8601), class: 'btn-ghost' %>
     <%= link_to 'Weekly / monthly summary ↗', money_reconciliations_path(date: @report.day.iso8601), class: 'btn-ghost' %>
   <% end %>
-  <div id="review-day" class="scroll-mt-48 md:scroll-mt-32"><h2 class="font-display text-xl">1. Review the day</h2><p class="mt-1 text-sm text-mocha">Compare one source, location and currency at a time. Missing imports are not zero-sales days.</p></div>
+  <div id="review-day" class="scroll-mt-48 md:scroll-mt-32"><h2 class="font-display text-xl">1. Review the day</h2><p class="mt-1 text-sm text-mocha">Compare one source, location and currency at a time. Missing imports are not zero-sales days.</p><p class="mt-2 text-xs text-mocha md:hidden">Swipe wide tables sideways to see every metric.</p></div>
   <details class="card card-pad text-sm"><summary class="cursor-pointer font-semibold">How the numbers relate</summary><div class="mt-3 space-y-2">
     <p>Day boundaries use <%= Time.zone.name %>. Order totals use order dates, tenders use payment dates, and refunds use refund dates. Source, currency and location stay separate.</p>
     <p>Sales, gateway payments and processor deposits can describe the same money. Review each layer separately. A matched recorded total does not prove a complete day or bank settlement. Shopify tenders may be inferred from order totals.</p>
     <p>Missing amounts stay unavailable. Attach invoices, daily reports, statements and fee reports below. Tips, fees and deposits entered from documents remain source observations when Rupert has no comparable field.</p>
   </div></details>
-  <section class="card overflow-x-auto"><table class="w-full text-sm">
+  <section class="card overflow-x-auto" tabindex="0" role="region" aria-label="Reconciliation table, scroll horizontally for all columns"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">Recorded sales and tenders</caption>
     <thead><tr><% ['Source / location', 'Currency', 'Orders', 'Order total', 'Cash received', 'Card received', 'Refunds', 'Tenders less refunds', 'Payment coverage issues'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
     <tbody><% @report.register.rows.each do |row| %>
@@ -43,7 +43,7 @@
         <td class="td"><%= DailyRegisterSummary::COVERAGE_KEYS.sum { |key| row[key] } %></td></tr>
     <% end %><% if @report.register.rows.empty? %><tr><td class="td" colspan="9">No recorded sales or tender activity. This does not establish a zero-sales day.</td></tr><% end %></tbody>
   </table></section>
-  <section class="card overflow-x-auto"><table class="w-full text-sm">
+  <section class="card overflow-x-auto" tabindex="0" role="region" aria-label="Reconciliation table, scroll horizontally for all columns"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">Source control comparisons</caption>
     <thead><tr><% ['Source / location', 'Currency', 'Metric', 'Source report', 'Rupert records', 'Rupert minus source', 'Result', 'Evidence'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
     <tbody><% @report.comparisons.each do |row| %><tr><td class="td"><%= reconciliation_source(row[:source]) %> / <%= (@locations_by_id || {})[row[:location_id]]&.name || row[:location_id].presence || 'Unassigned' %></td><td class="td"><%= row[:currency] %></td><td class="td"><%= row[:metric].humanize %></td>
@@ -58,7 +58,7 @@
   </section>
   <div id="source-evidence" class="scroll-mt-48 md:scroll-mt-32"><h2 class="font-display text-xl">Source evidence</h2><p class="mt-1 text-sm text-mocha">Open a source to inspect its observations and native controls. These layers may describe the same money.</p></div>
   <details class="card"><summary class="cursor-pointer p-4 font-semibold">C-Trax store-day controls <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.ctrax.size} store days" %></span></summary>
-  <section class="overflow-x-auto"><table class="w-full text-sm">
+  <section class="overflow-x-auto" tabindex="0" role="region" aria-label="Source evidence table, scroll horizontally for all columns"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">C-Trax store-day controls — native orders and register evidence</caption>
     <thead><tr><% ['Store / timezone', 'Currency', 'Check', 'Recorded', 'Source control', 'Difference', 'Review'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
     <tbody><% @report.ctrax.each do |snapshot| %><% detail = Ctrax::Reconciliation.new(snapshot) %>
@@ -71,7 +71,7 @@
   </table></section>
   </details>
   <details class="card"><summary class="cursor-pointer p-4 font-semibold">SwipeSimple native observations <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.swipesimple.size} tender groups" %></span></summary>
-  <section class="overflow-x-auto"><table class="w-full text-sm">
+  <section class="overflow-x-auto" tabindex="0" role="region" aria-label="Source evidence table, scroll horizontally for all columns"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">SwipeSimple native observations — separate from canonical sales</caption>
     <thead><tr><% ['Merchant account', 'Currency', 'Tender', 'Sales', 'Refunds', 'Net', 'Sale tips', 'Refund tips', 'Excluded rows'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
     <tbody><% @report.swipesimple.each do |row| %><tr><td class="td"><%= row[:account] %></td><td class="td"><%= row[:currency] %></td><td class="td"><%= row[:tender].presence || 'Unknown' %></td>
@@ -80,7 +80,7 @@
   </table><p class="p-4 text-xs"><%= link_to 'SwipeSimple reporting and native imports', swipesimple_reports_path(day: @report.day.iso8601), class: 'underline' %></p></section>
   </details>
   <details class="card"><summary class="cursor-pointer p-4 font-semibold">Authorize.net API settlement observations <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.gateway.size} groups" %></span></summary>
-  <section class="overflow-x-auto"><table class="w-full text-sm">
+  <section class="overflow-x-auto" tabindex="0" role="region" aria-label="Source evidence table, scroll horizontally for all columns"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">Authorize.net API observations by settlement day — not additional sales</caption>
     <thead><tr><% ['Environment', 'Gateway', 'Currency', 'Status', 'Type', 'Count', 'Settlement amount'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
     <tbody><% @report.gateway.each do |row| %><tr><% row.each do |value| %><td class="td"><%= value.nil? ? 'Unknown' : value %></td><% end %></tr><% end %>
@@ -88,7 +88,7 @@
   </table></section>
   </details>
   <details class="card"><summary class="cursor-pointer p-4 font-semibold">Authorize.net portal observations <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.portal.size} transactions" %></span></summary>
-  <section class="overflow-x-auto"><table class="w-full text-sm">
+  <section class="overflow-x-auto" tabindex="0" role="region" aria-label="Source evidence table, scroll horizontally for all columns"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">Authorize.net portal observations submitted or settled on this day — separate from the API</caption>
     <thead><tr><% ['Gateway / transaction', 'Currency', 'Status / type', 'Submitted at', 'Settled at', 'Settlement amount', 'Original export'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
     <tbody><% @report.portal.each do |row| %><tr><td class="td"><%= row['gateway_id'] %> / <%= row['transaction_id'] %></td><td class="td"><%= row['currency'] %></td><td class="td"><%= row['status'] %> / <%= row['transaction_type'] %></td><td class="td"><%= row['submitted_at'] %></td><td class="td"><%= row['settled_at'].presence || 'Unknown' %></td><td class="td"><%= money.call(row['settlement_cents']) %></td><td class="td"><%= link_to "Export ##{row['export_id']}", native_document_daily_reconciliations_path(source: 'authorize_net', id: row['export_id']), class: 'underline' %></td></tr><% end %>

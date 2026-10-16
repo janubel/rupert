@@ -2,7 +2,7 @@
 <% copy = (local_assigns[:copies] || {})["document:#{doc.id}"] %>
 <% can_correct = doc.kind == 'register_control' && !doc.metadata['withdrawn'] && !successor && Current.user.can?('reports.write') %>
 <article id="evidence-<%= doc.id %>" class="card card-pad min-w-0 scroll-mt-48 md:scroll-mt-32 space-y-3">
-  <div class="flex flex-wrap items-start justify-between gap-2"><p class="text-xs font-semibold uppercase tracking-wide text-mocha"><%= reconciliation_source(doc.source) %> · <%= doc.kind.humanize %></p><span class="badge"><%= reconciliation_document_state(doc, successor) %></span></div>
+  <div class="flex flex-wrap items-start justify-between gap-2"><p class="text-xs font-semibold uppercase tracking-wide text-mocha"><%= reconciliation_source(doc.source) %> · <%= doc.kind.humanize %></p><span class="inline-flex rounded-full border border-fog bg-haze px-2.5 py-1 text-xs font-semibold"><%= reconciliation_document_state(doc, successor) %></span></div>
   <%= link_to doc.filename, document_daily_reconciliation_path(doc), class: 'block break-words font-semibold text-olive underline underline-offset-4' %>
   <p class="text-sm"><span class="text-mocha">Covers </span><%= doc.period_from.strftime('%b %-d, %Y') %><%= doc.period_to != doc.period_from ? " – #{doc.period_to.strftime('%b %-d, %Y')}" : '' %><% if doc.has_attribute?(:byte_size) %><span class="ml-2 text-xs text-mocha"><%= number_to_human_size(doc.byte_size) %></span><% end %></p>
   <p class="text-xs text-mocha">Evidence #<%= doc.id %> · retained <%= doc.created_at.in_time_zone.strftime('%b %-d at %-I:%M %p %Z') %></p>
