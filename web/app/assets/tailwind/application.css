@@ -61,6 +61,15 @@
     @apply p-5;
   }
 
+  .source-sync-inactive {
+    @apply border-rose/30;
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-rose) 12%, #ffffff) 0%,
+      color-mix(in srgb, var(--color-rose) 6%, #ffffff) 100%
+    );
+  }
+
   .page-title {
     @apply font-display text-3xl text-ink;
   }
