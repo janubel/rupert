@@ -63,7 +63,9 @@ class InventoryPdfTest < ActionDispatch::IntegrationTest
   test 'operational inventory offers the shared stock CSV instead of the historical PDF' do
     get inventory_index_path
     assert_response :success
-    assert_select 'a[href^=?]', stock_comparison_path(format: :csv)
+    assert_select 'a', text: 'Download comparison CSV' do |links|
+      assert URI.parse(links.first['href']).path.end_with?('/stock_comparison.csv'), links.first['href']
+    end
   end
 
   test 'recommended skus CSV downloads the full Shopify vs Square SKU report' do

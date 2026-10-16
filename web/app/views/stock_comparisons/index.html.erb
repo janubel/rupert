@@ -4,7 +4,7 @@
     <h1 class="page-title">Shopify &amp; C-Trax stock</h1>
     <p class="max-w-3xl text-sm text-mocha">Two views of shared stock. Compare one Shopify location with one C-Trax store; quantities are never added together. This page is read-only.</p>
     <div class="flex flex-wrap gap-2">
-      <%= link_to 'Download comparison CSV', stock_comparison_path(request.query_parameters.except('page').merge(format: :csv)), class: 'btn-ghost' %>
+      <%= link_to 'Download comparison CSV', stock_comparison_path(request.query_parameters.slice('q', 'filter', 'shopify_location_id', 'ctrax_location_id').merge(format: :csv)), class: 'btn-ghost' %>
       <%= link_to 'Physical count worksheets', inventory_counts_path, class: 'btn-ghost' %>
       <%= link_to 'Source reads', syncs_path, class: 'btn-ghost' if Current.user.can?('sync.write') %>
     </div>
