@@ -5,6 +5,8 @@ Expanded NAB / IRIS evidence, endpoint inventory, native exports and remaining a
 
 Start here to resume operator rollout: [Derrick's day-to-day readiness and pickup plan](ops/day-to-day-readiness.md). It separates usable daily review workflows from the payment and inventory gates that still block replacing the current systems.
 
+Marketing operators: [Community thread and reply review](ops/community-marketing.md) explains topic search, manual intake, group-code evidence, reply approval and manual publication.
+
 | Where | What |
 | --- | --- |
 | `index.html`, `getting-started.html`, `architecture.html`, `modules.html`, `operations.html`, `deployment.html` | The published docs site (GitHub Pages, styled by `assets/style.css`) |
