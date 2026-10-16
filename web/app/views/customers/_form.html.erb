@@ -1,25 +1,33 @@
-<%= form_with model: customer, class: "space-y-4" do |f| %>
+<%= form_with model: customer, scope: :customer, url: customer.persisted? ? customer_path(customer) : customers_path, class: "space-y-4" do |f| %>
+  <% if customer.errors.any? %><p role="alert" class="text-rose"><%= customer.errors.full_messages.to_sentence %></p><% end %>
+  <% if customer.source != 'manual' %><p class="text-sm text-mocha">Contact details are maintained by <%= directory_label(customer.source) %>. Rupert CRM fields below survive directory refreshes.</p><% end %>
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
       <%= f.label :first_name, "First name", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.text_field :first_name, class: "input" %>
+      <%= f.text_field :first_name, class: "input", readonly: customer.source != "manual" %>
     </div>
     <div>
       <%= f.label :last_name, "Last name", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.text_field :last_name, class: "input" %>
+      <%= f.text_field :last_name, class: "input", readonly: customer.source != "manual" %>
     </div>
     <div>
       <%= f.label :email, "Email", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.email_field :email, class: "input" %>
+      <%= f.email_field :email, class: "input", readonly: customer.source != "manual" %>
     </div>
     <div>
       <%= f.label :phone, "Phone", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.telephone_field :phone, class: "input" %>
+      <%= f.telephone_field :phone, class: "input", readonly: customer.source != "manual" %>
     </div>
+  </div>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div><%= f.label :preferred_name, 'Display name', class: 'block text-sm' %><%= f.text_field :preferred_name, class: 'input', maxlength: 255 %></div>
+    <div><%= f.label :crm_status, 'Relationship', class: 'block text-sm' %><%= f.select :crm_status, Core::Customer::CRM_STATUSES.map { |s| [s.titleize, s] }, {}, class: 'select' %></div>
+    <div><%= f.label :tags, 'Tags (comma separated)', class: 'block text-sm' %><%= f.text_field :tags, class: 'input', maxlength: 1000 %></div>
+    <div><%= f.label :owner_id, 'Assigned to', class: 'block text-sm' %><%= f.select :owner_id, @owners.map { |u| [u.display_name, u.id] }, { include_blank: 'Unassigned' }, class: 'select' %></div>
   </div>
   <div>
     <%= f.label :notes, "Notes", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-    <%= f.text_area :notes, rows: 4, class: "input" %>
+    <%= f.text_area :notes, rows: 4, class: "input", maxlength: 10_000 %>
   </div>
   <div class="flex items-center gap-3">
     <%= f.submit "Save customer", class: "btn-primary" %>

@@ -18,7 +18,7 @@
   </section>
 
   <%= render "shared/directory_sync_status", kind: "employees" %>
-  <p class="text-xs text-taupe">C-Trax staff accounts are mirrored as employee records. Confirm employment type and payroll details in Rupert.</p>
+  <p class="text-xs text-taupe">Native staff accounts remain separate. Confirm identity, employment type, and payroll details before creating a web login.</p>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
@@ -43,6 +43,7 @@
     </div>
   </section>
 
+  <p class="text-sm"><%= @missing_logins %> active employee records need a login. <%= link_to 'Review employees without logins', people_employees_path(login: 'missing'), class: 'font-semibold hover:underline' %></p>
   <%= form_tag people_employees_path, method: :get, class: "flex flex-wrap gap-2" do %>
     <input type="search" name="q" value="<%= params[:q] %>" placeholder="Search name, employee #, email…" aria-label="Search employees" class="search w-full sm:max-w-xs" autocomplete="off">
     <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
@@ -51,6 +52,9 @@
         <option value="<%= status %>" <%= @status == status.to_s ? "selected" : "" %>><%= status.to_s.titleize %></option>
       <% end %>
     </select>
+    <%= select_tag :source, options_for_select([['All sources', '']] + Directories::Sync::PAIRS.keys.map { |v| [directory_label(v), v] }, params[:source]), class: 'select w-auto', aria: { label: 'Source filter' } %>
+    <%= select_tag :login, options_for_select([['All logins', ''], ['Needs login', 'missing'], ['Linked login', 'linked']], params[:login]), class: 'select w-auto', aria: { label: 'Login filter' } %>
+    <%= submit_tag 'Filter', class: 'btn-ghost btn-sm' %>
   <% end %>
 
   <div class="card overflow-hidden">
@@ -61,7 +65,7 @@
             <th scope="col" class="th">Employee</th>
             <th scope="col" class="th">Department</th>
             <th scope="col" class="th">Position</th>
-            <th scope="col" class="th">Hired</th>
+            <th scope="col" class="th">Web login</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
@@ -73,12 +77,12 @@
             <tr class="hover:bg-cream">
               <td class="td">
                 <p class="font-medium text-ink"><%= link_to employee.name, people_employee_path(employee), class: "hover:text-olive hover:underline" %></p>
-                <% if employee.source.present? %><p class="text-xs text-taupe">C-Trax · source account <%= employee.source_active ? 'active' : 'inactive' %> · <%= employee.employment_type.tr('_', ' ') %></p><% end %>
+                <% if employee.source.present? %><p class="text-xs text-taupe"><%= directory_label(employee.source) %> · source account <%= employee.source_active.nil? ? 'status not supplied' : employee.source_active ? 'active' : 'inactive' %> · <%= employee.employment_type.tr('_', ' ') %></p><% end %>
                 <p class="text-xs text-taupe"><%= employee.employee_number.presence || employee.email %></p>
               </td>
               <td class="td text-mocha"><%= employee.department&.name || "—" %></td>
               <td class="td text-mocha"><%= employee.position&.name || "—" %></td>
-              <td class="td text-mocha"><%= employee.hire_date ? l(employee.hire_date, format: :short) : "—" %></td>
+              <td class="td text-mocha"><%= employee.user ? (employee.user.active? ? "Login linked" : "Login disabled") : "Needs login" %></td>
               <td class="td">
                 <span class="<%= employee.active? ? "pill-fern" : employee.on_leave? ? "pill-olive" : "pill-rose" %>">
                   <span class="dot <%= employee.active? ? "bg-fern" : employee.on_leave? ? "bg-olive" : "bg-rose" %>"></span>
@@ -90,5 +94,6 @@
         </tbody>
       </table>
     </div>
+    <div class="p-4"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
   </div>
 </div>

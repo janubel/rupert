@@ -31,7 +31,7 @@ class ModuleRegistry
     Entry.new(key: 'registers', name: 'Registers', path: lambda {
       sales_pos_sessions_path
     }, permission: 'sales.read', position: 25),
-    Entry.new(key: 'customers', name: 'Customers', path: lambda {
+    Entry.new(key: 'customers', name: 'Customer CRM', path: lambda {
       customers_path
     }, permission: 'customers.read', position: 30),
     Entry.new(key: 'inventory', name: 'Inventory', path: lambda {

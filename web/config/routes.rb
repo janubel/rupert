@@ -121,6 +121,9 @@ Rails.application.routes.draw do
   end
   resources :customers, only: %i[index show new create edit update] do
     post :sync_directory, on: :collection
+    get :export, on: :collection
+    resources :interactions, only: :create, controller: 'customer_interactions'
+    resources :follow_ups, only: %i[create update], controller: 'customer_follow_ups'
   end
   namespace :projects do
     resources :projects, only: %i[index show new create edit update destroy] do
