@@ -2,7 +2,7 @@
 
 Investigated October 15, 2026, America/New_York. This integration preserves processor reports for reconciliation in Rupert; C-Trax remains the retail inventory reference.
 
-The SER8 release is deployed, with six real monthly table-summary snapshots imported. See [deployment verification and remaining API access requirement](iris-deployment-2026-10-15.md). Live API authentication and native Health Center export formats remain unverified. The expanded [integration investigation](iris-integration-investigation.md) covers additional endpoints, native Daily Deposits CSV, documents, webhooks and delivery alternatives.
+Automatic native Daily Deposits website imports are enabled on SER8. The earlier six monthly Health Center snapshots remain separate visible-table transcriptions. See [deployment verification and remaining API access requirement](iris-deployment-2026-10-15.md). Live API authentication and native Health Center export formats remain unverified. The expanded [integration investigation](iris-integration-investigation.md) covers additional endpoints, native Daily Deposits CSV, documents, webhooks and delivery alternatives.
 
 ## Verified evidence and limits
 
