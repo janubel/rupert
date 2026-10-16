@@ -88,7 +88,7 @@ module AuthorizeNetReporting
       attrs.merge(source_transaction_id: row.fetch('transId').to_s,
         submitted_at: utc_time(row.fetch('submitTimeUTC')), source_batch_id: batch['batchId']&.to_s,
         settled_at: batch['settlementTimeUTC'] && utc_time(batch['settlementTimeUTC']),
-        settlement_state: batch['settlementState'], currency: currency,
+        settlement_state: batch['settlementState'], currency: currency, invoice_number: invoice_number(row.dig('order', 'invoiceNumber')),
         authorized_amount: amount(row.fetch('authAmount')), settled_amount: amount(row.fetch('settleAmount')),
         tip_amount: row['tip'] && amount(row['tip'].fetch('amount')),
         surcharge_amount: row['surcharge'] && amount(row['surcharge'].fetch('amount')), observed_at: observed_at)
@@ -100,6 +100,13 @@ module AuthorizeNetReporting
       { source_batch_id: batch.fetch('batchId').to_s, settlement_state: batch.fetch('settlementState'),
         settled_at: batch['settlementTimeUTC'] && utc_time(batch['settlementTimeUTC']),
         payment_method: batch['paymentMethod'], statistics: stats.map { |s| s.slice(*STAT_FIELDS).transform_values(&:to_s) }, observed_at: observed_at }
+    end
+
+    def invoice_number(value)
+      return if value.nil? || value == ''
+      raise Client::Error, 'Reporting returned an invalid invoice reference.' unless value.is_a?(String) && value.bytesize <= 100 && value.valid_encoding? && !value.match?(/[\x00-\x1f\x7f]/)
+
+      value
     end
 
     def utc_time(value)

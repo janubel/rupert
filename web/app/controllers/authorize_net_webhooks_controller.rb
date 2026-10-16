@@ -21,10 +21,14 @@ class AuthorizeNetWebhooksController < ActionController::API
 
       body = request.body.read(MAX_BYTES + 1)
       return head(:content_too_large) if body.bytesize > MAX_BYTES
-      expected = OpenSSL::HMAC.hexdigest('SHA512', secret, body)
       supplied = request.headers['X-ANET-Signature'].to_s
-      return head(:unauthorized) unless supplied.match?(/\Asha512=[0-9a-f]{128}\z/i) &&
-        ActiveSupport::SecurityUtils.secure_compare(expected, supplied.split('=', 2).last.downcase)
+      return head(:unauthorized) unless supplied.match?(/\Asha512=[0-9a-f]{128}\z/i)
+
+      # Support the documented decoded Signature Key and legacy text-key callbacks.
+      # Both verify the exact raw body with a secret-key HMAC; neither trusts JSON amounts.
+      digests = [[secret].pack('H*'), secret].map { |key| OpenSSL::HMAC.hexdigest('SHA512', key, body) }
+      verified = digests.map { |digest| ActiveSupport::SecurityUtils.secure_compare(digest, supplied.split('=', 2).last.downcase) }
+      return head(:unauthorized) unless verified.any?
 
       event = JSON.parse(body, max_nesting: 10)
       return head(:bad_request) unless event.is_a?(Hash) && EVENTS.include?(event['eventType']) &&

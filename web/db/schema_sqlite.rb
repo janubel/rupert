@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -395,6 +395,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_020000) do
     t.index ["tenant_id"], name: "index_authorize_net_portal_exports_on_tenant_id"
   end
 
+  create_table "authorize_net_sale_links", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "authorize_net_transaction_id", null: false
+    t.integer "order_id", null: false
+    t.integer "reviewed_by_id", null: false
+    t.text "evidence_note", null: false
+    t.datetime "revoked_at"
+    t.integer "revoked_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["authorize_net_transaction_id"], name: "idx_anet_link_transaction"
+    t.index ["order_id"], name: "index_authorize_net_sale_links_on_order_id"
+    t.index ["reviewed_by_id"], name: "index_authorize_net_sale_links_on_reviewed_by_id"
+    t.index ["revoked_by_id"], name: "index_authorize_net_sale_links_on_revoked_by_id"
+    t.index ["tenant_id", "authorize_net_transaction_id"], name: "idx_anet_link_active_payment", unique: true, where: "revoked_at IS NULL"
+    t.index ["tenant_id", "order_id"], name: "idx_anet_link_active_order", unique: true, where: "revoked_at IS NULL"
+    t.index ["tenant_id"], name: "index_authorize_net_sale_links_on_tenant_id"
+  end
+
   create_table "authorize_net_transactions", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "environment", null: false
@@ -418,6 +437,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_020000) do
     t.json "status_history", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "invoice_number"
     t.index ["tenant_id", "environment", "gateway_id", "source_transaction_id"], name: "idx_anet_transaction_source", unique: true
     t.index ["tenant_id"], name: "index_authorize_net_transactions_on_tenant_id"
   end
@@ -1706,6 +1726,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_020000) do
   add_foreign_key "api_access_tokens", "users"
   add_foreign_key "authorize_net_batches", "tenants"
   add_foreign_key "authorize_net_portal_exports", "tenants"
+  add_foreign_key "authorize_net_sale_links", "authorize_net_transactions"
+  add_foreign_key "authorize_net_sale_links", "orders"
+  add_foreign_key "authorize_net_sale_links", "tenants"
+  add_foreign_key "authorize_net_sale_links", "users", column: "reviewed_by_id"
+  add_foreign_key "authorize_net_sale_links", "users", column: "revoked_by_id"
   add_foreign_key "authorize_net_transactions", "tenants"
   add_foreign_key "bulk_consumptions", "bulk_lots"
   add_foreign_key "bulk_consumptions", "bulk_movements"

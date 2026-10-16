@@ -24,11 +24,17 @@ class AuthorizeNetWebhooksTest < ActionDispatch::IntegrationTest
     assert_equal 0, Core::Order.count
   end
 
+  test 'legacy text-key callbacks still require the exact raw-body signature' do
+    hash = OpenSSL::HMAC.hexdigest('SHA512', 'a1' * 64, @event.to_json)
+    assert_enqueued_jobs(1) { deliver(signature: 'sha512=' + hash) }
+    assert_response :success
+  end
+
   test 'bad signatures wrong keys and modified bytes never enqueue' do
     assert_no_enqueued_jobs { deliver(signature: 'sha512=' + '0' * 128) }
     assert_response :unauthorized
     signed_body = @event.to_json
-    hash = OpenSSL::HMAC.hexdigest('SHA512', 'a1' * 64, signed_body)
+    hash = OpenSSL::HMAC.hexdigest('SHA512', ['a1' * 64].pack('H*'), signed_body)
     assert_no_enqueued_jobs { deliver(body: signed_body + ' ', signature: 'sha512=' + hash) }
     assert_response :unauthorized
   end
@@ -66,7 +72,7 @@ class AuthorizeNetWebhooksTest < ActionDispatch::IntegrationTest
   private
 
   def deliver(body: @event.to_json, signature: nil, content_type: 'application/json')
-    signature ||= 'sha512=' + OpenSSL::HMAC.hexdigest('SHA512', 'a1' * 64, body)
+    signature ||= 'sha512=' + OpenSSL::HMAC.hexdigest('SHA512', ['a1' * 64].pack('H*'), body)
     post @path, params: body, headers: { 'Content-Type' => content_type, 'X-ANET-Signature' => signature }
   end
 end
