@@ -301,7 +301,7 @@ class EmployeeTimesheetsTest < ActionDispatch::IntegrationTest
     get new_people_timesheet_path
     assert_response :success
     assert_select 'input[name="timesheet[period_start]"]'
-    assert_select 'select[name="timesheet[employee_id]"]'
+    assert_select 'input[type="hidden"][name="timesheet[employee_id]"]'
     get people_timesheet_path(@sheet)
     assert_response :success
     assert_select 'input[name="timesheet_entry[worked_on]"]'

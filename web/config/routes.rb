@@ -28,6 +28,12 @@ Rails.application.routes.draw do
   end
 
   get '/employee', to: 'employee_app#show', as: :employee_app
+  get '/employee/reports', to: 'employee_workspace#reports', as: :employee_reports
+  get '/employee/time-off', to: 'employee_workspace#time_off', as: :employee_time_off
+  post '/employee/time-off', to: 'employee_workspace#request_time_off'
+  post '/employee/time-off/:id/cancel', to: 'employee_workspace#cancel_time_off', as: :cancel_employee_time_off
+  post '/employee/week', to: 'employee_app#week', as: :employee_week
+  get '/employee/devices', to: 'employee_app#devices', as: :employee_devices
   post '/employee/devices/:id/revoke', to: 'employee_app#revoke', as: :revoke_employee_device
   get '/employee/privacy', to: 'employee_app#privacy', as: :employee_privacy
   get '/employee/manifest.webmanifest', to: 'employee_app#manifest', as: :employee_manifest

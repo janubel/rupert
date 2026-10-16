@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class TimeClockController < AuthenticatedController
+  before_action -> { response.headers['Cache-Control'] = 'no-store' }
   before_action :active_context
   before_action :authorize_reviewer, only: %i[approve_correction reject_correction]
   rescue_from TimeClockService::Error, ActiveRecord::RecordInvalid, with: :clock_error

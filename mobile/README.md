@@ -42,7 +42,7 @@ npx eas-cli submit --platform android --profile production
 
 These commands require owner-controlled credentials and may incur build/account costs. Configure the intended team and store records interactively before automated submission. Complete app icons/listing/screenshots, employee sign-in test access, privacy/data declarations, support details, and organization's distribution policy before submitting. No store submission has been performed by this implementation.
 
-After acceptance, configure `EMPLOYEE_IOS_DOWNLOAD_URL` / `EMPLOYEE_ANDROID_DOWNLOAD_URL` on Rupert to display the correct download links at `/employee`.
+After acceptance, share the approved native distribution links through the organization’s chosen employee onboarding channel. The instance’s `/employee` workspace stays focused on time, pay and leave without app promotion.
 
 ## Release acceptance
 
@@ -81,7 +81,7 @@ Production explicitly uses store distribution, physical iOS devices, Android App
    ```
 
 6. After real-device acceptance, use `npx eas-cli@25.0.0 submit --platform ios --profile production` for TestFlight/App Store Connect and the corresponding `--platform android` command for Google Play. The first Play upload may need to be made manually in Play Console. Android submission is configured as an internal-track draft; review and release it manually in Play Console when intended. Confirm the target app interactively; submission is separate from building.
-7. Complete the organization's listing, support contact, screenshots, privacy/data declarations and reviewer test access. Then set the approved HTTPS distribution links on the Rupert instance as described above.
+7. Complete the organization's listing, support contact, screenshots, privacy/data declarations and reviewer test access. Then share the approved HTTPS distribution links through the organization’s onboarding channel as described above.
 
 Signing, cloud builds, credential creation, account connection and store submission are deferred. The existing web accounts, emailed setup links and held profiles do not need to change for this mobile preparation. Rerun security and compatibility validation immediately before signing; a prepared source tree does not replace signed-device acceptance.
 

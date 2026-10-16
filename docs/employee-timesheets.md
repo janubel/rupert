@@ -36,16 +36,19 @@ Visit `https://YOUR_INSTANCE/employee`:
 
 The instance serves its manifest, icons, installation page, privacy/support page, and service worker. HTTPS is required for production installation. The service worker does **not** cache employee records or credentials. There is no offline queue: a clock/time entry is saved only when the server confirms it. The offline screen says explicitly that no hours were saved by that page.
 
-Employees can revoke their own native app sessions at `/employee`. Native session tokens expire after 30 days and are stored as digests on the server; the app stores the token in Expo SecureStore with device-only accessibility. The native app never stores the password. Web cookies cannot authorize the employee API, and employee app tokens cannot authorize Rupert's catalog/admin API.
+Employees can revoke their own device sessions at `/employee/devices`. Native session tokens expire after 30 days and are stored as digests on the server; the app stores the token in Expo SecureStore with device-only accessibility. The native app never stores the password. Web cookies cannot authorize the employee API, and employee app tokens cannot authorize Rupert's catalog/admin API.
 
-Set these optional deployment environment variables after signed native builds are distributed:
+The employee workspace contains no installation or store promotion. Distribute native apps separately when the owner is ready; signing and store submission remain deferred.
 
-```
-EMPLOYEE_IOS_DOWNLOAD_URL=https://YOUR_APPROVED_IOS_DISTRIBUTION_LINK
-EMPLOYEE_ANDROID_DOWNLOAD_URL=https://YOUR_APPROVED_ANDROID_DISTRIBUTION_LINK
-```
+## Personal workspace and reports
 
-The installation page displays only configured HTTPS download links. Do not substitute unsigned source archives for installable app links.
+Employee password and Google sign-ins land at `/employee`: a simple home with clock status, this week's hours, estimated gross pay and a shortcut to their current timesheet. Opening the week reuses an existing overlapping period and forces ownership to the signed-in worker. Native device management is a separate secondary page. Administrators without a linked employee can inspect a clearly marked, read-only example with `?preview=1`; no accounts, time records or rates are created by that preview.
+
+`/employee/time-off` shows only the signed-in worker's recorded hours and requests on a monthly calendar. Empty days do not imply scheduled days off. Employees request vacation, sick, personal or unpaid leave, track review status and cancel unreviewed requests. Reviewed requests require a manager to change them. Paid requests require the employee's requested working hours; requests crossing years must be submitted separately for each year. Recorded allowances are shown; missing allowances are not invented. Manager approval/cancellation uses a serialized transaction so retries cannot consume or restore hours twice, and cancelling an unapproved request never changes used hours.
+
+`/employee/reports` provides a personal date range, hour and time-off CSV downloads, estimated gross pay and only that employee's finalized/paid payslips. Dates are validated and limited to one year. Estimates use the hourly rate effective on each entry date and the existing multiplier for explicitly marked overtime. They include draft entries, exclude unimported clock shifts/commissions/deductions and are not payment instructions or promises. Missing rates and salaried periods have no hourly estimate; finalized payslips retain their recorded deductions, net pay and payment status/date. No future payment date is inferred. Separate clock totals avoid counting imported shifts twice.
+
+Employees on leave retain personal read access and time-off requests but cannot clock in while their worker record is on leave. Terminated or ambiguous links do not authorize a personal workspace. Clock corrections remain available from the employee's own time-clock history and require review. All personal pages and exports are `no-store`, sensitive form parameters are filtered from request logs, and cross-worker/tenant identifiers never select the personal worker.
 
 ## Native build and distribution
 
@@ -110,6 +113,6 @@ Private setup links last 24 hours, work once, and replace any previous unconsume
 
 ## Employee-only authorization boundary
 
-The `employee` role is fixed to `timesheets.self`, including when a legacy person or role override contains a wider permission or wildcard. Account and permission editors cannot expand it. To approve someone for broader duties, an administrator must explicitly assign a different role; this is separate from inviting them for employee time entry. Employee browser sessions and native bearer credentials cannot access sales, reconciliation, finance, payroll, customer directories or administrative API credentials. Native credentials only authorize the employee API and that worker's own records.
+The `employee` role is fixed to `timesheets.self`, including when a legacy person or role override contains a wider permission or wildcard. Account and permission editors cannot expand it. To approve someone for broader duties, an administrator must explicitly assign a different role; this is separate from inviting them for employee time entry. Employee browser sessions and native bearer credentials cannot access sales, reconciliation, company finance/payroll workspaces, customer directories or administrative API credentials. Native credentials only authorize the employee API and that worker's own records.
 
 Deactivating an account denies its existing browser and API sessions on the next request. Preserve employee identities, time history, existing setup links and held profiles when changing access. Audit actual financial routes as well as the navigation, and rehearse authentication with synthetic passwords only on a private database copy.

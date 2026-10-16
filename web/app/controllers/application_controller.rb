@@ -1,11 +1,16 @@
 # frozen_string_literal: true
 
 class ApplicationController < ActionController::Base
+  layout :workspace_layout
   before_action :set_current_context
   before_action :load_last_sync
   before_action :require_login
 
   private
+
+  def workspace_layout
+    Current.user&.employee? ? 'employee' : 'application'
+  end
 
   def set_current_context
     Current.user = session[:user_id] ? User.find_by(id: session[:user_id]) : nil

@@ -11,7 +11,7 @@ module People
     end
 
     def create?
-      user&.can?('timesheets.write') || worker.present?
+      user&.can?('timesheets.write') || (user&.active? && TimeClockService.worker_for(user).present?)
     end
     alias new? create?
     def update?
@@ -33,7 +33,7 @@ module People
     end
 
     def worker
-      TimeClockService.worker_for(user) if user&.active?
+      TimeClockService.worker_for(user, include_on_leave: true) if user&.active?
     end
 
     def own?
@@ -43,7 +43,7 @@ module People
     def self.visible_to(user)
       scope = People::Timesheet.all
       return scope if user.can?('timesheets.read')
-      worker = TimeClockService.worker_for(user)
+      worker = TimeClockService.worker_for(user, include_on_leave: true)
       worker ? scope.where(employee_id: worker.id) : scope.none
     end
   end

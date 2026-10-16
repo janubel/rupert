@@ -47,7 +47,7 @@ class EmployeeConsolidationIntegrationTest < ActionDispatch::IntegrationTest
     get employee_setup_path, params: { token: token }
     assert_response :success
     patch employee_setup_path, params: { token: token, password: 'employee-password123', password_confirmation: 'employee-password123' }
-    assert_redirected_to people_timesheets_path
+    assert_redirected_to employee_app_path
     get people_timesheets_path
     assert_response :success
     get employee_setup_path, params: { token: token }
