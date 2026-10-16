@@ -87,6 +87,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
 
   def update
     @follow_up = ReconciliationFollowUp.find(params[:id])
+    load_close_context
     values = params.require(:follow_up).permit(:title, :status, :due_on, :owner_id, :notes, :document_id, :lock_version)
     unless values[:lock_version].to_s.match?(/\A\d+\z/) && values[:notes].present?
       @entered_values = values.to_h
@@ -95,7 +96,13 @@ class ReconciliationFollowUpsController < AuthenticatedController
       return render :show, status: :unprocessable_entity
     end
     if @follow_up.update(values)
-      destination = params[:return_to] == 'overdue' ? reconciliation_follow_ups_path(status: 'overdue') : @follow_up
+      destination = if params[:return_to] == 'close' && @close_day
+        financial_close_path(day: @close_day.iso8601, anchor: 'close-follow-ups')
+      elsif params[:return_to] == 'overdue'
+        reconciliation_follow_ups_path(status: 'overdue')
+      else
+        @follow_up
+      end
       redirect_to destination, notice: 'Progress saved in Rupert. Earlier notes and assignments are retained. No email or message was sent.'
     else
       @entered_values = values.to_h
@@ -115,12 +122,23 @@ class ReconciliationFollowUpsController < AuthenticatedController
 
   private
 
+  def load_close_context
+    @close_day = nil
+    return if params[:close_day].blank?
+
+    day = ReconciliationEvidence.dates(params[:close_day], params[:close_day]).first
+    @close_day = day if day.between?(@follow_up.period_from, @follow_up.period_to)
+  rescue ReconciliationEvidence::Error
+    @close_day = nil
+  end
+
   def form_options
     @owners = User.active.where(tenant_id: Current.tenant_id).order(:name, :id).select { |user| user.can?('reports.read') }
     @locations = Location.select(:id, :name, :source).order(:name).to_a
   end
 
   def show_options
+    load_close_context
     form_options
     @events_pagy, @events = pagy(@follow_up.events.order(id: :desc), items: 15, page_param: :history_page)
     @matching_documents = @follow_up.matching_documents

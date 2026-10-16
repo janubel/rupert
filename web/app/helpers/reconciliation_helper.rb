@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 module ReconciliationHelper
+  def financial_close_action_label(key)
+    { missing_controls: 'Find missing register reports', conflicts: 'Inspect competing controls',
+      variances: 'Compare source differences', unavailable: 'Check unavailable amounts',
+      coverage: 'Inspect payment coverage', unconfirmed_imports: 'Check source import history',
+      open_follow_ups: 'Work open follow-ups', review: 'Inspect current review' }.fetch(key)
+  end
+
   def financial_close_blocker_path(key, day)
     return reconciliation_follow_ups_path(day: day.iso8601) if key == :open_follow_ups
     return daily_reconciliations_path(day: day.iso8601, comparison: key.to_s, anchor: 'control-comparisons') if %i[variances conflicts unavailable].include?(key)

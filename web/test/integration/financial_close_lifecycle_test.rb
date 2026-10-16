@@ -128,10 +128,20 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
         assert_select 'a[href=?]', reconciliation_follow_up_path(item, anchor: 'record-progress'), text: "Overdue request ##{item.id}"
         assert_select 'a', text: 'Track this missing report', count: 0
       end
+      item.update!(due_on: Date.current + 1, notes: 'Check the original tomorrow.')
+      get cash_forecast_path(day: @day)
+      assert_select '[aria-label="Next close action for 2026-10-14"]' do
+        assert_select '[aria-label="Missing register report scope"]', text: /Square · USD/
+        assert_select 'a[href=?]', daily_reconciliations_path(day: @day, control_for: workflow.attention.control_key(row), anchor: 'upload-document'), text: 'Add this control'
+        assert_select 'a[href=?]', reconciliation_follow_up_path(item, anchor: 'record-progress'), text: "Open request ##{item.id}"
+        assert_select 'a', text: 'Track this missing report', count: 0
+      end
       @user.update!(role: 'reporting')
       get financial_close_path(day: @day)
       assert_select 'a', text: 'Add this control', count: 0
-      assert_select 'a[href=?]', reconciliation_follow_up_path(item), text: "Overdue request ##{item.id}"
+      assert_select 'a[href=?]', reconciliation_follow_up_path(item), text: "Open request ##{item.id}"
+      get cash_forecast_path(day: @day)
+      assert_select '[aria-label="Next close action for 2026-10-14"] a', text: 'Add this control', count: 0
     end
   end
 
@@ -191,7 +201,7 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
       get overview_reconciliation_follow_ups_path(ending_on: @day, focus: 'overdue')
       assert_select 'article[aria-label^="Business date"]', count: 1
       assert_select '[aria-label="Next close action for 2026-10-14"]' do
-        assert_select 'a[href=?]', reconciliation_follow_up_path(item), text: 'Open this follow-up'
+        assert_select 'a[href=?]', reconciliation_follow_up_path(item, close_day: @day), text: 'Open this follow-up'
         assert_select 'a', text: 'Record progress on this follow-up', count: 0
       end
       assert_select 'a[aria-current="page"]', text: 'Overdue work · 1'
@@ -202,13 +212,13 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
       end
       get cash_forecast_path(day: @day)
       assert_select '[aria-label="Forecast baseline close status"] a[href=?]', reconciliation_follow_ups_path(day: @day, status: 'overdue'), text: 'Work 1 overdue follow-up'
-      assert_select '[aria-label="Forecast baseline close status"] a[href=?]', reconciliation_follow_up_path(item), text: 'Open this follow-up'
+      assert_select '[aria-label="Forecast baseline close status"] a[href=?]', reconciliation_follow_up_path(item, close_day: @day), text: 'Open this follow-up'
       get overview_reconciliation_follow_ups_path(ending_on: @day, focus: 'changed')
       assert_select 'article[aria-label^="Business date"]', count: 0
       assert_includes response.body, 'No dates match this focus'
       @user.update!(role: 'admin')
       get overview_reconciliation_follow_ups_path(ending_on: @day, focus: 'overdue')
-      assert_select '[aria-label="Next close action for 2026-10-14"] a[href=?]', reconciliation_follow_up_path(item, anchor: 'record-progress'), text: 'Record progress on this follow-up'
+      assert_select '[aria-label="Next close action for 2026-10-14"] a[href=?]', reconciliation_follow_up_path(item, close_day: @day, anchor: 'record-progress'), text: 'Record progress on this follow-up'
       get overview_reconciliation_follow_ups_path(ending_on: @day, focus: 'invalid')
       assert_select 'article[aria-label^="Business date"]', count: 7
     end

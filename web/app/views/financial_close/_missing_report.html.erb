@@ -1,0 +1,10 @@
+<% location = row[:location_id].present? ? Location.find_by(id: row[:location_id]) : nil %>
+<article class="space-y-3" aria-label="Missing register report scope">
+  <p class="font-semibold"><%= reconciliation_source(row[:source]) %> · <%= row[:currency].presence || 'Unknown currency' %> · <%= day.strftime('%b %-d, %Y') %></p>
+  <p class="text-sm text-mocha"><%= location&.name || row[:location_id].presence || 'Unassigned records only' %> · recorded activity has no current register control</p>
+  <div class="flex flex-wrap gap-2"><%= link_to 'Find this report', reconciliation_documents_path(source: ReconciliationLibrary::SOURCE_NAMES.key?(row[:source]) ? row[:source] : nil, from: day.iso8601, to: day.iso8601), class: 'btn-ghost btn-sm' %>
+    <% if can_write && ReconciliationDocument::SOURCES.excluding('rupert').include?(row[:source]) && row[:currency].to_s.match?(/\A[A-Z]{3}\z/) %><%= link_to 'Add this control', daily_reconciliations_path(day: day.iso8601, control_for: control_key, anchor: 'upload-document'), class: 'btn-primary btn-sm' %><% end %>
+    <% if request %><%= link_to "#{request.overdue? ? 'Overdue request' : 'Open request'} ##{request.id}", reconciliation_follow_up_path(request, anchor: can_write ? 'record-progress' : nil), class: 'btn-ghost btn-sm' %>
+    <% elsif can_write && ReconciliationDocument::SOURCES.excluding('rupert').include?(row[:source]) && row[:currency].to_s.match?(/\A[A-Z]{3}\z/) %><%= link_to 'Track this missing report', new_reconciliation_follow_up_path(reconciliation_follow_up_context(row, day, category: 'missing_report')), class: 'btn-ghost btn-sm' %><% end %>
+  </div>
+</article>

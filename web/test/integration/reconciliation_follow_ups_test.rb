@@ -70,6 +70,38 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
     file&.unlink
   end
 
+  test 'progress returns to a validated covered close day and preserves context on errors' do
+    item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+    get reconciliation_follow_up_path(item, close_day: '2026-10-14')
+    assert_select 'input[name="close_day"][value="2026-10-14"]'
+    assert_select 'form[data-busy="false"] button[name="return_to"][value="close"]', text: 'Save and return to financial close'
+    assert_select 'a[href=?]', financial_close_path(day: '2026-10-14', anchor: 'close-follow-ups'), text: 'Back to financial close'
+    assert_no_enqueued_jobs do
+      assert_no_difference ['ActionMailer::Base.deliveries.size', 'ReconciliationDocument.count'] do
+        assert_no_difference 'ReconciliationFollowUpEvent.count' do
+          patch reconciliation_follow_up_path(item), params: { close_day: '2026-10-14', return_to: 'close', follow_up: { notes: '', lock_version: item.lock_version } }
+        end
+        assert_response :unprocessable_entity
+        assert_select 'input[name="close_day"][value="2026-10-14"]'
+        assert_difference 'ReconciliationFollowUpEvent.count', 1 do
+          patch reconciliation_follow_up_path(item), params: { close_day: '2026-10-14', return_to: 'close', follow_up: { notes: 'Original outstanding; next step recorded locally.', lock_version: item.lock_version } }
+        end
+        assert_redirected_to financial_close_path(day: '2026-10-14', anchor: 'close-follow-ups')
+      end
+    end
+    ['2026-09-30', 'https://example.com'].each do |context|
+      get reconciliation_follow_up_path(item, close_day: context)
+      assert_select 'input[name="close_day"]', count: 0
+      assert_select 'button[value="close"]', count: 0
+    end
+    patch reconciliation_follow_up_path(item), params: { close_day: 'https://example.com', return_to: 'close', follow_up: { notes: 'Second local update.', lock_version: item.reload.lock_version } }
+    assert_redirected_to reconciliation_follow_up_path(item)
+    @user.update!(role: 'reporting')
+    get reconciliation_follow_up_path(item, close_day: '2026-10-14')
+    assert_select 'a', text: 'Back to financial close'
+    assert_select 'button[value="close"]', count: 0
+  end
+
   test 'an older reviewed or linked original remains selectable outside the recent evidence window' do
     item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
     doc = ReconciliationEvidence.retain!(bytes: 'older original', filename: 'older-statement.txt', source: 'bank', kind: 'bank_statement', from: '2026-10-01', to: '2026-10-31')
