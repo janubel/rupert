@@ -37,6 +37,8 @@ The hub exposes no bulk “fix everything” action. Credential replacement, ven
 
 Priority 2 now adds [structured source diagnostics and repair guidance](sync-diagnostics.md): safe attempt receipts, independent acquisition/source timestamps, separate C-Trax stock/sales channels, queue receipts, worker heartbeat evidence and in-page failure/staleness alerts. Precise causes remain unknown for older or unclassified failures. Event-time coverage, outbound transition notifications and source-scheduler registration proof remain separate gaps. “Configured” still does not mean “healthy,” and a recent heartbeat does not establish vendor entitlement or a supported feed.
 
+The [October 16 live source audit](live-sync-audit-2026-10-16.md) records verified reads, missing-access blockers and the exact settings preserved during troubleshooting.
+
 ## Validation and rollout
 
 Tests cover secret-free rendering, filtered parameters, active-workspace/role boundaries, platform setup exclusion, tenant/actor/service binding, expiry and stale forms, atomic validation, explicit removal and preservation of blank secrets. Existing provider/source tests protect their action gates. Use synthetic credentials and isolated databases for validation; real credentials, source exports and account references do not belong in public Git.

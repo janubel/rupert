@@ -1,10 +1,10 @@
-# Dashboard source status and 30-minute reads
+# Dashboard source status and scheduled reads
 
-The dashboard displays C-Trax, SwipeSimple and Authorize.net separately, with their latest source-read timestamps and on-demand controls. A configured schedule does not establish fresh vendor delivery.
+The dashboard displays C-Trax, SwipeSimple, Authorize.net, Shopify, NAB/IRIS and platform Google Drive backup separately, with their source-read timestamps. The credentials hub adds acquisition receipts, queue state and worker evidence. A configured schedule does not establish fresh vendor delivery. See the [live source audit](live-sync-audit-2026-10-16.md) for the October 16 checkpoint.
 
 - C-Trax: approved saved credentials allow direct stock reads every 30 minutes. Manual reads can run while automatic stock reads are paused. Native variant IDs, signed stock and missing quantities are retained.
-- SwipeSimple: every-30-minute local intake consumes newly delivered native transaction/invoice CSVs only when `RUPERT_SWIPESIMPLE_INBOX` is configured. On-demand intake is tenant-scoped. Without a supported producer, Sync now opens the native upload workflow, and the badge says Needs feed. The displayed source time is the export capture time, never the latest empty intake run.
-- Authorize.net: approved API reporting connections run every 30 minutes when enabled. Existing merchant keys are sufficient where authorized; replacement is unnecessary for portal downloads. Without API access, the dashboard opens portal CSV imports and the merchant reporting page. Portal snapshots stay visibly distinct from API reconciliation.
+- SwipeSimple: approved encrypted website credentials and the existing `reporting_enabled` opt-in allow native transaction/invoice website reads every 30 minutes. Each read starts an independent login session and validates account identity, both export kinds and complete row counts. Identical bytes retain the existing original; the connection records the fresh validated read time. This website flow is separate from a supported reporting API or vendor-delivered feed, which remains unverified. The legacy CSV inbox needs `RUPERT_SWIPESIMPLE_INBOX` and an approved producer; it remains disabled on SER8. Do not enable that inbox merely because website reads work. See [research and support limits](swipesimple-integration-research.md).
+- Authorize.net: approved API reporting connections run every five minutes when enabled. Merchant portal login does not establish API entitlement. Use the intended reporting credentials without rotating shared checkout keys. Without API access, portal CSV imports remain manual dated evidence, distinct from API reconciliation.
 
 ## Native Authorize.net portal evidence
 
@@ -18,6 +18,6 @@ The portal page shows totals only for the verified native Authorization w/ Auto 
 
 ## Production scheduling
 
-Use the existing Solid Queue worker/scheduler and config/recurring.yml; all three source tasks use every 30 minutes. The historical database flag hourly_sync_enabled now gates the C-Trax 30-minute schedule. Missing credentials or a missing CSV delivery directory keep that source inactive. Existing IRIS, Shopify, Square and operations schedules retain their own settings.
+Use the existing Solid Queue worker/scheduler and `web/config/recurring.yml`. C-Trax stock and SwipeSimple website reads run every 30 minutes; C-Trax sales run at minutes 5 and 35. The historical database flag `hourly_sync_enabled` gates C-Trax stock. Shopify/catalog scheduling runs every 15 minutes; Square is included only when its access token is configured. Authorize.net reporting dispatches every five minutes. NAB native deposits run daily at 06:45 Eastern, platform backup every six hours, directories every 30 minutes and document-retention Drive every 15 minutes. Dispatch registration does not mean a connection is enabled or authorized. Missing credentials, disabled opt-ins and the absent CSV inbox remain inactive; preserve these settings while diagnosing.
 
 Before release, back up production SQLite/config, rehearse the additive portal-export migration and check every existing table count. Restart the existing application container after promotion. Verify the recurring task rows, a real C-Trax worker completion, source timestamps, duplicate replay, encrypted originals, tenant permissions and public health.
