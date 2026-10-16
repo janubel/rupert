@@ -153,6 +153,7 @@ The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 
 
 ## Features, roadmap and comparison
 
+- [Master credentials and sync repair](docs/ops/master-credentials-and-sync.md) — central setup, safe credential forms, troubleshooting and the prioritized improvement plan.
 - [Public roadmap](https://techmore.github.io/rupert/roadmap.html) — implemented scope, implementation evidence, delivery phases and acceptance gates.
 - [Competitor matrix](https://techmore.github.io/rupert/competitors.html) — scoped ERP, inventory and POS comparisons, official sources and CSV/JSON downloads.
 - [Private owner checklist guide](https://techmore.github.io/rupert/owner-checklists.html) — administrator-only local attestations, evidence/history and private printing; no checklist contents are published.

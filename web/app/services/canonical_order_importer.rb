@@ -106,6 +106,10 @@ class CanonicalOrderImporter
     def upsert_customer!(source:, external_id:, email:, first_name:, last_name:, phone: nil)
       return if external_id.blank?
 
+      existing = Core::Customer.find_by(source: source, external_id: external_id)
+      # Order payloads can contain partial or historical customer information.
+      return existing if existing&.source_synced_at
+
       Core::Customer.upsert(
         {
           tenant_id: Current.tenant_id,

@@ -16,7 +16,7 @@ class ConnectionsGuide
       keys: %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN SHOPIFY_LOCATION_ID],
       find_url: 'https://admin.shopify.com/',
       find_hint: 'Store admin → Settings → Apps and sales channels, or your Partner dashboard → Apps. SHOPIFY_LOCATION_ID is optional — it pins which location counts as your primary selling location; leave it blank and the sync picks the first active one.',
-      renewal_note: 'Secrets can be rotated any time. If a sync reports an invalid token, re-install the app or regenerate the client secret — nothing else changes.'
+      renewal_note: 'Coordinate client changes with every consumer of this app. Verify a fresh read after updating Rupert. A delayed job alone is not a reason to replace credentials.'
     ),
     Service.new(
       key: 'square',
@@ -28,6 +28,15 @@ class ConnectionsGuide
       renewal_note: 'This connector uses a manually supplied access token. It does not implement OAuth login or automatic token refresh. If the token expires or is revoked, replace it through the Developer Dashboard.'
     ),
     Service.new(
+      key: 'google_sign_in',
+      name: 'Google sign-in',
+      description: 'Team sign-in for the allowed workspace email domains.',
+      keys: %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET],
+      find_url: 'https://console.cloud.google.com/apis/credentials',
+      find_hint: 'Use the OAuth client configured for Rupert sign-in. Manage allowed email domains separately in Settings.',
+      renewal_note: 'Coordinate client changes with the operator. Google sign-in and Google Drive backups use separate settings.'
+    ),
+    Service.new(
       key: 'google_drive',
       name: 'Google Drive backup',
       description: 'Platform-only snapshots of the entire shared instance database to an approved private Drive folder.',
@@ -35,7 +44,7 @@ class ConnectionsGuide
                GOOGLE_DRIVE_FOLDER_ID],
       find_url: 'https://console.cloud.google.com/apis/credentials',
       find_hint: 'Google Cloud Console → APIs & Services → Credentials → your OAuth 2.0 Client ID.',
-      renewal_note: 'The refresh token can lapse after about 6 months of inactivity. If backups stop, run the Connect flow on the Settings page again — no other setup is needed.'
+      renewal_note: 'If authorization fails, the platform operator should review backup status and restore the approved connection through Settings. Verify a new backup and a separate restore drill.'
     ),
     Service.new(
       key: 'buzz',
@@ -44,11 +53,11 @@ class ConnectionsGuide
       keys: %w[BUZZ_RELAY_URL BUZZ_CHANNEL BUZZ_PRIVATE_KEY BUZZ_ANNOUNCEMENTS_CHANNEL],
       find_url: nil,
       find_hint: 'Relay URL and channel ids come from your Buzz workspace. The private key is generated inside Rupert (Settings → Buzz agent).',
-      renewal_note: 'Generate a fresh agent keypair any time from the Settings page. Republish the profile so the relay recognizes the new npub, then re-add it to the channel.'
+      renewal_note: 'Coordinate identity changes with the existing channels before replacing the agent keypair. Review the Settings workflow and verify channel access after an approved change.'
     ),
     Service.new(
       key: 'authorize_net',
-      name: 'Authorize.net',
+      name: 'Authorize.net checkout',
       description: 'Card payments on warehouse-sale vendor links.',
       keys: %w[AUTHORIZE_NET_LOGIN_ID AUTHORIZE_NET_TRANSACTION_KEY AUTHORIZE_NET_CLIENT_KEY
                AUTHORIZE_NET_SANDBOX],

@@ -134,6 +134,62 @@ class GoogleLoginIdentityTest < ActionDispatch::IntegrationTest
     assert_includes duplicate.errors[:email], 'has already been taken'
   end
 
+  test 'explicit same-email approval signs an existing Gmail administrator into the same account' do
+    account = User.create!(email: 'finance.admin@gmail.com', role: 'admin', password: 'test-password', tenant_id: @tenant.id)
+    identity = account.google_login_identities.create!(email: account.email)
+    assert_no_difference 'User.count' do
+      sign_in_google(email: account.email, subject: 'approved-finance-subject')
+    end
+    assert_redirected_to root_path
+    assert_equal account.id, session[:user_id]
+    assert_equal 'approved-finance-subject', identity.reload.google_subject
+    assert_equal 'admin', account.reload.role
+    assert account.can?('finance.read')
+    assert account.can?('finance.write')
+    refute OauthAllowedDomain.unscoped.exists?(domain: 'gmail.com')
+  end
+
+  test 'an existing Gmail account without explicit approval cannot sign in with Google' do
+    account = User.create!(email: 'finance.admin@gmail.com', role: 'admin', password: 'test-password', tenant_id: @tenant.id)
+    sign_in_google(email: account.email)
+    assert_redirected_to login_path
+    assert_nil session[:user_id]
+  end
+
+  test 'same-email approval does not bypass inactive account workspace or cross-workspace checks' do
+    account = User.create!(email: 'finance.admin@gmail.com', role: 'admin', password: 'test-password', tenant_id: @tenant.id)
+    identity = account.google_login_identities.create!(email: account.email)
+    account.update!(active: false)
+    sign_in_google(email: account.email)
+    assert_nil session[:user_id]
+    assert_nil identity.reload.google_subject
+    account.update!(active: true)
+    @tenant.update!(status: 'inactive')
+    sign_in_google(email: account.email)
+    assert_nil session[:user_id]
+    assert_nil identity.reload.google_subject
+    @tenant.update!(status: 'active')
+    other = Tenant.create!(name: 'Other explicit login', subdomain: "otherexact#{SecureRandom.hex(4)}")
+    host! "#{other.subdomain}.example.com"
+    sign_in_google(email: account.email)
+    assert_redirected_to login_path
+    assert_nil session[:user_id]
+    assert_nil identity.reload.google_subject
+  end
+
+  test 'same-email approval keeps subject binding and revocation effective' do
+    account = User.create!(email: 'finance.admin@gmail.com', role: 'admin', password: 'test-password', tenant_id: @tenant.id)
+    identity = account.google_login_identities.create!(email: account.email, google_subject: 'original-subject')
+    sign_in_google(email: account.email, subject: 'different-subject')
+    assert_redirected_to login_path
+    assert_nil session[:user_id]
+    assert_equal 'original-subject', identity.reload.google_subject
+    identity.destroy!
+    sign_in_google(email: account.email, subject: 'original-subject')
+    assert_redirected_to login_path
+    assert_nil session[:user_id]
+  end
+
   private
 
   def sign_in_google(email: 'owner.personal@gmail.com', subject: 'linked-google-subject')

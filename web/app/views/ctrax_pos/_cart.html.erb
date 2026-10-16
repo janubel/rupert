@@ -1,0 +1,9 @@
+      <section class="card card-pad space-y-4 xl:sticky xl:top-4"><h2 class="font-display text-xl">Cashier cart</h2><p class="text-xs text-taupe">USD · prices from the last C-Trax stock read. Stock is not reserved.</p><p role="status" aria-live="polite" class="text-sm" data-pos-cart-target="status"><%= @quote_error %></p>
+        <%= form_tag quote_ctrax_pos_path(@snapshot.location_id, display_id: @display&.id), method: :post, class: 'space-y-4', data: { pos_cart_target: 'form', action: 'submit->pos-cart#quote', turbo: false, busy: false } do %>
+          <div class="space-y-3" data-pos-cart-target="items"></div>
+          <%= hidden_field_tag :tip_type, 'none', data: { pos_cart_target: 'tipType' } %><span hidden data-pos-cart-target="percentageFields"><%= select_tag :tip_percentage, options_for_select([['15%', '15']]), data: { pos_cart_target: 'tipPercentage' } %></span><span hidden data-pos-cart-target="amountFields"><%= hidden_field_tag :tip_amount, '0', data: { pos_cart_target: 'tipAmount' } %></span>
+          <div class="flex justify-between"><span>Subtotal before tax</span><strong data-pos-cart-target="subtotal">—</strong></div><span hidden data-pos-cart-target="tip">—</span><span hidden data-pos-cart-target="previewTotal">—</span>
+          <% if @display %><div class="rounded-xl bg-haze p-3"><p class="text-sm font-medium" data-pos-display-target="status" role="status" aria-live="polite">Customer screen paired. Tip choice stays private until confirmed.</p><p class="mt-2 text-sm" data-pos-display-target="total"></p></div><% else %><p class="text-sm text-mocha">Pair a customer screen to let the customer choose a tip privately.</p><% end %>
+          <div class="flex gap-2"><%= submit_tag 'Check cart', class: 'btn-primary' %><button type="button" class="btn-ghost" data-action="pos-cart#clear">Clear</button></div>
+        <% end %>
+      </section>

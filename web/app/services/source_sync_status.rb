@@ -2,13 +2,16 @@
 
 class SourceSyncStatus
   FRESH_FOR = 60.minutes
+  ACTIVE_BADGES = ['Live', 'Healthy', 'Syncing', 'Files current', 'Backing up'].freeze
 
-  def self.all
-    new.all
+  def self.all(include_platform: true)
+    new.all(include_platform: include_platform)
   end
 
-  def all
-    [ctrax, swipesimple, authorize_net, shopify, bank, google_backup]
+  def all(include_platform: true)
+    sources = [ctrax, swipesimple, authorize_net, shopify, bank]
+    sources << google_backup if include_platform
+    sources
   end
 
   private
@@ -151,15 +154,15 @@ class SourceSyncStatus
       'Paused'
     elsif last_at.nil?
       'Awaiting pull'
-    elsif last_at < FRESH_FOR.ago
+    elsif last_at < 10.minutes.ago
       'Stale'
     else
-      'Live'
+      'Recent API read'
     end
     count = api ? AuthorizeNetTransaction.count : AuthorizeNetPortalExport.latest_records.size
     { key: 'authorize_net', label: 'Authorize.net', badge: badge, last_at: last_at,
       detail: "#{count} payment observations",
-      schedule: api && connection.reporting_enabled ? 'Every 30 minutes' : 'Portal exports on demand · API access deferred',
+      schedule: api && connection.reporting_enabled ? 'Every 5 minutes · signed events when configured' : 'Manual snapshots · API credentials needed for live reporting',
       mode: api ? 'api' : 'portal', ready: true }
   end
 end

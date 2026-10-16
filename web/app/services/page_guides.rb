@@ -286,13 +286,13 @@ class PageGuides
       ]
     ),
     'connections' => Guide.new(
-      key: 'connections', title: 'Connections',
-      summary: 'The integrations powering Rupert — Shopify, Square, Google Drive, Buzz — and their status.',
+      key: 'connections', title: 'Master credentials & sync',
+      summary: 'One setup desk for saved credentials, source freshness, access checks and repair steps.',
       sections: [
-        { heading: "What you're seeing", body: "Each connected service and whether it's healthy. Reconnect or check credentials here when a sync fails." }
+        { heading: "What you're seeing", body: 'Credential completeness and actual source freshness are separate. Open a connection to replace credentials, explicitly check access, then run a read. Saved secrets stay hidden; backup setup remains with the platform operator.' }
       ],
       tips: [
-        "If a sync fails, check Connections first — it's usually a revoked token, not a code bug."
+        'If access checks pass but data stays stale, review Sync history and Worker status. Do not replace credentials or enable a schedule merely because a source is stale.'
       ]
     ),
     'system' => Guide.new(

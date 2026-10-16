@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -430,6 +430,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.index ["tenant_id"], name: "index_authorize_net_portal_exports_on_tenant_id"
   end
 
+  create_table "authorize_net_sale_links", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "authorize_net_transaction_id", null: false
+    t.bigint "order_id", null: false
+    t.bigint "reviewed_by_id", null: false
+    t.text "evidence_note", null: false
+    t.datetime "revoked_at"
+    t.bigint "revoked_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["authorize_net_transaction_id"], name: "idx_anet_link_transaction"
+    t.index ["order_id"], name: "index_authorize_net_sale_links_on_order_id"
+    t.index ["reviewed_by_id"], name: "index_authorize_net_sale_links_on_reviewed_by_id"
+    t.index ["revoked_by_id"], name: "index_authorize_net_sale_links_on_revoked_by_id"
+    t.index ["tenant_id", "authorize_net_transaction_id"], name: "idx_anet_link_active_payment", unique: true, where: "revoked_at IS NULL"
+    t.index ["tenant_id", "order_id"], name: "idx_anet_link_active_order", unique: true, where: "revoked_at IS NULL"
+    t.index ["tenant_id"], name: "index_authorize_net_sale_links_on_tenant_id"
+  end
+
   create_table "authorize_net_transactions", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "environment", null: false
@@ -453,6 +472,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.json "status_history", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "invoice_number"
     t.index ["tenant_id", "environment", "gateway_id", "source_transaction_id"], name: "idx_anet_transaction_source", unique: true
     t.index ["tenant_id"], name: "index_authorize_net_transactions_on_tenant_id"
   end
@@ -593,6 +613,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.string "last_name"
     t.text "notes"
     t.string "phone"
+    t.datetime "source_synced_at"
     t.string "source", null: false
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
@@ -617,6 +638,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.index ["tenant_id", "name"], name: "index_departments_on_tenant_id_and_name", unique: true
   end
 
+  create_table "directory_sync_states", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "provider", null: false
+    t.string "kind", null: false
+    t.string "status", default: "pending", null: false
+    t.string "attempt_token"
+    t.integer "record_count"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "last_success_at"
+    t.string "error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "provider", "kind"], name: "idx_directory_sync_identity", unique: true
+  end
+
   create_table "employees", force: :cascade do |t|
     t.text "address"
     t.datetime "created_at", null: false
@@ -627,6 +664,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.string "emergency_contact_phone"
     t.string "employee_number"
     t.string "employment_type", default: "full_time"
+    t.string "external_id"
     t.string "first_name", null: false
     t.date "hire_date"
     t.string "last_name", null: false
@@ -634,6 +672,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.text "notes"
     t.string "phone"
     t.bigint "position_id"
+    t.string "source"
+    t.boolean "source_active"
+    t.datetime "source_synced_at"
     t.string "status", default: "active", null: false
     t.string "tenant_id", null: false
     t.date "termination_date"
@@ -642,6 +683,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.index ["tenant_id", "department_id"], name: "index_employees_on_tenant_id_and_department_id"
     t.index ["tenant_id", "employee_number"], name: "index_employees_on_tenant_id_and_employee_number", unique: true
     t.index ["tenant_id", "position_id"], name: "index_employees_on_tenant_id_and_position_id"
+    t.index ["tenant_id", "source", "external_id"], name: "idx_employees_source_identity", unique: true
     t.index ["tenant_id", "status"], name: "index_employees_on_tenant_id_and_status"
     t.index ["tenant_id", "user_id"], name: "index_employees_on_tenant_id_and_user_id"
   end
@@ -1011,6 +1053,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "employee_id"], name: "index_payslips_on_tenant_id_and_employee_id"
     t.index ["tenant_id", "pay_run_id"], name: "index_payslips_on_tenant_id_and_pay_run_id"
+  end
+
+  create_table "ctrax_days", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "api_origin", null: false
+    t.string "store_id", null: false
+    t.date "business_date", null: false
+    t.string "timezone", null: false
+    t.string "currency", default: "USD", null: false
+    t.text "orders_json", null: false
+    t.text "sessions_json", null: false
+    t.text "controls_json", null: false
+    t.string "source_digest", null: false
+    t.datetime "captured_at", null: false
+    t.integer "reviewed_by_id"
+    t.string "reviewed_digest"
+    t.datetime "reviewed_at"
+    t.string "review_note", limit: 1000
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reviewed_by_id"], name: "index_ctrax_days_on_reviewed_by_id"
+    t.index ["tenant_id", "location_id", "business_date"], name: "idx_on_tenant_id_location_id_business_date_9a513d6082", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_days_on_tenant_id"
   end
 
   create_table "ctrax_stock_snapshots", force: :cascade do |t|
@@ -1430,6 +1496,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
     t.index ["tenant_id", "status"], name: "index_tasks_on_tenant_id_and_status"
   end
 
+  create_table "ctrax_image_links", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "location_id", null: false
+    t.string "variant_id", null: false
+    t.string "shopify_product_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "location_id", "variant_id"], name: "idx_on_tenant_id_location_id_variant_id_a6f332d264", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_image_links_on_tenant_id"
+  end
+
+  create_table "pos_display_sessions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "user_id", null: false
+    t.string "location_id", null: false
+    t.text "display_token", null: false
+    t.string "token_digest", null: false
+    t.text "draft_json", default: "{}", null: false
+    t.string "draft_digest"
+    t.integer "cart_revision", default: 0, null: false
+    t.integer "confirmed_revision"
+    t.integer "chosen_tip_cents"
+    t.boolean "demo", default: false, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "closed_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id"], name: "index_pos_display_sessions_on_tenant_id"
+    t.index ["token_digest"], name: "index_pos_display_sessions_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_pos_display_sessions_on_user_id"
+  end
+
   create_table "tenants", id: :string, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -1603,6 +1702,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
   add_foreign_key "api_access_tokens", "users", on_delete: :cascade
   add_foreign_key "authorize_net_batches", "tenants"
   add_foreign_key "authorize_net_portal_exports", "tenants"
+  add_foreign_key "authorize_net_sale_links", "authorize_net_transactions"
+  add_foreign_key "authorize_net_sale_links", "orders"
+  add_foreign_key "authorize_net_sale_links", "tenants"
+  add_foreign_key "authorize_net_sale_links", "users", column: "reviewed_by_id"
+  add_foreign_key "authorize_net_sale_links", "users", column: "revoked_by_id"
   add_foreign_key "authorize_net_transactions", "tenants"
   add_foreign_key "bulk_consumptions", "bulk_lots"
   add_foreign_key "bulk_consumptions", "bulk_movements"
@@ -1617,8 +1721,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_010000) do
   add_foreign_key "clock_shifts", "employees", on_delete: :nullify
   add_foreign_key "clock_shifts", "tenants"
   add_foreign_key "clock_shifts", "users", on_delete: :nullify
+  add_foreign_key "directory_sync_states", "tenants"
   add_foreign_key "departments", "employees", column: "manager_id"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
+  add_foreign_key "ctrax_days", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "ctrax_days", "tenants"
+  add_foreign_key "ctrax_days", "users", column: "reviewed_by_id"
+  add_foreign_key "ctrax_image_links", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "ctrax_image_links", "ShopifyProduct", column: "shopify_product_id", on_delete: :cascade
+  add_foreign_key "ctrax_image_links", "tenants"
+  add_foreign_key "pos_display_sessions", "Location", column: "location_id", on_delete: :cascade
+  add_foreign_key "pos_display_sessions", "tenants"
+  add_foreign_key "pos_display_sessions", "users"
   add_foreign_key "google_login_identities", "users", on_delete: :cascade
   add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade
   add_foreign_key "order_lines", "orders", on_delete: :cascade

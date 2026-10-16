@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 production:
+  source_directories:
+    class: DirectorySyncJob
+    queue: default
+    schedule: every 30 minutes
+  ctrax_sales:
+    class: CtraxSalesSyncJob
+    queue: default
+    schedule: '5,35 * * * *'
   iris_daily_deposits_web:
     class: IrisDailyDepositsWebJob
     queue: default
@@ -31,7 +39,7 @@ production:
   authorize_net_reporting:
     class: AuthorizeNetReportingJob
     queue: default
-    schedule: every 30 minutes
+    schedule: every 5 minutes
   daily_store_close:
     class: OperationsBriefJob
     queue: default

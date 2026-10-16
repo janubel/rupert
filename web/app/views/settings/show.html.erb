@@ -2,6 +2,7 @@
 <div class="space-y-8">
   <section>
     <h1 class="page-title">Settings</h1>
+    <p class="mt-2"><%= link_to 'Master credentials & sync', connections_path, class: 'btn-primary btn-sm' %></p>
     <p class="mt-1 text-sm text-mocha">Environment variables and database backup/restore. Environment keys apply to the sync engine immediately; boot-time keys (Shopify API key/secret, database) come from the droplet env.</p>
   </section>
 
@@ -139,7 +140,7 @@
           <span>
             Add this exact <b>Authorized redirect URI</b> (click to copy):
             <br>
-            <code data-controller="copy" data-copy-text="<%= drive_oauth_callback_settings_url %>" data-action="click->copy#copy" class="mt-1 block w-full cursor-pointer select-all break-all rounded-lg bg-haze px-3 py-1.5 font-mono text-xs text-ink"><%= drive_oauth_callback_settings_url %></code>
+            <code data-controller="copy" data-copy-text="<%= google_callback_url %>" data-action="click->copy#copy" class="mt-1 block w-full cursor-pointer select-all break-all rounded-lg bg-haze px-3 py-1.5 font-mono text-xs text-ink"><%= google_callback_url %></code>
             <br>Click <b>Create</b>. Google shows you a <b>Client ID</b> and <b>Client Secret</b> — copy both.
           </span>
         </li>
@@ -189,7 +190,7 @@
   <% end %>
   <section class="card card-pad">
     <div class="flex items-baseline justify-between">
-      <h2 class="font-display text-xl text-ink">Google sign-in</h2>
+    <h2 id="google-sign-in" class="font-display text-xl text-ink">Google sign-in</h2>
       <span class="<%= GoogleOauthService.configured? ? "pill-fern" : "pill-taupe" %>"><%= GoogleOauthService.configured? ? "Configured" : "Not configured" %></span>
     </div>
     <p class="mt-2 text-xs text-taupe">Let your team sign in with their Google account. Only email domains you allow below can get in — everyone else is rejected at the door. New people on an allowed domain get a reader account automatically.</p>

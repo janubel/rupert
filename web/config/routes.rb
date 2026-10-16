@@ -78,7 +78,9 @@ Rails.application.routes.draw do
       post :refund
     end
   end
-  resources :customers, only: %i[index show new create edit update]
+  resources :customers, only: %i[index show new create edit update] do
+    post :sync_directory, on: :collection
+  end
   namespace :projects do
     resources :projects, only: %i[index show new create edit update destroy] do
       member { post :transition }
@@ -142,6 +144,7 @@ Rails.application.routes.draw do
   end
   namespace :people do
     resources :employees, only: %i[index show new create edit update destroy] do
+      post :sync_directory, on: :collection
       member { post :transition }
     end
     resources :departments, only: %i[index new create edit update]
@@ -243,6 +246,8 @@ Rails.application.routes.draw do
   end
   get '/system', to: 'system#index', as: :system
   get '/connections', to: 'connections#index', as: :connections
+  get '/connections/:service/edit', to: 'connections#edit', as: :edit_connection
+  patch '/connections/:service', to: 'connections#update', as: :connection
   resources :owner_checklists, only: %i[index new create show edit update] do
     member do
       get :print
@@ -262,6 +267,21 @@ Rails.application.routes.draw do
     end
   end
   resources :ctrax_stock, only: :index
+  resources :ctrax_days, only: %i[index show create] do
+    member { post :review }
+  end
+  get '/ctrax_pos', to: 'ctrax_pos#index', as: :ctrax_pos
+  post '/ctrax_pos/:location_id/quote', to: 'ctrax_pos#quote', as: :quote_ctrax_pos
+  post '/ctrax_pos/:location_id/images/:variant_id', to: 'ctrax_pos#image', as: :ctrax_pos_image
+  resources :pos_displays, only: %i[create show destroy] do
+    member do
+      get :demo
+      post :clear
+    end
+  end
+  get '/customer_display', to: 'customer_displays#show', as: :customer_display
+  get '/customer_display/state', to: 'customer_displays#state', as: :customer_display_state
+  post '/customer_display/tip', to: 'customer_displays#tip', as: :customer_display_tip
   resources :inventory_exceptions, only: :index
   resources :bulk_recipes, only: %i[index new create]
   resources :bulk_consumptions, only: %i[index new create] do
@@ -273,6 +293,11 @@ Rails.application.routes.draw do
   get '/activity', to: 'activity#index', as: :activity
   resources :access_logs, only: :index
   get '/live/sync_status', to: 'live#sync_status'
+  resources :authorize_net_sale_links, only: %i[index create] do
+    member { post :revoke }
+  end
+  get '/live/commissions', to: 'live_commissions#show', as: :live_commissions
+  post '/webhooks/authorize_net/:connection_id', to: 'authorize_net_webhooks#create', as: :authorize_net_webhook
 
   resource :settings, only: :show do
     post :tenant

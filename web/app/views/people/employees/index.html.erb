@@ -8,11 +8,17 @@
     <div class="flex flex-wrap gap-2">
       <%= link_to "Departments", people_departments_path, class: "btn-ghost btn-sm" %>
       <%= link_to "Positions", people_positions_path, class: "btn-ghost btn-sm" %>
+      <% if Current.user.can?("hr.write") && Current.user.can?("sync.write") %>
+        <%= button_to "Sync employees now", sync_directory_people_employees_path, class: "btn-ghost btn-sm" %>
+      <% end %>
       <% if Current.user.can?("hr.write") %>
         <%= link_to "Add employee", new_people_employee_path, class: "btn-primary" %>
       <% end %>
     </div>
   </section>
+
+  <%= render "shared/directory_sync_status", kind: "employees" %>
+  <p class="text-xs text-taupe">C-Trax staff accounts are mirrored as employee records. Confirm employment type and payroll details in Rupert.</p>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
@@ -67,6 +73,7 @@
             <tr class="hover:bg-cream">
               <td class="td">
                 <p class="font-medium text-ink"><%= link_to employee.name, people_employee_path(employee), class: "hover:text-olive hover:underline" %></p>
+                <% if employee.source.present? %><p class="text-xs text-taupe">C-Trax · source account <%= employee.source_active ? 'active' : 'inactive' %> · <%= employee.employment_type.tr('_', ' ') %></p><% end %>
                 <p class="text-xs text-taupe"><%= employee.employee_number.presence || employee.email %></p>
               </td>
               <td class="td text-mocha"><%= employee.department&.name || "—" %></td>

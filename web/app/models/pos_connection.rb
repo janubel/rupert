@@ -55,7 +55,7 @@ class PosConnection < ApplicationRecord
     previous = credential_values
     assign_attributes(attributes)
     previous = {} if environment_changed? || gateway_changed? || reporting_auth_mode_changed?
-    supplied = submitted_credentials.to_h.stringify_keys.slice(*credential_keys)
+    supplied = submitted_credentials.to_h.stringify_keys.slice(*credential_keys, *(provider == 'authorize_net_reporting' ? ['signature_key'] : []))
                                     .reject { |_key, value| value.blank? }
     values = previous.merge(supplied)
     values['api_url'] = values['api_url'].delete_suffix('/') if %w[korona
@@ -67,6 +67,11 @@ class PosConnection < ApplicationRecord
     return false if errors.any?
 
     credential_keys.any? && credential_keys.all? { |key| credential_values[key].present? }
+  end
+
+  # Scope queued events to the account and signing key, not to ordinary status updates.
+  def webhook_scope
+    Digest::SHA256.hexdigest([environment, account_reference, credential_values['signature_key']].to_json)
   end
 
   def status_label
@@ -96,6 +101,10 @@ class PosConnection < ApplicationRecord
   private
 
   def valid_reporting_setup
+    if provider == 'ctrax'
+      errors.add(:base, 'Save approved C-Trax read credentials before enabling daily sales pulls.') if reporting_enabled && (!vendor_approved || !credentials_saved?)
+      return
+    end
     if provider == 'swipesimple'
       if credential_values.any? || reporting_enabled
         errors.add(:account_reference, 'must be the numeric SwipeSimple company ID') unless account_reference.to_s.match?(/\A[1-9][0-9]{0,19}\z/)
@@ -118,7 +127,7 @@ class PosConnection < ApplicationRecord
     if credential_values.any? || reporting_enabled
       errors.add(:account_reference, 'must be the numeric Authorize.net Gateway ID') unless account_reference.to_s.match?(/\A[1-9][0-9]{0,29}\z/)
     end
-    errors.add(:base, 'Save approved reporting credentials before enabling daily reconciliation.') if reporting_enabled && (!vendor_approved || !credentials_saved?)
+    errors.add(:base, 'Save approved reporting credentials before enabling automatic reconciliation.') if reporting_enabled && (!vendor_approved || !credentials_saved?)
     if reporting_auth_mode == 'api_key' && credential_values.any?
       errors.add(:base, 'Use an API Login ID of at most 25 characters and a Transaction Key of at most 16 characters.') if credential_values['api_login_id'].to_s.bytesize > 25 || credential_values['transaction_key'].to_s.bytesize > 16
     end
@@ -137,7 +146,7 @@ class PosConnection < ApplicationRecord
 
   def valid_credentials
     values = credential_values
-    allowed = credential_keys
+    allowed = credential_keys + (provider == 'authorize_net_reporting' ? ['signature_key'] : [])
     if credentials_json.to_s.bytesize > 16_384 || (values.keys - allowed).any? || values.values.any? do |value|
       !value.is_a?(String) || !value.valid_encoding? || value.bytesize > 4096 || value.match?(/[\x00-\x1f\x7f]/)
     end
@@ -147,7 +156,10 @@ class PosConnection < ApplicationRecord
     return if values.empty?
 
     errors.add(:base, (provider == 'swipesimple' || (provider == 'iris_reporting' && reporting_auth_mode == 'web')) ? 'Authorize website read access before saving credentials.' : 'Confirm approved API read access before saving credentials.') unless vendor_approved
-    errors.add(:base, 'Provide all required credential fields.') unless allowed.all? { |key| values[key].present? }
+    errors.add(:base, 'Provide all required credential fields.') unless credential_keys.all? { |key| values[key].present? }
+    if provider == 'authorize_net_reporting' && values['signature_key'].present? && !values['signature_key'].match?(/\A[0-9a-f]{128}\z/i)
+      errors.add(:base, 'Use the existing 128-character hexadecimal Authorize.net Signature Key.')
+    end
     if provider == 'swipesimple'
       errors.add(:base, 'Enter a valid SwipeSimple account email.') unless values['web_email'].to_s.match?(/\A[^\s@]+@[^\s@]+\.[^\s@]+\z/)
     elsif provider == 'iris_reporting'
