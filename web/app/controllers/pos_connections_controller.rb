@@ -11,7 +11,39 @@ class PosConnectionsController < AuthenticatedController
     @connections = PosConnection.all.index_by(&:provider)
   end
 
-  def show; end
+  def show
+    return unless @provider[:key] == 'authorize_net_reporting'
+    scope = { environment: @connection.environment, gateway_id: @connection.account_reference }
+    @report_date = params[:report_date].present? ? Date.iso8601(params[:report_date]) : Time.current.utc.to_date
+    start = Time.iso8601("#{@report_date}T00:00:00Z")
+    day = start...(start + 1.day)
+    transactions = AuthorizeNetTransaction.where(**scope)
+    relevant = transactions.where('submitted_at >= ? AND submitted_at < ? OR settled_at >= ? AND settled_at < ?', day.begin, day.end, day.begin, day.end)
+    @report_transactions = relevant.order(submitted_at: :desc).limit(100)
+    @report_transaction_count = relevant.count
+    @report_batches = AuthorizeNetBatch.where(**scope, settled_at: day).order(settled_at: :desc).limit(30)
+    # Group currency separately; never add amounts across currencies.
+    @report_totals = transactions.where(settled_at: day, payment_status: %w[settledSuccessfully refundSettledSuccessfully])
+      .where.not(currency: nil).group(:currency, :payment_status).sum(:settled_amount)
+    @report_status_counts = transactions.where(submitted_at: day).group(:payment_status).count
+  rescue ArgumentError
+    redirect_to pos_connection_path(@provider[:key]), alert: 'Choose a valid UTC reporting date.'
+  end
+
+  def import_reporting
+    raise ActiveRecord::RecordNotFound unless @provider[:key] == 'authorize_net_reporting'
+    unless @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
+      return redirect_to pos_connection_path(@provider[:key]), alert: 'Save approved reporting credentials before importing.'
+    end
+    from = params[:from].present? ? Time.iso8601("#{Date.iso8601(params[:from])}T00:00:00Z") : 7.days.ago
+    to = params[:to].present? ? Time.iso8601("#{Date.iso8601(params[:to])}T23:59:59Z") : Time.current
+    raise ArgumentError unless from < to && to - from <= 31.days
+    AuthorizeNetReportingJob.perform_later(tenant_id: Current.tenant_id, connection_id: @connection.id,
+      setup_version: @connection.lock_version, from: from.utc.iso8601, to: to.utc.iso8601)
+    redirect_to pos_connection_path(@provider[:key]), notice: 'Reporting import queued. Refresh this page to see the result.'
+  rescue ArgumentError
+    redirect_to pos_connection_path(@provider[:key]), alert: 'Enter valid UTC dates for a reporting window of at most 31 days.'
+  end
 
   def update
     if @provider[:key] == 'ctrax' && ActiveModel::Type::Boolean.new.cast(params.dig(:pos_connection,
@@ -35,15 +67,19 @@ class PosConnectionsController < AuthenticatedController
   end
 
   def check_access
-    unless @connection.check_kind && @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
-      return redirect_to pos_connection_path(@provider[:key]),
-        alert: 'Save approved API credentials before checking API access.'
+    unless (@connection.check_kind || @provider[:key] == 'authorize_net_reporting') && @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
+      return redirect_to pos_connection_path(@provider[:key]), alert: 'Save approved API credentials before checking API access.'
     end
 
     setup_version = @connection.lock_version
     arguments = { credentials: @connection.credential_values }
     arguments[:environment] = @connection.environment if %w[authorize_net nmi].include?(@connection.check_kind)
-    result = checker.call(**arguments)
+    result = if @provider[:key] == 'authorize_net_reporting'
+      AuthorizeNetReporting::Check.call(connection: @connection)
+    else
+      checker.call(**arguments)
+    end
+    setup_version = @connection.lock_version if @provider[:key] == 'authorize_net_reporting'
     # A single conditional write avoids SQLite deferred read-to-write upgrades.
     # No database transaction is held while the provider request is in flight.
     updated = PosConnection.where(id: @connection.id, lock_version: setup_version).update_all(
@@ -64,7 +100,7 @@ class PosConnectionsController < AuthenticatedController
   def disconnect
     if @connection.persisted?
       updated = PosConnection.where(id: @connection.id, lock_version: @connection.lock_version).update_all(
-        credentials_json: '{}', hourly_sync_enabled: false, last_check_status: nil, last_check_message: nil, last_checked_at: nil,
+        credentials_json: '{}', hourly_sync_enabled: false, reporting_enabled: false, last_report_status: nil, last_report_message: nil, last_reported_at: nil, last_check_status: nil, last_check_message: nil, last_checked_at: nil,
         updated_by_id: Current.user.id, updated_at: Time.current, lock_version: @connection.lock_version + 1
       )
       if updated.zero?
@@ -123,10 +159,15 @@ class PosConnectionsController < AuthenticatedController
   def setup_params
     requested = params.require(:pos_connection)
     gateway = @provider[:key] == 'valmar' ? requested.fetch(:gateway, @connection.gateway) : @connection.gateway
-    keys = PosProviderCatalog.credential_keys(@provider[:key], gateway: gateway)
+    keys = if @provider[:key] == 'authorize_net_reporting'
+      requested.fetch(:reporting_auth_mode, @connection.reporting_auth_mode) == 'oauth' ? %w[client_id client_secret refresh_token] : %w[api_login_id transaction_key]
+    else
+      PosProviderCatalog.credential_keys(@provider[:key], gateway: gateway)
+    end
     requested.permit(:environment, :account_reference, :access_requested, :vendor_approved, :lock_version,
       *(@provider[:key] == 'ctrax' ? [:hourly_sync_enabled] : []),
-      *(@provider[:key] == 'valmar' ? [:gateway] : []), credential_secret: keys)
+      *(@provider[:key] == 'valmar' ? [:gateway] : []),
+      *(@provider[:key] == 'authorize_net_reporting' ? [:reporting_auth_mode, :reporting_enabled] : []), credential_secret: keys)
   end
 
   def handle_busy_database(error)

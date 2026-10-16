@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_010000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -362,6 +362,49 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_220000) do
     t.index ["tenant_id", "created_at"], name: "idx_api_tokens_tenant_created"
     t.index ["token_digest"], name: "index_api_access_tokens_on_token_digest", unique: true
     t.index ["user_id"], name: "index_api_access_tokens_on_user_id"
+  end
+
+  create_table "authorize_net_batches", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "environment", null: false
+    t.string "gateway_id", null: false
+    t.string "source_batch_id", null: false
+    t.datetime "settled_at"
+    t.string "settlement_state", null: false
+    t.string "payment_method"
+    t.json "statistics", default: [], null: false
+    t.datetime "observed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "environment", "gateway_id", "source_batch_id"], name: "idx_anet_batch_source", unique: true
+    t.index ["tenant_id"], name: "index_authorize_net_batches_on_tenant_id"
+  end
+
+  create_table "authorize_net_transactions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "environment", null: false
+    t.string "gateway_id", null: false
+    t.string "source_transaction_id", null: false
+    t.string "reference_transaction_id"
+    t.string "source_batch_id"
+    t.string "transaction_type", null: false
+    t.string "payment_status", null: false
+    t.datetime "submitted_at", null: false
+    t.datetime "settled_at"
+    t.string "settlement_state"
+    t.string "currency"
+    t.decimal "authorized_amount", precision: 19, scale: 4, null: false
+    t.decimal "settled_amount", precision: 19, scale: 4, null: false
+    t.decimal "tip_amount", precision: 19, scale: 4
+    t.decimal "surcharge_amount", precision: 19, scale: 4
+    t.string "market_type"
+    t.string "product"
+    t.datetime "observed_at", null: false
+    t.json "status_history", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "environment", "gateway_id", "source_transaction_id"], name: "idx_anet_transaction_source", unique: true
+    t.index ["tenant_id"], name: "index_authorize_net_transactions_on_tenant_id"
   end
 
   create_table "bulk_consumptions", force: :cascade do |t|
@@ -833,6 +876,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_220000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "hourly_sync_enabled", default: false, null: false
+    t.string "reporting_auth_mode", default: "api_key", null: false
+    t.boolean "reporting_enabled", default: false, null: false
+    t.datetime "last_reported_at"
+    t.string "last_report_status"
+    t.string "last_report_message"
     t.index ["tenant_id", "provider"], name: "index_pos_connections_on_tenant_id_and_provider", unique: true
     t.index ["updated_by_id"], name: "index_pos_connections_on_updated_by_id"
     t.check_constraint "environment IN ('sandbox', 'production')", name: "pos_connection_environment"
@@ -1348,6 +1396,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_220000) do
   add_foreign_key "WarehouseTier", "tenants", column: "tenantId"
   add_foreign_key "api_access_tokens", "tenants"
   add_foreign_key "api_access_tokens", "users"
+  add_foreign_key "authorize_net_batches", "tenants"
+  add_foreign_key "authorize_net_transactions", "tenants"
   add_foreign_key "bulk_consumptions", "bulk_lots"
   add_foreign_key "bulk_consumptions", "bulk_movements"
   add_foreign_key "bulk_consumptions", "bulk_recipes"

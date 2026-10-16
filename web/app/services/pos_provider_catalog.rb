@@ -3,6 +3,11 @@
 # Verified connection methods. Merchant login never implies API or terminal access.
 class PosProviderCatalog
   PROVIDERS = [
+    { key: 'authorize_net_reporting', name: 'Authorize.net reporting', relationship: 'Payment reconciliation', mode: 'api',
+      description: 'Read transaction status, refunds, voids and settlement batches without processing payments.',
+      website: 'https://account.authorize.net/', docs: 'https://developer.authorize.net/api/reference/features/transaction-reporting.html',
+      instructions: 'Use a read-scope OAuth application where available. OAuth registration requires partner access and merchant owner/admin consent. Alternatively, API Login ID and Transaction Key can read reports but also permit payment processing: they are not read-only credentials. Never rotate a live checkout key for this setup. Enter the numeric Gateway ID from your merchant account as the merchant reference. C-Trax remains the retail inventory reference.',
+      credentials: %w[api_login_id transaction_key] },
     { key: 'valmar', name: 'Valmar', relationship: 'Current processor described by the business', mode: 'vendor',
       description: 'Record the merchant account and actual gateway before choosing a payment adapter.',
       website: 'https://app.valmarpayments.com/', docs: 'https://vlmr.com/knowledge-base/',

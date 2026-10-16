@@ -7,8 +7,7 @@ class PosConnection < ApplicationRecord
   include TenantScoped
 
   GATEWAYS = %w[unconfirmed authorize_net nmi swipesimple other].freeze
-  SETUP_FIELDS = %w[environment account_reference gateway access_requested vendor_approved credentials_json
-                    hourly_sync_enabled].freeze
+  SETUP_FIELDS = %w[environment account_reference gateway access_requested vendor_approved credentials_json hourly_sync_enabled reporting_auth_mode reporting_enabled].freeze
 
   encrypts :credentials_json
   belongs_to :updated_by, class_name: 'User', optional: true
@@ -20,6 +19,8 @@ class PosConnection < ApplicationRecord
   validates :gateway, inclusion: { in: GATEWAYS }
   validates :account_reference, length: { maximum: 200 }
   validates :last_check_status, inclusion: { in: %w[verified failed] }, allow_nil: true
+  validates :reporting_auth_mode, inclusion: { in: %w[api_key oauth] }
+  validate :valid_reporting_setup
   validate :valid_credentials
   before_validation :invalidate_check_on_setup_change
 
@@ -28,6 +29,9 @@ class PosConnection < ApplicationRecord
   end
 
   def credential_keys
+    if provider == 'authorize_net_reporting'
+      return reporting_auth_mode == 'oauth' ? %w[client_id client_secret refresh_token] : %w[api_login_id transaction_key]
+    end
     PosProviderCatalog.credential_keys(provider, gateway: gateway)
   end
 
@@ -49,7 +53,7 @@ class PosConnection < ApplicationRecord
   def apply_setup(attributes, submitted_credentials)
     previous = credential_values
     assign_attributes(attributes)
-    previous = {} if environment_changed? || gateway_changed?
+    previous = {} if environment_changed? || gateway_changed? || reporting_auth_mode_changed?
     supplied = submitted_credentials.to_h.stringify_keys.slice(*credential_keys)
                                     .reject { |_key, value| value.blank? }
     values = previous.merge(supplied)
@@ -66,6 +70,8 @@ class PosConnection < ApplicationRecord
 
   def status_label
     return 'Setup changes not saved' if errors.any?
+
+    return 'Reporting access checked' if provider == 'authorize_net_reporting' && credentials_saved? && last_check_status == 'verified'
 
     if credentials_saved? && last_check_status == 'verified'
       return 'API credentials checked' if check_kind == 'authorize_net'
@@ -88,9 +94,23 @@ class PosConnection < ApplicationRecord
 
   private
 
+  def valid_reporting_setup
+    return unless provider == 'authorize_net_reporting'
+    if credential_values.any? || reporting_enabled
+      errors.add(:account_reference, 'must be the numeric Authorize.net Gateway ID') unless account_reference.to_s.match?(/\A[1-9][0-9]{0,29}\z/)
+    end
+    errors.add(:base, 'Save approved reporting credentials before enabling daily reconciliation.') if reporting_enabled && (!vendor_approved || !credentials_saved?)
+    if reporting_auth_mode == 'api_key' && credential_values.any?
+      errors.add(:base, 'Use an API Login ID of at most 25 characters and a Transaction Key of at most 16 characters.') if credential_values['api_login_id'].to_s.bytesize > 25 || credential_values['transaction_key'].to_s.bytesize > 16
+    end
+  end
+
   def invalidate_check_on_setup_change
     return unless SETUP_FIELDS.any? { |field| will_save_change_to_attribute?(field) }
 
+    self.last_report_status = nil
+    self.last_report_message = nil
+    self.last_reported_at = nil
     self.last_check_status = nil
     self.last_check_message = nil
     self.last_checked_at = nil

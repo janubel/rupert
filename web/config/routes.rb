@@ -246,6 +246,7 @@ Rails.application.routes.draw do
   resources :pos_connections, only: %i[index show update], param: :provider do
     member do
       post :check_access
+      post :import_reporting
       post :disconnect
       post :sync_stock
     end

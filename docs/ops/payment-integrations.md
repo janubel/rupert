@@ -8,6 +8,8 @@ Reviewed 2026-10-15. This release prepares provider accounts for later setup. It
 
 The business described C-Trax POS with a PAX terminal and Valmar processing, and Shopify website payments through Valmar. SwipeSimple was a proposed replacement option. KORONA and Cova were evaluation candidates. Square was a previous provider. These are business-reported relationships; they do not establish current merchant approval, supported hardware or a vendor support deadline.
 
+For gateway payment reconciliation, see the separate [Authorize.net read-only reporting connector](https://techmore.github.io/rupert/authorize-net-reporting.html). It adds transaction/batch imports with isolated encrypted credentials; existing provider checks below retain their narrower behavior.
+
 ## Implemented connection paths
 
 | Provider | Rupert setup now | What remains before operational use |

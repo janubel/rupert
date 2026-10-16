@@ -16,6 +16,10 @@ production:
     class: FulfillmentMonitorJob
     queue: default
     schedule: every 30 minutes
+  authorize_net_reporting:
+    class: AuthorizeNetReportingJob
+    queue: default
+    schedule: "20 6 * * * America/New_York"
   daily_store_close:
     class: OperationsBriefJob
     queue: default
