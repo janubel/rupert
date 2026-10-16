@@ -28,7 +28,8 @@ class User < ActiveRecord::Base
       cashier: 'cashier',
       inventory_employee: 'inventory_employee',
       reporting: 'reporting',
-      reader: 'reader'
+      reader: 'reader',
+      employee: 'employee'
     },
     default: :admin
 
@@ -95,6 +96,7 @@ class User < ActiveRecord::Base
       'leave.read',
       'leave.write'
     ],
+    'employee' => %w[timesheets.self],
     'cashier' => [
       'dashboard.read',
       'sales.read',
@@ -118,6 +120,7 @@ class User < ActiveRecord::Base
   }.freeze
 
   def can?(permission)
+    return true if permission.to_s == 'timesheets.self' && (effective_permissions.include?('timesheets.read') || TimeClockService.worker_for(self))
     perms = effective_permissions
     perms.include?('*') || perms.include?(permission.to_s)
   end
@@ -212,7 +215,7 @@ class User < ActiveRecord::Base
       },
       {
         area: 'Team',
-        permissions: ['users.read', 'users.write', 'hr.read', 'hr.write', 'timesheets.read', 'timesheets.write',
+        permissions: ['users.read', 'users.write', 'hr.read', 'hr.write', 'timesheets.read', 'timesheets.write', 'timesheets.self',
                       'leave.read', 'leave.write', 'payroll.read', 'payroll.write']
       }
     ]

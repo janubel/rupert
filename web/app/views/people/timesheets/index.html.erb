@@ -5,9 +5,10 @@
       <h1 class="page-title">Timesheets</h1>
       <p class="mt-1 text-sm text-mocha">Hours by week per employee, submitted for review.</p>
     </div>
-    <% if Current.user.can?("timesheets.write") %>
+    <% if policy(People::Timesheet).create? %>
       <%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %>
     <% end %>
+    <%= link_to "Employee app & installation", employee_app_path, class: "btn-ghost btn-sm" %>
   </section>
 
   <% if @awaiting.positive? %>
@@ -21,7 +22,9 @@
         <option value="<%= status %>" <%= @status == status.to_s ? "selected" : "" %>><%= status.to_s.titleize %></option>
       <% end %>
     </select>
-    <input type="date" name="period" value="<%= params[:period] %>" class="input w-auto" title="Week of">
+    <input type="date" name="period" value="<%= params[:period] %>" class="input w-auto" title="Week of" aria-label="Week of">
+    <%= link_to 'Export filtered CSV', people_timesheets_path(format: :csv, status: @status, period: @period), class: 'btn-ghost btn-sm' %>
+    <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
   <% end %>
 
   <div class="card overflow-hidden">
@@ -41,7 +44,7 @@
           <% end %>
           <% @timesheets.each do |timesheet| %>
             <tr class="hover:bg-cream">
-              <td class="td font-medium text-ink"><%= link_to timesheet.employee&.name, people_employee_path(timesheet.employee), class: "hover:text-olive hover:underline" %></td>
+              <td class="td font-medium text-ink"><%= timesheet.employee&.name %></td>
               <td class="td"><%= link_to timesheet.period_label, people_timesheet_path(timesheet), class: "text-olive hover:underline" %></td>
               <td class="td text-right text-mocha"><%= number_with_precision(timesheet.total_hours, precision: 1) %></td>
               <td class="td">
@@ -53,4 +56,5 @@
       </table>
     </div>
   </div>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
 </div>

@@ -100,7 +100,7 @@ class ModuleRegistry
     }, permission: 'hr.read', position: 87),
     Entry.new(key: 'timesheets', name: 'Timesheets', path: lambda {
       people_timesheets_path
-    }, permission: 'timesheets.read', position: 88),
+    }, permission: 'timesheets.self', position: 88),
     Entry.new(key: 'leave', name: 'Leave & PTO', path: lambda {
       people_leave_requests_path
     }, permission: 'leave.read', position: 89),

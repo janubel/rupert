@@ -1,0 +1,8 @@
+<% content_for :title, 'Employee access' %>
+<section class="card card-pad space-y-4">
+  <h1 class="page-title">Set up <%= @employee.name %>'s login</h1>
+  <p>Share this private link directly with the employee. It expires in 24 hours and works once. Creating another link replaces this one. It also allows an employee password reset.</p>
+  <label for="setup-link">Private setup link</label><input id="setup-link" class="input w-full" readonly value="<%= @setup_url %>" onclick="this.select()">
+  <p>The employee signs in with <strong><%= @employee.user.email %></strong>. After setup, use <%= link_to 'Employee app', employee_app_path, class: 'text-olive underline' %> on a phone or computer.</p>
+  <%= link_to 'Back to employee', people_employee_path(@employee), class: 'btn-ghost' %>
+</section>
