@@ -4,12 +4,16 @@ require 'test_helper'
 
 class SourceHealthTest < ActiveSupport::TestCase
   setup do
+    travel_to Time.current.change(usec: 0)
     Current.user = users(:regular_user)
     %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].each { |key| EnvStore.set(key, 'synthetic-present') }
     SyncQueueHealth.stubs(:worker).returns(state: 'Recent worker heartbeat', last_at: Time.current)
     SyncQueueHealth.stubs(:execution).returns(state: 'No retained queue receipt', retry_at: nil)
   end
-  teardown { Current.reset }
+  teardown do
+    travel_back
+    Current.reset
+  end
 
   def receipt(status, time:, operation: 'catalog', source: 'shopify', category: nil, finished: time)
     SyncAttempt.create!(source: source, operation: operation, status: status,
