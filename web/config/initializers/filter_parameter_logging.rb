@@ -28,3 +28,6 @@ Rails.application.config.filter_parameters += %i[report_file merchant_number acc
 Rails.application.config.filter_parameters += %i[gateway_id exported_at records_json payload invoice_number order_reference evidence_note]
 
 Rails.application.config.filter_parameters += %i[timesheet timesheet_entry clock_correction]
+
+# Customer contact details, conversation notes and follow-up titles are private.
+Rails.application.config.filter_parameters += %i[customer interaction follow_up]

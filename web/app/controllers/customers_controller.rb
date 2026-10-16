@@ -12,7 +12,7 @@ class CustomersController < AuthenticatedController
     @due_follow_ups = CustomerFollowUp.due.includes(:customer, :owner).order(:due_on, :id).limit(20)
     @due_count = CustomerFollowUp.due.count
     @owners = crm_owners
-    @pagy, @customers = pagy(@q.result.order(created_at: :desc, id: :desc), items: 25)
+    @pagy, @customers = pagy(@q.result.distinct.order(created_at: :desc, id: :desc), items: 25)
     # One grouped SUM + one grouped COUNT for the page instead of a lifetime-
     # value query and an orders COUNT per row (the view calls orders.size).
     ids = @customers.map(&:id)
@@ -77,7 +77,7 @@ class CustomersController < AuthenticatedController
 
   def export
     authorize(:module, :customers_write?)
-    records = filtered_customers.ransack(params[:q]).result.order(:id)
+    records = filtered_customers.ransack(params[:q]).result.distinct.order(:id)
     if records.count > 25_000
       return redirect_to(customers_path, alert: 'Narrow your filters to 25,000 profiles or fewer before exporting.')
     end
