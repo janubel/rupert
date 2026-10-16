@@ -22,6 +22,15 @@ Rails.application.routes.draw do
     get :document, on: :member
   end
 
+  get '/employee', to: 'employee_app#show', as: :employee_app
+  post '/employee/devices/:id/revoke', to: 'employee_app#revoke', as: :revoke_employee_device
+  get '/employee/privacy', to: 'employee_app#privacy', as: :employee_privacy
+  get '/employee/manifest.webmanifest', to: 'employee_app#manifest', as: :employee_manifest
+  get '/employee/service-worker.js', to: 'employee_app#service_worker'
+  get '/employee/setup', to: 'employee_access#edit', as: :employee_setup
+  patch '/employee/setup', to: 'employee_access#update'
+  post '/people/employees/:employee_id/access', to: 'employee_access#create', as: :employee_access
+
   get '/login', to: 'sessions#new', as: :login
   post '/login', to: 'sessions#create'
   delete '/logout', to: 'sessions#destroy', as: :logout
@@ -67,6 +76,21 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
+      post 'employee/session', to: 'employee_sessions#create'
+      get 'employee/session', to: 'employee_sessions#show'
+      delete 'employee/session', to: 'employee_sessions#destroy'
+      resources :employee_timesheets, path: 'employee/timesheets', only: %i[index show create update destroy] do
+        member do
+          post 'actions/:event', to: 'employee_timesheets#transition'
+          post 'entries', to: 'employee_timesheets#entry'
+          patch 'entries/:entry_id', to: 'employee_timesheets#entry'
+          delete 'entries/:entry_id', to: 'employee_timesheets#entry'
+        end
+      end
+      get 'employee/clock', to: 'employee_clock#index'
+      post 'employee/clock', to: 'employee_clock#create'
+      patch 'employee/clock/:id', to: 'employee_clock#update'
+      post 'employee/clock/:id/corrections', to: 'employee_clock#correction'
       get :catalog, to: 'catalog#index'
       get :inventory, to: 'inventory#index'
       get :roadmap, to: 'roadmap#index'
@@ -172,6 +196,8 @@ Rails.application.routes.draw do
         post :reopen
         post :add_entry
         post :remove_entry
+        patch :update_entry
+        post :import_shifts
       end
     end
     resources :leave_requests, only: %i[index show new create destroy] do

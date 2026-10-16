@@ -667,6 +667,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id", "provider", "kind"], name: "idx_directory_sync_identity", unique: true
   end
 
+  create_table "employee_access_grants", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "employee_id", null: false
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token_digest"], name: "index_employee_access_grants_on_token_digest", unique: true
+  end
+
+  create_table "employee_app_sessions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "employee_id", null: false
+    t.string "token_digest", null: false
+    t.string "password_fingerprint", null: false
+    t.string "device_name", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "user_id"], name: "index_employee_app_sessions_on_tenant_id_and_user_id"
+    t.index ["token_digest"], name: "index_employee_app_sessions_on_token_digest", unique: true
+  end
+
   create_table "employees", force: :cascade do |t|
     t.text "address"
     t.datetime "created_at", null: false
@@ -1612,6 +1639,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["subdomain"], name: "index_tenants_on_subdomain", unique: true
   end
 
+  create_table "timesheet_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "timesheet_id", null: false
+    t.bigint "user_id"
+    t.string "action", null: false
+    t.text "details"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_events_on_tenant_id_and_timesheet_id"
+  end
+
   create_table "timesheet_entries", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.decimal "hours", precision: 6, scale: 2, default: "0.0", null: false
@@ -1620,6 +1658,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.datetime "updated_at", null: false
     t.string "work_type", default: "regular", null: false
     t.date "worked_on", null: false
+    t.text "notes"
+    t.bigint "clock_shift_id"
+    t.index ["tenant_id", "clock_shift_id", "worked_on"], name: "idx_timesheet_shift_day", unique: true
     t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_entries_on_tenant_id_and_timesheet_id"
   end
 
@@ -1634,6 +1675,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.string "status", default: "draft", null: false
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
+    t.datetime "submitted_at"
+    t.text "review_note"
     t.index ["tenant_id", "employee_id", "period_start"], name: "index_timesheets_on_tenant_id_and_employee_id_and_period_start", unique: true
     t.index ["tenant_id", "status"], name: "index_timesheets_on_tenant_id_and_status"
   end

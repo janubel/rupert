@@ -1,0 +1,26 @@
+name: Employee mobile
+on:
+  push:
+    paths: ['mobile/**', '.github/workflows/employee-mobile.yml']
+  pull_request:
+    paths: ['mobile/**', '.github/workflows/employee-mobile.yml']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npx expo install --check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run export
