@@ -5,6 +5,11 @@
 # a method per permission.
 class ModulePolicy < ApplicationPolicy
   %i[
+    marketing_read
+    marketing_write
+    marketing_review
+    marketing_contacts
+    marketing_discounts
     dashboard_read
     sales_read
     sales_write

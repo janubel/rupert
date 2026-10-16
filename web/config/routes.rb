@@ -1,9 +1,52 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  resource :financial_close, only: %i[show create], controller: 'financial_close'
+  resource :cash_forecast, only: %i[show create]
+  resource :retention_drive, only: :show do
+    get :connect
+    post :sync
+    post :disconnect
+  end
+
+  resources :reconciliation_follow_ups, only: %i[index new create show update] do
+    get :overview, on: :collection
+  end
+  resources :reconciliation_documents, only: :index
+
+  resources :daily_reconciliations, only: %i[index create] do
+    member { get :document }
+    collection do
+      post :archive
+      post :review
+      post :withdraw
+      get 'native_document/:source/:id', action: :native_document, as: :native_document
+    end
+  end
   root to: 'home#index'
+  post '/source_syncs/:source', to: 'source_syncs#create', as: :source_sync
+  resources :authorize_net_portal_exports, only: %i[index create] do
+    get :document, on: :member
+  end
+
+  resources :square_timesheets, path: 'people/square_timesheets', controller: 'people/square_timesheets', only: %i[index show], as: :people_square_timesheets
 
   get '/employee', to: 'employee_app#show', as: :employee_app
+  scope '/employee/preview', controller: :employee_preview, as: :employee_preview do
+    get '/timesheets', action: :timesheets, as: :timesheets
+    get '/timesheets/:id', action: :timesheet, as: :timesheet
+    get '/pay', action: :pay, as: :pay
+    get '/time-clock', action: :time_clock, as: :time_clock
+    get '/time-off', action: :time_off, as: :time_off
+    get '/reports', action: :reports, as: :reports
+  end
+  get '/employee/reports', to: 'employee_workspace#reports', as: :employee_reports
+  get '/employee/time-off', to: 'employee_workspace#time_off', as: :employee_time_off
+  post '/employee/time-off', to: 'employee_workspace#request_time_off'
+  post '/employee/time-off/:id/cancel', to: 'employee_workspace#cancel_time_off', as: :cancel_employee_time_off
+  post '/employee/problems', to: 'employee_workspace#report_problem', as: :employee_problem
+  post '/employee/week', to: 'employee_app#week', as: :employee_week
+  get '/employee/devices', to: 'employee_app#devices', as: :employee_devices
   post '/employee/devices/:id/revoke', to: 'employee_app#revoke', as: :revoke_employee_device
   get '/employee/privacy', to: 'employee_app#privacy', as: :employee_privacy
   get '/employee/manifest.webmanifest', to: 'employee_app#manifest', as: :employee_manifest
@@ -60,6 +103,7 @@ Rails.application.routes.draw do
       post 'employee/session', to: 'employee_sessions#create'
       get 'employee/session', to: 'employee_sessions#show'
       delete 'employee/session', to: 'employee_sessions#destroy'
+      resources :employee_square_timecards, path: 'employee/square_timecards', only: %i[index show]
       resources :employee_timesheets, path: 'employee/timesheets', only: %i[index show create update destroy] do
         member do
           post 'actions/:event', to: 'employee_timesheets#transition'
@@ -98,7 +142,12 @@ Rails.application.routes.draw do
       post :refund
     end
   end
-  resources :customers, only: %i[index show new create edit update]
+  resources :customers, only: %i[index show new create edit update] do
+    post :sync_directory, on: :collection
+    get :export, on: :collection
+    resources :interactions, only: :create, controller: 'customer_interactions'
+    resources :follow_ups, only: %i[create update], controller: 'customer_follow_ups'
+  end
   namespace :projects do
     resources :projects, only: %i[index show new create edit update destroy] do
       member { post :transition }
@@ -125,6 +174,7 @@ Rails.application.routes.draw do
     end
   end
 
+  get 'stock_comparison', to: 'inventory#index'
   resources :inventory, only: :index do
     collection do
       get :pdf
@@ -161,7 +211,13 @@ Rails.application.routes.draw do
     end
   end
   namespace :people do
+    resources :work_reports, only: %i[index update]
     resources :employees, only: %i[index show new create edit update destroy] do
+      post :add_pay_rate, on: :member
+      post :set_leave_allowance, on: :member
+      post :sync_directory, on: :collection
+      get :consolidation, on: :collection
+      post :consolidate, on: :collection
       member { post :transition }
     end
     resources :departments, only: %i[index new create edit update]
@@ -231,6 +287,7 @@ Rails.application.routes.draw do
   post '/time_clock/corrections/:id/reject', to: 'time_clock#reject_correction', as: :reject_correction_time_clock
   get '/time_clock/commissions', to: 'time_clock#commissions', as: :commission_preview_time_clock
   resources :reconcile, only: :index
+  resources :money_reconciliations, only: %i[index create]
   resources :reports, only: [:index] do
     collection do
       get :register_summary
@@ -264,6 +321,8 @@ Rails.application.routes.draw do
   end
   get '/system', to: 'system#index', as: :system
   get '/connections', to: 'connections#index', as: :connections
+  get '/connections/:service/edit', to: 'connections#edit', as: :edit_connection
+  patch '/connections/:service', to: 'connections#update', as: :connection
   resources :owner_checklists, only: %i[index new create show edit update] do
     member do
       get :print
@@ -276,9 +335,37 @@ Rails.application.routes.draw do
   resources :pos_connections, only: %i[index show update], param: :provider do
     member do
       post :check_access
+      post :import_reporting
+      post :import_iris_csv
       post :disconnect
+      post :sync_stock
     end
   end
+  resources :ctrax_stock, only: :index
+  get '/pos_settings/:location_id', to: 'pos_settings#show', as: :pos_setting
+  patch '/pos_settings/:location_id', to: 'pos_settings#update'
+  post '/pos_settings/:location_id/verify', to: 'pos_settings#verify', as: :verify_pos_setting
+  resources :pos_checkouts, only: %i[create show] do
+    post :cancel, on: :member
+    post :reconcile, on: :member
+  end
+  get '/customer_display/payment_config', to: 'customer_displays#payment_config', as: :customer_payment_config
+  post '/customer_display/pay', to: 'customer_displays#pay', as: :customer_pay
+  resources :ctrax_days, only: %i[index show create] do
+    member { post :review }
+  end
+  get '/ctrax_pos', to: 'ctrax_pos#index', as: :ctrax_pos
+  post '/ctrax_pos/:location_id/quote', to: 'ctrax_pos#quote', as: :quote_ctrax_pos
+  post '/ctrax_pos/:location_id/images/:variant_id', to: 'ctrax_pos#image', as: :ctrax_pos_image
+  resources :pos_displays, only: %i[create show destroy] do
+    member do
+      get :demo
+      post :clear
+    end
+  end
+  get '/customer_display', to: 'customer_displays#show', as: :customer_display
+  get '/customer_display/state', to: 'customer_displays#state', as: :customer_display_state
+  post '/customer_display/tip', to: 'customer_displays#tip', as: :customer_display_tip
   resources :inventory_exceptions, only: :index
   resources :bulk_recipes, only: %i[index new create]
   resources :bulk_consumptions, only: %i[index new create] do
@@ -290,6 +377,11 @@ Rails.application.routes.draw do
   get '/activity', to: 'activity#index', as: :activity
   resources :access_logs, only: :index
   get '/live/sync_status', to: 'live#sync_status'
+  resources :authorize_net_sale_links, only: %i[index create] do
+    member { post :revoke }
+  end
+  get '/live/commissions', to: 'live_commissions#show', as: :live_commissions
+  post '/webhooks/authorize_net/:connection_id', to: 'authorize_net_webhooks#create', as: :authorize_net_webhook
 
   resource :settings, only: :show do
     post :tenant
@@ -349,6 +441,54 @@ Rails.application.routes.draw do
   post '/w/:token/checkout', to: 'warehouse_checkouts#create', as: :warehouse_checkout_submit
 
   get '/w/:token/orders/:order_number', to: 'warehouse_orders#show', as: :warehouse_order
+
+  get '/marketing', to: 'marketing/workspace#index', as: :marketing
+  post '/marketing/toggle', to: 'marketing/workspace#toggle', as: :marketing_toggle
+  namespace :marketing do
+    resources :influencers, only: %i[index show new create edit update] do
+      resources :engagements, only: %i[new create]
+      resources :interactions, only: [:create]
+    end
+    resources :engagements, only: %i[show edit update] do
+      post :copy, on: :member
+      resources :shopify_discounts, only: %i[new create show] do
+        member do
+          post :activate
+          post :refresh
+        end
+      end
+      resources :offers, controller: 'influencer_offers', only: %i[new create edit update] do
+        member do
+          post :verify
+          post :copy
+        end
+      end
+      resources :product_gifts, only: %i[new create]
+      resources :documents, only: %i[new create]
+    end
+    resources :product_gifts, only: %i[show edit update] do
+      member do
+        post :item
+        post :transition
+      end
+    end
+    resources :documents, only: %i[show edit update] do
+      post :review, on: :member
+    end
+    resources :campaigns, only: %i[new create edit update]
+    resources :communities, only: %i[new create edit update] do
+      post :check_rules, on: :member
+    end
+    resources :offers, only: %i[new create edit update] do
+      post :verify, on: :member
+    end
+    resources :threads, only: %i[new create edit update] do
+      post :check_context, on: :member
+    end
+    resources :replies, only: %i[new create show update] do
+      post :transition, on: :member
+    end
+  end
 
   get '/up', to: proc { [200, { 'content-type' => 'text/plain' }, ['OK']] }
 

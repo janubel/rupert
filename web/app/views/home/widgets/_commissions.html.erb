@@ -1,0 +1,5 @@
+<div data-controller="live-report" data-live-report-interval-value="30000">
+  <%= turbo_frame_tag 'live-commissions', src: live_commissions_path, loading: :lazy do %>
+    <section class="card card-pad"><h2 class="font-display text-xl">Shift commissions · today</h2><p>Loading today's 1% estimate…</p></section>
+  <% end %>
+</div>

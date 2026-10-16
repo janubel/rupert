@@ -22,6 +22,7 @@ class ShopifyVariant < ApplicationRecord
   has_many :levels, class_name: 'InventoryLevel', foreign_key: 'shopifyVariantId'
 
   scope :tracked, -> { where(tracked: true) }
+  scope :current_catalog, -> { where(catalog_present: true).where(productId: ShopifyProduct.where(status: 'ACTIVE', catalog_present: true).select(:id)) }
   scope :search, lambda { |q|
     return all if q.blank?
 

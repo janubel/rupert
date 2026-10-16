@@ -2,12 +2,12 @@
 <div class="mx-auto max-w-sm pt-10">
   <div class="card card-pad">
     <div class="mb-6 text-center">
-      <span class="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-olive font-display text-xl text-cream">R</span>
+      <%= render "shared/rupert_face", size: 96, css_class: "mx-auto mb-3" %>
       <h1 class="font-display text-2xl text-ink">Rupert</h1>
       <p class="mt-1 text-sm text-mocha">Sign in to continue</p>
       <p class="mt-3 rounded-xl bg-haze px-3 py-2 text-left text-xs leading-relaxed text-mocha">
         <span class="font-semibold text-ink">First time here?</span>
-        Sign in with Google if your company domain is enabled — you'll get a reader account automatically. Otherwise, ask your admin to grant you access.
+        Sign in with Google if your company domain is enabled — you'll get a employee account automatically. Otherwise, ask your admin to grant you access.
       </p>
       <p class="mt-3 text-sm text-mocha"><%= link_to "Request a private company workspace", signup_path, class: "font-semibold text-olive hover:underline" %></p>
     </div>

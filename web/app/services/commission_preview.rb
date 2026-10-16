@@ -10,7 +10,7 @@ class CommissionPreview
   MAX_ORDERS = 5000
   MAX_SHIFTS = 1000
 
-  attr_reader :rows, :eligible_orders, :excluded_orders, :source, :currency, :start_date, :end_date
+  attr_reader :gateway_matched_orders, :gateway_excluded_orders, :rows, :eligible_orders, :excluded_orders, :source, :currency, :start_date, :end_date
 
   def initialize(start_date:, end_date:, source:, currency:)
     @start_date = Date.iso8601(start_date.to_s)
@@ -37,6 +37,14 @@ class CommissionPreview
 
     ids = orders.map(&:id)
     paid = Core::Payment.completed.where(order_id: ids).group(:order_id).sum(:amount_cents)
+    gateway_links = AuthorizeNetSaleLink.active.where(order_id: ids).includes(:order, :authorize_net_transaction).index_by(&:order_id)
+    @gateway_matched_orders = gateway_links.size
+    @gateway_excluded_orders = 0
+    gateway_links.each do |order_id, link|
+      eligible = link.eligible_payment?
+      @gateway_excluded_orders += 1 unless eligible
+      paid[order_id] = eligible ? link.order.gross_cents : 0
+    end
     refunds = Core::Refund.where(order_id: ids).distinct.pluck(:order_id).to_set
     bases = Core::OrderLine.where(order_id: ids).where('quantity > 0 AND unit_cents >= 0').group(:order_id).sum('unit_cents * quantity')
     invalid_lines = Core::OrderLine.where(order_id: ids)

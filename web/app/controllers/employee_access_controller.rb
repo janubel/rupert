@@ -8,6 +8,7 @@ class EmployeeAccessController < ApplicationController
     raise Pundit::NotAuthorizedError unless Current.user.can_manage_accounts? && Current.user.can?('hr.write')
     @employee = People::Employee.find(params[:employee_id])
     token = EmployeeAccessGrant.issue!(@employee)
+    @employee.reload
     @setup_url = employee_setup_url(token: token)
     ActivityLogger.log('employee_access_link_created', subject: @employee)
     render :created
@@ -36,7 +37,7 @@ class EmployeeAccessController < ApplicationController
     reset_session
     session[:user_id] = grant.user_id
     session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(grant.user.password_digest)
-    redirect_to people_timesheets_path, notice: 'Your password is set. Use this account on the web or in the Rupert app.'
+    redirect_to employee_app_path, notice: 'Your password is set. Welcome to your time workspace.'
   rescue ActiveRecord::RecordInvalid => e
     @grant = grant
     flash.now[:alert] = e.record.errors.full_messages.to_sentence

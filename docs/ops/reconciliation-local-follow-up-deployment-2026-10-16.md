@@ -1,0 +1,17 @@
+# Local follow-up and original-review UX — October 16, 2026
+
+[PR #62](https://github.com/techmore/rupert/pull/62) deployed application revision `b3606fe069851f259007190e4186b4f8384bafe0` to SER8 after the employee security rollout. It preserves complete prior release `2aa3f02669c002ea6fadb98f4015647f96eb562d`, including security revision `dd8981025976ba6c2d8969d45ff7a8848a475aa0` and the stock readability update. This pass adds no migrations or account/authentication changes. Later receipt changes are documentation only.
+
+**Track missing report** now makes the local-only action explicit: saving a request or progress note sends no email or message. Today, Tomorrow and In 3 days buttons set a next-check date using Rupert's Eastern date. An overdue form can save its required progress note and return directly to the overdue queue; invalid/stale edits stay on the form with entered text preserved.
+
+Matching-original cards show filename, covered period, retention date and download/select actions. Selecting an original changes the form only. After a requested upload, a matching original is suggested for review; saving a progress note links it. Nonmatching or foreign suggestions cannot change the link. Uploading does not change status, close work or certify source totals. The latest four matching originals are shown as cards, with the full recent set retained in the selector.
+
+Validation:
+
+- Exact combined Rails and employee-mobile CI passed. PostgreSQL: 1,332 tests / 9,884 assertions, zero failures/errors and two adapter-specific skips. SQLite: 1,332 tests / 9,899 assertions, zero failures/errors/skips. RuboCop: 692 clean files. [Rails run](https://github.com/techmore/rupert/actions/runs/38894832045); [mobile run](https://github.com/techmore/rupert/actions/runs/38894832043).
+- Focused integration/model/security checks passed: 19 tests / 264 assertions. Tracking/progress operations sent no mail or queued jobs; requested uploads stayed unlinked and open until explicit progress was saved. Foreign evidence suggestions were excluded. Server-side note, scope and stale-edit validation remains authoritative.
+- Desktop/390px phone preview verified date changes, original selection, retained notes/links and return-to-overdue behavior using synthetic data. Live read-only tracking forms, date controls and pending Drive state passed; no production test requests were created.
+- Consistent private production-copy rehearsal preserved every table count, verified daily/library/overview/form rendering, the new controller manifest, original decryption, archive replay and rollback of synthetic probes. One verified manifest was selected; public health returned HTTP 200 and web/jobs were active on clean source.
+- 50 eligible retained originals/report versions passed checksums. Consistent saved-key restoration verified originals, follow-up history and library/report/overview queries. The encrypted off-host checkpoint passed decryption and every archive-member checksum and was pushed to the owner-verified private backup destination.
+
+**No emails were sent by this task.** Only owner-authorized Codex deployment coordination was used. Google Drive remains pending; no consent, credential, cloud-folder or upload changes were made. Existing local originals remain encrypted and available. See the [workflow guide](daily-reconciliation-retention.md) and [prior priority-action receipt](reconciliation-priority-actions-deployment-2026-10-16.md). Private files, employee links and runtime keys remain outside public Git.

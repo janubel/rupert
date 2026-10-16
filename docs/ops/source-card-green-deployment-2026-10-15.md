@@ -1,0 +1,12 @@
+# Pastel green source cards deployed — October 15, 2026
+
+The owner requested committing/pushing the green-card change and deploying it to SER8. Source review remains in [PR #59](https://github.com/techmore/rupert/pull/59); this request did not merge that PR.
+
+- Deployed revision: `2dec8607077c4d3658bd99e0b659bae6a8bd20f7`, published on `codex/ser8-source-cards-green`. It preserves the complete running `e1fd022980a80ce7078297625f1019f622fe4b41` release, including the newer SwipeSimple website connector and Shopify/deposit/Google backup cards. Earlier attempts stopped at revision guards when other windows advanced SER8; no older checkout replaced their work.
+- Relative to that live base, only the source-card partial and component CSS change. Live, Healthy, Syncing and Files current use a light pastel green gradient/fern border. Other states retain the existing light pastel red tone and visible status labels. Source acquisition, schedules, credentials and permissions are unchanged.
+- The combined release passed isolated SQLite source-card integration tests: 8 tests, 55 assertions, no failures/errors/skips. Production Tailwind and asset precompilation passed from the same application sources. The prior public assets/manifests and a consistent SQLite backup were retained privately before activation.
+- Production rendering verified all six cards: C-Trax, SwipeSimple and Shopify were Live and green; Authorize.net Portal snapshot, deposit Portal imports and Google backup Needs connection were red at verification time. These statuses can change as the underlying sources change.
+- Public health returned HTTP 200. The application references the new fingerprinted stylesheet, which serves both active/inactive rules. Web/jobs are active and the deployed checkout is clean. SQLite integrity/foreign-key checks passed; schema versions and every pre-deployment SwipeSimple source document/row were retained.
+- The CSV inbox environment setting is absent in the configuration used by both restarted services. The production CSV intake job returned disabled with zero imports. This styling deployment does not alter the website-pull configuration installed by the separate workstream or enable a feed.
+
+No migration, payment operation, merchant-setting change, invoice delivery or inventory update was performed. This receipt is a later documentation commit; the deployed application revision is the one recorded above.

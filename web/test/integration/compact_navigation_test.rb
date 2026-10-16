@@ -18,15 +18,16 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'nav[aria-label="Module areas"] a svg[aria-hidden="true"][focusable="false"]'
     assert_select 'button.nav-utility[aria-label="Search"][title] svg'
     assert_select 'button[aria-haspopup="menu"][aria-label^="Account menu for "]'
-    assert_select 'header img', count: 0
+    assert_select 'header img', count: 1
+    assert_select 'header a.app-brand[aria-label="Rupert start page"] img[alt=""][width="40"][height="40"]', count: 1
     assert_select 'header .account-menu', text: /Store administrator/
   end
 
   test 'stock tools use one disclosure with labelled links and current page' do
     get inventory_index_path
     assert_select 'nav[aria-label="Module"] details[data-controller="navigation-menu"]', count: 1
-    assert_select 'nav[aria-label="Module"] summary[aria-label="Stock tools; current page Inventory"]'
-    assert_select 'nav[aria-label="Module"] .module-menu-panel a[aria-current="page"]', text: 'Inventory'
+    assert_select 'nav[aria-label="Module"] summary[aria-label="Stock tools; current page Stock comparison"]'
+    assert_select 'nav[aria-label="Module"] .module-menu-panel a[aria-current="page"]', text: 'Stock comparison'
     assert_select 'nav[aria-label="Module"] .module-menu-panel a', text: 'Locations'
     assert_select 'nav[aria-label="Module"] > a', count: 0
   end

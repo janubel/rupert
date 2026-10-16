@@ -19,7 +19,7 @@ class InventoryCountTest < ActiveSupport::TestCase
     InventoryLevel.create!(source: 'shopify', locationId: @location.id,
       shopifyVariantId: @shopify_variant.id, quantity: 10, tenant_id: @tenant.id)
 
-    @count = InventoryCount.create!(countedAt: Time.current, createdBy: 'tester',
+    @count = InventoryCount.create!(countedAt: Time.current, createdBy: 'tester', locationId: @location.id,
       tenant_id: @tenant.id)
     @item = @count.items.create!(sku: 'WIDGET-S', quantity: 7, tenant_id: @tenant.id)
   end
@@ -43,7 +43,9 @@ class InventoryCountTest < ActiveSupport::TestCase
     @item.reload
     assert_equal 10, @item.previousQuantity
     assert_equal @shopify_variant.id, @item.shopifyVariantId
-    assert_equal @square_variation.id, @item.squareVariationId
+    assert_nil @item.squareVariationId
+    assert_equal @location.id, @item.comparison['location_id']
+    assert_equal 'shopify', @item.comparison['source']
   end
 
   test 'approving a count is record-only: no override, no movements' do
@@ -74,7 +76,9 @@ class InventoryCountTest < ActiveSupport::TestCase
   test 'unlinked skus are snapshotted but not applied' do
     item = @count.items.create!(sku: 'UNLINKED', quantity: 3, tenant_id: @tenant.id)
     @count.snapshot_previous!
-    assert_equal 0, item.reload.previousQuantity
+    assert_nil item.reload.previousQuantity
+    assert_nil item.delta
+    assert_equal 'unavailable', item.comparison['status']
     assert_nil item.shopifyVariantId
 
     @count.submit!

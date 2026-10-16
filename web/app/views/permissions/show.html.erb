@@ -5,6 +5,7 @@
     <div>
       <h1 class="page-title">Permissions</h1>
       <p class="mt-1 text-sm text-mocha">What each role can do. Super admin always has full access; overrides below replace a role's built-in defaults.</p>
+      <p class="mt-1 text-sm text-mocha">Employee access is fixed to POS and their own time records and cannot be expanded by overrides.</p>
     </div>
     <div class="flex gap-2">
       <% if can_manage_accounts %>
@@ -46,7 +47,9 @@
                         @builtin.fetch(role, []).include?(permission) || @builtin.fetch(role, []).include?("*")
                       end %>
                     <td class="td text-center">
-                      <% if @builtin.fetch(role, []).include?("*") %>
+                      <% if role == 'employee' %>
+                        <span class="text-taupe" title="Employee — POS and own time records"><%= @builtin.fetch('employee').include?(permission) ? '✓' : '—' %></span>
+                      <% elsif @builtin.fetch(role, []).include?("*") %>
                         <span class="text-taupe" title="Super admin — always allowed">—</span>
                       <% else %>
                         <input type="checkbox" name="roles[<%= role %>][<%= permission %>]" value="1" <%= checked ? "checked" : "" %> class="accent-olive" <%= "disabled" unless can_manage_accounts %>>

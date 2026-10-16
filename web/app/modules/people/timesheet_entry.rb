@@ -14,6 +14,7 @@ module People
     belongs_to :clock_shift, optional: true
     validates :notes, length: { maximum: 1000 }
     validate :valid_time_record
+    validate :square_history_overlap
     validates :worked_on, presence: true
     validates :hours, numericality: { greater_than: 0, less_than_or_equal_to: 24 }
     validates :work_type, inclusion: { in: WORK_TYPES }
@@ -23,6 +24,16 @@ module People
     scope :ordered, -> { order(:worked_on, :id) }
 
     private
+
+    def square_history_overlap
+      return unless timesheet && worked_on && %w[regular overtime].include?(work_type)
+
+      from = clock_shift&.started_at || worked_on.in_time_zone
+      to = clock_shift&.ended_at || (worked_on + 1).in_time_zone
+      if SquareTimecard.overlapping(timesheet.employee_id, from, to).exists?
+        errors.add(:base, 'Square hours already cover this date or shift. Use non-overlapping clock shifts or request a correction for review.')
+      end
+    end
 
     def valid_time_record
       return unless timesheet

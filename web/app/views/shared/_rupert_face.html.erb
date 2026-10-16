@@ -1,0 +1,5 @@
+<%= image_tag "/branding/rupert-#{size > 40 ? 192 : 80}.png?v=1",
+      srcset: '/branding/rupert-80.png?v=1 80w, /branding/rupert-192.png?v=1 192w, /icon.png?v=rupert-dog-1 512w',
+      sizes: "#{size}px", width: size, height: size, alt: '',
+      class: local_assigns[:css_class],
+      style: "display:block;width:#{size}px;height:#{size}px;object-fit:contain;flex-shrink:0" %>

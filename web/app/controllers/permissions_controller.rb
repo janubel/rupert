@@ -22,6 +22,7 @@ class PermissionsController < AuthenticatedController
     valid_roles = User.roles.keys
     params[:roles].to_unsafe_h.each do |role, perms|
       next unless valid_roles.include?(role.to_s)
+      next if role.to_s == 'employee'
 
       enabled = perms.is_a?(Hash) ? perms.keys : Array(perms)
       RolePermission.where(tenant_id: Current.tenant_id, role: role).delete_all

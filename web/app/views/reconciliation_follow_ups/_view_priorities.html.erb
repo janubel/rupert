@@ -1,0 +1,21 @@
+<section class="card card-pad space-y-4" aria-label="Priorities in this filtered view">
+  <div><h2 class="font-display text-xl">Work this view<%= " · #{@day.strftime('%b %-d, %Y')}" if @day %></h2><p class="mt-1 text-sm text-mocha">These priorities use every selected filter across all result pages. A monthly request can cover several business days.</p></div>
+  <% if @day %><nav class="flex flex-wrap gap-2" aria-label="Move between covered business days">
+    <%= link_to 'Previous day', reconciliation_follow_ups_path(@queue_filters.merge(day: (@day - 1).iso8601)), class: 'btn-ghost btn-sm' %>
+    <%= link_to 'Next day', reconciliation_follow_ups_path(@queue_filters.merge(day: (@day + 1).iso8601)), class: 'btn-ghost btn-sm' %>
+    <%= link_to 'All dates with these filters', reconciliation_follow_ups_path(@queue_filters.except(:day)), class: 'btn-ghost btn-sm' %>
+    <%= link_to 'Check this financial close', financial_close_path(day: @day.iso8601), class: 'btn-ghost btn-sm' %>
+    <%= link_to 'Plan cash from this day', cash_forecast_path(day: @day.iso8601), class: 'btn-ghost btn-sm' %>
+  </nav><% end %>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <% [['Overdue follow-ups', @view_overdue_count, @view_next_overdue], ['Missing reports without a linked original', @view_missing_count, @view_next_missing]].each do |label, count, item| %>
+      <article class="min-w-0 rounded-xl border p-4 space-y-2 <%= count.positive? ? 'border-amber-300 bg-amber-50' : 'border-fog' %>">
+        <h3 class="text-sm font-semibold"><%= label %></h3><p class="font-display text-2xl"><%= count %></p>
+        <% if item %><p class="break-words text-sm font-semibold"><%= item.title %></p><p class="text-xs"><%= reconciliation_due_label(item) %> · <%= item.owner&.display_name || 'Needs an owner' %> · <%= reconciliation_source(item.source) %></p>
+          <div class="flex flex-wrap gap-2"><%= link_to Current.user.can?('reports.write') ? 'Work earliest due' : 'Review earliest due', reconciliation_follow_up_path(item, close_day: @day&.iso8601, queue: @queue_filters, anchor: Current.user.can?('reports.write') ? 'record-progress' : nil), class: 'btn-primary btn-sm' %><% unless item.document_id %><%= link_to 'Find retained original', reconciliation_documents_path(reconciliation_library_request_context(item, @day)), class: 'btn-ghost btn-sm' %><% end %></div>
+        <% else %><p class="text-xs text-mocha">None among the open or waiting requests in this view. Other dates or filters may still have work.</p><% end %>
+      </article>
+    <% end %>
+  </div>
+  <p class="text-xs text-mocha">Saved requests do not include every missing close report. Review close checks before deciding a day is ready. The shortcuts below switch to all dates.</p>
+</section>

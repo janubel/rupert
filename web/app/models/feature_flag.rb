@@ -4,7 +4,8 @@
 # Setting value is "1" (absent = off), so new features ship disabled by default.
 class FeatureFlag
   FLAGS = {
-    fulfillment_workflow: 'fulfillment_workflow_enabled'
+    fulfillment_workflow: 'fulfillment_workflow_enabled',
+    marketing: 'marketing_enabled'
   }.freeze
 
   class << self

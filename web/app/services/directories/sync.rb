@@ -1,0 +1,217 @@
+# frozen_string_literal: true
+
+require 'digest'
+
+module Directories
+  # Read complete native directories, validate them, then publish atomically.
+  # Native identities are kept separate; contact details never imply identity.
+  class Sync
+    class Error < StandardError
+      def initialize
+        super('Directory read failed or was incomplete. Previous records were retained; check source access and retry.')
+      end
+    end
+
+    class Busy < StandardError; end
+    PAIRS = { 'ctrax' => %w[customers employees], 'shopify' => %w[customers employees], 'square' => %w[customers employees], 'swipesimple' => %w[customers employees] }.freeze
+
+    def self.available?(provider)
+      return false unless Current.tenant&.status == 'active'
+      case provider
+      when 'ctrax', 'swipesimple'
+        connection = PosConnection.find_by(provider: provider)
+        connection&.vendor_approved && connection.credentials_saved?
+      when 'shopify'
+        %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].all? { |key| EnvStore.fetch(key, '').present? }
+      when 'square'
+        SquareClient.configured?
+      else false
+      end
+    end
+
+    def self.call(provider:, kind:)
+      new(provider, kind).call
+    end
+
+    def initialize(provider, kind)
+      @provider, @kind = provider, kind
+      raise Error unless PAIRS.fetch(provider, []).include?(kind) && self.class.available?(provider)
+    end
+
+    def call
+      state = DirectorySyncState.find_or_create_by!(provider: @provider, kind: @kind)
+      token = SecureRandom.hex(24)
+      started = Time.current
+      state.with_lock do
+        raise Busy, 'This directory is already syncing.' if state.status == 'running' && state.started_at && state.started_at > 15.minutes.ago
+
+        state.update!(status: 'running', attempt_token: token, started_at: started, finished_at: nil, error: nil)
+      end
+      fingerprint = credentials_fingerprint
+      rows = fetch_rows
+      records = rows.map { |row| normalize(row) }
+      raise Error unless records.map { |row| row[:external_id] }.uniq.size == records.size
+
+      state.with_lock do
+        raise Error unless state.attempt_token == token && Tenant.exists?(id: Current.tenant_id, status: 'active') && fingerprint == credentials_fingerprint && self.class.available?(@provider)
+
+        Tenant.where(id: Current.tenant_id).update_all('updated_at = updated_at') if @kind == 'employees'
+
+        records.each do |attributes|
+          if @kind == 'employees'
+            publish_employee(attributes, started)
+          else
+            record = Core::Customer.find_or_initialize_by(source: @provider, external_id: attributes.fetch(:external_id))
+            record.update!(attributes.merge(source_synced_at: started))
+          end
+        end
+        # Absence from a source roster is not an HR termination or a deletion.
+        if @kind == 'employees'
+          EmployeeSourceIdentity.where(source: @provider).where.not(external_id: records.map { |row| row[:external_id] })
+            .update_all(source_active: false, source_synced_at: started)
+          People::Employee.where(source: @provider).where.not(external_id: records.map { |row| row[:external_id] }).update_all(source_active: false)
+        end
+        state.update!(status: 'success', record_count: records.size, finished_at: Time.current,
+          last_success_at: started, error: nil)
+      end
+      records.size
+    rescue Busy
+      raise
+    rescue StandardError
+      if state && token
+        DirectorySyncState.where(id: state.id, attempt_token: token).update_all(status: 'failed',
+          finished_at: Time.current, error: Error.new.message, updated_at: Time.current)
+      end
+      raise Error
+    end
+
+    private
+
+    def publish_employee(attributes, started)
+      identity = EmployeeSourceIdentity.find_or_initialize_by(source: @provider, external_id: attributes.fetch(:external_id))
+      if identity.new_record?
+        employee = People::Employee.find_or_initialize_by(source: @provider, external_id: attributes.fetch(:external_id))
+        employee.assign_attributes(attributes.merge(employment_type: 'unspecified')) if employee.new_record?
+        employee.save!
+        identity.employee = employee
+      end
+      identity.update!(attributes.merge(source_synced_at: started))
+      # Native snapshots refresh; manually curated names, contact details, HR
+      # terms and login emails on the canonical person remain under HR control.
+      People::Employee.where(id: identity.employee_id, source: @provider, external_id: identity.external_id)
+        .update_all(source_active: attributes[:source_active], source_synced_at: started)
+    end
+
+    def credentials_fingerprint
+      EnvStore.clear_cache!
+      values = if %w[ctrax swipesimple].include?(@provider)
+        connection = PosConnection.find_by!(provider: @provider)
+        [connection.id, connection.account_reference, connection.vendor_approved, connection.credential_values]
+      elsif @provider == 'square'
+        [SquareClient.token, SquareClient.environment]
+      else
+        %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].map { |key| EnvStore.fetch(key, '') }
+      end
+      Digest::SHA256.hexdigest(values.to_json)
+    end
+
+    def fetch_rows
+      return (@kind == 'customers' ? ShopifyCustomers.fetch : ShopifyStaff.fetch) if @provider == 'shopify'
+      return SquareDirectory.fetch(@kind) if @provider == 'square'
+
+      if @provider == 'swipesimple'
+        connection = PosConnection.find_by!(provider: @provider)
+        credentials = connection.credential_values
+        company_id = connection.account_reference
+        begin
+          return SwipesimpleDirectory.new(credentials, company_id: company_id).fetch_directory(@kind)
+        rescue SwipesimpleWeb::Client::Error => error
+          if error.login_required?
+            connection.with_lock do
+              if connection.credential_values == credentials && connection.account_reference == company_id
+                connection.update_columns(reporting_enabled: false, last_report_status: 'needs_login', last_report_message: error.message, updated_at: Time.current, lock_version: connection.lock_version + 1)
+              end
+            end
+          end
+          raise Error
+        end
+      end
+
+      @credentials = PosConnection.find_by!(provider: 'ctrax').credential_values
+      client = Ctrax::Client.new(@credentials)
+      return client.customers if @kind == 'customers'
+
+      client.stores.flat_map { |store| client.employees(store[:id]) }
+        .reject { |row| row['is_superuser'] == true } # C-Trax platform/support accounts are not store employees.
+        .group_by { |row| row.fetch('id').to_s }.values.map do |copies|
+          raise Error unless copies.map { |row| row.slice('first_name', 'last_name', 'email', 'deleted_at') }.uniq.one?
+
+          copies.first
+        end
+    end
+
+    def normalize(row)
+      raise Error unless row.is_a?(Hash)
+
+      if @provider == 'swipesimple'
+        attributes = { external_id: text(row.fetch('id'), 255), first_name: text(row['first_name']), last_name: text(row['last_name']),
+          email: text(row['email']), phone: text(row['phone']) }
+        if @kind == 'employees'
+          attributes[:source_active] = nil # The native user grid does not report account status.
+          employee_names(attributes)
+        end
+        attributes
+      elsif @provider == 'square'
+        attributes = { external_id: text(row.fetch('id'), 255), first_name: text(row['given_name']), last_name: text(row['family_name']),
+          email: text(row['email_address']), phone: text(row['phone_number']) }
+        if @kind == 'customers'
+          attributes[:first_name] ||= text(row['company_name'])
+        else
+          raise Error unless %w[ACTIVE INACTIVE].include?(row['status'])
+
+          attributes[:source_active] = row['status'] == 'ACTIVE'
+          employee_names(attributes)
+        end
+        attributes
+      elsif @provider == 'shopify' && @kind == 'employees'
+        raise Error unless [true, false].include?(row['active'])
+
+        attributes = { external_id: text(row.fetch('id'), 255), first_name: text(row['firstName']), last_name: text(row['lastName']),
+          email: text(row['email']), source_active: row['active'] }
+        employee_names(attributes)
+      elsif @provider == 'shopify'
+        { external_id: text(row.fetch('id'), 255), first_name: text(row['firstName']), last_name: text(row['lastName']),
+          email: text(row.dig('defaultEmailAddress', 'emailAddress')), phone: text(row.dig('defaultPhoneNumber', 'phoneNumber')) }
+      else
+        id = row.fetch('id').to_s
+        raise Error unless id.match?(/\A[1-9][0-9]{0,18}\z/)
+
+        attributes = { external_id: "#{URI(@credentials.fetch('api_url')).host}/#{id}",
+          first_name: text(row['first_name']), last_name: text(row['last_name']),
+          email: text(row['email']), phone: text(row['phone_number']) }
+        if @kind == 'employees'
+          raise Error if attributes[:first_name].blank? || attributes[:last_name].blank?
+
+          attributes.delete(:phone) unless row.key?('phone_number')
+          attributes[:source_active] = row['deleted_at'].nil?
+        end
+        attributes
+      end
+    rescue KeyError, TypeError, NoMethodError
+      raise Error
+    end
+
+    def employee_names(attributes)
+      attributes[:first_name] ||= '(Not provided)'
+      attributes[:last_name] ||= '(Not provided)'
+      attributes
+    end
+
+    def text(value, maximum = 1000)
+      return nil if value.nil?
+      raise Error unless value.is_a?(String) && value.valid_encoding? && value.bytesize <= maximum && !value.include?("\u0000")
+
+      value.strip.presence
+    end
+  end
+end

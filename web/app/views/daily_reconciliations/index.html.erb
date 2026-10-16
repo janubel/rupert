@@ -1,0 +1,174 @@
+<% content_for :title, 'Daily reconciliation & documents' %>
+<% money = ->(cents) { reconciliation_money(cents) } %>
+<% can_write = Current.user.can?('reports.write') %>
+<% review = @report.latest_review %>
+<% review_current = review && review.report_digest == @report.digest %>
+<% comparisons = @report.comparisons %>
+<% attention = comparisons.count { |row| row[:status] != 'Matched recorded total' } %>
+<div class="mx-auto max-w-7xl space-y-6">
+  <header class="flex flex-wrap items-start justify-between gap-4">
+    <div><p class="text-xs font-semibold uppercase tracking-widest text-mocha">Daily close · <%= @report.day.strftime('%A, %B %-d') %></p><h1 class="page-title mt-2">Daily reconciliation &amp; documents</h1><p class="mt-2 text-sm text-mocha">Check the day. Keep the originals. Record what needs follow-up.</p></div>
+    <div class="flex flex-wrap gap-2"><%= link_to 'Financial close', financial_close_path(day: @report.day.iso8601), class: 'btn-ghost' %><%= link_to 'Find a retained file', reconciliation_documents_path, class: 'btn-ghost' %><% if can_write %><%= link_to 'Add a document', '#upload-document', class: 'btn-primary' %><% end %><%= link_to 'Download reconciliation CSV', daily_reconciliations_path(format: :csv, day: @report.day.iso8601), class: 'btn-ghost' %></div>
+  </header>
+  <% if @form_error %><div role="alert" tabindex="-1" id="reconciliation-error" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><p class="font-semibold"><%= @form_error %></p><p class="mt-1">Your entered text is still below. <%= link_to 'Return to the form ↓', "##{@error_section}", class: 'font-semibold underline' %><%= @error_section == 'upload-document' ? ' Select the original file again before submitting.' : '' %></p></div><% end %>
+  <nav class="flex flex-wrap gap-2 text-sm" aria-label="Daily reconciliation sections"><% [['Attention & follow-ups', '#attention-items'], ['Review day', '#review-day'], ['Source evidence', '#source-evidence'], ['Documents', '#documents'], ['Review & history', '#review-history']].each do |label, anchor| %><%= link_to label, anchor, class: 'btn-ghost btn-sm' %><% end %></nav>
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Daily review overview">
+    <div class="card card-pad border"><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Your review</p><p class="mt-2 font-display text-xl"><%= !review ? 'Not reviewed' : !review_current ? 'Changed since review' : review.status.humanize %></p><p class="mt-2 text-xs text-mocha"><%= review ? "Last note #{review.created_at.in_time_zone.strftime('%b %-d, %-I:%M %p')}" : 'Record a review after checking the evidence.' %></p></div>
+    <div class="card card-pad"><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Source comparisons</p><p class="mt-2 font-display text-xl"><%= comparisons.empty? ? 'No controls yet' : (attention.zero? ? "#{comparisons.size} metrics match" : "#{attention} need attention") %></p><p class="mt-2 text-xs text-mocha"><%= comparisons.count { |row| row[:status] == 'Matched recorded total' } %> matching metrics · native checks below</p></div>
+    <a href="#documents" class="card card-pad block hover:ring-2 hover:ring-olive"><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Documents for this day</p><p class="mt-2 font-display text-xl tabular-nums"><%= @report.documents.size %></p><p class="mt-2 text-xs text-mocha">Originals and supporting report versions</p></a>
+    <%= link_to retention_drive_path, class: 'card card-pad block hover:ring-2 hover:ring-olive' do %><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Google Drive retention</p><p class="mt-2 font-display text-xl"><%= @drive_connection&.connected? && @drive_connection.enabled ? (@drive_connection.last_error.present? ? 'Needs attention' : 'Automatic copies on') : 'Setup pending' %></p><p class="mt-2 text-xs text-mocha"><%= @drive_verified || 0 %> verified copies · originals retained in Rupert</p><% end %>
+  </section>
+  <%= form_with url: daily_reconciliations_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
+    <div><%= f.label :day, 'Business day', class: 'block text-sm' %><%= f.date_field :day, value: @report.day, required: true, class: 'input' %></div>
+    <%= f.submit 'Show day', class: 'btn-primary' %>
+    <%= link_to 'Previous day', daily_reconciliations_path(day: (@report.day - 1).iso8601), class: 'btn-ghost' %>
+    <%= link_to 'Yesterday', daily_reconciliations_path(day: Date.yesterday.iso8601), class: 'btn-ghost' %>
+    <%= link_to 'Today', daily_reconciliations_path(day: Date.current.iso8601), class: 'btn-ghost' %>
+    <%= link_to 'Next day', daily_reconciliations_path(day: (@report.day + 1).iso8601), class: 'btn-ghost' %>
+    <%= link_to 'Register detail ↗', register_summary_reports_path(day: @report.day.iso8601), class: 'btn-ghost' %>
+    <%= link_to 'Weekly / monthly summary ↗', money_reconciliations_path(date: @report.day.iso8601), class: 'btn-ghost' %>
+  <% end %>
+  <%= render 'daily_reconciliations/attention' %>
+  <div id="review-day" class="scroll-mt-48 md:scroll-mt-32"><h2 class="font-display text-xl">1. Review the day</h2><p class="mt-1 text-sm text-mocha">Compare one source, location and currency at a time. Missing imports are not zero-sales days.</p><p class="mt-2 text-xs text-mocha md:hidden">Swipe wide tables sideways to see every metric.</p></div>
+  <details class="card card-pad text-sm"><summary class="cursor-pointer font-semibold">How the numbers relate</summary><div class="mt-3 space-y-2">
+    <p>Day boundaries use <%= Time.zone.name %>. Order totals use order dates, tenders use payment dates, and refunds use refund dates. Source, currency and location stay separate.</p>
+    <p>Sales, gateway payments and processor deposits can describe the same money. Review each layer separately. A matched recorded total does not prove a complete day or bank settlement. Shopify tenders may be inferred from order totals.</p>
+    <p>Missing amounts stay unavailable. Attach invoices, daily reports, statements and fee reports below. Tips, fees and deposits entered from documents remain source observations when Rupert has no comparable field.</p>
+  </div></details>
+  <section class="card overflow-x-auto" tabindex="0" role="region" aria-label="Reconciliation table, scroll horizontally for all columns"><table class="w-full text-sm">
+    <caption class="p-4 text-left font-semibold">Recorded sales and tenders</caption>
+    <thead><tr><% ['Source / location', 'Currency', 'Orders', 'Order total', 'Cash received', 'Card received', 'Refunds', 'Tenders less refunds', 'Payment coverage issues'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
+    <tbody><% @report.register.rows.each do |row| %>
+      <tr><td class="td"><%= reconciliation_source(row[:source]) %><br><span class="text-xs"><%= (@locations_by_id || {})[row[:location_id]]&.name || row[:location_id].presence || 'Unassigned' %></span></td><td class="td"><%= row[:currency].presence || 'Unknown' %></td><td class="td"><%= row[:orders] %></td>
+        <% [row[:order_total_cents], row[:tenders].fetch('cash', 0), row[:tenders].fetch('card', 0), row[:refund_cents], row[:net_tender_cents]].each do |amount| %><td class="td"><%= money.call(amount) %></td><% end %>
+        <td class="td"><%= DailyRegisterSummary::COVERAGE_KEYS.sum { |key| row[key] } %></td></tr>
+    <% end %><% if @report.register.rows.empty? %><tr><td class="td" colspan="9">No recorded sales or tender activity. This does not establish a zero-sales day.</td></tr><% end %></tbody>
+  </table></section>
+  <section id="control-comparisons" class="scroll-mt-48 md:scroll-mt-32 space-y-3"><div class="flex flex-wrap gap-2" aria-label="Comparison filters"><% [['Needs attention', 'attention'], ['Differences', 'variances'], ['Unavailable', 'unavailable'], ['Conflicts', 'conflicts'], ['Matched', 'matched'], ['All metrics', 'all']].each do |label, value| %><%= link_to label, daily_reconciliations_path(day: @report.day.iso8601, comparison: value, anchor: 'control-comparisons'), class: (@comparison_filter || 'attention') == value ? 'btn-primary btn-sm' : 'btn-ghost btn-sm', aria: { current: ((@comparison_filter || 'attention') == value ? 'page' : nil) } %><% end %></div><p class="text-xs text-mocha">Differences appear first, grouped by currency and largest absolute difference within each currency. CSV downloads include every metric.</p>
+  <div class="card overflow-x-auto" tabindex="0" role="region" aria-label="Source control comparisons, scroll horizontally for all columns"><table class="w-full text-sm">
+    <caption class="p-4 text-left font-semibold">Source control comparisons · <%= (@comparison_rows || ReconciliationAttention.new(@report).differences).size %> shown of <%= @report.comparisons.size %> metrics</caption>
+    <thead><tr><% ['Source / location', 'Currency', 'Metric', 'Source report', 'Rupert records', 'Rupert minus source', 'Result', 'Evidence'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
+    <tbody><% (@comparison_rows || ReconciliationAttention.new(@report).differences).each do |row| %><tr><td class="td"><%= reconciliation_source(row[:source]) %> / <%= (@locations_by_id || {})[row[:location_id]]&.name || row[:location_id].presence || 'Unassigned' %></td><td class="td"><%= row[:currency] %></td><td class="td"><%= row[:metric].humanize %></td>
+      <% [:expected_cents, :actual_cents, :delta_cents].each do |key| %><td class="td"><%= key == :delta_cents ? reconciliation_difference(row[key]) : money.call(row[key]) %></td><% end %>
+      <td class="td"><span class="inline-block rounded-lg border px-2 py-1 text-xs font-semibold <%= reconciliation_tone(row[:status]) %>"><%= row[:status] %></span></td><td class="td"><% row[:document_ids].each do |id| %><%= link_to "##{id}", daily_reconciliations_path(day: @report.day.iso8601, anchor: "evidence-#{id}"), class: 'underline' %> <% end %></td></tr>
+    <% end %><% if (@comparison_rows || ReconciliationAttention.new(@report).differences).empty? %><tr><td class="td" colspan="8">No metrics match this view. Choose All metrics to inspect supplied controls, or check the missing-control prompts above.</td></tr><% end %></tbody>
+  </table></div></section>
+  <section class="card card-pad space-y-3">
+    <h2 class="font-semibold">Import freshness</h2>
+    <% @report.register.source_freshness.each do |source, state| %><p class="text-sm"><strong><%= reconciliation_source(source) %>:</strong> <%= state[:finished_at]&.in_time_zone&.strftime('%b %-d at %-I:%M %p %Z') || 'No source-confirmed successful import' %></p><% end %>
+    <p class="text-xs text-mocha">Latest import completion is not confirmation that every transaction for this day was imported.</p>
+  </section>
+  <div id="source-evidence" class="scroll-mt-48 md:scroll-mt-32"><h2 class="font-display text-xl">Source evidence</h2><p class="mt-1 text-sm text-mocha">Open a source to inspect its observations and native controls. These layers may describe the same money.</p></div>
+  <details class="card"><summary class="cursor-pointer p-4 font-semibold">C-Trax store-day controls <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.ctrax.size} store days" %></span></summary>
+  <section class="overflow-x-auto" tabindex="0" role="region" aria-label="Source evidence table, scroll horizontally for all columns"><table class="w-full text-sm">
+    <caption class="p-4 text-left font-semibold">C-Trax store-day controls — native orders and register evidence</caption>
+    <thead><tr><% ['Store / timezone', 'Currency', 'Check', 'Recorded', 'Source control', 'Difference', 'Review'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
+    <tbody><% @report.ctrax.each do |snapshot| %><% detail = Ctrax::Reconciliation.new(snapshot) %>
+      <% detail.checks.each do |check| %><tr><td class="td"><%= snapshot.location.name %><br><%= snapshot.timezone %></td><td class="td"><%= snapshot.currency %></td><td class="td"><%= check[:label] %></td>
+        <% [:actual, :expected, :delta].each do |key| %><td class="td"><%= check[:monetary] ? money.call(check[key]) : (check[key].nil? ? 'Unavailable' : check[key]) %></td><% end %>
+        <td class="td"><%= snapshot.reviewed? ? 'Current source review' : 'Needs source review' %></td></tr><% end %>
+      <% detail.warnings.each do |warning| %><tr><td class="td" colspan="7"><%= warning %></td></tr><% end %>
+      <% if Current.user.can?('sales.read') %><tr><td class="td" colspan="7"><%= link_to 'Open C-Trax receipts and cash-session checks', ctrax_day_path(snapshot), class: 'underline' %></td></tr><% end %>
+    <% end %><% if @report.ctrax.empty? %><tr><td class="td" colspan="7">No stored C-Trax day for this date. Native store-day boundaries use the store timezone shown here.</td></tr><% end %></tbody>
+  </table></section>
+  </details>
+  <details class="card"><summary class="cursor-pointer p-4 font-semibold">SwipeSimple native observations <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.swipesimple.size} tender groups" %></span></summary>
+  <section class="overflow-x-auto" tabindex="0" role="region" aria-label="Source evidence table, scroll horizontally for all columns"><table class="w-full text-sm">
+    <caption class="p-4 text-left font-semibold">SwipeSimple native observations — separate from canonical sales</caption>
+    <thead><tr><% ['Merchant account', 'Currency', 'Tender', 'Sales', 'Refunds', 'Net', 'Sale tips', 'Refund tips', 'Excluded rows'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
+    <tbody><% @report.swipesimple.each do |row| %><tr><td class="td"><%= row[:account] %></td><td class="td"><%= row[:currency] %></td><td class="td"><%= row[:tender].presence || 'Unknown' %></td>
+      <% [:sale_cents, :refund_cents, :net_cents, :sale_tip_cents, :refund_tip_cents].each do |key| %><td class="td"><%= money.call(row[key]) %></td><% end %><td class="td"><%= row[:excluded_rows] %></td></tr><% end %>
+      <% if @report.swipesimple.empty? %><tr><td class="td" colspan="9">No native transaction observations for this day.</td></tr><% end %></tbody>
+  </table><p class="p-4 text-xs"><%= link_to 'SwipeSimple reporting and native imports', swipesimple_reports_path(day: @report.day.iso8601), class: 'underline' %></p></section>
+  </details>
+  <details class="card"><summary class="cursor-pointer p-4 font-semibold">Authorize.net API settlement observations <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.gateway.size} groups" %></span></summary>
+  <section class="overflow-x-auto" tabindex="0" role="region" aria-label="Source evidence table, scroll horizontally for all columns"><table class="w-full text-sm">
+    <caption class="p-4 text-left font-semibold">Authorize.net API observations by settlement day — not additional sales</caption>
+    <thead><tr><% ['Environment', 'Gateway', 'Currency', 'Status', 'Type', 'Count', 'Settlement amount'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
+    <tbody><% @report.gateway.each do |row| %><tr><% row.each do |value| %><td class="td"><%= value.nil? ? 'Unknown' : value %></td><% end %></tr><% end %>
+      <% if @report.gateway.empty? %><tr><td class="td" colspan="7">No API settlement observations for this day. Retained portal exports are listed below.</td></tr><% end %></tbody>
+  </table></section>
+  </details>
+  <details class="card"><summary class="cursor-pointer p-4 font-semibold">Authorize.net portal observations <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.portal.size} transactions" %></span></summary>
+  <section class="overflow-x-auto" tabindex="0" role="region" aria-label="Source evidence table, scroll horizontally for all columns"><table class="w-full text-sm">
+    <caption class="p-4 text-left font-semibold">Authorize.net portal observations submitted or settled on this day — separate from the API</caption>
+    <thead><tr><% ['Gateway / transaction', 'Currency', 'Status / type', 'Submitted at', 'Settled at', 'Settlement amount', 'Original export'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
+    <tbody><% @report.portal.each do |row| %><tr><td class="td"><%= row['gateway_id'] %> / <%= row['transaction_id'] %></td><td class="td"><%= row['currency'] %></td><td class="td"><%= row['status'] %> / <%= row['transaction_type'] %></td><td class="td"><%= row['submitted_at'] %></td><td class="td"><%= row['settled_at'].presence || 'Unknown' %></td><td class="td"><%= money.call(row['settlement_cents']) %></td><td class="td"><%= link_to "Export ##{row['export_id']}", native_document_daily_reconciliations_path(source: 'authorize_net', id: row['export_id']), class: 'underline' %></td></tr><% end %>
+    <% if @report.portal.empty? %><tr><td class="td" colspan="7">No retained portal observations submitted or settled on this day.</td></tr><% end %></tbody>
+  </table></section>
+  </details>
+  <details class="card"><summary class="cursor-pointer p-4 font-semibold">NAB / IRIS reports <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.iris.size} snapshots" %></span></summary>
+  <section class="p-4 space-y-3"><h2 class="font-semibold">NAB / IRIS reports covering this day</h2>
+    <p class="text-sm">Windows may overlap. Batch amounts do not establish net bank funding. Native files imported after this release appear in the document vault below.</p>
+    <% @report.iris.each do |report| %><p class="text-sm">Snapshot #<%= report.id %> · <%= report.report_kind.humanize %> · <%= report.window_from %> to <%= report.window_to %> · <%= report.status %> · observed <%= report.observed_at.iso8601 %></p><% end %>
+    <% if @report.iris.empty? %><p class="text-sm">No stored snapshot covers this day.</p><% end %>
+    <p class="text-xs">Up to 50 latest snapshots. <%= link_to 'NAB / IRIS reporting and imports', pos_connection_path('iris_reporting'), class: 'underline' %></p>
+  </section>
+  </details>
+  <section id="documents" class="scroll-mt-48 md:scroll-mt-32 space-y-4">
+    <div class="flex flex-wrap items-end justify-between gap-3"><div><h2 class="font-display text-xl">2. Keep the originals</h2><p class="mt-1 text-sm text-mocha">Documents covering <%= @report.day.strftime('%B %-d, %Y') %>. Earlier versions remain available.</p></div><%= link_to 'Browse all retained files ↗', reconciliation_documents_path, class: 'btn-ghost btn-sm' %></div>
+    <div class="grid gap-4 md:grid-cols-2">
+      <%= render partial: 'reconciliation_documents/document', collection: @report.documents.reverse, as: :doc, locals: { successors: @successors || {}, copies: @drive_copies || {} } %>
+    </div>
+    <% if @report.documents.empty? %><div class="card card-pad space-y-2"><p class="font-semibold">No documents attached to this day yet</p><p class="text-sm text-mocha">Add a daily report, invoice, bank statement or fee report. Keep its original file so every comparison has evidence.</p><% if can_write %><%= link_to 'Add your first document ↓', '#upload-document', class: 'text-sm font-semibold text-olive underline' %><% end %></div><% end %>
+    <p class="text-xs text-mocha">Originals and review notes have no automatic deletion. Your encrypted Rupert copy stays available while a Drive upload is pending.</p>
+  </section>
+  <% if can_write %>
+    <section id="upload-document" class="card card-pad scroll-mt-48 md:scroll-mt-32 space-y-4"><h2 class="font-display text-xl"><%= @evidence_values&.dig('supersedes_id').present? ? "Correct control ##{@evidence_values['supersedes_id']}" : 'Add a report, invoice or statement' %></h2><p class="text-sm text-mocha">Start with the original file and its covered dates. Source totals are optional unless you choose Register control.</p>
+      <% if @evidence_values&.dig('supersedes_id').present? %><div class="rounded-xl bg-cream p-4 text-sm"><p class="font-semibold">The previous original will stay in the library.</p><p>Attach the replacement report and enter its totals. Keep the same source, dates, currency and location.</p><%= link_to 'Cancel correction', daily_reconciliations_path(day: @report.day.iso8601, anchor: 'documents'), class: 'mt-2 inline-block text-olive underline' %></div><% end %>
+      <% if @request %><div class="rounded-xl border border-fog bg-paper p-4 space-y-2"><p class="text-sm font-semibold">Original for follow-up #<%= @request.id %>: <%= @request.title %></p><p class="text-sm text-mocha">After upload, review the original and save a progress note to link it. You choose whether to keep investigating, wait or resolve.</p><%= link_to 'Back to this follow-up', reconciliation_follow_up_path(@request, close_day: @close_day&.iso8601, anchor: 'record-progress'), class: 'text-sm text-olive underline' %></div><% end %>
+      <%= form_with url: daily_reconciliations_path, multipart: true, scope: :evidence, class: 'space-y-4', data: { controller: 'reconciliation-form' } do |f| %>
+        <%= hidden_field_tag :day, @report.day.iso8601 %><%= hidden_field_tag :request_id, @request.id if @request %><%= hidden_field_tag :close_day, @close_day.iso8601 if @close_day %>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div><%= f.label :source, 'Source', class: 'block text-sm' %><%= f.select :source, ReconciliationDocument::SOURCES.excluding('rupert').map { |s| [reconciliation_source(s), s] }, { selected: reconciliation_form_value(:source, 'other') }, class: 'input' %></div>
+          <div><%= f.label :kind, 'Document kind', class: 'block text-sm' %><%= f.select :kind, (ReconciliationDocument::KINDS - ReconciliationDocument::GENERATED_KINDS).map { |s| [reconciliation_source(s), s] }, { selected: reconciliation_form_value(:kind, 'source_export') }, class: 'input', data: { reconciliation_form_target: 'kind', action: 'change->reconciliation-form#update' } %></div>
+          <div><%= f.label :period_from, 'Period starts', class: 'block text-sm' %><%= f.date_field :period_from, value: reconciliation_form_value(:period_from, @report.day), required: true, class: 'input', data: { reconciliation_form_target: 'from', action: 'change->reconciliation-form#update' } %></div>
+          <div><%= f.label :period_to, 'Period ends', class: 'block text-sm' %><%= f.date_field :period_to, value: reconciliation_form_value(:period_to, @report.day), required: true, class: 'input', data: { reconciliation_form_target: 'to' } %></div>
+        </div>
+        <div><%= label_tag :file, 'Original document · CSV, PDF, PNG, JPEG, JSON or TXT · up to 8 MiB', class: 'block text-sm' %><%= file_field_tag :file, required: true, accept: '.csv,.pdf,.png,.jpg,.jpeg,.json,.txt', class: 'input', data: { reconciliation_form_target: 'file', action: 'change->reconciliation-form#fileChanged' } %></div><p class="text-xs text-mocha" role="status" data-reconciliation-form-target="fileStatus">One original file, up to 8 MiB. Its bytes and checksum are retained.</p>
+        <div><%= f.label :note, 'Source context / explanation', class: 'block text-sm' %><%= f.text_area :note, value: reconciliation_form_value(:note), maxlength: 4000, rows: 3, class: 'input' %></div>
+        <details class="rounded-xl border border-haze p-4" data-reconciliation-form-target="totals"><summary class="cursor-pointer font-semibold text-sm">Source totals & corrections</summary><div class="mt-4 space-y-4"><div class="grid gap-4 md:grid-cols-2">
+          <div><%= f.label :currency, 'Currency (required for controls)', class: 'block text-sm' %><%= f.text_field :currency, value: reconciliation_form_value(:currency), placeholder: 'USD', maxlength: 3, pattern: '[A-Z]{3}', class: 'input', data: { reconciliation_form_target: 'currency' } %></div>
+          <div><%= f.label :location_id, 'Location to compare', class: 'block text-sm' %><%= f.select :location_id, (@locations || []).map { |location| ["#{location.name} · #{reconciliation_source(location.source)}", location.id] } + (reconciliation_form_value(:location_id).present? && (@locations || []).none? { |loc| loc.id == reconciliation_form_value(:location_id) } ? [["Recorded pool #{reconciliation_form_value(:location_id)}", reconciliation_form_value(:location_id)]] : []), { include_blank: 'Unassigned records only', selected: reconciliation_form_value(:location_id) }, class: 'input' %></div>
+        </div>
+        <p class="text-sm">Choose Register control to compare totals from a single-day report. Enter only amounts that share the metric definition and scope above: order total by order date, cash/card receipts by payment date, refunds by refund date. Refund amounts are positive. Leave missing amounts blank. Other document kinds are retained as supporting evidence.</p>
+        <div class="grid gap-4 md:grid-cols-3"><% ReconciliationEvidence::AMOUNTS.each do |key| %><div><%= f.label key, "#{key.humanize} (currency units)", class: 'block text-sm' %><%= f.text_field key, value: reconciliation_form_value(key), inputmode: 'decimal', placeholder: '123.45 or blank', class: 'input' %></div><% end %></div>
+        <%= f.hidden_field :supersedes_id, value: reconciliation_form_value(:supersedes_id) %>
+        </div></details>
+        <%= f.submit 'Retain document', class: 'btn-primary' %>
+      <% end %>
+    </section>
+    <details id="withdraw-control" class="card card-pad scroll-mt-48 md:scroll-mt-32" <%= 'open' if @error_section == 'withdraw-control' %>><summary class="cursor-pointer font-semibold">Withdraw a mistaken control</summary><div class="mt-4 space-y-3">
+      <p class="text-sm">Use this for an accidental duplicate or a control that should not be compared. Its original file, totals and your explanation remain in the vault.</p>
+      <%= form_with url: withdraw_daily_reconciliations_path, class: 'space-y-3' do |f| %>
+        <%= f.hidden_field :day, value: @report.day.iso8601 %>
+        <div><%= f.label :evidence_id, 'Choose the current control', class: 'block text-sm' %><%= f.select :evidence_id, @report.controls.map { |doc| ["##{doc.id} · #{reconciliation_source(doc.source)} · #{doc.filename}", doc.id] }, { include_blank: 'Select a control', selected: @withdraw_values&.dig('evidence_id') }, required: true, class: 'input' %></div>
+        <div><%= f.label :reason, 'Reason for withdrawal', class: 'block text-sm' %><%= f.text_area :reason, value: @withdraw_values&.dig('reason'), required: true, maxlength: 4000, rows: 3, class: 'input' %></div>
+        <%= f.submit 'Withdraw control and keep evidence', class: 'btn-ghost' %>
+      <% end %>
+    </div></details>
+    <section id="review-history" class="card card-pad scroll-mt-48 md:scroll-mt-32 space-y-4"><h2 class="font-display text-xl">3. Archive and review this report</h2>
+      <%= button_to 'Keep a permanent report version', archive_daily_reconciliations_path(day: @report.day.iso8601), class: 'btn-primary' %>
+      <%= form_with url: review_daily_reconciliations_path, class: 'space-y-3' do |f| %>
+        <%= f.hidden_field :day, value: @report.day.iso8601 %><%= f.hidden_field :report_digest, value: @report.digest %>
+        <div><%= f.label :status, 'Review status', class: 'block text-sm' %><%= f.select :status, [['Needs attention', 'needs_attention'], ['Reviewed', 'reviewed']], { selected: @review_values&.dig('status') || 'needs_attention' }, class: 'input' %></div>
+        <div><%= f.label :notes, 'Review notes / unresolved differences', class: 'block text-sm' %><%= f.text_area :notes, value: @review_values&.dig('notes'), required: true, maxlength: 4000, rows: 4, class: 'input' %></div>
+        <%= f.submit 'Record review', class: 'btn-primary' %>
+      <% end %>
+      <p class="text-xs">Reviewed records your assessment, including any unresolved differences. It does not change source data. A changed report requires a fresh review.</p>
+    </section>
+  <% end %>
+  <section id="<%= can_write ? 'retained-review-history' : 'review-history' %>" class="card card-pad space-y-3 scroll-mt-48"><h2 class="font-semibold">Report archive and review history</h2>
+    <p class="text-sm">At 07:15 Eastern each day, Rupert archives the previous seven business days. Identical reports reuse their archive; changed reports keep a new version. Older days can be archived on demand.</p>
+    <% if @archives.empty? && @reviews.empty? %><p class="text-sm text-mocha">No saved report or review for this date yet.</p><% end %>
+    <% @archives.each do |doc| %><div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-fog p-3"><%= link_to "Report ##{doc.id} · #{doc.created_at.in_time_zone.strftime('%b %-d at %-I:%M %p %Z')}", document_daily_reconciliation_path(doc), class: 'text-sm font-semibold text-olive underline' %><span class="text-xs"><%= doc.metadata['report_digest'] == @report.digest ? 'Matches current report' : 'Earlier report version' %></span></div><% end %>
+    <%= link_to 'Browse all report archives →', reconciliation_documents_path(category: 'archives', from: @report.day.iso8601, to: @report.day.iso8601), class: 'inline-block text-sm font-semibold text-olive underline' %>
+    <% @reviews.each do |review| %><article class="rounded-xl border p-4 <%= reconciliation_tone(review.report_digest == @report.digest ? review.status : 'changed') %>"><div class="flex flex-wrap justify-between gap-2"><p class="text-sm font-semibold"><%= review.status.humanize %> · <%= review.report_digest == @report.digest ? 'Current report version' : 'Changed since review' %></p><p class="text-xs"><%= review.created_at.in_time_zone.strftime('%b %-d, %Y at %-I:%M %p %Z') %> · <%= review.reviewed_by&.name.presence || 'Former user' %></p></div><p class="mt-3 whitespace-pre-wrap text-sm"><%= review.notes %></p></article><% end %>
+  </section>
+  <details class="card card-pad"><summary class="cursor-pointer font-semibold">Browse existing native export library</summary><div class="mt-4 space-y-3">
+    <%= link_to 'Search all native exports in the library →', reconciliation_documents_path(category: 'native_exports'), class: 'text-sm font-semibold text-olive underline' %>
+    <p class="text-sm">The latest 20 exports per source, across all dates. Export time is not the transaction period. Download an original to verify its covered dates.</p>
+    <% @swipesimple_exports.each do |doc| %><p class="text-sm"><%= link_to "SwipeSimple #{doc.kind} ##{doc.id} · received #{doc.exported_at.in_time_zone.strftime('%b %-d, %Y at %-I:%M %p %Z')}", native_document_daily_reconciliations_path(source: 'swipesimple', id: doc.id), class: 'underline' %></p><% end %>
+    <% @authorize_exports.each do |doc| %><p class="text-sm"><%= link_to "Authorize.net #{doc.kind} ##{doc.id} · received #{doc.exported_at.in_time_zone.strftime('%b %-d, %Y at %-I:%M %p %Z')}", native_document_daily_reconciliations_path(source: 'authorize_net', id: doc.id), class: 'underline' %></p><% end %>
+  </div></details>
+</div>

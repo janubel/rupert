@@ -10,12 +10,13 @@ class DashboardWidget
   WIDGETS = [
     Widget.new(key: 'stats', label: 'Key stats', partial: 'home/widgets/stats', position: 10),
     Widget.new(key: 'today_channels', label: 'Today per channel', partial: 'home/widgets/today_channels', position: 20),
-    Widget.new(key: 'attention', label: 'Needs attention', partial: 'home/widgets/attention', position: 30),
+    Widget.new(key: 'attention', label: 'Needs attention', partial: 'home/widgets/attention', position: 40),
     Widget.new(key: 'stock_alerts', label: 'Stock alerts · last 14 days', partial: 'home/widgets/stock_alerts',
-      position: 40),
-    Widget.new(key: 'revenue', label: 'Revenue · last 30 days', partial: 'home/widgets/revenue', position: 50),
+      position: 45),
+    Widget.new(key: 'revenue', label: 'Revenue · last 30 days', partial: 'home/widgets/revenue', position: 30),
     Widget.new(key: 'sync_history', label: 'Sync history', partial: 'home/widgets/sync_history', position: 60),
     Widget.new(key: 'goals', label: 'Goals & KPIs', partial: 'home/widgets/goals', position: 75),
+    Widget.new(key: 'commissions', label: 'Shift commissions · today', partial: 'home/widgets/commissions', position: 77),
     Widget.new(key: 'people', label: 'People', partial: 'home/widgets/people', position: 80)
   ].freeze
 
@@ -41,6 +42,7 @@ class DashboardWidget
     'revenue' => %w[sales.read],
     'sync_history' => %w[sync.read],
     'goals' => %w[projects.read],
+    'commissions' => %w[payroll.read],
     'people' => %w[hr.read]
   }.freeze
 
@@ -50,7 +52,7 @@ class DashboardWidget
 
   def self.entries(config = {}, user: nil)
     order = Array(config['widgets']).presence || default_order
-    hidden = Array(config['hidden'])
+    hidden = config.key?('hidden') ? Array(config['hidden']) : ['stock_alerts']
     ordered = order.filter_map { |key| find(key) }
     ordered.concat(all.reject { |widget| order.include?(widget.key) })
     ordered.select! { |widget| allowed?(widget.key, user) } if user

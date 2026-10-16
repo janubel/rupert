@@ -1,0 +1,41 @@
+<% content_for :title, 'Authorize.net portal reports' %>
+<div class="space-y-6">
+  <section class="card card-pad">
+    <h1 class="font-display text-2xl text-ink">Authorize.net portal reports</h1>
+    <p class="mt-2 text-mocha">Dated transaction observations downloaded from the merchant webpage. These are separate from API reconciliation, Shopify sales and bank deposits.</p>
+    <p class="mt-2 text-sm text-mocha">Use Manage Transactions → download → Expanded Fields/Comma Separated for settled and unsettled results. Import each file below. Portal sign-in may expire; no API key change is needed for this workflow.</p>
+    <%= link_to 'Open sales portal', 'https://new.authorize.net/smb2/merchant/TransactionManagement/ManageTransactions', class: 'btn-ghost btn-sm mt-3', target: '_blank', rel: 'noopener noreferrer' %>
+    <% @settled_totals.each do |currency, cents| %><p class="mt-3">Imported settled charges: <%= currency %> <%= number_with_precision(cents / 100.0, precision: 2) %>. Declines, errors, pending payments and refunds are excluded.</p><% end %>
+    <p class="mt-2 text-sm"><%= @rows.size %> latest payment observations. Coverage is limited to the exported windows; an empty or missing export does not establish zero sales.</p>
+  </section>
+  <% if Current.user.can?('sync.write') %>
+    <section class="card card-pad" id="import">
+      <h2 class="font-display text-xl">Import a fresh portal export</h2>
+      <%= form_tag authorize_net_portal_exports_path, multipart: true, data: { turbo: false }, class: 'space-y-3 mt-4' do %>
+        <label class="block">Gateway ID shown in portal profile <%= text_field_tag :gateway_id, @exports.first&.gateway_id, required: true, class: 'input' %></label>
+        <label class="block">Results exported <%= select_tag :kind, options_for_select([['Settled transactions', 'settled'], ['Unsettled transactions', 'unsettled']]), class: 'input' %></label>
+        <label class="block">Actual export time with offset <%= text_field_tag :exported_at, nil, placeholder: '2026-10-15T21:40:00-04:00', required: true, class: 'input' %></label>
+        <label class="block">Native expanded CSV <%= file_field_tag :file, accept: '.csv,text/csv', required: true, class: 'input' %></label>
+        <%= submit_tag 'Import portal snapshot', class: 'btn-primary btn-sm' %>
+      <% end %>
+    </section>
+  <% end %>
+  <section class="card card-pad">
+    <h2 class="font-display text-xl">Latest observations (up to 200)</h2>
+    <div class="overflow-x-auto mt-4"><table class="w-full text-sm">
+      <thead><tr><th>Transaction ID</th><th>Source status</th><th>Submitted UTC</th><th>Settled UTC</th><th>Authorized</th><th>Settlement amount</th><th>Evidence</th></tr></thead>
+      <tbody><% @rows.first(200).each do |row| %><tr>
+        <td><%= row['transaction_id'] %></td><td><%= row['status'] %></td><td><%= row['submitted_at'] %></td><td><%= row['settled_at'] %></td>
+        <td><%= row['currency'] %> <%= number_with_precision(row['authorization_cents'] / 100.0, precision: 2) %></td>
+        <td><%= row['currency'] %> <%= number_with_precision(row['settlement_cents'] / 100.0, precision: 2) %></td>
+        <td>#<%= row['export_id'] %> / row <%= row['source_row'] %> · <%= row['exported_at'] %></td>
+      </tr><% end %></tbody>
+    </table></div>
+  </section>
+  <section class="card card-pad">
+    <h2 class="font-display text-xl">Recent source files</h2>
+    <% @exports.each do |receipt| %><p class="mt-3">#<%= receipt.id %> · <%= receipt.kind %> · <%= receipt.records.size %> rows · exported <%= receipt.exported_at.iso8601 %>
+      <% if Current.user.can?('sync.write') %><%= link_to 'Download original CSV', document_authorize_net_portal_export_path(receipt), class: 'btn-ghost btn-sm' %><% end %>
+    </p><% end %>
+  </section>
+</div>

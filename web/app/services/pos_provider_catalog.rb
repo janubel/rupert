@@ -3,6 +3,16 @@
 # Verified connection methods. Merchant login never implies API or terminal access.
 class PosProviderCatalog
   PROVIDERS = [
+    { key: 'iris_reporting', name: 'NAB / IRIS merchant reporting', relationship: 'Processor deposits and reconciliation', mode: 'api',
+      description: 'Pull native Daily Deposits CSV with a NAB website login, or read reports with approved API access.',
+      website: 'https://nabankco.iriscrm.com/merchant-portal', docs: 'https://nabankco.iriscrm.com/api',
+      instructions: 'Use an API token issued for your IRIS tenant and authorized merchant IDs. Tokens inherit the issuing user’s permissions. A merchant portal password is not an API token. If API Settings is absent, NAB must enable appropriate reporting access or provide an approved integration user. Enter comma-separated merchant IDs to keep multiple accounts separate. For native Daily Deposits, choose website login and authorize read-only exports instead. Rupert creates its own server session, checks merchant identity and CSV totals, and pauses on sign-in verification. CSV uploads remain available without credentials.',
+      credentials: %w[api_url api_token] },
+    { key: 'authorize_net_reporting', name: 'Authorize.net reporting', relationship: 'Payment reconciliation', mode: 'api',
+      description: 'Read transaction status, refunds, voids and settlement batches without processing payments.',
+      website: 'https://account.authorize.net/', docs: 'https://developer.authorize.net/api/reference/features/transaction-reporting.html',
+      instructions: 'Use a read-scope OAuth application where available. OAuth registration requires partner access and merchant owner/admin consent. Alternatively, API Login ID and Transaction Key can read reports but also permit payment processing: they are not read-only credentials. Never rotate a live checkout key for this setup. Enter the numeric Gateway ID from your merchant account as the merchant reference. C-Trax remains the retail inventory reference.',
+      credentials: %w[api_login_id transaction_key] },
     { key: 'valmar', name: 'Valmar', relationship: 'Current processor described by the business', mode: 'vendor',
       description: 'Record the merchant account and actual gateway before choosing a payment adapter.',
       website: 'https://app.valmarpayments.com/', docs: 'https://vlmr.com/knowledge-base/',
@@ -13,16 +23,16 @@ class PosProviderCatalog
       website: 'https://www.pax.us/', docs: 'https://www.paxstore.us/developer',
       instructions: 'Confirm the terminal model, installed payment application and processor with Valmar. Obtain the approved SDK/bridge and test terminal from PAX or the processor. This screen does not send terminal commands.',
       credentials: [] },
-    { key: 'ctrax', name: 'C-Trax', relationship: 'Current POS described by the business', mode: 'vendor',
-      description: 'Prepare access to existing POS data and register reports.',
+    { key: 'ctrax', name: 'C-Trax', relationship: 'Retail inventory reference', mode: 'api',
+      description: 'Read store stock from C-Trax for physical inventory counts.',
       website: 'https://www.c-trax.com/', docs: 'https://www.c-trax.com/dispensary-analytics/',
-      instructions: 'Request the account-specific API documentation, credentials, permitted read scopes and sample exports from C-Trax. Public Open API marketing does not specify the authentication contract. Confirm terminal support dates directly.',
-      credentials: [] },
-    { key: 'swipesimple', name: 'SwipeSimple', relationship: 'Processor-proposed replacement option', mode: 'csv',
-      description: 'Import a transaction export through the existing SwipeSimple CSV importer.',
+      instructions: 'Use a C-Trax user authorized to read your stores. Enter the HTTPS API origin from your portal configuration and that user’s login. This connector uses the Serv 2.0 portal API; vendor-supported partner access has not yet been established. TRX merchant Client ID, Password/Token and Algorithm belong to payment processing and do not authenticate inventory reads. Stock sync never changes C-Trax inventory or payment settings.',
+      credentials: %w[api_url api_username api_password] },
+    { key: 'swipesimple', name: 'SwipeSimple', relationship: 'Merchant sales reporting', mode: 'web',
+      description: 'Pull fresh transaction and invoice exports from SwipeSimple Web on demand and every 30 minutes.',
       website: 'https://swipesimple.com/', docs: 'https://support.swipesimple.com/hc/en-us/articles/27117544574487-Does-SwipeSimple-have-a-public-API-for-integrations',
-      instructions: 'Use the transaction CSV export and Rupert’s Sync import. SwipeSimple does not publish a payments integration API. Confirm the merchant account, terminal and tipping workflow with Valmar before switching.',
-      credentials: [] },
+      instructions: 'Authorize Rupert to sign in with your existing SwipeSimple website account and read full transaction and invoice exports. SwipeSimple does not publish a payments integration API; this uses its website export flow and may need repair when the website changes. Enter the numeric company ID from your dashboard URL. Exports use USD and America/New_York. Additional sign-in verification pauses automatic pulls until you restore access. No payments or account settings are changed.',
+      credentials: %w[web_email web_password] },
     { key: 'korona', name: 'KORONA POS', relationship: 'Evaluation candidate', mode: 'api',
       description: 'Save dedicated API credentials and check read access to the account’s store structure.',
       website: 'https://www.koronacloud.com/', docs: 'https://manual.koronapos.com/how-can-i-integrate-with-korona-pos-api-apiv3-widget/',
@@ -69,7 +79,7 @@ class PosProviderCatalog
 
   def self.check_kind(provider, gateway: nil)
     return gateway if provider == 'valmar' && VALMAR_GATEWAY_CREDENTIALS.key?(gateway)
-    return provider if %w[korona cova].include?(provider)
+    return provider if %w[korona cova ctrax].include?(provider)
 
     nil
   end

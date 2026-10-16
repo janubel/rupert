@@ -3,8 +3,9 @@
 class TimeClockService
   class Error < StandardError; end
 
-  def self.worker_for(user)
-    workers = People::Employee.where(tenant_id: Current.tenant_id, user_id: user.id, status: 'active').limit(2).to_a
+  def self.worker_for(user, include_on_leave: false)
+    statuses = include_on_leave ? %w[active on_leave] : ['active']
+    workers = People::Employee.where(tenant_id: Current.tenant_id, user_id: user.id, status: statuses).limit(2).to_a
     workers.one? ? workers.first : nil
   end
 

@@ -1,0 +1,7 @@
+<% content_for :title, 'My timesheets' %>
+<section><h1 class="page-title">Timesheets</h1><p class="mt-1 text-sm text-mocha">Your hours by week, submitted for review.</p></section>
+<section class="space-y-3">
+  <% @sheets.each_with_index do |sheet, index| %>
+    <article class="card card-pad flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold"><%= link_to sheet.period_label, employee_preview_timesheet_path(index.zero? ? 'current' : 'previous'), class: 'text-olive underline' %></h2><p class="mt-1 text-sm text-mocha"><%= number_with_precision(@examples.summary(from: sheet.period_start, to: sheet.period_end).hours, precision: 2, strip_insignificant_zeros: true) %>h · <%= sheet.status.humanize %></p></div><%= link_to 'Open timesheet', employee_preview_timesheet_path(index.zero? ? 'current' : 'previous'), class: 'btn-ghost btn-sm' %></article>
+  <% end %>
+</section>

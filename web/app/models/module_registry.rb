@@ -13,6 +13,8 @@ class ModuleRegistry
   Entry = Struct.new(:key, :name, :path, :permission, :position, keyword_init: true)
 
   ENTRIES = [
+    Entry.new(key: 'influencers', name: 'Influencers', path: -> { marketing_influencers_path }, permission: 'marketing.read', position: 36),
+    Entry.new(key: 'marketing', name: 'Marketing', path: -> { marketing_path }, permission: 'marketing.read', position: 35),
     Entry.new(key: 'roadmap', name: 'Features & roadmap', path: -> { roadmap_path }, permission: nil, position: 110),
     Entry.new(key: 'owner_checklists', name: 'Owner checklists', path: -> { owner_checklists_path }, permission: nil, position: 109),
     Entry.new(key: 'api_access_tokens', name: 'API access', path: lambda {
@@ -21,16 +23,18 @@ class ModuleRegistry
     Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: 'dashboard.read', position: 10),
     Entry.new(key: 'platform', name: 'Instance overview', path: -> { platform_path }, permission: nil, position: 89),
     Entry.new(key: 'sales', name: 'Sales', path: -> { sales_path }, permission: 'sales.read', position: 20),
+    Entry.new(key: 'ctrax_pos', name: 'C-Trax retail', path: -> { ctrax_pos_path }, permission: %w[sales.read sales.write inventory.read], position: 21),
+    Entry.new(key: 'ctrax_days', name: 'C-Trax daily close', path: -> { ctrax_days_path }, permission: 'sales.read', position: 24),
     Entry.new(key: 'point_of_sale', name: 'POS preview', path: lambda {
       point_of_sale_path
     }, permission: %w[sales.read sales.write inventory.read], position: 22),
     Entry.new(key: 'registers', name: 'Registers', path: lambda {
       sales_pos_sessions_path
     }, permission: 'sales.read', position: 25),
-    Entry.new(key: 'customers', name: 'Customers', path: lambda {
+    Entry.new(key: 'customers', name: 'Customer CRM', path: lambda {
       customers_path
     }, permission: 'customers.read', position: 30),
-    Entry.new(key: 'inventory', name: 'Inventory', path: lambda {
+    Entry.new(key: 'inventory', name: 'Stock comparison', path: lambda {
       inventory_index_path
     }, permission: 'inventory.read', position: 40),
     Entry.new(key: 'inventory_exceptions', name: 'Inventory review', path: lambda {
@@ -62,6 +66,13 @@ class ModuleRegistry
     }, permission: 'reconcile.read', position: 50),
     Entry.new(key: 'sizes', name: 'Sizes', path: -> { size_families_path }, permission: 'settings.read', position: 51),
     Entry.new(key: 'reports', name: 'Reports', path: -> { reports_path }, permission: 'reports.read', position: 55),
+    Entry.new(key: 'financial_close', name: 'Financial close', path: -> { financial_close_path }, permission: 'reports.read', position: 55),
+    Entry.new(key: 'cash_forecast', name: 'Cash forecast', path: -> { cash_forecast_path }, permission: 'reports.read', position: 60),
+    Entry.new(key: 'reconciliation_overview', name: 'Reconciliation across days', path: -> { overview_reconciliation_follow_ups_path }, permission: 'reports.read', position: 58),
+    Entry.new(key: 'reconciliation_follow_ups', name: 'Report requests & follow-ups', path: -> { reconciliation_follow_ups_path }, permission: 'reports.read', position: 59),
+    Entry.new(key: 'reconciliation_documents', name: 'Document retention library', path: -> { reconciliation_documents_path }, permission: 'reports.read', position: 58),
+    Entry.new(key: 'retention_drive', name: 'Google Drive document retention', path: -> { retention_drive_path }, permission: 'reports.read', position: 57),
+    Entry.new(key: 'daily_reconciliation', name: 'Daily reconciliation & documents', path: -> { daily_reconciliations_path }, permission: 'reports.read', position: 56),
     Entry.new(key: 'register_summary', name: 'Daily register summary', path: lambda {
       register_summary_reports_path
     }, permission: 'reports.read', position: 56),
@@ -83,7 +94,7 @@ class ModuleRegistry
     Entry.new(key: 'pos_connections', name: 'POS & payments', path: lambda {
       pos_connections_path
     }, permission: 'settings.read', position: 94),
-    Entry.new(key: 'connections', name: 'Connections', path: lambda {
+    Entry.new(key: 'connections', name: 'Credentials & sync', path: lambda {
       connections_path
     }, permission: 'settings.read', position: 94),
     Entry.new(key: 'settings', name: 'Settings', path: lambda {
@@ -92,6 +103,7 @@ class ModuleRegistry
     Entry.new(key: 'employees', name: 'Employees', path: lambda {
       people_employees_path
     }, permission: 'hr.read', position: 85),
+    Entry.new(key: 'employee_reports', name: 'Employee reports', path: -> { people_work_reports_path }, permission: 'hr.read', position: 86),
     Entry.new(key: 'departments', name: 'Departments', path: lambda {
       people_departments_path
     }, permission: 'hr.read', position: 86),
@@ -140,9 +152,18 @@ class ModuleRegistry
     def nav_for(user)
       return [] unless user&.active?
 
+      if user.employee?
+        return all.select { |entry| %w[ctrax_pos time_clock timesheets].include?(entry.key) }.sort_by(&:position)
+      end
+
       all.select do |entry|
+        next user.can_use_pos? if %w[ctrax_pos point_of_sale].include?(entry.key)
         next false if %w[platform system].include?(entry.key) && !user.super_admin?
+        next false if entry.key == 'employee_reports' && !user.can_manage_accounts?
         next false if entry.key == 'owner_checklists' && !(user&.active? && (user.admin? || user.super_admin?))
+
+        next false if entry.key == 'influencers' && !FeatureFlag.enabled?(:marketing)
+        next false if entry.key == 'marketing' && !FeatureFlag.enabled?(:marketing) && !user.can_manage_accounts?
 
         Array(entry.permission).all? { |permission| user.can?(permission) }
       end.sort_by(&:position)
@@ -158,14 +179,15 @@ class ModuleRegistry
     # Every registered module must appear in exactly one area.
     AREAS = [
       { key: 'overview', name: 'Overview', modules: ['dashboard'] },
-      { key: 'sell', name: 'Sell', modules: %w[sales point_of_sale registers customers] },
+      { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos point_of_sale ctrax_days registers customers] },
+      { key: 'marketing', name: 'Marketing', modules: %w[marketing influencers] },
       { key: 'stock', name: 'Stock',
         modules: %w[inventory inventory_exceptions locations inventory_counts stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
       { key: 'money', name: 'Money',
-        modules: %w[reports register_summary ledger finance_accounts chart_of_accounts expenses payments] },
+        modules: %w[financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
       { key: 'team', name: 'Team',
-        modules: %w[accounts employees departments positions time_clock timesheets leave payroll permissions] },
+        modules: %w[accounts employees employee_reports departments positions time_clock timesheets leave payroll permissions] },
       { key: 'system', name: 'System',
         modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap owner_checklists] }
     ].freeze

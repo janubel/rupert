@@ -28,26 +28,37 @@ Square ───┼── sync engine ──▶ SQLite DB     ──▶ GUI
 
 ## Local development
 
-Requirements: Ruby 4.0.6 (rbenv), Bundler, PostgreSQL 16, Node (for the
-Shopify CLI).
+Requirements: Ruby 4.0.6 (rbenv), Bundler, and Node (for the Shopify CLI
+and JavaScript tests). SQLite is the simplest local setup; PostgreSQL 16
+is also supported.
 
 ```bash
-bundle install          # from web/
-cp .env.example .env    # fill in credentials at repo root
-# create the postgres role/db (or set POSTGRES_* env vars):
-#   createuser -s rupert && createdb -O rupert rupert_development
-bin/rails db:create db:migrate   # from web/
-bin/rails db:import_legacy       # one-time: pull data from legacy/prisma/dev.sqlite
-bin/rails db:sqlite_to_postgres  # one-time: migrate production.sqlite3 -> PG
+cp .env.example .env    # from repo root; configure local credentials
+cd web
+bundle install
+export RUPERT_DB_ADAPTER=sqlite3
+bin/rails db:prepare
 bin/rails tailwindcss:build
 bin/rails server        # http://localhost:3000
 ```
+
+For PostgreSQL, set `RUPERT_DB_ADAPTER=postgresql` and `POSTGRES_*`, then
+create a local `rupert_development` database before `db:prepare`. Legacy
+imports and production adapter migrations are separate operations; see
+[SQLite and Incus operations](docs/ops/sqlite-incus.md).
 
 The `.env` at the repo root is loaded at boot (Dotenv) and holds the sync
 engine credentials (`SHOPIFY_CLIENT_ID/SECRET`, `SQUARE_ACCESS_TOKEN`, …).
 The Shopify OAuth pair (`SHOPIFY_API_KEY`/`SHOPIFY_API_SECRET`) comes from
 `shopify app info --web-env` when developing through the Shopify CLI, or is
 set in the production environment.
+
+## Repository checks
+
+[Repository maintenance](docs/ops/repository-maintenance.md) records the
+validation commands, release branch conventions, and current consolidation
+work. Tests skip the repository-root `.env`; use explicit test settings and
+an isolated checkout.
 
 ## Operations
 
@@ -153,6 +164,7 @@ The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 
 
 ## Features, roadmap and comparison
 
+- [Master credentials and sync repair](docs/ops/master-credentials-and-sync.md) — central setup, safe credential forms, troubleshooting and the prioritized improvement plan.
 - [Public roadmap](https://techmore.github.io/rupert/roadmap.html) — implemented scope, implementation evidence, delivery phases and acceptance gates.
 - [Competitor matrix](https://techmore.github.io/rupert/competitors.html) — scoped ERP, inventory and POS comparisons, official sources and CSV/JSON downloads.
 - [Private owner checklist guide](https://techmore.github.io/rupert/owner-checklists.html) — administrator-only local attestations, evidence/history and private printing; no checklist contents are published.
@@ -190,3 +202,7 @@ records; no longer written), `Location`,
 ## Employee timesheets
 
 [Employee web/app access and timesheets](docs/employee-timesheets.md) covers setup links, employee permissions, approvals, clock imports, CSV exports, mobile APIs, and deployment. [Native app build and distribution](mobile/README.md) covers iPhone/Android signing and release preparation. The instance serves the installable employee web app at `/employee`.
+
+## Influencer marketing
+
+Use Marketing → Influencers for collaboration, gifting and document records. [Create temporary Shopify codes](docs/ops/shopify-influencer-discounts.md) with reviewed terms and discount-applying referral links. The connected Shopify app needs `write_discounts`; creating a code requires explicit operator confirmation. See the [CMS guide](docs/ops/influencer-cms.md).

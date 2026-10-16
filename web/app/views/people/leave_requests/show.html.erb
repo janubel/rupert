@@ -38,7 +38,7 @@
     </div>
     <div class="stat">
       <p class="stat-label">Balance remaining</p>
-      <p class="stat-value-sm mt-1"><%= number_with_precision(@balance.remaining_hours, precision: 1) %>h <%= @leave_request.leave_type.titleize %> <%= @leave_request.starts_on.year %></p>
+      <p class="stat-value-sm mt-1"><%= @balance ? "#{number_with_precision(@balance.remaining_hours, precision: 1)}h" : 'Allowance not set' %> <%= @leave_request.leave_type.titleize %> <%= @leave_request.starts_on.year %></p>
     </div>
   </section>
 

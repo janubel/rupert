@@ -3,7 +3,7 @@
   <header class="app-header">
     <div class="app-header-grid">
       <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
-        <span class="grid h-9 w-9 place-items-center rounded-xl bg-olive font-display text-lg text-cream">R</span><span class="app-brand-name">Rupert</span>
+        <%= render "shared/rupert_face", size: 40 %><span class="app-brand-name">Rupert</span>
       <% end %>
       <% if Current.user %>
         <nav class="area-navigation" aria-label="Module areas" style="--nav-area-count: <%= [nav_areas.size, 1].max %>">
@@ -25,7 +25,7 @@
             <div data-dropdown-target="menu" role="menu" class="account-menu hidden">
               <div class="border-b border-fog px-4 py-3"><p class="truncate text-sm font-semibold text-ink"><%= Current.user.display_name %></p><p class="truncate text-xs text-mocha"><%= Current.user.email %></p><p class="mt-2 text-xs font-semibold text-olive"><%= navigation_role_name(Current.user) %></p></div>
               <div class="p-2">
-                <%= link_to 'Employee app & devices', employee_app_path, class: 'nav-menu-item', role: 'menuitem' %>
+                <%= link_to 'My time & time off', employee_app_path, class: 'nav-menu-item', role: 'menuitem' %>
                 <%= link_to 'My timesheets', people_timesheets_path, class: 'nav-menu-item', role: 'menuitem' if Current.user.can?('timesheets.self') %>
                 <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>My time clock</span><% end %>
                 <%= link_to roadmap_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('document') %><span>Features &amp; roadmap</span><% end %>
@@ -54,7 +54,7 @@
     <% end %>
   </header>
 
-  <main id="main" tabindex="-1" class="mx-auto max-w-6xl px-6 py-8 focus:outline-none">
+  <main id="main" tabindex="-1" class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 focus:outline-none">
     <% if (guide = PageGuides.for_path(request.path)) %>
       <%= render "shared/page_guide", guide: guide %>
     <% end %>
