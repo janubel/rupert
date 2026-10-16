@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_060000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_070000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1801,6 +1801,49 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_060000) do
     t.index ["tenant_id"], name: "index_shopify_stock_snapshots_on_tenant_id"
   end
 
+  create_table "square_timecard_days", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "square_timecard_id", null: false
+    t.date "worked_on", null: false
+    t.integer "payable_seconds", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["square_timecard_id"], name: "index_square_timecard_days_on_square_timecard_id"
+    t.index ["tenant_id", "square_timecard_id", "worked_on"], name: "idx_square_timecard_day", unique: true
+    t.index ["tenant_id", "worked_on"], name: "index_square_timecard_days_on_tenant_id_and_worked_on"
+    t.index ["tenant_id"], name: "index_square_timecard_days_on_tenant_id"
+  end
+
+  create_table "square_timecards", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "employee_id"
+    t.string "external_id", null: false
+    t.string "team_member_id"
+    t.string "location_id"
+    t.string "timezone"
+    t.datetime "started_at"
+    t.datetime "ended_at"
+    t.bigint "payable_seconds", default: 0, null: false
+    t.bigint "unpaid_break_seconds", default: 0, null: false
+    t.integer "hourly_rate_cents"
+    t.string "currency"
+    t.string "import_status", null: false
+    t.string "issue"
+    t.integer "source_version"
+    t.datetime "source_updated_at"
+    t.string "original_digest"
+    t.text "source_payload"
+    t.text "latest_payload"
+    t.datetime "imported_at"
+    t.datetime "last_seen_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["employee_id"], name: "index_square_timecards_on_employee_id"
+    t.index ["tenant_id", "employee_id", "started_at"], name: "idx_square_timecard_worker"
+    t.index ["tenant_id", "external_id"], name: "idx_square_timecard_native", unique: true
+    t.index ["tenant_id"], name: "index_square_timecards_on_tenant_id"
+  end
+
   create_table "stock_reservation_pools", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "source", null: false
@@ -2289,6 +2332,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_060000) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "square_timecard_days", "square_timecards"
+  add_foreign_key "square_timecard_days", "tenants"
+  add_foreign_key "square_timecards", "employees"
+  add_foreign_key "square_timecards", "tenants"
   add_foreign_key "stock_reservations", "stock_reservation_pools"
   add_foreign_key "swipesimple_exports", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "swipesimple_report_rows", "swipesimple_exports"

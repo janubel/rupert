@@ -29,6 +29,8 @@ Rails.application.routes.draw do
     get :document, on: :member
   end
 
+  resources :square_timesheets, path: 'people/square_timesheets', controller: 'people/square_timesheets', only: %i[index show], as: :people_square_timesheets
+
   get '/employee', to: 'employee_app#show', as: :employee_app
   scope '/employee/preview', controller: :employee_preview, as: :employee_preview do
     get '/timesheets', action: :timesheets, as: :timesheets
@@ -101,6 +103,7 @@ Rails.application.routes.draw do
       post 'employee/session', to: 'employee_sessions#create'
       get 'employee/session', to: 'employee_sessions#show'
       delete 'employee/session', to: 'employee_sessions#destroy'
+      resources :employee_square_timecards, path: 'employee/square_timecards', only: %i[index show]
       resources :employee_timesheets, path: 'employee/timesheets', only: %i[index show create update destroy] do
         member do
           post 'actions/:event', to: 'employee_timesheets#transition'

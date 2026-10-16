@@ -22,6 +22,8 @@ module People
     belongs_to :position, class_name: 'People::Position', optional: true
     has_many :work_reports, class_name: 'EmployeeWorkReport', dependent: :restrict_with_exception
     has_many :pay_rates, class_name: 'People::PayRate', dependent: :destroy
+    has_many :square_timecards, dependent: :restrict_with_exception
+    has_many :square_timecard_days, through: :square_timecards, source: :days
     has_many :timesheets, class_name: 'People::Timesheet', dependent: :destroy
     has_many :timesheet_entries, through: :timesheets, source: :entries
     has_many :leave_balances, class_name: 'People::LeaveBalance', dependent: :destroy
