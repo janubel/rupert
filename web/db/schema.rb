@@ -1512,31 +1512,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_020000) do
     t.index ["tenant_id", "status"], name: "index_tasks_on_tenant_id_and_status"
   end
 
-  create_table "ctrax_days", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.string "location_id", null: false
-    t.string "api_origin", null: false
-    t.string "store_id", null: false
-    t.date "business_date", null: false
-    t.string "timezone", null: false
-    t.string "currency", default: "USD", null: false
-    t.text "orders_json", null: false
-    t.text "sessions_json", null: false
-    t.text "controls_json", null: false
-    t.string "source_digest", null: false
-    t.datetime "captured_at", null: false
-    t.integer "reviewed_by_id"
-    t.string "reviewed_digest"
-    t.datetime "reviewed_at"
-    t.string "review_note", limit: 1000
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["reviewed_by_id"], name: "index_ctrax_days_on_reviewed_by_id"
-    t.index ["tenant_id", "location_id", "business_date"], name: "idx_on_tenant_id_location_id_business_date_9a513d6082", unique: true
-    t.index ["tenant_id"], name: "index_ctrax_days_on_tenant_id"
-  end
-
-
   create_table "ctrax_image_links", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "location_id", null: false
