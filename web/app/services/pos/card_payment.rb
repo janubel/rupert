@@ -4,6 +4,7 @@ require 'digest'
 module Pos
   class CardPayment
     def self.call(checkout, nonce:)
+      return NmiCardPayment.call(checkout, nonce: nonce) if checkout.gateway_provider == 'nmi'
       raise Error, 'Demo card checkout does not accept real card tokens.' if checkout.demo?
       raise Error, 'Invalid payment token.' unless nonce.is_a?(String) && nonce.bytesize.between?(1, 4096) && !nonce.match?(/[\x00-\x20\x7f]/)
       setting = PosSetting.find_by!(location: checkout.location)
@@ -47,6 +48,7 @@ module Pos
     end
 
     def self.reconcile!(attempt)
+      return NmiCardPayment.reconcile!(attempt) if attempt.pos_checkout.gateway_provider == 'nmi'
       checkout = attempt.pos_checkout
       return if checkout.paid?
       setting = PosSetting.find_by!(location: checkout.location)
