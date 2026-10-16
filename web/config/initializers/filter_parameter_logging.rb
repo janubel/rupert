@@ -38,3 +38,6 @@ Rails.application.config.filter_parameters += %i[customer interaction follow_up]
 Rails.application.config.filter_parameters += [/\Acms_record\z/i, /\Ainteraction\z/i, :contact_email, :shipping_details, :private_notes, :tracking_number, :tracking_url]
 
 Rails.application.config.filter_parameters += [/\Adiscount\z/i]
+
+# Close attestations and bank-cash planning inputs remain private.
+Rails.application.config.filter_parameters += [/\Aforecast\z/i, /\Aclose\z/i]

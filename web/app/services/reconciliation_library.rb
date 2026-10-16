@@ -55,13 +55,13 @@ class ReconciliationLibrary
 
   def relations
     @relations ||= begin
-      vault = ReconciliationDocument.select(:id, :source, :kind, :filename, :period_from, :period_to,
+      vault = ReconciliationDocument.select(:id, :tenant_id, :source, :kind, :filename, :period_from, :period_to,
         :created_at, :metadata_json, :supersedes_id, :sha256, :byte_size)
       vault = vault.where(source: filters['source']) if filters['source'].present?
       vault = vault.where('period_to >= ?', @from) if @from
       vault = vault.where('period_from <= ?', @to) if @to
       kinds = { 'invoices' => ['invoice'], 'controls' => ['register_control'], 'source_files' => %w[source_export gateway_report processor_report bank_statement fee_statement],
-        'archives' => %w[daily_archive period_archive], 'native_exports' => [] }[filters['category']]
+        'archives' => ReconciliationDocument::GENERATED_KINDS, 'native_exports' => [] }[filters['category']]
       vault = vault.where(kind: kinds) if kinds
       if filters['q'].present?
         sources = SOURCE_NAMES.filter_map { |key, name| key if name.downcase.include?(filters['q'].downcase) }

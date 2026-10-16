@@ -22,6 +22,8 @@ module ReconciliationHelper
     return successor.metadata['withdrawn'] ? 'Withdrawn control' : 'Previous version' if successor
     return 'Current control' if doc.kind == 'register_control'
     return 'Report archive' if %w[daily_archive period_archive].include?(doc.kind)
+    return 'Financial close package' if doc.kind == 'close_package'
+    return 'Cash forecast scenario' if doc.kind == 'cash_forecast'
     return 'Normalized snapshot' if doc.metadata['coverage'] == 'normalized_source_snapshot'
 
     doc.supersedes_id ? 'Correction retained' : 'Original retained'

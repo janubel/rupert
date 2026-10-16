@@ -15,6 +15,10 @@ class ReconciliationFollowUpsController < AuthenticatedController
     @category = ReconciliationFollowUp::CATEGORIES.key?(params[:category]) ? params[:category] : nil
     @evidence_filter = params[:evidence] == 'missing' ? 'missing' : nil
     scope = ReconciliationFollowUp.all
+    if params[:original].present?
+      @original = ReconciliationDocument.find(params[:original])
+      scope = scope.merge(ReconciliationDocumentFollowUps.scope_for(@original))
+    end
     scope = scope.where(source: @source) if @source
     scope = scope.where(owner_id: @owner_filter == 'mine' ? Current.user.id : nil) if @owner_filter
     scope = scope.where(category: @category) if @category
@@ -119,6 +123,13 @@ class ReconciliationFollowUpsController < AuthenticatedController
     form_options
     @events_pagy, @events = pagy(@follow_up.events.order(id: :desc), items: 15, page_param: :history_page)
     @matching_documents = @follow_up.matching_documents
+    # Keep a specifically reviewed original selectable even outside the recent list.
+    [params[:evidence], @follow_up.document_id].compact.each do |id|
+      next if @matching_documents.any? { |doc| doc.id.to_s == id.to_s }
+
+      doc = ReconciliationDocument.select(:id, :tenant_id, :source, :kind, :filename, :metadata_json, :period_from, :period_to, :supersedes_id, :created_at).find_by(id: id)
+      @matching_documents.unshift(doc) if @follow_up.document_matches?(doc)
+    end
     if params[:evidence].present?
       @suggested_document_id = @matching_documents.find { |doc| doc.id.to_s == params[:evidence] }&.id
       @evidence_suggestion_missing = @suggested_document_id.nil?

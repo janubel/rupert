@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  resource :financial_close, only: %i[show create], controller: 'financial_close'
+  resource :cash_forecast, only: %i[show create]
   resource :retention_drive, only: :show do
     get :connect
     post :sync

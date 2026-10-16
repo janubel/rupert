@@ -70,6 +70,20 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
     file&.unlink
   end
 
+  test 'an older reviewed or linked original remains selectable outside the recent evidence window' do
+    item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+    doc = ReconciliationEvidence.retain!(bytes: 'older original', filename: 'older-statement.txt', source: 'bank', kind: 'bank_statement', from: '2026-10-01', to: '2026-10-31')
+    ReconciliationFollowUp.any_instance.stubs(:matching_documents).returns([])
+    get reconciliation_follow_up_path(item, evidence: doc.id)
+    assert_select 'select[name="follow_up[document_id]"] option[selected][value=?]', doc.id.to_s
+    assert_select 'button[data-evidence-id=?]', doc.id.to_s
+    assert_nil item.reload.document_id
+    item.update!(document: doc, notes: 'Original reviewed; waiting for remaining detail.')
+    get reconciliation_follow_up_path(item)
+    assert_select 'select[name="follow_up[document_id]"] option[selected][value=?]', doc.id.to_s
+    assert_includes response.body, 'older-statement.txt'
+  end
+
   test 'overdue actions lead the overview and original actions respect read access and linked evidence' do
     travel_to Time.zone.parse('2026-10-16 12:00') do
       overdue = ReconciliationFollowUp.create!(@values.merge(created_by: @user))

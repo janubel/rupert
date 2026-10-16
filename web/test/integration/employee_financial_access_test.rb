@@ -24,7 +24,7 @@ class EmployeeFinancialAccessTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'a[href=?]', sales_path, count: 0
     assert_select 'a[href=?]', daily_reconciliations_path, count: 0
-    %w[/sales /sales.csv /sales/print /reports /reports/sales /reports/reconciliation /reconcile /money_reconciliations /ledger /swipesimple_reports /daily_reconciliations /reconciliation_documents /reconciliation_follow_ups /customers /users /permissions /finance/accounts /finance/chart_of_accounts /people/pay_runs /people/employees /api_access_tokens /].each do |path|
+    %w[/sales /sales.csv /sales/print /reports /reports/sales /reports/reconciliation /reconcile /money_reconciliations /ledger /swipesimple_reports /daily_reconciliations /financial_close /cash_forecast /reconciliation_documents /reconciliation_follow_ups /customers /users /permissions /finance/accounts /finance/chart_of_accounts /people/pay_runs /people/employees /api_access_tokens /].each do |path|
       get path
       assert_includes [302, 303, 403, 404], response.status, "Employee could read #{path}"
     end
