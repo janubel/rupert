@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_010135) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -649,6 +649,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_010000) do
     t.string "unit"
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "status"], name: "index_goals_on_tenant_id_and_status"
+  end
+
+  create_table "google_login_identities", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "email", null: false
+    t.string "google_subject"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_google_login_identities_on_email", unique: true
+    t.index ["google_subject"], name: "index_google_login_identities_on_google_subject", unique: true
+    t.index ["user_id"], name: "index_google_login_identities_on_user_id"
   end
 
   create_table "inventory_count_scan_receipts", id: :string, force: :cascade do |t|
@@ -1425,6 +1436,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_010000) do
   add_foreign_key "clock_shifts", "users", on_delete: :nullify
   add_foreign_key "departments", "employees", column: "manager_id"
   add_foreign_key "fulfillments", "orders", on_delete: :cascade
+  add_foreign_key "google_login_identities", "users", on_delete: :cascade
   add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade
   add_foreign_key "order_lines", "orders", on_delete: :cascade
   add_foreign_key "owner_checklist_events", "owner_checklists"

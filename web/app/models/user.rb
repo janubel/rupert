@@ -8,6 +8,7 @@ class User < ActiveRecord::Base
   belongs_to :tenant, optional: true
   has_many :user_permissions, dependent: :destroy
   has_many :api_access_tokens, dependent: :destroy
+  has_many :google_login_identities, dependent: :destroy
 
   serialize :dashboard_config, coder: JSON
 

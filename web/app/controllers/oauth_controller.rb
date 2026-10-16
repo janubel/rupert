@@ -10,7 +10,8 @@
 # Domain enforcement: the user's email domain must be in the tenant's
 # OauthAllowedDomain list. Unknown domains are rejected; known domains with an
 # existing Rupert account sign in, and known domains without one get a reader
-# account auto-provisioned.
+# account auto-provisioned. Explicit Google login aliases use their canonical
+# account's allowed domain and never create another account.
 class OauthController < ApplicationController
   class AccountInAnotherTenant < StandardError; end
 
@@ -68,8 +69,13 @@ class OauthController < ApplicationController
 
     email = info['email'].to_s.downcase
     tested_domain ||= email.split('@').last
-    tenant = resolve_tenant(email)
-    unless tenant&.status == 'active' && OauthAllowedDomain.allowed?(email, tenant: tenant)
+    identity = GoogleLoginIdentity.find_by(email: email)
+    if identity && User.where(email: email).where.not(id: identity.user_id).exists?
+      raise GoogleOauthService::ExchangeError, 'This Google email has conflicting account links. Contact an admin.'
+    end
+    tenant = resolve_tenant(email, linked_user: identity&.user)
+    allowed_email = identity ? identity.user.email : email
+    unless tenant&.status == 'active' && OauthAllowedDomain.allowed?(allowed_email, tenant: tenant)
       AccessLogger.record(
         source: 'google',
         status: 'failure',
@@ -89,7 +95,7 @@ class OauthController < ApplicationController
       raise GoogleOauthService::ExchangeError, 'This Google identity does not match the approved workspace owner. Contact the platform owner.'
     end
 
-    user = find_or_create_user!(email, info, tenant)
+    user = identity ? identity.user : find_or_create_user!(email, info, tenant)
     unless user&.active?
       AccessLogger.record(
         source: 'google',
@@ -101,6 +107,8 @@ class OauthController < ApplicationController
       )
       return redirect_to(login_path, alert: 'This account has been deactivated. Contact an admin.')
     end
+
+    identity&.verify_subject!(info['sub'])
 
     reset_session # prevent session fixation
     session[:user_id] = user.id
@@ -138,8 +146,8 @@ class OauthController < ApplicationController
 
   # Root sign-in follows the globally unique exact account first. New readers
   # need one unambiguous active tenant domain; never pick an arbitrary store.
-  def resolve_tenant(email)
-    existing = User.find_by(email: email)
+  def resolve_tenant(email, linked_user: nil)
+    existing = linked_user || User.find_by(email: email)
     if Current.tenant
       raise AccountInAnotherTenant, email if existing && existing.tenant_id != Current.tenant.id
 
