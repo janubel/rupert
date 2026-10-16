@@ -120,7 +120,7 @@ class RetentionDrive
     record = SOURCES.fetch(prefix).find(id)
     if prefix == 'document'
       bytes = record.original_bytes
-      category = if %w[daily_archive period_archive].include?(record.kind)
+      category = if ReconciliationDocument::GENERATED_KINDS.include?(record.kind)
         'Report Archives'
       elsif record.kind == 'source_export' && record.metadata['coverage'] == 'normalized_source_snapshot'
         'Source Snapshots'

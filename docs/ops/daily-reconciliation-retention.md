@@ -76,3 +76,5 @@ The [October 16 across-day UX receipt](reconciliation-across-days-deployment-202
 The [October 16 priority-action UX receipt](reconciliation-priority-actions-deployment-2026-10-16.md) records prominent unrequested reports, overdue cards and direct progress/original actions.
 
 The [October 16 local follow-up UX receipt](reconciliation-local-follow-up-deployment-2026-10-16.md) records date shortcuts, original review/link suggestions and the post-security rollout with no email actions.
+
+The [financial-close workflow guide](financial-close.md) connects completeness, originals, differences, follow-up, version-bound review, retained close packages, reporting and manual cash scenarios through **Money → Financial close**. Generated close/scenario artifacts stay separate from source evidence and cannot invalidate their own baseline review.

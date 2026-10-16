@@ -4,7 +4,7 @@ class ReconciliationFollowUp < ApplicationRecord
   include TenantScoped
   STATUSES = { 'open' => 'Open', 'waiting' => 'Waiting on report / response', 'closed' => 'Closed by reviewer' }.freeze
   CATEGORIES = { 'missing_report' => 'Report request', 'difference' => 'Difference investigation' }.freeze
-  DOCUMENT_KINDS = ReconciliationDocument::KINDS.excluding('daily_archive', 'period_archive').freeze
+  DOCUMENT_KINDS = (ReconciliationDocument::KINDS - ReconciliationDocument::GENERATED_KINDS).freeze
   CONTEXT = %w[tenant_id category source document_kind period_from period_to currency location_id metric report_digest submission_key created_by_id].freeze
   encrypts :title
   encrypts :notes
