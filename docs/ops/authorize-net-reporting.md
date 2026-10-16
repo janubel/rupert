@@ -1,6 +1,6 @@
 # Authorize.net read-only reconciliation
 
-Investigated 2026-10-15. This draft implements gateway reporting in Rupert. Merchant account access has **not** been verified: the official Merchant Interface redirected to its login screen. No merchant credentials were supplied, no live API calls were made, and no merchant settings or payment operations were changed. C-Trax remains the retail inventory reference.
+Investigated 2026-10-15. This draft implements gateway reporting in Rupert. Authenticated portal reporting was inspected: settlement reports and transaction detail screens were accessible. This establishes portal visibility only. Live reporting API access remains **unverified** because the existing Transaction Key has not been supplied. No live reporting API calls, merchant setting changes or payment operations were performed. API Login IDs, merchant identifiers, private transaction samples and credentials are excluded from this public guide. C-Trax remains the retail inventory reference.
 
 ## Access and credentials
 
@@ -15,6 +15,14 @@ The new **POS & payments → Authorize.net reporting** connection is separate fr
 
 The official OAuth guide requires registration in the **Partner Interface**, followed by merchant owner/admin consent. This PR supports refreshing an already issued token; it does not implement application registration, initial consent/code exchange or imply that Herbal Healers has partner access. Do not generate or rotate live Transaction/Signature Keys: that can disrupt existing checkout integrations.
 
+### Shared checkout credentials and Shopify
+
+Authorize.net's [Shopify payment-app guide](https://www.authorize.net/support/shopify-platform-update.html) requires an API Login ID and Transaction Key. The same merchant credentials can serve multiple sites. Generating a replacement Transaction Key expires the old key immediately when requested, or automatically after 24 hours. That overlap only delays disruption: every checkout still using the old key must be updated before it expires. Never rotate a key to obtain reporting access.
+
+The merchant portal cannot redisplay an existing Transaction Key. First inspect Shopify **Settings → Payments** read-only to identify the active provider, then verify its account mapping without revealing secrets. This store-specific dependency remains unverified pending Shopify sign-in. Rupert's Shopify catalog/order app credentials are separate from the payment app's gateway credentials. Saving the existing key in Rupert's encrypted reporting form does not rotate the gateway key; the key still has payment-processing capability. Vendor-enforced reporting-only access requires approved OAuth `read` credentials, whose initial onboarding is not implemented here.
+
+Shopify's Payment ID and Authorize.net's transaction ID are distinct. The current payment app may place Shopify's Payment ID in the gateway transaction description. This importer preserves gateway IDs but does not retain free-text descriptions or automatically match Shopify orders; that cross-system reconciliation remains a gap.
+
 All integration secrets use `PosConnection.credentials_json` and Rupert's existing Rails encryption keys. Forms remain blank, request parameter containers are filtered and responses prohibit caching. OAuth access tokens live only in memory; refreshed refresh tokens are saved encrypted with a setup-version check. Preserve production encryption keys when backing up.
 
 ## Operator workflow
@@ -24,7 +32,7 @@ All integration secrets use `PosConnection.credentials_json` and Rupert's existi
 3. **Check read access** verifies merchant identity, recent settled batches and the unsettled transaction list. It probes a settled transaction list when a batch exists and transaction details when a sample exists; its message identifies probes that could not run on an empty account. It imports no payments and proves only the methods actually checked.
 4. **Import reporting data** queues a local import. Default: previous seven days of settlements, current unsettled transactions and all previously observed nonfinal payments. Optional UTC dates permit windows of at most 31 days. Refresh to see completion/failure.
 5. Select a UTC reporting day to inspect settlement totals by known currency/status, current statuses of payments submitted that day, source transactions and batches. Totals cover all imported rows; tables show at most 100 transactions and 30 batches. Unknown currencies are excluded from totals.
-6. Enable daily reconciliation only when ready. The existing Solid Queue recurring configuration runs it at **06:20 America/New_York** for active tenants with saved, approved, explicitly enabled credentials. This PR does not start a worker, enable any account, deploy or run the schedule.
+6. Enable daily reconciliation only when ready. The existing Solid Queue recurring configuration runs it at **06:20 America/New_York** for active tenants with saved, approved, explicitly enabled credentials. Deploying this code does not automatically enable any reporting account. Keep daily imports disabled until credentials are saved and reporting access is verified.
 
 Removing credentials disables daily reporting and retains imported provenance. Changing setup cancels queued imports using the previous version; stale in-flight imports cannot commit over a changed setup. A busy database or unexpected job infrastructure failure remains visible through normal job failure handling.
 
@@ -51,7 +59,7 @@ Daily totals reflect the **latest imported state**, not a historical ledger of e
 
 Local validation: 835 SQLite Rails tests / 6,077 assertions passed; all 444 Ruby files passed repository RuboCop. Generated product-site consistency, 19 documentation-page link checks and `git diff --check` passed. PostgreSQL execution is deferred to repository CI.
 
-Official schema and reference were downloaded directly over HTTPS. Synthetic API fixtures test pagination, source IDs, settlement/refund/void transitions, optional tips, exact decimal parsing, merchant mismatch, tenant/environment isolation, atomic failures, setup changes, OAuth read scopes/refresh rotation, bounded TLS transport and sanitized errors. Request/integration tests cover encrypted blank forms, explicit saves, queued imports, read-only permissions and daily totals beyond the display limit. Live merchant entitlement, processor field population, bank deposits and initial OAuth onboarding are unverified.
+Official schema and reference were downloaded directly over HTTPS. Synthetic API fixtures test pagination, source IDs, settlement/refund/void transitions, optional tips, exact decimal parsing, merchant mismatch, tenant/environment isolation, atomic failures, setup changes, OAuth read scopes/refresh rotation, bounded TLS transport and sanitized errors. Request/integration tests cover encrypted blank forms, explicit saves, queued imports, read-only permissions and daily totals beyond the display limit. Portal reporting visibility was inspected, but live API entitlement, processor field population, bank deposits and initial OAuth onboarding remain unverified. Existing Transaction Keys are not redisplayed by the portal; obtain the existing key securely from the owner or current checkout integration instead of rotating it during setup.
 
 ## Official sources
 

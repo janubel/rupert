@@ -54,7 +54,10 @@ class ConnectionsGuide
                AUTHORIZE_NET_SANDBOX],
       find_url: 'https://account.authorize.net/',
       find_hint: 'Merchant Interface → Account → API Credentials & Keys. The client key is what the checkout page embeds for Accept.js.',
-      renewal_note: "Rotate the transaction key any time from the Merchant Interface. Keep AUTHORIZE_NET_SANDBOX=1 until you're ready to take real charges."
+      renewal_note: 'Do not generate a new Transaction Key for reporting setup: Shopify and other checkouts may share ' \
+                    'the existing key. Rotation expires the old key immediately or after 24 hours and requires ' \
+                    'coordinated updates to every consumer. Use the existing key securely or approved OAuth read access ' \
+                    'for reporting.'
     ),
     Service.new(
       key: 'sync',
