@@ -41,6 +41,52 @@ An older failing read that finishes after a newer success cannot replace it.
 C-Trax sales failures cannot overwrite stock health. A new failure retains the
 previous successful acquisition timestamp and source snapshots.
 
+## Missing access versus a paused schedule
+
+**Current read setup** reports local required-field presence and Rupert's saved
+read-authorization confirmation separately from attempt results and schedule
+opt-in. Missing setup lists static field names only, including the intended
+company/gateway/merchant reference when required. Optional Square fields do not
+block a token-backed read. NAB website/API and Authorize.net OAuth/API modes use
+their own required fields. Presence does not prove vendor entitlement.
+
+A source with missing setup shows **Missing access**, or **Read authorization
+required** when only Rupert's read confirmation is absent. A configured source
+whose opt-in is disabled retains **Automatic reads paused**. No credential,
+approval flag or schedule is changed by this projection. A queued/running job or
+recorded failure retains its own status and support reference while current
+missing setup remains visible alongside it. Previous successful acquisitions
+are retained when credentials are later removed.
+
+Google Drive instance backup distinguishes missing OAuth client fields from
+**Authorization required** when the client exists but backup consent does not.
+The platform operator completes the existing Backup consent flow. No folder ID
+is required to diagnose read setup: the backup service creates its folder after
+authorization. Document-retention Drive is a separate consent flow; this change
+neither diagnoses its vendor denial from saved text nor activates it. Google
+backup diagnostics remain restricted to the platform operator. Unreadable saved
+credentials require restoration of the original encryption keys and must not be
+described as missing fields.
+
+## Legacy catalog evidence
+
+Before a source's first instrumented receipt, Shopify legacy evidence includes
+successful `SyncRun` rows with source `shopify` or `all`. A combined run always
+imports Shopify; it can skip Square, so a combined success does not establish a
+Square read. Both sources also recognize their own saved acquisition watermark,
+which advances only after that source's import completes. This preserves
+Shopify evidence when a later stage of a combined run fails. Watermark times are
+run-start acquisition evidence, not completion or event-coverage timestamps.
+
+The newest valid source watermark or applicable successful legacy finish time
+is shown as **Legacy success evidence**. Invalid timestamps and future
+watermarks are ignored; malformed Shopify watermarks no longer break the source
+cards. All lookups remain scoped to the workspace. Fresh legacy evidence avoids
+a false **Historical evidence stale** alert but remains **Awaiting observed
+success** until an actual instrumented success exists. It creates no attempt,
+last-attempt time or successful-acquisition receipt. A new instrumented failure
+still wins over older legacy evidence.
+
 ## Failure categories and repairs
 
 | Category | Meaning | Next action |
