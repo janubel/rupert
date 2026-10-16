@@ -296,4 +296,19 @@ class EmployeeTimesheetsTest < ActionDispatch::IntegrationTest
     assert_raises(TimesheetWorkflow::Error) { workflow.change(@sheet, :destroy) }
     assert People::Timesheet.exists?(@sheet.id)
   end
+  test 'browser forms use the parameter scopes accepted by their controllers' do
+    sign_in
+    get new_people_timesheet_path
+    assert_response :success
+    assert_select 'input[name="timesheet[period_start]"]'
+    assert_select 'select[name="timesheet[employee_id]"]'
+    get people_timesheet_path(@sheet)
+    assert_response :success
+    assert_select 'input[name="timesheet_entry[worked_on]"]'
+    assert_select 'input[name="timesheet_entry[hours]"]'
+    sign_in(@admin)
+    get new_people_employee_path
+    assert_response :success
+    assert_select 'input[name="employee[email]"]'
+  end
 end
