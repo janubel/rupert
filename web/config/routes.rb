@@ -28,6 +28,14 @@ Rails.application.routes.draw do
   end
 
   get '/employee', to: 'employee_app#show', as: :employee_app
+  scope '/employee/preview', controller: :employee_preview, as: :employee_preview do
+    get '/timesheets', action: :timesheets, as: :timesheets
+    get '/timesheets/:id', action: :timesheet, as: :timesheet
+    get '/pay', action: :pay, as: :pay
+    get '/time-clock', action: :time_clock, as: :time_clock
+    get '/time-off', action: :time_off, as: :time_off
+    get '/reports', action: :reports, as: :reports
+  end
   get '/employee/reports', to: 'employee_workspace#reports', as: :employee_reports
   get '/employee/time-off', to: 'employee_workspace#time_off', as: :employee_time_off
   post '/employee/time-off', to: 'employee_workspace#request_time_off'

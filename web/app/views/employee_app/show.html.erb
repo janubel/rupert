@@ -16,10 +16,9 @@
     <% end %>
   </section>
 <% else %>
-  <% if @preview %><p role="status" class="rounded-xl border border-olive/30 bg-olive/10 p-3 text-sm"><strong>Employee preview</strong> · Example data. Actions are disabled. <%= link_to 'Close preview', employee_app_path, class: 'underline' %></p><% end %>
   <section class="flex flex-wrap items-end justify-between gap-3">
     <div><p class="text-sm text-mocha"><%= Date.current.strftime('%A, %B %-d') %></p><h1 class="page-title">Hi, <%= @worker.first_name %></h1></div>
-    <% unless @preview %><%= link_to 'My time clock', time_clock_path, class: 'text-sm text-olive underline' %><% end %>
+    <%= link_to 'My time clock', personal_time_clock_path, class: 'text-sm text-olive underline' %>
   </section>
   <section class="card card-pad flex flex-wrap items-center justify-between gap-4">
     <div>
@@ -50,11 +49,11 @@
       <div class="flex flex-wrap items-center gap-3"><%= button_to @timesheet ? 'Open this week’s timesheet' : 'Start this week’s timesheet', employee_week_path, class: 'btn-primary', data: { turbo: false } %><%= link_to 'All my timesheets', people_timesheets_path, class: 'text-sm text-olive underline' %></div>
       <% if @summary.clock_hours.positive? %><p class="text-sm text-mocha"><%= number_with_precision(@summary.clock_hours, precision: 2) %>h clocked this week. Import finished shifts into your draft timesheet to include them.</p><% end %>
       <% if @timesheet&.review_note.present? %><p class="rounded-xl bg-haze p-3 text-sm"><strong>Review comment:</strong> <%= @timesheet.review_note %></p><% end %>
-    <% else %><button type="button" disabled class="btn-primary opacity-60">Open this week’s timesheet</button><% end %>
+    <% else %><div class="flex flex-wrap items-center gap-3"><%= link_to 'Open this week’s timesheet', employee_preview_timesheet_path('current'), class: 'btn-primary' %><%= link_to 'All my timesheets', employee_preview_timesheets_path, class: 'text-sm text-olive underline' %></div><% end %>
   </section>
   <section class="grid gap-3 sm:grid-cols-2">
-    <div class="card card-pad space-y-2"><h2 class="font-semibold">Time off</h2><p class="text-sm text-mocha"><%= @next_leave ? "#{@next_leave.leave_type.titleize} · #{@next_leave.starts_on.strftime('%b %-d')} – #{@next_leave.ends_on.strftime('%b %-d')} · #{@next_leave.status.humanize}" : 'Plan a vacation, request a day off or check your calendar.' %></p><% unless @preview %><%= link_to 'Calendar & requests', employee_time_off_path, class: 'text-sm text-olive underline' %><% end %></div>
-    <div class="card card-pad space-y-2"><h2 class="font-semibold">My reports</h2><p class="text-sm text-mocha">Check hours, estimated pay and finalized payslips. Download your hours when you need them.</p><% unless @preview %><%= link_to 'View my reports', employee_reports_path, class: 'text-sm text-olive underline' %><% end %></div>
+    <div class="card card-pad space-y-2"><h2 class="font-semibold">Time off</h2><p class="text-sm text-mocha"><%= @next_leave ? "#{@next_leave.leave_type.titleize} · #{@next_leave.starts_on.strftime('%b %-d')} – #{@next_leave.ends_on.strftime('%b %-d')} · #{@next_leave.status.humanize}" : 'Plan a vacation, request a day off or check your calendar.' %></p><%= link_to 'Calendar & requests', personal_time_off_path, class: 'text-sm text-olive underline' %></div>
+    <div class="card card-pad space-y-2"><h2 class="font-semibold">My reports</h2><p class="text-sm text-mocha">Check hours, estimated pay and finalized payslips. Download your hours when you need them.</p><%= link_to 'View my reports', personal_reports_path, class: 'text-sm text-olive underline' %></div>
   </section>
-  <% unless @preview %><p class="text-sm text-mocha">Need help with time or pay? <%= link_to 'Report a problem or correction', employee_reports_path(anchor: 'problems'), class: 'text-olive underline' %>.</p><% end %>
+  <p class="text-sm text-mocha">Need help with time or pay? <%= link_to 'Report a problem or correction', personal_reports_path(anchor: 'problems'), class: 'text-olive underline' %>.</p>
 <% end %>

@@ -2,11 +2,17 @@
 
 class ApplicationController < ActionController::Base
   layout :workspace_layout
+  before_action :reject_preview_mutation
   before_action :set_current_context
   before_action :load_last_sync
   before_action :require_login
 
   private
+
+  # A preview flag must never fall through to a real write, even for a linked admin.
+  def reject_preview_mutation
+    head :forbidden if params[:preview] == '1' && !request.get? && !request.head?
+  end
 
   def workspace_layout
     Current.user&.employee? ? 'employee' : 'application'

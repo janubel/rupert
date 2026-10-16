@@ -1,0 +1,6 @@
+<section id="payslips" class="space-y-3"><h2 class="text-lg font-semibold">My payslips</h2>
+  <% if @payslips.empty? %><p class="card card-pad text-sm text-mocha">No finalized payslips in this period. Your manager will confirm payment timing.</p><% end %>
+  <% @payslips.each do |slip| %>
+    <article class="card card-pad space-y-3"><div class="flex flex-wrap justify-between gap-2"><h3 class="font-semibold"><%= slip.pay_run.period_label %></h3><span class="pill-olive"><%= slip.pay_run.paid? ? 'Paid' : 'Finalized · not marked paid' %></span></div><dl class="grid grid-cols-3 gap-2 text-sm"><div><dt class="text-mocha">Gross</dt><dd class="font-semibold"><%= number_to_currency(slip.gross_cents / 100.0) %></dd></div><div><dt class="text-mocha">Deductions</dt><dd class="font-semibold"><%= number_to_currency(slip.deductions_cents / 100.0) %></dd></div><div><dt class="text-mocha">Net</dt><dd class="font-semibold"><%= number_to_currency(slip.net_cents / 100.0) %></dd></div></dl><% if slip.pay_run.paid_on %><p class="text-sm text-mocha">Recorded payment date: <%= l(slip.pay_run.paid_on, format: :long) %></p><% end %></article>
+  <% end %>
+</section>

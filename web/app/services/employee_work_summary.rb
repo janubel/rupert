@@ -20,18 +20,7 @@ class EmployeeWorkSummary
   end
 
   def self.preview
-    summary = allocate
-    worker = People::Employee.new(first_name: 'Alex', last_name: 'Employee')
-    start = Date.current.beginning_of_week
-    sheet = People::Timesheet.new(employee: worker, period_start: start, period_end: start + 6)
-    summary.instance_variable_set(:@employee, worker)
-    summary.instance_variable_set(:@from, start)
-    summary.instance_variable_set(:@to, start + 6)
-    summary.instance_variable_set(:@entries, (start..[start + 3, Date.current].min).map { |day| People::TimesheetEntry.new(timesheet: sheet, worked_on: day, hours: 8, work_type: 'regular') })
-    summary.instance_variable_set(:@rates, [People::PayRate.new(effective_on: start, pay_type: 'hourly', hourly_rate_cents: 2000)])
-    summary.instance_variable_set(:@shifts, [])
-    summary.instance_variable_set(:@requests, [])
-    summary
+    EmployeePreview.new.summary
   end
 
   def hours

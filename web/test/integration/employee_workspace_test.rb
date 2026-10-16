@@ -50,7 +50,7 @@ class EmployeeWorkspaceTest < ActionDispatch::IntegrationTest
     sign_in
     Current.tenant = @tenant
     assert_difference 'People::Timesheet.count', 1 do
-      2.times { post employee_week_path, params: { employee_id: @other.id, preview: 1 } }
+      2.times { post employee_week_path, params: { employee_id: @other.id } }
     end
     sheet = People::Timesheet.order(:id).last
     assert_equal @worker.id, sheet.employee_id
