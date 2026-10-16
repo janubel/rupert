@@ -5,9 +5,7 @@ class PosDisplaysController < AuthenticatedController
     render json: { error: error.message }, status: :conflict
   end
   before_action do
-    authorize(:module, :sales_write?)
-    authorize(:module, :sales_read?)
-    authorize(:module, :inventory_read?)
+    raise Pundit::NotAuthorizedError unless Current.user.can_use_pos?
     response.headers['Cache-Control'] = 'no-store'
   end
 

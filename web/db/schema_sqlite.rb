@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -2130,7 +2130,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_070000) do
     t.datetime "expires_at"
     t.string "name"
     t.string "password_digest"
-    t.string "role", default: "admin"
+    t.string "role", default: "employee"
     t.string "shopify_domain"
     t.string "shopify_token"
     t.bigint "shopify_user_id"

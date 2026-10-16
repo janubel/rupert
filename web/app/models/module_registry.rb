@@ -152,7 +152,12 @@ class ModuleRegistry
     def nav_for(user)
       return [] unless user&.active?
 
+      if user.employee?
+        return all.select { |entry| %w[ctrax_pos time_clock timesheets].include?(entry.key) }.sort_by(&:position)
+      end
+
       all.select do |entry|
+        next user.can_use_pos? if %w[ctrax_pos point_of_sale].include?(entry.key)
         next false if %w[platform system].include?(entry.key) && !user.super_admin?
         next false if entry.key == 'employee_reports' && !user.can_manage_accounts?
         next false if entry.key == 'owner_checklists' && !(user&.active? && (user.admin? || user.super_admin?))

@@ -177,7 +177,7 @@ class PageGuides
       ],
       tips: [
         'Only the platform super administrator configures Google Drive backups. Every 6 hours, Rupert can copy the entire shared instance database to that approved destination; store credentials cannot authorize this.',
-        'Add every staff email domain to Google sign-in; new people on an allowed domain get a reader account automatically.',
+        'Add every staff email domain to Google sign-in; new people on an allowed domain get a employee account automatically.',
         'Environment secrets (Square/Shopify tokens) live in the .env card and are encrypted at rest.'
       ]
     ),
