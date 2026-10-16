@@ -1,114 +1,136 @@
 <% content_for :title, @customer.name %>
+<% can_write = Current.user.can?("customers.write") %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= @customer.name %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <span class="pill-taupe capitalize"><%= directory_label(@customer.source) %></span>
-        <% if @customer.email.present? %><span class="ml-2"><%= @customer.email %></span><% end %>
-        <% if @customer.phone.present? %><span class="ml-2"><%= @customer.phone %></span><% end %>
-      </p>
+  <nav aria-label="Breadcrumb" class="text-xs text-taupe">
+    <%= link_to "Customers", customers_path, class: "font-semibold text-olive hover:underline" %> <span aria-hidden="true">/</span> <span aria-current="page"><%= @customer.name %></span>
+  </nav>
+
+  <section class="flex flex-wrap items-start justify-between gap-4">
+    <div class="flex min-w-0 items-center gap-4">
+      <span class="grid h-14 w-14 flex-none place-items-center rounded-full bg-olive text-lg font-semibold text-cream" aria-hidden="true"><%= customer_initials(@customer) %></span>
+      <div class="min-w-0">
+        <h1 class="page-title break-words"><%= @customer.name %></h1>
+        <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-mocha">
+          <%= customer_status_pill(@customer) %>
+          <span class="pill-taupe"><%= directory_label(@customer.source) %></span>
+          <%= customer_tag_pills(@customer) %>
+        </p>
+      </div>
     </div>
-    <div class="flex gap-2">
-      <%= link_to "Back to customers", customers_path, class: "btn-ghost btn-sm" %>
-      <% if Current.user.can?("customers.write") %>
-        <%= link_to "Edit", edit_customer_path(@customer), class: "btn-ghost btn-sm" %>
+    <div class="flex flex-wrap gap-2" role="group" aria-label="Quick actions">
+      <% if @customer.phone.present? %><%= link_to "Call", "tel:#{@customer.phone}", class: "btn-ghost btn-sm" %><% end %>
+      <% if @customer.email.present? %><%= link_to "Email", "mailto:#{@customer.email}", class: "btn-ghost btn-sm" %><% end %>
+      <% if can_write %>
+        <%= link_to "Log interaction", "#log-interaction", class: "btn-ghost btn-sm" %>
+        <%= link_to "Schedule follow-up", "#schedule-follow-up", class: "btn-ghost btn-sm" %>
+        <%= link_to "Edit", edit_customer_path(@customer), class: "btn-primary btn-sm" %>
       <% end %>
     </div>
   </section>
 
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Customer summary">
+    <div class="stat"><p class="stat-label">Orders</p><p class="stat-value mt-1"><%= @customer.orders.count %></p></div>
+    <div class="stat"><p class="stat-label">Lifetime spend</p><p class="stat-value mt-1"><%= customer_money(@customer.lifetime_totals) %></p></div>
+    <div class="stat"><p class="stat-label">Last order</p><p class="stat-value-sm mt-1"><%= @last_order_at ? l(@last_order_at, format: :short) : "—" %></p></div>
     <div class="stat">
-      <p class="stat-label">Orders</p>
-      <p class="stat-value mt-1"><%= @customer.orders.count %></p>
+      <p class="stat-label">Open follow-ups</p>
+      <p class="stat-value mt-1"><%= @open_follow_up_count %></p>
+      <% if @overdue_follow_up_count.positive? %><p class="mt-1 text-xs font-semibold text-rose"><%= @overdue_follow_up_count %> overdue</p><% end %>
     </div>
-    <div class="stat">
-      <p class="stat-label">Lifetime value</p>
-      <p class="stat-value mt-1"><%= customer_money(@customer.lifetime_totals) %></p>
-    </div>
-    <div class="stat">
-      <p class="stat-label">Last order</p>
-      <p class="stat-value-sm mt-1"><%= @last_order_at ? l(@last_order_at, format: :short) : "—" %></p>
-    </div>
-    <div class="stat">
-      <p class="stat-label">Member since</p>
-      <p class="stat-value-sm mt-1"><%= l(@customer.created_at.to_date, format: :long) %></p>
-    </div>
-  </section>
-
-  <section class="card card-pad">
-    <p class="text-sm"><strong><%= @customer.crm_status.titleize %></strong> · <%= @customer.tags.presence || 'No tags' %> · Assigned to <%= @customer.owner&.display_name || 'Unassigned' %></p>
-    <p class="mt-2 text-xs text-taupe">Source reference: <%= directory_label(@customer.source) %> · <%= @customer.external_id %></p>
-    <p class="mt-1 text-xs text-taupe"><%= customer_directory_status(@customer) %></p>
-    <p class="mt-1 text-xs text-taupe">Last full directory read: <%= @customer.source == 'manual' ? 'Added manually' : @customer.source_synced_at ? l(@customer.source_synced_at, format: :long) : 'Not verified' %></p>
   </section>
 
   <div class="grid gap-4 lg:grid-cols-3">
-    <div class="card card-pad lg:col-span-1">
-      <h2 class="font-display text-lg text-ink">Notes</h2>
-      <p class="mt-2 whitespace-pre-wrap text-sm text-mocha"><%= @customer.notes.presence || "No notes yet." %></p>
+    <div class="space-y-4 lg:col-span-1">
+      <section class="card card-pad" aria-labelledby="details-heading">
+        <h2 id="details-heading" class="font-display text-lg text-ink">Details</h2>
+        <dl class="mt-3 space-y-2 text-sm">
+          <div><dt class="text-xs text-taupe">Email</dt><dd class="break-words"><%= @customer.email.presence || "—" %></dd></div>
+          <div><dt class="text-xs text-taupe">Phone</dt><dd><%= @customer.phone.presence || "—" %></dd></div>
+          <div><dt class="text-xs text-taupe">Assigned to</dt><dd><%= @customer.owner&.display_name || "Unassigned" %></dd></div>
+          <div><dt class="text-xs text-taupe">Customer since</dt><dd><%= l(@customer.created_at.to_date, format: :long) %></dd></div>
+          <div><dt class="text-xs text-taupe">Source reference</dt><dd class="break-all text-xs text-mocha"><%= directory_label(@customer.source) %> · <%= @customer.external_id %></dd></div>
+          <div><dt class="text-xs text-taupe">Directory status</dt><dd class="text-xs text-mocha"><%= customer_directory_status(@customer) %><% unless @customer.source == "manual" %> · last full read <%= @customer.source_synced_at ? l(@customer.source_synced_at, format: :long) : "never" %><% end %></dd></div>
+        </dl>
+      </section>
+
+      <section class="card card-pad" aria-labelledby="notes-heading">
+        <h2 id="notes-heading" class="font-display text-lg text-ink">Notes</h2>
+        <p class="mt-2 whitespace-pre-wrap text-sm text-mocha"><%= @customer.notes.presence || "No notes yet." %></p>
+        <% if can_write %><p class="mt-3"><%= link_to "Edit notes", edit_customer_path(@customer, anchor: "customer_notes"), class: "text-xs font-semibold text-olive hover:underline" %></p><% end %>
+      </section>
+
+      <section class="card card-pad" aria-labelledby="follow-ups-heading">
+        <h2 id="follow-ups-heading" class="font-display text-lg text-ink">Follow-ups</h2>
+        <% if @follow_ups.empty? %><p class="mt-2 text-sm text-taupe">Nothing scheduled.</p><% end %>
+        <ul class="mt-2 divide-y divide-fog">
+          <% @follow_ups.each do |task| %>
+            <% state, pill = follow_up_state(task) %>
+            <li class="py-3 text-sm">
+              <p class="font-semibold <%= "text-taupe line-through" if task.completed_at %>"><%= task.title %></p>
+              <p class="mt-1 flex flex-wrap items-center gap-2 text-xs text-taupe"><span class="<%= pill %>"><%= state %></span> <%= l(task.due_on, format: :long) %> · <%= task.owner&.display_name || "Unassigned" %></p>
+              <% if can_write %><%= button_to (task.completed_at ? "Reopen" : "Mark complete"), customer_follow_up_path(@customer, task), method: :patch, params: { event: task.completed_at ? "reopen" : "complete" }, class: "btn-ghost btn-sm mt-2", form: { "aria-label": "#{task.completed_at ? 'Reopen' : 'Complete'} follow-up #{task.title}" } %><% end %>
+            </li>
+          <% end %>
+        </ul>
+        <%== pagy_nav(@follow_ups_pagy) if @follow_ups_pagy.pages > 1 %>
+        <% if can_write %>
+          <%= form_with url: customer_follow_ups_path(@customer), scope: :follow_up, id: "schedule-follow-up", class: "mt-4 space-y-3 border-t border-fog pt-4" do |f| %>
+            <h3 class="text-sm font-semibold text-ink">Schedule a follow-up</h3>
+            <div><%= f.label :title, "What needs doing?", class: "block text-sm" %><%= f.text_field :title, required: true, maxlength: 500, class: "input" %></div>
+            <div><%= f.label :due_on, "Due date", class: "block text-sm" %><%= f.date_field :due_on, required: true, value: Date.current, class: "input" %></div>
+            <div><%= f.label :owner_id, "Assigned to", class: "block text-sm" %><%= f.select :owner_id, @owners.map { |u| [u.display_name, u.id] }, { include_blank: "Unassigned", selected: @customer.owner_id || Current.user.id }, class: "select w-full" %></div>
+            <%= f.submit "Schedule follow-up", class: "btn-primary" %>
+          <% end %>
+        <% end %>
+      </section>
     </div>
 
-    <div class="card card-pad lg:col-span-2">
-      <h2 class="font-display text-lg text-ink">Order history</h2>
-      <div class="mt-3 divide-y divide-fog">
-        <% if @orders.empty? %>
-          <p class="py-3 text-sm text-taupe">No orders yet.</p>
-        <% end %>
-        <% @orders.each do |order| %>
-          <div class="flex items-center justify-between gap-4 py-3">
-            <div class="min-w-0">
-              <p class="truncate text-sm font-medium text-ink"><%= link_to order.display_number, order_path(order), class: "hover:text-olive hover:underline" %></p>
-              <p class="text-xs text-taupe"><%= l(order.occurred_at, format: :short) %> · <span class="capitalize"><%= order.channel %></span></p>
+    <div class="space-y-4 lg:col-span-2">
+      <section class="card card-pad" aria-labelledby="timeline-heading">
+        <h2 id="timeline-heading" class="font-display text-lg text-ink">Activity timeline</h2>
+        <p class="text-xs text-taupe">Conversations and contact history, newest first.</p>
+        <% if can_write %>
+          <%= form_with url: customer_interactions_path(@customer), scope: :interaction, id: "log-interaction", class: "mt-4 space-y-3 rounded-2xl bg-haze/60 p-4" do |f| %>
+            <h3 class="text-sm font-semibold text-ink">Log an interaction</h3>
+            <div class="grid gap-3 sm:grid-cols-4">
+              <div class="sm:col-span-1"><%= f.label :kind, "Type", class: "block text-sm" %><%= f.select :kind, CustomerInteraction::KINDS.map { |k| [k.titleize, k] }, {}, class: "select w-full" %></div>
+              <div class="sm:col-span-3"><%= f.label :body, "What happened?", class: "block text-sm" %><%= f.text_area :body, required: true, maxlength: 10_000, rows: 3, class: "input !rounded-2xl" %></div>
             </div>
-            <div class="flex items-center gap-3">
-              <span class="<%= %w[paid fulfilled].include?(order.status) ? "pill-fern" : "pill-clay" %>"><%= order.status %></span>
-              <span class="text-sm font-medium text-ink"><%= customer_money({ order.currency => order.gross_cents }) %></span>
-            </div>
-          </div>
+            <%= f.submit "Record interaction", class: "btn-primary" %>
+          <% end %>
         <% end %>
-      </div>
-      <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
-    </div>
-  </div>
+        <% if @interactions.empty? %><p class="mt-4 text-sm text-taupe">No interactions recorded yet.<%= " Log your first call, email or note above." if can_write %></p><% end %>
+        <ol class="mt-4 space-y-4 border-l border-fog pl-5">
+          <% @interactions.each do |entry| %>
+            <li class="relative">
+              <span class="absolute -left-[1.55rem] top-1 h-2.5 w-2.5 rounded-full bg-olive" aria-hidden="true"></span>
+              <p class="text-xs text-taupe"><span class="pill-taupe"><%= CustomersHelper::INTERACTION_LABELS.fetch(entry.kind, entry.kind.titleize) %></span> <%= entry.author&.display_name || "Former user" %> · <time datetime="<%= entry.created_at.iso8601 %>"><%= l(entry.created_at, format: :long) %></time></p>
+              <p class="mt-1 whitespace-pre-wrap text-sm"><%= entry.body %></p>
+            </li>
+          <% end %>
+        </ol>
+        <%== pagy_nav(@interactions_pagy) if @interactions_pagy.pages > 1 %>
+      </section>
 
-  <div class="grid gap-4 lg:grid-cols-2">
-    <section class="card card-pad">
-      <h2 class="font-display text-lg">Follow-ups</h2>
-      <% @follow_ups.each do |task| %>
-        <div class="border-b border-fog py-3 text-sm">
-          <p class="font-semibold"><%= task.title %></p>
-          <p class="text-xs text-taupe"><%= task.completed_at ? 'Completed' : task.due_on < Date.current ? 'Overdue' : 'Open' %> · <%= task.due_on %> · <%= task.owner&.display_name || 'Unassigned' %></p>
-          <% if Current.user.can?('customers.write') %><%= button_to task.completed_at ? 'Reopen' : 'Mark complete', customer_follow_up_path(@customer, task), method: :patch, params: { event: task.completed_at ? 'reopen' : 'complete' }, class: 'btn-ghost btn-sm mt-2' %><% end %>
-        </div>
-      <% end %>
-      <%== pagy_nav(@follow_ups_pagy) if @follow_ups_pagy.pages > 1 %>
-      <% if Current.user.can?('customers.write') %>
-        <%= form_with url: customer_follow_ups_path(@customer), scope: :follow_up, class: 'mt-4 space-y-3' do |f| %>
-          <div><%= f.label :title, 'Follow-up', class: 'block text-sm' %><%= f.text_field :title, required: true, maxlength: 500, class: 'input' %></div>
-          <div><%= f.label :due_on, 'Due date', class: 'block text-sm' %><%= f.date_field :due_on, required: true, value: Date.current, class: 'input' %></div>
-          <div><%= f.label :owner_id, 'Assigned to', class: 'block text-sm' %><%= f.select :owner_id, @owners.map { |u| [u.display_name, u.id] }, { include_blank: 'Unassigned', selected: @customer.owner_id || Current.user.id }, class: 'select' %></div>
-          <%= f.submit 'Schedule follow-up', class: 'btn-primary' %>
-        <% end %>
-      <% end %>
-    </section>
-    <section class="card card-pad">
-      <h2 class="font-display text-lg">Interaction history</h2>
-      <p class="text-xs text-taupe">Record conversations here. Email entries log past contact.</p>
-      <% @interactions.each do |entry| %>
-        <article class="border-b border-fog py-3">
-          <p class="text-xs text-taupe"><%= entry.kind.titleize %> · <%= entry.author&.display_name || 'Former user' %> · <%= l(entry.created_at, format: :long) %></p>
-          <p class="mt-1 whitespace-pre-wrap text-sm"><%= entry.body %></p>
-        </article>
-      <% end %>
-      <%== pagy_nav(@interactions_pagy) if @interactions_pagy.pages > 1 %>
-      <% if Current.user.can?('customers.write') %>
-        <%= form_with url: customer_interactions_path(@customer), scope: :interaction, class: 'mt-4 space-y-3' do |f| %>
-          <div><%= f.label :kind, 'Contact type', class: 'block text-sm' %><%= f.select :kind, CustomerInteraction::KINDS.map { |k| [k.titleize, k] }, {}, class: 'select' %></div>
-          <div><%= f.label :body, 'Notes', class: 'block text-sm' %><%= f.text_area :body, required: true, maxlength: 10_000, rows: 4, class: 'input' %></div>
-          <%= f.submit 'Record interaction', class: 'btn-primary' %>
-        <% end %>
-      <% end %>
-    </section>
+      <section class="card card-pad" aria-labelledby="orders-heading">
+        <h2 id="orders-heading" class="font-display text-lg text-ink">Order history</h2>
+        <% if @orders.empty? %><p class="py-3 text-sm text-taupe">No orders yet.</p><% end %>
+        <ul class="mt-3 divide-y divide-fog">
+          <% @orders.each do |order| %>
+            <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium text-ink"><%= link_to order.display_number, order_path(order), class: "hover:text-olive hover:underline" %></p>
+                <p class="text-xs text-taupe"><%= l(order.occurred_at, format: :short) %> · <span class="capitalize"><%= order.channel %></span></p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="<%= %w[paid fulfilled].include?(order.status) ? "pill-fern" : "pill-clay" %>"><%= order.status %></span>
+                <span class="text-sm font-medium text-ink"><%= customer_money({ order.currency => order.gross_cents }) %></span>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+        <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+      </section>
+    </div>
   </div>
 </div>

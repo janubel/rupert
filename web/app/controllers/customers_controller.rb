@@ -3,6 +3,13 @@
 require 'csv'
 
 class CustomersController < AuthenticatedController
+  SORTS = {
+    'recent' => [{ created_at: :desc, id: :desc }, 'Newest first'],
+    'oldest' => [{ created_at: :asc, id: :asc }, 'Oldest first'],
+    'name' => [%i[last_name first_name id], 'Name A–Z'],
+    'email' => [%i[email id], 'Email A–Z']
+  }.freeze
+
   before_action :set_customer, only: %i[show edit update]
 
   def index
@@ -13,7 +20,11 @@ class CustomersController < AuthenticatedController
     @due_follow_ups = CustomerFollowUp.due.includes(:customer, :owner).order(:due_on, :id).limit(20)
     @due_count = CustomerFollowUp.due.count
     @owners = crm_owners
-    @pagy, @customers = pagy(@q.result.distinct.order(created_at: :desc, id: :desc), items: 25)
+    @sort = SORTS.key?(params[:sort]) ? params[:sort] : 'recent'
+    @pagy, @customers = pagy(@q.result.distinct.order(SORTS.fetch(@sort).first), items: 25)
+    @status_counts = Core::Customer.group(:crm_status).count
+    @total_customers = @status_counts.values.sum
+    @filtered = filters_active?
     # One grouped SUM + one grouped COUNT for the page instead of a lifetime-
     # value query and an orders COUNT per row (the view calls orders.size).
     ids = @customers.map(&:id)
@@ -36,6 +47,8 @@ class CustomersController < AuthenticatedController
     authorize(@customer)
     @directory_states = DirectorySyncState.where(kind: 'customers').index_by(&:provider)
     @last_order_at = @customer.orders.maximum(:occurred_at)
+    @open_follow_up_count = @customer.follow_ups.open.count
+    @overdue_follow_up_count = @customer.follow_ups.due.where(due_on: ...Date.current).count
     @pagy, @orders = pagy(@customer.orders.order(occurred_at: :desc, id: :desc), items: 25)
     @interactions_pagy, @interactions = pagy(@customer.interactions.includes(:author).order(created_at: :desc, id: :desc), items: 25, page_param: :activity_page)
     @follow_ups_pagy, @follow_ups = pagy(@customer.follow_ups.includes(:owner).order(Arel.sql('CASE WHEN completed_at IS NULL THEN 0 ELSE 1 END'), :due_on, :id), items: 25, page_param: :follow_up_page)
@@ -97,6 +110,19 @@ class CustomersController < AuthenticatedController
   end
 
   private
+
+  # Staff who lack customers.read get an explanation instead of a bare redirect;
+  # write-permission denials keep the standard behaviour.
+  def user_not_authorized
+    return super if Current.user&.can?('customers.read')
+
+    render('customers/no_access', status: :forbidden)
+  end
+
+  def filters_active?
+    q = params[:q].respond_to?(:values) ? params[:q].values.any?(&:present?) : false
+    q || %i[status source owner due directory].any? { |key| params[key].present? }
+  end
 
   def filtered_customers
     records = Core::Customer.all
