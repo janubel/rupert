@@ -112,6 +112,10 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     assert card
     assert_includes card.text, 'Partially set up'
     assert_includes card.text, 'not set' # client secret missing
+    assert_select '[data-connection-source=shopify] [data-sync-access=missing]', text: /Missing: Client secret/
+    assert_select '[data-credential-service=square] [data-sync-access=missing]', text: /Missing: Access token/
+    assert_select '[data-connection-source=authorize_net] [data-sync-access=missing]', text: /Gateway ID/
+    assert_select '[data-connection-source=authorize_net]', text: /Missing access/
   end
 
   test 'a cashier cannot view connections' do

@@ -44,6 +44,10 @@ class SourceHealth
     legacy_at = legacy_success(operation)
     queue = SyncQueueHealth.execution(latest)
     enabled = enabled?(operation)
+    raise ActiveRecord::Encryption::Errors::Decryption if @source[:badge] == 'Credentials unreadable'
+
+    access = SourceReadAccess.for(@source[:key], connection: @connection)
+    access_missing = access && !access[:ready]
     category = latest&.error_category
     category = 'worker' if %w[queued running].include?(latest&.status) && queue[:state] == 'Failed in worker'
     failure_current = category && latest && (!success || (order_key(latest) <=> order_key(success)).positive?)
@@ -54,6 +58,8 @@ class SourceHealth
       latest.started_at < 45.minutes.ago ? 'Read stalled' : 'Reading'
     elsif latest&.status == 'queued'
       latest.queued_at < 15.minutes.ago && !queue[:retry_at] ? 'Queue delayed' : 'Queued'
+    elsif access_missing
+      access[:state]
     elsif !enabled
       'Automatic reads paused'
     elsif success_at.nil? && legacy_at && legacy_at < freshness.ago
@@ -69,21 +75,18 @@ class SourceHealth
       state = 'Partial acquisition'
       category = 'optional_reports'
     end
-    if @source[:badge] == 'Credentials unreadable'
-      state = 'Saved credentials unreadable'
-      category = 'encryption'
-    end
     # Legacy badges identify symptoms but cannot establish an exact failure
     # reason or attempt timestamp. Never classify saved free-text messages.
-    if latest.nil? && %w[Error Needs\ login].include?(@source[:badge])
+    if latest.nil? && (!access || access[:ready]) && %w[Error Needs\ login].include?(@source[:badge])
       state = 'Legacy failure · cause unknown'
       category = 'unknown'
     end
     title, action = guidance(state, category)
+    title, action = access.values_at(:reason, :action) if access && state == access[:state]
     {
       operation: operation, label: label, state: state, category: category,
-      reason: title, action: action, enabled: enabled,
-      alert: ['Failed', 'Read stalled', 'Queue delayed', 'Stale', 'Partial acquisition', 'Saved credentials unreadable', 'Historical evidence stale', 'Legacy failure · cause unknown'].include?(state),
+      reason: title, action: action, enabled: enabled, access: access,
+      alert: access_missing || ['Failed', 'Read stalled', 'Queue delayed', 'Stale', 'Partial acquisition', 'Saved credentials unreadable', 'Historical evidence stale', 'Legacy failure · cause unknown'].include?(state),
       last_attempt_at: latest&.started_at, queued_at: latest&.queued_at,
       last_success_at: success_at, legacy_at: legacy_at, source_at: source_time(operation),
       source_event_at: nil, coverage: coverage(operation),
@@ -94,7 +97,7 @@ class SourceHealth
     }
   rescue ActiveRecord::Encryption::Errors::Decryption
     title, action = SyncFailure::GUIDANCE.fetch('encryption')
-    { operation: operation, label: label, state: 'Saved credentials unreadable', alert: true,
+    { operation: operation, label: label, state: 'Saved credentials unreadable', category: 'encryption', alert: true,
       reason: title, action: action, history: [],
       worker: { state: 'Unknown', last_at: nil }, queue: { state: 'Unknown', retry_at: nil } }
   rescue ActiveRecord::ActiveRecordError
@@ -126,7 +129,7 @@ class SourceHealth
       operation == 'stock' ? CtraxStockSnapshot.minimum(:captured_at) : CtraxDay.maximum(:captured_at)
     when 'swipesimple', 'authorize_net', 'bank' then @connection&.last_reported_at
     when 'shopify', 'square'
-      SyncRun.where(source: @source[:key], status: 'success').maximum(:finishedAt)
+      CatalogSyncHistory.legacy_success(@source[:key])
     when 'google_backup' then BackupLog.unscoped.where(tenant_id: nil, status: 'success').maximum(:finishedAt)
     end
   end

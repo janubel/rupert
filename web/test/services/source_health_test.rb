@@ -4,11 +4,16 @@ require 'test_helper'
 
 class SourceHealthTest < ActiveSupport::TestCase
   setup do
+    travel_to Time.current.change(usec: 0)
     Current.user = users(:regular_user)
+    %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].each { |key| EnvStore.set(key, 'synthetic-present') }
     SyncQueueHealth.stubs(:worker).returns(state: 'Recent worker heartbeat', last_at: Time.current)
     SyncQueueHealth.stubs(:execution).returns(state: 'No retained queue receipt', retry_at: nil)
   end
-  teardown { Current.reset }
+  teardown do
+    travel_back
+    Current.reset
+  end
 
   def receipt(status, time:, operation: 'catalog', source: 'shopify', category: nil, finished: time)
     SyncAttempt.create!(source: source, operation: operation, status: status,
@@ -95,7 +100,10 @@ class SourceHealthTest < ActiveSupport::TestCase
   end
 
   test 'partial processor acquisition is distinguished from full availability' do
-    connection = Struct.new(:reporting_enabled, :reporting_auth_mode, :last_reported_at, :last_report_status).new(true, 'api_key', Time.current, 'partial')
+    connection = PosConnection.new(provider: 'iris_reporting', environment: 'production', vendor_approved: true,
+      reporting_enabled: true, reporting_auth_mode: 'api_key', account_reference: '123456',
+      credentials_json: { api_url: 'https://example.iriscrm.com', api_token: 'synthetic-token' }.to_json,
+      last_reported_at: Time.current, last_report_status: 'partial')
     PosConnection.stubs(:find_by).returns(connection)
     receipt('succeeded', time: 1.minute.ago, source: 'bank', operation: 'reporting')
     state = health(source: 'bank')
@@ -106,7 +114,10 @@ class SourceHealthTest < ActiveSupport::TestCase
   end
 
   test 'connector timestamps cannot hide a first instrumented failed attempt' do
-    connection = Struct.new(:reporting_enabled, :reporting_auth_mode, :last_reported_at, :last_report_status).new(true, 'api_key', Time.current, 'failed')
+    connection = PosConnection.new(provider: 'iris_reporting', environment: 'production', vendor_approved: true,
+      reporting_enabled: true, reporting_auth_mode: 'api_key', account_reference: '123456',
+      credentials_json: { api_url: 'https://example.iriscrm.com', api_token: 'synthetic-token' }.to_json,
+      last_reported_at: Time.current, last_report_status: 'failed')
     PosConnection.stubs(:find_by).returns(connection)
     receipt('failed', time: 1.minute.ago, source: 'bank', operation: 'reporting', category: 'data_contract')
     state = health(source: 'bank')
@@ -128,5 +139,70 @@ class SourceHealthTest < ActiveSupport::TestCase
     assert_equal 'encryption', state[:category]
     assert state[:alert]
     assert_includes state[:action], 'original encryption keys'
+  end
+
+  test 'missing reporting access is distinct from a deliberately paused configured connection' do
+    state = health(source: 'authorize_net', badge: 'Portal snapshot')
+    assert_equal 'Missing access', state[:state]
+    assert_includes state.dig(:access, :missing_fields), 'Transaction Key'
+    assert_includes state.dig(:access, :missing_fields), 'Gateway ID'
+    assert_nil state[:category]
+    assert_nil state[:last_attempt_at]
+    assert state[:alert]
+    connection = PosConnection.new(provider: 'authorize_net_reporting', vendor_approved: true,
+      account_reference: '123456', credentials_json: { api_login_id: 'test-login', transaction_key: 'test-key' }.to_json)
+    PosConnection.stubs(:find_by).returns(connection)
+    state = health(source: 'authorize_net')
+    assert_equal 'Automatic reads paused', state[:state]
+    assert state.dig(:access, :ready)
+    refute connection.reporting_enabled
+  end
+
+  test 'current missing access does not erase the result of an earlier failed read' do
+    failure = receipt('failed', time: 1.minute.ago, source: 'square', category: 'credentials')
+    EnvStore.stubs(:fetch).with('SQUARE_ACCESS_TOKEN', '').returns('')
+    state = health(source: 'square')
+    assert_equal 'Failed', state[:state]
+    assert_equal 'credentials', state[:category]
+    assert_equal "SYNC-#{failure.id}", state[:reference]
+    assert_equal ['Access token'], state.dig(:access, :missing_fields)
+  end
+
+  test 'missing access after a successful read retains success but does not claim a schedule was paused' do
+    success = receipt('succeeded', time: 1.minute.ago, source: 'square')
+    EnvStore.stubs(:fetch).with('SQUARE_ACCESS_TOKEN', '').returns('')
+    state = health(source: 'square')
+    assert_equal 'Missing access', state[:state]
+    assert_equal success.finished_at, state[:last_success_at]
+    assert_nil state[:category]
+    assert state[:alert]
+  end
+
+  test 'current combined Shopify success is legacy evidence without inventing a receipt' do
+    SyncRun.create!(source: 'shopify', status: 'success', mode: 'manual', actor: 'test', startedAt: 3.hours.ago, finishedAt: 2.hours.ago)
+    recent = SyncRun.create!(source: 'all', status: 'success', mode: 'scheduled', actor: 'test', startedAt: 5.minutes.ago, finishedAt: 4.minutes.ago)
+    state = health
+    assert_equal 'Awaiting observed success', state[:state]
+    assert_equal recent.finishedAt, state[:legacy_at]
+    assert_nil state[:last_success_at]
+    assert_nil state[:last_attempt_at]
+    assert_empty state[:history]
+    refute state[:alert]
+  end
+
+  test 'recent legacy evidence cannot hide a new instrumented failure' do
+    SyncRun.create!(source: 'all', status: 'success', mode: 'scheduled', actor: 'test', startedAt: 5.minutes.ago, finishedAt: 4.minutes.ago)
+    receipt('failed', time: 1.minute.ago, category: 'entitlement')
+    assert_equal 'Failed', health[:state]
+    assert_equal 'entitlement', health[:category]
+  end
+
+  test 'queued reads retain their receipt when current credentials are removed' do
+    EnvStore.stubs(:fetch).with('SQUARE_ACCESS_TOKEN', '').returns('')
+    queued = SyncAttempt.create!(source: 'square', operation: 'catalog', status: 'queued', queued_at: 1.minute.ago)
+    state = health(source: 'square')
+    assert_equal 'Queued', state[:state]
+    assert_equal "SYNC-#{queued.id}", state[:reference]
+    assert_equal ['Access token'], state.dig(:access, :missing_fields)
   end
 end

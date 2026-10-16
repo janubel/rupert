@@ -36,9 +36,10 @@ class SourceSyncStatus
 
   def platform(source, credential_keys)
     configured = credential_keys.all? { |key| EnvStore.fetch(key, '').present? }
-    value = Setting.find_by(key: "sync_watermark_#{source}", tenant_id: Current.tenant_id)&.value
-    last_at = Time.zone.parse(value) if value.present?
-    run = SyncRun.where(source: ['all', source]).order(startedAt: :desc).first
+    last_at = CatalogSyncHistory.watermark(source)
+    # A combined run can fail or finish without ever reading Square.
+    sources = source == 'shopify' ? %w[all shopify] : [source]
+    run = SyncRun.where(source: sources).order(startedAt: :desc).first
     badge = if !configured
       'Needs access'
     elsif run&.status == 'running' && run.startedAt > SyncEngine::STALE_RUN_AFTER.ago

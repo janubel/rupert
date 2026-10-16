@@ -1,9 +1,10 @@
 <% content_for :title, "Registers" %>
 <div class="space-y-6">
-  <section class="flex items-end justify-between gap-4">
+  <%= render "shared/retail_navigation" %>
+  <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="page-title">Registers</h1>
-      <p class="mt-1 text-sm text-mocha">POS sessions and cash-drawer reconciliation.</p>
+      <h1 class="page-title">Rupert registers</h1>
+      <p class="mt-1 text-sm text-mocha">Checkout shifts and local cash counts. Native C-Trax sessions and bank deposits are reviewed separately.</p>
     </div>
     <% if Current.user.can?("sales.write") %>
       <%= link_to "Open register", new_sales_pos_session_path, class: "btn-primary" %>
@@ -19,22 +20,22 @@
             <span class="pill-fern"><span class="dot bg-fern"></span> open</span>
           </div>
           <p class="mt-2 text-sm text-mocha">Opened <%= l(s.opened_at, format: :short) %></p>
-          <p class="mt-1 text-sm text-mocha">Sales: <span class="font-semibold text-ink"><%= number_to_currency(s.total_sales_cents / 100.0) %></span></p>
+          <p class="mt-1 text-sm text-mocha">Recorded tenders: <span class="font-semibold text-ink"><%= number_to_currency(s.total_sales_cents / 100.0) %></span></p>
         <% end %>
       <% end %>
     </section>
   <% end %>
 
   <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    <div class="retail-table-region" role="region" tabindex="0" aria-label="Rupert register history">
+      <table class="w-full text-sm"><caption class="sr-only">Rupert register history; amounts in USD</caption>
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <th scope="col" class="th">Register</th>
             <th scope="col" class="th">Opened</th>
             <th scope="col" class="th">Closed</th>
-            <th scope="col" class="th text-right">Cash sales</th>
-            <th scope="col" class="th text-right">Total sales</th>
+            <th scope="col" class="th text-right">Cash tenders</th>
+            <th scope="col" class="th text-right">Recorded tenders</th>
             <th scope="col" class="th text-right">Counted</th>
             <th scope="col" class="th text-right">Variance</th>
             <th scope="col" class="th">Status</th>
@@ -43,7 +44,7 @@
         <tbody class="divide-y divide-fog">
           <% if @sessions.empty? %>
             <tr>
-              <td class="empty-row">No registers yet — open one to start the day.</td>
+              <td class="empty-row" colspan="8">No registers yet — open one to start the day.</td>
             </tr>
           <% end %>
           <% @sessions.each do |s| %>

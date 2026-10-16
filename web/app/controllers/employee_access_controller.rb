@@ -36,6 +36,7 @@ class EmployeeAccessController < ApplicationController
     end
     reset_session
     session[:user_id] = grant.user_id
+    session[:auth_method] = 'employee_invite'
     session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(grant.user.password_digest)
     redirect_to employee_app_path, notice: 'Your password is set. Welcome to your time workspace.'
   rescue ActiveRecord::RecordInvalid => e

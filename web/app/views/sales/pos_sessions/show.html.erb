@@ -1,6 +1,7 @@
 <% content_for :title, @session.name %>
 <div class="space-y-6">
-  <section class="flex items-end justify-between gap-4">
+  <%= render "shared/retail_navigation" %>
+  <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title"><%= @session.name %></h1>
       <p class="mt-1 text-sm text-mocha">
@@ -10,29 +11,29 @@
         <span class="<%= @session.open? ? "pill-fern ml-1" : "pill-taupe ml-1" %>"><%= @session.status %></span>
       </p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <%= link_to "Back to registers", sales_pos_sessions_path, class: "btn-ghost btn-sm" %>
-      <%= form_tag refresh_sales_pos_session_path(@session), method: :post do %>
+      <% if retail_business_access?("sales.write") %><%= form_tag refresh_sales_pos_session_path(@session), method: :post do %>
         <%= submit_tag "Refresh from orders", class: "btn-ghost btn-sm" %>
-      <% end %>
+      <% end %><% end %>
     </div>
   </section>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
-      <p class="stat-label">Cash sales</p>
+      <p class="stat-label">Cash tenders</p>
       <p class="stat-value mt-1"><%= number_to_currency(@session.cash_sales_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Card sales</p>
+      <p class="stat-label">Card tenders</p>
       <p class="stat-value mt-1"><%= number_to_currency(@session.card_sales_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Gift card sales</p>
+      <p class="stat-label">Gift-card tenders</p>
       <p class="stat-value mt-1"><%= number_to_currency(@session.gift_sales_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Total sales</p>
+      <p class="stat-label">Recorded tenders</p>
       <p class="stat-value mt-1"><%= number_to_currency(@session.total_sales_cents / 100.0) %></p>
     </div>
   </section>
@@ -59,18 +60,19 @@
 
     <% if @session.open? && Current.user.can?("sales.write") %>
       <%= form_tag close_sales_pos_session_path(@session), method: :post, class: "mt-6 rounded-xl border border-fog bg-haze/60 p-4" do %>
-        <h3 class="font-display text-base text-ink">Settle register</h3>
+        <h3 class="font-display text-lg text-ink">Close this Rupert register</h3>
+        <p id="physical-count-help" class="mt-2 text-sm text-mocha">Count the physical drawer and enter dollars, for example 50.00. The expected amount is a comparison, not a cash count.</p>
         <div class="mt-3 flex flex-wrap items-end gap-3">
           <div>
-            <%= label_tag :counted_cents, "Counted cash", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-            <%= number_field_tag :counted_cents, @session.expected_cash_cents, class: "input w-40" %>
+            <%= label_tag :counted_cash, "Counted cash (USD)", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
+            <%= number_field_tag :counted_cash, nil, required: true, min: 0, max: 999999.99, step: "0.01", inputmode: "decimal", placeholder: "0.00", class: "input w-40", aria: { describedby: "physical-count-help" } %>
           </div>
           <div>
             <%= label_tag :notes, "Notes", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-            <%= text_field_tag :notes, nil, placeholder: "Optional", class: "input w-64" %>
+            <%= text_field_tag :notes, nil, placeholder: "Optional", class: "input w-full sm:w-64" %>
           </div>
           <div>
-            <%= submit_tag "Close register", class: "btn-primary", data: { confirm: "Settle and close this register?" } %>
+            <%= submit_tag "Close register", class: "btn-primary", data: { turbo_confirm: "Close this Rupert register with the physical cash count entered?" } %>
           </div>
         </div>
       <% end %>
@@ -83,7 +85,7 @@
     <div class="border-b border-fog px-5 py-3">
       <h2 class="font-display text-lg text-ink">Orders in this session</h2>
     </div>
-    <div class="overflow-x-auto">
+    <div class="retail-table-region" role="region" tabindex="0" aria-label="Orders in this register">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
@@ -96,7 +98,7 @@
         <tbody class="divide-y divide-fog">
           <% if @orders.empty? %>
             <tr>
-              <td class="empty-row">No orders yet in this session.</td>
+              <td class="empty-row" colspan="4">No orders yet in this session.</td>
             </tr>
           <% end %>
           <% @orders.each do |order| %>
