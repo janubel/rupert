@@ -372,3 +372,5 @@
   .operations-stages a p:last-child { display:none; }
   .operations-stages a p { font-size:.8rem; }
 }
+.operations-workspace [id] { scroll-margin-top:12rem; }
+@media(min-width:768px) { .operations-workspace [id] { scroll-margin-top:9rem; } }

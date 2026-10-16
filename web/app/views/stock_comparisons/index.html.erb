@@ -49,6 +49,7 @@
   <p class="max-w-4xl text-sm text-mocha">Shopify on-hand includes committed units; available is shown separately. Signed source values are preserved. SKU/barcode and name/package candidates are not approved mappings. Name/package candidates show both observations without a quantity difference. Unknown, fractional, untracked or over-one-hour-old observations also have no numerical difference. Missing packages, duplicate identifiers and conflicting source links stay unresolved.</p>
 </div></details>
   <div id="stock-comparison-results" tabindex="-1" class="operations-header retail-anchor"><h2 class="font-display text-xl">Stock comparison results</h2><p role="status" class="text-sm text-mocha"><%= @pagy.count %> matching rows · <%= @rows.size %> shown</p></div>
+  <p class="text-xs text-mocha sm:hidden">Swipe the table sideways to see each source quantity and the review flags.</p>
   <div class="card overflow-hidden"><div class="operations-table-region" role="region" tabindex="0" aria-label="Stock Comparisons table">
     <table class="operations-stock-table w-full text-sm">
       <thead><tr><th scope="col" class="th">Item / identity</th><th class="th text-right">Shopify on hand</th><th class="th text-right">Available</th><th class="th text-right">Committed</th><th class="th text-right">C-Trax stock</th><th class="th text-right">C-Trax − on hand</th><th scope="col" class="th">Review</th></tr></thead>
