@@ -33,6 +33,14 @@ controller.onChange({ target: { closest: () => ({ dataset: { visible: 'revenue' 
 assert.equal(section.hidden, true);
 controller.onChange({ target: { closest: () => ({ dataset: { visible: 'revenue' }, checked: true }) } });
 assert.equal(section.hidden, false);
+let moveFocus = 0;
+const moveButton = { focus() { moveFocus++; } };
+const sibling = {};
+const row = { previousElementSibling: sibling, contains: node => node === moveButton };
+controller.listTarget = { querySelector: () => row, insertBefore() {} };
+context.document.activeElement = moveButton;
+controller.moveRow('revenue', 'up');
+assert.equal(moveFocus, 1, 'Keyboard focus stays on the moved control');
 controller.saveLayout({ widgets: ['revenue'], hidden: [] });
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.equal(request.url, '/dashboard/customize');

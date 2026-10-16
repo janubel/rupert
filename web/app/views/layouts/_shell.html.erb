@@ -3,7 +3,7 @@
   <header class="app-header">
     <div class="app-header-grid">
       <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
-        <img src="/icon.png?v=rupert-dog-1" width="40" height="40" alt="" style="width:40px;height:40px;object-fit:contain;flex-shrink:0"><span class="app-brand-name">Rupert</span>
+        <%= render "shared/rupert_face", size: 40 %><span class="app-brand-name">Rupert</span>
       <% end %>
       <% if Current.user %>
         <nav class="area-navigation" aria-label="Module areas" style="--nav-area-count: <%= [nav_areas.size, 1].max %>">

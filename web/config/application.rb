@@ -8,7 +8,10 @@ require 'rails/all'
 # in the test environment so real credentials on the dev box never leak into
 # tests/CI logs — tests provide their own values.
 require 'dotenv'
-Dotenv.load(File.expand_path('../../.env', __dir__)) unless ENV['RAILS_ENV'] == 'test'
+Dotenv.load(File.expand_path('../../.env', __dir__)) unless Rails.env.test?
+if ENV['HOST'].present? && !ENV['HOST'].match?(%r{\Ahttps?://})
+  ENV['HOST'] = "https://#{ENV['HOST']}"
+end
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.

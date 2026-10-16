@@ -18,7 +18,8 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'nav[aria-label="Module areas"] a svg[aria-hidden="true"][focusable="false"]'
     assert_select 'button.nav-utility[aria-label="Search"][title] svg'
     assert_select 'button[aria-haspopup="menu"][aria-label^="Account menu for "]'
-    assert_select 'header img[alt=""]', count: 1
+    assert_select 'header img', count: 1
+    assert_select 'header a.app-brand[aria-label="Rupert start page"] img[alt=""][width="40"][height="40"]', count: 1
     assert_select 'header .account-menu', text: /Store administrator/
   end
 
