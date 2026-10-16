@@ -58,6 +58,11 @@ module ReconciliationHelper
       title: "#{reconciliation_source(row[:source])} #{category == 'missing_report' ? 'register report needed' : "#{row[:metric].to_s.humanize.downcase} review"}" }
   end
 
+  def reconciliation_library_request_context(item, close_day = nil)
+    { source: item.source, from: item.period_from.iso8601, to: item.period_to.iso8601,
+      follow_up: item.id, close_day: close_day&.iso8601 }.compact
+  end
+
   def reconciliation_follow_up_value(record, key)
     return @entered_values[key.to_s] if @entered_values&.key?(key.to_s)
     return @suggested_document_id if key == :document_id && @suggested_document_id

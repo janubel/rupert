@@ -10,7 +10,7 @@
   <div class="flex flex-wrap gap-2">
     <% if Current.user.can?('reports.write') && item.status != 'closed' %><%= link_to 'Record progress', reconciliation_follow_up_path(item, close_day: close_context, anchor: 'record-progress'), class: 'btn-primary btn-sm' %><% else %><%= link_to 'Open follow-up', reconciliation_follow_up_path(item, close_day: close_context), class: 'btn-ghost btn-sm' %><% end %>
     <% if item.document_id %><%= link_to 'Download linked original', document_daily_reconciliation_path(item.document_id), class: 'btn-ghost btn-sm' %>
-    <% else %><%= link_to 'Find retained original', reconciliation_documents_path(source: item.source, from: item.period_from.iso8601, to: item.period_to.iso8601), class: 'btn-ghost btn-sm' %><% if Current.user.can?('reports.write') && item.status != 'closed' %><%= link_to 'Add original', daily_reconciliations_path(request: item.id, close_day: close_context, anchor: 'upload-document'), class: 'btn-ghost btn-sm' %><% end %><% end %>
+    <% else %><%= link_to 'Find retained original', reconciliation_documents_path(reconciliation_library_request_context(item, local_assigns[:close_day])), class: 'btn-ghost btn-sm' %><% if Current.user.can?('reports.write') && item.status != 'closed' %><%= link_to 'Add original', daily_reconciliations_path(request: item.id, close_day: close_context, anchor: 'upload-document'), class: 'btn-ghost btn-sm' %><% end %><% end %>
     <%= link_to 'Review covered day', daily_reconciliations_path(day: item.period_from.iso8601), class: 'text-xs text-olive underline self-center' %>
   </div>
 </article>

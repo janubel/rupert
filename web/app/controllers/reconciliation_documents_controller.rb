@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class ReconciliationDocumentsController < AuthenticatedController
+  include ReconciliationCloseContext
   before_action -> { authorize(:module, :reports_read?) }
   before_action do
     response.headers['Cache-Control'] = 'no-store'
@@ -8,6 +9,7 @@ class ReconciliationDocumentsController < AuthenticatedController
   end
 
   def index
+    @report_request = ReconciliationFollowUp.includes(:owner).find(params[:follow_up]) if params[:follow_up].present?
     load_library
   rescue ReconciliationLibrary::Error => e
     @library_error = e.message
@@ -26,6 +28,12 @@ class ReconciliationDocumentsController < AuthenticatedController
 
       @library = ReconciliationLibrary.new
     end
+    if @report_request
+      load_close_context(@report_request)
+    else
+      load_close_context(from: @library.filters['from'], to: @library.filters['to'])
+    end
+    @library_context = { follow_up: @report_request&.id, close_day: @close_day&.iso8601 }.compact
     @follow_up_count = ReconciliationFollowUp.active.count
     @overdue_count = ReconciliationFollowUp.active.where('due_on < ?', Date.current).count
     @today_count = ReconciliationFollowUp.active.where(due_on: Date.current).count
@@ -36,6 +44,8 @@ class ReconciliationDocumentsController < AuthenticatedController
     if from.present? && to.present? && (Date.iso8601(to) - Date.iso8601(from)).between?(0, 365)
       @request_context.merge!(period_from: from, period_to: to)
     end
+    @request_context[:close_day] = @close_day.iso8601 if @close_day
+    @request_match_count = @report_request ? @entries.count { |entry| entry.rank.zero? && @report_request.document_matches?(entry.record) } : 0
     ids = @entries.select { |entry| entry.rank.zero? }.map { |entry| entry.record.id }
     @document_follow_ups = @entries.select { |entry| entry.rank.zero? }.to_h do |entry|
       [entry.record.id, ReconciliationDocumentFollowUps.for(entry.record)]
