@@ -70,7 +70,7 @@ class InventoryPdfTest < ActionDispatch::IntegrationTest
     get download_href
     assert_response :success
     assert_equal 'text/csv', response.media_type
-    assert_includes response.headers['Content-Disposition'], 'stock-comparison'
+    assert_includes response.headers['Content-Disposition'], 'shopify-ctrax-stock'
     assert_includes response.body, 'Shopify on hand'
   end
 
