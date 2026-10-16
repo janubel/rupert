@@ -42,6 +42,29 @@ class AuthorizeNetReportingTest < ActiveSupport::TestCase
 
   teardown { Current.reset }
 
+  test 'event imports fetch only verified current detail and do not claim full reconciliation freshness' do
+    AuthorizeNetClient.expects(:charge!).never
+    2.times { AuthorizeNetReporting::Import.call(connection: @connection, transaction_id: '9001') }
+    assert_equal 1, AuthorizeNetTransaction.count
+    assert_equal ['getMerchantDetailsRequest', 'getTransactionDetailsRequest'] * 2, @calls.map { |p| p.keys.first }
+    assert_nil @connection.reload.last_reported_at
+    assert_equal 0, Core::Order.count
+    assert_equal 0, Core::Payment.count
+    @status = 'voided'
+    AuthorizeNetReporting::Import.call(connection: @connection, transaction_id: '9001')
+    assert_equal 'voided', AuthorizeNetTransaction.first.payment_status
+    assert_equal 2, AuthorizeNetTransaction.first.status_history.size
+  end
+
+  test 'older in-flight observations cannot replace newer gateway state' do
+    import
+    future = 2.minutes.from_now
+    AuthorizeNetTransaction.first.update!(observed_at: future, payment_status: 'voided')
+    import
+    assert_equal 'voided', AuthorizeNetTransaction.first.payment_status
+    assert_equal future.to_i, AuthorizeNetTransaction.first.observed_at.to_i
+  end
+
   test 'import is replay safe and preserves settlement status history and optional tips' do
     @tip = { amount: '1.2500' }
     2.times { import }

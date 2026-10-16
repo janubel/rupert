@@ -14,8 +14,8 @@ module AuthorizeNetReporting
       chargeChargeBackAmount chargeChargeBackCount refundChargeBackAmount refundChargeBackCount
       chargeReturnedItemsAmount chargeReturnedItemsCount refundReturnedItemsAmount refundReturnedItemsCount].freeze
 
-    def self.call(connection:, from: 7.days.ago, to: Time.current)
-      new(connection).call(from: from, to: to)
+    def self.call(connection:, from: 7.days.ago, to: Time.current, transaction_id: nil)
+      new(connection).call(from: from, to: to, transaction_id: transaction_id)
     end
 
     def initialize(connection)
@@ -24,22 +24,22 @@ module AuthorizeNetReporting
       @client = Client.new(connection)
     end
 
-    def call(from:, to:)
+    def call(from:, to:, transaction_id: nil)
       merchant = @client.merchant
       gateway_id = merchant.fetch('gatewayId').to_s
       # Details have no currency field. Infer only for a single-currency merchant.
       currencies = merchant['currencies']
       currency = currencies.is_a?(Array) && currencies.size == 1 && currencies.first.to_s.match?(/\A[A-Z]{3}\z/) ? currencies.first : nil
-      batches = @client.batches(from: from, to: to)
+      batches = transaction_id ? [] : @client.batches(from: from, to: to)
       source_batches = {}
       summaries = batches.flat_map do |batch|
         @client.transactions(batch_id: batch.fetch('batchId')).each do |summary|
           source_batches[summary.fetch('transId').to_s] = batch.except('statistics')
         end
-      end + @client.transactions
+      end + (transaction_id ? [{ 'transId' => transaction_id }] : @client.transactions)
       scope = { environment: @connection.environment, gateway_id: gateway_id }
       # Revisit observed unsettled/auth transactions even after they disappear from lists (e.g. voids).
-      pending = AuthorizeNetTransaction.where(**scope).where.not(payment_status: AuthorizeNetTransaction::FINAL_STATUSES).pluck(:source_transaction_id)
+      pending = transaction_id ? [] : AuthorizeNetTransaction.where(**scope).where.not(payment_status: AuthorizeNetTransaction::FINAL_STATUSES).pluck(:source_transaction_id)
       ids = (summaries.map { |row| row.fetch('transId').to_s } + pending).uniq
       raise Client::Error, 'Reporting exceeded the transaction limit. Use a smaller window.' if ids.size > 20_000
       observed_at = Time.current
@@ -58,10 +58,12 @@ module AuthorizeNetReporting
         raise Client::Error, 'Reporting setup changed during import; retry.' unless fresh.lock_version == version
         normalized_batches.each do |attrs|
           record = AuthorizeNetBatch.find_or_initialize_by(**scope, source_batch_id: attrs.delete(:source_batch_id))
-          record.update!(attrs)
+          record.update!(attrs) unless record.observed_at && record.observed_at > observed_at
         end
         rows.each do |attrs|
           record = AuthorizeNetTransaction.find_or_initialize_by(**scope, source_transaction_id: attrs.delete(:source_transaction_id))
+          next if record.observed_at && record.observed_at > observed_at
+
           history = record.status_history.dup
           if history.last&.fetch('status', nil) != attrs[:payment_status]
             history << { 'status' => attrs[:payment_status], 'observed_at' => observed_at.iso8601 }
@@ -69,7 +71,7 @@ module AuthorizeNetReporting
           record.update!(attrs.merge(status_history: history))
         end
         fresh.update!(last_reported_at: observed_at, last_report_status: 'complete',
-          last_report_message: "Imported #{rows.size} payment observations and #{batches.size} settlement batches.")
+          last_report_message: "Imported #{rows.size} payment observations and #{batches.size} settlement batches.") unless transaction_id
       end
       @connection.reload
       { transactions: rows.size, batches: batches.size }

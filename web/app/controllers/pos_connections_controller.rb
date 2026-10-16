@@ -172,7 +172,11 @@ class PosConnectionsController < AuthenticatedController
 
   def import_iris_reporting
     unless @connection.persisted? && @connection.vendor_approved && @connection.credentials_saved?
-      return redirect_to pos_connection_path('iris_reporting'), alert: 'Save approved IRIS API credentials before importing.'
+      return redirect_to pos_connection_path('iris_reporting'), alert: 'Save authorized NAB reporting credentials before importing.'
+    end
+    if @connection.reporting_auth_mode == 'web'
+      IrisDailyDepositsWebJob.perform_later(@connection.id, manual: true, setup_version: @connection.lock_version)
+      return redirect_to pos_connection_path('iris_reporting'), notice: 'Fresh NAB Daily Deposits pull queued for the current and previous months.'
     end
     from = params[:from].present? ? Date.iso8601(params[:from]) : Date.current - 30
     to = params[:to].present? ? Date.iso8601(params[:to]) : Date.current
@@ -210,13 +214,17 @@ class PosConnectionsController < AuthenticatedController
     gateway = @provider[:key] == 'valmar' ? requested.fetch(:gateway, @connection.gateway) : @connection.gateway
     keys = if @provider[:key] == 'authorize_net_reporting'
       requested.fetch(:reporting_auth_mode, @connection.reporting_auth_mode) == 'oauth' ? %w[client_id client_secret refresh_token] : %w[api_login_id transaction_key]
+    elsif @provider[:key] == 'iris_reporting' && requested.fetch(:reporting_auth_mode, @connection.reporting_auth_mode) == 'web'
+      %w[web_username web_password]
     else
       PosProviderCatalog.credential_keys(@provider[:key], gateway: gateway)
     end
+    keys += ['signature_key'] if @provider[:key] == 'authorize_net_reporting'
     requested.permit(:environment, :account_reference, :access_requested, :vendor_approved, :lock_version,
       *(@provider[:key] == 'ctrax' ? %i[hourly_sync_enabled reporting_enabled] : []),
       *(@provider[:key] == 'valmar' ? [:gateway] : []),
       *(@provider[:key] == 'authorize_net_reporting' ? [:reporting_auth_mode, :reporting_enabled] : []),
+      *(@provider[:key] == 'iris_reporting' ? [:reporting_auth_mode] : []),
       *(%w[iris_reporting swipesimple].include?(@provider[:key]) ? [:reporting_enabled] : []), credential_secret: keys)
   end
 

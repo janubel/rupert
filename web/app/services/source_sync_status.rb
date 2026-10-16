@@ -39,10 +39,15 @@ class SourceSyncStatus
   def bank
     connection = PosConnection.find_by(provider: 'iris_reporting')
     latest = IrisReport.order(observed_at: :desc).first
-    api = connection&.vendor_approved && connection.credentials_saved?
-    last_at = api ? connection.last_reported_at : latest&.observed_at
-    badge = if !api
+    access = connection&.vendor_approved && connection.credentials_saved?
+    web = connection&.reporting_auth_mode == 'web'
+    last_at = access ? connection.last_reported_at : latest&.observed_at
+    badge = if !access
       latest ? 'Portal imports' : 'Needs access'
+    elsif connection.last_report_status == 'needs_login'
+      'Needs login'
+    elsif connection.last_report_status == 'running'
+      'Syncing'
     elsif connection.last_report_status == 'failed'
       'Error'
     elsif !connection.reporting_enabled
@@ -56,8 +61,8 @@ class SourceSyncStatus
     end
     { key: 'bank', label: 'Bank · NAB / IRIS', badge: badge, last_at: last_at,
       detail: "#{IrisReport.count} processor deposit and summary snapshots",
-      schedule: api && connection.reporting_enabled ? 'Daily at 6:45 a.m. Eastern' : 'Portal CSV imports · API access needed for automatic pulls',
-      mode: 'bank', ready: false }
+      schedule: access && connection.reporting_enabled ? "Daily at 6:45 a.m. Eastern · #{web ? 'native website exports' : 'API reports'}" : 'Automatic pulls paused · CSV upload available',
+      mode: 'bank', ready: access }
   end
 
   def google_backup
@@ -146,15 +151,15 @@ class SourceSyncStatus
       'Paused'
     elsif last_at.nil?
       'Awaiting pull'
-    elsif last_at < FRESH_FOR.ago
+    elsif last_at < 10.minutes.ago
       'Stale'
     else
-      'Live'
+      'Recent API read'
     end
     count = api ? AuthorizeNetTransaction.count : AuthorizeNetPortalExport.latest_records.size
     { key: 'authorize_net', label: 'Authorize.net', badge: badge, last_at: last_at,
       detail: "#{count} payment observations",
-      schedule: api && connection.reporting_enabled ? 'Every 30 minutes' : 'Portal exports on demand · API access deferred',
+      schedule: api && connection.reporting_enabled ? 'Every 5 minutes · signed events when configured' : 'Manual snapshots · API credentials needed for live reporting',
       mode: api ? 'api' : 'portal', ready: true }
   end
 end
