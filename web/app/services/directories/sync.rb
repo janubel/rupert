@@ -100,6 +100,7 @@ module Directories
       return client.customers if @kind == 'customers'
 
       client.stores.flat_map { |store| client.employees(store[:id]) }
+        .reject { |row| row['is_superuser'] == true } # C-Trax platform/support accounts are not store employees.
         .group_by { |row| row.fetch('id').to_s }.values.map do |copies|
           raise Error unless copies.map { |row| row.slice('first_name', 'last_name', 'email', 'deleted_at') }.uniq.one?
 
