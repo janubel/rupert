@@ -70,7 +70,7 @@
     <% if Current.user.can?("leave.read") %>
     <div class="stat">
       <p class="stat-label">PTO remaining</p>
-      <p class="stat-value-sm mt-1"><%= number_with_precision(@employee.leave_balance("vacation", Date.current.year).remaining_hours, precision: 1) %>h</p>
+      <p class="stat-value-sm mt-1"><% vacation_balance = @employee.leave_balances.find_by(leave_type: 'vacation', year: Date.current.year) %><%= vacation_balance ? "#{number_with_precision(vacation_balance.remaining_hours, precision: 1)}h" : 'Not set' %></p>
     </div>
     <% end %>
   </section>
@@ -114,6 +114,16 @@
         <% end %>
       </div>
 
+      <% if Current.user.can?('leave.write') %>
+        <details class="mt-4"><summary class="text-sm text-olive cursor-pointer">Set leave allowance</summary>
+          <%= form_with url: set_leave_allowance_people_employee_path(@employee), scope: :leave_allowance, class: 'mt-3 space-y-3' do |f| %>
+            <div><%= f.label :leave_type, 'Leave type', class: 'block text-sm mb-1' %><%= f.select :leave_type, People::LeaveRequest::LEAVE_TYPES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
+            <div><%= f.label :year, 'Year', class: 'block text-sm mb-1' %><%= f.number_field :year, value: Date.current.year, min: 1900, max: 2100, required: true, class: 'input' %></div>
+            <div><%= f.label :accrued_hours, 'Allowance accrued (hours)', class: 'block text-sm mb-1' %><%= f.number_field :accrued_hours, min: 0, max: 9999.99, step: 0.01, required: true, class: 'input' %></div>
+            <p class="text-xs text-mocha">Used hours are preserved. Enter the employee's actual approved allowance.</p><%= f.submit 'Save allowance', class: 'btn-primary btn-sm' %>
+          <% end %>
+        </details>
+      <% end %>
       <% end %>
       <% if Current.user.can?("payroll.read") %>
       <h2 class="mt-6 font-display text-lg text-ink">Pay rates</h2>
@@ -128,6 +138,18 @@
           </li>
         <% end %>
       </ul>
+      <% if Current.user.can?('payroll.write') %>
+        <details class="mt-4"><summary class="text-sm text-olive cursor-pointer">Set pay rate</summary>
+          <%= form_with url: add_pay_rate_people_employee_path(@employee), scope: :pay_rate, class: 'mt-3 space-y-3' do |f| %>
+            <div><%= f.label :pay_type, 'Pay type', class: 'block text-sm mb-1' %><%= f.select :pay_type, People::PayRate::PAY_TYPES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
+            <div><%= f.label :amount, 'Amount (USD)', class: 'block text-sm mb-1' %><%= f.number_field :amount, min: 0.01, max: 20000000, step: 0.01, required: true, class: 'input' %><p class="text-xs text-mocha">Hourly rate for hourly pay; annual salary for salary pay.</p></div>
+            <div><%= f.label :pay_frequency, 'Pay cycle', class: 'block text-sm mb-1' %><%= f.select :pay_frequency, People::PayRate::PAY_FREQUENCIES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
+            <div><%= f.label :effective_on, 'Effective from', class: 'block text-sm mb-1' %><%= f.date_field :effective_on, value: Date.current, required: true, class: 'input' %></div>
+            <div><%= f.label :ended_on, 'Last effective day (optional)', class: 'block text-sm mb-1' %><%= f.date_field :ended_on, class: 'input' %></div>
+            <p class="text-xs text-mocha">Earlier rates and payroll snapshots are retained. A new rate on the same date takes precedence for estimates.</p><%= f.submit 'Save pay rate', class: 'btn-primary btn-sm' %>
+          <% end %>
+        </details>
+      <% end %>
       <% end %>
     </section>
   </div>

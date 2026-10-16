@@ -198,6 +198,8 @@ Rails.application.routes.draw do
   end
   namespace :people do
     resources :employees, only: %i[index show new create edit update destroy] do
+      post :add_pay_rate, on: :member
+      post :set_leave_allowance, on: :member
       post :sync_directory, on: :collection
       get :consolidation, on: :collection
       post :consolidate, on: :collection

@@ -40,6 +40,8 @@ Employees can revoke their own device sessions at `/employee/devices`. Native se
 
 The employee workspace contains no installation or store promotion. Distribute native apps separately when the owner is ready; signing and store submission remain deferred.
 
+Administrators can configure actual effective-dated pay rates and annual leave allowances from the employee's HR page, under payroll-write or leave-write permission respectively. New rates preserve earlier history; future rates do not become current before their effective date. Allowance updates preserve used hours. No real rates or allowances are filled automatically.
+
 ## Personal workspace and reports
 
 Employee password and Google sign-ins land at `/employee`: a simple home with clock status, this week's hours, estimated gross pay and a shortcut to their current timesheet. Opening the week reuses an existing overlapping period and forces ownership to the signed-in worker. Native device management is a separate secondary page. Administrators without a linked employee can inspect a clearly marked, read-only example with `?preview=1`; no accounts, time records or rates are created by that preview.

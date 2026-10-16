@@ -71,7 +71,7 @@ module People
     end
 
     def current_pay_rate
-      pay_rates.where('ended_on IS NULL OR ended_on >= ?', Date.current).order(effective_on: :desc).first
+      pay_rates.where('effective_on <= ? AND (ended_on IS NULL OR ended_on >= ?)', Date.current, Date.current).order(effective_on: :desc, id: :desc).first
     end
 
     def on_payroll?

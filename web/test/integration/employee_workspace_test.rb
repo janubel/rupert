@@ -123,6 +123,25 @@ class EmployeeWorkspaceTest < ActionDispatch::IntegrationTest
     assert_redirected_to employee_app_path
   end
 
+  test 'only authorized administrators configure rates and allowances while preserving used hours' do
+    sign_in
+    assert_no_difference ['People::PayRate.count', 'People::LeaveBalance.count'] do
+      post add_pay_rate_people_employee_path(@worker), params: { pay_rate: { pay_type: 'hourly', amount: '20.50', pay_frequency: 'weekly', effective_on: '2026-10-01' } }
+      post set_leave_allowance_people_employee_path(@worker), params: { leave_allowance: { leave_type: 'vacation', year: 2026, accrued_hours: 80, used_hours: 0 } }
+    end
+    sign_in(users(:regular_user))
+    post add_pay_rate_people_employee_path(@worker), params: { pay_rate: { pay_type: 'hourly', amount: '20.50', pay_frequency: 'weekly', effective_on: '2026-10-01', employee_id: @other.id } }
+    assert_redirected_to people_employee_path(@worker)
+    assert_equal 2050, @worker.pay_rates.find_by!(effective_on: '2026-10-01').hourly_rate_cents
+    post set_leave_allowance_people_employee_path(@worker), params: { leave_allowance: { leave_type: 'vacation', year: 2026, accrued_hours: 80, used_hours: 0, employee_id: @other.id } }
+    balance = @worker.leave_balances.find_by!(year: 2026, leave_type: 'vacation')
+    assert_equal 80, balance.accrued_hours
+    assert_equal 8, balance.used_hours
+    assert_no_difference 'People::PayRate.count' do
+      post add_pay_rate_people_employee_path(@worker), params: { pay_rate: { pay_type: 'hourly', amount: '-10', effective_on: '2026-10-01' } }
+    end
+  end
+
   test 'employees on leave retain personal read access but cannot start a new shift' do
     @worker.place_on_leave!
     sign_in

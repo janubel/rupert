@@ -26,6 +26,7 @@ class EmployeeWorkSummaryTest < ActiveSupport::TestCase
     assert_equal 23500, summary.gross_cents
     assert_equal 2000, summary.rate_for(@from).hourly_rate_cents
     assert_equal 2500, summary.rate_for(@from + 2).hourly_rate_cents
+    assert_equal 2500, @worker.current_pay_rate.hourly_rate_cents
   end
 
   test 'missing and salary rates do not invent zero pay or a salary amount' do

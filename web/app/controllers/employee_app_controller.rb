@@ -2,6 +2,7 @@
 
 class EmployeeAppController < ApplicationController
   layout 'employee'
+  before_action -> { response.headers['Cache-Control'] = 'no-store' }, only: %i[show privacy devices revoke week]
   skip_before_action :require_login, only: %i[show privacy manifest service_worker]
   # This public script contains no session or employee data. Rails otherwise
   # rejects non-XHR JavaScript responses, including service worker registration.

@@ -48,8 +48,7 @@ class EmployeeWorkspaceController < AuthenticatedController
 
   def cancel_time_off
     request = @worker.leave_requests.find(params[:id])
-    if request.requested?
-      LeaveRequestWorkflow.change(request, :cancel, self_service: true)
+    if request.requested? && LeaveRequestWorkflow.change(request, :cancel, self_service: true)
       redirect_to employee_time_off_path, notice: 'Request cancelled.'
     else
       redirect_to employee_time_off_path, alert: 'Ask your manager to change time off that has already been reviewed.'
