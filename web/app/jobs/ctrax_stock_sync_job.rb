@@ -3,7 +3,7 @@
 class CtraxStockSyncJob < ApplicationJob
   queue_as :default
 
-  def perform(connection_id = nil)
+  def perform(connection_id = nil, manual: false)
     unless connection_id
       PosConnection.unscoped.joins(:tenant).where(provider: 'ctrax', hourly_sync_enabled: true,
         tenants: { status: 'active' }).find_each do |connection|
@@ -11,7 +11,9 @@ class CtraxStockSyncJob < ApplicationJob
       end
       return
     end
-    connection = PosConnection.unscoped.find_by(id: connection_id, provider: 'ctrax', hourly_sync_enabled: true)
+    connections = PosConnection.unscoped.where(id: connection_id, provider: 'ctrax')
+    connections = connections.where(hourly_sync_enabled: true) unless manual
+    connection = connections.first
     return unless connection&.tenant&.status == 'active'
 
     Current.set(tenant: connection.tenant) do
@@ -20,7 +22,7 @@ class CtraxStockSyncJob < ApplicationJob
       begin
         result = Ctrax::StockSync.call(connection: connection)
         ActivityLogger.log('ctrax_stock_synced', subject: connection,
-          details: "hourly: #{result[:stores]} stores, #{result[:variants]} variants")
+          details: "#{manual ? 'manual' : 'scheduled'}: #{result[:stores]} stores, #{result[:variants]} variants")
       rescue Ctrax::Client::Error => e
         ActivityLogger.log('ctrax_stock_sync_failed', subject: connection, details: e.message)
       end

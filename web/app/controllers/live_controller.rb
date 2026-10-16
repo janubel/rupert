@@ -20,12 +20,14 @@ class LiveController < AuthenticatedController
   private
 
   def live_streams
-    [
+    streams = [
       turbo_stream.replace('sync-banner', partial: 'syncs/banner'),
       turbo_stream.replace('last-sync', partial: 'shared/last_sync'),
       turbo_stream.replace('sync-runs', partial: 'syncs/runs'),
       turbo_stream.replace('header-sync-pill', partial: 'shared/header_sync_pill')
     ]
+    streams << turbo_stream.replace('source-sync-status', partial: 'home/source_sync_status') if params[:source_status] == '1'
+    streams
   end
 
   def authorize_read

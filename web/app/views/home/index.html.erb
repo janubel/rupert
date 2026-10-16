@@ -21,7 +21,10 @@
     </div>
   </section>
 
-  <% if Current.user.can?("sync.read") %><%= render "syncs/banner" %><% end %>
+  <% if Current.user.can?("sync.read") %>
+    <%= render "syncs/banner" %>
+    <%= render "home/source_sync_status" %>
+  <% end %>
 
   <section data-controller="dashboard-customizer" data-dashboard-customizer-target="panel" class="card card-pad hidden">
     <div class="flex items-baseline justify-between">

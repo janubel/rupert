@@ -24,3 +24,5 @@ Rails.application.config.filter_parameters += [/\Aworkspace_signup\z/i]
 Rails.application.config.filter_parameters += [/\Aswipesimple_export\z/i, /\Afile\z/i, :original_csv, :reference_number, :source_number]
 # Uploaded financial reports and merchant references stay out of request logs.
 Rails.application.config.filter_parameters += %i[report_file merchant_number account_reference]
+
+Rails.application.config.filter_parameters += %i[gateway_id exported_at records_json]

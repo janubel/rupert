@@ -18,7 +18,8 @@ export default class extends Controller {
   }
 
   refresh() {
-    fetch("/live/sync_status", {
+    const sourceStatus = document.getElementById("source-sync-status") ? "?source_status=1" : ""
+    fetch(`/live/sync_status${sourceStatus}`, {
       headers: {
         "Accept": "text/vnd.turbo-stream.html",
         "X-Requested-With": "XMLHttpRequest"
