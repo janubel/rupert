@@ -291,6 +291,9 @@ Rails.application.routes.draw do
   get '/activity', to: 'activity#index', as: :activity
   resources :access_logs, only: :index
   get '/live/sync_status', to: 'live#sync_status'
+  resources :authorize_net_sale_links, only: %i[index create] do
+    member { post :revoke }
+  end
   get '/live/commissions', to: 'live_commissions#show', as: :live_commissions
   post '/webhooks/authorize_net/:connection_id', to: 'authorize_net_webhooks#create', as: :authorize_net_webhook
 

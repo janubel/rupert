@@ -2,6 +2,7 @@
 <%= turbo_frame_tag 'authorize-payment-report', src: (pos_connection_path(@provider[:key], report_date: @report_date) unless turbo_frame_request?) do %>
 <section class="card card-pad space-y-4">
   <h2 class="font-display text-xl">Payment reconciliation</h2>
+  <%= link_to 'Match payments to sales for commissions', authorize_net_sale_links_path, class: 'btn-ghost', data: { turbo_frame: '_top' } if Current.user.can?('payroll.read') %>
   <p class="text-sm text-mocha">Payment observations do not create retail sales or change inventory. C-Trax remains the retail inventory reference. Refunds retain their original transaction link; voids retain their source status. Tips and customer surcharges are shown only when returned. Processing fees are unavailable. Currency stays unknown when the gateway enables multiple currencies.</p>
   <% if @connection.last_report_status %><p role="status"><%= @connection.last_report_status %>: <%= @connection.last_report_message %><% if @connection.last_reported_at %> Last completed <%= @connection.last_reported_at.utc.iso8601 %>.<% end %></p><% end %>
   <% if Current.user.can?('settings.write') && @connection.credentials_saved? %>

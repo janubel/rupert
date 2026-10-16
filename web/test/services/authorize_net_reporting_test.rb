@@ -124,6 +124,8 @@ class AuthorizeNetReportingTest < ActiveSupport::TestCase
     assert @calls.all? { |payload| AuthorizeNetReporting::Client::READ_METHODS.include?(payload.keys.first) }
     row = AuthorizeNetTransaction.first
     refute_includes row.attributes.to_json, 'CUSTOMER PRIVATE'
+    refute_includes row.attributes.to_json, 'PRIVATE FREE TEXT'
+    assert_equal 'SYNTHETIC-INVOICE', row.invoice_number
     raw = PosConnection.connection.select_value("SELECT credentials_json FROM pos_connections WHERE id = #{@connection.id}")
     refute_includes raw, 'synthetic-key'
     refute_includes raw, 'synthetic-report-login'
@@ -303,6 +305,7 @@ class AuthorizeNetReportingTest < ActiveSupport::TestCase
     { transId: '9001', refTransId: @status.start_with?('refund') ? '8999' : nil,
       submitTimeUTC: '2026-10-14T18:00:00', transactionType: @status.start_with?('refund') ? 'refundTransaction' : 'authCaptureTransaction',
       transactionStatus: @status, authAmount: '2.3000', settleAmount: '2.3000', tip: @tip,
+      order: { invoiceNumber: 'SYNTHETIC-INVOICE', description: 'PRIVATE FREE TEXT' },
       batch: @batch ? batch.except(:statistics) : nil, customer: { email: 'CUSTOMER PRIVATE' } }
   end
 end
