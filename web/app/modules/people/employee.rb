@@ -20,6 +20,7 @@ module People
     belongs_to :user, optional: true
     belongs_to :department, class_name: 'People::Department', optional: true
     belongs_to :position, class_name: 'People::Position', optional: true
+    has_many :work_reports, class_name: 'EmployeeWorkReport', dependent: :restrict_with_exception
     has_many :pay_rates, class_name: 'People::PayRate', dependent: :destroy
     has_many :timesheets, class_name: 'People::Timesheet', dependent: :destroy
     has_many :timesheet_entries, through: :timesheets, source: :entries

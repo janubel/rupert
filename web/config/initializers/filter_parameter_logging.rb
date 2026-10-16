@@ -30,7 +30,7 @@ Rails.application.config.filter_parameters += %i[gateway_id exported_at records_
 # Unexpected card fields are never accepted by hosted checkout and must not log.
 Rails.application.config.filter_parameters += %i[ccnumber ccexp cvv card_number card_exp card_cvv card_code merchant_company gateway_fingerprint]
 
-Rails.application.config.filter_parameters += %i[timesheet timesheet_entry clock_correction leave_request pay_rate leave_allowance]
+Rails.application.config.filter_parameters += %i[timesheet timesheet_entry clock_correction leave_request pay_rate leave_allowance work_report]
 
 # Customer contact details, conversation notes and follow-up titles are private.
 Rails.application.config.filter_parameters += %i[customer interaction follow_up]

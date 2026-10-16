@@ -9,11 +9,7 @@ class EmployeeWorkspaceController < AuthenticatedController
   rescue_from Date::Error, ArgumentError, with: :invalid_range
 
   def reports
-    @from = params[:from].present? ? Date.iso8601(params[:from]) : Date.current.beginning_of_week
-    @to = params[:to].present? ? Date.iso8601(params[:to]) : Date.current.end_of_week
-    @summary = EmployeeWorkSummary.new(employee: @worker, from: @from, to: @to)
-    @payslips = @worker.payslips.joins(:pay_run).where(pay_runs: { tenant_id: Current.tenant_id, status: %w[finalized paid] })
-      .where('pay_runs.period_start <= ? AND pay_runs.period_end >= ?', @to, @from).includes(:pay_run).order('pay_runs.period_end DESC')
+    load_report_data
     respond_to do |format|
       format.html
       format.csv do
@@ -21,6 +17,24 @@ class EmployeeWorkspaceController < AuthenticatedController
         send_data(leave ? @summary.time_off_csv : @summary.csv, filename: "my-#{leave ? 'time-off' : 'hours'}-#{@from}-#{@to}.csv", type: 'text/csv')
       end
     end
+  end
+
+  def report_problem
+    values = params.require(:work_report).permit(:kind, :details, :request_key)
+    @work_report = @worker.work_reports.find_by(request_key: values[:request_key]) if values[:request_key].present?
+    return redirect_to employee_reports_path(anchor: 'problems'), notice: 'Your report is already saved.' if @work_report
+
+    @work_report = @worker.work_reports.new(values)
+    @work_report.requester = Current.user
+    if @work_report.save
+      ActivityLogger.log('employee_work_report_created', subject: @work_report, details: 'Private employee problem report saved; awaiting review.')
+      redirect_to employee_reports_path(anchor: 'problems'), notice: 'Your report was saved for administrator review.'
+    else
+      load_report_data
+      render :reports, status: :unprocessable_entity
+    end
+  rescue ActiveRecord::RecordNotUnique
+    redirect_to employee_reports_path(anchor: 'problems'), notice: 'Your report is already saved.'
   end
 
   def time_off
@@ -56,6 +70,16 @@ class EmployeeWorkspaceController < AuthenticatedController
   end
 
   private
+
+  def load_report_data
+    @from = params[:from].present? ? Date.iso8601(params[:from]) : Date.current.beginning_of_week
+    @to = params[:to].present? ? Date.iso8601(params[:to]) : Date.current.end_of_week
+    @summary = EmployeeWorkSummary.new(employee: @worker, from: @from, to: @to)
+    @payslips = @worker.payslips.joins(:pay_run).where(pay_runs: { tenant_id: Current.tenant_id, status: %w[finalized paid] })
+      .where('pay_runs.period_start <= ? AND pay_runs.period_end >= ?', @to, @from).includes(:pay_run).order('pay_runs.period_end DESC')
+    @work_reports = @worker.work_reports.includes(:reviewer).order(created_at: :desc).limit(50)
+    @work_report ||= @worker.work_reports.new(request_key: SecureRandom.uuid, kind: 'time')
+  end
 
   def private_response
     response.headers['Cache-Control'] = 'no-store'

@@ -23,3 +23,17 @@
     <article class="card card-pad space-y-3"><div class="flex flex-wrap justify-between gap-2"><h3 class="font-semibold"><%= slip.pay_run.period_label %></h3><span class="pill-olive"><%= slip.pay_run.paid? ? 'Paid' : 'Finalized · not marked paid' %></span></div><dl class="grid grid-cols-3 gap-2 text-sm"><div><dt class="text-mocha">Gross</dt><dd class="font-semibold"><%= number_to_currency(slip.gross_cents / 100.0) %></dd></div><div><dt class="text-mocha">Deductions</dt><dd class="font-semibold"><%= number_to_currency(slip.deductions_cents / 100.0) %></dd></div><div><dt class="text-mocha">Net</dt><dd class="font-semibold"><%= number_to_currency(slip.net_cents / 100.0) %></dd></div></dl><% if slip.pay_run.paid_on %><p class="text-sm text-mocha">Recorded payment date: <%= l(slip.pay_run.paid_on, format: :long) %></p><% end %></article>
   <% end %>
 </section>
+
+<section id="problems" class="card card-pad space-y-4"><h2 class="text-lg font-semibold">Report a problem</h2><p class="text-sm text-mocha">Something wrong with your hours, pay or time off? Tell your administrator here. For a clock time that needs changing, <%= link_to 'request a clock correction', time_clock_path, class: 'text-olive underline' %>.</p>
+  <% if @work_report.errors.any? %><p role="alert" class="text-sm text-rose"><%= @work_report.errors.full_messages.to_sentence %></p><% end %>
+  <%= form_with model: @work_report, scope: :work_report, url: employee_problem_path, class: 'space-y-3' do |f| %>
+    <%= f.hidden_field :request_key %>
+    <div><%= f.label :kind, 'What is this about?', class: 'block text-sm mb-1' %><%= f.select :kind, EmployeeWorkReport::KINDS.map { |kind, label| [label, kind] }, {}, class: 'select w-full' %></div>
+    <div><%= f.label :details, 'What happened?', class: 'block text-sm mb-1' %><%= f.text_area :details, rows: 3, maxlength: 2000, required: true, class: 'input w-full' %></div>
+    <%= f.submit 'Save problem report', class: 'btn-primary' %>
+  <% end %>
+</section>
+<section class="space-y-3"><h2 class="text-lg font-semibold">My problem reports</h2>
+  <% if @work_reports.empty? %><p class="card card-pad text-sm text-mocha">No problem reports yet.</p><% end %>
+  <% @work_reports.each do |report| %><article class="card card-pad space-y-3"><div class="flex flex-wrap justify-between gap-2"><h3 class="font-semibold"><%= EmployeeWorkReport::KINDS.fetch(report.kind) %></h3><span class="pill-olive"><%= report.status.humanize %></span></div><p class="text-xs text-mocha">#<%= report.id %> · <%= l(report.created_at, format: :short) %></p><p class="whitespace-pre-wrap text-sm"><%= report.details %></p><% if report.response.present? %><p class="rounded-xl bg-haze p-3 text-sm whitespace-pre-wrap"><strong>Response:</strong> <%= report.response %></p><% if report.reviewed_at %><p class="text-xs text-mocha">Updated <%= l(report.reviewed_at, format: :short) %></p><% end %><% end %></article><% end %>
+</section>

@@ -56,5 +56,5 @@
     <div class="card card-pad space-y-2"><h2 class="font-semibold">Time off</h2><p class="text-sm text-mocha"><%= @next_leave ? "#{@next_leave.leave_type.titleize} · #{@next_leave.starts_on.strftime('%b %-d')} – #{@next_leave.ends_on.strftime('%b %-d')} · #{@next_leave.status.humanize}" : 'Plan a vacation, request a day off or check your calendar.' %></p><% unless @preview %><%= link_to 'Calendar & requests', employee_time_off_path, class: 'text-sm text-olive underline' %><% end %></div>
     <div class="card card-pad space-y-2"><h2 class="font-semibold">My reports</h2><p class="text-sm text-mocha">Check hours, estimated pay and finalized payslips. Download your hours when you need them.</p><% unless @preview %><%= link_to 'View my reports', employee_reports_path, class: 'text-sm text-olive underline' %><% end %></div>
   </section>
-  <% unless @preview %><p class="text-sm text-mocha">Something wrong with your hours? <%= link_to 'Report a time correction', time_clock_path, class: 'text-olive underline' %>.</p><% end %>
+  <% unless @preview %><p class="text-sm text-mocha">Need help with time or pay? <%= link_to 'Report a problem or correction', employee_reports_path(anchor: 'problems'), class: 'text-olive underline' %>.</p><% end %>
 <% end %>

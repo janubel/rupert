@@ -32,6 +32,7 @@ Rails.application.routes.draw do
   get '/employee/time-off', to: 'employee_workspace#time_off', as: :employee_time_off
   post '/employee/time-off', to: 'employee_workspace#request_time_off'
   post '/employee/time-off/:id/cancel', to: 'employee_workspace#cancel_time_off', as: :cancel_employee_time_off
+  post '/employee/problems', to: 'employee_workspace#report_problem', as: :employee_problem
   post '/employee/week', to: 'employee_app#week', as: :employee_week
   get '/employee/devices', to: 'employee_app#devices', as: :employee_devices
   post '/employee/devices/:id/revoke', to: 'employee_app#revoke', as: :revoke_employee_device
@@ -197,6 +198,7 @@ Rails.application.routes.draw do
     end
   end
   namespace :people do
+    resources :work_reports, only: %i[index update]
     resources :employees, only: %i[index show new create edit update destroy] do
       post :add_pay_rate, on: :member
       post :set_leave_allowance, on: :member
