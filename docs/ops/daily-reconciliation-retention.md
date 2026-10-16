@@ -74,3 +74,5 @@ The [October 16 attention and follow-up receipt](reconciliation-follow-ups-deplo
 The [October 16 across-day UX receipt](reconciliation-across-days-deployment-2026-10-16.md) records the seven-date overview, request/evidence shortcuts and combined release validation.
 
 The [October 16 priority-action UX receipt](reconciliation-priority-actions-deployment-2026-10-16.md) records prominent unrequested reports, overdue cards and direct progress/original actions.
+
+The [October 16 local follow-up UX receipt](reconciliation-local-follow-up-deployment-2026-10-16.md) records date shortcuts, original review/link suggestions and the post-security rollout with no email actions.
