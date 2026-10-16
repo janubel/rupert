@@ -116,4 +116,17 @@ class SquareTimecardSyncJobTest < ActiveJob::TestCase
     assert_equal 'imported', SquareTimecard.first.import_status
     assert_equal 28_800, SquareTimecardDay.sum(:payable_seconds)
   end
+
+  test 'employee-hours health is independent of catalog success and respects the tenant schedule' do
+    enable
+    SyncAttempt.create!(source: 'square', operation: 'catalog', status: 'succeeded', queued_at: 1.minute.ago, finished_at: Time.current)
+    SyncAttempt.create!(source: 'square', operation: 'timecards', status: 'failed', queued_at: Time.current, finished_at: Time.current, error_category: 'unknown')
+    health = SourceHealth.for(key: 'square', ready: true).find { |channel| channel[:operation] == 'timecards' }
+    assert_equal 'Failed', health[:state]
+    assert health[:enabled]
+    assert_nil health[:last_success_at]
+    assert_includes health[:coverage], 'Closed matched shifts count once'
+    SquareTimecardSync.configure!(enabled: false)
+    refute SourceHealth.for(key: 'square', ready: true).find { |channel| channel[:operation] == 'timecards' }[:enabled]
+  end
 end
