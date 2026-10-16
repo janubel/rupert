@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class DailyReconciliationsController < AuthenticatedController
+  include ReconciliationCloseContext
   before_action :private_response
   before_action -> { authorize(:module, :reports_read?) }
   before_action -> { authorize(:module, :reports_write?) }, only: %i[create archive review withdraw]
@@ -21,6 +22,7 @@ class DailyReconciliationsController < AuthenticatedController
       @request = ReconciliationFollowUp.find(params[:request])
       @evidence_values = @request.attributes.slice('source', 'period_from', 'period_to', 'currency', 'location_id').merge('kind' => @request.document_kind)
     end
+    load_close_context(@request)
     load_page(@correction&.period_from&.iso8601 || @request&.period_from&.iso8601 || selected_day)
     if params[:control_for].present?
       row = @report.register.rows.find { |item| @attention.control_key(item) == params[:control_for] }
@@ -37,6 +39,7 @@ class DailyReconciliationsController < AuthenticatedController
 
   def create
     @request = ReconciliationFollowUp.find(params[:request_id]) if params[:request_id].present?
+    load_close_context(@request)
     @evidence_values = params.fetch(:evidence, ActionController::Parameters.new).permit(:source, :kind, :period_from, :period_to, :currency, :location_id, :note, :supersedes_id, *ReconciliationEvidence::AMOUNTS).to_h
     file = params[:file]
     raise ReconciliationEvidence::Error, 'Attach a document no larger than 8 MiB.' unless file.is_a?(ActionDispatch::Http::UploadedFile) && file.size <= ReconciliationEvidence::MAX_BYTES
@@ -52,7 +55,7 @@ class DailyReconciliationsController < AuthenticatedController
       source: values['source'], kind: values['kind'], from: values['period_from'], to: values['period_to'], metadata: metadata,
       actor: Current.user, supersedes_id: values['supersedes_id'])
     if @request
-      redirect_to reconciliation_follow_up_path(@request, evidence: doc.id, anchor: 'record-progress'), notice: 'Original retained in Rupert. Review the suggested evidence and save a progress note to link it. Uploading does not change the follow-up status.'
+      redirect_to reconciliation_follow_up_path(@request, evidence: doc.id, close_day: @close_day&.iso8601, anchor: 'record-progress'), notice: 'Original retained in Rupert. Review the suggested evidence and save a progress note to link it. Uploading does not change the follow-up status.'
     else
       redirect_to daily_reconciliations_path(day: doc.period_from.iso8601), notice: "Evidence ##{doc.id} retained with its original bytes and checksum."
     end

@@ -70,6 +70,68 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
     file&.unlink
   end
 
+  test 'close context follows a missing request through validation replay upload progress and resolution' do
+    file = nil
+    get new_reconciliation_follow_up_path(period_from: '2026-10-01', period_to: '2026-10-31', close_day: '2026-10-14')
+    assert_select 'input[name="close_day"][value="2026-10-14"]'
+    post reconciliation_follow_ups_path, params: { close_day: '2026-10-14', follow_up: @values.merge(notes: '') }
+    assert_response :unprocessable_entity
+    assert_select 'input[name="close_day"][value="2026-10-14"]'
+    assert_no_enqueued_jobs do
+      assert_no_difference 'ActionMailer::Base.deliveries.size' do
+        post reconciliation_follow_ups_path, params: { close_day: '2026-10-14', follow_up: @values }
+        item = ReconciliationFollowUp.last
+        assert_redirected_to reconciliation_follow_up_path(item, close_day: '2026-10-14')
+        assert_no_difference 'ReconciliationFollowUp.count' do
+          post reconciliation_follow_ups_path, params: { close_day: '2026-10-14', follow_up: @values }
+        end
+        assert_redirected_to reconciliation_follow_up_path(item, close_day: '2026-10-14')
+        follow_redirect!
+        assert_select 'button[type="button"][data-decision="waiting"]', text: 'Waiting on report'
+        assert_select 'button[type="button"][data-decision="closed"]', text: 'Resolve follow-up'
+        assert_select 'a[href=?]', daily_reconciliations_path(day: item.period_from.iso8601, request: item.id, close_day: '2026-10-14', anchor: 'upload-document'), text: 'Add original report'
+        get daily_reconciliations_path(request: item.id, close_day: '2026-10-14')
+        assert_select '#upload-document input[name="close_day"][value="2026-10-14"]'
+        post daily_reconciliations_path, params: { request_id: item.id, close_day: '2026-10-14', evidence: { source: 'bank', kind: 'bank_statement', period_from: '2026-10-01', period_to: '2026-10-31' } }
+        assert_response :unprocessable_entity
+        assert_select '#upload-document input[name="close_day"][value="2026-10-14"]'
+        file = Tempfile.new(['resolution-original', '.txt'])
+        file.write('Synthetic covered original')
+        file.close
+        post daily_reconciliations_path, params: { request_id: item.id, close_day: '2026-10-14', file: Rack::Test::UploadedFile.new(file.path, 'text/plain'), evidence: { source: 'bank', kind: 'bank_statement', period_from: '2026-10-01', period_to: '2026-10-31' } }
+        doc = ReconciliationDocument.last
+        assert_redirected_to reconciliation_follow_up_path(item, evidence: doc.id, close_day: '2026-10-14', anchor: 'record-progress')
+        assert_nil item.reload.document_id
+        assert_equal 'open', item.status
+        patch reconciliation_follow_up_path(item), params: { close_day: '2026-10-14', follow_up: { status: 'waiting', notes: 'Original retained; review remaining questions tomorrow.', document_id: doc.id, lock_version: item.lock_version } }
+        assert_redirected_to reconciliation_follow_up_path(item, close_day: '2026-10-14')
+        patch reconciliation_follow_up_path(item), params: { close_day: '2026-10-14', return_to: 'close', follow_up: { status: 'closed', notes: 'Covered original reviewed; request resolved.', lock_version: item.reload.lock_version } }
+        assert_redirected_to financial_close_path(day: '2026-10-14', anchor: 'close-follow-ups')
+        assert_equal 'closed', item.reload.status
+        assert_equal doc.id, item.document_id
+        assert_equal 3, item.events.count
+        assert_equal 'Covered original reviewed; request resolved.', item.events.last.details['notes']
+      end
+    end
+  ensure
+    file&.unlink
+  end
+
+  test 'upload close context rejects uncovered dates and foreign requests' do
+    item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+    ['2026-09-30', 'https://example.com'].each do |context|
+      get daily_reconciliations_path(request: item.id, close_day: context)
+      assert_select '#upload-document input[name="close_day"]', count: 0
+    end
+    other = Tenant.create!(name: 'Foreign request', subdomain: 'foreign-close-request')
+    foreign = Current.set(tenant: other) do
+      author = User.create!(tenant: other, email: 'foreign-author@example.com', role: 'admin', password: 'password123')
+      ReconciliationFollowUp.create!(@values.merge(created_by: author, owner_id: nil, submission_key: SecureRandom.uuid))
+    end
+    get daily_reconciliations_path(request: foreign.id, close_day: '2026-10-14')
+    assert_response :not_found
+  end
+
   test 'progress returns to a validated covered close day and preserves context on errors' do
     item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
     get reconciliation_follow_up_path(item, close_day: '2026-10-14')

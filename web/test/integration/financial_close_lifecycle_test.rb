@@ -125,7 +125,7 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
       end
       assert_select '[aria-label="Missing reports blocking close"]' do
         assert_select 'a[href=?]', daily_reconciliations_path(day: @day, control_for: workflow.attention.control_key(row), anchor: 'upload-document'), text: 'Add this control'
-        assert_select 'a[href=?]', reconciliation_follow_up_path(item, anchor: 'record-progress'), text: "Overdue request ##{item.id}"
+        assert_select 'a[href=?]', reconciliation_follow_up_path(item, close_day: @day, anchor: 'record-progress'), text: "Overdue request ##{item.id}"
         assert_select 'a', text: 'Track this missing report', count: 0
       end
       item.update!(due_on: Date.current + 1, notes: 'Check the original tomorrow.')
@@ -133,13 +133,13 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
       assert_select '[aria-label="Next close action for 2026-10-14"]' do
         assert_select '[aria-label="Missing register report scope"]', text: /Square · USD/
         assert_select 'a[href=?]', daily_reconciliations_path(day: @day, control_for: workflow.attention.control_key(row), anchor: 'upload-document'), text: 'Add this control'
-        assert_select 'a[href=?]', reconciliation_follow_up_path(item, anchor: 'record-progress'), text: "Open request ##{item.id}"
+        assert_select 'a[href=?]', reconciliation_follow_up_path(item, close_day: @day, anchor: 'record-progress'), text: "Open request ##{item.id}"
         assert_select 'a', text: 'Track this missing report', count: 0
       end
       @user.update!(role: 'reporting')
       get financial_close_path(day: @day)
       assert_select 'a', text: 'Add this control', count: 0
-      assert_select 'a[href=?]', reconciliation_follow_up_path(item), text: "Open request ##{item.id}"
+      assert_select 'a[href=?]', reconciliation_follow_up_path(item, close_day: @day), text: "Open request ##{item.id}"
       get cash_forecast_path(day: @day)
       assert_select '[aria-label="Next close action for 2026-10-14"] a', text: 'Add this control', count: 0
     end

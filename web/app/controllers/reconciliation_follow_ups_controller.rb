@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class ReconciliationFollowUpsController < AuthenticatedController
+  include ReconciliationCloseContext
   before_action -> { authorize(:module, :reports_read?) }
   before_action -> { authorize(:module, :reports_write?) }, only: %i[new create update]
   before_action do
@@ -56,6 +57,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
     values = params.permit(:category, :source, :document_kind, :period_from, :period_to, :currency, :location_id, :metric, :title).to_h
     @follow_up = ReconciliationFollowUp.new({ category: 'missing_report', source: 'other', document_kind: 'source_export',
       period_from: Date.current, period_to: Date.current, due_on: Date.current + 1, owner_id: Current.user.tenant_id == Current.tenant_id ? Current.user.id : nil, submission_key: SecureRandom.uuid }.merge(values))
+    load_close_context
     form_options
   end
 
@@ -63,21 +65,27 @@ class ReconciliationFollowUpsController < AuthenticatedController
     values = params.require(:follow_up).permit(:category, :source, :document_kind, :period_from, :period_to, :currency, :location_id, :metric,
       :title, :notes, :due_on, :owner_id, :submission_key)
     @follow_up = ReconciliationFollowUp.find_by(submission_key: values[:submission_key]) if values[:submission_key].present?
-    return redirect_to(@follow_up, notice: 'This request is already saved. Open it to record another update.') if @follow_up
+    if @follow_up
+      load_close_context
+      return redirect_to(reconciliation_follow_up_path(@follow_up, close_day: @close_day&.iso8601), notice: 'This request is already saved. Open it to record another update.')
+    end
 
     @follow_up = ReconciliationFollowUp.new(values)
     @follow_up.created_by = Current.user
+    load_close_context
     if @follow_up.category == 'difference' && @follow_up.period_from
       @follow_up.report_digest = DailyMoneyReconciliation.new(day: @follow_up.period_from.iso8601).digest
     end
     if @follow_up.save
-      redirect_to @follow_up, notice: 'Follow-up saved in Rupert. No email or message was sent.'
+      redirect_to reconciliation_follow_up_path(@follow_up, close_day: @close_day&.iso8601), notice: 'Follow-up saved in Rupert. No email or message was sent.'
     else
       form_options
       render :new, status: :unprocessable_entity
     end
   rescue ActiveRecord::RecordNotUnique
-    redirect_to ReconciliationFollowUp.find_by!(submission_key: values[:submission_key]), notice: 'This request is already saved.'
+    @follow_up = ReconciliationFollowUp.find_by!(submission_key: values[:submission_key])
+    load_close_context
+    redirect_to reconciliation_follow_up_path(@follow_up, close_day: @close_day&.iso8601), notice: 'This request is already saved.'
   end
 
   def show
@@ -101,7 +109,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
       elsif params[:return_to] == 'overdue'
         reconciliation_follow_ups_path(status: 'overdue')
       else
-        @follow_up
+        reconciliation_follow_up_path(@follow_up, close_day: @close_day&.iso8601)
       end
       redirect_to destination, notice: 'Progress saved in Rupert. Earlier notes and assignments are retained. No email or message was sent.'
     else
@@ -121,16 +129,6 @@ class ReconciliationFollowUpsController < AuthenticatedController
   end
 
   private
-
-  def load_close_context
-    @close_day = nil
-    return if params[:close_day].blank?
-
-    day = ReconciliationEvidence.dates(params[:close_day], params[:close_day]).first
-    @close_day = day if day.between?(@follow_up.period_from, @follow_up.period_to)
-  rescue ReconciliationEvidence::Error
-    @close_day = nil
-  end
 
   def form_options
     @owners = User.active.where(tenant_id: Current.tenant_id).order(:name, :id).select { |user| user.can?('reports.read') }

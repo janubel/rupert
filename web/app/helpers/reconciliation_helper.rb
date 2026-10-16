@@ -53,7 +53,7 @@ module ReconciliationHelper
 
   def reconciliation_follow_up_context(row, day, category: 'difference')
     { category: category, source: row[:source], currency: row[:currency], location_id: row[:location_id],
-      document_kind: 'register_control', period_from: day.iso8601, period_to: day.iso8601,
+      document_kind: 'register_control', period_from: day.iso8601, period_to: day.iso8601, close_day: day.iso8601,
       metric: ReconciliationEvidence::AMOUNTS.include?(row[:metric]) ? row[:metric] : nil,
       title: "#{reconciliation_source(row[:source])} #{category == 'missing_report' ? 'register report needed' : "#{row[:metric].to_s.humanize.downcase} review"}" }
   end
