@@ -20,7 +20,16 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
-      - run: npx expo install --check
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run export
+      - name: Validate SDK compatibility, TypeScript and employee input boundaries
+        run: npm run check
+      - name: Validate Expo app configuration
+        run: npx --yes expo-doctor@1.21.4
+      - name: Export both native platforms with Hermes
+        run: npm run export
+      - name: Retain unsigned JavaScript export verification artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: employee-native-js-exports-${{ github.sha }}
+          path: mobile/dist/
+          if-no-files-found: error
+          retention-days: 14
