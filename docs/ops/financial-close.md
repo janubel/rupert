@@ -33,3 +33,5 @@ The forecast baseline panel links to close evidence, comparison across dates and
 The [across-date close deployment receipt](financial-close-across-days-deployment-2026-10-16.md) records verification and recovery for these changes.
 
 Use the date-focus shortcuts to show overdue work, missing register reports, missing/stale reviews or changed close packages within the selected seven dates. Focus counts describe dates, not distinct requests; the global priority queue remains across all dates. The next action on each date and forecast baseline goes directly to the earliest overdue follow-up with its owner and latest note, or to the leading close check when no overdue work remains. These are navigation shortcuts: they do not change progress, send reminders or certify a close.
+
+The [next-action deployment receipt](financial-close-next-action-deployment-2026-10-16.md) records the combined employee-source validation, live checks and encrypted recovery checkpoint.
