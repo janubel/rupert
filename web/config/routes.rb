@@ -420,6 +420,12 @@ Rails.application.routes.draw do
     end
     resources :engagements, only: %i[show edit update] do
       post :copy, on: :member
+      resources :shopify_discounts, only: %i[new create show] do
+        member do
+          post :activate
+          post :refresh
+        end
+      end
       resources :offers, controller: 'influencer_offers', only: %i[new create edit update] do
         member do
           post :verify
