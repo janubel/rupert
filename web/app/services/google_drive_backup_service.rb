@@ -3,6 +3,8 @@
 require 'google/apis/drive_v3'
 require 'signet/oauth_2/client'
 require 'fileutils'
+require 'digest'
+require 'tempfile'
 
 # Whole-instance Google Drive backup, configured only by the platform operator.
 # Tenant-owned Drive settings are never trusted as a snapshot destination.
@@ -48,7 +50,7 @@ class GoogleDriveBackupService
       EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', client.refresh_token)
     end
 
-    # Snapshot + upload + share + prune. Returns the BackupLog record.
+    # Snapshot + upload + verified download + prune. Returns the BackupLog record.
     def backup!(actor: 'manual')
       raise NotConnectedError, 'Google Drive is not connected' unless connected?
 
@@ -69,6 +71,7 @@ class GoogleDriveBackupService
           content_type: 'application/octet-stream'
         )
 
+        verify_upload!(drive, file.id, path)
         prune_old!(drive, folder_id)
 
         log.update!(
@@ -127,6 +130,21 @@ class GoogleDriveBackupService
     end
 
     private
+
+    def verify_upload!(drive, file_id, path)
+      metadata = drive.get_file(file_id, fields: 'id,size,md5Checksum')
+      unless metadata.size.to_i == File.size(path) && metadata.md5_checksum == Digest::MD5.file(path).hexdigest
+        raise NotConnectedError, 'Google Drive upload verification failed (size or checksum).'
+      end
+      Tempfile.create(['rupert-backup-verify-', '.bin']) do |copy|
+        copy.chmod(0o600)
+        drive.get_file(file_id, download_dest: copy.path)
+        unless File.size(copy.path) == File.size(path) &&
+            Digest::SHA256.file(copy.path).hexdigest == Digest::SHA256.file(path).hexdigest
+          raise NotConnectedError, 'Google Drive downloaded backup did not match the database snapshot.'
+        end
+      end
+    end
 
     def require_credentials!
       raise NotConfiguredError, 'GOOGLE_DRIVE_CLIENT_ID / CLIENT_SECRET are not set' unless configured?
