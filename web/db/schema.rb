@@ -10,10 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
+
+  create_table "money_reconciliations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "period_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.datetime "generated_at", null: false
+    t.text "payload_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_money_reconciliation_period", unique: true
+  end
 
   create_table "iris_reports", force: :cascade do |t|
     t.string "tenant_id", null: false

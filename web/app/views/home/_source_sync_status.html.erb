@@ -1,6 +1,7 @@
 <section id="source-sync-status" aria-label="Source sync status" class="space-y-3">
   <div class="flex flex-wrap items-baseline justify-between gap-2">
     <h2 class="font-display text-xl text-ink">Source connections</h2>
+    <% if Current.user.can?('reports.read') %><%= link_to 'Daily / weekly / monthly reconciliation', money_reconciliations_path, class: 'btn-ghost btn-sm' %><% end %>
     <p class="text-xs text-taupe">Badges show actual source freshness · schedules shown per connection</p>
   </div>
   <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

@@ -217,6 +217,7 @@ Rails.application.routes.draw do
   post '/time_clock/corrections/:id/reject', to: 'time_clock#reject_correction', as: :reject_correction_time_clock
   get '/time_clock/commissions', to: 'time_clock#commissions', as: :commission_preview_time_clock
   resources :reconcile, only: :index
+  resources :money_reconciliations, only: %i[index create]
   resources :reports, only: [:index] do
     collection do
       get :register_summary
