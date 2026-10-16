@@ -106,12 +106,18 @@ class ReconciliationFollowUpsController < AuthenticatedController
     if @follow_up.update(values)
       destination = if params[:return_to] == 'close' && @close_day
         financial_close_path(day: @close_day.iso8601, anchor: 'close-follow-ups')
+      elsif params[:return_to] == 'next_overdue'
+        @next_overdue = next_overdue
+        next_day = @close_day if @next_overdue && @close_day&.between?(@next_overdue.period_from, @next_overdue.period_to)
+        @next_overdue ? reconciliation_follow_up_path(@next_overdue, close_day: next_day&.iso8601, anchor: 'record-progress') : reconciliation_follow_ups_path(status: 'overdue')
       elsif params[:return_to] == 'overdue'
         reconciliation_follow_ups_path(status: 'overdue')
       else
         reconciliation_follow_up_path(@follow_up, close_day: @close_day&.iso8601)
       end
-      redirect_to destination, notice: 'Progress saved in Rupert. Earlier notes and assignments are retained. No email or message was sent.'
+      notice = 'Progress saved in Rupert. Earlier notes and assignments are retained. No email or message was sent.'
+      notice += ' No other overdue follow-ups were found; the queue reflects your saved status and due date.' if params[:return_to] == 'next_overdue' && @next_overdue.nil?
+      redirect_to destination, notice: notice
     else
       @entered_values = values.to_h
       messages = @follow_up.errors.full_messages
@@ -130,6 +136,10 @@ class ReconciliationFollowUpsController < AuthenticatedController
 
   private
 
+  def next_overdue
+    ReconciliationFollowUp.active.where('due_on < ?', Date.current).where.not(id: @follow_up.id).includes(:owner).order(:due_on, :id).first
+  end
+
   def form_options
     @owners = User.active.where(tenant_id: Current.tenant_id).order(:name, :id).select { |user| user.can?('reports.read') }
     @locations = Location.select(:id, :name, :source).order(:name).to_a
@@ -138,6 +148,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
   def show_options
     load_close_context
     form_options
+    @next_overdue = next_overdue if @follow_up.overdue?
     @events_pagy, @events = pagy(@follow_up.events.order(id: :desc), items: 15, page_param: :history_page)
     @matching_documents = @follow_up.matching_documents
     # Keep a specifically reviewed original selectable even outside the recent list.

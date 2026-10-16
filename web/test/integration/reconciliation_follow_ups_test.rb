@@ -164,6 +164,86 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
     assert_select 'button[value="close"]', count: 0
   end
 
+  test 'save and work next overdue picks the latest earliest due item across dates and changes only the current request' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      current = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+      next_item = ReconciliationFollowUp.create!(@values.merge(created_by: @user, title: 'Earlier October request', due_on: '2026-10-12', submission_key: SecureRandom.uuid))
+      later = ReconciliationFollowUp.create!(@values.merge(created_by: @user, title: 'September request', period_from: '2026-09-01', period_to: '2026-09-30', due_on: '2026-10-13', submission_key: SecureRandom.uuid))
+      ReconciliationFollowUp.create!(@values.merge(created_by: @user, title: 'Already closed', status: 'closed', due_on: '2026-10-01', submission_key: SecureRandom.uuid))
+      ReconciliationFollowUp.create!(@values.merge(created_by: @user, title: 'Due today', due_on: Date.current, submission_key: SecureRandom.uuid))
+      get reconciliation_follow_up_path(current, close_day: '2026-10-14')
+      assert_select '[aria-label="Continue overdue follow-ups across days"]', text: /Earlier October request/
+      assert_select 'form[data-busy="false"] button[name="return_to"][value="next_overdue"]', text: 'Save and work next overdue'
+      next_item.update!(status: 'closed', notes: 'Resolved elsewhere before this form was saved.')
+      assert_no_enqueued_jobs do
+        assert_no_difference ['ActionMailer::Base.deliveries.size', 'ReconciliationDocument.count'] do
+          assert_difference 'ReconciliationFollowUpEvent.count', 1 do
+            patch reconciliation_follow_up_path(current), params: { close_day: '2026-10-14', return_to: 'next_overdue', follow_up: { status: 'waiting', due_on: '2026-10-17', notes: 'Still outstanding; next check tomorrow.', lock_version: current.lock_version } }
+          end
+        end
+      end
+      assert_redirected_to reconciliation_follow_up_path(later, anchor: 'record-progress')
+      assert_equal 'waiting', current.reload.status
+      assert_equal Date.new(2026, 10, 17), current.due_on
+      assert_equal 1, later.events.count
+      assert_equal 'open', later.reload.status
+      follow_redirect!
+      assert_select 'input[name="close_day"]', count: 0
+      assert_select 'textarea[name="follow_up[notes]"]', text: ''
+      assert_select '[aria-label="Continue overdue follow-ups across days"]', text: /No other overdue/
+    end
+  end
+
+  test 'next overdue preserves a shared covered close date and excludes foreign tenant work' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      current = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+      next_item = ReconciliationFollowUp.create!(@values.merge(created_by: @user, due_on: '2026-10-10', submission_key: SecureRandom.uuid))
+      other = Tenant.create!(name: 'Foreign overdue', subdomain: 'foreign-overdue-continuation')
+      Current.set(tenant: other) do
+        author = User.create!(tenant: other, email: 'foreign-overdue-author@example.com', role: 'admin', password: 'password123')
+        ReconciliationFollowUp.create!(@values.merge(created_by: author, owner_id: nil, title: 'Foreign private request', due_on: '2026-10-01', submission_key: SecureRandom.uuid))
+      end
+      get reconciliation_follow_up_path(current, close_day: '2026-10-14')
+      refute_includes response.body, 'Foreign private request'
+      patch reconciliation_follow_up_path(current), params: { close_day: '2026-10-14', return_to: 'next_overdue', follow_up: { status: 'closed', notes: 'Documented exception reviewed.', lock_version: current.lock_version } }
+      assert_redirected_to reconciliation_follow_up_path(next_item, close_day: '2026-10-14', anchor: 'record-progress')
+      assert_equal 'closed', current.reload.status
+      assert_equal 1, next_item.events.count
+      @user.update!(role: 'reporting')
+      get reconciliation_follow_up_path(next_item)
+      assert_select 'button[value="next_overdue"]', count: 0
+      patch reconciliation_follow_up_path(next_item), params: { return_to: 'next_overdue', follow_up: { notes: 'Not allowed', lock_version: next_item.lock_version } }
+      assert_redirected_to root_path
+      assert_equal 1, next_item.events.count
+    end
+  end
+
+  test 'next overdue does not advance on invalid or stale saves and empty fallback keeps unresolved work visible' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      current = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+      get reconciliation_follow_up_path(current, close_day: '2026-10-14')
+      assert_select 'button[value="next_overdue"]', text: 'Save and check overdue queue'
+      assert_no_difference 'ReconciliationFollowUpEvent.count' do
+        patch reconciliation_follow_up_path(current), params: { close_day: '2026-10-14', return_to: 'next_overdue', follow_up: { notes: '', lock_version: current.lock_version } }
+      end
+      assert_response :unprocessable_entity
+      assert_select 'input[name="close_day"][value="2026-10-14"]'
+      version = current.lock_version
+      current.update!(notes: 'Newer reviewer update.')
+      assert_no_difference 'ReconciliationFollowUpEvent.count' do
+        patch reconciliation_follow_up_path(current), params: { return_to: 'next_overdue', follow_up: { notes: 'Preserve my unsaved text.', lock_version: version } }
+      end
+      assert_response :unprocessable_entity
+      assert_select 'textarea[name="follow_up[notes]"]', 'Preserve my unsaved text.'
+      patch reconciliation_follow_up_path(current), params: { return_to: 'next_overdue', follow_up: { notes: 'Still overdue, investigation continues.', lock_version: current.reload.lock_version } }
+      assert_redirected_to reconciliation_follow_ups_path(status: 'overdue')
+      assert_includes flash[:notice], 'No other overdue follow-ups'
+      assert current.reload.overdue?
+      follow_redirect!
+      assert_includes response.body, current.title
+    end
+  end
+
   test 'an older reviewed or linked original remains selectable outside the recent evidence window' do
     item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
     doc = ReconciliationEvidence.retain!(bytes: 'older original', filename: 'older-statement.txt', source: 'bank', kind: 'bank_statement', from: '2026-10-01', to: '2026-10-31')
