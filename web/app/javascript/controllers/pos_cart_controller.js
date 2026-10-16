@@ -109,6 +109,7 @@ export default class extends Controller {
   }
 
   invalidate() {
+    this.dispatch("changing")
     this.abort?.abort()
     ++this.sequence
     this.subtotalTarget.textContent = "—"
@@ -140,6 +141,7 @@ export default class extends Controller {
   }
 
   async refresh() {
+    this.dispatch("changing")
     this.abort?.abort()
     const sequence = ++this.sequence
     this.subtotalTarget.textContent = "—"
@@ -155,6 +157,7 @@ export default class extends Controller {
           return
         }
       }
+      this.dispatch("checked", { detail: { revision: null } })
       this.render([])
       this.statusTarget.textContent = "Choose products to build a preview."
       return
@@ -177,6 +180,7 @@ export default class extends Controller {
       const result = await response.json()
       if (sequence !== this.sequence) return
       if (!response.ok) throw new Error(result.error || "The preview could not be checked.")
+      this.dispatch("checked", { detail: { revision: result.display_revision } })
       this.lines = result.lines
       this.render(result.lines)
       this.subtotalTarget.textContent = this.amount(result.subtotal)

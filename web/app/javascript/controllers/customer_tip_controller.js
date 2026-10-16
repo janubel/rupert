@@ -35,6 +35,7 @@ export default class extends Controller {
       this.confirmed = state.confirmed
       this.choicesTarget.disabled = state.confirmed || !this.hasCart
       this.confirmTarget.disabled = state.confirmed || !this.hasCart
+      this.confirmTarget.textContent = state.confirmed ? "Choice confirmed" : "Confirm my choice"
       this.statusTarget.textContent = state.confirmed ? `Thank you. Your tip choice of ${this.money(state.tip_cents)} is confirmed.` : this.hasCart ? "Your tip choice stays private until you confirm." : "Waiting for the cashier’s cart…"
     } catch (error) {
       this.connected = false; this.confirmTarget.disabled = true; this.statusTarget.textContent = error.name === "AbortError" ? "Connection interrupted. Please wait before confirming." : error.message

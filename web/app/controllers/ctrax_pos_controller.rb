@@ -71,6 +71,9 @@ class CtraxPosController < PointOfSaleController
   end
 
   def publish_display(quote)
-    @display&.publish!(quote.deep_stringify_keys)
+    return unless @display
+
+    @display.publish!(quote.deep_stringify_keys)
+    quote[:display_revision] = @display.cart_revision
   end
 end

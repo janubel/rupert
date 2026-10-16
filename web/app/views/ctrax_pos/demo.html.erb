@@ -1,4 +1,4 @@
-<div class="space-y-4" data-controller="pos-cart pos-display" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>" data-pos-cart-clear-url-value="<%= clear_pos_display_path(@display) %>" data-pos-display-status-url-value="<%= pos_display_path(@display) %>">
+<div class="space-y-4" data-action="pos-cart:changing->pos-display#pending pos-cart:checked->pos-display#checked" data-controller="pos-cart pos-display" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>" data-pos-cart-clear-url-value="<%= clear_pos_display_path(@display) %>" data-pos-display-status-url-value="<%= pos_display_path(@display) %>">
   <header><h1 class="font-display text-2xl">Cashier cart</h1><p class="mt-2 text-sm text-mocha">Demonstration · C-Trax prices and website images · no charge</p></header>
   <%= render 'cart' %>
   <section class="card card-pad space-y-3">
