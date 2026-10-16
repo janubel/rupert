@@ -55,7 +55,7 @@ class EmployeeAppController < ApplicationController
 
   def manifest
     render json: { id: '/employee', name: 'Rupert Employee', short_name: 'Rupert', start_url: '/employee', scope: '/', display: 'standalone',
-      background_color: '#f6f3eb', theme_color: '#526145', icons: [192, 512].map { |size| { src: "/employee/icon-#{size}.png", sizes: "#{size}x#{size}", type: 'image/png', purpose: 'any maskable' } } }, content_type: 'application/manifest+json'
+      background_color: '#f6f3eb', theme_color: '#526145', icons: [192, 512].map { |size| { src: "/employee/icon-#{size}.png?v=rupert-dog-1", sizes: "#{size}x#{size}", type: 'image/png', purpose: 'any maskable' } } }, content_type: 'application/manifest+json'
   end
 
   def service_worker
