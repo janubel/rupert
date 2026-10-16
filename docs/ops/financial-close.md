@@ -29,3 +29,5 @@ Cash shortfall results show the amount below the entered reserve (or zero), with
 Across days now shows each date's close-check count, current/missing/stale review, latest retained package and whether evidence or follow-up progress changed since that package. Each date links to financial close, a cash plan with that baseline, and its overdue queue. A request covering several dates appears on each covered date; counts must not be added into a distinct-request total. Missing reviews are shown separately from the overview's report/follow-up issue count, and no quiet date is certified complete. Previous/next-day links support sequential close review.
 
 The forecast baseline panel links to close evidence, comparison across dates and overdue work. Changing the entered close date hides the previous baseline status and asks for calculation to refresh it, while preserving entered cash assumptions. Open close checks do not prevent manual scenario planning or replace the reviewer’s close decision.
+
+The [across-date close deployment receipt](financial-close-across-days-deployment-2026-10-16.md) records verification and recovery for these changes.
