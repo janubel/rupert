@@ -52,6 +52,8 @@ English table matrices use month names across columns and the observed portal me
 
 ## Native Daily Deposits CSV
 
+Deployed to SER8; see [release, verification and recovery evidence](iris-native-deposits-deployment-2026-10-15.md).
+
 Open **Import a native Daily Deposits CSV** on the IRIS connection page. In NAB, choose Deposits → Daily Deposits → Export → CSV. Supply the merchant selected in NAB, the source report month (`YYYY-MM`, 2000–2099) and the original CSV. API credentials are not needed. Settings-write permission and an active workspace are required.
 
 The importer accepts the inspected native structure: `Daily Deposits` title, `Records exported: N` preamble, the exact `Date,Amount,Transactions,Batch,Terminal Number,Type` header, data rows, and a shorter four-cell `Monthly Total` row. UTF-8 BOM and CRLF are supported. Dates are explicitly month/day/year and must fall in the selected month. Amounts are signed decimals with at most two fractional digits; valid dollar/grouping and parenthesized negatives are accepted. Counts are nonnegative integers. The exported record count and total amount/transaction count must match exactly. Missing batch/type, duplicate records, oversized cells, control characters, changed layouts, more than 10,000 rows or 1 MiB fail before persistence. Blank terminal numbers remain unknown; reference strings retain leading zeros.
