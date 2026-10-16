@@ -17,7 +17,7 @@
     <div><%= f.label :day, 'Covers business day', class: 'block text-sm' %><%= f.date_field :day, value: @day, class: 'input' %></div><div class="flex flex-wrap gap-2"><%= f.submit 'Filter follow-ups', class: 'btn-primary' %><%= link_to 'Clear', reconciliation_follow_ups_path, class: 'btn-ghost' %></div>
   <% end %></details>
   <p class="text-sm" role="status"><%= @pagy.count %> matching follow-ups · earliest due first<%= " · covers #{@day.strftime('%b %-d, %Y')}" if @day %><%= " · #{reconciliation_source(@source)}" if @source %><%= " · #{ReconciliationFollowUp::CATEGORIES[@category]}" if @category %><%= ' · no original linked' if @evidence_filter %></p><p class="text-xs text-mocha">Shortcut counts cover all dates; the list uses your selected filters. A file may already be retained but not linked to its request.</p>
-  <div class="grid gap-4 md:grid-cols-2"><% @follow_ups.each do |item| %><%= render 'card', item: item %><% end %></div>
+  <div class="grid gap-4 md:grid-cols-2"><% @follow_ups.each do |item| %><%= render 'card', item: item, close_day: @day %><% end %></div>
   <% if @follow_ups.empty? %><div class="card card-pad"><h2 class="font-display text-xl">No follow-ups match this view</h2><p class="mt-2 text-sm text-mocha">Change the filters or create a request for each report you expect. This queue shows saved requests.</p></div><% end %>
   <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
   <p class="text-xs text-mocha">Follow-ups are saved in Rupert. Status changes, assignments and notes remain in their history. Closing records a reviewer's decision; it does not assert a match or change source transactions.</p>

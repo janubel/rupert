@@ -128,6 +128,8 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
         assert_select 'a[href=?]', reconciliation_follow_up_path(item, close_day: @day, anchor: 'record-progress'), text: "Overdue request ##{item.id}"
         assert_select 'a', text: 'Track this missing report', count: 0
       end
+      assert_select '#close-follow-ups a[href=?]', reconciliation_follow_up_path(item, close_day: @day, anchor: 'record-progress'), text: 'Record progress'
+      assert_select '#close-follow-ups a[href=?]', daily_reconciliations_path(request: item.id, close_day: @day, anchor: 'upload-document'), text: 'Add original'
       item.update!(due_on: Date.current + 1, notes: 'Check the original tomorrow.')
       get cash_forecast_path(day: @day)
       assert_select '[aria-label="Next close action for 2026-10-14"]' do
