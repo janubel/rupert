@@ -60,7 +60,7 @@ module Sales
     # Pull sales for this session's window and location from the canonical
     # order stream, grouped by payment method.
     def refresh_from_orders!
-      orders = Core::Order.where('occurred_at >= ?', opened_at)
+      orders = ::Core::Order.where('occurred_at >= ?', opened_at)
       orders = orders.where('occurred_at < ?', closed_at) if closed_at
       orders = orders.where(location_id: [location_id, location&.externalId].compact) if location_id.present?
       # Two open drawers at one store must not both count the same Rupert sale.
