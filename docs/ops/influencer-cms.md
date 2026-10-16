@@ -23,9 +23,11 @@ Gift records do not reserve/deduct inventory, create platform orders, purchase l
 
 ## Temporary codes and referral links
 
+To create codes directly in Shopify, use the [Shopify influencer discount workflow](shopify-influencer-discounts.md), with reviewed terms, Shopify-enforced expiry and discount-applying referral links. The existing-code workflow below remains available for codes managed outside Rupert.
+
 Record an existing merchant-created code on the collaboration. It needs full discount terms, eligible products, minimum spend, usage/per-customer limits, stacking policy, start/end timestamps, a destination on the campaign storefront host and an evidence URL. A reviewer confirms the actual merchant settings for 24 hours. Changes clear verification. Codes are unique per workspace/merchant host across both group and influencer offers; a database constraint ensures an offer has exactly one recipient type.
 
-**Copy code and referral link** checks that the offer is active, freshly verified, tied to an Active collaboration and a contactable influencer. Expired/unverified codes cannot be copied through that workflow. Rupert's expiry does not deactivate a code in the merchant store; configure the merchant expiry to match. Automatic merchant-code creation/update/revocation remains a separate phase and requires explicit owner sign-off under `AGENTS.md`.
+**Copy code and referral link** checks that the offer is active, freshly verified, tied to an Active collaboration and a contactable influencer. Expired/unverified codes cannot be copied through that workflow. Rupert's expiry does not deactivate a code in the merchant store; configure the merchant expiry to match. Merchant-code updates/revocation remain separate actions requiring explicit owner sign-off under `AGENTS.md`.
 
 An Active collaboration also has a standalone referral URL. Both URL types retain approved storefront destinations and replace UTM parameters with campaign/influencer/collaboration-or-offer identifiers. They contain no contact details. Supported copy actions are audited. These are ordinary storefront URLs; Rupert does not provide a public redirect, count clicks, attribute orders, calculate commissions or prove who redeemed a shared code in this release.
 

@@ -643,7 +643,7 @@
       "area": "Marketing",
       "name": "Influencer collaborations and product gifting",
       "status": "Available",
-      "scope": "Tenant-scoped influencer directory, relationship/follow-up and encrypted contact logs; campaign collaborations, reviewed product-gift proposals and manual shipment history; expiring existing merchant-code records, UTM referral URLs and versioned documents. Separate contacts permission, stale-edit protection and encrypted audit evidence. No outreach sending, platform discount activation, inventory/order writes, click/conversion tracking or commissions.",
+      "scope": "Tenant-scoped influencer directory and encrypted contacts; collaborations, reviewed product gifts and manual shipment history; explicitly reviewed Shopify percentage/fixed code creation with expiry, usage limits, exact store/terms readback and recoverable creation intents; discount-applying UTM referral links, existing-code records and versioned documents. Separate contacts/discount permissions and encrypted audits. Shopify app access is required. No outreach, inventory/order writes, conversion tracking or commissions.",
       "evidence": "web/app/services/marketing/gift_workflow.rb",
       "phase": "4"
     }
