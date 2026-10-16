@@ -23,9 +23,9 @@
       <% end %>
     </div>
     <% if Current.user && !@preview %>
-      <nav aria-label="My workspace" class="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-4 pb-3 sm:px-6">
+      <nav aria-label="My workspace" class="mx-auto flex max-w-3xl grid grid-cols-4 gap-1 px-4 pb-3 sm:flex sm:px-6">
         <% [['Today', employee_app_path], ['Timesheets', people_timesheets_path], ['Time off', employee_time_off_path], ['Reports', employee_reports_path]].each do |label, path| %>
-          <%= link_to label, path, class: "rounded-full px-3 py-2 text-sm whitespace-nowrap #{request.path == path ? 'bg-olive text-white' : 'text-mocha hover:bg-haze'}", aria: { current: request.path == path ? 'page' : nil } %>
+          <%= link_to label, path, class: "rounded-full px-1 py-2 text-center text-xs whitespace-nowrap sm:px-3 sm:text-sm #{request.path == path ? 'bg-olive text-white' : 'text-mocha hover:bg-haze'}", aria: { current: request.path == path ? 'page' : nil } %>
         <% end %>
       </nav>
     <% end %>
