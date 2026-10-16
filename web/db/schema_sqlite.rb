@@ -622,6 +622,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
     t.index ["tenant_id"], name: "index_ctrax_stock_snapshots_on_tenant_id"
   end
 
+  create_table "customer_follow_ups", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "customer_id", null: false
+    t.bigint "author_id", null: false
+    t.bigint "owner_id"
+    t.string "title", null: false
+    t.date "due_on", null: false
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_follow_ups_on_customer_id"
+    t.index ["tenant_id", "completed_at", "due_on"], name: "idx_customer_follow_ups_due"
+  end
+
+  create_table "customer_interactions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "customer_id", null: false
+    t.bigint "author_id", null: false
+    t.string "kind", default: "note", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_interactions_on_customer_id"
+    t.index ["tenant_id", "customer_id", "created_at"], name: "idx_customer_interactions_timeline"
+  end
+
   create_table "customers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email"
@@ -634,9 +660,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
     t.datetime "source_synced_at"
+    t.string "crm_status", default: "customer", null: false
+    t.string "tags"
+    t.string "preferred_name"
+    t.bigint "owner_id"
     t.index ["tenant_id", "created_at", "id"], name: "idx_customers_tenant_created_id"
+    t.index ["tenant_id", "crm_status"], name: "index_customers_on_tenant_id_and_crm_status"
     t.index ["tenant_id", "email"], name: "index_customers_on_tenant_id_and_email"
     t.index ["tenant_id", "external_id", "source"], name: "index_customers_on_tenant_id_and_external_id_and_source", unique: true
+    t.index ["tenant_id", "owner_id"], name: "index_customers_on_tenant_id_and_owner_id"
     t.index ["tenant_id", "phone"], name: "index_customers_on_tenant_id_and_phone"
   end
 
@@ -2110,6 +2142,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
   add_foreign_key "ctrax_image_links", "tenants"
   add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_stock_snapshots", "tenants"
+  add_foreign_key "customer_follow_ups", "customers"
+  add_foreign_key "customer_follow_ups", "tenants"
+  add_foreign_key "customer_interactions", "customers"
+  add_foreign_key "customer_interactions", "tenants"
   add_foreign_key "daily_reconciliation_reviews", "tenants"
   add_foreign_key "daily_reconciliation_reviews", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "departments", "employees", column: "manager_id"

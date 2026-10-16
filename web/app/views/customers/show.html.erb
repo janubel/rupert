@@ -4,7 +4,7 @@
     <div>
       <h1 class="page-title"><%= @customer.name %></h1>
       <p class="mt-1 text-sm text-mocha">
-        <span class="pill-taupe capitalize"><%= @customer.source %></span>
+        <span class="pill-taupe capitalize"><%= directory_label(@customer.source) %></span>
         <% if @customer.email.present? %><span class="ml-2"><%= @customer.email %></span><% end %>
         <% if @customer.phone.present? %><span class="ml-2"><%= @customer.phone %></span><% end %>
       </p>
@@ -14,6 +14,7 @@
       <% if Current.user.can?("customers.write") %>
         <%= link_to "Edit", edit_customer_path(@customer), class: "btn-ghost btn-sm" %>
       <% end %>
+    </div>
   </section>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -23,16 +24,23 @@
     </div>
     <div class="stat">
       <p class="stat-label">Lifetime value</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@customer.lifetime_value_cents / 100.0) %></p>
+      <p class="stat-value mt-1"><%= customer_money(@customer.lifetime_totals) %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Last order</p>
-      <p class="stat-value-sm mt-1"><%= @orders.first ? l(@orders.first.occurred_at, format: :short) : "—" %></p>
+      <p class="stat-value-sm mt-1"><%= @last_order_at ? l(@last_order_at, format: :short) : "—" %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Member since</p>
       <p class="stat-value-sm mt-1"><%= l(@customer.created_at.to_date, format: :long) %></p>
     </div>
+  </section>
+
+  <section class="card card-pad">
+    <p class="text-sm"><strong><%= @customer.crm_status.titleize %></strong> · <%= @customer.tags.presence || 'No tags' %> · Assigned to <%= @customer.owner&.display_name || 'Unassigned' %></p>
+    <p class="mt-2 text-xs text-taupe">Source reference: <%= directory_label(@customer.source) %> · <%= @customer.external_id %></p>
+    <p class="mt-1 text-xs text-taupe"><%= customer_directory_status(@customer) %></p>
+    <p class="mt-1 text-xs text-taupe">Last full directory read: <%= @customer.source == 'manual' ? 'Added manually' : @customer.source_synced_at ? l(@customer.source_synced_at, format: :long) : 'Not verified' %></p>
   </section>
 
   <div class="grid gap-4 lg:grid-cols-3">
@@ -55,11 +63,52 @@
             </div>
             <div class="flex items-center gap-3">
               <span class="<%= %w[paid fulfilled].include?(order.status) ? "pill-fern" : "pill-clay" %>"><%= order.status %></span>
-              <span class="text-sm font-medium text-ink"><%= number_to_currency(order.gross_cents / 100.0) %></span>
+              <span class="text-sm font-medium text-ink"><%= customer_money({ order.currency => order.gross_cents }) %></span>
             </div>
           </div>
         <% end %>
       </div>
+      <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
     </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <section class="card card-pad">
+      <h2 class="font-display text-lg">Follow-ups</h2>
+      <% @follow_ups.each do |task| %>
+        <div class="border-b border-fog py-3 text-sm">
+          <p class="font-semibold"><%= task.title %></p>
+          <p class="text-xs text-taupe"><%= task.completed_at ? 'Completed' : task.due_on < Date.current ? 'Overdue' : 'Open' %> · <%= task.due_on %> · <%= task.owner&.display_name || 'Unassigned' %></p>
+          <% if Current.user.can?('customers.write') %><%= button_to task.completed_at ? 'Reopen' : 'Mark complete', customer_follow_up_path(@customer, task), method: :patch, params: { event: task.completed_at ? 'reopen' : 'complete' }, class: 'btn-ghost btn-sm mt-2' %><% end %>
+        </div>
+      <% end %>
+      <%== pagy_nav(@follow_ups_pagy) if @follow_ups_pagy.pages > 1 %>
+      <% if Current.user.can?('customers.write') %>
+        <%= form_with url: customer_follow_ups_path(@customer), scope: :follow_up, class: 'mt-4 space-y-3' do |f| %>
+          <div><%= f.label :title, 'Follow-up', class: 'block text-sm' %><%= f.text_field :title, required: true, maxlength: 500, class: 'input' %></div>
+          <div><%= f.label :due_on, 'Due date', class: 'block text-sm' %><%= f.date_field :due_on, required: true, value: Date.current, class: 'input' %></div>
+          <div><%= f.label :owner_id, 'Assigned to', class: 'block text-sm' %><%= f.select :owner_id, @owners.map { |u| [u.display_name, u.id] }, { include_blank: 'Unassigned', selected: @customer.owner_id || Current.user.id }, class: 'select' %></div>
+          <%= f.submit 'Schedule follow-up', class: 'btn-primary' %>
+        <% end %>
+      <% end %>
+    </section>
+    <section class="card card-pad">
+      <h2 class="font-display text-lg">Interaction history</h2>
+      <p class="text-xs text-taupe">Record conversations here. Email entries log past contact.</p>
+      <% @interactions.each do |entry| %>
+        <article class="border-b border-fog py-3">
+          <p class="text-xs text-taupe"><%= entry.kind.titleize %> · <%= entry.author&.display_name || 'Former user' %> · <%= l(entry.created_at, format: :long) %></p>
+          <p class="mt-1 whitespace-pre-wrap text-sm"><%= entry.body %></p>
+        </article>
+      <% end %>
+      <%== pagy_nav(@interactions_pagy) if @interactions_pagy.pages > 1 %>
+      <% if Current.user.can?('customers.write') %>
+        <%= form_with url: customer_interactions_path(@customer), scope: :interaction, class: 'mt-4 space-y-3' do |f| %>
+          <div><%= f.label :kind, 'Contact type', class: 'block text-sm' %><%= f.select :kind, CustomerInteraction::KINDS.map { |k| [k.titleize, k] }, {}, class: 'select' %></div>
+          <div><%= f.label :body, 'Notes', class: 'block text-sm' %><%= f.text_area :body, required: true, maxlength: 10_000, rows: 4, class: 'input' %></div>
+          <%= f.submit 'Record interaction', class: 'btn-primary' %>
+        <% end %>
+      <% end %>
+    </section>
   </div>
 </div>

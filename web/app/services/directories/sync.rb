@@ -13,16 +13,18 @@ module Directories
     end
 
     class Busy < StandardError; end
-    PAIRS = { 'ctrax' => %w[customers employees], 'shopify' => %w[customers] }.freeze
+    PAIRS = { 'ctrax' => %w[customers employees], 'shopify' => %w[customers employees], 'square' => %w[customers employees], 'swipesimple' => %w[customers employees] }.freeze
 
     def self.available?(provider)
       return false unless Current.tenant&.status == 'active'
       case provider
-      when 'ctrax'
-        connection = PosConnection.find_by(provider: 'ctrax')
+      when 'ctrax', 'swipesimple'
+        connection = PosConnection.find_by(provider: provider)
         connection&.vendor_approved && connection.credentials_saved?
       when 'shopify'
         %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].all? { |key| EnvStore.fetch(key, '').present? }
+      when 'square'
+        SquareClient.configured?
       else false
       end
     end
@@ -83,9 +85,11 @@ module Directories
 
     def credentials_fingerprint
       EnvStore.clear_cache!
-      values = if @provider == 'ctrax'
-        connection = PosConnection.find_by!(provider: 'ctrax')
-        [connection.id, connection.vendor_approved, connection.credential_values]
+      values = if %w[ctrax swipesimple].include?(@provider)
+        connection = PosConnection.find_by!(provider: @provider)
+        [connection.id, connection.account_reference, connection.vendor_approved, connection.credential_values]
+      elsif @provider == 'square'
+        [SquareClient.token, SquareClient.environment]
       else
         %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN].map { |key| EnvStore.fetch(key, '') }
       end
@@ -93,7 +97,26 @@ module Directories
     end
 
     def fetch_rows
-      return ShopifyCustomers.fetch if @provider == 'shopify'
+      return (@kind == 'customers' ? ShopifyCustomers.fetch : ShopifyStaff.fetch) if @provider == 'shopify'
+      return SquareDirectory.fetch(@kind) if @provider == 'square'
+
+      if @provider == 'swipesimple'
+        connection = PosConnection.find_by!(provider: @provider)
+        credentials = connection.credential_values
+        company_id = connection.account_reference
+        begin
+          return SwipesimpleDirectory.new(credentials, company_id: company_id).fetch_directory(@kind)
+        rescue SwipesimpleWeb::Client::Error => error
+          if error.login_required?
+            connection.with_lock do
+              if connection.credential_values == credentials && connection.account_reference == company_id
+                connection.update_columns(reporting_enabled: false, last_report_status: 'needs_login', last_report_message: error.message, updated_at: Time.current, lock_version: connection.lock_version + 1)
+              end
+            end
+          end
+          raise Error
+        end
+      end
 
       @credentials = PosConnection.find_by!(provider: 'ctrax').credential_values
       client = Ctrax::Client.new(@credentials)
@@ -111,7 +134,33 @@ module Directories
     def normalize(row)
       raise Error unless row.is_a?(Hash)
 
-      if @provider == 'shopify'
+      if @provider == 'swipesimple'
+        attributes = { external_id: text(row.fetch('id'), 255), first_name: text(row['first_name']), last_name: text(row['last_name']),
+          email: text(row['email']), phone: text(row['phone']) }
+        if @kind == 'employees'
+          attributes[:source_active] = nil # The native user grid does not report account status.
+          employee_names(attributes)
+        end
+        attributes
+      elsif @provider == 'square'
+        attributes = { external_id: text(row.fetch('id'), 255), first_name: text(row['given_name']), last_name: text(row['family_name']),
+          email: text(row['email_address']), phone: text(row['phone_number']) }
+        if @kind == 'customers'
+          attributes[:first_name] ||= text(row['company_name'])
+        else
+          raise Error unless %w[ACTIVE INACTIVE].include?(row['status'])
+
+          attributes[:source_active] = row['status'] == 'ACTIVE'
+          employee_names(attributes)
+        end
+        attributes
+      elsif @provider == 'shopify' && @kind == 'employees'
+        raise Error unless [true, false].include?(row['active'])
+
+        attributes = { external_id: text(row.fetch('id'), 255), first_name: text(row['firstName']), last_name: text(row['lastName']),
+          email: text(row['email']), source_active: row['active'] }
+        employee_names(attributes)
+      elsif @provider == 'shopify'
         { external_id: text(row.fetch('id'), 255), first_name: text(row['firstName']), last_name: text(row['lastName']),
           email: text(row.dig('defaultEmailAddress', 'emailAddress')), phone: text(row.dig('defaultPhoneNumber', 'phoneNumber')) }
       else
@@ -131,6 +180,12 @@ module Directories
       end
     rescue KeyError, TypeError, NoMethodError
       raise Error
+    end
+
+    def employee_names(attributes)
+      attributes[:first_name] ||= '(Not provided)'
+      attributes[:last_name] ||= '(Not provided)'
+      attributes
     end
 
     def text(value, maximum = 1000)

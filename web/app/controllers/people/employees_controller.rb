@@ -16,7 +16,11 @@ module People
           SearchSql.contains_any(%w[first_name last_name employee_number email]), *Array.new(4, "%#{@q}%")
         )
       end
-      @employees = @employees.includes(:department, :position).limit(200)
+      @employees = @employees.where(source: params[:source]) if Directories::Sync::PAIRS.key?(params[:source])
+      @employees = @employees.where(user_id: nil) if params[:login] == 'missing'
+      @employees = @employees.where.not(user_id: nil) if params[:login] == 'linked'
+      @missing_logins = People::Employee.active.where(user_id: nil).count
+      @pagy, @employees = pagy(@employees.includes(:department, :position, :user).order(:id), items: 50)
       @by_department = People::Employee.active.group(:department_id).count
       @pending_leave = People::LeaveRequest.pending.count if Current.user.can?('leave.read')
       @awaiting_timesheets = People::Timesheet.awaiting_review.count if Current.user.can?('timesheets.read')
@@ -25,11 +29,16 @@ module People
     def sync_directory
       authorize(:module, :hr_write?)
       authorize(:module, :sync_write?)
-      if Directories::Sync.available?('ctrax')
-        DirectorySyncJob.perform_later(Current.tenant_id, 'ctrax', 'employees', manual: true)
-        redirect_to(people_employees_path, notice: 'C-Trax employee directory sync queued. Refresh to see the latest read status.')
+      queued = Directories::Sync::PAIRS.filter_map do |provider, kinds|
+        next unless kinds.include?('employees') && Directories::Sync.available?(provider)
+
+        DirectorySyncJob.perform_later(Current.tenant_id, provider, 'employees', manual: true)
+        provider
+      end
+      if queued.any?
+        redirect_to(people_employees_path, notice: 'Employee directory reads queued. Refresh to review source coverage and access status.')
       else
-        redirect_to(people_employees_path, alert: 'Configure the authorized C-Trax connection first.')
+        redirect_to(people_employees_path, alert: 'Configure an authorized directory connection first.')
       end
     end
 

@@ -7,6 +7,7 @@ class DirectorySyncIntegrationTest < ActionDispatch::IntegrationTest
     Current.tenant = tenants(:default_tenant)
     @user = users(:regular_user)
     post login_path, params: { email: @user.email, password: 'password' }
+    Directories::Sync.stubs(:available?).returns(false)
     Directories::Sync.stubs(:available?).with('ctrax').returns(true)
     Directories::Sync.stubs(:available?).with('shopify').returns(true)
   end

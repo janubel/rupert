@@ -67,7 +67,7 @@ class ErpPagesFlowTest < ActionDispatch::IntegrationTest
   test 'customers page renders' do
     get_page customers_path
     assert_response :success
-    assert_select 'h1', /Customers/
+    assert_select 'h1', /Customer CRM/
   end
 
   test 'projects page renders' do

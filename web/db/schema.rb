@@ -609,12 +609,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
     t.check_constraint "ended_at IS NULL OR ended_at > started_at", name: "clock_positive_interval"
   end
 
+  create_table "customer_follow_ups", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "customer_id", null: false
+    t.bigint "author_id", null: false
+    t.bigint "owner_id"
+    t.string "title", null: false
+    t.date "due_on", null: false
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_follow_ups_on_customer_id"
+    t.index ["tenant_id", "completed_at", "due_on"], name: "idx_customer_follow_ups_due"
+  end
+
+  create_table "customer_interactions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "customer_id", null: false
+    t.bigint "author_id", null: false
+    t.string "kind", default: "note", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_interactions_on_customer_id"
+    t.index ["tenant_id", "customer_id", "created_at"], name: "idx_customer_interactions_timeline"
+  end
+
   create_table "customers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email"
     t.string "external_id", null: false
     t.string "first_name"
     t.string "last_name"
+    t.string "crm_status", default: "customer", null: false
+    t.string "tags"
+    t.string "preferred_name"
+    t.bigint "owner_id"
     t.text "notes"
     t.string "phone"
     t.datetime "source_synced_at"
@@ -629,6 +659,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
     t.index ["tenant_id", "email"], name: "index_customers_on_tenant_id_and_email"
     t.index ["tenant_id", "external_id", "source"], name: "index_customers_on_tenant_id_and_external_id_and_source", unique: true
     t.index ["tenant_id", "phone"], name: "index_customers_on_tenant_id_and_phone"
+    t.index ["tenant_id", "crm_status"], name: "index_customers_on_tenant_id_and_crm_status"
+    t.index ["tenant_id", "owner_id"], name: "index_customers_on_tenant_id_and_owner_id"
   end
 
   create_table "daily_reconciliation_reviews", force: :cascade do |t|
@@ -2092,6 +2124,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
   add_foreign_key "SkuLink", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "SkuLink", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "WarehouseTier", "tenants", column: "tenantId"
+  add_foreign_key "customer_follow_ups", "customers"
+  add_foreign_key "customer_follow_ups", "tenants"
+  add_foreign_key "customer_interactions", "customers"
+  add_foreign_key "customer_interactions", "tenants"
   add_foreign_key "api_access_tokens", "tenants", on_delete: :cascade
   add_foreign_key "api_access_tokens", "users", on_delete: :cascade
   add_foreign_key "authorize_net_batches", "tenants"

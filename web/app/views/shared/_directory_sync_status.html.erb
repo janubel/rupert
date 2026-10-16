@@ -1,14 +1,22 @@
 <section class="card p-4" aria-label="Directory sync status">
-  <p class="text-sm font-semibold text-ink">Source directories · every 30 minutes</p>
+  <p class="text-sm font-semibold text-ink">Directory coverage · scheduled every 30 minutes when enabled</p>
   <% Directories::Sync::PAIRS.each do |provider, kinds| %>
     <% next unless kinds.include?(kind) %>
     <% state = DirectorySyncState.find_by(provider: provider, kind: kind) %>
-    <p class="mt-2 text-sm text-mocha">
-      <span class="pill-taupe"><%= provider == 'ctrax' ? 'C-Trax' : 'Shopify' %> · <%= state&.status || 'Not synced' %></span>
+    <% available = Directories::Sync.available?(provider) %>
+    <% connection = PosConnection.find_by(provider: provider) if %w[ctrax swipesimple].include?(provider) %>
+    <div class="mt-3 text-sm text-mocha">
+      <span class="pill-taupe"><%= directory_label(provider) %> · <%= available ? (state&.status || 'Not yet verified') : 'Not configured' %></span>
       <% if state&.last_success_at %>
-        <%= number_with_delimiter(state.record_count) %> records · last successful read <%= state.last_success_at.in_time_zone('America/New_York').strftime('%b %-d, %-I:%M %p %Z') %>
+        <%= number_with_delimiter(state.record_count) %> records · last complete read <%= l(state.last_success_at, format: :long) %>
       <% end %>
-      <% if state&.error.present? %><span class="text-rose"><%= state.error %></span><% end %>
-    </p>
+      <% if available && ((provider == 'ctrax' && !connection&.hourly_sync_enabled) || (provider == 'swipesimple' && !connection&.reporting_enabled)) %><span class="pill-clay">Automatic reads paused</span><% end %>
+      <% if state&.error.present? %><p class="mt-1 text-rose"><%= state.error %></p><% end %>
+      <% if provider == 'shopify' && kind == 'employees' %><p class="mt-1 text-xs text-taupe">Requires Shopify staff access (read_users), an eligible plan, and Shopify approval. A failed read does not verify the roster.</p><% end %>
+      <% if provider == 'square' %><p class="mt-1 text-xs text-taupe"><%= kind == 'employees' ? 'Requires Square team read permission (EMPLOYEES_READ).' : 'Requires Square customer read permission (CUSTOMERS_READ). Covers profiles with public contact information.' %> Existing records alone do not verify a complete directory.</p><% end %>
+      <% if provider == 'swipesimple' %><p class="mt-1 text-xs text-taupe">Full native <%= kind == 'customers' ? 'customer' : 'user' %> grid for the saved company. Appointments has a separate directory; its contacts require a separate export.</p><% end %>
+    </div>
   <% end %>
+  <% if PosConnection.where(provider: 'iris_reporting').exists? %><p class="mt-3 text-xs text-taupe">IRIS provides merchant reporting; it does not supply an employee or customer directory.</p><% end %>
+  <p class="mt-3 text-xs text-taupe">Each source keeps its native identities. Partial or failed reads retain prior records. <%= link_to 'Manage connections', connections_path, class: 'hover:underline' if Current.user.can?('settings.read') %></p>
 </section>
