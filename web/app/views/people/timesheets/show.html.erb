@@ -56,7 +56,7 @@
     <% if @timesheet.draft? && policy(@timesheet).update? %>
       <div class="border-b border-fog bg-haze/40 px-5 py-3">
         <p class="text-xs text-taupe">Add a day's hours to this draft.</p>
-        <%= form_with model: [@timesheet, @entry], url: add_entry_people_timesheet_path(@timesheet), method: :post, class: "mt-2 flex flex-wrap items-end gap-2" do |f| %>
+        <%= form_with model: [@timesheet, @entry], scope: :timesheet_entry, url: add_entry_people_timesheet_path(@timesheet), method: :post, class: "mt-2 flex flex-wrap items-end gap-2" do |f| %>
           <div>
             <%= f.label :worked_on, "Date", class: "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-mocha" %>
             <%= f.date_field :worked_on, class: "input" %>
