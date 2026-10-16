@@ -59,12 +59,18 @@ class ReconciliationAcrossDaysTest < ActiveSupport::TestCase
       assert_equal 'Needs attention', row[:close][:review]
       assert_equal package.id, row[:close][:package_id]
       assert row[:close][:package_current]
+      overview = ReconciliationAcrossDays.new(ending_on: day.iso8601)
+      assert_equal 7, overview.focused_days('overdue').size
+      assert_empty overview.focused_days('changed')
+      refute_includes overview.focused_days('review').map { |entry| entry[:day] }, day
+      assert_equal item.id, row[:close][:next_overdue].id
       item.update!(notes: 'New next step recorded.')
       assert_no_enqueued_jobs do
         assert_no_difference ['ReconciliationDocument.count', 'ReconciliationFollowUpEvent.count', 'ActionMailer::Base.deliveries.size'] do
           row = ReconciliationAcrossDays.new(ending_on: day.iso8601).days.first
           refute row[:close][:package_current]
           assert_equal 'Needs attention', row[:close][:review]
+          assert_equal [day], ReconciliationAcrossDays.new(ending_on: day.iso8601).focused_days('changed').map { |entry| entry[:day] }
         end
       end
       ReconciliationEvidence.retain!(bytes: 'New evidence', filename: 'new-statement.txt', source: 'bank', kind: 'bank_statement', from: day.iso8601, to: day.iso8601)
@@ -75,6 +81,7 @@ class ReconciliationAcrossDaysTest < ActiveSupport::TestCase
         assert_nil row[:close][:package_id]
         assert_equal 'Review not recorded', row[:close][:review]
         assert_equal 0, row[:overdue]
+        assert_empty ReconciliationAcrossDays.new(ending_on: day.iso8601).focused_days('overdue')
       end
     end
   end

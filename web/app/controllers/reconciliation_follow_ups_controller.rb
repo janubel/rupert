@@ -42,6 +42,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
   end
 
   def overview
+    @focus = ReconciliationAcrossDays::FOCUS.key?(params[:focus]) ? params[:focus] : 'all'
     @overview = ReconciliationAcrossDays.new(ending_on: params[:ending_on].presence || Date.yesterday.iso8601)
     @overdue_count = ReconciliationFollowUp.active.where('due_on < ?', Date.current).count
     @today_count = ReconciliationFollowUp.active.where(due_on: Date.current).count

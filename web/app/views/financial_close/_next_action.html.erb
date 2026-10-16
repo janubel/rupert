@@ -1,0 +1,15 @@
+<% can_write = Current.user.can?('reports.write'); item = status[:next_overdue]; blocker = status[:next_blocker] %>
+<div class="rounded-xl border <%= item ? 'border-amber-300 bg-amber-50' : 'border-fog bg-paper' %> p-4 space-y-2" aria-label="Next close action for <%= day.iso8601 %>">
+  <% if item %>
+    <p class="text-xs font-semibold uppercase tracking-wide text-mocha">Overdue · next action</p><p class="font-semibold break-words"><%= item.title %></p>
+    <p class="text-sm"><%= reconciliation_due_label(item) %> · <%= item.owner&.display_name || 'Needs an owner' %></p>
+    <p class="text-sm text-mocha break-words"><%= truncate(item.notes, length: 180) %></p>
+    <%= link_to(can_write ? 'Record progress on this follow-up' : 'Open this follow-up', reconciliation_follow_up_path(item, anchor: can_write ? 'record-progress' : nil), class: 'btn-primary btn-sm') %>
+  <% elsif blocker %>
+    <p class="text-xs font-semibold uppercase tracking-wide text-mocha">Next close check</p><p class="font-semibold"><%= blocker[:title] %><%= blocker[:count] ? " · #{blocker[:count]}" : '' %></p>
+    <%= link_to 'Work this close check', financial_close_blocker_path(blocker[:key], day), class: 'btn-primary btn-sm', aria: { label: "Work #{blocker[:title]} for #{day.iso8601}" } %>
+  <% else %>
+    <p class="text-sm">Recorded checks are clear. The reviewer checklist and explanation still need confirmation.</p>
+    <%= link_to(can_write ? 'Finish reviewer checklist' : 'Inspect close versions', financial_close_path(day: day.iso8601, anchor: can_write ? 'retain-close' : 'close-history'), class: 'btn-primary btn-sm') %>
+  <% end %>
+</div>
