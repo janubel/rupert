@@ -191,3 +191,7 @@ records; no longer written), `Location`,
 ## Employee timesheets
 
 [Employee web/app access and timesheets](docs/employee-timesheets.md) covers setup links, employee permissions, approvals, clock imports, CSV exports, mobile APIs, and deployment. [Native app build and distribution](mobile/README.md) covers iPhone/Android signing and release preparation. The instance serves the installable employee web app at `/employee`.
+
+## Influencer marketing
+
+Use Marketing → Influencers for collaboration, gifting and document records. [Create temporary Shopify codes](docs/ops/shopify-influencer-discounts.md) with reviewed terms and discount-applying referral links. The connected Shopify app needs `write_discounts`; creating a code requires explicit operator confirmation. See the [CMS guide](docs/ops/influencer-cms.md).

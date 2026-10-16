@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_040000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1092,6 +1092,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id"], name: "index_marketing_review_events_on_tenant_id"
   end
 
+  create_table "marketing_shopify_discounts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "offer_id", null: false
+    t.string "shop_domain", null: false
+    t.string "shop_id", null: false
+    t.string "currency", null: false
+    t.string "request_key", null: false
+    t.text "request_json", null: false
+    t.string "status", default: "draft", null: false
+    t.string "remote_id"
+    t.string "remote_status"
+    t.text "remote_json"
+    t.text "last_error"
+    t.bigint "approved_by_id"
+    t.datetime "attempted_at"
+    t.datetime "checked_at"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["offer_id"], name: "index_marketing_shopify_discounts_on_offer_id", unique: true
+    t.index ["request_key"], name: "index_marketing_shopify_discounts_on_request_key", unique: true
+    t.index ["tenant_id"], name: "index_marketing_shopify_discounts_on_tenant_id"
+    t.index ["tenant_id", "shop_domain", "remote_id"], name: "marketing_shopify_remote_discount", unique: true
+    t.check_constraint "status IN ('draft', 'creating', 'created', 'uncertain', 'failed', 'blocked')", name: "marketing_shopify_discount_status"
+  end
+
   create_table "marketing_threads", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.integer "community_id", null: false
@@ -2109,6 +2135,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   add_foreign_key "marketing_review_events", "marketing_replies", column: "reply_id"
   add_foreign_key "marketing_review_events", "tenants"
   add_foreign_key "marketing_review_events", "users", column: "actor_id"
+  add_foreign_key "marketing_shopify_discounts", "marketing_offers", column: "offer_id"
+  add_foreign_key "marketing_shopify_discounts", "tenants"
+  add_foreign_key "marketing_shopify_discounts", "users", column: "approved_by_id"
   add_foreign_key "marketing_threads", "marketing_communities", column: "community_id"
   add_foreign_key "marketing_threads", "tenants"
   add_foreign_key "order_lines", "orders", on_delete: :cascade

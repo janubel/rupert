@@ -2,7 +2,7 @@
 
 ShopifyApp.configure do |config|
   config.application_name = 'Rupert'
-  config.scope = ENV.fetch('SCOPES', 'read_products,write_products,read_inventory,write_inventory,read_locations,read_orders,read_customers') # See shopify.app.toml for scopes
+  config.scope = ENV.fetch('SCOPES', 'read_products,write_products,read_inventory,write_inventory,read_locations,read_orders,read_customers,write_discounts') # See shopify.app.toml for scopes
   # Consult this page for more scope options: https://shopify.dev/api/usage/access-scopes
   config.embedded_app = true
   config.after_authenticate_job = false

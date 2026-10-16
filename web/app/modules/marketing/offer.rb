@@ -5,6 +5,7 @@ module Marketing
     self.table_name = 'marketing_offers'
     belongs_to :community, optional: true
     belongs_to :engagement, optional: true
+    has_one :shopify_discount, class_name: 'Marketing::ShopifyDiscount'
     before_validation do
       self.code = code.to_s.strip.upcase
       self.merchant_host = Urls.host(campaign&.storefront_url)
@@ -31,7 +32,7 @@ module Marketing
       starts_at && ends_at && starts_at <= Time.current && ends_at > Time.current &&
         verified_at && verified_at <= Time.current && verified_at > 24.hours.ago &&
         verified_by_id.present? && merchant_host == Urls.host(campaign&.storefront_url) &&
-        (engagement_id.nil? || engagement&.shareable?) &&
+        (engagement_id.nil? || engagement&.shareable?) && (shopify_discount.nil? || shopify_discount.ready?) &&
         Urls.host(destination_url) == merchant_host
     end
 
@@ -41,7 +42,8 @@ module Marketing
 
     def referral_url
       if engagement_id
-        return ReferralUrl.build(destination_url, source: "influencer-#{engagement.influencer_id}", campaign: engagement.campaign_id, content: "offer-#{id}")
+        return ReferralUrl.build(destination_url, source: "influencer-#{engagement.influencer_id}", campaign: engagement.campaign_id,
+          content: "offer-#{id}", discount_code: shopify_discount ? code : nil)
       end
 
       uri = URI.parse(destination_url)

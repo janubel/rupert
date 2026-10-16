@@ -1,0 +1,27 @@
+query RupertInfluencerDiscountByCode($code: String!) {
+  codeDiscountNodeByCode(code: $code) {
+    id
+    codeDiscount {
+      __typename
+      ... on DiscountCodeBasic {
+        title startsAt endsAt status usageLimit appliesOncePerCustomer
+        codes(first: 2) { nodes { code } pageInfo { hasNextPage } }
+        context { __typename }
+        combinesWith { orderDiscounts productDiscounts shippingDiscounts }
+        customerGets {
+          appliesOnOneTimePurchase appliesOnSubscription
+          items { __typename }
+          value {
+            __typename
+            ... on DiscountPercentage { percentage }
+            ... on DiscountAmount { amount { amount currencyCode } appliesOnEachItem }
+          }
+        }
+        minimumRequirement {
+          __typename
+          ... on DiscountMinimumSubtotal { greaterThanOrEqualToSubtotal { amount currencyCode } }
+        }
+      }
+    }
+  }
+}
