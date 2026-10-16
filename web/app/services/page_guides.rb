@@ -80,10 +80,10 @@ class PageGuides
       summary: 'Read-only Shopify and C-Trax observations of shared stock, with current catalog coverage and source read times.',
       sections: [
         { heading: 'Read the source states', body: 'Select one Shopify location and one C-Trax store. Shopify on-hand, available and committed quantities are separate. C-Trax retains signed stock. These are observations of shared stock; never add their quantities together.' },
-        { heading: 'Review identities and exceptions', body: 'Unique native variant IDs take precedence. Unique SKUs are candidates, not approved mappings. Duplicate or conflicting identities stay unpaired. Unknown stock is not zero; no current match does not mean not carried.' }
+        { heading: 'Review identities and exceptions', body: 'Unique native variant IDs take precedence. Unique SKU/barcode identifiers are candidates, not approved mappings. Exact product words and explicit packages can suggest additional candidates, with both source names and matching evidence. These name/package candidates have no quantity difference. Duplicate or conflicting identities stay unresolved. Historical Shopify candidates explain unmatched C-Trax items without restoring old stock. Unknown stock is not zero; no current match does not mean not carried.' }
       ],
       tips: [
-        'Search by item, SKU or native ID. Attention and unmatched filters also apply to the CSV export.',
+        'Search either source name, SKU, barcode or native ID. Attention, unmatched, name/package and historical filters also apply to CSV.',
         'Older-than-one-hour, unknown, fractional or untracked observations have no numerical difference.',
         'Current active tracked Shopify variants are shown; archived, absent and unverified historical records are excluded. This page never changes stock, SKUs or mappings.'
       ]

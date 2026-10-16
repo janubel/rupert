@@ -10,7 +10,7 @@ class StockComparison
   def initialize(shopify_location_id: nil, ctrax_location_id: nil, query: nil, filter: nil, at: Time.current)
     @at = at
     @query = query.to_s.strip[0, 255]
-    @filter = %w[attention unmatched].include?(filter) ? filter : 'all'
+    @filter = %w[attention unmatched candidates historical].include?(filter) ? filter : 'all'
     @shopify_snapshots = ShopifyStockSnapshot.includes(:location).order(:location_id).select { |s| s.location&.active }
     @ctrax_snapshots = CtraxStockSnapshot.includes(:location).order(:location_id).select { |s| s.location&.active }
     @shopify = selected(@shopify_snapshots, shopify_location_id, prefer_stock: true)
@@ -19,16 +19,19 @@ class StockComparison
 
   def rows
     @rows ||= build_rows.select do |row|
-      (@query.blank? || [row[:label], row[:sku], row[:shopify_id], row[:ctrax_id]].compact.join(' ').downcase.include?(@query.downcase)) &&
+      (@query.blank? || [row[:label], row[:ctrax_label], row[:sku], row[:ctrax_sku], row[:shopify_barcode], row[:ctrax_barcode], row[:shopify_id], row[:ctrax_id]].compact.join(' ').downcase.include?(@query.downcase)) &&
         (@filter != 'attention' || row[:issues].any? || row[:difference]&.nonzero?) &&
-        (@filter != 'unmatched' || !row[:paired])
+        (@filter != 'unmatched' || !row[:paired]) &&
+        (@filter != 'candidates' || row[:identity] == 'Name/package candidate') &&
+        (@filter != 'historical' || row[:historical].any?)
     end.sort_by { |row| [row[:issues].any? ? 0 : 1, row[:label].downcase, row[:shopify_id].to_s, row[:ctrax_id].to_s] }
   end
 
   def summary
     all = build_rows
     { rows: all.size, paired: all.count { |r| r[:paired] }, unknown: all.count { |r| r[:issues].include?('Unknown stock') },
-      negative: all.count { |r| r[:issues].include?('Negative stock') }, unpaired: all.count { |r| !r[:paired] } }
+      negative: all.count { |r| r[:issues].include?('Negative stock') }, unpaired: all.count { |r| !r[:paired] },
+      name_candidates: all.count { |r| r[:identity] == 'Name/package candidate' }, historical: all.count { |r| r[:historical].any? } }
   end
 
   def stale?(snapshot)
@@ -47,11 +50,12 @@ class StockComparison
     CSV.generate do |csv|
       csv << ['Item', 'SKU', 'Shopify variant ID', 'C-Trax variant ID', 'Identity', 'Shopify location', 'C-Trax store',
         'Shopify on hand', 'Shopify available', 'Shopify committed', 'C-Trax stock', 'C-Trax minus Shopify on hand',
-        'Issues', 'Shopify read time', 'C-Trax read time']
+        'Issues', 'Shopify read time', 'C-Trax read time', 'C-Trax item', 'C-Trax SKU', 'Shopify barcode', 'C-Trax barcode', 'Match evidence', 'Historical Shopify candidates']
       rows.each do |row|
         values = [row[:label], row[:sku], row[:shopify_id], row[:ctrax_id], row[:identity], shopify&.location&.name, ctrax&.location&.name,
           row[:on_hand], row[:available], row[:committed], row[:ctrax_quantity], row[:difference], row[:issues].join('; '),
-          shopify&.captured_at&.iso8601, ctrax&.captured_at&.iso8601]
+          shopify&.captured_at&.iso8601, ctrax&.captured_at&.iso8601, row[:ctrax_label], row[:ctrax_sku],
+          row[:shopify_barcode], row[:ctrax_barcode], row[:evidence].join('; '), row[:historical].map { |v| "#{v[:id]} (#{v[:status] || 'unknown status'}; present=#{v[:present]})" }.join('; ')]
         csv << values.map do |value|
           if value.is_a?(BigDecimal)
             value.to_s('F').delete_suffix('.0')
@@ -74,66 +78,33 @@ class StockComparison
     choices.one? ? choices.first : nil
   end
 
-  def normalized_sku(value)
-    value.to_s.strip.downcase.presence
-  end
-
-  def native_id(value)
-    value.to_s.split('/').last.presence
-  end
-
   def build_rows
     return @all_rows if @all_rows
 
     catalog = ShopifyVariant.current_catalog.includes(:product).to_a
     variants = catalog.select(&:tracked)
-    # Only the catalog epoch that produced this stock snapshot is comparable.
     stocks = shopify ? shopify.records.index_by { |r| r['id'] } : {}
     records = ctrax ? ctrax.records : []
-    s_by_sku = catalog.group_by { |v| normalized_sku(v.sku) }
-    c_by_sku = records.group_by { |r| normalized_sku(r['sku']) }
-    c_by_id = records.select { |r| r['website_variant_id'].present? }.group_by { |r| native_id(r['website_variant_id']) }
-    proposals = variants.index_with do |variant|
-      direct = c_by_id.fetch(native_id(variant.id), [])
-      sku = normalized_sku(variant.sku)
-      if direct.one? && direct.first['website_product_id'].present? && native_id(direct.first['website_product_id']) != native_id(variant.productId)
-        [nil, 'Conflicting source product ID']
-      elsif direct.one?
-        [direct.first, 'Source variant ID']
-      elsif direct.any?
-        [nil, 'Ambiguous source IDs']
-      elsif sku && s_by_sku[sku].one? && c_by_sku.fetch(sku, []).one?
-        record = c_by_sku[sku].first
-        # A conflicting native linkage cannot be replaced by text matching.
-        if record['website_variant_id'].present?
-          [nil, 'Conflicting source ID']
-        elsif record['website_product_id'].present? && native_id(record['website_product_id']) != native_id(variant.productId)
-          [nil, 'Conflicting source product ID']
-        else
-          [record, 'SKU candidate']
-        end
-      else
-        [nil, sku && c_by_sku.fetch(sku, []).any? ? 'Ambiguous SKU' : 'No current match']
-      end
-    end
-    claimed = proposals.values.filter_map(&:first).group_by { |r| r.fetch('id') }
+    historical = ShopifyVariant.where.not(id: catalog.map(&:id)).includes(:product).to_a
+    matcher = StockIdentityMatcher.new(catalog: catalog, records: records, historical: historical)
     used = []
     result = variants.map do |variant|
-      record, identity = proposals[variant]
-      if record && claimed.fetch(record.fetch('id')).size > 1
-        record = nil
-        identity = 'Shared or conflicting identity'
-      end
+      match = matcher.matches.fetch(variant.id)
+      record = match.record
       used << record.fetch('id') if record
       stock = stocks[variant.id] if shopify && variant.catalog_read_at == shopify.captured_at
-      build_row(variant, stock, record, identity)
+      build_row(variant, stock, record, match.identity, evidence: match.evidence, match_issues: match.issues,
+        name_candidate: match.priority == 2)
     end
-    result.concat(records.reject { |r| used.include?(r.fetch('id')) }.map { |r| build_row(nil, nil, r, 'No current match') })
+    result.concat(records.reject { |r| used.include?(r.fetch('id')) }.map do |record|
+      diagnostic = matcher.unmatched(record)
+      build_row(nil, nil, record, diagnostic[:identity], evidence: diagnostic[:evidence], historical: diagnostic[:historical])
+    end)
     @all_rows = result
   end
 
-  def build_row(variant, stock, record, identity)
-    issues = []
+  def build_row(variant, stock, record, identity, evidence: [], match_issues: [], historical: [], name_candidate: false)
+    issues = match_issues.dup
     on_hand = stock && stock['on_hand']
     available = stock && stock['available']
     committed = stock && stock['committed']
@@ -146,11 +117,12 @@ class StockComparison
     issues << 'Stale Shopify read' if variant && stale?(shopify)
     issues << 'Stale C-Trax read' if record && stale?(ctrax)
     issues << identity unless paired
-    comparable = paired && on_hand && quantity && record['manage_stock'] && quantity.frac.zero? && !stale?(shopify) && !stale?(ctrax)
+    comparable = !name_candidate && issues.none? { |issue| issue.include?('quantity difference withheld') } && paired && on_hand && quantity && record['manage_stock'] && quantity.frac.zero? && !stale?(shopify) && !stale?(ctrax)
     { label: variant ? [variant.product&.title, variant.title].compact.join(' · ') : record['name'].presence || "C-Trax #{record['id']}",
       sku: variant&.sku.presence || record&.dig('sku'), shopify_id: variant&.id, ctrax_id: record&.dig('id'),
       on_hand: on_hand, available: available, committed: committed, ctrax_quantity: quantity,
       difference: comparable ? quantity - on_hand : nil, identity: identity, paired: !!paired, issues: issues,
-      listed: record && record.fetch('listed', true) }
+      listed: record && record.fetch('listed', true), ctrax_label: record&.dig('name'), ctrax_sku: record&.dig('sku'),
+      shopify_barcode: variant&.barcode, ctrax_barcode: record&.dig('barcode'), evidence: evidence, historical: historical }
   end
 end
