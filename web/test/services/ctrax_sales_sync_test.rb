@@ -40,6 +40,10 @@ class CtraxSalesSyncTest < ActiveSupport::TestCase
     daily = DailyMoneyReconciliation.new(day: '2026-10-15')
     assert_equal [day.id], daily.ctrax.map(&:id)
     assert_includes daily.csv, 'C-Trax snapshot ID'
+    period = MoneyReconciliationReport.new(kind: 'weekly', date: '2026-10-15').payload
+    retail = period['rows'].find { |row| row['source'] == 'C-Trax' && row['metric'] == 'Recorded order total' }
+    assert_equal '10.0', retail['amount']
+    assert_equal 'USD', retail['currency']
 
     assert_equal 0, result.session_rows.first['variance']
     assert_requested :get, "#{@origin}/api/v1/stores/7/orders", headers: { 'X-Store-Timezone' => 'America/New_York' },

@@ -44,6 +44,7 @@ class MoneyReconciliationReport
         'Gateway totals use settlement dates; order totals use sale dates. Fees and funding delays require source evidence.'
       ]
       shopify
+      ctrax
       swipesimple
       authorize_net
       iris
@@ -117,6 +118,31 @@ class MoneyReconciliationReport
     @warnings << 'SwipeSimple exports do not establish complete coverage for this period.' if rows.empty?
   end
 
+  def ctrax
+    snapshots = CtraxDay.where(business_date: from..to).to_a
+    snapshots.group_by { |day| [day.api_origin, day.store_id, day.currency, day.timezone] }.each do |(_origin, store, currency, timezone), days|
+      checks = days.map { |day| Ctrax::Reconciliation.new(day) }
+      metrics = {
+        'Recorded order total' => checks.map { |check| check.sum(check.orders, 'total') },
+        'Recorded tax' => checks.map { |check| check.sum(check.orders, 'tax') },
+        'Recorded tips' => checks.map { |check| check.sum(check.orders, 'tip') },
+        'Cash receipts' => checks.map { |check| check.sum(check.payments.select { |row| row['type'] == 'cash' }, 'amount') },
+        'Card receipts' => checks.map { |check| check.sum(check.payments.select { |row| %w[credit standaloneCardTerminal].include?(row['type']) }, 'amount') },
+        'Source refund total' => days.map { |day| day.controls['refunds_totals_sum'] }
+      }
+      metrics.each do |metric, values|
+        if values.any?(&:nil?)
+          @warnings << "C-Trax #{metric.downcase} has missing source amounts; no total is inferred."
+          next
+        end
+        add('C-Trax', store, currency, metric, BigDecimal(values.sum.to_s) / 100, checks.sum { |check| check.orders.size },
+          "Native store-day snapshots in #{timezone}; #{days.size} stored date(s); coverage and bank receipt require review")
+      end
+      @warnings << 'C-Trax native controls or source review remain unresolved.' unless checks.all?(&:matched?) && days.all?(&:reviewed?)
+    end
+    @warnings << 'No C-Trax retail day snapshot is stored for this period; current stock does not establish historical sales.' if snapshots.empty?
+  end
+
   def authorize_net
     observations = AuthorizeNetPortalExport.latest_records.to_h { |r| [[r['gateway_id'], r['transaction_id']], r] }
     AuthorizeNetTransaction.where(environment: 'production').find_each do |r|
@@ -176,6 +202,6 @@ class MoneyReconciliationReport
     end
     @warnings << 'No native Daily Deposits or API deposit snapshot covers this period. Import the matching NAB export to review deposits.' if deposit_count.zero?
     @warnings << 'Monthly NAB summaries cannot establish daily/weekly deposits or actual bank statement receipt.'
-    @warnings << 'C-Trax supplies current stock counts; historical sales or cash cannot be inferred from its stock snapshot.'
+    @warnings << 'C-Trax stock snapshots are separate from its native daily retail reports; stock does not establish sales.'
   end
 end
