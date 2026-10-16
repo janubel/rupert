@@ -25,7 +25,7 @@ class EmployeeConsolidationTest < ActiveSupport::TestCase
   test 'consolidation retains every native identity and original profile while moving time history and revoking access' do
     user = User.create!(tenant: Current.tenant, email: 'alex@example.com', password: 'password123', role: 'employee')
     @primary.update!(email: 'preferred@example.com')
-    @duplicate.update!(user: user)
+    @duplicate.update!(user: user, employee_number: 'EXISTING-123')
     secret = EmployeeAccessGrant.issue!(@duplicate)
     session, = EmployeeAppSession.issue!(user: user, device_name: 'Test')
     shift = ClockShift.create!(user: user, employee: @duplicate, employee_key: @duplicate.id.to_s,
@@ -47,6 +47,9 @@ class EmployeeConsolidationTest < ActiveSupport::TestCase
     original = People::Employee.unscoped.find(@duplicate.id)
     assert_equal @primary.id, original.merged_into_id
     assert_nil original.user_id
+    assert_equal 'EXISTING-123', @primary.employee_number
+    assert_equal 'EXISTING-123', JSON.parse(original.merge_snapshot).fetch('employee_number')
+    assert_equal user.id, JSON.parse(original.merge_snapshot).fetch('user_id')
     refute EmployeeAccessGrant.lookup(secret).usable?
     refute session.reload.usable?
     assert ActivityLog.find_by!(action: 'employee_profiles_consolidated').details.include?(@duplicate.id.to_s)

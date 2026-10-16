@@ -10,7 +10,7 @@ class EmployeeConsolidation
     termination_date emergency_contact_name emergency_contact_phone].freeze
 
   def self.call(primary_id:, duplicate_ids:, reason:)
-    raise Error, 'Record why these profiles are the same person.' if reason.to_s.strip.blank?
+    raise Error, 'Record why these profiles are the same person (up to 2,000 characters).' if reason.to_s.strip.blank? || reason.to_s.length > 2000
     ids = Array(duplicate_ids).map(&:to_s).uniq - [primary_id.to_s]
     raise Error, 'Select at least one duplicate profile.' if ids.empty?
     People::Employee.transaction do
@@ -25,7 +25,8 @@ class EmployeeConsolidation
       attrs['employment_type'] = records.map(&:employment_type).find { |type| type != 'unspecified' } || 'unspecified'
       attrs['notes'] = records.map(&:notes).select(&:present?).uniq.join("\n\n").presence
       duplicates.each do |duplicate|
-        duplicate.update_columns(user_id: nil, merged_into_id: primary.id, merged_at: Time.current, updated_at: Time.current)
+        duplicate.update_columns(user_id: nil, employee_number: nil, merged_into_id: primary.id, merged_at: Time.current,
+          merge_snapshot: duplicate.attributes.except('merge_snapshot').to_json, updated_at: Time.current)
         EmployeeSourceIdentity.where(employee_id: duplicate.id).update_all(employee_id: primary.id, updated_at: Time.current)
         HISTORY.each { |model| model.where(employee_id: duplicate.id).update_all(employee_id: primary.id) }
         ClockShift.where(employee_id: duplicate.id).update_all(employee_id: primary.id, employee_key: primary.id.to_s)

@@ -775,6 +775,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_045000) do
     t.bigint "user_id"
     t.bigint "merged_into_id"
     t.datetime "merged_at"
+    t.text "merge_snapshot"
     t.index ["merged_into_id"], name: "index_employees_on_merged_into_id"
     t.index ["tenant_id", "department_id"], name: "index_employees_on_tenant_id_and_department_id"
     t.index ["tenant_id", "employee_number"], name: "index_employees_on_tenant_id_and_employee_number", unique: true

@@ -4,6 +4,7 @@ class ConsolidateEmployeeIdentities < ActiveRecord::Migration[8.1]
   def up
     add_reference :employees, :merged_into, foreign_key: { to_table: :employees }
     add_column :employees, :merged_at, :datetime
+    add_column :employees, :merge_snapshot, :text
     create_table :employee_source_identities do |t|
       t.string :tenant_id, null: false
       t.references :employee, null: false, foreign_key: true
