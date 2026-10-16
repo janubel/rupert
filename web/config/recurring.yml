@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 production:
+  iris_daily_deposits_web:
+    class: IrisDailyDepositsWebJob
+    queue: default
+    schedule: "45 6 * * * America/New_York"
   swipesimple_web_pull:
     class: SwipesimpleWebSyncJob
     queue: default

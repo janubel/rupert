@@ -19,7 +19,7 @@ class PosConnection < ApplicationRecord
   validates :gateway, inclusion: { in: GATEWAYS }
   validates :account_reference, length: { maximum: 200 }
   validates :last_check_status, inclusion: { in: %w[verified failed] }, allow_nil: true
-  validates :reporting_auth_mode, inclusion: { in: %w[api_key oauth] }
+  validates :reporting_auth_mode, inclusion: { in: ->(connection) { connection.provider == 'iris_reporting' ? %w[api_key web] : %w[api_key oauth] } }
   validate :valid_reporting_setup
   validate :valid_credentials
   before_validation :invalidate_check_on_setup_change
@@ -29,6 +29,7 @@ class PosConnection < ApplicationRecord
   end
 
   def credential_keys
+    return %w[web_username web_password] if provider == 'iris_reporting' && reporting_auth_mode == 'web'
     if provider == 'authorize_net_reporting'
       return reporting_auth_mode == 'oauth' ? %w[client_id client_secret refresh_token] : %w[api_login_id transaction_key]
     end
@@ -110,7 +111,7 @@ class PosConnection < ApplicationRecord
         errors.add(:account_reference, 'must contain up to 10 distinct numeric merchant IDs separated by commas')
       end
       errors.add(:environment, 'must be production for IRIS') unless environment == 'production'
-      errors.add(:base, 'Save approved IRIS API credentials before enabling scheduled reports.') if reporting_enabled && (!vendor_approved || !credentials_saved?)
+      errors.add(:base, 'Save authorized NAB read credentials before enabling scheduled reports.') if reporting_enabled && (!vendor_approved || !credentials_saved?)
       return
     end
     return unless provider == 'authorize_net_reporting'
@@ -145,12 +146,16 @@ class PosConnection < ApplicationRecord
     end
     return if values.empty?
 
-    errors.add(:base, provider == 'swipesimple' ? 'Authorize website read access before saving credentials.' : 'Confirm approved API read access before saving credentials.') unless vendor_approved
+    errors.add(:base, (provider == 'swipesimple' || (provider == 'iris_reporting' && reporting_auth_mode == 'web')) ? 'Authorize website read access before saving credentials.' : 'Confirm approved API read access before saving credentials.') unless vendor_approved
     errors.add(:base, 'Provide all required credential fields.') unless allowed.all? { |key| values[key].present? }
     if provider == 'swipesimple'
       errors.add(:base, 'Enter a valid SwipeSimple account email.') unless values['web_email'].to_s.match?(/\A[^\s@]+@[^\s@]+\.[^\s@]+\z/)
     elsif provider == 'iris_reporting'
-      errors.add(:base, 'Use an HTTPS IRIS tenant origin and an API token, without spaces or control characters.') unless IrisReporting::Client.valid_credentials?(values)
+      if reporting_auth_mode == 'web'
+        errors.add(:base, 'Use the NAB website username and password.') unless IrisReporting::WebClient.valid_credentials?(values)
+      else
+        errors.add(:base, 'Use an HTTPS IRIS tenant origin and an API token, without spaces or control characters.') unless IrisReporting::Client.valid_credentials?(values)
+      end
     elsif provider == 'ctrax'
       unless Ctrax::Client.valid_credentials?(values)
         errors.add(:base,
