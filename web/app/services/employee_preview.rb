@@ -30,7 +30,7 @@ class EmployeePreview
     raise ArgumentError, 'Choose a date range of up to one year.' unless from && to && to >= from && to <= from + 365
 
     result = EmployeeWorkSummary.allocate
-    { employee: employee, from: from, to: to, entries: entries.select { |entry| (from..to).cover?(entry.worked_on) },
+    { employee: employee, from: from, to: to, entries: entries.select { |entry| (from..to).cover?(entry.worked_on) }.sort_by(&:worked_on),
       rates: [rate], shifts: shifts.select { |shift| shift.started_at < (to + 1).in_time_zone && shift.ended_at > from.in_time_zone },
       requests: requests.select { |leave| leave.starts_on <= to && leave.ends_on >= from } }.each do |key, value|
       result.instance_variable_set("@#{key}", value)
