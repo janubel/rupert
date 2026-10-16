@@ -9,6 +9,13 @@ module CustomersHelper
     end.join(' · ')
   end
 
+  def customer_directory_status(customer)
+    return 'Added manually' if customer.source == 'manual'
+
+    latest = @directory_states&.dig(customer.source)&.last_success_at
+    latest && customer.source_synced_at == latest ? 'Verified in latest read' : 'Unverified / historical'
+  end
+
   def directory_label(source)
     { 'ctrax' => 'C-Trax', 'shopify' => 'Shopify', 'square' => 'Square', 'swipesimple' => 'SwipeSimple' }.fetch(source, source.to_s.titleize)
   end

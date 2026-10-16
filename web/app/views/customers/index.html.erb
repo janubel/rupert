@@ -19,7 +19,7 @@
     <div class="stat">
       <p class="stat-label">Customers</p>
       <p class="stat-value mt-1"><%= @pagy.count %></p>
-      <p class="mt-1 text-xs text-taupe">native profiles · matching contact details do not merge identities</p>
+      <p class="mt-1 text-xs text-taupe">source profiles, including retained history · matching contacts stay separate</p>
     </div>
   </section>
 
@@ -37,6 +37,7 @@
     <%= f.search_field :tags_cont, placeholder: 'Filter tags', aria_label: 'Filter tags', class: 'search w-40' %>
     <%= select_tag :status, options_for_select([['All relationships', '']] + Core::Customer::CRM_STATUSES.map { |v| [v.titleize, v] }, params[:status]), class: 'select w-auto', aria: { label: 'Relationship filter' } %>
     <%= select_tag :source, options_for_select([['All sources', '']] + Core::Customer::SOURCES.map { |v| [directory_label(v), v] }, params[:source]), class: 'select w-auto', aria: { label: 'Source filter' } %>
+    <%= select_tag :directory, options_for_select([['All profiles', ''], ['Verified in latest read', 'verified'], ['Unverified / historical', 'historical']], params[:directory]), class: 'select w-auto', aria: { label: 'Directory verification filter' } %>
     <%= select_tag :owner, options_for_select([['All assignments', ''], ['Assigned to me', 'mine'], ['Unassigned', 'unassigned']], params[:owner]), class: 'select w-auto', aria: { label: 'Assignment filter' } %>
     <%= hidden_field_tag :due, '1' if params[:due] == '1' %>
     <%= f.submit "Search", class: "btn-ghost btn-sm" %>
@@ -68,7 +69,7 @@
               <td class="td font-medium text-ink"><%= link_to customer.name, customer_path(customer), class: "hover:text-olive hover:underline" %></td>
               <td class="td text-mocha"><%= customer.email.presence || "—" %></td>
               <td class="td text-mocha"><%= customer.phone.presence || "—" %></td>
-              <td class="td"><span class="pill-taupe capitalize"><%= directory_label(customer.source) %></span><p class="mt-1 text-xs"><%= customer.crm_status.titleize %> · <%= customer.tags.presence || "No tags" %></p></td>
+              <td class="td"><span class="pill-taupe capitalize"><%= directory_label(customer.source) %></span><p class="mt-1 text-xs text-taupe"><%= customer_directory_status(customer) %></p><p class="mt-1 text-xs"><%= customer.crm_status.titleize %> · <%= customer.tags.presence || "No tags" %></p></td>
               <td class="td text-right text-mocha"><%= @order_counts[customer.id] || 0 %></td>
               <td class="td text-right font-medium text-ink"><%= customer_money(@lifetime_totals.select { |(id, _), _| id == customer.id }.to_h { |(_, currency), total| [currency, total] }) %></td>
             </tr>

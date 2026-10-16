@@ -220,4 +220,16 @@ class CanonicalOrderImporterTest < ActiveSupport::TestCase
     assert order
     assert_equal 'paid', order.status
   end
+  test 'anonymous Square sales do not invent customer identities and retain existing historical links' do
+    assert_no_difference 'Core::Customer.count' do
+      CanonicalOrderImporter.from_square!([square_order(id: 'anonymous-sale', customer_id: nil)])
+    end
+    assert_nil Core::Order.find_by!(source: 'square', source_order_id: 'anonymous-sale').customer_id
+    legacy = Core::Customer.create!(source: 'square', external_id: 'legacy-sale', notes: 'Historical context')
+    assert_no_difference 'Core::Customer.count' do
+      CanonicalOrderImporter.from_square!([square_order(id: 'legacy-sale', customer_id: nil)])
+    end
+    assert_equal legacy.id, Core::Order.find_by!(source: 'square', source_order_id: 'legacy-sale').customer_id
+    assert_equal 'Historical context', legacy.reload.notes
+  end
 end

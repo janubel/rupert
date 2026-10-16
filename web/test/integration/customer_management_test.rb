@@ -118,4 +118,19 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'article', count: 1
   end
+  test 'verified directory and retained historical profiles can be filtered independently' do
+    time = Time.current.change(usec: 0)
+    @customer.update!(source: 'square', source_synced_at: time)
+    historical = Core::Customer.create!(source: 'square', external_id: 'old-source-profile')
+    DirectorySyncState.create!(provider: 'square', kind: 'customers', status: 'success', record_count: 1, last_success_at: time)
+    get customers_path, params: { directory: 'verified' }
+    assert_response :success
+    assert_select 'tbody a[href=?]', customer_path(@customer)
+    assert_select 'tbody a[href=?]', customer_path(historical), count: 0
+    get customers_path, params: { directory: 'historical' }
+    assert_response :success
+    assert_select 'tbody a[href=?]', customer_path(@customer), count: 0
+    assert_select 'tbody a[href=?]', customer_path(historical)
+    assert_includes response.body, 'Unverified / historical'
+  end
 end

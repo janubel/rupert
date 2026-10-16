@@ -50,13 +50,13 @@ class CanonicalOrderImporter
       Array(orders).each do |node|
         next if node.blank?
 
-        customer = upsert_customer!(
-          source: 'square',
-          external_id: node['customer_id'].presence || node['id'],
-          email: nil,
-          first_name: nil,
-          last_name: nil
-        )
+        customer = if node['customer_id'].present?
+          upsert_customer!(source: 'square', external_id: node['customer_id'], email: nil, first_name: nil, last_name: nil)
+        else
+          # Preserve historical order-linked profiles without inventing a new
+          # customer identity for every anonymous sale.
+          Core::Customer.find_by(source: 'square', external_id: node['id'])
+        end
 
         Core::Order.transaction do
           Core::Order.upsert(

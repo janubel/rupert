@@ -38,7 +38,8 @@
 
   <section class="card card-pad">
     <p class="text-sm"><strong><%= @customer.crm_status.titleize %></strong> · <%= @customer.tags.presence || 'No tags' %> · Assigned to <%= @customer.owner&.display_name || 'Unassigned' %></p>
-    <p class="mt-2 text-xs text-taupe">Native profile: <%= directory_label(@customer.source) %> · <%= @customer.external_id %></p>
+    <p class="mt-2 text-xs text-taupe">Source reference: <%= directory_label(@customer.source) %> · <%= @customer.external_id %></p>
+    <p class="mt-1 text-xs text-taupe"><%= customer_directory_status(@customer) %></p>
     <p class="mt-1 text-xs text-taupe">Last full directory read: <%= @customer.source == 'manual' ? 'Added manually' : @customer.source_synced_at ? l(@customer.source_synced_at, format: :long) : 'Not verified' %></p>
   </section>
 

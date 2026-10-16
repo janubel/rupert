@@ -8,6 +8,7 @@ class CustomersController < AuthenticatedController
   def index
     authorize(:module, :customers_read?)
 
+    @directory_states = DirectorySyncState.where(kind: 'customers').index_by(&:provider)
     @q = filtered_customers.ransack(params[:q])
     @due_follow_ups = CustomerFollowUp.due.includes(:customer, :owner).order(:due_on, :id).limit(20)
     @due_count = CustomerFollowUp.due.count
@@ -33,6 +34,7 @@ class CustomersController < AuthenticatedController
 
   def show
     authorize(@customer)
+    @directory_states = DirectorySyncState.where(kind: 'customers').index_by(&:provider)
     @last_order_at = @customer.orders.maximum(:occurred_at)
     @pagy, @orders = pagy(@customer.orders.order(occurred_at: :desc, id: :desc), items: 25)
     @interactions_pagy, @interactions = pagy(@customer.interactions.includes(:author).order(created_at: :desc, id: :desc), items: 25, page_param: :activity_page)
@@ -103,7 +105,15 @@ class CustomersController < AuthenticatedController
     records = records.where(owner_id: Current.user.id) if params[:owner] == 'mine'
     records = records.where(owner_id: nil) if params[:owner] == 'unassigned'
     records = records.where(id: CustomerFollowUp.due.select(:customer_id)) if params[:due] == '1'
+    records = records.where(id: verified_customers.select(:id)) if params[:directory] == 'verified'
+    records = records.where.not(source: 'manual').where.not(id: verified_customers.select(:id)) if params[:directory] == 'historical'
     records
+  end
+
+  def verified_customers
+    DirectorySyncState.where(kind: 'customers').where.not(last_success_at: nil).map do |state|
+      Core::Customer.where(source: state.provider, source_synced_at: state.last_success_at)
+    end.reduce(Core::Customer.none, :or)
   end
 
   def crm_owners
