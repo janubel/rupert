@@ -15,14 +15,15 @@ class ReconciliationAcrossDays
 
   def days
     @days ||= (starting_on..ending_on).to_a.reverse.map do |day|
-      report = DailyMoneyReconciliation.new(day: day.iso8601)
-      attention = ReconciliationAttention.new(report)
+      workflow = FinancialCloseWorkflow.new(day: day.iso8601)
+      attention = workflow.attention
       missing = attention.missing_controls.map do |row|
         row.merge(request_id: requests[[day, row[:source], row[:currency], row[:location_id].presence]])
       end
       { day: day, counts: attention.counts, missing: missing,
         untracked: missing.count { |row| row[:request_id].nil? },
-        follow_ups: periods.sum { |(from, to), count| day.between?(from, to) ? count : 0 } }
+        follow_ups: workflow.open_follow_ups.size, overdue: workflow.open_follow_ups.count(&:overdue?),
+        close: workflow.status_summary }
     end
   end
 
@@ -40,10 +41,6 @@ class ReconciliationAcrossDays
 
   def active
     ReconciliationFollowUp.active.where('period_from <= ? AND period_to >= ?', ending_on, starting_on)
-  end
-
-  def periods
-    @periods ||= active.group(:period_from, :period_to).count
   end
 
   def requests
