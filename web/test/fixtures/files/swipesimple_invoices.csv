@@ -1,0 +1,8 @@
+﻿Invoice Number,Customer,Date Created,Last Sent,Due Date,Status,Amount
+INV-1,Fictional Customer,10/13/2026 8:27 PM,,10/25/2026,unpaid,$26.40
+INV-2,Fictional Customer,10/11/2026 8:27 PM,,,unpaid,$30.00
+INV-3,Fictional Customer,10/08/2026 8:27 PM,,,marked as paid,$18.00
+INV-4,Fictional Customer,10/08/2026 8:27 PM,,,unpaid,$49.00
+INV-5,Fictional Customer,10/06/2026 8:27 PM,,10/13/2026,past due,$32.40
+INV-6,Fictional Customer,10/05/2026 8:27 PM,,,voided,$45.00
+INV-7,Fictional Customer,10/03/2026 8:27 PM,,,unpaid,$22.00

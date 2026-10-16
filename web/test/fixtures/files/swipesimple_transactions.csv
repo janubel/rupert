@@ -1,0 +1,14 @@
+﻿Transaction #,Date,Type,Amount,Result,Method,Brand,Last 4,Auth Code,Cardholder Name,Reference Number,Merchant Account,Taken By
+DEMO-1,10/14/2026 8:27 PM,Sale,$48.00,Approved,Swiped,Visa,0000,TESTONLY,Fictional Customer,,Example Wholesale,example@example.invalid
+DEMO-2,10/14/2026 8:27 PM,Sale,$26.00,Approved,Dipped,Mastercard,0000,TESTONLY,Fictional Customer,,Example Wholesale,example@example.invalid
+DEMO-5,10/13/2026 8:27 PM,Refund,$35.00,Approved,On File,Visa,0000,TESTONLY,Fictional Customer,,Example Wholesale,example@example.invalid
+DEMO-4,10/13/2026 8:27 PM,Sale,$49.00,Approved,Cash,,,,,,Example Wholesale,example@example.invalid
+DEMO-5,10/12/2026 8:27 PM,Sale,$35.00,Approved,Swiped,Visa,0000,TESTONLY,Fictional Customer,,Example Wholesale,example@example.invalid
+DEMO-6,10/11/2026 8:27 PM,Sale,$79.00,Declined,Dipped,Mastercard,0000,,Fictional Customer,,Example Wholesale,example@example.invalid
+DEMO-7,10/11/2026 8:27 PM,Sale,$48.00,Voided,Keyed,Visa,0000,TESTONLY,Fictional Customer,,Example Wholesale,example@example.invalid
+DEMO-8,10/10/2026 8:27 PM,Sale,$23.00,Approved,Keyed,Amex,0000,TESTONLY,Fictional Customer,,Example Wholesale,example@example.invalid
+DEMO-9,10/10/2026 8:27 PM,Sale,$15.00,Approved,Cash,,,,,,Example Wholesale,example@example.invalid
+DEMO-10,10/05/2026 8:27 PM,Sale,$80.00,Approved,Cash,,,,,,Example Wholesale,example@example.invalid
+DEMO-11,10/05/2026 8:27 PM,Sale,$12.50,Approved,Cash,,,,,,Example Wholesale,example@example.invalid
+DEMO-12,10/01/2026 8:27 PM,Sale,$49.00,Approved,Dipped,Visa,0000,TESTONLY,Fictional Customer,,Example Wholesale,example@example.invalid
+DEMO-13,09/30/2026 8:27 PM,Sale,$35.00,Approved,Tapped,Mastercard,0000,TESTONLY,Fictional Customer,,Example Wholesale,example@example.invalid

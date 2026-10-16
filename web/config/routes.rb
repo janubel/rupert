@@ -232,6 +232,10 @@ Rails.application.routes.draw do
       post :push_guard_unfreeze
     end
   end
+  resources :swipesimple_reports, only: %i[index create] do
+    collection { post :preview }
+    member { get :document }
+  end
   get '/system', to: 'system#index', as: :system
   get '/connections', to: 'connections#index', as: :connections
   resources :owner_checklists, only: %i[index new create show edit update] do

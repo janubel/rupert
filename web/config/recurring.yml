@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 production:
+  swipesimple_csv_intake:
+    class: SwipesimpleInboxJob
+    queue: default
+    schedule: every hour at minute 20
   ctrax_stock:
     class: CtraxStockSyncJob
     queue: default
