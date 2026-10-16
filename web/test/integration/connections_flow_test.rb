@@ -45,18 +45,20 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
   test 'connections page lists every service with status' do
     get_page connections_path
     assert_response :success
-    assert_select 'h1', /Connections/
-    assert_select 'h2', /Shopify/
-    assert_select 'h2', /Square/
-    assert_select 'h2', text: /Google Drive backup/, count: 0
-    assert_select 'h2', /Buzz agent/
-    assert_select 'h2', /Sync schedule/
+    assert_select 'h1', 'Master credentials & sync'
+    assert_select 'h3', /Shopify/
+    assert_select 'h3', /Square/
+    assert_select '[data-credential-service=google_drive]', count: 0
+    assert_select '[data-connection-source=google_backup]', count: 0
+    assert_select 'h3', /Buzz agent/
+    assert_select 'h2', /Sync improvement plan/
 
     # Nothing configured yet → every card shows Not configured and keys masked/missing
     assert_select 'span', /Not configured/
-    assert_select 'p', /SHOPIFY_CLIENT_ID/
-    assert_select 'p', /SQUARE_ACCESS_TOKEN/
-    assert_select 'p', /not set/
+    assert_select 'li', /Client ID/
+    assert_select 'li', /Access token/
+    assert_select 'li', /not set/
+    assert_equal 'no-store', response.headers['Cache-Control']
   end
 
   test 'only the platform operator sees Drive keys and legacy tenant configuration is ignored' do
@@ -66,17 +68,18 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     user.update!(role: 'super_admin')
     get_page connections_path
     assert_response :success
-    card = css_select('section.card').find { |node| node.text.include?('Google Drive backup') }
+    card = css_select('[data-credential-service=google_drive]').first
     assert card
     assert_includes card.text, 'Not configured'
     refute_includes card.text, 'untr'
     drive.keys.each { |key| EnvStore.platform_set(key, 'approved-platform-value') }
     get_page connections_path
     assert_response :success
-    card = css_select('section.card').find { |node| node.text.include?('Google Drive backup') }
+    card = css_select('[data-credential-service=google_drive]').first
     assert_includes card.text, 'Configured'
-    assert_includes card.text, 'appr••••alue'
-    assert_includes card.text, 'database'
+    assert_includes card.text, 'Saved in Rupert'
+    refute_includes response.body, 'approved-platform-value'
+    refute_includes response.body, 'appr••••alue'
     refute_includes card.text, 'untr'
   end
 
@@ -92,8 +95,9 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     card = css_select('section.card').find { |node| node.text.include?('Square') }
     assert card
     assert_includes card.text, 'Configured'
-    assert_includes card.text, 'EAAA••••e123'
-    assert_includes card.text, 'database'
+    refute_includes response.body, 'EAAAsecretvalue123'
+    refute_includes response.body, 'EAAA••••e123'
+    assert_includes card.text, 'Saved in Rupert'
     assert card.css("a[href*='developer.squareup.com']").present?
   end
 

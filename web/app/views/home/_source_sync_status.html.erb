@@ -1,12 +1,13 @@
 <section id="source-sync-status" aria-label="Source sync status" class="space-y-3">
   <div class="flex flex-wrap items-baseline justify-between gap-2">
     <h2 class="font-display text-xl text-ink">Source connections</h2>
+    <% if Current.user.can?('settings.read') %><%= link_to 'Master credentials & sync', connections_path, class: 'text-xs text-olive underline' %><% end %>
     <% if Current.user.can?('reports.read') %><%= link_to 'Daily / weekly / monthly reconciliation', money_reconciliations_path, class: 'btn-ghost btn-sm' %><% end %>
     <p class="text-xs text-taupe">Badges show actual source freshness · schedules shown per connection</p>
   </div>
   <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
     <% SourceSyncStatus.all.each do |source| %>
-      <% syncing = %w[Live Healthy Syncing Files\ current].include?(source[:badge]) %>
+      <% syncing = SourceSyncStatus::ACTIVE_BADGES.include?(source[:badge]) %>
       <article class="<%= class_names('card card-pad', syncing ? 'source-sync-active' : 'source-sync-inactive') %>" data-source="<%= source[:key] %>">
         <div class="flex items-center justify-between gap-3">
           <h3 class="font-display text-lg text-ink"><%= source[:label] %></h3>
