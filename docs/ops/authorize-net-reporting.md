@@ -15,6 +15,14 @@ The new **POS & payments → Authorize.net reporting** connection is separate fr
 
 The official OAuth guide requires registration in the **Partner Interface**, followed by merchant owner/admin consent. This PR supports refreshing an already issued token; it does not implement application registration, initial consent/code exchange or imply that Herbal Healers has partner access. Do not generate or rotate live Transaction/Signature Keys: that can disrupt existing checkout integrations.
 
+### Shared checkout credentials and Shopify
+
+Authorize.net's [Shopify payment-app guide](https://www.authorize.net/support/shopify-platform-update.html) requires an API Login ID and Transaction Key. The same merchant credentials can serve multiple sites. Generating a replacement Transaction Key expires the old key immediately when requested, or automatically after 24 hours. That overlap only delays disruption: every checkout still using the old key must be updated before it expires. Never rotate a key to obtain reporting access.
+
+The merchant portal cannot redisplay an existing Transaction Key. First inspect Shopify **Settings → Payments** read-only to identify the active provider, then verify its account mapping without revealing secrets. This store-specific dependency remains unverified pending Shopify sign-in. Rupert's Shopify catalog/order app credentials are separate from the payment app's gateway credentials. Saving the existing key in Rupert's encrypted reporting form does not rotate the gateway key; the key still has payment-processing capability. Vendor-enforced reporting-only access requires approved OAuth `read` credentials, whose initial onboarding is not implemented here.
+
+Shopify's Payment ID and Authorize.net's transaction ID are distinct. The current payment app may place Shopify's Payment ID in the gateway transaction description. This importer preserves gateway IDs but does not retain free-text descriptions or automatically match Shopify orders; that cross-system reconciliation remains a gap.
+
 All integration secrets use `PosConnection.credentials_json` and Rupert's existing Rails encryption keys. Forms remain blank, request parameter containers are filtered and responses prohibit caching. OAuth access tokens live only in memory; refreshed refresh tokens are saved encrypted with a setup-version check. Preserve production encryption keys when backing up.
 
 ## Operator workflow
