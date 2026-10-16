@@ -82,6 +82,9 @@ module Ctrax
         'website_product_id' => row.dig('product', 'shopify_product_identifier')&.to_s,
         'website_variant_id' => row['shopify_product_variant_identifier']&.to_s,
         'price_cents' => minor_units(effective.call('is_promo_pricing_enabled') == true ? effective.call('promo_price') : effective.call('regular_price')),
+        'tax_status' => effective.call('tax_status'),
+        'tax_rates_mbp' => tax_rates(effective.call('tax_status'), row['attribute_store_overrides']),
+        'tax_rate_mbp' => tax_rates(effective.call('tax_status'), row['attribute_store_overrides'])&.sum,
         'variable_price' => effective.call('has_variable_pricing') == true,
         'listed' => effective.call('is_listed_for_sale') != false
       }
@@ -94,6 +97,17 @@ module Ctrax
       raise Client::Error, :response unless value.is_a?(String) && value.valid_encoding? && value.bytesize <= maximum
 
       value.presence
+    end
+
+    def tax_rates(status, overrides)
+      return [] if status == 'none'
+      return unless status == 'taxable' && overrides.is_a?(Hash)
+
+      rates = overrides['tax_rates']
+      return unless rates.is_a?(Array) && rates.all? { |rate| rate.is_a?(Hash) && rate['rate_mbp'].to_s.match?(/\A[0-9]{1,8}\z/) }
+
+      value = rates.sum { |rate| rate['rate_mbp'].to_i }
+      rates.map { |rate| rate['rate_mbp'].to_i } if value.between?(0, 10_000_000)
     end
 
     def minor_units(value)

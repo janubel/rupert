@@ -31,11 +31,13 @@ class PosDisplaySession < ApplicationRecord
     (BigDecimal(draft.fetch('subtotal', '0')) * 100).to_i
   end
 
-  def publish!(quote)
-    clean = quote.slice('source', 'currency_code', 'lines', 'subtotal', 'preview', 'tip_type', 'tip_amount', 'preview_total')
+  def publish!(quote, expected_revision: nil)
+    clean = quote.slice('source', 'currency_code', 'lines', 'subtotal', 'preview', 'tip_type', 'tip_amount', 'preview_total', 'subtotal_cents', 'tax_cents', 'tax_verified', 'total_before_tip_cents', 'stock_captured_at', 'checkout')
     digest = Digest::SHA256.hexdigest(JSON.generate(clean))
     with_lock do
       raise ActiveRecord::RecordInvalid, self unless active?
+      raise Pos::Error, 'Cart changed. Review it again.' if expected_revision && cart_revision != expected_revision
+      raise Pos::Error, 'Finish or cancel this checkout before editing the cart.' if current_checkout && !%w[paid cancelled].include?(current_checkout.status)
       return if draft_digest == digest
 
       update!(draft_json: clean, draft_digest: digest, cart_revision: cart_revision + 1,
@@ -67,10 +69,15 @@ class PosDisplaySession < ApplicationRecord
     end
   end
 
+  def current_checkout
+    PosCheckout.find_by(pos_display_session_id: id, cart_revision: cart_revision)
+  end
+
   def public_state
     { active: active?, demo: demo?, cart_revision: cart_revision, lines: draft['lines'] || [],
       subtotal_cents: subtotal_cents, currency: draft['currency_code'] || 'USD',
-      confirmed: confirmed?, tip_cents: confirmed? ? chosen_tip_cents : nil }
+      confirmed: confirmed?, tip_cents: confirmed? ? chosen_tip_cents : nil,
+      tax_cents: draft['tax_cents'], tax_verified: draft['tax_verified'], checkout: current_checkout&.receipt }
   end
 
   private

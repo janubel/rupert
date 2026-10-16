@@ -309,6 +309,15 @@ Rails.application.routes.draw do
     end
   end
   resources :ctrax_stock, only: :index
+  get '/pos_settings/:location_id', to: 'pos_settings#show', as: :pos_setting
+  patch '/pos_settings/:location_id', to: 'pos_settings#update'
+  post '/pos_settings/:location_id/verify', to: 'pos_settings#verify', as: :verify_pos_setting
+  resources :pos_checkouts, only: %i[create show] do
+    post :cancel, on: :member
+    post :reconcile, on: :member
+  end
+  get '/customer_display/payment_config', to: 'customer_displays#payment_config', as: :customer_payment_config
+  post '/customer_display/pay', to: 'customer_displays#pay', as: :customer_pay
   resources :ctrax_days, only: %i[index show create] do
     member { post :review }
   end
@@ -403,6 +412,30 @@ Rails.application.routes.draw do
   get '/marketing', to: 'marketing/workspace#index', as: :marketing
   post '/marketing/toggle', to: 'marketing/workspace#toggle', as: :marketing_toggle
   namespace :marketing do
+    resources :influencers, only: %i[index show new create edit update] do
+      resources :engagements, only: %i[new create]
+      resources :interactions, only: [:create]
+    end
+    resources :engagements, only: %i[show edit update] do
+      post :copy, on: :member
+      resources :offers, controller: 'influencer_offers', only: %i[new create edit update] do
+        member do
+          post :verify
+          post :copy
+        end
+      end
+      resources :product_gifts, only: %i[new create]
+      resources :documents, only: %i[new create]
+    end
+    resources :product_gifts, only: %i[show edit update] do
+      member do
+        post :item
+        post :transition
+      end
+    end
+    resources :documents, only: %i[show edit update] do
+      post :review, on: :member
+    end
     resources :campaigns, only: %i[new create edit update]
     resources :communities, only: %i[new create edit update] do
       post :check_rules, on: :member

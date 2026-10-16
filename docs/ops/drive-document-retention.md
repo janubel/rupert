@@ -20,3 +20,7 @@ The encrypted local vault remains the primary retained evidence. Drive copies ar
 If Google returns `403 access_denied` because the app is in Testing, the OAuth client’s developer must approve the intended test user or complete production setup. External Testing tokens for Drive expire after seven days: see [Google’s refresh-token expiration documentation](https://developers.google.com/identity/protocols/oauth2#expiration). The previously observed platform backup consent block is documented in [Google backup verification](google-backup-verification.md). Do not report retention connected until consent succeeds and an actual uploaded/downloaded file verifies.
 
 Apply migration `20261017033000_create_retention_drive_connections` and preserve runtime encryption keys. Consistent backups include connection settings and copy receipts alongside the original vault. Retry/copy tests cover lost upload responses, corrupt downloads, exact native bytes, tenant isolation, batching, paused connections, OAuth replay/expiry and permissions. No accounting or vendor records are mutated by the copy job.
+
+## Current activation checkpoint
+
+The [October 16 SER8 rollout](drive-retention-deployment-2026-10-16.md) deployed the UI and scheduler, but Google denied owner-account consent because the OAuth app is in Testing. The owner deferred adding the test user and requested a note. Automatic uploads remain off; 39 existing files were ready at the checkpoint. Resume with the test-user/consent steps above, then verify real cloud copies before declaring activation complete.

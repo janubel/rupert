@@ -6,8 +6,8 @@ require 'openssl'
 require 'uri'
 
 module Ctrax
-  # Observed Serv 2.0 admin contract, not a published partner API. All business
-  # requests are GETs. A fresh login token lives only in this client instance.
+  # Observed Serv 2.0 admin contract, not a published partner API. Business reads
+  # use GET; paid-sale inventory removal is explicit. Tokens live only here.
   class Client
     API_URL_PATTERN = %r{\Ahttps://[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.api\.cannatrax\.net\z}
     MAX_BYTES = 2 * 1024 * 1024
@@ -156,6 +156,22 @@ module Ctrax
       directory('/api/v1/users', store_id: store_id)
     end
 
+    def inventory_adjustments(store_id, variant_id)
+      authorize_store!(store_id)
+      raise Error, :invalid unless variant_id.to_s.match?(/\A[1-9][0-9]{0,18}\z/)
+
+      paged("/api/v1/stores/#{store_id}/productVariants/#{variant_id}/inventoryAdjustments", sort_by: 'created_at.desc')
+    end
+
+    def remove_stock(store_id, variant_id, quantity:, reference:)
+      authorize_store!(store_id)
+      raise Error, :invalid unless variant_id.to_s.match?(/\A[1-9][0-9]{0,18}\z/) && quantity.is_a?(Integer) && quantity.between?(1, 999) && reference.match?(/\ARupert POS [a-f0-9]{32} variant [1-9][0-9]{0,18}\z/)
+
+      request("/api/v1/stores/#{store_id}/productVariants/#{variant_id}/inventoryAdjustments", write: {
+        action: 'remove', quantity: quantity, reason: 'other', comments: reference
+      })
+    end
+
     # This endpoint may contain merchant secrets. Return counts only; never
     # persist, log or render the raw merchant response.
     def merchant_summary(store_id)
@@ -229,7 +245,7 @@ module Ctrax
       raise Error, :forbidden unless stores.any? { |store| store[:id] == id.to_s }
     end
 
-    def request(path, params: {}, login: false)
+    def request(path, params: {}, login: false, write: nil)
       remaining = @deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
       raise Error, :limit if remaining <= 0
 
@@ -239,11 +255,15 @@ module Ctrax
       headers['X-Store-Timezone'] = @store_timezone if @store_timezone
       headers['X-Client-Timezone'] = @store_timezone if @store_timezone
       headers['Authorization'] = "Bearer #{@token}" unless login
-      request = login ? Net::HTTP::Post.new(uri.request_uri, headers) : Net::HTTP::Get.new(uri.request_uri, headers)
+      request = (login || write) ? Net::HTTP::Post.new(uri.request_uri, headers) : Net::HTTP::Get.new(uri.request_uri, headers)
       if login
         request['Content-Type'] = 'application/json'
         request.body = { username: @credentials.fetch('api_username'),
                          password: @credentials.fetch('api_password') }.to_json
+      end
+      if write
+        request['Content-Type'] = 'application/json'
+        request.body = JSON.generate(write)
       end
       http = Net::HTTP.new(uri.host, uri.port, nil)
       http.use_ssl = true
@@ -257,7 +277,7 @@ module Ctrax
         client.request(request) do |response|
           raise Error, :unauthorized if response.code == '401'
           raise Error, :forbidden if response.code == '403'
-          unless response.code == '200' && response['Content-Type'].to_s.include?('application/json')
+          unless (response.code == '200' || (write && response.code == '201')) && response['Content-Type'].to_s.include?('application/json')
             raise Error,
               :response
           end

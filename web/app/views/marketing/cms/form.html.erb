@@ -1,0 +1,34 @@
+<div class="max-w-3xl space-y-5">
+  <%= link_to 'Back', @back_url, class: 'btn-ghost' %>
+  <h1 class="text-2xl font-semibold"><%= @record.persisted? ? 'Edit' : 'New' %> <%= @record.class.model_name.element.humanize.downcase %></h1>
+  <%= form_with model: @record, scope: :cms_record, url: @form_url, class: 'card card-pad space-y-4' do |f| %>
+    <%= f.hidden_field :lock_version if @record.persisted? %>
+    <% influencer_cms_fields(@record).each do |field| %>
+      <div><%= f.label field, class: 'block text-sm font-medium mb-1' %>
+        <% if (choices = influencer_cms_choices(@record, field)) %>
+          <%= f.select field, choices, { include_blank: 'Choose…' }, class: 'select w-full' %>
+        <% elsif %i[topics notes private_notes shipping_details deliverables terms body note].include?(field) %>
+          <%= f.text_area field, rows: field == :body ? 12 : 4, maxlength: field == :body ? 20000 : 5000, class: 'input w-full' %>
+        <% elsif field.to_s.end_with?('_at') %>
+          <%= f.datetime_local_field field, class: 'input w-full' %>
+        <% elsif field.to_s.end_with?('_url') %>
+          <%= f.url_field field, maxlength: 2000, class: 'input w-full', placeholder: 'https://…' %>
+        <% elsif field.to_s.end_with?('_cents') %>
+          <%= f.number_field field, min: 0, max: 99999999, step: 1, class: 'input w-full' %>
+        <% elsif field == :contact_email %>
+          <%= f.email_field field, maxlength: 254, class: 'input w-full' %>
+        <% else %>
+          <%= f.text_field field, maxlength: 200, class: 'input w-full' %>
+        <% end %>
+      </div>
+    <% end %>
+    <% if @record.is_a?(Marketing::Influencer) %><p class="text-sm text-mocha">Use Notes for audience fit and business context. Put contact details and recipient addresses in the restricted fields. Setting Do not contact suppresses offer sharing and new gift handoffs. Follow-up dates appear in the directory; no reminder or outreach is sent automatically.</p>
+    <% elsif @record.is_a?(Marketing::Engagement) %><p class="text-sm text-mocha">Choose an existing Marketing campaign and a destination on that campaign's storefront host. Activate the collaboration when its offer and product-gifting work should proceed. Each collaboration gets its own referral URL.</p>
+    <% elsif @record.is_a?(Marketing::Offer) %><p class="text-sm text-mocha">Record a code already created in your store, with its full terms, start and end dates, usage limits and merchant evidence URL. A reviewer confirms the evidence for 24 hours before sharing. Saving this form does not create or deactivate a merchant discount.</p>
+    <% elsif @record.is_a?(Marketing::ProductGift) %><p class="text-sm text-mocha">Costs are estimates entered in minor currency units (100 cents = 1 USD). Leave unknown costs blank. Confirm the recipient address after saving. Approved product/budget details lock; carrier and tracking can be updated until shipment. This record does not reserve or deduct inventory.</p>
+    <% elsif @record.is_a?(Marketing::Document) %><p class="text-sm text-mocha">Write a brief, instructions, agreement, disclosure or permission record here, or link to an external document. Content is displayed as plain text. Every save creates a revision and resets review. Restricted documents require contacts access. A review records an operator check; it does not sign an agreement or obtain content reuse permission.</p>
+    <% end %>
+    <p class="text-xs text-mocha">Times use Rupert's configured Eastern timezone. Selectors show up to 200 workspace entries.</p>
+    <%= f.submit 'Save', class: 'btn-primary' %>
+  <% end %>
+</div>
