@@ -36,7 +36,7 @@ class ReconciliationFollowUp < ApplicationRecord
   def matching_documents
     candidates = ReconciliationDocument.where(tenant_id: tenant_id, source: source, kind: document_kind)
       .where('period_from <= ? AND period_to >= ?', period_from, period_to)
-      .select(:id, :tenant_id, :source, :kind, :filename, :metadata_json, :period_from, :period_to, :supersedes_id).order(id: :desc).limit(100)
+      .select(:id, :tenant_id, :source, :kind, :filename, :metadata_json, :period_from, :period_to, :supersedes_id, :created_at).order(id: :desc).limit(100)
     candidates.select { |doc| document_matches?(doc) }
   end
 

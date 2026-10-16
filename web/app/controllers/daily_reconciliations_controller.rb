@@ -52,7 +52,7 @@ class DailyReconciliationsController < AuthenticatedController
       source: values['source'], kind: values['kind'], from: values['period_from'], to: values['period_to'], metadata: metadata,
       actor: Current.user, supersedes_id: values['supersedes_id'])
     if @request
-      redirect_to reconciliation_follow_up_path(@request), notice: "Evidence ##{doc.id} retained. Select matching evidence and save your progress note to link it to this follow-up."
+      redirect_to reconciliation_follow_up_path(@request, evidence: doc.id, anchor: 'record-progress'), notice: 'Original retained in Rupert. Review the suggested evidence and save a progress note to link it. Uploading does not change the follow-up status.'
     else
       redirect_to daily_reconciliations_path(day: doc.period_from.iso8601), notice: "Evidence ##{doc.id} retained with its original bytes and checksum."
     end

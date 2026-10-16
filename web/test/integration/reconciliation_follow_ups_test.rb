@@ -14,6 +14,62 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
   end
   teardown { Current.reset }
 
+  test 'tracking and queue progress are local only and validation keeps the user on the form' do
+    travel_to Time.zone.parse('2026-10-16 12:00') do
+      assert_no_difference 'ActionMailer::Base.deliveries.size' do
+        assert_no_enqueued_jobs do
+          post reconciliation_follow_ups_path, params: { follow_up: @values }
+          item = ReconciliationFollowUp.last
+          assert_redirected_to reconciliation_follow_up_path(item)
+          assert_includes flash[:notice], 'No email or message was sent.'
+          patch reconciliation_follow_up_path(item), params: { return_to: 'overdue', follow_up: { status: 'waiting', notes: '', lock_version: 0 } }
+          assert_response :unprocessable_entity
+          assert_equal 1, item.events.count
+          patch reconciliation_follow_up_path(item), params: { return_to: 'overdue', follow_up: { status: 'waiting', notes: 'Original still outstanding. Check again tomorrow.', due_on: '2026-10-17', lock_version: 0 } }
+          assert_redirected_to reconciliation_follow_ups_path(status: 'overdue')
+          assert_equal 'waiting', item.reload.status
+          assert_equal 2, item.events.count
+          get reconciliation_follow_up_path(item)
+          assert_select 'button[data-date="2026-10-16"]', text: 'Today'
+          assert_select 'button[data-date="2026-10-19"]', text: 'In 3 days'
+          assert_includes response.body, 'No email or message is sent.'
+        end
+      end
+    end
+  end
+
+  test 'requested upload suggests matching evidence without linking or closing and ignores foreign suggestions' do
+    item = ReconciliationFollowUp.create!(@values.merge(created_by: @user))
+    file = Tempfile.new(['follow-up-original', '.txt'])
+    file.write('Synthetic bank statement')
+    file.close
+    assert_no_enqueued_jobs do
+      post daily_reconciliations_path, params: { request_id: item.id, file: Rack::Test::UploadedFile.new(file.path, 'text/plain'),
+        evidence: { source: 'bank', kind: 'bank_statement', period_from: '2026-10-01', period_to: '2026-10-31' } }
+    end
+    doc = ReconciliationDocument.last
+    assert_redirected_to reconciliation_follow_up_path(item, evidence: doc.id, anchor: 'record-progress')
+    assert_nil item.reload.document_id
+    assert_equal 'open', item.status
+    assert_equal 1, item.events.count
+    follow_redirect!
+    assert_select 'select[name="follow_up[document_id]"] option[selected][value=?]', doc.id.to_s
+    assert_select 'button[data-evidence-id=?]', doc.id.to_s, text: 'Use this original'
+    assert_includes response.body, 'Nothing has been linked or closed yet.'
+    other = Tenant.create!(name: 'Foreign original', subdomain: 'foreign-original-suggestion')
+    foreign = Current.set(tenant: other) do
+      ReconciliationEvidence.retain!(bytes: 'private file', filename: 'foreign-private-original.txt', source: 'bank', kind: 'bank_statement', from: '2026-10-01', to: '2026-10-31')
+    end
+    get reconciliation_follow_up_path(item, evidence: foreign.id)
+    assert_response :success
+    refute_includes response.body, foreign.filename
+    assert_select 'select[name="follow_up[document_id]"] option[value=?]', foreign.id.to_s, count: 0
+    assert_includes response.body, 'No link was changed.'
+    assert_nil item.reload.document_id
+  ensure
+    file&.unlink
+  end
+
   test 'overdue actions lead the overview and original actions respect read access and linked evidence' do
     travel_to Time.zone.parse('2026-10-16 12:00') do
       overdue = ReconciliationFollowUp.create!(@values.merge(created_by: @user))

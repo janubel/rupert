@@ -66,7 +66,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
       @follow_up.report_digest = DailyMoneyReconciliation.new(day: @follow_up.period_from.iso8601).digest
     end
     if @follow_up.save
-      redirect_to @follow_up, notice: 'Follow-up saved in Rupert.'
+      redirect_to @follow_up, notice: 'Follow-up saved in Rupert. No email or message was sent.'
     else
       form_options
       render :new, status: :unprocessable_entity
@@ -90,7 +90,8 @@ class ReconciliationFollowUpsController < AuthenticatedController
       return render :show, status: :unprocessable_entity
     end
     if @follow_up.update(values)
-      redirect_to @follow_up, notice: 'Follow-up updated. Earlier notes and assignments are retained.'
+      destination = params[:return_to] == 'overdue' ? reconciliation_follow_ups_path(status: 'overdue') : @follow_up
+      redirect_to destination, notice: 'Progress saved in Rupert. Earlier notes and assignments are retained. No email or message was sent.'
     else
       @entered_values = values.to_h
       messages = @follow_up.errors.full_messages
@@ -118,6 +119,10 @@ class ReconciliationFollowUpsController < AuthenticatedController
     form_options
     @events_pagy, @events = pagy(@follow_up.events.order(id: :desc), items: 15, page_param: :history_page)
     @matching_documents = @follow_up.matching_documents
+    if params[:evidence].present?
+      @suggested_document_id = @matching_documents.find { |doc| doc.id.to_s == params[:evidence] }&.id
+      @evidence_suggestion_missing = @suggested_document_id.nil?
+    end
     @report_changed = @follow_up.report_digest.present? && @follow_up.report_digest != DailyMoneyReconciliation.new(day: @follow_up.period_from.iso8601).digest
   end
 end

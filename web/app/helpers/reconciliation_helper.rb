@@ -42,7 +42,10 @@ module ReconciliationHelper
   end
 
   def reconciliation_follow_up_value(record, key)
-    @entered_values&.key?(key.to_s) ? @entered_values[key.to_s] : record.public_send(key)
+    return @entered_values[key.to_s] if @entered_values&.key?(key.to_s)
+    return @suggested_document_id if key == :document_id && @suggested_document_id
+
+    record.public_send(key)
   end
 
   def reconciliation_due_label(item)
