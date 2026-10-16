@@ -11,6 +11,7 @@ class CashForecastScenarioTest < ActiveSupport::TestCase
   test 'opening shortfall and year boundary are explicit and CSV text cannot become a formula' do
     forecast = CashForecastScenario.new(values)
     assert_equal 0, forecast.first_shortfall[:week]
+    assert_equal 1, forecast.shortfall_cents
     assert_equal Date.new(2026, 12, 30), forecast.rows.first[:from]
     assert_equal Date.new(2027, 1, 5), forecast.rows.first[:to]
     assert_equal 100, forecast.rows.first[:closing_cents]

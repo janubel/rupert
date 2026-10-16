@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 module ReconciliationHelper
+  def financial_close_blocker_path(key, day)
+    return reconciliation_follow_ups_path(day: day.iso8601) if key == :open_follow_ups
+    return daily_reconciliations_path(day: day.iso8601, comparison: key.to_s, anchor: 'control-comparisons') if %i[variances conflicts unavailable].include?(key)
+
+    anchor = { missing_controls: 'missing-controls', coverage: 'review-day', unconfirmed_imports: 'source-evidence', review: 'review-history' }.fetch(key)
+    daily_reconciliations_path(day: day.iso8601, anchor: anchor)
+  end
+
   def reconciliation_source(source)
     ReconciliationLibrary::SOURCE_NAMES.fetch(source, source.to_s.humanize)
   end

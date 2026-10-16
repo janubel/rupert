@@ -17,3 +17,9 @@ The close action verifies included original checksums and atomically retains the
 Reading requires reports.read; retaining close/forecast versions additionally requires reports.write. Report readers may preview/download scenarios. Employee-only roles retain their fixed self-service boundary. Entire close/forecast form containers are filtered from request logs; responses use no-store/nosniff and writes use CSRF protection. Scenario amounts are POST fields rather than URL parameters. Originals, packages, scenarios and encrypted history remain in consistent database/configuration backups; saved Rails encryption keys are required for restoration.
 
 Daily reconciliation CSV and daily/weekly/monthly source summaries remain available from the close workspace. Source summaries preserve separate currencies and evidence layers; they are not substituted for bank reconciliation or a complete accounting P&L.
+
+The [October 16 deployment receipt](financial-close-deployment-2026-10-16.md) records the live release, employee-source preservation, exact CI, browser rehearsals and encrypted recovery verification.
+
+The close workspace puts actionable blockers first: missing source/currency/location controls, comparison/coverage/import checks, open follow-ups and missing/stale/Needs attention review. Current review is explicitly required for any package; other unresolved checks block a complete close while allowing an explained exception package. Missing-report actions preserve exact scope and reuse an existing open request. The first overdue follow-ups expose next steps and progress actions. Reference stages remain in an expandable workflow section.
+
+Cash shortfall results show the amount below the entered reserve (or zero), with a direct jump to opening cash or the affected week. Editing any assumption marks the displayed calculation as stale and disables CSV/retention until recalculation. Server-side amount, scope and baseline checks remain authoritative.
