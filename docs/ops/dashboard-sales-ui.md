@@ -1,8 +1,9 @@
 # Dashboard sales and shared workspace UX
 
 The dashboard includes native C-Trax completed, nondeleted orders alongside paid,
-fulfilled and refunded canonical order history. USD order totals include recorded
-tax and shipping, exclude tips, and show sales before separate refund review.
+fulfilled canonical order history. USD order totals use the recorded source
+amounts; C-Trax and Rupert POS tips remain separate. Source refund evidence needs
+separate review; fully refunded canonical orders retain the existing exclusion.
 Only canonical selling sources are accepted. Ledger, gateway, SwipeSimple,
 invoice, NMI sandbox and NAB deposit observations never contribute to sales.
 

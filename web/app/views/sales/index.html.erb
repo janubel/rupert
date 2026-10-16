@@ -33,7 +33,7 @@
   </section>
 
   <section class="card card-pad flex flex-wrap items-center justify-between gap-3" aria-label="Sales coverage">
-    <p class="max-w-2xl text-sm text-mocha">Native C-Trax orders are included in dashboard sales and reviewed in daily close. This journal contains canonical orders; its charts show paid, fulfilled and refunded order history. Payment and deposit reports are separate.</p>
+    <p class="max-w-2xl text-sm text-mocha">Native C-Trax orders are included in dashboard sales and reviewed in daily close. This journal contains canonical orders; its charts show paid and fulfilled orders. Payment and deposit reports are separate.</p>
     <div class="flex flex-wrap gap-2"><%= link_to 'Dashboard sales', dashboard_path, class: 'btn-ghost btn-sm' if Current.user.can?('dashboard.read') %><%= link_to 'C-Trax daily close', ctrax_days_path(date: @date), class: 'btn-ghost btn-sm' %></div>
   </section>
 

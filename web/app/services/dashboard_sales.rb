@@ -51,7 +51,7 @@ class DashboardSales
   private
 
   def canonical_rows
-    Core::Order.where(status: %w[paid fulfilled refunded], occurred_at: from..now, source: SOURCES)
+    Core::Order.where(status: %w[paid fulfilled], occurred_at: from..now, source: SOURCES)
       .pluck(:source, :occurred_at, :gross_cents, :currency).filter_map do |source, at, cents, currency|
       unless cents.is_a?(Integer) && currency == 'USD'
         warnings << 'Sales with missing amounts or a currency other than USD are excluded.'

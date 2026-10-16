@@ -35,7 +35,7 @@ class PageGuides
         { heading: "What you're seeing",
           body: 'Sales cards and charts use paid canonical orders and completed native C-Trax orders. Each native C-Trax order is counted once by source, store and order ID. Source pull times and latest sale dates describe different kinds of coverage; a recent pull can contain older sales.' },
         { heading: 'How to read the numbers',
-          body: "Sales are recorded USD order totals including tax and shipping, excluding tips. Payment reports, invoices and deposits are never added. Refunds are reviewed separately. Yesterday is the whole previous day; the last 7 and 30 days include today. Missing imports do not prove zero activity." }
+          body: "Sales are recorded USD totals from paid and fulfilled orders plus completed C-Trax sales. C-Trax tips remain separate. Payment reports, invoices and deposits are never added. Refunds require separate source review. Yesterday is the whole previous day; the last 7 and 30 days include today. Missing imports do not prove zero activity." }
       ],
       tips: [
         "Check the attention rail first every morning — it's ordered by severity.",

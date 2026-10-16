@@ -3,7 +3,7 @@
     <h2 class="font-display text-xl text-ink">Today · per channel</h2>
     <span class="text-xs text-taupe">Recorded sales · USD · <%= Time.zone.now.strftime('%Z') %></span>
   </div>
-  <p class="mt-2 text-sm text-mocha">Paid orders and completed C-Trax sales. Payment reports, invoices, tips, and bank deposits are not added. Tax and shipping are included; refunds are reviewed separately.</p>
+  <p class="mt-2 text-sm text-mocha">Paid orders and completed C-Trax sales. Payment reports, invoices, and bank deposits are not added. C-Trax tips stay separate; source refunds need separate review.</p>
   <dl class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     <% presenter.today_groups.each do |source, gross, count| %>
       <% freshness = presenter.sales_freshness.fetch(source, {}) %>

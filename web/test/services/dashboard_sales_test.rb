@@ -38,12 +38,12 @@ class DashboardSalesTest < ActiveSupport::TestCase
     end
   end
 
-  test 'refunded orders keep their original sale amount without subtracting or adding refund payments' do
+  test 'fully refunded canonical orders stay outside paid sales and refund payments never create sales' do
     order = canonical(source: 'shopify', source_order_id: 'refunded', status: 'refunded',
       occurred_at: @now, gross_cents: 2000, currency: 'USD')
     order.refunds.create!(amount_cents: 2000, method: 'card', refunded_at: @now)
-    assert_equal 2000, DashboardSales.new(now: @now).gross
-    assert_equal 1, DashboardSales.new(now: @now).count
+    assert_equal 0, DashboardSales.new(now: @now).gross
+    assert_equal 0, DashboardSales.new(now: @now).count
   end
 
   test 'native identity spans dates and keeps stores independent' do
