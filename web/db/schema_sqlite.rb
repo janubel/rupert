@@ -1682,6 +1682,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id", "identity"], name: "idx_swipesimple_tenant_identity"
   end
 
+  create_table "sync_attempts", force: :cascade do |t|
+    t.string "tenant_id"
+    t.string "source", null: false
+    t.string "operation", null: false
+    t.string "status", null: false
+    t.string "error_category"
+    t.string "active_job_id"
+    t.datetime "queued_at", null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active_job_id"], name: "index_sync_attempts_on_active_job_id"
+    t.index ["tenant_id", "source", "operation", "queued_at"], name: "idx_sync_attempts_source_history"
+  end
+
   create_table "tasks", force: :cascade do |t|
     t.string "assignee_id"
     t.datetime "completed_at"
@@ -1699,22 +1715,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["tenant_id", "status"], name: "index_tasks_on_tenant_id_and_status"
   end
 
-  create_table "sync_attempts", force: :cascade do |t|
-    t.string "tenant_id"
-    t.string "source", null: false
-    t.string "operation", null: false
-    t.string "status", null: false
-    t.string "error_category"
-    t.string "active_job_id"
-    t.datetime "queued_at", null: false
-    t.datetime "started_at"
-    t.datetime "finished_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["active_job_id"], name: "index_sync_attempts_on_active_job_id"
-    t.index ["tenant_id", "source", "operation", "queued_at"], name: "idx_sync_attempts_source_history"
-  end
-
   create_table "tenants", id: :string, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -1726,17 +1726,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.string "referral_domain"
     t.index ["referral_domain"], name: "index_tenants_on_referral_domain"
     t.index ["subdomain"], name: "index_tenants_on_subdomain", unique: true
-  end
-
-  create_table "timesheet_events", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.bigint "timesheet_id", null: false
-    t.bigint "user_id"
-    t.string "action", null: false
-    t.text "details"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_events_on_tenant_id_and_timesheet_id"
   end
 
   create_table "timesheet_entries", force: :cascade do |t|
@@ -1751,6 +1740,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.bigint "clock_shift_id"
     t.index ["tenant_id", "clock_shift_id", "worked_on"], name: "idx_timesheet_shift_day", unique: true
     t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_entries_on_tenant_id_and_timesheet_id"
+  end
+
+  create_table "timesheet_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "timesheet_id", null: false
+    t.bigint "user_id"
+    t.string "action", null: false
+    t.text "details"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "timesheet_id"], name: "index_timesheet_events_on_tenant_id_and_timesheet_id"
   end
 
   create_table "timesheets", force: :cascade do |t|
@@ -1894,7 +1894,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
-  add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade
@@ -2001,6 +2000,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   add_foreign_key "stock_reservations", "stock_reservation_pools"
   add_foreign_key "swipesimple_exports", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "swipesimple_report_rows", "swipesimple_exports"
+  add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
   add_foreign_key "workspace_signup_events", "users", column: "actor_id", on_delete: :nullify
   add_foreign_key "workspace_signup_events", "workspace_signups"
   add_foreign_key "workspace_signups", "tenants"

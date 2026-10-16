@@ -63,6 +63,8 @@ module Sales
       orders = Core::Order.where('occurred_at >= ?', opened_at)
       orders = orders.where('occurred_at < ?', closed_at) if closed_at
       orders = orders.where(location_id: [location_id, location&.externalId].compact) if location_id.present?
+      # Two open drawers at one store must not both count the same Rupert sale.
+      orders = orders.where.not(source: 'rupert_pos').or(orders.where(id: PosCheckout.where(pos_session_id: id).select(:order_id)))
 
       tenders = orders.joins(:payments).group('payments.method').sum('payments.amount_cents')
       self.cash_sales_cents = tenders['cash'].to_i

@@ -1842,9 +1842,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   create_table "pos_checkouts", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "location_id", null: false
-    t.integer "user_id", null: false
-    t.integer "pos_display_session_id", null: false
-    t.integer "pos_session_id"
+    t.bigint "user_id", null: false
+    t.bigint "pos_display_session_id", null: false
+    t.bigint "pos_session_id"
     t.integer "cart_revision", null: false
     t.string "reference", null: false
     t.string "status", default: "ready", null: false
@@ -1857,7 +1857,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
     t.integer "total_cents", null: false
     t.integer "cash_received_cents"
     t.integer "change_cents"
-    t.integer "order_id"
+    t.bigint "order_id"
     t.datetime "paid_at"
     t.string "gateway_id"
     t.string "environment"
@@ -1875,7 +1875,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
   create_table "pos_stock_allocations", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "location_id", null: false
-    t.integer "pos_checkout_id", null: false
+    t.bigint "pos_checkout_id", null: false
     t.string "variant_id", null: false
     t.integer "quantity", null: false
     t.string "status", default: "held", null: false
@@ -1892,7 +1892,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_033000) do
 
   create_table "pos_payment_attempts", force: :cascade do |t|
     t.string "tenant_id", null: false
-    t.integer "pos_checkout_id", null: false
+    t.bigint "pos_checkout_id", null: false
     t.string "invoice", null: false
     t.string "nonce_digest", null: false
     t.string "status", default: "submitting", null: false

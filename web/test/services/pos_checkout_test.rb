@@ -115,6 +115,17 @@ class PosCheckoutTest < ActiveSupport::TestCase
     assert_equal 'closed', @register.reload.status
   end
 
+  test 'refresh counts the paid tip only in the drawer selected for that sale' do
+    second = Sales::PosSession.create!(location: @location, user: @user, name: 'Second', opened_at: @register.opened_at)
+    @display.choose_tip!(revision: @display.cart_revision, choice: '10')
+    checkout = prepare
+    Pos::Checkout.cash!(checkout, received: '20')
+    @register.refresh_from_orders!
+    second.refresh_from_orders!
+    assert_equal 1166, @register.cash_sales_cents
+    assert_equal 0, second.cash_sales_cents
+  end
+
   private
 
   def prepare = Pos::Checkout.prepare!(display: @display.reload, tender: 'cash', register_id: @register.id)
