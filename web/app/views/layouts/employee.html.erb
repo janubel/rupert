@@ -18,7 +18,7 @@
   <header class="border-b border-fog bg-paper">
     <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
       <%= link_to employee_app_path(preview: @preview ? 1 : nil), class: 'app-brand text-lg font-semibold text-olive', aria: { label: 'My time home' } do %>
-        <img src="/icon.png?v=rupert-dog-1" width="40" height="40" alt="" style="width:40px;height:40px;object-fit:contain;flex-shrink:0">
+        <%= render "shared/rupert_face", size: 40 %>
         <span>Rupert</span>
       <% end %>
       <% if Current.user %>

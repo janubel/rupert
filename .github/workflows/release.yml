@@ -19,7 +19,7 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "tag" ]; then
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           else
             version=$(cat VERSION)
