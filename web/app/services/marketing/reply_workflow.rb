@@ -35,7 +35,7 @@ module Marketing
           campaign: campaign.attributes.slice('id', 'name', 'storefront_url', 'topics', 'lock_version'),
           community: community.attributes.except('created_at', 'updated_at'),
           thread: thread.attributes.except('created_at', 'updated_at'),
-          offer: offer.attributes.except('created_at', 'updated_at'),
+          offer: offer.attributes.except('created_at', 'updated_at', 'engagement_id'),
           text: "#{reply.body}\n\n#{reply.affiliation}\nCode: #{offer.code}\n#{offer.terms}\nOffer ends: #{offer.ends_at&.utc&.iso8601}\n#{offer.referral_url}"
         }
         digest = Digest::SHA256.hexdigest(JSON.generate(context))

@@ -4,7 +4,7 @@ module Marketing
   class OffersController < RecordsController
     def verify
       authorize_review
-      offer = Offer.find(params[:id])
+      offer = model.find(params[:id])
       raise ReplyWorkflow::Invalid, 'Confirm that the current merchant code and all terms match.' unless params[:confirmed] == '1'
       raise ReplyWorkflow::Invalid, 'Record a merchant evidence URL first.' if offer.evidence_url.blank?
 
@@ -15,7 +15,7 @@ module Marketing
 
     private
 
-    def model = Offer
+    def model = Offer.where.not(community_id: nil)
     def fields = %i[community_id code terms destination_url starts_at ends_at evidence_url]
   end
 end

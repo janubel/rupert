@@ -1,0 +1,12 @@
+<div class="space-y-6">
+  <div class="flex flex-wrap items-center gap-3"><h1 class="text-2xl font-semibold">Influencers</h1><%= link_to 'Community marketing', marketing_path, class: 'btn-ghost' %><% if Current.user.can?('marketing.write') %><%= link_to 'Add influencer', new_marketing_influencer_path, class: 'btn-primary' %><% end %></div>
+  <p class="text-sm text-mocha">Track prospects, collaborations, product gifts, temporary codes and campaign documents. Contact and shipment details have separate access permissions.</p>
+  <%= form_with url: marketing_influencers_path, method: :get, class: 'card card-pad flex flex-wrap gap-3' do |f| %>
+    <%= f.search_field :q, value: params[:q], placeholder: 'Name, handle or topic', 'aria-label': 'Search influencers', class: 'input' %>
+    <%= f.select :stage, Marketing::Influencer::STAGES.map { |s| [s.humanize, s] }, { include_blank: 'All stages', selected: params[:stage] }, class: 'select', 'aria-label': 'Relationship stage' %>
+    <label class="text-sm"><%= check_box_tag :due, '1', params[:due] == '1' %> Follow-up due</label><%= f.submit 'Filter', class: 'btn-ghost' %>
+  <% end %>
+  <% @influencers.first(30).each do |influencer| %><article class="card card-pad space-y-2"><h2 class="text-lg font-semibold"><%= link_to influencer.name, marketing_influencer_path(influencer), class: 'underline' %></h2><p class="text-sm"><%= influencer.platform %> <%= influencer.handle %> · <%= influencer.stage.humanize %> · Owner: <%= influencer.owner&.display_name || 'Unassigned' %></p><p class="text-sm"><%= influencer.topics %></p><p class="text-xs text-mocha">Next follow-up: <%= influencer.next_follow_up_at&.to_fs(:short) || 'Not scheduled' %></p></article><% end %>
+  <% if @influencers.empty? %><p>No matching influencers. Add a prospect to start planning a product collaboration.</p><% end %>
+  <nav class="flex gap-3" aria-label="Influencer pages"><% if @page > 1 %><%= link_to 'Previous', marketing_influencers_path(request.query_parameters.merge(page: @page - 1)), class: 'btn-ghost' %><% end %><% if @influencers.length > 30 %><%= link_to 'Next', marketing_influencers_path(request.query_parameters.merge(page: @page + 1)), class: 'btn-ghost' %><% end %></nav>
+</div>

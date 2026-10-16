@@ -637,6 +637,15 @@
       "scope": "One permission-scoped setup desk with encrypted named forms, credential completeness, explicit checks/reads and structured source-attempt receipts. Separate acquisition/source timestamps, typed failure repair guidance, C-Trax stock/sales channels, safe queue/worker evidence and in-page stale/failure alerts. Historical unknowns remain unknown; verified event coverage, outbound alerts and ownership/rotation remain planned. No automatic credential or source-schedule changes.",
       "evidence": "docs/ops/master-credentials-and-sync.md",
       "phase": "1"
+    },
+    {
+      "id": "F68",
+      "area": "Marketing",
+      "name": "Influencer collaborations and product gifting",
+      "status": "Available",
+      "scope": "Tenant-scoped influencer directory, relationship/follow-up and encrypted contact logs; campaign collaborations, reviewed product-gift proposals and manual shipment history; expiring existing merchant-code records, UTM referral URLs and versioned documents. Separate contacts permission, stale-edit protection and encrypted audit evidence. No outreach sending, platform discount activation, inventory/order writes, click/conversion tracking or commissions.",
+      "evidence": "web/app/services/marketing/gift_workflow.rb",
+      "phase": "4"
     }
   ]
 }

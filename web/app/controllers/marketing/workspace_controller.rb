@@ -12,7 +12,7 @@ module Marketing
 
       @campaigns = Campaign.order(:name).limit(201).to_a
       @communities = Community.includes(:campaign).order(:name).limit(201).to_a
-      @offers = Offer.includes(community: :campaign).order(created_at: :desc).limit(31).to_a
+      @offers = Offer.where.not(community_id: nil).includes(community: :campaign).order(created_at: :desc).limit(31).to_a
       @pending = Reply.includes(:thread).where(status: 'pending_review').order(updated_at: :asc).limit(31).to_a
       @page = params[:page].to_i.clamp(1, 10_000)
       scope = Thread.includes(:community, :reply).order(created_at: :desc, id: :desc)
