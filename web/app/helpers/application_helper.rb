@@ -113,4 +113,13 @@ module ApplicationHelper
     else 'Good evening'
     end
   end
+
+  # First C-Trax store whose card processing is not verified and enabled, shown
+  # to users who may run the POS setup. Nil when everything is ready.
+  def card_processing_down_location
+    return unless Current.user&.can?('settings.write') && Current.user.can?('sales.write') && Current.user.can?('inventory.write')
+    return if request.path.start_with?('/pos_settings')
+    ready = PosSetting.where(card_enabled: true).where.not(verified_at: nil).pluck(:location_id)
+    Location.where(source: 'ctrax').where.not(id: ready).order(:name).first
+  end
 end

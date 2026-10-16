@@ -36,6 +36,7 @@ class SessionsController < ApplicationController
     if user&.active? && user.tenant&.status == 'active' && user.authenticate(params[:password])
       reset_session # prevent session fixation
       session[:user_id] = user.id
+      session[:auth_method] = 'password'
       session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(user.password_digest) if user.employee?
       AccessLogger.record(
         source: 'password',
