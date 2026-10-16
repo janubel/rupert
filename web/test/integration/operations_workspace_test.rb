@@ -43,6 +43,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
         post finance_expenses_path, params: { expense: attributes.merge(amount: amount) }
         assert_response :unprocessable_entity, amount
         assert_select '[role=alert]'
+        assert_not_includes response.body, 'Amount cents'
         assert_select 'input[name="expense[payee]"][value="Precision fixture"]'
       end
     end
@@ -123,8 +124,9 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'nav[aria-label="Money workspace"] a[href=?]', finance_accounts_path, count: 0
     assert_select '#retain-close', count: 0
-    get inventory_index_path
+    get stock_comparison_path
     assert_response :success
+    assert_select 'nav[aria-label="Module areas"] a[aria-label=Stock][aria-current=page]'
     assert_select 'nav[aria-label="Stock workspace"]'
     assert_select 'a[href=?]', new_inventory_count_path, count: 0
     get reconcile_index_path

@@ -34,7 +34,7 @@ module Purchasing
             paid_cents: paid,
             balance_cents: [row.owed_cents.to_i - paid, 0].max
           }
-        end.sort_by { |r| -r[:balance_cents] }
+        end.select { |r| r.values_at(:owed_cents, :committed_cents, :paid_cents).any?(&:positive?) }.sort_by { |r| -r[:balance_cents] }
       end
 
       def total_cents

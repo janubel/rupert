@@ -44,7 +44,7 @@ module Core
             paid_cents: paid,
             order_count: row.order_count
           }
-        end.sort_by { |r| -r[:balance_cents] }
+        end.sort_by { |r| [r[:balance_cents].nil? ? 0 : 1, -(r[:balance_cents] || 0)] }
       end
 
       def total_cents(currency: 'USD')

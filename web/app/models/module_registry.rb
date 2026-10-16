@@ -129,7 +129,7 @@ class ModuleRegistry
     Entry.new(key: 'purchase_orders', name: 'Purchase orders', path: lambda {
       purchasing_purchase_orders_path
     }, permission: 'purchasing.read', position: 46),
-    Entry.new(key: 'finance_accounts', name: 'Accounts', path: lambda {
+    Entry.new(key: 'finance_accounts', name: 'Finance overview', path: lambda {
       finance_accounts_path
     }, permission: 'finance.read', position: 47),
     Entry.new(key: 'chart_of_accounts', name: 'Chart of accounts', path: lambda {
