@@ -147,6 +147,7 @@ class DailyMoneyReconciliationTest < ActiveSupport::TestCase
     assert_raises(ReconciliationEvidence::Error) { ReconciliationEvidence.cents('NaN') }
     assert_equal(-123, ReconciliationEvidence.cents('-1.23'))
     assert_nil ReconciliationEvidence.cents('')
+    assert_equal [Date.new(2100, 1, 1)] * 2, ReconciliationEvidence.dates('2100-01-01', '2100-01-01')
     assert_empty ReconciliationDocument.all
   end
 

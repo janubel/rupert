@@ -53,7 +53,7 @@ class ReconciliationEvidence
   end
 
   def self.dates(from, to)
-    raise Error, 'Use dates in YYYY-MM-DD format.' unless [from, to].all? { |date| date.to_s.match?(/\A20\d{2}-\d{2}-\d{2}\z/) }
+    raise Error, 'Use dates in YYYY-MM-DD format.' unless [from, to].all? { |date| date.to_s.match?(/\A\d{4}-\d{2}-\d{2}\z/) }
     first, last = [from, to].map { |date| Date.iso8601(date.to_s) }
     raise Error, 'The document period must be ordered and no longer than 366 days.' unless (last - first).between?(0, 365)
     [first, last]

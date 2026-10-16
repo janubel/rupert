@@ -138,5 +138,4 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
     assert_equal 'failed', BackupLog.unscoped.where(tenant_id: nil).order(startedAt: :desc).first.status
     refute File.exist?(@snapshot)
   end
-
 end
