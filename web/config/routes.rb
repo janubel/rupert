@@ -2,6 +2,10 @@
 
 Rails.application.routes.draw do
   root to: 'home#index'
+  post '/source_syncs/:source', to: 'source_syncs#create', as: :source_sync
+  resources :authorize_net_portal_exports, only: %i[index create] do
+    get :document, on: :member
+  end
 
   get '/login', to: 'sessions#new', as: :login
   post '/login', to: 'sessions#create'

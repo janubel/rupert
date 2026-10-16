@@ -16,3 +16,5 @@ Start here to resume operator rollout: [Derrick's day-to-day readiness and picku
 Product pages: `roadmap.html`, `competitors.html`, and `sqlite-incus.html`. Edit the catalog at `web/config/product_roadmap.json`, the matrix at `docs/data/competitor-matrix.json`, or the runbook at `docs/ops/sqlite-incus.md`, then run `bin/build-product-site`. CI runs `--check` to detect drift. Matrix cells link to official source pages; "Not established" is an unknown, not an absence claim.
 
 The current operating decision and restore/scaling guidance are in `ops/sqlite-incus.md`; cutover evidence is in `ops/sqlite-migration.md`. SER8-specific units and a host freshness watcher are under `deploy/`.
+
+- [Dashboard source status and 30-minute reads](ops/source-sync-status.md)

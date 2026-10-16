@@ -28,6 +28,12 @@ class CtraxStockSyncJobTest < ActiveJob::TestCase
     assert_equal previous.id, Current.tenant_id
   end
 
+  test 'manual reads can run while the automatic schedule is paused' do
+    @connection.update!(hourly_sync_enabled: false)
+    Ctrax::StockSync.expects(:call).returns(stores: 1, variants: 2)
+    CtraxStockSyncJob.perform_now(@connection.id, manual: true)
+  end
+
   test 'removing credentials or disabling schedule prevents queued work from connecting' do
     Ctrax::StockSync.expects(:call).never
     @connection.update!(hourly_sync_enabled: false)

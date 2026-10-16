@@ -5,11 +5,11 @@
     <p class="mt-2">Import native Transactions and Invoices CSV exports from SwipeSimple Web. These are source observations; C-Trax remains the retail inventory reference.</p>
     <p class="mt-2 text-sm">Approved transaction amounts are recorded payments, including any tips already in Amount. Invoice totals are separate and are never added to sales. Declined, voided, errored and canceled transactions are excluded from money totals. Approval does not verify bank settlement.</p>
     <p class="mt-2 text-sm">Exports omit receipt PDFs, invoice documents and linked-refund relationships. Original CSVs are retained encrypted, with SHA-256, source numbers and row positions. Missing tips remain unavailable. Reports use Rupert’s Eastern business day and the latest transaction observation and latest full invoice snapshot per account. Invoice numbers can repeat; invoice rows remain separate source observations.</p>
-    <p class="mt-2 text-sm">Hourly ingestion can process newly delivered CSVs on SER8. Automatic vendor delivery/API access has not been verified; an hourly worker cannot make an old export current.</p>
+    <p class="mt-2 text-sm">Delivery is checked every 30 minutes when an approved feed is configured. Import a fresh native export on demand below. The export timestamp shows source freshness; checking an empty inbox does not refresh vendor data.</p>
   </section>
 
   <% if Current.user.can?('sync.write') %>
-    <section class="card card-pad">
+    <section id="import" class="card card-pad">
       <h2 class="font-display text-xl">Review a native export</h2>
       <p class="text-sm mt-2">Export one merchant account at a time. Confirm its currency, time zone and the time this file was exported. Do not use the download/import time of a historical file as its export time. Invoice imports must include every invoice, without date, search or status filters. Keep the vendor headers intact. Maximum 8 MiB / 10,000 rows.</p>
       <% if @preview %>

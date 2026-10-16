@@ -1,0 +1,31 @@
+<section id="source-sync-status" aria-label="Source sync status" class="space-y-3">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h2 class="font-display text-xl text-ink">Source connections</h2>
+    <p class="text-xs text-taupe">30-minute schedule · badges show actual source freshness</p>
+  </div>
+  <div class="grid gap-4 md:grid-cols-3">
+    <% SourceSyncStatus.all.each do |source| %>
+      <article class="card card-pad" data-source="<%= source[:key] %>">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="font-display text-lg text-ink"><%= source[:label] %></h3>
+          <span class="<%= %w[Live Files\ current].include?(source[:badge]) ? 'pill-fern' : source[:badge] == 'Error' ? 'pill-rose' : 'pill-taupe' %>"><%= source[:badge] %></span>
+        </div>
+        <p class="mt-3 text-sm text-mocha"><%= source[:detail] %></p>
+        <p class="mt-1 text-xs text-taupe"><%= source[:schedule] %></p>
+        <p class="mt-2 text-xs text-mocha">Last source read: <% if source[:last_at] %><time datetime="<%= source[:last_at].iso8601 %>"><%= l(source[:last_at].in_time_zone, format: :short) %></time><% else %>None yet<% end %></p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <% permitted = Current.user.can?('sync.write') && (source[:key] != 'ctrax' || Current.user.can?('inventory.write')) %>
+          <% if permitted && source[:ready] %>
+            <%= button_to(source[:mode] == 'portal' ? 'Import portal export' : 'Sync now', source_sync_path(source[:key]), class: 'btn-primary btn-sm', form: { data: { turbo: false } }) %>
+          <% end %>
+          <% if source[:key] == 'swipesimple' && Current.user.can?('sync.write') %>
+            <%= link_to 'Import CSV', swipesimple_reports_path(anchor: 'import'), class: 'btn-ghost btn-sm' %>
+            <%= link_to 'Open exports', 'https://swipesimple.com/transactions', class: 'btn-ghost btn-sm', target: '_blank', rel: 'noopener noreferrer' %>
+          <% elsif source[:key] == 'authorize_net' && source[:mode] == 'portal' && Current.user.can?('sync.write') %>
+            <%= link_to 'Open sales portal', 'https://new.authorize.net/smb2/merchant/TransactionManagement/ManageTransactions', class: 'btn-ghost btn-sm', target: '_blank', rel: 'noopener noreferrer' %>
+          <% end %>
+        </div>
+      </article>
+    <% end %>
+  </div>
+</section>

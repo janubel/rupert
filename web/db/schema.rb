@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_021000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -401,6 +401,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_021000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "environment", "gateway_id", "source_batch_id"], name: "idx_anet_batch_source", unique: true
     t.index ["tenant_id"], name: "index_authorize_net_batches_on_tenant_id"
+  end
+
+  create_table "authorize_net_portal_exports", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "gateway_id", null: false
+    t.string "kind", null: false
+    t.string "fingerprint", null: false
+    t.string "sha256", null: false
+    t.datetime "exported_at", null: false
+    t.text "original_csv", null: false
+    t.text "records_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "fingerprint"], name: "idx_anet_portal_fingerprint", unique: true
+    t.index ["tenant_id"], name: "index_authorize_net_portal_exports_on_tenant_id"
   end
 
   create_table "authorize_net_transactions", force: :cascade do |t|
@@ -1475,6 +1490,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_021000) do
   add_foreign_key "api_access_tokens", "tenants", on_delete: :cascade
   add_foreign_key "api_access_tokens", "users", on_delete: :cascade
   add_foreign_key "authorize_net_batches", "tenants"
+  add_foreign_key "authorize_net_portal_exports", "tenants"
   add_foreign_key "authorize_net_transactions", "tenants"
   add_foreign_key "bulk_consumptions", "bulk_lots"
   add_foreign_key "bulk_consumptions", "bulk_movements"

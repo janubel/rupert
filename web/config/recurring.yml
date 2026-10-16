@@ -4,11 +4,11 @@ production:
   swipesimple_csv_intake:
     class: SwipesimpleInboxJob
     queue: default
-    schedule: every hour at minute 20
+    schedule: every 30 minutes
   ctrax_stock:
     class: CtraxStockSyncJob
     queue: default
-    schedule: every hour at minute 20
+    schedule: every 30 minutes
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
@@ -27,7 +27,7 @@ production:
   authorize_net_reporting:
     class: AuthorizeNetReportingJob
     queue: default
-    schedule: "20 6 * * * America/New_York"
+    schedule: every 30 minutes
   daily_store_close:
     class: OperationsBriefJob
     queue: default
