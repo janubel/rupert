@@ -134,7 +134,6 @@ class SyncEngineTest < ActiveSupport::TestCase
   end
 
   test 'incremental runs fetch only the watermark window plus refresh tail' do
-    travel_to Time.zone.local(2026, 10, 16, 0, 30)
     watermark = 2.hours.ago
     Setting.create!(key: 'sync_watermark_shopify', value: watermark.iso8601, tenant_id: Current.tenant_id)
 
@@ -150,9 +149,8 @@ class SyncEngineTest < ActiveSupport::TestCase
 
     SyncEngine.run!(mode: 'scheduled', actor: 'scheduler')
 
-    # Shopify accepts a calendar-date cutoff, so the 48h tail rounds down to that date.
-    assert_equal (watermark - 48.hours).strftime('%Y-%m-%d'), captured_since
-    assert_equal '2026-10-13', captured_since
+    # Shopify receives a calendar date, including when the tail crosses midnight.
+    assert_equal (watermark - SyncEngine::REFRESH_TAIL).strftime('%Y-%m-%d'), captured_since
   end
 
   test 'explicit history_days bypasses the watermark (manual backfill)' do

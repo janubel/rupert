@@ -27,4 +27,19 @@ class DirectorySyncJobTest < ActiveJob::TestCase
     tenants(:default_tenant).update!(status: 'suspended')
     DirectorySyncJob.perform_now(tenants(:default_tenant).id, 'ctrax', 'customers')
   end
+
+  test 'scheduler and queued reads refresh credentials cached before another process removed settings' do
+    @connection.update!(hourly_sync_enabled: false)
+    keys = %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET SHOPIFY_SHOP_DOMAIN]
+    keys.each { |key| EnvStore.set(key, 'fixture') }
+    assert Directories::Sync.available?('shopify')
+    # Another process cannot clear this worker's request-local memoization.
+    Setting.where(tenant_id: Current.tenant_id, key: keys).delete_all
+    assert_no_enqueued_jobs { DirectorySyncJob.perform_now }
+    keys.each { |key| EnvStore.set(key, 'fixture') }
+    assert Directories::Sync.available?('shopify')
+    Setting.where(tenant_id: Current.tenant_id, key: keys).delete_all
+    Directories::Sync.expects(:call).never
+    DirectorySyncJob.perform_now(Current.tenant_id, 'shopify', 'customers')
+  end
 end

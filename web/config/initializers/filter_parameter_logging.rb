@@ -31,3 +31,5 @@ Rails.application.config.filter_parameters += %i[timesheet timesheet_entry clock
 
 # Customer contact details, conversation notes and follow-up titles are private.
 Rails.application.config.filter_parameters += %i[customer interaction follow_up]
+# Influencer contacts, recipient addresses and campaign documents remain private.
+Rails.application.config.filter_parameters += [/\Acms_record\z/i, /\Ainteraction\z/i, :contact_email, :shipping_details, :private_notes, :tracking_number, :tracking_url]

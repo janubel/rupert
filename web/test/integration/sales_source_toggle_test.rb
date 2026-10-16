@@ -4,7 +4,7 @@ require 'test_helper'
 
 class SalesSourceToggleTest < ActionDispatch::IntegrationTest
   setup do
-    travel_to Time.zone.local(2026, 10, 15, 12)
+    travel_to Time.zone.local(2026, 10, 15, 12, 0, 0)
     @tenant = tenants(:default_tenant)
     @admin = User.create!(email: 'sales-admin@example.com', password: 'password123', role: 'admin', name: 'Admin',
       tenant_id: @tenant.id)
@@ -13,6 +13,7 @@ class SalesSourceToggleTest < ActionDispatch::IntegrationTest
   end
 
   teardown do
+    travel_back
     Current.tenant = nil
   end
 

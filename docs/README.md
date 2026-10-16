@@ -7,6 +7,8 @@ Start here to resume operator rollout: [Derrick's day-to-day readiness and picku
 
 Marketing operators: [Community thread and reply review](ops/community-marketing.md) explains topic search, manual intake, group-code evidence, reply approval and manual publication.
 
+Influencer operators: [Influencer CMS](ops/influencer-cms.md) covers prospects, collaborations, product gifts, temporary code records, referral URLs, private contacts and versioned documents.
+
 | Where | What |
 | --- | --- |
 | `index.html`, `getting-started.html`, `architecture.html`, `modules.html`, `operations.html`, `deployment.html` | The published docs site (GitHub Pages, styled by `assets/style.css`) |

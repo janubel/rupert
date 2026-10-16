@@ -5,6 +5,7 @@
     <%= button_to(@enabled ? 'Disable Marketing' : 'Enable Marketing', marketing_toggle_path, params: { enabled: @enabled ? '0' : '1' }, class: 'btn-ghost') %>
   <% end %>
   <% if @enabled %>
+    <%= link_to 'Influencer CMS', marketing_influencers_path, class: 'btn-primary' %>
     <% if Current.user.can?('marketing.write') %><nav class="flex flex-wrap gap-2" aria-label="Marketing setup"><%= link_to 'New campaign', new_marketing_campaign_path, class: 'btn-primary' %><%= link_to 'New group', new_marketing_community_path, class: 'btn-ghost' %><%= link_to 'Record group code', new_marketing_offer_path, class: 'btn-ghost' %><%= link_to 'Save thread', new_marketing_thread_path, class: 'btn-ghost' %></nav><% end %>
     <section class="card card-pad space-y-3"><h2 class="text-lg font-semibold">Campaigns</h2>
       <% @campaigns.first(200).each do |campaign| %><p><%= campaign.name %> · <%= campaign.topics %> <% if Current.user.can?('marketing.write') %><%= link_to 'Edit', edit_marketing_campaign_path(campaign), class: 'underline' %><% end %></p><% end %>
