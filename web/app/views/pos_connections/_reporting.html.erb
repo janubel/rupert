@@ -1,5 +1,5 @@
 <div data-controller="live-report" data-live-report-interval-value="30000">
-<%= turbo_frame_tag 'authorize-payment-report', src: pos_connection_path(@provider[:key], report_date: @report_date) do %>
+<%= turbo_frame_tag 'authorize-payment-report', src: (pos_connection_path(@provider[:key], report_date: @report_date) unless turbo_frame_request?) do %>
 <section class="card card-pad space-y-4">
   <h2 class="font-display text-xl">Payment reconciliation</h2>
   <p class="text-sm text-mocha">Payment observations do not create retail sales or change inventory. C-Trax remains the retail inventory reference. Refunds retain their original transaction link; voids retain their source status. Tips and customer surcharges are shown only when returned. Processing fees are unavailable. Currency stays unknown when the gateway enables multiple currencies.</p>

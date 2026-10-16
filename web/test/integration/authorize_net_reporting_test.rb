@@ -59,6 +59,13 @@ class AuthorizeNetReportingIntegrationTest < ActionDispatch::IntegrationTest
     assert_empty connection.reload.credential_values
   end
 
+  test 'payment report frame refresh keeps its contents without a recursive source URL' do
+    get @path, headers: { 'Turbo-Frame' => 'authorize-payment-report' }
+    assert_response :success
+    assert_select 'turbo-frame#authorize-payment-report[src]', count: 0
+    assert_select 'turbo-frame#authorize-payment-report h2', text: 'Payment reconciliation'
+  end
+
   test 'method changes clear old secrets and expose only chosen fields' do
     patch @path, params: { pos_connection: { reporting_auth_mode: 'oauth' } }
     assert_response :redirect
