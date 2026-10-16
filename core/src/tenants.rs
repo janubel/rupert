@@ -6,7 +6,7 @@ use parking_lot::Mutex;
 use rusqlite::Connection;
 use std::{path::PathBuf, sync::{Arc, OnceLock, atomic::{AtomicBool, Ordering}}, time::Duration};
 use tokio::sync::{Semaphore, broadcast, oneshot};
-use std::{collections::HashSet, sync::atomic::AtomicUsize};
+use std::{collections::HashSet, sync::atomic::{AtomicI64, AtomicUsize}};
 use crate::{Adjust, Item};
 
 /// Tunables, read once from the environment so one binary can be A/B tested.
@@ -29,6 +29,8 @@ pub struct TenantDb {
     flushing: AtomicBool,
     pub bus: broadcast::Sender<Arc<crate::feed::Ev>>,
     pub sse_clients: AtomicUsize,
+    /// Highest event id published on this tenant; lets a new stream start "now" without a DB read.
+    pub last_event: AtomicI64,
 }
 
 fn tune(c: &Connection) -> rusqlite::Result<()> {
@@ -44,7 +46,8 @@ impl TenantDb {
         let w = Connection::open(&path)?;
         tune(&w)?;
         migrate::apply(&w, migrate::TENANT)?;
-        Ok(Self { writer: Mutex::new(w), readers: Mutex::new(Vec::new()), path, queue: Mutex::new(Vec::new()), flushing: AtomicBool::new(false), bus, sse_clients: AtomicUsize::new(0) })
+        let last = w.query_row("SELECT coalesce(max(id),0) FROM events", [], |r| r.get::<_, i64>(0))?;
+        Ok(Self { writer: Mutex::new(w), readers: Mutex::new(Vec::new()), path, queue: Mutex::new(Vec::new()), flushing: AtomicBool::new(false), bus, sse_clients: AtomicUsize::new(0), last_event: AtomicI64::new(last) })
     }
     /// Borrow a read connection (WAL allows readers concurrent with the writer).
     pub fn with_reader<T>(&self, f: impl FnOnce(&Connection) -> rusqlite::Result<T>) -> rusqlite::Result<T> {
@@ -61,6 +64,11 @@ impl TenantDb {
         let mut pool = self.readers.lock();
         if pool.len() < cfg().readers { pool.push(c); }
         r
+    }
+
+    /// Broadcast committed events and advance the "now" cursor.
+    pub fn publish(&self, evs: Vec<crate::feed::Ev>) {
+        for e in evs { let id = e.id; let _ = self.bus.send(Arc::new(e)); self.last_event.fetch_max(id, Ordering::AcqRel); }
     }
 
     /// Group commit: callers enqueue; one leader drains everything pending into a
@@ -106,7 +114,7 @@ impl TenantDb {
                     Ok(out)
                 })()
             };
-            if results.is_ok() { for e in evs { let _ = self.bus.send(Arc::new(e)); } }
+            if results.is_ok() { self.publish(evs); }
             match results {
                 Ok(rs) => for (p, r) in batch.into_iter().zip(rs) { let _ = p.tx.send(r); },
                 Err(_) => for p in batch { let _ = p.tx.send(Err(500)); },

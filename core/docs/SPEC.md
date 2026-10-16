@@ -231,21 +231,57 @@ loopback, shared laptop):
 | milestone 3, run 1 | 42 MB | 88.7k / 2.70 ms | 50.8k / 3.32 ms |
 | milestone 3, run 2 | 43 MB | 87.0k / 2.64 ms | 33.2k / 3.96 ms |
 
-Reads are about 12% lower and writes 35-55% lower than milestone 2. The write cost
-is expected (each adjust now also inserts an event row and serialises JSON); the
-spread between the two runs shows how noisy this machine is, so treat it as a
-range. The read drop is not explained and was not investigated; it may be noise
-from the desktop session.
+(Superseded by the A/B below: the milestone-2 read figure of ~100k came from a quieter
+machine. Re-run back to back today, both builds read at 85-89k.)
 
-**SSE memory (open problem).** 1000 simultaneous streams across 50 tenants raised
-server RSS from 6 MB to about 95-127 MB (~90-120 KB per stream). Isolation: 1000
-plain keep-alive connections after one request cost ~27 KB each, so about 60 KB
-per stream is in the SSE task/channel path, plus ~20 MB from per-tenant reader
-connections (`RUPERT_READERS=8` vs 1). Arena tuning did not help; fewer tokio
-workers helped a little. Fan-out was correct (20 of 20 listeners of one tenant
-received an adjust). Next experiments: smaller mpsc buffers, a shared per-tenant
-fan-out task instead of one task per client, hyper buffer limits via a hand-built
-accept loop. Until then keep `RUPERT_SSE_MAX` conservative.
+**SSE memory (resolved, see follow-up below).** The first cut used ~90-120 KB per stream.
+
+### Follow-up: SSE memory and the milestone 2 vs 3 A/B (2026-10-16)
+
+Method: 1000 simultaneous SSE streams (20 per tenant over 50 tenants, the per-tenant
+cap is 50), RSS read from `/proc` at 2 s and 16 s, server started fresh each run;
+read/write numbers as before (medians of 5 x 6 s, 32 connections).
+
+What was measured, in order:
+
+| Experiment | RSS for 1000 streams |
+| --- | --- |
+| before (task per stream, DB read per stream start, unbounded blocking pool) | 99-127 MB |
+| bare SSE response, no task/DB/auth (floor: hyper + axum Sse) | 35 MB (~29 KB per stream) |
+| 1000 plain keep-alive connections after one request | 33 MB (~27 KB each) |
+| per-tenant footprint (same 1000 streams on 20 vs 50 vs 100 tenants) | ~1 MB per active tenant while each stream opened reader connections |
+| **after** (below) | **56-64 MB, median 58 MB** over 5 runs |
+
+Findings and changes:
+- The future per stream is only 560 bytes, so the task was not the cost.
+- The real costs were reader SQLite connections: every stream start did a DB read
+  (cursor lookup, then an initial replay) and so opened up to 8 reader connections
+  per tenant. Fix: each tenant keeps an atomic `last_event` cursor (advanced on
+  publish), and a client that is already current skips the initial replay. Both
+  replay paths stay covered by `tests/sync_smoke.py` (live delivery and
+  `Last-Event-ID` replay).
+- The blocking pool defaulted to 512 threads and a burst of 1000 stream starts used
+  471; it is now capped (`RUPERT_BLOCKING_THREADS`, default 64; 75 threads peak).
+  On its own this saved only ~5 MB, so it was a minor factor.
+- A shared per-tenant fan-out task was not needed: after the fixes a stream is
+  ~29 KB of HTTP/SSE floor plus ~20 KB of our state. Fan-out still delivered to
+  20 of 20 listeners of a tenant in every run.
+- Remaining per-tenant cost (~0.3-0.5 MB per active tenant: writer connection, shm,
+  broadcast buffer) is bounded by `RUPERT_MAX_OPEN` (default 64).
+
+A/B of the milestone 2 commit against current, built and run back to back on the
+same machine (2 rounds each, medians of 5 runs per round):
+
+| Build | Read rps / p99 | Write rps / p99 | RSS after 500 tenants |
+| --- | --- | --- | --- |
+| milestone 2 (e850cd2) | 85.0k, 87.7k / 2.7 ms | 113.5k, 113.4k / 1.0 ms | 40-43 MB |
+| milestone 3 + memory fixes | 86.4k, 88.7k / 2.6-2.7 ms | 74.4k, 75.1k / 1.2 ms | 42-43 MB |
+
+Reads are unchanged. Writes are ~35% lower: each adjust now also inserts an `events`
+row and serialises its JSON inside the same transaction, which is the price of the
+replayable realtime feed. Two things could buy it back if writes become the
+bottleneck (neither tried): batch the event rows in one multi-row insert per group
+commit, or make the outbox optional per tenant.
 
 Not done: Shopify per-location levels and orders, Square orders, scheduled
 (automatic) syncs, webhooks, mirror search, SKU linking between Shopify and Square,

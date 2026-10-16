@@ -106,8 +106,14 @@ async fn seed(State(app): State<App>, Query(q): Query<SeedQ>) -> Response {
     }).await.unwrap()
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
+    // Bound the blocking pool: its default (512 threads) lets a burst of requests pin
+    // hundreds of thread stacks and allocator arenas that are never returned.
+    let blocking = std::env::var("RUPERT_BLOCKING_THREADS").ok().and_then(|v| v.parse().ok()).unwrap_or(64);
+    tokio::runtime::Builder::new_multi_thread().enable_all().max_blocking_threads(blocking).build().expect("runtime").block_on(run());
+}
+
+async fn run() {
     let dir = PathBuf::from(std::env::var("RUPERT_DATA").unwrap_or_else(|_| "./data".into()));
     let max_open: u64 = std::env::var("RUPERT_MAX_OPEN").ok().and_then(|v| v.parse().ok()).unwrap_or(64);
     let app: App = Arc::new(Registry::new(dir, max_open).expect("open central db"));

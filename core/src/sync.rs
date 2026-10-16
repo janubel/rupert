@@ -114,7 +114,7 @@ pub async fn runs(State(reg): State<Arc<Registry>>, p: Principal) -> R {
     ok(json!({ "data": rows }))
 }
 
-fn publish(db: &TenantDb, evs: Vec<Ev>) { for e in evs { let _ = db.bus.send(Arc::new(e)); } }
+fn publish(db: &TenantDb, evs: Vec<Ev>) { db.publish(evs); }
 
 fn run(reg: &Registry, tenant: &str, source: &str, run_id: i64) -> Result<Value, String> {
     let db = reg.db(tenant).map_err(|e| e.to_string())?;

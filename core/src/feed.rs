@@ -36,10 +36,6 @@ fn since(db: &TenantDb, after: i64, limit: i64) -> rusqlite::Result<Vec<Ev>> {
     })
 }
 
-fn max_id(db: &TenantDb) -> i64 {
-    db.with_reader(|c| c.query_row("SELECT coalesce(max(id),0) FROM events", [], |r| r.get(0))).unwrap_or(0)
-}
-
 #[derive(Deserialize)]
 pub struct SinceQ { since: Option<i64>, limit: Option<i64> }
 
@@ -82,11 +78,13 @@ pub async fn stream(State(reg): State<Arc<Registry>>, p: Principal, headers: Hea
     let guard = ClientGuard(db.clone(), reg.clone());
     let mut rx = db.bus.subscribe(); // subscribe before replay so nothing falls in the gap
     let hdr = headers.get("last-event-id").and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<i64>().ok());
-    let mut last = match hdr.or(q.since) { Some(s) => s.max(0), None => { let d = db.clone(); tokio::task::spawn_blocking(move || max_id(&d)).await.unwrap_or(0) } };
+    let mut last = match hdr.or(q.since) { Some(s) => s.max(0), None => db.last_event.load(Ordering::Acquire) };
     let (tx, out) = mpsc::channel(64);
     tokio::spawn(async move {
         let _g = guard;
-        if !replay(&db, &mut last, &tx).await { return; }
+        // Nothing to replay for a client that is already current: skip the DB read (and the
+        // reader connection it would open).
+        if db.last_event.load(Ordering::Acquire) > last && !replay(&db, &mut last, &tx).await { return; }
         let deadline = tokio::time::Instant::now() + Duration::from_secs(MAX_STREAM_SECS);
         loop {
             tokio::select! {
