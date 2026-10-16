@@ -191,6 +191,8 @@ Rails.application.routes.draw do
   namespace :people do
     resources :employees, only: %i[index show new create edit update destroy] do
       post :sync_directory, on: :collection
+      get :consolidation, on: :collection
+      post :consolidate, on: :collection
       member { post :transition }
     end
     resources :departments, only: %i[index new create edit update]
