@@ -21,14 +21,14 @@ class CatalogSyncHistoryTest < ActiveSupport::TestCase
   test 'per-source watermark survives a combined run that failed after that source imported' do
     historical_run('all', status: 'failed')
     time = 10.minutes.ago.change(usec: 0)
-    Setting.create!(key: 'sync_watermark_shopify', value: time.iso8601)
+    Setting.create!(key: 'sync_watermark_shopify', value: time.iso8601, tenant_id: Current.tenant_id)
     assert_equal time, CatalogSyncHistory.legacy_success('shopify')
     assert_nil CatalogSyncHistory.legacy_success('square')
   end
 
   test 'malformed and future watermarks cannot invent fresh evidence or break source cards' do
     %w[not-a-time tomorrow 2026-02-30T00:00:00Z].each do |value|
-      setting = Setting.find_or_initialize_by(key: 'sync_watermark_shopify')
+      setting = Setting.find_or_initialize_by(key: 'sync_watermark_shopify', tenant_id: Current.tenant_id)
       setting.update!(value: value)
       assert_nil CatalogSyncHistory.watermark('shopify')
       assert_nil CatalogSyncHistory.legacy_success('shopify')
@@ -41,7 +41,7 @@ class CatalogSyncHistoryTest < ActiveSupport::TestCase
 
   test 'successful legacy records and watermarks stay tenant scoped' do
     historical_run('all')
-    Setting.create!(key: 'sync_watermark_shopify', value: 1.minute.ago.iso8601)
+    Setting.create!(key: 'sync_watermark_shopify', value: 1.minute.ago.iso8601, tenant_id: Current.tenant_id)
     Current.tenant = Tenant.create!(name: 'Other history', subdomain: 'other-history', status: 'active')
     assert_nil CatalogSyncHistory.legacy_success('shopify')
     assert_nil CatalogSyncHistory.watermark('shopify')

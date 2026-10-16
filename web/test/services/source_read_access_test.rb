@@ -23,11 +23,11 @@ class SourceReadAccessTest < ActiveSupport::TestCase
   test 'website and API reporting modes name their own missing credentials' do
     connection = PosConnection.new(provider: 'iris_reporting', reporting_auth_mode: 'web', vendor_approved: true, account_reference: '123456')
     access = SourceReadAccess.for('bank', connection: connection)
-    assert_equal ['Web username', 'Web password'], access[:missing_fields]
+    assert_equal ['Website username', 'Website password'], access[:missing_fields]
     connection.reporting_auth_mode = 'api_key'
-    assert_equal ['Api url', 'Api token'], SourceReadAccess.for('bank', connection: connection)[:missing_fields]
+    assert_equal ['API URL', 'API token'], SourceReadAccess.for('bank', connection: connection)[:missing_fields]
     connection = PosConnection.new(provider: 'authorize_net_reporting', reporting_auth_mode: 'oauth', vendor_approved: true, account_reference: '123456')
-    assert_equal ['Client id', 'Client secret', 'Refresh token'], SourceReadAccess.for('authorize_net', connection: connection)[:missing_fields]
+    assert_equal ['Client ID', 'Client secret', 'Refresh token'], SourceReadAccess.for('authorize_net', connection: connection)[:missing_fields]
   end
 
   test 'saved website login without read authorization is not mistaken for rejected credentials' do

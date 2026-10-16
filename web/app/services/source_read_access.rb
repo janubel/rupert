@@ -10,6 +10,12 @@ class SourceReadAccess
     'bank' => 'Review NAB / IRIS setup for the selected website or API method and intended merchant accounts.'
   }.freeze
   ACCOUNT_LABELS = { 'swipesimple' => 'Company ID', 'authorize_net' => 'Gateway ID', 'bank' => 'Merchant IDs' }.freeze
+  CREDENTIAL_LABELS = {
+    'api_url' => 'API URL', 'api_token' => 'API token', 'api_username' => 'API username', 'api_password' => 'API password',
+    'api_login_id' => 'API Login ID', 'transaction_key' => 'Transaction Key',
+    'client_id' => 'Client ID', 'client_secret' => 'Client secret', 'refresh_token' => 'Refresh token',
+    'web_email' => 'Website email', 'web_username' => 'Website username', 'web_password' => 'Website password'
+  }.freeze
 
   def self.for(source, connection: nil)
     new(source, connection).call
@@ -59,7 +65,7 @@ class SourceReadAccess
 
     connection = @connection || PosConnection.new(provider: provider)
     values = connection.credential_values
-    absent = connection.credential_keys.filter_map { |key| key.humanize if values[key].blank? }
+    absent = connection.credential_keys.filter_map { |key| CREDENTIAL_LABELS.fetch(key) if values[key].blank? }
     account_label = ACCOUNT_LABELS[@source]
     absent << account_label if account_label && connection.account_reference.blank?
     absent << 'Read authorization confirmation' unless connection.vendor_approved

@@ -140,7 +140,7 @@ class SourceHealthTest < ActiveSupport::TestCase
   test 'missing reporting access is distinct from a deliberately paused configured connection' do
     state = health(source: 'authorize_net', badge: 'Portal snapshot')
     assert_equal 'Missing access', state[:state]
-    assert_includes state.dig(:access, :missing_fields), 'Transaction key'
+    assert_includes state.dig(:access, :missing_fields), 'Transaction Key'
     assert_includes state.dig(:access, :missing_fields), 'Gateway ID'
     assert_nil state[:category]
     assert_nil state[:last_attempt_at]
