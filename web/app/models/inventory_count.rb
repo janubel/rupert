@@ -54,6 +54,8 @@ class InventoryCount < ApplicationRecord
   # Freeze one local mirror pool and its identity when submitted. Unknown or
   # ambiguous pools keep a reason and no numerical variance.
   def snapshot_previous!
+    return self unless draft?
+
     transaction do
       InventoryCountComparison.capture_all!(self)
     end

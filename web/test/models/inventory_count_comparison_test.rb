@@ -6,12 +6,15 @@ class InventoryCountComparisonTest < ActiveSupport::TestCase
   setup do
     @tenant = tenants(:default_tenant)
     Current.tenant = @tenant
-    @product = ShopifyProduct.create!(id: 'count-comparison-product', title: 'Count product')
-    @variant = ShopifyVariant.create!(productId: @product.id, sku: 'EXACT-1', title: 'First')
+    EnvStore.set('SHOPIFY_SHOP_DOMAIN', 'count-test.myshopify.com')
+    @epoch = Time.current.change(usec: 0)
+    @product = ShopifyProduct.create!(id: 'count-comparison-product', title: 'Count product', status: 'ACTIVE', catalog_present: true, catalog_read_at: @epoch)
+    @variant = ShopifyVariant.create!(productId: @product.id, sku: 'EXACT-1', title: 'First', inventoryItemId: 'native-item', tracked: true, catalog_present: true, catalog_read_at: @epoch)
     @location = Location.create!(source: 'shopify', externalId: 'exact-location', name: 'Chosen')
     @other_location = Location.create!(source: 'shopify', externalId: 'other-location', name: 'Other')
     @level = InventoryLevel.create!(source: 'shopify', locationId: @location.id, shopifyVariantId: @variant.id, quantity: 10, sourceQuantity: 10)
     InventoryLevel.create!(source: 'shopify', locationId: @other_location.id, shopifyVariantId: @variant.id, quantity: 90, sourceQuantity: 90)
+    @snapshot = ShopifyStockSnapshot.create!(location: @location, shop_domain: ShopifyClient.shop_domain, captured_at: @epoch, records_json: [{ 'id' => @variant.id, 'inventory_item_id' => 'native-item', 'on_hand' => 10, 'available' => 2, 'committed' => 8 }])
     @count = InventoryCount.create!(countedAt: Time.current, locationId: @location.id)
     @row = @count.items.create!(sku: 'EXACT-1', quantity: 7)
   end
@@ -23,8 +26,9 @@ class InventoryCountComparisonTest < ActiveSupport::TestCase
     assert_equal 10, @row.reload.previousQuantity
     assert_equal(-3, @row.delta)
     assert_equal @variant.id, @row.comparison['source_item_id']
-    assert_equal @level.id, @row.comparison['inventory_level_id']
-    assert_equal 'available_or_legacy_aggregate', @row.comparison['quantity_basis']
+    assert_equal @snapshot.id, @row.comparison['stock_snapshot_id']
+    assert_nil @row.comparison['inventory_level_id']
+    assert_equal 'native_on_hand', @row.comparison['quantity_basis']
     @location.update!(name: 'Renamed')
     @level.update!(quantity: 200, sourceQuantity: 200)
     SkuLink.create!(sku: 'EXACT-1', shopifyVariantId: nil)
@@ -38,18 +42,18 @@ class InventoryCountComparisonTest < ActiveSupport::TestCase
     assert_nil @row.reload.previousQuantity
     assert_nil @row.delta
     @count.update!(locationId: @location.id)
-    @level.destroy!
+    @snapshot.destroy!
     @count.snapshot_previous!
     assert_nil @row.reload.previousQuantity
-    assert_match(/No unambiguous stored stock row/, @row.comparison_label)
+    assert_match(/No native Shopify stock snapshot/, @row.comparison_label)
   end
 
-  test 'real zero and oversold available quantities remain distinct from missing stock' do
-    @level.update!(quantity: 0, sourceQuantity: 0)
+  test 'real zero and negative native on hand quantities remain distinct from missing stock' do
+    @snapshot.update!(records_json: @snapshot.records.map { |r| r.merge('on_hand' => 0) })
     @count.snapshot_previous!
     assert_equal 0, @row.reload.previousQuantity
     assert_equal 7, @row.delta
-    @level.update!(sourceQuantity: -4)
+    @snapshot.update!(records_json: @snapshot.records.map { |r| r.merge('on_hand' => -4) })
     @count.snapshot_previous!
     assert_equal(-4, @row.reload.previousQuantity)
     assert_equal 11, @row.delta
@@ -96,13 +100,13 @@ class InventoryCountComparisonTest < ActiveSupport::TestCase
     assert_match(/identity changed/, @row.comparison_label)
   end
 
-  test 'malformed mixed-platform stock rows cannot be accepted' do
+  test 'legacy mixed-platform rows do not supply native on hand quantities' do
     item = SquareItem.create!(id: 'count-comparison-square', name: 'Square product')
     variation = SquareVariation.create!(itemId: item.id, name: 'First', sku: 'EXACT-1')
-    @level.update!(squareVariationId: variation.id)
+    @level.update!(squareVariationId: variation.id, quantity: 999)
     @count.snapshot_previous!
-    assert_nil @row.reload.previousQuantity
-    assert_nil @row.delta
+    assert_equal 10, @row.reload.previousQuantity
+    assert_equal(-3, @row.delta)
   end
 
   test 'a link into another tenant cannot provide an item or a comparison' do

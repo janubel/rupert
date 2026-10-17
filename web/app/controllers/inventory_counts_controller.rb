@@ -26,7 +26,7 @@ class InventoryCountsController < AuthenticatedController
   end
 
   def create
-    @count = InventoryCount.new(count_params.merge(createdBy: Current.user.email))
+    @count = InventoryCount.new(count_params.merge(createdBy: Current.user.email, tenant_id: Current.tenant_id))
     build_items(@count)
     if @count.save
       destination = params[:start_scanning] == '1' ? scan_inventory_count_path(@count) : inventory_count_path(@count)
@@ -163,14 +163,29 @@ class InventoryCountsController < AuthenticatedController
       sku = row[:sku].to_s.strip
       next if sku.blank? && row[:quantity].to_s.blank?
 
-      count.items.build(sku: sku, quantity: row[:quantity])
+      item = count.items.build(sku: sku, quantity: row[:quantity])
+      restore_shopify_identity(item, row[:source_identity]) if row[:source_identity].present?
     end
-    return unless count.location&.source == 'ctrax'
-
-    comparison = Ctrax::CountComparison.new(count)
+    comparison = case count.location&.source
+    when 'ctrax' then Ctrax::CountComparison.new(count)
+    when 'shopify' then ShopifyCountComparison.new(count, count.items.map(&:sku))
+    end
+    return unless comparison
     count.items.each do |item|
-      item.sku = comparison.canonical_key(item.sku)
+      item.sku = comparison.canonical_key(item.sku) if comparison.respond_to?(:canonical_key)
       item.assign_attributes(comparison.attributes_for(item))
     end
+  end
+
+  def restore_shopify_identity(item, token)
+    identity = Rails.application.message_verifier('shopify_count_identity').verified(token) if token.is_a?(String)
+    raise ActionController::BadRequest, 'The prepared count identity is invalid. Reload the worksheet.' unless identity.is_a?(Hash) && identity['tenant_id'] == @count.tenant_id
+
+    # Editing a SKU or selecting a different source location is an explicit new
+    # row choice. Unchanged rows retain the original native identity on save.
+    return unless identity['sku'] == item.sku && identity['location_id'] == @count.locationId
+
+    item.shopifyVariantId = identity['source_item_id']
+    item.comparison_snapshot = identity.except('tenant_id', 'sku')
   end
 end

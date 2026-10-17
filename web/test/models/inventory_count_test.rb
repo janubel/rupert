@@ -6,6 +6,7 @@ class InventoryCountTest < ActiveSupport::TestCase
   setup do
     Current.tenant = tenants(:default_tenant)
     @tenant = tenants(:default_tenant)
+    EnvStore.set('SHOPIFY_SHOP_DOMAIN', 'count-test.myshopify.com')
     @product = ShopifyProduct.create!(id: 'prod-1', title: 'Widget', tenant_id: @tenant.id)
     @shopify_variant = ShopifyVariant.create!(title: 'Widget - Small', sku: 'WIDGET-S',
       productId: @product.id, tenant_id: @tenant.id)
@@ -18,6 +19,12 @@ class InventoryCountTest < ActiveSupport::TestCase
       tenant_id: @tenant.id)
     InventoryLevel.create!(source: 'shopify', locationId: @location.id,
       shopifyVariantId: @shopify_variant.id, quantity: 10, tenant_id: @tenant.id)
+
+    at = Time.current.change(usec: 0)
+    @product.update!(status: 'ACTIVE', catalog_present: true, catalog_read_at: at)
+    @shopify_variant.update!(tracked: true, catalog_present: true, catalog_read_at: at, inventoryItemId: 'count-native-item')
+    ShopifyStockSnapshot.create!(location: @location, shop_domain: ShopifyClient.shop_domain, captured_at: at,
+      records_json: [{ 'id' => @shopify_variant.id, 'inventory_item_id' => 'count-native-item', 'on_hand' => 10 }])
 
     @count = InventoryCount.create!(countedAt: Time.current, createdBy: 'tester', locationId: @location.id,
       tenant_id: @tenant.id)

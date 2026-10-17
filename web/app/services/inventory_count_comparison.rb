@@ -22,16 +22,18 @@ class InventoryCountComparison
     @count = count
     @location = Location.find_by(id: count.locationId, tenant_id: count.tenant_id)
     if @location&.source == 'ctrax'
-      @ctrax = Ctrax::CountComparison.new(count)
+      @native = Ctrax::CountComparison.new(count)
       return
     end
-    return unless @location && %w[shopify square].include?(@location.source)
+    if @location&.source == 'shopify'
+      @native = ShopifyCountComparison.new(count, skus)
+      return
+    end
+    return unless @location&.source == 'square'
 
-    @shopify = @location.source == 'shopify'
-    @key = @shopify ? :shopifyVariantId : :squareVariationId
-    @opposite = @shopify ? :squareVariationId : :shopifyVariantId
-    model = @shopify ? ShopifyVariant : SquareVariation
-    catalog = model.where(tenant_id: count.tenant_id)
+    @key = :squareVariationId
+    @opposite = :shopifyVariantId
+    catalog = SquareVariation.where(tenant_id: count.tenant_id)
     levels = InventoryLevel.where(tenant_id: count.tenant_id, source: @location.source, locationId: @location.id)
     skus ||= catalog.where(id: levels.select(@key)).where.not(sku: [nil, '']).distinct.pluck(:sku)
     skus = skus.uniq
@@ -42,13 +44,13 @@ class InventoryCountComparison
     end
     @shared_ids = @ids_by_sku.values.select(&:one?).map(&:first).tally.select { |_, n| n > 1 }.keys
     ids = @ids_by_sku.values.flatten.uniq
-    @source_items = catalog.includes(@shopify ? :product : :item).where(id: ids).index_by(&:id)
+    @source_items = catalog.includes(:item).where(id: ids).index_by(&:id)
     @levels_by_item = levels.where(@key => ids).to_a.group_by { |level| level[@key] }
     @duplicates = count.new_record? ? [] : count.items.group(:sku).count.select { |_, n| n > 1 }.keys
   end
 
   def attributes_for(item)
-    return @ctrax.attributes_for(item) if @ctrax
+    return @native.attributes_for(item) if @native
 
     metadata = {
       'status' => 'unavailable', 'captured_at' => Time.current.iso8601(6),
@@ -79,17 +81,15 @@ class InventoryCountComparison
     end
 
     level = levels.first
-    # Existing Shopify mirrors can contain the legacy primary-location
-    # aggregate fallback; row identity does not prove native location provenance.
-    quantity = @shopify && !level.sourceQuantity.nil? ? level.sourceQuantity : level.quantity
+    quantity = level.quantity
     metadata.merge!('status' => 'matched', 'source_item_id' => source_item.id,
       'inventory_level_id' => level.id, 'mirrored_at' => level.updatedAt&.iso8601(6),
-      'quantity_basis' => @shopify ? 'available_or_legacy_aggregate' : 'in_stock')
+      'quantity_basis' => 'in_stock')
     { @key => source_item.id, previousQuantity: quantity, comparison_snapshot: metadata }
   end
 
   def prepared_items
-    return @ctrax.prepared_items if @ctrax
+    return @native.prepared_items if @native
 
     return [] unless @ids_by_sku
 
@@ -99,7 +99,7 @@ class InventoryCountComparison
       next unless attributes[:comparison_snapshot]['status'] == 'matched'
 
       source_item = @source_items[attributes[@key]]
-      @shopify ? item.shopify_variant = source_item : item.square_variation = source_item
+      item.square_variation = source_item
       # Physical counts cannot be negative even when available stock is oversold.
       item.assign_attributes(attributes.merge(quantity: [attributes[:previousQuantity], 0].max))
       item

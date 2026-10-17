@@ -112,8 +112,8 @@
       "area": "Stock",
       "name": "Location inventory",
       "status": "Available",
-      "scope": "Stored per-location mirrors, platform totals, movements and PDF snapshots. Legacy Shopify clamping/aggregate fallback and fetch limits require source verification; complete native pool provenance remains pending.",
-      "evidence": "web/app/controllers/inventory_controller.rb",
+      "scope": "Native Shopify on-hand/available/committed snapshots and complete catalog presence reads; read-only shared Shopify/C-Trax stock comparison with freshness, identity and unknown-state gates. Legacy mirrors remain for historical screens. Physical stock accuracy and source correction still require operator review.",
+      "evidence": "docs/ops/shared-stock-comparison.md",
       "phase": "0"
     },
     {
@@ -130,8 +130,8 @@
       "area": "Stock",
       "name": "Count approval workflow",
       "status": "Available",
-      "scope": "Local prepare/submit/approve/reject/reopen audit flow. New comparisons snapshot one stored platform/location/item row with identity and timestamp; missing or ambiguous pools have no delta. Historical sums remain labeled unverified. Native source/location provenance, mirror completeness and source application remain pending.",
-      "evidence": "web/app/models/inventory_count.rb",
+      "scope": "Local prepare/submit/approve/reject/reopen audit flow. New Shopify comparisons use the exact native on-hand location snapshot with shop/catalog epoch and freshness checks; C-Trax retains native store/variant snapshots. Missing or ambiguous evidence has no delta; prior submitted bases stay frozen. Approval does not write source stock.",
+      "evidence": "web/app/services/inventory_count_comparison.rb",
       "phase": "0"
     },
     {
@@ -328,7 +328,7 @@
       "area": "Stock",
       "name": "Barcode scanning and labels",
       "status": "Partial",
-      "scope": "Exact SKU and stored-barcode scan-to-count, replay-safe draft entry and audit receipts. Barcode import, receiving, labels and camera/offline support remain planned.",
+      "scope": "Exact SKU and imported native barcode scan-to-count, replay-safe draft entry and audit receipts; C-Trax native-ID worksheets cover missing SKUs. Shopify missing-SKU worksheets, scan-to-receive, label printing and camera/offline support remain separate work.",
       "evidence": "web/app/services/inventory_count_scan.rb",
       "phase": "1"
     },
@@ -526,8 +526,8 @@
       "area": "Commerce",
       "name": "Customer tipping",
       "status": "Partial",
-      "scope": "No-tip, percentage and custom-amount quote prompts with decimal validation. No collected tips, terminal tipping, payment settlement or tip refunds are enabled.",
-      "evidence": "web/app/controllers/point_of_sale_controller.rb",
+      "scope": "Private paired customer display with explicit no-tip, percentage or custom confirmation, invalidated when the cart changes. Implemented cash and conditional hosted-card checkout include confirmed tips. PAX terminal tipping, tip reversal/refunds and actual merchant acceptance remain pending.",
+      "evidence": "docs/ctrax-retail.md",
       "phase": "1"
     },
     {
@@ -535,17 +535,17 @@
       "area": "Commerce",
       "name": "Daily register summaries",
       "status": "Partial",
-      "scope": "Event-dated tender/refund/net detail, payment coverage diagnostics and source-specific import freshness with CSV by source/location/currency. Shopify tenders remain inferred; C-Trax imports, terminal deposits, discounts, collected tips and fees remain incomplete.",
-      "evidence": "web/app/services/daily_register_summary.rb",
+      "scope": "Event-dated canonical register detail and CSV plus native C-Trax source sales/tax/discount/tip/tender controls and local review. Missing/open/cross-day cash evidence remains unknown. Source register closing, complete refund/fee coverage and payout-to-bank reconciliation remain separate.",
+      "evidence": "docs/ctrax-retail.md",
       "phase": "0"
     },
     {
       "id": "F57",
       "area": "Commerce",
       "name": "Processor and terminal integration",
-      "status": "Planned",
-      "scope": "Account/gateway preparation exists separately; payment capture and terminal execution remain planned. Confirm actual Valmar gateway, approved terminal and merchant access, then sandbox sale/tip/refund/settlement round trips.",
-      "evidence": "docs/ops/payment-integrations.md",
+      "status": "Partial",
+      "scope": "Conditional Authorize.net hosted-browser capture and read-only uncertain-outcome recovery, plus NMI sandbox-only tokenized checkout; NMI production charging is blocked. PAX/EMV/contactless commands, refund/void execution and vendor-connected/live acceptance remain incomplete. Correct store merchant scope must be confirmed.",
+      "evidence": "docs/ctrax-retail.md",
       "phase": "1"
     },
     {
@@ -553,7 +553,7 @@
       "area": "System",
       "name": "POS and payment account setup",
       "status": "Available",
-      "scope": "Tenant-scoped provider setup and encrypted credential/read checks for KORONA/Cova and operator-selected Authorize.net or NMI gateway paths. Valmar is the reported processor; this merchant account's actual gateway is unconfirmed. No payment capture, terminal execution or automatic business-data import.",
+      "scope": "Encrypted provider-specific account preparation and explicit credential/read checks, separate from per-store checkout activation. C-Trax and SwipeSimple source readers exist independently. Saved setup and checks do not prove payment/terminal/settlement readiness or this merchant account\u2019s gateway mapping.",
       "evidence": "web/app/controllers/pos_connections_controller.rb",
       "phase": "1"
     },
@@ -606,9 +606,9 @@
       "id": "F64",
       "area": "Finance",
       "name": "Long-term Valmar and Authorize.net integrations",
-      "status": "Planned",
-      "scope": "Owner direction recorded October 15, 2026: probably retain Valmar and Authorize.net as long-term Rupert integrations. Confirm account/gateway mapping and supported read access; reconcile SwipeSimple operational evidence with gateway payments and processor deposits without double counting. Hourly SwipeSimple intake stays disabled until a supported vendor feed is verified. C-Trax remains the retail inventory reference. This objective does not activate payments or change merchant settings.",
-      "evidence": "docs/ops/swipesimple-integration-research.md",
+      "status": "Partial",
+      "scope": "Long-term Valmar/Authorize.net objective with implemented separate Authorize.net reporting and portal-evidence paths, SwipeSimple website evidence and deposit/reconciliation workflows. Exact merchant/gateway mapping, supported vendor entitlement and complete payment-to-bank matching remain unverified. Legacy SwipeSimple CSV inbox stays disabled without an approved producer; working website reads are separate.",
+      "evidence": "docs/ops/money-reconciliation.md",
       "phase": "3"
     },
     {

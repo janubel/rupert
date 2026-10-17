@@ -37,7 +37,7 @@
     </p>
   <% end %>
 
-  <p class="text-sm text-mocha">Comparisons use the stored mirror at submission for one platform, location and item. Missing or ambiguous pools have no numerical delta. A mirror comparison does not verify current platform stock, native location provenance or sync completeness. Legacy Shopify rows may contain an aggregate assigned to the primary location.</p>
+  <p class="text-sm text-mocha">Comparisons freeze one source, location and item at submission. New Shopify comparisons use signed native on-hand snapshots less than one hour old with matching catalog identity; available stock and legacy aggregates are excluded. Missing or ambiguous pools have no numerical delta. Historical comparisons retain their original labeled basis. Stored observations do not guarantee current shelf stock or reserve stock against other sales.</p>
 
   <div class="card overflow-hidden">
     <div class="card-pad pb-3">

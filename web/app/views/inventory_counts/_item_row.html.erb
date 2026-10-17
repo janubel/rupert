@@ -4,5 +4,8 @@
   <% end %>
   <input type="text" name="items[][sku]" value="<%= item.sku %>" list="known-skus" placeholder="SKU" class="input flex-1 font-mono" autocomplete="off">
   <input type="number" name="items[][quantity]" value="<%= item.quantity_before_type_cast %>" min="0" step="1" placeholder="Qty" class="input w-24">
+  <% if item.shopify_source_identity_token %>
+    <%= hidden_field_tag "items[][source_identity]", item.shopify_source_identity_token %>
+  <% end %>
   <button type="button" data-remove-row class="text-xs font-medium text-taupe hover:text-rose">Remove</button>
 </div>

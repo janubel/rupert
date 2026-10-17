@@ -27,6 +27,14 @@ class InventoryCountItem < ApplicationRecord
     comparison_snapshot.is_a?(Hash) ? comparison_snapshot : {}
   end
 
+  def shopify_source_identity_token
+    return unless comparison['source'] == 'shopify' && comparison['source_item_id'].present?
+
+    identity = comparison.slice('source', 'source_item_id', 'location_id', 'source_location_id', 'shop_domain', 'inventory_item_id')
+      .merge('tenant_id' => tenant_id || Current.tenant_id, 'sku' => sku)
+    Rails.application.message_verifier('shopify_count_identity').generate(identity)
+  end
+
   def comparison_label
     return 'Legacy total · pool not verified' if comparison.empty? && !previousQuantity.nil?
     return comparison['reason'] || 'Comparison captured on submission' unless comparison['status'] == 'matched'

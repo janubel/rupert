@@ -31,7 +31,7 @@
       </div>
       <%= submit_tag "Load location sheet", class: "btn-ghost" %>
     <% end %>
-    <p class="rounded-xl bg-haze px-4 py-3 text-sm text-mocha">Only unambiguous rows in the selected location's stored mirror appear. Missing rows are not zero stock. Shopify mirrors may contain available stock or a legacy aggregate assigned to the primary location; Square quantities are mirrored in-stock units. Sync completeness and freshness must be checked separately.</p>
+    <p class="rounded-xl bg-haze px-4 py-3 text-sm text-mocha">Only unambiguous stored rows at the selected location appear. Shopify sheets use native on-hand stock from a current, tracked catalog read less than one hour old; available stock and legacy aggregates are excluded. Missing stock is not zero. C-Trax and Square retain their separate source bases. Replace pre-filled values with the physically counted totals.</p>
   <% end %>
 
   <%= form_tag inventory_counts_path, method: :post, class: "space-y-6", data: { controller: "count-sheet", action: "keydown->count-sheet#advanceOnEnter" } do %>
@@ -92,6 +92,9 @@
                     <input type="number" name="items[<%= index %>][quantity]" min="0" value="<%= item.quantity %>"
                       class="input w-24 text-right" autocomplete="off" data-count-input>
                     <input type="hidden" name="items[<%= index %>][sku]" value="<%= item.sku %>">
+                    <% if item.shopify_source_identity_token %>
+                      <%= hidden_field_tag "items[#{index}][source_identity]", item.shopify_source_identity_token %>
+                    <% end %>
                   </td>
                 </tr>
               <% end %>

@@ -1,6 +1,6 @@
 # Inventory workflow operations
 
-Reviewed 2026-10-16. Shopify and C-Trax mostly share physical stock, with Square disabled. Stock → Stock comparison is the current read-only operational view; see [comparison and catalog freshness](shared-stock-comparison.md). Local counts, holds and bulk workflows do not push platform stock or guarantee availability in another channel. Legacy Shopify/Square catalog links and reservation pools do not establish shared Shopify/C-Trax allocation.
+Reviewed 2026-10-17. Shopify and C-Trax mostly share physical stock, with Square disabled. Stock → Stock comparison is the current read-only operational view; see [comparison and catalog freshness](shared-stock-comparison.md). Local counts, holds and bulk workflows do not push platform stock or guarantee availability in another channel. Legacy Shopify/Square catalog links and reservation pools do not establish shared Shopify/C-Trax allocation.
 
 For an everyday explanation of the separate payment setup, see [Payments in plain English](https://techmore.github.io/rupert/payment-basics.html), including Valmar and Authorize.net contacts.
 
@@ -24,9 +24,11 @@ Open **Stock → Counts**, create or open a draft worksheet, and choose **Scan i
 
 Prepared worksheets require a platform location and include only unambiguous stored rows for that location. Choose the location and use **Load location sheet** before saving. Sheets start with mirrored quantities filled in; oversold stock starts at zero in the physical-count input. Missing or ambiguous rows are omitted, not treated as zero. Review the count before adding units, or explicitly set the physically counted total. Each intentional scan receives a new request token; retrying it returns the prior result without adding units twice. Scanner receipts retain the actor and result.
 
-Scans change the draft worksheet only. Submitted, approved and rejected worksheets cannot be scanned or edited; rejected sheets must first be reopened. Submission and approval are audit records and do not change mirrored platform quantities. Submission captures the matched platform, stored location, source item ID, stock row ID and mirror timestamp for each row. A missing location, missing stock row, duplicate SKU, changed scanned identity or malformed mixed-platform row leaves the comparison unavailable with a reason and no numerical delta. True zero remains distinguishable from missing stock. Raw negative Shopify quantities are retained in the comparison when present. Historical totals without comparison provenance remain visible as legacy values, with no trusted delta.
+Scans change the draft worksheet only. Submitted, approved and rejected worksheets cannot be scanned or edited; rejected sheets must first be reopened. Submission and approval are audit records and do not change mirrored platform quantities. Submission captures the matched platform, selected location, source item ID, observation identifier/time and quantity basis for each row. A missing location, missing stock row, duplicate SKU, changed scanned identity or malformed mixed-platform row leaves the comparison unavailable with a reason and no numerical delta. True zero remains distinguishable from missing stock. New Shopify comparisons use native signed on-hand quantities, not available stock; a negative observation remains negative in the comparison while its physical-count input starts at zero. Historical totals without comparison provenance remain visible as legacy values, with no trusted delta.
 
-These are **stored mirror comparisons**, not verified live platform counts. Shopify rows may contain available stock or a legacy aggregate assigned to the primary location; Square mirrors may also be incomplete. Labels preserve that limitation. Location names and quantities are frozen at submission even if the catalog, mapping or location later changes. Approval remains record-only.
+For example, a Shopify snapshot with 15 on hand, 9 available and 6 committed compares a physical count of 12 against 15, producing a difference of −3. Committed customer orders do not make six physical units disappear from this worksheet.
+
+These are **dated stored observations**, not verified live shelf counts. New Shopify worksheets use the selected native on-hand snapshot, bound to the configured shop, current catalog identity and read epoch; unknown, stale, untracked or non-whole-unit observations have no delta. Submitted historical worksheets retain their original available/legacy-aggregate basis and are not rewritten. C-Trax retains native store-stock comparisons; Square remains a legacy mirror path. Location names and quantities freeze at submission even if the catalog, mapping or location later changes. Approval remains record-only.
 
 Label printing, camera decoding, offline scanning and scan-to-receive remain planned.
 
@@ -60,13 +62,13 @@ The sale list filters imported order dates; its receipt CSV filters deduction-re
 
 ## Mirror limits and physical verification
 
-The queue evaluates stored Rupert records. Existing Shopify mirrors clamp negative source quantities to zero and can assign an aggregate quantity to the primary location when per-location data is unavailable. Catalog/location/level fetch limits can also omit source detail. A positive or zero mirror therefore cannot establish complete source coverage, detect every native oversold item or reconstruct a synthetic location allocation.
+Stock comparison and new Shopify count worksheets use separate native signed Shopify snapshots from complete validated catalog/location reads. Older InventoryLevel mirrors remain for legacy screens, holds and historical worksheets; those can contain clamped negatives or a primary-location aggregate fallback. Do not generalize those old limits to the current native snapshot, or relabel old comparisons as new on-hand evidence. Neither path is a physical shelf verification.
 
 Stale snapshots, SKU-based historical estimates and legacy count sums require source and physical verification. Exact recipe consumption uses the separate bulk lot ledger; it does not reconcile these platform mirrors. No local workflow guarantees stock against concurrent external sales.
 
 ## Payment boundary
 
-Valmar is the business-reported payment-services provider; the account's gateway, backend processor and acquiring bank require confirmation. Authorize.net is a possible gateway path, not a confirmed fact about this merchant account; other configured gateway choices require their own account confirmation. Rupert's credential/profile checks do not authorize, capture or refund payments or execute a terminal. Continue completing sales in the existing POS until the payment and operator cutover gates pass.
+Valmar is the business-reported payment-services provider; this store's actual gateway/backend and approved terminal scope require confirmation. Separate retail checkout now implements cash receipts/tax/tip handling, optional conditional Authorize.net hosted-card checkout and an NMI sandbox-only path. Paid-sale C-Trax stock deductions have their own enabled outbox and recovery gates. These are separate from count approvals, provider setup checks and the Shopify-only bulk-material ledger. Real merchant/terminal/stock-write acceptance, refunds and cutover remain incomplete; see [retail checkout](https://github.com/techmore/rupert/blob/main/docs/ctrax-retail.md) and [current daily-use gates](https://techmore.github.io/rupert/day-to-day-readiness.html).
 
 ## Deployment
 

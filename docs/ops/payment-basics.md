@@ -59,6 +59,6 @@ Record their answers, support contacts and review/renewal dates in Rupert's [pri
 
 ## What Rupert can claim today
 
-Rupert has provider preparation and selected gateway credential checks. It also has a separate legacy Authorize.net warehouse-checkout code path. Those facts do not demonstrate that Derrick's account is connected or that live sales, terminals, refunds and bank settlement have passed acceptance. Full payment readiness remains unverified. The current POS remains the payment fallback until the [cutover checks](https://techmore.github.io/rupert/pos-parity.html) pass.
+Implementation scope reviewed October 17, 2026: Rupert now includes cash checkout with tax checks, confirmed customer tips and receipts; optional per-store Authorize.net hosted-card checkout with uncertain-outcome recovery; and NMI sandbox-only card testing. NMI production charging is blocked. Provider preparation/read checks, reporting and the legacy warehouse checkout are separate paths. These implemented features do not demonstrate that Derrick's intended merchant account is connected or that real payments, stock effects, terminals, refunds and bank settlement have passed acceptance. Keep the existing accepted checkout as the fallback until the [cutover checks](https://techmore.github.io/rupert/pos-parity.html) pass.
 
-See [payment account setup](https://techmore.github.io/rupert/payment-integrations.html) for the implemented credential checks and their limits.
+See [payment account setup](https://techmore.github.io/rupert/payment-integrations.html) for the separate setup/check paths and [daily-use rollout](https://techmore.github.io/rupert/day-to-day-readiness.html) for what still needs acceptance. Public contact details above retain their stated verification date.

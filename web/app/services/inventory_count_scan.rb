@@ -106,6 +106,11 @@ class InventoryCountScan
       attributes = match.slice(:shopifyVariantId, :squareVariationId).merge(quantity: total)
       attributes[:sku] = match[:sku] if ctrax
       attributes.merge!(ctrax.attributes_for(item)) if ctrax
+      if count.location&.source == 'shopify'
+        attributes[:squareVariationId] = nil
+        item.assign_attributes(attributes)
+        attributes.merge!(ShopifyCountComparison.new(count, count.items.map(&:sku)).attributes_for(item))
+      end
       item.update!(attributes)
       result = match.merge(quantity: item.quantity, total_quantity: count.total_quantity, item_count: count.items.count)
       count.scan_receipts.create!(request_token: request_token, fingerprint: fingerprint, result: result,

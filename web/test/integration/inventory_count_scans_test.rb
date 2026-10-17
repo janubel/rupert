@@ -241,6 +241,37 @@ class InventoryCountScansTest < ActionDispatch::IntegrationTest
     assert_empty @count.items
   end
 
+  test 'selected Shopify scan binds native identity and snapshot on hand without changing source stock' do
+    EnvStore.set('SHOPIFY_SHOP_DOMAIN', 'scan-count.myshopify.com')
+    at = Time.current.change(usec: 0)
+    @product.update!(status: 'ACTIVE', catalog_present: true, catalog_read_at: at)
+    @variant.update!(tracked: true, catalog_present: true, catalog_read_at: at, inventoryItemId: 'scan-native-item')
+    @count.update!(locationId: @location.id)
+    snapshot = ShopifyStockSnapshot.create!(location: @location, shop_domain: ShopifyClient.shop_domain, captured_at: at,
+      records_json: [{ 'id' => @variant.id, 'inventory_item_id' => @variant.inventoryItemId, 'on_hand' => 13, 'available' => 10 }])
+    token = SecureRandom.uuid
+    record_scan(request_token: token, mode: 'set', quantity: '9')
+    assert_response :success
+    item = @count.items.first
+    assert_equal 13, item.previousQuantity
+    assert_equal @variant.id, item.comparison['source_item_id']
+    assert_equal 'native_on_hand', item.comparison['quantity_basis']
+    assert_equal snapshot.id, item.comparison['stock_snapshot_id']
+    original = response.parsed_body
+    record_scan(request_token: token, mode: 'set', quantity: '9')
+    assert_equal original, response.parsed_body
+    assert_equal 1, @count.scan_receipts.count
+    assert_equal 10, @level.reload.quantity
+    assert_equal 13, snapshot.reload.records.first['on_hand']
+    SkuLink.create!(sku: 'SCAN-ALIAS', shopifyVariantId: @variant.id)
+    record_scan(code: 'SCAN-ALIAS', mode: 'set', quantity: '2')
+    assert_response :success
+    alias_item = @count.items.find_by!(sku: 'SCAN-ALIAS')
+    assert_nil alias_item.previousQuantity
+    assert_nil alias_item.delta
+    assert_match(/same platform stock pool/, alias_item.comparison['reason'])
+  end
+
   private
 
   def record_scan(**overrides)
