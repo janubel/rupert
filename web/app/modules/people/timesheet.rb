@@ -66,6 +66,24 @@ module People
       "#{period_start.strftime('%b %d')} – #{period_end.strftime('%b %d, %Y')}"
     end
 
+    # Display figures: 1% commission on credited sales plus the fixed card
+    # bonus. Not posted to payroll.
+    def compensation
+      TimesheetCompensation.calculate(sales_cents: sales_cents, card_redemptions: card_redemptions)
+    end
+
+    def commission_cents
+      compensation[:commission_cents]
+    end
+
+    def card_bonus_cents
+      compensation[:card_bonus_cents]
+    end
+
+    def compensation_total_cents
+      compensation[:total_cents]
+    end
+
     def payroll_locked?
       People::Payslip.joins(:pay_run).where(employee_id: employee_id, pay_runs: { tenant_id: tenant_id })
         .where('pay_runs.period_start <= ? AND pay_runs.period_end >= ?', period_end, period_start).exists?

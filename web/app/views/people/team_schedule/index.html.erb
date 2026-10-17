@@ -1,0 +1,64 @@
+<% content_for :title, "Team schedule" %>
+<div class="space-y-6">
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">Team schedule</h1>
+      <p class="mt-1 text-sm text-mocha">Hours worked per employee per day, pulled from Rupert punches, Square timecards and C-Trax shifts. Read-only.</p>
+    </div>
+    <div class="flex gap-2">
+      <%= link_to 'Previous week', people_team_schedule_path(week: @prev_week.iso8601), class: 'btn-ghost btn-sm' %>
+      <%= link_to 'This week', people_team_schedule_path, class: 'btn-ghost btn-sm' %>
+      <%= link_to 'Next week', people_team_schedule_path(week: @next_week.iso8601), class: 'btn-ghost btn-sm' %>
+    </div>
+  </section>
+
+  <p class="text-sm text-mocha"><%= @week.strftime('%b %-d') %> – <%= (@week + 6).strftime('%b %-d, %Y') %></p>
+
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60">
+          <tr>
+            <th scope="col" class="th text-left">Employee</th>
+            <% @week_days.each do |day| %>
+              <th scope="col" class="th text-center <%= day == Date.current ? 'text-olive' : '' %>"><%= day.strftime('%a') %><br><span class="text-xs text-taupe"><%= day.strftime('%-d') %></span></th>
+            <% end %>
+            <th scope="col" class="th text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-fog">
+          <% @employees.each do |employee| %>
+            <% row_hours = @hours[employee.id] || {} %>
+            <% total = row_hours.values.sum %>
+            <tr class="hover:bg-cream">
+              <td class="td font-medium text-ink whitespace-nowrap"><%= employee.name %></td>
+              <% @week_days.each do |day| %>
+                <% h = row_hours[day.iso8601].to_f %>
+                <td class="td text-center <%= h.positive? ? 'font-semibold text-olive-deep' : 'text-taupe' %>">
+                  <%= h.positive? ? number_with_precision(h, precision: 1) : '—' %>
+                </td>
+              <% end %>
+              <td class="td text-right font-semibold text-ink"><%= number_with_precision(total, precision: 1) %>h</td>
+            </tr>
+          <% end %>
+          <% if @employees.empty? %>
+            <tr><td colspan="9" class="empty-row">No active employees.</td></tr>
+          <% end %>
+        </tbody>
+        <tfoot class="border-t border-fog bg-haze/40">
+          <tr>
+            <td class="td font-semibold text-ink">Team total</td>
+            <% @week_days.each do |day| %>
+              <% col_total = @employees.sum { |e| (@hours[e.id] || {})[day.iso8601].to_f } %>
+              <td class="td text-center font-semibold text-ink"><%= col_total.positive? ? number_with_precision(col_total, precision: 1) : '—' %></td>
+            <% end %>
+            <td class="td text-right font-bold text-ink"><%= number_with_precision(@employees.sum { |e| (@hours[e.id] || {}).values.sum }, precision: 1) %>h</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <p class="text-xs text-taupe">Hours combine Rupert punches, Square timecards and C-Trax shifts per day. Overlapping hours from multiple sources are summed — review before relying on totals.</p>
+</div>
+EOF

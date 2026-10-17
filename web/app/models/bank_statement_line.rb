@@ -8,6 +8,7 @@ class BankStatementLine < ApplicationRecord
   include LockedPeriodGuard
 
   encrypts :description
+  encrypts :review_note
 
   STATUSES = %w[pending recorded ignored matched].freeze
   # Plain-keyword hints only. A suggestion is never applied without a person choosing it.
@@ -27,6 +28,7 @@ class BankStatementLine < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
 
   scope :pending, -> { where(status: 'pending') }
+  scope :flagged, -> { where(review_flag: true) }
   scope :matched, -> { where(status: 'matched') }
   scope :for_document, ->(id) { where(document_id: id).order(:line_no) }
 
@@ -34,6 +36,15 @@ class BankStatementLine < ApplicationRecord
   def out_cents = -amount_cents
   def pending? = status == 'pending'
   def matched? = status == 'matched'
+  def recorded_source? = expense_id.present? || vendor_payment_id.present?
+
+  def review_category_label
+    { 'processor_deposit' => 'Processor payout', 'owner_transfer' => 'Owner / personal transfer',
+      'bank_fees' => 'Bank & processing fees', 'tax_liability' => 'Tax remittance',
+      'needs_review' => 'Needs your review', 'unidentified_deposit' => 'Unidentified receipt',
+      'non_expense' => 'Excluded from expenses', 'vendor_payment' => 'Vendor payment' }
+      .fetch(review_category, review_category.to_s.humanize.presence || 'Uncategorized')
+  end
 
   def suggested_category
     text = description.to_s.downcase
@@ -43,17 +54,30 @@ class BankStatementLine < ApplicationRecord
   # Link this line to the ledger entry it reconciles to (F40). Records who and
   # when, like decide!, but does not create any money record.
   def match!(journal_entry:, user:)
+    protect_recorded_source!
     update!(status: 'matched', journal_entry_id: journal_entry.id,
       decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
   end
 
   def unmatch!(user:)
+    protect_recorded_source!
     update!(status: 'pending', journal_entry_id: nil,
       decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
   end
 
-  def decide!(status:, user:, expense: nil, vendor_payment: nil)
+  def decide!(status:, user:, expense: nil, vendor_payment: nil, journal_entry: nil)
+    protect_recorded_source!
     update!(status: status, decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current,
-      expense_id: expense&.id, vendor_payment_id: vendor_payment&.id)
+      expense_id: expense&.id, vendor_payment_id: vendor_payment&.id, journal_entry_id: journal_entry&.id, review_flag: false, reviewed_at: Time.current,
+      review_category: expense&.category || (vendor_payment ? 'vendor_payment' : review_category.presence || 'non_expense'))
+  end
+
+  private
+
+  def protect_recorded_source!
+    return unless recorded_source?
+
+    errors.add(:base, 'This bank line is linked to its recorded expense or vendor payment. Review that source record before changing its journal link.')
+    raise ActiveRecord::RecordInvalid, self
   end
 end

@@ -1,0 +1,124 @@
+<% content_for :title, 'Bookkeeping' %>
+<% overview = @overview; currency = overview.currency; balance = overview.statement_balance
+   bank_money = ->(cents) { currency ? operations_money(cents, currency: currency) : 'Currency unverified' }
+   expense_categories = overview.expense_categories %>
+<div class="mx-auto max-w-7xl space-y-6 operations-workspace bookkeeping-workspace">
+  <%= render 'shared/operations_navigation', workspace: :finance %>
+  <header class="operations-header bookkeeping-header">
+    <div>
+      <p class="eyebrow text-mocha">Your financial workspace</p>
+      <h1 class="page-title mt-2">Bookkeeping</h1>
+      <p class="mt-2 text-sm text-mocha">Know what moved, what is recorded, and what still needs a decision.</p>
+    </div>
+    <% if Current.user.can?('finance.write') %>
+      <div class="flex flex-wrap gap-2">
+        <%= link_to 'Add expense', new_finance_expense_path, class: 'btn-ghost' %>
+        <%= link_to 'Import bank statement', bank_statements_path, class: 'btn-primary' %>
+      </div>
+    <% end %>
+  </header>
+
+  <div class="bookkeeping-period card card-pad">
+    <div>
+      <p class="eyebrow text-mocha">Statement activity</p>
+      <h2 class="font-display text-2xl"><%= overview.month.strftime('%B %Y') %></h2>
+      <p class="text-xs text-mocha">Bank figures cover the selected account. Expenses cover this workspace.</p>
+    </div>
+    <%= form_with url: bookkeeping_path, method: :get, class: 'operations-filters', data: { turbo: false } do |f| %>
+      <div><%= f.label :month, 'Month', class: 'field-label' %><%= f.month_field :month, value: overview.month.strftime('%Y-%m'), min: '2000-01', max: '2099-12', class: 'input', required: true %></div>
+      <% if overview.accounts.any? %><div><%= f.label :account, 'Bank account', class: 'field-label' %><%= f.select :account, overview.accounts, { selected: overview.account }, class: 'select' %></div><% end %>
+      <%= f.submit 'Apply', class: 'btn-ghost' %>
+    <% end %>
+  </div>
+
+  <section class="bookkeeping-stats" aria-label="Financial summary for selected month">
+    <article class="bookkeeping-stat bookkeeping-stat-balance">
+      <p class="stat-label">Statement balance</p>
+      <p class="bookkeeping-number"><%= balance ? operations_money(balance[:cents], currency: balance[:currency]) : 'Unavailable' %></p>
+      <p class="text-xs"><%= balance ? "As of #{balance[:date].strftime('%b %-d, %Y')} · retained statement" : 'Upload a statement with a verified closing balance.' %></p>
+      <p class="mt-3 text-xs">Historical statement balance. A live bank balance is not connected.</p>
+    </article>
+    <article class="bookkeeping-stat"><p class="stat-label">Money in</p><p class="bookkeeping-number"><%= overview.line_count.positive? ? bank_money.call(overview.credits_cents) : 'No activity' %></p><p class="text-xs text-mocha">All statement credits, including transfers.</p></article>
+    <article class="bookkeeping-stat"><p class="stat-label">Money out</p><p class="bookkeeping-number"><%= overview.line_count.positive? ? bank_money.call(overview.debits_cents) : 'No activity' %></p><p class="text-xs text-mocha">All statement debits, including transfers.</p></article>
+    <article class="bookkeeping-stat"><p class="stat-label">Net cash movement</p><p class="bookkeeping-number"><%= overview.line_count.positive? ? bank_money.call(overview.net_cents) : 'No activity' %></p><p class="text-xs text-mocha">Money in less money out for this month.</p></article>
+  </section>
+
+  <section class="bookkeeping-review-banner" aria-labelledby="bookkeeping-review-heading">
+    <div class="bookkeeping-review-count"><%= overview.pending_count %></div>
+    <div class="min-w-0 flex-1">
+      <h2 id="bookkeeping-review-heading" class="font-semibold"><%= overview.line_count.zero? ? 'Import a statement to start reviewing' : (overview.pending_count.positive? ? 'Transactions need your review' : 'Transaction review is up to date') %></h2>
+      <p class="text-sm text-mocha"><%= overview.decided_count %> of <%= overview.line_count %> decided · <%= overview.flagged_count %> flagged for clarification</p>
+      <div class="desk-meter mt-2" role="progressbar" aria-label="Bank transactions decided" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= overview.progress %>"><span style="width:<%= overview.progress %>%"></span></div>
+    </div>
+    <%= link_to 'Review transactions →', bank_statements_path, class: 'btn-primary' %>
+  </section>
+
+  <div class="bookkeeping-columns">
+    <section class="card card-pad space-y-4" aria-labelledby="bookkeeping-expenses">
+      <div class="bookkeeping-section-heading"><h2 id="bookkeeping-expenses" class="font-display text-2xl">Recorded expenses</h2><%= link_to 'View expenses →', finance_expenses_path(month: overview.month.strftime('%Y-%m')), class: 'text-sm font-semibold underline' %></div>
+      <p class="bookkeeping-number"><%= operations_money(overview.expense_cents) %></p>
+      <p class="text-xs text-mocha">Only confirmed expenses entered in Rupert. Pending lines and excluded transfers are separate.</p>
+      <% if expense_categories.any? %>
+        <div class="space-y-3">
+          <% expense_categories.each do |category, amount| %>
+            <div>
+              <div class="bookkeeping-category"><span><%= category.humanize %></span><strong><%= operations_money(amount) %></strong></div>
+              <div class="bookkeeping-category-track" aria-hidden="true"><span style="width:<%= amount * 100 / [overview.expense_cents, 1].max %>%"></span></div>
+            </div>
+          <% end %>
+        </div>
+      <% else %><p class="bookkeeping-empty">No expenses recorded for this month. Start with the bank transactions or add an expense.</p><% end %>
+      <div class="bookkeeping-divider text-sm"><span>Vendor payments, tracked separately</span><strong><%= operations_money(overview.vendor_payment_cents) %></strong></div>
+    </section>
+
+    <section class="card card-pad space-y-4" aria-labelledby="bookkeeping-questions">
+      <div class="bookkeeping-section-heading"><h2 id="bookkeeping-questions" class="font-display text-2xl">Needs your attention</h2><span class="pill-taupe"><%= overview.pending_count %> waiting</span></div>
+      <% if overview.questions.any? %>
+        <div class="space-y-3">
+          <% overview.questions.each do |line| %>
+            <%= link_to bank_statement_path(line.document_id, anchor: "bank-line-#{line.id}"), class: 'bookkeeping-question' do %>
+              <span class="bookkeeping-question-top"><strong><%= line.review_category_label %></strong><strong><%= currency ? operations_money(line.amount_cents.abs, currency: currency) : number_with_precision(line.amount_cents.abs / 100.0, precision: 2, delimiter: ',') %> <span class="text-xs"><%= line.money_out? ? 'out' : 'in' %></span></strong></span>
+              <span class="text-sm"><%= line.description.truncate(85) %></span>
+              <span class="text-xs text-mocha"><%= line.review_note.presence || 'Choose a category or confirm why this line is excluded.' %></span>
+            <% end %>
+          <% end %>
+        </div>
+      <% else %><p class="bookkeeping-empty">No bank transactions waiting in this month. Daily reconciliation and period close have their own checks.</p><% end %>
+      <% if Current.user.can?('reports.read') %><%= link_to "#{overview.open_follow_ups.count} open follow-ups for this month →", reconciliation_follow_ups_path, class: 'text-sm font-semibold underline' %><% end %>
+    </section>
+  </div>
+
+  <section class="card overflow-hidden" aria-labelledby="bookkeeping-activity">
+    <div class="card-pad bookkeeping-section-heading"><div><h2 id="bookkeeping-activity" class="font-display text-2xl">Recent bank transactions</h2><p class="mt-1 text-xs text-mocha"><%= overview.account.presence || 'No bank account imported' %> · category, review status, and original evidence together.</p></div><%= link_to 'All statements →', bank_statements_path, class: 'text-sm font-semibold underline' %></div>
+    <div class="operations-table-region" tabindex="0" role="region" aria-label="Recent bank transactions">
+      <table class="w-full text-sm operations-table bookkeeping-table">
+        <thead><tr><th scope="col">Date</th><th scope="col">Transaction</th><th scope="col">Category</th><th scope="col">Status</th><th scope="col" class="text-right">Amount<%= " (#{currency})" if currency %></th></tr></thead>
+        <tbody>
+          <% overview.recent_lines.each do |line| %>
+            <tr><td class="whitespace-nowrap"><%= line.posted_on.strftime('%b %-d') %></td><td><%= link_to line.description.truncate(100), bank_statement_path(line.document_id, show: 'all', anchor: "bank-line-#{line.id}"), class: 'font-semibold underline' %></td><td><%= line.review_category_label %></td><td><span class="<%= line.pending? ? 'pill-taupe' : 'pill-fern' %>"><%= line.pending? ? (line.review_flag? ? 'Flagged' : 'To review') : (line.status == 'ignored' ? 'Excluded' : line.status.humanize) %></span></td><td class="text-right whitespace-nowrap bookkeeping-amount"><%= line.money_out? ? '−' : '+' %><%= number_with_precision(line.amount_cents.abs / 100.0, precision: 2, delimiter: ',') %></td></tr>
+          <% end %>
+          <% if overview.line_count.zero? %><tr><td colspan="5" class="bookkeeping-empty">No bank transactions for this account and month. Import a statement or choose another month.</td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="space-y-3" aria-labelledby="bookkeeping-statements">
+    <div class="bookkeeping-section-heading"><h2 id="bookkeeping-statements" class="font-display text-2xl">Financial statements</h2><%= link_to 'General ledger →', finance_journal_entries_path(from: overview.from, to: overview.to), class: 'text-sm font-semibold underline' %></div>
+    <p class="text-sm text-mocha">Posted entries for this period. Pending bank lines and other unposted records are not included.</p>
+    <div class="bookkeeping-tools">
+      <%= link_to finance_reports_income_statement_path(from: overview.from, to: overview.to), class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Performance</p><h3 class="mt-2 font-display text-xl">Income statement →</h3><p class="mt-2 text-sm text-mocha">Revenue and expenses from the posted ledger.</p><% end %>
+      <%= link_to finance_reports_balance_sheet_path(from: overview.from, to: overview.to), class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Position</p><h3 class="mt-2 font-display text-xl">Balance sheet →</h3><p class="mt-2 text-sm text-mocha">Posted assets, liabilities, and equity through month end.</p><% end %>
+      <%= link_to finance_reports_trial_balance_path(from: overview.from, to: overview.to), class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Control</p><h3 class="mt-2 font-display text-xl">Trial balance →</h3><p class="mt-2 text-sm text-mocha">Account debits and credits for the selected period.</p><% end %>
+    </div>
+  </section>
+
+  <section class="bookkeeping-tools" aria-label="Bookkeeping tools">
+    <% if Current.user.can?('reports.read') %>
+      <%= link_to books_desk_path, class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Reconciliation</p><h2 class="mt-2 font-display text-xl">Close & review →</h2><p class="mt-2 text-sm text-mocha">Match daily sources, resolve differences, and approve finished periods.</p><% end %>
+      <%= link_to reconciliation_documents_path, class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Evidence</p><h2 class="mt-2 font-display text-xl">Documents & reports →</h2><p class="mt-2 text-sm text-mocha">Find bank originals, receipts, processor reports, and retained archives.</p><% end %>
+    <% end %>
+    <%= link_to finance_chart_of_accounts_path, class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Organization</p><h2 class="mt-2 font-display text-xl">Chart of accounts →</h2><p class="mt-2 text-sm text-mocha">Keep the same account structure across your financial records.</p><% end %>
+  </section>
+  <p class="text-xs text-mocha">Bank movement, recorded expenses, and vendor payments answer different questions. This overview does not certify reconciliation or calculate profit. The default month is the latest imported activity for the selected bank account.</p>
+</div>

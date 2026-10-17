@@ -8,14 +8,11 @@
         <%= @timesheet.employee.name %>
         <span class="text-taupe">·</span>
         <span class="<%= @timesheet.approved? ? "pill-fern" : @timesheet.submitted? ? "pill-olive" : @timesheet.rejected? ? "pill-rose" : "pill-taupe" %>"><%= @timesheet.status %></span>
-        <% if @timesheet.submitted_at %><span class="text-taupe">· submitted <%= l(@timesheet.submitted_at, format: :short) %></span><% end %>
         <% if @timesheet.reviewer %><span class="text-taupe">· reviewed by <%= @timesheet.reviewer.display_name %></span><% end %>
       </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
       <%= link_to 'Back to timesheets', people_timesheets_path, class: 'btn-ghost btn-sm' %>
-      <%= link_to '← Earlier', people_timesheet_path(@previous_sheet), class: 'btn-ghost btn-sm', title: @previous_sheet.period_label if @previous_sheet %>
-      <%= link_to 'Later →', people_timesheet_path(@next_sheet), class: 'btn-ghost btn-sm', title: @next_sheet.period_label if @next_sheet %>
       <%= link_to 'Download CSV', people_timesheet_path(@timesheet, format: :csv), class: 'btn-ghost btn-sm' %>
       <% if policy(@timesheet).update? && @timesheet.draft? %>
         <%= button_to 'Submit for review', submit_people_timesheet_path(@timesheet), class: 'btn-primary btn-sm' %>
@@ -28,7 +25,6 @@
           <%= f.label :review_note, 'Review comment', class: 'sr-only' %>
           <%= f.text_field :review_note, maxlength: 4000, placeholder: 'Review comment', class: 'input' %>
           <%= f.submit 'Approve', class: 'btn-primary btn-sm' %>
-          <% if @next_awaiting %><%= f.submit 'Approve & next', name: 'continue', class: 'btn-primary btn-sm' %><% end %>
           <%= f.submit 'Return for correction', formaction: reject_people_timesheet_path(@timesheet), class: 'btn-ghost btn-sm' %>
         <% end %>
       <% end %>
@@ -42,12 +38,10 @@
     <section class="card card-pad space-y-2" aria-label="Review checklist">
       <h2 class="font-display text-lg">Before approving</h2>
       <p class="text-sm text-mocha">Check the dates, daily hours, overtime and notes below against the employee's shifts. Approval rechecks entries, imported clock hours and pending corrections. Return the timesheet for correction if anything needs changing.</p>
-      <% if @summary.flags.any? %><p class="flex flex-wrap gap-2"><% @summary.flags.each do |flag| %><span class="pill-clay"><%= flag %></span><% end %></p><% end %>
-      <% if @next_awaiting %><p class="text-sm"><%= link_to "Skip to next awaiting review: #{@next_awaiting.employee.name}", people_timesheet_path(@next_awaiting), class: 'text-olive underline' %></p><% end %>
     </section>
   <% end %>
 
-  <section class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+  <section class="grid grid-cols-3 gap-4">
     <div class="stat">
       <p class="stat-label">Total hours</p>
       <p class="stat-value mt-1"><%= number_with_precision(@timesheet.total_hours, precision: 1) %></p>
@@ -61,27 +55,16 @@
       <p class="stat-value mt-1"><%= number_with_precision(@timesheet.overtime_hours, precision: 1) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Days worked</p>
-      <p class="stat-value mt-1"><%= @summary.days_worked %></p>
+      <p class="stat-label">Commission (1%)</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@timesheet.commission_cents / 100.0) %></p>
     </div>
-  </section>
-
-  <% days = (@timesheet.period_start..@timesheet.period_end).to_a %>
-  <% by_day = @timesheet.entries.group_by(&:worked_on) %>
-  <section class="card overflow-hidden" aria-label="Daily hours">
-    <div class="border-b border-fog px-5 py-3"><h2 class="font-display text-lg text-ink">Day by day</h2></div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60"><tr>
-          <% days.each do |day| %><th scope="col" class="th text-center"><%= day.strftime('%a') %><br><span class="font-normal"><%= day.strftime('%b %-d') %></span></th><% end %>
-        </tr></thead>
-        <tbody><tr>
-          <% days.each do |day| %>
-            <% hours = (by_day[day] || []).sum(&:hours) %>
-            <td class="td text-center <%= hours > TimesheetInsights::LONG_DAY_HOURS ? 'font-semibold text-rose' : hours.zero? ? 'text-taupe' : 'text-ink' %>"><%= hours.zero? ? '–' : number_with_precision(hours, precision: 2, strip_insignificant_zeros: true) %></td>
-          <% end %>
-        </tr></tbody>
-      </table>
+    <div class="stat">
+      <p class="stat-label">Card bonus (<%= @timesheet.card_redemptions %> &times; $10)</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@timesheet.card_bonus_cents / 100.0) %></p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Compensation total</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@timesheet.compensation_total_cents / 100.0) %></p>
     </div>
   </section>
 
@@ -132,7 +115,7 @@
           <% @timesheet.entries.ordered.each do |entry| %>
             <tr class="hover:bg-cream">
               <td class="td text-mocha"><%= l(entry.worked_on, format: :long) %></td>
-              <td class="td"><span class="pill-taupe capitalize"><%= entry.work_type %></span><% if entry.clock_shift_id %> <span class="pill-olive">Time clock</span><% end %><p class="text-xs"><%= entry.notes %></p></td>
+              <td class="td"><span class="pill-taupe capitalize"><%= entry.work_type %></span><p class="text-xs"><%= entry.notes %></p></td>
               <td class="td text-right font-medium text-ink"><%= number_with_precision(entry.hours, precision: 2) %></td>
               <% if @timesheet.draft? && policy(@timesheet).update? %>
                 <td class="td text-right">
@@ -153,6 +136,17 @@
       </table>
     </div>
   </div>
+
+  <section class="card card-pad space-y-2">
+    <h2 class="font-display text-lg text-ink">Compensation breakdown</h2>
+    <p class="text-sm text-mocha">Commission is 1% of credited period sales. The employee 50%-off card adds a $10 bonus per redemption. These are display figures and are not posted to payroll.</p>
+    <dl class="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+      <div><dt class="text-xs text-mocha">Credited sales</dt><dd class="font-medium text-ink"><%= number_to_currency(@timesheet.sales_cents / 100.0) %></dd></div>
+      <div><dt class="text-xs text-mocha">Commission (1%)</dt><dd class="font-medium text-ink"><%= number_to_currency(@timesheet.commission_cents / 100.0) %></dd></div>
+      <div><dt class="text-xs text-mocha">Card redemptions</dt><dd class="font-medium text-ink"><%= @timesheet.card_redemptions %></dd></div>
+      <div><dt class="text-xs text-mocha">Card bonus</dt><dd class="font-medium text-ink"><%= number_to_currency(@timesheet.card_bonus_cents / 100.0) %></dd></div>
+    </dl>
+  </section>
 
   <% if @timesheet.notes.present? %>
     <section class="card card-pad">

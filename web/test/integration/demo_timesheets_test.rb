@@ -52,6 +52,19 @@ class DemoTimesheetsTest < ActionDispatch::IntegrationTest
     assert @owner.can_use_pos?
   end
 
+  test 'sample weeks carry fictional sales and card redemptions for the compensation display' do
+    first, last = @sheets
+    assert_equal [120_000, 96_000], @sheets.map(&:sales_cents)
+    assert_equal [3, 2], @sheets.map(&:card_redemptions)
+    # 1% commission + $10 per card redemption, display figures only.
+    assert_equal [1200, 960], @sheets.map(&:commission_cents)
+    assert_equal [3000, 2000], @sheets.map(&:card_bonus_cents)
+    assert_equal [4200, 2960], @sheets.map(&:compensation_total_cents)
+    sign_in(@owner)
+    get people_timesheet_path(first, format: :csv)
+    assert_includes response.body, '120000,1200,3,3000,4200'
+  end
+
   test 'assigned employee reviewer can approve or return only the assigned demo records' do
     sign_in(@reviewer)
     get people_timesheets_path

@@ -11,6 +11,10 @@ module Finance
   #   vendor payment DR accounts payable       CR <cash/card by method>
   #   sale           DR <cash by method>       CR sales revenue (+ sales tax)
   class Posting
+    # Raised when an entry cannot be posted (for example a required account is
+    # missing). Callers post inside the same transaction as the record, so the
+    # record is rolled back instead of being saved without its ledger entry.
+    class Error < StandardError; end
     # Credit (money-out destination / money-in source) account by tender method.
     CASH_BY_METHOD = {
       'cash' => '1000',          # Cash
@@ -133,8 +137,18 @@ module Finance
 
       private
 
+      # A tenant created before the chart of accounts existed (or in a test) may
+      # have none; seed the standard chart (idempotent) instead of failing the
+      # money record the user is saving. Only missing standard accounts are
+      # added; the workspace's existing accounts are never replaced. A code
+      # still missing after that is reported plainly so the record rolls back.
       def account(code)
-        Finance::Account.find_by!(code: code)
+        existing = Finance::Account.find_by(code: code)
+        return existing if existing
+
+        Finance::ChartOfAccounts.seed!
+        Finance::Account.find_by(code: code) ||
+          raise(Error, "Account #{code} is missing from the chart of accounts. Restore or re-create it, then try again. Nothing was saved.")
       end
 
       # Split a payment's tax out proportionally from its order (orders carry

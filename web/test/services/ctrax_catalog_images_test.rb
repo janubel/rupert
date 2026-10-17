@@ -22,6 +22,8 @@ class CtraxCatalogImagesTest < ActiveSupport::TestCase
   test 'local mapping is tenant scoped and unsafe images are never rendered' do
     CtraxImageLink.create!(location: @location, variant_id: '3', shopify_product: @product)
     assert_includes Ctrax::CatalogImages.new(@location).url('id' => '3'), 'tea.jpg'
+    @product.update!(featuredImageUrl: nil)
+    assert_nil Ctrax::CatalogImages.new(@location).url('id' => '3')
     @product.update!(featuredImageUrl: 'https://evil.example/track.jpg')
     assert_nil Ctrax::CatalogImages.new(@location).url('id' => '3')
     other = Tenant.create!(name: 'Other', subdomain: 'other-ctrax-image')

@@ -1,17 +1,25 @@
 <% groups = operations_link_groups(workspace, day: local_assigns[:day]); finance = %i[money finance].include?(workspace.to_sym) %>
 <% if groups.any? %>
-  <nav class="operations-navigation <%= 'finance-navigation' if finance %>" aria-label="<%= finance ? 'Finance' : workspace.to_s.humanize %> workspace" <%= tag.attributes(data: { controller: 'finance-shortcuts' }) if finance %>>
+  <nav class="operations-navigation <%= 'finance-navigation' if finance %>" aria-label="<%= finance ? 'Bookkeeping' : workspace.to_s.humanize %> workspace">
     <% if finance %>
-      <% groups.each do |group, links| %>
-        <div class="finance-navigation-group" role="group" aria-label="<%= group %>">
-          <span class="workspace-nav-group"><%= group %></span>
-          <% links.each do |label, path, active| %>
-            <% key = OperationsWorkspaceHelper::FINANCE_SHORTCUTS[label] %>
-            <%= link_to path, class: "nav-pill workspace-nav-link #{active ? 'nav-pill-active' : 'nav-pill-idle'}", title: (key ? "#{label} · press g then #{key.upcase}" : nil), aria: { current: active ? 'page' : nil, keyshortcuts: (key ? "g #{key}" : nil) }, data: { shortcut: key } do %><%= label %><% if key %><span class="nav-key" aria-hidden="true" data-key="<%= key %>"></span><% end %><% end %>
-          <% end %>
-        </div>
-      <% end %>
-      <span class="finance-navigation-hint" aria-hidden="true">Jump: press <kbd>g</kbd> then a letter</span>
+      <% current_label = groups.flat_map { |_g, links| links }.find { |link| link[2] }&.first %>
+      <details class="finance-menu" open data-controller="menu-collapse">
+        <summary class="finance-menu-summary">Bookkeeping menu<% if current_label %> · You are on: <%= current_label %><% end %></summary>
+      <div class="finance-navigation-title"><span>Bookkeeping</span><span class="finance-navigation-hint">Transactions · Reconciliation · Reports</span></div>
+      <% primary = groups.find { |group, _| group == 'Bookkeeping' } %>
+      <% if primary %><div class="finance-primary-links"><% primary.last.each do |label, path, active| %><%= link_to label, path, class: "nav-pill workspace-nav-link #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: active ? 'page' : nil } %><% end %></div><% end %>
+      <div class="finance-navigation-groups">
+        <% groups.each do |group, links| %>
+          <% next if group == 'Bookkeeping' %>
+          <details class="finance-navigation-group" <%= 'open' if links.any? { |link| link[2] } %>>
+            <summary class="workspace-nav-group"><%= group %></summary>
+            <div class="finance-navigation-links">
+              <% links.each do |label, path, active| %><%= link_to label, path, class: "nav-pill workspace-nav-link #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: active ? 'page' : nil } %><% end %>
+            </div>
+          </details>
+        <% end %>
+      </div>
+      </details>
     <% else %>
       <% groups.each do |group, links| %>
         <% if group %><span class="workspace-nav-group"><%= group %></span><% end %>

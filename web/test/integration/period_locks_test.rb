@@ -6,6 +6,7 @@ class PeriodLocksIntegrationTest < ActionDispatch::IntegrationTest
   setup do
     @tenant = tenants(:default_tenant)
     Current.tenant = @tenant
+    Finance::ChartOfAccounts.seed! # expenses post to the ledger, which needs the chart
     @month = Date.current.beginning_of_month << 2
     post login_path, params: { email: 'admin@example.com', password: 'password' }
   end

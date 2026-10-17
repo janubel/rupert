@@ -7,30 +7,30 @@
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :code, "Code", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :code, "Code", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.text_field :code, class: "input", placeholder: "e.g. 1100", autocomplete: "off" %>
-      <p class="mt-1 text-xs text-taupe">A unique number for the account, e.g. 1100 for a checking account.</p>
+      <p class="mt-1 text-sm text-mocha">A unique number. Accounts are listed in code order. Posting rules refer to codes, so avoid changing a code that already has entries.</p>
     </div>
     <div>
-      <%= f.label :name, "Name", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :name, "Name", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.text_field :name, class: "input", placeholder: "e.g. Checking account", autocomplete: "off" %>
     </div>
   </div>
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :account_type, "Type", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :account_type, "Type", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.select :account_type, Finance::Account::TYPES.map { |t| [Finance::Account::TYPE_LABELS.fetch(t), t] }, {}, class: "select w-full" %>
     </div>
     <div>
-      <%= f.label :normal_balance, "Normal balance", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :normal_balance, "Increases with (normal balance)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.select :normal_balance, [["Debit", "debit"], ["Credit", "credit"]], {}, class: "select w-full" %>
-      <p class="mt-1 text-xs text-taupe">Defaults from the type: assets/expenses are debit, liabilities/equity/revenue are credit.</p>
+      <p class="mt-1 text-sm text-mocha">Normally debit for assets and expenses, credit for liabilities, equity and revenue. Choosing the other side makes reports show this account backwards.</p>
     </div>
   </div>
 
   <div>
-    <%= f.label :description, "Description (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+    <%= f.label :description, "Description (optional)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
     <%= f.text_area :description, rows: 2, class: "input !rounded-2xl", placeholder: "What this account tracks" %>
   </div>
 

@@ -11,7 +11,11 @@
 
   <div>
     <%= f.label :role, "Role", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-    <%= f.select :role, @roles, {}, class: "select w-full" %>
+    <% role_locked = !Current.user.super_admin? && user.persisted? && user.admin? %>
+    <%= f.select :role, @roles, { selected: user.role }, class: "select w-full", disabled: role_locked %>
+    <% if role_locked %>
+      <p class="mt-1 text-xs text-taupe">Only the super admin can change an administrator's role.</p>
+    <% end %>
     <p class="mt-1 text-xs text-taupe">Roles are tuned in the <a href="<%= permissions_path %>" class="text-olive hover:underline">Permissions</a> screen.</p>
   </div>
 

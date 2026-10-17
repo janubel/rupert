@@ -390,8 +390,8 @@
       "id": "F40",
       "area": "Finance",
       "name": "Bank reconciliation and accounting exports",
-      "status": "Partial",
-      "scope": "Statement-to-GL matching workbench (sign/amount/date) with confirm and difference reporting, plus QuickBooks IIF and CSV ledger export. Automated duplicate review remains.",
+      "status": "Available",
+      "scope": "Statement-to-GL matching workbench (sign/amount/date) with confirm and difference reporting, duplicate-line review with ignore, and QuickBooks IIF / CSV ledger export.",
       "evidence": "docs/data/product-roadmap.json",
       "phase": "3"
     },

@@ -8,6 +8,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     @user = User.create!(tenant: @tenant, email: 'operations@example.test', password: 'password123', role: 'admin')
     post login_path, params: { email: @user.email, password: 'password123' }
     Current.tenant = @tenant
+    Finance::ChartOfAccounts.seed! # expenses post to the ledger, which needs the chart
   end
   teardown { Current.reset }
 
@@ -34,7 +35,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     get new_finance_chart_of_account_path
     assert_select 'input[name="account[code]"]'
     get financial_close_path, params: { day: '2026-10-10' }
-    assert_select 'nav[aria-label="Finance workspace"] a[href=?]', daily_reconciliations_path(day: '2026-10-10')
+    assert_select 'nav[aria-label="Bookkeeping workspace"] a[href=?]', daily_reconciliations_path(day: '2026-10-10')
     assert_select 'nav[aria-label="Reconciliation workflow"]'
     assert_select '[aria-label="Close status overview"]'
   end
@@ -58,9 +59,9 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     assert_redirected_to finance_vendor_payments_path
     assert_equal 1234, Finance::VendorPayment.last.amount_cents
     get finance_accounts_path
-    assert_select '[aria-label="Vendor balances"] tr', text: /Credit fixture.*USD 12.34/m
-    assert_select '[aria-label="Vendor balance summary"]', text: /Vendor credits.*USD 12.34/m
-    assert_select '[aria-label="Vendor balance summary"]', text: /Vendor balances due.*USD 0.00/m
+    assert_select '[aria-label="Vendor balances"] tr', text: /Credit fixture.*\$12\.34/m
+    assert_select '[aria-label="Vendor balance summary"]', text: /Vendor credits.*\$12\.34/m
+    assert_select '[aria-label="Vendor balance summary"]', text: /Vendor balances due.*\$0\.00/m
     post finance_chart_of_accounts_path, params: { account: { code: '9910', name: 'UI fixture', account_type: 'expense', normal_balance: 'debit', active: '1' } }
     assert_redirected_to finance_chart_of_accounts_path
     assert Finance::Account.exists?(code: '9910')
@@ -75,7 +76,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     balances = Core::Receivables.by_customer.to_h { |row| [row[:currency], row[:balance_cents]] }
     assert_equal({ 'USD' => 750, 'EUR' => 1500 }, balances)
     get finance_accounts_path
-    assert_select '[aria-label="Customer receivables"] tr', text: /Currency Fixture.*USD.*USD 7.50/m
+    assert_select '[aria-label="Customer receivables"] tr', text: /Currency Fixture.*USD.*\$7\.50/m
     assert_select '[aria-label="Customer receivables"] tr', text: /Currency Fixture.*EUR.*EUR 15.00/m
   end
 
@@ -128,7 +129,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     @user.update_permission_overrides!(%w[reports.read inventory.read reconcile.read])
     get financial_close_path
     assert_response :success
-    assert_select 'nav[aria-label="Finance workspace"] a[href=?]', finance_accounts_path, count: 0
+    assert_select 'nav[aria-label="Bookkeeping workspace"] a[href=?]', finance_accounts_path, count: 0
     assert_select '#retain-close', count: 0
     get stock_comparison_path
     assert_response :success

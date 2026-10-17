@@ -1,22 +1,13 @@
 <% content_for :title, "Chart of accounts" %>
-<div class="space-y-6 operations-workspace" data-controller="table-filter">
+<div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Chart of accounts</h1>
-      <p class="mt-1 text-sm text-mocha">The account codes the ledger posts to, grouped by type. <%= @active_count %> active of <%= @grouped.values.sum(&:length) %> accounts.</p>
-    </div>
+  <%= render layout: 'finance/page_header', locals: { title: 'Chart of accounts', currency: nil, print: true,
+        explain: "The list of accounts the ledger posts to, in code order and grouped by type. #{@active_count} active of #{@grouped.values.sum(&:length)} accounts. Select a code to see every entry posted to it. An archived account stays on record but cannot be used for new entries." } do %>
     <% if Current.user.can?("finance.write") %>
       <%= link_to "Add account", new_finance_chart_of_account_path, class: "btn-primary" %>
     <% end %>
-  </section>
-
-  <div class="table-filter">
-    <input type="search" class="input" placeholder="Find an account by code, name or description…" aria-label="Filter accounts" data-table-filter-target="input" data-action="input->table-filter#filter keydown.esc->table-filter#clear">
-    <span class="table-filter-count" data-table-filter-target="count" aria-live="polite"></span>
-  </div>
-  <p class="card card-pad text-sm text-mocha" data-table-filter-target="empty" hidden>No accounts match. <button type="button" class="font-semibold text-olive-deep underline" data-action="table-filter#clear">Clear filter</button></p>
+  <% end %>
 
   <% Finance::Account::TYPE_LABELS.each do |type, label| %>
     <% accounts = @grouped.fetch(type, []) %>
@@ -26,14 +17,14 @@
         <span class="pill-taupe"><%= accounts.count(&:active) %> active</span>
       </div>
       <div class="operations-table-region" role="region" tabindex="0" aria-label="Finance record table">
-        <table class="operations-table w-full text-sm">
+        <table class="operations-table finance-table w-full">
           <thead class="border-b border-fog bg-haze/60">
             <tr>
               <th scope="col" class="th">Code</th>
               <th scope="col" class="th">Name</th>
-              <th scope="col" class="th">Normal balance</th>
+              <th scope="col" class="th">Increases with</th>
               <th scope="col" class="th">Description</th>
-              <th scope="col" class="th text-right"></th>
+              <th scope="col" class="th num"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-fog">
@@ -41,21 +32,21 @@
               <tr><td colspan="5" class="empty-row">No <%= label.downcase %> accounts.</td></tr>
             <% end %>
             <% accounts.each do |account| %>
-              <tr data-table-filter-target="row" class="hover:bg-cream <%= account.active ? "" : "opacity-50" %>">
-                <td class="td font-mono text-mocha"><%= account.code %></td>
+              <tr class="<%= "row-removed" unless account.active %>">
+                <td class="td font-mono text-mocha"><%= link_to account.code, finance_chart_of_account_path(account), class: "link", aria: { label: "Ledger lines for #{finance_account_label(account)}" } %></td>
                 <td class="td font-medium text-ink">
                   <%= account.name %>
-                  <% unless account.active %><span class="ml-2 pill-taupe">archived</span><% end %>
+                  <% unless account.active %><span class="ml-2 status-tag status-removed">Archived</span><% end %>
                 </td>
-                <td class="td text-mocha capitalize"><%= account.normal_balance %></td>
-                <td class="td text-taupe"><%= account.description.presence || "—" %></td>
+                <td class="td capitalize"><%= account.normal_balance %></td>
+                <td class="td text-mocha"><%= account.description.presence || "—" %></td>
                 <td class="td whitespace-nowrap text-right">
                   <% if Current.user.can?("finance.write") %>
-                    <%= link_to "Edit", edit_finance_chart_of_account_path(account), class: "text-xs font-semibold text-olive hover:underline" %>
+                    <%= link_to "Edit", edit_finance_chart_of_account_path(account), class: "text-sm font-semibold text-olive hover:underline" %>
                     <% if account.active %>
-                      <%= button_to "Archive", archive_finance_chart_of_account_path(account), method: :post, class: "ml-2 text-xs font-semibold text-taupe hover:text-rose", data: { turbo_confirm: "Archive #{account.name}? It will stay in the chart but be hidden from new entries." } %>
+                      <%= button_to "Archive", archive_finance_chart_of_account_path(account), method: :post, class: "ml-2 text-sm font-semibold text-mocha hover:text-rose", form: { data: { turbo_confirm: "Archive account #{finance_account_label(account)}?\n\nIt stays in the chart and keeps its history, but cannot be chosen for new entries. Existing entries and reports are not changed. You can restore it later." } } %>
                     <% else %>
-                      <%= button_to "Restore", restore_finance_chart_of_account_path(account), method: :post, class: "ml-2 text-xs font-semibold text-fern hover:underline" %>
+                      <%= button_to "Restore", restore_finance_chart_of_account_path(account), method: :post, class: "ml-2 text-sm font-semibold text-fern hover:underline" %>
                     <% end %>
                   <% end %>
                 </td>

@@ -17,7 +17,18 @@ class RoadmapFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'h1', 'Features & roadmap'
     assert_select 'td', 'Planned'
-    assert_select 'td', /not a complete double-entry/
+    assert_select 'tr', text: /Chart of accounts and reporting/ do
+      assert_select 'td', 'Available'
+      assert_select 'td', /double-entry general ledger and financial statements/
+    end
+    assert_select 'tr', text: /Double-entry ledger and close/ do
+      assert_select 'td', 'Available'
+      assert_select 'td', /ledger period locks that block edits to closed periods/
+    end
+    assert_select 'tr', text: /Bank reconciliation and accounting exports/ do
+      assert_select 'td', 'Available'
+      assert_select 'td', /duplicate-line review with ignore/
+    end
 
     get system_path
     assert_redirected_to root_path

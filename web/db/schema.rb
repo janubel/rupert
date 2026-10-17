@@ -72,6 +72,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_200000) do
     t.string "decided_by_name"
     t.datetime "decided_at"
     t.datetime "created_at", null: false
+    t.string "review_category"
+    t.text "review_note"
+    t.boolean "review_flag", default: false, null: false
+    t.datetime "reviewed_at"
     t.bigint "journal_entry_id"
     t.index ["journal_entry_id"], name: "idx_bank_lines_journal_entry"
     t.index ["tenant_id", "document_id", "status"], name: "idx_bank_lines_document"
@@ -2250,6 +2254,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_200000) do
     t.bigint "assigned_reviewer_id"
     t.datetime "submitted_at"
     t.text "review_note"
+    t.integer "sales_cents", default: 0, null: false
+    t.integer "card_redemptions", default: 0, null: false
     t.index ["assigned_reviewer_id"], name: "index_timesheets_on_assigned_reviewer_id"
     t.index ["tenant_id", "employee_id", "period_start"], name: "index_timesheets_on_tenant_id_and_employee_id_and_period_start", unique: true
     t.index ["tenant_id", "status"], name: "index_timesheets_on_tenant_id_and_status"

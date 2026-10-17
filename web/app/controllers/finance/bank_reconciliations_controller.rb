@@ -6,7 +6,7 @@ module Finance
   # pairing. Suggestions are computed read-only; confirming persists the link.
   class BankReconciliationsController < AuthenticatedController
     before_action -> { authorize(:module, :finance_read?) }
-    before_action -> { authorize(:module, :finance_write?) }, only: %i[match unmatch]
+    before_action -> { authorize(:module, :finance_write?) }, only: %i[match unmatch ignore]
 
     def index
       @account_label = params[:account_label].presence || default_account_label
@@ -24,15 +24,31 @@ module Finance
       line.match!(journal_entry: entry, user: Current.user)
       ActivityLogger.log('bank_line_matched', subject: line,
         details: "Statement line ##{line.id} (#{line.amount_cents}) matched to journal entry ##{entry.id}")
-      redirect_to bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
+      redirect_to finance_bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
         notice: 'Matched to the ledger.'
     end
 
     def unmatch
       line = BankStatementLine.find(params[:line_id])
       line.unmatch!(user: Current.user)
-      redirect_to bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
+      redirect_to finance_bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
         notice: 'Match cleared.'
+    end
+
+    # Mark a statement line ignored (e.g. a suspected duplicate) so it drops out
+    # of reconciliation and duplicate detection.
+    def ignore
+      line = BankStatementLine.find(params[:line_id])
+      line.decide!(status: 'ignored', user: Current.user)
+      ActivityLogger.log('bank_line_ignored', subject: line,
+        details: "Statement line ##{line.id} (#{line.amount_cents}) marked ignored")
+      redirect_to finance_bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
+        notice: 'Line ignored.'
+    end
+
+    rescue_from ActiveRecord::RecordInvalid do |error|
+      redirect_to finance_bank_reconciliation_path(from: params[:from], to: params[:to]),
+        alert: error.record.errors.full_messages.to_sentence
     end
 
     private
