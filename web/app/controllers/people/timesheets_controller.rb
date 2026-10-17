@@ -9,11 +9,12 @@ module People
 
     def index
       authorize(People::Timesheet, :index?)
-      @reviewer = Current.user.can_review_timesheets?
+      @reviewer = Current.user.can_review_timesheets? || People::TimesheetPolicy.assigned_demos(Current.user).exists?
       @status = params[:status].presence || (@reviewer ? 'submitted' : 'all')
       @status = 'all' unless (People::Timesheet.aasm.states.map { |state| state.name.to_s } + ['all']).include?(@status)
       @period = params[:period].presence
       visible = People::TimesheetPolicy.visible_to(Current.user)
+      @has_demo_timesheets = visible.demo_records.exists?
       @awaiting = visible.awaiting_review.count
       scope = visible.by_status(@status)
       if @period
@@ -25,7 +26,7 @@ module People
       end
       @square_history = SquareTimecard.visible_to(Current.user)
       @ctrax_history = CtraxLaborShift.visible_to(Current.user)
-      @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee), items: 30)
+      @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)
     rescue Date::Error
       redirect_to people_timesheets_path, alert: 'Choose a valid period date.'
     end
