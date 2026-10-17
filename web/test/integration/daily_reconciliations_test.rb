@@ -114,4 +114,16 @@ class DailyReconciliationsTest < ActionDispatch::IntegrationTest
     get document_daily_reconciliation_path(doc)
     assert_redirected_to root_path
   end
+  test 'informational controls stay out of the attention filter and remain in all metrics' do
+    ReconciliationEvidence.retain!(bytes: 'tips control', filename: 'tips.txt', source: 'square',
+      kind: 'register_control', from: '2026-10-14', to: '2026-10-14', metadata: { 'currency' => 'USD', 'tips' => 100 })
+    get daily_reconciliations_path(day: '2026-10-14')
+    assert_response :success
+    assert_empty @controller.instance_variable_get(:@comparison_rows)
+    assert_includes response.body, 'No differences to resolve'
+    get daily_reconciliations_path(day: '2026-10-14', comparison: 'all')
+    assert_response :success
+    assert_equal [DailyMoneyReconciliation::INFORMATIONAL], @controller.instance_variable_get(:@comparison_rows).pluck(:status)
+  end
+
 end

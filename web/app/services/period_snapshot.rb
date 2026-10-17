@@ -25,8 +25,8 @@ class PeriodSnapshot
       'from' => from.iso8601, 'to' => to.iso8601,
       'orders' => rows(Core::Order.where(occurred_at: @range).group(:source, :currency, :status)
         .pluck(:source, :currency, :status, Arel.sql('COUNT(*)'), Arel.sql('SUM(gross_cents)'), Arel.sql('SUM(tax_cents)'))),
-      'payments' => rows(Core::Payment.where(paid_at: @range).group(:status).pluck(:status, Arel.sql('COUNT(*)'), Arel.sql('SUM(amount_cents)'))),
-      'refunds' => rows(Core::Refund.where(refunded_at: @range).group(:method).pluck(:method, Arel.sql('COUNT(*)'), Arel.sql('SUM(amount_cents)'))),
+      'payments' => rows(Core::Payment.joins(:order).where(paid_at: @range).group('orders.source', 'orders.currency', 'payments.status').pluck('orders.source', 'orders.currency', 'payments.status', Arel.sql('COUNT(*)'), Arel.sql('SUM(payments.amount_cents)'))),
+      'refunds' => rows(Core::Refund.joins(:order).where(refunded_at: @range).group('orders.source', 'orders.currency', 'refunds.method').pluck('orders.source', 'orders.currency', 'refunds.method', Arel.sql('COUNT(*)'), Arel.sql('SUM(refunds.amount_cents)'))),
       'expenses' => rows(Finance::Expense.where(incurred_on: from..to).group(:category).pluck(:category, Arel.sql('COUNT(*)'), Arel.sql('SUM(amount_cents)'))),
       'vendor_payments' => rows(Finance::VendorPayment.where(paid_on: from..to).group(:vendor_id).pluck(:vendor_id, Arel.sql('COUNT(*)'), Arel.sql('SUM(amount_cents)'))),
       'bank_lines' => rows(BankStatementLine.where(posted_on: from..to).group(:status).pluck(:status, Arel.sql('COUNT(*)'), Arel.sql('SUM(amount_cents)'))),

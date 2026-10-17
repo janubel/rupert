@@ -122,7 +122,7 @@ class DailyReconciliationsController < AuthenticatedController
     @attention = ReconciliationAttention.new(@report)
     @comparison_filter = %w[attention all matched variances unavailable conflicts].include?(params[:comparison]) ? params[:comparison] : 'attention'
     selected_status = { 'matched' => 'Matched recorded total', 'variances' => 'Variance', 'unavailable' => 'Unavailable in canonical records', 'conflicts' => 'Conflicting controls' }[@comparison_filter]
-    @comparison_rows = @report.comparisons.select { |row| @comparison_filter == 'all' || (selected_status ? row[:status] == selected_status : row[:status] != 'Matched recorded total') }
+    @comparison_rows = @report.comparisons.select { |row| @comparison_filter == 'all' || (selected_status ? row[:status] == selected_status : @attention.differences.include?(row)) }
     @comparison_rows = @comparison_rows.sort_by { |row| ReconciliationAttention.sort_key(row) }
     @day_follow_ups = ReconciliationFollowUp.covering(@report.day).active.includes(:owner).order(:due_on, :id).limit(6)
     @follow_up_open_count = ReconciliationFollowUp.active.count

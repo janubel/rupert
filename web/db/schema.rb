@@ -440,6 +440,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_190000) do
     t.index ["tenant_id"], name: "index_authorize_net_batches_on_tenant_id"
   end
 
+  create_table "authorize_net_portal_observations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "authorize_net_portal_export_id", null: false
+    t.integer "position", null: false
+    t.string "gateway_id", null: false
+    t.string "transaction_id", null: false
+    t.datetime "exported_at", null: false
+    t.datetime "submitted_at"
+    t.datetime "settled_at"
+    t.string "status"
+    t.string "transaction_type"
+    t.string "currency"
+    t.bigint "settlement_cents"
+    t.text "record_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["authorize_net_portal_export_id", "position"], name: "idx_anet_portal_obs_row", unique: true
+    t.index ["tenant_id", "settled_at"], name: "idx_anet_portal_obs_settled"
+    t.index ["tenant_id", "submitted_at"], name: "idx_anet_portal_obs_submitted"
+    t.index ["tenant_id", "transaction_id", "gateway_id"], name: "idx_anet_portal_obs_key"
+  end
+
   create_table "authorize_net_portal_exports", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "gateway_id", null: false
@@ -2464,4 +2486,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_190000) do
   add_foreign_key "marketing_product_gift_items", "tenants"
   add_foreign_key "marketing_product_gifts", "marketing_engagements", column: "engagement_id"
   add_foreign_key "marketing_product_gifts", "tenants"
+  add_foreign_key "authorize_net_portal_observations", "authorize_net_portal_exports", on_delete: :cascade
+  add_foreign_key "authorize_net_portal_observations", "tenants"
 end

@@ -4,7 +4,7 @@
 <% review = @report.latest_review %>
 <% review_current = review && review.report_digest == @report.digest %>
 <% comparisons = @report.comparisons %>
-<% attention = comparisons.count { |row| row[:status] != 'Matched recorded total' } %>
+<% attention = @attention.differences.size %>
 <div class="mx-auto max-w-7xl space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money, day: @report.day %>
   <header class="flex flex-wrap items-start justify-between gap-4">
@@ -25,7 +25,7 @@
   <% end %>
   <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Daily review overview">
     <div class="card card-pad border"><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Your review</p><p class="mt-2 font-display text-xl"><%= !review ? 'Not reviewed' : !review_current ? 'Changed since review' : review.status.humanize %></p><p class="mt-2 text-xs text-mocha"><%= review ? "Last note #{review.created_at.in_time_zone.strftime('%b %-d, %-I:%M %p')}" : 'Record a review after checking the evidence.' %></p></div>
-    <div class="card card-pad"><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Source comparisons</p><p class="mt-2 font-display text-xl"><%= comparisons.empty? ? 'No controls yet' : (attention.zero? ? "#{comparisons.size} metrics match" : "#{attention} need attention") %></p><p class="mt-2 text-xs text-mocha"><%= comparisons.count { |row| row[:status] == 'Matched recorded total' } %> matching metrics · native checks below</p></div>
+    <div class="card card-pad"><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Source comparisons</p><p class="mt-2 font-display text-xl"><%= comparisons.empty? ? 'No controls yet' : (attention.zero? ? 'No differences to resolve' : "#{attention} need attention") %></p><p class="mt-2 text-xs text-mocha"><%= comparisons.count { |row| row[:status] == 'Matched recorded total' } %> matching metrics · native checks below</p></div>
     <a href="#documents" class="card card-pad block hover:ring-2 hover:ring-olive"><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Documents for this day</p><p class="mt-2 font-display text-xl tabular-nums"><%= @report.documents.size %></p><p class="mt-2 text-xs text-mocha">Originals and supporting report versions</p></a>
     <%= link_to retention_drive_path, class: 'card card-pad block hover:ring-2 hover:ring-olive' do %><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Google Drive retention</p><p class="mt-2 font-display text-xl"><%= @drive_connection&.connected? && @drive_connection.enabled ? (@drive_connection.last_error.present? ? 'Needs attention' : 'Automatic copies on') : 'Setup pending' %></p><p class="mt-2 text-xs text-mocha"><%= @drive_verified || 0 %> verified copies · originals retained in Rupert</p><% end %>
   </section>
