@@ -1,0 +1,29 @@
+<% content_for :title, "Financial reports" %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+
+  <section>
+    <h1 class="page-title">Financial reports</h1>
+    <p class="mt-1 text-sm text-mocha">Statements computed from the double-entry general ledger.</p>
+  </section>
+
+  <section class="grid gap-4 sm:grid-cols-3">
+    <%= link_to finance_reports_trial_balance_path, class: "card card-pad hover:border-mocha" do %>
+      <h2 class="font-semibold">Trial balance</h2>
+      <p class="mt-1 text-sm text-mocha">Every account with debit, credit and balance for a period.</p>
+    <% end %>
+    <%= link_to finance_reports_income_statement_path, class: "card card-pad hover:border-mocha" do %>
+      <h2 class="font-semibold">Income statement</h2>
+      <p class="mt-1 text-sm text-mocha">Revenue and expenses, and net income for a period.</p>
+    <% end %>
+    <%= link_to finance_reports_balance_sheet_path, class: "card card-pad hover:border-mocha" do %>
+      <h2 class="font-semibold">Balance sheet</h2>
+      <p class="mt-1 text-sm text-mocha">Assets, liabilities and equity as of a date.</p>
+    <% end %>
+  </section>
+
+  <p class="text-sm text-mocha">
+    <%= link_to "General ledger", finance_journal_entries_path, class: "link" %> ·
+    <%= link_to "Chart of accounts", finance_chart_of_accounts_path, class: "link" %>
+  </p>
+</div>
