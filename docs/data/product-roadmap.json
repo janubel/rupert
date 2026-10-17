@@ -200,7 +200,7 @@
     {
       "id": "F19",
       "area": "People",
-      "name": "Employee directory",
+      "name": "Staff directory",
       "status": "Available",
       "scope": "Departments, positions, status lifecycle and HR records.",
       "evidence": "web/app/modules/people/employee.rb",
@@ -211,7 +211,7 @@
       "area": "People",
       "name": "Timesheets and PTO",
       "status": "Available",
-      "scope": "Top-level submitted-hours review queue for admins, managers and least-privileged shift leaders; approve/return with audit history and no self-review. Timesheets links to all available retained Square and C-Trax history, with reviewer/all-employee filters including inactive, open, unmatched and unassigned records, latest clock/break punches, original evidence and immutable C-Trax observation history. Exact native identities and consolidation preserve employee history; formula-safe CSV respects own-worker/workspace boundaries. Source-history implementation deployed and complete source reads succeeded on October 17, 2026; authenticated access/render and pre/post-deployment recovery verification passed. Automatic C-Trax labor refresh has workspace opt-in, revision/actor/connection checks, safe attempt/freshness status and 15-minute server dispatch at minutes 02/17/32/47; enabled and verified for Herbal Healers on SER8 on October 17, 2026. Square retains its existing opt-in schedule. Approval rechecks retained entries, active employment, changed imported hours and pending clock corrections. No automatic approvals, additive cross-source totals or payroll posting; employee self-service, payroll locks and PTO remain available.",
+      "scope": "Top-level submitted-hours review queue for admins, managers and least-privileged shift leaders; approve/return with audit history and no self-review. Timesheets links to all available retained Square and C-Trax history, with reviewer/all-employee filters including inactive, open, unmatched and unassigned records, latest clock/break punches, original evidence and immutable C-Trax observation history. Exact native identities and consolidation preserve staff history; formula-safe CSV respects own-worker/workspace boundaries. Source-history implementation deployed and complete source reads succeeded on October 17, 2026; authenticated access/render and pre/post-deployment recovery verification passed. Automatic C-Trax labor refresh has workspace opt-in, revision/actor/connection checks, safe attempt/freshness status and 15-minute server dispatch at minutes 02/17/32/47; enabled and verified for Herbal Healers on SER8 on October 17, 2026. Square retains its existing opt-in schedule. Approval rechecks retained entries, active employment, changed imported hours and pending clock corrections. No automatic approvals, additive cross-source totals or payroll posting; staff self-service, payroll locks and PTO remain available.",
       "evidence": "web/test/integration/timesheet_reviews_test.rb",
       "phase": "0"
     },
@@ -499,7 +499,7 @@
       "area": "People",
       "name": "POS, inventory and reporting roles",
       "status": "Available",
-      "scope": "Cashier/POS, inventory employee, reporting and admin presets; tenant-scoped role assignment, protected super-admin role and deactivated-session rejection.",
+      "scope": "Cashier/POS, inventory staff member, reporting and admin presets; tenant-scoped role assignment, protected super-admin role and deactivated-session rejection.",
       "evidence": "web/app/models/user.rb",
       "phase": "0"
     },
@@ -598,7 +598,7 @@
       "area": "System",
       "name": "Compact role-aware navigation and access boundaries",
       "status": "Available",
-      "scope": "Named work areas, local accessible icons, permitted-tools disclosures and role-labelled account menus reduce header clutter. Search categories, dashboard widgets/queries and cached responses follow business permissions. Reader defaults exclude personnel/payroll; employee pay/time/leave sections have separate gates. Workspace user/permission administration and host/instance utilities require their respective administrator roles; size-membership edits require settings write. Existing explicit business permission overrides remain supported.",
+      "scope": "Named work areas, local accessible icons, permitted-tools disclosures and role-labelled account menus reduce header clutter. Search categories, dashboard widgets/queries and cached responses follow business permissions. Reader defaults exclude personnel/payroll; staff member pay/time/leave sections have separate gates. Workspace user/permission administration and host/instance utilities require their respective administrator roles; size-membership edits require settings write. Existing explicit business permission overrides remain supported.",
       "evidence": "web/app/models/module_registry.rb",
       "phase": "0"
     },
