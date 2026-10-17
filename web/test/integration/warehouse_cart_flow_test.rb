@@ -64,6 +64,7 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
     EnvStore.set('AUTHORIZE_NET_LOGIN_ID', nil)
     EnvStore.set('AUTHORIZE_NET_TRANSACTION_KEY', nil)
     EnvStore.set('AUTHORIZE_NET_SANDBOX', nil)
+    %w[APPLE_PAY_MERCHANT_ID APPLE_PAY_IDENTITY_CERT APPLE_PAY_IDENTITY_KEY].each { |k| EnvStore.set(k, nil) }
     Current.tenant = nil
   end
 
@@ -180,5 +181,127 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
   test 'empty cart cannot reach checkout' do
     get warehouse_checkout_path(@share.token)
     assert_response :not_found
+  end
+
+  def configure_apple_pay
+    key = OpenSSL::PKey::RSA.new(2048)
+    cert = OpenSSL::X509::Certificate.new
+    cert.version = 2
+    cert.serial = 1
+    cert.subject = cert.issuer = OpenSSL::X509::Name.parse('/CN=merchant.test')
+    cert.public_key = key.public_key
+    cert.not_before = Time.now - 60
+    cert.not_after = Time.now + 3600
+    cert.sign(key, OpenSSL::Digest.new('SHA256'))
+    EnvStore.set('APPLE_PAY_MERCHANT_ID', 'merchant.test.rupert')
+    EnvStore.set('APPLE_PAY_IDENTITY_CERT', cert.to_pem)
+    EnvStore.set('APPLE_PAY_IDENTITY_KEY', key.to_pem)
+  end
+
+  test 'apple pay button is hidden until Apple Pay is configured, then shown with the cart total' do
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: '5' }
+    get warehouse_checkout_path(@share.token)
+    assert_select '[data-apple-pay-target="button"]', count: 0
+
+    configure_apple_pay
+    get warehouse_checkout_path(@share.token)
+    assert_select '[data-apple-pay-target="button"]', count: 1
+    assert_select 'form[data-apple-pay-total-value="80.00"]'
+  end
+
+  test 'apple pay session is 404 when not configured and refuses non-Apple validation URLs' do
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: '1' }
+    post warehouse_apple_pay_session_path(@share.token), params: { validation_url: 'https://apple-pay-gateway.apple.com/x' }
+    assert_response :not_found
+
+    configure_apple_pay
+    post warehouse_apple_pay_session_path(@share.token), params: { validation_url: 'https://evil.example.com/paymentservices/startSession' }
+    assert_response :unprocessable_entity
+    assert_not_requested :post, 'https://evil.example.com/paymentservices/startSession'
+  end
+
+  test 'apple pay session relays Apple response using merchant id and request domain' do
+    configure_apple_pay
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: '1' }
+    apple = stub_request(:post, 'https://apple-pay-gateway.apple.com/paymentservices/startSession').with { |req|
+      body = JSON.parse(req.body)
+      body['merchantIdentifier'] == 'merchant.test.rupert' && body['initiative'] == 'web' &&
+        body['displayName'] == 'Sage Supply' && body['initiativeContext'].present?
+    }.to_return(status: 200, body: { merchantSessionIdentifier: 'abc' }.to_json)
+
+    post warehouse_apple_pay_session_path(@share.token),
+      params: { validation_url: 'https://apple-pay-gateway.apple.com/paymentservices/startSession' }
+
+    assert_requested apple
+    assert_response :success
+    assert_equal 'abc', response.parsed_body['merchantSessionIdentifier']
+  end
+
+  test 'apple pay token is charged through Authorize.net with the apple descriptor' do
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: '5' }
+    charge = stub_request(:post, 'https://apitest.authorize.net/xml/v1/request.api').with { |req|
+      payment = JSON.parse(req.body).dig('createTransactionRequest', 'transactionRequest', 'payment', 'opaqueData')
+      payment == { 'dataDescriptor' => 'COMMON.APPLE.INAPP.PAYMENT', 'dataValue' => 'YXBwbGUtdG9rZW4=' }
+    }.to_return(status: 200, body: approved_gateway_body)
+
+    post warehouse_checkout_submit_path(@share.token), params: {
+      shipping_name: 'Ada Vendor', shipping_address1: '1 Main St', shipping_city: 'Springfield',
+      shipping_zip: '12345', shipping_country: 'US',
+      payment_nonce: 'YXBwbGUtdG9rZW4=', data_descriptor: 'COMMON.APPLE.INAPP.PAYMENT'
+    }
+
+    assert_requested charge
+    assert_redirected_to(%r{/w/#{@share.token}/orders/})
+  end
+
+  test 'unknown payment descriptors fall back to the card descriptor' do
+    stub = stub_request(:post, 'https://apitest.authorize.net/xml/v1/request.api').with { |req|
+      JSON.parse(req.body).dig('createTransactionRequest', 'transactionRequest', 'payment', 'opaqueData', 'dataDescriptor') ==
+        'COMMON.ACCEPT.INAPP.PAYMENT'
+    }.to_return(status: 200, body: approved_gateway_body)
+
+    AuthorizeNetClient.charge!(amount_cents: 100, payment_nonce: 'n', data_descriptor: 'SOMETHING.ELSE')
+
+    assert_requested stub
+  end
+
+  test 'google pay button shows in sandbox and its token is charged with the google descriptor' do
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: '5' }
+    get warehouse_checkout_path(@share.token)
+    assert_select '[data-google-pay-target="button"]', count: 1
+    assert_select 'form[data-google-pay-environment-value="TEST"][data-google-pay-login-id-value="testlogin"]'
+    assert_select 'form[data-google-pay-total-value="80.00"]'
+
+    charge = stub_request(:post, 'https://apitest.authorize.net/xml/v1/request.api').with { |req|
+      JSON.parse(req.body).dig('createTransactionRequest', 'transactionRequest', 'payment', 'opaqueData') ==
+        { 'dataDescriptor' => 'COMMON.GOOGLE.INAPP.PAYMENT', 'dataValue' => 'Z29vZ2xlLXRva2Vu' }
+    }.to_return(status: 200, body: approved_gateway_body)
+    post warehouse_checkout_submit_path(@share.token), params: {
+      shipping_name: 'Ada Vendor', shipping_address1: '1 Main St', shipping_city: 'Springfield',
+      shipping_zip: '12345', shipping_country: 'US',
+      payment_nonce: 'Z29vZ2xlLXRva2Vu', data_descriptor: 'COMMON.GOOGLE.INAPP.PAYMENT'
+    }
+    assert_requested charge
+  end
+
+  test 'google pay is hidden in production until a merchant id is saved' do
+    EnvStore.set('AUTHORIZE_NET_SANDBOX', '0')
+    stub_request(:post, 'https://api.authorize.net/xml/v1/request.api')
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: '1' }
+    get warehouse_checkout_path(@share.token)
+    assert_select '[data-google-pay-target="button"]', count: 0
+
+    EnvStore.set('GOOGLE_PAY_MERCHANT_ID', 'BCR2DN4TEST')
+    get warehouse_checkout_path(@share.token)
+    assert_select '[data-google-pay-target="button"]', count: 1
+    assert_select 'form[data-google-pay-environment-value="PRODUCTION"]'
+  ensure
+    EnvStore.set('GOOGLE_PAY_MERCHANT_ID', nil)
+  end
+
+  test 'checkout page has no raw card inputs, only hosted fields and wallet tokens' do
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: '1' }
+    get warehouse_checkout_path(@share.token)
+    assert_select 'input[name*="card"], input[autocomplete^="cc-"]', count: 0
   end
 end

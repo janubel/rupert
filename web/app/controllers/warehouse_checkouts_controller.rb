@@ -14,10 +14,19 @@ class WarehouseCheckoutsController < ApplicationController
   before_action :require_cart
 
   def show
-    @cart = current_cart
-    @client_key = AuthorizeNetClient.client_key
-    @login_id = AuthorizeNetClient.login_id
-    @accept_js_url = AuthorizeNetClient.accept_js_url
+    load_payment_config
+  end
+
+  # Browser asks us to validate an Apple Pay session; we relay Apple's answer.
+  def apple_pay_session
+    return head(:not_found) unless ApplePayMerchantSession.configured?
+
+    session_json = ApplePayMerchantSession.call(
+      validation_url: params[:validation_url], domain: request.host, default_name: @share.name
+    )
+    render json: session_json
+  rescue ApplePayMerchantSession::Error => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def create
@@ -33,16 +42,23 @@ class WarehouseCheckoutsController < ApplicationController
       clear_cart_token!
       redirect_to(warehouse_order_path(@share.token, result.order.order_number), notice: 'Order confirmed.')
     else
-      @cart = current_cart
-      @client_key = AuthorizeNetClient.client_key
-      @login_id = AuthorizeNetClient.login_id
-      @accept_js_url = AuthorizeNetClient.accept_js_url
+      load_payment_config
       flash.now[:alert] = result.error
       render(:show, status: :unprocessable_entity)
     end
   end
 
   private
+
+  def load_payment_config
+    @cart = current_cart
+    @client_key = AuthorizeNetClient.client_key
+    @login_id = AuthorizeNetClient.login_id
+    @accept_js_url = AuthorizeNetClient.accept_js_url
+    @apple_pay = ApplePayMerchantSession.configured? && AuthorizeNetClient.configured?
+    @google_pay = AuthorizeNetClient.configured? &&
+                  (AuthorizeNetClient.sandbox? || EnvStore.fetch('GOOGLE_PAY_MERCHANT_ID', '').present?)
+  end
 
   def require_cart
     render_404 if current_cart.items.none?

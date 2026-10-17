@@ -8,7 +8,7 @@ class PosConnectionsTest < ActionDispatch::IntegrationTest
     @owner = users(:regular_user)
     Current.tenant = @tenant
     login
-    @authorize_credentials = { api_login_id: 'sandbox-login', transaction_key: 'sandbox-key-1234' }
+    @authorize_credentials = { api_login_id: 'sandbox-login', transaction_key: 'sandbox-key-1234', client_key: 'sandbox-client-key' }
     @nmi_credentials = { security_key: 'private-nmi-security-key' }
     @credentials = { api_url: 'https://167.koronacloud.com/web/api/v3',
       account_id: '11111111-2222-3333-4444-555555555555', api_username: 'dedicated-read-user', api_password: 'private-api-password' }
@@ -247,6 +247,7 @@ class PosConnectionsTest < ActionDispatch::IntegrationTest
     get pos_connection_path('valmar')
     assert_select 'input[name="pos_connection[credential_secret][api_login_id]"][maxlength="20"]'
     assert_select 'input[name="pos_connection[credential_secret][transaction_key]"][maxlength="16"]'
+    assert_select 'input[name="pos_connection[credential_secret][client_key]"]'
     assert_select 'input[name="pos_connection[credential_secret][security_key]"]', count: 0
     assert_select 'button', text: 'Check API credentials', count: 0
     assert_includes response.body, 'verifies API authentication only'
@@ -266,7 +267,7 @@ class PosConnectionsTest < ActionDispatch::IntegrationTest
     raw = PosConnection.connection.select_value("SELECT credentials_json FROM pos_connections WHERE id = #{connection.id}")
     @authorize_credentials.each_value { |value| assert_not_includes raw, value }
     get pos_connection_path('valmar')
-    assert_select 'input[type="password"]', count: 2
+    assert_select 'input[type="password"]', count: 3
     assert_select 'input[type="password"][value]', count: 0
     assert_select 'button', text: 'Check API credentials'
     @authorize_credentials.each_value { |value| assert_not_includes response.body, value }

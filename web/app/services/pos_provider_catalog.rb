@@ -56,14 +56,14 @@ class PosProviderCatalog
   ].freeze
 
   VALMAR_GATEWAY_CREDENTIALS = {
-    'authorize_net' => %w[api_login_id transaction_key],
+    'authorize_net' => %w[api_login_id transaction_key client_key],
     'nmi' => %w[security_key]
   }.freeze
 
   VALMAR_GATEWAY_DETAILS = {
     'authorize_net' => {
       name: 'Authorize.net', docs: 'https://developer.authorize.net/api/reference/index.html',
-      instructions: 'Use the API Login ID and transaction key issued for the selected sandbox or production merchant account. This check verifies API authentication only. It does not read transactions, enable checkout, send a payment or operate a terminal.'
+      instructions: 'Use the API Login ID, transaction key and public client key (Accept.js) issued for the selected sandbox or production merchant account. This check verifies API authentication only. It does not read transactions, enable checkout, send a payment or operate a terminal.'
     },
     'nmi' => {
       name: 'NMI', docs: 'https://docs.nmi.com/reference/query',
