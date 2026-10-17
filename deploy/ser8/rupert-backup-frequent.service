@@ -1,0 +1,13 @@
+# SER8 (Incus container "rupert"): install to /etc/systemd/system/. Runs as root because /etc/rupert.env is root-only.
+# Install the script to /usr/local/sbin (not into the /opt/rupert git checkout, which must stay clean for deploys):
+#   install -m 0755 rupert-backup-frequent.sh /usr/local/sbin/
+[Unit]
+Description=Rupert frequent rolling database snapshot
+
+[Service]
+Type=oneshot
+Environment=APP_DIR=/opt/rupert
+ExecStart=/usr/local/sbin/rupert-backup-frequent.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=240
