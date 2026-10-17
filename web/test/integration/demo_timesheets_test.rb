@@ -36,7 +36,9 @@ class DemoTimesheetsTest < ActionDispatch::IntegrationTest
     sign_in(@owner)
     get people_timesheets_path
     assert_response :success
+    get people_timesheet_path(@sheets.first)
     assert_select '[aria-label="Demo timesheet notice"]', text: /DEMO.*Fictional timesheet/
+    get people_timesheets_path(view: 'list')
     assert_select 'a[href=?]', people_timesheet_path(@real_sheet), count: 0
     get people_timesheet_path(@sheets.first)
     assert_response :success

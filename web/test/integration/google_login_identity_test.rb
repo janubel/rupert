@@ -221,7 +221,7 @@ class GoogleLoginIdentityTest < ActionDispatch::IntegrationTest
     get ctrax_pos_path
     assert_response :success
     assert_select 'nav[aria-label="My workspace"] a[href=?]', ctrax_pos_path
-    get people_timesheets_path
+    get people_timesheets_path(view: 'list')
     assert_response :success
     assert_select 'a[href=?]', people_timesheet_path(own_sheet)
     assert_select 'a[href=?]', people_timesheet_path(other_sheet), count: 0

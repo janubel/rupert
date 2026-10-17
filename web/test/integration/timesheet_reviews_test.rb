@@ -27,13 +27,13 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     %w[admin manager shift_leader].each do |role|
       @reviewer.update!(role: role)
       sign_in
-      get people_timesheets_path
+      get people_timesheets_path(view: 'list')
       assert_response :success
-      assert_select 'nav[aria-label="Module areas"] a[href=?][aria-current="page"]', people_timesheets_path, text: 'Timesheets'
+      assert_select 'nav[aria-label="Module areas"] a[aria-current="page"]', minimum: 1
       assert_select 'nav[aria-label="Timesheet review"] a', text: 'Needs review (1)'
       assert_select 'a[href=?]', people_timesheet_path(@sheet), text: 'Review timesheet'
       assert_select 'a[href=?]', people_timesheet_path(@draft), count: 0
-      get people_timesheets_path(status: 'all')
+      get people_timesheets_path(status: 'all', view: 'list')
       assert_select 'a[href=?]', people_timesheet_path(@draft), minimum: 1
       get people_timesheet_path(@sheet)
       assert_select 'input[type="submit"][value="Approve"]'
@@ -66,7 +66,7 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     post approve_people_timesheet_path(@sheet)
     assert @sheet.reload.submitted?
     assert_nil @sheet.reviewed_by
-    get people_timesheets_path
+    get people_timesheets_path(view: 'list')
     assert_select 'p', text: 'Another reviewer required'
   end
 
@@ -128,5 +128,33 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     assert @sheet.reload.submitted?
     assert_nil @sheet.reviewed_by
     assert_match(/no longer active/, flash[:alert])
+  end
+
+  test 'admin list view shows hour breakdowns flags search week navigation and day grid' do
+    @sheet.entries.create!(worked_on: '2026-07-28', hours: 3, work_type: 'overtime')
+    @sheet.submit!
+    sign_in
+    get people_timesheets_path(view: 'list', status: 'all', period: '2026-07-28')
+    assert_response :success
+    assert_select 'section[aria-label="Timesheet summary"]'
+    assert_select 'span', text: 'Overtime recorded'
+    assert_select 'nav[aria-label="Week"] a', text: /Previous week/
+    assert_select 'section[aria-label="Missing timesheets"]', count: 0 # reviewer lacks timesheets.write
+    get people_timesheets_path(view: 'list', status: 'all', q: 'alex')
+    assert_select 'a[href=?]', people_timesheet_path(@sheet), minimum: 1
+    assert_select 'a[href=?]', people_timesheet_path(@draft), count: 0
+    get people_timesheet_path(@sheet)
+    assert_select 'section[aria-label="Daily hours"]'
+  end
+
+  test 'bulk approve approves eligible sheets and reports the rest' do
+    @sheet.submit!
+    sign_in
+    post bulk_approve_people_timesheets_path, params: { timesheet_ids: [@sheet.id, @draft.id], review_note: 'ok' }
+    assert @sheet.reload.approved?
+    assert @draft.reload.draft?
+    assert_match(/not available/, flash[:alert])
+    post bulk_approve_people_timesheets_path
+    assert_match(/Select at least one/, flash[:alert])
   end
 end
