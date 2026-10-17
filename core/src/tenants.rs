@@ -262,6 +262,7 @@ pub struct Registry {
     pub sync_sem: Arc<Semaphore>,
     pub sse_total: AtomicUsize,
     pub hook_sem: Arc<Semaphore>,
+    pub shutdown: tokio::sync::watch::Sender<bool>,
     pub hook_debounce: Mutex<std::collections::HashMap<(String, String), i64>>,
     pub sse_max: usize,
     buses: Cache<String, broadcast::Sender<Arc<crate::feed::Ev>>>,
@@ -294,6 +295,7 @@ impl Registry {
             )),
             sse_total: AtomicUsize::new(0),
             hook_sem: Arc::new(Semaphore::new(4)),
+            shutdown: tokio::sync::watch::channel(false).0,
             hook_debounce: Mutex::new(Default::default()),
             sse_max: std::env::var("RUPERT_SSE_MAX")
                 .ok()
@@ -319,6 +321,37 @@ impl Registry {
         self.open.insert(tenant.to_string(), d.clone());
         Ok(d)
     }
+    pub fn data_dir(&self) -> &std::path::Path {
+        &self.dir
+    }
+    pub fn tenant_path(&self, tenant: &str) -> PathBuf {
+        self.dir.join("tenants").join(format!("{tenant}.db"))
+    }
+    pub fn open_tenants(&self) -> u64 {
+        self.open.run_pending_tasks();
+        self.open.entry_count()
+    }
+
+    /// Folds every open database's WAL back into its main file so a stop leaves nothing in `-wal` files.
+    pub fn checkpoint_all(&self) -> usize {
+        let mut n = 0;
+        for (_, db) in self.open.iter() {
+            if db
+                .writer
+                .lock()
+                .execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")
+                .is_ok()
+            {
+                n += 1;
+            }
+        }
+        let _ = self
+            .central
+            .lock()
+            .execute_batch("PRAGMA wal_checkpoint(TRUNCATE)");
+        n
+    }
+
     pub fn create_tenant(&self, id: &str, name: &str, host: &str) -> rusqlite::Result<()> {
         let now = crate::now();
         let c = self.central.lock();

@@ -15,14 +15,65 @@ mod upstream;
 use auth::Principal;
 use axum::{
     Json, Router,
-    extract::{Query, State},
+    extract::{MatchedPath, Query, Request, State},
     http::StatusCode,
+    middleware::Next,
     response::{IntoResponse, Response},
     routing::{get, post, put},
 };
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tenants::Registry;
+
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const GIT_REV: &str = match option_env!("RUPERT_GIT_REV") {
+    Some(r) => r,
+    None => "unknown",
+};
+static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+pub fn uptime_secs() -> u64 {
+    STARTED.get().map(|t| t.elapsed().as_secs()).unwrap_or(0)
+}
+
+/// One JSON object per line on stderr (journald picks it up). Never pass secrets or raw URLs here.
+pub fn log(level: &str, msg: &str, extra: serde_json::Value) {
+    let mut o = serde_json::json!({ "ts": now(), "level": level, "msg": msg });
+    if let (Some(m), Some(e)) = (o.as_object_mut(), extra.as_object()) {
+        for (k, v) in e {
+            m.insert(k.clone(), v.clone());
+        }
+    }
+    eprintln!("{o}");
+}
+
+/// Access log by route *template* (so `/hooks/{provider}/{token}` never exposes the token), no query strings,
+/// no headers. Errors and slow requests are always logged; everything with RUPERT_ACCESS_LOG=1.
+async fn access_log(req: Request, next: Next) -> Response {
+    let (method, route) = (
+        req.method().to_string(),
+        req.extensions()
+            .get::<MatchedPath>()
+            .map(|m| m.as_str().to_string())
+            .unwrap_or_else(|| "-".into()),
+    );
+    let t = std::time::Instant::now();
+    let res = next.run(req).await;
+    let (ms, status) = (t.elapsed().as_millis() as u64, res.status().as_u16());
+    if status >= 500 || ms >= 1000 || std::env::var("RUPERT_ACCESS_LOG").as_deref() == Ok("1") {
+        log(
+            "info",
+            "request",
+            serde_json::json!({ "method": method, "route": route, "status": status, "ms": ms }),
+        );
+    }
+    res
+}
+
+async fn shutdown_signal() {
+    use tokio::signal::unix::{SignalKind, signal};
+    let mut term = signal(SignalKind::terminate()).expect("SIGTERM handler");
+    tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = term.recv() => {} }
+}
 
 pub fn now() -> i64 {
     std::time::SystemTime::now()
@@ -240,11 +291,53 @@ async fn run() {
         .route("/api/v1/locations", get(sync::locations))
         .route("/api/v1/inventory/levels", get(sync::levels))
         .route("/api/v1/sync/{source}", post(sync::trigger))
+        .route("/api/v1/health", get(sync::health))
         .merge(auth::routes())
-        .with_state(app);
+        .layer(axum::middleware::from_fn(access_log))
+        .with_state(app.clone());
     let addr = std::env::var("RUPERT_LISTEN").unwrap_or_else(|_| "127.0.0.1:8799".into());
     let l = tokio::net::TcpListener::bind(&addr).await.expect("bind");
-    axum::serve(l, r.into_make_service_with_connect_info::<SocketAddr>())
-        .await
-        .unwrap();
+    STARTED.get_or_init(std::time::Instant::now);
+    log(
+        "info",
+        "listening",
+        serde_json::json!({ "addr": addr, "version": VERSION, "git_rev": GIT_REV, "dev": app.auth.dev, "scheduler": std::env::var("RUPERT_SCHEDULER").as_deref() != Ok("0") }),
+    );
+
+    // Stop: close the listener, end SSE streams, let in-flight requests and running syncs finish (bounded),
+    // then fold every WAL into its database so a snapshot or backup taken afterwards is complete.
+    let a2 = app.clone();
+    let server = axum::serve(l, r.into_make_service_with_connect_info::<SocketAddr>())
+        .with_graceful_shutdown(async move {
+            shutdown_signal().await;
+            log("info", "shutdown requested", serde_json::json!({}));
+            let _ = a2.shutdown.send(true);
+        });
+    let mut down = app.shutdown.subscribe();
+    let deadline = async {
+        let _ = down.changed().await;
+        tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+    };
+    tokio::select! {
+        r = server => { if let Err(e) = r { log("error", "server error", serde_json::json!({ "error": e.to_string() })); } }
+        _ = deadline => log("warn", "connections still open after 15 s; stopping anyway", serde_json::json!({})),
+    }
+    for _ in 0..40 {
+        if app.sync_running.lock().is_empty() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+    let running = app.sync_running.lock().len();
+    let n = tokio::task::spawn_blocking({
+        let a = app.clone();
+        move || a.checkpoint_all()
+    })
+    .await
+    .unwrap_or(0);
+    log(
+        "info",
+        "stopped",
+        serde_json::json!({ "checkpointed_databases": n, "syncs_interrupted": running }),
+    );
 }

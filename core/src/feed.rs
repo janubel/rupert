@@ -202,6 +202,7 @@ pub async fn stream(
     }
     let guard = ClientGuard(db.clone(), reg.clone());
     let mut rx = db.bus.subscribe(); // subscribe before replay so nothing falls in the gap
+    let mut down = reg.shutdown.subscribe();
     let hdr = headers
         .get("last-event-id")
         .and_then(|v| v.to_str().ok())
@@ -227,6 +228,7 @@ pub async fn stream(
                     Err(RecvError::Closed) => return,
                 },
                 _ = tokio::time::sleep_until(deadline) => return,
+                _ = down.changed() => return, // server is stopping: end the stream so clients reconnect elsewhere
                 _ = tx.closed() => return,
             }
         }

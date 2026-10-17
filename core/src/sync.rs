@@ -1251,3 +1251,65 @@ pub async fn order_detail(
         None => Err(err(404, "not found")),
     }
 }
+
+// ---------- health (for monitoring) ----------
+
+/// Operational state for this tenant and the process: last sync per provider, whether a scheduled sync is
+/// overdue, API budget use, row counts and file sizes. A host-side timer should alert on `overdue`.
+pub async fn health(State(reg): State<Arc<Registry>>, p: Principal) -> R {
+    p.require("inventory:read", "staff")?;
+    let db = reg.db(&p.tenant_id).map_err(|_| err(500, "internal"))?;
+    let (r2, t) = (reg.clone(), p.tenant_id.clone());
+    let sched: Vec<(String, i64, i64)> = tokio::task::spawn_blocking(move || {
+        let c = r2.central.lock();
+        c.prepare_cached("SELECT source,every_secs,next_due FROM schedules WHERE tenant_id=?1")
+            .and_then(|mut s| {
+                s.query_map([&t], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+                    .map(|i| i.flatten().collect())
+            })
+            .unwrap_or_default()
+    })
+    .await
+    .map_err(|_| err(500, "internal"))?;
+    let (tenant_file, central_file) = (
+        reg.tenant_path(&p.tenant_id),
+        reg.data_dir().join("central.db"),
+    );
+    let realtime = db.realtime();
+    let now = crate::now();
+    let body = tokio::task::spawn_blocking(move || {
+        let size = |p: &std::path::Path| std::fs::metadata(p).map(|m| m.len()).unwrap_or(0) + std::fs::metadata(format!("{}-wal", p.display())).map(|m| m.len()).unwrap_or(0);
+        db.with_reader(|c| {
+            let count = |t: &str| c.query_row(&format!("SELECT count(*) FROM {t}"), [], |r| r.get::<_, i64>(0)).unwrap_or(0);
+            let mut providers = serde_json::Map::new();
+            for src in ["shopify", "square"] {
+                let last: Option<(String, Option<i64>, i64)> = c.query_row("SELECT status,finished_at,started_at FROM sync_runs WHERE source=?1 AND status<>'running' ORDER BY id DESC LIMIT 1", [src], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).ok();
+                let last_ok: Option<i64> = c.query_row("SELECT finished_at FROM sync_runs WHERE source=?1 AND status='ok' ORDER BY id DESC LIMIT 1", [src], |r| r.get(0)).ok().flatten();
+                let sch = sched.iter().find(|(s, _, _)| s == src);
+                let every = sch.map(|(_, e, _)| *e);
+                let ok_age = last_ok.map(|t| now - t);
+                // Overdue: a schedule exists and (the last good sync is older than three intervals, or there has
+                // never been one and either a run already failed or the first run is itself late). A brand-new
+                // schedule that has not had its chance yet is not overdue.
+                let overdue = sch.map(|(_, e, next_due)| match ok_age {
+                    Some(a) => a > 3 * e + 60,
+                    None => last.as_ref().is_some_and(|l| l.0 == "failed") || now > next_due + e + 60,
+                });
+                let used: i64 = c.query_row("SELECT coalesce(sum(requests),0) FROM api_usage WHERE provider=?1 AND bucket>?2", params![src, now / BUCKET_SECS - 6], |r| r.get(0)).unwrap_or(0);
+                providers.insert(src.into(), json!({ "last_status": last.as_ref().map(|l| l.0.clone()), "last_finished_at": last.as_ref().and_then(|l| l.1), "last_ok_age_secs": ok_age,
+                    "scheduled_every_secs": every, "overdue": overdue, "requests_last_hour": used }));
+            }
+            Ok(json!({ "providers": providers, "realtime": realtime, "hourly_budget": hourly_budget(),
+                "counts": { "shopify_variants": count("shopify_variants"), "square_variations": count("square_variations"), "orders": count("orders"), "events": count("events") },
+                "db_bytes": { "tenant": size(&tenant_file), "central": size(&central_file) } }))
+        }).unwrap_or(Value::Null)
+    }).await.map_err(|_| err(500, "internal"))?;
+    let any_overdue = body["providers"]
+        .as_object()
+        .map(|m| m.values().any(|v| v["overdue"] == true))
+        .unwrap_or(false);
+    ok(
+        json!({ "status": if any_overdue { "degraded" } else { "ok" }, "version": crate::VERSION, "git_rev": crate::GIT_REV, "uptime_secs": crate::uptime_secs(), "tenant": body,
+        "process": { "open_tenants": reg.open_tenants(), "sse_streams": reg.sse_total.load(std::sync::atomic::Ordering::Relaxed), "syncs_running": reg.sync_running.lock().len() } }),
+    )
+}
