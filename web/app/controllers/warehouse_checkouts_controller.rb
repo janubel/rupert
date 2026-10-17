@@ -63,7 +63,18 @@ class WarehouseCheckoutsController < ApplicationController
   end
 
   def require_cart
-    render_404 if current_cart.items.none?
+    cart = current_cart(include_checked_out: true)
+    if cart.checked_out?
+      # A committed checkout may have lost its response. The original signed,
+      # share-bound cart cookie still proves this browser owns the confirmation.
+      order = Core::Order.find_by(source: 'online', source_order_id: "wh-#{cart.id}", channel: 'warehouse')
+      return render_404 unless order&.paid?
+
+      write_order_confirmation(order)
+      clear_cart_token!
+      return redirect_to warehouse_order_path(@share.token, order.order_number)
+    end
+    render_404 if cart.items.none?
   end
 
   def order_params

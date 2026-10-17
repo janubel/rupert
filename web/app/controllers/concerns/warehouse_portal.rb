@@ -18,10 +18,10 @@ module WarehousePortal
     response.headers['X-Robots-Tag'] = 'noindex, nofollow'
   end
 
-  def current_cart
+  def current_cart(include_checked_out: false)
     @current_cart ||= begin
       cart = WarehouseCart.find_by(token: cart_token, share_id: @share.id) if cart_token
-      if cart.nil? || cart.checked_out?
+      if cart.nil? || cart.checked_out? && !include_checked_out
         cart = WarehouseCart.create!(
           share: @share,
           tenant_id: @share.tenant_id,

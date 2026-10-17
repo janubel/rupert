@@ -151,6 +151,29 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  %i[get post].each do |request_method|
+    test "#{request_method} after a lost successful response recovers confirmation through the browser cart" do
+      post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: '2' }
+      cart = WarehouseCart.last
+      Current.tenant = @tenant
+      # The first request committed, but none of its Set-Cookie headers or redirect
+      # reached the browser. It still holds the original signed cart cookie.
+      result = WarehouseCheckoutService.call(share: @share, cart: cart, payment_nonce: 'lost-response-nonce',
+        shipping: { shipping_name: 'Recovery customer' })
+      assert_predicate result, :success?
+      Current.reset
+
+      assert_no_difference ['Core::Payment.unscoped.count', 'WarehouseCart.count'] do
+        public_send(request_method, warehouse_checkout_submit_path(@share.token), params: { payment_nonce: 'retry-nonce' })
+      end
+      assert_redirected_to warehouse_order_path(@share.token, result.order.order_number)
+      follow_redirect!
+      assert_response :success
+      assert_select 'h1', /Order confirmed/
+      assert_requested :post, 'https://apitest.authorize.net/xml/v1/request.api', times: 1
+    end
+  end
+
   test 'declined payment leaves no paid order' do
     stub_request(:post, 'https://apitest.authorize.net/xml/v1/request.api')
       .to_return(status: 200,

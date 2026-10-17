@@ -169,7 +169,7 @@ class AuditIntegrityServicesTest < ActiveSupport::TestCase
       uploaded.close
       assert_equal 2, source.get_first_value('SELECT count(*) FROM audit_rows')
       BackupService.stub(:database_path, original) do
-        assert_raises(BackupService::RestoreError) { BackupService.send(:sqlite_restore!, upload) }
+        assert_raises(BackupService::RestoreError) { BackupService.restore!(upload) }
       end
       refute File.exist?("#{original}.pre-restore")
       assert_equal 2, source.get_first_value('SELECT count(*) FROM audit_rows')

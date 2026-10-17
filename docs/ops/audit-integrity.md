@@ -8,7 +8,7 @@ Warehouse payment attempts commit before the gateway request. They retain a nonc
 
 An approved response remains saved if local order creation fails. The same browser can finish that approved order without sending another charge or entering another card token. A lost response, held response or approval without a transaction ID remains unresolved. The customer sees the invoice reference, and the Activity log records a review item. The store operator must review that invoice in the original gateway account. Do not clear the attempt, switch its state to declined or submit a new charge merely because a local order is missing. This release does not automatically resolve an unknown outcome.
 
-Order confirmation now requires the purchasing browser's signed, share-bound confirmation cookie. Knowing a vendor link and an order number grants no access to another customer's confirmation. Historical confirmations without the new cookie remain available to authorized staff through the ordinary order pages.
+Order confirmation now requires the purchasing browser's signed, share-bound confirmation cookie. Knowing a vendor link and an order number grants no access to another customer's confirmation. Historical confirmations without the new cookie remain available to authorized staff through the ordinary order pages. If a successful checkout response is lost, returning to checkout with the original signed cart cookie recovers the paid order and issues its confirmation cookie without another gateway request. Cart editing still starts a new cart after payment.
 
 The new `warehouse_payment_attempts` table is additive. No existing orders, payments or payroll records are rewritten by deployment.
 
@@ -20,11 +20,11 @@ Weekly and biweekly salaried pay use 52 and 26 annual installments, prorated ove
 
 Sales-tax allocation separates the amount including tip from the order's collected tax. Cumulative payment allocation assigns a final split-tender rounding cent once. Ignored bank lines remain retained history and are excluded from active reconciliation totals and unresolved work.
 
-## SQLite restoration
+## Database restoration
 
-Live SQLite restoration through the web UI is disabled. An HTTP request cannot stop other workers or safely replace their open WAL database. Snapshot downloads remain available. PostgreSQL restoration retains its separate transaction-based path.
+Live database restoration through the web UI is disabled for both adapters. An HTTP request cannot stop other web/job writers. PostgreSQL transaction rollback does not preserve writes committed after an older recovery dump if that dump is replayed; even a successful replacement discards newer activity. SQLite cannot safely replace an open WAL database. Snapshot downloads remain available, use unique private filenames for overlapping requests, and retain the adapter-specific file extension.
 
-An instance operator restoring SQLite must first take a consistent SQLite backup using the backup API, verify a restored copy with integrity and foreign-key checks, preserve configuration and encryption keys privately, stop all web/job writers and close their connections, then restore and verify before starting services. Preserve subsequent business writes and an explicit reconciliation plan before choosing an older backup. A plain copy of the live main database file does not include uncheckpointed WAL commits.
+An instance operator restoring a database must first take a consistent SQLite backup using the SQLite backup API or PostgreSQL pg_dump, verify a restored copy with integrity and foreign-key checks, preserve configuration and encryption keys privately, stop all web/job writers and close their connections, then restore and verify before starting services. Preserve subsequent business writes and an explicit reconciliation plan before choosing an older backup. A plain copy of the live main database file does not include uncheckpointed WAL commits.
 
 ## Local Orchard instance
 
