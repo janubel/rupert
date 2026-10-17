@@ -34,10 +34,7 @@ class EmployeeAccessController < ApplicationController
       grant.update!(used_at: Time.current)
       EmployeeAppSession.unscoped.where(user_id: grant.user_id).update_all(revoked_at: Time.current)
     end
-    reset_session
-    session[:user_id] = grant.user_id
-    session[:auth_method] = 'employee_invite'
-    session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(grant.user.password_digest)
+    start_browser_session(grant.user, method: 'employee_invite')
     redirect_to employee_app_path, notice: 'Your password is set. Welcome to your time workspace.'
   rescue ActiveRecord::RecordInvalid => e
     @grant = grant

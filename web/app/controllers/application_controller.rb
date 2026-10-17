@@ -62,8 +62,37 @@ class ApplicationController < ActionController::Base
     Current.user&.employee? ? 'employee' : 'application'
   end
 
+  # Bind every role to its authenticated credentials. Legacy administrator cookies
+  # must not outlive an account-link correction or password reset.
+  def start_browser_session(user, method:, google_email: nil, google_identity: nil)
+    reset_session
+    session[:user_id] = user.id
+    session[:auth_method] = method
+    session[:authentication_fingerprint] = Digest::SHA256.hexdigest(user.password_digest)
+    if method == 'google'
+      session[:google_login_email] = google_email
+      session[:google_login_identity_id] = google_identity.id if google_identity
+    end
+  end
+
+  def valid_browser_session?(user)
+    return false unless session[:authentication_fingerprint] == Digest::SHA256.hexdigest(user.password_digest)
+    return true unless session[:auth_method] == 'google'
+
+    email = session[:google_login_email]
+    if session[:google_login_identity_id]
+      GoogleLoginIdentity.exists?(id: session[:google_login_identity_id], email: email, user_id: user.id)
+    else
+      email.present? && email == user.email
+    end
+  end
+
   def set_current_context
     Current.user = session[:user_id] ? User.find_by(id: session[:user_id]) : nil
+    if Current.user && !valid_browser_session?(Current.user)
+      reset_session
+      Current.user = nil
+    end
 
     if Current.user&.super_admin?
       # Super admins are platform-wide and may scope to any store via its
@@ -77,10 +106,6 @@ class ApplicationController < ActionController::Base
   end
 
   def require_login
-    if Current.user&.employee? && session[:employee_password_fingerprint] != Digest::SHA256.hexdigest(Current.user.password_digest)
-      reset_session
-      Current.user = nil
-    end
     if Current.user && !Current.user.active?
       session.delete(:user_id)
       Current.user = nil
