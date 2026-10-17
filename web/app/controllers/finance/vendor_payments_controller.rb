@@ -22,7 +22,7 @@ module Finance
 
     def new
       authorize(:module, :finance_write?)
-      @payment = Finance::VendorPayment.new(paid_on: Date.today, vendor_id: params[:vendor_id])
+      @payment = Finance::VendorPayment.new(paid_on: Date.current, vendor_id: params[:vendor_id])
       @vendors = Purchasing::Vendor.ordered
     end
 

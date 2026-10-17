@@ -30,7 +30,7 @@ module Finance
 
     def new
       authorize(:module, :finance_write?)
-      @expense = Finance::Expense.new(incurred_on: Date.today)
+      @expense = Finance::Expense.new(incurred_on: Date.current)
       @vendors = Purchasing::Vendor.ordered
     end
 
