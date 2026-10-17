@@ -24,6 +24,7 @@ module OperationsWorkspaceHelper
        ['Bank statements', bank_statements_path, 'finance.read', 'bank_statements', 'Records'],
        ['Source documents', reconciliation_documents_path(from: date, to: date, close_day: date), 'reports.read', 'reconciliation_documents', 'Records'],
        ['Accounts', finance_accounts_path, 'finance.read', 'finance/accounts', 'Records'],
+       ['Receipts', receipts_path, 'finance.read', 'receipts', 'Records'],
        ['Expenses', finance_expenses_path, 'finance.read', 'finance/expenses', 'Records'],
        ['Vendor payments', finance_vendor_payments_path, 'finance.read', 'finance/vendor_payments', 'Records'],
        ['Chart of accounts', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts', 'Records'],

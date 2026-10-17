@@ -25,7 +25,7 @@ class EmployeePosAccessTest < ActionDispatch::IntegrationTest
     [ctrax_days_path, pos_connection_path('ctrax'), pos_setting_path(@location.id), new_sales_pos_session_path].each do |path|
       assert_select 'a[href=?]', path, count: 0
     end
-    assert_equal %w[ctrax_pos time_clock timesheets], ModuleRegistry.nav_for(@user).map(&:key)
+    assert_equal %w[ctrax_pos receipts time_clock timesheets], ModuleRegistry.nav_for(@user).map(&:key)
     get root_path
     assert_redirected_to ctrax_pos_path
     post pos_displays_path, params: { location_id: @location.id, demo: '1' }
