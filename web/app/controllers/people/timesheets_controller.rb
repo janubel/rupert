@@ -13,6 +13,7 @@ module People
       @status = params[:status].presence || (@reviewer ? 'submitted' : 'all')
       @status = 'all' unless (People::Timesheet.aasm.states.map { |state| state.name.to_s } + ['all']).include?(@status)
       @period = params[:period].presence
+      @view = %w[unified list].include?(params[:view]) ? params[:view] : 'list'
       visible = People::TimesheetPolicy.visible_to(Current.user)
       @has_demo_timesheets = visible.demo_records.exists?
       @awaiting = visible.awaiting_review.count
@@ -28,6 +29,15 @@ module People
       @ctrax_history = CtraxLaborShift.visible_to(Current.user)
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)
       load_admin_overview(visible) if @reviewer
+      # Unified view: combine Rupert timesheets + Square timecards + C-Trax shifts
+      # into one sortable list so every source is visible in a single place.
+      if @view == 'unified'
+        @unified = build_unified_records(visible)
+        @page = [params[:page].to_i, 1].max
+        @per_page = 40
+        @pagy = Pagy.new(count: @unified.size, page: @page, items: @per_page)
+        @unified_records = @unified.slice((@page - 1) * @per_page, @per_page) || []
+      end
     rescue Date::Error
       redirect_to people_timesheets_path, alert: 'Choose a valid period date.'
     end
@@ -109,6 +119,28 @@ module People
 
     def load_employees
       @employees = Current.user.can?('timesheets.write') ? People::Employee.active.ordered : People::Employee.active.where(user_id: Current.user.id)
+    end
+
+    def build_unified_records(visible)
+      records = []
+      visible.includes(:employee, :assigned_reviewer).find_each do |ts|
+        records << { source: 'Rupert', source_class: 'pill-olive', employee: ts.employee&.name || 'Unknown',
+          date: ts.period_start, end_date: ts.period_end, hours: ts.total_hours.to_f, status: ts.status,
+          detail: ts.demo? ? 'DEMO' : ts.period_label, path: people_timesheet_path(ts) }
+      end
+      SquareTimecard.visible_to(Current.user).includes(:employee).find_each do |card|
+        records << { source: 'Square', source_class: 'pill-taupe', employee: card.employee&.name || 'Unmatched',
+          date: card.started_at&.to_date, end_date: card.ended_at&.to_date, hours: card.hours.to_f, status: card.import_status,
+          detail: "Timecard ##{card.external_id}", path: people_square_timesheet_path(card) }
+      end
+      CtraxLaborShift.visible_to(Current.user).includes(:employee).find_each do |shift|
+        latest = helpers.ctrax_source_values(shift.latest_record) rescue {}
+        hours = latest[:reported_hours] || latest[:elapsed_hours] || shift.reported_hours
+        records << { source: 'C-Trax', source_class: 'pill-taupe', employee: shift.employee&.name || 'Unmatched',
+          date: (shift.started_at || latest[:started_at])&.to_date, end_date: (shift.ended_at || latest[:ended_at])&.to_date,
+          hours: hours&.to_f, status: shift.status, detail: "Shift ##{shift.external_id}", path: people_ctrax_timesheet_path(shift) }
+      end
+      records.sort_by { |r| r[:date] || Date.new(1970) }.reverse
     end
 
     # Navigation overview for reviewers: the next few weeks at a glance and
