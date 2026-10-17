@@ -421,3 +421,15 @@
 .lock-grid { display:grid;gap:.4rem;grid-template-columns:repeat(2,minmax(0,1fr)); }
 @media(min-width:640px) { .lock-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 @media(min-width:1024px) { .lock-grid { grid-template-columns:repeat(6,minmax(0,1fr)); } }
+
+/* One Finance header across bookkeeping, accounts and source evidence. */
+.finance-navigation { display:block;border:1px solid var(--color-fog);border-radius:1rem;padding:1rem;background:var(--color-paper);overflow:visible; }
+.finance-navigation-title { display:flex;flex-wrap:wrap;gap:.5rem;justify-content:space-between;align-items:center;font-weight:600;margin-bottom:.75rem; }
+.finance-navigation-hint { font-size:.75rem;font-weight:400;color:var(--color-mocha); }
+.finance-navigation-groups { display:grid;gap:1rem; }
+.finance-navigation-group { min-width:0; }
+.finance-navigation-group .workspace-nav-group { display:list-item;list-style:disclosure-closed inside;cursor:pointer;padding:0;margin-bottom:.35rem; }
+.finance-navigation-group[open] > .workspace-nav-group { list-style-type:disclosure-open; }
+.finance-navigation-links { display:flex;flex-wrap:wrap;gap:.25rem; }
+.finance-navigation-links .nav-pill { font-size:.75rem; }
+@media (min-width: 900px) { .finance-navigation-groups { grid-template-columns:1fr 1.35fr 1fr; } }

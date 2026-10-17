@@ -17,7 +17,7 @@ class ReconciliationWorkflowUxTest < ActionDispatch::IntegrationTest
   test 'library finds originals across dates without exposing other tenants' do
     get reconciliation_documents_path, params: { q: 'DAILY-CONTROL', from: '2026-10-01', to: '2026-10-31' }
     assert_response :success
-    assert_select 'h1', 'Document retention library'
+    assert_select 'h1', 'Source documents'
     assert_includes response.body, 'daily-control.csv'
     assert_equal 'no-store', response.headers['Cache-Control']
     other = Tenant.create!(name: 'Foreign UX', subdomain: 'foreign-ux')
@@ -187,7 +187,7 @@ class ReconciliationWorkflowUxTest < ActionDispatch::IntegrationTest
     assert_select '[aria-label="Report request being resolved"]', text: /This request is closed/
     get reconciliation_documents_path(source: 'bank', from: '2026-10-14', to: '2026-10-14', close_day: '2026-10-14', q: 'absent')
     assert_select 'a[href=?]', new_reconciliation_follow_up_path(source: 'bank', period_from: '2026-10-14', period_to: '2026-10-14', close_day: '2026-10-14'), text: 'Track missing report'
-    assert_select 'a[href=?]', financial_close_path(day: '2026-10-14', anchor: 'close-missing-reports'), text: 'Back to financial close'
+    assert_select 'a[href=?]', financial_close_path(day: '2026-10-14', anchor: 'close-missing-reports'), text: 'Back to day close'
     other = Tenant.create!(name: 'Foreign request library', subdomain: 'foreign-request-library')
     @user.update!(tenant: other)
     get reconciliation_documents_path(follow_up: item.id, close_day: '2026-10-14')

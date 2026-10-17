@@ -67,13 +67,19 @@ class ModuleRegistry
     Entry.new(key: 'sizes', name: 'Sizes', path: -> { size_families_path }, permission: 'settings.read', position: 51),
     Entry.new(key: 'reports', name: 'Reports', path: -> { reports_path }, permission: 'reports.read', position: 55),
     Entry.new(key: 'books_desk', name: 'Books desk', path: -> { books_desk_path }, permission: 'reports.read', position: 46),
-    Entry.new(key: 'financial_close', name: 'Financial close', path: -> { financial_close_path }, permission: 'reports.read', position: 55),
+    Entry.new(key: 'book_approvals', name: 'Book approvals', path: -> { book_approvals_path }, permission: 'reports.read', position: 57),
+    Entry.new(key: 'bank_statements', name: 'Bank statements', path: -> { bank_statements_path }, permission: 'finance.read', position: 60),
+    Entry.new(key: 'business_snapshot', name: 'Business snapshot', path: -> { business_snapshot_path }, permission: 'finance.read', position: 61),
+    Entry.new(key: 'books_check', name: 'Books health', path: -> { books_check_path }, permission: 'reports.read', position: 62),
+    Entry.new(key: 'period_locks', name: 'Period locks', path: -> { period_locks_path }, permission: 'reports.read', position: 63),
+    Entry.new(key: 'source_reports', name: 'Source reports', path: -> { money_reconciliations_path }, permission: 'reports.read', position: 64),
+    Entry.new(key: 'financial_close', name: 'Day close', path: -> { financial_close_path }, permission: 'reports.read', position: 55),
     Entry.new(key: 'cash_forecast', name: 'Cash forecast', path: -> { cash_forecast_path }, permission: 'reports.read', position: 60),
-    Entry.new(key: 'reconciliation_overview', name: 'Reconciliation across days', path: -> { overview_reconciliation_follow_ups_path }, permission: 'reports.read', position: 58),
-    Entry.new(key: 'reconciliation_follow_ups', name: 'Report requests & follow-ups', path: -> { reconciliation_follow_ups_path }, permission: 'reports.read', position: 59),
-    Entry.new(key: 'reconciliation_documents', name: 'Document retention library', path: -> { reconciliation_documents_path }, permission: 'reports.read', position: 58),
-    Entry.new(key: 'retention_drive', name: 'Google Drive document retention', path: -> { retention_drive_path }, permission: 'reports.read', position: 57),
-    Entry.new(key: 'daily_reconciliation', name: 'Daily reconciliation & documents', path: -> { daily_reconciliations_path }, permission: 'reports.read', position: 56),
+    Entry.new(key: 'reconciliation_overview', name: 'Open days', path: -> { overview_reconciliation_follow_ups_path }, permission: 'reports.read', position: 58),
+    Entry.new(key: 'reconciliation_follow_ups', name: 'Follow-ups', path: -> { reconciliation_follow_ups_path }, permission: 'reports.read', position: 59),
+    Entry.new(key: 'reconciliation_documents', name: 'Source documents', path: -> { reconciliation_documents_path }, permission: 'reports.read', position: 58),
+    Entry.new(key: 'retention_drive', name: 'Drive copies', path: -> { retention_drive_path }, permission: 'reports.read', position: 57),
+    Entry.new(key: 'daily_reconciliation', name: 'Daily reconciliation', path: -> { daily_reconciliations_path }, permission: 'reports.read', position: 56),
     Entry.new(key: 'register_summary', name: 'Daily register summary', path: lambda {
       register_summary_reports_path
     }, permission: 'reports.read', position: 56),
@@ -130,7 +136,7 @@ class ModuleRegistry
     Entry.new(key: 'purchase_orders', name: 'Purchase orders', path: lambda {
       purchasing_purchase_orders_path
     }, permission: 'purchasing.read', position: 46),
-    Entry.new(key: 'finance_accounts', name: 'Finance overview', path: lambda {
+    Entry.new(key: 'finance_accounts', name: 'Accounts', path: lambda {
       finance_accounts_path
     }, permission: 'finance.read', position: 47),
     Entry.new(key: 'chart_of_accounts', name: 'Chart of accounts', path: lambda {
@@ -139,7 +145,7 @@ class ModuleRegistry
     Entry.new(key: 'expenses', name: 'Expenses', path: lambda {
       finance_expenses_path
     }, permission: 'finance.read', position: 49),
-    Entry.new(key: 'payments', name: 'Payments', path: lambda {
+    Entry.new(key: 'payments', name: 'Vendor payments', path: lambda {
       finance_vendor_payments_path
     }, permission: 'finance.read', position: 50)
   ].freeze
@@ -184,8 +190,8 @@ class ModuleRegistry
       { key: 'marketing', name: 'Marketing', modules: %w[marketing influencers] },
       { key: 'stock', name: 'Stock',
         modules: %w[inventory inventory_exceptions locations inventory_counts stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
-      { key: 'money', name: 'Money',
-        modules: %w[books_desk financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments] },
+      { key: 'money', name: 'Finance',
+        modules: %w[books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
       { key: 'team', name: 'Team',
         modules: %w[accounts employees employee_reports departments positions time_clock timesheets leave payroll permissions] },

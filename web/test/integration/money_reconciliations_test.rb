@@ -14,7 +14,7 @@ class MoneyReconciliationsTest < ActionDispatch::IntegrationTest
     %w[daily weekly monthly].each do |kind|
       get money_reconciliations_path, params: { kind: kind, date: '2026-10-15' }
       assert_response :success
-      assert_select 'h1', 'Money reconciliation'
+      assert_select 'h1', 'Source reports'
       assert_includes response.body, 'Review required'
       assert_equal 'private, no-store', response.headers['Cache-Control']
     end

@@ -13,7 +13,7 @@ class BooksCheckIntegrationTest < ActionDispatch::IntegrationTest
   test 'page renders for a signed-in reviewer and exports csv' do
     get books_check_path
     assert_response :success
-    assert_select 'h1', 'Books check'
+    assert_select 'h1', 'Books health'
     assert_equal 'private, no-store', response.headers['Cache-Control']
     get books_check_path(format: :csv)
     assert_response :success

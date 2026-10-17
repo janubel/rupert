@@ -19,7 +19,7 @@ class PeriodLocksIntegrationTest < ActionDispatch::IntegrationTest
   test 'page renders the focused period, calendar and ledger' do
     get period_locks_path(kind: 'monthly', date: @month.iso8601)
     assert_response :success
-    assert_select 'h1', 'Locked periods'
+    assert_select 'h1', 'Period locks'
     assert_select '#lock-focus-title', PeriodLock.label('monthly', @month)
     assert_select 'ol.lock-grid', 3
     assert_includes response.body, 'Lock ledger'

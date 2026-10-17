@@ -60,4 +60,13 @@ class BooksPeriodTest < ActiveSupport::TestCase
     order.mark_paid!
     assert_equal %w[shopify square], period.pools.map { |p| p[:source] }
   end
+  test 'month-end day states detect changed evidence after approval' do
+    sale
+    approval = BookApproval.record!(period: period, status: 'approved_with_exceptions', notes: 'Reviewed', user: users(:regular_user))
+    assert_equal :approved_with_exceptions, BooksPeriod.day_states([@day])[@day]
+    sale(gross: 2000)
+    assert_equal :changed, BooksPeriod.day_states([@day])[@day]
+    assert_equal approval.report_digest, approval.reload.report_digest
+    assert_equal({}, BooksPeriod.day_states([]))
+  end
 end

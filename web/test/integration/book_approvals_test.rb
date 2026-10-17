@@ -24,7 +24,7 @@ class BookApprovalsIntegrationTest < ActionDispatch::IntegrationTest
   test 'page renders for daily and weekly with the ledger' do
     get book_approvals_path
     assert_response :success
-    assert_select 'h1', 'Approve the books'
+    assert_select 'h1', 'Book approvals'
     assert_equal 'private, no-store', response.headers['Cache-Control']
     get book_approvals_path(kind: 'weekly')
     assert_response :success

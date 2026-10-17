@@ -23,8 +23,8 @@ class BooksDesksIntegrationTest < ActionDispatch::IntegrationTest
     assert_select 'article[aria-labelledby=close-monthly]'
     assert_select 'article[aria-labelledby=close-yearly]'
     assert_select 'turbo-frame#books-desk-checks[src=?]', checks_books_desk_path
-    assert_select 'nav[aria-label="Money workspace"] a[aria-current=page]', text: 'Books desk'
-    assert_select 'nav[aria-label="Money workspace"] .workspace-nav-group', text: 'Routine'
+    assert_select 'nav[aria-label="Finance workspace"] a[aria-current=page]', text: 'Books desk'
+    assert_select 'nav[aria-label="Finance workspace"] .workspace-nav-group', text: 'Daily & weekly'
   end
 
   test 'an earlier week can be chosen and a future week falls back to last week' do
@@ -56,5 +56,19 @@ class BooksDesksIntegrationTest < ActionDispatch::IntegrationTest
     users(:regular_user).update!(role: 'employee')
     get books_desk_path
     assert_response :redirect
+  end
+  test 'finance screens share one complete header and identify their own page' do
+    [books_desk_path, period_locks_path, book_approvals_path, bank_statements_path,
+     business_snapshot_path, books_check_path, finance_accounts_path, finance_expenses_path,
+     finance_vendor_payments_path, finance_chart_of_accounts_path, ledger_index_path].each do |path|
+      get path
+      assert_response :success
+      assert_select 'nav[aria-label="Finance workspace"]', count: 1
+      assert_select 'nav[aria-label="Finance workspace"] a[aria-current="page"]', count: 1
+      assert_select 'nav[aria-label="Finance workspace"] .workspace-nav-group', text: 'Daily & weekly'
+      assert_select 'nav[aria-label="Finance workspace"] .workspace-nav-group', text: 'Records'
+      assert_select 'nav[aria-label="Finance workspace"] .workspace-nav-group', text: 'Reports & control'
+      assert_select 'nav[aria-label="Module areas"] a.nav-pill-active', text: 'Finance'
+    end
   end
 end

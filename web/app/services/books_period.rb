@@ -113,10 +113,17 @@ class BooksPeriod
 
   # A day-level view for the strip of recent days. Weekly approvals cover their days.
   def self.day_states(days)
-    approvals = BookApproval.where(period_to: days.min..).chronological.to_a
+    return {} if days.empty?
+
+    approvals = BookApproval.where('period_from <= ? AND period_to >= ?', days.max, days.min).chronological.to_a
+    current = {}
     days.index_with do |day|
-      covering = approvals.select { |a| a.period_from <= day && a.period_to >= day }
-      covering.empty? ? :pending : covering.last.status.to_sym
+      approval = approvals.select { |a| a.period_from <= day && a.period_to >= day }.max_by { |a| [a.approved_at, a.id] }
+      next :pending unless approval
+
+      key = [approval.period_kind, approval.period_from, approval.period_to]
+      current[key] = new(kind: approval.period_kind, date: approval.period_from).digest == approval.report_digest unless current.key?(key)
+      current[key] ? approval.status.to_sym : :changed
     end
   end
 
