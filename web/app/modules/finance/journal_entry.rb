@@ -7,6 +7,7 @@ module Finance
   # header can never disagree with its postings.
   class JournalEntry < ApplicationRecord
     include TenantScoped
+    include LockedPeriodGuard
 
     self.table_name = 'journal_entries'
 
@@ -18,6 +19,7 @@ module Finance
     validates :posted_on, presence: true
     validates :kind, presence: true, inclusion: { in: KINDS }
     validates :status, presence: true, inclusion: { in: STATUSES }
+    guard_locked_period :posted_on
     validate :lines_balance
 
     scope :posted, -> { where(status: 'posted') }
