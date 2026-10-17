@@ -83,6 +83,7 @@ class User < ActiveRecord::Base
       'payroll.write'
     ],
     'manager' => [
+      'receipts.review',
       'dashboard.read',
       'sales.read',
       'customers.read',
@@ -131,6 +132,10 @@ class User < ActiveRecord::Base
     return true if permission.to_s == 'timesheets.self' && (effective_permissions.include?('timesheets.read') || TimeClockService.worker_for(self))
     perms = effective_permissions
     perms.include?('*') || perms.include?(permission.to_s)
+  end
+
+  def can_review_receipts?
+    active? && (can?('receipts.review') || can?('finance.write'))
   end
 
   def can_review_timesheets?
@@ -221,6 +226,7 @@ class User < ActiveRecord::Base
   # and to keep the role matrix in one place.
   def self.permission_catalog
     [
+      { area: 'Receipts', permissions: ['receipts.review'] },
       { area: 'Overview', permissions: ['dashboard.read'] },
       { area: 'Marketing', permissions: ['marketing.read', 'marketing.write', 'marketing.review', 'marketing.contacts', 'marketing.discounts'] },
       {

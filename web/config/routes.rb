@@ -194,6 +194,16 @@ Rails.application.routes.draw do
     end
   end
   resources :locations
+  resources :receipts, only: %i[index new create show edit update] do
+    member do
+      get :download
+      post :submit
+      post :approve
+      post :reject
+      post :reopen
+    end
+  end
+
   namespace :finance do
     get '/accounts', to: 'accounts#show', as: :accounts
     resources :chart_of_accounts, only: %i[index new create edit update] do
