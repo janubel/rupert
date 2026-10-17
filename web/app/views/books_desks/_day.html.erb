@@ -1,0 +1,33 @@
+<% day = row.day; next_stage = row.next_stage %>
+<article id="day-<%= day.iso8601 %>" class="card desk-day <%= 'desk-day-complete' if row.complete? %>" aria-labelledby="day-<%= day.iso8601 %>-title">
+  <header class="desk-day-header">
+    <div class="min-w-0">
+      <h3 id="day-<%= day.iso8601 %>-title" class="font-semibold"><%= day.strftime('%A, %b %-d') %></h3>
+      <p class="text-xs text-mocha"><%= pluralize(row.orders, 'order') %> · <%= books_desk_totals(row.totals) %></p>
+    </div>
+    <% if row.complete? %>
+      <span class="pill-fern">Finished</span>
+    <% elsif !row.actionable? %>
+      <span class="pill-taupe">Up to date · signs off with the week</span>
+    <% else %>
+      <span class="text-xs font-semibold text-mocha"><%= row.done_count %> of <%= row.stages.size %> steps</span>
+    <% end %>
+  </header>
+  <ol class="desk-steps" aria-label="Cleanup steps for <%= day.strftime('%b %-d') %>">
+    <% row.stages.each do |stage| %>
+      <li>
+        <%= link_to books_desk_stage_path(day, stage), class: 'desk-step', data: { state: stage.state }, title: stage.hint,
+              aria: { current: (stage == next_stage ? 'step' : nil) } do %>
+          <span class="desk-step-top"><span class="desk-glyph" aria-hidden="true"><%= books_desk_glyph(stage.state) %></span><span class="desk-step-label"><%= stage.label %></span></span>
+          <span class="desk-step-detail"><span class="sr-only"><%= books_desk_state_label(stage.state) %>: </span><%= stage.detail %></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+  <% if next_stage %>
+    <div class="desk-day-footer">
+      <p class="text-sm"><span class="text-mocha">Next:</span> <%= next_stage.detail %></p>
+      <%= link_to books_desk_stage_action(next_stage), books_desk_stage_path(day, next_stage), class: 'btn-primary btn-sm', aria: { label: "#{books_desk_stage_action(next_stage)} for #{day.strftime('%A %b %-d')}" } %>
+    </div>
+  <% end %>
+</article>

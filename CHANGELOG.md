@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add the **Books desk** (`/books`), one front door for money cleanup. Each finished day shows six ordered steps (sales in, registers match, follow-ups, reviewed, closed, approved) with a single "do this next" action, oldest day first. Last week gets a chores checklist (bank statement, undecided bank lines, money out, overdue follow-ups, weekly approval). Days of the current week wait for the weekly sign-off instead of asking for daily approvals. The housekeeping audit loads lazily.
+- Add month, quarter and year end checklists and **period locks** (`/books/locks`). Locking a finished period stores a fingerprint of its totals and retains a dated JSON archive. Expenses, vendor payments, bank-line decisions, day reviews, close packages and approvals dated inside a locked period then cannot be added, changed, moved or removed. Locks and reopenings are kept in a hash-chained ledger; reopening needs settings access and a written reason. Source imports that change a locked period are flagged on the lock page and in the books check.
+- Money reconciliation reports add quarterly and yearly periods, retained automatically on the first of each quarter (12:35 a.m.) and on January 1 (12:40 a.m.) Eastern.
+- Group the Money workspace navigation into Routine, Records and Reports, and add Bank statements and Locked periods to it.
+- Bank statement review: progress bar, "Use suggestions" to pre-fill recognised payees (still saved only by a person), a sticky save bar with a live count, and a warning before leaving with unsaved choices.
+
 - Phone layouts: the page guide no longer auto-opens on narrow screens (it filled the first screen), Inventory shows each variant's Shopify/POS counts under its name (the table is wider than the page at every size), and Accounts shows each person's role, status and Edit link under their name, because those columns scroll out of view.
 - Stop the Sales, Reports and Settings pages from scrolling sideways on phone-width screens: filter rows wrap, the reports tab strip scrolls inside its pill, grid items may shrink so wide charts no longer stretch the page, and long redirect URLs break.
 - Show a read-only notice on Inventory when Shopify reports negative (oversold) stock for variants; displayed quantities are unchanged and nothing is written to Shopify.

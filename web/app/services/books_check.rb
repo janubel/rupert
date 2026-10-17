@@ -26,7 +26,7 @@ class BooksCheck
   def checks
     @checks ||= [source_freshness, sync_health, paid_without_payment, payment_mismatch, refund_records,
       orders_without_location, impossible_amounts, missing_controls, unreviewed_days,
-      overdue_follow_ups, evidence_integrity, approval_ledger, unapproved_days, offsite_backup, bank_lines_waiting].compact
+      overdue_follow_ups, evidence_integrity, approval_ledger, locked_periods, unapproved_days, offsite_backup, bank_lines_waiting].compact
   end
 
   def summary
@@ -226,6 +226,22 @@ class BooksCheck
       detail_bad: "Ledger check failed at entry #{result[:broken_id] || '?'}: #{result[:reason]} Treat approvals after that point as unverified.",
       action: 'Restore the database from the last good backup and compare, then re-approve the affected periods.',
       path: routes.book_approvals_path)
+  end
+
+  # Locked months, quarters and years: the lock ledger is intact and each
+  # period's records still match the fingerprint taken when it was locked.
+  def locked_periods
+    chain = PeriodLock.verify_chain
+    locks = PeriodLock.active_locks.last(40)
+    drifted = locks.reject(&:still_matches?)
+    problems = (chain[:ok] ? 0 : 1) + drifted.size
+    rows = drifted.map { |lock| [lock.label, lock.actor_name, lock.acted_at.to_date.iso8601] }
+    rows.unshift(['Lock ledger', chain[:broken_id], chain[:reason]]) unless chain[:ok]
+    build('locked_periods', 'Locked periods still match what was locked', count: problems, level: chain[:ok] ? :watch : :fix, rows: rows,
+      detail_ok: locks.empty? ? 'No period is locked yet. Lock finished months from the Books desk.' : "#{locks.size} locked period(s) unchanged; lock ledger intact.",
+      detail_bad: chain[:ok] ? "Records changed after locking: #{drifted.map(&:label).join(', ')}. Usually a late source import." : "Lock ledger check failed: #{chain[:reason]}",
+      action: 'Open Locked periods, inspect what changed, then reopen with a reason and lock again if the new numbers are right.',
+      path: routes.period_locks_path(kind: drifted.first&.period_kind, date: drifted.first&.period_from&.iso8601))
   end
 
   def unapproved_days

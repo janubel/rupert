@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  resource :books_desk, only: :show, path: 'books' do
+    get :checks
+  end
+  resources :period_locks, only: %i[index create], path: 'books/locks'
   resource :financial_close, only: %i[show create], controller: 'financial_close'
   resource :cash_forecast, only: %i[show create]
   resource :books_check, only: :show, controller: 'books_check'

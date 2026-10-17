@@ -21,6 +21,7 @@ class BookApprovalsController < AuthenticatedController
     values = params.require(:approval).permit(:kind, :date, :digest, :status, :notes, :confirmed)
     load_page(values[:kind], values[:date])
     raise BooksPeriod::Error, 'Only a finished day or week can be approved.' unless @period.complete?
+    if (lock = PeriodLock.lock_covering(@period.from, @period.to)) then raise BooksPeriod::Error, PeriodLock.locked_message(lock) end
     raise BooksPeriod::Error, 'The books changed while you were looking. Review the refreshed numbers and approve again.' unless values[:digest] == @period.digest
     raise BooksPeriod::Error, 'Tick the box to confirm you looked at these numbers.' unless values[:confirmed] == '1'
     raise BooksPeriod::Error, 'Choose what you decided.' unless BookApproval::STATUSES.include?(values[:status])

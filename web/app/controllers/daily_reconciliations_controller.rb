@@ -106,6 +106,7 @@ class DailyReconciliationsController < AuthenticatedController
     @review_values = params.permit(:status, :notes).to_h
     report = DailyMoneyReconciliation.new(day: selected_day)
     raise ReconciliationEvidence::Error, 'The report changed. Reload it before recording your review.' unless params[:report_digest] == report.digest
+    if (lock = PeriodLock.lock_covering(report.day)) then raise ReconciliationEvidence::Error, PeriodLock.locked_message(lock) end
     review = DailyReconciliationReview.create!(day: report.day, report_digest: report.digest, status: params[:status], notes: params[:notes], reviewed_by: Current.user)
     ActivityLogger.log('daily_reconciliation_reviewed', subject: review, details: "#{report.day.iso8601}: #{review.status}")
     redirect_to daily_reconciliations_path(day: report.day.iso8601), notice: 'Review recorded against this report version. Source data was not changed.'

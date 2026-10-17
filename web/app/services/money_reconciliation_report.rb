@@ -7,7 +7,7 @@ require 'bigdecimal'
 # order, gateway and deposit layers. Missing currency and coverage stay unknown.
 class MoneyReconciliationReport
   ZONE = 'America/New_York'
-  KINDS = %w[daily weekly monthly].freeze
+  KINDS = %w[daily weekly monthly quarterly yearly].freeze
   attr_reader :kind, :from, :to
 
   def self.previous_period(kind, today: Time.find_zone!(ZONE).today)
@@ -15,12 +15,14 @@ class MoneyReconciliationReport
     when 'daily' then today - 1
     when 'weekly' then today.beginning_of_week - 7
     when 'monthly' then today.beginning_of_month - 1
-    else raise ArgumentError, 'Choose daily, weekly or monthly.'
+    when 'quarterly' then today.beginning_of_quarter - 1
+    when 'yearly' then today.beginning_of_year - 1
+    else raise ArgumentError, 'Choose daily, weekly, monthly, quarterly or yearly.'
     end
   end
 
   def initialize(kind: 'daily', date: Time.find_zone!(ZONE).today)
-    raise ArgumentError, 'Choose daily, weekly or monthly.' unless KINDS.include?(kind)
+    raise ArgumentError, 'Choose daily, weekly, monthly, quarterly or yearly.' unless KINDS.include?(kind)
 
     day = date.is_a?(Date) ? date : Date.iso8601(date.to_s)
     raise ArgumentError, 'Choose a date between 2000 and 2099.' unless day.year.between?(2000, 2099)
@@ -29,6 +31,8 @@ class MoneyReconciliationReport
     @from, @to = case kind
     when 'weekly' then [day.beginning_of_week, day.end_of_week]
     when 'monthly' then [day.beginning_of_month, day.end_of_month]
+    when 'quarterly' then [day.beginning_of_quarter, day.end_of_quarter]
+    when 'yearly' then [day.beginning_of_year, day.end_of_year]
     else [day, day]
     end
     zone = Time.find_zone!(ZONE)

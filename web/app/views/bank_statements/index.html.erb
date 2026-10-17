@@ -7,6 +7,11 @@
     <p class="mt-2 max-w-2xl text-sm text-mocha">Rupert has no connection to your bank. Download a statement as CSV from your bank, upload it here, then say what each withdrawal was. Nothing is recorded until you choose it, and a line is never imported twice.</p>
   </header>
 
+  <% waiting_total = @statements.sum { |row| row[3].to_i } %>
+  <% if waiting_total.positive? %>
+    <p class="card card-pad text-sm" role="status"><strong><%= pluralize(waiting_total, 'line') %></strong> across your statements still need a decision. Undecided withdrawals are missing from money out.</p>
+  <% end %>
+
   <% if @form_error %><p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><%= @form_error %></p><% end %>
 
   <% if @can_write %>
@@ -36,7 +41,7 @@
               <td class="td text-xs text-taupe"><%= @documents[doc_id]&.filename %></td>
               <td class="td"><%= from %> to <%= to %></td>
               <td class="td"><%= total %></td>
-              <td class="td"><%= waiting.to_i.zero? ? 'All decided' : "#{waiting} to review" %></td>
+              <td class="td"><% if waiting.to_i.zero? %>All decided<% else %><%= link_to "#{waiting} to review", bank_statement_path(doc_id), class: 'font-semibold text-olive-deep underline' %><% end %></td>
             </tr>
           <% end %>
         </tbody>
