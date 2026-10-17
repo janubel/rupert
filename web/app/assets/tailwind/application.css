@@ -488,3 +488,17 @@
 .finance-table .group-row th { background:var(--color-haze);font-weight:700;text-align:left;border-top:1px solid var(--color-fog); }
 .finance-table .subtotal-row th,.finance-table .subtotal-row td { font-weight:700;border-top:1px solid var(--color-mocha);text-align:left; }
 .finance-table .subtotal-row td.num { text-align:right; }
+
+/* Readability for every Money page (those that render the Finance navigation). */
+.operations-workspace:has(.finance-navigation) { font-size:1rem;line-height:1.55; }
+.operations-workspace:has(.finance-navigation) .text-sm { font-size:1rem; }
+.operations-workspace:has(.finance-navigation) .text-xs { font-size:.9375rem; }
+.operations-workspace:has(.finance-navigation) p { max-width:75ch; }
+.operations-workspace:has(.finance-navigation) .finance-table td,
+.operations-workspace:has(.finance-navigation) .finance-table th { padding-top:.8rem;padding-bottom:.8rem; }
+.operations-workspace:has(.finance-navigation) .finance-table thead th { font-size:.85rem;letter-spacing:.06em;color:var(--color-ink); }
+.operations-workspace:has(.finance-navigation) .stat-label { font-size:.8125rem; }
+.operations-workspace:has(.finance-navigation) .field-label { font-size:.9375rem; }
+.operations-workspace:has(.finance-navigation) .input,
+.operations-workspace:has(.finance-navigation) .select { font-size:1rem;min-height:2.75rem; }
+.operations-workspace:has(.finance-navigation) h2 { margin-top:.25rem; }
