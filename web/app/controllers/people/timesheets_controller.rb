@@ -13,7 +13,8 @@ module People
       @status = params[:status].presence || (@reviewer ? 'submitted' : 'all')
       @status = 'all' unless (People::Timesheet.aasm.states.map { |state| state.name.to_s } + ['all']).include?(@status)
       @period = params[:period].presence
-      @view = %w[unified list].include?(params[:view]) ? params[:view] : 'unified'
+      @view = %w[calendar unified list].include?(params[:view]) ? params[:view] : 'unified'
+      @all_employees_for_punches = Current.user.can_review_timesheets? || (Current.user.can_manage_accounts? && Current.user.can?('timesheets.read'))
       visible = People::TimesheetPolicy.visible_to(Current.user)
       @has_demo_timesheets = visible.demo_records.exists?
       @awaiting = visible.awaiting_review.count
@@ -29,6 +30,26 @@ module People
       @ctrax_history = CtraxLaborShift.visible_to(Current.user)
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)
       load_admin_overview(visible) if @reviewer
+      # Calendar view: bucket timesheets (and punches) by every day they cover.
+      if @view == 'calendar'
+        @month = parse_month(params[:month]) || Date.current.beginning_of_month
+        @month_days = @month.beginning_of_month..@month.end_of_month
+        cal_scope = visible.by_status(@status).where('period_start <= ? AND period_end >= ?', @month.end_of_month, @month.beginning_of_month)
+        punch_scope = if @all_employees_for_punches
+          ClockShift.all
+        else
+          ClockShift.where(employee_id: TimeClockService.worker_for(Current.user, include_on_leave: true)&.id)
+        end
+        @calendar_days = @month_days.each_with_object({}) do |day, days|
+          ts = cal_scope.select { |t| t.period_start <= day && t.period_end >= day }
+          punches = punch_scope.select { |p| p.started_at.to_date == day }
+          square = SquareTimecard.visible_to(Current.user).select { |c| c.started_at&.to_date == day }
+          days[day.iso8601] = { timesheets: ts, punches: punches.size + square.size,
+                                hours: (punches.sum { |p| ((p.ended_at || p.started_at) - p.started_at) / 3600.0 } + square.sum(&:hours).to_f).round(2) }
+        end
+        @prev_month = (@month - 1.month).beginning_of_month
+        @next_month = (@month + 1.month).beginning_of_month
+      end
       # Unified view: combine Rupert timesheets + Square timecards + C-Trax shifts
       # into one sortable list so every source is visible in a single place.
       if @view == 'unified'
@@ -146,6 +167,14 @@ module People
     # Navigation overview for reviewers: the next few weeks at a glance and
     # upcoming time off, so the timesheet page is a usable hub without
     # hunting through separate menus.
+    def parse_month(value)
+      return nil if value.blank?
+
+      Date.iso8601(value.to_s + '-01').beginning_of_month
+    rescue Date::Error
+      nil
+    end
+
     def load_admin_overview(visible)
       @upcoming_weeks = (0..3).map do |offset|
         monday = Date.current.beginning_of_week + offset.weeks
