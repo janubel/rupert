@@ -192,8 +192,8 @@
       "id": "F18",
       "area": "Finance",
       "name": "Chart of accounts and reporting",
-      "status": "Partial",
-      "scope": "Account classification, receivables/payables and reports; not a complete double-entry general ledger.",
+      "status": "Available",
+      "scope": "Account classification, receivables/payables, a double-entry general ledger and financial statements.",
       "evidence": "web/app/modules/finance/account.rb",
       "phase": "0"
     },
@@ -381,9 +381,9 @@
       "id": "F39",
       "area": "Finance",
       "name": "Double-entry ledger and close",
-      "status": "Planned",
-      "scope": "Balanced journal entries, period locks, trial balance and auditable source references.",
-      "evidence": "docs/data/product-roadmap.json",
+      "status": "Partial",
+      "scope": "Balanced journal entries with idempotent posting from sales, expenses and vendor payments; trial balance, income statement and balance statement with CSV export. Period locks for the ledger and bank reconciliation remain (see F40).",
+      "evidence": "web/app/services/finance/posting.rb",
       "phase": "3"
     },
     {

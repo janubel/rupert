@@ -1,0 +1,51 @@
+<% content_for :title, "Trial balance" %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">Trial balance</h1>
+      <p class="mt-1 text-sm text-mocha"><%= @from %> through <%= @to %> · USD</p>
+    </div>
+    <%= link_to "All reports", finance_reports_path, class: "btn-ghost btn-sm" %>
+  </section>
+
+  <%= render 'window', path: finance_reports_trial_balance_path, csv_path: finance_reports_trial_balance_path(format: :csv) %>
+
+  <div class="card overflow-hidden">
+    <table class="operations-table w-full text-sm">
+      <thead class="border-b border-fog bg-haze/60">
+        <tr>
+          <th scope="col" class="th">Code</th>
+          <th scope="col" class="th">Account</th>
+          <th scope="col" class="th text-right">Debit</th>
+          <th scope="col" class="th text-right">Credit</th>
+          <th scope="col" class="th text-right">Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @rows.each do |row| %>
+          <tr class="border-b border-fog/60">
+            <td class="td text-taupe"><%= row.account.code %></td>
+            <td class="td"><%= row.account.name %></td>
+            <td class="td text-right"><%= row.debit.positive? ? number_to_currency(row.debit / 100.0) : '—' %></td>
+            <td class="td text-right"><%= row.credit.positive? ? number_to_currency(row.credit / 100.0) : '—' %></td>
+            <td class="td text-right"><%= number_to_currency(row.balance / 100.0) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr class="font-semibold">
+          <td class="td" colspan="2">Totals</td>
+          <td class="td text-right"><%= number_to_currency(@total_debit / 100.0) %></td>
+          <td class="td text-right"><%= number_to_currency(@total_credit / 100.0) %></td>
+          <td class="td"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <p class="text-xs <%= @total_debit == @total_credit ? 'text-emerald-600' : 'text-red-600' %>">
+    <%= @total_debit == @total_credit ? 'Debits equal credits.' : 'Warning: debits and credits do not match.' %>
+  </p>
+</div>

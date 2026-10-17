@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -176,8 +176,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
   end
 
   create_table "ShopifyProduct", id: :string, force: :cascade do |t|
-    t.boolean "catalog_present"
-    t.datetime "catalog_read_at"
     t.string "featuredImageUrl"
     t.string "handle"
     t.datetime "publishedAt"
@@ -187,14 +185,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
     t.string "tenant_id"
     t.string "title", null: false
     t.integer "totalInventory", default: 0
+    t.boolean "catalog_present"
+    t.datetime "catalog_read_at"
     t.index ["status"], name: "index_ShopifyProduct_on_status"
     t.index ["tenant_id"], name: "index_ShopifyProduct_on_tenant_id"
     t.index ["title"], name: "index_ShopifyProduct_on_title"
   end
 
   create_table "ShopifyVariant", id: :string, force: :cascade do |t|
-    t.boolean "catalog_present"
-    t.datetime "catalog_read_at"
     t.string "barcode"
     t.float "compareAtPrice"
     t.string "inventoryItemId"
@@ -206,6 +204,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
     t.string "tenant_id"
     t.string "title", null: false
     t.boolean "tracked", default: false
+    t.boolean "catalog_present"
+    t.datetime "catalog_read_at"
     t.index ["productId"], name: "index_ShopifyVariant_on_productId"
     t.index ["sku", "productId"], name: "idx_shopify_variants_sku_product"
     t.index ["sku"], name: "index_ShopifyVariant_on_sku"
@@ -936,6 +936,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
     t.bigint "vendor_id"
+    t.bigint "account_id"
+    t.index ["account_id"], name: "idx_expenses_account"
     t.index ["discarded_at"], name: "index_expenses_on_discarded_at"
     t.index ["tenant_id", "category"], name: "index_expenses_on_tenant_id_and_category"
     t.index ["tenant_id", "incurred_on"], name: "index_expenses_on_tenant_id_and_incurred_on"
@@ -1009,6 +1011,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "api_origin", "merchant_number", "report_kind", "window_from", "window_to"], name: "idx_iris_report_window", unique: true
     t.index ["tenant_id"], name: "index_iris_reports_on_tenant_id"
+  end
+
+  create_table "journal_entries", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.date "posted_on", null: false
+    t.string "kind", null: false
+    t.string "status", default: "posted", null: false
+    t.string "source_type"
+    t.string "source_id"
+    t.text "memo"
+    t.integer "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "posted_on"], name: "idx_journal_entries_posted_on"
+    t.index ["tenant_id", "source_type", "source_id"], name: "idx_journal_entries_source", unique: true, where: "status = 'posted'"
+    t.index ["tenant_id"], name: "index_journal_entries_on_tenant_id"
+  end
+
+  create_table "journal_lines", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "journal_entry_id", null: false
+    t.bigint "account_id", null: false
+    t.integer "debit_cents", default: 0, null: false
+    t.integer "credit_cents", default: 0, null: false
+    t.text "memo"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["journal_entry_id"], name: "idx_journal_lines_entry"
+    t.index ["tenant_id", "account_id"], name: "idx_journal_lines_account"
+    t.index ["tenant_id"], name: "index_journal_lines_on_tenant_id"
   end
 
   create_table "kpi_readings", force: :cascade do |t|
@@ -2040,6 +2073,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+# Could not dump table "sqlite_stat1" because of following StandardError
+#   Unknown type '' for column 'tbl'
+
+
   create_table "square_timecard_days", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.integer "square_timecard_id", null: false
@@ -2374,8 +2411,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
   add_foreign_key "SkuLink", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "SkuLink", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "WarehouseTier", "tenants", column: "tenantId"
-  add_foreign_key "api_access_tokens", "tenants"
-  add_foreign_key "api_access_tokens", "users"
+  add_foreign_key "api_access_tokens", "tenants", on_delete: :cascade
+  add_foreign_key "api_access_tokens", "users", on_delete: :cascade
   add_foreign_key "authorize_net_batches", "tenants"
   add_foreign_key "authorize_net_portal_exports", "tenants"
   add_foreign_key "authorize_net_portal_observations", "authorize_net_portal_exports", on_delete: :cascade

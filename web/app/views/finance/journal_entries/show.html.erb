@@ -1,0 +1,54 @@
+<% content_for :title, "Journal entry ##{@entry.id}" %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">Journal entry</h1>
+      <p class="mt-1 text-sm text-mocha">
+        <%= @entry.posted_on %> · <%= @entry.kind.tr('_', ' ').titleize %>
+        <% if @entry.source_type.present? %>· <%= @entry.source_type %> #<%= @entry.source_id %><% end %>
+      </p>
+    </div>
+    <%= link_to "Back to ledger", finance_journal_entries_path, class: "btn-ghost btn-sm" %>
+  </section>
+
+  <% if @entry.memo.present? %>
+    <p class="text-sm text-mocha"><%= @entry.memo %></p>
+  <% end %>
+
+  <div class="card overflow-hidden">
+    <table class="operations-table w-full text-sm">
+      <thead class="border-b border-fog bg-haze/60">
+        <tr>
+          <th scope="col" class="th">Account</th>
+          <th scope="col" class="th">Memo</th>
+          <th scope="col" class="th text-right">Debit</th>
+          <th scope="col" class="th text-right">Credit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @entry.journal_lines.sort_by(&:position).each do |line| %>
+          <tr class="border-b border-fog/60">
+            <td class="td"><%= line.account.code %> · <%= line.account.name %></td>
+            <td class="td text-taupe"><%= line.memo %></td>
+            <td class="td text-right"><%= line.debit? ? number_to_currency(line.debit_cents / 100.0) : '—' %></td>
+            <td class="td text-right"><%= line.credit? ? number_to_currency(line.credit_cents / 100.0) : '—' %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr class="font-semibold">
+          <td class="td" colspan="2">Totals</td>
+          <td class="td text-right"><%= number_to_currency(@entry.debit_cents / 100.0) %></td>
+          <td class="td text-right"><%= number_to_currency(@entry.credit_cents / 100.0) %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <p class="text-xs text-taupe">
+    Status: <%= @entry.status %> · Created <%= @entry.created_at&.strftime('%b %-d, %Y %H:%M') %>
+    <%= "(by user ##{@entry.created_by_id})" if @entry.created_by_id.present? %>
+  </p>
+</div>
