@@ -65,6 +65,49 @@ class MoneyReconciliationReportTest < ActiveSupport::TestCase
     assert report('monthly', '2026-09-01').payload['rows'].any? { |r| r['metric'].include?('Monthly summary') }
   end
 
+  test 'Square sales and refund dates retain location currency and workspace boundaries' do
+    first = order('square-usd', '2026-10-15T15:00:00Z', 1200)
+    first.update!(source: 'square', location_id: 'register-a')
+    second = order('square-eur', '2026-10-15T16:00:00Z', 900)
+    second.update!(source: 'square', location_id: 'register-a', currency: 'EUR')
+    old = order('square-old', '2026-10-14T16:00:00Z', 800)
+    old.update!(source: 'square', location_id: 'register-b')
+    old.refunds.create!(method: 'card', amount_cents: 200, refunded_at: Time.iso8601('2026-10-15T18:00:00Z'))
+    old.refunds.create!(method: 'card', amount_cents: 100, refunded_at: Time.iso8601('2026-10-16T18:00:00Z'))
+    tenant = Current.tenant
+    Current.tenant = Tenant.create!(name: 'Other square', subdomain: 'other-square')
+    foreign = order('square-foreign', '2026-10-15T15:00:00Z', 99999)
+    foreign.update!(source: 'square')
+    Current.tenant = tenant
+    rows = report.payload['rows'].select { |row| row['source'] == 'Square' }
+    assert_equal 3, rows.size
+    assert_equal ['12.0', '9.0'], rows.select { |row| row['metric'] == 'Recorded sales' }.pluck('amount').sort
+    assert_equal ['USD', 'EUR'], rows.select { |row| row['metric'] == 'Recorded sales' }.pluck('currency').sort.reverse
+    assert_equal '2.0', rows.find { |row| row['metric'] == 'Recorded refunds' }['amount']
+    refute report.payload.key?('grand_total')
+  end
+
+  test 'Square missing amounts remain unavailable and old sales remain visible in coverage' do
+    row = order('square-unknown', '2026-10-15T15:00:00Z', 1000)
+    row.update_columns(source: 'square', gross_cents: nil)
+    old = order('square-history', '2024-01-01T15:00:00Z', 1000)
+    old.update!(source: 'square')
+    payload = report.payload
+    refute payload['rows'].any? { |item| item['source'] == 'Square' }
+    assert payload['warnings'].any? { |warning| warning.include?('Square recorded sales include missing amounts') }
+    coverage = payload['source_coverage']
+    assert_equal %w[C-Trax Square Shopify SwipeSimple], coverage.pluck('label')
+    square = coverage.find { |item| item['key'] == 'square' }
+    assert_equal 1, square['period_records']
+    assert_equal 2, square['stored_records']
+    assert_equal '2024-01-01', square['first_date']
+    assert_equal '2026-10-15', square['last_date']
+    assert_equal 0, coverage.find { |item| item['key'] == 'swipesimple' }['period_records']
+    assert_includes report.csv, 'Records in selected period'
+    Current.tenant = Tenant.create!(name: 'Empty coverage', subdomain: 'empty-coverage')
+    assert report.payload['source_coverage'].all? { |item| item['stored_records'].zero? }
+  end
+
   test 'API observations override duplicate portal IDs with exact decimal currency amounts' do
     row = { 'transaction_id' => '1', 'status' => 'Settled Successfully', 'transaction_type' => 'Authorization w/ Auto Capture',
       'settled_at' => '2026-10-15T15:00:00Z', 'submitted_at' => '2026-10-14T15:00:00Z', 'currency' => 'USD', 'settlement_cents' => 100 }

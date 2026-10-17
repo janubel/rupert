@@ -1,0 +1,21 @@
+<section class="space-y-3" aria-label="Vendor source coverage">
+  <h2 class="font-display text-xl">Sources for reconciliation</h2>
+  <p class="text-sm text-mocha">C-Trax retail records, Square POS orders, Shopify online orders and SwipeSimple payments remain separate. A sale and its payment may describe the same money.</p>
+  <% if coverage %>
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <% coverage.each do |source| %>
+        <article class="card card-pad space-y-2 min-w-0" data-finance-source="<%= source['key'] %>">
+          <h3 class="font-semibold"><%= source['label'] %></h3>
+          <p class="text-xs text-mocha"><%= source['role'] %></p>
+          <p class="font-semibold"><%= number_with_delimiter(source['period_records']) %> <%= source['unit'] %> in this period</p>
+          <% if source['period_records'].zero? %><p class="text-sm text-mocha">No evidence stored for this period. Confirm coverage before treating this as zero activity.</p><% end %>
+          <p class="text-xs text-mocha"><%= number_with_delimiter(source['stored_records']) %> stored overall · observed dates <%= source['first_date'] || 'Unknown' %> to <%= source['last_date'] || 'Unknown' %></p>
+          <p class="text-xs text-mocha">Last source read: <%= source['last_read'] ? retail_event_time(source['last_read'], timezone: 'America/New_York') : 'Unconfirmed' %></p>
+        </article>
+      <% end %>
+    </div>
+    <p class="text-xs text-mocha">Observed dates show the oldest and newest stored evidence. They do not establish complete coverage between those dates. Amounts stay separated by source, account and currency.</p>
+  <% else %>
+    <p class="text-sm text-mocha">This earlier saved review has no source-coverage summary. Open the current period report to inspect all four sources; the saved evidence remains unchanged.</p>
+  <% end %>
+</section>

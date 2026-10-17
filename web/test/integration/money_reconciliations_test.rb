@@ -16,6 +16,9 @@ class MoneyReconciliationsTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select 'h1', 'Source reports'
       assert_includes response.body, 'Review required'
+      assert_select '[aria-label="Vendor source coverage"] [data-finance-source]', count: 4
+      %w[ctrax square shopify swipesimple].each { |source| assert_select "[data-finance-source='#{source}'] h3", count: 1 }
+      assert_includes response.body, 'Confirm coverage before treating this as zero activity.'
       assert_equal 'private, no-store', response.headers['Cache-Control']
     end
     get money_reconciliations_path(format: :csv), params: { kind: 'monthly', date: '2026-10-15' }
@@ -25,6 +28,22 @@ class MoneyReconciliationsTest < ActionDispatch::IntegrationTest
     assert_equal '2026-10-12', response.parsed_body['from']
     assert_equal '2026-10-18', response.parsed_body['to']
     refute_includes response.body, 'credentials_json'
+  end
+
+  test 'daily reconciliation displays all four vendors even without period observations' do
+    get daily_reconciliations_path, params: { day: '2026-10-15' }
+    assert_response :success
+    assert_select '[aria-label="Vendor source coverage"] [data-finance-source]', count: 4
+  end
+
+  test 'earlier saved reports do not borrow current source coverage' do
+    Current.tenant = @tenant
+    report = MoneyReconciliationReport.new(date: '2026-10-15').save!
+    report.update!(payload_json: report.payload.except('source_coverage').to_json)
+    get money_reconciliations_path, params: { saved: report.id }
+    assert_response :success
+    assert_includes response.body, 'earlier saved review has no source-coverage summary'
+    assert_select '[data-finance-source]', count: 0
   end
 
   test 'saving records an encrypted review without queuing external work' do
