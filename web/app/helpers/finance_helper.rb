@@ -3,7 +3,7 @@
 # Money and status display for the Money workspace (finance, close, books).
 # Amounts are always integer cents; nothing here rounds, converts or sums.
 module FinanceHelper
-  MINUS = "−"
+  MINUS = '−'
 
   # Plain-text amount: "$1,234.56", "−$0.01", "CAD 5.00". A nil amount is
   # missing, not zero, and reads as +missing+ ("—" unless overridden).
@@ -39,10 +39,11 @@ module FinanceHelper
   # debit total minus the credit total (or assets minus liabilities+equity).
   def finance_balance_status(difference_cents, balanced_text: 'Balanced')
     if difference_cents.to_i.zero?
-      content_tag(:p, "#{balanced_text}: no difference.", class: 'balance-status balance-ok', role: 'status', data: { balance: 'ok' })
+      content_tag(:p, "#{balanced_text}: no difference.",
+                  class: 'balance-status balance-ok', role: 'status', data: { balance: 'ok' })
     else
       content_tag(:p, "Out of balance by #{finance_money_text(difference_cents.to_i.abs)}.",
-        class: 'balance-status balance-bad', role: 'status', data: { balance: 'bad' })
+                  class: 'balance-status balance-bad', role: 'status', data: { balance: 'bad' })
     end
   end
 

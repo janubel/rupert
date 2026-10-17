@@ -11,9 +11,9 @@ class FinanceHelperTest < ActionView::TestCase
   end
 
   test 'negative amounts use a real minus sign and the negative class' do
-    assert_equal "−$0.01", finance_money_text(-1)
+    assert_equal '−$0.01', finance_money_text(-1)
     html = finance_money(-1)
-    assert_includes html, "−$0.01"
+    assert_includes html, '−$0.01'
     assert_includes html, 'money-negative'
     assert_includes html, 'class="money money-negative"'
   end
