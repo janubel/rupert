@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require 'test_helper'
 
 class BookkeepingOverviewTest < ActiveSupport::TestCase
@@ -26,7 +27,7 @@ class BookkeepingOverviewTest < ActiveSupport::TestCase
     overview = BookkeepingOverview.new(month: '2026-04', account: 'Operating')
     assert_equal 'USD', overview.currency
     assert_equal 123_456, overview.statement_balance[:cents]
-    assert_equal Date.new(2026,4,30), overview.statement_balance[:date]
+    assert_equal Date.new(2026, 4, 30), overview.statement_balance[:date]
     @result[:document].metadata # Original remains immutable.
     Finance::Expense.create!(payee: 'Software', category: 'software', amount_cents: 2500, incurred_on: '2026-04-03')
     assert_equal [['software', 2500]], overview.expense_categories

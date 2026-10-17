@@ -234,7 +234,7 @@ class PageGuides
       ]
     ),
     'finance' => Guide.new(
-      key: 'finance', title: 'Finance',
+      key: 'finance', title: 'Bookkeeping',
       summary: 'Chart of accounts, expenses, and vendor payments — the books that tie sales to money out.',
       sections: [
         { heading: "What you're seeing", body: 'Your chart of accounts, expense records, and vendor payments. Vendor credits, purchase commitments and received balances remain separate. Customer receivables are grouped by currency. These local records do not establish a bank balance or a complete accounting profit.' }

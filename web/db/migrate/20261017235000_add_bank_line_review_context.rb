@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddBankLineReviewContext < ActiveRecord::Migration[8.1]
   def change
     add_column :bank_statement_lines, :review_category, :string
