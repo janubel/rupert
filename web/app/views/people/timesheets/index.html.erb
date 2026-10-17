@@ -121,6 +121,12 @@
     <div class="rounded-xl border border-olive/30 bg-olive/10 px-4 py-2.5 text-sm text-olive"><%= @awaiting %> timesheet<%= @awaiting == 1 ? "" : "s" %> awaiting review.</div>
   <% end %>
 
+  <nav aria-label="Timesheet view" class="flex flex-wrap gap-2">
+    <%= link_to 'Rupert timesheets', people_timesheets_path(request.query_parameters.merge(view: 'list')), class: "nav-pill #{@view == 'list' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
+    <%= link_to 'All sources (unified)', people_timesheets_path(request.query_parameters.merge(view: 'unified')), class: "nav-pill #{@view == 'unified' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
+  </nav>
+
+  <% unless @view == 'unified' %>
   <%= form_tag people_timesheets_path, method: :get, class: "flex flex-wrap gap-2" do %>
     <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
       <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
@@ -171,4 +177,40 @@
     </div>
   </div>
   <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <% end %>
+
+  <% if @view == 'unified' %>
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr>
+              <th scope="col" class="th">Source</th>
+              <th scope="col" class="th">Employee</th>
+              <th scope="col" class="th">Date</th>
+              <th scope="col" class="th text-right">Hours</th>
+              <th scope="col" class="th">Status</th>
+              <th scope="col" class="th">Detail</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-fog">
+            <% if @unified_records.blank? %>
+              <tr><td colspan="6" class="empty-row">No time records in this view.</td></tr>
+            <% end %>
+            <% @unified_records.each do |record| %>
+              <tr class="hover:bg-cream">
+                <td class="td"><span class="<%= record[:source_class] %>"><%= record[:source] %></span></td>
+                <td class="td font-medium text-ink"><%= record[:employee] %></td>
+                <td class="td text-mocha"><%= record[:date]&.strftime('%b %-d, %Y') || '—' %><% if record[:end_date] && record[:end_date] != record[:date] %> – <%= record[:end_date].strftime('%b %-d') %><% end %></td>
+                <td class="td text-right text-mocha"><%= record[:hours].nil? ? '—' : number_with_precision(record[:hours], precision: 2) %></td>
+                <td class="td"><span class="pill-taupe"><%= record[:status] %></span></td>
+                <td class="td"><%= link_to (record[:detail].presence || 'View'), record[:path], class: 'text-olive hover:underline' %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <% end %>
 </div>
