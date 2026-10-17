@@ -236,3 +236,39 @@ survives restarts.
 long-lived processes with `incus exec` in this container: use systemd units. The Rails `rupert` container has no such
 rule and still suffers the original problem; the same one-line rule would fix it, but that is the owner's call and was
 not applied.
+
+## 13. Hardened build deployed to `rupert-core` (2026-10-17, owner approved; no Caddy, DNS or webhook changes)
+
+**What:** commit `27fcd16` (signup closed by default, `POST /api/v1/me/password`, health endpoint, graceful stop, JSON logs)
+replaced `5299b7e` in the running container.
+
+**Build and tests.** Throwaway Ubuntu 24.04 container, rustc 1.99.1, `cargo build --release --locked`, tree clean at the exact
+commit. Artifact `~/rupert-core-releases/27fcd16/rupert-core`, 6,427,768 bytes, links only libc/libm/libgcc_s, SHA-256
+`eb369a01418775fd5062ade9dc2586102ebc1d2879dcb4c3961587ef54253fbb` (with `SHA256SUMS`, `BUILD-INFO`, test sources). On that
+x86_64 binary: 5 unit, 51 auth, 21 operations (shutdown, health, log safety, signup gating) and 130 sync/orders/webhook checks all passed.
+(The first attempt ran everything in one long SSH command that was killed part-way; the state was inspected, the build re-verified
+(cargo reported it up to date, same checksum) and the remaining steps rerun in short pieces.) The build container was deleted.
+
+**Deploy.** Snapshot `pre-27fcd16` taken first (rollback point; `phase4-baseline-5299b7e` also kept). Binary pushed beside the
+old one, checksum verified inside the container, atomic rename, `systemctl restart rupert-core` from inside the container
+(works because of the AppArmor rule in section 12): old process logged a graceful `stopped`, one new process, no restarts,
+no leftover. Startup log reports `git_rev 27fcd16`, `dev:false`.
+
+**Verification on the live container.**
+- `POST /auth/signup` with a valid body: **403 "signups are closed"**; tenant count stayed 1.
+- `POST /api/v1/me/password` without a login: 401 (endpoint present; behaviour covered by the 51-check suite).
+- Owner login works; `/api/v1/health`: ok, counts intact.
+- Real read-only syncs with the new binary: Shopify 351 variants (2 real changes picked up), orders +2 added and 21 updated,
+  20 requests, 0 throttled; Square 741 variations, 13 requests, 0 throttled.
+- Upstream ledger since the restart: only the allowlisted reads (token exchange, Locations, Products, Levels x12, Orders x5,
+  catalog list x3, locations, counts x8, orders search), all HTTP 200, zero write-like calls.
+- Kernel signal denials for the container: 0.
+- `scripts/parity.py` against the live Rails database: **no differences** (Shopify orders now 193 on both sides).
+- Rails `/up` still 200; no other container changed.
+
+**Rollback:** `incus snapshot restore rupert-core pre-27fcd16` (or copy `~/rupert-core-releases/5299b7e/rupert-core` back and restart).
+
+**Still open before DNS goes live** (see `PUBLIC-STEP-RUNBOOK.md` section 7): `RUPERT_PUBLIC_URL` is still the placeholder; the owner
+password is the generated one and the owner email is the placeholder `owner@rupert-core.local` (change the password with
+`POST /api/v1/me/password`; the email has no endpoint yet); oauth2-proxy files and the Google client secret; Hover A record;
+Caddy block with `sudo`.

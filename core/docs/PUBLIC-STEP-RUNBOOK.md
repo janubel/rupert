@@ -170,9 +170,8 @@ Rails and every other site are untouched by any of this.
 
 - [ ] Hover **A record** `rrupert` -> `71.162.207.117` (not a redirect); `dig` confirms.
 - [ ] Google OAuth redirect URI added; client id and secret ready; allowed-email list decided.
-- [ ] **Hardened build deployed to `rupert-core`** (me, on your go): signup closed by default, `POST /api/v1/me/password`,
-      health endpoint, graceful stop. Needs a fresh x86_64 build (about 2 minutes), tests on the host, a snapshot first,
-      then `systemctl restart rupert-core`. The running build (`5299b7e`) still has **open signup**: do not expose it.
+- [x] **Hardened build deployed to `rupert-core`** (done 2026-10-17, commit `27fcd16`, see DEPLOYMENT-PLAN section 13): signup
+      closed (verified 403), password-change endpoint, health endpoint, graceful stop; snapshot `pre-27fcd16` is the rollback.
 - [ ] `RUPERT_PUBLIC_URL=https://rrupert.stoverparc.org` in `/etc/rupert-core/env`; `RUPERT_DEV` and `RUPERT_SIGNUP` unset.
 - [ ] Owner password changed (`POST /api/v1/me/password`) and the owner email corrected from the placeholder
       `owner@rupert-core.local`.
