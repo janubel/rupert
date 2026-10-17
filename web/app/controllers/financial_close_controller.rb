@@ -17,6 +17,7 @@ class FinancialCloseController < AuthenticatedController
     @values = params.require(:close).permit(:day, :workflow_digest, :disposition, :notes, *FinancialCloseWorkflow::CHECKS.keys).to_h
     @workflow = FinancialCloseWorkflow.new(day: @values['day'])
     doc = @workflow.retain!(@values, actor: Current.user)
+    ActivityLogger.log('financial_close_retained', subject: doc, details: "#{@workflow.day.iso8601}: #{@values['disposition']}")
     redirect_to financial_close_path(day: @workflow.day.iso8601, anchor: 'close-history'), notice: "Close package ##{doc.id} retained. Originals and follow-up history remain available. No email or message was sent."
   rescue ReconciliationEvidence::Error => e
     return redirect_to financial_close_path, alert: 'Choose a valid business date.' unless @workflow

@@ -78,6 +78,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
       @follow_up.report_digest = DailyMoneyReconciliation.new(day: @follow_up.period_from.iso8601).digest
     end
     if @follow_up.save
+      ActivityLogger.log('reconciliation_follow_up_created', subject: @follow_up, details: "#{@follow_up.category}: #{@follow_up.period_from}..#{@follow_up.period_to}")
       redirect_to reconciliation_follow_up_path(@follow_up, close_day: @close_day&.iso8601), notice: 'Follow-up saved in Rupert. No email or message was sent.'
     else
       form_options
@@ -106,6 +107,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
       return render :show, status: :unprocessable_entity
     end
     if @follow_up.update(values)
+      ActivityLogger.log('reconciliation_follow_up_updated', subject: @follow_up, details: "status #{@follow_up.status}")
       destination = if params[:return_to] == 'close' && @close_day
         financial_close_path(day: @close_day.iso8601, anchor: 'close-follow-ups')
       elsif params[:return_to] == 'next_overdue'

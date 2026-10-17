@@ -12,13 +12,17 @@ class ApiAccessTokensController < AuthenticatedController
   def create
     @token, @issued_secret = ApiAccessToken.issue(attributes: token_params.to_h.symbolize_keys,
       user: Current.user, tenant: Current.tenant)
+    ActivityLogger.log('api_token_issued', subject: @token, details: "scopes: #{Array(@token.scopes).join(', ')}; expires #{@token.expires_at&.to_date}") if @token.persisted?
     load_tokens
     render :index, status: @token.persisted? ? :created : :unprocessable_entity
   end
 
   def revoke
     token = ApiAccessToken.find(params[:id])
-    token.update!(revoked_at: Time.current) unless token.revoked_at
+    unless token.revoked_at
+      token.update!(revoked_at: Time.current)
+      ActivityLogger.log('api_token_revoked', subject: token)
+    end
     redirect_to api_access_tokens_path, notice: 'API token revoked.'
   end
 
