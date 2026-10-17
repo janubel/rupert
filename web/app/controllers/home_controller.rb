@@ -14,7 +14,7 @@ class HomeController < AuthenticatedController
   # Body: { widgets: [keys in display order], hidden: [keys] } or { reset: true }.
   def customize
     if params[:reset]
-      Current.user.update!(dashboard_config: nil)
+      Current.user.update!(dashboard_config: Current.user.dashboard_config_hash.slice('start_page').presence)
       return render(json: { ok: true, reset: true })
     end
 
@@ -25,7 +25,7 @@ class HomeController < AuthenticatedController
       return render(json: { ok: false, error: 'Unknown or unavailable widget in layout' }, status: :unprocessable_entity)
     end
 
-    Current.user.update!(dashboard_config: { 'widgets' => widgets, 'hidden' => hidden })
+    Current.user.update!(dashboard_config: Current.user.dashboard_config_hash.merge('widgets' => widgets, 'hidden' => hidden))
     render(json: { ok: true, widgets: widgets, hidden: hidden })
   rescue ActiveRecord::RecordInvalid => e
     render(json: { ok: false, error: e.message }, status: :unprocessable_entity)

@@ -4,7 +4,7 @@ class SessionsController < ApplicationController
   skip_before_action :require_login, only: %i[new create]
 
   def new
-    redirect_to(Current.user.employee? ? employee_app_path : root_path) if Current.user
+    redirect_to(sign_in_landing_path(Current.user)) if Current.user
   end
 
   def create
@@ -45,7 +45,7 @@ class SessionsController < ApplicationController
         user: user,
         domain: user.email.to_s.split('@').last
       )
-      redirect_to(user.employee? ? employee_app_path : root_path, notice: 'Signed in')
+      redirect_to(sign_in_landing_path(user), notice: 'Signed in')
     else
       AccessLogger.record(
         source: 'password',

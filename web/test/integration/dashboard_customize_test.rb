@@ -71,4 +71,30 @@ class DashboardCustomizeTest < ActionDispatch::IntegrationTest
       w.key
     end)
   end
+  test 'customizing and resetting layout preserve the bookkeeping landing preference' do
+    @user.update!(dashboard_config: { 'start_page' => 'bookkeeping' })
+    post customize_dashboard_path, params: { widgets: ['stats'], hidden: [] }
+    assert_response :success
+    assert_equal 'bookkeeping', @user.reload.dashboard_config_hash['start_page']
+    post customize_dashboard_path, params: { reset: true }
+    assert_response :success
+    assert_equal({ 'start_page' => 'bookkeeping' }, @user.reload.dashboard_config_hash)
+  end
+
+  test 'password login honors a permitted bookkeeping landing page' do
+    @user.update!(dashboard_config: { 'start_page' => 'bookkeeping' })
+    post login_path, params: { email: @user.email, password: 'password' }
+    assert_redirected_to books_check_path
+    get login_path
+    assert_redirected_to books_check_path
+  end
+
+  test 'bookkeeping preference cannot grant reports access or redirect employees' do
+    @user.update!(role: 'cashier', dashboard_config: { 'start_page' => 'bookkeeping' })
+    post login_path, params: { email: @user.email, password: 'password' }
+    assert_redirected_to root_path
+    @user.update!(role: 'employee')
+    post login_path, params: { email: @user.email, password: 'password' }
+    assert_redirected_to employee_app_path
+  end
 end
