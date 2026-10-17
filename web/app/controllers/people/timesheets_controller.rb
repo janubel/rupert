@@ -14,7 +14,7 @@ module People
       @status = 'all' unless (People::Timesheet.aasm.states.map { |state| state.name.to_s } + ['all']).include?(@status)
       @period = params[:period].presence
       @query = params[:q].to_s.strip.first(80).presence
-      @view = %w[calendar unified list].include?(params[:view]) ? params[:view] : 'calendar'
+      @view = %w[calendar unified list].include?(params[:view]) ? params[:view] : 'list'
       @all_employees_for_punches = Current.user.can_review_timesheets? || (Current.user.can_manage_accounts? && Current.user.can?('timesheets.read'))
       visible = People::TimesheetPolicy.visible_to(Current.user)
       @has_demo_timesheets = visible.demo_records.exists?
@@ -35,6 +35,12 @@ module People
       @ctrax_history = CtraxLaborShift.visible_to(Current.user)
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)
       @summaries = TimesheetInsights.summaries(@timesheets.to_a)
+      # The week schedule leads the page for anyone who can review time, with an employee key to switch people on and off.
+      @calendar_view = @reviewer && Current.user.can?('timesheets.read')
+      if @calendar_view
+        @week_start ||= Date.current.beginning_of_week
+        @calendar = TimesheetCalendar.new(@week_start, user: Current.user)
+      end
       @missing = TimesheetInsights.missing_for_week(@week_start || Date.current) if @reviewer && Current.user.can?('timesheets.write') && !@query
       @view_hours = People::TimesheetEntry.where(timesheet_id: scope.reorder(nil).select(:id)).sum(:hours)
       load_admin_overview(visible) if @reviewer

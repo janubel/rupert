@@ -1,6 +1,9 @@
 <% content_for :title, "Timesheets" %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
+  <% if @reviewer && @calendar_view %>
+    <%= render 'people/timesheets/calendar', calendar: @calendar, week: (@week_start || Date.current.beginning_of_week) %>
+  <% end %>
   
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>

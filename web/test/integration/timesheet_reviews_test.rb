@@ -157,4 +157,14 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     post bulk_approve_people_timesheets_path
     assert_match(/Select at least one/, flash[:alert])
   end
+
+  test 'reviewers see the week schedule first with an employee key that toggles people' do
+    sign_in
+    get people_timesheets_path
+    assert_response :success
+    assert_select 'section[aria-label="Week calendar"]'
+    assert_select 'aside#emp-key-title, aside[aria-labelledby="emp-key-title"]'
+    body = response.body
+    assert_operator body.index('aria-label="Week calendar"'), :<, body.index('<h1 class="page-title">Timesheets')
+  end
 end
