@@ -1,0 +1,109 @@
+<% content_for :title, 'Business snapshot' %>
+<% d = @data
+   money = ->(cents) { cents.nil? ? 'Unknown' : number_to_currency(cents / 100.0) }
+   when_ = ->(iso) { iso.present? ? I18n.l(Time.iso8601(iso).in_time_zone, format: :short) : 'Never seen' }
+   age = ->(iso) { iso.present? ? "#{time_ago_in_words(Time.iso8601(iso))} ago" : 'no record' } %>
+<div class="mx-auto max-w-5xl space-y-6 operations-workspace">
+  <div class="print:hidden"><%= render 'shared/operations_navigation', workspace: :money, day: Date.current %></div>
+
+  <header class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Business snapshot</p>
+      <h1 class="page-title mt-2"><%= d['business'] || 'Business' %>: where things stand</h1>
+      <p class="mt-2 max-w-2xl text-sm text-mocha">Prepared <%= when_.call(d['generated_at']) %> (<%= d['timezone'] %>) from live records. Each section says where its numbers come from and how old they are. Unknown means unknown, not zero.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 print:hidden">
+      <button type="button" class="btn-primary" onclick="window.print()">Print</button>
+      <% if Current.user.can?('reports.write') %>
+        <%= button_to 'Save a dated copy', business_snapshot_path, method: :post, class: 'btn-ghost', form: { class: 'inline' }, data: { turbo_confirm: 'Keep an unchangeable copy of this snapshot as evidence?' } %>
+      <% end %>
+    </div>
+  </header>
+
+  <section class="card card-pad break-inside-avoid" aria-label="Data health">
+    <h2 class="font-display text-xl">Can I trust this today?</h2>
+    <% h = d['health'] %>
+    <p class="mt-1 text-sm"><strong><%= { 'ok' => 'All clear', 'watch' => 'Worth a look', 'fix' => 'Needs fixing' }.fetch(h['books_check']) %></strong>: <%= h['fix'] %> to fix, <%= h['watch'] %> to watch, <%= h['ok'] %> passing in Books check. Approval ledger: <%= h['approval_ledger_intact'] ? "intact (#{h['approvals']} entries)" : 'PROBLEM, treat approvals as unverified' %>.</p>
+  </section>
+
+  <section class="space-y-3 break-inside-avoid" aria-label="Sales">
+    <h2 class="font-display text-2xl">1. Sales and where they come from</h2>
+    <p class="text-sm text-mocha"><%= d['sales']['note'] %></p>
+    <div class="card overflow-x-auto"><table class="w-full text-sm">
+      <thead class="border-b border-fog bg-haze/60"><tr><th scope="col" class="th">Source</th><% BusinessSnapshot::WINDOWS.each do |days| %><th scope="col" class="th text-right">Last <%= days %> days</th><% end %><th scope="col" class="th">Last sale</th><th scope="col" class="th">Last import</th></tr></thead>
+      <tbody class="divide-y divide-fog">
+        <% d['sales']['sources'].each do |src| %>
+          <tr>
+            <td class="td"><span class="font-medium"><%= src['label'] %></span><span class="block text-xs text-taupe"><%= src['note'] %></span></td>
+            <% BusinessSnapshot::WINDOWS.each do |days| %>
+              <% row = d['sales']['windows'][days.to_s].find { |r| r['source'] == src['key'] } %>
+              <td class="td text-right"><%= row ? "#{money.call(row['cents'])} (#{row['orders']})" : '$0.00 (0)' %></td>
+            <% end %>
+            <td class="td text-xs"><%= age.call(src['last_sale_at']) %></td>
+            <td class="td text-xs"><%= age.call(src['last_import_at']) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table></div>
+    <p class="text-xs text-mocha">Figures are sales totals with order counts in brackets. Windows end today.</p>
+  </section>
+
+  <section class="space-y-3 break-inside-avoid" aria-label="Products">
+    <h2 class="font-display text-2xl">2. Products and stock</h2>
+    <% p = d['products'] %>
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <% [['Active products', p['active_products']], ['Variants', p['variants']], ['Linked Shopify↔Square SKUs', p['linked_skus']], ['Stock value at price', money.call(p['stock_value_cents'])], ['Low stock (≤ ' + p['low_stock_threshold'].to_s + ')', p['low_stock']], ['Out of stock', p['out_of_stock']]].each do |label, value| %>
+        <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value mt-1"><%= value %></p></div>
+      <% end %>
+    </div>
+    <% if p['top_sellers_90d'].any? %>
+      <div class="card overflow-x-auto"><table class="w-full text-sm">
+        <caption class="p-3 text-left text-xs font-semibold uppercase tracking-wide text-mocha">Top sellers, last 90 days (canonical orders)</caption>
+        <tbody class="divide-y divide-fog"><% p['top_sellers_90d'].each do |row| %><tr><td class="td"><%= row['name'] %> <span class="text-xs text-taupe"><%= row['sku'] %></span></td><td class="td text-right"><%= money.call(row['cents']) %></td></tr><% end %></tbody>
+      </table></div>
+    <% end %>
+    <p class="text-xs text-mocha"><%= p['note'] %></p>
+  </section>
+
+  <section class="space-y-3 break-inside-avoid" aria-label="Cash">
+    <h2 class="font-display text-2xl">3. Cash and money coming in</h2>
+    <% c = d['cash'] %>
+    <div class="card overflow-x-auto"><table class="w-full text-sm">
+      <caption class="p-3 text-left text-xs font-semibold uppercase tracking-wide text-mocha">Recorded sales receipts, last 30 days</caption>
+      <tbody class="divide-y divide-fog">
+        <% c['tenders_30d'].each do |method, cents| %><tr><td class="td"><%= method.to_s.humanize %></td><td class="td text-right"><%= money.call(cents) %></td></tr><% end %>
+        <% if c['tenders_30d'].empty? %><tr><td class="td text-mocha" colspan="2">No tender records in this window.</td></tr><% end %>
+        <tr><td class="td">Refunds recorded</td><td class="td text-right"><%= money.call(c['refunds_30d_cents']) %></td></tr>
+      </tbody>
+    </table></div>
+    <ul class="space-y-1 text-sm">
+      <li><strong>Card processor deposits:</strong> <%= c['processor_deposits'] ? "latest report read #{age.call(c['processor_deposits']['observed_at'])}, covering #{c['processor_deposits']['window_from']} to #{c['processor_deposits']['window_to']}" : 'no deposit reports on file' %>.</li>
+      <li><strong>Bank:</strong> no live connection. <%= c['bank']['statements'].zero? ? 'No bank statements uploaded.' : "#{pluralize(c['bank']['statements'], 'statement')} uploaded, latest line #{c['bank']['latest_line_on']}, #{c['bank']['lines_waiting']} line(s) waiting for a decision." %></li>
+      <li><strong>Cash forecast:</strong> <%= c['cash_forecast'] ? "scenario retained #{age.call(c['cash_forecast']['retained_at'])} (baseline #{c['cash_forecast']['baseline']})" : 'none retained' %>.</li>
+      <li><strong>Last human approval of the books:</strong> <%= c['latest_approval'] ? "#{c['latest_approval']['period']} · #{c['latest_approval']['status'].humanize} by #{c['latest_approval']['by']} #{age.call(c['latest_approval']['at'])}" : 'none yet' %>.</li>
+    </ul>
+    <p class="text-xs text-mocha"><%= c['note'] %></p>
+  </section>
+
+  <section class="space-y-3 break-inside-avoid" aria-label="Money out and vendors">
+    <h2 class="font-display text-2xl">4. Money out and vendors</h2>
+    <% m = d['money_out']; v = d['vendors'] %>
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <% [["Expenses, 90 days (#{m['expenses_90d_count']})", money.call(m['expenses_90d_cents'])], ["Vendor payments, 90 days (#{m['vendor_payments_90d_count']})", money.call(m['vendor_payments_90d_cents'])], ['Owed to vendors', money.call(v['owed_cents'])], ['Ordered, not received', money.call(v['committed_cents'])]].each do |label, value| %>
+        <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value mt-1"><%= value %></p></div>
+      <% end %>
+    </div>
+    <% if m['by_category'].any? %><p class="text-sm">Expenses by category: <%= m['by_category'].map { |k, c| "#{k.humanize} #{money.call(c)}" }.join(' · ') %>.</p><% end %>
+    <% if v['vendors'].any? %>
+      <div class="card overflow-x-auto"><table class="w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60"><tr><% %w[Vendor Owed Paid Balance Ordered].each_with_index do |hd, i| %><th scope="col" class="th <%= 'text-right' if i.positive? %>"><%= hd %></th><% end %></tr></thead>
+        <tbody class="divide-y divide-fog"><% v['vendors'].each do |row| %><tr><td class="td"><%= row['name'] %></td><td class="td text-right"><%= money.call(row['owed_cents']) %></td><td class="td text-right"><%= money.call(row['paid_cents']) %></td><td class="td text-right font-semibold"><%= money.call(row['balance_cents']) %></td><td class="td text-right"><%= money.call(row['committed_cents']) %></td></tr><% end %></tbody>
+      </table></div>
+    <% else %>
+      <p class="card card-pad text-sm text-mocha"><%= pluralize(v['vendor_count'], 'vendor') %> on file, none with orders or payments yet.</p>
+    <% end %>
+    <p class="text-xs text-mocha"><%= m['note'] %> <%= v['note'] %></p>
+  </section>
+
+  <footer class="border-t border-fog pt-3 text-xs text-mocha">Rupert <%= d['version'] %> · generated <%= d['generated_at'] %> for <%= Current.user.display_name || Current.user.email %>. A saved copy is a JSON file kept unchanged with a checksum. This is an operational picture, not audited financial statements.</footer>
+</div>

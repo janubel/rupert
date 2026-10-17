@@ -4,6 +4,7 @@ Rails.application.routes.draw do
   resource :financial_close, only: %i[show create], controller: 'financial_close'
   resource :cash_forecast, only: %i[show create]
   resource :books_check, only: :show, controller: 'books_check'
+  resource :business_snapshot, only: %i[show create], path: 'snapshot'
   resources :bank_statements, only: %i[index show create] do
     member { post :decide }
   end
