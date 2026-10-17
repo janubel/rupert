@@ -51,9 +51,15 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     assert_equal @vendor.id, Finance::VendorPayment.last.vendor_id
     assert_equal %w[recorded ignored recorded], BankStatementLine.for_document(doc.id).map(&:status)
     assert_equal users(:regular_user).id, ups.reload.decided_by_id
+    expense_entry = Finance::JournalEntry.for_source('Finance::Expense', ups.expense_id).posted.first!
+    payment_entry = Finance::JournalEntry.for_source('Finance::VendorPayment', acme.reload.vendor_payment_id).posted.first!
+    assert expense_entry.balanced?
+    assert payment_entry.balanced?
+    assert_equal 4210, expense_entry.journal_lines.joins(:account).where(accounts: { code: '1100' }).sum(:credit_cents)
+    assert_equal 12_000, payment_entry.journal_lines.joins(:account).where(accounts: { code: '1100' }).sum(:credit_cents)
     assert last_entry('bank_statement_decided')
     # deciding again changes nothing
-    assert_no_difference ['Finance::Expense.count', 'Finance::VendorPayment.count'] do
+    assert_no_difference ['Finance::Expense.count', 'Finance::VendorPayment.count', 'Finance::JournalEntry.count'] do
       post decide_bank_statement_path(doc.id), params: { decisions: { ups.id => 'expense:shipping' } }
     end
   end
@@ -65,6 +71,20 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     post decide_bank_statement_path(doc.id), params: { decisions: { deposit.id => 'expense:other' } }
     assert_equal 0, Finance::Expense.count
     assert_equal 'pending', deposit.reload.status
+  end
+
+  test 'failed bank journal posting rolls back the expense and leaves the flagged line pending' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    line.update!(review_flag: true, review_note: 'Need receipt')
+    Finance::Posting.stubs(:expense).raises(ActiveRecord::RecordInvalid.new(Finance::JournalEntry.new))
+    assert_no_difference ['Finance::Expense.count', 'Finance::JournalEntry.count'] do
+      post decide_bank_statement_path(doc.id), params: { decisions: { line.id => 'expense:shipping' } }
+    end
+    assert_equal 'pending', line.reload.status
+    assert line.review_flag?
+    assert_nil line.expense_id
   end
 
   test 'roles without finance access cannot view, upload or decide' do

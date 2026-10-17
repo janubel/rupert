@@ -14,3 +14,5 @@ The expense and vendor-payment registers accept `month=YYYY-MM`; expense CSV exp
 Daily source matching, close packages, approvals and period locks remain on **Close & review** (`/books`) and their existing pages. The overview does not certify reconciliation or lock a period. All routes retain their existing permission and tenant boundaries.
 
 Real statements, transaction exports, review plans, receipts and production database copies must stay outside the public repository.
+
+Bank decisions create balanced journal entries in the same transaction as their expense or vendor-payment record and decision. A bank withdrawal credits checking (the statement records its bank settlement); its original card/ACH descriptor is retained. Failed postings roll the decision and money record back together. Legacy workspaces missing the standard chart receive only missing default accounts when posting; existing/custom accounts are preserved.

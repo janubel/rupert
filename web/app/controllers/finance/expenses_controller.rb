@@ -38,20 +38,22 @@ module Finance
     def create
       authorize(:module, :finance_write?)
       @expense = Finance::Expense.new(expense_params)
-      if @expense.save
-        note_approved_period(@expense.incurred_on, 'Expense')
+      Finance::Expense.transaction do
+        @expense.save!
         Finance::Posting.expense(@expense, created_by: Current.user)
-        ActivityLogger.log(
-          'expense_recorded',
-          subject: @expense,
-          details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category}"
-        )
-        redirect_to(finance_expenses_path, notice: 'Expense recorded.')
-      else
-        @vendors = Purchasing::Vendor.ordered
-      @accounts = Finance::Account.active.ordered
-        render(:new, status: :unprocessable_entity)
       end
+      note_approved_period(@expense.incurred_on, 'Expense')
+      ActivityLogger.log(
+        'expense_recorded',
+        subject: @expense,
+        details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category}"
+      )
+      redirect_to(finance_expenses_path, notice: 'Expense recorded.')
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound
+      @expense.errors.add(:base, 'The expense could not be posted. Check the chart of accounts and try again.') if @expense.errors.empty?
+      @vendors = Purchasing::Vendor.ordered
+      @accounts = Finance::Account.active.ordered
+      render(:new, status: :unprocessable_entity)
     end
 
     def edit
@@ -70,7 +72,7 @@ module Finance
         redirect_to(finance_expenses_path, notice: 'Expense updated.')
       else
         @vendors = Purchasing::Vendor.ordered
-      @accounts = Finance::Account.active.ordered
+        @accounts = Finance::Account.active.ordered
         render(:edit, status: :unprocessable_entity)
       end
     end

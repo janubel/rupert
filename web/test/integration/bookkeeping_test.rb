@@ -69,4 +69,14 @@ class BookkeepingIntegrationTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'April 2026'
   end
+
+  test 'failed expense posting never leaves a saved expense without its journal' do
+    Finance::Posting.stubs(:expense).raises(ActiveRecord::RecordNotFound)
+    assert_no_difference ['Finance::Expense.count', 'Finance::JournalEntry.count'] do
+      post finance_expenses_path, params: { expense: { payee: 'Posting failure', category: 'software', amount: '25.00', incurred_on: '2026-04-03', method: 'bank_transfer' } }
+    end
+    assert_response :unprocessable_entity
+    assert_includes response.body, 'The expense could not be posted'
+    assert_select 'input[name="expense[payee]"][value="Posting failure"]'
+  end
 end

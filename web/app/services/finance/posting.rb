@@ -134,6 +134,12 @@ module Finance
       private
 
       def account(code)
+        existing = Finance::Account.find_by(code: code)
+        return existing if existing
+
+        # Legacy workspaces may predate setup's chart seeding. Add only missing
+        # standard accounts; never replace the workspace's existing accounts.
+        Finance::ChartOfAccounts.seed!
         Finance::Account.find_by!(code: code)
       end
 

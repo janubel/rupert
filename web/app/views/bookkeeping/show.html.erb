@@ -103,6 +103,16 @@
     </div>
   </section>
 
+  <section class="space-y-3" aria-labelledby="bookkeeping-statements">
+    <div class="bookkeeping-section-heading"><h2 id="bookkeeping-statements" class="font-display text-2xl">Financial statements</h2><%= link_to 'General ledger →', finance_journal_entries_path(from: overview.from, to: overview.to), class: 'text-sm font-semibold underline' %></div>
+    <p class="text-sm text-mocha">Posted entries for this period. Pending bank lines and other unposted records are not included.</p>
+    <div class="bookkeeping-tools">
+      <%= link_to finance_reports_income_statement_path(from: overview.from, to: overview.to), class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Performance</p><h3 class="mt-2 font-display text-xl">Income statement →</h3><p class="mt-2 text-sm text-mocha">Revenue and expenses from the posted ledger.</p><% end %>
+      <%= link_to finance_reports_balance_sheet_path(from: overview.from, to: overview.to), class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Position</p><h3 class="mt-2 font-display text-xl">Balance sheet →</h3><p class="mt-2 text-sm text-mocha">Posted assets, liabilities, and equity through month end.</p><% end %>
+      <%= link_to finance_reports_trial_balance_path(from: overview.from, to: overview.to), class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Control</p><h3 class="mt-2 font-display text-xl">Trial balance →</h3><p class="mt-2 text-sm text-mocha">Account debits and credits for the selected period.</p><% end %>
+    </div>
+  </section>
+
   <section class="bookkeeping-tools" aria-label="Bookkeeping tools">
     <% if Current.user.can?('reports.read') %>
       <%= link_to books_desk_path, class: 'card card-pad operations-task' do %><p class="eyebrow text-mocha">Reconciliation</p><h2 class="mt-2 font-display text-xl">Close & review →</h2><p class="mt-2 text-sm text-mocha">Match daily sources, resolve differences, and approve finished periods.</p><% end %>
