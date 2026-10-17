@@ -2,7 +2,7 @@
   <div>
     <p class="eyebrow text-mocha">Current findings · all stored history</p>
     <h2 id="reconciliation-findings-title" class="font-display text-2xl">What needs reconciliation</h2>
-    <p class="mt-1 text-xs text-mocha">Checked <%= retail_event_time(findings.generated_at, timezone: 'America/New_York') %>. These live checks are separate from the selected period and any saved review.</p>
+    <p class="mt-1 text-xs text-mocha">Checked <%= retail_event_time(findings.generated_at.iso8601, timezone: 'America/New_York') %>. These live checks are separate from the selected period and any saved review.</p>
   </div>
   <p class="text-sm font-semibold">Bank deposit matching remains incomplete. Payment gaps and unpaid invoices below are source findings, not confirmed missing bank deposits.</p>
   <div class="grid gap-4 md:grid-cols-2">

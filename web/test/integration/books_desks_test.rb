@@ -19,6 +19,7 @@ class BooksDesksIntegrationTest < ActionDispatch::IntegrationTest
     assert_select '#desk-next-title'
     assert_select '#reconciliation-findings'
     assert_includes response.body, 'Bank deposit matching remains incomplete.'
+    assert_select '#reconciliation-findings', text: /Checked (?!Unknown time)/
     assert_select '#desk-focus-week', text: /Last week/
     assert_select 'ol.desk-steps', minimum: 7
     assert_select '#desk-period-end'
