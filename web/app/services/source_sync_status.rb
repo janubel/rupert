@@ -191,7 +191,7 @@ class SourceSyncStatus
     else
       'Recent API read'
     end
-    count = api ? AuthorizeNetTransaction.count : AuthorizeNetPortalExport.latest_records.size
+    count = api ? AuthorizeNetTransaction.count : AuthorizeNetPortalObservation.transaction_count
     { key: 'authorize_net', label: 'Authorize.net', badge: badge, last_at: last_at,
       detail: "#{count} payment observations",
       schedule: api && connection.reporting_enabled ? 'Every 5 minutes · signed events when configured' : 'Manual snapshots · API credentials needed for live reporting',

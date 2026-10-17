@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -432,6 +432,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "fingerprint"], name: "idx_anet_portal_fingerprint", unique: true
     t.index ["tenant_id"], name: "index_authorize_net_portal_exports_on_tenant_id"
+  end
+
+  create_table "authorize_net_portal_observations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "authorize_net_portal_export_id", null: false
+    t.integer "position", null: false
+    t.string "gateway_id", null: false
+    t.string "transaction_id", null: false
+    t.datetime "exported_at", null: false
+    t.datetime "submitted_at"
+    t.datetime "settled_at"
+    t.string "status"
+    t.string "transaction_type"
+    t.string "currency"
+    t.bigint "settlement_cents"
+    t.text "record_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["authorize_net_portal_export_id", "position"], name: "idx_anet_portal_obs_row", unique: true
+    t.index ["tenant_id", "settled_at"], name: "idx_anet_portal_obs_settled"
+    t.index ["tenant_id", "submitted_at"], name: "idx_anet_portal_obs_submitted"
+    t.index ["tenant_id", "transaction_id", "gateway_id"], name: "idx_anet_portal_obs_key"
   end
 
   create_table "authorize_net_sale_links", force: :cascade do |t|
@@ -2261,6 +2283,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
   add_foreign_key "api_access_tokens", "users", on_delete: :cascade
   add_foreign_key "authorize_net_batches", "tenants"
   add_foreign_key "authorize_net_portal_exports", "tenants"
+  add_foreign_key "authorize_net_portal_observations", "authorize_net_portal_exports", on_delete: :cascade
+  add_foreign_key "authorize_net_portal_observations", "tenants"
   add_foreign_key "authorize_net_sale_links", "authorize_net_transactions"
   add_foreign_key "authorize_net_sale_links", "orders"
   add_foreign_key "authorize_net_sale_links", "tenants"

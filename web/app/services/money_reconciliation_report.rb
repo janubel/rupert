@@ -156,8 +156,14 @@ class MoneyReconciliationReport
   end
 
   def authorize_net
-    observations = AuthorizeNetPortalExport.latest_records.to_h { |r| [[r['gateway_id'], r['transaction_id']], r] }
-    AuthorizeNetTransaction.where(environment: 'production').find_each do |r|
+    # Only transactions with some settlement in range can end in range; their
+    # full API and portal history still decides the newest observation.
+    api = AuthorizeNetTransaction.where(environment: 'production')
+    keys = (AuthorizeNetPortalObservation.where(settled_at: @range).distinct.pluck(:gateway_id, :transaction_id) +
+      api.where(settled_at: @range).distinct.pluck(:gateway_id, :source_transaction_id)).to_set
+    observations = AuthorizeNetPortalObservation.latest_for(keys).to_h { |r| [[r['gateway_id'], r['transaction_id']], r] }
+    api_rows = keys.map(&:last).uniq.each_slice(AuthorizeNetPortalObservation::SLICE).flat_map { |ids| api.where(source_transaction_id: ids).to_a }
+    api_rows.select { |r| keys.include?([r.gateway_id, r.source_transaction_id]) }.sort_by(&:id).each do |r|
       previous = observations[[r.gateway_id, r.source_transaction_id]]
       next if previous && Time.iso8601(previous.fetch('exported_at')) > r.observed_at
 

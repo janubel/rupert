@@ -7,9 +7,9 @@ class AuthorizeNetPortalExportsController < AuthenticatedController
 
   def index
     @exports = AuthorizeNetPortalExport.order(exported_at: :desc).limit(20)
-    @rows = AuthorizeNetPortalExport.latest_records.sort_by { |row| row.fetch('submitted_at') }.reverse
-    @settled_totals = @rows.select { |row| row['status'] == 'Settled Successfully' && row['transaction_type'] == 'Authorization w/ Auto Capture' }.group_by { |row| row.fetch('currency') }
-      .transform_values { |rows| rows.sum { |row| row.fetch('settlement_cents') } }
+    @rows = AuthorizeNetPortalObservation.recent(200)
+    @observation_count = AuthorizeNetPortalObservation.transaction_count
+    @settled_totals = AuthorizeNetPortalObservation.latest_totals(status: 'Settled Successfully', transaction_type: 'Authorization w/ Auto Capture')
   end
 
   def create
