@@ -1,6 +1,6 @@
 <% content_for :title, 'Book approvals' %>
 <% period = @period; state = period.state; latest = period.latest_approval; issues = period.issues
-   money = ->(cents) { cents.nil? ? 'Unavailable' : number_to_currency(cents / 100.0) }
+   money = ->(cents) { cents.nil? ? 'Unavailable' : finance_money_text(cents) }
    stamp = ->(time) { I18n.l(time.in_time_zone, format: :long) }
    tones = { pending: 'border-fog bg-paper', approved: 'border-olive bg-haze', approved_with_exceptions: 'border-amber-300 bg-amber-50',
              needs_attention: 'border-rose-300 bg-rose-50', changed: 'border-amber-300 bg-amber-50' }

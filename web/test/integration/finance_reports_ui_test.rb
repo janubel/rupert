@@ -101,4 +101,15 @@ class FinanceReportsUiTest < ActionDispatch::IntegrationTest
       assert_includes text, 'No amounts change'
     end
   end
+
+  test 'the Money navigation reaches the general ledger, reports and bank reconciliation' do
+    get finance_journal_entries_path
+    assert_select 'nav[aria-label="Finance workspace"] a[href=?]', finance_journal_entries_path
+    assert_select 'nav[aria-label="Finance workspace"] a[href=?]', finance_reports_path
+    assert_select 'nav[aria-label="Finance workspace"] a[href=?]', finance_bank_reconciliation_path
+    assert_select 'a[aria-current=page]', 'General ledger'
+    get ledger_index_path
+    assert_select 'h1', 'Imported orders'
+    assert_select 'a[href=?]', finance_journal_entries_path, text: 'General ledger'
+  end
 end

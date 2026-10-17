@@ -62,7 +62,7 @@ class PagesFlowTest < ActionDispatch::IntegrationTest
   test 'ledger renders' do
     get_page ledger_index_path
     assert_response :success
-    assert_select 'h1', 'Ledger'
+    assert_select 'h1', 'Imported orders'
   end
 
   test 'alerts renders' do
