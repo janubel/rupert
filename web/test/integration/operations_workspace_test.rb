@@ -16,11 +16,15 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
      finance_accounts_path, finance_expenses_path, finance_vendor_payments_path, finance_chart_of_accounts_path,
      new_finance_expense_path, new_finance_vendor_payment_path, new_finance_chart_of_account_path,
      financial_close_path, daily_reconciliations_path, money_reconciliations_path, reconciliation_documents_path,
-     reconciliation_follow_ups_path, overview_reconciliation_follow_ups_path, cash_forecast_path, ledger_index_path].each do |path|
+     reconciliation_follow_ups_path, overview_reconciliation_follow_ups_path, cash_forecast_path, ledger_index_path, receipts_path].each do |path|
       get path
       assert_response :success, path
       assert_select 'nav.operations-navigation', minimum: 1
     end
+    get finance_chart_of_accounts_path
+    assert_select '[data-controller=table-filter] tr[data-table-filter-target=row]', minimum: 1
+    get receipts_path
+    assert_select 'select[name=status][data-controller=auto-submit]'
     get finance_expenses_path
     assert_select '[data-controller=table-filter] input[type=search][data-table-filter-target=input]'
     get new_finance_expense_path

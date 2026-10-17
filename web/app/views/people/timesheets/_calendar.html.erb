@@ -3,9 +3,17 @@
 <% palette = %w[217 340 152 28 265 190 48 310] %>
 <% hue = ->(id) { palette[calendar.employees.index { |eid, _| eid == id }.to_i % palette.size] } %>
 <% hour_px = 48 %>
+<% hours = calendar.hours_by_employee %>
+<% clocked_in = calendar.clocked_in %>
 <% holidays = UsHolidays.between(week, week + 6).to_h %>
 <% upcoming = UsHolidays.between(Date.current, Date.current + 180).first(6) %>
 <section class="space-y-3" data-controller="schedule-filter" aria-label="Week calendar">
+  <% if clocked_in.any? %>
+    <div class="card card-pad flex flex-wrap items-center gap-2 text-sm" aria-label="Clocked in now">
+      <span class="pill-fern">Clocked in now (<%= clocked_in.map(&:employee_id).uniq.size %>)</span>
+      <% clocked_in.each do |b| %><span class="pill-taupe"><%= b.employee_name %> since <%= b.starts_at.strftime('%-l:%M%P') %> · <%= b.source %></span><% end %>
+    </div>
+  <% end %>
   <div class="flex flex-wrap items-center gap-2">
     <% if calendar.employees.empty? %>
       <p class="text-sm text-mocha">No recorded shifts this week.</p>
@@ -14,6 +22,7 @@
       <button type="button" data-schedule-filter-target="toggle" data-employee-id="<%= id %>" data-action="schedule-filter#toggle" aria-pressed="true"
         class="inline-flex items-center gap-2 rounded-full border border-fog bg-white px-3 py-1 text-sm">
         <span class="inline-block size-2.5 rounded-full" style="background: hsl(<%= hue.call(id) %> 70% 50%)"></span><%= name %>
+        <% if hours[id] %><span class="text-xs text-mocha"><%= hours[id].map { |src, h| "#{src.sub('Rupert clock', 'Clock')} #{number_with_precision(h, precision: 1, strip_insignificant_zeros: true)}h" }.join(' · ') %></span><% end %>
       </button>
     <% end %>
     <% if calendar.employees.any? %>
@@ -34,6 +43,20 @@
         </div>
       <% end %>
     </div>
+    <% if calendar.entries.any? %>
+      <div class="grid border-b border-fog text-xs" style="grid-template-columns: 3.5rem repeat(7, minmax(0, 1fr))">
+        <div class="py-1 pr-2 text-right text-mocha">Logged</div>
+        <% days.each do |day| %>
+          <div class="space-y-0.5 border-l border-fog/70 p-1 <%= day < Date.current ? 'opacity-50' : '' %>">
+            <% calendar.entries_for(day).each do |e| %>
+              <p data-schedule-filter-target="block" data-employee-id="<%= e.employee_id %>" class="truncate rounded px-1" style="background: hsl(<%= hue.call(e.employee_id) %> 80% 92%)" title="<%= e.employee_name %> · <%= e.work_type %> · typed on timesheet">
+                <%= e.employee_name %> <%= number_with_precision(e.hours, precision: 1, strip_insignificant_zeros: true) %>h<%= " #{e.work_type}" unless e.work_type == 'regular' %>
+              </p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
     <div class="overflow-y-auto" style="max-height: 36rem" data-schedule-filter-target="scroller">
       <div class="grid" style="grid-template-columns: 3.5rem repeat(7, minmax(0, 1fr)); height: <%= hour_px * 24 %>px">
         <div class="relative">
@@ -47,11 +70,11 @@
             <% calendar.blocks_for(day).each do |b| %>
               <% h = hue.call(b.employee_id) %>
               <div data-schedule-filter-target="block" data-employee-id="<%= b.employee_id %>"
-                   title="<%= b.employee_name %> · <%= b.source %> · <%= b.label %>"
+                   title="<%= b.employee_name %> · <%= b.source %> · <%= b.label %> (<%= b.hours %>h)<%= ' · not linked to an employee' if b.unmatched %>"
                    class="absolute overflow-hidden rounded-md border px-1.5 py-1 text-xs leading-tight <%= b.past ? 'opacity-45' : '' %>"
                    style="top: <%= b.top_percent %>%; height: <%= b.height_percent %>%; left: calc(<%= b.lane %> * 100% / <%= b.lanes %> + 2px); width: calc(100% / <%= b.lanes %> - 4px); background: hsl(<%= h %> 80% 92%); border-color: hsl(<%= h %> 60% 70%); color: hsl(<%= h %> 60% 22%)">
                 <p class="truncate font-semibold"><%= b.employee_name %></p>
-                <p class="truncate"><%= b.label %></p>
+                <p class="truncate"><%= b.label %> · <%= number_with_precision(b.hours, precision: 1, strip_insignificant_zeros: true) %>h</p>
                 <p class="truncate opacity-75"><%= b.source %></p>
               </div>
             <% end %>
@@ -69,5 +92,5 @@
       <% upcoming.each do |day, name| %><li><%= link_to day.strftime('%a, %b %-d'), people_timesheets_path(period: day.beginning_of_week.iso8601), class: 'text-olive hover:underline' %> — <%= name %></li><% end %>
     </ul>
   </div>
-  <p class="text-xs text-mocha">Faded blocks are in the past. Rupert clock, Square and C-Trax shifts are separate sources and are never added together. Turning an employee off only hides them from this view.</p>
+  <p class="text-xs text-mocha">Faded blocks are in the past. “Logged” shows hours typed onto a timesheet without clock times. Rupert clock, Square and C-Trax shifts are separate sources and are never added together. Turning an employee off only hides them from this view.</p>
 </section>

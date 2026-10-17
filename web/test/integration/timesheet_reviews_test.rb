@@ -159,6 +159,19 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     assert_match 'Labor Day', response.body
   end
 
+  test 'calendar shows open punches, unlinked source records and typed hours' do
+    ClockShift.create!(employee: @employee, user: @worker, employee_key: @employee.id.to_s, employee_name: @employee.name,
+      employment_type: 'part_time', request_token: 'calendar-token-0002', started_at: 2.hours.ago)
+    SquareTimecard.create!(external_id: 'sq-1', team_member_id: 'TMXYZ123456', started_at: 3.hours.ago, ended_at: 1.hour.ago,
+      import_status: 'unmatched', last_seen_at: Time.current)
+    sign_in
+    get people_timesheets_path(period: Date.current.beginning_of_week.iso8601)
+    assert_select '[aria-label="Clocked in now"]', text: /Alex Worker/
+    assert_match 'Unmatched Square', response.body
+    get people_timesheets_path(period: '2026-07-27')
+    assert_select 'p[data-schedule-filter-target="block"]', text: /Alex Worker 8h/
+  end
+
   test 'bulk approve approves eligible sheets and reports the rest' do
     @sheet.submit!
     own = @other.timesheets.create!(period_start: '2026-08-03', period_end: '2026-08-09')
