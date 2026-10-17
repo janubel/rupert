@@ -11,12 +11,16 @@ class FinanceClosePagesUxTest < ActionDispatch::IntegrationTest
 
   teardown { Current.reset }
 
-  test 'each page uses the shared header with one primary action in it' do
+  test 'each page uses the shared header with at most one primary action in it' do
     day = Date.new(2026, 10, 10).iso8601
     { 'Daily reconciliation' => daily_reconciliations_path(day: day),
       'Day close' => financial_close_path(day: day),
       'Report requests & follow-ups' => reconciliation_follow_ups_path,
-      'Source documents' => reconciliation_documents_path }.each do |title, path|
+      'Source documents' => reconciliation_documents_path,
+      'Cash forecast' => cash_forecast_path(day: day),
+      'Source reports' => money_reconciliations_path(date: day),
+      'Period locks' => period_locks_path,
+      'Receipts' => receipts_path }.each do |title, path|
       get path
       assert_response :success, path
       assert_select '.finance-header h1', title

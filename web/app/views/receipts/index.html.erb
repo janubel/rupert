@@ -1,11 +1,14 @@
 <% content_for :title, 'Receipts' %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4"><div><h1 class="page-title">Receipts</h1><p class="mt-1 text-sm text-mocha"><%= @reviewer ? 'Review submitted purchases or track your own receipts.' : 'Upload and track your own purchase receipts.' %></p></div><%= link_to 'Upload receipt', new_receipt_path, class: 'btn-primary' %></section>
+  <%= render layout: 'finance/page_header', locals: { title: 'Receipts', currency: 'USD',
+        explain: (@reviewer ? 'Review submitted purchases or track your own receipts. Approving a receipt does not pay anyone or create an expense.' : 'Upload and track your own purchase receipts. A reviewer approves or returns each one.') } do %>
+    <%= link_to 'Upload receipt', new_receipt_path, class: 'btn-primary' %>
+  <% end %>
   <p class="card card-pad text-sm"><strong><%= @awaiting %> awaiting approval.</strong> Approval records a review; it does not pay a reimbursement or add an expense to the books.</p>
   <%= form_tag receipts_path, method: :get, class: 'flex flex-wrap items-end gap-3' do %><div><%= label_tag :status, 'Receipt status', class: 'label' %><%= select_tag :status, options_for_select([['All receipts', 'all']] + PurchaseReceipt::STATUSES.map { |s| [s == 'rejected' ? 'Returned for correction' : s.humanize, s] }, @status), class: 'select' %></div><%= submit_tag 'Filter', class: 'btn-ghost' %><% end %>
   <div class="card overflow-x-auto" role="region" tabindex="0" aria-label="Purchase receipts">
     <table class="w-full text-sm"><thead><tr><th scope="col" class="th">Purchase</th><th scope="col" class="th">Submitted by</th><th scope="col" class="th">Amount · USD</th><th scope="col" class="th">Status</th></tr></thead><tbody>
-      <% @receipts.each do |receipt| %><tr><td class="td"><%= link_to receipt.payee, receipt_path(receipt), class: 'font-semibold text-olive underline' %><p class="text-xs text-mocha"><%= receipt.incurred_on %></p></td><td class="td"><%= receipt.submitted_by.display_name %></td><td class="td whitespace-nowrap"><%= number_to_currency(receipt.amount_cents / 100.0) %></td><td class="td"><%= receipt.status == 'rejected' ? 'Returned for correction' : receipt.status.humanize %></td></tr><% end %>
+      <% @receipts.each do |receipt| %><tr><td class="td"><%= link_to receipt.payee, receipt_path(receipt), class: 'font-semibold text-olive underline' %><p class="text-sm text-mocha"><%= receipt.incurred_on %></p></td><td class="td"><%= receipt.submitted_by.display_name %></td><td class="td whitespace-nowrap"><%= finance_money(receipt.amount_cents) %></td><td class="td"><%= receipt.status == 'rejected' ? 'Returned for correction' : receipt.status.humanize %></td></tr><% end %>
       <% if @receipts.empty? %><tr><td colspan="4" class="empty-row">No receipts match this status.</td></tr><% end %>
     </tbody></table>
   </div>
