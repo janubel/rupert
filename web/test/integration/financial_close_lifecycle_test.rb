@@ -16,6 +16,10 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
   end
   teardown { Current.reset }
 
+  def assert_blank_field(id)
+    assert_select("##{id}") { |field| assert_equal '', field.first['value'].to_s }
+  end
+
   def record_review
     DailyReconciliationReview.create!(day: @day, report_digest: DailyMoneyReconciliation.new(day: @day).digest, status: 'reviewed', notes: 'Original inspected; manual bank checks documented.', reviewed_by: @user)
   end
@@ -217,25 +221,33 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_select 'a', text: /Track.*missing report/, count: 0
   end
 
-  test 'cash checklist wires only active required entries and preserves incomplete scenario inputs for readers' do
+  test 'cash checklist requires base entries, allows blank weeks and ties amount errors to their field for readers' do
     @user.update!(role: 'reporting')
     get cash_forecast_path(day: @day)
     assert_response :success
     assert_select '[aria-label="Cash plan input checklist"]'
     assert_select '#cash-plan-checklist button[type="button"][data-action="cash-forecast-form#jumpMissing"]', text: 'Review next missing entry'
-    assert_select '[data-cash-forecast-form-target~="entry"]:not([disabled])', count: 20
+    assert_select '[data-cash-forecast-form-target~="entry"]:not([disabled])', count: 4
+    assert_select '[data-cash-forecast-form-target~="amount"]:not([disabled]):not([required])', count: 16
+    assert_select 'label.sr-only[for="forecast_weeks_7_payments"]', text: 'Week 8 cash payments'
+    assert_select '#cash-week-table input.text-right.tabular-nums', count: 26
+    assert_select '[role="toolbar"][aria-label="Weekly amount fill helpers"] button[data-action="cash-forecast-form#fillDown"]', count: 2
     values = @forecast_values.deep_dup
     values[:weeks]['1'][:payments] = ''
-    values[:weeks]['2'][:receipts] = '77.00'
+    values[:weeks]['2'][:receipts] = 'abc'
+    values[:weeks]['3'][:receipts] = '77.00'
     assert_no_enqueued_jobs do
       assert_no_difference ['ReconciliationDocument.count', 'ActionMailer::Base.deliveries.size'] do
         post cash_forecast_path, params: { intent: 'preview', forecast: values }
       end
     end
     assert_response :unprocessable_entity
-    assert_select '[role="alert"]', text: /Week 2 payments/
-    assert_select '[data-cash-forecast-form-target~="entry"]:not([disabled])', count: 12
-    assert_select '#forecast_weeks_2_receipts[value="77.00"][data-entry-label="Week 3 bank receipts"]'
+    assert_select '#cash-forecast-error[role="alert"]', text: /Week 3 bank receipts/
+    assert_select '#cash-forecast-error a[href="#forecast_weeks_2_receipts"]', text: 'Go to this entry'
+    assert_select '#forecast_weeks_2_receipts[aria-invalid="true"][aria-describedby="cash-forecast-error"][value="abc"]'
+    assert_select '#forecast_weeks_1_receipts[aria-invalid]', count: 0
+    assert_select '[data-cash-forecast-form-target~="entry"]:not([disabled])', count: 4
+    assert_select '#forecast_weeks_3_receipts[value="77.00"][data-entry-label="Week 4 bank receipts"]'
     assert_select '#forecast_weeks_4_receipts[disabled]'
     assert_select 'button', text: 'Retain scenario version', count: 0
   end
@@ -275,13 +287,93 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_includes response.headers['Content-Type'], 'text/csv'
     assert_includes response.body, '2001'
     assert_equal 'no-store', response.headers['Cache-Control']
-    post cash_forecast_path, params: { intent: 'preview', forecast: @forecast_values.deep_merge(weeks: { '2' => { payments: '' } }) }
+    post cash_forecast_path, params: { intent: 'preview', forecast: @forecast_values.merge(opening: '') }
     assert_response :unprocessable_entity
-    assert_includes response.body, 'Week 3 payments: enter an explicit amount'
+    assert_includes response.body, 'Opening cash: enter an explicit amount'
     assert_select 'textarea[name="forecast[notes]"]', @forecast_values[:notes]
     post cash_forecast_path, params: { intent: 'retain', forecast: @forecast_values.merge(baseline_digest: 'stale') }
     assert_response :unprocessable_entity
     assert_includes response.body, 'baseline report changed'
+  end
+
+  test 'blank weeks count as zero only after the exact blank entries are confirmed and the confirmation is retained' do
+    baseline = DailyMoneyReconciliation.new(day: @day).digest
+    blank = @forecast_values.deep_merge(weeks: { '1' => { payments: '' }, '3' => { receipts: ' ' } }, baseline_digest: baseline)
+    post cash_forecast_path, params: { intent: 'preview', forecast: blank }
+    assert_response :success
+    assert_select '[aria-label="Blank entries counted as zero"]', text: /2 blank weekly entries counted as 0/
+    assert_select '#forecast-results tfoot', text: /Total · 4 weeks\s*100\.01\s*30\.00\s*90\.00\s*−60\.00\s*40\.01/
+    assert_select '#forecast-results table.tabular-nums td', text: /\(blank\)/, count: 2
+    assert_select '#cash-zero-confirmation h2', text: '2 blank weekly entries will be saved as 0'
+    assert_select '#cash-zero-confirmation li a[href="#forecast_weeks_1_payments"]', text: 'Week 2 · Oct 22 – Oct 28 · payments'
+    assert_select '#cash-zero-confirmation li a[href="#forecast_weeks_3_receipts"]', text: /Week 4 .* bank receipts/
+    assert_select 'input[type="checkbox"][name="forecast[zero_confirmation]"][value="2:payments,4:receipts"][data-review-only]:not([checked])'
+    %w[retain csv].each do |intent|
+      [nil, '2:payments', '2:payments,4:receipts,1:receipts'].each do |confirmation|
+        assert_no_difference 'ReconciliationDocument.count' do
+          post cash_forecast_path, params: { intent: intent, forecast: blank.merge(zero_confirmation: confirmation) }
+        end
+        assert_response :unprocessable_entity
+        assert_select '#cash-forecast-error a[href="#cash-zero-confirmation"]'
+        assert_select '#forecast_zero_confirmation[aria-invalid="true"][aria-describedby="cash-zero-error"]'
+        assert_select '#cash-zero-error', text: 'Confirm the 2 blank weekly entries listed below will be saved as 0, or enter amounts for them.'
+      end
+    end
+    post cash_forecast_path, params: { intent: 'csv', forecast: blank.merge(zero_confirmation: '2:payments,4:receipts') }
+    assert_includes response.body, 'Blank entries confirmed as 0,Week 2 payments; Week 4 bank receipts'
+    assert_difference 'ReconciliationDocument.count', 1 do
+      post cash_forecast_path, params: { intent: 'retain', forecast: blank.merge(zero_confirmation: '2:payments,4:receipts') }
+    end
+    doc = ReconciliationDocument.where(kind: 'cash_forecast').last
+    expected = [{ 'week' => 2, 'field' => 'payments' }, { 'week' => 4, 'field' => 'receipts' }]
+    assert_equal expected, doc.metadata['blank_entries_confirmed_as_zero']
+    assert_equal expected, JSON.parse(doc.original_bytes)['blank_entries_confirmed_as_zero']
+    assert_equal [1000, 1000, 1000, 0], JSON.parse(doc.original_bytes)['rows'].map { |row| row['receipts_cents'] }
+    post cash_forecast_path, params: { intent: 'retain', forecast: @forecast_values.merge(baseline_digest: baseline) }
+    assert_equal [], ReconciliationDocument.where(kind: 'cash_forecast').last.metadata['blank_entries_confirmed_as_zero']
+  end
+
+  test 'cash forecast prefills from the latest retained scenario in its currency, shifting whole weeks only' do
+    baseline = DailyMoneyReconciliation.new(day: @day).digest
+    weeks = { '0' => { receipts: '1', payments: '2' }, '1' => { receipts: '3', payments: '' }, '2' => { receipts: '5', payments: '6' }, '3' => { receipts: '7', payments: '8' } }
+    post cash_forecast_path, params: { intent: 'retain', forecast: @forecast_values.merge(weeks: weeks, baseline_digest: baseline, zero_confirmation: '2:payments') }
+    source = ReconciliationDocument.where(kind: 'cash_forecast').last
+    get cash_forecast_path(day: @day)
+    assert_select '#cash-prefill', count: 0
+    assert_select 'a[href=?]', cash_forecast_path(day: @day, currency: 'CAD'), text: 'Start from the latest CAD scenario'
+    get cash_forecast_path(day: '2026-10-21', currency: 'cad')
+    assert_select '#cash-prefill h2', text: "Started from retained scenario ##{source.id}"
+    assert_select '#cash-prefill', text: /moved 1 week earlier.*Week 4 had no earlier amount.*Opening cash is not carried/m
+    assert_select 'input[name="forecast[prefilled_from]"][value=?]', source.id.to_s
+    assert_select '#forecast_currency[value="CAD"]'
+    assert_select '#forecast_horizon option[selected][value="4"]'
+    assert_blank_field 'forecast_opening'
+    assert_select '#forecast_reserve[value="50.00"]'
+    assert_select 'textarea[name="forecast[notes]"]', @forecast_values[:notes]
+    assert_select '#forecast_weeks_0_receipts[value="3.00"]'
+    assert_blank_field 'forecast_weeks_0_payments'
+    assert_select '#forecast_weeks_2_payments[value="8.00"]'
+    assert_blank_field 'forecast_weeks_3_receipts'
+    assert_select '#cash-prefill a[href=?]', cash_forecast_path(day: '2026-10-21', currency: 'CAD', prefill: 'none'), text: 'Clear prefill and start blank'
+    get cash_forecast_path(day: @day, currency: 'CAD')
+    assert_select '#cash-prefill', text: /Same close date/
+    assert_select '#forecast_opening[value="100.01"]'
+    assert_select '#forecast_weeks_1_receipts[value="3.00"]'
+    get cash_forecast_path(day: '2026-10-17', currency: 'CAD')
+    assert_select '#cash-prefill', text: /not a whole number of weeks before Oct 17, so weekly amounts were not carried/
+    assert_blank_field 'forecast_weeks_0_receipts'
+    assert_select 'textarea[name="forecast[notes]"]', @forecast_values[:notes]
+    get cash_forecast_path(day: '2026-10-21', currency: 'CAD', prefill: 'none')
+    assert_select '#cash-prefill', count: 0
+    assert_blank_field 'forecast_weeks_0_receipts'
+    assert_select 'a[href=?]', cash_forecast_path(day: '2026-10-21', currency: 'CAD'), text: 'Start from the latest CAD scenario'
+    assert_difference 'ReconciliationDocument.count', 1 do
+      post cash_forecast_path, params: { intent: 'retain', forecast: @forecast_values.merge(baseline_digest: baseline, prefilled_from: source.id) }
+    end
+    assert_equal source.id, ReconciliationDocument.where(kind: 'cash_forecast').last.metadata['prefilled_from_document_id']
+    assert_equal source.id, JSON.parse(ReconciliationDocument.where(kind: 'cash_forecast').last.original_bytes)['prefilled_from_document_id']
+    post cash_forecast_path, params: { intent: 'retain', forecast: @forecast_values.merge(baseline_digest: baseline, prefilled_from: @original.id, notes: 'Another synthetic plan.') }
+    assert_nil ReconciliationDocument.where(kind: 'cash_forecast').last.metadata['prefilled_from_document_id']
   end
 
   test 'across dates exposes close and overdue actions with the selected date for report readers' do

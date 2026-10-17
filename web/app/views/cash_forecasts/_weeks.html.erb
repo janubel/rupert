@@ -1,0 +1,31 @@
+<section class="space-y-3" aria-labelledby="cash-weekly-plan-heading">
+  <h2 id="cash-weekly-plan-heading" class="font-display text-xl">Weekly cash plan</h2>
+  <p id="cash-weekly-plan-help" class="text-sm text-mocha">Leave a week blank when nothing is planned: before any download or retained version you confirm each blank entry as 0. Amounts may use thousands commas, a leading $ or leading-dot cents; valid amounts are rewritten as plain numbers when you leave the field. Paste a column (or receipts and payments columns) from a spreadsheet into any week to fill downward. Up/Down arrows move between weeks; Alt+Down repeats an amount into the empty weeks below. Do not count a vendor payment again in another expense amount.</p>
+  <div role="toolbar" aria-label="Weekly amount fill helpers" aria-controls="cash-week-table" class="flex flex-wrap items-center gap-2 rounded-xl border border-fog bg-paper p-3" data-cash-forecast-form-target="toolbar">
+    <p class="w-full text-sm font-semibold" data-cash-forecast-form-target="fillSelection">Select a weekly amount to repeat it.</p>
+    <button type="button" class="btn-ghost btn-sm" disabled data-cash-forecast-form-target="fillButton" data-action="cash-forecast-form#fillDown">Repeat into empty weeks below</button>
+    <button type="button" class="btn-ghost btn-sm" disabled data-cash-forecast-form-target="fillButton" data-action="cash-forecast-form#fillDown" data-overwrite="true">Repeat into all weeks below</button>
+    <button type="button" class="btn-ghost btn-sm" disabled data-cash-forecast-form-target="fillButton" data-action="cash-forecast-form#fillWeek">Repeat whole week into empty weeks below</button>
+    <p role="status" class="w-full text-sm text-mocha" data-cash-forecast-form-target="fillStatus"></p>
+  </div>
+  <p class="text-xs text-mocha md:hidden">Swipe the table sideways for payments and running totals.</p>
+  <div class="overflow-x-auto rounded-xl border border-fog">
+    <table id="cash-week-table" class="w-full text-sm tabular-nums" aria-describedby="cash-weekly-plan-help">
+      <caption class="sr-only">Weekly receipts and payments in currency units, with each week's net change and projected closing cash</caption>
+      <thead><tr><th scope="col" class="th">Week</th><th scope="col" class="th text-right">Expected bank receipts</th><th scope="col" class="th text-right">Expected cash payments</th><th scope="col" class="th text-right">Net change</th><th scope="col" class="th text-right">Projected closing</th></tr></thead>
+      <tbody>
+        <% 13.times do |index| %><% week = values.fetch('weeks', {})[index.to_s] || {} %>
+        <tr id="cash-week-<%= index + 1 %>" class="scroll-mt-48" data-cash-forecast-form-target="week" data-week="<%= index + 1 %>" <%= 'hidden' if index >= horizon %>>
+          <th scope="row" class="td whitespace-nowrap text-left font-semibold">Week <%= index + 1 %><span class="block text-xs font-normal text-mocha" data-week-dates><%= cash_forecast_week_dates(@baseline.day, index) if @baseline %></span></th>
+          <% { 'receipts' => 'bank receipts', 'payments' => 'cash payments' }.each do |key, label| %><% id = "forecast_weeks_#{index}_#{key}" %>
+          <td class="td min-w-36"><%= label_tag id, "Week #{index + 1} #{label}", class: 'sr-only' %><%= text_field_tag "forecast[weeks][#{index}][#{key}]", week[key], id: id, inputmode: 'decimal', autocomplete: 'off', placeholder: 'blank = 0', disabled: index >= horizon, class: 'input text-right tabular-nums', **cash_forecast_field_error(id), data: { cash_forecast_form_target: 'amount', entry_label: "Week #{index + 1} #{label}", week_index: index, field: key, action: 'focus->cash-forecast-form#select keydown->cash-forecast-form#navigate paste->cash-forecast-form#paste change->cash-forecast-form#normalize' } %></td>
+          <% end %>
+          <td class="td text-right whitespace-nowrap" data-net></td><td class="td text-right whitespace-nowrap" data-closing></td>
+        </tr>
+        <% end %>
+      </tbody>
+      <tfoot class="font-semibold"><tr><th scope="row" class="td text-left" data-cash-forecast-form-target="totalLabel">Total</th><td class="td text-right" data-cash-forecast-form-target="totalReceipts"></td><td class="td text-right" data-cash-forecast-form-target="totalPayments"></td><td class="td text-right" data-cash-forecast-form-target="totalNet"></td><td class="td text-right" data-cash-forecast-form-target="totalClosing"></td></tr></tfoot>
+    </table>
+  </div>
+  <p class="text-sm text-mocha" data-cash-forecast-form-target="blankSummary"></p>
+</section>
