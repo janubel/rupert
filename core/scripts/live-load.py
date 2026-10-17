@@ -33,8 +33,8 @@ def call(method, path, body=None, tok=None):
 
 # local owner account (random password kept in a private file; this is not a production account)
 if not os.path.exists(OWNER):
-    acct = {"email": "owner@rupert.local", "password": secrets.token_urlsafe(24)}
-    s, r = call("POST", "/auth/signup", {**acct, "org_name": "Local live test", "subdomain": "live-test"})
+    acct = {"email": os.environ.get("RUPERT_LIVE_EMAIL", "owner@rupert.local"), "password": secrets.token_urlsafe(24)}
+    s, r = call("POST", "/auth/signup", {**acct, "org_name": os.environ.get("RUPERT_LIVE_ORG", "Local live test"), "subdomain": os.environ.get("RUPERT_LIVE_SUBDOMAIN", "live-test")})
     if s != 201: die(f"signup failed ({s}): {r.get('error')}")
     fd = os.open(OWNER, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600); open(fd, "w").write(json.dumps(acct))
 acct = json.load(open(OWNER))

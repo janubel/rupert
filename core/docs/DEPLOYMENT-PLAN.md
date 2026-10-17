@@ -137,3 +137,65 @@ Never set `RUPERT_DEV` in production (it enables test upstream overrides and the
 
 Phases 1-7 complete, two clean weeks of daily parity with zero unexplained differences, a restore drill passed from
 an off-host copy, webhook events observed end to end, and the owner has chosen which routes (if any) move to Rust.
+
+## 11. Execution log: phases 1-4 (2026-10-17, approved by the owner; no Caddy, DNS or webhook changes)
+
+**Phase 1 (code, done).** Graceful shutdown, `/api/v1/health`, JSON logs by route template; commit `5299b7e`, rebased on
+the owner's rustfmt/clippy/CI commit (#96) and compliant with it (`cargo fmt --check`, `clippy -D warnings`).
+Tests: 5 unit, 41 auth, 130 sync/orders/webhooks, 15 ops (SIGTERM with an open stream folds the WAL to zero, overdue
+detection, no secret URL or token in logs).
+
+**Phase 2 (build, done).** Throwaway Ubuntu 24.04 container on SER8; rustup installer verified against its published
+SHA-256; rustc 1.99.1; `cargo build --release --locked` in 72 s. Artifact `~/rupert-core-releases/5299b7e/rupert-core`
+(x86_64, 6.4 MB, links only libc/libm/libgcc_s), SHA-256 `667ea41b45acfb6136caa14562c60a16150550632e3f367c9472fc31be0f44de`,
+with `BUILD-INFO`, `SHA256SUMS` and the test sources. All suites pass **on this x86_64 binary** (run on the host,
+because of the signal problem below). The build container was deleted afterwards.
+
+**Phase 3 (container, done) and a finding that needs a decision.** `rupert-core`: unprivileged, 1 CPU, 512 MiB, 8 GiB,
+`10.96.131.175:8798`, systemd unit (`rupertcore` user, `ProtectSystem=strict`, `NoNewPrivileges`, `MemoryMax=480M`,
+start limit 5 per 5 min so a failed restart cannot loop forever), env file 0600 with a generated master key.
+Restart test, as the plan required: **`systemctl restart` inside the container fails** (the old process cannot be
+killed: "Found left-over process ... Ignoring", the new one dies with "Address already in use"). The documented
+host-side recovery works: `incus restart rupert-core --force` brings up exactly one healthy process.
+
+*Root cause (measured, kernel log).* Host kernel 7.0.0-38 with AppArmor 5.0.2 denies `signal` between **all** processes
+in the container, including systemd and `kill -0` on its own child: the sender is the container profile
+(`incus-<name>_</var/lib/incus>`) and the target's label is the stacked `incus-<name>_</var/lib/incus>//&unconfined`,
+which the stock rule (`peer=@{profile_name}`) does not match. This is not limited to "processes from an older
+profile" as the Rails notes suspected; it affects fresh containers (reproduced on the build container within
+minutes of creating it). Consequences for any service in any container on this host: no in-container stop or
+restart, and no graceful SIGTERM at host `incus stop` either (systemd's SIGTERM is denied, the host then kills),
+so Phase 1's checkpoint-on-stop only helps when the process is stopped some other way. SQLite recovers from a
+hard kill, so data is safe; only the clean shutdown is lost.
+
+*Options for the owner.*
+- **A (recommended, needs approval): a narrow per-container AppArmor rule** (`raw.apparmor` allowing signals to
+  the container's own stacked label), tried first on a throwaway container to find the minimal rule, then applied to
+  `rupert-core` only. This does not disable AppArmor, make the container privileged or touch other containers. It is a
+  security-policy change, so it was not applied without approval. The same fix would likely repair `rupert`.
+- **B: accept the limitation.** Deploy and restart only with `incus restart rupert-core --force` (a short outage each
+  time, no graceful shutdown).
+- **C: run the service on the host** instead of in a container (no container confinement, weaker isolation).
+
+**Phase 4 (bootstrap, done).** Tenant `herbalhealers` created (owner login `owner@rupert-core.local`; the random password
+is in `/root/.config/rupert-core/live-owner.json` inside the container, mode 600; change the email/password before any
+real use). The five Shopify/Square variables were copied container-to-container on the host without being printed,
+sealed under the new master key, and the plaintext copy was shredded. First read-only sync from the new container:
+Shopify 351 variants, 354 per-location levels, 208 orders in 9 s; Square 741 variations, 121 orders in 3 s.
+- Upstream ledger (journal): only the allowlisted reads, all HTTP 200, zero write-like calls, zero throttles
+  (Shopify 36 requests, Square 13).
+- Credential scan of the data directory and journal: nothing found.
+- `scripts/parity.py` (read-only, runs on SER8) against the live Rails database: **no differences** across Shopify
+  variants (351), per-location levels (200 fresh Rails rows), locations, Square variations (741) and non-zero counts
+  (238), Shopify orders (191) and Square orders (121). One orphan Rails count row (1 unit, a variation that no longer
+  exists) is reported as information.
+- Footprint: service RSS 36 MB, container memory 59 MiB of 512, data 3.6 MB.
+- Baseline Incus snapshot `phase4-baseline-5299b7e` taken as a rollback point.
+
+**State left on SER8:** new container `rupert-core` (running, autostart); `~/rupert-core-releases/5299b7e/`. Nothing else
+was changed: Rails, Caddy, DNS and every other container are as they were (Rails `/up` answers 200). Scheduled syncs
+are off, `RUPERT_PUBLIC_URL` is a placeholder, no backup timer yet (phase 7), the master key exists only in the
+container's env file and its snapshot (escrow decision still open), and no webhooks are registered.
+
+**Next (needs the owner):** choose A/B/C for the signal problem; then phase 5 (hostname, DNS, Caddy with `sudo`) and the
+shadow period.
