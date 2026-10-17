@@ -18,9 +18,9 @@ module Finance
       export = Finance::LedgerExport.new(from: from, to: to)
       format = export.format_for(params[:format])
       send_data export.render(format.key),
-                filename: export.filename(format.key),
-                type: format.content_type,
-                disposition: 'attachment'
+        filename: export.filename(format.key),
+        type: format.content_type,
+        disposition: 'attachment'
     end
 
     private

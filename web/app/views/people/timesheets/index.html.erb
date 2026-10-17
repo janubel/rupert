@@ -54,19 +54,21 @@
             <th scope="col" class="th">Employee</th>
             <th scope="col" class="th">Period</th>
             <th scope="col" class="th text-right">Hours</th>
+            <th scope="col" class="th text-right">Comp.</th>
             <th scope="col" class="th">Status</th>
             <th scope="col" class="th">Review</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @timesheets.empty? %>
-            <tr><td colspan="5" class="empty-row"><%= @status == 'submitted' ? 'No timesheets awaiting review.' : 'No timesheets found.' %></td></tr>
+            <tr><td colspan="6" class="empty-row"><%= @status == 'submitted' ? 'No timesheets awaiting review.' : 'No timesheets found.' %></td></tr>
           <% end %>
           <% @timesheets.each do |timesheet| %>
             <tr class="hover:bg-cream">
               <td class="td font-medium text-ink"><%= timesheet.employee&.name %><% if timesheet.demo? %><span class="ml-2 pill-taupe">DEMO</span><% end %></td>
               <td class="td"><%= link_to timesheet.period_label, people_timesheet_path(timesheet), class: "text-olive hover:underline" %></td>
               <td class="td text-right text-mocha"><%= number_with_precision(timesheet.total_hours, precision: 1) %></td>
+              <td class="td text-right text-mocha" title="1% commission + $10/card bonus"><%= number_to_currency(timesheet.compensation_total_cents / 100.0) %></td>
               <td class="td">
                 <span class="<%= timesheet.approved? ? "pill-fern" : timesheet.submitted? ? "pill-olive" : timesheet.rejected? ? "pill-rose" : "pill-taupe" %>"><%= timesheet.status %></span>
               </td>

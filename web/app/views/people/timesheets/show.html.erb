@@ -54,6 +54,18 @@
       <p class="stat-label">Overtime</p>
       <p class="stat-value mt-1"><%= number_with_precision(@timesheet.overtime_hours, precision: 1) %></p>
     </div>
+    <div class="stat">
+      <p class="stat-label">Commission (1%)</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@timesheet.commission_cents / 100.0) %></p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Card bonus (<%= @timesheet.card_redemptions %> &times; $10)</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@timesheet.card_bonus_cents / 100.0) %></p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Compensation total</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@timesheet.compensation_total_cents / 100.0) %></p>
+    </div>
   </section>
 
   <div class="card overflow-hidden">
@@ -124,6 +136,17 @@
       </table>
     </div>
   </div>
+
+  <section class="card card-pad space-y-2">
+    <h2 class="font-display text-lg text-ink">Compensation breakdown</h2>
+    <p class="text-sm text-mocha">Commission is 1% of credited period sales. The employee 50%-off card adds a $10 bonus per redemption. These are display figures and are not posted to payroll.</p>
+    <dl class="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+      <div><dt class="text-xs text-mocha">Credited sales</dt><dd class="font-medium text-ink"><%= number_to_currency(@timesheet.sales_cents / 100.0) %></dd></div>
+      <div><dt class="text-xs text-mocha">Commission (1%)</dt><dd class="font-medium text-ink"><%= number_to_currency(@timesheet.commission_cents / 100.0) %></dd></div>
+      <div><dt class="text-xs text-mocha">Card redemptions</dt><dd class="font-medium text-ink"><%= @timesheet.card_redemptions %></dd></div>
+      <div><dt class="text-xs text-mocha">Card bonus</dt><dd class="font-medium text-ink"><%= number_to_currency(@timesheet.card_bonus_cents / 100.0) %></dd></div>
+    </dl>
+  </section>
 
   <% if @timesheet.notes.present? %>
     <section class="card card-pad">

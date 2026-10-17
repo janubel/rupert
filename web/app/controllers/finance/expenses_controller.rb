@@ -50,7 +50,7 @@ module Finance
         redirect_to(finance_expenses_path, notice: 'Expense recorded.')
       else
         @vendors = Purchasing::Vendor.ordered
-      @accounts = Finance::Account.active.ordered
+        @accounts = Finance::Account.active.ordered
         render(:new, status: :unprocessable_entity)
       end
     end
@@ -71,7 +71,7 @@ module Finance
         redirect_to(finance_expenses_path, notice: 'Expense updated.')
       else
         @vendors = Purchasing::Vendor.ordered
-      @accounts = Finance::Account.active.ordered
+        @accounts = Finance::Account.active.ordered
         render(:edit, status: :unprocessable_entity)
       end
     end

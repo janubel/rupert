@@ -13,7 +13,7 @@ module Finance
       @from = parse_date(params[:from]) || default_from
       @to = parse_date(params[:to]) || default_to
       @reconciliation = BankReconciliation.new(account_label: @account_label, from: @from, to: @to,
-                                                window_days: params[:window_days])
+        window_days: params[:window_days])
       @account_labels = BankStatementLine.distinct.order(:account_label).pluck(:account_label)
       response.headers['Cache-Control'] = 'private, no-store'
     end
