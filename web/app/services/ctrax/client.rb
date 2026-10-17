@@ -156,6 +156,15 @@ module Ctrax
       directory('/api/v1/users', store_id: store_id)
     end
 
+    # Native labor history is global to the accessible account, with explicit
+    # store IDs on each row. Do not invent an unsupported store query filter.
+    def labor_shifts(in_progress:)
+      raise Error, :invalid unless [true, false].include?(in_progress)
+
+      stores
+      paged('/api/v1/laborShifts', is_in_progress: in_progress ? 1 : 0)
+    end
+
     def inventory_adjustments(store_id, variant_id)
       authorize_store!(store_id)
       raise Error, :invalid unless variant_id.to_s.match?(/\A[1-9][0-9]{0,18}\z/)

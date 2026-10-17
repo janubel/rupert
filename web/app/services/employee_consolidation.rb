@@ -5,7 +5,7 @@
 class EmployeeConsolidation
   class Error < StandardError; end
   HISTORY = [People::Timesheet, People::LeaveBalance, People::LeaveRequest, People::PayRate, People::Payslip,
-    EmployeeAccessGrant, EmployeeAppSession, EmployeeWorkReport, SquareTimecard].freeze
+    EmployeeAccessGrant, EmployeeAppSession, EmployeeWorkReport, SquareTimecard, CtraxLaborShift].freeze
   HR_FIELDS = %w[user_id department_id position_id employee_number legal_name address date_of_birth hire_date
     termination_date emergency_contact_name emergency_contact_phone].freeze
 

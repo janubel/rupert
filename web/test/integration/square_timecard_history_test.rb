@@ -67,7 +67,8 @@ class SquareTimecardHistoryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'PRIVATE OTHER WORKER'
     get people_square_timesheets_path, params: { employee_id: @worker.id }
     assert_response :success
-    refute_includes response.body, 'PRIVATE OTHER WORKER'
+    assert_select 'article a[href=?]', people_square_timesheet_path(@other_card), count: 0
+    assert_select 'select[name="employee_id"] option', text: 'PRIVATE OTHER WORKER'
     get people_square_timesheet_path(@card)
     assert_response :success
     assert_includes response.body, 'own-card'

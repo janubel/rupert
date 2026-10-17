@@ -1,0 +1,47 @@
+<% content_for :title, 'C-Trax shift' %>
+<section class="space-y-3">
+  <h1 class="page-title">C-Trax shift</h1>
+  <p class="text-sm text-mocha">Read-only source history · <%= @shift.status.humanize %></p>
+  <%= link_to 'Back to C-Trax history', people_ctrax_timesheets_path, class: 'text-sm text-olive underline' %>
+</section>
+<section class="card card-pad space-y-3" aria-label="Latest source observation">
+  <h2 class="text-lg font-semibold"><%= @shift.employee&.name || 'Employee not matched' %> · Latest source observation</h2>
+  <dl class="grid gap-3 text-sm sm:grid-cols-2">
+    <div><dt class="text-mocha">C-Trax shift ID</dt><dd><%= @shift.external_id %></dd></div>
+    <div><dt class="text-mocha">Store ID</dt><dd><%= @shift.latest_record['store_id'] || @shift.store_id || 'Not available' %></dd></div>
+    <div><dt class="text-mocha">Clock-in</dt><dd><%= @latest[:started_at] ? l(@latest[:started_at].in_time_zone, format: :long) : 'Not available' %></dd></div>
+    <div><dt class="text-mocha">Clock-out</dt><dd><%= @latest[:ended_at] ? l(@latest[:ended_at].in_time_zone, format: :long) : 'Not available' %></dd></div>
+    <div><dt class="text-mocha">Source-reported hours</dt><dd><%= @latest[:reported_hours].nil? ? 'Not available' : number_with_precision(@latest[:reported_hours], precision: 2) %></dd></div>
+    <div><dt class="text-mocha">Elapsed hours</dt><dd><%= @latest[:elapsed_hours].nil? ? 'Not available' : number_with_precision(@latest[:elapsed_hours], precision: 2) %></dd></div>
+    <div><dt class="text-mocha">In progress</dt><dd><%= @latest[:in_progress].nil? ? 'Not reported' : @latest[:in_progress] ? 'Yes' : 'No' %></dd></div>
+    <div><dt class="text-mocha">Verified by source</dt><dd><%= @latest[:verified].nil? ? 'Not reported' : @latest[:verified] ? 'Yes' : 'No' %></dd></div>
+    <div><dt class="text-mocha">Last read</dt><dd><%= @shift.last_seen_at ? l(@shift.last_seen_at.in_time_zone, format: :long) : 'Not available' %></dd></div>
+  </dl>
+  <% if @latest[:reported_hours] && @latest[:elapsed_hours] && (@latest[:reported_hours] - @latest[:elapsed_hours]).abs > 0.01 %><p class="rounded-xl bg-haze p-3 text-sm">Reported and elapsed hours differ. This may reflect source adjustments; review the source rather than assuming either value is payable.</p><% end %>
+  <% if @shift.issue.present? %><p class="rounded-xl bg-haze p-3 text-sm"><%= @shift.issue %></p><% end %>
+  <p class="text-sm text-mocha">Source verification is not Rupert approval or proof of payment. These hours remain excluded from Rupert payroll and personal hour totals. Do not add them to overlapping Square or Rupert entries.</p>
+</section>
+<section class="card card-pad space-y-3" aria-label="Original source observation">
+  <h2 class="text-lg font-semibold">Original source observation</h2>
+  <p class="text-sm text-mocha">The first observed punches and reported hours are retained here even when C-Trax later closes or changes the shift.</p>
+  <dl class="grid gap-3 text-sm sm:grid-cols-2">
+    <div><dt class="text-mocha">Original clock-in</dt><dd><%= @shift.started_at ? l(@shift.started_at.in_time_zone, format: :long) : 'Not available' %></dd></div>
+    <div><dt class="text-mocha">Original clock-out</dt><dd><%= @shift.ended_at ? l(@shift.ended_at.in_time_zone, format: :long) : 'Not available' %></dd></div>
+    <div><dt class="text-mocha">Original source-reported hours</dt><dd><%= @shift.reported_hours.nil? ? 'Not available' : number_with_precision(@shift.reported_hours, precision: 2) %></dd></div>
+    <div><dt class="text-mocha">Original elapsed hours</dt><dd><%= @shift.elapsed_hours.nil? ? 'Not available' : number_with_precision(@shift.elapsed_hours, precision: 2) %></dd></div>
+  </dl>
+</section>
+<section class="card card-pad space-y-3" aria-label="Source observation history">
+  <h2 class="text-lg font-semibold">Source observation history</h2>
+  <p class="text-sm text-mocha"><%= @observation_count %> recorded observations. Showing the latest 50; identical refreshes do not add duplicates. Missing or changed records stay in history.</p>
+  <%= link_to 'Download all observations CSV', people_ctrax_timesheet_path(@shift, format: :csv), class: 'text-sm text-olive underline' %>
+  <% @observations.each do |observation| %>
+    <% values = ctrax_source_values(observation.record_data) %>
+    <article class="border-t border-fog pt-3 space-y-1" data-observation="<%= observation.sequence %>">
+      <h3 class="font-semibold">Observation <%= observation.sequence %> · <%= l(observation.observed_at.in_time_zone, format: :long) %> · <%= observation.status.humanize %></h3>
+      <p class="text-sm">Clock-in: <%= values[:started_at] ? l(values[:started_at].in_time_zone, format: :long) : 'Not available' %> · Clock-out: <%= values[:ended_at] ? l(values[:ended_at].in_time_zone, format: :long) : 'Not available' %></p>
+      <p class="text-sm">Source-reported: <%= values[:reported_hours].nil? ? 'Not available' : "#{number_with_precision(values[:reported_hours], precision: 2)}h" %> · Elapsed: <%= values[:elapsed_hours].nil? ? 'Not available' : "#{number_with_precision(values[:elapsed_hours], precision: 2)}h" %><%= ' · In progress' if values[:in_progress] %></p>
+      <% if observation.issue.present? %><p class="text-sm text-mocha"><%= observation.issue %></p><% end %>
+    </article>
+  <% end %>
+</section>

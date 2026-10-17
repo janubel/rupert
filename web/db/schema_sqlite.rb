@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_220000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -673,6 +673,47 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_190000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "location_id", "variant_id"], name: "idx_on_tenant_id_location_id_variant_id_a6f332d264", unique: true
     t.index ["tenant_id"], name: "index_ctrax_image_links_on_tenant_id"
+  end
+
+  create_table "ctrax_labor_observations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "ctrax_labor_shift_id", null: false
+    t.integer "sequence", null: false
+    t.datetime "observed_at", null: false
+    t.string "digest", null: false
+    t.text "payload", null: false
+    t.index ["ctrax_labor_shift_id", "sequence"], name: "idx_ctrax_labor_observation_sequence", unique: true
+    t.index ["ctrax_labor_shift_id"], name: "index_ctrax_labor_observations_on_ctrax_labor_shift_id"
+    t.index ["tenant_id"], name: "index_ctrax_labor_observations_on_tenant_id"
+  end
+
+  create_table "ctrax_labor_shifts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "employee_id"
+    t.string "source_origin", null: false
+    t.string "external_id", null: false
+    t.string "store_id"
+    t.string "user_external_id", null: false
+    t.datetime "started_at"
+    t.datetime "ended_at"
+    t.decimal "reported_hours", precision: 20, scale: 8
+    t.decimal "elapsed_hours", precision: 20, scale: 8
+    t.boolean "in_progress", null: false
+    t.boolean "verified", null: false
+    t.string "status", null: false
+    t.string "issue"
+    t.datetime "last_seen_at", null: false
+    t.datetime "source_updated_at"
+    t.string "original_digest", null: false
+    t.string "latest_digest", null: false
+    t.text "source_payload", null: false
+    t.text "latest_payload", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["employee_id"], name: "index_ctrax_labor_shifts_on_employee_id"
+    t.index ["tenant_id", "employee_id", "started_at"], name: "idx_ctrax_labor_worker"
+    t.index ["tenant_id", "source_origin", "external_id"], name: "idx_ctrax_labor_native", unique: true
+    t.index ["tenant_id"], name: "index_ctrax_labor_shifts_on_tenant_id"
   end
 
   create_table "ctrax_stock_snapshots", force: :cascade do |t|
@@ -2361,6 +2402,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_190000) do
   add_foreign_key "ctrax_image_links", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_image_links", "ShopifyProduct", column: "shopify_product_id", on_delete: :cascade
   add_foreign_key "ctrax_image_links", "tenants"
+  add_foreign_key "ctrax_labor_observations", "ctrax_labor_shifts"
+  add_foreign_key "ctrax_labor_observations", "tenants"
+  add_foreign_key "ctrax_labor_shifts", "employees"
+  add_foreign_key "ctrax_labor_shifts", "tenants"
   add_foreign_key "ctrax_stock_snapshots", "Location", column: "location_id", on_delete: :cascade
   add_foreign_key "ctrax_stock_snapshots", "tenants"
   add_foreign_key "customer_follow_ups", "customers"

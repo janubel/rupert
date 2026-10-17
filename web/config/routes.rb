@@ -40,6 +40,7 @@ Rails.application.routes.draw do
   end
 
   resources :square_timesheets, path: 'people/square_timesheets', controller: 'people/square_timesheets', only: %i[index show], as: :people_square_timesheets
+  resources :ctrax_timesheets, path: 'people/ctrax_timesheets', controller: 'people/ctrax_timesheets', only: %i[index show], as: :people_ctrax_timesheets
 
   get '/employee', to: 'employee_app#show', as: :employee_app
   scope '/employee/preview', controller: :employee_preview, as: :employee_preview do

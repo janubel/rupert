@@ -24,6 +24,7 @@ module People
         return send_data TimesheetCsv.generate(scope), filename: 'timesheets.csv', type: 'text/csv'
       end
       @square_history = SquareTimecard.visible_to(Current.user)
+      @ctrax_history = CtraxLaborShift.visible_to(Current.user)
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee), items: 30)
     rescue Date::Error
       redirect_to people_timesheets_path, alert: 'Choose a valid period date.'

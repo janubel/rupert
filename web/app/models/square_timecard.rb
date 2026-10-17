@@ -24,7 +24,8 @@ class SquareTimecard < ApplicationRecord
   end
 
   def self.visible_to(user)
-    return all if user.can_manage_accounts? && user.can?('timesheets.read')
+    return none unless user&.active? && (user.super_admin? || user.tenant_id == Current.tenant_id)
+    return all if user.can_review_timesheets? || (user.can_manage_accounts? && user.can?('timesheets.read'))
 
     worker = TimeClockService.worker_for(user, include_on_leave: true)
     worker ? where(employee_id: worker.id) : none
