@@ -17,6 +17,8 @@ class BooksDesksIntegrationTest < ActionDispatch::IntegrationTest
     assert_equal 'private, no-store', response.headers['Cache-Control']
     assert_select 'h1', 'Books desk'
     assert_select '#desk-next-title'
+    assert_select '#reconciliation-findings'
+    assert_includes response.body, 'Bank deposit matching remains incomplete.'
     assert_select '#desk-focus-week', text: /Last week/
     assert_select 'ol.desk-steps', minimum: 7
     assert_select '#desk-period-end'

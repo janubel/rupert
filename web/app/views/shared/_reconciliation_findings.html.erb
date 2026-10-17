@@ -1,0 +1,50 @@
+<section id="reconciliation-findings" class="card card-pad space-y-4" aria-labelledby="reconciliation-findings-title">
+  <div>
+    <p class="eyebrow text-mocha">Current findings · all stored history</p>
+    <h2 id="reconciliation-findings-title" class="font-display text-2xl">What needs reconciliation</h2>
+    <p class="mt-1 text-xs text-mocha">Checked <%= retail_event_time(findings.generated_at, timezone: 'America/New_York') %>. These live checks are separate from the selected period and any saved review.</p>
+  </div>
+  <p class="text-sm font-semibold">Bank deposit matching remains incomplete. Payment gaps and unpaid invoices below are source findings, not confirmed missing bank deposits.</p>
+  <div class="grid gap-4 md:grid-cols-2">
+    <article class="space-y-2" aria-label="Square missing recorded payments">
+      <h3 class="font-semibold">Square · <%= pluralize(findings.square_missing.count, 'order') %> without a recorded payment</h3>
+      <p class="text-xs text-mocha">Paid, fulfilled or refunded orders with a positive recorded total and no completed local tender. Review the original payment before correcting the record.</p>
+      <% findings.square_missing.limit(Finance::ReconciliationFindings::LIMIT).each do |order| %>
+        <p class="text-sm"><%= link_to order.display_number, order_path(order), class: 'font-semibold underline break-all' %> · <%= order.occurred_at.in_time_zone('America/New_York').to_date %> · <%= order.currency.presence || 'Unconfirmed currency' %> <%= number_with_precision(BigDecimal(order.gross_cents.to_s) / 100, precision: 2, delimiter: ',') %></p>
+      <% end %>
+      <% if findings.square_missing.count > Finance::ReconciliationFindings::LIMIT %><p class="text-xs text-mocha">First <%= Finance::ReconciliationFindings::LIMIT %> shown. <%= link_to 'Review Square orders', orders_path(source: 'square'), class: 'underline' %>.</p><% end %>
+    </article>
+    <article class="space-y-2" aria-label="SwipeSimple unpaid invoices">
+      <h3 class="font-semibold">SwipeSimple · <%= pluralize(findings.unpaid_invoices.size, 'unpaid invoice') %></h3>
+      <% findings.invoice_groups.each do |group| %>
+        <p class="text-sm"><%= group[:account] %> · <%= group[:currency].presence || 'Unconfirmed currency' %> <strong><%= group[:cents].nil? ? 'Amount unavailable' : number_with_precision(BigDecimal(group[:cents].to_s) / 100, precision: 2, delimiter: ',') %></strong> · <%= pluralize(group[:count], 'invoice') %></p>
+      <% end %>
+      <p class="text-xs text-mocha">Latest full account snapshot only. Invoices are separate from payment receipts; a missing due date does not establish that an invoice is overdue.</p>
+      <details><summary class="disclosure-trigger text-sm font-semibold">Invoice references and due dates</summary>
+        <ul class="mt-2 space-y-1 text-sm">
+          <% findings.unpaid_invoices.first(Finance::ReconciliationFindings::LIMIT).each do |invoice| %>
+            <li>Invoice <%= invoice.source_number %> · <%= invoice.swipesimple_export.currency.presence || 'Unconfirmed currency' %> <%= invoice.amount_cents.nil? ? 'Amount unavailable' : number_with_precision(BigDecimal(invoice.amount_cents.to_s) / 100, precision: 2, delimiter: ',') %> · due <%= invoice.due_on || 'Unknown' %></li>
+          <% end %>
+        </ul>
+        <% if findings.unpaid_invoices.size > Finance::ReconciliationFindings::LIMIT %><p class="text-xs">First <%= Finance::ReconciliationFindings::LIMIT %> references shown.</p><% end %>
+      </details>
+      <%= link_to 'Review SwipeSimple evidence', swipesimple_reports_path, class: 'text-sm font-semibold underline' %>
+    </article>
+  </div>
+  <div class="grid gap-4 md:grid-cols-2">
+    <% ctrax = findings.ctrax_controls; iris = findings.iris_controls %>
+    <article class="text-sm" aria-label="C-Trax source controls"><h3 class="font-semibold">C-Trax source controls</h3><p><%= ctrax[:matched] %> of <%= ctrax[:checks] %> checks agree across <%= pluralize(ctrax[:days], 'stored day') %>. <%= ctrax[:different] %> differ; <%= ctrax[:unknown] %> unavailable.</p><p class="mt-1 text-xs text-mocha">Native orders and tender controls only. Tips are separate from base tender. Refunds, register cash and bank funding still require review.</p></article>
+    <article class="text-sm" aria-label="NAB IRIS source controls"><h3 class="font-semibold">NAB / IRIS source controls</h3><p><%= iris[:matched] %> of <%= iris[:reports] %> monthly deposit reports agree with their row totals. <%= iris[:different] %> differ; <%= iris[:unknown] %> unavailable.</p><p class="mt-1 text-xs text-mocha">One latest native snapshot per merchant and month. Processor currency and net ACH funding need confirmation before matching to Wells Fargo.</p></article>
+  </div>
+  <article class="space-y-2 text-sm" aria-label="Available bank evidence">
+    <h3 class="font-semibold">Bank evidence for Wells Fargo reconciliation</h3>
+    <% if findings.bank_accounts.empty? %>
+      <p>No bank statement transactions are stored yet. Import the Wells Fargo checking statement to establish actual bank credits.</p>
+    <% else %>
+      <% findings.bank_accounts.each do |label, count, first_on, last_on| %><p><strong><%= label %></strong> · <%= pluralize(count, 'bank line') %> · <%= first_on %> through <%= last_on %></p><% end %>
+      <p>Statement presence does not certify a match. Confirm the account, deposit references, fees, currency and funding dates against each source.</p>
+    <% end %>
+    <%= link_to 'Open bank statements', bank_statements_path, class: 'btn-ghost btn-sm' %>
+    <%= link_to 'Review source reports', money_reconciliations_path, class: 'btn-ghost btn-sm' unless controller_name == 'money_reconciliations' %>
+  </article>
+</section>

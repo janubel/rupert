@@ -23,6 +23,8 @@
     <% end %>
   </header>
 
+  <%= render 'shared/reconciliation_findings', findings: @findings %>
+
   <section class="desk-next card card-pad" aria-labelledby="desk-next-title">
     <div class="desk-next-body">
       <% if next_day %>
