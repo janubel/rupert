@@ -209,7 +209,7 @@ Rails.application.routes.draw do
 
   namespace :finance do
     get '/accounts', to: 'accounts#show', as: :accounts
-    resources :chart_of_accounts, only: %i[index new create edit update] do
+    resources :chart_of_accounts, only: %i[index show new create edit update] do
       member do
         post :archive
         post :restore
@@ -221,7 +221,9 @@ Rails.application.routes.draw do
     resources :vendor_payments, only: %i[index new create destroy] do
       member { post :restore }
     end
-    resources :journal_entries, only: %i[index show new create]
+    resources :journal_entries, only: %i[index show new create] do
+      member { post :reverse }
+    end
     get 'reports', to: 'reports#index', as: :reports
     get 'reports/trial_balance', to: 'reports#trial_balance', as: :reports_trial_balance
     get 'reports/income_statement', to: 'reports#income_statement', as: :reports_income_statement

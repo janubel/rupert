@@ -32,7 +32,7 @@ module OperationsWorkspaceHelper
        ['Receipts', receipts_path, 'finance.read', 'receipts', 'Records'],
        ['Chart of accounts', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts', 'Records'],
        ['General ledger', finance_journal_entries_path, 'finance.read', 'finance/journal_entries', 'Records'],
-       ['Ledger', ledger_index_path, 'ledger.read', 'ledger', 'Records'],
+       ['Imported orders', ledger_index_path, 'ledger.read', 'ledger', 'Records'],
        ['Ledger export', finance_ledger_export_path, 'finance.read', 'finance/ledger_exports', 'Reports & control'],
        ['Financial statements', finance_reports_path, 'finance.read', 'finance/reports', 'Reports & control'],
        ['Source reports', money_reconciliations_path(date: date), 'reports.read', 'money_reconciliations', 'Reports & control'],

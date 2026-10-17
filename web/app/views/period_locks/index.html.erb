@@ -4,14 +4,10 @@
 <div class="mx-auto max-w-6xl space-y-8 operations-workspace books-desk">
   <%= render 'shared/operations_navigation', workspace: :money, day: Date.yesterday %>
 
-  <header class="operations-header">
-    <div>
-      <p class="eyebrow text-mocha">Finance · history and retention</p>
-      <h1 class="page-title mt-2">Period locks</h1>
-      <p class="mt-2 max-w-2xl text-sm text-mocha">When a month, quarter or year is finished and checked, lock it. Nothing dated inside a locked period can then be added, changed or removed in Rupert: expenses, vendor payments, bank-line decisions, day reviews, closes and approvals. Each lock keeps a dated archive of the period’s totals. Reopening needs a written reason and is recorded.</p>
-    </div>
+  <%= render layout: 'finance/page_header', locals: { title: 'Period locks', currency: nil,
+        explain: 'Lock a finished month, quarter or year so nothing dated inside it can be added, changed or removed: expenses, payments, bank decisions, reviews, closes and approvals. Each lock keeps a dated archive of the totals. Unlocking needs a written reason and is recorded.' } do %>
     <%= link_to 'Back to Books desk', books_desk_path, class: 'btn-ghost btn-sm' %>
-  </header>
+  <% end %>
 
   <% if @form_error %><p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><%= @form_error %></p><% end %>
 

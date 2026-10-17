@@ -2,60 +2,56 @@
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Balance sheet</h1>
-      <p class="mt-1 text-sm text-mocha">As of <%= @to %> · USD</p>
-    </div>
+  <%= render layout: 'finance/page_header', locals: { title: 'Balance sheet', range: "as of #{@to}", print: true,
+        explain: 'What the business owns (assets), owes (liabilities) and is worth to the owner (equity) on one date. Assets must equal liabilities plus equity.' } do %>
     <%= link_to "All reports", finance_reports_path, class: "btn-ghost btn-sm" %>
-  </section>
+  <% end %>
 
   <%= render 'window', path: finance_reports_balance_sheet_path, csv_path: finance_reports_balance_sheet_path(format: :csv) %>
 
-  <section class="grid grid-cols-3 gap-4">
+  <section class="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Report totals">
     <div class="stat">
       <p class="stat-label">Total assets</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@sheet[:total_assets] / 100.0) %></p>
+      <p class="stat-value mt-1"><%= finance_money(@sheet[:total_assets]) %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Total liabilities</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@sheet[:total_liabilities] / 100.0) %></p>
+      <p class="stat-value mt-1"><%= finance_money(@sheet[:total_liabilities]) %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Total equity</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@sheet[:total_equity] / 100.0) %></p>
+      <p class="stat-value mt-1"><%= finance_money(@sheet[:total_equity]) %></p>
     </div>
   </section>
 
   <div class="card overflow-hidden">
-    <table class="operations-table w-full text-sm">
+    <table class="operations-table finance-table w-full">
+      <caption class="sr-only">Balance sheet, amounts in USD</caption>
       <thead class="border-b border-fog bg-haze/60">
-        <tr><th scope="col" class="th">Account</th><th scope="col" class="th text-right">Balance</th></tr>
+        <tr><th scope="col" class="th">Account</th><th scope="col" class="th num">Balance</th></tr>
       </thead>
       <tbody>
-        <tr class="bg-haze/40"><td class="td font-semibold" colspan="2">Assets</td></tr>
+        <tr class="group-row"><th scope="colgroup" class="td" colspan="2">Assets</th></tr>
         <% @sheet[:assets].each do |row| %>
-          <tr class="border-b border-fog/60"><td class="td"><%= row.account.code %> · <%= row.account.name %></td><td class="td text-right"><%= number_to_currency(row.balance / 100.0) %></td></tr>
+          <tr><td class="td"><%= link_to finance_account_label(row.account), finance_chart_of_account_path(row.account, from: @from, to: @to), class: "link" %></td><td class="td num"><%= finance_money(row.balance) %></td></tr>
         <% end %>
-        <tr class="font-semibold"><td class="td">Total assets</td><td class="td text-right"><%= number_to_currency(@sheet[:total_assets] / 100.0) %></td></tr>
+        <tr class="subtotal-row"><th scope="row" class="td">Total assets</th><td class="td num"><%= finance_money(@sheet[:total_assets]) %></td></tr>
 
-        <tr class="bg-haze/40"><td class="td font-semibold" colspan="2">Liabilities</td></tr>
+        <tr class="group-row"><th scope="colgroup" class="td" colspan="2">Liabilities</th></tr>
         <% @sheet[:liabilities].each do |row| %>
-          <tr class="border-b border-fog/60"><td class="td"><%= row.account.code %> · <%= row.account.name %></td><td class="td text-right"><%= number_to_currency(row.balance / 100.0) %></td></tr>
+          <tr><td class="td"><%= link_to finance_account_label(row.account), finance_chart_of_account_path(row.account, from: @from, to: @to), class: "link" %></td><td class="td num"><%= finance_money(row.balance) %></td></tr>
         <% end %>
-        <tr class="font-semibold"><td class="td">Total liabilities</td><td class="td text-right"><%= number_to_currency(@sheet[:total_liabilities] / 100.0) %></td></tr>
+        <tr class="subtotal-row"><th scope="row" class="td">Total liabilities</th><td class="td num"><%= finance_money(@sheet[:total_liabilities]) %></td></tr>
 
-        <tr class="bg-haze/40"><td class="td font-semibold" colspan="2">Equity</td></tr>
+        <tr class="group-row"><th scope="colgroup" class="td" colspan="2">Equity</th></tr>
         <% @sheet[:equity].each do |row| %>
-          <tr class="border-b border-fog/60"><td class="td"><%= row.account.code %> · <%= row.account.name %></td><td class="td text-right"><%= number_to_currency(row.balance / 100.0) %></td></tr>
+          <tr><td class="td"><%= link_to finance_account_label(row.account), finance_chart_of_account_path(row.account, from: @from, to: @to), class: "link" %></td><td class="td num"><%= finance_money(row.balance) %></td></tr>
         <% end %>
-        <tr class="border-b border-fog/60"><td class="td">Current period earnings</td><td class="td text-right"><%= number_to_currency(@sheet[:current_period_earnings] / 100.0) %></td></tr>
-        <tr class="font-semibold"><td class="td">Total equity</td><td class="td text-right"><%= number_to_currency(@sheet[:total_equity] / 100.0) %></td></tr>
+        <tr><td class="td">Current period earnings</td><td class="td num"><%= finance_money(@sheet[:current_period_earnings]) %></td></tr>
+        <tr class="subtotal-row"><th scope="row" class="td">Total equity</th><td class="td num"><%= finance_money(@sheet[:total_equity]) %></td></tr>
       </tbody>
     </table>
   </div>
 
-  <p class="text-xs <%= @sheet[:balanced] ? 'text-emerald-600' : 'text-red-600' %>">
-    <%= @sheet[:balanced] ? 'Assets = Liabilities + Equity.' : 'Warning: the balance sheet does not balance.' %>
-  </p>
+  <%= finance_balance_status(@sheet[:total_assets] - (@sheet[:total_liabilities] + @sheet[:total_equity]), balanced_text: "Balanced: assets equal liabilities plus equity") %>
 </div>

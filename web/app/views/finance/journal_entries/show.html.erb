@@ -1,54 +1,112 @@
 <% content_for :title, "Journal entry ##{@entry.id}" %>
+<% reversible = @can_write && %w[manual opening].include?(@entry.kind) && !@entry.void? && @reversed_by.nil? %>
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="page-title">Journal entry</h1>
-      <p class="mt-1 text-sm text-mocha">
-        <%= @entry.posted_on %> · <%= @entry.kind.tr('_', ' ').titleize %>
-        <% if @entry.source_type.present? %>· <%= @entry.source_type %> #<%= @entry.source_id %><% end %>
+      <h1 class="page-title">Journal entry #<%= @entry.id %></h1>
+      <p class="mt-1 text-base text-mocha">
+        <%= @entry.posted_on %> · <%= @entry.kind.tr('_', ' ').titleize %> · USD
+        <% if @source_link %>· Source: <%= link_to @source_link[0], @source_link[1], class: "link" %>
+        <% elsif @entry.source_type.present? && @entry.source_type != 'Finance::JournalEntry' %>· Source: <%= @entry.source_type %> #<%= @entry.source_id %>
+        <% end %>
       </p>
     </div>
     <%= link_to "Back to ledger", finance_journal_entries_path, class: "btn-ghost btn-sm" %>
   </section>
 
+  <div class="entry-state <%= @entry.void? ? 'entry-state-void' : 'entry-state-posted' %>" role="status">
+    <p class="font-semibold">
+      <% if @entry.void? %>Void: this entry is excluded from every report.
+      <% elsif @reversed_by %>Posted and reversed: <%= link_to "entry ##{@reversed_by.id}", finance_journal_entry_path(@reversed_by), class: "link" %> cancels it out (<%= @reversed_by.posted_on %>).
+      <% else %>Posted: read-only.
+      <% end %>
+    </p>
+    <p class="text-base">
+      <% if @entry.void? %>A void entry is kept for the audit trail. It was voided when the expense or payment it came from was removed or changed.
+      <% elsif @reversal_of %>This entry reverses <%= link_to "entry ##{@reversal_of.id}", finance_journal_entry_path(@reversal_of), class: "link" %>.
+      <% else %>Posted entries are never edited. To correct one, reverse it and post the right entry.
+      <% end %>
+      <% if @lock %>Dated inside <%= @lock.label %>, which is locked<%= " by #{@lock.actor_name}" %>; nothing dated in that period can change.<% end %>
+    </p>
+  </div>
+
   <% if @entry.memo.present? %>
-    <p class="text-sm text-mocha"><%= @entry.memo %></p>
+    <p class="text-base text-ink"><span class="text-mocha">Memo:</span> <%= @entry.memo %></p>
   <% end %>
 
   <div class="card overflow-hidden">
-    <table class="operations-table w-full text-sm">
-      <thead class="border-b border-fog bg-haze/60">
-        <tr>
-          <th scope="col" class="th">Account</th>
-          <th scope="col" class="th">Memo</th>
-          <th scope="col" class="th text-right">Debit</th>
-          <th scope="col" class="th text-right">Credit</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @entry.journal_lines.sort_by(&:position).each do |line| %>
-          <tr class="border-b border-fog/60">
-            <td class="td"><%= line.account.code %> · <%= line.account.name %></td>
-            <td class="td text-taupe"><%= line.memo %></td>
-            <td class="td text-right"><%= line.debit? ? number_to_currency(line.debit_cents / 100.0) : '—' %></td>
-            <td class="td text-right"><%= line.credit? ? number_to_currency(line.credit_cents / 100.0) : '—' %></td>
+    <div class="operations-table-region" role="region" tabindex="0" aria-label="Entry lines">
+      <table class="operations-table finance-table w-full">
+        <caption class="sr-only">Lines of journal entry <%= @entry.id %>, in USD</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="th">Account</th>
+            <th scope="col" class="th">Memo</th>
+            <th scope="col" class="th num">Debit</th>
+            <th scope="col" class="th num">Credit</th>
           </tr>
-        <% end %>
-      </tbody>
-      <tfoot>
-        <tr class="font-semibold">
-          <td class="td" colspan="2">Totals</td>
-          <td class="td text-right"><%= number_to_currency(@entry.debit_cents / 100.0) %></td>
-          <td class="td text-right"><%= number_to_currency(@entry.credit_cents / 100.0) %></td>
-        </tr>
-      </tfoot>
-    </table>
+        </thead>
+        <tbody>
+          <% @entry.journal_lines.sort_by(&:position).each do |line| %>
+            <tr>
+              <td class="td"><%= link_to finance_account_label(line.account), finance_chart_of_account_path(line.account), class: "link" %></td>
+              <td class="td text-mocha"><%= line.memo.presence || '—' %></td>
+              <td class="td num"><%= finance_money(line.debit_cents, zero: :dash) %></td>
+              <td class="td num"><%= finance_money(line.credit_cents, zero: :dash) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" class="td" colspan="2">Totals</th>
+            <td class="td num"><%= finance_money(@entry.debit_cents) %></td>
+            <td class="td num"><%= finance_money(@entry.credit_cents) %></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </div>
 
-  <p class="text-xs text-taupe">
-    Status: <%= @entry.status %> · Created <%= @entry.created_at&.strftime('%b %-d, %Y %H:%M') %>
-    <%= "(by user ##{@entry.created_by_id})" if @entry.created_by_id.present? %>
-  </p>
+  <%= finance_balance_status(@entry.debit_cents - @entry.credit_cents) %>
+
+  <% if reversible %>
+    <section class="card card-pad max-w-2xl space-y-3" aria-labelledby="reverse-title">
+      <h2 id="reverse-title" class="font-display text-xl">Reverse this entry</h2>
+      <p class="text-base text-mocha">Posts a new entry that swaps every debit and credit, so the net effect on the books is zero. This entry stays on record. Reversing needs a date and a reason.</p>
+      <%= form_with url: reverse_finance_journal_entry_path(@entry), method: :post, class: "space-y-3",
+            data: { controller: "confirm-submit", confirm_submit_message_value: "Reverse entry ##{@entry.id}?\n\nAmount: #{finance_money_text(@entry.debit_cents)}\nOriginal date: #{@entry.posted_on}\n\nA new entry with every debit and credit swapped is posted on the date below. Entry ##{@entry.id} is kept. This cannot be undone, but you can post another entry to correct it.", action: "submit->confirm-submit#confirm" } do %>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <%= label_tag :reverse_posted_on, "Date of the reversal", class: "field-label" %>
+            <%= date_field_tag :posted_on, Date.current, id: :reverse_posted_on, required: true, class: "select w-full" %>
+          </div>
+          <div>
+            <%= label_tag :reverse_reason, "Reason", class: "field-label" %>
+            <%= text_field_tag :reason, nil, id: :reverse_reason, required: true, maxlength: 200, class: "input w-full", autocomplete: "off", placeholder: "Why this entry is wrong" %>
+          </div>
+        </div>
+        <%= submit_tag "Reverse entry", class: "btn-primary" %>
+      <% end %>
+    </section>
+  <% elsif @entry.kind.in?(%w[expense vendor_payment sale]) && !@entry.void? %>
+    <p class="text-base text-mocha">This entry was generated automatically. To correct it, change or remove the <%= @source_link ? @source_link[0].downcase : 'source record' %>; the ledger follows it.</p>
+  <% end %>
+
+  <section class="card card-pad space-y-2" aria-labelledby="entry-history">
+    <h2 id="entry-history" class="font-display text-xl">History</h2>
+    <ul class="space-y-1 text-base">
+      <li>
+        <strong>Posted</strong> <%= @entry.created_at&.strftime('%b %-d, %Y %-I:%M %p') %>
+        by <%= @creator ? @creator.display_name : (@entry.created_by_id ? "a user that no longer exists (#{@entry.created_by_id})" : 'the system (generated automatically)') %>
+      </li>
+      <% @activity.each do |log| %>
+        <li><strong><%= log.action.tr('_', ' ').capitalize %></strong> <%= log.created_at.strftime('%b %-d, %Y %-I:%M %p') %> by <%= log.actor_name.presence || 'the system' %><%= " · #{log.details}" if log.details.present? %></li>
+      <% end %>
+      <% if @entry.updated_at && @entry.updated_at > @entry.created_at + 1.second %>
+        <li><strong>Last changed</strong> <%= @entry.updated_at.strftime('%b %-d, %Y %-I:%M %p') %> (status: <%= @entry.status %>)</li>
+      <% end %>
+    </ul>
+  </section>
 </div>

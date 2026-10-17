@@ -1,44 +1,59 @@
-<%= form_with model: expense, scope: :expense, url: (expense.persisted? ? finance_expense_path(expense) : finance_expenses_path), class: "mt-6 space-y-4" do |f| %>
+<% lock = expense.persisted? ? finance_lock_for(expense.attribute_in_database(:incurred_on)) : nil %>
+<% confirm_text = if expense.persisted?
+     "Save changes to this expense?\n\nAmount: {amount}\nPayee: {who}\nDate: {date}\n\nIf the amount, category, method, date or account changed, its ledger entry is voided (kept on record) and a new one is posted with these figures. No money moves."
+   else
+     "Record this expense?\n\nAmount: {amount}\nPayee: {who}\nDate: {date}\n\nIt is added to the expense register and posted to the ledger now. No money moves; this records a payment already made. You can remove it later and restore it."
+   end %>
+<% if lock %>
+  <div class="entry-state entry-state-void" role="status">
+    <p class="font-semibold">Read-only: <%= lock.label %> is locked.</p>
+    <p class="text-base">This expense is dated inside a locked period, so it cannot be changed or removed. <%= PeriodLock.locked_message(lock) %></p>
+  </div>
+<% end %>
+<%= form_with model: expense, scope: :expense, url: (expense.persisted? ? finance_expense_path(expense) : finance_expenses_path), class: "mt-6 space-y-4",
+      data: { controller: "finance-form", finance_form_locks_value: finance_locks_json, finance_form_confirm_value: confirm_text,
+              action: "submit->finance-form#confirm input->finance-form#sync change->finance-form#sync" } do |f| %>
   <%= render "shared/form_errors", model: expense %>
+  <fieldset <%= 'disabled' if lock %> class="space-y-4 min-w-0">
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :payee, "Payee", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_field :payee, class: "input", placeholder: "Who was paid", autocomplete: "off" %>
+      <%= f.label :payee, "Payee", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.text_field :payee, class: "input", placeholder: "Who was paid", autocomplete: "off", data: { finance_form_target: "who" } %>
     </div>
     <div>
-      <%= f.label :vendor_id, "Vendor (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :vendor_id, "Vendor (optional)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.collection_select :vendor_id, @vendors, :id, :name, { include_blank: "—" }, class: "select w-full" %>
     </div>
   </div>
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :category, "Category", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :category, "Category", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.select :category, Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, {}, class: "select w-full" %>
     </div>
     <div>
-      <%= f.label :amount, "Amount (USD)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :amount, "Amount (USD)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <div class="flex items-center gap-1">
         <span class="text-sm text-mocha" aria-hidden="true">$</span>
-        <%= f.text_field :amount, required: true, inputmode: "decimal", placeholder: "0.00", class: "input", aria: { describedby: "finance-amount-help" } %>
+        <%= f.text_field :amount, required: true, inputmode: "decimal", placeholder: "0.00", class: "input money", autocomplete: "off", aria: { describedby: "finance-amount-help" }, data: { finance_form_target: "amount" } %>
       </div>
     </div>
   </div>
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :incurred_on, "Date", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.date_field :incurred_on, class: "select w-full" %>
+      <%= f.label :incurred_on, "Date", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.date_field :incurred_on, class: "select w-full", required: true, data: { finance_form_target: "date" } %>
     </div>
     <div>
-      <%= f.label :method, "Method", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :method, "Method", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.select :method, Finance::Expense::METHODS, {}, class: "select w-full" %>
     </div>
   </div>
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :reference, "Reference", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :reference, "Reference", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.text_field :reference, class: "input", autocomplete: "off" %>
     </div>
     <div></div>
@@ -46,20 +61,22 @@
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :account_id, "GL account (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :account_id, "GL account (optional)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.collection_select :account_id, (@accounts || Finance::Account.active.ordered), :id, :label, { include_blank: "— auto from category —" }, class: "select w-full" %>
     </div>
     <div></div>
   </div>
 
   <div>
-    <%= f.label :notes, "Notes", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+    <%= f.label :notes, "Notes", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
     <%= f.text_area :notes, rows: 3, class: "input retail-notes" %>
   </div>
 
-  <p id="finance-amount-help" class="text-xs text-mocha">Enter dollars with up to two decimal places. This records an existing payment in Rupert; it does not transfer money.</p>
+  <p id="finance-amount-help" class="text-sm text-mocha">Enter dollars with up to two decimal places, no $ sign or commas. This records an existing payment in Rupert; it does not transfer money.</p>
+  </fieldset>
+  <ul class="form-reasons" aria-live="polite" data-finance-form-target="reasons" hidden></ul>
   <div class="flex flex-wrap items-center gap-3 pt-2">
-    <%= f.submit expense.persisted? ? "Save changes" : "Record expense", class: "btn-primary" %>
-    <%= link_to "Cancel", finance_expenses_path, class: "btn-ghost" %>
+    <% unless lock %><%= f.submit expense.persisted? ? "Save changes" : "Record expense", class: "btn-primary", data: { finance_form_target: "submit" } %><% end %>
+    <%= link_to lock ? "Back to expenses" : "Cancel", finance_expenses_path, class: "btn-ghost" %>
   </div>
 <% end %>

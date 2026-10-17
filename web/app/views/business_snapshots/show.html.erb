@@ -1,6 +1,6 @@
 <% content_for :title, 'Business snapshot' %>
 <% d = @data
-   money = ->(cents) { cents.nil? ? 'Unknown' : number_to_currency(cents / 100.0) }
+   money = ->(cents) { cents.nil? ? 'Unknown' : finance_money_text(cents) }
    when_ = ->(iso) { iso.present? ? I18n.l(Time.iso8601(iso).in_time_zone, format: :short) : 'Never seen' }
    age = ->(iso) { iso.present? ? "#{time_ago_in_words(Time.iso8601(iso))} ago" : 'no record' } %>
 <div class="mx-auto max-w-5xl space-y-6 operations-workspace">

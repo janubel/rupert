@@ -436,6 +436,90 @@
 
 .build-version { display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.65rem;padding:.2rem 1rem;border-bottom:1px solid var(--color-fog);background:var(--color-paper);font-size:11px;line-height:1.4;color:var(--color-mocha);font-variant-numeric:tabular-nums; }
 
+/* Money display (FinanceHelper#finance_money): tabular digits, real minus sign, red negatives. */
+.money { font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;white-space:nowrap; }
+.money-negative { color:#b42318;font-weight:600; }
+.money-missing { color:var(--color-taupe); }
+
+/* Forms: totals, balance state and reasons a form cannot be submitted. */
+.balance-status { font-size:1rem;font-weight:600;border-radius:.75rem;padding:.6rem .9rem;border:1px solid var(--color-fog);background:var(--color-paper); }
+.balance-status::before { content:"\2717  ";font-weight:700; }
+.balance-ok,.balance-status[data-balance="ok"] { color:#05603a;border-color:#a6d8bf;background:#ecfdf3; }
+.balance-ok::before,.balance-status[data-balance="ok"]::before { content:"\2713  "; }
+.balance-bad,.balance-status[data-balance="bad"] { color:#b42318;border-color:#f3b7b0;background:#fef3f2; }
+.form-reasons { list-style:disc;padding:.6rem .9rem .6rem 2rem;border:1px solid #f1d49a;background:#fffaeb;border-radius:.75rem;font-size:.95rem;color:#7a4b00; }
+.form-reasons[hidden] { display:none; }
+.line-invalid { background:#fef3f2; }
+.line-invalid td:first-child,.line-invalid th:first-child { box-shadow:inset 4px 0 0 #b42318; }
+.btn-primary:disabled,.btn-primary[aria-disabled="true"] { opacity:.55;cursor:not-allowed; }
+.operations-workspace :focus-visible { outline:3px solid var(--color-olive);outline-offset:2px; }
+
+/* Posted / void / locked record banners (never colour alone: each has a text label). */
+.entry-state { border:1px solid var(--color-fog);border-left-width:6px;border-radius:.75rem;padding:.75rem 1rem;background:var(--color-paper); }
+.entry-state-posted { border-left-color:#05603a; }
+.entry-state-void { border-left-color:#b42318;background:#fef3f2; }
+
+/* Money page pattern: header, meta line, readable tables, status tags, print. */
+.finance-header { display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem; }
+.finance-meta { display:flex;flex-wrap:wrap;gap:.25rem 1rem;margin-top:.25rem;font-size:1rem;font-weight:600;color:var(--color-mocha); }
+.finance-table { font-size:1rem;line-height:1.5; }
+.finance-table th.num,.finance-table td.num { text-align:right;font-variant-numeric:tabular-nums; }
+.finance-table thead th { position:sticky;top:0;z-index:1;background:var(--color-haze);box-shadow:0 1px 0 var(--color-fog);font-size:.8rem; }
+.finance-table tbody tr:nth-child(even) { background:color-mix(in srgb,var(--color-haze) 55%,transparent); }
+.finance-table tbody tr:hover { background:var(--color-cream); }
+.finance-table tfoot th,.finance-table tfoot td { font-weight:700;border-top:2px solid var(--color-mocha);background:var(--color-haze);text-align:left; }
+.finance-table tfoot td.num { text-align:right; }
+.finance-table .empty-row { padding:1.5rem 1rem;text-align:center;color:var(--color-mocha); }
+.row-removed { color:var(--color-taupe);background:repeating-linear-gradient(135deg,transparent 0 8px,rgba(107,101,92,.07) 8px 16px) !important; }
+.status-tag { display:inline-block;border-radius:.375rem;border:1px solid currentColor;padding:0 .4rem;font-size:.85rem;font-weight:700; }
+.status-active { color:#05603a; }
+.status-removed { color:#b42318; }
+.status-locked { color:#7a4b00; }
+.row-action { background:none;border:0;padding:.25rem .5rem;font-size:1rem;font-weight:700;text-decoration:underline;cursor:pointer;min-height:44px; }
+.operations-table-region { max-height:75vh; }
+@media print {
+  .no-print,.operations-navigation,.operations-filters,nav,.pagy,button,form.operations-filters { display:none !important; }
+  .operations-table-region { max-height:none !important;overflow:visible !important; }
+  .finance-table thead th { position:static; }
+  .finance-table { font-size:11pt; }
+  .card,.stat { box-shadow:none !important;break-inside:avoid; }
+  body { background:#fff !important; }
+}
+.finance-table .group-row th { background:var(--color-haze);font-weight:700;text-align:left;border-top:1px solid var(--color-fog); }
+.finance-table .subtotal-row th,.finance-table .subtotal-row td { font-weight:700;border-top:1px solid var(--color-mocha);text-align:left; }
+.finance-table .subtotal-row td.num { text-align:right; }
+
+/* Readability for every Money page (those that render the Finance navigation). */
+.operations-workspace:has(.finance-navigation) { font-size:1rem;line-height:1.55; }
+.operations-workspace:has(.finance-navigation) .text-sm { font-size:1rem; }
+.operations-workspace:has(.finance-navigation) .text-xs { font-size:.9375rem; }
+.operations-workspace:has(.finance-navigation) p { max-width:75ch; }
+.operations-workspace:has(.finance-navigation) .finance-table td,
+.operations-workspace:has(.finance-navigation) .finance-table th { padding-top:.8rem;padding-bottom:.8rem; }
+.operations-workspace:has(.finance-navigation) .finance-table thead th { font-size:.85rem;letter-spacing:.06em;color:var(--color-ink); }
+.operations-workspace:has(.finance-navigation) .stat-label { font-size:.8125rem; }
+.operations-workspace:has(.finance-navigation) .field-label { font-size:.9375rem; }
+.operations-workspace:has(.finance-navigation) .input,
+.operations-workspace:has(.finance-navigation) .select { font-size:1rem;min-height:2.75rem; }
+.operations-workspace:has(.finance-navigation) h2 { margin-top:.25rem; }
+
+/* Finance menu: always open on wide screens, one tappable line on phones. */
+.finance-menu-summary { display:none;cursor:pointer;font-weight:700;padding:.5rem 0;min-height:44px;align-items:center; }
+@media(max-width:640px) {
+  .finance-menu-summary { display:flex; }
+  .finance-navigation-title { display:none; }
+}
+.finance-menu-summary::after { content:"\25BE";margin-left:auto;font-size:1.25rem; }
+.finance-menu[open] .finance-menu-summary::after { content:"\25B4"; }
+
+/* Finance menu text meets the same 15px floor as the pages it links to. */
+.finance-navigation .nav-pill,.finance-navigation .workspace-nav-link { font-size:.9375rem; }
+.finance-navigation .workspace-nav-group { font-size:.875rem;color:var(--color-mocha); }
+.finance-navigation .finance-navigation-hint { font-size:.875rem; }
+.operations-workspace:has(.finance-navigation) .btn-sm,
+.operations-workspace:has(.finance-navigation) [class*="pill-"] { font-size:.9375rem; }
+.operations-workspace:has(.finance-navigation) .eyebrow { font-size:.875rem; }
+.finance-navigation .workspace-nav-group,.finance-navigation .finance-navigation-hint { font-size:.9375rem; }
 /* Bookkeeping: consistent financial hierarchy and tabular money columns. */
 .bookkeeping-period { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1.5rem; }
 .bookkeeping-period .operations-filters { flex:1 1 24rem;max-width:38rem; }

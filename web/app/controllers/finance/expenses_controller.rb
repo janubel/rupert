@@ -4,28 +4,37 @@ module Finance
   # Expense register: money-out records with categories.
   class ExpensesController < AuthenticatedController
     include ApprovedPeriodNotice
-    include FinanceRegisterPeriod
+    include FinanceRegister
     before_action :set_expense, only: %i[edit update destroy restore]
 
     def index
       authorize(:module, :finance_read?)
-      @category = params[:category].presence || 'all'
-      load_finance_register_period
-      active = Finance::Expense.where(incurred_on: @from..@through)
+      @from, @through = register_window
       @category = Finance::Expense::CATEGORIES.include?(params[:category]) ? params[:category] : 'all'
-      active = active.by_category(@category)
+      @q = params[:q].to_s.strip.first(100)
+      @min_cents = register_cents(params[:min])
+      @max_cents = register_cents(params[:max])
+      @filter_problem = amount_filter_problem
+      active = Finance::Expense.where(incurred_on: @from..@through).by_category(@category)
+      active = search(active)
+      active = active.where('expenses.amount_cents >= ?', @min_cents) if @min_cents
+      active = active.where('expenses.amount_cents <= ?', @max_cents) if @max_cents
       @by_category = active.group(:category).sum(:amount_cents).sort_by { |_key, value| -value }.first(3)
-      @include_deleted = params[:include_deleted] == '1'
+      @include_deleted = params[:include_deleted] != '0'
       @total_cents = active.sum(:amount_cents)
       @entry_count = active.count
       scope = @include_deleted ? active.with_discarded : active
       @removed_count = scope.count - @entry_count
       response.headers['Cache-Control'] = 'private, no-store'
+      ordered = scope.includes(:vendor).order(incurred_on: :desc, created_at: :desc)
       if request.format.csv?
-        send_data expenses_csv(scope.includes(:vendor).order(incurred_on: :desc, created_at: :desc)), filename: "expenses-#{@month || "#{@range_days}d"}.csv"
+        send_data expenses_csv(ordered), filename: "expenses-#{@month || "#{@from}-#{@through}"}.csv", type: 'text/csv'
         return
       end
-      @pagy, @expenses = pagy(scope.includes(:vendor).order(incurred_on: :desc, created_at: :desc), items: 50)
+      @pagy, @expenses = pagy(ordered, items: 50)
+      @activity = register_activity('Finance::Expense', @expenses.map(&:id))
+      @locks = register_locks
+      @can_write = Current.user.can?('finance.write')
     end
 
     def new
@@ -38,22 +47,19 @@ module Finance
     def create
       authorize(:module, :finance_write?)
       @expense = Finance::Expense.new(expense_params)
-      Finance::Expense.transaction do
-        @expense.save!
-        Finance::Posting.expense(@expense, created_by: Current.user)
+      if save_with_posting { @expense.save && post_expense(@expense) }
+        note_approved_period(@expense.incurred_on, 'Expense')
+        ActivityLogger.log(
+          'expense_recorded',
+          subject: @expense,
+          details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category}"
+        )
+        redirect_to(finance_expenses_path, notice: 'Expense recorded.')
+      else
+        @vendors = Purchasing::Vendor.ordered
+        @accounts = Finance::Account.active.ordered
+        render(:new, status: :unprocessable_entity)
       end
-      note_approved_period(@expense.incurred_on, 'Expense')
-      ActivityLogger.log(
-        'expense_recorded',
-        subject: @expense,
-        details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category}"
-      )
-      redirect_to(finance_expenses_path, notice: 'Expense recorded.')
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound
-      @expense.errors.add(:base, 'The expense could not be posted. Check the chart of accounts and try again.') if @expense.errors.empty?
-      @vendors = Purchasing::Vendor.ordered
-      @accounts = Finance::Account.active.ordered
-      render(:new, status: :unprocessable_entity)
     end
 
     def edit
@@ -65,8 +71,7 @@ module Finance
     def update
       authorize(:module, :finance_write?)
       old_date = @expense.incurred_on
-      if @expense.update(expense_params)
-        repost_expense(@expense)
+      if save_with_posting { @expense.update(expense_params) && repost_expense(@expense) }
         ActivityLogger.log('expense_updated', subject: @expense, details: change_summary(@expense))
         [old_date, @expense.incurred_on].uniq.each { |date| note_approved_period(date, 'Expense') }
         redirect_to(finance_expenses_path, notice: 'Expense updated.')
@@ -79,9 +84,9 @@ module Finance
 
     def destroy
       authorize(:module, :finance_write?)
-      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @expense.discard
+      removed = save_with_posting { @expense.discard && (Finance::Posting.void_source('Finance::Expense', @expense.id) || true) }
+      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless removed
 
-      Finance::Posting.void_source('Finance::Expense', @expense.id)
       ActivityLogger.log('expense_deleted', subject: @expense, details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category} · #{@expense.incurred_on}")
       note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense removed.')
@@ -90,9 +95,9 @@ module Finance
     # Restore a discarded expense back into the register.
     def restore
       authorize(:module, :finance_write?)
-      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @expense.undiscard
+      restored = save_with_posting { @expense.undiscard && post_expense(@expense) }
+      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless restored
 
-      Finance::Posting.expense(@expense, created_by: Current.user)
       ActivityLogger.log('expense_restored', subject: @expense)
       note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense restored.')
@@ -104,26 +109,75 @@ module Finance
     # the ledger always reflects the current expense.
     def repost_expense(expense)
       financial = %w[amount_cents category method incurred_on account_id]
-      return unless (expense.saved_changes.keys & financial).any?
+      return true unless (expense.saved_changes.keys & financial).any?
 
       Finance::Posting.void_source('Finance::Expense', expense.id)
-      Finance::Posting.expense(expense, created_by: Current.user)
+      post_expense(expense)
     end
 
+    def post_expense(expense)
+      Finance::Posting.expense(expense, created_by: Current.user)
+      true
+    end
+
+    # Runs the record change and its ledger posting as one unit. If either
+    # fails the whole thing is rolled back and the reason is put on the record,
+    # so an expense is never saved without its ledger entry.
+    def posting_failure_message(error)
+      case error
+      when ActiveRecord::RecordInvalid then error.record.errors.full_messages.to_sentence
+      when ActiveRecord::RecordNotFound then 'The expense could not be posted. Check the chart of accounts and try again.'
+      else error.message
+      end
+    end
+
+    def save_with_posting
+      ok = false
+      Finance::Expense.transaction do
+        ok = yield
+        raise ActiveRecord::Rollback unless ok
+      end
+      ok
+    rescue Finance::Posting::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
+      @expense.errors.add(:base, posting_failure_message(e))
+      false
+    end
+
+    def search(scope)
+      return scope if @q.blank?
+
+      like = register_like(@q)
+      scope.left_joins(:vendor).where(
+        'LOWER(expenses.payee) LIKE :q OR LOWER(expenses.reference) LIKE :q OR LOWER(expenses.notes) LIKE :q OR LOWER(vendors.name) LIKE :q', q: like
+      )
+    end
+
+    def amount_filter_problem
+      if params[:min].present? && @min_cents.nil? || params[:max].present? && @max_cents.nil?
+        'An amount filter was ignored: enter dollars as digits with up to two decimals, for example 25.50.'
+      elsif @min_cents && @max_cents && @min_cents > @max_cents
+        'The minimum amount is larger than the maximum, so nothing can match.'
+      end
+    end
+
+    # Text cells are neutralised so a payee such as "=HYPERLINK(...)" cannot
+    # run as a spreadsheet formula. Amounts are exact decimals in USD.
     def expenses_csv(expenses)
       require 'csv'
+      safe = FinanceHelper.method(:csv_safe)
       CSV.generate do |csv|
-        csv << %w[Date Payee Category Method Amount Vendor Reference Notes State]
+        csv << %w[Date Payee Category Method Amount Currency Vendor Reference Notes State]
         expenses.each do |expense|
           csv << [
             expense.incurred_on,
-            expense.payee,
+            safe.call(expense.payee),
             expense.category,
             expense.method,
-            expense.amount_cents / 100.0,
-            expense.vendor&.name,
-            expense.reference,
-            expense.notes,
+            FinanceHelper.cents_to_decimal(expense.amount_cents),
+            'USD',
+            safe.call(expense.vendor&.name),
+            safe.call(expense.reference),
+            safe.call(expense.notes),
             expense.discarded? ? 'Removed' : 'Active'
           ]
         end

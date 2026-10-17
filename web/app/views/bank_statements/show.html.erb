@@ -1,5 +1,5 @@
 <% content_for :title, 'Review bank statement' %>
-<% money = ->(cents) { number_to_currency(cents.abs / 100.0) }
+<% money = ->(cents) { finance_money_text(cents.abs) }
    total_lines = @counts.values.sum; decided = total_lines - @counts.fetch('pending', 0) %>
 <div class="mx-auto max-w-6xl space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :finance %>

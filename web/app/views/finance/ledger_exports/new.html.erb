@@ -13,15 +13,15 @@
   <%= form_with url: finance_ledger_export_path, method: :post, class: "card card-pad space-y-4" do |f| %>
     <div class="grid gap-4 sm:grid-cols-3">
       <div>
-        <%= label_tag :from, "From", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+        <%= label_tag :from, "From", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
         <%= date_field_tag :from, @from, class: "select w-full" %>
       </div>
       <div>
-        <%= label_tag :to, "To", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+        <%= label_tag :to, "To", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
         <%= date_field_tag :to, @to, class: "select w-full" %>
       </div>
       <div>
-        <%= label_tag :format, "Format", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+        <%= label_tag :format, "Format", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
         <%= select_tag :format, options_from_collection_for_select(Finance::LedgerExport::FORMATS, :key, :label, @format), class: "select w-full" %>
       </div>
     </div>
@@ -30,7 +30,7 @@
     </div>
   <% end %>
 
-  <p class="text-xs text-taupe">
+  <p class="text-sm text-mocha">
     Exports only posted entries in the chosen range; voided entries are excluded. QuickBooks IIF imports as a general journal; the CSV lists debits and credits per line for Xero, Wave, Sage and similar.
   </p>
 </div>
