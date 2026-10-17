@@ -50,9 +50,10 @@ class DailyReconciliationsController < AuthenticatedController
       raise ReconciliationEvidence::Error, 'Use the report archive action to retain generated Rupert reports.'
     end
     context = values['supersedes_id'].present? ? ReconciliationDocument.find(values['supersedes_id']).metadata.slice('merchant', 'api_origin', 'report_kind') : {}
-    metadata = context.merge(values.slice('currency', 'location_id', 'note').transform_values(&:strip))
+    metadata = context.merge(values.slice('currency', 'location_id', 'note').transform_values { |value| value.to_s.strip })
+    metadata['currency'] = metadata['currency'].upcase if metadata.key?('currency')
     raise ReconciliationEvidence::Error, 'Notes must be no longer than 4000 characters.' if metadata['note'].to_s.length > 4000
-    ReconciliationEvidence::AMOUNTS.each { |key| metadata[key] = ReconciliationEvidence.cents(values[key]) }
+    ReconciliationEvidence::AMOUNTS.each { |key| metadata[key] = ReconciliationEvidence.cents(values[key], metric: key) }
     doc = ReconciliationEvidence.retain!(bytes: file.read(ReconciliationEvidence::MAX_BYTES + 1), filename: file.original_filename,
       source: values['source'], kind: values['kind'], from: values['period_from'], to: values['period_to'], metadata: metadata,
       actor: Current.user, supersedes_id: values['supersedes_id'])
@@ -140,7 +141,7 @@ class DailyReconciliationsController < AuthenticatedController
   end
 
   def selected_day
-    params[:day].presence || Date.current.iso8601
+    params[:day].presence || Date.yesterday.iso8601
   end
 
   def private_response

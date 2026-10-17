@@ -20,7 +20,7 @@ class ReconciliationAttentionTest < ActiveSupport::TestCase
     values = [['EUR', 5], ['EUR', nil], ['USD', -10], ['USD', 500], ['USD', nil]].map do |currency, delta|
       { currency: currency, source: 'square', metric: 'card', delta_cents: delta, status: delta ? 'Variance' : 'Unavailable in canonical records' }
     end
-    report = stub(comparisons: values + [{ status: 'Matched recorded total' }], register: stub(rows: []))
+    report = stub(comparisons: values + [{ status: 'Matched recorded total' }, { status: DailyMoneyReconciliation::INFORMATIONAL, metric: 'tips' }], register: stub(rows: []))
     attention = ReconciliationAttention.new(report)
     assert_equal [5, 500, -10, nil, nil], attention.differences.map { |row| row[:delta_cents] }
     assert_equal({ variances: 3, unavailable: 2, conflicts: 0, missing_controls: 0 }, attention.counts)
