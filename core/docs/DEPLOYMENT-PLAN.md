@@ -199,3 +199,39 @@ container's env file and its snapshot (escrow decision still open), and no webho
 
 **Next (needs the owner):** choose A/B/C for the signal problem; then phase 5 (hostname, DNS, Caddy with `sudo`) and the
 shadow period.
+
+## 12. The container signal problem: option A applied and verified (2026-10-17, owner approved)
+
+**Rule.** One line in the container's own AppArmor raw rules, applied to `rupert-core` only:
+
+```
+incus config set rupert-core raw.apparmor='signal (send,receive) peer=@{profile_name}//&unconfined,'
+```
+It lets processes in the container signal each other (their label is this profile stacked with `unconfined`) and nothing
+else: the peer must be this container's own label, so it grants nothing toward the host or other containers (which also
+sit in separate PID namespaces). It does not disable AppArmor, make the container privileged or change any shared
+policy. Precedent on this host: the `sonder` container already carries an equivalent, slightly broader rule
+(`peer="incus-sonder_</var/lib/incus>//&*"`). No other container was changed (checked: `rupert`, `rupert-db`,
+`homeboard`, `daedalus-prod` have none).
+
+**Proof, on a throwaway container running the same binary and unit (`scripts/signal-test.sh`):**
+
+| Check | Without the rule | With the rule |
+| --- | --- | --- |
+| a process signals its own child | denied | works |
+| `systemctl restart rupert-core` | stranded old process, new one panics "Address already in use" | clean replacement, 1 process, healthz ok |
+| graceful stop line (`shutdown requested` / `stopped`) on restart | none | present |
+| kernel signal denials during the run | 9-11 | **0** |
+| rule edited while the service runs (in-place profile reload, the case the Rails notes feared) | n/a | restart still clean, 0 denials |
+| host `incus stop` then `start` | no graceful stop logged | graceful stop logged in the persistent journal, healthy after start |
+
+The same test then passed on `rupert-core` itself (restart PID 429 to 458, 0 denials, host stop and start healthy), the
+SQLite WAL files were all 0 bytes afterwards, and `scripts/parity.py` still reported no differences. The throwaway
+container was deleted. The journal on `rupert-core` is now persistent (`/var/log/journal`), so stop/start history
+survives restarts.
+
+**Operating notes.** `systemctl restart rupert-core` and `systemctl stop` now work inside the container, and a host
+`incus restart rupert-core` stops the service gracefully. Keep the start-limit in the unit anyway. Do not start
+long-lived processes with `incus exec` in this container: use systemd units. The Rails `rupert` container has no such
+rule and still suffers the original problem; the same one-line rule would fix it, but that is the owner's call and was
+not applied.
