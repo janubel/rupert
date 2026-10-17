@@ -10,7 +10,9 @@ class BooksCheckController < AuthenticatedController
     @check = BooksCheck.new(window_days: params[:days].presence || 30)
     respond_to do |format|
       format.html
-      format.csv { send_data(@check.csv, type: 'text/csv', filename: "books-check-#{Date.current.iso8601}.csv") }
+      format.csv {
+        log_export('Books check CSV', "#{@check.window_days} days")
+        send_data(@check.csv, type: 'text/csv', filename: "books-check-#{Date.current.iso8601}.csv") }
     end
   end
 end

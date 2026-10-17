@@ -17,6 +17,7 @@ module OperationsWorkspaceHelper
        ['Catalog links', reconcile_index_path, 'reconcile.read', 'reconcile']]
     when :money
       [['Finance', finance_accounts_path, 'finance.read', 'finance/*'],
+       ['Approve books', book_approvals_path, 'reports.read', 'book_approvals'],
        ['Financial close', financial_close_path(day: date), 'reports.read', 'financial_close'],
        ['Books check', books_check_path, 'reports.read', 'books_check'],
        ['Daily checks', daily_reconciliations_path(day: date), 'reports.read', 'daily_reconciliations'],
@@ -42,7 +43,7 @@ module OperationsWorkspaceHelper
   end
 
   def operations_workspace_page?
-    controller_path.start_with?('finance/') || %w[sales inventory inventory_counts inventory_count_scans inventory_exceptions reconcile ledger financial_close books_check daily_reconciliations reconciliation_follow_ups reconciliation_documents money_reconciliations cash_forecasts].include?(controller_path)
+    controller_path.start_with?('finance/') || %w[sales inventory inventory_counts inventory_count_scans inventory_exceptions reconcile ledger financial_close book_approvals books_check daily_reconciliations reconciliation_follow_ups reconciliation_documents money_reconciliations cash_forecasts].include?(controller_path)
   end
 
   def operations_source_name(value)

@@ -82,8 +82,13 @@ class DailyMoneyReconciliation
       documents: documents.map { |doc| [doc.id, doc.fingerprint] } }
   end
 
+  # Fingerprint of the evidence itself. Source-import timestamps are shown on
+  # the report but excluded here: every successful sync (every 15 minutes)
+  # would otherwise change the digest and silently invalidate reviews, closes
+  # and follow-ups bound to it. Whether an import is stale is reported as an
+  # issue, not as a data change.
   def digest
-    Digest::SHA256.hexdigest(payload.to_json)
+    Digest::SHA256.hexdigest(payload.except(:freshness).to_json)
   end
 
   def latest_review

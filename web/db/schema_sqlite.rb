@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_150000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -444,6 +444,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
     t.text "invoice_number"
     t.index ["tenant_id", "environment", "gateway_id", "source_transaction_id"], name: "idx_anet_transaction_source", unique: true
     t.index ["tenant_id"], name: "index_authorize_net_transactions_on_tenant_id"
+  end
+
+  create_table "book_approvals", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "period_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.string "status", null: false
+    t.string "report_digest", null: false
+    t.text "summary_json", null: false
+    t.text "notes"
+    t.integer "approved_by_id"
+    t.string "approved_by_name", null: false
+    t.datetime "approved_at", null: false
+    t.string "ip"
+    t.string "user_agent"
+    t.string "prev_hash", null: false
+    t.string "entry_hash", null: false
+    t.datetime "created_at", null: false
+    t.index ["approved_by_id"], name: "index_book_approvals_on_approved_by_id"
+    t.index ["entry_hash"], name: "idx_book_approvals_entry_hash", unique: true
+    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_book_approvals_period"
+    t.index ["tenant_id"], name: "index_book_approvals_on_tenant_id"
   end
 
   create_table "bulk_consumptions", force: :cascade do |t|

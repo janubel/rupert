@@ -19,7 +19,9 @@ class ActivityController < AuthenticatedController
     scope = filtered(ActivityLog.where(tenant_id: Current.tenant_id).order(created_at: :desc, id: :desc))
     respond_to do |format|
       format.html { @pagy, @activities = pagy(scope, items: 50) }
-      format.csv { send_data(csv_for(scope.limit(10_000)), type: 'text/csv', filename: "activity-#{Date.current.iso8601}.csv") }
+      format.csv {
+        log_export('Activity CSV', request.query_string.presence)
+        send_data(csv_for(scope.limit(10_000)), type: 'text/csv', filename: "activity-#{Date.current.iso8601}.csv") }
     end
   end
 

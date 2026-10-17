@@ -3,6 +3,7 @@
 module Finance
   # Expense register: money-out records with categories.
   class ExpensesController < AuthenticatedController
+    include ApprovedPeriodNotice
     before_action :set_expense, only: %i[edit update destroy restore]
 
     def index
@@ -38,6 +39,7 @@ module Finance
       authorize(:module, :finance_write?)
       @expense = Finance::Expense.new(expense_params)
       if @expense.save
+        note_approved_period(@expense.incurred_on, 'Expense')
         ActivityLogger.log(
           'expense_recorded',
           subject: @expense,
@@ -57,8 +59,10 @@ module Finance
 
     def update
       authorize(:module, :finance_write?)
+      old_date = @expense.incurred_on
       if @expense.update(expense_params)
-        ActivityLogger.log('expense_updated', subject: @expense)
+        ActivityLogger.log('expense_updated', subject: @expense, details: change_summary(@expense))
+        [old_date, @expense.incurred_on].uniq.each { |date| note_approved_period(date, 'Expense') }
         redirect_to(finance_expenses_path, notice: 'Expense updated.')
       else
         @vendors = Purchasing::Vendor.ordered
@@ -69,7 +73,8 @@ module Finance
     def destroy
       authorize(:module, :finance_write?)
       @expense.discard
-      ActivityLogger.log('expense_deleted', subject: @expense)
+      ActivityLogger.log('expense_deleted', subject: @expense, details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category} · #{@expense.incurred_on}")
+      note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense removed.')
     end
 
@@ -78,6 +83,7 @@ module Finance
       authorize(:module, :finance_write?)
       @expense.undiscard
       ActivityLogger.log('expense_restored', subject: @expense)
+      note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense restored.')
     end
 
