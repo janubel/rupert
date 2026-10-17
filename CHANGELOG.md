@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add **duplicate review** to bank reconciliation (completes F40): the workbench now flags statement lines that share an amount within the date window as possible duplicates, with a one-click ignore. Ignored lines drop out of reconciliation and duplicate detection.
 - Add **ledger export** (F40): download posted journal entries at `/finance/ledger_export` as QuickBooks IIF (general journal) or an accountant-friendly CSV with per-line debits/credits, for import into QuickBooks, Xero, Wave, Sage and similar. Exports only posted entries in the chosen range; voids are excluded.
 - Add **manual journal entries** and **GL period locks** (completes the F39 close). Accountants can post a balanced manual entry — an adjustment, accrual, opening balance or owner draw — at `/finance/journal_entries/new`; debits must equal credits, enforced on save. The general ledger now honors period locks: an entry dated inside a locked month, quarter or year cannot be created or voided until the period is reopened on the Books desk.
 - Add **bank reconciliation** (roadmap F40): a workbench at `/finance/bank_reconciliation` that matches uploaded bank-statement lines to general-ledger Cash/Checking movements by sign, amount and date, with one-click confirm/clear. Surfaces the statement-vs-ledger difference and the unmatched items on each side (money that moved in the bank with no ledger entry, and ledger movements absent from the statement). Matching is a suggestion only — nothing is applied without a person.
