@@ -49,7 +49,7 @@
         <div class="retail-product-grid">
           <% @records.each do |record| %>
             <article class="card retail-product-card overflow-hidden" aria-label="<%= record['name'] %>">
-              <% if (image = @images.url(record)) %><%= image_tag image, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', class: 'retail-product-image' %><% else %><div class="retail-product-image grid place-items-center text-xs text-taupe">Image not linked</div><% end %>
+              <% if (image = @images.url(record)) %><%= image_tag image, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', class: 'w-full h-48 object-contain bg-haze' %><% else %><div class="w-full h-48 grid place-items-center text-xs text-taupe bg-haze">Image not linked</div><% end %>
               <div class="retail-product-body">
                 <p class="text-xs text-taupe"><%= record['category'].presence || 'Uncategorized' %></p>
                 <h3 class="font-semibold leading-snug"><%= record['product_name'].presence || record['name'] %></h3><p class="text-sm text-mocha"><%= record['name'] %></p>
