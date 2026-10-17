@@ -36,6 +36,7 @@ class BankStatementLine < ApplicationRecord
   def out_cents = -amount_cents
   def pending? = status == 'pending'
   def matched? = status == 'matched'
+  def recorded_source? = expense_id.present? || vendor_payment_id.present?
 
   def review_category_label
     { 'processor_deposit' => 'Processor payout', 'owner_transfer' => 'Owner / personal transfer',
@@ -53,11 +54,13 @@ class BankStatementLine < ApplicationRecord
   # Link this line to the ledger entry it reconciles to (F40). Records who and
   # when, like decide!, but does not create any money record.
   def match!(journal_entry:, user:)
+    protect_recorded_source!
     update!(status: 'matched', journal_entry_id: journal_entry.id,
       decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
   end
 
   def unmatch!(user:)
+    protect_recorded_source!
     update!(status: 'pending', journal_entry_id: nil,
       decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
   end
@@ -66,5 +69,14 @@ class BankStatementLine < ApplicationRecord
     update!(status: status, decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current,
       expense_id: expense&.id, vendor_payment_id: vendor_payment&.id, journal_entry_id: journal_entry&.id, review_flag: false, reviewed_at: Time.current,
       review_category: expense&.category || (vendor_payment ? 'vendor_payment' : review_category.presence || 'non_expense'))
+  end
+
+  private
+
+  def protect_recorded_source!
+    return unless recorded_source?
+
+    errors.add(:base, 'This bank line is linked to its recorded expense or vendor payment. Review that source record before changing its journal link.')
+    raise ActiveRecord::RecordInvalid, self
   end
 end

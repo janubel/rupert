@@ -35,6 +35,11 @@ module Finance
         notice: 'Match cleared.'
     end
 
+    rescue_from ActiveRecord::RecordInvalid do |error|
+      redirect_to finance_bank_reconciliation_path(from: params[:from], to: params[:to]),
+        alert: error.record.errors.full_messages.to_sentence
+    end
+
     private
 
     def default_account_label

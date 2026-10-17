@@ -63,7 +63,13 @@ module Finance
         lines.each do |line|
           next unless line.journal_entry_id
 
-          result[line.id] = existing_entry(line)
+          entry = existing_entry(line)
+          next unless entry
+
+          result[line.id] = entry
+          gl_movements.each_with_index do |movement, index|
+            claimed << index if movement[:entry].id == entry.entry.id
+          end
         end
 
         lines.each do |line|

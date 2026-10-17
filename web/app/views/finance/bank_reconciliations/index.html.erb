@@ -74,7 +74,9 @@
                 <% end %>
               </td>
               <td class="td">
-                <% if line.journal_entry_id.present? %>
+                <% if line.recorded_source? %>
+                  <span class="text-xs text-taupe">Linked to recorded source</span>
+                <% elsif line.journal_entry_id.present? %>
                   <%= button_to "Clear", finance_bank_reconciliation_unmatch_path, method: :post,
                         params: { line_id: line.id, from: @from, to: @to }, class: "btn-ghost btn-sm" %>
                 <% elsif suggestion %>

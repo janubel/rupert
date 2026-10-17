@@ -66,6 +66,29 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'recorded bank sources retain their journal links and reserve their ledger movements' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    post decide_bank_statement_path(doc.id), params: { decisions: { line.id => 'expense:shipping' } }
+    entry_id = line.reload.journal_entry_id
+    duplicate = BankStatementLine.create!(document_id: doc.id, line_no: 99, account_label: line.account_label,
+      posted_on: line.posted_on, description: 'Another withdrawal', amount_cents: line.amount_cents, fingerprint: SecureRandom.hex(24))
+    reconciliation = Finance::BankReconciliation.new(account_label: line.account_label, from: line.posted_on, to: line.posted_on)
+    assert_equal entry_id, reconciliation.suggestions.fetch(line.id).entry.id
+    assert_nil reconciliation.suggestions[duplicate.id]
+    assert_no_difference 'Finance::Expense.count' do
+      post finance_bank_reconciliation_unmatch_path, params: { line_id: line.id }
+      assert_redirected_to finance_bank_reconciliation_path
+      assert_equal 'recorded', line.reload.status
+      assert_equal entry_id, line.journal_entry_id
+      post finance_bank_reconciliation_match_path, params: { line_id: line.id, journal_entry_id: entry_id }
+      assert_equal 'recorded', line.reload.status
+      assert_equal entry_id, line.journal_entry_id
+      post decide_bank_statement_path(doc.id), params: { decisions: { line.id => 'expense:shipping' } }
+    end
+  end
+
   test 'a deposit cannot be recorded as an expense' do
     upload
     doc = ReconciliationDocument.where(kind: 'bank_statement').last
