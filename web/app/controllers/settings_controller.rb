@@ -75,18 +75,18 @@ class SettingsController < AuthenticatedController
     render(plain: body, content_type: 'text/plain')
   end
 
-  # GET /settings/backup — consistent SQLite snapshot download
+  # GET /settings/backup — consistent instance snapshot download
   def backup
     path = BackupService.snapshot_path
     log_export('Full database snapshot')
     send_file(
       path,
-      filename: "rupert-backup-#{Time.now.strftime('%Y%m%d-%H%M%S')}.sqlite3",
+      filename: "rupert-backup-#{Time.now.strftime('%Y%m%d-%H%M%S')}#{File.extname(path)}",
       type: 'application/octet-stream'
     )
   end
 
-  # POST /settings/restore — upload a .sqlite3 backup and swap it in
+  # POST /settings/restore — retained endpoint explains offline maintenance
   def restore
     file = params[:file]
     raise ArgumentError, 'No file uploaded' if file.nil?
