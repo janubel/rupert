@@ -224,6 +224,9 @@ Rails.application.routes.draw do
     get 'reports/trial_balance', to: 'reports#trial_balance', as: :reports_trial_balance
     get 'reports/income_statement', to: 'reports#income_statement', as: :reports_income_statement
     get 'reports/balance_sheet', to: 'reports#balance_sheet', as: :reports_balance_sheet
+    get 'bank_reconciliation', to: 'bank_reconciliations#index', as: :bank_reconciliation
+    post 'bank_reconciliation/match', to: 'bank_reconciliations#match', as: :bank_reconciliation_match
+    post 'bank_reconciliation/unmatch', to: 'bank_reconciliations#unmatch', as: :bank_reconciliation_unmatch
   end
   namespace :purchasing do
     resources :vendors
