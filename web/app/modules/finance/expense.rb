@@ -7,6 +7,7 @@ module Finance
     include Discard::Model
     include TenantScoped
     include FinanceAmount
+    include LockedPeriodGuard
 
     self.table_name = 'expenses'
 
@@ -30,6 +31,7 @@ module Finance
     METHODS = %w[card cash check bank_transfer other].freeze
 
     belongs_to :vendor, class_name: 'Purchasing::Vendor', optional: true
+    guard_locked_period :incurred_on
 
     validates :category, inclusion: { in: CATEGORIES }
     validates :amount_cents, numericality: { greater_than: 0, less_than_or_equal_to: 2_147_483_647 }

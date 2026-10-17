@@ -19,7 +19,7 @@ class MoneyReconciliationsController < AuthenticatedController
         send_data @report.csv(@payload), filename: "money-reconciliation-#{@report.kind}-#{@report.from.iso8601}.csv" }
     end
   rescue ArgumentError
-    redirect_to money_reconciliations_path, alert: 'Choose a valid daily, weekly or monthly reporting date.'
+    redirect_to money_reconciliations_path, alert: 'Choose a valid daily, weekly, monthly, quarterly or yearly reporting date.'
   end
 
   def create

@@ -9,6 +9,7 @@ require 'digest'
 # evidence later changes, the approval is shown as "changed since approval".
 class BookApproval < ApplicationRecord
   include TenantScoped
+  include LockedPeriodGuard
 
   encrypts :notes
   encrypts :summary_json
@@ -20,6 +21,7 @@ class BookApproval < ApplicationRecord
                     'needs_attention' => 'Needs attention' }.freeze
 
   belongs_to :approved_by, class_name: 'User', optional: true
+  guard_locked_period range: ->(r) { [r.period_from, r.period_to] }
 
   validates :period_kind, inclusion: { in: KINDS }
   validates :status, inclusion: { in: STATUSES }

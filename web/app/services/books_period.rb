@@ -19,7 +19,9 @@ class BooksPeriod
     kind == 'weekly' ? new(kind: 'weekly', date: today.beginning_of_week - 7) : new(kind: 'daily', date: today - 1)
   end
 
-  def initialize(kind:, date:)
+  # workflows: optional { Date => FinancialCloseWorkflow } already built by the
+  # caller (the Books desk), so a page showing many periods builds each day once.
+  def initialize(kind:, date:, workflows: nil)
     raise Error, 'Choose a daily or weekly approval.' unless BookApproval::KINDS.include?(kind)
 
     day = date.is_a?(Date) ? date : Date.iso8601(date.to_s)
@@ -27,6 +29,7 @@ class BooksPeriod
 
     @kind = kind
     @from, @to = kind == 'weekly' ? [day.beginning_of_week, day.end_of_week] : [day, day]
+    @workflows = workflows.slice(*days) if workflows && days.all? { |d| workflows.key?(d) }
   rescue Date::Error
     raise Error, 'Use a date in YYYY-MM-DD format.'
   end

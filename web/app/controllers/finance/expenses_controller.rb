@@ -72,7 +72,8 @@ module Finance
 
     def destroy
       authorize(:module, :finance_write?)
-      @expense.discard
+      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @expense.discard
+
       ActivityLogger.log('expense_deleted', subject: @expense, details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category} · #{@expense.incurred_on}")
       note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense removed.')
@@ -81,7 +82,8 @@ module Finance
     # Restore a discarded expense back into the register.
     def restore
       authorize(:module, :finance_write?)
-      @expense.undiscard
+      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @expense.undiscard
+
       ActivityLogger.log('expense_restored', subject: @expense)
       note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense restored.')

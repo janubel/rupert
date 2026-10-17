@@ -46,7 +46,8 @@ module Finance
 
     def destroy
       authorize(:module, :finance_write?)
-      @payment.discard
+      return redirect_to(finance_vendor_payments_path, alert: @payment.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @payment.discard
+
       note_approved_period(@payment.paid_on, 'Vendor payment')
       ActivityLogger.log(
         'payment_deleted',
@@ -58,7 +59,8 @@ module Finance
 
     def restore
       authorize(:module, :finance_write?)
-      @payment.undiscard
+      return redirect_to(finance_vendor_payments_path, alert: @payment.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @payment.undiscard
+
       note_approved_period(@payment.paid_on, 'Vendor payment')
       ActivityLogger.log('payment_restored', subject: @payment.vendor)
       redirect_to(finance_vendor_payments_path, notice: 'Payment restored.')

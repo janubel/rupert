@@ -90,6 +90,16 @@ production:
     queue: default
     args: [monthly]
     schedule: "30 0 1 * * America/New_York"
+  money_reconciliation_quarterly:
+    class: MoneyReconciliationJob
+    queue: default
+    args: [quarterly]
+    schedule: "35 0 1 1,4,7,10 * America/New_York"
+  money_reconciliation_yearly:
+    class: MoneyReconciliationJob
+    queue: default
+    args: [yearly]
+    schedule: "40 0 1 1 * America/New_York"
   drive_backups:
     class: BackupJob
     queue: default

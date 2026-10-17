@@ -1,6 +1,9 @@
-<% links = operations_links(workspace, day: local_assigns[:day]) %>
-<% if links.any? %>
+<% groups = operations_link_groups(workspace, day: local_assigns[:day]) %>
+<% if groups.any? %>
   <nav class="operations-navigation" aria-label="<%= workspace.to_s.humanize %> workspace">
-    <% links.each do |label, path, active| %><%= link_to label, path, class: "nav-pill workspace-nav-link #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: active ? 'page' : nil } %><% end %>
+    <% groups.each_with_index do |(group, links), index| %>
+      <% if group %><span class="workspace-nav-group <%= 'workspace-nav-group-break' if index.positive? %>"><%= group %></span><% end %>
+      <% links.each do |label, path, active| %><%= link_to label, path, class: "nav-pill workspace-nav-link #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: active ? 'page' : nil } %><% end %>
+    <% end %>
   </nav>
 <% end %>

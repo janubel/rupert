@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1417,6 +1417,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_180000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "location_id"], name: "index_ctrax_stock_snapshots_on_tenant_id_and_location_id", unique: true
     t.index ["tenant_id"], name: "index_ctrax_stock_snapshots_on_tenant_id"
+  end
+
+  create_table "period_locks", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "action", null: false
+    t.string "period_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.string "fingerprint", null: false
+    t.text "summary_json", null: false
+    t.text "reason"
+    t.integer "archive_document_id"
+    t.integer "actor_id"
+    t.string "actor_name", null: false
+    t.datetime "acted_at", null: false
+    t.string "ip"
+    t.string "user_agent"
+    t.string "prev_hash", null: false
+    t.string "entry_hash", null: false
+    t.datetime "created_at", null: false
+    t.index ["entry_hash"], name: "idx_period_locks_entry_hash", unique: true
+    t.index ["tenant_id", "period_from", "period_to"], name: "idx_period_locks_range"
+    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_period_locks_period"
+    t.index ["tenant_id"], name: "index_period_locks_on_tenant_id"
   end
 
   create_table "pos_connections", force: :cascade do |t|

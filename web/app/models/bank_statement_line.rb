@@ -5,6 +5,7 @@
 # encrypted at rest. Lines are never deleted; deciding records who and when.
 class BankStatementLine < ApplicationRecord
   include TenantScoped
+  include LockedPeriodGuard
 
   encrypts :description
 
@@ -18,6 +19,7 @@ class BankStatementLine < ApplicationRecord
   }.freeze
 
   belongs_to :decided_by, class_name: 'User', optional: true
+  guard_locked_period :posted_on
 
   validates :account_label, :posted_on, :description, :fingerprint, presence: true
   validates :amount_cents, numericality: { only_integer: true, other_than: 0 }

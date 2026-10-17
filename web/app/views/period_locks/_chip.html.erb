@@ -1,0 +1,9 @@
+<% e = @events[[kind, from]]; state = e.nil? ? :open : e.lock? ? :locked : :reopened
+   tone = { locked: :done, reopened: :exception, open: :todo }.fetch(state) %>
+<li>
+  <%= link_to period_locks_path(kind: kind, date: from.iso8601, anchor: 'lock-focus'), class: 'desk-step', data: { state: tone },
+        aria: { current: (checklist.kind == kind && checklist.from == from) ? 'true' : nil } do %>
+    <span class="desk-step-top"><span class="desk-glyph" aria-hidden="true"><%= books_desk_glyph(tone) %></span><span class="desk-step-label"><%= PeriodLock.label(kind, from) %></span></span>
+    <span class="desk-step-detail"><%= books_desk_state_label(state) %><%= " · #{e.actor_name}" if e&.lock? %></span>
+  <% end %>
+</li>

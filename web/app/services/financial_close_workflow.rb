@@ -102,6 +102,7 @@ class FinancialCloseWorkflow
 
   def retain!(values, actor:)
     raise ReconciliationEvidence::Error, 'Reload the close workspace; evidence or follow-up progress changed.' unless values['workflow_digest'] == digest
+    if (lock = PeriodLock.lock_covering(day)) then raise ReconciliationEvidence::Error, PeriodLock.locked_message(lock) end
     raise ReconciliationEvidence::Error, 'Record a review against the current report before retaining a close package.' unless review_current?
     raise ReconciliationEvidence::Error, 'Confirm each close checklist item.' unless CHECKS.keys.all? { |key| values[key] == '1' }
     note = values['notes'].to_s.strip

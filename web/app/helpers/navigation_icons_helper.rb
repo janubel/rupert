@@ -32,7 +32,7 @@ module NavigationIconsHelper
     'dashboard' => 'overview', 'point_of_sale' => 'sell', 'inventory_counts' => 'count',
     'inventory_exceptions' => 'review', 'bulk_consumptions' => 'review', 'reconcile' => 'link',
     'connections' => 'link', 'pos_connections' => 'link', 'alerts' => 'alert',
-    'reports' => 'report', 'register_summary' => 'report', 'time_clock' => 'clock',
+    'reports' => 'report', 'books_desk' => 'review', 'register_summary' => 'report', 'time_clock' => 'clock',
     'settings' => 'settings', 'platform' => 'platform', 'owner_checklists' => 'review',
     'api_access_tokens' => 'shield', 'permissions' => 'shield', 'roadmap' => 'document'
   }.freeze
