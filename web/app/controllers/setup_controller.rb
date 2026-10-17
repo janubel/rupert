@@ -26,7 +26,7 @@ class SetupController < ApplicationController
       Current.tenant = tenant
       Finance::ChartOfAccounts.seed!
       Current.tenant = nil
-      session[:user_id] = user.id
+      start_browser_session(user, method: 'password')
       redirect_to(root_url(subdomain: tenant.subdomain), notice: 'Welcome! Your workspace is ready.')
     else
       @tenant = tenant

@@ -34,10 +34,7 @@ class SessionsController < ApplicationController
       User.find_by(email: email)
            end
     if user&.active? && user.tenant&.status == 'active' && user.authenticate(params[:password])
-      reset_session # prevent session fixation
-      session[:user_id] = user.id
-      session[:auth_method] = 'password'
-      session[:employee_password_fingerprint] = Digest::SHA256.hexdigest(user.password_digest) if user.employee?
+      start_browser_session(user, method: 'password')
       AccessLogger.record(
         source: 'password',
         status: 'success',

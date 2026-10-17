@@ -196,6 +196,58 @@ class GoogleLoginIdentityTest < ActionDispatch::IntegrationTest
     assert_nil session[:user_id]
   end
 
+  test 'moving a Google link expires the old admin session and signs in the employee with private timesheets' do
+    host! "#{@tenant.subdomain}.example.com"
+    sign_in_google
+    assert_equal @owner.id, session[:user_id]
+    Current.tenant = @tenant
+    employee = User.create!(tenant: @tenant, email: @identity.email, name: 'Employee', role: 'employee', password: 'test-password')
+    worker = People::Employee.create!(user: employee, first_name: 'Own', last_name: 'Worker')
+    other = People::Employee.create!(first_name: 'Other', last_name: 'Private')
+    monday = Date.current.beginning_of_week
+    own_sheet = worker.timesheets.create!(period_start: monday, period_end: monday + 6)
+    other_sheet = other.timesheets.create!(period_start: monday, period_end: monday + 6)
+    @identity.update!(user: employee)
+
+    get login_path
+    assert_response :success
+    assert_nil session[:user_id]
+    get ctrax_pos_path
+    assert_redirected_to login_path
+
+    sign_in_google
+    assert_redirected_to employee_app_path
+    assert_equal employee.id, session[:user_id]
+    get ctrax_pos_path
+    assert_response :success
+    assert_select 'nav[aria-label="My workspace"] a[href=?]', ctrax_pos_path
+    get people_timesheets_path
+    assert_response :success
+    assert_select 'a[href=?]', people_timesheet_path(own_sheet)
+    assert_select 'a[href=?]', people_timesheet_path(other_sheet), count: 0
+    get people_timesheet_path(other_sheet)
+    assert_response :not_found
+    get people_timesheet_path(other_sheet, format: :csv)
+    assert_response :not_found
+    assert_equal 'super_admin', @owner.reload.role
+  end
+
+  test 'revoking a linked identity expires an already authenticated session' do
+    sign_in_google
+    @identity.destroy!
+    get login_path
+    assert_response :success
+    assert_nil session[:user_id]
+  end
+
+  test 'password changes expire administrator browser sessions' do
+    sign_in_google
+    @owner.update!(password: 'replacement-password')
+    get login_path
+    assert_response :success
+    assert_nil session[:user_id]
+  end
+
   private
 
   def sign_in_google(email: 'owner.personal@gmail.com', subject: 'linked-google-subject')
