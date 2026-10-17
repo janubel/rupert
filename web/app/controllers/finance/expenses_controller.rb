@@ -33,6 +33,7 @@ module Finance
       authorize(:module, :finance_write?)
       @expense = Finance::Expense.new(incurred_on: Date.current)
       @vendors = Purchasing::Vendor.ordered
+      @accounts = Finance::Account.active.ordered
     end
 
     def create
@@ -40,6 +41,7 @@ module Finance
       @expense = Finance::Expense.new(expense_params)
       if @expense.save
         note_approved_period(@expense.incurred_on, 'Expense')
+        Finance::Posting.expense(@expense, created_by: Current.user)
         ActivityLogger.log(
           'expense_recorded',
           subject: @expense,
@@ -48,6 +50,7 @@ module Finance
         redirect_to(finance_expenses_path, notice: 'Expense recorded.')
       else
         @vendors = Purchasing::Vendor.ordered
+      @accounts = Finance::Account.active.ordered
         render(:new, status: :unprocessable_entity)
       end
     end
@@ -55,17 +58,20 @@ module Finance
     def edit
       authorize(:module, :finance_write?)
       @vendors = Purchasing::Vendor.ordered
+      @accounts = Finance::Account.active.ordered
     end
 
     def update
       authorize(:module, :finance_write?)
       old_date = @expense.incurred_on
       if @expense.update(expense_params)
+        repost_expense(@expense)
         ActivityLogger.log('expense_updated', subject: @expense, details: change_summary(@expense))
         [old_date, @expense.incurred_on].uniq.each { |date| note_approved_period(date, 'Expense') }
         redirect_to(finance_expenses_path, notice: 'Expense updated.')
       else
         @vendors = Purchasing::Vendor.ordered
+      @accounts = Finance::Account.active.ordered
         render(:edit, status: :unprocessable_entity)
       end
     end
@@ -74,6 +80,7 @@ module Finance
       authorize(:module, :finance_write?)
       return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @expense.discard
 
+      Finance::Posting.void_source('Finance::Expense', @expense.id)
       ActivityLogger.log('expense_deleted', subject: @expense, details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category} · #{@expense.incurred_on}")
       note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense removed.')
@@ -84,12 +91,23 @@ module Finance
       authorize(:module, :finance_write?)
       return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @expense.undiscard
 
+      Finance::Posting.expense(@expense, created_by: Current.user)
       ActivityLogger.log('expense_restored', subject: @expense)
       note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense restored.')
     end
 
     private
+
+    # Void the prior posting and re-post when a money-bearing field changed, so
+    # the ledger always reflects the current expense.
+    def repost_expense(expense)
+      financial = %w[amount_cents category method incurred_on account_id]
+      return unless (expense.saved_changes.keys & financial).any?
+
+      Finance::Posting.void_source('Finance::Expense', expense.id)
+      Finance::Posting.expense(expense, created_by: Current.user)
+    end
 
     def expenses_csv(expenses)
       require 'csv'
@@ -116,7 +134,7 @@ module Finance
     end
 
     def expense_params
-      params.require(:expense).permit(:payee, :category, :amount, :incurred_on, :method, :reference, :notes, :vendor_id)
+      params.require(:expense).permit(:payee, :category, :amount, :incurred_on, :method, :reference, :notes, :vendor_id, :account_id)
     end
   end
 end

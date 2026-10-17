@@ -148,7 +148,13 @@ class ModuleRegistry
     }, permission: 'finance.read', position: 49),
     Entry.new(key: 'payments', name: 'Vendor payments', path: lambda {
       finance_vendor_payments_path
-    }, permission: 'finance.read', position: 50)
+    }, permission: 'finance.read', position: 50),
+    Entry.new(key: 'journal_entries', name: 'General ledger', path: lambda {
+      finance_journal_entries_path
+    }, permission: 'finance.read', position: 51),
+    Entry.new(key: 'finance_reports', name: 'Financial reports', path: lambda {
+      finance_reports_path
+    }, permission: 'finance.read', position: 52)
   ].freeze
 
   class << self
@@ -192,7 +198,7 @@ class ModuleRegistry
       { key: 'stock', name: 'Stock',
         modules: %w[inventory inventory_exceptions locations inventory_counts stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
       { key: 'money', name: 'Finance',
-        modules: %w[books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments] },
+        modules: %w[books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
       { key: 'receipts', name: 'Receipts', modules: %w[receipts] },
       { key: 'timesheets', name: 'Timesheets', modules: %w[timesheets] },

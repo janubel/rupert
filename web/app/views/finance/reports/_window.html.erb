@@ -1,0 +1,6 @@
+<%= form_tag path, method: :get, class: "card card-pad operations-filters" do %>
+  <label class="flex items-center gap-1.5 text-sm text-mocha">From <%= date_field_tag :from, @from, class: "select" %></label>
+  <label class="flex items-center gap-1.5 text-sm text-mocha">To <%= date_field_tag :to, @to, class: "select" %></label>
+  <%= submit_tag "Apply", class: "btn-ghost btn-sm" %>
+  <%= link_to "Export CSV", csv_path, class: "btn-ghost btn-sm", data: { turbo: false } %>
+<% end %>

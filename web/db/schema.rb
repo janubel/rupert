@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_235700) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -927,6 +927,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_235700) do
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
     t.bigint "vendor_id"
+    t.bigint "account_id"
+    t.index ["account_id"], name: "idx_expenses_account"
     t.index ["discarded_at"], name: "index_expenses_on_discarded_at"
     t.index ["tenant_id", "category"], name: "index_expenses_on_tenant_id_and_category"
     t.index ["tenant_id", "incurred_on"], name: "index_expenses_on_tenant_id_and_incurred_on"
@@ -983,6 +985,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_235700) do
     t.text "result", null: false
     t.datetime "created_at", null: false
     t.index ["tenant_id", "count_id", "request_token"], name: "idx_count_scan_receipts_request", unique: true
+  end
+
+  create_table "journal_entries", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.date "posted_on", null: false
+    t.string "kind", null: false
+    t.string "status", default: "posted", null: false
+    t.string "source_type"
+    t.string "source_id"
+    t.text "memo"
+    t.integer "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "posted_on"], name: "idx_journal_entries_posted_on"
+    t.index ["tenant_id", "source_type", "source_id"], name: "idx_journal_entries_source", unique: true, where: "status = 'posted'"
+    t.index ["tenant_id"], name: "index_journal_entries_on_tenant_id"
+  end
+
+  create_table "journal_lines", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "journal_entry_id", null: false
+    t.bigint "account_id", null: false
+    t.integer "debit_cents", default: 0, null: false
+    t.integer "credit_cents", default: 0, null: false
+    t.text "memo"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["journal_entry_id"], name: "idx_journal_lines_entry"
+    t.index ["tenant_id", "account_id"], name: "idx_journal_lines_account"
+    t.index ["tenant_id"], name: "index_journal_lines_on_tenant_id"
   end
 
   create_table "kpi_readings", force: :cascade do |t|

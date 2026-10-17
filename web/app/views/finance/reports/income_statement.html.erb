@@ -1,0 +1,58 @@
+<% content_for :title, "Income statement" %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">Income statement</h1>
+      <p class="mt-1 text-sm text-mocha"><%= @from %> through <%= @to %> · USD</p>
+    </div>
+    <%= link_to "All reports", finance_reports_path, class: "btn-ghost btn-sm" %>
+  </section>
+
+  <%= render 'window', path: finance_reports_income_statement_path, csv_path: finance_reports_income_statement_path(format: :csv) %>
+
+  <section class="grid grid-cols-3 gap-4">
+    <div class="stat">
+      <p class="stat-label">Revenue</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@statement[:total_revenue] / 100.0) %></p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Expenses</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@statement[:total_expense] / 100.0) %></p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Net income</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@statement[:net_income] / 100.0) %></p>
+    </div>
+  </section>
+
+  <div class="card overflow-hidden">
+    <table class="operations-table w-full text-sm">
+      <thead class="border-b border-fog bg-haze/60">
+        <tr><th scope="col" class="th">Account</th><th scope="col" class="th text-right">Amount</th></tr>
+      </thead>
+      <tbody>
+        <tr class="bg-haze/40"><td class="td font-semibold" colspan="2">Revenue</td></tr>
+        <% @statement[:revenue].each do |row| %>
+          <tr class="border-b border-fog/60">
+            <td class="td"><%= row.account.code %> · <%= row.account.name %></td>
+            <td class="td text-right"><%= number_to_currency(row.balance / 100.0) %></td>
+          </tr>
+        <% end %>
+        <tr class="font-semibold"><td class="td">Total revenue</td><td class="td text-right"><%= number_to_currency(@statement[:total_revenue] / 100.0) %></td></tr>
+        <tr class="bg-haze/40"><td class="td font-semibold" colspan="2">Expenses</td></tr>
+        <% @statement[:expense].each do |row| %>
+          <tr class="border-b border-fog/60">
+            <td class="td"><%= row.account.code %> · <%= row.account.name %></td>
+            <td class="td text-right"><%= number_to_currency(row.balance / 100.0) %></td>
+          </tr>
+        <% end %>
+        <tr class="font-semibold"><td class="td">Total expenses</td><td class="td text-right"><%= number_to_currency(@statement[:total_expense] / 100.0) %></td></tr>
+      </tbody>
+      <tfoot>
+        <tr class="font-bold"><td class="td">Net income</td><td class="td text-right"><%= number_to_currency(@statement[:net_income] / 100.0) %></td></tr>
+      </tfoot>
+    </table>
+  </div>
+</div>

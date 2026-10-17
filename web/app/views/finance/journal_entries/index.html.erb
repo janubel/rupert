@@ -1,0 +1,70 @@
+<% content_for :title, "General ledger" %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">General ledger</h1>
+      <p class="mt-1 text-sm text-mocha">Balanced journal entries posted from sales, expenses and vendor payments.</p>
+    </div>
+    <div class="flex gap-2">
+      <%= link_to "Financial reports", finance_reports_path, class: "btn-ghost btn-sm" %>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-3 gap-4">
+    <div class="stat">
+      <p class="stat-label">Entries</p>
+      <p class="stat-value mt-1"><%= number_with_delimiter(@totals[:entries]) %></p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Total debits · USD</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@totals[:debits] / 100.0) %></p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Total credits · USD</p>
+      <p class="stat-value mt-1"><%= number_to_currency(@totals[:credits] / 100.0) %></p>
+      <p class="mt-1 text-xs <%= @totals[:debits] == @totals[:credits] ? 'text-emerald-600' : 'text-red-600' %>">
+        <%= @totals[:debits] == @totals[:credits] ? 'In balance' : 'Out of balance' %>
+      </p>
+    </div>
+  </section>
+
+  <%= form_tag finance_journal_entries_path, method: :get, class: "card card-pad operations-filters" do %>
+    <%= select_tag :kind, options_for_select([["All kinds", "all"]] + Finance::JournalEntry::KINDS.map { |k| [k.tr('_', ' ').titleize, k] }, @kind), class: "select" %>
+    <%= date_field_tag :from, @from, class: "select" %>
+    <%= date_field_tag :to, @to, class: "select" %>
+    <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
+  <% end %>
+
+  <div class="card overflow-hidden">
+    <div class="operations-table-region" role="region" tabindex="0" aria-label="Journal entries">
+      <table class="operations-table w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60">
+          <tr>
+            <th scope="col" class="th">Date</th>
+            <th scope="col" class="th">Kind</th>
+            <th scope="col" class="th">Memo</th>
+            <th scope="col" class="th">Source</th>
+            <th scope="col" class="th text-right">Amount</th>
+            <th scope="col" class="th">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @entries.each do |entry| %>
+            <tr class="border-b border-fog/60">
+              <td class="td"><%= entry.posted_on %></td>
+              <td class="td"><%= entry.kind.tr('_', ' ').titleize %></td>
+              <td class="td"><%= link_to (entry.memo.presence || "Entry ##{entry.id}"), finance_journal_entry_path(entry), class: "link" %></td>
+              <td class="td text-taupe"><%= entry.source_type %> #<%= entry.source_id %></td>
+              <td class="td text-right"><%= number_to_currency(entry.debit_cents / 100.0) %></td>
+              <td class="td"><span class="<%= entry.void? ? 'text-taupe line-through' : 'text-emerald-600' %>"><%= entry.status %></span></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+</div>
