@@ -156,6 +156,7 @@ Rails.application.routes.draw do
       post :add_tracking
       post :update_fulfillment_status
       post :refund
+      post :release_warehouse_stock
     end
   end
   resources :customers, only: %i[index show new create edit update] do

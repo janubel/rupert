@@ -116,6 +116,7 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
     orders_before = Core::Order.unscoped.count
     assert_difference 'Core::Payment.unscoped.count' do
       post warehouse_checkout_submit_path(@share.token), params: {
+        checkout_quote: WarehouseCheckoutQuote.issue(WarehouseCart.last),
         shipping_name: 'Ada Vendor',
         shipping_address1: '1 Main St',
         shipping_city: 'Springfield',
@@ -158,9 +159,10 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
       Current.tenant = @tenant
       # The first request committed, but none of its Set-Cookie headers or redirect
       # reached the browser. It still holds the original signed cart cookie.
-      result = WarehouseCheckoutService.call(share: @share, cart: cart, payment_nonce: 'lost-response-nonce',
+      result = WarehouseCheckoutService.call(share: @share, cart: cart, quote_token: WarehouseCheckoutQuote.issue(cart), payment_nonce: 'lost-response-nonce',
         shipping: { shipping_name: 'Recovery customer' })
       assert_predicate result, :success?
+      result.order.fulfill! # Staff may fulfill before the buyer retries a lost response.
       Current.reset
 
       assert_no_difference ['Core::Payment.unscoped.count', 'WarehouseCart.count'] do
@@ -191,6 +193,7 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
 
     assert_no_difference 'Core::OrderLine.unscoped.count' do
       post warehouse_checkout_submit_path(@share.token), params: {
+        checkout_quote: WarehouseCheckoutQuote.issue(WarehouseCart.last),
         shipping_name: 'Ada',
         shipping_address1: '1 Main',
         shipping_city: 'Springfield',
@@ -210,6 +213,123 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
   test 'empty cart cannot reach checkout' do
     get warehouse_checkout_path(@share.token)
     assert_response :not_found
+  end
+
+  test 'public catalog excludes draft and removed products and variants' do
+    @product.update!(status: 'DRAFT')
+    get warehouse_sale_path(@share.token)
+    assert_select "input[name='variant_id'][value='#{@variant.id}']", count: 0
+    @product.update!(status: 'ACTIVE', catalog_present: false)
+    get warehouse_sale_path(@share.token)
+    assert_select "input[name='variant_id'][value='#{@variant.id}']", count: 0
+    @product.update!(catalog_present: true)
+    @variant.update!(catalog_present: false)
+    get warehouse_sale_path(@share.token)
+    assert_select "input[name='variant_id'][value='#{@variant.id}']", count: 0
+  end
+
+  test 'direct cart submissions cannot add a withdrawn product' do
+    @product.update!(status: 'DRAFT')
+    assert_no_difference 'WarehouseCartItem.count' do
+      post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: 1 }
+    end
+    assert_redirected_to warehouse_sale_path(@share.token)
+  end
+
+  test 'price changes require review before any charge and a fresh confirmation can proceed' do
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: 2 }
+    get warehouse_checkout_path(@share.token)
+    quote = css_select('input[name="checkout_quote"]').first&.[]('value')
+    @variant.update!(price: 30)
+    assert_no_difference 'Core::Payment.unscoped.count' do
+      post warehouse_checkout_submit_path(@share.token), params: { payment_nonce: 'price-change-nonce', checkout_quote: quote }
+    end
+    assert_response :unprocessable_entity
+    assert_select "div[role='alert']", /Review/
+    assert_not_requested :post, 'https://apitest.authorize.net/xml/v1/request.api'
+    refreshed_quote = css_select('input[name="checkout_quote"]').first&.[]('value')
+    assert refreshed_quote.present?
+    post warehouse_checkout_submit_path(@share.token), params: { payment_nonce: 'reviewed-price-nonce', checkout_quote: refreshed_quote }
+    assert_response :redirect
+    assert_equal 4800, Core::Payment.unscoped.last.amount_cents
+  end
+
+  test 'a cart changed in another tab cannot charge an older checkout total' do
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: 2 }
+    get warehouse_checkout_path(@share.token)
+    quote = css_select('input[name="checkout_quote"]').first&.[]('value')
+    cart = WarehouseCart.last
+    cart.set_quantity!(cart.items.first.id, 3)
+    assert_no_difference 'Core::Payment.unscoped.count' do
+      post warehouse_checkout_submit_path(@share.token), params: { payment_nonce: 'old-tab-nonce', checkout_quote: quote }
+    end
+    assert_response :unprocessable_entity
+    assert_not_requested :post, 'https://apitest.authorize.net/xml/v1/request.api'
+  end
+
+  test 'withdrawn cart lines cannot reach the gateway' do
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: 2 }
+    get warehouse_checkout_path(@share.token)
+    quote = css_select('input[name="checkout_quote"]').first&.[]('value')
+    @variant.update!(catalog_present: false)
+    assert_no_difference 'Core::Payment.unscoped.count' do
+      post warehouse_checkout_submit_path(@share.token), params: { payment_nonce: 'removed-item-nonce', checkout_quote: quote }
+    end
+    assert_response :unprocessable_entity
+    assert_not_requested :post, 'https://apitest.authorize.net/xml/v1/request.api'
+  end
+
+  test 'cached public catalogs keep each browsers cart form CSRF token valid' do
+    old_cache = Rails.cache
+    old_store = WarehouseSalesController.cache_store
+    old_caching = WarehouseSalesController.perform_caching
+    old_forgery = ApplicationController.allow_forgery_protection
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    WarehouseSalesController.cache_store = Rails.cache
+    WarehouseSalesController.perform_caching = true
+    ApplicationController.allow_forgery_protection = true
+    first_browser = open_session
+    second_browser = open_session
+    first_browser.get warehouse_sale_path(@share.token)
+    first_token = Nokogiri::HTML(first_browser.response.body).at_css("form input[name='authenticity_token']")['value']
+    second_browser.get warehouse_sale_path(@share.token)
+    second_token = Nokogiri::HTML(second_browser.response.body).at_css("form input[name='authenticity_token']")['value']
+    refute_equal first_token, second_token, 'Cart forms must carry their own browser session token'
+    [[first_browser, first_token], [second_browser, second_token]].each do |browser, token|
+      browser.post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: 1, authenticity_token: token }
+      assert_equal 302, browser.response.status
+    end
+  ensure
+    ApplicationController.allow_forgery_protection = old_forgery
+    WarehouseSalesController.perform_caching = old_caching
+    WarehouseSalesController.cache_store = old_store
+    Rails.cache = old_cache
+  end
+
+  test 'foreign workspace stock cannot inflate this vendor catalogs availability' do
+    InventoryLevel.unscoped.where(shopifyVariantId: @variant.id).update_all(quantity: 2, available: 2)
+    other = Tenant.create!(name: 'Other workspace', subdomain: 'other-warehouse')
+    InventoryLevel.create!(tenant_id: other.id, source: 'shopify', locationId: 'foreign-location', shopifyVariantId: @variant.id, quantity: 100, available: 100)
+    get warehouse_sale_path(@share.token)
+    assert_select "input[name='quantity'][max='2']", count: 1
+    assert_no_difference 'WarehouseCartItem.count' do
+      post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: 3 }
+    end
+  end
+
+  test 'payment throttling returns a cooldown without contacting the gateway' do
+    post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: 1 }
+    get warehouse_checkout_path(@share.token)
+    quote = css_select('input[name="checkout_quote"]').first['value']
+    cart = WarehouseCart.last
+    5.times do
+      cart.warehouse_payment_attempts.create!(tenant_id: @tenant.id, status: 'declined', invoice_number: "TEST#{SecureRandom.hex(8)}",
+        nonce_digest: SecureRandom.hex(32), gateway_fingerprint: SecureRandom.hex(32), amount_cents: cart.total_cents, shipping_json: '{}', submitted_at: Time.current)
+    end
+    post warehouse_checkout_submit_path(@share.token), params: { payment_nonce: 'limited-nonce', checkout_quote: quote }
+    assert_response :too_many_requests
+    assert_equal '600', response.headers['Retry-After']
+    assert_not_requested :post, 'https://apitest.authorize.net/xml/v1/request.api'
   end
 
   def configure_apple_pay
@@ -274,6 +394,7 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
     }.to_return(status: 200, body: approved_gateway_body)
 
     post warehouse_checkout_submit_path(@share.token), params: {
+      checkout_quote: WarehouseCheckoutQuote.issue(WarehouseCart.last),
       shipping_name: 'Ada Vendor', shipping_address1: '1 Main St', shipping_city: 'Springfield',
       shipping_zip: '12345', shipping_country: 'US',
       payment_nonce: 'YXBwbGUtdG9rZW4=', data_descriptor: 'COMMON.APPLE.INAPP.PAYMENT'
@@ -306,6 +427,7 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
         { 'dataDescriptor' => 'COMMON.GOOGLE.INAPP.PAYMENT', 'dataValue' => 'Z29vZ2xlLXRva2Vu' }
     }.to_return(status: 200, body: approved_gateway_body)
     post warehouse_checkout_submit_path(@share.token), params: {
+      checkout_quote: WarehouseCheckoutQuote.issue(WarehouseCart.last),
       shipping_name: 'Ada Vendor', shipping_address1: '1 Main St', shipping_city: 'Springfield',
       shipping_zip: '12345', shipping_country: 'US',
       payment_nonce: 'Z29vZ2xlLXRva2Vu', data_descriptor: 'COMMON.GOOGLE.INAPP.PAYMENT'

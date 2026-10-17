@@ -142,7 +142,7 @@ class AuditIntegrityServicesTest < ActiveSupport::TestCase
       true }.returns(
       AuthorizeNetClient::Result.new(transaction_id: 'synthetic-accepted-charge', response_code: '1', message: 'Approved'))
     Core::OrderLine.stubs(:create!).raises(ActiveRecord::RecordInvalid.new(Core::OrderLine.new))
-    first = WarehouseCheckoutService.call(share: share, cart: cart, payment_nonce: 'synthetic-nonce-one')
+    first = WarehouseCheckoutService.call(share: share, cart: cart, quote_token: WarehouseCheckoutQuote.issue(cart), payment_nonce: 'synthetic-nonce-one')
     refute_predicate first, :success?
     assert_equal 1, gateway_calls
     assert_equal 0, Core::Order.count

@@ -33,6 +33,7 @@
                 google_pay_merchant_id_value: EnvStore.fetch("GOOGLE_PAY_MERCHANT_ID", ""),
                 google_pay_merchant_name_value: EnvStore.fetch("GOOGLE_PAY_MERCHANT_NAME", "").presence || @share.name,
                 action: "submit->accept-payment#submit" } do %>
+    <%= hidden_field_tag :checkout_quote, @checkout_quote %>
     <div class="grid gap-4 lg:grid-cols-5">
       <div class="space-y-4 lg:col-span-3">
         <div class="card card-pad">

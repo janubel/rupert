@@ -24,6 +24,8 @@
   </section>
 </div>
 
+<%= render 'warehouse_stock_holds' %>
+
 <% if FeatureFlag.enabled?(:fulfillment_workflow) %>
   <div class="print:hidden">
     <section class="card card-pad mt-6">

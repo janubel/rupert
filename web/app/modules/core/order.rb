@@ -18,6 +18,7 @@ module Core
     has_many :payments, class_name: 'Core::Payment', foreign_key: :order_id, dependent: :destroy
     has_many :fulfillments, class_name: 'Core::Fulfillment', foreign_key: :order_id, dependent: :destroy
     has_many :refunds, class_name: 'Core::Refund', foreign_key: :order_id, dependent: :destroy
+    has_many :warehouse_stock_holds, foreign_key: :order_id, dependent: :restrict_with_exception
 
     validates :source, presence: true
     validates :source_order_id, presence: true

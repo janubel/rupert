@@ -35,7 +35,8 @@ class WarehouseCheckoutsController < ApplicationController
       cart: current_cart,
       shipping: order_params,
       payment_nonce: params[:payment_nonce],
-      data_descriptor: params[:data_descriptor]
+      data_descriptor: params[:data_descriptor],
+      quote_token: params[:checkout_quote]
     )
 
     if result.success?
@@ -45,7 +46,8 @@ class WarehouseCheckoutsController < ApplicationController
     else
       load_payment_config
       flash.now[:alert] = result.error
-      render(:show, status: :unprocessable_entity)
+      response.headers['Retry-After'] = WarehouseCheckoutService::ATTEMPT_WINDOW.to_i.to_s if result.rate_limited?
+      render(:show, status: result.rate_limited? ? :too_many_requests : :unprocessable_entity)
     end
   end
 
@@ -54,6 +56,7 @@ class WarehouseCheckoutsController < ApplicationController
   def load_payment_config
     @cart = current_cart
     @payment_attempt = @cart.warehouse_payment_attempts.unresolved.order(:id).first
+    @checkout_quote = WarehouseCheckoutQuote.issue(@cart) unless @payment_attempt
     @client_key = AuthorizeNetClient.client_key
     @login_id = AuthorizeNetClient.login_id
     @accept_js_url = AuthorizeNetClient.accept_js_url
@@ -68,7 +71,7 @@ class WarehouseCheckoutsController < ApplicationController
       # A committed checkout may have lost its response. The original signed,
       # share-bound cart cookie still proves this browser owns the confirmation.
       order = Core::Order.find_by(source: 'online', source_order_id: "wh-#{cart.id}", channel: 'warehouse')
-      return render_404 unless order&.paid?
+      return render_404 unless order && %w[paid fulfilled refunded].include?(order.status)
 
       write_order_confirmation(order)
       clear_cart_token!

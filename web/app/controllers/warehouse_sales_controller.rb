@@ -12,6 +12,8 @@ class WarehouseSalesController < ApplicationController
 
   def show
     @cart = current_cart
-    @products = ShopifyProduct.includes(variants: :levels).order(:title)
+    @variants = ShopifyVariant.warehouse_catalog(tenant_id: @share.tenant_id).includes(:product).to_a
+      .sort_by { |variant| [variant.product.title.downcase, variant.title.downcase] }
+    @stock_by_variant = InventoryLevel.warehouse_quantities(tenant_id: @share.tenant_id, variant_ids: @variants.map(&:id))
   end
 end

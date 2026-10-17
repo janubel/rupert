@@ -4,6 +4,7 @@ class WarehousePaymentAttempt < ApplicationRecord
   include TenantScoped
 
   belongs_to :warehouse_cart
+  has_many :warehouse_stock_holds, dependent: :restrict_with_exception
   encrypts :shipping_json
   STATUSES = %w[submitting unknown approved declined paid].freeze
   scope :unresolved, -> { where(status: %w[submitting unknown approved]) }

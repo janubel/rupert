@@ -41,3 +41,7 @@ Rails.application.config.filter_parameters += [/\Adiscount\z/i]
 
 # Close attestations and bank-cash planning inputs remain private.
 Rails.application.config.filter_parameters += [/\Aforecast\z/i, /\Aclose\z/i]
+
+# Public checkout addresses and signed review tokens stay out of request logs.
+Rails.application.config.filter_parameters += [/\Ashipping_/i, :checkout_quote]
+Rails.application.config.filter_parameters += %i[source_adjustment_reference source_adjusted_at]

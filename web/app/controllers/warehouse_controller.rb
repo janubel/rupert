@@ -9,6 +9,11 @@ class WarehouseController < AuthenticatedController
   def index
     @global_tiers = WarehouseTier.where(shareId: nil).order(:minQty)
     @shares = WarehouseShare.order(:name)
+    if Current.user.can?('sales.read') && Current.user.can?('inventory.read')
+      @hold_count = WarehouseStockHold.held.count
+      @stock_holds = WarehouseStockHold.held.includes(:order, :warehouse_payment_attempt, warehouse_cart: [:share, :items])
+        .order(:created_at, :id).limit(100)
+    end
   end
 
   def update_tiers

@@ -6,6 +6,7 @@
 # (never trusted from the browser) via WarehouseShare#sale_price.
 class WarehouseCart < ApplicationRecord
   class PaymentLocked < StandardError; end
+  class UnavailableItem < StandardError; end
   STATUSES = %w[open checked_out].freeze
 
   belongs_to :share, class_name: 'WarehouseShare', foreign_key: :share_id
@@ -25,6 +26,9 @@ class WarehouseCart < ApplicationRecord
   def add_item!(variant, quantity: 1)
     with_lock do
       ensure_editable!
+      variant = ShopifyVariant.warehouse_catalog(tenant_id: tenant_id).find_by(id: variant.id)
+      raise UnavailableItem, 'This product is no longer available. Remove it from your cart.' unless variant
+
       quantity = quantity.to_i.clamp(1, WarehouseCartItem::MAX_QUANTITY)
       item = items.find_or_initialize_by(variant_id: variant.id)
       item.tenant_id = tenant_id
@@ -32,6 +36,7 @@ class WarehouseCart < ApplicationRecord
       item.sku = variant.sku
       item.title = [variant.product&.title, variant.title].compact.join(' · ')
       item.quantity = (item.quantity.to_i + quantity).clamp(1, WarehouseCartItem::MAX_QUANTITY)
+      ensure_available!(item)
       item.assign_price!(share, variant)
       item.save!
       item
@@ -48,7 +53,11 @@ class WarehouseCart < ApplicationRecord
         item.destroy!
       else
         item.quantity = quantity.to_i.clamp(1, WarehouseCartItem::MAX_QUANTITY)
-        item.assign_price!(share, item.variant)
+        variant = item.variant
+        raise UnavailableItem, 'This product is no longer available. Remove it from your cart.' unless variant
+
+        ensure_available!(item)
+        item.assign_price!(share, variant)
         item.save!
       end
     end
@@ -79,5 +88,12 @@ class WarehouseCart < ApplicationRecord
 
   def mark_checked_out!
     update!(status: 'checked_out')
+  end
+
+  private
+
+  def ensure_available!(item)
+    available = item.available_quantity
+    raise UnavailableItem, "Only #{available} of this item are available." if item.quantity > available
   end
 end

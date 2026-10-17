@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_220000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -2447,6 +2447,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_210000) do
     t.index ["warehouse_cart_id"], name: "index_warehouse_payment_attempts_on_warehouse_cart_id"
   end
 
+  create_table "warehouse_stock_holds", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "warehouse_cart_id", null: false
+    t.integer "warehouse_payment_attempt_id"
+    t.integer "order_id"
+    t.string "variant_id", null: false
+    t.integer "quantity", null: false
+    t.string "status", default: "held", null: false
+    t.string "release_reason"
+    t.datetime "released_at"
+    t.integer "released_by_id"
+    t.datetime "fulfillment_confirmed_at"
+    t.datetime "source_adjusted_at"
+    t.datetime "source_refreshed_at"
+    t.text "source_adjustment_reference"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_warehouse_stock_holds_on_order_id"
+    t.index ["released_by_id"], name: "index_warehouse_stock_holds_on_released_by_id"
+    t.index ["tenant_id", "status", "variant_id"], name: "idx_warehouse_holds_available"
+    t.index ["warehouse_cart_id", "variant_id"], name: "idx_warehouse_holds_one_active_line", unique: true, where: "status = 'held'"
+    t.index ["warehouse_cart_id"], name: "index_warehouse_stock_holds_on_warehouse_cart_id"
+    t.index ["warehouse_payment_attempt_id"], name: "index_warehouse_stock_holds_on_warehouse_payment_attempt_id"
+    t.check_constraint "quantity > 0", name: "warehouse_holds_positive_quantity"
+    t.check_constraint "status IN ('held', 'released')", name: "warehouse_holds_valid_status"
+  end
+
   create_table "workspace_signup_events", force: :cascade do |t|
     t.integer "workspace_signup_id", null: false
     t.integer "actor_id"
@@ -2644,6 +2671,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_210000) do
   add_foreign_key "swipesimple_exports", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "swipesimple_report_rows", "swipesimple_exports"
   add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
+  add_foreign_key "warehouse_stock_holds", "orders"
+  add_foreign_key "warehouse_stock_holds", "users", column: "released_by_id"
+  add_foreign_key "warehouse_stock_holds", "warehouse_carts"
+  add_foreign_key "warehouse_stock_holds", "warehouse_payment_attempts"
   add_foreign_key "workspace_signup_events", "users", column: "actor_id", on_delete: :nullify
   add_foreign_key "workspace_signup_events", "workspace_signups"
   add_foreign_key "workspace_signups", "tenants"

@@ -5,7 +5,10 @@
 # through Authorize.net with an Accept.js nonce, and on approval a Core::Order
 # with its lines and a card payment are recorded and marked paid.
 class WarehouseCheckoutService
-  Result = Struct.new(:success?, :order, :error, keyword_init: true)
+  Result = Struct.new(:success?, :order, :error, :rate_limited?, keyword_init: true)
+  ATTEMPT_WINDOW = 10.minutes
+  CART_ATTEMPT_LIMIT = 5
+  SHARE_ATTEMPT_LIMIT = 30
 
   SHIPPING_FIELDS = %i[
     shipping_name
@@ -19,23 +22,25 @@ class WarehouseCheckoutService
   ].freeze
 
   class << self
-    def call(share:, cart:, shipping: {}, payment_nonce: nil, data_descriptor: nil)
+    def call(share:, cart:, shipping: {}, payment_nonce: nil, data_descriptor: nil, quote_token: nil)
       new(
         share: share,
         cart: cart,
         shipping: shipping,
         payment_nonce: payment_nonce,
-        data_descriptor: data_descriptor
+        data_descriptor: data_descriptor,
+        quote_token: quote_token
       ).call
     end
   end
 
-  def initialize(share:, cart:, shipping: {}, payment_nonce: nil, data_descriptor: nil)
+  def initialize(share:, cart:, shipping: {}, payment_nonce: nil, data_descriptor: nil, quote_token: nil)
     @share = share
     @cart = cart
     @shipping = shipping
     @payment_nonce = payment_nonce
     @data_descriptor = data_descriptor
+    @quote_token = quote_token
   end
 
   def call
@@ -61,7 +66,11 @@ class WarehouseCheckoutService
   # The attempt commits before any network I/O. A lost response remains
   # unresolved, and approval survives a failure to create local order records.
   def prepare_attempt
-    @cart.with_lock do
+    WarehouseCart.transaction do
+      # First statement is a write: serialize the budget across Puma processes
+      # on SQLite and PostgreSQL. No transaction spans the gateway request.
+      Tenant.where(id: @cart.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
+      @cart.lock!
       if @cart.checked_out?
         existing = Core::Order.find_by(tenant_id: @share.tenant_id, source: 'online', source_order_id: order_ref_id)
         return existing ? Result.new(success?: true, order: existing) : failure('This cart has already been checked out.')
@@ -73,17 +82,36 @@ class WarehouseCheckoutService
       return failure('Payment details are missing or invalid.') unless @payment_nonce.is_a?(String) && @payment_nonce.match?(/\A[!-~]{1,4096}\z/)
       lines = validate_lines
       return failure(lines) if lines.is_a?(String)
+      unless WarehouseCheckoutQuote.valid?(@quote_token, @cart)
+        return failure('Your cart or prices changed, or checkout expired. Review the updated total and submit again. No payment was submitted.')
+      end
+      if payment_budget_exhausted?
+        return Result.new(success?: false, rate_limited?: true,
+          error: 'Too many payment attempts. Wait ten minutes before trying another payment. Approved payments can still be finished.')
+      end
 
       @submit_new_attempt = true
       @gateway_snapshot = AuthorizeNetClient.credential_snapshot
-      @cart.warehouse_payment_attempts.create!(
+      attempt = @cart.warehouse_payment_attempts.create!(
         tenant_id: @cart.tenant_id, invoice_number: "WH#{SecureRandom.hex(9)}",
         nonce_digest: Digest::SHA256.hexdigest(@payment_nonce.to_s),
         gateway_fingerprint: Digest::SHA256.hexdigest(@gateway_snapshot.to_json),
         amount_cents: @cart.total_cents, shipping_json: @shipping.slice(*SHIPPING_FIELDS).to_json,
         submitted_at: Time.current
       )
+      @cart.items.each do |item|
+        attempt.warehouse_stock_holds.create!(tenant_id: @cart.tenant_id, warehouse_cart: @cart, variant_id: item.variant_id, quantity: item.quantity)
+      end
+      attempt
     end
+  end
+
+  def payment_budget_exhausted?
+    recent = WarehousePaymentAttempt.where(tenant_id: @cart.tenant_id).where('submitted_at >= ?', ATTEMPT_WINDOW.ago)
+    return true if recent.where(warehouse_cart_id: @cart.id).limit(CART_ATTEMPT_LIMIT).count >= CART_ATTEMPT_LIMIT
+
+    carts = WarehouseCart.where(tenant_id: @cart.tenant_id, share_id: @share.id).select(:id)
+    recent.where(warehouse_cart_id: carts).limit(SHARE_ATTEMPT_LIMIT).count >= SHARE_ATTEMPT_LIMIT
   end
 
   def submit_payment(attempt)
@@ -93,7 +121,10 @@ class WarehouseCheckoutService
     if charge.approved? && charge.transaction_id.to_s.match?(/\A[A-Za-z0-9_-]{1,64}\z/)
       attempt.update!(status: 'approved', transaction_id: charge.transaction_id, resolved_at: Time.current)
     elsif charge.response_code == '2'
-      attempt.update!(status: 'declined', resolved_at: Time.current)
+      WarehousePaymentAttempt.transaction do
+        attempt.update!(status: 'declined', resolved_at: Time.current)
+        attempt.warehouse_stock_holds.held.update_all(status: 'released', release_reason: 'gateway_declined', released_at: Time.current, updated_at: Time.current)
+      end
     else
       attempt.update!(status: 'unknown')
       log_payment_review(attempt)
@@ -117,6 +148,7 @@ class WarehouseCheckoutService
       lines = @cart.items.map { |item| { item: item } }
       order = create_order(lines, attempt)
       record_success(order, lines, attempt)
+      attempt.warehouse_stock_holds.held.update_all(order_id: order.id, updated_at: Time.current)
       @cart.mark_checked_out!
       attempt.update!(status: 'paid')
       Result.new(success?: true, order: order)
@@ -128,6 +160,8 @@ class WarehouseCheckoutService
   def validate_lines
     validated = []
     @cart.items.each do |item|
+      return 'A cart item is no longer available. Remove it and try again.' unless item.tenant_id == @cart.tenant_id && item.share_id == @share.id
+
       variant = item.variant
       return "#{item.title.presence || 'Item'} is no longer available." unless variant
 
@@ -169,6 +203,7 @@ class WarehouseCheckoutService
         tenant_id: @share.tenant_id,
         order_id: order.id,
         sku: item.sku.presence,
+        source_variant_id: item.variant_id,
         name: item.title,
         quantity: item.quantity,
         unit_cents: item.unit_cents,

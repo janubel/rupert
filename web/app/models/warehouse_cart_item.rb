@@ -10,11 +10,11 @@ class WarehouseCartItem < ApplicationRecord
   belongs_to :cart, class_name: 'WarehouseCart', foreign_key: :cart_id
 
   def variant
-    @variant ||= ShopifyVariant.unscoped.find_by(id: variant_id)
+    ShopifyVariant.warehouse_catalog(tenant_id: tenant_id).find_by(id: variant_id)
   end
 
   def available_quantity
-    InventoryLevel.unscoped.where(shopifyVariantId: variant_id).sum(:quantity)
+    InventoryLevel.warehouse_quantities(tenant_id: tenant_id, variant_ids: [variant_id]).fetch(variant_id, 0)
   end
 
   # Recompute unit/line prices for the current quantity against the share's

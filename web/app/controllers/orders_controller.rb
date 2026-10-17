@@ -10,6 +10,17 @@ class OrdersController < AuthenticatedController
     @fulfillments = @order.fulfillments.order(created_at: :desc)
     @refunds = @order.refunds.order(refunded_at: :desc)
     @doc = params[:doc].to_s == 'packing_slip' ? 'packing_slip' : 'invoice'
+    @warehouse_holds = @order.warehouse_stock_holds.includes(:released_by, warehouse_cart: :items).order(:id)
+  end
+
+  def release_warehouse_stock
+    authorize(:module, :sales_write?)
+    authorize(:module, :inventory_write?)
+    count = WarehouseStockRelease.call(order: @order, actor: Current.user, fulfilled: params[:fulfillment_confirmed],
+      source_confirmed: params[:source_stock_confirmed], adjusted_at: params[:source_adjusted_at], reference: params[:source_adjustment_reference])
+    redirect_to order_path(@order), notice: count.positive? ? 'Warehouse stock holds released; fulfillment and source adjustment recorded.' : 'This order has no remaining stock holds.'
+  rescue WarehouseStockRelease::Error, ActiveRecord::RecordInvalid => error
+    redirect_to order_path(@order), alert: error.message
   end
 
   # Office workflow: record a shipped package with carrier tracking.

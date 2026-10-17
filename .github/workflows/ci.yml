@@ -67,6 +67,9 @@ jobs:
       - name: Prepare test database
         run: bin/rails db:prepare
 
+      - name: Verify warehouse hold migration and legacy backfill
+        run: bin/rails runner test/support/verify_warehouse_hold_migration.rb
+
       - name: Build Tailwind CSS
         run: bin/rails tailwindcss:build
 

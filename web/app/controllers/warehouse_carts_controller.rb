@@ -12,6 +12,9 @@ class WarehouseCartsController < ApplicationController
   rescue_from WarehouseCart::PaymentLocked do |error|
     redirect_to warehouse_cart_path(@share.token), alert: error.message
   end
+  rescue_from WarehouseCart::UnavailableItem do |error|
+    redirect_to warehouse_cart_path(@share.token), alert: error.message
+  end
 
   def show
     @cart = current_cart
@@ -19,11 +22,11 @@ class WarehouseCartsController < ApplicationController
 
   def add_item
     quantity = params[:quantity].to_i.clamp(1, WarehouseCartItem::MAX_QUANTITY)
-    variant = ShopifyVariant.find_by(id: params[:variant_id])
+    variant = ShopifyVariant.warehouse_catalog(tenant_id: @share.tenant_id).find_by(id: params[:variant_id])
 
     return redirect_to(warehouse_sale_path(@share.token), alert: 'That product is no longer available.') unless variant
 
-    available = InventoryLevel.unscoped.where(shopifyVariantId: variant.id).sum(:quantity)
+    available = InventoryLevel.warehouse_quantities(tenant_id: @share.tenant_id, variant_ids: [variant.id]).fetch(variant.id, 0)
     if quantity > available
       return redirect_to(warehouse_sale_path(@share.token),
         alert: "Only #{available} of #{variant.title} are available.")
