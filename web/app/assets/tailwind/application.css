@@ -627,3 +627,14 @@ body:has(.finance-navigation) .module-navigation-wrap { display:none; }
   .finance-primary-links .nav-pill,.finance-navigation .nav-pill { min-height:30px;padding:.1rem .65rem;font-size:.85rem; }
   .finance-navigation-groups > .finance-navigation-group > summary { min-height:30px;padding:.1rem .7rem;font-size:.8rem; }
 }
+
+/* Two-row desktop header: brand + utilities on top, labelled area tabs below. */
+@media(min-width:761px) {
+  .app-header-grid { grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"brand . utils" "areas areas areas";row-gap:.1rem;padding:.3rem 1.5rem .35rem; }
+  .app-brand { grid-area:brand; }
+  .header-utilities { grid-area:utils;justify-self:end; }
+  .area-navigation { grid-area:areas;justify-content:flex-start;gap:.15rem; }
+  .nav-area:not([aria-current=page]) > span { display:inline; }
+  .app-brand-name { display:inline; }
+  .nav-area { padding:.15rem .7rem;min-height:32px; }
+}
