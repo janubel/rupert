@@ -1,0 +1,20 @@
+[Unit]
+Description=Rupert core Google sign-in proxy
+After=network-online.target rupert-core.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=oauth2-proxy
+Group=oauth2-proxy
+ExecStart=/usr/local/bin/oauth2-proxy --config=/etc/rrupert-oauth2-proxy.cfg
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/etc/rrupert-oauth2-proxy.cfg /etc/rrupert-oauth2-emails.txt /var/lib/rrupert-auth
+
+[Install]
+WantedBy=multi-user.target

@@ -93,6 +93,26 @@ finally:
     try: srv.terminate(); srv.wait(timeout=10)
     except Exception: srv.kill()
 
+# public signup is closed by default; a shared code opens it for callers who know it
+def signup_server(port, extra):
+    env = {k: v for k, v in os.environ.items() if not k.startswith("RUPERT_")}
+    return subprocess.Popen([BIN], env=dict(env, RUPERT_DATA=tempfile.mkdtemp(prefix="rupert-signup-"), RUPERT_LISTEN=f"127.0.0.1:{port}", RUPERT_BASE_DOMAIN="rupert.test", **extra), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+def signup_call(port, body):
+    r = urllib.request.Request(f"http://127.0.0.1:{port}/auth/signup", method="POST", headers={"content-type": "application/json"}, data=json.dumps(body).encode())
+    try: return urllib.request.urlopen(r, timeout=10).status
+    except urllib.error.HTTPError as e: return e.code
+body = lambda n, **kw: {"email": f"{n}@x.test", "password": "correct-horse-battery", "org_name": "S", "subdomain": f"sub{n}", **kw}
+for port, extra, cases in (
+    (8796, {}, [("closed by default", body("a"), 403), ("a code is ignored when none is configured", body("b", signup_code="whatever"), 403)]),
+    (8797, {"RUPERT_SIGNUP_CODE": "open-sesame-123"}, [("missing code refused", body("c"), 403), ("wrong code refused", body("d", signup_code="nope"), 403), ("right code accepted", body("e", signup_code="open-sesame-123"), 201)]),
+    (8798, {"RUPERT_SIGNUP": "open"}, [("explicitly open", body("f"), 201)]),
+):
+    p2 = signup_server(port, extra); time.sleep(1)
+    try:
+        for name, b, want in cases: check("signup " + name, signup_call(port, b), want)
+    finally:
+        p2.terminate(); p2.wait()
+
 print(f"{total - len(fails)}/{total} passed")
 for f in fails: print("FAIL", f)
 sys.exit(1 if fails else 0)

@@ -8,7 +8,7 @@ PORT = 8791
 BASE = f"http://127.0.0.1:{PORT}"
 data = tempfile.mkdtemp(prefix="rupert-smoke-")
 srv = subprocess.Popen([BIN], env=dict(os.environ, RUPERT_DATA=data, RUPERT_LISTEN=f"127.0.0.1:{PORT}",
-                       RUPERT_COOKIE_SECURE="0", RUPERT_BASE_DOMAIN="rupert.test"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                       RUPERT_COOKIE_SECURE="0", RUPERT_BASE_DOMAIN="rupert.test", RUPERT_SIGNUP="open"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 fails, total = [], 0
 
@@ -49,7 +49,7 @@ try:
     check("me session, no host (single membership)", call("GET", "/api/v1/me", tok=A_SESS)[0], 200)
     check("session on wrong host", call("GET", "/api/v1/me", tok=A_SESS, host="shopb.rupert.test")[0], 401)
 
-    check("login ok", call("POST", "/auth/login", {"email": "a@x.test", "password": PW})[0], 200)
+    s, lg, _ = call("POST", "/auth/login", {"email": "a@x.test", "password": PW}); check("login ok", s, 200); OTHER_SESS = lg["session_token"]
     check("login wrong pw", call("POST", "/auth/login", {"email": "a@x.test", "password": "wrong-wrong-wrong"})[0], 401)
     check("login unknown", call("POST", "/auth/login", {"email": "nobody@x.test", "password": PW})[0], 401)
 
@@ -80,6 +80,19 @@ try:
     check("staff cannot adjust", call("POST", "/api/v1/adjust", {"sku": "S1", "delta": 1, "reason": "x"}, tok=ST, host="shopa.rupert.test")[0], 403)
     check("staff cannot mint tokens", call("POST", "/api/v1/tokens", {"name": "z", "scopes": ["inventory:read"]}, tok=ST, host="shopa.rupert.test")[0], 403)
     check("staff cannot invite", call("POST", "/api/v1/invites", {"email": "q@x.test", "role": "staff"}, tok=ST, host="shopa.rupert.test")[0], 403)
+
+    # password change
+    NEWPW = "a-brand-new-long-password"
+    check("pw change: wrong current password", call("POST", "/api/v1/me/password", {"current_password": "not-the-password", "new_password": NEWPW}, tok=A_SESS)[0], 401)
+    check("pw change: too short", call("POST", "/api/v1/me/password", {"current_password": PW, "new_password": "short"}, tok=A_SESS)[0], 400)
+    check("pw change: must differ", call("POST", "/api/v1/me/password", {"current_password": PW, "new_password": PW}, tok=A_SESS)[0], 400)
+    check("pw change: tokens cannot", call("POST", "/api/v1/me/password", {"current_password": PW, "new_password": NEWPW}, tok=RO)[0], 403)
+    check("pw change: needs auth", call("POST", "/api/v1/me/password", {"current_password": PW, "new_password": NEWPW})[0], 401)
+    check("pw change ok", call("POST", "/api/v1/me/password", {"current_password": PW, "new_password": NEWPW}, tok=A_SESS)[0], 200)
+    check("pw change keeps this session", call("GET", "/api/v1/me", tok=A_SESS)[0], 200)
+    check("pw change signs out other sessions", call("GET", "/api/v1/me", tok=OTHER_SESS)[0], 401)
+    check("old password no longer works", call("POST", "/auth/login", {"email": "a@x.test", "password": PW})[0], 401)
+    check("new password works", call("POST", "/auth/login", {"email": "a@x.test", "password": NEWPW})[0], 200)
 
     check("logout", call("POST", "/auth/logout", tok=ST)[0], 200)
     check("logged-out session rejected", call("GET", "/api/v1/me", tok=ST)[0], 401)

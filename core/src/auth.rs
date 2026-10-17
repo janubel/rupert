@@ -53,6 +53,9 @@ pub struct AuthState {
     trust_proxy: bool,
     secure_cookie: bool,
     pub dev: bool,
+    /// Public signup is closed unless dev mode, `RUPERT_SIGNUP=open`, or the caller knows `RUPERT_SIGNUP_CODE`.
+    signup_open: bool,
+    signup_code: Option<String>,
 }
 
 impl AuthState {
@@ -78,6 +81,11 @@ impl AuthState {
             trust_proxy: env("RUPERT_TRUST_PROXY").as_deref() == Some("1"),
             secure_cookie: env("RUPERT_COOKIE_SECURE").as_deref() != Some("0"),
             dev: env("RUPERT_DEV").as_deref() == Some("1"),
+            signup_open: env("RUPERT_SIGNUP").as_deref() == Some("open")
+                || env("RUPERT_DEV").as_deref() == Some("1"),
+            signup_code: env("RUPERT_SIGNUP_CODE")
+                .filter(|c| !c.is_empty())
+                .map(|c| sha_hex(&c)),
         }
     }
 }
@@ -106,6 +114,11 @@ fn verify_pw(pw: &str, hash: &str) -> bool {
         .map(|h| argon().verify_password(pw.as_bytes(), &h).is_ok())
         .unwrap_or(false)
 }
+/// Constant-time equality for equal-length secrets (digests).
+fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
 pub fn sha_hex(s: &str) -> String {
     Sha256::digest(s.as_bytes())
         .iter()
@@ -413,6 +426,7 @@ struct Signup {
     org_name: String,
     subdomain: String,
     name: Option<String>,
+    signup_code: Option<String>,
 }
 
 async fn signup(
@@ -422,6 +436,16 @@ async fn signup(
     Json(b): Json<Signup>,
 ) -> R {
     limit(&reg, format!("signup|{}", client_key(&reg, ci, &h)), 5)?;
+    if !reg.auth.signup_open {
+        // Closed by default: only a caller holding the shared code may create an organization.
+        let ok = match (&reg.auth.signup_code, &b.signup_code) {
+            (Some(want), Some(got)) => ct_eq(want.as_bytes(), sha_hex(got).as_bytes()),
+            _ => false,
+        };
+        if !ok {
+            return Err(err(403, "signups are closed"));
+        }
+    }
     let email = b.email.trim().to_ascii_lowercase();
     if !valid_email(&email) {
         return Err(err(400, "invalid email"));
@@ -570,6 +594,87 @@ fn memberships(c: &Connection, uid: i64) -> Vec<Value> {
     c.prepare_cached("SELECT m.tenant_id,t.name,m.role FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=?1")
         .and_then(|mut s| s.query_map([uid], |r| Ok(json!({ "tenant_id": r.get::<_, String>(0)?, "name": r.get::<_, String>(1)?, "role": r.get::<_, String>(2)? }))).map(|i| i.flatten().collect()))
         .unwrap_or_default()
+}
+
+#[derive(Deserialize)]
+struct ChangePassword {
+    current_password: String,
+    new_password: String,
+}
+
+/// Signed-in users change their own password. All of their other sessions are signed out; API tokens are
+/// unaffected (revoke them separately if the password was compromised).
+async fn change_password(
+    State(reg): State<Arc<Registry>>,
+    p: Principal,
+    h: HeaderMap,
+    Json(b): Json<ChangePassword>,
+) -> R {
+    if p.token_id.is_some() {
+        return Err(err(
+            403,
+            "passwords are changed by signed-in users, not tokens",
+        ));
+    }
+    limit(&reg, format!("pwchange|{}", p.user_id), 10)?;
+    if !valid_pw(&b.new_password) {
+        return Err(err(400, "password must be 12-128 characters"));
+    }
+    if b.new_password == b.current_password {
+        return Err(err(
+            400,
+            "the new password must differ from the current one",
+        ));
+    }
+    let (r2, uid) = (reg.clone(), p.user_id);
+    let hash: String = tokio::task::spawn_blocking(move || {
+        r2.central
+            .lock()
+            .query_row("SELECT pw_hash FROM users WHERE id=?1", [uid], |r| r.get(0))
+            .ok()
+    })
+    .await
+    .map_err(|_| err(500, "internal"))?
+    .ok_or_else(|| err(404, "not found"))?;
+    if !verify_async(&reg, b.current_password, hash).await {
+        let r3 = reg.clone();
+        let t = p.tenant_id.clone();
+        tokio::task::spawn_blocking(move || {
+            audit(
+                &r3.central.lock(),
+                Some(&t),
+                Some(uid),
+                "password_change_failed",
+                "",
+            )
+        })
+        .await
+        .ok();
+        return Err(err(401, "current password is incorrect"));
+    }
+    let new_hash = hash_async(&reg, b.new_password).await?;
+    let current = h
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(str::to_string)
+        .or_else(|| cookie_val(&h))
+        .map(|t| sha_hex(&t))
+        .unwrap_or_default();
+    let (r4, t4) = (reg.clone(), p.tenant_id.clone());
+    tokio::task::spawn_blocking(move || {
+        let c = r4.central.lock();
+        let _ = c.execute("UPDATE users SET pw_hash=?2 WHERE id=?1", params![uid, new_hash]);
+        let _ = c.execute(
+            "UPDATE sessions SET revoked_at=?3 WHERE user_id=?1 AND digest<>?2 AND revoked_at IS NULL",
+            params![uid, current, crate::now()],
+        );
+        audit(&c, Some(&t4), Some(uid), "password_change", "");
+    })
+    .await
+    .map_err(|_| err(500, "internal"))?;
+    reg.auth.principals.invalidate_all();
+    ok(json!({ "changed": true }))
 }
 
 async fn logout(State(reg): State<Arc<Registry>>, h: HeaderMap) -> R {
@@ -858,6 +963,7 @@ pub fn routes() -> Router<Arc<Registry>> {
         .route("/auth/logout", post(logout))
         .route("/auth/invites/accept", post(accept_invite))
         .route("/api/v1/me", get(me))
+        .route("/api/v1/me/password", post(change_password))
         .route("/api/v1/tokens", get(list_tokens).post(create_token))
         .route("/api/v1/tokens/{id}", delete(revoke_token))
         .route("/api/v1/invites", post(create_invite))
