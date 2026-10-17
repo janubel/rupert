@@ -44,7 +44,7 @@ class SoftDeleteTest < ActionDispatch::IntegrationTest
 
   test 'deleting an expense soft-deletes it and it can be restored' do
     expense = Finance::Expense.create!(tenant_id: @tenant.id, payee: 'Soft Co', category: 'supplies',
-      amount_cents: 5000, incurred_on: Date.today, method: 'card')
+      amount_cents: 5000, incurred_on: Date.current, method: 'card')
 
     post finance_expense_path(expense), params: {
       _method: 'delete', shop: 'm11u0i-sb.myshopify.com', embedded: '1'
@@ -76,7 +76,7 @@ class SoftDeleteTest < ActionDispatch::IntegrationTest
     po.mark_received!
 
     payment = Finance::VendorPayment.create!(tenant_id: @tenant.id, vendor_id: vendor.id, amount_cents: 4000,
-      paid_on: Date.today, method: 'check')
+      paid_on: Date.current, method: 'check')
     assert_equal 6000, Purchasing::Payables.total_cents
 
     payment.discard
