@@ -202,4 +202,4 @@ Rails and every other site are untouched by any of this.
   limits and the request budget, not by Google. If you prefer, tell me and I will put only `/hooks/*` and `/healthz`
   outside the gate and give API clients a separate hostname.
 - The app has no MFA of its own; Google sign-in plays that role for human access. Webhooks are not registered yet
-  (that is a write to Shopify/Square and needs your approval). Scheduled syncs and the backup timer are still off.
+  (that is a write to Shopify/Square and needs your approval). Backups (6-hourly, plus a host copy) and 15-minute scheduled syncs are on as of 2026-10-17; see DEPLOYMENT-PLAN section 14.

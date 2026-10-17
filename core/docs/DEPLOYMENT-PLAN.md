@@ -272,3 +272,45 @@ no leftover. Startup log reports `git_rev 27fcd16`, `dev:false`.
 password is the generated one and the owner email is the placeholder `owner@rupert-core.local` (change the password with
 `POST /api/v1/me/password`; the email has no endpoint yet); oauth2-proxy files and the Google client secret; Hover A record;
 Caddy block with `sudo`.
+
+## 14. Backups, restore drill and scheduled syncs (2026-10-17, owner approved; no Caddy, DNS or webhook changes)
+
+**Backup (inside `rupert-core`).** `rupert-core-backup` (installed in `/usr/local/sbin`, run by `rupert-core-backup.timer` at
+00/06/12/18:17 UTC, `Persistent`, as the service user so file ownership never drifts). For central.db and every tenant
+database it takes a `VACUUM INTO` snapshot (consistent while the service keeps writing), checks `PRAGMA integrity_check`,
+gzips it and records SHA-256 and per-table row counts in `MANIFEST.json`. The run is built under a `.partial` name and renamed
+only when complete; the newest 32 runs are kept; everything is 0600/0700. The master key is **not** in the backup
+(by design: a backup alone cannot decrypt stored provider credentials). First real run: 2 databases, 6,016 tenant rows, about
+195 KB compressed. `rupert-core-restore <run> <empty-dir>` verifies every checksum, refuses a non-empty target, and checks
+integrity and exact row counts after restoring.
+
+**Copy outside the container.** A user timer on the SER8 host (`rupert-core-backup-pull`, 00/06/12/18:40 UTC, 23 minutes after
+each backup) pulls the newest run to `~/rupert-core-backups/`, verifies every file against the manifest before accepting it and
+keeps 28. This survives losing the container. It is still the same physical disk, so a true **off-host copy remains open**.
+
+**Tests.** `tests/backup_test.py` (22 checks, no server needed): backups taken while writers commit paired rows are
+transactionally consistent (restored `xs == ys`), pruning, private permissions, no key or env file in a backup, restore refuses a
+non-empty target, a tampered file is rejected before anything is written, a manifest row-count mismatch is rejected and cleaned
+up, a corrupt tenant database fails the run leaving earlier backups untouched and no `.partial` directory.
+
+**Restore drill** (`scripts/restore-drill.sh`, installed on the host as `rupert-core-restore-drill`; takes about 10 s, repeatable,
+leaves nothing behind). It takes a fresh backup, copies it to the host, restores the **host copy** into a scratch container and starts
+the real service from it, with the scheduler off and the Shopify/Square URLs pointed at a closed local port so nothing can reach the
+real stores. Result, run three times (once in the background, once in the foreground, once under trace): PASS on every check:
+restore verified, service healthy from restored data (restore plus start took 1-2 s on top of the container being ready), owner login
+works with the restored password hash, health counts equal the manifest, sealed Shopify credentials decrypt with the escrowed
+master key, and a **wrong** key leaves them unreadable (so the master key must be escrowed separately; it is currently only in
+`/etc/rupert-core/env` and in container snapshots). The scratch container is deleted. (A first foreground run hung because the
+script inherited an open stdin from ssh; fixed with `exec </dev/null`.)
+
+**Scheduled syncs.** Shopify and Square every 15 minutes (the Rails mirror syncs on the same cadence), first runs about 15 minutes after
+they were set. Per pass the app makes about 20 Shopify and 13 Square requests, so 15-minute scheduling uses roughly 8-10% of the
+1000-per-hour budget per provider. Failures back off exponentially; `GET /api/v1/health` reports `overdue` if a schedule falls
+behind three intervals.
+
+**Still open:** an alert when a backup or sync is stale (the health endpoint covers syncs only; a host timer that calls it, plus a
+backup-age check, would complete it); off-host backup destination; master key escrow; the quarterly drill is a calendar item, not a
+timer; recovery of `/root/.config/rupert-core/live-owner.json` and the oauth2-proxy secrets (not in backups: re-creatable).
+
+**To restore for real:** `systemctl stop rupert-core`, move `/var/lib/rupert-core` aside, `rupert-core-restore <run> /var/lib/rupert-core`,
+`chown -R rupertcore:rupertcore /var/lib/rupert-core`, `systemctl start rupert-core`, then `scripts/parity.py`.

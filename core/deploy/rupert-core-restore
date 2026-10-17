@@ -1,0 +1,70 @@
+#!/usr/bin/python3 -I
+"""Restore a rupert-core backup run into an EMPTY directory.
+
+  rupert-core-restore <backup-run-dir> <target-dir>
+
+Every file is checked against MANIFEST.json (SHA-256) before it is decompressed; each restored database must pass
+PRAGMA integrity_check and have exactly the per-table row counts recorded at backup time. The target must not exist
+or must be empty, so a restore can never overwrite live data. On any problem nothing is left behind and the exit code
+is non-zero. After a successful restore: chown the tree to the service user and start the service.
+"""
+import gzip, hashlib, json, os, shutil, sqlite3, sys
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def table_counts(conn):
+    names = [r[0] for r in conn.execute("select name from sqlite_master where type='table' and name not like 'sqlite_%' order by name")]
+    return {n: conn.execute(f'select count(*) from "{n}"').fetchone()[0] for n in names}
+
+
+def main():
+    if len(sys.argv) != 3:
+        raise SystemExit(__doc__)
+    src, dst = sys.argv[1], sys.argv[2]
+    with open(os.path.join(src, "MANIFEST.json")) as f:
+        manifest = json.load(f)
+    if manifest.get("format") != 1:
+        raise SystemExit("unsupported backup format")
+    if os.path.exists(dst) and os.listdir(dst):
+        raise SystemExit(f"refusing to restore into a non-empty directory: {dst}")
+    for e in manifest["files"]:
+        p = os.path.join(src, e["file"])
+        if not os.path.exists(p):
+            raise SystemExit(f"missing file: {e['file']}")
+        if sha256(p) != e["sha256"]:
+            raise SystemExit(f"checksum mismatch (corrupt or tampered): {e['file']}")
+    created = not os.path.exists(dst)
+    os.makedirs(os.path.join(dst, "tenants"), mode=0o700, exist_ok=True)
+    os.umask(0o077)
+    try:
+        for e in manifest["files"]:
+            out = os.path.join(dst, e["db"])
+            with gzip.open(os.path.join(src, e["file"]), "rb") as g, open(out, "wb") as f:
+                shutil.copyfileobj(g, f)
+            os.chmod(out, 0o600)
+            c = sqlite3.connect(f"file:{out}?mode=ro", uri=True)
+            try:
+                verdict = c.execute("PRAGMA integrity_check").fetchone()[0]
+                counts = table_counts(c)
+            finally:
+                c.close()
+            if verdict != "ok":
+                raise SystemExit(f"integrity_check failed after restore: {e['db']}: {verdict}")
+            if counts != e["tables"]:
+                bad = sorted(k for k in set(counts) | set(e["tables"]) if counts.get(k) != e["tables"].get(k))
+                raise SystemExit(f"row counts differ from the backup manifest in {e['db']}: {bad}")
+    except BaseException:
+        shutil.rmtree(dst, ignore_errors=True) if created else [shutil.rmtree(os.path.join(dst, x), ignore_errors=True) for x in os.listdir(dst)]
+        raise
+    print(json.dumps({"event": "restore-ok", "created": manifest["created"], "databases": len(manifest["files"]), "target": dst}))
+
+
+if __name__ == "__main__":
+    main()
