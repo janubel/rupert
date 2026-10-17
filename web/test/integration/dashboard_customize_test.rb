@@ -73,7 +73,7 @@ class DashboardCustomizeTest < ActionDispatch::IntegrationTest
   end
   test 'customizing and resetting layout preserve the bookkeeping landing preference' do
     @user.update!(dashboard_config: { 'start_page' => 'bookkeeping' })
-    post customize_dashboard_path, params: { widgets: ['stats'], hidden: [] }
+    post customize_dashboard_path, params: { widgets: ['stats'], hidden: [] }, as: :json
     assert_response :success
     assert_equal 'bookkeeping', @user.reload.dashboard_config_hash['start_page']
     post customize_dashboard_path, params: { reset: true }
