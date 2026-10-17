@@ -520,3 +520,35 @@
 .operations-workspace:has(.finance-navigation) [class*="pill-"] { font-size:.9375rem; }
 .operations-workspace:has(.finance-navigation) .eyebrow { font-size:.875rem; }
 .finance-navigation .workspace-nav-group,.finance-navigation .finance-navigation-hint { font-size:.9375rem; }
+/* Bookkeeping: consistent financial hierarchy and tabular money columns. */
+.bookkeeping-period { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1.5rem; }
+.bookkeeping-period .operations-filters { flex:1 1 24rem;max-width:38rem; }
+.bookkeeping-stats { display:grid;gap:1rem;grid-template-columns:repeat(2,minmax(0,1fr)); }
+.bookkeeping-stat { min-width:0;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);padding:1.25rem; }
+.bookkeeping-stat-balance { background:#193e3a;color:#fff;border-color:#193e3a; }
+.bookkeeping-stat-balance .stat-label { color:#cae1d4; }
+.bookkeeping-number { margin:.6rem 0;font-size:clamp(1.25rem,2vw,1.8rem);font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.035em;line-height:1.25;overflow-wrap:anywhere; }
+.bookkeeping-review-banner { display:flex;flex-wrap:wrap;align-items:center;gap:1rem;border:1px solid #d8c59b;border-radius:1rem;background:#faf4e6;padding:1.25rem; }
+.bookkeeping-review-count { font-size:2.5rem;line-height:1;font-weight:600;font-variant-numeric:tabular-nums;min-width:3rem; }
+.bookkeeping-review-banner .desk-meter { max-width:26rem; }
+.bookkeeping-columns { display:grid;gap:1.25rem;align-items:start; }
+.bookkeeping-section-heading { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem; }
+.bookkeeping-category { display:flex;justify-content:space-between;gap:1rem;font-size:.875rem;font-variant-numeric:tabular-nums; }
+.bookkeeping-category-track { margin-top:.35rem;height:.4rem;background:var(--color-fog);border-radius:1rem;overflow:hidden; }
+.bookkeeping-category-track span { display:block;height:100%;border-radius:1rem;background:var(--color-fern); }
+.bookkeeping-divider { display:flex;flex-wrap:wrap;gap:.5rem;justify-content:space-between;border-top:1px solid var(--color-fog);padding-top:1rem;font-variant-numeric:tabular-nums; }
+.bookkeeping-question { display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--color-fog);border-left:3px solid #a47d34;border-radius:.65rem;padding:.8rem;overflow-wrap:anywhere; }
+.bookkeeping-question:hover { background:var(--color-haze); }
+.bookkeeping-question-top { display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;font-size:.8rem;font-variant-numeric:tabular-nums; }
+.bookkeeping-empty { padding:1rem 0;color:var(--color-mocha);font-size:.875rem; }
+.bookkeeping-table th { background:var(--color-haze);text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--color-mocha); }
+.bookkeeping-table th,.bookkeeping-table td { padding:.9rem 1.1rem;border-top:1px solid var(--color-fog);vertical-align:top; }
+.bookkeeping-table th.text-right { text-align:right; }
+.bookkeeping-amount { font-variant-numeric:tabular-nums;font-weight:600; }
+.bookkeeping-tools { display:grid;gap:1rem; }
+.bank-review-note { display:block;margin-top:.35rem;font-size:.75rem;line-height:1.5;color:var(--color-mocha); }
+.bank-flagged { border-left:3px solid #a47d34;background:#faf4e640; }
+@media(min-width:1000px) { .bookkeeping-stats { grid-template-columns:repeat(4,minmax(0,1fr)); }.bookkeeping-columns { grid-template-columns:minmax(0,1fr) minmax(0,1.2fr); }.bookkeeping-tools { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(max-width:640px) { .bookkeeping-review-banner .btn-primary { width:100%; }.bookkeeping-header .btn-primary,.bookkeeping-header .btn-ghost { width:100%; }.bookkeeping-header > div { width:100%; }.bookkeeping-stat { padding:1rem; }.bookkeeping-period .operations-filters { flex-basis:100%; } }
+.finance-primary-links { display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.85rem;padding-bottom:.85rem;border-bottom:1px solid var(--color-fog); }
+.finance-primary-links .nav-pill { min-height:40px;display:inline-flex;align-items:center; }

@@ -26,17 +26,6 @@ class FinancePostingAtomicTest < ActionDispatch::IntegrationTest
     assert_equal 1250, Finance::JournalEntry.last.debit_cents
   end
 
-  test 'a missing account rolls the expense back and says why instead of a 404' do
-    Finance::ChartOfAccounts.seed!
-    Finance::Account.find_by!(code: '1000').destroy
-    assert_no_difference ['Finance::Expense.count', 'Finance::JournalEntry.count'] do
-      post finance_expenses_path, params: params_for
-    end
-    assert_response :unprocessable_entity
-    assert_includes response.body, 'Account 1000 is missing from the chart of accounts'
-    assert_includes response.body, 'Nothing was saved'
-  end
-
   test 'any posting failure leaves no expense behind' do
     Finance::ChartOfAccounts.seed!
     Finance::Posting.stub(:expense, ->(*, **) { raise Finance::Posting::Error, 'ledger refused' }) do

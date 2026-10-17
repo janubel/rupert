@@ -29,11 +29,11 @@ module Ctrax
 
     def url(record)
       product = product_for(record)
-      return unless product
+      return unless product && product.featuredImageUrl.present?
 
       uri = URI.parse(product.featuredImageUrl)
       return unless uri.scheme == 'https' && uri.userinfo.nil? && uri.port == 443 &&
-                    (uri.host == 'cdn.shopify.com' || uri.host == 'herbalhealerscbd.com' || uri.host == 'www.herbalhealerscbd.com')
+                    (uri.host == 'cdn.shopify.com' || uri.host == 'herbalhealerscbd.com' || uri.host == 'www.herbalhealerscbd.com' || uri.host == 'herbalhealers.com' || uri.host == 'www.herbalhealers.com')
 
       product.thumbnail_url(width: 320, height: 320)
     rescue URI::InvalidURIError

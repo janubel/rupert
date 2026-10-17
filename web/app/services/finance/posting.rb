@@ -137,11 +137,16 @@ module Finance
 
       private
 
-      # A tenant that has never opened Chart of accounts has no chart yet;
-      # create the standard one on first use. A code still missing after that
-      # means someone changed the chart, which must be said plainly.
+      # A tenant created before the chart of accounts existed (or in a test) may
+      # have none; seed the standard chart (idempotent) instead of failing the
+      # money record the user is saving. Only missing standard accounts are
+      # added; the workspace's existing accounts are never replaced. A code
+      # still missing after that is reported plainly so the record rolls back.
       def account(code)
-        Finance::ChartOfAccounts.seed! if Finance::Account.none?
+        existing = Finance::Account.find_by(code: code)
+        return existing if existing
+
+        Finance::ChartOfAccounts.seed!
         Finance::Account.find_by(code: code) ||
           raise(Error, "Account #{code} is missing from the chart of accounts. Restore or re-create it, then try again. Nothing was saved.")
       end

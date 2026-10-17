@@ -1,0 +1,4 @@
+[safe]
+	directory = /opt/rupert
+	directory = /opt/rbenv
+	directory = /opt/rbenv/plugins/ruby-build

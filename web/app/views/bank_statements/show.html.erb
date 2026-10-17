@@ -7,12 +7,15 @@
     <div>
       <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Bank statement</p>
       <h1 class="page-title mt-2"><%= @document.filename %></h1>
-      <p class="mt-2 text-sm text-mocha"><%= @document.period_from %> to <%= @document.period_to %> · <%= @counts.fetch('pending', 0) %> to review · <%= @counts.fetch('recorded', 0) %> recorded · <%= @counts.fetch('ignored', 0) %> ignored.</p>
+      <p class="mt-2 text-sm text-mocha"><%= @document.period_from %> to <%= @document.period_to %> · <%= @counts.fetch('pending', 0) %> to review · <%= @counts.fetch('recorded', 0) %> recorded · <%= @counts.fetch('ignored', 0) %> ignored · <%= @counts.fetch('matched', 0) %> matched.</p>
+      <% if @flagged_count.positive? %><p class="mt-2 text-sm font-semibold"><%= @flagged_count %> flagged for your clarification. Open questions stay pending until you decide.</p><% end %>
       <div class="desk-meter mt-3 max-w-sm" role="progressbar" aria-valuemin="0" aria-valuemax="<%= total_lines %>" aria-valuenow="<%= decided %>" aria-label="Lines decided"><span style="width: <%= total_lines.zero? ? 0 : decided * 100 / total_lines %>%"></span></div>
       <p class="mt-1 text-xs text-mocha"><%= decided %> of <%= pluralize(total_lines, 'line') %> decided</p>
     </div>
     <div class="flex flex-wrap gap-2">
       <%= link_to 'Back to statements', bank_statements_path, class: 'btn-ghost btn-sm' %>
+      <%= link_to 'Bookkeeping overview', bookkeeping_path(month: @document.period_from.strftime('%Y-%m')), class: 'btn-ghost btn-sm' %>
+      <% if @flagged_count.positive? %><%= link_to 'Flagged questions', bank_statement_path(@document.id, show: 'flagged'), class: 'btn-ghost btn-sm' %><% end %>
       <%= link_to(@filter == 'all' ? 'Only waiting' : 'Show everything', bank_statement_path(@document.id, show: (@filter == 'all' ? 'pending' : 'all')), class: 'btn-ghost btn-sm') %>
       <%= link_to 'Original file', document_daily_reconciliation_path(@document), class: 'btn-ghost btn-sm', data: { turbo: false } %>
     </div>
@@ -20,7 +23,7 @@
 
   <% if @lines.empty? %>
     <div class="card card-pad space-y-2 text-sm">
-      <p class="font-semibold">Nothing waiting. Every line has a decision.</p>
+      <p class="font-semibold"><%= @filter == 'flagged' ? 'No flagged questions waiting.' : 'Nothing waiting. Every line has a decision.' %></p>
       <% if Current.user.can?('reports.read') %><p><%= link_to 'Back to the Books desk', books_desk_path, class: 'font-semibold text-olive-deep underline' %> for the rest of the week’s cleanup.</p><% end %>
     </div>
   <% else %>
@@ -41,9 +44,12 @@
         </tr></thead>
         <tbody class="divide-y divide-fog">
           <% @lines.each do |line| %>
-            <tr>
+            <tr id="bank-line-<%= line.id %>" class="<%= 'bank-flagged' if line.review_flag? %>">
               <td class="td whitespace-nowrap"><%= line.posted_on.strftime('%b %-d, %Y') %></td>
-              <td class="td max-w-md break-words"><%= line.description %></td>
+              <td class="td max-w-md break-words"><%= line.description %>
+                <% if line.review_category.present? %><span class="block mt-1 text-xs font-semibold"><%= '⚑ ' if line.review_flag? %><%= line.review_category_label %></span><% end %>
+                <% if line.review_note.present? %><span class="bank-review-note"><%= line.review_note %></span><% end %>
+              </td>
               <td class="td text-right"><%= line.money_out? ? money.call(line.amount_cents) : '' %></td>
               <td class="td text-right"><%= line.money_out? ? '' : money.call(line.amount_cents) %></td>
               <td class="td">

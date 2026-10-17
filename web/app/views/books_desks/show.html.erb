@@ -1,4 +1,4 @@
-<% content_for :title, 'Books desk' %>
+<% content_for :title, 'Close & review · Bookkeeping' %>
 <% desk = @desk; progress = desk.progress; next_day = desk.next_day; next_task = desk.next_task
    this_week = desk.this_week_days; focus_days = desk.focus_days; tasks = desk.focus_tasks
    week_state = desk.week_period(desk.focus_week).state %>
@@ -7,8 +7,8 @@
 
   <header class="operations-header">
     <div>
-      <p class="eyebrow text-mocha">Finance · daily and weekly cleanup</p>
-      <h1 class="page-title mt-2">Books desk</h1>
+      <p class="eyebrow text-mocha">Bookkeeping · daily and weekly cleanup</p>
+      <h1 class="page-title mt-2">Close & review</h1>
       <p class="mt-2 max-w-2xl text-sm text-mocha">Each finished day moves through six steps, and each finished week has a short list of chores. Rupert shows what is done and opens the right page for whatever is next. Nothing here changes a record by itself.</p>
     </div>
     <% if @can_write_finance || @can_write_reports %>

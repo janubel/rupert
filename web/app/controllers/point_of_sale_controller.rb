@@ -18,8 +18,7 @@ class PointOfSaleController < AuthenticatedController
   rescue_from QuoteError, with: :invalid_quote
 
   def index
-    load_catalog
-    @catalog_status = SourceSyncStatus.all.find { |status| status[:key] == 'shopify' }
+    redirect_to ctrax_pos_path
   end
 
   def quote
@@ -41,8 +40,12 @@ class PointOfSaleController < AuthenticatedController
     respond_to do |format|
       format.json { render json: @quote }
       format.html do
-        load_catalog
-        render :index
+        if controller_path == 'point_of_sale'
+          redirect_to ctrax_pos_path
+        else
+          load_catalog
+          render :index
+        end
       end
     end
   end
@@ -225,9 +228,13 @@ class PointOfSaleController < AuthenticatedController
     respond_to do |format|
       format.json { render json: { error: error.message }, status: :unprocessable_entity }
       format.html do
-        @quote_error = error.message
-        load_catalog
-        render :index, status: :unprocessable_entity
+        if controller_path == 'point_of_sale'
+          redirect_to ctrax_pos_path, alert: error.message
+        else
+          @quote_error = error.message
+          load_catalog
+          render :index, status: :unprocessable_entity
+        end
       end
     end
   end

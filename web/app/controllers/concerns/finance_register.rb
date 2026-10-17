@@ -4,6 +4,7 @@
 # registers. Read-only: nothing here changes a record.
 module FinanceRegister
   extend ActiveSupport::Concern
+  include FinanceRegisterPeriod
 
   AMOUNT_FORMAT = /\A\d{1,9}(?:\.\d{1,2})?\z/
 
@@ -33,8 +34,8 @@ module FinanceRegister
       @range_days = nil
       [from, to]
     else
-      @range_days = params[:days].present? ? params[:days].to_i.clamp(7, 365) : default_days
-      [Date.current - (@range_days - 1), Date.current]
+      load_finance_register_period
+      [@from, @through]
     end
   end
 

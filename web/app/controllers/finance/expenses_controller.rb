@@ -28,7 +28,7 @@ module Finance
       response.headers['Cache-Control'] = 'private, no-store'
       ordered = scope.includes(:vendor).order(incurred_on: :desc, created_at: :desc)
       if request.format.csv?
-        send_data expenses_csv(ordered), filename: "expenses-#{@from}-#{@through}.csv", type: 'text/csv'
+        send_data expenses_csv(ordered), filename: "expenses-#{@month || "#{@from}-#{@through}"}.csv", type: 'text/csv'
         return
       end
       @pagy, @expenses = pagy(ordered, items: 50)
@@ -123,6 +123,14 @@ module Finance
     # Runs the record change and its ledger posting as one unit. If either
     # fails the whole thing is rolled back and the reason is put on the record,
     # so an expense is never saved without its ledger entry.
+    def posting_failure_message(error)
+      case error
+      when ActiveRecord::RecordInvalid then error.record.errors.full_messages.to_sentence
+      when ActiveRecord::RecordNotFound then 'The expense could not be posted. Check the chart of accounts and try again.'
+      else error.message
+      end
+    end
+
     def save_with_posting
       ok = false
       Finance::Expense.transaction do
@@ -130,8 +138,8 @@ module Finance
         raise ActiveRecord::Rollback unless ok
       end
       ok
-    rescue Finance::Posting::Error, ActiveRecord::RecordInvalid => e
-      @expense.errors.add(:base, e.is_a?(ActiveRecord::RecordInvalid) ? e.record.errors.full_messages.to_sentence : e.message)
+    rescue Finance::Posting::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
+      @expense.errors.add(:base, posting_failure_message(e))
       false
     end
 

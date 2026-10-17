@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  resource :bookkeeping, only: :show, controller: 'bookkeeping'
   resource :books_desk, only: :show, path: 'books' do
     get :checks
   end
@@ -43,6 +44,7 @@ Rails.application.routes.draw do
   resources :ctrax_timesheets, path: 'people/ctrax_timesheets', controller: 'people/ctrax_timesheets', only: %i[index show], as: :people_ctrax_timesheets
   patch '/people/ctrax_timesheets/schedule', to: 'people/ctrax_timesheet_schedules#update', as: :people_ctrax_timesheet_schedule
 
+  get '/people/punch_history', to: 'people/punch_history#index', as: :people_punch_history
   get '/employee', to: 'employee_app#show', as: :employee_app
   scope '/employee/preview', controller: :employee_preview, as: :employee_preview do
     get '/timesheets', action: :timesheets, as: :timesheets
@@ -229,6 +231,7 @@ Rails.application.routes.draw do
     get 'bank_reconciliation', to: 'bank_reconciliations#index', as: :bank_reconciliation
     post 'bank_reconciliation/match', to: 'bank_reconciliations#match', as: :bank_reconciliation_match
     post 'bank_reconciliation/unmatch', to: 'bank_reconciliations#unmatch', as: :bank_reconciliation_unmatch
+    post 'bank_reconciliation/ignore', to: 'bank_reconciliations#ignore', as: :bank_reconciliation_ignore
     get 'ledger_export', to: 'ledger_exports#new', as: :ledger_export
     post 'ledger_export', to: 'ledger_exports#create'
   end
@@ -391,6 +394,7 @@ Rails.application.routes.draw do
   end
   get '/ctrax_pos', to: 'ctrax_pos#index', as: :ctrax_pos
   post '/ctrax_pos/:location_id/quote', to: 'ctrax_pos#quote', as: :quote_ctrax_pos
+  post '/ctrax_pos/:location_id/images', to: 'ctrax_pos#image', as: :ctrax_pos_images
   post '/ctrax_pos/:location_id/images/:variant_id', to: 'ctrax_pos#image', as: :ctrax_pos_image
   resources :pos_displays, only: %i[create show destroy] do
     member do

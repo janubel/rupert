@@ -40,6 +40,29 @@
     </div>
   </section>
 
+  <% dups = @reconciliation.duplicate_groups %>
+  <% if dups.any? %>
+    <div class="card card-pad">
+      <h2 class="font-display text-xl">Possible duplicates (<%= dups.size %>)</h2>
+      <p class="mt-1 text-sm text-mocha">Statement lines with the same amount close together. Review and ignore any that are true duplicates; ignored lines drop out of reconciliation.</p>
+      <div class="mt-3 space-y-3">
+        <% dups.each do |group| %>
+          <div class="rounded border border-fog p-3">
+            <% group.each do |line| %>
+              <div class="flex items-center justify-between gap-3 py-1">
+                <span><%= line.posted_on %> · <%= line.description.to_s.truncate(44) %> · <%= finance_money(line.amount_cents) %></span>
+                <% if line.recorded_source? %><span class="text-sm text-mocha">Review recorded source</span><% else %>
+                <%= button_to "Ignore this line", finance_bank_reconciliation_ignore_path, method: :post, params: { line_id: line.id, from: @from, to: @to }, class: "btn-ghost btn-sm",
+                      form: { data: { turbo_confirm: "Ignore this statement line?\n\n#{line.posted_on}, #{finance_money_text(line.amount_cents)}, #{line.description.to_s.truncate(40)}\n\nIt drops out of reconciliation and duplicate checks. The bank statement itself is not changed." } } %>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <div class="card overflow-hidden">
     <h2 class="px-4 pt-4 font-display text-xl">Statement lines</h2>
     <div class="operations-table-region" role="region" tabindex="0" aria-label="Statement lines">
@@ -70,7 +93,9 @@
                 <% end %>
               </td>
               <td class="td">
-                <% if line.journal_entry_id.present? %>
+                <% if line.recorded_source? %>
+                  <span class="text-sm text-mocha">Linked to recorded source</span>
+                <% elsif line.journal_entry_id.present? %>
                   <%= button_to "Clear match", finance_bank_reconciliation_unmatch_path, method: :post,
                         params: { line_id: line.id, from: @from, to: @to }, class: "btn-ghost btn-sm",
                         form: { data: { turbo_confirm: "Clear this match?\n\nStatement line: #{line.posted_on}, #{finance_money_text(line.amount_cents)}, #{line.description.to_s.truncate(40)}\n\nThe line goes back to unmatched. The ledger entry is not changed." } } %>

@@ -27,6 +27,11 @@ class DemoTimesheetProvisioner
         hours.each_with_index do |value, day|
           sheet.entries.create!(worked_on: monday + day, hours: value, work_type: 'regular', notes: 'DEMO: Fictional retail shift for review practice.')
         end
+        # DEMO: fictional credited sales (1% commission) and employee 50%-off
+        # card redemptions (fixed bonus). Display figures only, never payroll.
+        sales_cents = weeks_ago == 2 ? 120_000 : 96_000
+        redemptions = weeks_ago == 2 ? 3 : 2
+        sheet.update!(sales_cents: sales_cents, card_redemptions: redemptions)
         sheet.events.create!(user: actor, action: 'demo_created', details: { assigned_reviewer_id: reviewer.id, fictional: true })
         TimesheetWorkflow.new(user: actor).change(sheet, :submit)
         sheet
