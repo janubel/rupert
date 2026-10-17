@@ -157,6 +157,10 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     assert_select 'section[aria-label="Week calendar"]'
     assert_select 'button[data-employee-id=?]', @employee.id.to_s
     assert_match 'Labor Day', response.body
+    assert_operator response.body.index('aria-label="Week calendar"'), :<, response.body.index('<h1 class="page-title">Timesheets</h1>')
+    assert_select 'aside[aria-labelledby=emp-key-title] button[role=switch][data-employee-id=?]', @employee.id.to_s
+    assert_select 'section[aria-label="Week calendar"] nav[aria-label=Week] a', text: 'Today'
+    assert_select '.shift .shift-compact', minimum: 1
   end
 
   test 'calendar shows open punches, unlinked source records and typed hours' do
