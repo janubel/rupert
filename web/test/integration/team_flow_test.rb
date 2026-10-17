@@ -94,7 +94,7 @@ class TeamFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_nil User.find_by(email: 'sneaky@example.com')
-    assert_match(/allowed employee role/, flash[:alert])
+    assert_match(/Only a super admin can create administrators/, flash[:alert])
   end
 
   test 'deactivated employee cannot sign in' do
