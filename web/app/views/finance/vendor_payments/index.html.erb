@@ -15,7 +15,7 @@
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-3">
     <div class="stat">
       <p class="stat-label">Recorded payments · USD</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@total_cents / 100.0) %></p>
+      <p class="stat-value mt-1"><%= finance_money(@total_cents) %></p>
       <p class="mt-1 text-xs text-taupe"><%= @entry_count %> active payments</p>
     </div>
   </section>
@@ -50,7 +50,7 @@
               <td class="td whitespace-nowrap text-mocha"><%= l(payment.paid_on, format: :short) %></td>
               <td class="td font-medium text-ink"><%= retail_business_access?('purchasing.read') ? link_to(payment.vendor.name, payment.vendor, class: 'text-olive underline') : payment.vendor.name %></td>
               <td class="td text-mocha capitalize"><%= payment.method %></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(payment.amount_cents / 100.0) %></td>
+              <td class="td text-right font-medium text-ink"><%= finance_money(payment.amount_cents) %></td>
               <td class="td text-right">
                 <% if payment.discarded? %><span class="pill-taupe">Removed</span><% end %>
                 <% if Current.user.can?("finance.write") %>

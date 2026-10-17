@@ -22,11 +22,11 @@
     </div>
     <div class="stat">
       <p class="stat-label">Total debits · USD</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@totals[:debits] / 100.0) %></p>
+      <p class="stat-value mt-1"><%= finance_money(@totals[:debits]) %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Total credits · USD</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@totals[:credits] / 100.0) %></p>
+      <p class="stat-value mt-1"><%= finance_money(@totals[:credits]) %></p>
       <p class="mt-1 text-xs <%= @totals[:debits] == @totals[:credits] ? 'text-emerald-600' : 'text-red-600' %>">
         <%= @totals[:debits] == @totals[:credits] ? 'In balance' : 'Out of balance' %>
       </p>
@@ -60,7 +60,7 @@
               <td class="td"><%= entry.kind.tr('_', ' ').titleize %></td>
               <td class="td"><%= link_to (entry.memo.presence || "Entry ##{entry.id}"), finance_journal_entry_path(entry), class: "link" %></td>
               <td class="td text-taupe"><%= entry.source_type %> #<%= entry.source_id %></td>
-              <td class="td text-right"><%= number_to_currency(entry.debit_cents / 100.0) %></td>
+              <td class="td text-right"><%= finance_money(entry.debit_cents) %></td>
               <td class="td"><span class="<%= entry.void? ? 'text-taupe line-through' : 'text-emerald-600' %>"><%= entry.status %></span></td>
             </tr>
           <% end %>

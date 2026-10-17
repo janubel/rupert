@@ -18,13 +18,13 @@
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
       <p class="stat-label">Active expenses · USD</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@total_cents / 100.0) %></p>
+      <p class="stat-value mt-1"><%= finance_money(@total_cents) %></p>
       <p class="mt-1 text-xs text-taupe"><%= @entry_count %> active entries</p>
     </div>
     <% @by_category.first(3).each do |category, cents| %>
       <div class="stat">
         <p class="stat-label"><%= category.tr("_", " ").titleize %></p>
-        <p class="stat-value mt-1"><%= number_to_currency(cents / 100.0) %></p>
+        <p class="stat-value mt-1"><%= finance_money(cents) %></p>
       </div>
     <% end %>
   </section>
@@ -62,7 +62,7 @@
               <td class="td font-medium text-ink"><%= expense.payee.presence || expense.vendor&.name || "—" %></td>
               <td class="td"><span class="pill-taupe"><%= expense.category_label %></span></td>
               <td class="td text-mocha capitalize"><%= expense.method %></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(expense.amount_cents / 100.0) %></td>
+              <td class="td text-right font-medium text-ink"><%= finance_money(expense.amount_cents) %></td>
               <td class="td text-right">
                 <% if expense.discarded? %><span class="pill-taupe">Removed</span><% end %>
                 <% if Current.user.can?("finance.write") %>

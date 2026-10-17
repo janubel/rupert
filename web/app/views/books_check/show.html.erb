@@ -33,7 +33,7 @@
           <summary class="flex flex-wrap items-center justify-between gap-2 cursor-pointer">
             <span class="font-semibold"><%= c.title %></span>
             <span class="text-sm text-mocha">
-              <% if c.ok? %>Pass<% else %><%= pluralize(c.count, 'item') %><% if c.cents %> · <%= number_to_currency(c.cents / 100.0) %><% end %><% end %>
+              <% if c.ok? %>Pass<% else %><%= pluralize(c.count, 'item') %><% if c.cents %> · <%= finance_money(c.cents) %><% end %><% end %>
             </span>
           </summary>
           <p class="mt-2 text-sm"><%= c.detail %></p>

@@ -30,17 +30,17 @@
     </div>
     <div class="stat">
       <p class="stat-label">Statement net · USD</p>
-      <p class="stat-value mt-1"><%= number_to_currency(s[:statement_net_cents] / 100.0) %></p>
-      <p class="mt-1 text-xs text-taupe">in <%= number_to_currency(s[:statement_in_cents] / 100.0) %> · out <%= number_to_currency(s[:statement_out_cents] / 100.0) %></p>
+      <p class="stat-value mt-1"><%= finance_money(s[:statement_net_cents]) %></p>
+      <p class="mt-1 text-xs text-taupe">in <%= finance_money(s[:statement_in_cents]) %> · out <%= finance_money(s[:statement_out_cents]) %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Ledger net · USD</p>
-      <p class="stat-value mt-1"><%= number_to_currency(s[:gl_net_cents] / 100.0) %></p>
+      <p class="stat-value mt-1"><%= finance_money(s[:gl_net_cents]) %></p>
       <p class="mt-1 text-xs text-taupe">cash + checking accounts</p>
     </div>
     <div class="stat">
       <p class="stat-label">Difference · USD</p>
-      <p class="stat-value mt-1 <%= s[:difference_cents].zero? ? 'text-emerald-600' : 'text-amber-600' %>"><%= number_to_currency(s[:difference_cents] / 100.0) %></p>
+      <p class="stat-value mt-1 <%= s[:difference_cents].zero? ? 'text-emerald-600' : 'text-amber-600' %>"><%= finance_money(s[:difference_cents]) %></p>
       <p class="mt-1 text-xs text-taupe"><%= s[:difference_cents].zero? ? 'reconciled' : 'statement vs ledger' %></p>
     </div>
   </section>
@@ -64,7 +64,7 @@
             <tr class="border-b border-fog/60">
               <td class="td"><%= line.posted_on %></td>
               <td class="td"><%= line.description.to_s.truncate(48) %></td>
-              <td class="td text-right <%= line.amount_cents.negative? ? 'text-red-600' : 'text-emerald-600' %>"><%= number_to_currency(line.amount_cents / 100.0) %></td>
+              <td class="td text-right <%= line.amount_cents.negative? ? 'text-red-600' : 'text-emerald-600' %>"><%= finance_money(line.amount_cents) %></td>
               <td class="td">
                 <% if suggestion %>
                   <%= link_to (suggestion.entry.memo.presence || "Entry ##{suggestion.entry.id}"), finance_journal_entry_path(suggestion.entry), class: "link" %>
@@ -104,7 +104,7 @@
               <tr class="border-b border-fog/60">
                 <td class="td"><%= m[:date] %></td>
                 <td class="td"><%= link_to (m[:entry].memo.presence || "Entry ##{m[:entry].id}"), finance_journal_entry_path(m[:entry]), class: "link" %></td>
-                <td class="td text-right"><%= number_to_currency(m[:signed_cents] / 100.0) %></td>
+                <td class="td text-right"><%= finance_money(m[:signed_cents]) %></td>
               </tr>
             <% end %>
           </tbody>

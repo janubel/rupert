@@ -435,3 +435,8 @@
 @media (min-width: 900px) { .finance-navigation-groups { grid-template-columns:1fr 1.35fr 1fr; } }
 
 .build-version { display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.65rem;padding:.2rem 1rem;border-bottom:1px solid var(--color-fog);background:var(--color-paper);font-size:11px;line-height:1.4;color:var(--color-mocha);font-variant-numeric:tabular-nums; }
+
+/* Money display (FinanceHelper#finance_money): tabular digits, real minus sign, red negatives. */
+.money { font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;white-space:nowrap; }
+.money-negative { color:#b42318;font-weight:600; }
+.money-missing { color:var(--color-taupe); }

@@ -28,17 +28,17 @@
           <tr class="border-b border-fog/60">
             <td class="td text-taupe"><%= row.account.code %></td>
             <td class="td"><%= row.account.name %></td>
-            <td class="td text-right"><%= row.debit.positive? ? number_to_currency(row.debit / 100.0) : '—' %></td>
-            <td class="td text-right"><%= row.credit.positive? ? number_to_currency(row.credit / 100.0) : '—' %></td>
-            <td class="td text-right"><%= number_to_currency(row.balance / 100.0) %></td>
+            <td class="td text-right"><%= finance_money(row.debit, zero: :dash) %></td>
+            <td class="td text-right"><%= finance_money(row.credit, zero: :dash) %></td>
+            <td class="td text-right"><%= finance_money(row.balance) %></td>
           </tr>
         <% end %>
       </tbody>
       <tfoot>
         <tr class="font-semibold">
           <td class="td" colspan="2">Totals</td>
-          <td class="td text-right"><%= number_to_currency(@total_debit / 100.0) %></td>
-          <td class="td text-right"><%= number_to_currency(@total_credit / 100.0) %></td>
+          <td class="td text-right"><%= finance_money(@total_debit) %></td>
+          <td class="td text-right"><%= finance_money(@total_credit) %></td>
           <td class="td"></td>
         </tr>
       </tfoot>
