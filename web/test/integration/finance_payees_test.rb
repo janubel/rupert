@@ -19,7 +19,7 @@ class FinancePayeesTest < ActionDispatch::IntegrationTest
   test 'lists payees with separate expense and payment totals and merges free-text spellings' do
     get finance_payees_path
     assert_response :success
-    assert_select 'nav[aria-label="Finance workspace"] a[aria-current=page]', text: 'By payee'
+    assert_select 'nav[aria-label="Bookkeeping workspace"] a[aria-current=page]', text: 'By payee'
     assert_select 'table td a', text: 'Acme Paper'
     assert_select 'table td a', text: 'Corner Cafe', count: 1
     assert_includes response.body, '$125.00 · 1'

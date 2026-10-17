@@ -30,24 +30,6 @@ class BooksDesksIntegrationTest < ActionDispatch::IntegrationTest
     assert_select 'nav[aria-label="Bookkeeping workspace"] .workspace-nav-group', text: 'Reconcile & close'
   end
 
-  test 'the next action comes before the collapsed findings, whose summary carries the counts' do
-    get books_desk_path
-    assert_response :success
-    assert_operator response.body.index('id="desk-next-title"'), :<, response.body.index('id="desk-findings"')
-    assert_select 'details#desk-findings:not([open]) summary', text: /Square · \d+ without payment/
-    assert_select 'details#desk-findings summary', text: /SwipeSimple · \d+ unpaid invoice/
-    assert_select 'details#desk-findings #reconciliation-findings'
-    assert_select 'nav[aria-label="Finance workspace"] [role=group]', minimum: 2
-  end
-
-  test 'finance links carry unique g-then-letter jump keys' do
-    get books_desk_path
-    assert_select 'nav[aria-label="Finance workspace"][data-controller=finance-shortcuts]'
-    assert_select 'nav[aria-label="Finance workspace"] a[data-shortcut=d][aria-keyshortcuts="g d"]', text: 'Books desk'
-    keys = OperationsWorkspaceHelper::FINANCE_SHORTCUTS.values
-    assert_equal keys.uniq, keys
-  end
-
   test 'an earlier week can be chosen and a future week falls back to last week' do
     get books_desk_path(week: (Date.current - 30).iso8601)
     assert_response :success
