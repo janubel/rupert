@@ -28,6 +28,7 @@
       <article class="card card-pad space-y-2"><h3 class="font-semibold">Rupert timesheets</h3><p class="text-sm text-mocha">Weekly entries and approval history.</p><%= link_to 'View all Rupert timesheets', people_timesheets_path(status: 'all'), class: 'text-sm text-olive underline' %></article>
       <article class="card card-pad space-y-2"><h3 class="font-semibold">Square timecards</h3><p class="text-sm text-mocha"><%= @square_history.count %> retained records, including open and held history. Counted Square history also appears in personal reports and calendars.</p><%= link_to 'View Square history', people_square_timesheets_path, class: 'text-sm text-olive underline' %></article>
       <article class="card card-pad space-y-2"><h3 class="font-semibold">C-Trax shifts</h3><p class="text-sm text-mocha"><%= @ctrax_history.count %> retained records. Source-reported hours and elapsed time remain unapproved history.</p><%= link_to 'View C-Trax history', people_ctrax_timesheets_path, class: 'text-sm text-olive underline' %></article>
+      <article class="card card-pad space-y-2"><h3 class="font-semibold">Punch history</h3><p class="text-sm text-mocha">Every Rupert clock punch and imported Square timecard in one calendar or list, with a CSV report.</p><%= link_to 'View punch history', people_punch_history_path, class: 'text-sm text-olive underline' %></article>
     </div>
   </section>
   <% if @awaiting.positive? %>

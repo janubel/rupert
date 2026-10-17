@@ -1,0 +1,118 @@
+<% content_for :title, 'Punch history' %>
+<div class="space-y-6" data-controller="punch-calendar">
+  <section class="space-y-3">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="page-title">Punch history</h1>
+        <p class="mt-1 text-sm text-mocha">Every clock punch from Rupert and imported Square timecards, in one place. Read-only reporting: nothing here creates, edits or approves payroll, and a shift recorded in both sources is never added together.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <%= link_to 'Rupert timesheets', people_timesheets_path, class: 'btn-ghost btn-sm' %>
+        <%= link_to 'Square history', people_square_timesheets_path, class: 'btn-ghost btn-sm' %>
+        <%= link_to 'Download CSV report', people_punch_history_path(request.query_parameters.merge(format: :csv)), class: 'btn-ghost btn-sm' %>
+      </div>
+    </div>
+  </section>
+
+  <%= form_with url: people_punch_history_path, method: :get, class: 'card card-pad space-y-3', data: { punch_calendar_target: 'form' } do |f| %>
+    <%= hidden_field_tag :view, @view %>
+    <%= hidden_field_tag :from, @from.iso8601, data: { punch_calendar_target: 'from' } %>
+    <%= hidden_field_tag :to, @to.iso8601, data: { punch_calendar_target: 'to' } %>
+    <div class="flex flex-wrap items-end gap-3">
+      <div><%= label_tag :employee_id, 'Employee', class: 'block text-sm mb-1' %><%= select_tag :employee_id, options_for_select([['All employees', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
+      <div><%= label_tag :source, 'Source', class: 'block text-sm mb-1' %><%= select_tag :source, options_for_select([['All sources', ''], ['Rupert clock', 'rupert'], ['Square', 'square']], params[:source]), class: 'select' %></div>
+      <div><%= label_tag :status, 'Status', class: 'block text-sm mb-1' %><%= select_tag :status, options_for_select([['All statuses', ''], ['Closed', 'closed'], ['Open (still punched in)', 'open'], ['Imported', 'imported'], ['Conflict', 'conflict'], ['Unmatched', 'unmatched']], params[:status]), class: 'select' %></div>
+      <%= submit_tag 'Run report', class: 'btn-primary' %>
+      <%= link_to 'Reset', people_punch_history_path, class: 'btn-ghost btn-sm' %>
+    </div>
+    <p class="text-sm text-mocha">Selected range: <strong data-punch-calendar-target="label"><%= @from.strftime('%b %-d, %Y') %> – <%= @to.strftime('%b %-d, %Y') %></strong></p>
+  <% end %>
+
+  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div class="card card-pad"><p class="text-sm text-mocha">Punches</p><p class="text-2xl font-semibold"><%= @summary.punches %></p></div>
+    <div class="card card-pad"><p class="text-sm text-mocha">Counted hours</p><p class="text-2xl font-semibold"><%= number_with_precision(@summary.counted_hours, precision: 2) %></p></div>
+    <div class="card card-pad"><p class="text-sm text-mocha">All hours</p><p class="text-2xl font-semibold"><%= number_with_precision(@summary.hours, precision: 2) %></p></div>
+    <div class="card card-pad"><p class="text-sm text-mocha">Flagged</p><p class="text-2xl font-semibold"><%= @summary.flagged %></p></div>
+  </section>
+
+  <nav aria-label="Punch history view" class="flex flex-wrap gap-2">
+    <%= link_to 'Calendar', people_punch_history_path(request.query_parameters.merge(view: 'calendar')), class: "nav-pill #{@view == 'calendar' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
+    <%= link_to 'List', people_punch_history_path(request.query_parameters.merge(view: 'list')), class: "nav-pill #{@view == 'list' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
+  </nav>
+
+  <% if @view == 'calendar' %>
+    <section class="card card-pad space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold"><%= @from.strftime('%B %Y') %></h2>
+        <p class="text-sm text-mocha">Drag across days to select a reporting range, then release.</p>
+      </div>
+      <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wide text-mocha">
+        <% Date::DAYNAMES.rotate.each do |day| %><div class="py-1"><%= day %></div><% end %>
+      </div>
+      <div class="grid grid-cols-7 gap-1" data-punch-calendar-target="grid">
+        <% @month.each do |day| %>
+          <% bucket = @calendar_days[day.iso8601] %>
+          <div class="min-h-24 rounded-xl border border-fog p-2 text-left <%= bucket ? 'bg-haze/40' : 'bg-cream' %>"
+               data-punch-calendar-target="day" data-date="<%= day.iso8601 %>"
+               data-action="mousedown->punch-calendar#start mouseenter->punch-calendar#extend"
+               role="button" tabindex="0" aria-label="<%= day.strftime('%B %-d, %Y') %>">
+            <p class="text-xs font-semibold <%= day == Date.current ? 'text-olive' : 'text-ink' %>"><%= day.day %></p>
+            <% if bucket %>
+              <p class="mt-1 text-xs font-semibold text-olive"><%= bucket[:rows].size %> punch<%= bucket[:rows].size == 1 ? '' : 'es' %></p>
+              <p class="text-xs text-mocha"><%= number_with_precision(bucket[:hours], precision: 2) %> h</p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </section>
+  <% else %>
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr>
+              <th scope="col" class="th">Employee</th>
+              <th scope="col" class="th">Source</th>
+              <th scope="col" class="th">Clock-in</th>
+              <th scope="col" class="th">Clock-out</th>
+              <th scope="col" class="th text-right">Hours</th>
+              <th scope="col" class="th">Status</th>
+              <th scope="col" class="th">Counted</th>
+              <th scope="col" class="th">Reference</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-fog">
+            <% if @rows.empty? %>
+              <tr><td colspan="8" class="empty-row">No punches in this range.</td></tr>
+            <% end %>
+            <% @rows.each do |row| %>
+              <tr class="hover:bg-cream">
+                <td class="td font-medium text-ink"><%= row.employee_name %></td>
+                <td class="td"><span class="pill-taupe"><%= row.source == 'rupert' ? 'Rupert' : 'Square' %></span></td>
+                <td class="td"><%= row.started_at&.strftime('%b %-d, %H:%M') || '—' %></td>
+                <td class="td"><%= row.ended_at&.strftime('%b %-d, %H:%M') || '—' %></td>
+                <td class="td text-right text-mocha"><%= row.hours ? number_with_precision(row.hours, precision: 2) : '—' %></td>
+                <td class="td"><span class="<%= row.status == 'open' ? 'pill-rose' : row.status == 'conflict' ? 'pill-rose' : row.status == 'imported' || row.status == 'closed' ? 'pill-fern' : 'pill-olive' %>"><%= row.status %></span></td>
+                <td class="td"><%= row.counted ? 'Yes' : 'No' %></td>
+                <td class="td text-mocha"><%= row.reference %><% if row.issue.present? %><p class="text-xs"><%= row.issue %></p><% end %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <section class="card card-pad space-y-2">
+    <h2 class="text-lg font-semibold">Hours by employee</h2>
+    <% if @summary.by_employee.empty? %>
+      <p class="text-sm text-mocha">No punches in this range.</p>
+    <% else %>
+      <ul class="divide-y divide-fog text-sm">
+        <% @summary.by_employee.sort_by { |_name, hours| -hours }.each do |name, hours| %>
+          <li class="flex justify-between py-1.5"><span><%= name %></span><span class="font-semibold"><%= number_with_precision(hours, precision: 2) %> h</span></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+</div>
