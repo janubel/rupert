@@ -440,3 +440,21 @@
 .money { font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;white-space:nowrap; }
 .money-negative { color:#b42318;font-weight:600; }
 .money-missing { color:var(--color-taupe); }
+
+/* Forms: totals, balance state and reasons a form cannot be submitted. */
+.balance-status { font-size:1rem;font-weight:600;border-radius:.75rem;padding:.6rem .9rem;border:1px solid var(--color-fog);background:var(--color-paper); }
+.balance-status::before { content:"\2717  ";font-weight:700; }
+.balance-ok,.balance-status[data-balance="ok"] { color:#05603a;border-color:#a6d8bf;background:#ecfdf3; }
+.balance-ok::before,.balance-status[data-balance="ok"]::before { content:"\2713  "; }
+.balance-bad,.balance-status[data-balance="bad"] { color:#b42318;border-color:#f3b7b0;background:#fef3f2; }
+.form-reasons { list-style:disc;padding:.6rem .9rem .6rem 2rem;border:1px solid #f1d49a;background:#fffaeb;border-radius:.75rem;font-size:.95rem;color:#7a4b00; }
+.form-reasons[hidden] { display:none; }
+.line-invalid { background:#fef3f2; }
+.line-invalid td:first-child,.line-invalid th:first-child { box-shadow:inset 4px 0 0 #b42318; }
+.btn-primary:disabled,.btn-primary[aria-disabled="true"] { opacity:.55;cursor:not-allowed; }
+.operations-workspace :focus-visible { outline:3px solid var(--color-olive);outline-offset:2px; }
+
+/* Posted / void / locked record banners (never colour alone: each has a text label). */
+.entry-state { border:1px solid var(--color-fog);border-left-width:6px;border-radius:.75rem;padding:.75rem 1rem;background:var(--color-paper); }
+.entry-state-posted { border-left-color:#05603a; }
+.entry-state-void { border-left-color:#b42318;background:#fef3f2; }

@@ -6,7 +6,7 @@ module Finance
   # first visit if empty (idempotent).
   class ChartOfAccountsController < AuthenticatedController
     before_action :seed_if_empty
-    before_action :set_account, only: %i[edit update archive restore]
+    before_action :set_account, only: %i[show edit update archive restore]
 
     def index
       authorize(:module, :finance_read?)
@@ -15,6 +15,17 @@ module Finance
         out[type] = accounts.select { |a| a.account_type == type }
       end
       @active_count = accounts.count(&:active)
+    end
+
+    # Every posted line that touched one account, in date order. Read-only.
+    def show
+      authorize(:module, :finance_read?)
+      @from = parse_date(params[:from])
+      @to = parse_date(params[:to])
+      @rows = GeneralLedger.new(from: @from, to: @to).account_ledger(@account)
+      @total_debit = @rows.sum { |row| row[:line].debit_cents.to_i }
+      @total_credit = @rows.sum { |row| row[:line].credit_cents.to_i }
+      response.headers['Cache-Control'] = 'private, no-store'
     end
 
     def new
@@ -66,6 +77,14 @@ module Finance
     # Guarantee the standard chart exists without requiring a rake step.
     def seed_if_empty
       ChartOfAccounts.seed! if Current.user&.can?('finance.read') && Account.count.zero?
+    end
+
+    def parse_date(value)
+      return nil if value.blank?
+
+      Date.parse(value)
+    rescue Date::Error
+      nil
     end
 
     def account_params

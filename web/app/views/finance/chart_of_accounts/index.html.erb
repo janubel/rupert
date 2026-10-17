@@ -36,7 +36,7 @@
             <% end %>
             <% accounts.each do |account| %>
               <tr class="hover:bg-cream <%= account.active ? "" : "opacity-50" %>">
-                <td class="td font-mono text-mocha"><%= account.code %></td>
+                <td class="td font-mono text-mocha"><%= link_to account.code, finance_chart_of_account_path(account), class: "link", aria: { label: "Ledger lines for #{finance_account_label(account)}" } %></td>
                 <td class="td font-medium text-ink">
                   <%= account.name %>
                   <% unless account.active %><span class="ml-2 pill-taupe">archived</span><% end %>

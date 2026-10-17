@@ -40,11 +40,22 @@ module FinanceHelper
   def finance_balance_status(difference_cents, balanced_text: 'Balanced')
     if difference_cents.to_i.zero?
       content_tag(:p, "#{balanced_text}: no difference.",
-                  class: 'balance-status balance-ok', role: 'status', data: { balance: 'ok' })
+        class: 'balance-status balance-ok', role: 'status', data: { balance: 'ok' })
     else
       content_tag(:p, "Out of balance by #{finance_money_text(difference_cents.to_i.abs)}.",
-                  class: 'balance-status balance-bad', role: 'status', data: { balance: 'bad' })
+        class: 'balance-status balance-bad', role: 'status', data: { balance: 'bad' })
     end
+  end
+
+  # Active period locks as JSON for form scripts: [{from:, to:, label:}].
+  # The server re-checks every date; this only warns before submitting.
+  def finance_locks_json
+    PeriodLock.active_locks.map { |l| { from: l.period_from.iso8601, to: l.period_to.iso8601, label: l.label } }.to_json
+  end
+
+  # The lock covering a date, for read-only notices on existing records.
+  def finance_lock_for(date)
+    date.present? ? PeriodLock.lock_covering(date) : nil
   end
 
   # Spreadsheet-safe text: a cell that starts with = + - @ tab or CR would be
