@@ -1,3 +1,8 @@
+// axum handlers here conventionally return `Result<_, Response>`, whose error
+// variant is large (a full HTTP response). Re-typing every handler around a boxed
+// error would be invasive for no runtime benefit, so allow the lint crate-wide.
+#![allow(clippy::result_large_err)]
+
 mod auth;
 mod crypto;
 mod feed;
@@ -8,45 +13,92 @@ mod tenants;
 mod upstream;
 
 use auth::Principal;
-use axum::{Json, Router, extract::{Query, State}, http::StatusCode, response::{IntoResponse, Response}, routing::{get, post, put}};
+use axum::{
+    Json, Router,
+    extract::{Query, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::{get, post, put},
+};
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tenants::Registry;
 
 pub fn now() -> i64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
 }
 
 type App = Arc<Registry>;
 
-fn jerr(c: StatusCode, m: &str) -> Response { (c, Json(serde_json::json!({ "error": m }))).into_response() }
+fn jerr(c: StatusCode, m: &str) -> Response {
+    (c, Json(serde_json::json!({ "error": m }))).into_response()
+}
 
 fn tenant_db(app: &Registry, p: &Principal) -> Result<Arc<tenants::TenantDb>, Response> {
-    app.db(&p.tenant_id).map_err(|_| jerr(StatusCode::INTERNAL_SERVER_ERROR, "tenant database unavailable"))
+    app.db(&p.tenant_id).map_err(|_| {
+        jerr(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "tenant database unavailable",
+        )
+    })
 }
 
 #[derive(Serialize)]
-pub struct Item { pub sku: String, pub name: String, pub qty: i64 }
-
-#[derive(Deserialize)]
-struct SkuQ { sku: String }
-
-async fn get_item(State(app): State<App>, p: Principal, Query(q): Query<SkuQ>) -> Result<Json<Item>, Response> {
-    p.require("inventory:read", "staff")?;
-    let db = tenant_db(&app, &p)?;
-    tokio::task::spawn_blocking(move || {
-        db.with_reader(|c| c.prepare_cached("SELECT sku,name,qty FROM inventory_items WHERE sku=?1")?
-            .query_row([&q.sku], |r| Ok(Item { sku: r.get(0)?, name: r.get(1)?, qty: r.get(2)? })))
-            .map(Json).map_err(|_| jerr(StatusCode::NOT_FOUND, "not found"))
-    }).await.map_err(|_| jerr(StatusCode::INTERNAL_SERVER_ERROR, "internal"))?
+pub struct Item {
+    pub sku: String,
+    pub name: String,
+    pub qty: i64,
 }
 
 #[derive(Deserialize)]
-pub struct Adjust { pub sku: String, pub delta: i64, pub reason: String }
+struct SkuQ {
+    sku: String,
+}
 
-async fn adjust(State(app): State<App>, p: Principal, Json(a): Json<Adjust>) -> Result<Json<Item>, Response> {
+async fn get_item(
+    State(app): State<App>,
+    p: Principal,
+    Query(q): Query<SkuQ>,
+) -> Result<Json<Item>, Response> {
+    p.require("inventory:read", "staff")?;
+    let db = tenant_db(&app, &p)?;
+    tokio::task::spawn_blocking(move || {
+        db.with_reader(|c| {
+            c.prepare_cached("SELECT sku,name,qty FROM inventory_items WHERE sku=?1")?
+                .query_row([&q.sku], |r| {
+                    Ok(Item {
+                        sku: r.get(0)?,
+                        name: r.get(1)?,
+                        qty: r.get(2)?,
+                    })
+                })
+        })
+        .map(Json)
+        .map_err(|_| jerr(StatusCode::NOT_FOUND, "not found"))
+    })
+    .await
+    .map_err(|_| jerr(StatusCode::INTERNAL_SERVER_ERROR, "internal"))?
+}
+
+#[derive(Deserialize)]
+pub struct Adjust {
+    pub sku: String,
+    pub delta: i64,
+    pub reason: String,
+}
+
+async fn adjust(
+    State(app): State<App>,
+    p: Principal,
+    Json(a): Json<Adjust>,
+) -> Result<Json<Item>, Response> {
     p.require("inventory:write", "manager")?;
-    if a.reason.len() > 200 || a.sku.len() > 100 { return Err(jerr(StatusCode::BAD_REQUEST, "invalid input")); }
+    if a.reason.len() > 200 || a.sku.len() > 100 {
+        return Err(jerr(StatusCode::BAD_REQUEST, "invalid input"));
+    }
     let db = tenant_db(&app, &p)?;
     match db.submit(a).await {
         Ok(Ok(item)) => Ok(Json(item)),
@@ -56,11 +108,21 @@ async fn adjust(State(app): State<App>, p: Principal, Json(a): Json<Adjust>) -> 
 }
 
 #[derive(Deserialize)]
-struct NewItem { sku: String, name: String, qty: i64 }
+struct NewItem {
+    sku: String,
+    name: String,
+    qty: i64,
+}
 
-async fn put_item(State(app): State<App>, p: Principal, Json(i): Json<NewItem>) -> Result<Json<Item>, Response> {
+async fn put_item(
+    State(app): State<App>,
+    p: Principal,
+    Json(i): Json<NewItem>,
+) -> Result<Json<Item>, Response> {
     p.require("inventory:write", "manager")?;
-    if i.sku.is_empty() || i.sku.len() > 100 || i.name.len() > 200 { return Err(jerr(StatusCode::BAD_REQUEST, "invalid input")); }
+    if i.sku.is_empty() || i.sku.len() > 100 || i.name.len() > 200 {
+        return Err(jerr(StatusCode::BAD_REQUEST, "invalid input"));
+    }
     let db = tenant_db(&app, &p)?;
     tokio::task::spawn_blocking(move || {
         db.writer.lock().execute("INSERT INTO inventory_items VALUES (?1,?2,?3,?4) ON CONFLICT(sku) DO UPDATE SET name=excluded.name, qty=excluded.qty, updated_at=excluded.updated_at",
@@ -73,15 +135,23 @@ async fn put_item(State(app): State<App>, p: Principal, Json(i): Json<NewItem>) 
 pub fn dev_token(t: usize) -> String {
     use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
     use sha2::{Digest, Sha256};
-    format!("rupert_{}", URL_SAFE_NO_PAD.encode(Sha256::digest(format!("rupert-dev-{t}"))))
+    format!(
+        "rupert_{}",
+        URL_SAFE_NO_PAD.encode(Sha256::digest(format!("rupert-dev-{t}")))
+    )
 }
 
 #[derive(Deserialize)]
-struct SeedQ { tenants: usize, items: usize }
+struct SeedQ {
+    tenants: usize,
+    items: usize,
+}
 
 /// Dev-only (RUPERT_DEV=1): N tenants with M items, one owner + full-scope token each.
 async fn seed(State(app): State<App>, Query(q): Query<SeedQ>) -> Response {
-    if !app.auth.dev { return jerr(StatusCode::NOT_FOUND, "not found"); }
+    if !app.auth.dev {
+        return jerr(StatusCode::NOT_FOUND, "not found");
+    }
     tokio::task::spawn_blocking(move || {
         for t in 0..q.tenants {
             let id = format!("t{t}");
@@ -110,15 +180,28 @@ async fn seed(State(app): State<App>, Query(q): Query<SeedQ>) -> Response {
 fn main() {
     // Bound the blocking pool: its default (512 threads) lets a burst of requests pin
     // hundreds of thread stacks and allocator arenas that are never returned.
-    let blocking = std::env::var("RUPERT_BLOCKING_THREADS").ok().and_then(|v| v.parse().ok()).unwrap_or(64);
-    tokio::runtime::Builder::new_multi_thread().enable_all().max_blocking_threads(blocking).build().expect("runtime").block_on(run());
+    let blocking = std::env::var("RUPERT_BLOCKING_THREADS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(64);
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .max_blocking_threads(blocking)
+        .build()
+        .expect("runtime")
+        .block_on(run());
 }
 
 async fn run() {
     let dir = PathBuf::from(std::env::var("RUPERT_DATA").unwrap_or_else(|_| "./data".into()));
-    let max_open: u64 = std::env::var("RUPERT_MAX_OPEN").ok().and_then(|v| v.parse().ok()).unwrap_or(64);
+    let max_open: u64 = std::env::var("RUPERT_MAX_OPEN")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(64);
     let app: App = Arc::new(Registry::new(dir, max_open).expect("open central db"));
-    if std::env::var("RUPERT_SCHEDULER").as_deref() != Ok("0") { tokio::spawn(sync::scheduler(app.clone())); }
+    if std::env::var("RUPERT_SCHEDULER").as_deref() != Ok("0") {
+        tokio::spawn(sync::scheduler(app.clone()));
+    }
     let r = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route("/api/v1/item", get(get_item).post(put_item))
@@ -126,19 +209,34 @@ async fn run() {
         .route("/dev/seed", post(seed))
         .route("/api/v1/events", get(feed::stream))
         .route("/api/v1/events/recent", get(feed::recent))
-        .route("/api/v1/settings", get(feed::get_settings).put(feed::put_settings))
+        .route(
+            "/api/v1/settings",
+            get(feed::get_settings).put(feed::put_settings),
+        )
         .route("/api/v1/catalog", get(sync::catalog))
         .route("/api/v1/inventory", get(sync::inventory))
         .route("/api/v1/connections", get(sync::list_connections))
-        .route("/api/v1/connections/{provider}", put(sync::put_connection).delete(sync::delete_connection))
+        .route(
+            "/api/v1/connections/{provider}",
+            put(sync::put_connection).delete(sync::delete_connection),
+        )
         .route("/api/v1/sync/runs", get(sync::runs))
         .route("/api/v1/sync/usage", get(sync::usage))
         .route("/api/v1/webhooks", get(hooks::status))
-        .route("/api/v1/webhooks/token", post(hooks::rotate_token).delete(hooks::disable))
-        .route("/hooks/{provider}/{token}", post(hooks::receive).layer(axum::extract::DefaultBodyLimit::max(1024 * 1024)))
+        .route(
+            "/api/v1/webhooks/token",
+            post(hooks::rotate_token).delete(hooks::disable),
+        )
+        .route(
+            "/hooks/{provider}/{token}",
+            post(hooks::receive).layer(axum::extract::DefaultBodyLimit::max(1024 * 1024)),
+        )
         .route("/api/v1/orders", get(sync::orders_list))
         .route("/api/v1/orders/detail", get(sync::order_detail))
-        .route("/api/v1/sync/schedule", get(sync::get_schedule).put(sync::put_schedule))
+        .route(
+            "/api/v1/sync/schedule",
+            get(sync::get_schedule).put(sync::put_schedule),
+        )
         .route("/api/v1/locations", get(sync::locations))
         .route("/api/v1/inventory/levels", get(sync::levels))
         .route("/api/v1/sync/{source}", post(sync::trigger))
@@ -146,5 +244,7 @@ async fn run() {
         .with_state(app);
     let addr = std::env::var("RUPERT_LISTEN").unwrap_or_else(|_| "127.0.0.1:8799".into());
     let l = tokio::net::TcpListener::bind(&addr).await.expect("bind");
-    axum::serve(l, r.into_make_service_with_connect_info::<SocketAddr>()).await.unwrap();
+    axum::serve(l, r.into_make_service_with_connect_info::<SocketAddr>())
+        .await
+        .unwrap();
 }

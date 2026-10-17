@@ -94,7 +94,10 @@ pub fn central() -> Vec<&'static str> {
 pub fn apply(conn: &Connection, list: &[&str]) -> rusqlite::Result<()> {
     let have = conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))? as usize;
     for (i, sql) in list.iter().enumerate().skip(have) {
-        conn.execute_batch(&format!("BEGIN; {sql}; PRAGMA user_version = {}; COMMIT;", i + 1))?;
+        conn.execute_batch(&format!(
+            "BEGIN; {sql}; PRAGMA user_version = {}; COMMIT;",
+            i + 1
+        ))?;
     }
     Ok(())
 }
