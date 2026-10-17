@@ -37,7 +37,9 @@ module People
 
     def valid_time_record
       return unless timesheet
-      errors.add(:base, 'Only draft timesheets can be edited') unless timesheet.draft?
+      if !timesheet.draft? && (new_record? || has_changes_to_save?)
+        errors.add(:base, 'Only draft timesheets can be edited')
+      end
       errors.add(:timesheet, 'must belong to this workspace') unless timesheet.tenant_id == tenant_id
       if worked_on && timesheet.period_start && timesheet.period_end
         errors.add(:worked_on, 'must be inside the timesheet period') unless (timesheet.period_start..timesheet.period_end).cover?(worked_on)

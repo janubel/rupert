@@ -1,6 +1,6 @@
 # Financial consolidation — October 17, 2026
 
-Review candidate: [PR #107](https://github.com/techmore/rupert/pull/107), branch `codex/financial-consolidation`, based on `fix/operations-workspace-ux` at `2a4cae6`. This is a source consolidation, not a deployment or an audit of live balances.
+Original review candidate: [PR #107](https://github.com/techmore/rupert/pull/107), branch `codex/financial-consolidation`, based on `fix/operations-workspace-ux` at `2a4cae6`. This document records its source consolidation, not an audit of live balances. The later [combined-release deployment and recovery receipt](combined-release-recovery-2026-10-17.md) records production activation at `96da470` and completed migration, page and recovery verification.
 
 ## Included branches
 
@@ -29,8 +29,8 @@ Existing branches and PRs remain available. #107 targets its immediate operation
 
 Final local validation: 1,573 Rails tests / 12,295 assertions, zero failures/errors/skips; 780 Ruby files without lint offenses; six JavaScript suites; product-site, documentation-link and diff-whitespace checks passed. PostgreSQL and SQLite GitHub CI results are recorded in the PR. Local checks use Ruby 4.0.6, synthetic databases, test keys, `LANG=en_US.UTF-8` and isolated SQLite paths. The full suite requires permission for worker sockets and system metrics on this host. All gateway requests in tests are mocked.
 
-SER8 SSH timed out. The latest deployment receipt records application revision `9b6c35e`, preserved in this candidate's ancestry, but the current live revision has not been verified. No live charge, refund, bank decision, approval, inventory write, credential update or deployment was executed.
+At the original source-review checkpoint, SER8 SSH timed out and the latest documented application revision was `9b6c35e`; that review performed no deployment. The later combined-release pass verified live source, preserved the four newer controller changes, rehearsed migration and recovery on an isolated current copy, and deployed clean revision `96da470` at 14:03 America/New_York. See the [deployment receipt](combined-release-recovery-2026-10-17.md) for completed migration, page and encrypted off-host recovery results. No live charge, refund, bank decision, approval, inventory write or credential update was used as a release probe.
 
-Before deployment, verify the clean current live revision under the deployment lock, incorporate any intervening release and rerun combined checks. Back up and rehearse additive migrations against an isolated current copy. Portal observation backfill requires the existing production encryption keys. Do not replace production with main or restore an older database to revert source code.
+For subsequent deployments, verify the current live revision and any uncommitted work under the deployment lock, incorporate intervening changes and rerun combined checks. Back up and rehearse additive migrations against an isolated current copy. Portal observation backfill requires the existing production encryption keys. Do not overwrite concurrent live work or restore an older database to revert source code.
 
 Informational-control status changes alter daily report digests for days containing tips, fees or deposits; affected days require another review and retained packages must be checked against the new digest. Payment/refund period snapshots now include source and currency, so existing period-lock fingerprints may change and require explicit inspection rather than silently rewriting historical lock events. Wallet and live gateway readiness remain merchant-specific and unverified.

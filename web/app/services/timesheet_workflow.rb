@@ -45,13 +45,12 @@ class TimesheetWorkflow
         attrs = { entry_id: entry.id, before: before, after: entry.attributes.slice('worked_on', 'hours', 'work_type', 'notes') }
       when 'submit'
         draft!(sheet)
-        raise Error, 'Add at least one entry before submitting.' unless sheet.entries.exists?
-        raise Error, 'This employee is no longer active.' unless sheet.employee.active?
-        validate_imports!(sheet)
+        validate_for_review!(sheet)
         sheet.update!(submitted_at: Time.current, reviewed_by: nil, reviewed_at: nil, review_note: nil)
         sheet.submit!
       when 'approve', 'reject'
         raise Error, 'Only submitted timesheets can be reviewed.' unless sheet.submitted?
+        validate_for_review!(sheet) if action.to_s == 'approve'
         # Existing integrations may omit a note; the web and app show an optional review comment.
         sheet.update!(reviewed_by: @user.id, reviewed_at: Time.current, review_note: attrs[:review_note].to_s.strip.presence)
         sheet.public_send("#{action}!")
@@ -99,6 +98,18 @@ class TimesheetWorkflow
   def audit(sheet, action, details = {})
     sheet.events.create!(user: @user, action: action, details: details)
     ActivityLogger.log("timesheet_#{action}", subject: sheet)
+  end
+
+  def validate_for_review!(sheet)
+    raise Error, 'Add at least one entry before submitting.' unless sheet.entries.exists?
+    raise Error, 'This employee is no longer active.' unless sheet.employee.active?
+    raise Error, sheet.errors.full_messages.to_sentence unless sheet.valid?
+    sheet.entries.each do |entry|
+      next if entry.valid?
+
+      raise Error, "#{entry.worked_on}: #{entry.errors.full_messages.to_sentence}"
+    end
+    validate_imports!(sheet)
   end
 
   def validate_imports!(sheet)

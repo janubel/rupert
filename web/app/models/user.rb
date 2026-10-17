@@ -26,6 +26,7 @@ class User < ActiveRecord::Base
       super_admin: 'super_admin',
       admin: 'admin',
       manager: 'manager',
+      shift_leader: 'shift_leader',
       cashier: 'cashier',
       inventory_employee: 'inventory_employee',
       reporting: 'reporting',
@@ -102,6 +103,7 @@ class User < ActiveRecord::Base
       'leave.read',
       'leave.write'
     ],
+    'shift_leader' => %w[dashboard.read pos.use timesheets.read timesheets.review],
     'employee' => %w[pos.use timesheets.self],
     'cashier' => [
       'dashboard.read',
@@ -129,6 +131,10 @@ class User < ActiveRecord::Base
     return true if permission.to_s == 'timesheets.self' && (effective_permissions.include?('timesheets.read') || TimeClockService.worker_for(self))
     perms = effective_permissions
     perms.include?('*') || perms.include?(permission.to_s)
+  end
+
+  def can_review_timesheets?
+    active? && can?('timesheets.read') && (can?('timesheets.review') || can?('timesheets.write'))
   end
 
   # POS access does not grant sales history, reports or inventory management.
@@ -234,7 +240,7 @@ class User < ActiveRecord::Base
       },
       {
         area: 'Team',
-        permissions: ['users.read', 'users.write', 'hr.read', 'hr.write', 'timesheets.read', 'timesheets.write', 'timesheets.self',
+        permissions: ['users.read', 'users.write', 'hr.read', 'hr.write', 'timesheets.read', 'timesheets.write', 'timesheets.review', 'timesheets.self',
                       'leave.read', 'leave.write', 'payroll.read', 'payroll.write']
       }
     ]
