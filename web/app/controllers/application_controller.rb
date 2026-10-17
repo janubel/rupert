@@ -53,9 +53,7 @@ class ApplicationController < ActionController::Base
   # A fixed, permission-checked landing page keeps personal defaults separate from roles.
   def sign_in_landing_path(user)
     return employee_app_path if user.employee?
-    if user.dashboard_config_hash['start_page'] == 'bookkeeping' && user.can?('reports.read')
-      return books_check_path
-    end
+    return books_check_path if user.dashboard_config_hash['start_page'] == 'bookkeeping' && user.can?('reports.read')
 
     root_path
   end
