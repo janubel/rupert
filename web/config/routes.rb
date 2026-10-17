@@ -312,6 +312,7 @@ Rails.application.routes.draw do
   end
   get '/point_of_sale', to: 'point_of_sale#index', as: :point_of_sale
   post '/point_of_sale/quote', to: 'point_of_sale#quote', as: :quote_point_of_sale
+  post '/point_of_sale/lookup', to: 'point_of_sale#lookup', as: :lookup_point_of_sale
   get '/time_clock', to: 'time_clock#index', as: :time_clock
   post '/time_clock/clock_in', to: 'time_clock#clock_in', as: :clock_in_time_clock
   post '/time_clock/clock_out', to: 'time_clock#clock_out', as: :clock_out_time_clock
