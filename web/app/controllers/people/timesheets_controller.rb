@@ -27,6 +27,7 @@ module People
       @square_history = SquareTimecard.visible_to(Current.user)
       @ctrax_history = CtraxLaborShift.visible_to(Current.user)
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)
+      load_admin_overview(visible) if @reviewer
     rescue Date::Error
       redirect_to people_timesheets_path, alert: 'Choose a valid period date.'
     end
@@ -108,6 +109,23 @@ module People
 
     def load_employees
       @employees = Current.user.can?('timesheets.write') ? People::Employee.active.ordered : People::Employee.active.where(user_id: Current.user.id)
+    end
+
+    # Navigation overview for reviewers: the next few weeks at a glance and
+    # upcoming time off, so the timesheet page is a usable hub without
+    # hunting through separate menus.
+    def load_admin_overview(visible)
+      @upcoming_weeks = (0..3).map do |offset|
+        monday = Date.current.beginning_of_week + offset.weeks
+        week = visible.where('period_start <= ? AND period_end >= ?', monday + 6, monday)
+        { monday: monday, label: offset.zero? ? 'This week' : monday.strftime('%b %-d'),
+          total: week.count, submitted: week.by_status('submitted').count,
+          approved: week.by_status('approved').count, draft: week.by_status('draft').count,
+          rejected: week.by_status('rejected').count }
+      end
+      @upcoming_leave = People::LeaveRequest.where(status: %w[requested approved])
+        .where('ends_on >= ?', Date.current).order(:starts_on).limit(8)
+      @pending_leave_count = People::LeaveRequest.pending.count
     end
 
     def timesheet_params
