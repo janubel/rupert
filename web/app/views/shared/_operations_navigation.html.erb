@@ -2,17 +2,12 @@
 <% if groups.any? %>
   <nav class="operations-navigation <%= 'finance-navigation' if finance %>" aria-label="<%= finance ? 'Finance' : workspace.to_s.humanize %> workspace">
     <% if finance %>
-      <div class="finance-navigation-title"><span>Finance</span><span class="finance-navigation-hint">Review → Reconcile → Close → Approve</span></div>
-      <div class="finance-navigation-groups">
-        <% groups.each do |group, links| %>
-          <details class="finance-navigation-group" <%= 'open' if links.any? { |link| link[2] } %>>
-            <summary class="workspace-nav-group"><%= group %></summary>
-            <div class="finance-navigation-links">
-              <% links.each do |label, path, active| %><%= link_to label, path, class: "nav-pill workspace-nav-link #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: active ? 'page' : nil } %><% end %>
-            </div>
-          </details>
-        <% end %>
-      </div>
+      <% groups.each do |group, links| %>
+        <div class="finance-navigation-group" role="group" aria-label="<%= group %>">
+          <span class="workspace-nav-group"><%= group %></span>
+          <% links.each do |label, path, active| %><%= link_to label, path, class: "nav-pill workspace-nav-link #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: active ? 'page' : nil } %><% end %>
+        </div>
+      <% end %>
     <% else %>
       <% groups.each do |group, links| %>
         <% if group %><span class="workspace-nav-group"><%= group %></span><% end %>

@@ -21,6 +21,8 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
       assert_response :success, path
       assert_select 'nav.operations-navigation', minimum: 1
     end
+    get finance_expenses_path
+    assert_select '[data-controller=table-filter] input[type=search][data-table-filter-target=input]'
     get new_finance_expense_path
     assert_select 'input[name="expense[amount]"][required][inputmode=decimal]'
     get new_finance_vendor_payment_path

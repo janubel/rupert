@@ -262,10 +262,12 @@
 .app-header-grid { max-width:72rem;margin:auto;padding:.65rem 1.5rem;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:1rem; }
 .app-brand { display:flex;align-items:center;gap:.6rem;min-height:44px; }
 .app-brand-name { font:1.15rem var(--font-display); }
-.area-navigation { display:flex;justify-content:center;gap:.2rem;min-width:0; }
+.area-navigation { display:flex;justify-content:safe center;gap:.2rem;min-width:0;overflow-x:auto;scrollbar-width:none; }
+.area-navigation::-webkit-scrollbar { display:none; }
+.nav-area { flex:none; }
 .nav-area { display:flex;align-items:center;justify-content:center;gap:.35rem;min-height:44px;padding:.4rem .55rem;border-radius:999px;white-space:nowrap;font-size:.9rem;font-weight:600; }
 .nav-symbol { flex:none;width:20px;height:20px; }
-.header-utilities { display:flex;align-items:center;gap:.15rem; }
+.header-utilities { display:flex;align-items:center;flex:none;gap:.15rem; }
 .nav-utility { position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border-radius:999px;color:var(--color-mocha); }
 .nav-utility:hover { background:var(--color-haze);color:var(--color-ink); }
 .nav-utility:focus-visible,.nav-area:focus-visible,.module-menu-trigger:focus-visible,.nav-menu-item:focus-visible,.app-brand:focus-visible { outline:2px solid var(--color-olive);outline-offset:3px; }
@@ -284,7 +286,8 @@
 .module-menu-panel { position:absolute;left:0;top:calc(100% + 4px);z-index:40;width:min(23rem,calc(100vw - 2rem));max-height:60vh;overflow:auto;padding:.65rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px #1a393d26; }
 .nav-menu-item { display:flex;align-items:center;gap:.65rem;min-height:44px;padding:.55rem .75rem;border-radius:.6rem;font-size:.9rem;text-align:left; }
 .nav-menu-item:hover { background:var(--color-haze); }
-@media(max-width:1050px) { .app-brand-name { display:none; }.nav-area { gap:.25rem;padding:.35rem .4rem;font-size:.82rem; } }
+@media(max-width:1250px) { .app-brand-name { display:none; }.nav-area { gap:.25rem;padding:.35rem .4rem;font-size:.82rem; } }
+@media(min-width:761px) and (max-width:1100px) { .nav-area > span { display:none; }.nav-area { padding:.4rem .6rem; } }
 @media(max-width:760px) { .app-header-grid { grid-template-columns:auto auto;gap:.25rem;padding:.35rem 1rem; }.header-utilities { justify-self:end; }.area-navigation { grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(var(--nav-area-count,7),minmax(44px,1fr));overflow-x:auto;gap:.1rem;justify-content:start; }.nav-area { flex-direction:column;gap:.15rem;min-width:0;padding:.35rem .1rem;border-radius:.7rem;font-size:.7rem; }.area-navigation .nav-symbol { width:18px;height:18px; }.module-navigation { padding:.1rem 1rem; }.tools-caption { display:none; } }
 
 /* Grid items default to min-width:auto, so one wide child (a chart canvas, a
@@ -422,16 +425,25 @@
 @media(min-width:640px) { .lock-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 @media(min-width:1024px) { .lock-grid { grid-template-columns:repeat(6,minmax(0,1fr)); } }
 
-/* One Finance header across bookkeeping, accounts and source evidence. */
-.finance-navigation { display:block;border:1px solid var(--color-fog);border-radius:1rem;padding:1rem;background:var(--color-paper);overflow:visible; }
-.finance-navigation-title { display:flex;flex-wrap:wrap;gap:.5rem;justify-content:space-between;align-items:center;font-weight:600;margin-bottom:.75rem; }
-.finance-navigation-hint { font-size:.75rem;font-weight:400;color:var(--color-mocha); }
-.finance-navigation-groups { display:grid;gap:1rem; }
-.finance-navigation-group { min-width:0; }
-.finance-navigation-group .workspace-nav-group { display:list-item;list-style:disclosure-closed inside;cursor:pointer;padding:0;margin-bottom:.35rem; }
-.finance-navigation-group[open] > .workspace-nav-group { list-style-type:disclosure-open; }
-.finance-navigation-links { display:flex;flex-wrap:wrap;gap:.25rem; }
-.finance-navigation-links .nav-pill { font-size:.75rem; }
-@media (min-width: 900px) { .finance-navigation-groups { grid-template-columns:1fr 1.35fr 1fr; } }
+/* One compact Finance header across bookkeeping, accounts and source evidence:
+   labelled groups flow inline. */
+.finance-navigation { display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .9rem;margin-inline:-.5rem;padding:.4rem .5rem;border-bottom:1px solid var(--color-fog);border-radius:.9rem;background:color-mix(in srgb, var(--color-oat) 92%, transparent);backdrop-filter:blur(6px);overflow:visible; }
+.finance-navigation-group { display:flex;flex-wrap:wrap;align-items:center;gap:.15rem;min-width:0; }
+.finance-navigation .workspace-nav-group { margin-right:.2rem; }
+.finance-navigation .nav-pill { min-height:36px;padding:.2rem .65rem;font-size:.8rem; }
+@media(max-width:760px) { .finance-navigation { flex-wrap:nowrap;overflow-x:auto;margin-inline:0;scrollbar-width:thin; }.finance-navigation-group { flex:none;flex-wrap:nowrap; }.finance-navigation .nav-pill { min-height:44px; } }
+
+/* Dense record tables: figures line up, headers stay in view while scrolling. */
+.operations-table td.text-right,.operations-table th.text-right,.table-figures { font-variant-numeric:tabular-nums; }
+.operations-table-region { max-height:75vh; }
+.operations-table thead th { position:sticky;top:0;z-index:1;background:color-mix(in srgb, var(--color-haze) 96%, white); }
+.table-filter { display:flex;align-items:center;gap:.6rem;flex-wrap:wrap; }
+.table-filter .input { max-width:22rem; }
+.table-filter-count { font-size:.8rem;color:var(--color-mocha); }
+[data-table-filter-target="row"][hidden] { display:none; }
 
 .build-version { display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.65rem;padding:.2rem 1rem;border-bottom:1px solid var(--color-fog);background:var(--color-paper);font-size:11px;line-height:1.4;color:var(--color-mocha);font-variant-numeric:tabular-nums; }
+
+/* Books desk: findings tuck under the next action; the summary carries the counts. */
+.desk-findings-summary { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem 1rem;padding:1rem 1.25rem;cursor:pointer; }
+.desk-findings > div > section { box-shadow:none;border:0;background:none;padding:0; }

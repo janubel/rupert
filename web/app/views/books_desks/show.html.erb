@@ -23,8 +23,6 @@
     <% end %>
   </header>
 
-  <%= render 'shared/reconciliation_findings', findings: @findings %>
-
   <section class="desk-next card card-pad" aria-labelledby="desk-next-title">
     <div class="desk-next-body">
       <% if next_day %>
@@ -63,6 +61,17 @@
       <p class="mt-2 text-xs text-mocha"><%= progress[:up_to_date] %> of <%= pluralize(progress[:days], 'day') %> up to date</p>
     </div>
   </section>
+
+  <details class="desk-findings card" id="desk-findings">
+    <summary class="desk-findings-summary disclosure-trigger">
+      <span class="font-display text-xl">What needs reconciliation</span>
+      <span class="flex flex-wrap gap-2">
+        <span class="<%= @findings.square_missing.count.zero? ? 'pill-fern' : 'pill-rose' %>">Square · <%= @findings.square_missing.count %> without payment</span>
+        <span class="<%= @findings.unpaid_invoices.empty? ? 'pill-fern' : 'pill-rose' %>">SwipeSimple · <%= pluralize(@findings.unpaid_invoices.size, 'unpaid invoice') %></span>
+      </span>
+    </summary>
+    <div class="px-5 pb-5"><%= render 'shared/reconciliation_findings', findings: @findings %></div>
+  </details>
 
   <% if this_week.any? %>
     <section class="space-y-3" aria-labelledby="desk-this-week">
