@@ -31,6 +31,12 @@ class GoogleLoginIdentityTest < ActionDispatch::IntegrationTest
     assert_equal @identity.email, log.email
   end
 
+  test 'linked Google login honors the permitted bookkeeping landing page' do
+    @owner.update!(dashboard_config: { 'start_page' => 'bookkeeping' })
+    sign_in_google
+    assert_redirected_to books_check_path
+  end
+
   test 'linked login works on its own workspace subdomain' do
     host! "#{@tenant.subdomain}.example.com"
     sign_in_google
