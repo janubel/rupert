@@ -133,6 +133,9 @@ module Finance
 
       private
 
+      # A tenant created before the chart of accounts existed (or in a test) may
+      # have none; seed the standard chart (idempotent) instead of failing the
+      # money record the user is saving.
       def account(code)
         existing = Finance::Account.find_by(code: code)
         return existing if existing
