@@ -9,9 +9,13 @@ module People
 
     def index
       authorize(People::Timesheet, :index?)
-      @status = params[:status].presence || 'all'
+      @reviewer = Current.user.can_review_timesheets?
+      @status = params[:status].presence || (@reviewer ? 'submitted' : 'all')
+      @status = 'all' unless (People::Timesheet.aasm.states.map { |state| state.name.to_s } + ['all']).include?(@status)
       @period = params[:period].presence
-      scope = People::TimesheetPolicy.visible_to(Current.user).by_status(@status)
+      visible = People::TimesheetPolicy.visible_to(Current.user)
+      @awaiting = visible.awaiting_review.count
+      scope = visible.by_status(@status)
       if @period
         day = Date.iso8601(@period)
         scope = scope.where('period_start <= ? AND period_end >= ?', day.end_of_week, day.beginning_of_week)
@@ -20,7 +24,6 @@ module People
         return send_data TimesheetCsv.generate(scope), filename: 'timesheets.csv', type: 'text/csv'
       end
       @square_history = SquareTimecard.visible_to(Current.user)
-      @awaiting = scope.awaiting_review.count
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee), items: 30)
     rescue Date::Error
       redirect_to people_timesheets_path, alert: 'Choose a valid period date.'

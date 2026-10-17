@@ -187,8 +187,9 @@ class ModuleRegistry
       { key: 'money', name: 'Money',
         modules: %w[books_desk financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
+      { key: 'timesheets', name: 'Timesheets', modules: %w[timesheets] },
       { key: 'team', name: 'Team',
-        modules: %w[accounts employees employee_reports departments positions time_clock timesheets leave payroll permissions] },
+        modules: %w[accounts employees employee_reports departments positions time_clock leave payroll permissions] },
       { key: 'system', name: 'System',
         modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap owner_checklists] }
     ].freeze

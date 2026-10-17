@@ -33,6 +33,13 @@
     </div>
   </section>
 
+  <% if @timesheet.submitted? && policy(@timesheet).approve? %>
+    <section class="card card-pad space-y-2" aria-label="Review checklist">
+      <h2 class="font-display text-lg">Before approving</h2>
+      <p class="text-sm text-mocha">Check the dates, daily hours, overtime and notes below against the employee's shifts. Approval rechecks entries, imported clock hours and pending corrections. Return the timesheet for correction if anything needs changing.</p>
+    </section>
+  <% end %>
+
   <section class="grid grid-cols-3 gap-4">
     <div class="stat">
       <p class="stat-label">Total hours</p>

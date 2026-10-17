@@ -25,7 +25,7 @@ module People
     alias remove_entry? update?
     alias import_shifts? update?
     def approve?
-      tenant? && user.can?('timesheets.write') && record.employee.user_id != user.id
+      tenant? && user&.can_review_timesheets? && record.employee.user_id != user.id
     end
     alias reject? approve?
     def reopen?

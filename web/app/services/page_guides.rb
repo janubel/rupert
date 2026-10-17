@@ -216,7 +216,7 @@ class PageGuides
       key: 'users', title: 'Accounts',
       summary: 'Who can sign in and their role. Also the per-person permission overrides.',
       sections: [
-        { heading: "What you're seeing", body: 'The login accounts (which pair with employees) and their roles: super_admin, admin, manager, cashier, reader. Super admin is platform-wide; everything else is scoped to this store.' }
+        { heading: "What you're seeing", body: 'The login accounts (which pair with employees) and their roles: super_admin, admin, manager, shift_leader, cashier, reader. Shift leaders review timesheets without payroll or account administration. Super admin is platform-wide; everything else is scoped to this store.' }
       ],
       tips: [
         'Give the least privilege that works — readers can view, managers can run, admins configure.',

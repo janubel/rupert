@@ -11,6 +11,15 @@
     <%= link_to "My time home", employee_app_path, class: "btn-ghost btn-sm" %>
   </section>
 
+  <% if @reviewer %>
+    <nav aria-label="Timesheet review" class="flex flex-wrap gap-2">
+      <% [['Needs review', 'submitted'], ['All timesheets', 'all'], ['Approved', 'approved'], ['Returned for correction', 'rejected']].each do |label, status| %>
+        <%= link_to (status == 'submitted' ? "#{label} (#{@awaiting})" : label), people_timesheets_path(status: status), class: "nav-pill #{@status == status ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@status == status ? 'page' : nil) } %>
+      <% end %>
+    </nav>
+    <p class="text-sm text-mocha">Review each day's hours and notes, then approve or return for correction. Your own timesheets need another reviewer. Approved hours can be included in payroll.</p>
+  <% end %>
+
   <% if @square_history.exists? %><section class="card card-pad space-y-2"><h2 class="text-lg font-semibold">Square timecards</h2><p class="text-sm text-mocha">Imported Square history is read only. It appears in your hours reports and calendar, and is kept separate from new Rupert timesheets and payroll.</p><%= link_to 'View Square history', people_square_timesheets_path, class: 'text-sm text-olive underline' %></section><% end %>
   <% if @awaiting.positive? %>
     <div class="rounded-xl border border-olive/30 bg-olive/10 px-4 py-2.5 text-sm text-olive"><%= @awaiting %> timesheet<%= @awaiting == 1 ? "" : "s" %> awaiting review.</div>
@@ -37,11 +46,12 @@
             <th scope="col" class="th">Period</th>
             <th scope="col" class="th text-right">Hours</th>
             <th scope="col" class="th">Status</th>
+            <th scope="col" class="th">Review</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @timesheets.empty? %>
-            <tr><td colspan="4" class="empty-row">No timesheets found.</td></tr>
+            <tr><td colspan="5" class="empty-row"><%= @status == 'submitted' ? 'No timesheets awaiting review.' : 'No timesheets found.' %></td></tr>
           <% end %>
           <% @timesheets.each do |timesheet| %>
             <tr class="hover:bg-cream">
@@ -50,6 +60,10 @@
               <td class="td text-right text-mocha"><%= number_with_precision(timesheet.total_hours, precision: 1) %></td>
               <td class="td">
                 <span class="<%= timesheet.approved? ? "pill-fern" : timesheet.submitted? ? "pill-olive" : timesheet.rejected? ? "pill-rose" : "pill-taupe" %>"><%= timesheet.status %></span>
+              </td>
+              <td class="td">
+                <%= link_to (timesheet.submitted? && policy(timesheet).approve? ? 'Review timesheet' : 'View timesheet'), people_timesheet_path(timesheet), class: 'text-olive underline' %>
+                <% if @reviewer && timesheet.submitted? && !policy(timesheet).approve? %><p class="text-xs text-mocha">Another reviewer required</p><% end %>
               </td>
             </tr>
           <% end %>
