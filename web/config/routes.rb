@@ -219,7 +219,7 @@ Rails.application.routes.draw do
     resources :vendor_payments, only: %i[index new create destroy] do
       member { post :restore }
     end
-    resources :journal_entries, only: %i[index show]
+    resources :journal_entries, only: %i[index show new create]
     get 'reports', to: 'reports#index', as: :reports
     get 'reports/trial_balance', to: 'reports#trial_balance', as: :reports_trial_balance
     get 'reports/income_statement', to: 'reports#income_statement', as: :reports_income_statement
