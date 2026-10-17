@@ -143,6 +143,12 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
     assert_equal 5, order.line_items
 
     assert cart.reload.checked_out?
+    other_browser = open_session
+    other_browser.get warehouse_order_path(@share.token, order.order_number)
+    assert_equal 404, other_browser.response.status
+    other_share = WarehouseShare.create!(name: 'Another vendor', tenant: @tenant)
+    get warehouse_order_path(other_share.token, order.order_number)
+    assert_response :not_found
   end
 
   test 'declined payment leaves no paid order' do

@@ -29,6 +29,7 @@ module Finance
 
     def lines
       @lines ||= BankStatementLine.where(account_label: account_label, posted_on: from..to)
+                                  .where.not(status: 'ignored')
                                   .order(:posted_on, :line_no).to_a
     end
 

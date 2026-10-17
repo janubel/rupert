@@ -6,6 +6,9 @@ module Finance
     include ApprovedPeriodNotice
     include FinanceRegister
     before_action :set_payment, only: %i[destroy restore]
+    rescue_from ActiveRecord::RecordInvalid, Finance::Posting::Error, Discard::RecordNotDiscarded, Discard::RecordNotUndiscarded do |error|
+      redirect_to finance_vendor_payments_path, alert: "Nothing was changed: #{error.message}"
+    end
 
     def index
       authorize(:module, :finance_read?)
@@ -44,7 +47,8 @@ module Finance
     def create
       authorize(:module, :finance_write?)
       @payment = Finance::VendorPayment.new(payment_params)
-      if @payment.save
+      begin
+        Finance::VendorPaymentWorkflow.save!(@payment, actor: Current.user)
         note_approved_period(@payment.paid_on, 'Vendor payment')
         ActivityLogger.log(
           'vendor_payment',
@@ -52,7 +56,8 @@ module Finance
           details: "#{helpers.finance_money_text(@payment.amount_cents)} to #{@payment.vendor.name} dated #{@payment.paid_on}"
         )
         redirect_to(finance_vendor_payments_path, notice: "Payment to #{@payment.vendor.name} recorded.")
-      else
+      rescue ActiveRecord::RecordInvalid, Finance::Posting::Error => error
+        @payment.errors.add(:base, error.message) unless error.is_a?(ActiveRecord::RecordInvalid) && error.record == @payment
         @vendors = Purchasing::Vendor.ordered
         render(:new, status: :unprocessable_entity)
       end
@@ -60,7 +65,7 @@ module Finance
 
     def destroy
       authorize(:module, :finance_write?)
-      return redirect_to(finance_vendor_payments_path, alert: @payment.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @payment.discard
+      Finance::VendorPaymentWorkflow.discard!(@payment)
 
       note_approved_period(@payment.paid_on, 'Vendor payment')
       ActivityLogger.log(
@@ -73,7 +78,7 @@ module Finance
 
     def restore
       authorize(:module, :finance_write?)
-      return redirect_to(finance_vendor_payments_path, alert: @payment.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @payment.undiscard
+      Finance::VendorPaymentWorkflow.restore!(@payment, actor: Current.user)
 
       note_approved_period(@payment.paid_on, 'Vendor payment')
       ActivityLogger.log('payment_restored', subject: @payment,

@@ -39,63 +39,89 @@ class WarehouseCheckoutService
   end
 
   def call
-    return failure('Your cart is empty.') if @cart.items.empty?
-    return failure('Authorize.net is not configured.') unless AuthorizeNetClient.configured?
-    return failure('Payment details are missing.') if @payment_nonce.blank?
+    @submit_new_attempt = false
+    return failure('This cart does not belong to this vendor link.') unless @cart.tenant_id == Current.tenant_id && @share.tenant_id == Current.tenant_id && @cart.share_id == @share.id
 
-    # Hard lock: the cart row is locked for the whole checkout so two
-    # concurrent POSTs (double-click, refresh, shared cookie) serialize, and a
-    # second attempt resolves to the existing order instead of charging twice.
-    # Order + payment + checked_out flag commit atomically.
-    result = nil
-    @cart.with_lock do
-      if @cart.checked_out?
-        existing = Core::Order.find_by(tenant_id: @share.tenant_id, source: 'online', source_order_id: order_ref_id)
-        result = if existing
-          Result.new(success?: true,
-            order: existing)
-        else
-          failure('This cart has already been checked out.')
-                 end
-        next result
-      end
+    attempt = prepare_attempt
+    return attempt if attempt.is_a?(Result)
 
-      lines = validate_lines
-      if lines.is_a?(String)
-        result = failure(lines)
-        next result
-      end
+    submit_payment(attempt) if @submit_new_attempt
+    return failure('Payment was declined. You may try a new payment token.') if attempt.reload.status == 'declined'
+    return failure('Payment status needs review. Do not submit another payment; contact the store.') unless attempt.status == 'approved'
 
-      order = create_order(lines)
-      charge = AuthorizeNetClient.charge!(
-        amount_cents: @cart.total_cents,
-        payment_nonce: @payment_nonce,
-        data_descriptor: @data_descriptor.presence || 'COMMON.ACCEPT.INAPP.PAYMENT',
-        ref_id: order.source_order_id,
-        invoice_number: order.order_number,
-        description: "Warehouse sale · #{@share.name}"
-      )
-
-      if charge.approved?
-        record_success(order, lines, charge)
-        @cart.mark_checked_out!
-        result = Result.new(success?: true, order: order)
-      else
-        result = Result.new(success?: false,
-          error: "Payment was declined#{": #{charge.message}" if charge.message.present?}")
-        # Roll back the pending order: a declined charge must not leave an
-        # order row behind, and the cart stays open for another attempt.
-        raise ActiveRecord::Rollback
-      end
-    end
-    result
-  rescue AuthorizeNetClient::Error => e
-    failure(e.message)
+    complete_approved(attempt)
   rescue ActiveRecord::RecordNotUnique
-    recover_already_processed!
+    failure('This payment token was already submitted. Check its existing payment status.')
+  rescue ActiveRecord::RecordInvalid, WarehouseCart::PaymentLocked
+    failure('The payment record needs review. No additional charge was submitted; retry to finish an approved payment or contact the store.')
   end
 
   private
+
+  # The attempt commits before any network I/O. A lost response remains
+  # unresolved, and approval survives a failure to create local order records.
+  def prepare_attempt
+    @cart.with_lock do
+      if @cart.checked_out?
+        existing = Core::Order.find_by(tenant_id: @share.tenant_id, source: 'online', source_order_id: order_ref_id)
+        return existing ? Result.new(success?: true, order: existing) : failure('This cart has already been checked out.')
+      end
+      existing = @cart.warehouse_payment_attempts.unresolved.order(:id).first
+      return existing if existing
+      return failure('Your cart is empty.') if @cart.items.empty?
+      return failure('Authorize.net is not configured.') unless AuthorizeNetClient.configured?
+      return failure('Payment details are missing or invalid.') unless @payment_nonce.is_a?(String) && @payment_nonce.match?(/\A[!-~]{1,4096}\z/)
+      lines = validate_lines
+      return failure(lines) if lines.is_a?(String)
+
+      @submit_new_attempt = true
+      @gateway_snapshot = AuthorizeNetClient.credential_snapshot
+      @cart.warehouse_payment_attempts.create!(
+        tenant_id: @cart.tenant_id, invoice_number: "WH#{SecureRandom.hex(9)}",
+        nonce_digest: Digest::SHA256.hexdigest(@payment_nonce.to_s),
+        gateway_fingerprint: Digest::SHA256.hexdigest(@gateway_snapshot.to_json),
+        amount_cents: @cart.total_cents, shipping_json: @shipping.slice(*SHIPPING_FIELDS).to_json,
+        submitted_at: Time.current
+      )
+    end
+  end
+
+  def submit_payment(attempt)
+    charge = AuthorizeNetClient.charge!(amount_cents: attempt.amount_cents, payment_nonce: @payment_nonce,
+      data_descriptor: @data_descriptor.presence || 'COMMON.ACCEPT.INAPP.PAYMENT',
+      ref_id: order_ref_id, invoice_number: attempt.invoice_number, description: "Warehouse sale · #{@share.name}", credential_snapshot: @gateway_snapshot)
+    if charge.approved? && charge.transaction_id.to_s.match?(/\A[A-Za-z0-9_-]{1,64}\z/)
+      attempt.update!(status: 'approved', transaction_id: charge.transaction_id, resolved_at: Time.current)
+    elsif charge.response_code == '2'
+      attempt.update!(status: 'declined', resolved_at: Time.current)
+    else
+      attempt.update!(status: 'unknown')
+      log_payment_review(attempt)
+    end
+  rescue AuthorizeNetClient::Error, Timeout::Error, SocketError, IOError, SystemCallError, JSON::ParserError, OpenSSL::SSL::SSLError
+    attempt.update!(status: 'unknown')
+    log_payment_review(attempt)
+  end
+
+  def log_payment_review(attempt)
+    ActivityLogger.log('warehouse_payment_needs_review', subject: attempt, details: "#{attempt.invoice_number}: #{attempt.status}")
+  end
+
+  def complete_approved(attempt)
+    @cart.with_lock do
+      attempt.reload
+      return recover_already_processed! if @cart.checked_out?
+      raise WarehouseCart::PaymentLocked unless attempt.status == 'approved' && attempt.amount_cents == @cart.total_cents
+
+      @shipping = attempt.shipping
+      lines = @cart.items.map { |item| { item: item } }
+      order = create_order(lines, attempt)
+      record_success(order, lines, attempt)
+      @cart.mark_checked_out!
+      attempt.update!(status: 'paid')
+      Result.new(success?: true, order: order)
+    end
+  end
 
   # Revalidate every line against the catalog and current stock, refreshing the
   # stored price snapshot. Returns the validated lines or an error string.
@@ -116,15 +142,15 @@ class WarehouseCheckoutService
     validated
   end
 
-  def create_order(lines)
+  def create_order(lines, attempt)
     order = Core::Order.new(
       tenant_id: @share.tenant_id,
       source: 'online',
       source_order_id: order_ref_id,
-      order_number: next_order_number,
+      order_number: attempt.invoice_number,
       channel: 'warehouse',
       currency: 'USD',
-      gross_cents: @cart.total_cents,
+      gross_cents: attempt.amount_cents,
       tax_cents: 0,
       line_items: lines.sum { |line| line[:item].quantity },
       occurred_at: Time.current
@@ -161,14 +187,7 @@ class WarehouseCheckoutService
     order.mark_paid!
   end
 
-  def next_order_number
-    "WH-#{Time.current.strftime('%Y%m%d%H%M%S')}-#{SecureRandom.hex(3).upcase}"
-  end
-
-  # Deterministic per cart so a retried checkout (charge succeeded but the
-  # response was lost) reuses the same Authorize.net ref_id — Authorize.net
-  # de-duplicates on it — and resolves to the same order instead of double
-  # charging.
+  # Correlates local records only; refId is not a gateway idempotency key.
   def order_ref_id
     "wh-#{@cart.id}"
   end

@@ -39,6 +39,7 @@ class WarehouseCheckoutsController < ApplicationController
     )
 
     if result.success?
+      write_order_confirmation(result.order)
       clear_cart_token!
       redirect_to(warehouse_order_path(@share.token, result.order.order_number), notice: 'Order confirmed.')
     else
@@ -52,6 +53,7 @@ class WarehouseCheckoutsController < ApplicationController
 
   def load_payment_config
     @cart = current_cart
+    @payment_attempt = @cart.warehouse_payment_attempts.unresolved.order(:id).first
     @client_key = AuthorizeNetClient.client_key
     @login_id = AuthorizeNetClient.login_id
     @accept_js_url = AuthorizeNetClient.accept_js_url

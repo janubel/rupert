@@ -97,8 +97,9 @@ class BankStatementsController < AuthenticatedController
       vendor = Purchasing::Vendor.find(value)
       raise BankStatementImport::Error, 'Only withdrawals can be recorded as a vendor payment.' unless line.money_out?
 
-      payment = Finance::VendorPayment.create!(vendor: vendor, amount_cents: line.out_cents, paid_on: line.posted_on, method: 'bank_transfer',
+      payment = Finance::VendorPayment.new(vendor: vendor, amount_cents: line.out_cents, paid_on: line.posted_on, method: 'bank_transfer',
         reference: "bank-line-#{line.id}", notes: note)
+      Finance::VendorPaymentWorkflow.save!(payment, actor: Current.user)
       entry = Finance::Posting.vendor_payment(payment, created_by: Current.user)
       line.decide!(status: 'recorded', user: Current.user, vendor_payment: payment, journal_entry: entry)
       ActivityLogger.log('vendor_payment', subject: vendor, details: "$#{format('%.2f', line.out_cents / 100.0)} · from bank statement")

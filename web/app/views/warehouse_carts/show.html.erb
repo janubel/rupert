@@ -21,6 +21,7 @@
             <p class="truncate font-medium text-ink"><%= item.title %></p>
             <p class="text-xs text-taupe"><%= number_to_currency(item.unit_price) %> each</p>
           </div>
+          <% unless @cart.payment_locked? %>
           <div class="flex items-center gap-2">
             <%= form_tag warehouse_cart_item_path(@share.token, item.id), method: :patch, class: "flex items-center gap-2" do %>
               <%= number_field_tag "quantity", item.quantity, min: 0, max: [item.available_quantity, WarehouseCartItem::MAX_QUANTITY].min, class: "input w-20" %>
@@ -28,6 +29,7 @@
             <% end %>
             <%= button_to "Remove", warehouse_cart_remove_item_path(@share.token, item.id), method: :delete, class: "btn-ghost btn-sm" %>
           </div>
+          <% end %>
           <p class="w-24 text-right font-semibold text-ink"><%= number_to_currency(item.line_price) %></p>
         </div>
       <% end %>

@@ -60,9 +60,29 @@ module People
         regular = [hours.to_f - overtime.to_f, 0].max
         ((regular * rate.hourly_rate_cents) + (overtime.to_f * rate.hourly_rate_cents * OVERTIME_MULTIPLIER)).round
       else
-        weeks = (pay_run.period_end - pay_run.period_start).to_f / 7.0
-        denominator = { 'weekly' => 52.0, 'biweekly' => 26.0, 'monthly' => 12.0 }.fetch(rate.pay_frequency, 26.0)
-        (rate.annual_salary_cents * (weeks / denominator)).round
+        salary_for(rate, pay_run)
+      end
+    end
+
+    # Weekly and biweekly salaries use 52/26 installments, prorated by
+    # inclusive scheduled days. Monthly salaries use calendar-month shares.
+    def self.salary_for(rate, pay_run)
+      annual = BigDecimal(rate.annual_salary_cents.to_s)
+      first = pay_run.period_start
+      last = pay_run.period_end
+      return 0 if last < first
+
+      if rate.pay_frequency == 'monthly'
+        amount = BigDecimal('0')
+        while first <= last
+          through = [first.end_of_month, last].min
+          amount += annual / 12 * ((through - first).to_i + 1) / first.end_of_month.day
+          first = through + 1
+        end
+        amount.round.to_i
+      else
+        days = (last - first).to_i + 1
+        (annual * days / 364).round.to_i
       end
     end
 
@@ -83,6 +103,6 @@ module People
       totals
     end
 
-    private_class_method :gross_for, :approved_hours
+    private_class_method :gross_for, :salary_for, :approved_hours
   end
 end

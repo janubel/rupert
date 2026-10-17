@@ -9,6 +9,9 @@ class WarehouseCartsController < ApplicationController
   skip_before_action :require_login
   skip_before_action :load_last_sync
   before_action :load_share
+  rescue_from WarehouseCart::PaymentLocked do |error|
+    redirect_to warehouse_cart_path(@share.token), alert: error.message
+  end
 
   def show
     @cart = current_cart
@@ -38,7 +41,7 @@ class WarehouseCartsController < ApplicationController
   end
 
   def remove_item
-    current_cart.items.find(params[:item_id]).destroy!
+    current_cart.remove_item!(params[:item_id])
     redirect_to(warehouse_cart_path(@share.token), notice: 'Item removed.')
   rescue ActiveRecord::RecordNotFound
     redirect_to(warehouse_cart_path(@share.token), alert: 'Item no longer in your cart.')

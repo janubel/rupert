@@ -134,6 +134,8 @@ module Finance
     def save_with_posting
       ok = false
       Finance::Expense.transaction do
+        Tenant.where(id: Current.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
+        @expense.reload if @expense.persisted?
         ok = yield
         raise ActiveRecord::Rollback unless ok
       end

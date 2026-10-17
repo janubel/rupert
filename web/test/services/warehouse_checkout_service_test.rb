@@ -82,4 +82,35 @@ class WarehouseCheckoutServiceTest < ActiveSupport::TestCase
     refute_predicate @cart, :checked_out?
     assert_equal 0, Core::Order.count
   end
+
+  test 'an unknown payment blocks new charges and cart edits' do
+    AuthorizeNetClient.stubs(:configured?).returns(true)
+    AuthorizeNetClient.expects(:charge!).once.raises(Net::ReadTimeout)
+    first = WarehouseCheckoutService.call(share: @share, cart: @cart, payment_nonce: 'nonce-one')
+    refute_predicate first, :success?
+    assert_equal 'unknown', @cart.warehouse_payment_attempts.sole.status
+    assert_raises(WarehouseCart::PaymentLocked) { @cart.add_item!(@variant) }
+    assert_raises(WarehouseCart::PaymentLocked) { @cart.set_quantity!(@cart.items.first.id, 3) }
+    assert_raises(WarehouseCart::PaymentLocked) { @cart.remove_item!(@cart.items.first.id) }
+    retry_result = WarehouseCheckoutService.call(share: @share, cart: @cart.reload, payment_nonce: 'nonce-two')
+    refute_predicate retry_result, :success?
+    assert_equal 0, Core::Order.count
+  end
+
+  test 'only an explicit decline permits a new payment token' do
+    AuthorizeNetClient.stubs(:configured?).returns(true)
+    declined = AuthorizeNetClient::Result.new(response_code: '2')
+    AuthorizeNetClient.expects(:charge!).twice.returns(declined, approved_charge)
+    refute_predicate WarehouseCheckoutService.call(share: @share, cart: @cart, payment_nonce: 'nonce-one'), :success?
+    assert_predicate WarehouseCheckoutService.call(share: @share, cart: @cart.reload, payment_nonce: 'nonce-two'), :success?
+    assert_equal %w[declined paid], @cart.warehouse_payment_attempts.order(:id).pluck(:status)
+  end
+
+  test 'approval without a transaction id remains unresolved' do
+    AuthorizeNetClient.stubs(:configured?).returns(true)
+    AuthorizeNetClient.expects(:charge!).once.returns(AuthorizeNetClient::Result.new(response_code: '1'))
+    refute_predicate WarehouseCheckoutService.call(share: @share, cart: @cart, payment_nonce: 'nonce-one'), :success?
+    refute_predicate WarehouseCheckoutService.call(share: @share, cart: @cart.reload, payment_nonce: 'nonce-two'), :success?
+    assert_equal 'unknown', @cart.warehouse_payment_attempts.sole.status
+  end
 end
