@@ -121,6 +121,9 @@ class ModuleRegistry
     Entry.new(key: 'timesheets', name: 'Timesheets', path: lambda {
       people_timesheets_path
     }, permission: 'timesheets.self', position: 88),
+    Entry.new(key: 'punch_history', name: 'Punch history', path: lambda {
+      people_punch_history_path
+    }, permission: 'timesheets.read', position: 88),
     Entry.new(key: 'leave', name: 'Leave & PTO', path: lambda {
       people_leave_requests_path
     }, permission: 'leave.read', position: 89),
@@ -207,7 +210,7 @@ class ModuleRegistry
         modules: %w[books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports bank_reconciliation ledger_export] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
       { key: 'receipts', name: 'Receipts', modules: %w[receipts] },
-      { key: 'timesheets', name: 'Timesheets', modules: %w[timesheets] },
+      { key: 'timesheets', name: 'Timesheets', modules: %w[timesheets punch_history] },
       { key: 'team', name: 'Team',
         modules: %w[accounts employees employee_reports departments positions time_clock leave payroll permissions] },
       { key: 'system', name: 'System',
