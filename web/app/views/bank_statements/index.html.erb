@@ -1,0 +1,46 @@
+<% content_for :title, 'Bank statements' %>
+<div class="mx-auto max-w-5xl space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :finance %>
+  <header>
+    <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Finance · money out</p>
+    <h1 class="page-title mt-2">Bank statements</h1>
+    <p class="mt-2 max-w-2xl text-sm text-mocha">Rupert has no connection to your bank. Download a statement as CSV from your bank, upload it here, then say what each withdrawal was. Nothing is recorded until you choose it, and a line is never imported twice.</p>
+  </header>
+
+  <% if @form_error %><p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><%= @form_error %></p><% end %>
+
+  <% if @can_write %>
+    <section class="card card-pad space-y-3">
+      <h2 class="font-display text-xl">Upload a statement</h2>
+      <%= form_with url: bank_statements_path, multipart: true, class: 'space-y-3' do |f| %>
+        <div><%= f.label :account_label, 'Account name (a name, never the account number)', class: 'block text-sm font-semibold' %><%= f.text_field :account_label, value: params[:account_label], required: true, maxlength: 60, placeholder: 'Operating checking', class: 'input' %></div>
+        <div><%= f.label :file, 'Statement CSV', class: 'block text-sm font-semibold' %><%= f.file_field :file, accept: '.csv,text/csv', required: true, class: 'input' %></div>
+        <label class="flex items-start gap-3 text-sm"><%= f.check_box :withdrawals_positive, { class: 'mt-1', checked: params[:withdrawals_positive] == '1' }, '1', '0' %><span>My bank lists withdrawals as positive numbers in one Amount column (leave unticked if withdrawals are negative or there are separate Debit and Credit columns).</span></label>
+        <%= f.submit 'Read statement', class: 'btn-primary' %>
+        <p class="text-xs text-mocha">The original file is kept unchanged and encrypted. Descriptions are encrypted. Up to 5,000 rows and 8 MiB.</p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section class="space-y-3">
+    <h2 class="font-display text-xl">Uploaded statements</h2>
+    <% if @statements.empty? %>
+      <p class="card card-pad text-sm text-mocha">No statements yet.</p>
+    <% else %>
+      <div class="card overflow-x-auto"><table class="w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60"><tr><% %w[Account File Dates Lines Waiting].each do |h| %><th scope="col" class="th"><%= h %></th><% end %></tr></thead>
+        <tbody class="divide-y divide-fog">
+          <% @statements.each do |doc_id, label, total, waiting, from, to| %>
+            <tr>
+              <td class="td font-medium"><%= link_to label, bank_statement_path(doc_id), class: 'underline' %></td>
+              <td class="td text-xs text-taupe"><%= @documents[doc_id]&.filename %></td>
+              <td class="td"><%= from %> to <%= to %></td>
+              <td class="td"><%= total %></td>
+              <td class="td"><%= waiting.to_i.zero? ? 'All decided' : "#{waiting} to review" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table></div>
+    <% end %>
+  </section>
+</div>

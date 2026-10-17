@@ -4,6 +4,9 @@ Rails.application.routes.draw do
   resource :financial_close, only: %i[show create], controller: 'financial_close'
   resource :cash_forecast, only: %i[show create]
   resource :books_check, only: :show, controller: 'books_check'
+  resources :bank_statements, only: %i[index show create] do
+    member { post :decide }
+  end
   resource :book_approvals, only: %i[show create], path: 'approve_books', controller: 'book_approvals'
   resource :retention_drive, only: :show do
     get :connect

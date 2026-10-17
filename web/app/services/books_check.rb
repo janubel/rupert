@@ -26,7 +26,7 @@ class BooksCheck
   def checks
     @checks ||= [source_freshness, sync_health, paid_without_payment, payment_mismatch, refund_records,
       orders_without_location, impossible_amounts, missing_controls, unreviewed_days,
-      overdue_follow_ups, evidence_integrity, approval_ledger, unapproved_days, offsite_backup].compact
+      overdue_follow_ups, evidence_integrity, approval_ledger, unapproved_days, offsite_backup, bank_lines_waiting].compact
   end
 
   def summary
@@ -247,6 +247,16 @@ class BooksCheck
       detail_ok: 'A Google Drive backup upload succeeded this week.',
       detail_bad: 'No successful off-host backup is recorded. The books exist only on this machine and its local snapshots.',
       action: 'Connect Google Drive backup in Settings (platform administrator).', path: routes.settings_path)
+  end
+
+  def bank_lines_waiting
+    scope = BankStatementLine.pending
+    build('bank_lines_waiting', 'Uploaded bank lines have a decision', count: scope.count, level: :watch,
+      cents: scope.where('amount_cents < 0').sum('-amount_cents'),
+      rows: scope.group(:document_id, :account_label).count.map { |(doc, label), n| [label, doc, n] }.first(SAMPLE),
+      detail_ok: 'Every uploaded bank line is recorded or ignored (or none uploaded).',
+      detail_bad: 'Bank statement lines are waiting for someone to say what they were. Withdrawals left undecided are missing from money out.',
+      action: 'Open Bank statements and decide the waiting lines.', path: routes.bank_statements_path)
   end
 
   def safe(value)
