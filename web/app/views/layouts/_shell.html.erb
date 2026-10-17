@@ -15,6 +15,9 @@
           <% if Current.user.super_admin? %>
             <%= link_to platform_path, class: 'nav-utility', aria: { label: 'Instance overview' }, title: 'Instance overview' do %><%= navigation_icon('platform') %><span class="nav-hint">Instance overview</span><% end %>
           <% end %>
+          <% if Current.user.can?('customers.read') %>
+            <%= link_to customers_path, class: "nav-utility #{'bg-haze text-ink' if request.path.start_with?('/customers')}", aria: { label: 'Customers', current: (request.path.start_with?('/customers') ? 'page' : nil) }, title: 'Customers', data: { customers_link: true } do %><%= navigation_icon('customers') %><span class="nav-hint">Customers</span><% end %>
+          <% end %>
           <% if Current.user.can?('dashboard.read') %>
             <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
           <% end %>

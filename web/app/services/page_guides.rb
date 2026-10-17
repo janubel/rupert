@@ -287,10 +287,11 @@ class PageGuides
       key: 'customers', title: 'Customers',
       summary: 'Everyone who buys — orders, contact info, and history in one place.',
       sections: [
-        { heading: "What you're seeing", body: "The customer list, searchable, with their order history. Opening a customer shows the orders they've placed across channels." }
+        { heading: "What you're seeing", body: "The customer list with relationship counts, search, filters and sorting. Opening a customer shows their activity timeline, follow-ups, notes and order history." }
       ],
       tips: [
-        'Search by name, phone, or email — not just order number.'
+        'Search by name, phone, or email — not just order number.',
+        'Use the relationship tabs and removable filter chips to narrow the list; Clear all resets it.'
       ]
     ),
     'connections' => Guide.new(

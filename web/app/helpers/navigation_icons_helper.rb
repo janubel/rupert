@@ -25,6 +25,7 @@ module NavigationIconsHelper
     'alert' => ['m12 3 10 18H2Z', 'M12 9v5M12 17h.01'],
     'settings' => ['M4 6h16M4 12h16M4 18h16', 'M8 3v6M16 9v6M10 15v6'],
     'document' => ['M5 3h10l4 4v14H5Z', 'M14 3v5h5M8 12h8M8 16h8'],
+    'customers' => ['M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z', 'M4 21a8 8 0 0 1 16 0', 'M19 4h2M20 3v2'],
     'shield' => ['m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6Z', 'm8 12 3 3 5-6']
   }.freeze
 
@@ -34,7 +35,7 @@ module NavigationIconsHelper
     'connections' => 'link', 'pos_connections' => 'link', 'alerts' => 'alert',
     'reports' => 'report', 'register_summary' => 'report', 'time_clock' => 'clock',
     'settings' => 'settings', 'platform' => 'platform', 'owner_checklists' => 'review',
-    'api_access_tokens' => 'shield', 'permissions' => 'shield', 'roadmap' => 'document'
+    'api_access_tokens' => 'shield', 'permissions' => 'shield', 'roadmap' => 'document', 'customers' => 'customers'
   }.freeze
 
   def navigation_icon(key, css_class: 'nav-symbol')

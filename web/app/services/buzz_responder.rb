@@ -44,9 +44,9 @@ class BuzzResponder
   def status_summary
     last = SyncRun.order(startedAt: :desc).first
     sync_line = if last
-                  "Last sync: #{last.status} #{time_ago(last.startedAt)} (#{last.source || 'all'})"
-                else
-                  'No syncs recorded yet.'
+      "Last sync: #{last.status} #{time_ago(last.startedAt)} (#{last.source || 'all'})"
+    else
+      'No syncs recorded yet.'
                 end
     pending = InventoryCount.by_status('pending').count
     alerts = StockAlert.open.count

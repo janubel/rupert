@@ -1,36 +1,42 @@
-<%= form_with model: customer, scope: :customer, url: customer.persisted? ? customer_path(customer) : customers_path, class: "space-y-4" do |f| %>
-  <% if customer.errors.any? %><p role="alert" class="text-rose"><%= customer.errors.full_messages.to_sentence %></p><% end %>
-  <% if customer.source != 'manual' %><p class="text-sm text-mocha">Contact details are maintained by <%= directory_label(customer.source) %>. Rupert CRM fields below survive directory refreshes.</p><% end %>
-  <div class="grid gap-4 sm:grid-cols-2">
-    <div>
-      <%= f.label :first_name, "First name", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.text_field :first_name, class: "input", readonly: customer.source != "manual" %>
+<% locked = customer.source != "manual" %>
+<% label_class = "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
+<%= form_with model: customer, scope: :customer, url: customer.persisted? ? customer_path(customer) : customers_path, class: "space-y-6" do |f| %>
+  <% if customer.errors.any? %>
+    <div role="alert" class="flash flash-alert">
+      <p class="font-semibold">Please fix the following:</p>
+      <ul class="mt-1 list-disc pl-5"><% customer.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
     </div>
-    <div>
-      <%= f.label :last_name, "Last name", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.text_field :last_name, class: "input", readonly: customer.source != "manual" %>
+  <% end %>
+
+  <fieldset class="space-y-4">
+    <legend class="font-display text-lg text-ink">Contact details</legend>
+    <% if locked %><p class="text-sm text-mocha" id="contact-locked">Contact details are maintained by <%= directory_label(customer.source) %>. Rupert CRM fields below survive directory refreshes.</p><% end %>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div><%= f.label :first_name, "First name", class: label_class %><%= f.text_field :first_name, class: "input", readonly: locked, autocomplete: "off", aria: { describedby: (locked ? "contact-locked" : nil) } %></div>
+      <div><%= f.label :last_name, "Last name", class: label_class %><%= f.text_field :last_name, class: "input", readonly: locked, autocomplete: "off", aria: { describedby: (locked ? "contact-locked" : nil) } %></div>
+      <div><%= f.label :email, "Email", class: label_class %><%= f.email_field :email, class: "input", readonly: locked, autocomplete: "off", aria: { describedby: (locked ? "contact-locked" : nil) } %></div>
+      <div><%= f.label :phone, "Phone", class: label_class %><%= f.telephone_field :phone, class: "input", readonly: locked, autocomplete: "off", aria: { describedby: (locked ? "contact-locked" : nil) } %></div>
     </div>
-    <div>
-      <%= f.label :email, "Email", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.email_field :email, class: "input", readonly: customer.source != "manual" %>
+  </fieldset>
+
+  <fieldset class="space-y-4">
+    <legend class="font-display text-lg text-ink">Relationship</legend>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div><%= f.label :preferred_name, "Display name", class: label_class %><%= f.text_field :preferred_name, class: "input", maxlength: 255, aria: { describedby: "display-name-hint" } %><p id="display-name-hint" class="mt-1 text-xs text-taupe">Shown instead of the contact name, e.g. a nickname or business name.</p></div>
+      <div><%= f.label :crm_status, "Relationship", class: label_class %><%= f.select :crm_status, Core::Customer::CRM_STATUSES.map { |s| [s.titleize, s] }, {}, class: "select w-full" %></div>
+      <div><%= f.label :tags, "Tags", class: label_class %><%= f.text_field :tags, class: "input", maxlength: 1000, placeholder: "retail, wholesale, event", aria: { describedby: "tags-hint" } %><p id="tags-hint" class="mt-1 text-xs text-taupe">Separate with commas.</p></div>
+      <div><%= f.label :owner_id, "Assigned to", class: label_class %><%= f.select :owner_id, @owners.map { |u| [u.display_name, u.id] }, { include_blank: "Unassigned" }, class: "select w-full" %></div>
     </div>
-    <div>
-      <%= f.label :phone, "Phone", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.telephone_field :phone, class: "input", readonly: customer.source != "manual" %>
-    </div>
-  </div>
-  <div class="grid gap-4 sm:grid-cols-2">
-    <div><%= f.label :preferred_name, 'Display name', class: 'block text-sm' %><%= f.text_field :preferred_name, class: 'input', maxlength: 255 %></div>
-    <div><%= f.label :crm_status, 'Relationship', class: 'block text-sm' %><%= f.select :crm_status, Core::Customer::CRM_STATUSES.map { |s| [s.titleize, s] }, {}, class: 'select' %></div>
-    <div><%= f.label :tags, 'Tags (comma separated)', class: 'block text-sm' %><%= f.text_field :tags, class: 'input', maxlength: 1000 %></div>
-    <div><%= f.label :owner_id, 'Assigned to', class: 'block text-sm' %><%= f.select :owner_id, @owners.map { |u| [u.display_name, u.id] }, { include_blank: 'Unassigned' }, class: 'select' %></div>
-  </div>
-  <div>
-    <%= f.label :notes, "Notes", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-    <%= f.text_area :notes, rows: 4, class: "input", maxlength: 10_000 %>
-  </div>
-  <div class="flex items-center gap-3">
-    <%= f.submit "Save customer", class: "btn-primary" %>
+  </fieldset>
+
+  <fieldset>
+    <legend class="font-display text-lg text-ink">Notes</legend>
+    <%= f.label :notes, "Private notes", class: "sr-only" %>
+    <%= f.text_area :notes, rows: 5, class: "input !rounded-2xl mt-2", maxlength: 10_000, placeholder: "Preferences, sizing, anything the team should know…" %>
+  </fieldset>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <%= f.submit (customer.persisted? ? "Save changes" : "Add customer"), class: "btn-primary" %>
     <%= link_to "Cancel", customer.persisted? ? customer_path(customer) : customers_path, class: "btn-ghost" %>
   </div>
 <% end %>

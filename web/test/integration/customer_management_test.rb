@@ -116,7 +116,7 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     26.times { |n| @customer.interactions.create!(author: @user, body: "Entry #{n}") }
     get customer_path(@customer), params: { activity_page: 2 }
     assert_response :success
-    assert_select 'article', count: 1
+    assert_select '#timeline-heading ~ ol li', count: 1
   end
   test 'verified directory and retained historical profiles can be filtered independently' do
     time = Time.current.change(usec: 0)
@@ -132,5 +132,77 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     assert_select 'tbody a[href=?]', customer_path(@customer), count: 0
     assert_select 'tbody a[href=?]', customer_path(historical)
     assert_includes response.body, 'Unverified / historical'
+  end
+
+  test 'index is discoverable from the header and dashboard shortcuts' do
+    get customers_path
+    assert_response :success
+    assert_select 'a[data-customers-link][href=?][aria-label="Customers"][aria-current="page"]', customers_path
+    OnboardingController.stubs(:configured?).returns(true)
+    get root_path
+    assert_response :success
+    assert_select 'a[data-customers-link][href=?]', customers_path
+    assert_select 'nav[aria-label="Daily work"] a[href=?]', customers_path
+  end
+
+  test 'users without customers.read get an explanation instead of a silent redirect' do
+    @user.update!(role: 'inventory_employee')
+    get root_path
+    assert_select 'a[data-customers-link]', count: 0
+    get customers_path
+    assert_response :forbidden
+    assert_select '[role=alert]', text: /doesn't include customers/
+    assert_includes response.body, 'Inventory staff'
+    get customer_path(@customer)
+    assert_response :forbidden
+  end
+
+  test 'index shows relationship counts, filter chips, sorting and clear paths' do
+    @customer.update!(crm_status: 'vip', first_name: 'Zed', last_name: 'Zebra')
+    Core::Customer.create!(source: 'manual', external_id: 'crm-2', first_name: 'Amy', last_name: 'Apple', crm_status: 'lead')
+    get customers_path, params: { sort: 'name' }
+    assert_response :success
+    assert_equal %w[Amy Zed], css_select('tbody tr td:first-child a').map { |a| a.text.split.first }
+    assert_select 'nav[aria-label="Relationship filter"] a[aria-current="true"]', text: /All/
+    get customers_path, params: { status: 'vip', q: { first_name_or_last_name_or_preferred_name_or_email_or_phone_cont: 'zed' } }
+    assert_select 'ul[aria-label="Active filters"] a', minimum: 3
+    assert_select 'tbody tr', count: 1
+    assert_includes response.body, 'match your filters'
+    get customers_path, params: { sort: 'bogus; drop table' }
+    assert_response :success
+  end
+
+  test 'empty states distinguish a new workspace from a filter with no matches' do
+    get customers_path, params: { status: 'inactive' }
+    assert_select 'h2', text: 'No customers match these filters'
+    assert_select 'a[href=?]', customers_path, text: 'Clear all filters'
+    Core::Customer.delete_all
+    get customers_path
+    assert_select 'h2', text: 'No customers yet'
+    assert_select 'a[href=?]', new_customer_path
+  end
+
+  test 'customer page offers quick actions, summary and timeline in order' do
+    @customer.update!(email: 'fixture@example.com', phone: '555-0100', tags: 'vip')
+    @customer.follow_ups.create!(title: 'Overdue call', due_on: Date.yesterday, author: @user)
+    get customer_path(@customer)
+    assert_response :success
+    assert_select '[aria-label="Quick actions"] a[href=?]', 'mailto:fixture@example.com'
+    assert_select '[aria-label="Quick actions"] a[href=?]', 'tel:555-0100'
+    assert_select '[aria-label="Quick actions"] a[href=?]', edit_customer_path(@customer)
+    assert_includes response.body, '1 overdue'
+    assert_select 'form#log-interaction'
+    assert_select 'form#schedule-follow-up'
+    @user.update!(role: 'reader')
+    get customer_path(@customer)
+    assert_select 'form#log-interaction', count: 0
+    assert_select '[aria-label="Quick actions"] a[href=?]', edit_customer_path(@customer), count: 0
+  end
+
+  test 'form groups fields and reports every validation error' do
+    post customers_path, params: { customer: { first_name: 'Bad', crm_status: 'nonsense' } }
+    assert_response :unprocessable_entity
+    assert_select 'fieldset legend', text: 'Contact details'
+    assert_select '[role=alert] li'
   end
 end

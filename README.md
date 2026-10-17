@@ -19,9 +19,11 @@ Square ───┼── sync engine ──▶ SQLite DB     ──▶ GUI
 | Path | Purpose |
 | --- | --- |
 | `web/` | The Rails 8.1 app: sync engine services, Oatmeal GUI, JSON APIs |
+| `core/` | Parallel Rust implementation that mirrors the Rails app (see `core/docs/SPEC.md`) |
+| `mobile/` | Employee iPhone/Android app (see `mobile/README.md`) |
 | `legacy/` | The original Node/React implementation, kept as reference |
 | `docs/` | Docs site, plans, audits and research (see `docs/README.md`) |
-| `deploy/` | Old droplet systemd units, kept for reference only (see below) |
+| `deploy/` | SER8 (Incus) systemd units and host freshness watcher; older droplet units kept for reference (see Production and deployment) |
 | `bin/` | Host scripts (`backup.sh`) |
 | `shopify.app.toml` | Shopify app config (scopes, webhooks) |
 | `Dockerfile`, `docker-compose.yml` | Optional container deployment |
