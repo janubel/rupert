@@ -14,7 +14,7 @@ class MoneyReconciliationsTest < ActionDispatch::IntegrationTest
     %w[daily weekly monthly].each do |kind|
       get money_reconciliations_path, params: { kind: kind, date: '2026-10-15' }
       assert_response :success
-      assert_select 'h1', 'Money reconciliation'
+      assert_select 'h1', 'Source reports'
       assert_includes response.body, 'Review required'
       assert_select '[aria-label="Vendor source coverage"] [data-finance-source]', count: 4
       %w[ctrax square shopify swipesimple].each { |source| assert_select "[data-finance-source='#{source}'] h3", count: 1 }

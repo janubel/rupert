@@ -1,4 +1,4 @@
-<% content_for :title, 'Locked periods' %>
+<% content_for :title, 'Period locks' %>
 <% c = @checklist; event = c.lock_event; locked = c.locked?
    stamp = ->(time) { time.in_time_zone.strftime('%b %-d, %Y at %-I:%M %p') } %>
 <div class="mx-auto max-w-6xl space-y-8 operations-workspace books-desk">
@@ -6,8 +6,8 @@
 
   <header class="operations-header">
     <div>
-      <p class="eyebrow text-mocha">Money · history and retention</p>
-      <h1 class="page-title mt-2">Locked periods</h1>
+      <p class="eyebrow text-mocha">Finance · history and retention</p>
+      <h1 class="page-title mt-2">Period locks</h1>
       <p class="mt-2 max-w-2xl text-sm text-mocha">When a month, quarter or year is finished and checked, lock it. Nothing dated inside a locked period can then be added, changed or removed in Rupert: expenses, vendor payments, bank-line decisions, day reviews, closes and approvals. Each lock keeps a dated archive of the period’s totals. Reopening needs a written reason and is recorded.</p>
     </div>
     <%= link_to 'Back to Books desk', books_desk_path, class: 'btn-ghost btn-sm' %>

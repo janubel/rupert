@@ -29,4 +29,21 @@ class BooksDeskTest < ActiveSupport::TestCase
     assert_equal [Date.new(2026, 1, 1), Date.new(2026, 12, 31)], [y.from, y.to]
     assert_equal Date.new(2025, 12, 31), MoneyReconciliationReport.previous_period('yearly', today: Date.new(2026, 3, 2))
   end
+  test 'weekly approval waits until daily reviews and closes are done' do
+    stages = BooksDesk::STAGES.keys.map do |key|
+      BooksDesk::Stage.new(key: key, state: key == :approved ? :todo : :done, blocker: key == :approved ? :week : nil)
+    end
+    day = BooksDesk::Day.new(day: Date.new(2026, 10, 5), orders: 1, totals: {}, stages: stages)
+    assert day.daily_cleanup_complete?
+    assert_not day.complete?
+    assert_nil day.next_stage
+    desk = BooksDesk.new(today: Date.new(2026, 10, 17))
+    desk.stubs(:focus_days).returns(Array.new(7, day))
+    task = desk.focus_tasks.find { |item| item.key == :days }
+    assert task.done?
+    assert_includes task.detail, 'Approve the week after the remaining chores'
+    stages.find { |stage| stage.key == :closed }.state = :todo
+    assert_not day.daily_cleanup_complete?
+    assert_equal :closed, day.next_stage.key
+  end
 end

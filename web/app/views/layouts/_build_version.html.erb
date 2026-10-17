@@ -1,0 +1,5 @@
+<% build = BuildInfo.current %>
+<div class="build-version" aria-label="Rupert build version" data-build-version="<%= build.revision %>">
+  <span>Rupert</span><span title="<%= build.revision %>"><%= build.label %></span>
+  <% if build.built_at %><time datetime="<%= build.built_at.iso8601 %>"><%= build.built_at.strftime('%Y-%m-%d %H:%M UTC') %></time><% end %>
+</div>

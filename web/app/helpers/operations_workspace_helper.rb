@@ -2,7 +2,7 @@
 
 module OperationsWorkspaceHelper
   def operations_links(workspace, day: nil)
-    date = day&.iso8601
+    date = (day || Date.yesterday).iso8601
     entries = case workspace.to_sym
     when :sales
       [['Sales journal', sales_path(date: date), 'sales.read', 'sales'],
@@ -15,27 +15,24 @@ module OperationsWorkspaceHelper
        ['Stock review', inventory_exceptions_path, 'inventory.read', 'inventory_exceptions'],
        ['Movements', movements_inventory_index_path, 'inventory.read', 'inventory/movements'],
        ['Catalog links', reconcile_index_path, 'reconcile.read', 'reconcile']]
-    when :money
-      [['Books desk', books_desk_path, 'reports.read', 'books_desks', 'Routine'],
-       ['Daily checks', daily_reconciliations_path(day: date), 'reports.read', 'daily_reconciliations', 'Routine'],
-       ['Financial close', financial_close_path(day: date), 'reports.read', 'financial_close', 'Routine'],
-       ['Approve books', book_approvals_path, 'reports.read', 'book_approvals', 'Routine'],
-       ['Follow-ups', reconciliation_follow_ups_path(day: date), 'reports.read', 'reconciliation_follow_ups', 'Routine'],
-       ['Locked periods', period_locks_path, 'reports.read', 'period_locks', 'Routine'],
+    when :money, :finance
+      [['Books desk', books_desk_path, 'reports.read', 'books_desks', 'Daily & weekly'],
+       ['Daily reconciliation', daily_reconciliations_path(day: date), 'reports.read', 'daily_reconciliations', 'Daily & weekly'],
+       ['Day close', financial_close_path(day: date), 'reports.read', 'financial_close', 'Daily & weekly'],
+       ['Book approvals', book_approvals_path, 'reports.read', 'book_approvals', 'Daily & weekly'],
+       ['Follow-ups', reconciliation_follow_ups_path(day: date), 'reports.read', 'reconciliation_follow_ups', 'Daily & weekly'],
        ['Bank statements', bank_statements_path, 'finance.read', 'bank_statements', 'Records'],
-       ['Originals', reconciliation_documents_path(from: date, to: date, close_day: date), 'reports.read', 'reconciliation_documents', 'Records'],
-       ['Finance', finance_accounts_path, 'finance.read', 'finance/*', 'Records'],
-       ['Snapshot', business_snapshot_path, 'finance.read', 'business_snapshots', 'Reports'],
-       ['Books check', books_check_path, 'reports.read', 'books_check', 'Reports'],
-       ['Cash plan', cash_forecast_path(day: date), 'reports.read', 'cash_forecasts', 'Reports']]
-    when :finance
-      [['Books desk', books_desk_path, 'reports.read', 'books_desks'],
-       ['Accounts', finance_accounts_path, 'finance.read', 'finance/accounts'],
-       ['Expenses', finance_expenses_path, 'finance.read', 'finance/expenses'],
-       ['Vendor payments', finance_vendor_payments_path, 'finance.read', 'finance/vendor_payments'],
-       ['Bank statements', bank_statements_path, 'finance.read', 'bank_statements'],
-       ['Account codes', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts'],
-       ['Ledger', ledger_index_path, 'ledger.read', 'ledger']]
+       ['Source documents', reconciliation_documents_path(from: date, to: date, close_day: date), 'reports.read', 'reconciliation_documents', 'Records'],
+       ['Accounts', finance_accounts_path, 'finance.read', 'finance/accounts', 'Records'],
+       ['Expenses', finance_expenses_path, 'finance.read', 'finance/expenses', 'Records'],
+       ['Vendor payments', finance_vendor_payments_path, 'finance.read', 'finance/vendor_payments', 'Records'],
+       ['Chart of accounts', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts', 'Records'],
+       ['Ledger', ledger_index_path, 'ledger.read', 'ledger', 'Records'],
+       ['Source reports', money_reconciliations_path(date: date), 'reports.read', 'money_reconciliations', 'Reports & control'],
+       ['Cash forecast', cash_forecast_path(day: date), 'reports.read', 'cash_forecasts', 'Reports & control'],
+       ['Business snapshot', business_snapshot_path, 'finance.read', 'business_snapshots', 'Reports & control'],
+       ['Books health', books_check_path, 'reports.read', 'books_check', 'Reports & control'],
+       ['Period locks', period_locks_path, 'reports.read', 'period_locks', 'Reports & control']]
     else
       []
     end

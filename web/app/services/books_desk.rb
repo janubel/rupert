@@ -38,7 +38,8 @@ class BooksDesk
 
   Day = Struct.new(:day, :orders, :totals, :stages, keyword_init: true) do
     def complete? = stages.all?(&:done?)
-    def next_stage = stages.find { |stage| ACTIONABLE_STATES.include?(stage.state) }
+    def next_stage = stages.find { |stage| ACTIONABLE_STATES.include?(stage.state) && !(stage.key == :approved && stage.blocker == :week) }
+    def daily_cleanup_complete? = stages.reject { |stage| stage.key == :approved }.all?(&:done?)
     def actionable? = !next_stage.nil?
     def done_count = stages.count(&:done?)
     def quiet? = orders.zero?
@@ -245,7 +246,7 @@ class BooksDesk
   def week_tasks(monday)
     sunday = monday + 6
     days = focus_days
-    open_days = days.reject(&:complete?)
+    open_days = days.reject(&:daily_cleanup_complete?)
     lines = BankStatementLine.where(posted_on: monday..sunday)
     waiting = lines.pending
     statement = ReconciliationDocument.where(kind: 'bank_statement').where('period_to >= ?', sunday - 2).where('period_from <= ?', sunday).exists?
@@ -256,9 +257,9 @@ class BooksDesk
       .where(created_at: monday.beginning_of_day..(sunday + 7).end_of_day).exists?
 
     [
-      Task.new(key: :days, title: 'Finish the daily cleanup for all seven days',
+      Task.new(key: :days, title: 'Finish daily reviews and closes',
         state: open_days.empty? ? :done : :todo,
-        detail: open_days.empty? ? 'Every day is reviewed, closed and approved.' : "#{7 - open_days.size} of 7 days finished. Oldest open: #{open_days.min_by(&:day).day.strftime('%a %b %-d')}.",
+        detail: open_days.empty? ? 'Every day is reviewed and closed. Approve the week after the remaining chores.' : "#{7 - open_days.size} of 7 days reviewed and closed. Oldest open: #{open_days.min_by(&:day).day.strftime('%a %b %-d')}.",
         link: open_days.min_by(&:day)&.then { |d| [:day, d] }),
       Task.new(key: :statement, title: 'Upload the bank statement for the week',
         state: statement ? :done : :todo,

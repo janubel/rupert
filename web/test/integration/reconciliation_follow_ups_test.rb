@@ -137,7 +137,7 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
     get reconciliation_follow_up_path(item, close_day: '2026-10-14')
     assert_select 'input[name="close_day"][value="2026-10-14"]'
     assert_select 'form[data-busy="false"] button[name="return_to"][value="close"]', text: 'Save and return to financial close'
-    assert_select 'a[href=?]', financial_close_path(day: '2026-10-14', anchor: 'close-follow-ups'), text: 'Back to financial close'
+    assert_select 'a[href=?]', financial_close_path(day: '2026-10-14', anchor: 'close-follow-ups'), text: 'Back to day close'
     assert_no_enqueued_jobs do
       assert_no_difference ['ActionMailer::Base.deliveries.size', 'ReconciliationDocument.count'] do
         assert_no_difference 'ReconciliationFollowUpEvent.count' do
@@ -160,7 +160,7 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
     assert_redirected_to reconciliation_follow_up_path(item)
     @user.update!(role: 'reporting')
     get reconciliation_follow_up_path(item, close_day: '2026-10-14')
-    assert_select 'a', text: 'Back to financial close'
+    assert_select 'a', text: 'Back to day close'
     assert_select 'button[value="close"]', count: 0
   end
 

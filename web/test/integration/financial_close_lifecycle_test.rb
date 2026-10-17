@@ -32,8 +32,8 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
   test 'close requires current review and checklist then retains stable replayable evidence without messaging' do
     get financial_close_path(day: @day)
     assert_response :success
-    assert_select 'h1', 'Financial close'
-    assert_select 'div[aria-label="Financial close lifecycle"] section', count: 6
+    assert_select 'h1', 'Day close'
+    assert_select 'div[aria-label="Day close lifecycle"] section', count: 6
     assert_includes response.body, 'Review not recorded'
     assert_select '[aria-label="Checks needing action"]', text: /Required for any package/
     assert_select 'input[value="Verify originals & retain close package"][disabled]'
@@ -395,7 +395,7 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
       end
       assert_select 'a[aria-current="page"]', text: 'Overdue work · 1'
       assert_select '[aria-label="Close status for 2026-10-14"]' do
-        assert_select 'a[href=?]', financial_close_path(day: @day), text: 'Open financial close'
+        assert_select 'a[href=?]', financial_close_path(day: @day), text: 'Open day close'
         assert_select 'a[href=?]', cash_forecast_path(day: @day), text: 'Plan cash from this date'
         assert_select 'a[href=?]', reconciliation_follow_ups_path(day: @day, status: 'overdue'), text: 'Overdue follow-ups · 1'
       end

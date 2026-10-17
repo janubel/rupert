@@ -46,7 +46,7 @@ module BooksDeskHelper
     when :bank_statements then bank_statements_path
     when :bank_statement then bank_statement_path(value)
     when :expenses then finance_expenses_path(days: 30)
-    when :follow_ups then value ? reconciliation_follow_ups_path : reconciliation_follow_ups_path(status: 'overdue')
+    when :follow_ups then value ? reconciliation_follow_ups_path(day: value.iso8601) : reconciliation_follow_ups_path(status: 'overdue')
     when :approve_week then book_approvals_path(kind: 'weekly', date: value.iso8601, anchor: 'approve')
     when :snapshot then business_snapshot_path
     end

@@ -1,11 +1,11 @@
-<% content_for :title, 'Books check' %>
+<% content_for :title, 'Books health' %>
 <% check = @check; summary = check.summary %>
 <div class="mx-auto max-w-5xl space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money, day: Date.current %>
   <header class="flex flex-wrap items-start justify-between gap-4">
     <div>
-      <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Money · audit</p>
-      <h1 class="page-title mt-2">Books check</h1>
+      <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Finance · audit</p>
+      <h1 class="page-title mt-2">Books health</h1>
       <p class="mt-2 text-sm text-mocha">Read-only checks on the last <%= check.window_days %> days of sales, payments, refunds and retained evidence. Nothing here changes data.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">

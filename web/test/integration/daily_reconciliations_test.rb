@@ -15,7 +15,7 @@ class DailyReconciliationsTest < ActionDispatch::IntegrationTest
   test 'page CSV retention downloads and review version checks' do
     get daily_reconciliations_path(day: '2026-10-14')
     assert_response :success
-    assert_select 'h1', 'Daily reconciliation & documents'
+    assert_select 'h1', 'Daily reconciliation'
     assert_equal 'no-store', response.headers['Cache-Control']
     get daily_reconciliations_path(format: :csv, day: '2026-10-14')
     assert_response :success
