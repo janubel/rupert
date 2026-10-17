@@ -228,6 +228,9 @@ Rails.application.routes.draw do
     get 'bank_reconciliation', to: 'bank_reconciliations#index', as: :bank_reconciliation
     post 'bank_reconciliation/match', to: 'bank_reconciliations#match', as: :bank_reconciliation_match
     post 'bank_reconciliation/unmatch', to: 'bank_reconciliations#unmatch', as: :bank_reconciliation_unmatch
+    post 'bank_reconciliation/ignore', to: 'bank_reconciliations#ignore', as: :bank_reconciliation_ignore
+    get 'ledger_export', to: 'ledger_exports#new', as: :ledger_export
+    post 'ledger_export', to: 'ledger_exports#create'
   end
   namespace :purchasing do
     resources :vendors
@@ -310,6 +313,7 @@ Rails.application.routes.draw do
   end
   get '/point_of_sale', to: 'point_of_sale#index', as: :point_of_sale
   post '/point_of_sale/quote', to: 'point_of_sale#quote', as: :quote_point_of_sale
+  post '/point_of_sale/lookup', to: 'point_of_sale#lookup', as: :lookup_point_of_sale
   get '/time_clock', to: 'time_clock#index', as: :time_clock
   post '/time_clock/clock_in', to: 'time_clock#clock_in', as: :clock_in_time_clock
   post '/time_clock/clock_out', to: 'time_clock#clock_out', as: :clock_out_time_clock

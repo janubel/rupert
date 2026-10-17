@@ -2314,6 +2314,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
     t.text "review_note"
     t.boolean "demo", default: false, null: false
     t.integer "assigned_reviewer_id"
+    t.integer "sales_cents", default: 0, null: false
+    t.integer "card_redemptions", default: 0, null: false
     t.index ["assigned_reviewer_id"], name: "index_timesheets_on_assigned_reviewer_id"
     t.index ["tenant_id", "employee_id", "period_start"], name: "index_timesheets_on_tenant_id_and_employee_id_and_period_start", unique: true
     t.index ["tenant_id", "status"], name: "index_timesheets_on_tenant_id_and_status"

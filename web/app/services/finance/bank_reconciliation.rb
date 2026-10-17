@@ -83,8 +83,8 @@ module Finance
           movement, index = candidate
           claimed << index
           result[line.id] = Suggestion.new(line: line, entry: movement[:entry],
-                                           amount_cents: line.amount_cents,
-                                           days_apart: (movement[:date] - line.posted_on).abs)
+            amount_cents: line.amount_cents,
+            days_apart: (movement[:date] - line.posted_on).abs)
         end
         result
       end
@@ -92,6 +92,28 @@ module Finance
 
     def matched_lines = lines.select { |l| suggestions.key?(l.id) }
     def unmatched_lines = lines.reject { |l| suggestions.key?(l.id) }
+
+    # Near-duplicate statement lines: same amount within the date window, which
+    # the exact-fingerprint dedupe at import would not catch (e.g. a deposit
+    # that appears twice with a slightly different description, or a double
+    # charge). Ignored lines are excluded. Each group has 2+ lines.
+    def duplicate_groups
+      active = lines.reject { |l| l.status == 'ignored' }
+      active.group_by(&:amount_cents).filter_map do |_amount, group|
+        next if group.size < 2
+
+        clusters = [[]]
+        group.sort_by(&:posted_on).each do |line|
+          last = clusters.last.last
+          if last && (line.posted_on - last.posted_on).abs <= window_days
+            clusters.last << line
+          else
+            clusters << [line]
+          end
+        end
+        clusters.select { |c| c.size > 1 }
+      end.flatten(1)
+    end
 
     def matched_entry_ids = suggestions.values.filter_map { |s| s.is_a?(Suggestion) ? s.entry.id : s&.id }
     def unmatched_gl = gl_movements.reject { |m| matched_entry_ids.include?(m[:entry].id) }

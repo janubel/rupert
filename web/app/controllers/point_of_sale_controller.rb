@@ -7,6 +7,9 @@ class PointOfSaleController < AuthenticatedController
   MAX_LINES = 50
   MAX_QUANTITY = 999
   MAX_UNIT_PRICE = BigDecimal('999999.99')
+  LOOKUP_QUERY_MAX = 120
+  LOOKUP_LIMIT = 8
+  CATALOG_SEARCH_SQL = 'LOWER(sku) LIKE ? OR LOWER(title) LIKE ? OR LOWER(barcode) LIKE ? OR "productId" IN (?)'
 
   class QuoteError < StandardError; end
 
@@ -16,6 +19,7 @@ class PointOfSaleController < AuthenticatedController
 
   def index
     load_catalog
+    @catalog_status = SourceSyncStatus.all.find { |status| status[:key] == 'shopify' }
   end
 
   def quote
@@ -41,6 +45,25 @@ class PointOfSaleController < AuthenticatedController
         render :index
       end
     end
+  end
+
+  # Barcode / SKU quick-add. Resolves a scanned code to catalog variants so a
+  # cashier never types an item in. It prices nothing on its own, changes no
+  # cart state server-side, and creates no sale, payment or reservation.
+  def lookup
+    term = params[:q].to_s.strip.first(LOOKUP_QUERY_MAX)
+    raise QuoteError, 'Scan or type a barcode, SKU, product or variant.' if term.blank?
+
+    matches = lookup_matches(term)
+    render json: { query: term, count: matches.size, matches: matches.map { |variant| lookup_payload(variant) } }
+  end
+
+  # Exact barcode or SKU wins; otherwise a bounded list the cashier picks from.
+  # Never guesses: several matches stay several matches.
+  def lookup_matches(term)
+    exact = catalog_scope.where(sku: term).to_a
+    exact = catalog_scope.where(barcode: term).to_a if exact.empty?
+    exact.presence || catalog_scope(term).order(:sku, :id).limit(LOOKUP_LIMIT).to_a
   end
 
   private
@@ -80,16 +103,36 @@ class PointOfSaleController < AuthenticatedController
 
   def load_catalog
     @query = params[:q].to_s.strip.first(200)
-    scope = ShopifyVariant.where(catalog_present: [nil, true]).where(productId: ShopifyProduct.active.select(:id)).includes(:product)
-    if @query.present?
-      term = "%#{ActiveRecord::Base.sanitize_sql_like(@query.downcase)}%"
-      products = ShopifyProduct.active.where('LOWER(title) LIKE ?', term).select(:id)
-      scope = scope.where('LOWER(sku) LIKE ? OR LOWER(title) LIKE ? OR "productId" IN (?)', term, term, products)
-    end
-    @pagy, @variants = pagy(scope.order(:sku, :id), items: 24)
+    @pagy, @variants = pagy(catalog_scope(@query).order(:sku, :id), items: 24)
     @ambiguous_skus = ShopifyVariant.where(sku: @variants.map(&:sku).reject(&:blank?))
       .group(:sku).having('COUNT(*) > 1').pluck(:sku)
     @cart_key = "rupert:pos-preview:#{Current.tenant_id}:#{Current.user.id}"
+  end
+
+  # Tenant-scoped, catalog-present variants of active products, optionally
+  # narrowed by a free-text term matched against SKU, title, barcode and the
+  # parent product title. Used by the catalog page and the code lookup so both
+  # surfaces answer from one definition of "what may be sold".
+  def catalog_scope(query = nil)
+    term = query.to_s.strip.first(LOOKUP_QUERY_MAX)
+    scope = ShopifyVariant.where(catalog_present: [nil, true])
+      .where(productId: ShopifyProduct.active.select(:id)).includes(:product)
+    return scope if term.blank?
+
+    like = "%#{ActiveRecord::Base.sanitize_sql_like(term.downcase)}%"
+    products = ShopifyProduct.active.where('LOWER(title) LIKE ?', like).select(:id)
+    scope.where(CATALOG_SEARCH_SQL, like, like, like, products)
+  end
+
+  def lookup_payload(variant)
+    price = catalog_price(variant)
+    line_payload(variant, 1, price).except(:quantity).merge(
+      barcode: variant.barcode,
+      unit_price: price&.to_s('F'),
+      line_total: price&.to_s('F'),
+      available: variant.product.status == 'ACTIVE' && variant.catalog_present != false &&
+        variant.product.catalog_present != false && !price.nil?
+    )
   end
 
   def requested_items
@@ -115,10 +158,14 @@ class PointOfSaleController < AuthenticatedController
     price = catalog_price(variant)
     raise QuoteError, 'A selected item has no supported catalog price. Refresh or choose another item.' unless price
 
+    line_payload(variant, quantity.to_i, price)
+  end
+
+  def line_payload(variant, quantity, price)
     {
       variant_id: variant.id, sku: variant.sku, title: variant.title,
       product_title: variant.product.title, thumbnail_url: safe_thumbnail(variant.product),
-      quantity: quantity.to_i, unit_price: price.to_s('F'), line_total: (price * quantity.to_i).to_s('F')
+      quantity: quantity, unit_price: price&.to_s('F'), line_total: price ? (price * quantity).to_s('F') : nil
     }
   end
 

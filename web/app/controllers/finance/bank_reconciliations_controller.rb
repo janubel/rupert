@@ -6,14 +6,14 @@ module Finance
   # pairing. Suggestions are computed read-only; confirming persists the link.
   class BankReconciliationsController < AuthenticatedController
     before_action -> { authorize(:module, :finance_read?) }
-    before_action -> { authorize(:module, :finance_write?) }, only: %i[match unmatch]
+    before_action -> { authorize(:module, :finance_write?) }, only: %i[match unmatch ignore]
 
     def index
       @account_label = params[:account_label].presence || default_account_label
       @from = parse_date(params[:from]) || default_from
       @to = parse_date(params[:to]) || default_to
       @reconciliation = BankReconciliation.new(account_label: @account_label, from: @from, to: @to,
-                                                window_days: params[:window_days])
+        window_days: params[:window_days])
       @account_labels = BankStatementLine.distinct.order(:account_label).pluck(:account_label)
       response.headers['Cache-Control'] = 'private, no-store'
     end
@@ -33,6 +33,17 @@ module Finance
       line.unmatch!(user: Current.user)
       redirect_to bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
         notice: 'Match cleared.'
+    end
+
+    # Mark a statement line ignored (e.g. a suspected duplicate) so it drops out
+    # of reconciliation and duplicate detection.
+    def ignore
+      line = BankStatementLine.find(params[:line_id])
+      line.decide!(status: 'ignored', user: Current.user)
+      ActivityLogger.log('bank_line_ignored', subject: line,
+        details: "Statement line ##{line.id} (#{line.amount_cents}) marked ignored")
+      redirect_to bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
+        notice: 'Line ignored.'
     end
 
     private
