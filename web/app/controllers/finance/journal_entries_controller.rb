@@ -52,7 +52,7 @@ module Finance
         { account_id: lp[:account_id].to_i, debit_cents: debit, credit_cents: credit, memo: lp[:memo] }
       end
       @entry = JournalEntry.post!(kind: 'manual', posted_on: params[:posted_on], memo: params[:memo],
-                                  lines: lines, created_by: Current.user)
+        lines: lines, created_by: Current.user)
       ActivityLogger.log('journal_entry_created', subject: @entry,
         details: "Manual entry · #{@entry.debit_cents} cents on #{@entry.posted_on}")
       redirect_to finance_journal_entry_path(@entry), notice: 'Journal entry posted.'

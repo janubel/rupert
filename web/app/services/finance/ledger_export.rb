@@ -12,9 +12,9 @@ module Finance
 
     FORMATS = [
       Format.new(key: 'iif', label: 'QuickBooks IIF (journal)', extension: 'iif',
-                 content_type: 'text/plain'),
+        content_type: 'text/plain'),
       Format.new(key: 'csv', label: 'Journal CSV (debits/credits)', extension: 'csv',
-                 content_type: 'text/csv')
+        content_type: 'text/csv')
     ].freeze
 
     def initialize(from:, to:)
