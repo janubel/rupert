@@ -22,8 +22,12 @@ class RoadmapFlowTest < ActionDispatch::IntegrationTest
       assert_select 'td', /double-entry general ledger and financial statements/
     end
     assert_select 'tr', text: /Double-entry ledger and close/ do
+      assert_select 'td', 'Available'
+      assert_select 'td', /ledger period locks that block edits to closed periods/
+    end
+    assert_select 'tr', text: /Bank reconciliation and accounting exports/ do
       assert_select 'td', 'Partial'
-      assert_select 'td', /Period locks for the ledger and bank reconciliation remain/
+      assert_select 'td', /Automated duplicate review remains/
     end
 
     get system_path

@@ -11,6 +11,9 @@ class RetailWorkspaceTest < ActionDispatch::IntegrationTest
     CtraxStockSnapshot.create!(location: @location, api_origin: 'https://fixture.api.cannatrax.net', store_id: '7', captured_at: Time.current,
       records_json: [{ 'id' => '3', 'name' => 'Tea Tin', 'product_name' => 'Tea', 'price_cents' => 1000, 'quantity' => '-2', 'manage_stock' => true, 'listed' => true },
                     { 'id' => '4', 'name' => 'Coffee Tin', 'product_name' => 'Coffee', 'price_cents' => 2000, 'quantity' => nil, 'manage_stock' => true, 'listed' => true }])
+    %w[Tea Coffee].each do |title|
+      ShopifyProduct.create!(id: "retail-image-#{title.downcase}", title: title, status: 'ACTIVE', featuredImageUrl: "https://cdn.shopify.com/#{title.downcase}.jpg")
+    end
     post login_path, params: { email: @user.email, password: 'password' }
     Current.tenant = @tenant
   end
