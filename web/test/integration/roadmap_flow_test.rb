@@ -17,7 +17,7 @@ class RoadmapFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'h1', 'Features & roadmap'
     assert_select 'td', 'Planned'
-    assert_select 'td', /not a complete double-entry/
+    assert_select 'td', /a double-entry general ledger and financial statements/
 
     get system_path
     assert_redirected_to root_path

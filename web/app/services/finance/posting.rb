@@ -133,8 +133,14 @@ module Finance
 
       private
 
+      # A tenant created before the chart of accounts existed (or in a test) may
+      # have none; seed the standard chart (idempotent) instead of failing the
+      # money record the user is saving.
       def account(code)
-        Finance::Account.find_by!(code: code)
+        Finance::Account.find_by(code: code) || begin
+          Finance::ChartOfAccounts.seed!
+          Finance::Account.find_by!(code: code)
+        end
       end
 
       # Split a payment's tax out proportionally from its order (orders carry

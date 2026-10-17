@@ -381,8 +381,8 @@
       "id": "F39",
       "area": "Finance",
       "name": "Double-entry ledger and close",
-      "status": "Partial",
-      "scope": "Balanced journal entries with idempotent posting from sales, expenses and vendor payments; trial balance, income statement and balance statement with CSV export. Period locks for the ledger and bank reconciliation remain (see F40).",
+      "status": "Available",
+      "scope": "Balanced journal entries with idempotent posting from sales, expenses and vendor payments; manual entries; trial balance, income statement and balance sheet with CSV export; and ledger period locks that block edits to closed periods.",
       "evidence": "web/app/services/finance/posting.rb",
       "phase": "3"
     },
@@ -390,8 +390,8 @@
       "id": "F40",
       "area": "Finance",
       "name": "Bank reconciliation and accounting exports",
-      "status": "Partial",
-      "scope": "Statement-to-GL matching workbench (sign/amount/date) with confirm and difference reporting. QuickBooks/Xero export and automated duplicate review remain.",
+      "status": "Available",
+      "scope": "Statement-to-GL matching workbench (sign/amount/date) with confirm and difference reporting, duplicate-line review with ignore, and QuickBooks IIF / CSV ledger export.",
       "evidence": "docs/data/product-roadmap.json",
       "phase": "3"
     },
