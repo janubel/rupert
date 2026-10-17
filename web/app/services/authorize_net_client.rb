@@ -118,15 +118,18 @@ class AuthorizeNetClient
     # Credential accessors read the Valmar connection when it is set up for
     # Authorize.net, otherwise the legacy EnvStore settings.
     def login_id
-      saved_credentials['api_login_id'].presence || EnvStore.fetch('AUTHORIZE_NET_LOGIN_ID', '')
+      connection = saved_connection
+      connection ? connection.credential_values['api_login_id'].to_s : EnvStore.fetch('AUTHORIZE_NET_LOGIN_ID', '')
     end
 
     def client_key
-      saved_credentials['client_key'].presence || EnvStore.fetch('AUTHORIZE_NET_CLIENT_KEY', '')
+      connection = saved_connection
+      connection ? connection.credential_values['client_key'].to_s : EnvStore.fetch('AUTHORIZE_NET_CLIENT_KEY', '')
     end
 
     def transaction_key
-      saved_credentials['transaction_key'].presence || EnvStore.fetch('AUTHORIZE_NET_TRANSACTION_KEY', '')
+      connection = saved_connection
+      connection ? connection.credential_values['transaction_key'].to_s : EnvStore.fetch('AUTHORIZE_NET_TRANSACTION_KEY', '')
     end
 
     private
@@ -134,10 +137,6 @@ class AuthorizeNetClient
     def saved_connection
       connection = PosConnection.find_by(provider: 'valmar')
       connection if connection&.gateway == 'authorize_net' && connection.credentials_saved?
-    end
-
-    def saved_credentials
-      saved_connection&.credential_values || {}
     end
 
     def authentication

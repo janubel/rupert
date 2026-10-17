@@ -125,5 +125,4 @@ class DailyReconciliationsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [DailyMoneyReconciliation::INFORMATIONAL], @controller.instance_variable_get(:@comparison_rows).pluck(:status)
   end
-
 end

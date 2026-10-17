@@ -172,5 +172,15 @@ class AuthorizeNetClientTest < ActiveSupport::TestCase
     Current.tenant = Tenant.create!(name: 'Other Co', subdomain: 'otherco')
     refute_equal 'connlogin', AuthorizeNetClient.login_id
   end
+  test 'saved payment credentials never mix with legacy credentials' do
+    connection = Struct.new(:credential_values, :environment).new({ 'api_login_id' => 'saved-login' }, 'production')
+    AuthorizeNetClient.stubs(:saved_connection).returns(connection)
+    assert_equal 'saved-login', AuthorizeNetClient.login_id
+    assert_equal '', AuthorizeNetClient.transaction_key
+    assert_equal '', AuthorizeNetClient.client_key
+    assert_not AuthorizeNetClient.configured?
+    assert_not AuthorizeNetClient.sandbox?
+    assert_raises(AuthorizeNetClient::Error) { AuthorizeNetClient.charge!(amount_cents: 100, payment_nonce: 'nonce') }
+    assert_not_requested :post, ENDPOINT
+  end
 end
-
