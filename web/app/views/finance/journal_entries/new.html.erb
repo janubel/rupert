@@ -1,0 +1,59 @@
+<% content_for :title, "New journal entry" %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">New journal entry</h1>
+      <p class="mt-1 text-sm text-mocha">Post a manual adjustment, accrual, opening balance or owner draw. Debits must equal credits.</p>
+    </div>
+    <%= link_to "Back to ledger", finance_journal_entries_path, class: "btn-ghost btn-sm" %>
+  </section>
+
+  <%= form_with url: finance_journal_entries_path, method: :post, class: "space-y-4" do |f| %>
+    <%= render "shared/form_errors", model: @entry if @form_error %>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <%= label_tag :posted_on, "Date", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+        <%= date_field_tag :posted_on, @entry.posted_on, class: "select w-full", required: true %>
+      </div>
+      <div>
+        <%= label_tag :memo, "Memo", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+        <%= text_field_tag :memo, @entry.memo, class: "input w-full", placeholder: "What this entry records", autocomplete: "off" %>
+      </div>
+    </div>
+
+    <div class="card overflow-hidden">
+      <table class="operations-table w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60">
+          <tr>
+            <th scope="col" class="th">Account</th>
+            <th scope="col" class="th text-right">Debit</th>
+            <th scope="col" class="th text-right">Credit</th>
+            <th scope="col" class="th">Line memo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% 6.times do |i| %>
+            <tr class="border-b border-fog/60">
+              <td class="td">
+                <%= select_tag "lines[][account_id]", options_from_collection_for_select(@accounts, :id, :label), include_blank: "—", class: "select w-full" %>
+              </td>
+              <td class="td"><%= text_field_tag "lines[][debit]", nil, class: "input w-full text-right", inputmode: "decimal", placeholder: "0.00" %></td>
+              <td class="td"><%= text_field_tag "lines[][credit]", nil, class: "input w-full text-right", inputmode: "decimal", placeholder: "0.00" %></td>
+              <td class="td"><%= text_field_tag "lines[][memo]", nil, class: "input w-full", autocomplete: "off" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-xs text-taupe">Enter a dollar amount in either the Debit or the Credit column for each used line, never both. Leave unused rows blank.</p>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <%= submit_tag "Post entry", class: "btn-primary" %>
+      <%= link_to "Cancel", finance_journal_entries_path, class: "btn-ghost" %>
+    </div>
+  <% end %>
+</div>

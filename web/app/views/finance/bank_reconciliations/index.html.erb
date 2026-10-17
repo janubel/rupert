@@ -1,0 +1,120 @@
+<% content_for :title, "Bank reconciliation" %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">Bank reconciliation</h1>
+      <p class="mt-1 text-sm text-mocha">Match <%= @account_label %> statement lines to the general ledger. Suggestions are never applied without you.</p>
+    </div>
+    <div class="flex gap-2">
+      <%= link_to "General ledger", finance_journal_entries_path, class: "btn-ghost btn-sm" %>
+      <%= link_to "Bank statements", bank_statements_path, class: "btn-ghost btn-sm" %>
+    </div>
+  </section>
+
+  <%= form_tag finance_bank_reconciliation_path, method: :get, class: "card card-pad operations-filters" do %>
+    <%= select_tag :account_label, options_for_select(@account_labels, @account_label), class: "select", aria: { label: "Account" } %>
+    <%= date_field_tag :from, @from, class: "select" %>
+    <%= date_field_tag :to, @to, class: "select" %>
+    <%= select_tag :window_days, options_for_select([["±0 days",0],["±3 days",3],["±5 days",5],["±10 days",10]], @reconciliation.window_days), class: "select", aria: { label: "Match window" } %>
+    <%= submit_tag "Reconcile", class: "btn-ghost btn-sm" %>
+  <% end %>
+
+  <% s = @reconciliation.summary %>
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="stat">
+      <p class="stat-label">Lines</p>
+      <p class="stat-value mt-1"><%= s[:lines] %></p>
+      <p class="mt-1 text-xs text-taupe"><%= s[:matched] %> matched · <%= s[:unmatched_lines] %> unmatched</p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Statement net · USD</p>
+      <p class="stat-value mt-1"><%= number_to_currency(s[:statement_net_cents] / 100.0) %></p>
+      <p class="mt-1 text-xs text-taupe">in <%= number_to_currency(s[:statement_in_cents] / 100.0) %> · out <%= number_to_currency(s[:statement_out_cents] / 100.0) %></p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Ledger net · USD</p>
+      <p class="stat-value mt-1"><%= number_to_currency(s[:gl_net_cents] / 100.0) %></p>
+      <p class="mt-1 text-xs text-taupe">cash + checking accounts</p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Difference · USD</p>
+      <p class="stat-value mt-1 <%= s[:difference_cents].zero? ? 'text-emerald-600' : 'text-amber-600' %>"><%= number_to_currency(s[:difference_cents] / 100.0) %></p>
+      <p class="mt-1 text-xs text-taupe"><%= s[:difference_cents].zero? ? 'reconciled' : 'statement vs ledger' %></p>
+    </div>
+  </section>
+
+  <div class="card overflow-hidden">
+    <h2 class="px-4 pt-4 text-sm font-semibold">Statement lines</h2>
+    <div class="operations-table-region" role="region" tabindex="0" aria-label="Statement lines">
+      <table class="operations-table w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60">
+          <tr>
+            <th scope="col" class="th">Date</th>
+            <th scope="col" class="th">Description</th>
+            <th scope="col" class="th text-right">Amount</th>
+            <th scope="col" class="th">Suggested ledger match</th>
+            <th scope="col" class="th">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @reconciliation.lines.each do |line| %>
+            <% suggestion = @reconciliation.suggestions[line.id] %>
+            <tr class="border-b border-fog/60">
+              <td class="td"><%= line.posted_on %></td>
+              <td class="td"><%= line.description.to_s.truncate(48) %></td>
+              <td class="td text-right <%= line.amount_cents.negative? ? 'text-red-600' : 'text-emerald-600' %>"><%= number_to_currency(line.amount_cents / 100.0) %></td>
+              <td class="td">
+                <% if suggestion %>
+                  <%= link_to (suggestion.entry.memo.presence || "Entry ##{suggestion.entry.id}"), finance_journal_entry_path(suggestion.entry), class: "link" %>
+                  <span class="text-xs text-taupe">· <%= suggestion.entry.posted_on %><%= " (±#{suggestion.days_apart}d)" if suggestion.days_apart.to_i.positive? %></span>
+                <% else %>
+                  <span class="text-taupe">no match</span>
+                <% end %>
+              </td>
+              <td class="td">
+                <% if line.journal_entry_id.present? %>
+                  <%= button_to "Clear", finance_bank_reconciliation_unmatch_path, method: :post,
+                        params: { line_id: line.id, from: @from, to: @to }, class: "btn-ghost btn-sm" %>
+                <% elsif suggestion %>
+                  <%= button_to "Confirm", finance_bank_reconciliation_match_path, method: :post,
+                        params: { line_id: line.id, journal_entry_id: suggestion.entry.id, from: @from, to: @to }, class: "btn-primary btn-sm" %>
+                <% else %>
+                  <span class="text-xs text-taupe">—</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <% if @reconciliation.unmatched_gl.any? %>
+    <div class="card overflow-hidden">
+      <h2 class="px-4 pt-4 text-sm font-semibold">Ledger movements with no statement line (<%= @reconciliation.unmatched_gl.size %>)</h2>
+      <div class="operations-table-region" role="region" tabindex="0" aria-label="Unmatched ledger movements">
+        <table class="operations-table w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr><th scope="col" class="th">Date</th><th scope="col" class="th">Entry</th><th scope="col" class="th text-right">Amount</th></tr>
+          </thead>
+          <tbody>
+            <% @reconciliation.unmatched_gl.each do |m| %>
+              <tr class="border-b border-fog/60">
+                <td class="td"><%= m[:date] %></td>
+                <td class="td"><%= link_to (m[:entry].memo.presence || "Entry ##{m[:entry].id}"), finance_journal_entry_path(m[:entry]), class: "link" %></td>
+                <td class="td text-right"><%= number_to_currency(m[:signed_cents] / 100.0) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <p class="text-xs text-taupe">
+    Reconciles against the Cash (1000) and Checking (1100) accounts. Card sales are posted to Cash on receipt and settle to the bank later, so some statement deposits will not pair one-to-one — record bank withdrawals as expenses on the
+    <%= link_to "bank statements", bank_statements_path, class: "link" %> page first, then reconcile here.
+  </p>
+</div>

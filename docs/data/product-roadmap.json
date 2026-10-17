@@ -192,8 +192,8 @@
       "id": "F18",
       "area": "Finance",
       "name": "Chart of accounts and reporting",
-      "status": "Partial",
-      "scope": "Account classification, receivables/payables and reports; not a complete double-entry general ledger.",
+      "status": "Available",
+      "scope": "Account classification, receivables/payables, a double-entry general ledger and financial statements.",
       "evidence": "web/app/modules/finance/account.rb",
       "phase": "0"
     },
@@ -211,7 +211,7 @@
       "area": "People",
       "name": "Timesheets and PTO",
       "status": "Available",
-      "scope": "Top-level submitted-hours review queue for admins, managers and least-privileged shift leaders; approve/return with audit history and no self-review. Timesheets links to all available retained Square and C-Trax history, with reviewer/all-employee filters including inactive, open, unmatched and unassigned records, latest clock/break punches, original evidence and immutable C-Trax observation history. Exact native identities and consolidation preserve employee history; formula-safe CSV respects own-worker/workspace boundaries. Source-history implementation deployed and complete source reads succeeded on October 17, 2026; authenticated access/render and pre/post-deployment recovery verification passed. Automatic C-Trax labor refresh has workspace opt-in, revision/actor/connection checks, safe attempt/freshness status and 15-minute server dispatch at minutes 02/17/32/47; implementation pending live deployment and activation verification. Square retains its existing opt-in schedule. Approval rechecks retained entries, active employment, changed imported hours and pending clock corrections. No automatic approvals, additive cross-source totals or payroll posting; employee self-service, payroll locks and PTO remain available.",
+      "scope": "Top-level submitted-hours review queue for admins, managers and least-privileged shift leaders; approve/return with audit history and no self-review. Timesheets links to all available retained Square and C-Trax history, with reviewer/all-employee filters including inactive, open, unmatched and unassigned records, latest clock/break punches, original evidence and immutable C-Trax observation history. Exact native identities and consolidation preserve employee history; formula-safe CSV respects own-worker/workspace boundaries. Source-history implementation deployed and complete source reads succeeded on October 17, 2026; authenticated access/render and pre/post-deployment recovery verification passed. Automatic C-Trax labor refresh has workspace opt-in, revision/actor/connection checks, safe attempt/freshness status and 15-minute server dispatch at minutes 02/17/32/47; enabled and verified for Herbal Healers on SER8 on October 17, 2026. Square retains its existing opt-in schedule. Approval rechecks retained entries, active employment, changed imported hours and pending clock corrections. No automatic approvals, additive cross-source totals or payroll posting; employee self-service, payroll locks and PTO remain available.",
       "evidence": "web/test/integration/timesheet_reviews_test.rb",
       "phase": "0"
     },
@@ -381,17 +381,17 @@
       "id": "F39",
       "area": "Finance",
       "name": "Double-entry ledger and close",
-      "status": "Planned",
-      "scope": "Balanced journal entries, period locks, trial balance and auditable source references.",
-      "evidence": "docs/data/product-roadmap.json",
+      "status": "Partial",
+      "scope": "Balanced journal entries with idempotent posting from sales, expenses and vendor payments; trial balance, income statement and balance statement with CSV export. Period locks for the ledger and bank reconciliation remain (see F40).",
+      "evidence": "web/app/services/finance/posting.rb",
       "phase": "3"
     },
     {
       "id": "F40",
       "area": "Finance",
       "name": "Bank reconciliation and accounting exports",
-      "status": "Planned",
-      "scope": "Statement matching, duplicates review and QuickBooks/Xero export or adapters.",
+      "status": "Partial",
+      "scope": "Statement-to-GL matching workbench (sign/amount/date) with confirm and difference reporting. QuickBooks/Xero export and automated duplicate review remain.",
       "evidence": "docs/data/product-roadmap.json",
       "phase": "3"
     },
