@@ -40,7 +40,7 @@ class SyncFailure
     return 'data_contract' if error.is_a?(JSON::ParserError)
     return 'network' if error.is_a?(SocketError) || error.is_a?(OpenSSL::SSL::SSLError)
 
-    known = [Ctrax::Client::Error, SwipesimpleWeb::Client::Error, IrisReporting::Client::Error,
+    known = [Ctrax::Client::Error, Ctrax::LaborImport::Error, SwipesimpleWeb::Client::Error, IrisReporting::Client::Error,
       IrisReporting::WebClient::Error, AuthorizeNetReporting::Client::Error, ShopifyClient::Error, SquareClient::Error]
     return REASONS.fetch(error.reason, 'unknown') if known.any? { |type| error.is_a?(type) } && error.respond_to?(:reason)
 

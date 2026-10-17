@@ -13,6 +13,7 @@ class ModuleRegistry
   Entry = Struct.new(:key, :name, :path, :permission, :position, keyword_init: true)
 
   ENTRIES = [
+    Entry.new(key: 'receipts', name: 'Receipts', path: -> { receipts_path }, permission: nil, position: 54),
     Entry.new(key: 'influencers', name: 'Influencers', path: -> { marketing_influencers_path }, permission: 'marketing.read', position: 36),
     Entry.new(key: 'marketing', name: 'Marketing', path: -> { marketing_path }, permission: 'marketing.read', position: 35),
     Entry.new(key: 'roadmap', name: 'Features & roadmap', path: -> { roadmap_path }, permission: nil, position: 110),
@@ -166,7 +167,7 @@ class ModuleRegistry
       return [] unless user&.active?
 
       if user.employee?
-        return all.select { |entry| %w[ctrax_pos time_clock timesheets].include?(entry.key) }.sort_by(&:position)
+        return all.select { |entry| %w[ctrax_pos time_clock timesheets receipts].include?(entry.key) }.sort_by(&:position)
       end
 
       all.select do |entry|
@@ -199,6 +200,7 @@ class ModuleRegistry
       { key: 'money', name: 'Finance',
         modules: %w[books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
+      { key: 'receipts', name: 'Receipts', modules: %w[receipts] },
       { key: 'timesheets', name: 'Timesheets', modules: %w[timesheets] },
       { key: 'team', name: 'Team',
         modules: %w[accounts employees employee_reports departments positions time_clock leave payroll permissions] },

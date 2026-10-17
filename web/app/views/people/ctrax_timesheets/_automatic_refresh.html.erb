@@ -1,0 +1,31 @@
+<% if @all_employees %>
+  <section class="card card-pad space-y-3" aria-label="Automatic C-Trax timecard refresh">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-lg font-semibold">Automatic timecard refresh</h2>
+      <span class="pill-olive"><%= @ctrax_schedule['enabled'] == true ? 'Enabled' : 'Disabled' %></span>
+    </div>
+    <p class="text-sm text-mocha">Every 15 minutes, at :02, :17, :32 and :47 each hour. Each complete read retains C-Trax punches, open shifts and changes as source history.</p>
+    <p class="text-sm">Last successful recorded read: <strong><%= @ctrax_last_success&.finished_at ? l(@ctrax_last_success.finished_at.in_time_zone, format: '%b %-d, %Y · %-I:%M %p %Z') : 'No successful read recorded' %></strong>.</p>
+    <% if @ctrax_schedule['enabled'] == true %>
+      <% if @ctrax_schedule_actor_valid %>
+        <p class="text-sm">Next scheduled slot (estimate): <%= l(@ctrax_next_slot.in_time_zone, format: '%b %-d, %Y · %-I:%M %p %Z') %>. Queue, worker or vendor delays can postpone completion; confirm the successful read time.</p>
+      <% else %>
+        <p class="rounded-xl bg-haze p-3 text-sm" role="status">Administrator review required. The authorizing account no longer has the required access. An authorized administrator must review and enable the schedule again.</p>
+      <% end %>
+    <% end %>
+    <% if @ctrax_latest_attempt %>
+      <p class="text-sm" role="status">Latest timecard read attempt: <strong><%= @ctrax_latest_attempt.status.humanize %></strong><% if @ctrax_latest_attempt.finished_at || @ctrax_latest_attempt.started_at || @ctrax_latest_attempt.queued_at %> · <%= l((@ctrax_latest_attempt.finished_at || @ctrax_latest_attempt.started_at || @ctrax_latest_attempt.queued_at).in_time_zone, format: '%b %-d, %-I:%M %p %Z') %><% end %>.</p>
+      <% if @ctrax_latest_attempt.status == 'failed' %>
+        <% guidance = SyncFailure::GUIDANCE.fetch(@ctrax_latest_attempt.error_category, SyncFailure::GUIDANCE.fetch('unknown')) %>
+        <p class="rounded-xl bg-haze p-3 text-sm" role="alert"><strong><%= guidance.first %>.</strong> <%= guidance.last %> Previous source history is retained.</p>
+      <% end %>
+    <% end %>
+    <p class="text-sm text-mocha">Refresh permission requires an active account administrator with timesheet-write access. A refresh retains source evidence; it does not approve hours or post payroll.</p>
+    <% if @can_manage_ctrax_schedule %>
+      <div class="flex flex-wrap gap-3">
+        <%= button_to(@ctrax_schedule['enabled'] == true ? 'Review and re-enable automatic refresh' : 'Enable automatic refresh', people_ctrax_timesheet_schedule_path, method: :patch, params: { enabled: '1' }, class: 'btn-primary') %>
+        <% if @ctrax_schedule['enabled'] == true %><%= button_to 'Disable automatic refresh', people_ctrax_timesheet_schedule_path, method: :patch, params: { enabled: '0' }, class: 'btn-ghost btn-sm' %><% end %>
+      </div>
+    <% end %>
+  </section>
+<% end %>

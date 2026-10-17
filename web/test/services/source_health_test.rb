@@ -87,8 +87,9 @@ class SourceHealthTest < ActiveSupport::TestCase
       hourly_sync_enabled: true, credentials_json: { api_url: 'https://example.api.cannatrax.net', api_username: 'synthetic', api_password: 'synthetic' }.to_json)
     states = SourceHealth.for(key: 'ctrax', ready: true)
     assert_equal 'Current acquisition', states.first[:state]
-    assert_equal 'Failed', states.last[:state]
-    refute states.last[:enabled]
+    sales = states.find { |channel| channel[:operation] == 'sales' }
+    assert_equal 'Failed', sales[:state]
+    refute sales[:enabled]
   end
 
   test 'workspace and platform history remain isolated' do

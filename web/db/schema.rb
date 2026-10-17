@@ -1683,6 +1683,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
     t.index ["tenant_id"], name: "index_reconciliation_follow_ups_on_tenant_id"
   end
 
+  create_table "purchase_receipt_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "purchase_receipt_id", null: false
+    t.bigint "actor_id", null: false
+    t.string "action", null: false
+    t.text "snapshot_json", null: false
+    t.text "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_purchase_receipt_events_on_actor_id"
+    t.index ["purchase_receipt_id"], name: "index_purchase_receipt_events_on_purchase_receipt_id"
+  end
+
+  create_table "purchase_receipts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "submitted_by_id", null: false
+    t.string "status", default: "draft", null: false
+    t.string "payee", null: false
+    t.date "incurred_on", null: false
+    t.integer "amount_cents", null: false
+    t.string "currency", default: "USD", null: false
+    t.string "category", null: false
+    t.text "notes"
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.integer "byte_size", null: false
+    t.string "sha256", null: false
+    t.text "content_base64", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["submitted_by_id"], name: "index_purchase_receipts_on_submitted_by_id"
+    t.index ["tenant_id", "status", "created_at"], name: "index_purchase_receipts_on_tenant_id_and_status_and_created_at"
+    t.index ["tenant_id", "submitted_by_id", "sha256"], name: "idx_purchase_receipts_duplicate_file", unique: true
+  end
+
   create_table "reconciliation_documents", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "source", null: false
@@ -2459,6 +2495,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
   add_foreign_key "reconciliation_follow_ups", "tenants"
   add_foreign_key "reconciliation_follow_ups", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "reconciliation_follow_ups", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "purchase_receipt_events", "purchase_receipts"
+  add_foreign_key "purchase_receipt_events", "tenants"
+  add_foreign_key "purchase_receipt_events", "users", column: "actor_id"
+  add_foreign_key "purchase_receipts", "tenants"
+  add_foreign_key "purchase_receipts", "users", column: "submitted_by_id"
   add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
   add_foreign_key "reconciliation_documents", "tenants"
   add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify

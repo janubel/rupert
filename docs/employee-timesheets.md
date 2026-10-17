@@ -30,6 +30,8 @@ The named **Timesheets** work area opens the submitted **Needs review** queue fo
 
 These source views do not approve hours or generate payroll. Counted Square history retains its existing personal-report/calendar treatment; C-Trax history does not enter personal totals or payroll. Do not add overlapping source hours together. See the [employee source-history guide](ops/employee-source-history.md) for access, punches, identity and recovery details. The expanded source-history implementation was deployed and complete source reads succeeded on October 17, 2026; authenticated access/render and pre/post-deployment recovery checks passed; see the [source-history deployment receipt](ops/employee-source-history-deployment-2026-10-17.md).
 
+Automatic C-Trax labor refresh is a separate implementation pending live deployment and activation verification. An active account administrator with account-management and timesheet-write permission can opt the workspace in from C-Trax history. Server reads dispatch every 15 minutes at minutes 02, 17, 32 and 47; queue delays and complete-source validation affect actual pickup time. Reviewer status visibility does not grant configuration permission. See the [automatic refresh workflow and limits](ops/ctrax-timesheet-refresh.md).
+
 The workflow uses a transaction and tenant writer lock before overlap checks, daily totals, mutations, and reviews; this supports SQLite and PostgreSQL. Payroll generation takes the same lock before reading approved hours. Timesheet events preserve changes, actor, and review history. The existing activity trail records creation/deletion and workflow actions.
 
 ## Web app installation and device sessions

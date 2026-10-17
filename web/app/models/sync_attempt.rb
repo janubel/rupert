@@ -5,7 +5,7 @@ class SyncAttempt < ApplicationRecord
   include TenantScoped
 
   OPERATIONS = {
-    'ctrax' => %w[stock sales], 'swipesimple' => %w[web], 'bank' => %w[web reporting],
+    'ctrax' => %w[stock sales timecards], 'swipesimple' => %w[web], 'bank' => %w[web reporting],
     'authorize_net' => %w[reporting events], 'shopify' => %w[catalog],
     'square' => %w[catalog timecards], 'google_backup' => %w[backup]
   }.freeze

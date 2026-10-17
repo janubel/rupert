@@ -176,6 +176,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
   end
 
   create_table "ShopifyProduct", id: :string, force: :cascade do |t|
+    t.boolean "catalog_present"
+    t.datetime "catalog_read_at"
     t.string "featuredImageUrl"
     t.string "handle"
     t.datetime "publishedAt"
@@ -185,14 +187,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
     t.string "tenant_id"
     t.string "title", null: false
     t.integer "totalInventory", default: 0
-    t.boolean "catalog_present"
-    t.datetime "catalog_read_at"
     t.index ["status"], name: "index_ShopifyProduct_on_status"
     t.index ["tenant_id"], name: "index_ShopifyProduct_on_tenant_id"
     t.index ["title"], name: "index_ShopifyProduct_on_title"
   end
 
   create_table "ShopifyVariant", id: :string, force: :cascade do |t|
+    t.boolean "catalog_present"
+    t.datetime "catalog_read_at"
     t.string "barcode"
     t.float "compareAtPrice"
     t.string "inventoryItemId"
@@ -204,8 +206,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
     t.string "tenant_id"
     t.string "title", null: false
     t.boolean "tracked", default: false
-    t.boolean "catalog_present"
-    t.datetime "catalog_read_at"
     t.index ["productId"], name: "index_ShopifyVariant_on_productId"
     t.index ["sku", "productId"], name: "idx_shopify_variants_sku_product"
     t.index ["sku"], name: "index_ShopifyVariant_on_sku"
@@ -1751,6 +1751,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
     t.index ["tenant_id", "vendor_id"], name: "index_purchase_orders_on_tenant_id_and_vendor_id"
   end
 
+  create_table "purchase_receipt_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "purchase_receipt_id", null: false
+    t.integer "actor_id", null: false
+    t.string "action", null: false
+    t.text "snapshot_json", null: false
+    t.text "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_purchase_receipt_events_on_actor_id"
+    t.index ["purchase_receipt_id"], name: "index_purchase_receipt_events_on_purchase_receipt_id"
+  end
+
+  create_table "purchase_receipts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "submitted_by_id", null: false
+    t.string "status", default: "draft", null: false
+    t.string "payee", null: false
+    t.date "incurred_on", null: false
+    t.integer "amount_cents", null: false
+    t.string "currency", default: "USD", null: false
+    t.string "category", null: false
+    t.text "notes"
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.integer "byte_size", null: false
+    t.string "sha256", null: false
+    t.text "content_base64", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["submitted_by_id"], name: "index_purchase_receipts_on_submitted_by_id"
+    t.index ["tenant_id", "status", "created_at"], name: "index_purchase_receipts_on_tenant_id_and_status_and_created_at"
+    t.index ["tenant_id", "submitted_by_id", "sha256"], name: "idx_purchase_receipts_duplicate_file", unique: true
+  end
+
   create_table "reconciliation_documents", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "source", null: false
@@ -2072,10 +2108,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
     t.index ["key", "value"], name: "index_solid_queue_semaphores_on_key_and_value"
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
-
-# Could not dump table "sqlite_stat1" because of following StandardError
-#   Unknown type '' for column 'tbl'
-
 
   create_table "square_timecard_days", force: :cascade do |t|
     t.string "tenant_id", null: false
@@ -2411,8 +2443,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
   add_foreign_key "SkuLink", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "SkuLink", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "WarehouseTier", "tenants", column: "tenantId"
-  add_foreign_key "api_access_tokens", "tenants", on_delete: :cascade
-  add_foreign_key "api_access_tokens", "users", on_delete: :cascade
+  add_foreign_key "api_access_tokens", "tenants"
+  add_foreign_key "api_access_tokens", "users"
   add_foreign_key "authorize_net_batches", "tenants"
   add_foreign_key "authorize_net_portal_exports", "tenants"
   add_foreign_key "authorize_net_portal_observations", "authorize_net_portal_exports", on_delete: :cascade
@@ -2528,6 +2560,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_000100) do
   add_foreign_key "pos_stock_allocations", "Location", column: "location_id"
   add_foreign_key "pos_stock_allocations", "pos_checkouts"
   add_foreign_key "pos_stock_allocations", "tenants"
+  add_foreign_key "purchase_receipt_events", "purchase_receipts"
+  add_foreign_key "purchase_receipt_events", "tenants"
+  add_foreign_key "purchase_receipt_events", "users", column: "actor_id"
+  add_foreign_key "purchase_receipts", "tenants"
+  add_foreign_key "purchase_receipts", "users", column: "submitted_by_id"
   add_foreign_key "reconciliation_documents", "reconciliation_documents", column: "supersedes_id"
   add_foreign_key "reconciliation_documents", "tenants"
   add_foreign_key "reconciliation_documents", "users", column: "uploaded_by_id", on_delete: :nullify

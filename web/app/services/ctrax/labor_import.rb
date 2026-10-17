@@ -7,17 +7,25 @@ require 'uri'
 module Ctrax
   # Complete native read, then atomic local publication. No source/payroll writes.
   class LaborImport
-    class Error < StandardError; end
+    class Error < StandardError
+      attr_reader :reason
+
+      def initialize(message, reason: :response)
+        @reason = reason
+        super(message)
+      end
+    end
     UNASSIGNED_ISSUE = 'Source store not supplied; unassigned evidence, excluded from payroll.'
     FIELDS = %w[id store_id user_id started_at ended_at number_of_hours is_in_progress is_verified deleted_at
                 updated_at explicitly_verified_at explicitly_verified_by_id].freeze
 
-    def self.call(actor: Current.user)
-      new(actor: actor).call
+    def self.call(actor: Current.user, sync_configuration: nil)
+      new(actor: actor, sync_configuration: sync_configuration).call
     end
 
-    def initialize(actor: Current.user)
+    def initialize(actor: Current.user, sync_configuration: nil)
       @actor_id = actor&.id
+      @sync_configuration = sync_configuration
     end
 
     def call
@@ -26,9 +34,12 @@ module Ctrax
       @connection = PosConnection.find_by(provider: 'ctrax', vendor_approved: true)
       raise Error, 'Configure approved C-Trax read access first.' unless @connection&.credentials_saved?
 
-      @fingerprint = credentials_fingerprint
-      @origin = @connection.credential_values.fetch('api_url')
-      client = Client.new(@connection.credential_values)
+      credentials = @connection.credential_values
+      @fingerprint = Digest::SHA256.hexdigest([@connection.id, credentials].to_json)
+      @origin = credentials.fetch('api_url')
+      @publication_key = 'ctrax_labor_publication:' + Digest::SHA256.hexdigest(@origin)
+      @publication_token = Setting.find_by(tenant_id: Current.tenant_id, key: @publication_key)&.value
+      client = Client.new(credentials)
       stores = client.stores.map { |store| store.fetch(:id).to_s }
       rows = [false, true].flat_map do |in_progress|
         client.labor_shifts(in_progress: in_progress).map do |row|
@@ -44,6 +55,10 @@ module Ctrax
           status: 'active').update_all('updated_at = updated_at') == 1
 
         authorize!
+        CtraxLaborSync.verify!(@sync_configuration) if @sync_configuration
+        if Setting.find_by(tenant_id: Current.tenant_id, key: @publication_key)&.value != @publication_token
+          raise Error.new('A newer complete C-Trax read was already published; retry the read.', reason: :changed)
+        end
         unless @fingerprint == credentials_fingerprint
           raise Error,
             'C-Trax credentials changed; previous history retained.'
@@ -62,12 +77,15 @@ module Ctrax
           record.update!(status: status, issue: issue)
           append_observation(record)
         end
+        Setting.find_or_create_for(@publication_key, Current.tenant_id) { |setting| setting.value = SecureRandom.hex(24) }
         statuses = CtraxLaborShift.where(source_origin: @origin).group(:status).count
         { stores: stores.length, shifts: rows.length, imported: statuses.fetch('imported', 0), open: statuses.fetch('open', 0),
           unmatched: statuses.fetch('unmatched', 0), issues: statuses.except('imported').values.sum,
           changed: statuses.fetch('changed', 0), missing: statuses.fetch('missing', 0), statuses: statuses }
       end
-    rescue Client::Error, KeyError, TypeError, JSON::ParserError
+    rescue Client::Error => error
+      raise Error.new('C-Trax labor read failed or was incomplete; previous history retained.', reason: error.reason)
+    rescue KeyError, TypeError, JSON::ParserError
       raise Error, 'C-Trax labor read failed or was incomplete; previous history retained.'
     end
 

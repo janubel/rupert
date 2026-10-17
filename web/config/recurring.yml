@@ -25,6 +25,10 @@ production:
     class: SquareTimecardSyncJob
     queue: default
     schedule: every 15 minutes
+  ctrax_timecards:
+    class: CtraxLaborSyncJob
+    queue: default
+    schedule: '2,17,32,47 * * * *'
   ctrax_sales:
     class: CtraxSalesSyncJob
     queue: default
