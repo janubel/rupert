@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Store admins manage tenant employee roles. Only super admins can assign or
-# modify a super admin account.
+# Store admins manage tenant employee roles. Only super admins can create or
+# re-role administrators, or assign or modify a super admin account.
 class UsersController < AuthenticatedController
   before_action :authorize_read, only: %i[index edit]
   before_action :authorize_write, except: %i[index edit]
@@ -111,14 +111,23 @@ class UsersController < AuthenticatedController
     permitted
   end
 
+  # Only a super admin can create administrators (or super admins); store admins
+  # manage everyone below them.
   def assignable_roles
-    Current.user.super_admin? ? User.roles.keys : User.roles.keys.excluding('super_admin')
+    Current.user.super_admin? ? User.roles.keys : User.roles.keys.excluding('super_admin', 'admin')
   end
 
   def guard_role_assignment
     role = params.dig(:user, :role)
-    return if role.blank? || assignable_roles.include?(role)
+    return if role.blank?
+    return if assignable_roles.include?(role) && !admin_role_locked?
 
-    redirect_to users_path, alert: 'Choose an allowed employee role. Only a super admin can assign the super admin role.'
+    redirect_to users_path,
+      alert: 'Only a super admin can create administrators or change an administrator\'s role.'
+  end
+
+  # A store admin cannot demote or re-role another administrator.
+  def admin_role_locked?
+    !Current.user.super_admin? && @user&.admin?
   end
 end
