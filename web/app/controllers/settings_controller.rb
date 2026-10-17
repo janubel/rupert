@@ -52,6 +52,7 @@ class SettingsController < AuthenticatedController
     raise ArgumentError, 'Provide .env text or a file' if text.blank?
 
     imported = EnvStore.import!(text, allow_platform: platform_admin?)
+    ActivityLogger.log('settings_env_imported', details: "keys: #{Array(imported.try(:keys) || imported).join(', ')}".truncate(500))
     render(json: { ok: true, imported: imported })
   rescue ArgumentError, ActiveRecord::RecordInvalid => e
     render(json: { ok: false, error: e.message }, status: :unprocessable_entity)
@@ -65,9 +66,11 @@ class SettingsController < AuthenticatedController
   # secrets, and POST (not GET) keeps it out of caches/logs.
   def env_export
     unless Current.user.authenticate(params[:password].to_s)
+      ActivityLogger.log('settings_env_export_denied', details: 'Incorrect password')
       return redirect_to(env_export_confirm_settings_path, alert: 'Password incorrect.')
     end
 
+    ActivityLogger.log('settings_env_exported', details: 'Managed settings exported after password re-entry')
     body = EnvStore.export.map { |key, value| "#{key}=#{value}" }.join("\n") + "\n"
     render(plain: body, content_type: 'text/plain')
   end
@@ -75,6 +78,7 @@ class SettingsController < AuthenticatedController
   # GET /settings/backup — consistent SQLite snapshot download
   def backup
     path = BackupService.snapshot_path
+    ActivityLogger.log('database_backup_downloaded', details: 'Full database snapshot downloaded')
     send_file(
       path,
       filename: "rupert-backup-#{Time.now.strftime('%Y%m%d-%H%M%S')}.sqlite3",
@@ -89,6 +93,7 @@ class SettingsController < AuthenticatedController
 
     path = file.tempfile.path
     BackupService.restore!(path)
+    ActivityLogger.log('database_restored', details: "Database replaced from upload #{file.original_filename.to_s.truncate(80)} (#{file.size} bytes)")
     render(json: { ok: true })
   rescue BackupService::RestoreError, ArgumentError => e
     render(json: { ok: false, error: e.message }, status: :unprocessable_entity)
@@ -137,6 +142,7 @@ class SettingsController < AuthenticatedController
   # POST /settings/drive_backup — run a backup right now
   def drive_backup
     log = GoogleDriveBackupService.backup!(actor: 'user')
+    ActivityLogger.log('drive_backup_run', details: "Manual Drive backup: #{log.status}")
     render(json: {
              ok: log.success?, status: log.status, fileName: log.fileName, driveUrl: log.driveUrl, error: log.error
            })
@@ -147,6 +153,7 @@ class SettingsController < AuthenticatedController
   # POST /settings/drive_disconnect — forget the refresh token
   def drive_disconnect
     GoogleDriveBackupService.disconnect!
+    ActivityLogger.log('drive_disconnected', details: 'Google Drive instance backup disconnected')
     clear_drive_oauth_state
     redirect_to(settings_path, notice: 'Disconnected from Google Drive.')
   end
@@ -160,6 +167,8 @@ class SettingsController < AuthenticatedController
     elsif secret.present?
       EnvStore.set('GOOGLE_OAUTH_CLIENT_SECRET', secret)
     end
+    changed = [params.key?(:client_id) && 'client id', (secret.present? || params[:clear_client_secret] == '1') && (params[:clear_client_secret] == '1' ? 'secret cleared' : 'secret replaced')].select(&:itself)
+    ActivityLogger.log('google_signin_credentials_saved', details: changed.join(', ').presence || 'no change')
     redirect_to(settings_path, notice: 'Google sign-in credentials saved.')
   end
 
@@ -167,6 +176,7 @@ class SettingsController < AuthenticatedController
   def oauth_domains
     domain = OauthAllowedDomain.new(domain: params[:domain], tenant_id: Current.tenant_id)
     if domain.save
+      ActivityLogger.log('oauth_domain_allowed', details: domain.domain)
       redirect_to(settings_path, notice: "Allowed #{domain.domain} to sign in with Google.")
     else
       redirect_to(settings_path, alert: domain.errors.full_messages.to_sentence)
@@ -180,6 +190,7 @@ class SettingsController < AuthenticatedController
         /\A@/, ''
       ))
     if domain&.destroy
+      ActivityLogger.log('oauth_domain_removed', details: domain.domain)
       redirect_to(settings_path, notice: "Removed #{domain.domain} from Google sign-in.")
     else
       redirect_to(settings_path, alert: 'Domain not found.')
@@ -192,6 +203,7 @@ class SettingsController < AuthenticatedController
     TenantSettings.set(:business_name, params[:business_name]) if params[:business_name].present?
     TenantSettings.set(:invoice_prefix, params[:invoice_prefix]) if params[:invoice_prefix].present?
     TenantSettings.set(:low_stock_threshold, params[:low_stock_threshold].to_i) if params[:low_stock_threshold].present?
+    ActivityLogger.log('business_settings_saved', details: %w[business_name invoice_prefix low_stock_threshold].select { |k| params[k].present? }.join(', '))
     redirect_to(settings_path, notice: 'Business settings saved.')
   end
 
@@ -199,6 +211,7 @@ class SettingsController < AuthenticatedController
   # status workflow on orders.
   def fulfillment_workflow
     FeatureFlag.set(:fulfillment_workflow, params[:enabled] == '1')
+    ActivityLogger.log('fulfillment_workflow_changed', details: params[:enabled] == '1' ? 'enabled' : 'disabled')
     redirect_to(settings_path, notice: "Fulfillment workflow #{params[:enabled] == '1' ? 'enabled' : 'disabled'}.")
   end
 

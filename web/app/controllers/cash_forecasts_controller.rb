@@ -23,6 +23,7 @@ class CashForecastsController < AuthenticatedController
 
       doc = @forecast.retain!(baseline_digest: @baseline.report.digest, actor: Current.user)
       @retained_document = doc
+      ActivityLogger.log('cash_forecast_retained', subject: doc, details: "baseline #{@forecast.as_of}")
       flash.now[:notice] = "Scenario ##{doc.id} retained with its assumptions. No email or message was sent."
     elsif params[:intent] == 'csv'
       return send_data @forecast.csv, type: 'text/csv', filename: "cash-forecast-#{@forecast.as_of}-#{@forecast.currency}.csv", disposition: 'attachment'

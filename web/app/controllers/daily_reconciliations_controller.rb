@@ -54,6 +54,7 @@ class DailyReconciliationsController < AuthenticatedController
     doc = ReconciliationEvidence.retain!(bytes: file.read(ReconciliationEvidence::MAX_BYTES + 1), filename: file.original_filename,
       source: values['source'], kind: values['kind'], from: values['period_from'], to: values['period_to'], metadata: metadata,
       actor: Current.user, supersedes_id: values['supersedes_id'])
+    ActivityLogger.log('reconciliation_evidence_retained', subject: doc, details: "#{doc.source} #{doc.kind} #{doc.period_from}..#{doc.period_to}; sha256 #{doc.sha256.to_s.first(12)}")
     if @request
       redirect_to reconciliation_follow_up_path(@request, evidence: doc.id, close_day: @close_day&.iso8601, anchor: 'record-progress'), notice: 'Original retained in Rupert. Review the suggested evidence and save a progress note to link it. Uploading does not change the follow-up status.'
     else
@@ -78,6 +79,7 @@ class DailyReconciliationsController < AuthenticatedController
   def archive
     report = DailyMoneyReconciliation.new(day: selected_day)
     doc = report.archive!(actor: Current.user)
+    ActivityLogger.log('daily_report_archived', subject: doc, details: report.day.iso8601)
     redirect_to daily_reconciliations_path(day: report.day.iso8601), notice: "Daily report archived as evidence ##{doc.id}."
   end
 
@@ -92,6 +94,7 @@ class DailyReconciliationsController < AuthenticatedController
     ReconciliationEvidence.retain!(bytes: previous.original_bytes, filename: previous.filename, source: previous.source,
       kind: previous.kind, from: previous.period_from.iso8601, to: previous.period_to.iso8601,
       metadata: previous.metadata.merge('withdrawn' => true, 'note' => reason), supersedes_id: previous.id, actor: Current.user)
+    ActivityLogger.log('reconciliation_control_withdrawn', subject: previous, details: "#{previous.source} #{previous.period_from}; reason recorded")
     redirect_to daily_reconciliations_path(day: previous.period_from.iso8601), notice: 'Control withdrawn from comparisons; original evidence and explanation retained.'
   end
 
@@ -99,7 +102,8 @@ class DailyReconciliationsController < AuthenticatedController
     @review_values = params.permit(:status, :notes).to_h
     report = DailyMoneyReconciliation.new(day: selected_day)
     raise ReconciliationEvidence::Error, 'The report changed. Reload it before recording your review.' unless params[:report_digest] == report.digest
-    DailyReconciliationReview.create!(day: report.day, report_digest: report.digest, status: params[:status], notes: params[:notes], reviewed_by: Current.user)
+    review = DailyReconciliationReview.create!(day: report.day, report_digest: report.digest, status: params[:status], notes: params[:notes], reviewed_by: Current.user)
+    ActivityLogger.log('daily_reconciliation_reviewed', subject: review, details: "#{report.day.iso8601}: #{review.status}")
     redirect_to daily_reconciliations_path(day: report.day.iso8601), notice: 'Review recorded against this report version. Source data was not changed.'
   rescue ActiveRecord::RecordInvalid
     raise ReconciliationEvidence::Error, 'Choose a review status and enter notes of 1 to 4000 characters.'

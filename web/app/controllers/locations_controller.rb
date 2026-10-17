@@ -32,6 +32,7 @@ class LocationsController < AuthenticatedController
     @location.externalId = "manual-#{SecureRandom.hex(8)}"
     @location.syncedAt = Time.current
     if @location.save
+      ActivityLogger.log('location_added', subject: @location)
       redirect_to(@location, notice: 'Location added.')
     else
       render(:new, status: :unprocessable_entity)
@@ -45,6 +46,7 @@ class LocationsController < AuthenticatedController
   def update
     authorize(:module, :inventory_write?)
     if @location.update(location_params)
+      ActivityLogger.log('location_updated', subject: @location, details: @location.previous_changes.keys.excluding('updatedAt').join(', '))
       redirect_to(@location, notice: 'Location updated.')
     else
       render(:edit, status: :unprocessable_entity)
@@ -56,6 +58,7 @@ class LocationsController < AuthenticatedController
     return redirect_to(@location, alert: "Location has stock levels and can't be removed.") if @location.levels.any?
 
     @location.destroy
+    ActivityLogger.log('location_removed', subject: @location)
     redirect_to(locations_path, notice: 'Location removed.')
   end
 

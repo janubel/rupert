@@ -13,8 +13,10 @@ class DataRetention
   POLICIES = {
     'InventoryMovement' => [180.days, 'createdAt'],
     'LedgerEntry' => [365.days, 'occurredAt'],
-    'AccessLog' => [90.days, 'created_at'],
-    'ActivityLog' => [90.days, 'created_at'],
+    # The audit trails back financial and operator reviews, so they outlive
+    # the mirrors: seven years of business actions, two of sign-in attempts.
+    'AccessLog' => [730.days, 'created_at'],
+    'ActivityLog' => [2555.days, 'created_at'],
     'SyncAttempt' => [90.days, 'queued_at']
   }.freeze
 
