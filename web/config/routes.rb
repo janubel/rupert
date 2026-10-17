@@ -50,9 +50,11 @@ Rails.application.routes.draw do
     get '/pay', action: :pay, as: :pay
     get '/time-clock', action: :time_clock, as: :time_clock
     get '/time-off', action: :time_off, as: :time_off
+    get '/schedule', action: :schedule, as: :schedule
     get '/reports', action: :reports, as: :reports
   end
   get '/employee/reports', to: 'employee_workspace#reports', as: :employee_reports
+  get '/employee/schedule', to: 'employee_workspace#schedule', as: :employee_schedule
   get '/employee/time-off', to: 'employee_workspace#time_off', as: :employee_time_off
   post '/employee/time-off', to: 'employee_workspace#request_time_off'
   post '/employee/time-off/:id/cancel', to: 'employee_workspace#cancel_time_off', as: :cancel_employee_time_off
@@ -254,6 +256,7 @@ Rails.application.routes.draw do
     end
     resources :departments, only: %i[index new create edit update]
     resources :positions, only: %i[index new create edit update]
+    resources :scheduled_shifts, path: 'schedule', only: %i[index new create edit update destroy]
     resources :timesheets, only: %i[index show new create edit update destroy] do
       member do
         post :submit

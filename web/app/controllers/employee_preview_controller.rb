@@ -43,6 +43,16 @@ class EmployeePreviewController < AuthenticatedController
     end
   end
 
+  def schedule
+    day = params[:week].present? ? Date.iso8601(params[:week]) : Date.current
+    raise ArgumentError unless (1900..2100).cover?(day.year)
+
+    @week = day.beginning_of_week
+    @shifts = @examples.scheduled_shifts.select { |shift| shift.starts_at.to_date.between?(@week, @week + 6) }.sort_by(&:starts_at)
+    @requests = @examples.requests.select { |leave| %w[requested approved].include?(leave.status) && leave.starts_on <= @week + 6 && leave.ends_on >= @week }
+    render 'employee_workspace/schedule'
+  end
+
   def time_off
     @month = params[:month].present? ? Date.strptime("#{params[:month]}-01", '%Y-%m-%d') : Date.current.beginning_of_month
     raise ArgumentError unless (1900..2100).cover?(@month.year) && (params[:month].blank? || params[:month] == @month.strftime('%Y-%m'))

@@ -20,7 +20,7 @@ class EmployeePreviewTest < ActionDispatch::IntegrationTest
   def preview_paths
     [employee_app_path(preview: 1), employee_preview_timesheets_path, employee_preview_timesheet_path('current'),
       employee_preview_timesheet_path('previous'), employee_preview_pay_path, employee_preview_time_off_path,
-      employee_preview_reports_path, employee_preview_time_clock_path, employee_privacy_path(preview: 1)]
+      employee_preview_schedule_path, employee_preview_reports_path, employee_preview_time_clock_path, employee_privacy_path(preview: 1)]
   end
 
   def employee_rows
@@ -50,7 +50,7 @@ class EmployeePreviewTest < ActionDispatch::IntegrationTest
           refute_includes response.body, 'PRIVATE REAL'
           refute_includes response.body, 'PRIVATE REAL WORKER'
           assert_select 'a[href^="/people"], a[href="/sales"], a[href="/reconcile"], a[href="/time_clock"]', count: 0
-          assert_select 'nav[aria-label="My workspace"] a', count: 5
+          assert_select 'nav[aria-label="My workspace"] a', count: 6
           response.parsed_body.css('form:not([method="get"])').each do |form|
             assert form['action'].start_with?('/employee/preview/')
             assert_equal 1, form.css('fieldset[disabled]').size

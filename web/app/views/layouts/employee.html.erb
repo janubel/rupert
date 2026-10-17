@@ -31,7 +31,7 @@
     </div>
     <% if Current.user %>
       <nav aria-label="My workspace" class="workspace-navigation mx-auto max-w-3xl px-4 pb-3 sm:px-6">
-        <% links = @preview ? [['Today', employee_app_path(preview: 1)], ['Timesheets', employee_preview_timesheets_path], ['Pay', employee_preview_pay_path], ['Time off', employee_preview_time_off_path], ['Reports', employee_preview_reports_path]] : [['Today', employee_app_path], ['Receipts', receipts_path], ['Timesheets', people_timesheets_path], ['Time off', employee_time_off_path], ['Reports', employee_reports_path]] %>
+        <% links = @preview ? [['Today', employee_app_path(preview: 1)], ['Timesheets', employee_preview_timesheets_path], ['Schedule', employee_preview_schedule_path], ['Pay', employee_preview_pay_path], ['Time off', employee_preview_time_off_path], ['Reports', employee_preview_reports_path]] : [['Today', employee_app_path], ['Receipts', receipts_path], ['Timesheets', people_timesheets_path], ['Schedule', employee_schedule_path], ['Time off', employee_time_off_path], ['Reports', employee_reports_path]] %>
         <% links.unshift(['POS', ctrax_pos_path]) if !@preview && Current.user.can_use_pos? %>
         <% links.each do |label, path| %>
           <%= link_to label, path, class: "nav-pill workspace-nav-link #{module_match_strength(path.split('?').first).positive? ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: module_match_strength(path.split('?').first).positive? ? 'page' : nil } %>

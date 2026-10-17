@@ -1,0 +1,28 @@
+<% content_for :title, 'My schedule' %>
+<% week_hours = @shifts.sum(&:hours) %>
+<section class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="page-title">Schedule</h1><p class="mt-1 text-sm text-mocha">The shifts your manager has planned for you.</p></div><%= link_to 'Request time off', personal_time_off_path(anchor: 'time-off-request'), class: 'text-sm text-olive underline' %></section>
+<section class="card card-pad space-y-4">
+  <div class="flex items-center justify-between gap-2">
+    <%= link_to '←', personal_schedule_path(week: (@week - 7).iso8601), class: 'btn-ghost btn-sm', aria: { label: 'Previous week' } %>
+    <div class="text-center"><h2 class="text-lg font-semibold"><%= @week.strftime('%b %-d') %> – <%= (@week + 6).strftime('%b %-d, %Y') %></h2><p class="text-xs text-mocha"><%= number_with_precision(week_hours, precision: 2, strip_insignificant_zeros: true) %> planned hours<% if @week == Date.current.beginning_of_week %> · This week<% else %> · <%= link_to 'Back to this week', personal_schedule_path, class: 'underline' %><% end %></p></div>
+    <%= link_to '→', personal_schedule_path(week: (@week + 7).iso8601), class: 'btn-ghost btn-sm', aria: { label: 'Next week' } %>
+  </div>
+  <ol class="divide-y divide-fog" aria-label="Shifts this week">
+    <% (@week..(@week + 6)).each do |day| %>
+      <% day_shifts = @shifts.select { |shift| shift.starts_at.to_date == day } %>
+      <% day_leave = @requests.select { |leave| leave.starts_on <= day && leave.ends_on >= day } %>
+      <li class="flex gap-3 py-3 <%= day == Date.current ? 'bg-haze/40 -mx-2 px-2 rounded-lg' : '' %>">
+        <div class="w-14 shrink-0 text-center"><p class="text-xs uppercase text-mocha"><%= day.strftime('%a') %></p><p class="text-lg font-semibold <%= day == Date.current ? 'text-olive' : '' %>"><%= day.day %></p></div>
+        <div class="min-w-0 flex-1 space-y-1">
+          <% day_shifts.each do |shift| %>
+            <p class="font-semibold"><%= shift.time_label %><span class="font-normal text-mocha"> · <%= number_with_precision(shift.hours, precision: 2, strip_insignificant_zeros: true) %>h<% if shift.role_label.present? %> · <%= shift.role_label %><% end %></span></p>
+            <% if shift.notes.present? %><p class="text-sm text-mocha whitespace-pre-wrap"><%= shift.notes %></p><% end %>
+          <% end %>
+          <% day_leave.each do |leave| %><p class="text-sm text-olive"><%= leave.leave_type.humanize %> · <%= leave.requested? ? 'Pending approval' : 'Approved time off' %></p><% end %>
+          <% if day_shifts.empty? && day_leave.empty? %><p class="text-sm text-taupe">No shift planned</p><% end %>
+        </div>
+      </li>
+    <% end %>
+  </ol>
+  <p class="text-xs text-mocha">Planned shifts can change; hours you actually work come from your time clock. Times use <%= Time.zone.tzinfo.identifier %>.</p>
+</section>

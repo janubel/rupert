@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -716,6 +716,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
     t.index ["tenant_id", "user_id"], name: "idx_clock_one_open_shift", unique: true, where: "((ended_at IS NULL) AND (user_id IS NOT NULL))"
     t.index ["user_id"], name: "index_clock_shifts_on_user_id"
     t.check_constraint "ended_at IS NULL OR ended_at > started_at", name: "clock_positive_interval"
+  end
+
+  create_table "scheduled_shifts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "employee_id", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.string "role_label"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["employee_id", "starts_at"], name: "idx_scheduled_shift_employee"
+    t.index ["employee_id"], name: "index_scheduled_shifts_on_employee_id"
+    t.index ["tenant_id", "starts_at"], name: "idx_scheduled_shift_window"
+    t.check_constraint "ends_at > starts_at", name: "scheduled_shift_positive_interval"
   end
 
   create_table "customer_follow_ups", force: :cascade do |t|
@@ -2488,6 +2503,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
   add_foreign_key "clock_corrections", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "clock_shifts", "employees", on_delete: :nullify
   add_foreign_key "clock_shifts", "tenants"
+  add_foreign_key "scheduled_shifts", "employees", on_delete: :cascade
   add_foreign_key "clock_shifts", "users", on_delete: :nullify
   add_foreign_key "daily_reconciliation_reviews", "tenants"
   add_foreign_key "daily_reconciliation_reviews", "users", column: "reviewed_by_id", on_delete: :nullify

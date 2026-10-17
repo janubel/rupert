@@ -3,7 +3,7 @@
 # Synthetic records only: no employee association is queried or persisted.
 # Readonly models also fail closed if a future caller accidentally tries saving.
 class EmployeePreview
-  attr_reader :employee, :sheets, :entries, :requests, :balances, :payslips, :work_reports, :shifts, :rate
+  attr_reader :employee, :scheduled_shifts, :sheets, :entries, :requests, :balances, :payslips, :work_reports, :shifts, :rate
 
   def initialize
     @start = Date.current.beginning_of_week
@@ -23,6 +23,10 @@ class EmployeePreview
     @work_reports = [example(EmployeeWorkReport, employee: employee, kind: 'pay', status: 'resolved', details: 'Example: Please check the pay rate for last week.', response: 'Example response: Your rate was checked and the payslip is ready.', created_at: (@start - 2).in_time_zone + 10.hours, reviewed_at: (@start - 1).in_time_zone + 10.hours)]
     @shifts = entries.map do |entry|
       example(ClockShift, employee: employee, started_at: entry.worked_on.in_time_zone + 9.hours, ended_at: entry.worked_on.in_time_zone + 17.hours)
+    end
+    @scheduled_shifts = [-7, 0, 1, 2, 4, 7, 8].map do |offset|
+      day = @start + offset
+      example(People::ScheduledShift, employee: employee, starts_at: day.in_time_zone + 9.hours, ends_at: day.in_time_zone + 17.hours, role_label: 'Floor', notes: offset == 2 ? 'Example: close with Sam' : nil)
     end
   end
 

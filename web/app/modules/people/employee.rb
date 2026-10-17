@@ -29,6 +29,7 @@ module People
     has_many :timesheet_entries, through: :timesheets, source: :entries
     has_many :leave_balances, class_name: 'People::LeaveBalance', dependent: :destroy
     has_many :leave_requests, class_name: 'People::LeaveRequest', dependent: :destroy
+    has_many :scheduled_shifts, class_name: 'People::ScheduledShift', dependent: :destroy
     has_many :payslips, class_name: 'People::Payslip', dependent: :destroy
     has_many :managed_departments, class_name: 'People::Department', foreign_key: :manager_id, dependent: :nullify
 

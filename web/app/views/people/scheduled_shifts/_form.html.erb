@@ -1,0 +1,30 @@
+<%= form_with model: shift, scope: :scheduled_shift, url: (shift.persisted? ? people_scheduled_shift_path(shift) : people_scheduled_shifts_path), class: "mt-6 space-y-4" do |f| %>
+  <% if shift.errors.any? %><p role="alert" class="text-sm text-rose"><%= shift.errors.full_messages.to_sentence %></p><% end %>
+  <div>
+    <%= f.label :employee_id, "Person", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+    <%= f.select :employee_id, @employees.map { |e| [e.full_name, e.id] }, { include_blank: "Choose…" }, class: "select w-full sm:max-w-xs", required: true %>
+  </div>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <%= f.label :starts_at, "Starts", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.datetime_field :starts_at, class: "input", required: true %>
+    </div>
+    <div>
+      <%= f.label :ends_at, "Ends", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.datetime_field :ends_at, class: "input", required: true %>
+    </div>
+  </div>
+  <div>
+    <%= f.label :role_label, "Role or station (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+    <%= f.text_field :role_label, class: "input sm:max-w-xs", maxlength: 80, placeholder: "e.g. Front counter" %>
+  </div>
+  <div>
+    <%= f.label :notes, "Note for the employee (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+    <%= f.text_area :notes, rows: 2, maxlength: 2000, class: "input !rounded-2xl" %>
+  </div>
+  <div class="flex items-center gap-3 pt-2">
+    <%= f.submit shift.persisted? ? "Save changes" : "Add shift", class: "btn-primary" %>
+    <%= link_to "Cancel", people_scheduled_shifts_path(week: shift.starts_at&.to_date&.iso8601), class: "btn-ghost" %>
+  </div>
+<% end %>
+<% if shift.persisted? %><%= button_to "Delete shift", people_scheduled_shift_path(shift), method: :delete, class: "text-sm text-rose underline", form: { data: { turbo_confirm: "Remove this shift?" } } %><% end %>

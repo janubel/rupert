@@ -37,6 +37,12 @@ class EmployeeWorkspaceController < AuthenticatedController
     redirect_to employee_reports_path(anchor: 'problems'), notice: 'Your report is already saved.'
   end
 
+  def schedule
+    load_schedule_week
+    @shifts = @worker.scheduled_shifts.between(@week, @week + 6).chronological.to_a
+    @requests = @worker.leave_requests.where(status: %w[requested approved]).where('starts_on <= ? AND ends_on >= ?', @week + 6, @week).to_a
+  end
+
   def time_off
     @month = params[:month].present? ? Date.strptime("#{params[:month]}-01", '%Y-%m-%d') : Date.current.beginning_of_month
     raise ArgumentError, 'Choose a valid calendar month.' unless (1900..2100).cover?(@month.year) && (params[:month].blank? || params[:month] == @month.strftime('%Y-%m'))
@@ -70,6 +76,13 @@ class EmployeeWorkspaceController < AuthenticatedController
   end
 
   private
+
+  def load_schedule_week
+    day = params[:week].present? ? Date.iso8601(params[:week]) : Date.current
+    raise ArgumentError, 'Choose a valid week.' unless (1900..2100).cover?(day.year)
+
+    @week = day.beginning_of_week
+  end
 
   def load_report_data
     @from = params[:from].present? ? Date.iso8601(params[:from]) : Date.current.beginning_of_week

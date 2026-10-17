@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_200000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1913,6 +1913,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
     t.index ["tenant_id", "role"], name: "index_role_permissions_on_tenant_id_and_role"
   end
 
+  create_table "scheduled_shifts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "employee_id", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.string "role_label"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["employee_id", "starts_at"], name: "idx_scheduled_shift_employee"
+    t.index ["employee_id"], name: "index_scheduled_shifts_on_employee_id"
+    t.index ["tenant_id", "starts_at"], name: "idx_scheduled_shift_window"
+    t.check_constraint "ends_at > starts_at", name: "scheduled_shift_positive_interval"
+  end
+
   create_table "settings", force: :cascade do |t|
     t.string "key", null: false
     t.string "tenant_id"
@@ -2110,10 +2125,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
     t.index ["key", "value"], name: "index_solid_queue_semaphores_on_key_and_value"
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
-
-# Could not dump table "sqlite_stat1" because of following StandardError
-#   Unknown type '' for column 'tbl'
-
 
   create_table "square_timecard_days", force: :cascade do |t|
     t.string "tenant_id", null: false
@@ -2583,6 +2594,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_100000) do
   add_foreign_key "refunds", "orders", on_delete: :cascade
   add_foreign_key "retention_drive_connections", "tenants"
   add_foreign_key "retention_drive_items", "tenants"
+  add_foreign_key "scheduled_shifts", "employees", on_delete: :cascade
   add_foreign_key "size_changes", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "size_family_members", "size_families", column: "family_id", on_delete: :cascade
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

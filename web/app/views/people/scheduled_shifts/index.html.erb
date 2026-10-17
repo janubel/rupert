@@ -1,0 +1,49 @@
+<% content_for :title, "Schedule" %>
+<% can_write = Current.user.can?("hr.write") %>
+<div class="space-y-6">
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">Schedule</h1>
+      <p class="mt-1 text-sm text-mocha">Planned shifts. Employees see their own on the Schedule tab of their workspace.</p>
+    </div>
+    <% if can_write %><%= link_to "New shift", new_people_scheduled_shift_path(date: [@week, Date.current].max.iso8601), class: "btn-primary" %><% end %>
+  </section>
+
+  <div class="flex items-center justify-between gap-2">
+    <%= link_to "←", people_scheduled_shifts_path(week: (@week - 7).iso8601), class: "btn-ghost btn-sm", aria: { label: "Previous week" } %>
+    <h2 class="text-lg font-semibold"><%= @week.strftime("%b %-d") %> – <%= (@week + 6).strftime("%b %-d, %Y") %></h2>
+    <%= link_to "→", people_scheduled_shifts_path(week: (@week + 7).iso8601), class: "btn-ghost btn-sm", aria: { label: "Next week" } %>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60">
+          <tr>
+            <th scope="col" class="th">Person</th>
+            <% (@week..(@week + 6)).each do |day| %><th scope="col" class="th"><%= day.strftime("%a %-d") %></th><% end %>
+            <th scope="col" class="th text-right">Hours</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-fog">
+          <% if @by_employee.empty? %>
+            <tr><td colspan="9" class="empty-row">No shifts planned this week.</td></tr>
+          <% end %>
+          <% @by_employee.each do |employee, shifts| %>
+            <tr class="align-top hover:bg-cream">
+              <td class="td font-medium text-ink"><%= employee.full_name %></td>
+              <% (@week..(@week + 6)).each do |day| %>
+                <td class="td text-mocha">
+                  <% shifts.select { |shift| shift.starts_at.to_date == day }.each do |shift| %>
+                    <p class="whitespace-nowrap"><%= can_write ? link_to(shift.time_label, edit_people_scheduled_shift_path(shift), class: "text-olive hover:underline") : shift.time_label %><% if shift.role_label.present? %><span class="block text-xs"><%= shift.role_label %></span><% end %></p>
+                  <% end %>
+                </td>
+              <% end %>
+              <td class="td text-right text-mocha"><%= number_with_precision(shifts.sum(&:hours), precision: 2, strip_insignificant_zeros: true) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
