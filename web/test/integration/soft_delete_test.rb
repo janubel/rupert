@@ -32,6 +32,7 @@ class SoftDeleteTest < ActionDispatch::IntegrationTest
     @user = User.create!(email: 'soft@example.com', password: 'password123', role: 'admin', tenant_id: @tenant.id)
     post login_path, params: { email: 'soft@example.com', password: 'password123' }
     Current.tenant = @tenant
+    Finance::ChartOfAccounts.seed! # expenses post to the ledger, which needs the chart
   end
 
   teardown do
@@ -53,8 +54,11 @@ class SoftDeleteTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert expense.reload.discarded?
-    # hidden from the default register
+    # removed records stay visible and labelled; they can be hidden with the filter
     get_page finance_expenses_path
+    assert_select 'tr.row-removed td', text: /Soft Co/
+    assert_select 'tr.row-removed .status-removed', 'Removed'
+    get_page finance_expenses_path(include_deleted: '0')
     assert_select 'td', text: /Soft Co/, count: 0
 
     # restore

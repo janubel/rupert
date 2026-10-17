@@ -32,6 +32,7 @@ class FinanceFlowTest < ActionDispatch::IntegrationTest
     @user = User.create!(email: 'finance@example.com', password: 'password123', role: 'admin', tenant_id: @tenant.id)
     post login_path, params: { email: 'finance@example.com', password: 'password123' }
     Current.tenant = @tenant
+    Finance::ChartOfAccounts.seed! # expenses post to the ledger, which needs the chart
   end
 
   teardown do

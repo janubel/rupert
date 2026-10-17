@@ -47,6 +47,14 @@ module FinanceHelper
     end
   end
 
+  # Exact decimal for CSV: 12550 -> "125.50". No floats.
+  def self.cents_to_decimal(cents)
+    return '' if cents.nil?
+
+    whole, fraction = Integer(cents).abs.divmod(100)
+    "#{'-' if Integer(cents).negative?}#{whole}.#{format('%02d', fraction)}"
+  end
+
   # Active period locks as JSON for form scripts: [{from:, to:, label:}].
   # The server re-checks every date; this only warns before submitting.
   def finance_locks_json
@@ -56,6 +64,44 @@ module FinanceHelper
   # The lock covering a date, for read-only notices on existing records.
   def finance_lock_for(date)
     date.present? ? PeriodLock.lock_covering(date) : nil
+  end
+
+  ACTION_LABELS = {
+    'expense_recorded' => 'Recorded', 'vendor_payment' => 'Recorded',
+    'expense_updated' => 'Edited',
+    'expense_deleted' => 'Removed', 'payment_deleted' => 'Removed',
+    'expense_restored' => 'Restored', 'payment_restored' => 'Restored'
+  }.freeze
+
+  # Who did what to a register record, oldest first, as plain sentences. The
+  # first line always exists: records saved before the audit trail was kept
+  # say so instead of implying a person.
+  def finance_history(record, logs)
+    events = Array(logs).filter_map do |log|
+      label = ACTION_LABELS[log.action]
+      next unless label
+
+      "#{label} #{log.created_at.in_time_zone.strftime('%b %-d, %Y %-I:%M %p')} by #{log.actor_name.presence || 'the system'}"
+    end
+    unless Array(logs).any? { |log| ACTION_LABELS[log.action] == 'Recorded' }
+      events.unshift("Recorded #{record.created_at.in_time_zone.strftime('%b %-d, %Y')} (author not recorded)")
+    end
+    events
+  end
+
+  # The narrowest active lock covering a date, from a preloaded list.
+  def finance_lock_in(locks, date)
+    return nil if date.blank?
+
+    Array(locks).select { |l| l.period_from <= date && date <= l.period_to }.min_by { |l| l.period_to - l.period_from }
+  end
+
+  # Confirmation text for removing a register record: names the amount, who
+  # and when, and what happens next.
+  def finance_remove_confirm(noun, cents, who, date, ledger: true)
+    effect = ledger ? 'Its ledger entry is voided (kept on record as void).' : 'It stays visible as Removed.'
+    "Remove this #{noun}?\n\nAmount: #{finance_money_text(cents)}\n#{noun == "expense" ? "Payee" : "Vendor"}: #{who.presence || '(none)'}\n" \
+      "Date: #{date}\n\n#{effect} It no longer counts in totals, and you can restore it from the Removed row."
   end
 
   # Spreadsheet-safe text: a cell that starts with = + - @ tab or CR would be

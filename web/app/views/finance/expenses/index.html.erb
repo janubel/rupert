@@ -1,25 +1,21 @@
 <% content_for :title, "Expenses" %>
+<% range_text = "#{@from} through #{@through}" %>
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Expenses</h1>
-      <p class="mt-1 text-sm text-mocha">Money out across the last <%= @range_days %> days.</p>
-    </div>
-    <div class="flex gap-2">
-      <%= link_to "Export CSV", finance_expenses_path(category: @category, days: @range_days, include_deleted: (@include_deleted ? 1 : nil), format: :csv), class: "btn-ghost btn-sm", data: { turbo: false } %>
-      <% if Current.user.can?("finance.write") %>
-        <%= link_to "Record expense", new_finance_expense_path, class: "btn-primary" %>
-      <% end %>
-    </div>
-  </section>
+  <%= render layout: 'finance/page_header', locals: { title: 'Expenses', range: range_text, print: true,
+        explain: 'Money the business has paid out. Each expense posts to the ledger. Removing one keeps it on this list as Removed and can be undone.' } do %>
+    <%= link_to "Export CSV", finance_expenses_path(request.query_parameters.merge(format: :csv)), class: "btn-ghost btn-sm", data: { turbo: false } %>
+    <% if @can_write %>
+      <%= link_to "Record expense", new_finance_expense_path, class: "btn-primary" %>
+    <% end %>
+  <% end %>
 
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Expense summary">
     <div class="stat">
       <p class="stat-label">Active expenses · USD</p>
       <p class="stat-value mt-1"><%= finance_money(@total_cents) %></p>
-      <p class="mt-1 text-xs text-taupe"><%= @entry_count %> active entries</p>
+      <p class="mt-1 text-sm text-mocha"><%= pluralize(@entry_count, 'active expense') %> in range<%= ', filtered' if @q.present? || @min_cents || @max_cents || @category != 'all' %></p>
     </div>
     <% @by_category.first(3).each do |category, cents| %>
       <div class="stat">
@@ -29,54 +25,85 @@
     <% end %>
   </section>
 
-  <%= form_tag finance_expenses_path, method: :get, class: "card card-pad operations-filters" do %>
-    <%= select_tag :category, options_for_select([["All categories", "all"]] + Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, @category), class: "select", aria: { label: "Expense category" } %>
-    <%= select_tag :days, options_for_select([["Last 30 days", 30], ["Last 90 days", 90], ["Last year", 365]], @range_days), class: "select", aria: { label: "Date range" } %>
-    <label class="flex items-center gap-1.5 text-sm text-mocha">
-      <%= check_box_tag :include_deleted, "1", @include_deleted %> include removed history
-    </label>
-    <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
+  <%= form_tag finance_expenses_path, method: :get, class: "card card-pad operations-filters", role: "search", aria: { label: "Filter expenses" } do %>
+    <div><%= label_tag :q, "Payee, vendor or reference", class: "field-label" %><%= search_field_tag :q, @q, class: "input", autocomplete: "off" %></div>
+    <div><%= label_tag :category, "Category", class: "field-label" %>
+      <%= select_tag :category, options_for_select([["All categories", "all"]] + Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, @category), class: "select w-full" %></div>
+    <div><%= label_tag :from, "From", class: "field-label" %><%= date_field_tag :from, @from, class: "select w-full" %></div>
+    <div><%= label_tag :to, "To", class: "field-label" %><%= date_field_tag :to, @through, class: "select w-full" %></div>
+    <div><%= label_tag :min, "Amount from (USD)", class: "field-label" %><%= text_field_tag :min, params[:min], class: "input money", inputmode: "decimal", placeholder: "0.00" %></div>
+    <div><%= label_tag :max, "Amount to (USD)", class: "field-label" %><%= text_field_tag :max, params[:max], class: "input money", inputmode: "decimal", placeholder: "0.00" %></div>
+    <%= hidden_field_tag :include_deleted, "0", id: nil %>
+    <label class="flex items-center gap-1.5 text-base text-mocha"><%= check_box_tag :include_deleted, "1", @include_deleted %> Show removed expenses</label>
+    <%= submit_tag "Apply filters", class: "btn-primary btn-sm" %>
+    <%= link_to "Clear", finance_expenses_path, class: "btn-ghost btn-sm" %>
   <% end %>
 
-  <p class="text-sm text-mocha"><%= @from %> through <%= @through %> · USD. Summary totals exclude removed records. <%= @removed_count %> removed entries included in this view. This register records existing payments; no money is transferred.</p>
+  <% if @filter_problem %><p role="alert" class="flash flash-alert"><%= @filter_problem %></p><% end %>
+
+  <p class="text-base text-mocha">
+    Totals count active expenses only. <%= pluralize(@removed_count, 'removed expense') %> shown in the list<%= @include_deleted ? '' : ' (hidden by the filter)' %>.
+    This register records payments that already happened; no money is transferred.
+  </p>
   <div class="card overflow-hidden">
-    <div class="operations-table-region" role="region" tabindex="0" aria-label="Finance record table">
-      <table class="operations-table w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="operations-table-region" role="region" tabindex="0" aria-label="Expense register">
+      <table class="operations-table finance-table w-full">
+        <caption class="sr-only">Expenses from <%= range_text %>, newest first, amounts in USD</caption>
+        <thead>
           <tr>
             <th scope="col" class="th">Date</th>
             <th scope="col" class="th">Payee</th>
             <th scope="col" class="th">Category</th>
             <th scope="col" class="th">Method</th>
-            <th scope="col" class="th text-right">Amount</th>
-            <th scope="col" class="th"></th>
+            <th scope="col" class="th num">Amount</th>
+            <th scope="col" class="th">Status and history</th>
+            <th scope="col" class="th no-print"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @expenses.empty? %>
-            <tr><td colspan="6" class="empty-row">No expenses in this range.</td></tr>
+            <tr><td colspan="7" class="empty-row">No expenses match. Widen the dates, clear the filters<%= ', or record the first expense' if @can_write %>.</td></tr>
           <% end %>
           <% @expenses.each do |expense| %>
-            <tr class="hover:bg-cream <%= expense.discarded? ? "opacity-50" : "" %>">
-              <td class="td whitespace-nowrap text-mocha"><%= l(expense.incurred_on, format: :short) %></td>
-              <td class="td font-medium text-ink"><%= expense.payee.presence || expense.vendor&.name || "—" %></td>
+            <% lock = finance_lock_in(@locks, expense.incurred_on) %>
+            <% who = expense.payee.presence || expense.vendor&.name %>
+            <% history = finance_history(expense, @activity[expense.id.to_s]) %>
+            <tr class="<%= 'row-removed' if expense.discarded? %>">
+              <td class="td whitespace-nowrap"><%= l(expense.incurred_on, format: :short) %></td>
+              <td class="td font-medium"><%= who || "—" %></td>
               <td class="td"><span class="pill-taupe"><%= expense.category_label %></span></td>
-              <td class="td text-mocha capitalize"><%= expense.method %></td>
-              <td class="td text-right font-medium text-ink"><%= finance_money(expense.amount_cents) %></td>
-              <td class="td text-right">
-                <% if expense.discarded? %><span class="pill-taupe">Removed</span><% end %>
-                <% if Current.user.can?("finance.write") %>
-                  <% if expense.discarded? %>
-                    <%= button_to "Restore", restore_finance_expense_path(expense), method: :post, class: "text-xs font-semibold text-fern hover:underline" %>
+              <td class="td capitalize"><%= expense.method.to_s.tr('_', ' ') %></td>
+              <td class="td num <%= 'line-through' if expense.discarded? %>"><%= finance_money(expense.amount_cents) %></td>
+              <td class="td">
+                <% if expense.discarded? %><span class="status-tag status-removed">Removed</span><% else %><span class="status-tag status-active">Active</span><% end %>
+                <% if lock %><span class="status-tag status-locked" title="<%= PeriodLock.locked_message(lock) %>">Locked · <%= lock.label %></span><% end %>
+                <details class="mt-1"><summary class="text-sm text-mocha cursor-pointer"><%= history.last %></summary>
+                  <ul class="text-sm text-mocha mt-1"><% history.each do |line| %><li><%= line %></li><% end %></ul></details>
+              </td>
+              <td class="td no-print whitespace-nowrap">
+                <% if @can_write %>
+                  <% if lock %>
+                    <span class="text-sm text-mocha">Read-only: period locked</span>
+                  <% elsif expense.discarded? %>
+                    <%= button_to "Restore", restore_finance_expense_path(expense), method: :post, class: "row-action text-fern" %>
                   <% else %>
-                    <%= link_to "Edit", edit_finance_expense_path(expense), class: "text-xs font-semibold text-olive hover:underline" %>
-                    <%= button_to "Delete", finance_expense_path(expense), method: :delete, class: "ml-2 text-xs font-semibold text-rose hover:underline", data: { turbo_confirm: "Delete this expense?" } %>
+                    <%= link_to "Edit", edit_finance_expense_path(expense), class: "row-action text-olive-deep", aria: { label: "Edit expense #{who} #{finance_money_text(expense.amount_cents)}" } %>
+                    <%= button_to "Remove", finance_expense_path(expense), method: :delete, class: "row-action text-rose",
+                          form: { data: { turbo_confirm: finance_remove_confirm('expense', expense.amount_cents, who, expense.incurred_on) } },
+                          aria: { label: "Remove expense #{who} #{finance_money_text(expense.amount_cents)}" } %>
                   <% end %>
                 <% end %>
               </td>
             </tr>
           <% end %>
         </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" class="td" colspan="4">Total of active expenses in range (all pages)</th>
+            <td class="td num"><%= finance_money(@total_cents) %></td>
+            <td class="td" colspan="2"><%= pluralize(@entry_count, 'expense') %></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   </div>

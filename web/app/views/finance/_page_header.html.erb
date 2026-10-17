@@ -1,0 +1,17 @@
+<%# One header for every Money page: title, what it covers (dates and currency), one plain sentence of explanation, then actions.
+    Usage: render layout: 'finance/page_header', locals: { title:, range:, explain:, currency: 'USD', print: false } do ... actions ... end %>
+<% currency = local_assigns.fetch(:currency, 'USD') %>
+<section class="finance-header">
+  <div class="min-w-0">
+    <h1 class="page-title"><%= title %></h1>
+    <p class="finance-meta">
+      <% if local_assigns[:range].present? %><span>Dates: <%= range %></span><% end %>
+      <% if currency.present? %><span>Currency: <%= currency %></span><% end %>
+    </p>
+    <% if local_assigns[:explain].present? %><p class="mt-1 text-base text-mocha"><%= explain %></p><% end %>
+  </div>
+  <div class="flex flex-wrap gap-2 no-print">
+    <%= yield %>
+    <% if local_assigns[:print] %><button type="button" class="btn-ghost btn-sm" data-controller="print" data-action="click->print#print">Print</button><% end %>
+  </div>
+</section>
