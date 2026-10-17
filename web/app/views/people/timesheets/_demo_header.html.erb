@@ -1,0 +1,7 @@
+<section role="status" aria-label="Demo timesheet notice" class="rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-amber-950">
+  <p class="text-lg font-bold">DEMO · Fictional timesheet</p>
+  <p class="mt-1 text-sm">Sample hours for review practice. Excluded from payroll and actual-hours reports.</p>
+  <% if local_assigns[:timesheet]&.assigned_reviewer %>
+    <p class="mt-1 text-sm font-semibold">Assigned to <%= timesheet.assigned_reviewer.display_name %> for approval or return.</p>
+  <% end %>
+</section>

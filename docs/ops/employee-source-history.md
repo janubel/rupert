@@ -1,6 +1,6 @@
 # Employee source history
 
-Release status: **implementation undergoing deployment verification**. This guide describes the implemented scope; it is not a claim that the new source-history views have passed live deployment checks.
+Release status: **deployed and verified on October 17, 2026**. Live migration, retained-data checks, complete Square/C-Trax source reads, authenticated employee/reviewer access/render checks and private pre/post-deployment recovery verification succeeded. See the [deployment and recovery receipt](employee-source-history-deployment-2026-10-17.md) for evidence and limits.
 
 ## Find every available source record
 
@@ -35,6 +35,8 @@ Native source identities resolve through retained employee source identities. Na
 Square's previously counted historical days continue to appear once in personal reports and calendars under the existing Square rules. C-Trax source hours remain excluded from personal hour totals and Rupert payroll. Neither source import creates Rupert approvals, pay rates, overtime classifications, payslips or payment status. New Rupert payroll uses its existing approved-entry workflow.
 
 Rupert, Square and C-Trax can describe the same work. Their counts and hours remain separate; do not add overlapping records across sources or treat source verification as Rupert approval or proof of payment. Review conflicts and corrections before relying on the evidence.
+
+C-Trax automatic labor refresh is not scheduled. This release includes the verified manual source read; ongoing automatic refresh requires a separate explicit scheduler implementation and activation. Square retains its existing opt-in refresh schedule.
 
 ## Deployment and recovery
 

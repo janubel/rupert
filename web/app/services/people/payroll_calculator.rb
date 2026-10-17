@@ -68,7 +68,7 @@ module People
 
     # Approved hours per employee inside the pay window: [total, overtime].
     def self.approved_hours(pay_run)
-      rows = People::Timesheet.approved
+      rows = People::Timesheet.non_demo.approved
                               .where('period_start <= ? AND period_end >= ?', pay_run.period_end, pay_run.period_start)
                               .joins(:entries)
                               .where(timesheet_entries: { worked_on: pay_run.period_start..pay_run.period_end, tenant_id: Current.tenant_id })
