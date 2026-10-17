@@ -52,10 +52,16 @@ class H(BaseHTTPRequestHandler):
                 if q["query"].startswith("query OrderLines("):
                     return self.reply(200, {"data": {"order": {"lineItems": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [oline("B", 2, "B-1", 1)]}}}})
                 if q["query"].startswith("query OrderById"):
+                    S["n_order_by_id"] = S.get("n_order_by_id", 0) + 1
                     o = next((x for x in S["orders"] if x["id"] == v["id"]), None)
                     return self.reply(200, {"data": {"order": o}})
                 cur = v.get("cursor"); page, nxt = (S["orders"][:2], "o1") if cur is None else (S["orders"][2:], None)
                 return self.reply(200, {"data": {"orders": {"pageInfo": {"hasNextPage": bool(nxt), "endCursor": nxt}, "nodes": page}}})
+            if q["query"].startswith("query ItemTotal("):
+                for pr in S["products"]:
+                    for vn in pr["variants"]["nodes"]:
+                        if vn["inventoryItem"]["id"] == v["id"]: return self.reply(200, {"data": {"inventoryItem": {"variant": {"inventoryQuantity": vn["inventoryQuantity"]}}}})
+                return self.reply(200, {"data": {"inventoryItem": None}})
             if q["query"].startswith("query Levels("):
                 if not S.get("levels_throttled"):
                     S["levels_throttled"] = True   # Shopify reports cost throttling as HTTP 200 + errors
@@ -80,6 +86,9 @@ class H(BaseHTTPRequestHandler):
             prods = [] if S["empty"] else S["products"]
             cur = v.get("cursor"); page, nxt = (prods[:2], "p1") if cur is None else (prods[2:], None)
             return self.reply(200, {"data": {"products": {"pageInfo": {"hasNextPage": bool(nxt), "endCursor": nxt}, "nodes": page}}})
+        if u.path == "/v2/orders/batch-retrieve":
+            ids = json.loads(b)["order_ids"]
+            return self.reply(200, {"orders": [o for o in S["sq_orders"] if o["id"] in ids]})
         if u.path == "/v2/orders/search":
             req = json.loads(b); cur = req.get("cursor")
             page, nxt = (S["sq_orders"][:2], "sc1") if cur is None else (S["sq_orders"][2:], None)
@@ -336,6 +345,93 @@ try:
     s, rec = call("GET", "/api/v1/events/recent?since=%d&limit=50" % 0, tok=OWN)
     check("enable writes one marker event", (ecount() - n0, rec["data"][-1]["kind"] if rec.get("data") else None), (1, "realtime.enabled"))
     check("setting survives (re-read)", call("GET", "/api/v1/settings", tok=OWN)[1], {"realtime": True})
+
+    # webhooks: signed, deduplicated, processed by re-reading from the provider (never trusting the payload)
+    import hashlib, hmac as _hmac
+    SQ_KEY = "sq-webhook-key-789"
+    def hook(provider, token, obj, event_id=None, topic=None, key=None, url="", raw=None, headers=None):
+        raw = raw if raw is not None else json.dumps(obj).encode()
+        sig = base64.b64encode(_hmac.new((key or (SHOPIFY_SECRET if provider == "shopify" else SQ_KEY)).encode(), url.encode() + raw, hashlib.sha256).digest()).decode()
+        h = {"content-type": "application/json", **(headers or {})}
+        if provider == "shopify":
+            h["X-Shopify-Hmac-Sha256"] = sig
+            if event_id: h["X-Shopify-Event-Id"] = event_id
+            if topic: h["X-Shopify-Topic"] = topic
+        else:
+            h["x-square-hmacsha256-signature"] = sig
+        r = urllib.request.Request(f"http://127.0.0.1:{PORT}/hooks/{provider}/{token}", data=raw, headers=h, method="POST")
+        try: x = urllib.request.urlopen(r, timeout=10); return x.status, json.loads(x.read() or b"{}")
+        except urllib.error.HTTPError as e:
+            try: return e.code, json.loads(e.read() or b"{}")
+            except Exception: return e.code, {}
+    def until(fn, t=8):
+        t0 = time.time()
+        while time.time() - t0 < t:
+            r = fn()
+            if r: return r
+            time.sleep(0.1)
+        return None
+
+    check("staff cannot create webhook token", call("POST", "/api/v1/webhooks/token", tok=STAFF)[0], 403)
+    check("api token cannot create webhook token", call("POST", "/api/v1/webhooks/token", tok=SYNCTOK)[0], 403)
+    check("webhooks start disabled", call("GET", "/api/v1/webhooks", tok=OWN)[1]["enabled"], False)
+    s, wt = call("POST", "/api/v1/webhooks/token", tok=OWN)
+    WH = wt["token"]
+    check("webhook token issued with urls", (s, WH.startswith("rwh_"), len(WH), WH in wt["urls"]["shopify"], WH in wt["urls"]["square"]), (201, True, 47, True, True))
+    SQ_URL = "https://example.test/hooks/square/" + WH
+    check("square webhook fields must come together", call("PUT", "/api/v1/connections/square", {"access_token": SQUARE_TOKEN, "environment": "sandbox", "webhook_signature_key": SQ_KEY}, tok=OWN)[0], 400)
+    check("store square webhook key + url", call("PUT", "/api/v1/connections/square", {"access_token": SQUARE_TOKEN, "environment": "sandbox", "webhook_signature_key": SQ_KEY, "webhook_url": SQ_URL}, tok=OWN)[0], 200)
+
+    check("unknown token", hook("shopify", "rwh_" + "x" * 43, {}, "e0", "orders/updated")[0], 404)
+    check("unknown provider", hook("paypal", WH, {}, "e0", "orders/updated")[0], 404)
+    check("bad shopify signature", hook("shopify", WH, {"id": 1}, "e1", "orders/updated", key="not-the-secret")[0], 401)
+    check("bad square signature", hook("square", WH, {"type": "order.updated", "event_id": "x"}, key="wrong", url=SQ_URL)[0], 401)
+    check("signed but no event id", hook("shopify", WH, {"id": 1}, None, "orders/updated")[0], 400)
+    big = b"{" + b" " * (1024 * 1024 + 10) + b"}"
+    check("oversized body refused", hook("shopify", WH, None, "e2", "orders/updated", raw=big)[0], 413)
+
+    runs0 = len(call("GET", "/api/v1/sync/runs", tok=OWN)[1]["data"])
+    S["orders"][0] = sorder(1, [oline("A", 1, "A-1", 2)], more=True, status="REFUNDED", upd="2026-10-12T08:00:00Z")
+    n0 = S.get("n_order_by_id", 0)
+    check("order webhook accepted", hook("shopify", WH, {"admin_graphql_api_id": gid("Order", 1)}, "evt-order-1", "orders/updated")[1], {"status": "accepted"})
+    got = until(lambda: call("GET", "/api/v1/orders/detail?id=" + urllib.parse.quote(gid("Order", 1), safe=""), tok=ORD)[1].get("order", {}).get("status") == "REFUNDED")
+    check("order refreshed from the provider, no full sync needed", (got, S.get("n_order_by_id", 0) - n0, len(call("GET", "/api/v1/sync/runs", tok=OWN)[1]["data"]) - runs0), (True, 1, 0))
+    check("duplicate delivery ignored", hook("shopify", WH, {"admin_graphql_api_id": gid("Order", 1)}, "evt-order-1", "orders/updated")[1], {"status": "duplicate"})
+    time.sleep(0.7)
+    check("duplicate did not trigger another read", S.get("n_order_by_id", 0) - n0, 1)
+
+    S["products"][0]["variants"]["nodes"][1]["inventoryQuantity"] = 9          # A-2: 3 -> 9
+    hook("shopify", WH, {"inventory_item_id": 2, "location_id": 1, "available": 9}, "evt-inv-1", "inventory_levels/update")
+    got = until(lambda: {(r["sku"], r["location_id"].split("/")[-1]): r["quantity"] for r in call("GET", "/api/v1/inventory/levels?source=shopify&per_page=100", tok=OWN)[1]["data"]}.get(("A-2", "1")) == 9)
+    s, iv = call("GET", "/api/v1/inventory?source=shopify&per_page=100", tok=OWN)
+    check("inventory webhook updates level and variant total", (got, {r["sku"]: r["quantity"] for r in iv["data"]}.get("A-2")), (True, 9))
+    check("webhook-driven change reaches the live feed", sse.wait_for(lambda e: e["kind"] == "mirror.level.changed" and e["data"].get("via") == "webhook" and e["data"]["qty"] == {"from": 3, "to": 9}), True)
+
+    fin = lambda: len([r for r in call("GET", "/api/v1/sync/runs", tok=OWN)[1]["data"] if r["status"] != "running" and r["source"] == "shopify"])
+    f0 = fin()
+    for i in range(3): hook("shopify", WH, {"id": 7}, f"evt-prod-{i}", "products/update")
+    until(lambda: fin() >= f0 + 1)
+    time.sleep(2.0)
+    check("burst of catalog webhooks causes exactly one debounced sync", fin() - f0, 1)
+
+    S["counts"]["VAR2"] = {"L1": 7}
+    sqpay = {"type": "inventory.count.updated", "event_id": "sq-evt-1", "data": {"object": {"inventory_counts": [{"catalog_object_id": "VAR2", "location_id": "L1", "quantity": "7", "state": "IN_STOCK"}]}}}
+    check("square inventory webhook accepted", hook("square", WH, sqpay, url=SQ_URL)[1], {"status": "accepted"})
+    got = until(lambda: {(r["sku"], r["location_id"]): r["quantity"] for r in call("GET", "/api/v1/inventory/levels?source=square&per_page=100", tok=OWN)[1]["data"]}.get(("S-2", "L1")) == 7)
+    s, iv = call("GET", "/api/v1/inventory?source=square&per_page=100", tok=OWN)
+    check("square inventory webhook updates count and total", (got, {r["sku"]: r["quantity"] for r in iv["data"]}.get("S-2")), (True, 7))
+    S["sq_orders"][1]["total_money"]["amount"] = 2500; S["sq_orders"][1]["updated_at"] = "2026-10-13T12:00:00Z"
+    sqo = {"type": "order.updated", "event_id": "sq-evt-2", "data": {"object": {"order_updated": {"order_id": "SQO2", "location_id": "L1", "state": "COMPLETED"}}}}
+    hook("square", WH, sqo, url=SQ_URL)
+    got = until(lambda: call("GET", "/api/v1/orders/detail?id=SQO2", tok=ORD)[1].get("order", {}).get("total") == 25.0)
+    check("square order webhook refreshes the order", got, True)
+
+    s, st = call("GET", "/api/v1/webhooks", tok=OWN)
+    outcomes = {(e["provider"], e["topic"], e["outcome"]): e["count"] for e in st["last_24h"]}
+    check("webhook status shows outcomes", (st["enabled"], outcomes.get(("shopify", "orders/updated", "order refreshed")), outcomes.get(("shopify", "inventory_levels/update", "inventory refreshed")),
+          outcomes.get(("shopify", "products/update", "sync_started")), outcomes.get(("shopify", "products/update", "debounced")), outcomes.get(("square", "order.updated", "order refreshed"))), (True, 1, 1, 1, 2, 1))
+    check("webhook token can be disabled", call("DELETE", "/api/v1/webhooks/token", tok=OWN)[0], 200)
+    check("disabled token is gone", hook("shopify", WH, {"id": 1}, "evt-after", "orders/updated")[0], 404)
 
     # scheduled syncs (test-only every_seconds; production minimum is 5 minutes)
     check("schedule list starts empty", call("GET", "/api/v1/sync/schedule", tok=OWN)[1]["data"], [])

@@ -153,6 +153,8 @@ pub struct Registry {
     pub sync_running: Mutex<HashSet<(String, String)>>,
     pub sync_sem: Arc<Semaphore>,
     pub sse_total: AtomicUsize,
+    pub hook_sem: Arc<Semaphore>,
+    pub hook_debounce: Mutex<std::collections::HashMap<(String, String), i64>>,
     pub sse_max: usize,
     buses: Cache<String, broadcast::Sender<Arc<crate::feed::Ev>>>,
 }
@@ -175,6 +177,8 @@ impl Registry {
             sync_running: Mutex::new(HashSet::new()),
             sync_sem: Arc::new(Semaphore::new(std::env::var("RUPERT_SYNC_CONCURRENCY").ok().and_then(|v| v.parse().ok()).unwrap_or(2))),
             sse_total: AtomicUsize::new(0),
+            hook_sem: Arc::new(Semaphore::new(4)),
+            hook_debounce: Mutex::new(Default::default()),
             sse_max: std::env::var("RUPERT_SSE_MAX").ok().and_then(|v| v.parse().ok()).unwrap_or(1000),
             buses: Cache::builder().max_capacity(10_000).time_to_idle(Duration::from_secs(3600)).build(),
         })

@@ -54,7 +54,8 @@ pub const TENANT: &[&str] = &[
      CREATE TABLE order_lines (order_id TEXT NOT NULL, line_id TEXT NOT NULL, sku TEXT, variant_id TEXT, title TEXT, qty INTEGER NOT NULL, price REAL,
         PRIMARY KEY (order_id, line_id)) WITHOUT ROWID;
      CREATE INDEX order_lines_sku ON order_lines(sku);
-     CREATE TABLE webhook_events (id TEXT PRIMARY KEY, provider TEXT NOT NULL, topic TEXT NOT NULL, received_at INTEGER NOT NULL) WITHOUT ROWID;",
+     CREATE TABLE webhook_events (id TEXT PRIMARY KEY, provider TEXT NOT NULL, topic TEXT NOT NULL, received_at INTEGER NOT NULL, outcome TEXT) WITHOUT ROWID;
+     CREATE INDEX webhook_events_received ON webhook_events(received_at);",
 ];
 
 pub const CENTRAL: &[&str] = &[
@@ -76,10 +77,17 @@ pub const CENTRAL_SCHEDULES: &str = "
     CREATE INDEX schedules_due ON schedules(next_due);
 ";
 
+/// Central migration 4: webhook URL tokens (digest only, like API tokens).
+pub const CENTRAL_HOOKS: &str = "
+    CREATE TABLE webhook_tokens (digest TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, created_at INTEGER NOT NULL) WITHOUT ROWID;
+    CREATE INDEX webhook_tokens_tenant ON webhook_tokens(tenant_id);
+";
+
 pub fn central() -> Vec<&'static str> {
     let mut v = CENTRAL.to_vec();
     v.push(CENTRAL_AUTH);
     v.push(CENTRAL_SCHEDULES);
+    v.push(CENTRAL_HOOKS);
     v
 }
 

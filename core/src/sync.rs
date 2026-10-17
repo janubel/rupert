@@ -30,7 +30,11 @@ pub async fn put_connection(State(reg): State<Arc<Registry>>, p: Principal, Path
             let (t, e) = (b["access_token"].as_str().unwrap_or(""), b["environment"].as_str().unwrap_or("production"));
             if t.is_empty() || t.len() > 300 { return Err(err(400, "access_token is required")); }
             if e != "production" && e != "sandbox" { return Err(err(400, "environment must be production or sandbox")); }
-            json!({ "access_token": t, "environment": e })
+            let (wk, wu) = (b["webhook_signature_key"].as_str().unwrap_or(""), b["webhook_url"].as_str().unwrap_or(""));
+            if wk.len() > 200 || wu.len() > 300 || (!wu.is_empty() && !wu.starts_with("https://")) || (wk.is_empty() != wu.is_empty()) {
+                return Err(err(400, "webhook_signature_key and an https webhook_url must be given together"));
+            }
+            json!({ "access_token": t, "environment": e, "webhook_signature_key": wk, "webhook_url": wu })
         }
         _ => return Err(err(404, "unknown provider")),
     };
@@ -219,18 +223,18 @@ pub async fn runs(State(reg): State<Arc<Registry>>, p: Principal) -> R {
     ok(json!({ "data": rows }))
 }
 
-fn publish(db: &TenantDb, evs: Vec<Ev>) { db.publish(evs); }
+pub(crate) fn publish(db: &TenantDb, evs: Vec<Ev>) { db.publish(evs); }
 
-fn env_u64(k: &str, d: u64) -> u64 { std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d) }
+pub(crate) fn env_u64(k: &str, d: u64) -> u64 { std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d) }
 
 /// Per-run request cap. A normal full sync needs roughly (variants / 30) + a handful of calls, so this
 /// leaves room for very large catalogs while still stopping a loop within seconds.
-fn run_cap() -> u64 { env_u64("RUPERT_MAX_REQUESTS_PER_RUN", 5000) }
+pub(crate) fn run_cap() -> u64 { env_u64("RUPERT_MAX_REQUESTS_PER_RUN", 5000) }
 /// Requests per provider per rolling hour before new syncs are refused.
-fn hourly_budget() -> i64 { env_u64("RUPERT_API_BUDGET_PER_HOUR", 1000) as i64 }
-const BUCKET_SECS: i64 = 600;
+pub(crate) fn hourly_budget() -> i64 { env_u64("RUPERT_API_BUDGET_PER_HOUR", 1000) as i64 }
+pub(crate) const BUCKET_SECS: i64 = 600;
 
-fn record_usage(db: &TenantDb, source: &str, meter: &upstream::SharedMeter) {
+pub(crate) fn record_usage(db: &TenantDb, source: &str, meter: &upstream::SharedMeter) {
     let m = meter.lock();
     let bucket = crate::now() / BUCKET_SECS;
     let c = db.writer.lock();
@@ -241,23 +245,33 @@ fn record_usage(db: &TenantDb, source: &str, meter: &upstream::SharedMeter) {
     let _ = c.execute("DELETE FROM api_usage WHERE bucket < ?1", [bucket - 30 * 144]); // keep 30 days
 }
 
+/// Decrypts the stored credentials for one provider.
+pub(crate) fn load_creds(reg: &Registry, db: &TenantDb, tenant: &str, source: &str) -> Result<Value, String> {
+    let key = reg.master.ok_or("RUPERT_MASTER_KEY is not configured")?;
+    let blob: Vec<u8> = db.with_reader(|c| c.query_row("SELECT sealed FROM connections WHERE provider=?1", [source], |r| r.get(0))).map_err(|_| "not connected".to_string())?;
+    serde_json::from_slice(&crypto::open(&key, tenant, source, &blob).ok_or("stored credentials could not be decrypted")?).map_err(|_| "stored credentials are corrupt".to_string())
+}
+
+fn dev_env(reg: &Registry, k: &str) -> Option<String> { if reg.auth.dev { std::env::var(k).ok() } else { None } } // test upstreams only in dev mode
+
+pub(crate) fn make_shopify(reg: &Registry, creds: &Value, meter: upstream::SharedMeter) -> Shopify {
+    let base = dev_env(reg, "RUPERT_SHOPIFY_BASE").unwrap_or_else(|| format!("https://{}", creds["shop_domain"].as_str().unwrap_or_default()));
+    Shopify::new(base, creds["client_id"].as_str().unwrap_or_default().into(), creds["client_secret"].as_str().unwrap_or_default().into(), meter)
+}
+
+pub(crate) fn make_square(reg: &Registry, creds: &Value, meter: upstream::SharedMeter) -> Square {
+    let base = dev_env(reg, "RUPERT_SQUARE_BASE").unwrap_or_else(|| if creds["environment"] == "sandbox" { "https://connect.squareupsandbox.com/v2".into() } else { "https://connect.squareup.com/v2".into() });
+    Square::new(base, creds["access_token"].as_str().unwrap_or_default().into(), meter)
+}
+
 fn run(reg: &Registry, tenant: &str, source: &str, run_id: i64) -> Result<Value, String> {
     let db = reg.db(tenant).map_err(|e| e.to_string())?;
     let meter = upstream::Meter::shared(run_cap());
     let result = (|| {
-        let key = reg.master.ok_or("RUPERT_MASTER_KEY is not configured")?;
-        let blob: Vec<u8> = db.with_reader(|c| c.query_row("SELECT sealed FROM connections WHERE provider=?1", [source], |r| r.get(0))).map_err(|_| "not connected".to_string())?;
-        let creds: Value = serde_json::from_slice(&crypto::open(&key, tenant, source, &blob).ok_or("stored credentials could not be decrypted")?).map_err(|_| "stored credentials are corrupt")?;
-        let dev = |k: &str| if reg.auth.dev { std::env::var(k).ok() } else { None }; // test upstreams only in dev mode
+        let creds = load_creds(reg, &db, tenant, source)?;
         match source {
-            "shopify" => {
-                let base = dev("RUPERT_SHOPIFY_BASE").unwrap_or_else(|| format!("https://{}", creds["shop_domain"].as_str().unwrap_or_default()));
-                sync_shopify(&db, run_id, &mut Shopify::new(base, creds["client_id"].as_str().unwrap_or_default().into(), creds["client_secret"].as_str().unwrap_or_default().into(), meter.clone()))
-            }
-            _ => {
-                let base = dev("RUPERT_SQUARE_BASE").unwrap_or_else(|| if creds["environment"] == "sandbox" { "https://connect.squareupsandbox.com/v2".into() } else { "https://connect.squareup.com/v2".into() });
-                sync_square(&db, run_id, Square::new(base, creds["access_token"].as_str().unwrap_or_default().into(), meter.clone()))
-            }
+            "shopify" => sync_shopify(&db, run_id, &mut make_shopify(reg, &creds, meter.clone())),
+            _ => sync_square(&db, run_id, make_square(reg, &creds, meter.clone())),
         }
     })();
     // Every run, successful or not, records how many calls it made (also kept per hour for budgeting).

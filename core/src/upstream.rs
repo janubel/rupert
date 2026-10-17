@@ -193,6 +193,12 @@ impl Shopify {
         self.parse_order(&n).map(Some)
     }
 
+    /// The variant total Shopify reports for one inventory item (used by webhook-driven refreshes).
+    pub fn item_total(&mut self, item_id: &str) -> Result<Option<i64>, String> {
+        let d = self.graphql("query ItemTotal($id: ID!) { inventoryItem(id: $id) { variant { inventoryQuantity } } }", json!({ "id": item_id }))?;
+        Ok(d["inventoryItem"]["variant"]["inventoryQuantity"].as_i64())
+    }
+
     pub fn locations(&mut self) -> Result<Vec<ShopLocation>, String> {
         let (mut out, mut cursor) = (Vec::new(), Value::Null);
         loop {

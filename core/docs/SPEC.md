@@ -459,3 +459,59 @@ requests per pass with no throttling. Not done: carrying the cost estimate acros
 Tests: `tests/sync_smoke.py` is now 89 checks (levels and locations, level-change events, clamping, fallback to the
 primary location, scheduler start/stop and backoff, THROTTLED retry using the refill rate, request counts, usage
 endpoint, per-run cap and hourly budget); 89/89 on repeated clean runs, plus 41 auth checks and 5 unit tests.
+
+## Read-only orders and webhooks (2026-10-16)
+
+### Orders (read-only mirror)
+- **Shopify:** `orders` GraphQL query filtered by `updated_at`, 10 orders x 50 lines per request (cost ~510, under the
+  1000-point cap), per-order line paging beyond 50. **Square:** `POST /orders/search` (COMPLETED orders by `updated_at`)
+  and `POST /orders/batch-retrieve`, both reads, now on the client allowlist (unit-tested; writes such as
+  `POST /orders` stay rejected).
+- **No customer identity is stored**: no name, email, phone, shipping/billing address or payment details, and the queries
+  do not even ask for them. The integration test feeds PII through the mock and greps the data directory afterwards.
+  Stored per order: id, source, number, created/updated/cancelled time, status, total, currency, and lines
+  (sku, variant, title, quantity, unit price). Square lines resolve SKUs from the mirrored catalog.
+- Incremental: each pass starts one day before the last good pass (overlap catches edits made while a pass ran);
+  the first pass looks back `RUPERT_ORDER_LOOKBACK_DAYS` (default 30) and emits no events for the backfill.
+  Changes emit `mirror.order.added` / `mirror.order.changed` (no customer data in the event).
+- A failing order pass (typically a token without the orders scope) is reported in `details.orders.error` and does
+  not fail the catalog sync; hitting the per-run request cap does fail the run. `RUPERT_ORDERS=0` turns it off.
+- `GET /api/v1/orders?source=&since=&page=&per_page=` and `GET /api/v1/orders/detail?id=` (ids contain slashes, hence
+  the query string). Scope `orders:read`, role manager+.
+
+### Webhooks (receiver built and tested; not registered anywhere)
+- **Endpoints:** owners create or rotate a per-tenant token with `POST /api/v1/webhooks/token` (shown once, stored as a
+  digest) and get `/hooks/shopify/<token>` and `/hooks/square/<token>` URLs based on `RUPERT_PUBLIC_URL`;
+  `DELETE` disables; `GET /api/v1/webhooks` shows the last 24 h by topic and outcome.
+- **Authentication:** the URL token plus the provider's HMAC, checked in constant time. Shopify:
+  `X-Shopify-Hmac-Sha256` = base64 HMAC-SHA256 of the body keyed with the app's client secret (already stored).
+  Square: `x-square-hmacsha256-signature` = base64 HMAC-SHA256 of notification URL + body keyed with the
+  subscription's signature key; store it with `PUT /api/v1/connections/square` (`webhook_signature_key` and
+  `webhook_url`, given together, https only). Bad token or no connection looks like 404; a bad signature is 401.
+- **Hardening:** 1 MiB body limit (413), rate limits per token (600/min) and per IP, deduplication by provider event id
+  (7-day window, duplicates get 200 `duplicate`), immediate 200 then bounded background processing (4 at a time).
+- **Never trusts the payload for state.** Supported topics: Shopify `orders/*`, `inventory_levels/update`,
+  `products/*`, `inventory_items/*`; Square `order.created|updated`, `inventory.count.updated`,
+  `catalog.version.updated`. Order and inventory events re-read just that object from the provider (read-only,
+  counted by the request meter, skipped when the hourly budget is used up so the schedule catches up) and apply it;
+  catalog-level events trigger one full read-only sync, debounced to one per provider per minute.
+  Webhook-driven changes carry `via: "webhook"` in the live feed.
+- **Registering the subscription is a write to Shopify/Square, so Rupert never does it.** The owner adds the URL in the
+  Shopify admin (Settings > Notifications > Webhooks, or the app's webhook config) and the Square Developer
+  dashboard, or explicitly approves a one-off registration. It also needs a public HTTPS URL: the local live server
+  binds 127.0.0.1, so webhooks only make sense once the Rust app is deployed behind Caddy.
+
+### Verification
+- `tests/sync_smoke.py`: 130 checks, 130/130 on five consecutive runs (plus 41 auth checks, 5 unit tests): signed and
+  forged requests, unknown token/provider, missing event id, oversized body, targeted order and inventory refresh with
+  the mock's call counts (one read per event, none for duplicates), a burst of 3 catalog events causing exactly one
+  sync, Square count and order webhooks, status outcomes, token disable.
+- **Live, read-only, production store:** the new order pass fetched 208 Shopify orders (21 query pages) and 121 Square
+  orders (1 search) in 8 s and 3 s; the request log showed only reads (all HTTP 200, no mutation, no webhook calls).
+  Parity with the Rails tables for orders created since 2026-09-17: Shopify 191 of 191 and Square 121 of 121 order ids
+  present on both sides, 0 differences in total (against `gross_cents`), 0 in line count, 0 in line-quantity sums. (Shopify
+  also returned 17 older orders updated in the window; Rails keeps those from earlier passes.)
+- Differences by design: Rails stores customer records and shipping addresses and a normalized status (`fulfilled`/`paid`);
+  Rust stores neither identity nor address and keeps the provider's raw financial status (`PAID`, `COMPLETED`).
+- Not done: fulfillment state, refunds/returns beyond the cancelled flag, Square payments, live webhook delivery
+  (needs the public deployment and the owner's approval to register), webhook-triggered sync for archived products.

@@ -1,6 +1,7 @@
 mod auth;
 mod crypto;
 mod feed;
+mod hooks;
 mod migrate;
 mod sync;
 mod tenants;
@@ -132,6 +133,9 @@ async fn run() {
         .route("/api/v1/connections/{provider}", put(sync::put_connection).delete(sync::delete_connection))
         .route("/api/v1/sync/runs", get(sync::runs))
         .route("/api/v1/sync/usage", get(sync::usage))
+        .route("/api/v1/webhooks", get(hooks::status))
+        .route("/api/v1/webhooks/token", post(hooks::rotate_token).delete(hooks::disable))
+        .route("/hooks/{provider}/{token}", post(hooks::receive).layer(axum::extract::DefaultBodyLimit::max(1024 * 1024)))
         .route("/api/v1/orders", get(sync::orders_list))
         .route("/api/v1/orders/detail", get(sync::order_detail))
         .route("/api/v1/sync/schedule", get(sync::get_schedule).put(sync::put_schedule))

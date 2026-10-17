@@ -73,7 +73,7 @@ fn verify_pw(pw: &str, hash: &str) -> bool {
 pub fn sha_hex(s: &str) -> String {
     Sha256::digest(s.as_bytes()).iter().map(|b| format!("{b:02x}")).collect()
 }
-fn rand_token(prefix: &str) -> String {
+pub(crate) fn rand_token(prefix: &str) -> String {
     let mut b = [0u8; 32];
     getrandom::fill(&mut b).expect("os randomness");
     format!("{prefix}{}", URL_SAFE_NO_PAD.encode(b))
@@ -115,7 +115,7 @@ pub async fn no_store(req: axum::extract::Request, next: axum::middleware::Next)
     r
 }
 
-fn client_key(reg: &Registry, ci: SocketAddr, h: &HeaderMap) -> String {
+pub(crate) fn client_key(reg: &Registry, ci: SocketAddr, h: &HeaderMap) -> String {
     if reg.auth.trust_proxy {
         // The rightmost entry is the one our own proxy appended; earlier ones are client-controlled.
         if let Some(ip) = h.get("x-forwarded-for").and_then(|v| v.to_str().ok()).and_then(|v| v.rsplit(',').next()) {
@@ -124,7 +124,7 @@ fn client_key(reg: &Registry, ci: SocketAddr, h: &HeaderMap) -> String {
     }
     ci.ip().to_string()
 }
-fn limit(reg: &Registry, key: String, max: u32) -> Result<(), Response> {
+pub(crate) fn limit(reg: &Registry, key: String, max: u32) -> Result<(), Response> {
     let c = reg.auth.limiter.get_with(key, || Arc::new(AtomicU32::new(0)));
     if c.fetch_add(1, Ordering::Relaxed) >= max { Err(err(429, "too many requests")) } else { Ok(()) }
 }
