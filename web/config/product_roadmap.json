@@ -390,8 +390,8 @@
       "id": "F40",
       "area": "Finance",
       "name": "Bank reconciliation and accounting exports",
-      "status": "Planned",
-      "scope": "Statement matching, duplicates review and QuickBooks/Xero export or adapters.",
+      "status": "Partial",
+      "scope": "Statement-to-GL matching workbench (sign/amount/date) with confirm and difference reporting. QuickBooks/Xero export and automated duplicate review remain.",
       "evidence": "docs/data/product-roadmap.json",
       "phase": "3"
     },
