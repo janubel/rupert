@@ -6,6 +6,8 @@ class ReconciliationEvidence
   Error = Class.new(ArgumentError)
   MAX_BYTES = 8 * 1024 * 1024
   AMOUNTS = %w[order_total cash card refunds tips fees deposit].freeze
+  # Net totals may be negative; these are entered as positive magnitudes.
+  UNSIGNED = %w[refunds tips fees deposit].freeze
   TYPES = { '.csv' => 'text/csv', '.pdf' => 'application/pdf', '.png' => 'image/png',
     '.jpg' => 'image/jpeg', '.jpeg' => 'image/jpeg', '.json' => 'application/json', '.txt' => 'text/plain' }.freeze
 
@@ -28,6 +30,7 @@ class ReconciliationEvidence
       raise Error, 'A register control must cover exactly one day and identify its currency.' unless first == last && meta['currency'].to_s.match?(/\A[A-Z]{3}\z/)
       raise Error, 'Register controls require at least one source total.' unless AMOUNTS.any? { |key| meta[key].is_a?(Integer) }
       raise Error, 'Invalid control totals.' unless AMOUNTS.all? { |key| meta[key].nil? || (meta[key].is_a?(Integer) && meta[key].abs < 10**15) }
+      raise Error, 'Refunds, fees, tips and deposits must be zero or positive.' if !meta['withdrawn'] && UNSIGNED.any? { |key| meta[key].to_i.negative? }
     end
     sha = Digest::SHA256.hexdigest(bytes.b)
     fingerprint = Digest::SHA256.hexdigest([source, kind, first, last, sha, meta, supersedes_id.presence&.to_i].to_json)
@@ -65,10 +68,23 @@ class ReconciliationEvidence
     raise Error, 'Choose valid calendar dates.'
   end
 
-  def self.cents(value)
+  # Accepts 1234.56, 1,234.56, $1,234.56, .50 and surrounding spaces; never guesses at ambiguous separators.
+  def self.cents(value, metric: nil)
     return nil if value.blank?
-    raise Error, 'Enter amounts with at most two decimal places, without currency symbols.' unless value.to_s.match?(/\A-?\d{1,12}(?:\.\d{1,2})?\z/)
-    (BigDecimal(value.to_s) * 100).to_i
+    text = value.to_s.strip
+    match = text.match(/\A(-)?\$?(\d{1,3}(?:,\d{3})+|\d+)?(?:\.(\d{1,2}))?\z/)
+    unless match && (match[2] || match[3]) && match[2].to_s.delete(',').length <= 12
+      raise Error, "#{label(metric)}: use commas only between groups of three digits, for example 1,234.56." if text.include?(',')
+      raise Error, "#{label(metric)}: enter at most two decimal places." if text.match?(/\.\d{3,}\z/)
+      raise Error, "#{label(metric)}: enter an amount like 1234.56, 1,234.56 or $1,234.56 (up to 12 digits; no other symbols or letters)."
+    end
+    raise Error, "#{label(metric)}: enter a positive amount; refunds, fees, tips and deposits are recorded without a minus sign." if match[1] && UNSIGNED.include?(metric)
+    cents = (match[2].to_s.delete(',').to_i * 100) + match[3].to_s.ljust(2, '0').to_i
+    match[1] ? -cents : cents
+  end
+
+  def self.label(metric)
+    metric ? metric.to_s.humanize : 'Amount'
   end
 
   def self.validate_bytes!(bytes, type)
