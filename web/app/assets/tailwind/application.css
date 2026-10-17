@@ -511,3 +511,12 @@
 }
 .finance-menu-summary::after { content:"\25BE";margin-left:auto;font-size:1.25rem; }
 .finance-menu[open] .finance-menu-summary::after { content:"\25B4"; }
+
+/* Finance menu text meets the same 15px floor as the pages it links to. */
+.finance-navigation .nav-pill,.finance-navigation .workspace-nav-link { font-size:.9375rem; }
+.finance-navigation .workspace-nav-group { font-size:.875rem;color:var(--color-mocha); }
+.finance-navigation .finance-navigation-hint { font-size:.875rem; }
+.operations-workspace:has(.finance-navigation) .btn-sm,
+.operations-workspace:has(.finance-navigation) [class*="pill-"] { font-size:.9375rem; }
+.operations-workspace:has(.finance-navigation) .eyebrow { font-size:.875rem; }
+.finance-navigation .workspace-nav-group,.finance-navigation .finance-navigation-hint { font-size:.9375rem; }
