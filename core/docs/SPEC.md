@@ -360,3 +360,46 @@ Per-round writes: M2 59.7k, 56.7k, 56.7k; ON 40.6k, 42.6k, 42.2k; OFF 54.8k, 61.
   so no read difference is claimed.
 - Absolute numbers differ from the previous session's table (this machine drifts between
   sessions); only the within-session ordering is meaningful.
+
+## First live run: read-only sync of the production store (2026-10-16)
+
+Tenant #1 is the production shop (`m11u0i-sb.myshopify.com`, Square production, 3 locations), loaded
+into a local-only Rust Rupert (`scripts/run-live.sh`, `scripts/live-load.py`) using the credentials the
+Rails app already uses, copied over SSH from the `rupert` container's `/etc/rupert.env` into a private
+file (`~/.config/rupert-core/live.env`, mode 600). Nothing was written to Shopify, Square or the
+server. Data stays local (`core/data-live`, gitignored).
+
+Read-only evidence:
+- `RUPERT_LOG_UPSTREAM=1` ledger (method, path, GraphQL operation, status; no bodies or secrets). Across
+  three full sync passes the only calls were: `POST /admin/oauth/access_token` (token exchange),
+  `POST .../graphql.json` with operation `Products` (a query), `GET /v2/locations`,
+  `GET /v2/catalog/list` and `POST /v2/inventory/counts/batch-retrieve` (a read). All HTTP 200; zero
+  writes, no `mutation`.
+- Secret scan of the local data directory, server log and loader output found no credential.
+- A repeat sync changes nothing (0 added, 0 changed, 0 removed).
+- Server-side access used read-only commands only: env key names, `sqlite3 -readonly` on the Rails
+  production database, and the Tailscale-SSH approval the owner granted in the browser.
+
+Parity against the live Rails mirror (read from `production.sqlite3`; counts compared per row):
+
+| | Rails | Rust | Differences |
+| --- | --- | --- | --- |
+| Shopify variants (rows refreshed today) | 351 | 351 | 0 missing, 0 extra, 0 SKU, 0 quantity (sum 3,283 = 3,283), 0 status |
+| Square variations | 741 | 741 | 0 missing, 0 extra, 0 SKU, 0 quantity (sum 2,385 = 2,385) |
+
+The first run was **not** at parity and the report found two causes, both fixed (migration 5 plus
+sync changes, covered by `tests/sync_smoke.py`, now 59 checks):
+1. **Product status.** The shop has 90 products: 42 active, 8 draft, 40 archived. The Rails source on
+   `main` queries `status:active` only, but the production mirror holds and refreshes all statuses
+   (ACTIVE/DRAFT/ARCHIVED), so production is not running what `main` says. Rust now fetches every
+   status and stores `product_status` (exposed as `status` in `/api/v1/catalog`). This is a code/deploy
+   discrepancy worth checking on the Rails side.
+2. **Oversold stock.** Rails mirrors negative Shopify stock as 0 and counts oversold tracked variants;
+   Rust had stored the raw negatives (50 rows differed). Rust now clamps to 0 and reports `oversold`
+   in the run details (0 tracked variants were oversold on this run).
+
+Also observed on the Rails side, not changed: its `ShopifyVariant` table holds 902 rows, 551 of which
+were last refreshed in August and are never removed, so raw Rails counts overstate the live catalog.
+The Rust sync removes variants that disappear from Shopify after a successful run.
+
+Not covered by this run: orders, per-location Shopify levels, scheduled syncs, webhooks.

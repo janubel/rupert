@@ -72,9 +72,9 @@ fn short(v: &Value) -> String { v.to_string().chars().take(300).collect() }
 
 pub struct Shopify { agent: ureq::Agent, base: String, client_id: String, secret: String, token: Option<String> }
 
-pub struct ShopifyVariant { pub id: String, pub product_id: String, pub title: String, pub sku: Option<String>, pub price: Option<f64>, pub inventory_item_id: Option<String>, pub qty: i64, pub tracked: bool }
+pub struct ShopifyVariant { pub id: String, pub product_id: String, pub product_status: String, pub title: String, pub sku: Option<String>, pub price: Option<f64>, pub inventory_item_id: Option<String>, pub qty: i64, pub tracked: bool }
 
-const PRODUCTS_QUERY: &str = "query Products($cursor: String) { products(first: 250, query: \"status:active\", sortKey: TITLE, after: $cursor) { pageInfo { hasNextPage endCursor } nodes { id title variants(first: 100) { pageInfo { hasNextPage endCursor } nodes { id title sku price inventoryQuantity inventoryItem { id tracked } } } } } }";
+const PRODUCTS_QUERY: &str = "query Products($cursor: String) { products(first: 250, sortKey: TITLE, after: $cursor) { pageInfo { hasNextPage endCursor } nodes { id title status variants(first: 100) { pageInfo { hasNextPage endCursor } nodes { id title sku price inventoryQuantity inventoryItem { id tracked } } } } } }";
 const VARIANTS_QUERY: &str = "query ProductVariants($id: ID!, $cursor: String) { product(id: $id) { variants(first: 100, after: $cursor) { pageInfo { hasNextPage endCursor } nodes { id title sku price inventoryQuantity inventoryItem { id tracked } } } } }";
 
 impl Shopify {
@@ -113,6 +113,7 @@ impl Shopify {
             let mut out = Vec::new();
             for p in page["nodes"].as_array().into_iter().flatten() {
                 let pid = p["id"].as_str().unwrap_or_default().to_string();
+                let pstatus = p["status"].as_str().unwrap_or("ACTIVE").to_string();
                 let mut nodes: Vec<Value> = p["variants"]["nodes"].as_array().cloned().unwrap_or_default();
                 let mut vc = p["variants"]["pageInfo"]["hasNextPage"].as_bool().unwrap_or(false).then(|| p["variants"]["pageInfo"]["endCursor"].clone());
                 while let Some(c) = vc.take() {
@@ -123,7 +124,7 @@ impl Shopify {
                 }
                 for n in nodes {
                     out.push(ShopifyVariant {
-                        id: n["id"].as_str().unwrap_or_default().into(), product_id: pid.clone(), title: n["title"].as_str().unwrap_or_default().into(),
+                        id: n["id"].as_str().unwrap_or_default().into(), product_id: pid.clone(), product_status: pstatus.clone(), title: n["title"].as_str().unwrap_or_default().into(),
                         sku: n["sku"].as_str().filter(|s| !s.is_empty()).map(String::from),
                         price: n["price"].as_str().and_then(|s| s.parse().ok()).or(n["price"].as_f64()),
                         inventory_item_id: n["inventoryItem"]["id"].as_str().map(String::from),

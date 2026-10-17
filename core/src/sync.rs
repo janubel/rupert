@@ -152,7 +152,7 @@ fn run(reg: &Registry, tenant: &str, source: &str, run_id: i64) -> Result<Value,
 // ---------- Shopify ingest ----------
 
 fn sync_shopify(db: &TenantDb, run_id: i64, mut client: Shopify) -> Result<Value, String> {
-    let (mut seen, mut added, mut changed) = (0i64, 0i64, 0i64);
+    let (mut seen, mut added, mut changed, mut oversold) = (0i64, 0i64, 0i64, 0i64);
     client.variants(|page| {
         let mut evs = Vec::new();
         {
@@ -160,15 +160,18 @@ fn sync_shopify(db: &TenantDb, run_id: i64, mut client: Shopify) -> Result<Value
             let tx = c.transaction().map_err(|e| e.to_string())?;
             for v in &page {
                 seen += 1;
+                // Same rule as the Rails mirror: oversold (negative) stock is stored as 0 and counted.
+                if v.qty < 0 && v.tracked { oversold += 1; }
+                let qty_in = v.qty.max(0);
                 let old: Option<(String, Option<String>, Option<f64>, i64)> = tx.prepare_cached("SELECT title,sku,price,qty FROM shopify_variants WHERE id=?1").and_then(|mut s| s.query_row([&v.id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))).ok();
-                tx.prepare_cached("INSERT INTO shopify_variants(id,product_id,title,sku,price,inventory_item_id,qty,tracked,synced_run) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)
-                    ON CONFLICT(id) DO UPDATE SET product_id=excluded.product_id,title=excluded.title,sku=excluded.sku,price=excluded.price,inventory_item_id=excluded.inventory_item_id,qty=excluded.qty,tracked=excluded.tracked,synced_run=excluded.synced_run")
-                    .and_then(|mut s| s.execute(params![v.id, v.product_id, v.title, v.sku, v.price, v.inventory_item_id, v.qty, v.tracked, run_id])).map_err(|e| e.to_string())?;
+                tx.prepare_cached("INSERT INTO shopify_variants(id,product_id,title,sku,price,inventory_item_id,qty,tracked,synced_run,product_status) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)
+                    ON CONFLICT(id) DO UPDATE SET product_status=excluded.product_status,product_id=excluded.product_id,title=excluded.title,sku=excluded.sku,price=excluded.price,inventory_item_id=excluded.inventory_item_id,qty=excluded.qty,tracked=excluded.tracked,synced_run=excluded.synced_run")
+                    .and_then(|mut s| s.execute(params![v.id, v.product_id, v.title, v.sku, v.price, v.inventory_item_id, qty_in, v.tracked, run_id, v.product_status])).map_err(|e| e.to_string())?;
                 match old {
-                    None => { added += 1; evs.extend(feed::emit_if(db.realtime(), &tx, "mirror.variant.added", Some(&v.id), &json!({ "source": "shopify", "sku": v.sku, "title": v.title, "qty": v.qty })).map_err(|e| e.to_string())?); }
-                    Some((t, sku, price, qty)) if t != v.title || sku != v.sku || price != v.price || qty != v.qty => {
+                    None => { added += 1; evs.extend(feed::emit_if(db.realtime(), &tx, "mirror.variant.added", Some(&v.id), &json!({ "source": "shopify", "sku": v.sku, "title": v.title, "qty": qty_in })).map_err(|e| e.to_string())?); }
+                    Some((t, sku, price, qty)) if t != v.title || sku != v.sku || price != v.price || qty != qty_in => {
                         changed += 1;
-                        evs.extend(feed::emit_if(db.realtime(), &tx, "mirror.variant.changed", Some(&v.id), &json!({ "source": "shopify", "sku": v.sku, "qty": { "from": qty, "to": v.qty }, "price": { "from": price, "to": v.price }, "title_changed": t != v.title, "sku_changed": sku != v.sku })).map_err(|e| e.to_string())?);
+                        evs.extend(feed::emit_if(db.realtime(), &tx, "mirror.variant.changed", Some(&v.id), &json!({ "source": "shopify", "sku": v.sku, "qty": { "from": qty, "to": qty_in }, "price": { "from": price, "to": v.price }, "title_changed": t != v.title, "sku_changed": sku != v.sku })).map_err(|e| e.to_string())?);
                     }
                     _ => {}
                 }
@@ -183,7 +186,7 @@ fn sync_shopify(db: &TenantDb, run_id: i64, mut client: Shopify) -> Result<Value
     let existing: i64 = db.with_reader(|c| c.query_row("SELECT count(*) FROM shopify_variants", [], |r| r.get(0))).unwrap_or(0);
     if seen == 0 && existing > 0 { return Err("Shopify returned no variants; refusing to remove the existing mirror".into()); }
     let removed = remove_stale(db, "shopify_variants", "shopify", run_id)?;
-    Ok(json!({ "seen": seen, "added": added, "changed": changed, "removed": removed }))
+    Ok(json!({ "seen": seen, "added": added, "changed": changed, "removed": removed, "oversold": oversold }))
 }
 
 fn remove_stale(db: &TenantDb, table: &str, source: &str, run_id: i64) -> Result<i64, String> {
@@ -284,7 +287,7 @@ async fn list(reg: Arc<Registry>, p: Principal, scope: &str, q: ListQ, inventory
     let src = source.clone();
     let mut rows: Vec<Value> = tokio::task::spawn_blocking(move || db.with_reader(|c| {
         let sql = match (src.as_str(), inventory) {
-            ("shopify", false) => "SELECT id,sku,title,product_id,price,qty FROM shopify_variants ORDER BY id LIMIT ?1 OFFSET ?2",
+            ("shopify", false) => "SELECT id,sku,title,product_id,price,qty,product_status FROM shopify_variants ORDER BY id LIMIT ?1 OFFSET ?2",
             ("shopify", true) => "SELECT id,sku,title,product_id,price,qty FROM shopify_variants ORDER BY id LIMIT ?1 OFFSET ?2",
             (_, false) => "SELECT id,sku,name,item_id,NULL,qty FROM square_variations ORDER BY id LIMIT ?1 OFFSET ?2",
             (_, true) => "SELECT id,sku,name,item_id,NULL,qty FROM square_variations ORDER BY id LIMIT ?1 OFFSET ?2",
@@ -292,7 +295,7 @@ async fn list(reg: Arc<Registry>, p: Principal, scope: &str, q: ListQ, inventory
         let mut s = c.prepare_cached(sql)?;
         let v = s.query_map((per + 1, (page - 1) * per), |r| {
             Ok(if inventory { json!({ "id": r.get::<_, String>(0)?, "source": src, "sku": r.get::<_, Option<String>>(1)?, "quantity": r.get::<_, i64>(5)? }) }
-               else { json!({ "id": r.get::<_, String>(0)?, "source": src, "sku": r.get::<_, Option<String>>(1)?, "name": r.get::<_, String>(2)?, "product_id": r.get::<_, String>(3)?, "price": r.get::<_, Option<f64>>(4)? }) })
+               else { json!({ "id": r.get::<_, String>(0)?, "source": src, "sku": r.get::<_, Option<String>>(1)?, "name": r.get::<_, String>(2)?, "product_id": r.get::<_, String>(3)?, "price": r.get::<_, Option<f64>>(4)?, "status": r.get::<_, Option<String>>(6).unwrap_or(None) }) })
         })?.flatten().collect();
         Ok(v)
     }).unwrap_or_default()).await.map_err(|_| err(500, "internal"))?;

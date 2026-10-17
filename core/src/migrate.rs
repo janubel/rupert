@@ -33,6 +33,8 @@ pub const TENANT: &[&str] = &[
      ALTER TABLE events_new RENAME TO events;",
     // 4: per-tenant settings (realtime outbox on/off).
     "CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;",
+    // 5: Shopify product status (ACTIVE/DRAFT/ARCHIVED); production Rupert mirrors all of them.
+    "ALTER TABLE shopify_variants ADD COLUMN product_status TEXT NOT NULL DEFAULT 'ACTIVE';",
 ];
 
 pub const CENTRAL: &[&str] = &[

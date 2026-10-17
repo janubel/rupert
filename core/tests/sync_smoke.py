@@ -55,12 +55,12 @@ class H(BaseHTTPRequestHandler):
             return self.reply(200, {"counts": counts})
         self.reply(404, {})
 
-def product(n, variants, more=False):
-    return {"id": gid("Product", n), "title": f"P{n}", "variants": {"pageInfo": {"hasNextPage": more, "endCursor": "vc1" if more else None}, "nodes": variants}}
+def product(n, variants, more=False, status="ACTIVE"):
+    return {"id": gid("Product", n), "title": f"P{n}", "status": status, "variants": {"pageInfo": {"hasNextPage": more, "endCursor": "vc1" if more else None}, "nodes": variants}}
 def sq(n, sku): return {"type": "ITEM", "id": f"ITEM{n}", "item_data": {"name": f"Item {n}", "variations": [{"id": f"VAR{n}", "item_variation_data": {"name": f"Var {n}", "sku": sku}}]}}
 
 def reset_mock():
-    S.update(products=[product(1, [variant(1, "A-1", 10), variant(2, "A-2", 3)]), product(2, [variant(3, "B-1", 7)], more=True), product(3, [variant(4, "C-1", 1)])],
+    S.update(products=[product(1, [variant(1, "A-1", 10), variant(2, "A-2", 3)]), product(2, [variant(3, "B-1", 7)], more=True), product(3, [variant(4, "C-1", 1)], status="ARCHIVED")],
              square_items=[sq(1, "S-1"), sq(2, "S-2"), sq(3, "S-3")],
              counts={"VAR1": {"L1": 4, "L2": 6, "L3": 100}, "VAR2": {"L1": 2}}, throttled=False, delay=0.0, empty=False)
 
@@ -156,6 +156,8 @@ try:
     s, c = call("GET", "/api/v1/catalog?source=shopify&per_page=2", tok=CATONLY)
     check("catalog page 1", (s, len(c["data"]), c["meta"]["has_more"], c["meta"]["next_page"]), (200, 2, True, 2))
     s, c3 = call("GET", "/api/v1/catalog?source=shopify&per_page=2&page=3", tok=CATONLY); check("catalog last page", (len(c3["data"]), c3["meta"]["has_more"]), (1, False))
+    s, cat = call("GET", "/api/v1/catalog?source=shopify&per_page=100", tok=CATONLY)
+    check("archived product mirrored with its status", {r["sku"]: r["status"] for r in cat["data"]}.get("C-1"), "ARCHIVED")
     check("catalog bad per_page", call("GET", "/api/v1/catalog?per_page=101", tok=CATONLY)[0], 400)
     check("catalog token cannot read inventory", call("GET", "/api/v1/inventory?source=shopify", tok=CATONLY)[0], 403)
     s, iv = call("GET", "/api/v1/inventory?source=shopify&per_page=100", tok=OWN); check("inventory total qty", sum(r["quantity"] for r in iv["data"]), 10 + 3 + 7 + 1 + 5)
@@ -164,10 +166,13 @@ try:
     sse = Sse(OWN); sse.start(); time.sleep(0.5)
     S["products"][0]["variants"]["nodes"][0]["inventoryQuantity"] = 8      # A-1: 10 -> 8
     S["products"].pop()                                                    # C-1 removed
-    S["products"].append(product(5, [variant(5, "D-1", 2)]))              # D-1 added (3rd page of mock)
+    S["products"].append(product(5, [variant(5, "D-1", -2)]))              # D-1 added (3rd page of mock)
     S["throttled"] = True
     call("POST", "/api/v1/sync/shopify", tok=OWN); run = wait_run(OWN, 2)
     d = (run or {}).get("details") or {}
+    check("sync 2 oversold counted", d.get("oversold"), 1)
+    s, iv2 = call("GET", "/api/v1/inventory?source=shopify&per_page=100", tok=OWN)
+    check("oversold stock mirrored as 0 (Rails rule)", {r["sku"]: r["quantity"] for r in iv2["data"]}.get("D-1"), 0)
     check("sync 2 counts", (run or {}).get("status"), "ok"); check("sync 2 diff", (d.get("added"), d.get("changed"), d.get("removed")), (1, 1, 1))
     check("SSE got changed qty", sse.wait_for(lambda e: e["kind"] == "mirror.variant.changed" and e["data"]["qty"] == {"from": 10, "to": 8}), True)
     check("SSE got removed", sse.wait_for(lambda e: e["kind"] == "mirror.variant.removed" and e["data"]["sku"] == "C-1"), True)
