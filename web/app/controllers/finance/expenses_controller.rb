@@ -47,9 +47,8 @@ module Finance
     def create
       authorize(:module, :finance_write?)
       @expense = Finance::Expense.new(expense_params)
-      if @expense.save
+      if save_with_posting { @expense.save && post_expense(@expense) }
         note_approved_period(@expense.incurred_on, 'Expense')
-        Finance::Posting.expense(@expense, created_by: Current.user)
         ActivityLogger.log(
           'expense_recorded',
           subject: @expense,
@@ -72,8 +71,7 @@ module Finance
     def update
       authorize(:module, :finance_write?)
       old_date = @expense.incurred_on
-      if @expense.update(expense_params)
-        repost_expense(@expense)
+      if save_with_posting { @expense.update(expense_params) && repost_expense(@expense) }
         ActivityLogger.log('expense_updated', subject: @expense, details: change_summary(@expense))
         [old_date, @expense.incurred_on].uniq.each { |date| note_approved_period(date, 'Expense') }
         redirect_to(finance_expenses_path, notice: 'Expense updated.')
@@ -86,9 +84,9 @@ module Finance
 
     def destroy
       authorize(:module, :finance_write?)
-      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @expense.discard
+      removed = save_with_posting { @expense.discard && (Finance::Posting.void_source('Finance::Expense', @expense.id) || true) }
+      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless removed
 
-      Finance::Posting.void_source('Finance::Expense', @expense.id)
       ActivityLogger.log('expense_deleted', subject: @expense, details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category} · #{@expense.incurred_on}")
       note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense removed.')
@@ -97,9 +95,9 @@ module Finance
     # Restore a discarded expense back into the register.
     def restore
       authorize(:module, :finance_write?)
-      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @expense.undiscard
+      restored = save_with_posting { @expense.undiscard && post_expense(@expense) }
+      return redirect_to(finance_expenses_path, alert: @expense.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless restored
 
-      Finance::Posting.expense(@expense, created_by: Current.user)
       ActivityLogger.log('expense_restored', subject: @expense)
       note_approved_period(@expense.incurred_on, 'Expense')
       redirect_to(finance_expenses_path, notice: 'Expense restored.')
@@ -111,10 +109,30 @@ module Finance
     # the ledger always reflects the current expense.
     def repost_expense(expense)
       financial = %w[amount_cents category method incurred_on account_id]
-      return unless (expense.saved_changes.keys & financial).any?
+      return true unless (expense.saved_changes.keys & financial).any?
 
       Finance::Posting.void_source('Finance::Expense', expense.id)
+      post_expense(expense)
+    end
+
+    def post_expense(expense)
       Finance::Posting.expense(expense, created_by: Current.user)
+      true
+    end
+
+    # Runs the record change and its ledger posting as one unit. If either
+    # fails the whole thing is rolled back and the reason is put on the record,
+    # so an expense is never saved without its ledger entry.
+    def save_with_posting
+      ok = false
+      Finance::Expense.transaction do
+        ok = yield
+        raise ActiveRecord::Rollback unless ok
+      end
+      ok
+    rescue Finance::Posting::Error, ActiveRecord::RecordInvalid => e
+      @expense.errors.add(:base, e.is_a?(ActiveRecord::RecordInvalid) ? e.record.errors.full_messages.to_sentence : e.message)
+      false
     end
 
     def search(scope)
