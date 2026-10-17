@@ -3,6 +3,9 @@
   <nav class="operations-navigation <%= 'finance-navigation' if finance %>" aria-label="<%= finance ? 'Finance' : workspace.to_s.humanize %> workspace">
     <% if finance %>
       <div class="finance-navigation-title"><span>Finance</span><span class="finance-navigation-hint">Review → Reconcile → Close → Approve</span></div>
+      <% current_label = groups.flat_map { |_g, links| links }.find { |link| link[2] }&.first %>
+      <details class="finance-menu" open data-controller="menu-collapse">
+        <summary class="finance-menu-summary">Finance menu<% if current_label %> · You are on: <%= current_label %><% end %></summary>
       <div class="finance-navigation-groups">
         <% groups.each do |group, links| %>
           <details class="finance-navigation-group" <%= 'open' if links.any? { |link| link[2] } %>>
@@ -13,6 +16,7 @@
           </details>
         <% end %>
       </div>
+      </details>
     <% else %>
       <% groups.each do |group, links| %>
         <% if group %><span class="workspace-nav-group"><%= group %></span><% end %>
