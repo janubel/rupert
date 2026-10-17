@@ -84,4 +84,11 @@ class AuditTrailTest < ActionDispatch::IntegrationTest
     assert_equal "#{day}: reviewed", entry.details
     assert_equal 'DailyReconciliationReview', entry.subject_type
   end
+
+  test 'legacy entries stored with a NilClass subject show no subject' do
+    ActivityLog.create!(tenant_id: @tenant.id, action: 'legacy_probe', actor_name: 'system', subject_type: 'NilClass')
+    get activity_path(q: 'legacy_probe')
+    assert_response :success
+    assert_not_includes response.body, 'nil class'
+  end
 end
