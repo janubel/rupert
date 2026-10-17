@@ -271,6 +271,7 @@ Rails.application.routes.draw do
         post :import_shifts
       end
     end
+    get 'team_schedule', to: 'team_schedule#index', as: :team_schedule
     resources :leave_requests, only: %i[index show new create destroy] do
       member do
         post :approve
