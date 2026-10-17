@@ -33,7 +33,9 @@ class DailyReconciliationsController < AuthenticatedController
     end
     respond_to do |format|
       format.html
-      format.csv { send_data(@report.csv, type: 'text/csv', filename: "daily-reconciliation-#{@report.day}.csv") }
+      format.csv {
+        log_export('Daily reconciliation CSV', @report.day.iso8601)
+        send_data(@report.csv, type: 'text/csv', filename: "daily-reconciliation-#{@report.day}.csv") }
     end
   end
 
@@ -64,6 +66,7 @@ class DailyReconciliationsController < AuthenticatedController
 
   def document
     doc = ReconciliationDocument.find(params[:id])
+    log_export('Retained original', "##{doc.id} #{doc.source} #{doc.kind} #{doc.filename}")
     send_data(doc.original_bytes, type: doc.content_type, filename: doc.filename, disposition: 'attachment')
   end
 
@@ -73,6 +76,7 @@ class DailyReconciliationsController < AuthenticatedController
     when 'authorize_net' then AuthorizeNetPortalExport.find(params[:id])
     else raise ActiveRecord::RecordNotFound
     end
+    log_export('Native source export', "#{params[:source]} ##{receipt.id}")
     send_data(receipt.original_csv, type: 'text/csv', disposition: 'attachment', filename: "#{params[:source]}-#{receipt.id}.csv")
   end
 

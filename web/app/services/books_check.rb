@@ -26,7 +26,7 @@ class BooksCheck
   def checks
     @checks ||= [source_freshness, sync_health, paid_without_payment, payment_mismatch, refund_records,
       orders_without_location, impossible_amounts, missing_controls, unreviewed_days,
-      overdue_follow_ups, evidence_integrity].compact
+      overdue_follow_ups, evidence_integrity, approval_ledger, unapproved_days, offsite_backup].compact
   end
 
   def summary
@@ -214,6 +214,39 @@ class BooksCheck
       detail_ok: "#{docs.size} recently retained original(s) re-verified against their SHA-256.",
       detail_bad: 'These retained documents failed checksum verification. Do not rely on them.',
       action: 'Restore from backup and re-retain the original; keep the failed record for the audit trail.')
+  end
+
+  # The approval ledger is hash-chained; any edited, removed or reordered
+  # entry shows here.
+  def approval_ledger
+    result = BookApproval.verify_chain
+    build('approval_ledger', 'The approval ledger is intact', count: result[:ok] ? 0 : 1,
+      rows: [[result[:broken_id], result[:reason]]],
+      detail_ok: "#{result[:count]} approval(s), each linked to the one before it.",
+      detail_bad: "Ledger check failed at entry #{result[:broken_id] || '?'}: #{result[:reason]} Treat approvals after that point as unverified.",
+      action: 'Restore the database from the last good backup and compare, then re-approve the affected periods.',
+      path: routes.book_approvals_path)
+  end
+
+  def unapproved_days
+    states = BooksPeriod.day_states((1..7).map { |n| Date.current - n }.reverse)
+    open = states.select { |day, state| state == :pending && sales_days.include?(day) }.keys
+    build('unapproved_days', 'Recent days have been approved by a person', count: open.size, level: :watch,
+      rows: open.map { |d| [d.iso8601] },
+      detail_ok: 'Every recent sales day has a recorded human approval.',
+      detail_bad: "Waiting for approval: #{open.map(&:iso8601).first(7).join(', ')}.",
+      action: 'Open Approve books and sign off the day or week.',
+      path: open.first && routes.book_approvals_path(kind: 'daily', date: open.first.iso8601))
+  end
+
+  # A local database backup exists on the host, but a copy that survives losing
+  # the machine only counts once an off-host upload has succeeded.
+  def offsite_backup
+    recent = BackupLog.unscoped.where(status: 'success').where('"startedAt" >= ?', generated_at - 7.days).exists?
+    build('offsite_backup', 'An off-host backup succeeded in the last 7 days', count: recent ? 0 : 1, level: :watch,
+      detail_ok: 'A Google Drive backup upload succeeded this week.',
+      detail_bad: 'No successful off-host backup is recorded. The books exist only on this machine and its local snapshots.',
+      action: 'Connect Google Drive backup in Settings (platform administrator).', path: routes.settings_path)
   end
 
   def safe(value)

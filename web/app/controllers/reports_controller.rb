@@ -23,7 +23,9 @@ class ReportsController < AuthenticatedController
       source: params[:source].presence, location_id: params[:location_id].presence)
     respond_to do |format|
       format.html
-      format.csv { send_data(@summary.csv, filename: "register-summary-#{@summary.day.iso8601}.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", @summary.day.iso8601)
+        send_data(@summary.csv, filename: "register-summary-#{@summary.day.iso8601}.csv") }
     end
   rescue ArgumentError
     redirect_to(register_summary_reports_path, alert: 'Choose a valid calendar day (YYYY-MM-DD).')
@@ -70,7 +72,9 @@ class ReportsController < AuthenticatedController
 
     respond_to do |format|
       format.html
-      format.csv { send_data(sales_csv, filename: "sales-report-#{@days}d.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", "#{@days || 1} days")
+        send_data(sales_csv, filename: "sales-report-#{@days}d.csv") }
     end
   end
 
@@ -114,7 +118,9 @@ class ReportsController < AuthenticatedController
 
     respond_to do |format|
       format.html
-      format.csv { send_data(financial_csv, filename: "financial-report-#{@days}d.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", "#{@days || 1} days")
+        send_data(financial_csv, filename: "financial-report-#{@days}d.csv") }
     end
   end
 
@@ -150,7 +156,9 @@ class ReportsController < AuthenticatedController
 
     respond_to do |format|
       format.html
-      format.csv { send_data(inventory_csv, filename: "inventory-report-#{@days}d.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", "#{@days || 1} days")
+        send_data(inventory_csv, filename: "inventory-report-#{@days}d.csv") }
     end
   end
 
@@ -168,7 +176,9 @@ class ReportsController < AuthenticatedController
 
     respond_to do |format|
       format.html
-      format.csv { send_data(operations_csv, filename: "operations-report-#{@days}d.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", "#{@days || 1} days")
+        send_data(operations_csv, filename: "operations-report-#{@days}d.csv") }
     end
   end
 
@@ -177,6 +187,7 @@ class ReportsController < AuthenticatedController
     respond_to do |format|
       format.html
       format.csv do
+        log_export('Inventory reconciliation CSV')
         send_data(@reconciliation.csv, filename: "inventory-reconciliation-#{Time.current.to_date.iso8601}.csv")
       end
     end

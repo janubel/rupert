@@ -78,7 +78,7 @@ class SettingsController < AuthenticatedController
   # GET /settings/backup — consistent SQLite snapshot download
   def backup
     path = BackupService.snapshot_path
-    ActivityLogger.log('database_backup_downloaded', details: 'Full database snapshot downloaded')
+    log_export('Full database snapshot')
     send_file(
       path,
       filename: "rupert-backup-#{Time.now.strftime('%Y%m%d-%H%M%S')}.sqlite3",

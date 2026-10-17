@@ -3,6 +3,7 @@
 module Finance
   # Record a payment to a vendor (accounts payable).
   class VendorPaymentsController < AuthenticatedController
+    include ApprovedPeriodNotice
     before_action :set_payment, only: %i[destroy restore]
 
     def index
@@ -30,6 +31,7 @@ module Finance
       authorize(:module, :finance_write?)
       @payment = Finance::VendorPayment.new(payment_params)
       if @payment.save
+        note_approved_period(@payment.paid_on, 'Vendor payment')
         ActivityLogger.log(
           'vendor_payment',
           subject: @payment.vendor,
@@ -45,6 +47,7 @@ module Finance
     def destroy
       authorize(:module, :finance_write?)
       @payment.discard
+      note_approved_period(@payment.paid_on, 'Vendor payment')
       ActivityLogger.log(
         'payment_deleted',
         subject: @payment.vendor,
@@ -56,6 +59,7 @@ module Finance
     def restore
       authorize(:module, :finance_write?)
       @payment.undiscard
+      note_approved_period(@payment.paid_on, 'Vendor payment')
       ActivityLogger.log('payment_restored', subject: @payment.vendor)
       redirect_to(finance_vendor_payments_path, notice: 'Payment restored.')
     end
