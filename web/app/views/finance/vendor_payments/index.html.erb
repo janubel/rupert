@@ -29,7 +29,11 @@
   <% end %>
 
   <p class="text-sm text-mocha"><%= @from %> through <%= @through %> · USD. Summary totals exclude removed records. <%= @removed_count %> removed entries included in this view. This register records existing payments; no money is transferred.</p>
-  <div class="card overflow-hidden">
+  <div class="card overflow-hidden" data-controller="table-filter">
+    <div class="table-filter border-b border-fog px-4 py-3">
+      <input type="search" class="input" placeholder="Narrow these rows: vendor, method…" aria-label="Filter payments on this page" data-table-filter-target="input" data-action="input->table-filter#filter keydown.esc->table-filter#clear">
+      <span class="table-filter-count" data-table-filter-target="count" aria-live="polite"></span>
+    </div>
     <div class="operations-table-region" role="region" tabindex="0" aria-label="Finance record table">
       <table class="operations-table w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
@@ -43,10 +47,10 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @payments.empty? %>
-            <tr><td colspan="5" class="empty-row">No payments in this range.</td></tr>
+            <tr><td colspan="5" class="empty-row">No payments in this range.<% if Current.user.can?("finance.write") %> <%= link_to "Record a payment", new_finance_vendor_payment_path, class: "font-semibold text-olive-deep underline" %><% end %></td></tr>
           <% end %>
           <% @payments.each do |payment| %>
-            <tr class="hover:bg-cream <%= payment.discarded? ? "opacity-50" : "" %>">
+            <tr data-table-filter-target="row" class="hover:bg-cream <%= payment.discarded? ? "opacity-50" : "" %>">
               <td class="td whitespace-nowrap text-mocha"><%= l(payment.paid_on, format: :short) %></td>
               <td class="td font-medium text-ink"><%= retail_business_access?('purchasing.read') ? link_to(payment.vendor.name, payment.vendor, class: 'text-olive underline') : payment.vendor.name %></td>
               <td class="td text-mocha capitalize"><%= payment.method %></td>
@@ -63,6 +67,7 @@
               </td>
             </tr>
           <% end %>
+          <tr data-table-filter-target="empty" hidden><td colspan="5" class="empty-row">No rows on this page match. <button type="button" class="font-semibold text-olive-deep underline" data-action="table-filter#clear">Clear filter</button></td></tr>
         </tbody>
       </table>
     </div>

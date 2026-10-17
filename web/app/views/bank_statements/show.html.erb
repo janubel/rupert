@@ -24,7 +24,7 @@
       <% if Current.user.can?('reports.read') %><p><%= link_to 'Back to the Books desk', books_desk_path, class: 'font-semibold text-olive-deep underline' %> for the rest of the week’s cleanup.</p><% end %>
     </div>
   <% else %>
-    <%= form_with url: decide_bank_statement_path(@document.id), class: 'space-y-4', data: { controller: 'bank-decisions', action: 'submit->bank-decisions#submit' } do |f| %>
+    <%= form_with url: decide_bank_statement_path(@document.id), class: 'space-y-4', data: { controller: 'bank-decisions table-filter', action: 'submit->bank-decisions#submit' } do |f| %>
       <% if @can_write && @lines.any? { |l| l.pending? && l.money_out? && l.suggested_category != 'other' } %>
         <div class="card card-pad flex flex-wrap items-center justify-between gap-3 text-sm">
           <p class="max-w-xl text-mocha">Rupert recognised some payees from their description (rent, utilities, shipping, software and so on). Fill those in, check each one, then save. Nothing is recorded until you press Save.</p>
@@ -35,17 +35,30 @@
         </div>
       <% end %>
       <%= hidden_field_tag :show, @filter %>
+      <div class="card card-pad flex flex-wrap items-end gap-4 text-sm">
+        <div class="table-filter min-w-0 flex-1 basis-64">
+          <input type="search" class="input" placeholder="Find a line by description, date or amount…" aria-label="Filter statement lines" data-table-filter-target="input" data-action="input->table-filter#filter keydown.esc->table-filter#clear">
+          <span class="table-filter-count" data-table-filter-target="count" aria-live="polite"></span>
+        </div>
+        <% if @can_write && @lines.any?(&:pending?) %>
+          <div class="flex flex-wrap items-center gap-2">
+            <label for="bulk-choice" class="font-semibold text-mocha">Set every shown waiting line to</label>
+            <select id="bulk-choice" class="select" data-bank-decisions-target="bulk"><option value="">Pick one…</option></select>
+            <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#applyBulk">Apply to shown lines</button>
+          </div>
+        <% end %>
+      </div>
       <div class="card overflow-x-auto"><table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60"><tr>
           <th scope="col" class="th">Date</th><th scope="col" class="th">Description</th><th scope="col" class="th text-right">Out</th><th scope="col" class="th text-right">In</th><th scope="col" class="th">What was it?</th>
         </tr></thead>
         <tbody class="divide-y divide-fog">
           <% @lines.each do |line| %>
-            <tr>
+            <tr data-table-filter-target="row">
               <td class="td whitespace-nowrap"><%= line.posted_on.strftime('%b %-d, %Y') %></td>
               <td class="td max-w-md break-words"><%= line.description %></td>
-              <td class="td text-right"><%= line.money_out? ? money.call(line.amount_cents) : '' %></td>
-              <td class="td text-right"><%= line.money_out? ? '' : money.call(line.amount_cents) %></td>
+              <td class="td text-right table-figures"><%= line.money_out? ? money.call(line.amount_cents) : '' %></td>
+              <td class="td text-right table-figures"><%= line.money_out? ? '' : money.call(line.amount_cents) %></td>
               <td class="td">
                 <% if !line.pending? %>
                   <%= line.status.humanize %><%= " by #{line.decided_by_name}" if line.decided_by_name %>
@@ -66,6 +79,7 @@
               </td>
             </tr>
           <% end %>
+          <tr data-table-filter-target="empty" hidden><td colspan="5" class="empty-row">No lines match. <button type="button" class="font-semibold text-olive-deep underline" data-action="table-filter#clear">Clear filter</button></td></tr>
         </tbody>
       </table></div>
       <% if @can_write %>

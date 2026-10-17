@@ -31,6 +31,17 @@ class BookApprovalsIntegrationTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Approval ledger'
   end
 
+  test 'decision form wires live note and confirmation validation' do
+    get book_approvals_path
+    assert_response :success
+    assert_select 'form[data-controller=approval-form]' do
+      assert_select 'input[type=radio][data-approval-form-target=status]', minimum: 3
+      assert_select 'textarea[data-approval-form-target=notes]'
+      assert_select 'input[type=checkbox][data-approval-form-target=confirm]'
+      assert_select 'input[type=submit][data-approval-form-target=submit]'
+    end
+  end
+
   test 'a person can approve and it records who, when and an activity entry' do
     approve
     assert_redirected_to book_approvals_path(kind: 'daily', date: @day)

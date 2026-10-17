@@ -137,7 +137,7 @@
   <% if @can_write && period.complete? %>
     <section class="card card-pad space-y-4" id="approve" aria-label="Approve">
       <h2 class="font-display text-xl">Your decision</h2>
-      <%= form_with url: book_approvals_path, scope: :approval, class: 'space-y-4' do |f| %>
+      <%= form_with url: book_approvals_path, scope: :approval, class: 'space-y-4', data: { controller: 'approval-form' } do |f| %>
         <%= f.hidden_field :kind, value: period.kind %>
         <%= f.hidden_field :date, value: period.from.iso8601 %>
         <%= f.hidden_field :digest, value: period.digest %>
@@ -145,15 +145,15 @@
         <fieldset class="space-y-2">
           <legend class="sr-only">Decision</legend>
           <% [['approved', 'Looks right: approve', period.issue_total.positive?], ['approved_with_exceptions', 'Approve with exceptions (explain below)', false], ['needs_attention', 'Not right yet: needs attention (explain below)', false]].each do |value, label, disabled| %>
-            <label class="flex items-start gap-3 text-sm"><%= f.radio_button :status, value, checked: selected == value, disabled: disabled, class: 'mt-1' %><span><%= label %><%= ' — unavailable while checks are open' if disabled %></span></label>
+            <label class="flex items-start gap-3 text-sm"><%= f.radio_button :status, value, checked: selected == value, disabled: disabled, class: 'mt-1', data: { approval_form_target: 'status', action: 'change->approval-form#sync' } %><span><%= label %><%= ' — unavailable while checks are open' if disabled %></span></label>
           <% end %>
         </fieldset>
         <div>
-          <%= f.label :notes, 'Note (required unless plainly approved)', class: 'block text-sm font-semibold' %>
-          <%= f.text_area :notes, value: @values&.dig('notes'), rows: 3, maxlength: 4000, class: 'input', placeholder: 'What you checked, what is outstanding, who owns it.' %>
+          <%= f.label :notes, 'Note (required unless plainly approved)', class: 'block text-sm font-semibold', data: { approval_form_target: 'label' } %>
+          <%= f.text_area :notes, value: @values&.dig('notes'), rows: 3, maxlength: 4000, class: 'input', placeholder: 'What you checked, what is outstanding, who owns it.', data: { approval_form_target: 'notes' } %>
         </div>
-        <label class="flex items-start gap-3 text-sm"><%= f.check_box :confirmed, { checked: @values&.dig('confirmed') == '1', class: 'mt-1' }, '1', '0' %><span>I looked at these numbers (version <code><%= period.digest.first(10) %></code>) as <strong><%= Current.user.display_name || Current.user.email %></strong>.</span></label>
-        <%= f.submit 'Record my decision', class: 'btn-primary' %>
+        <label class="flex items-start gap-3 text-sm"><%= f.check_box :confirmed, { checked: @values&.dig('confirmed') == '1', class: 'mt-1', data: { approval_form_target: 'confirm', action: 'change->approval-form#sync' } }, '1', '0' %><span>I looked at these numbers (version <code><%= period.digest.first(10) %></code>) as <strong><%= Current.user.display_name || Current.user.email %></strong>.</span></label>
+        <%= f.submit 'Record my decision', class: 'btn-primary disabled:opacity-50 disabled:cursor-not-allowed', data: { approval_form_target: 'submit' } %>
         <p class="text-xs text-mocha">Saved with your name, the date and time, and your network address. It cannot be edited or deleted; a later decision is added after it. This records a human review of Rupert’s records, not a bank reconciliation or tax filing.</p>
       <% end %>
     </section>

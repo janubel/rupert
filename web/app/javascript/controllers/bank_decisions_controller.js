@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 // can pre-fill the keyword suggestions (a person still presses Save), and
 // warns before leaving the page with choices that were not saved.
 export default class extends Controller {
-  static targets = ["choice", "count", "save", "fill"]
+  static targets = ["choice", "count", "save", "fill", "bulk"]
 
   connect() {
     this.submitting = false
@@ -14,11 +14,42 @@ export default class extends Controller {
       event.returnValue = ""
     }
     window.addEventListener("beforeunload", this.beforeUnload)
+    this.buildBulk()
     this.sync()
   }
 
   disconnect() {
     window.removeEventListener("beforeunload", this.beforeUnload)
+  }
+
+  // The bulk picker offers the choices of the fullest line picker (a deposit's
+  // picker only has "ignore", a withdrawal's also has expenses and vendors).
+  buildBulk() {
+    if (!this.hasBulkTarget || this.choiceTargets.length === 0) return
+    const source = this.choiceTargets.reduce((best, select) => (select.querySelectorAll("optgroup").length > best.querySelectorAll("optgroup").length ? select : best))
+    source.querySelectorAll("optgroup").forEach((group) => {
+      if (group.label) this.bulkTarget.appendChild(group.cloneNode(true))
+    })
+  }
+
+  // Applies one choice to the waiting lines currently shown by the filter.
+  // Lines the person already chose, and lines that cannot take it (a deposit
+  // cannot become an expense), are left alone. Nothing is saved until Save.
+  applyBulk() {
+    const value = this.bulkTarget.value
+    if (!value) return
+    let applied = 0
+    this.choiceTargets.forEach((select) => {
+      const row = select.closest("tr")
+      if (row?.hidden) return
+      if (select.value && select.value !== "leave") return
+      if (![...select.options].some((option) => option.value === value)) return
+      select.value = value
+      row.classList.remove("bank-line-suggested")
+      applied += 1
+    })
+    this.sync()
+    if (this.hasCountTarget) this.countTarget.textContent += ` · applied to ${applied}`
   }
 
   chosen() {

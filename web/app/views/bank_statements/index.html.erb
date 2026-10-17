@@ -14,19 +14,6 @@
 
   <% if @form_error %><p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><%= @form_error %></p><% end %>
 
-  <% if @can_write %>
-    <section class="card card-pad space-y-3">
-      <h2 class="font-display text-xl">Upload a statement</h2>
-      <%= form_with url: bank_statements_path, multipart: true, class: 'space-y-3' do |f| %>
-        <div><%= f.label :account_label, 'Account name (a name, never the account number)', class: 'block text-sm font-semibold' %><%= f.text_field :account_label, value: params[:account_label], required: true, maxlength: 60, placeholder: 'Operating checking', class: 'input' %></div>
-        <div><%= f.label :file, 'Statement CSV', class: 'block text-sm font-semibold' %><%= f.file_field :file, accept: '.csv,text/csv', required: true, class: 'input' %></div>
-        <label class="flex items-start gap-3 text-sm"><%= f.check_box :withdrawals_positive, { class: 'mt-1', checked: params[:withdrawals_positive] == '1' }, '1', '0' %><span>My bank lists withdrawals as positive numbers in one Amount column (leave unticked if withdrawals are negative or there are separate Debit and Credit columns).</span></label>
-        <%= f.submit 'Read statement', class: 'btn-primary' %>
-        <p class="text-xs text-mocha">The original file is kept unchanged and encrypted. Descriptions are encrypted. Up to 5,000 rows and 8 MiB.</p>
-      <% end %>
-    </section>
-  <% end %>
-
   <section class="space-y-3">
     <h2 class="font-display text-xl">Uploaded statements</h2>
     <% if @statements.empty? %>
@@ -48,4 +35,17 @@
       </table></div>
     <% end %>
   </section>
+  <% if @can_write %>
+    <details class="card card-pad space-y-3" id="upload-statement" <%= 'open' if @statements.empty? || @form_error %>>
+      <summary class="disclosure-trigger font-display text-xl">Upload a statement</summary>
+      <%= form_with url: bank_statements_path, multipart: true, class: 'space-y-3' do |f| %>
+        <div><%= f.label :account_label, 'Account name (a name, never the account number)', class: 'block text-sm font-semibold' %><%= f.text_field :account_label, value: params[:account_label], required: true, maxlength: 60, placeholder: 'Operating checking', class: 'input' %></div>
+        <div><%= f.label :file, 'Statement CSV', class: 'block text-sm font-semibold' %><%= f.file_field :file, accept: '.csv,text/csv', required: true, class: 'input' %></div>
+        <label class="flex items-start gap-3 text-sm"><%= f.check_box :withdrawals_positive, { class: 'mt-1', checked: params[:withdrawals_positive] == '1' }, '1', '0' %><span>My bank lists withdrawals as positive numbers in one Amount column (leave unticked if withdrawals are negative or there are separate Debit and Credit columns).</span></label>
+        <%= f.submit 'Read statement', class: 'btn-primary' %>
+        <p class="text-xs text-mocha">The original file is kept unchanged and encrypted. Descriptions are encrypted. Up to 5,000 rows and 8 MiB.</p>
+      <% end %>
+    </details>
+  <% end %>
+
 </div>

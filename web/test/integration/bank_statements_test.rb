@@ -67,6 +67,20 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     assert_equal 'pending', deposit.reload.status
   end
 
+  test 'statement list comes before a collapsed upload form and review has filter and bulk tools' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    get bank_statements_path
+    assert_response :success
+    assert_operator response.body.index('Uploaded statements'), :<, response.body.index('id="upload-statement"')
+    assert_select 'details#upload-statement:not([open]) form'
+    get bank_statement_path(doc.id)
+    assert_select 'form[data-controller~=table-filter][data-controller~=bank-decisions]'
+    assert_select 'input[type=search][data-table-filter-target=input]'
+    assert_select 'select#bulk-choice[data-bank-decisions-target=bulk]'
+    assert_select 'tr[data-table-filter-target=row]', minimum: 1
+  end
+
   test 'roles without finance access cannot view, upload or decide' do
     upload
     doc = ReconciliationDocument.where(kind: 'bank_statement').last
