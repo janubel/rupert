@@ -64,6 +64,8 @@ an isolated checkout.
 
 ## Operations
 
+[Purchase receipt uploads and approvals](docs/purchase-receipts.md) are available from the Receipts tab, including employee self-service and an independent review queue.
+
 For the current daily-use limits and the next payment/inventory rollout gates, start with [Derrick's day-to-day pickup plan](docs/ops/day-to-day-readiness.md).
 
 ```bash

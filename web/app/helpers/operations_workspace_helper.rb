@@ -28,6 +28,7 @@ module OperationsWorkspaceHelper
        ['Follow-ups', reconciliation_follow_ups_path(day: date), 'reports.read', 'reconciliation_follow_ups', 'Reconcile & close'],
        ['Source documents', reconciliation_documents_path(from: date, to: date, close_day: date), 'reports.read', 'reconciliation_documents', 'Records'],
        ['Accounts', finance_accounts_path, 'finance.read', 'finance/accounts', 'Records'],
+       ['Receipts', receipts_path, 'finance.read', 'receipts', 'Records'],
        ['Chart of accounts', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts', 'Records'],
        ['Ledger', ledger_index_path, 'ledger.read', 'ledger', 'Records'],
        ['Source reports', money_reconciliations_path(date: date), 'reports.read', 'money_reconciliations', 'Reports & control'],

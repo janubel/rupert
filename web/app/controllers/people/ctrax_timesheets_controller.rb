@@ -32,6 +32,16 @@ module People
       @count = scope.count
       @open = scope.select(:id, :latest_payload).find_each.count { |shift| shift.latest_record['is_in_progress'] == true }
       @held = scope.where.not(status: 'imported').count
+      if @all_employees
+        @ctrax_schedule = CtraxLaborSync.configuration
+        @can_manage_ctrax_schedule = CtraxLaborSync.authorized_actor(Current.user.id).present?
+        @ctrax_schedule_actor_valid = CtraxLaborSync.authorized_actor(@ctrax_schedule['actor_id']).present? if @ctrax_schedule['enabled'] == true
+        attempts = SyncAttempt.where(source: 'ctrax', operation: 'timecards')
+        @ctrax_latest_attempt = attempts.order(id: :desc).first
+        @ctrax_last_success = attempts.where(status: 'succeeded').order(finished_at: :desc, id: :desc).first
+        @ctrax_next_slot = Time.current.beginning_of_hour + 2.minutes
+        @ctrax_next_slot += 15.minutes while @ctrax_next_slot <= Time.current
+      end
       @pagy, @shifts = pagy(scope.order(started_at: :desc, id: :desc).includes(:employee), items: 30)
     rescue Date::Error
       redirect_to people_ctrax_timesheets_path, alert: 'Choose valid dates.'

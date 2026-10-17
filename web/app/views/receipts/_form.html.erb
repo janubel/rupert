@@ -1,0 +1,15 @@
+<% if @form_error %><p role="alert" class="flash flash-alert"><%= @form_error %> Choose your file again before uploading.</p><% end %>
+<%= form_with model: @receipt, url: @receipt.persisted? ? receipt_path(@receipt) : receipts_path, html: { multipart: true, class: 'card card-pad space-y-4' }, data: { turbo: false } do |f| %>
+  <%= f.hidden_field :lock_version if @receipt.persisted? %>
+  <div><%= f.label :payee, 'Merchant / payee', class: 'label' %><%= f.text_field :payee, required: true, maxlength: 200, class: 'input' %></div>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div><%= f.label :incurred_on, 'Purchase date', class: 'label' %><%= f.date_field :incurred_on, required: true, max: Date.current.iso8601, class: 'input' %></div>
+    <div><%= f.label :amount, 'Total amount · USD', class: 'label' %><%= f.text_field :amount, required: true, inputmode: 'decimal', placeholder: '0.00', class: 'input' %></div>
+  </div>
+  <div><%= f.label :category, class: 'label' %><%= f.select :category, Finance::Expense::CATEGORIES.map { |c| [c.humanize, c] }, {}, class: 'select' %></div>
+  <div><%= f.label :notes, 'Business purpose / notes', class: 'label' %><%= f.text_area :notes, maxlength: 4000, rows: 3, class: 'input' %></div>
+  <% unless @receipt.persisted? %>
+    <div><%= f.label :file, 'Receipt file', class: 'label' %><%= f.file_field :file, required: true, accept: 'application/pdf,image/jpeg,image/png,image/webp', class: 'input', aria: { describedby: 'receipt-file-help' } %><p id="receipt-file-help" class="mt-2 text-sm text-mocha">PDF, JPEG, PNG or WebP · maximum 10 MB. Originals stay private. Files are retained with their approval history.</p></div>
+  <% end %>
+  <div class="flex flex-wrap gap-3"><%= f.submit @receipt.persisted? ? 'Save draft' : 'Upload receipt', class: 'btn-primary' %><%= link_to 'Cancel', @receipt.persisted? ? receipt_path(@receipt) : receipts_path, class: 'btn-ghost' %></div>
+<% end %>

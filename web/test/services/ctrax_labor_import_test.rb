@@ -271,4 +271,35 @@ class CtraxLaborImportTest < ActiveSupport::TestCase
       assert_equal 0, CtraxLaborObservation.count
     end
   end
+  test 'a newer complete empty publication prevents an older read from resurrecting missing punches' do
+    stub_rows([row])
+    Ctrax::LaborImport.call
+    nested = false
+    stub_request(:get, "#{@origin}/api/v1/laborShifts").with(query: { is_in_progress: '1', page: '1', per_page: '50' }).to_return do
+      unless nested
+        nested = true
+        stub_rows
+        Ctrax::LaborImport.call
+      end
+      page([])
+    end
+    assert_raises(Ctrax::LaborImport::Error) { Ctrax::LaborImport.call }
+    record = CtraxLaborShift.first
+    assert_equal 'missing', record.status
+    assert_equal 'missing', record.observations.order(:sequence).last.status
+    assert_equal 2, record.observations.count
+  end
+
+  test 'initial fingerprint describes the exact credentials supplied to the client rather than a newer reload' do
+    stub_rows([row])
+    rotated = @connection.dup
+    rotated.id = @connection.id
+    rotated.credentials_json = { api_url: @origin, api_username: 'rotated', api_password: 'new-secret' }.to_json
+    PosConnection.stubs(:find_by).with(provider: 'ctrax', vendor_approved: true).returns(@connection)
+    PosConnection.stubs(:find_by).with(id: @connection.id, provider: 'ctrax', vendor_approved: true).returns(rotated)
+    assert_raises(Ctrax::LaborImport::Error) { Ctrax::LaborImport.call }
+    assert_equal 0, CtraxLaborShift.count
+    assert_equal 0, CtraxLaborObservation.count
+    assert_requested :post, "#{@origin}/api/auth/login", body: { username: 'fixture', password: 'secret' }.to_json
+  end
 end

@@ -42,6 +42,7 @@ Rails.application.routes.draw do
 
   resources :square_timesheets, path: 'people/square_timesheets', controller: 'people/square_timesheets', only: %i[index show], as: :people_square_timesheets
   resources :ctrax_timesheets, path: 'people/ctrax_timesheets', controller: 'people/ctrax_timesheets', only: %i[index show], as: :people_ctrax_timesheets
+  patch '/people/ctrax_timesheets/schedule', to: 'people/ctrax_timesheet_schedules#update', as: :people_ctrax_timesheet_schedule
 
   get '/employee', to: 'employee_app#show', as: :employee_app
   scope '/employee/preview', controller: :employee_preview, as: :employee_preview do
@@ -195,6 +196,16 @@ Rails.application.routes.draw do
     end
   end
   resources :locations
+  resources :receipts, only: %i[index new create show edit update] do
+    member do
+      get :download
+      post :submit
+      post :approve
+      post :reject
+      post :reopen
+    end
+  end
+
   namespace :finance do
     get '/accounts', to: 'accounts#show', as: :accounts
     resources :chart_of_accounts, only: %i[index new create edit update] do

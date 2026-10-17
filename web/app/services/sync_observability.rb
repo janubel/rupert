@@ -68,9 +68,10 @@ class SyncObservability
       return sources.filter_map { |source| { tenant_id: tenant_id, source: source, operation: 'catalog' } if %w[shopify square].include?(source) }
     end
     return [{ tenant_id: nil, source: 'google_backup', operation: 'backup' }] if name == 'BackupJob'
-    if name == 'SquareTimecardSyncJob'
+    if %w[SquareTimecardSyncJob CtraxLaborSyncJob].include?(name)
       tenant_id = args.first
-      return Tenant.exists?(id: tenant_id, status: 'active') ? [{ tenant_id: tenant_id, source: 'square', operation: 'timecards' }] : []
+      source = name == 'CtraxLaborSyncJob' ? 'ctrax' : 'square'
+      return Tenant.exists?(id: tenant_id, status: 'active') ? [{ tenant_id: tenant_id, source: source, operation: 'timecards' }] : []
     end
 
     source, operation, provider = {

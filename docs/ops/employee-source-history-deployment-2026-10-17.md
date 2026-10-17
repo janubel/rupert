@@ -21,7 +21,7 @@ The C-Trax import retained **24 immutable observations**. Unassigned records ret
 
 These aggregate source statuses do not establish approved or payable hours, employment status or payment. Counted Square history retains its existing personal-report/calendar treatment. C-Trax history remains excluded from personal hour totals and Rupert payroll. The imports create no Rupert approvals, pay rates, overtime classifications or payroll payments and do not mutate upstream timecards. Overlapping Rupert/Square/C-Trax hours are not added automatically.
 
-**C-Trax automatic labor refresh is not scheduled.** This receipt covers the completed manual source read. Square retains its existing opt-in refresh schedule.
+**C-Trax automatic labor refresh was not scheduled by this release.** This receipt covers the completed manual source read. Square retains its existing opt-in refresh schedule. The later [automatic C-Trax refresh guide](ctrax-timesheet-refresh.md) records the separate implementation and activation status.
 
 The live Square feed contained no break punches. Break-punch display/export capability is covered by synthetic tests; this receipt does not claim that real break-punch data was returned. C-Trax breaks remain unavailable and are not inferred.
 
