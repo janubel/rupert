@@ -32,6 +32,7 @@ class CtraxSalesSyncTest < ActiveSupport::TestCase
     assert_not_includes day.orders_json.to_json, 'private@example'
     result = Ctrax::Reconciliation.new(day)
     assert result.matched?
+    assert_equal({ days: 1, checks: 10, matched: 10, different: 0, unknown: 0 }, Finance::ReconciliationFindings.new.ctrax_controls)
     assert_equal 1, ReconciliationDocument.count
     retained = ReconciliationDocument.first.original_bytes
     assert_includes retained, 'orders_json'

@@ -12,7 +12,7 @@ class MoneyReconciliationsController < AuthenticatedController
     @saved = saved
     @history = MoneyReconciliation.order(period_from: :desc, generated_at: :desc).limit(36)
     respond_to do |format|
-      format.html
+      format.html { @findings = Finance::ReconciliationFindings.new }
       format.json { render json: @payload }
       format.csv {
         log_export('Money reconciliation CSV', "#{@report.kind} #{@report.from}")

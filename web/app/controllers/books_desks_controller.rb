@@ -9,6 +9,7 @@ class BooksDesksController < AuthenticatedController
 
   def show
     @desk = BooksDesk.new(week: params[:week])
+    @findings = Finance::ReconciliationFindings.new
     @can_write_reports = Current.user.can?('reports.write')
     @can_write_finance = Current.user.can?('finance.write')
   rescue BooksDesk::Error, BooksPeriod::Error => e
