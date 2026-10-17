@@ -13,7 +13,7 @@ module People
       @status = params[:status].presence || (@reviewer ? 'submitted' : 'all')
       @status = 'all' unless (People::Timesheet.aasm.states.map { |state| state.name.to_s } + ['all']).include?(@status)
       @period = params[:period].presence
-      @view = %w[unified list].include?(params[:view]) ? params[:view] : 'list'
+      @view = %w[unified list].include?(params[:view]) ? params[:view] : 'unified'
       visible = People::TimesheetPolicy.visible_to(Current.user)
       @has_demo_timesheets = visible.demo_records.exists?
       @awaiting = visible.awaiting_review.count
