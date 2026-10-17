@@ -47,6 +47,14 @@ pub const TENANT: &[&str] = &[
     "CREATE TABLE api_usage (bucket INTEGER NOT NULL, provider TEXT NOT NULL, op TEXT NOT NULL,
         requests INTEGER NOT NULL DEFAULT 0, throttled INTEGER NOT NULL DEFAULT 0, retries INTEGER NOT NULL DEFAULT 0,
         errors INTEGER NOT NULL DEFAULT 0, wait_ms INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (bucket, provider, op)) WITHOUT ROWID;",
+    // 8: read-only order mirror. Deliberately no customer name/email/phone/address: sales data only.
+    "CREATE TABLE orders (id TEXT PRIMARY KEY, source TEXT NOT NULL, name TEXT, created_at TEXT NOT NULL, updated_at TEXT,
+        cancelled_at TEXT, status TEXT, total REAL, currency TEXT, line_count INTEGER NOT NULL DEFAULT 0, synced_run INTEGER NOT NULL DEFAULT 0) WITHOUT ROWID;
+     CREATE INDEX orders_source_created ON orders(source, created_at);
+     CREATE TABLE order_lines (order_id TEXT NOT NULL, line_id TEXT NOT NULL, sku TEXT, variant_id TEXT, title TEXT, qty INTEGER NOT NULL, price REAL,
+        PRIMARY KEY (order_id, line_id)) WITHOUT ROWID;
+     CREATE INDEX order_lines_sku ON order_lines(sku);
+     CREATE TABLE webhook_events (id TEXT PRIMARY KEY, provider TEXT NOT NULL, topic TEXT NOT NULL, received_at INTEGER NOT NULL) WITHOUT ROWID;",
 ];
 
 pub const CENTRAL: &[&str] = &[

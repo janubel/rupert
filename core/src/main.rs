@@ -132,6 +132,8 @@ async fn run() {
         .route("/api/v1/connections/{provider}", put(sync::put_connection).delete(sync::delete_connection))
         .route("/api/v1/sync/runs", get(sync::runs))
         .route("/api/v1/sync/usage", get(sync::usage))
+        .route("/api/v1/orders", get(sync::orders_list))
+        .route("/api/v1/orders/detail", get(sync::order_detail))
         .route("/api/v1/sync/schedule", get(sync::get_schedule).put(sync::put_schedule))
         .route("/api/v1/locations", get(sync::locations))
         .route("/api/v1/inventory/levels", get(sync::levels))

@@ -23,7 +23,7 @@ use sha2::{Digest, Sha256};
 use std::{net::SocketAddr, sync::{Arc, atomic::{AtomicU32, Ordering}}, time::Duration};
 use tokio::sync::Semaphore;
 
-pub const SCOPES: &[&str] = &["catalog:read", "inventory:read", "inventory:write", "roadmap:read", "sync:run"];
+pub const SCOPES: &[&str] = &["catalog:read", "inventory:read", "inventory:write", "roadmap:read", "sync:run", "orders:read"];
 const SESSION_SECS: i64 = 14 * 86400;
 const COOKIE: &str = "rupert_session";
 

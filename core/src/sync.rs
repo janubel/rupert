@@ -252,7 +252,7 @@ fn run(reg: &Registry, tenant: &str, source: &str, run_id: i64) -> Result<Value,
         match source {
             "shopify" => {
                 let base = dev("RUPERT_SHOPIFY_BASE").unwrap_or_else(|| format!("https://{}", creds["shop_domain"].as_str().unwrap_or_default()));
-                sync_shopify(&db, run_id, Shopify::new(base, creds["client_id"].as_str().unwrap_or_default().into(), creds["client_secret"].as_str().unwrap_or_default().into(), meter.clone()))
+                sync_shopify(&db, run_id, &mut Shopify::new(base, creds["client_id"].as_str().unwrap_or_default().into(), creds["client_secret"].as_str().unwrap_or_default().into(), meter.clone()))
             }
             _ => {
                 let base = dev("RUPERT_SQUARE_BASE").unwrap_or_else(|| if creds["environment"] == "sandbox" { "https://connect.squareupsandbox.com/v2".into() } else { "https://connect.squareup.com/v2".into() });
@@ -279,9 +279,103 @@ fn run(reg: &Registry, tenant: &str, source: &str, run_id: i64) -> Result<Value,
     result
 }
 
+// ---------- orders (read-only mirror; no customer identity, address or payment details) ----------
+
+/// ISO-8601 UTC timestamp from epoch seconds (civil-from-days, no date crate).
+fn iso(secs: i64) -> String {
+    let (days, rem) = (secs.div_euclid(86400), secs.rem_euclid(86400));
+    let z = days + 719468; let era = z.div_euclid(146097); let doe = z.rem_euclid(146097);
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365; let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1; let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y + (m <= 2) as i64, m, d, rem / 3600, rem % 3600 / 60, rem % 60)
+}
+
+/// Where the next order pass starts: the last good pass's start minus a day of overlap (catches edits that
+/// land while a pass runs), or `RUPERT_ORDER_LOOKBACK_DAYS` (default 30) back on the first pass.
+fn orders_since(db: &TenantDb, source: &str) -> (String, bool) {
+    let last: Option<i64> = db.with_reader(|c| c.query_row("SELECT value FROM settings WHERE key=?1", [format!("orders_since_{source}")], |r| r.get::<_, String>(0))).ok().and_then(|v| v.parse().ok());
+    let lookback = env_u64("RUPERT_ORDER_LOOKBACK_DAYS", 30) as i64 * 86400;
+    match last { Some(t) => (iso(t - 86400), false), None => (iso(crate::now() - lookback), true) }
+}
+
+fn set_orders_watermark(db: &TenantDb, source: &str, started: i64) {
+    let _ = db.writer.lock().execute("INSERT INTO settings VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value", params![format!("orders_since_{source}"), started.to_string()]);
+}
+
+/// Upserts a page of orders (replacing each order's lines). `silent` suppresses events for the first backfill.
+pub fn ingest_orders(db: &TenantDb, source: &str, run_id: i64, page: &[upstream::Order], silent: bool) -> Result<(i64, i64), String> {
+    let (mut added, mut changed) = (0i64, 0i64);
+    let mut evs = Vec::new();
+    {
+        let mut c = db.writer.lock();
+        let tx = c.transaction().map_err(|e| e.to_string())?;
+        for o in page {
+            let old: Option<(Option<String>, Option<String>, Option<String>)> = tx.prepare_cached("SELECT updated_at,status,cancelled_at FROM orders WHERE id=?1")
+                .and_then(|mut s| s.query_row([&o.id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))).ok();
+            let same = old.as_ref().is_some_and(|(u, st, ca)| *u == o.updated_at && *st == o.status && *ca == o.cancelled_at);
+            if same {
+                tx.execute("UPDATE orders SET synced_run=?2 WHERE id=?1", params![o.id, run_id]).map_err(|e| e.to_string())?;
+                continue;
+            }
+            tx.prepare_cached("INSERT INTO orders(id,source,name,created_at,updated_at,cancelled_at,status,total,currency,line_count,synced_run) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)
+                ON CONFLICT(id) DO UPDATE SET name=excluded.name,updated_at=excluded.updated_at,cancelled_at=excluded.cancelled_at,status=excluded.status,total=excluded.total,currency=excluded.currency,line_count=excluded.line_count,synced_run=excluded.synced_run")
+                .and_then(|mut s| s.execute(params![o.id, source, o.name, o.created_at, o.updated_at, o.cancelled_at, o.status, o.total, o.currency, o.lines.len() as i64, run_id])).map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM order_lines WHERE order_id=?1", [&o.id]).map_err(|e| e.to_string())?;
+            for l in &o.lines {
+                // Square lines only carry the catalog variation id; resolve the SKU from the mirrored catalog.
+                let sku = l.sku.clone().or_else(|| l.variant_id.as_ref().and_then(|v| {
+                    let q = if source == "shopify" { "SELECT sku FROM shopify_variants WHERE id=?1" } else { "SELECT sku FROM square_variations WHERE id=?1" };
+                    tx.query_row(q, [v], |r| r.get::<_, Option<String>>(0)).ok().flatten()
+                }));
+                tx.prepare_cached("INSERT OR REPLACE INTO order_lines VALUES (?1,?2,?3,?4,?5,?6,?7)")
+                    .and_then(|mut s| s.execute(params![o.id, l.line_id, sku, l.variant_id, l.title, l.qty, l.price])).map_err(|e| e.to_string())?;
+            }
+            if old.is_none() { added += 1 } else { changed += 1 }
+            if !silent {
+                let kind = if old.is_none() { "mirror.order.added" } else { "mirror.order.changed" };
+                evs.extend(feed::emit_if(db.realtime(), &tx, kind, Some(&o.id), &json!({ "source": source, "name": o.name, "status": o.status, "total": o.total, "currency": o.currency, "lines": o.lines.len() })).map_err(|e| e.to_string())?);
+            }
+        }
+        tx.commit().map_err(|e| e.to_string())?;
+    }
+    publish(db, evs);
+    Ok((added, changed))
+}
+
+fn orders_enabled() -> bool { std::env::var("RUPERT_ORDERS").as_deref() != Ok("0") }
+
+fn orders_phase(r: Result<Value, String>) -> Result<Value, String> {
+    match r {
+        Ok(v) => Ok(v),
+        // A hit request cap means something is looping: that must fail the run. Anything else (typically a token
+        // without the orders scope) is reported in the run details and must not break the catalog sync.
+        Err(e) if e.contains("request cap") => Err(e),
+        Err(e) => Ok(json!({ "error": e.chars().take(300).collect::<String>() })),
+    }
+}
+
+fn sync_orders_shopify(db: &TenantDb, run_id: i64, client: &mut Shopify) -> Result<Value, String> {
+    let started = crate::now();
+    let (since, initial) = orders_since(db, "shopify");
+    let (mut seen, mut added, mut changed) = (0i64, 0i64, 0i64);
+    client.orders(&since, |page| { seen += page.len() as i64; let (a, c) = ingest_orders(db, "shopify", run_id, &page, initial)?; added += a; changed += c; Ok(()) })?;
+    set_orders_watermark(db, "shopify", started);
+    Ok(json!({ "since": since, "seen": seen, "added": added, "changed": changed }))
+}
+
+fn sync_orders_square(db: &TenantDb, run_id: i64, client: &Square, locations: &[String]) -> Result<Value, String> {
+    let started = crate::now();
+    let (since, initial) = orders_since(db, "square");
+    let (mut seen, mut added, mut changed) = (0i64, 0i64, 0i64);
+    client.orders(locations, &since, |page| { seen += page.len() as i64; let (a, c) = ingest_orders(db, "square", run_id, &page, initial)?; added += a; changed += c; Ok(()) })?;
+    set_orders_watermark(db, "square", started);
+    Ok(json!({ "since": since, "seen": seen, "added": added, "changed": changed }))
+}
+
 // ---------- Shopify ingest ----------
 
-fn sync_shopify(db: &TenantDb, run_id: i64, mut client: Shopify) -> Result<Value, String> {
+fn sync_shopify(db: &TenantDb, run_id: i64, client: &mut Shopify) -> Result<Value, String> {
     // Locations first: levels reference them, and one of them is flagged primary (first active, else first).
     let mut locs = client.locations()?;
     if locs.is_empty() { locs.push(upstream::ShopLocation { id: "default".into(), name: "Shopify Online Store".into(), active: true }); }
@@ -371,7 +465,8 @@ fn sync_shopify(db: &TenantDb, run_id: i64, mut client: Shopify) -> Result<Value
         c.execute("DELETE FROM shopify_locations WHERE synced_run<>?1", [run_id]).map_err(|e| e.to_string())?;
     }
     let removed = remove_stale(db, "shopify_variants", "shopify", run_id)?;
-    Ok(json!({ "seen": seen, "added": added, "changed": changed, "removed": removed, "oversold": oversold, "locations": locs.len(), "levels": level_rows, "level_changes": level_changes }))
+    let orders = if orders_enabled() { orders_phase(sync_orders_shopify(db, run_id, client))? } else { json!({ "skipped": true }) };
+    Ok(json!({ "seen": seen, "added": added, "changed": changed, "removed": removed, "oversold": oversold, "locations": locs.len(), "levels": level_rows, "level_changes": level_changes, "orders": orders }))
 }
 
 fn remove_stale(db: &TenantDb, table: &str, source: &str, run_id: i64) -> Result<i64, String> {
@@ -459,7 +554,8 @@ fn sync_square(db: &TenantDb, run_id: i64, client: Square) -> Result<Value, Stri
     }
     publish(db, evs);
     let removed = remove_stale(db, "square_variations", "square", run_id)?;
-    Ok(json!({ "seen": seen, "added": added, "changed": changed, "removed": removed, "locations": locations.len() }))
+    let orders = if orders_enabled() { orders_phase(sync_orders_square(db, run_id, &client, &locations))? } else { json!({ "skipped": true }) };
+    Ok(json!({ "seen": seen, "added": added, "changed": changed, "removed": removed, "locations": locations.len(), "orders": orders }))
 }
 
 // ---------- mirror reads (shape follows docs/api-v1.md) ----------
@@ -568,4 +664,45 @@ pub async fn usage(State(reg): State<Arc<Registry>>, p: Principal, Query(q): Que
         e["by_op"][op] = json!(req);
     }
     ok(json!({ "hours": hours, "hourly_budget": hourly_budget(), "per_run_cap": run_cap(), "providers": out }))
+}
+
+// ---------- order reads ----------
+
+#[derive(Deserialize)]
+pub struct OrdersQ { source: Option<String>, since: Option<String>, id: Option<String>, page: Option<i64>, per_page: Option<i64> }
+
+pub async fn orders_list(State(reg): State<Arc<Registry>>, p: Principal, Query(q): Query<OrdersQ>) -> R {
+    p.require("orders:read", "manager")?;
+    let (page, per) = (q.page.unwrap_or(1), q.per_page.unwrap_or(50));
+    if !(1..=1000).contains(&page) || !(1..=100).contains(&per) { return Err(err(400, "page must be 1-1000 and per_page 1-100")); }
+    let source = q.source.clone().filter(|s| s == "shopify" || s == "square");
+    if q.source.is_some() && source.is_none() { return Err(err(400, "source must be shopify or square")); }
+    let since = q.since.clone().unwrap_or_default();
+    if since.len() > 30 { return Err(err(400, "invalid since")); }
+    let db = reg.db(&p.tenant_id).map_err(|_| err(500, "internal"))?;
+    let mut rows: Vec<Value> = tokio::task::spawn_blocking(move || db.with_reader(|c| {
+        let mut s = c.prepare_cached("SELECT id,source,name,created_at,updated_at,cancelled_at,status,total,currency,line_count FROM orders WHERE (?1 IS NULL OR source=?1) AND created_at>=?2 ORDER BY created_at DESC, id LIMIT ?3 OFFSET ?4")?;
+        let v = s.query_map(params![source, since, per + 1, (page - 1) * per], |r| Ok(json!({ "id": r.get::<_, String>(0)?, "source": r.get::<_, String>(1)?, "name": r.get::<_, Option<String>>(2)?,
+            "created_at": r.get::<_, String>(3)?, "updated_at": r.get::<_, Option<String>>(4)?, "cancelled_at": r.get::<_, Option<String>>(5)?, "status": r.get::<_, Option<String>>(6)?,
+            "total": r.get::<_, Option<f64>>(7)?, "currency": r.get::<_, Option<String>>(8)?, "line_count": r.get::<_, i64>(9)? })))?.flatten().collect();
+        Ok(v)
+    }).unwrap_or_default()).await.map_err(|_| err(500, "internal"))?;
+    let has_more = rows.len() as i64 > per && page < 1000;
+    rows.truncate(per as usize);
+    ok(json!({ "data": rows, "meta": { "page": page, "per_page": per, "has_more": has_more, "next_page": has_more.then_some(page + 1) } }))
+}
+
+/// One order with its lines. The id goes in the query string because Shopify ids contain slashes.
+pub async fn order_detail(State(reg): State<Arc<Registry>>, p: Principal, Query(q): Query<OrdersQ>) -> R {
+    p.require("orders:read", "manager")?;
+    let id = q.id.clone().filter(|i| !i.is_empty() && i.len() <= 100).ok_or_else(|| err(400, "id is required"))?;
+    let db = reg.db(&p.tenant_id).map_err(|_| err(500, "internal"))?;
+    let found = tokio::task::spawn_blocking(move || db.with_reader(|c| {
+        let head = c.query_row("SELECT id,source,name,created_at,updated_at,cancelled_at,status,total,currency FROM orders WHERE id=?1", [&id], |r| Ok(json!({ "id": r.get::<_, String>(0)?, "source": r.get::<_, String>(1)?, "name": r.get::<_, Option<String>>(2)?,
+            "created_at": r.get::<_, String>(3)?, "updated_at": r.get::<_, Option<String>>(4)?, "cancelled_at": r.get::<_, Option<String>>(5)?, "status": r.get::<_, Option<String>>(6)?, "total": r.get::<_, Option<f64>>(7)?, "currency": r.get::<_, Option<String>>(8)? })))?;
+        let mut s = c.prepare_cached("SELECT line_id,sku,variant_id,title,qty,price FROM order_lines WHERE order_id=?1 ORDER BY line_id")?;
+        let lines: Vec<Value> = s.query_map([&id], |r| Ok(json!({ "line_id": r.get::<_, String>(0)?, "sku": r.get::<_, Option<String>>(1)?, "variant_id": r.get::<_, Option<String>>(2)?, "title": r.get::<_, String>(3)?, "quantity": r.get::<_, i64>(4)?, "price": r.get::<_, Option<f64>>(5)? })))?.flatten().collect();
+        Ok::<Value, rusqlite::Error>(json!({ "order": head, "lines": lines }))
+    }).ok()).await.map_err(|_| err(500, "internal"))?;
+    match found { Some(v) => ok(v), None => Err(err(404, "not found")) }
 }

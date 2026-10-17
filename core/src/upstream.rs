@@ -40,7 +40,7 @@ pub fn check_graphql(q: &str) -> Result<(), String> {
 
 pub fn check_square(method: &str, path: &str) -> Result<(), String> {
     match (method, path.split('?').next().unwrap_or(path)) {
-        ("GET", "/locations") | ("GET", "/catalog/list") | ("POST", "/inventory/counts/batch-retrieve") => Ok(()),
+        ("GET", "/locations") | ("GET", "/catalog/list") | ("POST", "/inventory/counts/batch-retrieve") | ("POST", "/orders/search") | ("POST", "/orders/batch-retrieve") => Ok(()),
         _ => Err(format!("read-only client: {method} {path} is not allowlisted")),
     }
 }
@@ -136,9 +136,63 @@ const ITEM_LEVELS_QUERY: &str = "query ItemLevels($id: ID!, $cursor: String) { i
 /// Aliased single-item lookups per request keep the computed GraphQL cost under Shopify's cap.
 pub const LEVELS_BATCH: usize = 30;
 
+/// One line of an order. No customer data anywhere in these types.
+pub struct OrderLine { pub line_id: String, pub sku: Option<String>, pub variant_id: Option<String>, pub title: String, pub qty: i64, pub price: Option<f64> }
+pub struct Order { pub id: String, pub name: Option<String>, pub created_at: String, pub updated_at: Option<String>, pub cancelled_at: Option<String>,
+    pub status: Option<String>, pub total: Option<f64>, pub currency: Option<String>, pub lines: Vec<OrderLine> }
+
+const ORDER_FIELDS: &str = "id name createdAt updatedAt cancelledAt displayFinancialStatus currentTotalPriceSet { shopMoney { amount currencyCode } } lineItems(first: 50) { pageInfo { hasNextPage endCursor } nodes { id title sku quantity currentQuantity variant { id } originalUnitPriceSet { shopMoney { amount } } } }";
+// first: 10 orders x 50 lines keeps the computed cost (~510) under Shopify's 1000-point cap.
+const ORDERS_QUERY_HEAD: &str = "query Orders($q: String!, $cursor: String) { orders(first: 10, query: $q, sortKey: UPDATED_AT, after: $cursor) { pageInfo { hasNextPage endCursor } nodes { ";
+const ORDER_LINES_QUERY: &str = "query OrderLines($id: ID!, $cursor: String) { order(id: $id) { lineItems(first: 50, after: $cursor) { pageInfo { hasNextPage endCursor } nodes { id title sku quantity currentQuantity variant { id } originalUnitPriceSet { shopMoney { amount } } } } } }";
+
+fn parse_line(n: &Value) -> OrderLine {
+    OrderLine { line_id: n["id"].as_str().unwrap_or_default().into(), sku: n["sku"].as_str().filter(|s| !s.is_empty()).map(String::from), variant_id: n["variant"]["id"].as_str().map(String::from),
+        title: n["title"].as_str().unwrap_or_default().chars().take(200).collect(), qty: n["currentQuantity"].as_i64().or(n["quantity"].as_i64()).unwrap_or(0),
+        price: n["originalUnitPriceSet"]["shopMoney"]["amount"].as_str().and_then(|s| s.parse().ok()) }
+}
+
 pub struct ShopLocation { pub id: String, pub name: String, pub active: bool }
 
 impl Shopify {
+    fn parse_order(&mut self, n: &Value) -> Result<Order, String> {
+        let id = n["id"].as_str().unwrap_or_default().to_string();
+        let mut lines: Vec<OrderLine> = n["lineItems"]["nodes"].as_array().into_iter().flatten().map(parse_line).collect();
+        let mut cursor = n["lineItems"]["pageInfo"]["hasNextPage"].as_bool().unwrap_or(false).then(|| n["lineItems"]["pageInfo"]["endCursor"].clone());
+        while let Some(c) = cursor.take() {
+            let d = self.graphql(ORDER_LINES_QUERY, json!({ "id": id, "cursor": c }))?;
+            let li = &d["order"]["lineItems"];
+            lines.extend(li["nodes"].as_array().into_iter().flatten().map(parse_line));
+            if li["pageInfo"]["hasNextPage"].as_bool().unwrap_or(false) { cursor = Some(li["pageInfo"]["endCursor"].clone()); }
+        }
+        Ok(Order { id, name: n["name"].as_str().map(String::from), created_at: n["createdAt"].as_str().unwrap_or_default().into(), updated_at: n["updatedAt"].as_str().map(String::from),
+            cancelled_at: n["cancelledAt"].as_str().map(String::from), status: n["displayFinancialStatus"].as_str().map(String::from),
+            total: n["currentTotalPriceSet"]["shopMoney"]["amount"].as_str().and_then(|s| s.parse().ok()), currency: n["currentTotalPriceSet"]["shopMoney"]["currencyCode"].as_str().map(String::from), lines })
+    }
+
+    /// Orders updated since `since_iso`, oldest update first, streamed page by page. Needs the read_orders scope.
+    pub fn orders(&mut self, since_iso: &str, mut sink: impl FnMut(Vec<Order>) -> Result<(), String>) -> Result<(), String> {
+        let q = format!("{ORDERS_QUERY_HEAD}{ORDER_FIELDS} }} }} }}");
+        let (mut cursor, filter) = (Value::Null, format!("updated_at:>='{since_iso}'"));
+        loop {
+            let d = self.graphql(&q, json!({ "q": filter, "cursor": cursor }))?;
+            let page = &d["orders"];
+            let mut out = Vec::new();
+            for n in page["nodes"].as_array().into_iter().flatten() { out.push(self.parse_order(n)?); }
+            sink(out)?;
+            if page["pageInfo"]["hasNextPage"].as_bool().unwrap_or(false) { cursor = page["pageInfo"]["endCursor"].clone(); } else { return Ok(()); }
+        }
+    }
+
+    /// One order by id (webhook-driven refresh); None if Shopify does not know it.
+    pub fn order(&mut self, id: &str) -> Result<Option<Order>, String> {
+        let q = format!("query OrderById($id: ID!) {{ order(id: $id) {{ {ORDER_FIELDS} }} }}");
+        let d = self.graphql(&q, json!({ "id": id }))?;
+        if d["order"].is_null() { return Ok(None); }
+        let n = d["order"].clone();
+        self.parse_order(&n).map(Some)
+    }
+
     pub fn locations(&mut self) -> Result<Vec<ShopLocation>, String> {
         let (mut out, mut cursor) = (Vec::new(), Value::Null);
         loop {
@@ -280,7 +334,7 @@ impl Square {
         check_square(method, path)?;
         let auth = format!("Bearer {}", self.token);
         let url = format!("{}{path}", self.base);
-        let op = match path.split('?').next().unwrap_or(path) { "/locations" => "locations", "/catalog/list" => "catalog_list", _ => "counts" };
+        let op = match path.split('?').next().unwrap_or(path) { "/locations" => "locations", "/catalog/list" => "catalog_list", "/orders/search" | "/orders/batch-retrieve" => "orders", _ => "counts" };
         let (s, v) = call(&self.agent, &self.meter, op, method, &url, &[("Authorization", &auth), ("Square-Version", SQUARE_VERSION)], body.as_ref())?;
         ledger(method, &url, None, s);
         if s != 200 {
@@ -288,6 +342,41 @@ impl Square {
             return Err(format!("Square {method} {} failed ({s}) {d}", path.split('?').next().unwrap_or(path)));
         }
         Ok(v)
+    }
+
+    fn parse_order(o: &Value) -> Order {
+        let money = |m: &Value| m["amount"].as_i64().map(|c| c as f64 / 100.0);
+        let lines = o["line_items"].as_array().into_iter().flatten().map(|l| OrderLine {
+            line_id: l["uid"].as_str().unwrap_or_default().into(), sku: None, variant_id: l["catalog_object_id"].as_str().map(String::from),
+            title: l["name"].as_str().unwrap_or_default().chars().take(200).collect(), qty: l["quantity"].as_str().and_then(|q| q.parse::<f64>().ok()).or(l["quantity"].as_f64()).unwrap_or(0.0) as i64,
+            price: money(&l["base_price_money"]) }).collect();
+        Order { id: o["id"].as_str().unwrap_or_default().into(), name: None, created_at: o["created_at"].as_str().unwrap_or_default().into(), updated_at: o["updated_at"].as_str().map(String::from),
+            cancelled_at: (o["state"] == "CANCELED").then(|| o["closed_at"].as_str().or(o["updated_at"].as_str()).unwrap_or_default().to_string()),
+            status: o["state"].as_str().map(String::from), total: money(&o["total_money"]), currency: o["total_money"]["currency"].as_str().map(String::from), lines }
+    }
+
+    /// Completed orders updated since `since_iso` across the given locations (read-only search).
+    pub fn orders(&self, locations: &[String], since_iso: &str, mut sink: impl FnMut(Vec<Order>) -> Result<(), String>) -> Result<(), String> {
+        for chunk in locations.chunks(10) {
+            let mut cursor: Option<String> = None;
+            loop {
+                let mut body = json!({ "location_ids": chunk, "limit": 200, "query": {
+                    "filter": { "state_filter": { "states": ["COMPLETED"] }, "date_time_filter": { "updated_at": { "start_at": since_iso } } },
+                    "sort": { "sort_field": "UPDATED_AT", "sort_order": "ASC" } } });
+                if let Some(c) = &cursor { body["cursor"] = json!(c); }
+                let v = self.req("POST", "/orders/search", Some(body))?;
+                sink(v["orders"].as_array().into_iter().flatten().map(Self::parse_order).collect())?;
+                cursor = v["cursor"].as_str().filter(|c| !c.is_empty()).map(String::from);
+                if cursor.is_none() { break; }
+            }
+        }
+        Ok(())
+    }
+
+    /// Specific orders at one location (webhook-driven refresh).
+    pub fn orders_by_ids(&self, location_id: &str, ids: &[String]) -> Result<Vec<Order>, String> {
+        let v = self.req("POST", "/orders/batch-retrieve", Some(json!({ "location_id": location_id, "order_ids": ids })))?;
+        Ok(v["orders"].as_array().into_iter().flatten().map(Self::parse_order).collect())
     }
 
     /// Active locations as (id, name).
@@ -359,7 +448,8 @@ mod tests {
         assert!(check_square("GET", "/locations").is_ok());
         assert!(check_square("GET", "/catalog/list?types=ITEM").is_ok());
         assert!(check_square("POST", "/inventory/counts/batch-retrieve").is_ok());
-        for (m, p) in [("POST", "/catalog/upsert"), ("POST", "/inventory/changes/batch-create"), ("DELETE", "/catalog/object/X"), ("PUT", "/locations"), ("POST", "/orders"), ("GET", "/payments")] {
+        assert!(check_square("POST", "/orders/search").is_ok() && check_square("POST", "/orders/batch-retrieve").is_ok());
+        for (m, p) in [("POST", "/orders"), ("POST", "/orders/calculate"), ("PUT", "/orders/X"), ("POST", "/catalog/upsert"), ("POST", "/inventory/changes/batch-create"), ("DELETE", "/catalog/object/X"), ("PUT", "/locations"), ("POST", "/orders"), ("GET", "/payments")] {
             assert!(check_square(m, p).is_err(), "{m} {p}");
         }
     }

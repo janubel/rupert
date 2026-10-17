@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Milestone 3 end-to-end test against mock Shopify/Square upstreams.
 Usage: python3 -I tests/sync_smoke.py [path-to-binary]"""
-import base64, http.client, json, os, subprocess, sys, tempfile, threading, time, urllib.error, urllib.request
+import base64, http.client, json, urllib.parse, os, subprocess, sys, tempfile, threading, time, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -46,6 +46,16 @@ class H(BaseHTTPRequestHandler):
             if q["query"].startswith("query Locations"):
                 return self.reply(200, {"data": {"locations": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [
                     {"id": LOC(1), "name": "Main", "isActive": True}, {"id": LOC(2), "name": "Warehouse", "isActive": True}, {"id": LOC(3), "name": "Closed", "isActive": False}]}}})
+            if q["query"].startswith("query Orders(") or q["query"].startswith("query OrderById") or q["query"].startswith("query OrderLines("):
+                if S.get("orders_denied"):
+                    return self.reply(200, {"errors": [{"message": "Access denied for orders field. Required access: read_orders", "extensions": {"code": "ACCESS_DENIED"}}]})
+                if q["query"].startswith("query OrderLines("):
+                    return self.reply(200, {"data": {"order": {"lineItems": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [oline("B", 2, "B-1", 1)]}}}})
+                if q["query"].startswith("query OrderById"):
+                    o = next((x for x in S["orders"] if x["id"] == v["id"]), None)
+                    return self.reply(200, {"data": {"order": o}})
+                cur = v.get("cursor"); page, nxt = (S["orders"][:2], "o1") if cur is None else (S["orders"][2:], None)
+                return self.reply(200, {"data": {"orders": {"pageInfo": {"hasNextPage": bool(nxt), "endCursor": nxt}, "nodes": page}}})
             if q["query"].startswith("query Levels("):
                 if not S.get("levels_throttled"):
                     S["levels_throttled"] = True   # Shopify reports cost throttling as HTTP 200 + errors
@@ -70,6 +80,12 @@ class H(BaseHTTPRequestHandler):
             prods = [] if S["empty"] else S["products"]
             cur = v.get("cursor"); page, nxt = (prods[:2], "p1") if cur is None else (prods[2:], None)
             return self.reply(200, {"data": {"products": {"pageInfo": {"hasNextPage": bool(nxt), "endCursor": nxt}, "nodes": page}}})
+        if u.path == "/v2/orders/search":
+            req = json.loads(b); cur = req.get("cursor")
+            page, nxt = (S["sq_orders"][:2], "sc1") if cur is None else (S["sq_orders"][2:], None)
+            out = {"orders": page}
+            if nxt: out["cursor"] = nxt
+            return self.reply(200, out)
         if u.path == "/v2/inventory/counts/batch-retrieve":
             req = json.loads(b); ids, locs = req["catalog_object_ids"], set(req["location_ids"])
             counts = [{"catalog_object_id": i, "location_id": loc, "state": "IN_STOCK", "quantity": str(q)} for i in ids for loc, q in S["counts"].get(i, {}).items() if loc in locs]
@@ -78,12 +94,24 @@ class H(BaseHTTPRequestHandler):
 
 def product(n, variants, more=False, status="ACTIVE"):
     return {"id": gid("Product", n), "title": f"P{n}", "status": status, "variants": {"pageInfo": {"hasNextPage": more, "endCursor": "vc1" if more else None}, "nodes": variants}}
+def oline(tag, n, sku, qty):
+    return {"id": gid("LineItem", f"{tag}{n}"), "title": f"Line {sku}", "sku": sku, "quantity": qty, "currentQuantity": qty, "variant": {"id": gid("ProductVariant", n)}, "originalUnitPriceSet": {"shopMoney": {"amount": "10.00"}}}
+def sorder(n, lines, more=False, status="PAID", cancelled=None, upd="2026-10-10T10:00:00Z"):
+    return {"id": gid("Order", n), "name": f"#{1000 + n}", "createdAt": f"2026-10-0{n}T10:00:00Z", "updatedAt": upd, "cancelledAt": cancelled, "displayFinancialStatus": status,
+            "currentTotalPriceSet": {"shopMoney": {"amount": "25.50", "currencyCode": "USD"}},
+            "customer": {"email": "pii@example.test", "firstName": "Pat"}, "shippingAddress": {"address1": "1 Secret St"},   # present upstream; must never be stored
+            "lineItems": {"pageInfo": {"hasNextPage": more, "endCursor": "lc1" if more else None}, "nodes": lines}}
+def sqorder(n, var, qty, state="COMPLETED"):
+    return {"id": f"SQO{n}", "location_id": "L1", "created_at": f"2026-10-0{n}T12:00:00Z", "updated_at": f"2026-10-0{n}T12:05:00Z", "state": state,
+            "total_money": {"amount": 1999, "currency": "USD"}, "customer_id": "CUST-PII", "line_items": [{"uid": f"SQL{n}", "name": "Thing", "quantity": str(qty), "catalog_object_id": var, "base_price_money": {"amount": 999, "currency": "USD"}}]}
 def sq(n, sku): return {"type": "ITEM", "id": f"ITEM{n}", "item_data": {"name": f"Item {n}", "variations": [{"id": f"VAR{n}", "item_variation_data": {"name": f"Var {n}", "sku": sku}}]}}
 
 def reset_mock():
     S.update(products=[product(1, [variant(1, "A-1", 10), variant(2, "A-2", 3)]), product(2, [variant(3, "B-1", 7)], more=True), product(3, [variant(4, "C-1", 1)], status="ARCHIVED")],
              square_items=[sq(1, "S-1"), sq(2, "S-2"), sq(3, "S-3")],
-             counts={"VAR1": {"L1": 4, "L2": 6, "L3": 100}, "VAR2": {"L1": 2}}, throttled=False, delay=0.0, empty=False)
+             counts={"VAR1": {"L1": 4, "L2": 6, "L3": 100}, "VAR2": {"L1": 2}}, throttled=False, delay=0.0, empty=False,
+             orders=[sorder(1, [oline("A", 1, "A-1", 2)], more=True), sorder(2, [oline("C", 4, "C-1", 1)]), sorder(3, [oline("E", 99, "EXTRA-1", 3)])],
+             sq_orders=[sqorder(1, "VAR1", 2), sqorder(2, "VAR2", 1), sqorder(3, "VAR1", 4)], orders_denied=False)
 
 mock = ThreadingHTTPServer(("127.0.0.1", MOCK), H); threading.Thread(target=mock.serve_forever, daemon=True).start()
 reset_mock()
@@ -175,7 +203,7 @@ try:
     d = (run or {}).get("details") or {}
     check("sync 1 counts", (d.get("seen"), d.get("added"), d.get("changed"), d.get("removed")), (5, 5, 0, 0))
     api = (d or {}).get("api") or {}
-    check("run records its own request counts", (api.get("requests", 0) >= 6, sorted(api.get("by_op", {}))), (True, ["Levels", "Locations", "ProductVariants", "Products", "token_exchange"]))
+    check("run records its own request counts", (api.get("requests", 0) >= 6, sorted(api.get("by_op", {}))), (True, ["Levels", "Locations", "OrderLines", "Orders", "ProductVariants", "Products", "token_exchange"]))
     check("throttling is counted (HTTP 429 + GraphQL THROTTLED); retries include any stale-connection retry", (api.get("throttled"), api.get("retries", 0) >= 2), (2, True))
     s, u = call("GET", "/api/v1/sync/usage?hours=1", tok=OWN)
     sh = u["providers"]["shopify"]
@@ -189,6 +217,20 @@ try:
     check("catalog bad per_page", call("GET", "/api/v1/catalog?per_page=101", tok=CATONLY)[0], 400)
     check("catalog token cannot read inventory", call("GET", "/api/v1/inventory?source=shopify", tok=CATONLY)[0], 403)
     s, iv = call("GET", "/api/v1/inventory?source=shopify&per_page=100", tok=OWN); check("inventory total qty", sum(r["quantity"] for r in iv["data"]), 10 + 3 + 7 + 1 + 5)
+
+    # orders (read-only mirror; no customer identity)
+    od = ((run or {}).get("details") or {}).get("orders") or {}
+    check("sync 1 order pass", (od.get("seen"), od.get("added"), od.get("changed")), (3, 3, 0))
+    ORD = call("POST", "/api/v1/tokens", {"name": "ord", "scopes": ["orders:read"]}, tok=OWN)[1]["token"]
+    s, ol = call("GET", "/api/v1/orders?source=shopify", tok=ORD)
+    check("orders listed newest first", (s, [o["name"] for o in ol["data"]]), (200, ["#1003", "#1002", "#1001"]))
+    s, det = call("GET", "/api/v1/orders/detail?id=" + urllib.parse.quote(gid("Order", 1), safe=""), tok=ORD)
+    check("order detail merges paged lines", (s, sorted((l["sku"], l["quantity"]) for l in det["lines"]), det["order"]["total"], det["order"]["currency"]), (200, [("A-1", 2), ("B-1", 1)], 25.5, "USD"))
+    check("orders need orders:read", call("GET", "/api/v1/orders", tok=CATONLY)[0], 403)
+    check("orders need manager", call("GET", "/api/v1/orders", tok=STAFF, host="shop.rupert.test")[0], 403)
+    check("orders paging validated", call("GET", "/api/v1/orders?per_page=500", tok=ORD)[0], 400)
+    check("order detail unknown id", call("GET", "/api/v1/orders/detail?id=nope", tok=ORD)[0], 404)
+    check("first-pass backfill emits no order events", [e for e in call("GET", "/api/v1/events/recent?limit=500", tok=OWN)[1]["data"] if e["kind"].startswith("mirror.order")], [])
 
     # per-location data (Shopify locations/levels, Square location names/counts)
     s, lo = call("GET", "/api/v1/locations?source=shopify", tok=OWN)
@@ -207,6 +249,8 @@ try:
     S["products"].pop()                                                    # C-1 removed
     S["products"].append(product(5, [variant(5, "D-1", -2)]))              # D-1 added (3rd page of mock)
     S["throttled"] = True
+    S["orders"][1] = sorder(2, [oline("C", 4, "C-1", 1)], status="REFUNDED", cancelled="2026-10-11T09:00:00Z", upd="2026-10-11T09:00:00Z")   # O2 refunded
+    S["orders"].append(sorder(4, [oline("D", 5, "D-1", 1)]))                                                                                  # O4 new
     call("POST", "/api/v1/sync/shopify", tok=OWN); run = wait_run(OWN, 2)
     d = (run or {}).get("details") or {}
     check("sync 2 oversold counted", d.get("oversold"), 1)
@@ -220,6 +264,10 @@ try:
     s, lv = call("GET", "/api/v1/inventory/levels?source=shopify&per_page=100", tok=OWN)
     got2 = {(r["sku"], r["location_id"].split("/")[-1]): r["quantity"] for r in lv["data"]}
     check("levels after resync (removed variant's levels gone, oversold clamped to 0)", (("C-1", "1") in got2, got2.get(("D-1", "1")), got2.get(("A-1", "1"))), (False, 0, 8))
+    od2 = (d.get("orders") or {})
+    check("sync 2 order diff", (od2.get("added"), od2.get("changed")), (1, 1))
+    check("SSE got order change (no customer data in it)", sse.wait_for(lambda e: e["kind"] == "mirror.order.changed" and e["data"]["status"] == "REFUNDED" and "email" not in json.dumps(e)), True)
+    check("SSE got order added", sse.wait_for(lambda e: e["kind"] == "mirror.order.added" and e["data"]["name"] == "#1004"), True)
     check("SSE got sync.finished", sse.wait_for(lambda e: e["kind"] == "sync.finished"), True)
 
     # POS-side adjust shows up live, and an unchanged re-sync emits nothing new
@@ -256,6 +304,12 @@ try:
     s, lo = call("GET", "/api/v1/locations?source=square", tok=OWN); check("square location names (active only)", sorted(l["name"] for l in lo["data"]), ["Store One", "Store Two"])
     s, lv = call("GET", "/api/v1/inventory/levels?source=square&per_page=100", tok=OWN)
     check("square per-location counts", {(r["sku"], r["location_id"]): r["quantity"] for r in lv["data"]}, {("S-1", "L1"): 4, ("S-1", "L2"): 6, ("S-2", "L1"): 2})
+    od = (run or {}).get("details", {}).get("orders") or {}
+    check("square order pass", (od.get("seen"), od.get("added")), (3, 3))
+    s, so = call("GET", "/api/v1/orders?source=square", tok=ORD)
+    check("square orders mirrored", (s, len(so["data"]), so["data"][0]["total"] if so["data"] else None), (200, 3, 19.99))
+    s, sdet = call("GET", "/api/v1/orders/detail?id=SQO1", tok=ORD)
+    check("square order line resolves SKU from the catalog mirror", [(l["sku"], l["quantity"]) for l in sdet["lines"]], [("S-1", 2)])
     S["counts"]["VAR2"] = {"L1": 9}
     call("POST", "/api/v1/sync/square", tok=OWN); wait_run(OWN, 6)
     s, iv = call("GET", "/api/v1/inventory?source=square&per_page=100", tok=OWN); check("square qty updated", {r["sku"]: r["quantity"] for r in iv["data"]}["S-2"], 9)
@@ -312,8 +366,17 @@ try:
     check("no syncs after schedule removed", finished("shopify"), settled)
     check("schedule list empty again", call("GET", "/api/v1/sync/schedule", tok=OWN)[1]["data"], [])
 
+    # a token without the orders scope must not break the catalog sync
+    S["orders_denied"] = True; S["throttled"] = True
+    done_before = len([r for r in call("GET", "/api/v1/sync/runs", tok=OWN)[1]["data"] if r["status"] != "running"])
+    call("POST", "/api/v1/sync/shopify", tok=OWN); run = wait_run(OWN, done_before + 1)
+    check("orders denied: run still ok, error reported in details", ((run or {}).get("status"), "read_orders" in str(((run or {}).get("details") or {}).get("orders"))), ("ok", True))
+    S["orders_denied"] = False
+    raw_all = b"".join(open(os.path.join(dp, f), "rb").read() for dp, _, fs in os.walk(data) for f in fs)
+    check("customer identity/address never stored", [t for t in (b"pii@example.test", b"1 Secret St", b"CUST-PII", b"Pat") if t in raw_all], [])
+
     # read-only guarantee: only allowlisted upstream calls were made, no mutations
-    allowed = {("POST", "/admin/oauth/access_token"), ("POST", "/admin/api/2026-07/graphql.json"), ("GET", "/v2/locations"), ("GET", "/v2/catalog/list"), ("POST", "/v2/inventory/counts/batch-retrieve")}
+    allowed = {("POST", "/admin/oauth/access_token"), ("POST", "/admin/api/2026-07/graphql.json"), ("GET", "/v2/locations"), ("GET", "/v2/catalog/list"), ("POST", "/v2/inventory/counts/batch-retrieve"), ("POST", "/v2/orders/search"), ("POST", "/v2/orders/batch-retrieve")}
     bad = [(m, p) for m, p, b in S["log"] if (m, p) not in allowed]
     check("upstream calls all allowlisted", bad, [])
     check("no mutation in any upstream body", [b for _, _, b in S["log"] if "mutation" in b.lower()], [])
