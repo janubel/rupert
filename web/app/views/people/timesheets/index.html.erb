@@ -142,17 +142,22 @@
       <% Date::DAYNAMES.rotate.each do |day| %><div class="py-1"><%= day %></div><% end %>
     </div>
     <div class="grid grid-cols-7 gap-1">
-      <% @month_days.each do |day| %>
-        <% bucket = @calendar_days[day.iso8601] %>
-        <div class="min-h-20 rounded-xl border border-fog p-2 text-left <%= bucket && (bucket[:timesheets].any? || bucket[:punches].positive?) ? 'bg-haze/40' : 'bg-cream' %>" role="button" tabindex="0" aria-label="<%= day.strftime('%B %-d, %Y') %>">
-          <p class="text-xs font-semibold <%= day == Date.current ? 'text-olive' : 'text-ink' %>"><%= day.day %></p>
-          <% if bucket && bucket[:timesheets].any? %>
-            <% bucket[:timesheets].each do |ts| %>
-              <p class="mt-1 text-xs font-semibold <%= ts.approved? ? 'text-fern' : ts.submitted? ? 'text-olive-deep' : ts.rejected? ? 'text-rose' : 'text-taupe' %>" title="<%= ts.employee&.name %>"><%= ts.employee&.name&.split&.first %> · <%= ts.status %></p>
-            <% end %>
+      <% @calendar_days_range.each do |day| %>
+        <% in_month = day.month == @month.month %>
+        <% bucket = in_month ? @calendar_days[day.iso8601] : nil %>
+        <div class="min-h-24 rounded-xl border p-2 text-left <%= in_month ? (bucket && (bucket[:timesheets].any? || bucket[:punches].positive?) ? 'border-fog bg-haze/40' : 'border-fog bg-cream') : 'border-transparent bg-haze/30' %> <%= day == Date.current ? 'ring-2 ring-olive' : '' %>" role="button" tabindex="0" aria-label="<%= day.strftime('%B %-d, %Y') %>">
+          <p class="text-xs font-semibold <%= in_month ? (day == Date.current ? 'text-olive' : 'text-ink') : 'text-taupe/60' %>"><%= day.day %></p>
+          <% if in_month && bucket && bucket[:timesheets].any? %>
+            <div class="mt-1 space-y-0.5">
+              <% bucket[:timesheets].each do |ts| %>
+                <div class="truncate rounded px-1 py-0.5 text-[10px] font-semibold leading-tight <%= ts.approved? ? 'bg-fern/15 text-fern' : ts.submitted? ? 'bg-olive/15 text-olive-deep' : ts.rejected? ? 'bg-rose/15 text-rose' : 'bg-taupe/15 text-taupe' %>" title="<%= ts.employee&.name %> · <%= ts.period_label %> · #{number_with_precision(ts.total_hours, precision: 1)}h">
+                  <%= ts.employee&.name&.split&.first %> · <%= ts.status %>
+                </div>
+              <% end %>
+            </div>
           <% end %>
-          <% if bucket && bucket[:punches].positive? %>
-            <p class="mt-1 text-xs text-mocha"><%= bucket[:punches] %> punch<%= bucket[:punches] == 1 ? '' : 'es' %> · <%= number_with_precision(bucket[:hours], precision: 1) %>h</p>
+          <% if in_month && bucket && bucket[:punches].positive? %>
+            <p class="mt-1 text-[10px] text-mocha"><%= bucket[:punches] %> punch<%= bucket[:punches] == 1 ? '' : 'es' %> · <%= number_with_precision(bucket[:hours], precision: 1) %>h</p>
           <% end %>
         </div>
       <% end %>

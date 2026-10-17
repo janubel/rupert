@@ -34,6 +34,8 @@ module People
       if @view == 'calendar'
         @month = parse_month(params[:month]) || Date.current.beginning_of_month
         @month_days = @month.beginning_of_month..@month.end_of_month
+        @calendar_start = @month.beginning_of_month.beginning_of_week(:monday)
+        @calendar_days_range = (@calendar_start..(@calendar_start + 41.days))
         cal_scope = visible.by_status(@status).where('period_start <= ? AND period_end >= ?', @month.end_of_month, @month.beginning_of_month)
         punch_scope = if @all_employees_for_punches
           ClockShift.all
