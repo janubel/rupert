@@ -54,6 +54,13 @@ class CtraxPosTest < ActionDispatch::IntegrationTest
     get ctrax_pos_path
     assert_select 'article.retail-product-card', count: 1
     assert_select 'nav a[href=?]', point_of_sale_path, count: 0
+    assert_select 'select#missing_image_variant option[value="hidden-0"]'
+    post ctrax_pos_images_path(@location.id), params: { variant_id: 'hidden-0', product_id: @product.id }
+    assert_redirected_to ctrax_pos_path(location_id: @location.id)
+    follow_redirect!
+    assert_select 'article.retail-product-card', count: 2
+    assert_equal 26, @snapshot.reload.records.size
+    assert_equal 'No image 0', @snapshot.records.find { |r| r['id'] == 'hidden-0' }['name']
   end
 
   test 'server prices cart and keeps choice private until customer confirmation' do

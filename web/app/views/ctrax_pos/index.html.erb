@@ -22,6 +22,16 @@
           </div></details>
         <% end %>
       </div>
+      <% if retail_business_access?('inventory.write') && @missing_image_records.any? %>
+        <details><summary class="disclosure-trigger text-sm font-semibold text-olive-deep">Link missing website images · <%= @missing_image_records.size %> hidden products</summary>
+          <p class="mt-2 text-xs text-mocha">Choose the matching website product. Its image makes this variant visible in the POS.</p>
+          <%= form_tag ctrax_pos_images_path(@snapshot.location_id), method: :post, class: 'mt-3 grid gap-3 sm:grid-cols-2' do %>
+            <div><%= label_tag :missing_image_variant, 'C-Trax variant', class: 'field-label' %><%= select_tag :variant_id, options_for_select(@missing_image_records.sort_by { |r| r['name'].to_s }.map { |r| [r['name'], r['id']] }), id: 'missing_image_variant', include_blank: 'Choose hidden product', required: true, class: 'select w-full' %></div>
+            <div><%= label_tag :missing_image_product, 'Website product image', class: 'field-label' %><%= select_tag :product_id, options_for_select(image_options), id: 'missing_image_product', include_blank: 'Choose website product', required: true, class: 'select w-full' %></div>
+            <%= submit_tag 'Link image', class: 'btn-primary' %>
+          <% end %>
+        </details>
+      <% end %>
       <% unless stock_fresh %><p class="text-sm text-clay">A new stock read is required to check this cart. <%= retail_business_access?('settings.read') ? 'Refresh the C-Trax connection before continuing.' : 'Ask a manager to refresh the C-Trax stock read.' %></p><% end %>
       <div class="flex flex-wrap items-center gap-2">
         <% if @display %>

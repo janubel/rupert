@@ -390,6 +390,7 @@ Rails.application.routes.draw do
   end
   get '/ctrax_pos', to: 'ctrax_pos#index', as: :ctrax_pos
   post '/ctrax_pos/:location_id/quote', to: 'ctrax_pos#quote', as: :quote_ctrax_pos
+  post '/ctrax_pos/:location_id/images', to: 'ctrax_pos#image', as: :ctrax_pos_images
   post '/ctrax_pos/:location_id/images/:variant_id', to: 'ctrax_pos#image', as: :ctrax_pos_image
   resources :pos_displays, only: %i[create show destroy] do
     member do
