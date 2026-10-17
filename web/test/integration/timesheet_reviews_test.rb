@@ -147,6 +147,18 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     assert_select 'section[aria-label="Daily hours"]'
   end
 
+  test 'calendar view leads the page with holidays and per-employee toggles' do
+    ClockShift.create!(employee: @employee, user: @worker, employee_key: @employee.id.to_s, employee_name: @employee.name,
+      employment_type: 'part_time', request_token: 'calendar-token-0001',
+      started_at: Time.zone.parse('2026-09-08 09:00'), ended_at: Time.zone.parse('2026-09-08 13:00'))
+    sign_in
+    get people_timesheets_path(period: '2026-09-07')
+    assert_response :success
+    assert_select 'section[aria-label="Week calendar"]'
+    assert_select 'button[data-employee-id=?]', @employee.id.to_s
+    assert_match 'Labor Day', response.body
+  end
+
   test 'bulk approve approves eligible sheets and reports the rest' do
     @sheet.submit!
     own = @other.timesheets.create!(period_start: '2026-08-03', period_end: '2026-08-09')

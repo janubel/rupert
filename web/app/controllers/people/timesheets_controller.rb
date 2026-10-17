@@ -29,6 +29,11 @@ module People
       if request.format.csv?
         return send_data TimesheetCsv.generate(scope), filename: 'timesheets.csv', type: 'text/csv'
       end
+      @calendar_view = @reviewer && Current.user.can?('timesheets.read')
+      if @calendar_view
+        @week_start ||= Date.current.beginning_of_week
+        @calendar = TimesheetCalendar.new(@week_start, user: Current.user)
+      end
       @square_history = SquareTimecard.visible_to(Current.user)
       @ctrax_history = CtraxLaborShift.visible_to(Current.user)
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)

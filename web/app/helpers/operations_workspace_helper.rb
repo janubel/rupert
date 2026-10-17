@@ -46,6 +46,14 @@ module OperationsWorkspaceHelper
     end
   end
 
+  # "g then letter" jump keys for the Finance workspace links.
+  FINANCE_SHORTCUTS = {
+    'Books desk' => 'd', 'Daily reconciliation' => 'r', 'Day close' => 'c', 'Book approvals' => 'a', 'Follow-ups' => 'f',
+    'Bank statements' => 'b', 'Source documents' => 's', 'Accounts' => 'o', 'Receipts' => 'p', 'Expenses' => 'e',
+    'Vendor payments' => 'v', 'Chart of accounts' => 't', 'Ledger' => 'l', 'Source reports' => 'u',
+    'Cash forecast' => 'w', 'Business snapshot' => 'n', 'Books health' => 'h', 'Period locks' => 'k'
+  }.freeze
+
   # The same links split into labelled groups (Routine / Records / Reports)
   # where the workspace defines them; one unlabelled group otherwise.
   def operations_link_groups(workspace, day: nil)

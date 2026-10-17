@@ -14,6 +14,16 @@
 
   <% if @reviewer %>
     <% week_base = @week_start || Date.current.beginning_of_week %>
+    <nav aria-label="Week" class="flex flex-wrap items-center gap-2">
+      <%= link_to '← Previous week', people_timesheets_path(status: @status, q: @query, period: (week_base - 7).iso8601), class: 'btn-ghost btn-sm' %>
+      <span class="text-sm font-medium"><%= @period ? "Week of #{week_base.strftime('%b %d, %Y')}" : 'All weeks' %></span>
+      <%= link_to 'Next week →', people_timesheets_path(status: @status, q: @query, period: (week_base + 7).iso8601), class: 'btn-ghost btn-sm' %>
+      <%= link_to 'This week', people_timesheets_path(status: @status, q: @query, period: Date.current.beginning_of_week.iso8601), class: 'btn-ghost btn-sm' %>
+      <% if @period %><%= link_to 'All weeks', people_timesheets_path(status: @status, q: @query), class: 'btn-ghost btn-sm' %><% end %>
+    </nav>
+    <% if @calendar_view %>
+      <%= render 'people/timesheets/calendar', calendar: @calendar, week: week_base %>
+    <% end %>
     <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Timesheet summary">
       <div class="stat"><p class="stat-label">Needs review</p><p class="stat-value mt-1"><%= @status_counts.fetch('submitted', 0) %></p><p class="text-xs text-mocha"><%= @awaiting %> across all weeks</p></div>
       <div class="stat"><p class="stat-label">Approved</p><p class="stat-value mt-1"><%= @status_counts.fetch('approved', 0) %></p></div>
@@ -28,13 +38,6 @@
       <% end %>
     </nav>
 
-    <nav aria-label="Week" class="flex flex-wrap items-center gap-2">
-      <%= link_to '← Previous week', people_timesheets_path(status: @status, q: @query, period: (week_base - 7).iso8601), class: 'btn-ghost btn-sm' %>
-      <span class="text-sm font-medium"><%= @period ? "Week of #{week_base.strftime('%b %d, %Y')}" : 'All weeks' %></span>
-      <%= link_to 'Next week →', people_timesheets_path(status: @status, q: @query, period: (week_base + 7).iso8601), class: 'btn-ghost btn-sm' %>
-      <%= link_to 'This week', people_timesheets_path(status: @status, q: @query, period: Date.current.beginning_of_week.iso8601), class: 'btn-ghost btn-sm' %>
-      <% if @period %><%= link_to 'All weeks', people_timesheets_path(status: @status, q: @query), class: 'btn-ghost btn-sm' %><% end %>
-    </nav>
     <p class="text-sm text-mocha">Review each day's hours and notes, then approve or return for correction. Your own timesheets need another reviewer. Demo hours are always excluded from payroll.</p>
   <% end %>
 

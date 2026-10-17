@@ -40,6 +40,14 @@ class BooksDesksIntegrationTest < ActionDispatch::IntegrationTest
     assert_select 'nav[aria-label="Finance workspace"] [role=group]', minimum: 2
   end
 
+  test 'finance links carry unique g-then-letter jump keys' do
+    get books_desk_path
+    assert_select 'nav[aria-label="Finance workspace"][data-controller=finance-shortcuts]'
+    assert_select 'nav[aria-label="Finance workspace"] a[data-shortcut=d][aria-keyshortcuts="g d"]', text: 'Books desk'
+    keys = OperationsWorkspaceHelper::FINANCE_SHORTCUTS.values
+    assert_equal keys.uniq, keys
+  end
+
   test 'an earlier week can be chosen and a future week falls back to last week' do
     get books_desk_path(week: (Date.current - 30).iso8601)
     assert_response :success
