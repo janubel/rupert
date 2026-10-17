@@ -2,14 +2,14 @@
 <div class="space-y-6">
   <section>
     <h1 class="page-title">New leave request</h1>
-    <p class="mt-1 text-sm text-mocha">Request time off for an employee.</p>
+    <p class="mt-1 text-sm text-mocha">Request time off for a staff member.</p>
   </section>
 
   <%= form_with model: @leave_request, url: people_leave_requests_path, class: "mt-6 space-y-4" do |f| %>
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
-        <%= f.label :employee_id, "Employee", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.select :employee_id, @employees.map { |e| [e.name, e.id] }, { include_blank: "Select employee…" }, class: "select w-full", required: true %>
+        <%= f.label :employee_id, "Staff member", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+        <%= f.select :employee_id, @employees.map { |e| [e.name, e.id] }, { include_blank: "Select staff member…" }, class: "select w-full", required: true %>
       </div>
       <div>
         <%= f.label :leave_type, "Type", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>

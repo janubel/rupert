@@ -106,10 +106,10 @@ class ModuleRegistry
     Entry.new(key: 'settings', name: 'Settings', path: lambda {
       settings_path
     }, permission: 'settings.read', position: 100),
-    Entry.new(key: 'employees', name: 'Employees', path: lambda {
+    Entry.new(key: 'employees', name: 'Staff', path: lambda {
       people_employees_path
     }, permission: 'hr.read', position: 85),
-    Entry.new(key: 'employee_reports', name: 'Employee reports', path: -> { people_work_reports_path }, permission: 'hr.read', position: 86),
+    Entry.new(key: 'employee_reports', name: 'Staff reports', path: -> { people_work_reports_path }, permission: 'hr.read', position: 86),
     Entry.new(key: 'departments', name: 'Departments', path: lambda {
       people_departments_path
     }, permission: 'hr.read', position: 86),

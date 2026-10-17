@@ -200,7 +200,7 @@ class User < ActiveRecord::Base
   # An empty list removes all overrides (falls back to role permissions).
   def update_permission_overrides!(permissions)
     if employee? && (permissions.to_a - ROLE_PERMISSIONS.fetch('employee')).any?
-      raise ArgumentError, 'Employee access is limited to POS and their own time records.'
+      raise ArgumentError, 'Staff access is limited to POS and their own time records.'
     end
     @effective_permissions = nil
     user_permissions.reset

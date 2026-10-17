@@ -118,7 +118,7 @@ module People
       errors.add(:period_end, 'must be within 31 days of the start') if period_end > period_start + 30
       overlapping = self.class.where(employee_id: employee_id).where.not(id: id)
         .where('period_start <= ? AND period_end >= ?', period_end, period_start)
-      errors.add(:base, 'This employee already has a timesheet overlapping this period') if overlapping.exists?
+      errors.add(:base, 'This staff member already has a timesheet overlapping this period') if overlapping.exists?
       if entries.where('worked_on < ? OR worked_on > ?', period_start, period_end).exists?
         errors.add(:base, 'The period must include all existing entries')
       end

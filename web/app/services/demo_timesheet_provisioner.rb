@@ -5,11 +5,11 @@
 class DemoTimesheetProvisioner
   def self.call(user:, reviewer:, actor:, today: Date.current)
     raise Pundit::NotAuthorizedError unless actor&.active? && actor.can_manage_accounts? && actor.can?('timesheets.write') && (actor.super_admin? || actor.tenant_id == Current.tenant_id)
-    raise ArgumentError, 'Choose an active employee account in this workspace.' unless user&.active? && user.employee? && user.tenant_id == Current.tenant_id
+    raise ArgumentError, 'Choose an active staff account in this workspace.' unless user&.active? && user.employee? && user.tenant_id == Current.tenant_id
     unless reviewer&.active? && reviewer.tenant_id == Current.tenant_id && reviewer.id != user.id
       raise ArgumentError, 'Choose another active reviewer in this workspace.'
     end
-    worker = TimeClockService.worker_for(user) || raise(ArgumentError, 'Link exactly one active employee profile first.')
+    worker = TimeClockService.worker_for(user) || raise(ArgumentError, 'Link exactly one active staff profile first.')
     People::Timesheet.transaction do
       Tenant.where(id: Current.tenant_id).update_all('updated_at = updated_at')
       [2, 1].map do |weeks_ago|

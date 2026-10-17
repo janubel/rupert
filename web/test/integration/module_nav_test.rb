@@ -92,6 +92,6 @@ class ModuleNavTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "nav[aria-label='Module'] a", text: 'Accounts', count: 0
     assert_select "nav[aria-label='Module'] a", text: 'Users', count: 1
-    assert_select "nav[aria-label='Module'] a", text: 'Employees'
+    assert_select "nav[aria-label='Module'] a", text: 'Staff'
   end
 end

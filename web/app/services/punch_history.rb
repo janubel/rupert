@@ -75,7 +75,7 @@ class PunchHistory
 
   def to_csv
     CSV.generate do |out|
-      out << ['Employee', 'Source', 'Clock-in', 'Clock-out', 'Hours', 'Status',
+      out << ['Staff member', 'Source', 'Clock-in', 'Clock-out', 'Hours', 'Status',
         'Counted', 'Reference', 'Issue', 'Hourly rate', 'Estimated pay']
       rows.each do |row|
         out << [row.employee_name, row.source == 'rupert' ? 'Rupert clock' : 'Square',
@@ -124,7 +124,7 @@ class PunchHistory
     scope.order(started_at: :desc).map do |card|
       Row.new(
         kind: 'square_timecard', employee_id: card.employee_id,
-        employee_name: card.employee&.name || 'Employee not matched',
+        employee_name: card.employee&.name || 'Staff member not matched',
         source: 'square', started_at: card.started_at, ended_at: card.ended_at,
         hours: card.hours.round(2), status: card.import_status,
         reference: "Square #{card.external_id}", issue: card.issue,

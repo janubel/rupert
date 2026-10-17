@@ -10,19 +10,19 @@ class EmployeeAccessGrant < ApplicationRecord
     transaction do
       Tenant.where(id: Current.tenant_id).update_all('updated_at = updated_at')
       employee = People::Employee.find(employee.id)
-      raise TimesheetWorkflow::Error, 'An active employee with an email address is required.' unless employee.active? && employee.email.present?
+      raise TimesheetWorkflow::Error, 'An active staff member with an email address is required.' unless employee.active? && employee.email.present?
       if employee.source_identities.exists? && !employee.source_identities.where(source_active: [true, nil]).exists?
         raise TimesheetWorkflow::Error, 'All source accounts are inactive; confirm employment before issuing access.'
       end
       email = employee.email.strip.downcase
       if People::Employee.where('LOWER(TRIM(email)) = ?', email).where.not(id: employee.id).exists?
-        raise TimesheetWorkflow::Error, 'This email is shared by multiple employees; confirm identity or use an individual email.'
+        raise TimesheetWorkflow::Error, 'This email is shared by multiple staff; confirm identity or use an individual email.'
       end
       user = employee.user
       if user
-        raise TimesheetWorkflow::Error, 'Manage this existing account through Accounts; setup links are only for the employee role.' unless user.employee? && user.active? && user.tenant_id == Current.tenant_id
+        raise TimesheetWorkflow::Error, 'Manage this existing account through Accounts; setup links are only for the staff role.' unless user.employee? && user.active? && user.tenant_id == Current.tenant_id
       else
-        raise TimesheetWorkflow::Error, 'An account already uses this email. Link the verified existing account through the employee record.' if User.where('LOWER(TRIM(email)) = ?', email).exists?
+        raise TimesheetWorkflow::Error, 'An account already uses this email. Link the verified existing account through the staff record.' if User.where('LOWER(TRIM(email)) = ?', email).exists?
         user = User.create!(tenant: Current.tenant, email: email, name: employee.name,
           role: 'employee', password: SecureRandom.urlsafe_base64(48))
         employee.update!(user: user)

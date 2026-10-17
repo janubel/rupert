@@ -27,7 +27,7 @@ class DirectorySyncIntegrationTest < ActionDispatch::IntegrationTest
     assert_select 'button', 'Sync customers now'
     get people_employees_path
     assert_response :success
-    assert_select 'button', 'Sync employees now'
+    assert_select 'button', 'Sync staff now'
   end
 
   test 'readers cannot trigger directory jobs' do

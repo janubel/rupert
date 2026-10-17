@@ -10,7 +10,7 @@ class EmployeeAppSession < ApplicationRecord
 
   def self.issue!(user:, device_name:)
     employee = TimeClockService.worker_for(user)
-    raise TimesheetWorkflow::Error, 'Ask an administrator to link one active employee record to your account.' unless employee
+    raise TimesheetWorkflow::Error, 'Ask an administrator to link one active staff record to your account.' unless employee
     secret = "rupert_employee_#{SecureRandom.urlsafe_base64(32)}"
     session = create!(user: user, employee: employee, device_name: device_name.to_s.strip,
       token_digest: Digest::SHA256.hexdigest(secret), expires_at: 30.days.from_now,

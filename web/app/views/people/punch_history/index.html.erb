@@ -19,7 +19,7 @@
     <%= hidden_field_tag :from, @from.iso8601, data: { punch_calendar_target: 'from' } %>
     <%= hidden_field_tag :to, @to.iso8601, data: { punch_calendar_target: 'to' } %>
     <div class="flex flex-wrap items-end gap-3">
-      <div><%= label_tag :employee_id, 'Employee', class: 'block text-sm mb-1' %><%= select_tag :employee_id, options_for_select([['All employees', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
+      <div><%= label_tag :employee_id, 'Staff member', class: 'block text-sm mb-1' %><%= select_tag :employee_id, options_for_select([['All staff', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
       <div><%= label_tag :source, 'Source', class: 'block text-sm mb-1' %><%= select_tag :source, options_for_select([['All sources', ''], ['Rupert clock', 'rupert'], ['Square', 'square']], params[:source]), class: 'select' %></div>
       <div><%= label_tag :status, 'Status', class: 'block text-sm mb-1' %><%= select_tag :status, options_for_select([['All statuses', ''], ['Closed', 'closed'], ['Open (still punched in)', 'open'], ['Imported', 'imported'], ['Conflict', 'conflict'], ['Unmatched', 'unmatched']], params[:status]), class: 'select' %></div>
       <%= submit_tag 'Run report', class: 'btn-primary' %>
@@ -71,7 +71,7 @@
         <table class="w-full text-sm">
           <thead class="border-b border-fog bg-haze/60">
             <tr>
-              <th scope="col" class="th">Employee</th>
+              <th scope="col" class="th">Staff member</th>
               <th scope="col" class="th">Source</th>
               <th scope="col" class="th">Clock-in</th>
               <th scope="col" class="th">Clock-out</th>
@@ -104,7 +104,7 @@
   <% end %>
 
   <section class="card card-pad space-y-2">
-    <h2 class="text-lg font-semibold">Hours by employee</h2>
+    <h2 class="text-lg font-semibold">Hours by staff member</h2>
     <% if @summary.by_employee.empty? %>
       <p class="text-sm text-mocha">No punches in this range.</p>
     <% else %>

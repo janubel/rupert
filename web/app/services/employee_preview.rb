@@ -7,7 +7,7 @@ class EmployeePreview
 
   def initialize
     @start = Date.current.beginning_of_week
-    @employee = example(People::Employee, first_name: 'Alex', last_name: 'Employee')
+    @employee = example(People::Employee, first_name: 'Alex', last_name: 'Example')
     @sheets = [sheet(@start, 'draft'), sheet(@start - 7, 'approved')]
     @entries = sheets.flat_map do |record|
       last_day = record.draft? ? [@start + 3, Date.current].min : record.period_start + 4

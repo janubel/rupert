@@ -19,7 +19,7 @@ module People
       scope = scope.where('started_at < ?', (Date.iso8601(params[:to]) + 1).in_time_zone) if params[:to].present?
       if request.format.csv?
         data = CSV.generate do |csv|
-          csv << ['Employee', 'C-Trax shift ID', 'Store ID', 'Latest clock-in', 'Latest clock-out', 'Latest source-reported hours', 'Latest elapsed hours', 'Latest in progress', 'Latest source verified', 'Status', 'Review issue', 'Original clock-in', 'Original clock-out', 'Original source-reported hours', 'Original elapsed hours']
+          csv << ['Staff member', 'C-Trax shift ID', 'Store ID', 'Latest clock-in', 'Latest clock-out', 'Latest source-reported hours', 'Latest elapsed hours', 'Latest in progress', 'Latest source verified', 'Status', 'Review issue', 'Original clock-in', 'Original clock-out', 'Original source-reported hours', 'Original elapsed hours']
           scope.includes(:employee).find_each do |shift|
             latest = helpers.ctrax_source_values(shift.latest_record)
             csv << [shift.employee&.name, shift.external_id, shift.store_id, latest[:started_at]&.iso8601, latest[:ended_at]&.iso8601,

@@ -36,7 +36,7 @@ function EmployeeApp() {
   useEffect(() => { sheetRef.current = sheet; if (sheet) setSheets(rows => rows.map(row => row.id === sheet.id ? sheet : row)); }, [sheet]);
   useEffect(() => { SecureStore.getItemAsync(storageKey).then(value => {
     if (value) { const saved = JSON.parse(value) as Login; instanceOrigin(saved.origin); setOrigin(saved.origin); setLogin(saved); }
-  }).catch(() => setMessage('Sign in to reconnect your employee account.')).finally(() => setReady(true)); }, []);
+  }).catch(() => setMessage('Sign in to reconnect your staff account.')).finally(() => setReady(true)); }, []);
   async function clearSession() {
     loginRef.current = null; setLogin(null); setSheets([]); setSheet(null); setShifts([]); setCreating(false); setCorrection(null); setPassword('');
     await SecureStore.deleteItemAsync(storageKey);
@@ -103,10 +103,10 @@ function EmployeeApp() {
       {!!message && <Text accessibilityRole="alert" style={s.notice}>{message}</Text>}
       {!ready ? <Text>Opening your account…</Text> : !login ? <View style={s.card}>
         <Field label="Rupert instance address" placeholder="https://rupert.example.com" value={origin} onChangeText={setOrigin} autoCapitalize="none" keyboardType="url" autoCorrect={false}/>
-        <Field label="Employee email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" autoCorrect={false}/>
+        <Field label="Staff email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" autoCorrect={false}/>
         <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password"/>
         <Button title="Sign in" disabled={busy || !origin || !email || !password} onPress={() => void run(signIn)}/>
-        <Text style={s.caption}>New employee or forgot your password? Ask your administrator for a private setup link. Set your password on the Rupert website, then sign in here.</Text>
+        <Text style={s.caption}>New staff member or forgot your password? Ask your administrator for a private setup link. Set your password on the Rupert website, then sign in here.</Text>
       </View> : <>
         <View style={s.row}><Button title="Timesheets" subtle onPress={() => { setSheet(null); setCreating(false); }}/><Button title="Sign out" subtle disabled={busy} onPress={() => void run(async () => { try { await api('session', 'DELETE'); } finally { await clearSession(); } })}/></View>
         {!sheet && !creating && <>
@@ -155,7 +155,7 @@ function EmployeeApp() {
         </>}
         <Text style={s.caption}>An internet connection is required. Changes are saved only after the server confirms them.</Text>
         <Button title="Privacy & support" subtle onPress={() => void Linking.openURL(`${login.origin}/employee/privacy`)}/>
-        <Button title="Open employee website" subtle onPress={() => void Linking.openURL(`${login.origin}/employee`)}/>
+        <Button title="Open staff website" subtle onPress={() => void Linking.openURL(`${login.origin}/employee`)}/>
       </>}
     </ScrollView>
   </KeyboardAvoidingView></SafeAreaView>;

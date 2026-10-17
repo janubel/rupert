@@ -5,7 +5,7 @@
   <%= link_to 'Back to C-Trax history', people_ctrax_timesheets_path, class: 'text-sm text-olive underline' %>
 </section>
 <section class="card card-pad space-y-3" aria-label="Latest source observation">
-  <h2 class="text-lg font-semibold"><%= @shift.employee&.name || 'Employee not matched' %> · Latest source observation</h2>
+  <h2 class="text-lg font-semibold"><%= @shift.employee&.name || 'Staff member not matched' %> · Latest source observation</h2>
   <dl class="grid gap-3 text-sm sm:grid-cols-2">
     <div><dt class="text-mocha">C-Trax shift ID</dt><dd><%= @shift.external_id %></dd></div>
     <div><dt class="text-mocha">Store ID</dt><dd><%= @shift.latest_record['store_id'] || @shift.store_id || 'Not available' %></dd></div>

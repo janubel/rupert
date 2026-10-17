@@ -56,7 +56,7 @@ class PeopleFlowTest < ActionDispatch::IntegrationTest
 
     get_page people_employees_path
     assert_response :success
-    assert_select 'h1', /Employees/
+    assert_select 'h1', /Staff/
     assert_select 'td', /Alex Morgan/
     assert_select 'td', /Retail/
   end

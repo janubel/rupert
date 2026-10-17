@@ -15,7 +15,7 @@
     </div>
     <div class="flex flex-wrap items-center gap-2">
       <% if Current.user.can_manage_accounts? && @employee.square_timecards.exists? %><%= link_to 'Square hours', people_square_timesheets_path(employee_id: @employee.id), class: 'btn-ghost btn-sm' %><% end %>
-      <%= link_to "Back to employees", people_employees_path, class: "btn-ghost btn-sm" %>
+      <%= link_to "Back to staff", people_employees_path, class: "btn-ghost btn-sm" %>
       <% if Current.user.can?("hr.write") %>
         <% if @employee.may_place_on_leave? %>
           <%= button_to "Place on leave", transition_people_employee_path(@employee, event: "place_on_leave"), method: :post, class: "btn-ghost btn-sm", data: { confirm: "Put #{@employee.name} on leave?" } %>
@@ -40,15 +40,15 @@
       <% @employee.source_identities.order(:source, :id).each do |identity| %>
         <p class="text-sm"><strong><%= directory_label(identity.source) %></strong> · <%= [identity.first_name, identity.last_name].compact.join(' ') %> · <%= identity.email %> · <%= identity.source_active.nil? ? 'Status not supplied' : identity.source_active ? 'Active source account' : 'Inactive source account' %></p>
       <% end %>
-      <p class="text-xs text-taupe">Source contact details refresh independently of this employee’s name, login, and HR details.</p>
+      <p class="text-xs text-taupe">Source contact details refresh independently of this staff member’s name, login, and HR details.</p>
     </section>
   <% end %>
 
     <section id="access" class="card card-pad space-y-3">
-      <h2 class="font-display text-lg">Employee web &amp; app access</h2>
+      <h2 class="font-display text-lg">Staff web &amp; app access</h2>
       <p class="text-sm"><%= @employee.user ? "Linked to #{@employee.user.email}" : 'No login linked.' %></p>
       <%= render 'access_badges', employee: @employee %>
-      <p class="text-xs text-mocha">Badges show current tab access. Own records stay limited to this employee; POS checkout does not grant company sales history or reconciliation.</p>
+      <p class="text-xs text-mocha">Badges show current tab access. Own records stay limited to this staff member; POS checkout does not grant company sales history or reconciliation.</p>
       <% if (account = @employee.user) && Current.user.can_manage_accounts? && (Current.user.super_admin? || !account.super_admin?) %>
         <%= form_with model: account, url: user_path(account), class: 'flex flex-wrap items-end gap-3' do |f| %>
           <%= hidden_field_tag :return_employee_id, @employee.id %>
@@ -56,7 +56,7 @@
           <div><%= f.label :active, 'Login status', class: 'block text-sm mb-1' %><%= f.select :active, [['Enabled', true], ['Disabled', false]], {}, class: 'select' %></div>
           <%= f.submit 'Save access level', class: 'btn-primary btn-sm' %>
         <% end %>
-        <p class="text-xs text-mocha">Employee access includes POS and personal time records. Other roles may expose company data. Individual overrides can replace a role’s defaults.</p>
+        <p class="text-xs text-mocha">Staff access includes POS and personal time records. Other roles may expose company data. Individual overrides can replace a role’s defaults.</p>
         <%= link_to 'Edit individual permissions', edit_user_path(account), class: 'text-sm text-olive underline' %>
       <% end %>
       <% if Current.user.can_manage_accounts? && Current.user.can?('hr.write') && @employee.active? %>
@@ -94,7 +94,7 @@
         <div class="flex justify-between gap-4"><dt class="text-mocha">Legal name</dt><dd class="font-medium text-ink"><%= @employee.legal_name.presence || "—" %></dd></div>
         <div class="flex justify-between gap-4"><dt class="text-mocha">Email</dt><dd class="font-medium text-ink"><%= @employee.email.presence || "—" %></dd></div>
         <div class="flex justify-between gap-4"><dt class="text-mocha">Phone</dt><dd class="font-medium text-ink"><%= @employee.phone.presence || "—" %></dd></div>
-        <div class="flex justify-between gap-4"><dt class="text-mocha">Employee #</dt><dd class="font-medium text-ink"><%= @employee.employee_number.presence || "—" %></dd></div>
+        <div class="flex justify-between gap-4"><dt class="text-mocha">Staff member #</dt><dd class="font-medium text-ink"><%= @employee.employee_number.presence || "—" %></dd></div>
         <div class="flex justify-between gap-4"><dt class="text-mocha">Login account</dt><dd class="font-medium text-ink"><%= @employee.user&.email.presence || "—" %></dd></div>
       </dl>
       <% if @employee.address.present? %>
@@ -132,7 +132,7 @@
             <div><%= f.label :leave_type, 'Leave type', class: 'block text-sm mb-1' %><%= f.select :leave_type, People::LeaveRequest::LEAVE_TYPES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
             <div><%= f.label :year, 'Year', class: 'block text-sm mb-1' %><%= f.number_field :year, value: Date.current.year, min: 1900, max: 2100, required: true, class: 'input' %></div>
             <div><%= f.label :accrued_hours, 'Allowance accrued (hours)', class: 'block text-sm mb-1' %><%= f.number_field :accrued_hours, min: 0, max: 9999.99, step: 0.01, required: true, class: 'input' %></div>
-            <p class="text-xs text-mocha">Used hours are preserved. Enter the employee's actual approved allowance.</p><%= f.submit 'Save allowance', class: 'btn-primary btn-sm' %>
+            <p class="text-xs text-mocha">Used hours are preserved. Enter the staff member's actual approved allowance.</p><%= f.submit 'Save allowance', class: 'btn-primary btn-sm' %>
           <% end %>
         </details>
       <% end %>

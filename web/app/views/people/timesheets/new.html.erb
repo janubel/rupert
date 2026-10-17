@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section>
     <h1 class="page-title">New timesheet</h1>
-    <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? 'Choose the week, then add your daily hours.' : 'Pick an employee and the pay week, then add daily hours.' %></p>
+    <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? 'Choose the week, then add your daily hours.' : 'Pick a staff member and the pay week, then add daily hours.' %></p>
   </section>
   <%= render "form", timesheet: @timesheet %>
 </div>

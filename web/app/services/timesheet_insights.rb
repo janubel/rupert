@@ -37,7 +37,7 @@ class TimesheetInsights
     flags << 'Overtime recorded' if summary.overtime.positive?
     flags << "Over #{WEEKLY_OVERTIME_HOURS} hours without overtime" if summary.total - summary.other > WEEKLY_OVERTIME_HOURS && summary.overtime.zero? && (sheet.period_end - sheet.period_start) < 7
     flags << "Day over #{LONG_DAY_HOURS} hours" if summary.longest_day > LONG_DAY_HOURS
-    flags << 'Employee inactive' if sheet.employee && !sheet.employee.active?
+    flags << 'Staff member inactive' if sheet.employee && !sheet.employee.active?
     flags
   end
 

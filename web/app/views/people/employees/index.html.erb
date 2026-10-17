@@ -1,26 +1,26 @@
-<% content_for :title, "Employees" %>
+<% content_for :title, "Staff" %>
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="page-title">Employees</h1>
+      <h1 class="page-title">Staff</h1>
       <p class="mt-1 text-sm text-mocha">The team directory with their department, position, and employment status.</p>
     </div>
     <div class="flex flex-wrap gap-2">
-      <%= link_to 'Employee problem reports', people_work_reports_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
+      <%= link_to 'Staff problem reports', people_work_reports_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
       <%= link_to "Departments", people_departments_path, class: "btn-ghost btn-sm" %>
       <%= link_to "Positions", people_positions_path, class: "btn-ghost btn-sm" %>
       <% if Current.user.can?("hr.write") && Current.user.can?("sync.write") %>
-        <%= button_to "Sync employees now", sync_directory_people_employees_path, class: "btn-ghost btn-sm" %>
+        <%= button_to "Sync staff now", sync_directory_people_employees_path, class: "btn-ghost btn-sm" %>
       <% end %>
       <% if Current.user.can?("hr.write") %>
         <%= link_to 'Consolidate profiles', consolidation_people_employees_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
-        <%= link_to "Add employee", new_people_employee_path, class: "btn-primary" %>
+        <%= link_to "Add staff member", new_people_employee_path, class: "btn-primary" %>
       <% end %>
     </div>
   </section>
 
   <%= render "shared/directory_sync_status", kind: "employees" %>
-  <p class="text-xs text-taupe">Each employee can have accounts in several apps. Consolidated profiles retain every source identity. Confirm employment type and payroll details before payroll.</p>
+  <p class="text-xs text-taupe">Each staff member can have accounts in several apps. Consolidated profiles retain every source identity. Confirm employment type and payroll details before payroll.</p>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
@@ -45,9 +45,9 @@
     </div>
   </section>
 
-  <p class="text-sm"><%= @missing_logins %> active employee records need a login. <%= link_to 'Review employees without logins', people_employees_path(login: 'missing'), class: 'font-semibold hover:underline' %></p>
+  <p class="text-sm"><%= @missing_logins %> active employee records need a login. <%= link_to 'Review staff without logins', people_employees_path(login: 'missing'), class: 'font-semibold hover:underline' %></p>
   <%= form_tag people_employees_path, method: :get, class: "flex flex-wrap gap-2" do %>
-    <input type="search" name="q" value="<%= params[:q] %>" placeholder="Search name, employee #, email…" aria-label="Search employees" class="search w-full sm:max-w-xs" autocomplete="off">
+    <input type="search" name="q" value="<%= params[:q] %>" placeholder="Search name, staff member #, email…" aria-label="Search staff" class="search w-full sm:max-w-xs" autocomplete="off">
     <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
       <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
       <% People::Employee.aasm.states.map(&:name).each do |status| %>
@@ -64,7 +64,7 @@
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
-            <th scope="col" class="th">Employee</th>
+            <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Department</th>
             <th scope="col" class="th">Position</th>
             <th scope="col" class="th">Web login</th>
@@ -74,7 +74,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @employees.empty? %>
-            <tr><td colspan="6" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No employees yet — add the first one." %></td></tr>
+            <tr><td colspan="6" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No staff yet — add the first one." %></td></tr>
           <% end %>
           <% @employees.each do |employee| %>
             <tr class="hover:bg-cream">

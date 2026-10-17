@@ -36,7 +36,7 @@
       <p class="stat-value mt-1"><%= number_to_currency(@pay_run.total_net_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Employees</p>
+      <p class="stat-label">Staff</p>
       <p class="stat-value mt-1"><%= @pay_run.payslips.count %></p>
     </div>
   </section>
@@ -51,7 +51,7 @@
         <p class="text-xs text-taupe">Add a manual payslip (bonus, commission, off-cycle). Deductions default to a 15% tax estimate on finalize.</p>
         <%= form_with model: [@pay_run, @slip], url: add_payslip_people_pay_run_path(@pay_run), method: :post, class: "mt-2 flex flex-wrap items-end gap-2" do |f| %>
           <div>
-            <%= f.label :employee_id, "Employee", class: "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-mocha" %>
+            <%= f.label :employee_id, "Staff member", class: "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-mocha" %>
             <%= f.select :employee_id, @employees.map { |e| [e.name, e.id] }, { include_blank: "…" }, class: "select w-auto", required: true %>
           </div>
           <div>
@@ -78,7 +78,7 @@
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
-            <th scope="col" class="th">Employee</th>
+            <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Rate</th>
             <th scope="col" class="th text-right">Hours</th>
             <th scope="col" class="th text-right">Gross</th>

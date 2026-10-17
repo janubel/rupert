@@ -17,7 +17,7 @@
   <div class="grid items-start gap-3 lg:grid-cols-[15rem_minmax(0,1fr)]">
   <aside class="card card-pad space-y-2 lg:sticky lg:top-24" aria-labelledby="emp-key-title">
     <div class="flex items-center justify-between gap-2">
-      <h2 id="emp-key-title" class="text-sm font-semibold">Employee key</h2>
+      <h2 id="emp-key-title" class="text-sm font-semibold">Staff member key</h2>
       <span class="text-xs text-mocha" data-schedule-filter-target="count" aria-live="polite"></span>
     </div>
     <% if calendar.employees.empty? %>
@@ -92,7 +92,7 @@
             <% calendar.blocks_for(day).each do |b| %>
               <% h = hue.call(b.employee_id) %>
               <div data-schedule-filter-target="block" data-employee-id="<%= b.employee_id %>"
-                   title="<%= b.employee_name %> · <%= b.source %> · <%= b.label %> (<%= b.hours %>h)<%= ' · not linked to an employee' if b.unmatched %>"
+                   title="<%= b.employee_name %> · <%= b.source %> · <%= b.label %> (<%= b.hours %>h)<%= ' · not linked to a staff member' if b.unmatched %>"
                    tabindex="0" class="shift absolute overflow-hidden rounded-md border px-1.5 py-1 text-xs leading-tight <%= b.past ? 'opacity-45' : '' %>"
                    style="top: <%= b.top_percent %>%; height: <%= b.height_percent %>%; left: calc(<%= b.lane %> * 100% / <%= b.lanes %> + 2px); width: calc(100% / <%= b.lanes %> - 4px); background: hsl(<%= h %> 80% 92%); border-color: hsl(<%= h %> 60% 70%); color: hsl(<%= h %> 60% 22%)">
                 <div class="shift-full">
@@ -122,5 +122,5 @@
       <% upcoming.each do |day, name| %><li><%= link_to day.strftime('%a, %b %-d'), people_timesheets_path(period: day.beginning_of_week.iso8601), class: 'text-olive hover:underline' %> — <%= name %></li><% end %>
     </ul>
   </div>
-  <p class="text-xs text-mocha">Faded blocks are in the past. “Logged” shows hours typed onto a timesheet without clock times. Rupert clock, Square and C-Trax shifts are separate sources and are never added together. Turning an employee off only hides them from this view.</p>
+  <p class="text-xs text-mocha">Faded blocks are in the past. “Logged” shows hours typed onto a timesheet without clock times. Rupert clock, Square and C-Trax shifts are separate sources and are never added together. Turning a staff member off only hides them from this view.</p>
 </section>

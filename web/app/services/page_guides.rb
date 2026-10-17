@@ -137,7 +137,7 @@ class PageGuides
       key: 'activity', title: 'Activity',
       summary: 'The audit trail — who did what, to which record, and when.',
       sections: [
-        { heading: "What you're seeing", body: 'A chronological log of business actions: employee changes, permission edits, and other write operations with the actor and the record they touched.' }
+        { heading: "What you're seeing", body: 'A chronological log of business actions: staff member changes, permission edits, and other write operations with the actor and the record they touched.' }
       ],
       tips: [
         'Pair this with the Access log — Activity is what happened in the app, Access log is who signed in from where.'
@@ -177,24 +177,24 @@ class PageGuides
       ],
       tips: [
         'Only the platform super administrator configures Google Drive backups. Every 6 hours, Rupert can copy the entire shared instance database to that approved destination; store credentials cannot authorize this.',
-        'Add every staff email domain to Google sign-in; new people on an allowed domain get a employee account automatically.',
+        'Add every staff email domain to Google sign-in; new people on an allowed domain get a staff account automatically.',
         'Environment secrets (Square/Shopify tokens) live in the .env card and are encrypted at rest.'
       ]
     ),
     'employees' => Guide.new(
-      key: 'employees', title: 'Employees',
+      key: 'employees', title: 'Staff',
       summary: 'Your team directory — who works where, linked to their login accounts.',
       sections: [
-        { heading: "What you're seeing", body: 'Every employee with their role/position and, where set, the login account they use to sign in. Roles drive what each person can see and do.' }
+        { heading: "What you're seeing", body: 'Every staff member with their role/position and, where set, the login account they use to sign in. Roles drive what each person can see and do.' }
       ],
       tips: [
-        'Link an employee to a login account so their work (timesheets, sales) is attributed to them.',
+        'Link a staff member to a login account so their work (timesheets, sales) is attributed to them.',
         'Manage what they can access on the Permissions screen, not by editing the role matrix directly.'
       ]
     ),
     'timesheets' => Guide.new(
       key: 'timesheets', title: 'Timesheets',
-      summary: 'Clock-in tracking for the team — time worked per employee and shift.',
+      summary: 'Clock-in tracking for the team — time worked per staff member and shift.',
       sections: [
         { heading: "What you're seeing", body: 'Timesheet entries with in/out times, submitted, reviewed, and approved states. Approvals feed payroll.' }
       ],
@@ -216,7 +216,7 @@ class PageGuides
       key: 'users', title: 'Accounts',
       summary: 'Who can sign in and their role. Also the per-person permission overrides.',
       sections: [
-        { heading: "What you're seeing", body: 'The login accounts (which pair with employees) and their roles: super_admin, admin, manager, shift_leader, cashier, reader. Shift leaders review timesheets without payroll or account administration. Super admin is platform-wide; everything else is scoped to this store.' }
+        { heading: "What you're seeing", body: 'The login accounts (which pair with staff) and their roles: super_admin, admin, manager, shift_leader, cashier, reader. Shift leaders review timesheets without payroll or account administration. Super admin is platform-wide; everything else is scoped to this store.' }
       ],
       tips: [
         'Give the least privilege that works — readers can view, managers can run, admins configure.',
@@ -391,7 +391,7 @@ class PageGuides
       key: 'departments', title: 'Departments',
       summary: 'Your org structure — the teams people belong to.',
       sections: [
-        { heading: "What you're seeing", body: 'Departments that employees belong to. They drive reporting and who sees what in the team area.' }
+        { heading: "What you're seeing", body: 'Departments that staff belong to. They drive reporting and who sees what in the team area.' }
       ],
       tips: [
         'Keep this small and stable; move people between departments, not the departments around them.'
@@ -401,10 +401,10 @@ class PageGuides
       key: 'positions', title: 'Positions',
       summary: 'The roles people fill — cashier, manager, etc. — independent of login permissions.',
       sections: [
-        { heading: "What you're seeing", body: 'Position titles you can assign to employees. Positions describe the job; login permissions control system access.' }
+        { heading: "What you're seeing", body: 'Position titles you can assign to staff. Positions describe the job; login permissions control system access.' }
       ],
       tips: [
-        'Assign a position to every employee so the directory and reports read cleanly.'
+        'Assign a position to every staff member so the directory and reports read cleanly.'
       ]
     ),
     'leave' => Guide.new(

@@ -39,7 +39,7 @@ class UsersController < AuthenticatedController
   # clears them, falling back to the role's permissions.
   def update_permissions
     if @user.employee?
-      return redirect_to(edit_user_path(@user), alert: 'Employee access is fixed to POS and their own time records.')
+      return redirect_to(edit_user_path(@user), alert: 'Staff access is fixed to POS and their own time records.')
     end
 
     raw = params[:permissions]

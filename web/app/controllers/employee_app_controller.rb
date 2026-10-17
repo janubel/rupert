@@ -31,7 +31,7 @@ class EmployeeAppController < ApplicationController
 
   def week
     worker = TimeClockService.worker_for(Current.user)
-    return redirect_to employee_app_path, alert: 'Ask an administrator to link your employee record.' unless worker
+    return redirect_to employee_app_path, alert: 'Ask an administrator to link your staff record.' unless worker
 
     # Open an existing overlapping period instead of creating competing weeks.
     monday = Date.current.beginning_of_week
@@ -54,7 +54,7 @@ class EmployeeAppController < ApplicationController
   end
 
   def manifest
-    render json: { id: '/employee', name: 'Rupert Employee', short_name: 'Rupert', start_url: '/employee', scope: '/', display: 'standalone',
+    render json: { id: '/employee', name: 'Rupert Staff', short_name: 'Rupert', start_url: '/employee', scope: '/', display: 'standalone',
       background_color: '#f6f3eb', theme_color: '#526145', icons: [192, 512].map { |size| { src: "/employee/icon-#{size}.png?v=rupert-dog-1", sizes: "#{size}x#{size}", type: 'image/png', purpose: 'any maskable' } } }, content_type: 'application/manifest+json'
   end
 

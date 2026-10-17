@@ -5,8 +5,8 @@
       <%= f.hidden_field :employee_id, value: @employees.first&.id %>
     <% else %>
     <div>
-      <%= f.label :employee_id, "Employee", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.select :employee_id, @employees.map { |e| [e.name, e.id] }, { include_blank: "Select employee…" }, class: "select w-full", required: true, disabled: timesheet.persisted? %>
+      <%= f.label :employee_id, "Staff member", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.select :employee_id, @employees.map { |e| [e.name, e.id] }, { include_blank: "Select staff member…" }, class: "select w-full", required: true, disabled: timesheet.persisted? %>
     </div>
     <% end %>
     <div>

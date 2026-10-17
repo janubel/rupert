@@ -9,9 +9,9 @@
 <% elsif !@worker %>
   <section class="card card-pad space-y-4">
     <h1 class="page-title">My time</h1>
-    <p>Ask an administrator to link your employee record to see your hours, pay and time off.</p>
+    <p>Ask an administrator to link your staff record to see your hours, pay and time off.</p>
     <% if Current.user.can_manage_accounts? %>
-      <%= link_to 'Preview employee view', employee_app_path(preview: 1), class: 'btn-primary' %>
+      <%= link_to 'Preview staff member view', employee_app_path(preview: 1), class: 'btn-primary' %>
       <p class="text-sm text-mocha">Preview uses example data and makes no changes.</p>
     <% end %>
   </section>

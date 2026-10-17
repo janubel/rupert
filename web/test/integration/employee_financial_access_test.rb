@@ -38,7 +38,7 @@ class EmployeeFinancialAccessTest < ActionDispatch::IntegrationTest
     post login_path, params: { email: admin.email, password: 'password' }
     get edit_user_path(@employee_user)
     assert_response :success
-    assert_select 'h2', 'Employee-only access'
+    assert_select 'h2', 'Staff-only access'
     assert_select 'input[name="permissions[sales.read]"]', count: 0
     post update_permissions_user_path(@employee_user), params: { permissions: { 'sales.read' => '1', 'reports.read' => '1' } }
     assert_redirected_to edit_user_path(@employee_user)

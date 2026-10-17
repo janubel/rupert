@@ -25,7 +25,7 @@ module Api
         secret = request.headers['Authorization'].to_s.match(/\ABearer (\S+)\z/i)&.captures&.first
         @employee_session = EmployeeAppSession.authenticate(secret)
         unless @employee_session
-          response.headers['WWW-Authenticate'] = 'Bearer realm="Rupert Employee"'
+          response.headers['WWW-Authenticate'] = 'Bearer realm="Rupert Staff"'
           return render json: { error: 'unauthorized' }, status: :unauthorized
         end
         Current.user = @employee_session.user

@@ -10,7 +10,7 @@
         <%= button_to 'Clock in', clock_in_time_clock_path, params: { request_token: SecureRandom.uuid }, method: :post, class: 'btn-primary', data: { turbo: false } %>
       <% end %>
     <% else %>
-      <h2 class="font-display text-xl">Link your worker record</h2><p class="text-sm text-mocha">Ask an administrator to connect exactly one active Employee record to your sign-in account. Contractors can use the same time clock. Your existing shift history stays below.</p>
+      <h2 class="font-display text-xl">Link your worker record</h2><p class="text-sm text-mocha">Ask an administrator to connect exactly one active Staff record to your sign-in account. Contractors can use the same time clock. Your existing shift history stays below.</p>
     <% end %>
     <% if @open_shift %>
       <p>Clocked in <%= l(@open_shift.started_at, format: '%b %d, %Y %H:%M:%S %Z') %> · <%= number_with_precision(@open_shift.hours, precision: 2) %> hours so far</p>

@@ -22,7 +22,7 @@ module People
       @held = scope.where(imported_at: nil).count
       if request.format.csv?
         data = CSV.generate do |csv|
-          csv << ['Employee', 'Square timecard ID', 'Original clock-in', 'Original clock-out', 'Original timezone', 'Original paid seconds', 'Original counted hours', 'Import status', 'Counted in history', 'Latest clock-in', 'Latest clock-out', 'Latest timezone', 'Latest source status', 'Latest break punches']
+          csv << ['Staff member', 'Square timecard ID', 'Original clock-in', 'Original clock-out', 'Original timezone', 'Original paid seconds', 'Original counted hours', 'Import status', 'Counted in history', 'Latest clock-in', 'Latest clock-out', 'Latest timezone', 'Latest source status', 'Latest break punches']
           scope.includes(:employee).find_each do |card|
             latest = helpers.square_latest_values(card)
             pauses = latest[:breaks].map { |pause| pause.merge(started_at: pause[:started_at]&.iso8601, ended_at: pause[:ended_at]&.iso8601) }
@@ -42,7 +42,7 @@ module People
       @latest = helpers.square_latest_values(@card)
       if request.format.csv?
         data = CSV.generate do |csv|
-          csv << ['Employee', 'Square timecard ID', 'Record type', 'Clock-in', 'Clock-out', 'Timezone', 'Break name', 'Paid break', 'Original counted hours', 'Import status']
+          csv << ['Staff member', 'Square timecard ID', 'Record type', 'Clock-in', 'Clock-out', 'Timezone', 'Break name', 'Paid break', 'Original counted hours', 'Import status']
           csv << [@card.employee&.name, @card.external_id, 'Latest source punches', @latest[:started_at]&.iso8601,
             @latest[:ended_at]&.iso8601, @latest[:timezone], nil, nil, nil, @card.import_status].map { |value| TimesheetCsv.cell(value) }
           @latest[:breaks].each do |pause|

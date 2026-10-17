@@ -27,7 +27,7 @@ class EmployeeWorkspaceController < AuthenticatedController
     @work_report = @worker.work_reports.new(values)
     @work_report.requester = Current.user
     if @work_report.save
-      ActivityLogger.log('employee_work_report_created', subject: @work_report, details: 'Private employee problem report saved; awaiting review.')
+      ActivityLogger.log('employee_work_report_created', subject: @work_report, details: 'Private staff problem report saved; awaiting review.')
       redirect_to employee_reports_path(anchor: 'problems'), notice: 'Your report was saved for administrator review.'
     else
       load_report_data
@@ -58,7 +58,7 @@ class EmployeeWorkspaceController < AuthenticatedController
     @request.errors.add(:hours, 'must be entered for paid time off') if @request.leave_type != 'unpaid' && @request.hours.blank?
     @request.errors.add(:ends_on, 'must be in the same calendar year; submit a separate request for each year') if @request.starts_on && @request.ends_on && @request.starts_on.year != @request.ends_on.year
     if @request.errors.empty? && @request.save
-      ActivityLogger.log('leave_requested', subject: @request, details: 'Employee self-service request; awaiting manager review.')
+      ActivityLogger.log('leave_requested', subject: @request, details: 'Staff self-service request; awaiting manager review.')
       redirect_to employee_time_off_path, notice: 'Time-off request sent for review.'
     else
       time_off
@@ -102,7 +102,7 @@ class EmployeeWorkspaceController < AuthenticatedController
     @worker = TimeClockService.worker_for(Current.user, include_on_leave: true)
     return if @worker
 
-    redirect_to employee_app_path, alert: 'Ask an administrator to link your employee record before using your personal workspace.'
+    redirect_to employee_app_path, alert: 'Ask an administrator to link your staff record before using your personal workspace.'
   end
 
   def invalid_range

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 namespace :timesheets do
-  desc 'Create two submitted, payroll-excluded demo weeks for an employee and assigned reviewer'
+  desc 'Create two submitted, payroll-excluded demo weeks for a staff member and assigned reviewer'
   task :demo, %i[employee_email workspace reviewer_email actor_email] => :environment do |_task, args|
     raise ArgumentError, 'Specify employee_email, workspace, reviewer_email and actor_email.' unless args.to_a.length == 4 && args.to_a.all?(&:present?)
     tenant = Tenant.find_by!(subdomain: args[:workspace], status: 'active')

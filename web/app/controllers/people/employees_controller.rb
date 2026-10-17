@@ -40,7 +40,7 @@ module People
         provider
       end
       if queued.any?
-        redirect_to(people_employees_path, notice: 'Employee directory reads queued. Refresh to review source coverage and access status.')
+        redirect_to(people_employees_path, notice: 'Staff directory reads queued. Refresh to review source coverage and access status.')
       else
         redirect_to(people_employees_path, alert: 'Configure an authorized directory connection first.')
       end
@@ -104,16 +104,16 @@ module People
       authorize(:module, :hr_write?)
       if @employee.active?
         return redirect_to(people_employee_path(@employee),
-          alert: 'Terminate the employee instead of deleting the record.')
+          alert: 'Terminate the staff member instead of deleting the record.')
       end
 
       unless @employee.destroy
         return redirect_to people_employee_path(@employee), alert: @employee.errors.full_messages.to_sentence
       end
       ActivityLogger.log('employee_record_removed', subject: @employee)
-      redirect_to(people_employees_path, notice: 'Employee record removed.')
+      redirect_to(people_employees_path, notice: 'Staff record removed.')
     rescue ActiveRecord::DeleteRestrictionError
-      redirect_to people_employee_path(@employee), alert: 'Retain employees with linked source identities and their history.'
+      redirect_to people_employee_path(@employee), alert: 'Retain staff with linked source identities and their history.'
     end
 
     def add_pay_rate
@@ -161,7 +161,7 @@ module People
         redirect_to(people_employee_path(@employee), notice: "#{@employee.name} #{event.tr('_', ' ')}d.")
       else
         redirect_to(people_employee_path(@employee),
-          alert: "Cannot #{event.tr('_', ' ')} a #{@employee.status} employee.")
+          alert: "Cannot #{event.tr('_', ' ')} a #{@employee.status} staff member.")
       end
     end
 

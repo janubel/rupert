@@ -61,10 +61,10 @@ class SquareTimecardImport
       if old&.imported_at
         changed = old.original_digest != item[:digest] || old.employee_id != worker&.id
         item[:state] = changed ? 'changed' : 'imported'
-        item[:issue] = changed ? 'Square source or employee mapping changed; original imported hours retained for review.' : nil
+        item[:issue] = changed ? 'Square source or staff mapping changed; original imported hours retained for review.' : nil
       elsif !worker
         item[:state] = 'unmatched'
-        item[:issue] = 'No consolidated employee has this Square team-member identity.'
+        item[:issue] = 'No consolidated staff member has this Square team-member identity.'
       end
       item
     end

@@ -19,8 +19,8 @@ module People
         return redirect_to people_work_reports_path, alert: 'Enter a response and reload an outdated form.'
       end
       report.update!(values.merge(reviewer: Current.user, reviewed_at: Time.current))
-      ActivityLogger.log('employee_work_report_reviewed', subject: report, details: "Status: #{report.status}; response available in the private employee workspace.")
-      redirect_to people_work_reports_path, notice: 'Response saved for the employee.'
+      ActivityLogger.log('employee_work_report_reviewed', subject: report, details: "Status: #{report.status}; response available in the private staff workspace.")
+      redirect_to people_work_reports_path, notice: 'Response saved for the staff member.'
     rescue ActiveRecord::StaleObjectError
       redirect_to people_work_reports_path, alert: 'Another administrator updated this report. Reload before responding.'
     rescue ActiveRecord::RecordInvalid => error

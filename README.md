@@ -20,7 +20,7 @@ Square ───┼── sync engine ──▶ SQLite DB     ──▶ GUI
 | --- | --- |
 | `web/` | The Rails 8.1 app: sync engine services, Oatmeal GUI, JSON APIs |
 | `core/` | Parallel Rust implementation that mirrors the Rails app (see `core/docs/SPEC.md`) |
-| `mobile/` | Employee iPhone/Android app (see `mobile/README.md`) |
+| `mobile/` | Staff iPhone/Android app (see `mobile/README.md`) |
 | `legacy/` | The original Node/React implementation, kept as reference |
 | `docs/` | Docs site, plans, audits and research (see `docs/README.md`) |
 | `deploy/` | SER8 (Incus) systemd units and host freshness watcher; older droplet units kept for reference (see Production and deployment) |
@@ -64,7 +64,7 @@ an isolated checkout.
 
 ## Operations
 
-[Purchase receipt uploads and approvals](docs/purchase-receipts.md) are available from the Receipts tab, including employee self-service and an independent review queue.
+[Purchase receipt uploads and approvals](docs/purchase-receipts.md) are available from the Receipts tab, including staff self-service and an independent review queue.
 
 For the current daily-use limits and the next payment/inventory rollout gates, start with [Derrick's day-to-day pickup plan](docs/ops/day-to-day-readiness.md).
 
@@ -125,8 +125,8 @@ and never write SKUs without explicit sign-off.**
   - `GET /settings/env_export` · full `.env` text
   - `GET /settings/backup` · consistent adapter-aware snapshot (SQLite or PostgreSQL)
   - `POST /settings/restore` · multipart `file` upload
-- **Team / People (HR)** — full employee lifecycle:
-  - **Employees** · HR records with department, position, and status lifecycle
+- **Team / People (HR)** — full staff lifecycle:
+  - **Staff** · HR records with department, position, and status lifecycle
   - **Departments** · org chart (manager, headcount)
   - **Positions** · job titles and pay grades
   - **Timesheets** · weekly hours with submit / approve / reject workflow
@@ -151,7 +151,7 @@ manual source (`SwipesimpleImporter`) feeds CSV exports through the same seam.
 - Dashboards: per-user widget layout saved as JSON on `User#dashboard_config`
 - Sales grid: `SalesController` builds an hourly × location pivot from
   `Core::Order` (`groupdate`-ready time series)
-- HR: `app/modules/people/` (employees, departments, positions, timesheets,
+- HR: `app/modules/people/` (staff, departments, positions, timesheets,
   leave & PTO, payroll) with `PayrollCalculator` turning approved timesheets
   into payslips
 - DB: SQLite with FTS5 search runs in production as recorded by the October 13 cutover report. PostgreSQL remains the default for unconfigured environments; CI covers both adapters. See `docs/ops/sqlite-incus.md` for tuning, recovery and scaling triggers.
@@ -203,9 +203,9 @@ records; no longer written), `Location`,
 - [SwipeSimple reporting investigation and hourly SER8 CSV intake](docs/ops/swipesimple-reporting.md) — verified native formats, encrypted source provenance, invoice identity limits, operational setup and remaining vendor access requirements.
 - [SwipeSimple integration research and long-term Valmar / Authorize.net objective](docs/ops/swipesimple-integration-research.md) — supported-feed options, ACH/reporting gaps, QuickBooks and partner-access limits, source evidence and the vendor questionnaire; roadmap F64 records the owner's direction.
 
-## Employee timesheets
+## Staff timesheets
 
-[Employee web/app access and timesheets](docs/employee-timesheets.md) covers setup links, employee permissions, approvals, clock imports, CSV exports, mobile APIs, and deployment. [Native app build and distribution](mobile/README.md) covers iPhone/Android signing and release preparation. The instance serves the installable employee web app at `/employee`.
+[Staff web/app access and timesheets](docs/employee-timesheets.md) covers setup links, staff permissions, approvals, clock imports, CSV exports, mobile APIs, and deployment. [Native app build and distribution](mobile/README.md) covers iPhone/Android signing and release preparation. The instance serves the installable staff web app at `/employee`.
 
 ## Influencer marketing
 

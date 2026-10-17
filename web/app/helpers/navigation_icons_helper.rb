@@ -54,7 +54,7 @@ module NavigationIconsHelper
   # How this browser session was validated, from the login path that created it.
   def navigation_signin_method
     { 'google' => 'Signed in with Google (verified account)', 'password' => 'Signed in with password',
-      'employee_invite' => 'Signed in with employee invite link' }.fetch(session[:auth_method].to_s, 'Sign-in method not recorded for this session')
+      'employee_invite' => 'Signed in with staff member invite link' }.fetch(session[:auth_method].to_s, 'Sign-in method not recorded for this session')
   end
 
   def navigation_role_name(user)

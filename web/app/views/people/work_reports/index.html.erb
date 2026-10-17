@@ -1,8 +1,8 @@
-<% content_for :title, 'Employee problem reports' %>
-<section class="flex flex-wrap items-end justify-between gap-3"><div><h1 class="page-title">Employee problem reports</h1><p class="mt-1 text-sm text-mocha">Private time, pay and time-off questions. Responses appear in the employee’s own workspace.</p></div><%= link_to 'Back to employees', people_employees_path, class: 'btn-ghost btn-sm' %></section>
+<% content_for :title, 'Staff problem reports' %>
+<section class="flex flex-wrap items-end justify-between gap-3"><div><h1 class="page-title">Staff problem reports</h1><p class="mt-1 text-sm text-mocha">Private time, pay and time-off questions. Responses appear in the staff member’s own workspace.</p></div><%= link_to 'Back to staff', people_employees_path, class: 'btn-ghost btn-sm' %></section>
 <%= form_with url: people_work_reports_path, method: :get, class: 'my-5 flex flex-wrap gap-2' do |f| %><%= f.label :status, 'Status', class: 'sr-only' %><%= f.select :status, [['All', 'all']] + EmployeeWorkReport::STATUSES.map { |status| [status.humanize, status] }, { selected: @status }, class: 'select' %><%= f.submit 'Filter', class: 'btn-ghost btn-sm' %><% end %>
 <div class="space-y-4">
-  <% if @reports.empty? %><p class="card card-pad text-sm text-mocha">No employee problem reports.</p><% end %>
+  <% if @reports.empty? %><p class="card card-pad text-sm text-mocha">No staff problem reports.</p><% end %>
   <% @reports.each do |report| %>
     <article class="card card-pad space-y-3"><div class="flex flex-wrap justify-between gap-2"><h2 class="font-semibold"><%= report.employee.name %> · <%= EmployeeWorkReport::KINDS.fetch(report.kind) %></h2><span class="pill-olive"><%= report.status.humanize %></span></div><p class="text-xs text-mocha">Reported <%= l(report.created_at, format: :short) %> · #<%= report.id %></p><p class="whitespace-pre-wrap text-sm"><%= report.details %></p>
       <% if report.response.present? %><p class="rounded-xl bg-haze p-3 text-sm whitespace-pre-wrap"><strong>Latest response:</strong> <%= report.response %></p><% end %>
@@ -10,7 +10,7 @@
         <%= form_with url: people_work_report_path(report), method: :patch, scope: :work_report, class: 'space-y-3' do |f| %>
           <%= f.hidden_field :lock_version, value: report.lock_version %>
           <div><%= f.label :status, 'Status', for: "report-status-#{report.id}", class: 'block text-sm mb-1' %><%= f.select :status, EmployeeWorkReport::STATUSES.map { |status| [status.humanize, status] }, { selected: report.status }, id: "report-status-#{report.id}", class: 'select' %></div>
-          <div><%= f.label :response, 'Response to employee', for: "report-response-#{report.id}", class: 'block text-sm mb-1' %><%= f.text_area :response, value: report.response, id: "report-response-#{report.id}", required: true, maxlength: 2000, rows: 3, class: 'input w-full' %></div>
+          <div><%= f.label :response, 'Response to staff member', for: "report-response-#{report.id}", class: 'block text-sm mb-1' %><%= f.text_area :response, value: report.response, id: "report-response-#{report.id}", required: true, maxlength: 2000, rows: 3, class: 'input w-full' %></div>
           <%= f.submit 'Save response', class: 'btn-primary btn-sm' %>
         <% end %>
       <% end %>

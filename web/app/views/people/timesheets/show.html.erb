@@ -41,7 +41,7 @@
   <% if @timesheet.submitted? && policy(@timesheet).approve? %>
     <section class="card card-pad space-y-2" aria-label="Review checklist">
       <h2 class="font-display text-lg">Before approving</h2>
-      <p class="text-sm text-mocha">Check the dates, daily hours, overtime and notes below against the employee's shifts. Approval rechecks entries, imported clock hours and pending corrections. Return the timesheet for correction if anything needs changing.</p>
+      <p class="text-sm text-mocha">Check the dates, daily hours, overtime and notes below against the staff member's shifts. Approval rechecks entries, imported clock hours and pending corrections. Return the timesheet for correction if anything needs changing.</p>
       <% if @summary.flags.any? %><p class="flex flex-wrap gap-2"><% @summary.flags.each do |flag| %><span class="pill-clay"><%= flag %></span><% end %></p><% end %>
       <% if @next_awaiting %><p class="text-sm"><%= link_to "Skip to next awaiting review: #{@next_awaiting.employee.name}", people_timesheet_path(@next_awaiting), class: 'text-olive underline' %></p><% end %>
     </section>
@@ -164,7 +164,7 @@
 
   <section class="card card-pad space-y-2">
     <h2 class="font-display text-lg text-ink">Compensation breakdown</h2>
-    <p class="text-sm text-mocha">Commission is 1% of credited period sales. The employee 50%-off card adds a $10 bonus per redemption. These are display figures and are not posted to payroll.</p>
+    <p class="text-sm text-mocha">Commission is 1% of credited period sales. The staff 50%-off card adds a $10 bonus per redemption. These are display figures and are not posted to payroll.</p>
     <dl class="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
       <div><dt class="text-xs text-mocha">Credited sales</dt><dd class="font-medium text-ink"><%= number_to_currency(@timesheet.sales_cents / 100.0) %></dd></div>
       <div><dt class="text-xs text-mocha">Commission (1%)</dt><dd class="font-medium text-ink"><%= number_to_currency(@timesheet.commission_cents / 100.0) %></dd></div>

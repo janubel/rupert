@@ -1,6 +1,6 @@
-<% content_for :title, 'Consolidate employee profiles' %>
+<% content_for :title, 'Consolidate staff profiles' %>
 <section class="card card-pad space-y-4">
-  <h1 class="page-title">Consolidate employee profiles</h1>
+  <h1 class="page-title">Consolidate staff profiles</h1>
   <p>Confirm these accounts belong to the same person. The primary profile supplies the name and contact details. All source accounts and HR history are retained. Conflicting HR details, overlapping time records, and duplicate payroll or leave records require review first. Existing setup links and app sessions are revoked.</p>
   <%= form_tag consolidate_people_employees_path, class: 'space-y-4' do %>
     <label class="block">Keep primary profile
@@ -15,5 +15,5 @@
     <label class="block">How was identity confirmed?<%= text_area_tag :reason, nil, class: 'input w-full', required: true, maxlength: 2000 %></label>
     <%= submit_tag 'Consolidate selected profiles', class: 'btn-primary' %>
   <% end %>
-  <%= link_to 'Back to employees', people_employees_path, class: 'btn-ghost' %>
+  <%= link_to 'Back to staff', people_employees_path, class: 'btn-ghost' %>
 </section>

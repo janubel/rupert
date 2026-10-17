@@ -89,7 +89,7 @@ class TimesheetWorkflow
   end
 
   def worker!
-    TimeClockService.worker_for(@user) || raise(Error, 'Ask an administrator to link one active employee record to your account.')
+    TimeClockService.worker_for(@user) || raise(Error, 'Ask an administrator to link one active staff record to your account.')
   end
 
   def draft!(sheet)
@@ -103,7 +103,7 @@ class TimesheetWorkflow
 
   def validate_for_review!(sheet)
     raise Error, 'Add at least one entry before submitting.' unless sheet.entries.exists?
-    raise Error, 'This employee is no longer active.' unless sheet.employee.active?
+    raise Error, 'This staff member is no longer active.' unless sheet.employee.active?
     raise Error, sheet.errors.full_messages.to_sentence unless sheet.valid?
     sheet.entries.each do |entry|
       next if entry.valid?

@@ -14,10 +14,10 @@ module Api
         if user&.active? && user.tenant&.status == 'active' && (!host_tenant || host_tenant.id == user.tenant_id) && user.authenticate(params[:password])
           Current.user = user
           record, token = EmployeeAppSession.issue!(user: user, device_name: params[:device_name].presence || 'Rupert app')
-          AccessLogger.record(source: 'password', status: 'success', request: request, user: user, detail: 'employee app')
+          AccessLogger.record(source: 'password', status: 'success', request: request, user: user, detail: 'staff app')
           render json: { token: token, expires_at: record.expires_at.iso8601, employee: { id: record.employee_id, name: record.employee.name }, workspace: { name: Current.tenant.name } }, status: :created
         else
-          AccessLogger.record(source: 'password', status: 'failure', request: request, email: email, detail: 'invalid employee credentials')
+          AccessLogger.record(source: 'password', status: 'failure', request: request, email: email, detail: 'invalid staff member credentials')
           render json: { error: 'invalid_credentials' }, status: :unauthorized
         end
       end

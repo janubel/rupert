@@ -1,4 +1,4 @@
-# Rupert Employee — iPhone and Android
+# Rupert Staff — iPhone and Android
 
 Native Expo/React Native client for a Rupert instance. The instance itself supplies the installable web app at `/employee`; there is no separate native-client web deployment.
 
@@ -13,7 +13,7 @@ npm run export
 npx expo start
 ```
 
-The login screen accepts the instance's clean HTTPS origin and the employee email/password. Optionally set `EXPO_PUBLIC_RUPERT_URL` when building for one instance. This address is public configuration, never a secret. The app rejects embedded credentials, paths, fragments, non-HTTPS addresses, and redirected API requests. Passwords are not retained. The sign-in token uses SecureStore and is removed when signing out. Server revocation, termination, and password reset invalidate access.
+The login screen accepts the instance's clean HTTPS origin and the staff email/password. Optionally set `EXPO_PUBLIC_RUPERT_URL` when building for one instance. This address is public configuration, never a secret. The app rejects embedded credentials, paths, fragments, non-HTTPS addresses, and redirected API requests. Passwords are not retained. The sign-in token uses SecureStore and is removed when signing out. Server revocation, termination, and password reset invalidate access.
 
 On ARM Linux, Expo's supplied Hermes compiler is an x86-64 binary. Validate JavaScript bundling locally with `npx expo export --platform ios --no-bytecode` and `npx expo export --platform android --no-bytecode`. The GitHub workflow runs the normal Hermes export on x86-64 Ubuntu. Distributable binaries must use normal EAS/native compilation; the diagnostic JS exports are not IPA/APK files.
 
@@ -40,9 +40,9 @@ npx eas-cli submit --platform ios --profile production
 npx eas-cli submit --platform android --profile production
 ```
 
-These commands require owner-controlled credentials and may incur build/account costs. Configure the intended team and store records interactively before automated submission. Complete app icons/listing/screenshots, employee sign-in test access, privacy/data declarations, support details, and organization's distribution policy before submitting. No store submission has been performed by this implementation.
+These commands require owner-controlled credentials and may incur build/account costs. Configure the intended team and store records interactively before automated submission. Complete app icons/listing/screenshots, staff sign-in test access, privacy/data declarations, support details, and organization's distribution policy before submitting. No store submission has been performed by this implementation.
 
-After acceptance, share the approved native distribution links through the organization’s chosen employee onboarding channel. The instance’s `/employee` workspace stays focused on time, pay and leave without app promotion.
+After acceptance, share the approved native distribution links through the organization’s chosen staff onboarding channel. The instance’s `/employee` workspace stays focused on time, pay and leave without app promotion.
 
 ## Release acceptance
 
@@ -52,13 +52,13 @@ The October 16, 2026 security update fixes the transitive UUID advisory with an 
 
 `npm run check` verifies the actual patched files and rejects any new/unexplained advisory. Raw `npm audit` still reports 15 high findings because it identifies upstream versions, including their dependent packages; the report is retained in `dist/dependency-security.json` with the two verified backports. These are not hidden findings or a claim that the registry audit is clean. Run the checks again immediately before signing, and complete real-device acceptance.
 
-See [employee timesheets](../docs/employee-timesheets.md) for account provisioning, web installation, server deployment, and the full API contract.
+See [staff timesheets](../docs/employee-timesheets.md) for account provisioning, web installation, server deployment, and the full API contract.
 
 ## Prepared signing handoff (October 16, 2026)
 
-The supported SDK 58 patch and lockfile now use Expo **58.0.12**. `npm run check` runs the online Expo compatibility check, TypeScript validation, employee boundaries, exploit regression tests, verified security backports and the fail-closed advisory gate. CI additionally runs Expo Doctor and exports **iOS and Android with Hermes bytecode** on x86-64 Ubuntu. Its `employee-native-js-exports-<commit>` artifact contains JavaScript/assets for verification; it is not an installable or signed app. Dependency checks remain enabled.
+The supported SDK 58 patch and lockfile now use Expo **58.0.12**. `npm run check` runs the online Expo compatibility check, TypeScript validation, staff boundaries, exploit regression tests, verified security backports and the fail-closed advisory gate. CI additionally runs Expo Doctor and exports **iOS and Android with Hermes bytecode** on x86-64 Ubuntu. Its `employee-native-js-exports-<commit>` artifact contains JavaScript/assets for verification; it is not an installable or signed app. Dependency checks remain enabled.
 
-All EAS profiles prefill the employee app with `https://rupert.stoverparc.org`. The instance field stays editable, and this public URL contains no employee identity or credentials. For a separate staging build, change the selected profile's `EXPO_PUBLIC_RUPERT_URL` before building. The development profile uses the EAS `development` environment, preview uses `preview`, and store builds use `production`.
+All EAS profiles prefill the staff app with `https://rupert.stoverparc.org`. The instance field stays editable, and this public URL contains no staff identity or credentials. For a separate staging build, change the selected profile's `EXPO_PUBLIC_RUPERT_URL` before building. The development profile uses the EAS `development` environment, preview uses `preview`, and store builds use `production`.
 
 | Profile | iPhone / iPad | Android | Intended handoff |
 | --- | --- | --- | --- |
@@ -72,7 +72,7 @@ Production explicitly uses store distribution, physical iOS devices, Android App
 2. Run `npx eas-cli@25.0.0 login` from `mobile/`, set `EXPO_OWNER` to the selected Expo account/organization, then run `npx eas-cli@25.0.0 init`. Set the returned `EAS_PROJECT_ID` in the local/build environment; initialize only the intended organization project. The project ID and owner are public metadata. Keep passwords, signing keys, EAS/API tokens and store service-account files outside Git.
 3. Run `npm ci`, `npm run check`, `npx --yes expo-doctor@1.21.4`, and `npm run export` on a supported x86-64 build machine. Check the resolved config with `npx expo config --type public`; verify owner/project, bundle identifiers, app version and intended instance before building.
 4. Create the Google Play and App Store Connect records under the selected organizations. Connect signing interactively using EAS credentials. For iOS ad hoc testing, register the intended devices first. Use the matching EAS environments for any public identifier overrides; the profile's public Rupert URL is supplied explicitly.
-5. Build and validate on designated employee test accounts before any submission:
+5. Build and validate on designated staff test accounts before any submission:
 
    ```sh
    npx eas-cli@25.0.0 build --platform android --profile preview

@@ -4,7 +4,7 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Schedule</h1>
-      <p class="mt-1 text-sm text-mocha">Planned shifts. Employees see their own on the Schedule tab of their workspace.</p>
+      <p class="mt-1 text-sm text-mocha">Planned shifts. Staff see their own on the Schedule tab of their workspace.</p>
     </div>
     <% if can_write %><%= link_to "New shift", new_people_scheduled_shift_path(date: [@week, Date.current].max.iso8601), class: "btn-primary" %><% end %>
   </section>

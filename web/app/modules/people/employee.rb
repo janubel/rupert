@@ -94,7 +94,7 @@ module People
     def protect_consolidation_history
       return unless self.class.unscoped.where(tenant_id: tenant_id, merged_into_id: id).exists?
 
-      errors.add(:base, 'This employee has consolidated profiles; retain the record and its history.')
+      errors.add(:base, 'This staff member has consolidated profiles; retain the record and its history.')
       throw :abort
     end
 

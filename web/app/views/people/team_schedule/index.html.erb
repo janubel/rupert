@@ -3,7 +3,7 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Team schedule</h1>
-      <p class="mt-1 text-sm text-mocha">Hours worked per employee per day, pulled from Rupert punches, Square timecards and C-Trax shifts. Read-only.</p>
+      <p class="mt-1 text-sm text-mocha">Hours worked per staff member per day, pulled from Rupert punches, Square timecards and C-Trax shifts. Read-only.</p>
     </div>
     <div class="flex gap-2">
       <%= link_to 'Previous week', people_team_schedule_path(week: @prev_week.iso8601), class: 'btn-ghost btn-sm' %>
@@ -19,7 +19,7 @@
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
-            <th scope="col" class="th text-left">Employee</th>
+            <th scope="col" class="th text-left">Staff member</th>
             <% @week_days.each do |day| %>
               <th scope="col" class="th text-center <%= day == Date.current ? 'text-olive' : '' %>"><%= day.strftime('%a') %><br><span class="text-xs text-taupe"><%= day.strftime('%-d') %></span></th>
             <% end %>
@@ -42,7 +42,7 @@
             </tr>
           <% end %>
           <% if @employees.empty? %>
-            <tr><td colspan="9" class="empty-row">No active employees.</td></tr>
+            <tr><td colspan="9" class="empty-row">No active staff.</td></tr>
           <% end %>
         </tbody>
         <tfoot class="border-t border-fog bg-haze/40">

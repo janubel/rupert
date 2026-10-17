@@ -60,12 +60,12 @@ The [Influencer CMS](ops/influencer-cms.md) adds prospect/relationship tracking,
 
 ## Team / People (HR)
 
-The People module set (`app/modules/people/`) covers the full employee lifecycle
+The People module set (`app/modules/people/`) covers the full staff lifecycle
 from directory to payroll.
 
 | Module | Purpose |
 | --- | --- |
-| Employees | HR records: contact, employment type, status (active / on leave / terminated / rehire), department & position, emergency contact. |
+| Staff | HR records: contact, employment type, status (active / on leave / terminated / rehire), department & position, emergency contact. |
 | Departments | Org chart: name, code, manager, headcount. |
 | Positions | Job titles and pay grades, optionally tied to a department. |
 | Timesheets | Weekly hours per employee: draft → submitted → approved/rejected/reopened, with per-day entries (regular / overtime / PTO). |

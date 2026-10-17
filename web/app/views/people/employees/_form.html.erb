@@ -1,6 +1,6 @@
 <% if employee.errors.any? %>
   <div role="alert" class="rounded-xl border border-rose p-4 text-sm text-rose">
-    <p class="font-semibold">Check the employee details:</p>
+    <p class="font-semibold">Check the staff details:</p>
     <ul class="mt-2 list-disc pl-5">
       <% employee.errors.full_messages.each do |message| %>
         <li><%= message %></li>
@@ -19,7 +19,7 @@
       <%= f.text_field :last_name, class: "input", autocomplete: "off", required: true %>
     </div>
     <div>
-      <%= f.label :employee_number, "Employee #", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :employee_number, "Staff member #", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.text_field :employee_number, class: "input", autocomplete: "off", placeholder: "E2026-001" %>
     </div>
   </div>
@@ -98,7 +98,7 @@
   </div>
 
   <div class="flex items-center gap-3 pt-2">
-    <%= f.submit employee.persisted? ? "Save changes" : "Add employee", class: "btn-primary" %>
+    <%= f.submit employee.persisted? ? "Save changes" : "Add staff member", class: "btn-primary" %>
     <%= link_to "Cancel", employee.persisted? ? people_employee_path(employee) : people_employees_path, class: "btn-ghost" %>
   </div>
 <% end %>

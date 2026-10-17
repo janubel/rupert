@@ -150,10 +150,10 @@ module Ctrax
           item.merge!(status: 'changed',
             issue: 'Source or worker mapping changed; original history retained for review.')
         elsif !employee
-          item.merge!(status: 'unmatched', issue: 'No consolidated employee matches this native C-Trax user.')
+          item.merge!(status: 'unmatched', issue: 'No consolidated staff member matches this native C-Trax user.')
         end
         if row['store_id'].nil? && employee&.tenant_id != Current.tenant_id
-          raise Error, 'Unassigned C-Trax evidence no longer has an exact workspace employee mapping.'
+          raise Error, 'Unassigned C-Trax evidence no longer has an exact workspace staff mapping.'
         end
         if (item[:old] && item[:old].store_id.nil?) || (!item[:old] && row['store_id'].nil?)
           changed = item[:status] == 'changed'

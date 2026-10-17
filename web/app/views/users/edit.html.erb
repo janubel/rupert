@@ -13,8 +13,8 @@
 
   <% if @user.employee? %>
     <section class="card card-pad">
-      <h2 class="font-display text-xl text-ink">Employee-only access</h2>
-      <p class="mt-1 text-sm text-mocha">This account can use POS and its own time clock, timesheets, time off and personal pay reports. It cannot access sales history, reconciliation, company financial reports, customer records or account management. Permission overrides cannot expand the employee role.</p>
+      <h2 class="font-display text-xl text-ink">Staff-only access</h2>
+      <p class="mt-1 text-sm text-mocha">This account can use POS and its own time clock, timesheets, time off and personal pay reports. It cannot access sales history, reconciliation, company financial reports, customer records or account management. Permission overrides cannot expand the staff role.</p>
     </section>
   <% end %>
   <% unless @user.super_admin? || @user.employee? %>

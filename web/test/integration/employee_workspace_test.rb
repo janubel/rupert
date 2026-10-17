@@ -39,7 +39,7 @@ class EmployeeWorkspaceTest < ActionDispatch::IntegrationTest
     %w[Install\ Rupert Native\ employee\ app iPhone\ \&\ iPad].each { |text| refute_includes response.body, text }
     get employee_app_path(preview: 1, employee_id: @other.id)
     assert_select 'h1', 'Hi, Alex'
-    refute_includes response.body, 'Employee preview'
+    refute_includes response.body, 'Staff preview'
     get time_clock_path
     assert_response :success
     assert_equal 'no-store', response.headers['Cache-Control']

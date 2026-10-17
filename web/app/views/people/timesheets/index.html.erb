@@ -8,7 +8,7 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Timesheets</h1>
-      <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? (@reviewer ? 'Your timesheets and assigned demo reviews.' : 'Your hours by week, submitted for review.') : 'Hours by week per employee, submitted for review.' %></p>
+      <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? (@reviewer ? 'Your timesheets and assigned demo reviews.' : 'Your hours by week, submitted for review.') : 'Hours by week per staff member, submitted for review.' %></p>
     </div>
     <% if policy(People::Timesheet).create? %>
       <%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %>
@@ -29,7 +29,7 @@
       <h2 class="text-lg font-semibold">Where to go next</h2>
       <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <%= link_to people_employees_path, class: 'card card-pad space-y-1 hover:bg-cream' do %>
-          <h3 class="font-semibold">Employees</h3>
+          <h3 class="font-semibold">Staff</h3>
           <p class="text-sm text-mocha">Profiles, pay rates and leave balances.</p>
         <% end %>
         <%= link_to people_leave_requests_path, class: 'card card-pad space-y-1 hover:bg-cream' do %>
@@ -89,7 +89,7 @@
             <table class="w-full text-sm">
               <thead class="border-b border-fog bg-haze/60">
                 <tr>
-                  <th scope="col" class="th">Employee</th>
+                  <th scope="col" class="th">Staff member</th>
                   <th scope="col" class="th">Type</th>
                   <th scope="col" class="th">Dates</th>
                   <th scope="col" class="th">Status</th>
@@ -112,15 +112,15 @@
     </section>
   <% end %>
 
-  <section class="space-y-3" aria-label="Employee time sources">
-    <h2 class="text-lg font-semibold"><%= Current.user.employee? ? 'Your time sources' : 'All employee time sources' %></h2>
+  <section class="space-y-3" aria-label="Staff member time sources">
+    <h2 class="text-lg font-semibold"><%= Current.user.employee? ? 'Your time sources' : 'All staff member time sources' %></h2>
     <p class="text-sm text-mocha">Rupert submissions, Square timecards and C-Trax shifts are separate records. Review each source; overlapping hours must not be added together. Source records do not approve hours or create a payroll payment.</p>
     <div class="grid gap-3 sm:grid-cols-3">
       <article class="card card-pad space-y-2"><h3 class="font-semibold">Rupert timesheets</h3><p class="text-sm text-mocha">Weekly entries and approval history.</p><%= link_to 'View all Rupert timesheets', people_timesheets_path(status: 'all'), class: 'text-sm text-olive underline' %></article>
       <article class="card card-pad space-y-2"><h3 class="font-semibold">Square timecards</h3><p class="text-sm text-mocha"><%= @square_history.count %> retained records, including open and held history. Counted Square history also appears in personal reports and calendars.</p><%= link_to 'View Square history', people_square_timesheets_path, class: 'text-sm text-olive underline' %></article>
       <article class="card card-pad space-y-2"><h3 class="font-semibold">C-Trax shifts</h3><p class="text-sm text-mocha"><%= @ctrax_history.count %> retained records. Source-reported hours and elapsed time remain unapproved history.</p><%= link_to 'View C-Trax history', people_ctrax_timesheets_path, class: 'text-sm text-olive underline' %></article>
       <article class="card card-pad space-y-2"><h3 class="font-semibold">Punch history</h3><p class="text-sm text-mocha">Every Rupert clock punch and imported Square timecard in one calendar or list, with a CSV report.</p><%= link_to 'View punch history', people_punch_history_path, class: 'text-sm text-olive underline' %></article>
-      <article class="card card-pad space-y-2"><h3 class="font-semibold">Team schedule</h3><p class="text-sm text-mocha">Employee × day grid of hours worked from all sources.</p><%= link_to 'View team schedule', people_team_schedule_path, class: 'text-sm text-olive underline' %></article>
+      <article class="card card-pad space-y-2"><h3 class="font-semibold">Team schedule</h3><p class="text-sm text-mocha">Staff member × day grid of hours worked from all sources.</p><%= link_to 'View team schedule', people_team_schedule_path, class: 'text-sm text-olive underline' %></article>
     </div>
   </section>
   <% if @awaiting.positive? %>
@@ -176,7 +176,7 @@
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <th scope="col" class="th">Source</th>
-            <th scope="col" class="th">Employee</th>
+            <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Date</th>
             <th scope="col" class="th text-right">Hours</th>
             <th scope="col" class="th">Status</th>
@@ -223,7 +223,7 @@
 
   <%= form_tag people_timesheets_path, method: :get, class: "flex flex-wrap gap-2" do %>
     <%= hidden_field_tag :view, "list" %>
-    <input type="search" name="q" value="<%= @query %>" placeholder="Search employee" aria-label="Search employee" class="input w-auto">
+    <input type="search" name="q" value="<%= @query %>" placeholder="Search staff member" aria-label="Search staff member" class="input w-auto">
     <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
       <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
       <% People::Timesheet.aasm.states.map(&:name).each do |status| %>
@@ -251,7 +251,7 @@
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <% if approvable.any? %><th scope="col" class="th"><span class="sr-only">Select</span></th><% end %>
-            <th scope="col" class="th">Employee</th>
+            <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Period</th>
             <th scope="col" class="th text-right">Regular</th>
             <th scope="col" class="th text-right">Overtime</th>

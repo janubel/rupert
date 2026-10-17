@@ -12,7 +12,7 @@ namespace :square do
     Current.reset
   end
 
-  desc 'Read Square timecards and preview their employee matches; APPLY=1 imports local history only'
+  desc 'Read Square timecards and preview their staff member matches; APPLY=1 imports local history only'
   task timecards: :environment do
     Current.tenant = Tenant.find(ENV.fetch('TENANT_ID'))
     Current.user = User.find(ENV.fetch('ACTOR_ID'))

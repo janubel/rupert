@@ -17,6 +17,6 @@
       <% if provider == 'swipesimple' %><p class="mt-1 text-xs text-taupe">Full native <%= kind == 'customers' ? 'customer' : 'user' %> grid for the saved company. Appointments has a separate directory; its contacts require a separate export.</p><% end %>
     </div>
   <% end %>
-  <% if PosConnection.where(provider: 'iris_reporting').exists? %><p class="mt-3 text-xs text-taupe">IRIS provides merchant reporting; it does not supply an employee or customer directory.</p><% end %>
+  <% if PosConnection.where(provider: 'iris_reporting').exists? %><p class="mt-3 text-xs text-taupe">IRIS provides merchant reporting; it does not supply a staff member or customer directory.</p><% end %>
   <p class="mt-3 text-xs text-taupe">Each source keeps its native identities. Partial or failed reads retain prior records. <%= link_to 'Manage connections', connections_path, class: 'hover:underline' if Current.user.can?('settings.read') %></p>
 </section>

@@ -4,11 +4,11 @@
 # messages, credentials, account IDs, queue arguments or hostnames enter HTML.
 class SourceHealth
   CHANNELS = {
-    'ctrax' => [['stock', 'Stock', 60.minutes], ['sales', 'Daily sales', 60.minutes], ['timecards', 'Employee punches', 30.minutes]],
+    'ctrax' => [['stock', 'Stock', 60.minutes], ['sales', 'Daily sales', 60.minutes], ['timecards', 'Staff punches', 30.minutes]],
     'swipesimple' => [['web', 'Website exports', 60.minutes]],
     'authorize_net' => [['reporting', 'Reporting API', 10.minutes]],
     'shopify' => [['catalog', 'Catalog and orders', 60.minutes]],
-    'square' => [['catalog', 'Catalog and orders', 60.minutes], ['timecards', 'Employee hours', 30.minutes]],
+    'square' => [['catalog', 'Catalog and orders', 60.minutes], ['timecards', 'Staff hours', 30.minutes]],
     'bank' => [['reporting', 'Processor reports', 36.hours]],
     'google_backup' => [['backup', 'Verified backup', 8.hours]]
   }.freeze
