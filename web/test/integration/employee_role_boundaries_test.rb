@@ -28,6 +28,31 @@ class EmployeeRoleBoundariesTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'store admin cannot create an administrator or re-role one, a super admin can' do
+    sign_in('admin')
+    assert_no_difference('User.count') do
+      post users_path, params: { user: { email: 'new-admin@example.com', password: 'password123', role: 'admin' } }
+    end
+    assert_redirected_to users_path
+
+    other_admin = User.create!(tenant: Current.tenant, email: 'other-admin@example.com', password: 'password123', role: 'admin')
+    patch user_path(other_admin), params: { user: { role: 'cashier' } }
+    assert_redirected_to users_path
+    assert_equal 'admin', other_admin.reload.role
+
+    get edit_user_path(other_admin)
+    assert_select 'select[name="user[role]"][disabled]'
+    get new_user_path
+    assert_select 'select[name="user[role]"] option[value="admin"]', count: 0
+
+    delete logout_path
+    sign_in('super_admin')
+    post users_path, params: { user: { email: 'new-admin@example.com', password: 'password123', role: 'admin' } }
+    assert_equal 'admin', User.find_by!(email: 'new-admin@example.com').role
+    patch user_path(other_admin), params: { user: { role: 'manager' } }
+    assert_equal 'manager', other_admin.reload.role
+  end
+
   test 'deactivating an account invalidates its existing browser session' do
     sign_in('cashier')
     User.find_by!(email: 'cashier-boundary@example.com').update!(active: false)
