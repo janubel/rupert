@@ -288,7 +288,7 @@
 .nav-menu-item:hover { background:var(--color-haze); }
 @media(max-width:1450px) { .app-brand-name { display:none; }.nav-area { gap:.25rem;padding:.35rem .4rem;font-size:.82rem; } }
 @media(min-width:761px) { .nav-area:not([aria-current=page]) > span { display:none; }.nav-area { padding:.4rem .6rem; } }
-@media(max-width:760px) { .app-header-grid { grid-template-columns:auto auto;gap:.25rem;padding:.35rem 1rem; }.header-utilities { justify-self:end; }.area-navigation { grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(var(--nav-area-count,7),minmax(44px,1fr));overflow-x:auto;gap:.1rem;justify-content:start; }.nav-area { flex-direction:column;gap:.15rem;min-width:0;padding:.35rem .1rem;border-radius:.7rem;font-size:.7rem; }.area-navigation .nav-symbol { width:18px;height:18px; }.module-navigation { padding:.1rem 1rem; }.tools-caption { display:none; } }
+@media(max-width:760px) { .app-header-grid { grid-template-columns:auto auto;gap:.25rem;padding:.35rem 1rem; }.header-utilities { justify-self:end; }.area-navigation { grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(var(--nav-area-count,7),minmax(66px,1fr));overflow-x:auto;gap:.1rem;justify-content:start; }.nav-area { flex-direction:column;gap:.15rem;min-width:0;padding:.35rem .1rem;border-radius:.7rem;font-size:.7rem; }.area-navigation .nav-symbol { width:18px;height:18px; }.module-navigation { padding:.1rem 1rem; }.tools-caption { display:none; } }
 
 /* Grid items default to min-width:auto, so one wide child (a chart canvas, a
    long URL) stretched the whole single-column grid past the viewport on phones. */
@@ -586,3 +586,21 @@
 @media(max-width:640px) { .bookkeeping-review-banner .btn-primary { width:100%; }.bookkeeping-header .btn-primary,.bookkeeping-header .btn-ghost { width:100%; }.bookkeeping-header > div { width:100%; }.bookkeeping-stat { padding:1rem; }.bookkeeping-period .operations-filters { flex-basis:100%; } }
 .finance-primary-links { display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.85rem;padding-bottom:.85rem;border-bottom:1px solid var(--color-fog); }
 .finance-primary-links .nav-pill { min-height:40px;display:inline-flex;align-items:center; }
+
+/* Finance workspace nav: one tidy row. Title and primary links sit together; the
+   other groups are pill dropdowns. The module bar above only repeats this nav. */
+body:has(.finance-navigation) .module-navigation-wrap { display:none; }
+.finance-navigation { display:block; }
+.finance-navigation-title { display:flex;flex-wrap:wrap;align-items:baseline;gap:.15rem .75rem;margin-bottom:.4rem; }
+.finance-navigation-title > span:first-child { font-family:var(--font-serif,inherit);font-size:1.15rem;font-weight:700;color:var(--color-ink); }
+.finance-navigation-title .finance-navigation-hint { margin-left:0;font-size:.8rem;color:var(--color-taupe); }
+.finance-primary-links { margin-bottom:.4rem;padding-bottom:.4rem; }
+.finance-navigation-groups { display:flex;flex-wrap:wrap;gap:.4rem; }
+.finance-navigation-groups > .finance-navigation-group { position:relative;display:block; }
+.finance-navigation-groups > .finance-navigation-group > summary { display:inline-flex;align-items:center;gap:.35rem;min-height:36px;padding:.2rem .8rem;border:1px solid var(--color-fog);border-radius:999px;background:var(--color-paper);cursor:pointer;list-style:none;font-size:.85rem;letter-spacing:.04em;text-transform:none;font-weight:600;color:var(--color-mocha); }
+.finance-navigation-groups > .finance-navigation-group > summary::-webkit-details-marker { display:none; }
+.finance-navigation-groups > .finance-navigation-group > summary::after { content:"\25BE";font-size:.8rem; }
+.finance-navigation-groups > .finance-navigation-group[open] > summary { background:var(--color-haze);color:var(--color-ink); }
+.finance-navigation-links { position:absolute;left:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;gap:.1rem;min-width:13rem;padding:.4rem;border:1px solid var(--color-fog);border-radius:.8rem;background:var(--color-paper);box-shadow:0 8px 24px #1a393d22; }
+.finance-navigation-links .nav-pill { justify-content:flex-start; }
+@media(max-width:760px) { .finance-navigation { overflow:visible; } }
