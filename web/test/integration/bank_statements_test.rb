@@ -85,6 +85,10 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
       post finance_bank_reconciliation_match_path, params: { line_id: line.id, journal_entry_id: entry_id }
       assert_equal 'recorded', line.reload.status
       assert_equal entry_id, line.journal_entry_id
+      post finance_bank_reconciliation_ignore_path, params: { line_id: line.id }
+      assert_redirected_to finance_bank_reconciliation_path
+      assert_equal 'recorded', line.reload.status
+      assert_equal entry_id, line.journal_entry_id
       post decide_bank_statement_path(doc.id), params: { decisions: { line.id => 'expense:shipping' } }
     end
   end
@@ -104,6 +108,9 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
       assert_redirected_to finance_bank_reconciliation_path(account_label: line.account_label)
       assert_equal 'pending', line.reload.status
       assert_nil line.journal_entry_id
+      post finance_bank_reconciliation_ignore_path, params: { line_id: line.id }
+      assert_redirected_to finance_bank_reconciliation_path(account_label: line.account_label)
+      assert_equal 'ignored', line.reload.status
     end
   end
 

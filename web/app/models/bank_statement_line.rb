@@ -66,6 +66,7 @@ class BankStatementLine < ApplicationRecord
   end
 
   def decide!(status:, user:, expense: nil, vendor_payment: nil, journal_entry: nil)
+    protect_recorded_source!
     update!(status: status, decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current,
       expense_id: expense&.id, vendor_payment_id: vendor_payment&.id, journal_entry_id: journal_entry&.id, review_flag: false, reviewed_at: Time.current,
       review_category: expense&.category || (vendor_payment ? 'vendor_payment' : review_category.presence || 'non_expense'))

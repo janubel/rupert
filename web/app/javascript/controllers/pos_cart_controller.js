@@ -355,7 +355,7 @@ export default class extends Controller {
   render(lines) {
     if (this.hasCountTarget) this.countTargets.forEach(target => { target.textContent = Array.from(this.cart.values()).reduce((total, quantity) => total + quantity, 0) })
     const byId = new Map(lines.map(line => [line.variant_id, line]))
-    const previousPrices = this.lastPrices
+    const previousPrices = this.lastPrices || new Map()
     this.itemsTarget.replaceChildren()
     if (!this.cart.size) {
       const empty = document.createElement("p")

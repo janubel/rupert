@@ -26,8 +26,8 @@ class RoadmapFlowTest < ActionDispatch::IntegrationTest
       assert_select 'td', /ledger period locks that block edits to closed periods/
     end
     assert_select 'tr', text: /Bank reconciliation and accounting exports/ do
-      assert_select 'td', 'Partial'
-      assert_select 'td', /Automated duplicate review remains/
+      assert_select 'td', 'Available'
+      assert_select 'td', /duplicate-line review with ignore/
     end
 
     get system_path

@@ -228,6 +228,7 @@ Rails.application.routes.draw do
     get 'bank_reconciliation', to: 'bank_reconciliations#index', as: :bank_reconciliation
     post 'bank_reconciliation/match', to: 'bank_reconciliations#match', as: :bank_reconciliation_match
     post 'bank_reconciliation/unmatch', to: 'bank_reconciliations#unmatch', as: :bank_reconciliation_unmatch
+    post 'bank_reconciliation/ignore', to: 'bank_reconciliations#ignore', as: :bank_reconciliation_ignore
     get 'ledger_export', to: 'ledger_exports#new', as: :ledger_export
     post 'ledger_export', to: 'ledger_exports#create'
   end
