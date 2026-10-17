@@ -27,10 +27,10 @@ Status: **Done** (this branch), **Partial**, **Open** (not changed; see owner qu
 
 | Page | Observation | Risk | Recommendation |
 |---|---|---|---|
-| Daily reconciliation, Day close, Follow-ups, Source documents | Dense one-line ERB; 70+ `text-xs` (12px) labels; many same-weight buttons | Flow: hard to find the one next step | Apply the page header and 15px rule; one primary action per screen |
+| Daily reconciliation, Day close, Follow-ups, Source documents | Done: shared header, one primary action in the header, repeated list buttons demoted, 15px minimum | Flow | Still dense inside sections; not yet checked in the browser |
 | Books desk | Clear "Do this next" card; weekly/period steps good | Low | Keep; add money formatting where amounts appear |
-| Cash forecast, Source reports, Period locks | Own layouts, no shared header, currency not labelled consistently | Medium | Adopt finance/page_header |
-| Receipts | `number_to_currency`, small text | Low | Switch to finance_money |
+| Cash forecast, Source reports, Period locks | Done: shared header; per-currency money kept deliberately | Low | none |
+| Receipts | Done: shared header and money display (pages have no Finance menu by design; employees use them) | Low | none |
 | Finance navigation | Takes most of a phone screen above the page title | Flow | Collapse to one disclosure on small screens |
 
 ## Findings reported, deliberately not fixed (accounting logic)
