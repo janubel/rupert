@@ -13,34 +13,34 @@
                   finance_form_confirm_value: "Record this vendor payment?\n\nAmount: {amount}\nVendor: {who}\nDate: {date}\n\nIt reduces the amount owed to this vendor in the payments register. No money moves; this records a payment already made. You can remove it later and restore it.",
                   action: "submit->finance-form#confirm input->finance-form#sync change->finance-form#sync" } do |f| %>
       <div>
-        <%= f.label :vendor_id, "Vendor", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+        <%= f.label :vendor_id, "Vendor", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
         <%= f.collection_select :vendor_id, @vendors, :id, :name, {}, class: "select w-full", data: { finance_form_target: "who" } %>
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <%= f.label :amount, "Amount (USD)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+          <%= f.label :amount, "Amount (USD)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
           <div class="flex items-center gap-1">
             <span class="text-sm text-mocha" aria-hidden="true">$</span>
             <%= f.text_field :amount, required: true, inputmode: "decimal", placeholder: "0.00", class: "input money", autocomplete: "off", aria: { describedby: "finance-amount-help" }, data: { finance_form_target: "amount" } %>
           </div>
         </div>
         <div>
-          <%= f.label :paid_on, "Date", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+          <%= f.label :paid_on, "Date", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
           <%= f.date_field :paid_on, class: "select w-full", required: true, data: { finance_form_target: "date" } %>
         </div>
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <%= f.label :method, "Method", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+          <%= f.label :method, "Method", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
           <%= f.select :method, Finance::VendorPayment::METHODS, {}, class: "select w-full" %>
         </div>
         <div>
-          <%= f.label :reference, "Reference", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+          <%= f.label :reference, "Reference", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
           <%= f.text_field :reference, class: "input", autocomplete: "off" %>
         </div>
       </div>
       <div>
-        <%= f.label :notes, "Notes", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+        <%= f.label :notes, "Notes", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
         <%= f.text_area :notes, rows: 3, class: "input retail-notes" %>
       </div>
       <p id="finance-amount-help" class="text-sm text-mocha">Enter dollars with up to two decimal places, no $ sign or commas. This records an existing payment in Rupert; it does not transfer money.</p>

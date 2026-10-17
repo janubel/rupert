@@ -14,20 +14,21 @@ module Finance
       @kind = JournalEntry::KINDS.include?(params[:kind]) ? params[:kind] : 'all'
       @from = parse_date(params[:from])
       @to = parse_date(params[:to])
+      @q = params[:q].to_s.strip.first(100)
+      @account = Finance::Account.find_by(id: params[:account_id]) if params[:account_id].present?
+      @min_cents = to_cents_or_nil(params[:min])
+      @max_cents = to_cents_or_nil(params[:max])
+      @filter_problem = 'An amount filter was ignored: enter dollars as digits with up to two decimals.' if bad_amount_filter?
 
-      scope = JournalEntry.in_range(@from, @to).recent
-      scope = scope.where(kind: @kind) if @kind != 'all'
-
-      totals_scope = JournalEntry.in_range(@from, @to)
-      totals_scope = totals_scope.where(kind: @kind) if @kind != 'all'
-      entry_ids = totals_scope.pluck(:id)
+      filtered = filtered_entries
+      entry_ids = filtered.pluck(:id)
       @totals = {
         entries: entry_ids.size,
+        void: filtered.where(status: 'void').count,
         debits: entry_ids.any? ? JournalLine.where(journal_entry_id: entry_ids).sum(:debit_cents) : 0,
         credits: entry_ids.any? ? JournalLine.where(journal_entry_id: entry_ids).sum(:credit_cents) : 0
       }
-
-      @pagy, @entries = pagy(scope, items: 50)
+      @pagy, @entries = pagy(filtered.includes(:journal_lines).order(posted_on: :desc, id: :desc), items: 50)
       response.headers['Cache-Control'] = 'private, no-store'
     end
 
@@ -98,6 +99,38 @@ module Finance
     end
 
     private
+
+    def filtered_entries
+      scope = JournalEntry.in_range(@from, @to)
+      scope = scope.where(kind: @kind) if @kind != 'all'
+      scope = scope.where(id: JournalLine.where(account_id: @account.id).select(:journal_entry_id)) if @account
+      if @q.present?
+        like = "%#{ActiveRecord::Base.sanitize_sql_like(@q.downcase)}%"
+        scope = scope.where('LOWER(journal_entries.memo) LIKE ?', like)
+      end
+      if @min_cents || @max_cents
+        # An entry's amount is its debit total (equal to its credit total).
+        sums = JournalLine.group(:journal_entry_id).having(amount_clause).select(:journal_entry_id)
+        scope = scope.where(id: sums)
+      end
+      scope
+    end
+
+    def amount_clause
+      clauses = []
+      clauses << "SUM(debit_cents) >= #{@min_cents.to_i}" if @min_cents
+      clauses << "SUM(debit_cents) <= #{@max_cents.to_i}" if @max_cents
+      clauses.join(' AND ')
+    end
+
+    def to_cents_or_nil(value)
+      text = value.to_s.strip
+      text.match?(AMOUNT_FORMAT) ? (BigDecimal(text) * 100).to_i : nil
+    end
+
+    def bad_amount_filter?
+      (params[:min].present? && @min_cents.nil?) || (params[:max].present? && @max_cents.nil?)
+    end
 
     # [label, path] for the record an entry was generated from, when there is a
     # page for it. Never raises for a source that has since been removed.

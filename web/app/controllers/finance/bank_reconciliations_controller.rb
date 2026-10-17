@@ -21,7 +21,12 @@ module Finance
     def match
       line = BankStatementLine.find(params[:line_id])
       entry = JournalEntry.posted.find(params[:journal_entry_id])
-      line.match!(journal_entry: entry, user: Current.user)
+      begin
+        line.match!(journal_entry: entry, user: Current.user)
+      rescue ActiveRecord::RecordInvalid => e
+        return redirect_to(bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
+          alert: "Not matched. #{e.record.errors.full_messages.to_sentence}")
+      end
       ActivityLogger.log('bank_line_matched', subject: line,
         details: "Statement line ##{line.id} (#{line.amount_cents}) matched to journal entry ##{entry.id}")
       redirect_to bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
@@ -30,7 +35,12 @@ module Finance
 
     def unmatch
       line = BankStatementLine.find(params[:line_id])
-      line.unmatch!(user: Current.user)
+      begin
+        line.unmatch!(user: Current.user)
+      rescue ActiveRecord::RecordInvalid => e
+        return redirect_to(bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
+          alert: "Match not cleared. #{e.record.errors.full_messages.to_sentence}")
+      end
       redirect_to bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
         notice: 'Match cleared.'
     end

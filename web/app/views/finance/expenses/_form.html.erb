@@ -17,22 +17,22 @@
   <fieldset <%= 'disabled' if lock %> class="space-y-4 min-w-0">
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :payee, "Payee", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :payee, "Payee", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.text_field :payee, class: "input", placeholder: "Who was paid", autocomplete: "off", data: { finance_form_target: "who" } %>
     </div>
     <div>
-      <%= f.label :vendor_id, "Vendor (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :vendor_id, "Vendor (optional)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.collection_select :vendor_id, @vendors, :id, :name, { include_blank: "—" }, class: "select w-full" %>
     </div>
   </div>
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :category, "Category", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :category, "Category", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.select :category, Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, {}, class: "select w-full" %>
     </div>
     <div>
-      <%= f.label :amount, "Amount (USD)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :amount, "Amount (USD)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <div class="flex items-center gap-1">
         <span class="text-sm text-mocha" aria-hidden="true">$</span>
         <%= f.text_field :amount, required: true, inputmode: "decimal", placeholder: "0.00", class: "input money", autocomplete: "off", aria: { describedby: "finance-amount-help" }, data: { finance_form_target: "amount" } %>
@@ -42,18 +42,18 @@
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :incurred_on, "Date", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :incurred_on, "Date", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.date_field :incurred_on, class: "select w-full", required: true, data: { finance_form_target: "date" } %>
     </div>
     <div>
-      <%= f.label :method, "Method", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :method, "Method", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.select :method, Finance::Expense::METHODS, {}, class: "select w-full" %>
     </div>
   </div>
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :reference, "Reference", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :reference, "Reference", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.text_field :reference, class: "input", autocomplete: "off" %>
     </div>
     <div></div>
@@ -61,14 +61,14 @@
 
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
-      <%= f.label :account_id, "GL account (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :account_id, "GL account (optional)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
       <%= f.collection_select :account_id, (@accounts || Finance::Account.active.ordered), :id, :label, { include_blank: "— auto from category —" }, class: "select w-full" %>
     </div>
     <div></div>
   </div>
 
   <div>
-    <%= f.label :notes, "Notes", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+    <%= f.label :notes, "Notes", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
     <%= f.text_area :notes, rows: 3, class: "input retail-notes" %>
   </div>
 

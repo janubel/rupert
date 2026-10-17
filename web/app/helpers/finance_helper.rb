@@ -37,9 +37,9 @@ module FinanceHelper
 
   # Plain-language balance status for a report. +difference_cents+ is the
   # debit total minus the credit total (or assets minus liabilities+equity).
-  def finance_balance_status(difference_cents, balanced_text: 'Balanced')
+  def finance_balance_status(difference_cents, balanced_text: 'Balanced: no difference')
     if difference_cents.to_i.zero?
-      content_tag(:p, "#{balanced_text}: no difference.",
+      content_tag(:p, "#{balanced_text}.",
         class: 'balance-status balance-ok', role: 'status', data: { balance: 'ok' })
     else
       content_tag(:p, "Out of balance by #{finance_money_text(difference_cents.to_i.abs)}.",

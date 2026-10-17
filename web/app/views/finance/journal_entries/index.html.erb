@@ -1,24 +1,20 @@
 <% content_for :title, "General ledger" %>
+<% range_text = (@from || @to) ? "#{@from || 'start'} through #{@to || 'today'}" : 'All dates' %>
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">General ledger</h1>
-      <p class="mt-1 text-sm text-mocha">Balanced journal entries posted from sales, expenses and vendor payments.</p>
-    </div>
-    <div class="flex gap-2">
-      <%= link_to "Financial reports", finance_reports_path, class: "btn-ghost btn-sm" %>
-      <% if @can_write %>
-        <%= link_to "New entry", new_finance_journal_entry_path, class: "btn-primary btn-sm" %>
-      <% end %>
-    </div>
-  </section>
+  <%= render layout: 'finance/page_header', locals: { title: 'General ledger', range: range_text, print: true,
+        explain: 'The record of every posted entry. Each entry has equal debits and credits. Entries from expenses and sales are created automatically; you can add manual entries and reverse them.' } do %>
+    <%= link_to "Financial reports", finance_reports_path, class: "btn-ghost btn-sm" %>
+    <%= link_to "Export", finance_ledger_export_path, class: "btn-ghost btn-sm" %>
+    <% if @can_write %><%= link_to "New entry", new_finance_journal_entry_path, class: "btn-primary btn-sm" %><% end %>
+  <% end %>
 
-  <section class="grid grid-cols-3 gap-4">
+  <section class="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Ledger summary">
     <div class="stat">
       <p class="stat-label">Entries</p>
       <p class="stat-value mt-1"><%= number_with_delimiter(@totals[:entries]) %></p>
+      <p class="mt-1 text-sm text-mocha"><%= @totals[:void] %> of them void</p>
     </div>
     <div class="stat">
       <p class="stat-label">Total debits · USD</p>
@@ -27,41 +23,54 @@
     <div class="stat">
       <p class="stat-label">Total credits · USD</p>
       <p class="stat-value mt-1"><%= finance_money(@totals[:credits]) %></p>
-      <p class="mt-1 text-xs <%= @totals[:debits] == @totals[:credits] ? 'text-emerald-600' : 'text-red-600' %>">
-        <%= @totals[:debits] == @totals[:credits] ? 'In balance' : 'Out of balance' %>
-      </p>
     </div>
   </section>
+  <%= finance_balance_status(@totals[:debits] - @totals[:credits], balanced_text: 'Balanced: debits equal credits') %>
+  <p class="text-sm text-mocha -mt-3">Totals include void entries shown in the list. Reports and exports leave void entries out.</p>
 
-  <%= form_tag finance_journal_entries_path, method: :get, class: "card card-pad operations-filters" do %>
-    <%= select_tag :kind, options_for_select([["All kinds", "all"]] + Finance::JournalEntry::KINDS.map { |k| [k.tr('_', ' ').titleize, k] }, @kind), class: "select" %>
-    <%= date_field_tag :from, @from, class: "select" %>
-    <%= date_field_tag :to, @to, class: "select" %>
-    <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
+  <%= form_tag finance_journal_entries_path, method: :get, class: "card card-pad operations-filters", role: "search", aria: { label: "Filter ledger entries" } do %>
+    <div><%= label_tag :q, "Memo contains", class: "field-label" %><%= search_field_tag :q, @q, class: "input", autocomplete: "off" %></div>
+    <div><%= label_tag :account_id, "Account", class: "field-label" %>
+      <%= select_tag :account_id, options_for_select(Finance::Account.ordered.map { |a| [a.label, a.id] }, @account&.id), include_blank: "All accounts", class: "select w-full" %></div>
+    <div><%= label_tag :kind, "Kind", class: "field-label" %>
+      <%= select_tag :kind, options_for_select([["All kinds", "all"]] + Finance::JournalEntry::KINDS.map { |k| [k.tr('_', ' ').titleize, k] }, @kind), class: "select w-full" %></div>
+    <div><%= label_tag :from, "From", class: "field-label" %><%= date_field_tag :from, @from, class: "select w-full" %></div>
+    <div><%= label_tag :to, "To", class: "field-label" %><%= date_field_tag :to, @to, class: "select w-full" %></div>
+    <div><%= label_tag :min, "Amount from (USD)", class: "field-label" %><%= text_field_tag :min, params[:min], class: "input money", inputmode: "decimal" %></div>
+    <div><%= label_tag :max, "Amount to (USD)", class: "field-label" %><%= text_field_tag :max, params[:max], class: "input money", inputmode: "decimal" %></div>
+    <%= submit_tag "Apply filters", class: "btn-primary btn-sm" %>
+    <%= link_to "Clear", finance_journal_entries_path, class: "btn-ghost btn-sm" %>
   <% end %>
+  <% if @filter_problem %><p role="alert" class="flash flash-alert"><%= @filter_problem %></p><% end %>
 
   <div class="card overflow-hidden">
     <div class="operations-table-region" role="region" tabindex="0" aria-label="Journal entries">
-      <table class="operations-table w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+      <table class="operations-table finance-table w-full">
+        <caption class="sr-only">Journal entries, newest first, amounts in USD</caption>
+        <thead>
           <tr>
+            <th scope="col" class="th">Entry</th>
             <th scope="col" class="th">Date</th>
             <th scope="col" class="th">Kind</th>
             <th scope="col" class="th">Memo</th>
             <th scope="col" class="th">Source</th>
-            <th scope="col" class="th text-right">Amount</th>
+            <th scope="col" class="th num">Amount</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
         <tbody>
+          <% if @entries.empty? %>
+            <tr><td colspan="7" class="empty-row">No entries match. Clear the filters<%= ', or post a manual entry' if @can_write %>.</td></tr>
+          <% end %>
           <% @entries.each do |entry| %>
-            <tr class="border-b border-fog/60">
-              <td class="td"><%= entry.posted_on %></td>
+            <tr class="<%= 'row-removed' if entry.void? %>">
+              <td class="td whitespace-nowrap"><%= link_to "##{entry.id}", finance_journal_entry_path(entry), class: "link", aria: { label: "Open journal entry #{entry.id}" } %></td>
+              <td class="td whitespace-nowrap"><%= entry.posted_on %></td>
               <td class="td"><%= entry.kind.tr('_', ' ').titleize %></td>
               <td class="td"><%= link_to (entry.memo.presence || "Entry ##{entry.id}"), finance_journal_entry_path(entry), class: "link" %></td>
-              <td class="td text-taupe"><%= entry.source_type %> #<%= entry.source_id %></td>
-              <td class="td text-right"><%= finance_money(entry.debit_cents) %></td>
-              <td class="td"><span class="<%= entry.void? ? 'text-taupe line-through' : 'text-emerald-600' %>"><%= entry.status %></span></td>
+              <td class="td text-mocha"><%= entry.source_type.present? ? "#{entry.source_type.demodulize.titleize} ##{entry.source_id}" : 'Manual' %></td>
+              <td class="td num"><%= finance_money(entry.debit_cents) %></td>
+              <td class="td"><%= entry.void? ? tag.span('Void', class: 'status-tag status-removed') : tag.span('Posted', class: 'status-tag status-active') %></td>
             </tr>
           <% end %>
         </tbody>

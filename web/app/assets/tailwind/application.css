@@ -485,3 +485,6 @@
   .card,.stat { box-shadow:none !important;break-inside:avoid; }
   body { background:#fff !important; }
 }
+.finance-table .group-row th { background:var(--color-haze);font-weight:700;text-align:left;border-top:1px solid var(--color-fog); }
+.finance-table .subtotal-row th,.finance-table .subtotal-row td { font-weight:700;border-top:1px solid var(--color-mocha);text-align:left; }
+.finance-table .subtotal-row td.num { text-align:right; }
