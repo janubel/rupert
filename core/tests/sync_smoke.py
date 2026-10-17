@@ -26,7 +26,7 @@ class H(BaseHTTPRequestHandler):
         n = int(self.headers.get("content-length") or 0); return self.rfile.read(n).decode() if n else ""
     def do_GET(self):
         u = urlparse(self.path); S["log"].append(("GET", u.path, ""))
-        if u.path == "/v2/locations": return self.reply(200, {"locations": [{"id": "L1", "status": "ACTIVE"}, {"id": "L2", "status": "ACTIVE"}, {"id": "L3", "status": "INACTIVE"}]})
+        if u.path == "/v2/locations": return self.reply(200, {"locations": [{"id": "L1", "name": "Store One", "status": "ACTIVE"}, {"id": "L2", "name": "Store Two", "status": "ACTIVE"}, {"id": "L3", "name": "Closed", "status": "INACTIVE"}]})
         if u.path == "/v2/catalog/list":
             cur = parse_qs(u.query).get("cursor", [None])[0]; items = S["square_items"]
             if S["empty"]: return self.reply(200, {"objects": []})
@@ -42,6 +42,27 @@ class H(BaseHTTPRequestHandler):
             if self.headers.get("X-Shopify-Access-Token") != "shpat_mock": return self.reply(401, {})
             time.sleep(S["delay"])
             q = json.loads(b); v = q["variables"]
+            LOC = lambda n: gid("Location", n)
+            if q["query"].startswith("query Locations"):
+                return self.reply(200, {"data": {"locations": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [
+                    {"id": LOC(1), "name": "Main", "isActive": True}, {"id": LOC(2), "name": "Warehouse", "isActive": True}, {"id": LOC(3), "name": "Closed", "isActive": False}]}}})
+            if q["query"].startswith("query Levels("):
+                if not S.get("levels_throttled"):
+                    S["levels_throttled"] = True   # Shopify reports cost throttling as HTTP 200 + errors
+                    return self.reply(200, {"errors": [{"message": "Throttled", "extensions": {"code": "THROTTLED"}}], "extensions": {"cost": {"requestedQueryCost": 200, "actualQueryCost": None, "throttleStatus": {"maximumAvailable": 1000, "currentlyAvailable": 100, "restoreRate": 100}}}})
+                bysku = {}
+                for pr in S["products"]:
+                    for vn in pr["variants"]["nodes"]: bysku[vn["inventoryItem"]["id"]] = vn
+                bysku[gid("InventoryItem", 99)] = variant(99, "EXTRA-1", 5)
+                data = {}
+                for key, item_id in v.items():
+                    vn = bysku.get(item_id)
+                    if vn is None or vn["sku"] == "B-1": data[key] = None; continue      # unknown to Shopify -> primary fallback
+                    nodes = [{"location": {"id": LOC(1)}, "quantities": [{"name": "available", "quantity": vn["inventoryQuantity"]}]}]
+                    if vn["sku"] == "A-1": nodes.append({"location": {"id": LOC(2)}, "quantities": [{"name": "available", "quantity": 4}]})
+                    if vn["sku"] == "A-2": nodes.append({"location": {"id": LOC(9)}, "quantities": [{"name": "available", "quantity": 5}]})   # unknown location: skipped
+                    data[key] = {"id": item_id, "inventoryLevels": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": nodes}}
+                return self.reply(200, {"data": data})
             if "ProductVariants" in q["query"]:
                 return self.reply(200, {"data": {"product": {"variants": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [variant(99, "EXTRA-1", 5)]}}}})
             if not S["throttled"]:
@@ -71,15 +92,15 @@ reset_mock()
 data = tempfile.mkdtemp(prefix="rupert-sync-")
 key = base64.b64encode(os.urandom(32)).decode()
 srv = subprocess.Popen([BIN], env=dict(os.environ, RUPERT_DATA=data, RUPERT_LISTEN=f"127.0.0.1:{PORT}", RUPERT_COOKIE_SECURE="0", RUPERT_BASE_DOMAIN="rupert.test",
-    RUPERT_DEV="1", RUPERT_MASTER_KEY=key, RUPERT_SHOPIFY_BASE=f"http://127.0.0.1:{MOCK}", RUPERT_SQUARE_BASE=f"http://127.0.0.1:{MOCK}/v2"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    RUPERT_DEV="1", RUPERT_SCHEDULER_TICK_SECS="1", RUPERT_MASTER_KEY=key, RUPERT_SHOPIFY_BASE=f"http://127.0.0.1:{MOCK}", RUPERT_SQUARE_BASE=f"http://127.0.0.1:{MOCK}/v2"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 fails, total, bodies = [], 0, []
 
-def call(method, path, body=None, tok=None, host=None):
+def call(method, path, body=None, tok=None, host=None, port=None):
     h = {"content-type": "application/json"}
     if tok: h["Authorization"] = "Bearer " + tok
     if host: h["Host"] = host
-    req = urllib.request.Request(f"http://127.0.0.1:{PORT}{path}", method=method, headers=h, data=json.dumps(body).encode() if body is not None else None)
+    req = urllib.request.Request(f"http://127.0.0.1:{port or PORT}{path}", method=method, headers=h, data=json.dumps(body).encode() if body is not None else None)
     try: r = urllib.request.urlopen(req); raw, code = r.read(), r.status
     except urllib.error.HTTPError as e: raw, code = e.read(), e.code
     bodies.append(raw.decode(errors="replace"))
@@ -153,6 +174,13 @@ try:
     run = wait_run(OWN, 1); check("sync 1 finished", ((run or {}).get("status"), (run or {}).get("error")), ("ok", None))
     d = (run or {}).get("details") or {}
     check("sync 1 counts", (d.get("seen"), d.get("added"), d.get("changed"), d.get("removed")), (5, 5, 0, 0))
+    api = (d or {}).get("api") or {}
+    check("run records its own request counts", (api.get("requests", 0) >= 6, sorted(api.get("by_op", {}))), (True, ["Levels", "Locations", "ProductVariants", "Products", "token_exchange"]))
+    check("throttling is counted (HTTP 429 + GraphQL THROTTLED); retries include any stale-connection retry", (api.get("throttled"), api.get("retries", 0) >= 2), (2, True))
+    s, u = call("GET", "/api/v1/sync/usage?hours=1", tok=OWN)
+    sh = u["providers"]["shopify"]
+    check("usage endpoint totals match the run", (sh["requests"], sh["throttled"], sh["last_hour"]), (api["requests"], 2, api["requests"]))
+    check("usage exposes the limits", (u["hourly_budget"], u["per_run_cap"]), (1000, 5000))
     s, c = call("GET", "/api/v1/catalog?source=shopify&per_page=2", tok=CATONLY)
     check("catalog page 1", (s, len(c["data"]), c["meta"]["has_more"], c["meta"]["next_page"]), (200, 2, True, 2))
     s, c3 = call("GET", "/api/v1/catalog?source=shopify&per_page=2&page=3", tok=CATONLY); check("catalog last page", (len(c3["data"]), c3["meta"]["has_more"]), (1, False))
@@ -161,6 +189,17 @@ try:
     check("catalog bad per_page", call("GET", "/api/v1/catalog?per_page=101", tok=CATONLY)[0], 400)
     check("catalog token cannot read inventory", call("GET", "/api/v1/inventory?source=shopify", tok=CATONLY)[0], 403)
     s, iv = call("GET", "/api/v1/inventory?source=shopify&per_page=100", tok=OWN); check("inventory total qty", sum(r["quantity"] for r in iv["data"]), 10 + 3 + 7 + 1 + 5)
+
+    # per-location data (Shopify locations/levels, Square location names/counts)
+    s, lo = call("GET", "/api/v1/locations?source=shopify", tok=OWN)
+    check("shopify locations", sorted((l["name"], l["active"], l["primary"]) for l in lo["data"]), [("Closed", False, False), ("Main", True, True), ("Warehouse", True, False)])
+    s, lv = call("GET", "/api/v1/inventory/levels?source=shopify&per_page=100", tok=OWN)
+    got = {(r["sku"], r["location_id"].split("/")[-1]): r["quantity"] for r in lv["data"]}
+    check("shopify levels (per location, unknown location skipped, fallback to primary)", got,
+          {("A-1", "1"): 10, ("A-1", "2"): 4, ("A-2", "1"): 3, ("B-1", "1"): 7, ("C-1", "1"): 1, ("EXTRA-1", "1"): 5})
+    check("levels paging", call("GET", "/api/v1/inventory/levels?source=shopify&per_page=2", tok=OWN)[1]["meta"]["has_more"], True)
+    check("levels need inventory:read", call("GET", "/api/v1/inventory/levels", tok=CATONLY)[0], 403)
+    check("sync 1 reports locations and levels", ((run or {}).get("details") or {}).get("locations"), 3)
 
     # live feed: connect, then change upstream and re-sync
     sse = Sse(OWN); sse.start(); time.sleep(0.5)
@@ -177,6 +216,10 @@ try:
     check("SSE got changed qty", sse.wait_for(lambda e: e["kind"] == "mirror.variant.changed" and e["data"]["qty"] == {"from": 10, "to": 8}), True)
     check("SSE got removed", sse.wait_for(lambda e: e["kind"] == "mirror.variant.removed" and e["data"]["sku"] == "C-1"), True)
     check("SSE got added", sse.wait_for(lambda e: e["kind"] == "mirror.variant.added" and e["data"]["sku"] == "D-1"), True)
+    check("SSE got per-location change", sse.wait_for(lambda e: e["kind"] == "mirror.level.changed" and e["data"]["sku"] == "A-1" and e["data"]["qty"] == {"from": 10, "to": 8}), True)
+    s, lv = call("GET", "/api/v1/inventory/levels?source=shopify&per_page=100", tok=OWN)
+    got2 = {(r["sku"], r["location_id"].split("/")[-1]): r["quantity"] for r in lv["data"]}
+    check("levels after resync (removed variant's levels gone, oversold clamped to 0)", (("C-1", "1") in got2, got2.get(("D-1", "1")), got2.get(("A-1", "1"))), (False, 0, 8))
     check("SSE got sync.finished", sse.wait_for(lambda e: e["kind"] == "sync.finished"), True)
 
     # POS-side adjust shows up live, and an unchanged re-sync emits nothing new
@@ -210,6 +253,9 @@ try:
     check("square ok", (run or {}).get("status"), "ok")
     s, iv = call("GET", "/api/v1/inventory?source=square&per_page=100", tok=OWN)
     check("square qty (L1+L2 only; L3 inactive)", {r["sku"]: r["quantity"] for r in iv["data"]}, {"S-1": 10, "S-2": 2, "S-3": 0})
+    s, lo = call("GET", "/api/v1/locations?source=square", tok=OWN); check("square location names (active only)", sorted(l["name"] for l in lo["data"]), ["Store One", "Store Two"])
+    s, lv = call("GET", "/api/v1/inventory/levels?source=square&per_page=100", tok=OWN)
+    check("square per-location counts", {(r["sku"], r["location_id"]): r["quantity"] for r in lv["data"]}, {("S-1", "L1"): 4, ("S-1", "L2"): 6, ("S-2", "L1"): 2})
     S["counts"]["VAR2"] = {"L1": 9}
     call("POST", "/api/v1/sync/square", tok=OWN); wait_run(OWN, 6)
     s, iv = call("GET", "/api/v1/inventory?source=square&per_page=100", tok=OWN); check("square qty updated", {r["sku"]: r["quantity"] for r in iv["data"]}["S-2"], 9)
@@ -237,6 +283,35 @@ try:
     check("enable writes one marker event", (ecount() - n0, rec["data"][-1]["kind"] if rec.get("data") else None), (1, "realtime.enabled"))
     check("setting survives (re-read)", call("GET", "/api/v1/settings", tok=OWN)[1], {"realtime": True})
 
+    # scheduled syncs (test-only every_seconds; production minimum is 5 minutes)
+    check("schedule list starts empty", call("GET", "/api/v1/sync/schedule", tok=OWN)[1]["data"], [])
+    check("staff cannot schedule", call("PUT", "/api/v1/sync/schedule", {"source": "shopify", "every_minutes": 15}, tok=STAFF)[0], 403)
+    check("minimum interval enforced", call("PUT", "/api/v1/sync/schedule", {"source": "shopify", "every_minutes": 2}, tok=OWN)[0], 400)
+    check("maximum interval enforced", call("PUT", "/api/v1/sync/schedule", {"source": "shopify", "every_minutes": 1441}, tok=OWN)[0], 400)
+    check("unknown source", call("PUT", "/api/v1/sync/schedule", {"source": "paypal", "every_minutes": 15}, tok=OWN)[0], 404)
+    def finished(src): return len([r for r in call("GET", "/api/v1/sync/runs", tok=OWN)[1]["data"] if r["status"] != "running" and r["source"] == src])
+    before = finished("shopify")
+    check("set schedule", call("PUT", "/api/v1/sync/schedule", {"source": "shopify", "every_seconds": 2}, tok=OWN)[0], 200)
+    check("schedule listed", [r["source"] for r in call("GET", "/api/v1/sync/schedule", tok=OWN)[1]["data"]], ["shopify"])
+    t0 = time.time()
+    while time.time() - t0 < 15 and finished("shopify") < before + 2: time.sleep(0.3)
+    check("scheduler started 2+ syncs by itself", finished("shopify") >= before + 2, True)
+    # failing runs back off instead of hammering the upstream
+    S["empty"] = True
+    t0 = time.time(); sch = {}
+    while time.time() - t0 < 20:
+        rows = call("GET", "/api/v1/sync/schedule", tok=OWN)[1]["data"]
+        sch = rows[0] if rows else {}
+        if sch.get("consecutive_failures", 0) >= 1: break
+        time.sleep(0.3)
+    check("failures counted", sch.get("consecutive_failures", 0) >= 1, True)
+    check("next attempt pushed out after a failure (backoff)", sch.get("next_due", 0) - int(time.time()) >= 2, True)
+    S["empty"] = False
+    check("remove schedule", call("PUT", "/api/v1/sync/schedule", {"source": "shopify", "every_minutes": None}, tok=OWN)[0], 200)
+    time.sleep(1.5); settled = finished("shopify"); time.sleep(5)
+    check("no syncs after schedule removed", finished("shopify"), settled)
+    check("schedule list empty again", call("GET", "/api/v1/sync/schedule", tok=OWN)[1]["data"], [])
+
     # read-only guarantee: only allowlisted upstream calls were made, no mutations
     allowed = {("POST", "/admin/oauth/access_token"), ("POST", "/admin/api/2026-07/graphql.json"), ("GET", "/v2/locations"), ("GET", "/v2/catalog/list"), ("POST", "/v2/inventory/counts/batch-retrieve")}
     bad = [(m, p) for m, p, b in S["log"] if (m, p) not in allowed]
@@ -250,6 +325,32 @@ try:
     check("secrets not stored in plaintext on disk", (SHOPIFY_SECRET.encode() in raw, SQUARE_TOKEN.encode() in raw), (False, False))
     check("disconnect", call("DELETE", "/api/v1/connections/square", tok=OWN)[0], 200)
     check("sync after disconnect", call("POST", "/api/v1/sync/square", tok=OWN)[0], 409)
+    # request cap and hourly budget (second server with tiny limits)
+    P2 = 8794
+    srv2 = subprocess.Popen([BIN], env=dict(os.environ, RUPERT_DATA=tempfile.mkdtemp(prefix="rupert-cap-"), RUPERT_LISTEN=f"127.0.0.1:{P2}", RUPERT_COOKIE_SECURE="0", RUPERT_BASE_DOMAIN="rupert.test",
+        RUPERT_DEV="1", RUPERT_SCHEDULER="0", RUPERT_MASTER_KEY=key, RUPERT_MAX_REQUESTS_PER_RUN="3", RUPERT_API_BUDGET_PER_HOUR="10",
+        RUPERT_SHOPIFY_BASE=f"http://127.0.0.1:{MOCK}", RUPERT_SQUARE_BASE=f"http://127.0.0.1:{MOCK}/v2"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1)
+    try:
+        s2, a2 = call("POST", "/auth/signup", {"email": "cap@x.test", "password": PW, "org_name": "Cap", "subdomain": "cap"}, port=P2); T2 = a2["session_token"]
+        call("PUT", "/api/v1/connections/shopify", {"shop_domain": "mock-shop.myshopify.com", "client_id": "c", "client_secret": "s"}, tok=T2, port=P2)
+        statuses = []
+        for n in range(6):
+            st, r = call("POST", "/api/v1/sync/shopify", tok=T2, port=P2); statuses.append(st)
+            if st != 202: break
+            t0 = time.time()
+            while time.time() - t0 < 10:
+                runs = call("GET", "/api/v1/sync/runs", tok=T2, port=P2)[1]["data"]
+                if runs and runs[0]["status"] != "running": break
+                time.sleep(0.2)
+        last = call("GET", "/api/v1/sync/runs", tok=T2, port=P2)[1]["data"][0]
+        check("runaway run aborted by the per-run cap", (last["status"], "request cap" in str(last["error"]), last["details"]["api"]["requests"]), ("failed", True, 3))
+        check("hourly budget refuses further syncs (429)", statuses[-1], 429)
+        check("budget reached only after enough requests were spent", len(statuses) >= 4, True)
+        u2 = call("GET", "/api/v1/sync/usage", tok=T2, port=P2)[1]
+        check("usage reflects failed runs too", u2["providers"]["shopify"]["last_hour"] >= 10, True)
+    finally:
+        srv2.terminate(); srv2.wait()
 finally:
     srv.terminate(); srv.wait(); mock.shutdown()
 

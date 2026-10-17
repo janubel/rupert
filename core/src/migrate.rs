@@ -35,6 +35,18 @@ pub const TENANT: &[&str] = &[
     "CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;",
     // 5: Shopify product status (ACTIVE/DRAFT/ARCHIVED); production Rupert mirrors all of them.
     "ALTER TABLE shopify_variants ADD COLUMN product_status TEXT NOT NULL DEFAULT 'ACTIVE';",
+    // 6: per-location stock. Shopify locations + per-(variant, location) available (clamped like Rails),
+    // Square location names. Square per-location counts already live in square_counts.
+    "CREATE TABLE shopify_locations (id TEXT PRIMARY KEY, name TEXT NOT NULL, active INTEGER NOT NULL,
+        is_primary INTEGER NOT NULL DEFAULT 0, synced_run INTEGER NOT NULL) WITHOUT ROWID;
+     CREATE TABLE shopify_levels (variant_id TEXT NOT NULL, location_id TEXT NOT NULL, qty INTEGER NOT NULL,
+        raw_qty INTEGER NOT NULL, synced_run INTEGER NOT NULL, PRIMARY KEY (variant_id, location_id)) WITHOUT ROWID;
+     CREATE INDEX shopify_levels_loc ON shopify_levels(location_id);
+     CREATE TABLE square_locations (id TEXT PRIMARY KEY, name TEXT NOT NULL, synced_run INTEGER NOT NULL) WITHOUT ROWID;",
+    // 7: how hard we lean on each provider's API. 10-minute buckets, per provider and operation.
+    "CREATE TABLE api_usage (bucket INTEGER NOT NULL, provider TEXT NOT NULL, op TEXT NOT NULL,
+        requests INTEGER NOT NULL DEFAULT 0, throttled INTEGER NOT NULL DEFAULT 0, retries INTEGER NOT NULL DEFAULT 0,
+        errors INTEGER NOT NULL DEFAULT 0, wait_ms INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (bucket, provider, op)) WITHOUT ROWID;",
 ];
 
 pub const CENTRAL: &[&str] = &[
@@ -49,9 +61,17 @@ pub const CENTRAL: &[&str] = &[
         PRIMARY KEY (from_tenant, to_tenant, scope)) WITHOUT ROWID;",
 ];
 
+/// Central migration 3: sync schedules (scanned by the scheduler, so they live in the central DB).
+pub const CENTRAL_SCHEDULES: &str = "
+    CREATE TABLE schedules (tenant_id TEXT NOT NULL, source TEXT NOT NULL, every_secs INTEGER NOT NULL,
+        next_due INTEGER NOT NULL, fails INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (tenant_id, source)) WITHOUT ROWID;
+    CREATE INDEX schedules_due ON schedules(next_due);
+";
+
 pub fn central() -> Vec<&'static str> {
     let mut v = CENTRAL.to_vec();
     v.push(CENTRAL_AUTH);
+    v.push(CENTRAL_SCHEDULES);
     v
 }
 

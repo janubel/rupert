@@ -403,3 +403,59 @@ were last refreshed in August and are never removed, so raw Rails counts oversta
 The Rust sync removes variants that disappear from Shopify after a successful run.
 
 Not covered by this run: orders, per-location Shopify levels, scheduled syncs, webhooks.
+
+## Scheduled syncs, per-location levels, API request meter (2026-10-16)
+
+**Scheduled syncs.** `PUT /api/v1/sync/schedule {"source": "shopify|square", "every_minutes": 5..1440 | null}`
+(manager+, scope `sync:run`; `null` removes it), `GET /api/v1/sync/schedule`. Schedules live in the central DB
+and a scheduler task (tick `RUPERT_SCHEDULER_TICK_SECS`, default 15 s; `RUPERT_SCHEDULER=0` disables) starts due
+runs through the same path as the manual trigger, at most 5 per tick so a restart after downtime does not
+stampede the providers. The next attempt is scheduled before the run starts (a crash cannot cause a tight loop),
+with ~5% per-tenant jitter. A failed run backs the next attempt off exponentially up to an hour (the failure count
+is shown in `GET`); a success resets it. "Already running" and "budget used up" skip a tick without counting as
+failures. Tests use a dev-only `every_seconds`.
+
+**Per-location levels.** Shopify locations, per-(variant, location) `available` (clamped at 0) and Square location
+names are mirrored. Rules copied from the Rails mirror: a variant with no level data keeps its total on the primary
+location (first active); levels for unknown locations are skipped. `GET /api/v1/locations?source=` and
+`GET /api/v1/inventory/levels?source=` (same paging contract as the other mirror reads). Changes to existing rows
+emit `mirror.level.changed`; first-time rows are covered by `mirror.variant.added`. Levels are fetched in aliased
+batches of 30 items per request, following per-item level pagination.
+
+**API request meter** (added after the throttle bug below). Every upstream HTTP attempt is counted per provider
+and operation, with retries, throttles, errors and time spent waiting.
+- Each run's `details.api` holds its counts (also for failed runs).
+- Hourly buckets are kept per tenant for 30 days; `GET /api/v1/sync/usage?hours=24` returns totals, per-operation
+  counts and `last_hour` against the budget.
+- **Per-run cap** (`RUPERT_MAX_REQUESTS_PER_RUN`, default 5000): a run that makes more calls aborts with an error,
+  which stops a loop or pagination bug within seconds. A normal full sync needs about `variants / 30 + 10` calls.
+- **Hourly budget** (`RUPERT_API_BUDGET_PER_HOUR`, default 1000 per provider): new syncs (manual or scheduled)
+  are refused with 429 until usage drops. Tested with a second server using tiny limits (cap 3, budget 10).
+
+**Throttle bug found by the live run.** Shopify reports cost throttling as HTTP 200 with a `THROTTLED` GraphQL error,
+which the HTTP-only retry never saw, so a second sync started seconds after the first failed. Now `THROTTLED` is
+retried, requests are paced from the cost state Shopify returns (`throttleStatus.currentlyAvailable`, `restoreRate`),
+and every throttle is counted. Measured against the real store (read-only):
+
+| Pass | Shopify requests | Throttled | Waited |
+| --- | --- | --- | --- |
+| first, after a normal gap | 15 (1 token, 1 locations, 1 products, 12 levels) | 0 | 0 s |
+| second, started seconds later | 22-24 | 7-9 | 8-10 s |
+
+Back-to-back passes still hit the throttle (the real API's throttle response does not report the bucket state, so
+the first requests of a run are blind); runs spaced by the 5-minute scheduler minimum did not. Square needed 12
+requests per pass with no throttling. Not done: carrying the cost estimate across runs.
+
+**Live per-location parity** (read-only, against the production Rails database):
+- Shopify levels: of the 200 Rails level rows refreshed today (all for ACTIVE products), Rust matches 200 of 200
+  with 0 quantity differences. The other 88 Rails rows were last refreshed 25 Aug - 2 Oct and belong to DRAFT/ARCHIVED
+  products; all 21 quantity mismatches are among them, and Rust (354 rows, refreshing all 351 variants) holds the
+  current values. So Rails' per-location levels for non-active products are stale, not Rust's.
+- Shopify locations: HHPA (primary) and www.herbalhealerscbd.com, as in Rails. Rails also lists a `ctrax` location
+  that comes from a different integration.
+- Square: 3 locations, names equal. All 2,223 current count rows match Rails with 0 differences. Rails keeps 8
+  extra rows from 17 Aug for variations no longer in the catalog (7 zero rows, one 1-unit row).
+
+Tests: `tests/sync_smoke.py` is now 89 checks (levels and locations, level-change events, clamping, fallback to the
+primary location, scheduler start/stop and backoff, THROTTLED retry using the refill rate, request counts, usage
+endpoint, per-run cap and hourly budget); 89/89 on repeated clean runs, plus 41 auth checks and 5 unit tests.

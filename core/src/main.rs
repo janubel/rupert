@@ -117,6 +117,7 @@ async fn run() {
     let dir = PathBuf::from(std::env::var("RUPERT_DATA").unwrap_or_else(|_| "./data".into()));
     let max_open: u64 = std::env::var("RUPERT_MAX_OPEN").ok().and_then(|v| v.parse().ok()).unwrap_or(64);
     let app: App = Arc::new(Registry::new(dir, max_open).expect("open central db"));
+    if std::env::var("RUPERT_SCHEDULER").as_deref() != Ok("0") { tokio::spawn(sync::scheduler(app.clone())); }
     let r = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route("/api/v1/item", get(get_item).post(put_item))
@@ -130,6 +131,10 @@ async fn run() {
         .route("/api/v1/connections", get(sync::list_connections))
         .route("/api/v1/connections/{provider}", put(sync::put_connection).delete(sync::delete_connection))
         .route("/api/v1/sync/runs", get(sync::runs))
+        .route("/api/v1/sync/usage", get(sync::usage))
+        .route("/api/v1/sync/schedule", get(sync::get_schedule).put(sync::put_schedule))
+        .route("/api/v1/locations", get(sync::locations))
+        .route("/api/v1/inventory/levels", get(sync::levels))
         .route("/api/v1/sync/{source}", post(sync::trigger))
         .merge(auth::routes())
         .with_state(app);
