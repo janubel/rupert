@@ -4,7 +4,7 @@ require 'csv'
 module People
   class TimesheetsController < AuthenticatedController
     before_action :prevent_caching
-    before_action :set_timesheet, except: %i[index new create]
+    before_action :set_timesheet, except: %i[index new create bulk_approve]
     rescue_from TimesheetWorkflow::Error, ActiveRecord::RecordInvalid, AASM::InvalidTransition, with: :workflow_error
 
     def index
@@ -13,22 +13,36 @@ module People
       @status = params[:status].presence || (@reviewer ? 'submitted' : 'all')
       @status = 'all' unless (People::Timesheet.aasm.states.map { |state| state.name.to_s } + ['all']).include?(@status)
       @period = params[:period].presence
-      @view = %w[calendar unified list].include?(params[:view]) ? params[:view] : 'calendar'
+      @query = params[:q].to_s.strip.first(80).presence
+      @view = %w[calendar unified list].include?(params[:view]) ? params[:view] : 'list'
       @all_employees_for_punches = Current.user.can_review_timesheets? || (Current.user.can_manage_accounts? && Current.user.can?('timesheets.read'))
       visible = People::TimesheetPolicy.visible_to(Current.user)
       @has_demo_timesheets = visible.demo_records.exists?
       @awaiting = visible.awaiting_review.count
-      scope = visible.by_status(@status)
+      scoped = visible
       if @period
         day = Date.iso8601(@period)
-        scope = scope.where('period_start <= ? AND period_end >= ?', day.end_of_week, day.beginning_of_week)
+        @week_start = day.beginning_of_week
+        scoped = scoped.where('period_start <= ? AND period_end >= ?', day.end_of_week, day.beginning_of_week)
       end
+      scoped = scoped.joins(:employee).merge(search_employees(@query)) if @query
+      @status_counts = scoped.group(:status).count
+      scope = scoped.by_status(@status)
       if request.format.csv?
         return send_data TimesheetCsv.generate(scope), filename: 'timesheets.csv', type: 'text/csv'
       end
       @square_history = SquareTimecard.visible_to(Current.user)
       @ctrax_history = CtraxLaborShift.visible_to(Current.user)
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)
+      @summaries = TimesheetInsights.summaries(@timesheets.to_a)
+      # The week schedule leads the page for anyone who can review time, with an employee key to switch people on and off.
+      @calendar_view = @reviewer && Current.user.can?('timesheets.read')
+      if @calendar_view
+        @week_start ||= Date.current.beginning_of_week
+        @calendar = TimesheetCalendar.new(@week_start, user: Current.user)
+      end
+      @missing = TimesheetInsights.missing_for_week(@week_start || Date.current) if @reviewer && Current.user.can?('timesheets.write') && !@query
+      @view_hours = People::TimesheetEntry.where(timesheet_id: scope.reorder(nil).select(:id)).sum(:hours)
       load_admin_overview(visible) if @reviewer
       # Calendar view: bucket timesheets (and punches) by every day they cover.
       if @view == 'calendar'
@@ -65,9 +79,41 @@ module People
       redirect_to people_timesheets_path, alert: 'Choose a valid period date.'
     end
 
+    # Approve several submitted sheets in one step. Each goes through the same
+    # per-sheet policy and workflow checks as a single approval; failures are
+    # reported by employee and never block the others.
+    def bulk_approve
+      authorize(People::Timesheet, :index?)
+      ids = Array(params[:timesheet_ids]).map(&:to_i).first(100)
+      raise TimesheetWorkflow::Error, 'Select at least one timesheet to approve.' if ids.empty?
+
+      approved = 0
+      failures = []
+      People::TimesheetPolicy.visible_to(Current.user).where(id: ids).includes(:employee).each do |sheet|
+        unless People::TimesheetPolicy.new(Current.user, sheet).approve? && sheet.submitted?
+          failures << "#{sheet.employee&.name}: not available for your approval"
+          next
+        end
+        workflow.change(sheet, :approve, review_note: params[:review_note])
+        approved += 1
+      rescue TimesheetWorkflow::Error, ActiveRecord::RecordInvalid, AASM::InvalidTransition => e
+        failures << "#{sheet.employee&.name}: #{e.is_a?(ActiveRecord::RecordInvalid) ? e.record.errors.full_messages.to_sentence : e.message}"
+      end
+      flash[:notice] = "#{approved} timesheet#{approved == 1 ? '' : 's'} approved." if approved.positive?
+      flash[:alert] = "Not approved — #{failures.to_sentence}" if failures.any?
+      redirect_to people_timesheets_path(status: params[:return_status].presence, period: params[:return_period].presence,
+        q: params[:return_q].presence, view: 'list')
+    end
+
     def show
       authorize(@timesheet)
       @entry = People::TimesheetEntry.new(timesheet: @timesheet, worked_on: [Date.current, @timesheet.period_end].min)
+      @summary = TimesheetInsights.summaries([@timesheet]).fetch(@timesheet.id)
+      visible = People::TimesheetPolicy.visible_to(Current.user)
+      mine = visible.where(employee_id: @timesheet.employee_id)
+      @previous_sheet = mine.where('period_start < ?', @timesheet.period_start).order(period_start: :desc).first
+      @next_sheet = mine.where('period_start > ?', @timesheet.period_start).order(:period_start).first
+      @next_awaiting = visible.awaiting_review.where.not(id: @timesheet.id).order(:submitted_at, :id).first
       respond_to do |format|
         format.html
         format.csv do
@@ -114,7 +160,15 @@ module People
     %i[submit approve reject reopen import_shifts].each do |event|
       define_method(event) do
         workflow.change(@timesheet, event, review_note: params[:review_note])
-        redirect_to people_timesheet_path(@timesheet), notice: "Timesheet #{event.to_s.tr('_', ' ')} completed."
+        following = if params[:continue].present? && event == :approve
+          People::TimesheetPolicy.visible_to(Current.user).awaiting_review.where.not(id: @timesheet.id).order(:submitted_at, :id).first
+        end
+        notice = "Timesheet #{event.to_s.tr('_', ' ')} completed."
+        if following
+          redirect_to people_timesheet_path(following), notice: "#{notice} Here is the next one awaiting review."
+        else
+          redirect_to people_timesheet_path(@timesheet), notice: notice
+        end
       end
     end
 
@@ -130,6 +184,11 @@ module People
 
     def prevent_caching
       response.headers['Cache-Control'] = 'no-store'
+    end
+
+    def search_employees(term)
+      like = "%#{ActiveRecord::Base.sanitize_sql_like(term.downcase)}%"
+      People::Employee.where("LOWER(employees.first_name || ' ' || employees.last_name) LIKE ?", like)
     end
 
     def workflow

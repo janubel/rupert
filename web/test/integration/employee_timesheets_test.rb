@@ -33,7 +33,7 @@ class EmployeeTimesheetsTest < ActionDispatch::IntegrationTest
 
   test 'employee browser shows only own timesheets and forces ownership on create' do
     sign_in
-    get people_timesheets_path
+    get people_timesheets_path(view: 'list')
     assert_response :success
     assert_select 'td', /Alex Worker/
     assert_select 'td', text: /Other Worker/, count: 0
