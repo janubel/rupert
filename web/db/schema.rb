@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -2351,6 +2351,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_200000) do
     t.index ["token"], name: "index_warehouse_carts_on_token", unique: true
   end
 
+  create_table "warehouse_payment_attempts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "warehouse_cart_id", null: false
+    t.string "status", default: "submitting", null: false
+    t.string "invoice_number", null: false
+    t.string "nonce_digest", null: false
+    t.string "gateway_fingerprint", null: false
+    t.integer "amount_cents", null: false
+    t.text "shipping_json", null: false
+    t.string "transaction_id"
+    t.datetime "submitted_at", null: false
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_number"], name: "index_warehouse_payment_attempts_on_invoice_number", unique: true
+    t.index ["nonce_digest"], name: "index_warehouse_payment_attempts_on_nonce_digest", unique: true
+    t.index ["tenant_id", "warehouse_cart_id"], name: "idx_warehouse_attempts_tenant_cart"
+    t.index ["warehouse_cart_id"], name: "idx_warehouse_attempts_one_unresolved", unique: true, where: "((status)::text = ANY ((ARRAY['submitting'::character varying, 'unknown'::character varying, 'approved'::character varying])::text[]))"
+    t.index ["warehouse_cart_id"], name: "index_warehouse_payment_attempts_on_warehouse_cart_id"
+  end
+
   create_table "workspace_signup_events", force: :cascade do |t|
     t.bigint "workspace_signup_id", null: false
     t.bigint "actor_id"
@@ -2634,4 +2655,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_200000) do
   add_foreign_key "marketing_product_gifts", "tenants"
   add_foreign_key "authorize_net_portal_observations", "authorize_net_portal_exports", on_delete: :cascade
   add_foreign_key "authorize_net_portal_observations", "tenants"
+  add_foreign_key "warehouse_payment_attempts", "warehouse_carts"
 end

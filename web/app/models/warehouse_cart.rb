@@ -5,6 +5,7 @@
 # survives reloads without any login. Prices are always computed server-side
 # (never trusted from the browser) via WarehouseShare#sale_price.
 class WarehouseCart < ApplicationRecord
+  class PaymentLocked < StandardError; end
   STATUSES = %w[open checked_out].freeze
 
   belongs_to :share, class_name: 'WarehouseShare', foreign_key: :share_id
@@ -12,6 +13,7 @@ class WarehouseCart < ApplicationRecord
     class_name: 'WarehouseCartItem',
     foreign_key: :cart_id,
     dependent: :destroy
+  has_many :warehouse_payment_attempts, dependent: :restrict_with_exception
 
   validates :token, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
@@ -21,29 +23,50 @@ class WarehouseCart < ApplicationRecord
   end
 
   def add_item!(variant, quantity: 1)
-    quantity = quantity.to_i.clamp(1, WarehouseCartItem::MAX_QUANTITY)
-    item = items.find_or_initialize_by(variant_id: variant.id)
-    item.tenant_id = tenant_id
-    item.share_id = share_id
-    item.sku = variant.sku
-    item.title = [variant.product&.title, variant.title].compact.join(' · ')
-    item.quantity = (item.quantity.to_i + quantity).clamp(1, WarehouseCartItem::MAX_QUANTITY)
-    item.assign_price!(share, variant)
-    item.save!
-    item
+    with_lock do
+      ensure_editable!
+      quantity = quantity.to_i.clamp(1, WarehouseCartItem::MAX_QUANTITY)
+      item = items.find_or_initialize_by(variant_id: variant.id)
+      item.tenant_id = tenant_id
+      item.share_id = share_id
+      item.sku = variant.sku
+      item.title = [variant.product&.title, variant.title].compact.join(' · ')
+      item.quantity = (item.quantity.to_i + quantity).clamp(1, WarehouseCartItem::MAX_QUANTITY)
+      item.assign_price!(share, variant)
+      item.save!
+      item
+    end
   end
 
   # Update (or remove when <= 0) an existing line, keeping prices in sync with
   # the current quantity.
   def set_quantity!(item_id, quantity)
-    item = items.find(item_id)
-    if quantity.to_i <= 0
-      item.destroy!
-    else
-      item.quantity = quantity.to_i.clamp(1, WarehouseCartItem::MAX_QUANTITY)
-      item.assign_price!(share, item.variant)
-      item.save!
+    with_lock do
+      ensure_editable!
+      item = items.find(item_id)
+      if quantity.to_i <= 0
+        item.destroy!
+      else
+        item.quantity = quantity.to_i.clamp(1, WarehouseCartItem::MAX_QUANTITY)
+        item.assign_price!(share, item.variant)
+        item.save!
+      end
     end
+  end
+
+  def remove_item!(item_id)
+    with_lock do
+      ensure_editable!
+      items.find(item_id).destroy!
+    end
+  end
+
+  def payment_locked?
+    checked_out? || warehouse_payment_attempts.unresolved.exists?
+  end
+
+  def ensure_editable!
+    raise PaymentLocked, 'This cart has a submitted payment. Check its payment status before changing it.' if payment_locked?
   end
 
   def total_cents

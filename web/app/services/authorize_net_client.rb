@@ -52,11 +52,26 @@ class AuthorizeNetClient
       ACCEPT_JS_URLS[sandbox? ? :sandbox : :production]
     end
 
+    # Capture the destination once before a durable payment attempt is made.
+    # Never persist or log this hash; attempts retain only its SHA-256 digest.
+    def credential_snapshot
+      connection = saved_connection
+      if connection
+        credentials = connection.credential_values
+        { sandbox: connection.environment == 'sandbox', login_id: credentials['api_login_id'].to_s,
+          transaction_key: credentials['transaction_key'].to_s }
+      else
+        { sandbox: EnvStore.fetch('AUTHORIZE_NET_SANDBOX', '0') == '1', login_id: EnvStore.fetch('AUTHORIZE_NET_LOGIN_ID', ''),
+          transaction_key: EnvStore.fetch('AUTHORIZE_NET_TRANSACTION_KEY', '') }
+      end
+    end
+
     # Charge a tokenized (Accept.js) payment. amount_cents is the total in the
     # merchant's minor currency (USD cents).
     def charge!(amount_cents:, payment_nonce:, data_descriptor: 'COMMON.ACCEPT.INAPP.PAYMENT',
-                ref_id: nil, invoice_number: nil, description: nil)
-      raise Error, 'Authorize.net is not configured' unless configured?
+                ref_id: nil, invoice_number: nil, description: nil, credential_snapshot: nil)
+      credentials = credential_snapshot || self.credential_snapshot
+      raise Error, 'Authorize.net is not configured' unless credentials[:login_id].present? && credentials[:transaction_key].present?
 
       data_descriptor = DATA_DESCRIPTORS.first unless DATA_DESCRIPTORS.include?(data_descriptor)
       transaction = {
@@ -73,13 +88,13 @@ class AuthorizeNetClient
 
       payload = {
         createTransactionRequest: {
-          merchantAuthentication: authentication,
+          merchantAuthentication: { name: credentials[:login_id], transactionKey: credentials[:transaction_key] },
           refId: ref_id,
           transactionRequest: transaction
         }
       }
 
-      parse(post(payload))
+      parse(post(payload, sandbox: credentials[:sandbox]))
     end
 
     # Cancel a charge that has not settled yet. Voids need only the original
@@ -104,9 +119,9 @@ class AuthorizeNetClient
     def transaction_details(transaction_id)
       raise Error, 'Authorize.net is not configured' unless configured?
 
-      doc = JSON.parse(post(getTransactionDetailsRequest: {
+      doc = JSON.parse(post({ getTransactionDetailsRequest: {
         merchantAuthentication: authentication, transId: transaction_id.to_s
-      }).b.delete_prefix("\xEF\xBB\xBF".b).force_encoding(Encoding::UTF_8))
+      } }).b.delete_prefix("\xEF\xBB\xBF".b).force_encoding(Encoding::UTF_8))
       raise Error, doc.dig('messages', 'message', 0, 'text').to_s if doc.dig('messages', 'resultCode') == 'Error'
 
       transaction = doc['transaction'] || {}
@@ -148,13 +163,14 @@ class AuthorizeNetClient
       raise Error, 'Transaction id is required' if transaction_id.blank?
 
       request = { transactionType: type }.merge(extra).merge(refTransId: transaction_id.to_s)
-      parse(post(createTransactionRequest: {
+      parse(post({ createTransactionRequest: {
         merchantAuthentication: authentication, refId: ref_id, transactionRequest: request
-      }))
+      } }))
     end
 
-    def post(payload)
-      uri = URI(ENDPOINTS[sandbox? ? :sandbox : :production])
+    def post(payload, sandbox: nil)
+      environment = sandbox.nil? ? sandbox? : sandbox
+      uri = URI(ENDPOINTS[environment ? :sandbox : :production])
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = uri.scheme == 'https'
       http.open_timeout = 10

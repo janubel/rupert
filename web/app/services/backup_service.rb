@@ -114,26 +114,11 @@ class BackupService
       verify_post_restore!
     end
 
-    def sqlite_restore!(source_path)
-      original = database_path
-      staging = "#{original}.restore-#{Process.pid}"
-      rollback = "#{original}.pre-restore"
-      FileUtils.cp(original, rollback)
-      FileUtils.cp(source_path, staging)
-      begin
-        ActiveRecord::Base.connection_pool.disconnect!
-        FileUtils.cp(staging, original)
-        ActiveRecord::Base.establish_connection
-        verify_post_restore!
-      rescue StandardError
-        ActiveRecord::Base.connection_pool.disconnect!
-        FileUtils.cp(rollback, original)
-        ActiveRecord::Base.establish_connection
-        raise
-      ensure
-        FileUtils.rm_f(staging)
-        FileUtils.rm_f(rollback)
-      end
+    def sqlite_restore!(_source_path)
+      # A web request cannot quiesce other Puma/job processes or safely replace
+      # their open WAL database. Never offer a file-copy rollback as recovery.
+      # Keep downloads available; restoration belongs to offline host maintenance.
+      raise RestoreError, 'SQLite restore requires offline maintenance with web and jobs stopped and a verified consistent recovery backup. No database files were changed.'
     end
 
     def pg_restore_list_ok?(source_path)

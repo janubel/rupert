@@ -112,7 +112,7 @@ module Finance
       # Void the posted entry for a source record (used when an expense changes
       # or is removed). Returns the voided entry, or nil when none was posted.
       def void_source(source_type, source_id)
-        entry = JournalEntry.for_source(source_type, source_id).first
+        entry = JournalEntry.for_source(source_type, source_id).posted.lock.first
         entry&.void!
         entry
       end
@@ -161,7 +161,13 @@ module Finance
         tax = order.tax_cents.to_i
         return 0 if gross <= 0 || tax <= 0
 
-        (payment.amount_cents.to_i * tax) / gross
+        # Gross excludes tips; payment receipts include them. Allocate against
+        # the complete amount payable, so tips cannot inflate collected tax.
+        total = gross + order.tip_cents.to_i
+        previous = order.payments.completed.where('id < ?', payment.id).sum(:amount_cents)
+        before = [(previous * tax) / total, tax].min
+        after = [((previous + payment.amount_cents.to_i) * tax) / total, tax].min
+        after - before
       end
     end
   end

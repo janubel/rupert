@@ -9,6 +9,16 @@
     <% end %>
   </header>
 
+  <% if @payment_attempt %>
+    <div class="card card-pad space-y-3">
+      <% if @payment_attempt.status == 'approved' %>
+        <p>Your payment was approved. Finish saving your order without submitting another card payment.</p>
+        <%= button_to 'Finish approved order', warehouse_checkout_submit_path(@share.token), method: :post, class: 'btn-primary', data: { turbo: false } %>
+      <% else %>
+        <p>Payment status needs review. Do not submit another payment. Contact the store with reference <%= @payment_attempt.invoice_number %>.</p>
+      <% end %>
+    </div>
+  <% else %>
   <%= form_tag warehouse_checkout_submit_path(@share.token), method: :post,
         data: { turbo: false, controller: "accept-payment#{' apple-pay' if @apple_pay}#{' google-pay' if @google_pay}",
                 accept_payment_login_id_value: @login_id,
@@ -115,5 +125,6 @@
         </div>
       </div>
     </div>
+  <% end %>
   <% end %>
 </section>

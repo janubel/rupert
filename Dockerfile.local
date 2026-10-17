@@ -1,0 +1,18 @@
+# Local Orchard/Apple-container instance. Uses a separate database and dummy
+# boot credentials; production data and merchant credentials are never copied.
+FROM ruby:4.0.6-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev libsqlite3-dev git ca-certificates curl && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY web/Gemfile web/Gemfile.lock ./
+RUN bundle install --jobs 4 --retry 3
+COPY web ./
+ARG RUPERT_BUILD_SHA
+RUN ruby -rjson -e 'sha = ENV.fetch("RUPERT_BUILD_SHA"); abort "Full revision required" unless sha.match?(/\A[0-9a-f]{40}\z/); File.write("config/build.json", JSON.generate(revision: sha))'
+ENV RAILS_ENV=development RUPERT_DB_ADAPTER=sqlite3 RUPERT_SQLITE_DATABASE_DEVELOPMENT=/data/rupert.sqlite3 \
+    SHOPIFY_API_KEY=local-placeholder SHOPIFY_API_SECRET=local-placeholder HOST=localhost \
+    RAILS_LOG_TO_STDOUT=1
+RUN bin/rails tailwindcss:build && useradd --create-home --uid 1000 app && mkdir /data && chown -R app:app /app /data
+USER app
+EXPOSE 3000
+CMD ["bin/rails", "server", "-b", "0.0.0.0"]
