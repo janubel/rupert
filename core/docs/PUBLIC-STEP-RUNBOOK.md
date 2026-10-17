@@ -34,10 +34,27 @@ In the Google Cloud console, on the OAuth client you created: authorised redirec
 `https://rrupert.stoverparc.org/oauth2/callback` (exactly, https, no trailing slash). The client secret never goes
 through chat: you place it on the box in step 3.
 
-## 3. Google sign-in proxy inside `rupert-core` (me, plus owner for the secret and the email list)
+## 3. Google sign-in proxy inside `rupert-core`
 
-Same pattern as `energy.stoverparc.org` (oauth2-proxy v7.15.4). I copy the same binary container-to-container
-(no download), create the files below, and you add the two values only you have.
+**Status (2026-10-17): installed and inert.** The same oauth2-proxy v7.15.4 binary as the energy site was copied
+container-to-container (checksum matched, no download); the `oauth2-proxy` system user, `/var/lib/rrupert-auth` (0700)
+with a generated cookie secret, the config, the unit file and the helper `rrupert-auth` are in place. The service is
+**disabled and stopped**, and `rrupert-auth enable` refuses to start it until the three values below exist. The setup was
+tested with dummy values on a throwaway transient unit: `/ping` 200, an unauthenticated visit is redirected to Google with
+the redirect URI `https://rrupert.stoverparc.org/oauth2/callback`, PKCE S256, scopes `openid email profile` and a
+`__Host-rrupert_csrf` Secure cookie. Source files: `core/deploy/rrupert-oauth2-proxy.cfg`, `.service`, `rrupert-auth`.
+
+**To finish (owner; the secret never goes through chat), run on SER8:**
+```
+incus exec rupert-core -- rrupert-auth set-client-id <your-id>.apps.googleusercontent.com
+incus exec rupert-core -- sh -c 'umask 077; cat > /var/lib/rrupert-auth/google-client-secret'     # paste the secret, Enter, Ctrl-D
+incus exec rupert-core -- sh -c 'echo you@example.com >> /etc/rrupert-oauth2-emails.txt'          # one line per allowed Google account
+incus exec rupert-core -- rrupert-auth status      # all four lines must say OK
+incus exec rupert-core -- rrupert-auth enable      # starts the proxy and checks /ping
+```
+(The secret file already exists, owned by `oauth2-proxy`, mode 600; `cat >` keeps that.)
+
+What was installed, for reference:
 
 `/etc/rrupert-oauth2-proxy.cfg` (no secrets in it except the client id, which is not secret):
 ```
@@ -61,11 +78,9 @@ cookie_expire = "24h"
 pass_user_headers = true
 whitelist_domains = ["rrupert.stoverparc.org"]
 ```
-- `/etc/rrupert-oauth2-emails.txt`: one allowed Google email per line (**owner**: yours, and any buddy you want in).
+- `/etc/rrupert-oauth2-emails.txt`: one allowed Google email per line (yours, and any buddy you want in).
   Unlike the energy site there is no `email_domains` line, so only listed people get in.
-- `/var/lib/rrupert-auth/cookie-secret` (me: 32 random bytes), `/var/lib/rrupert-auth/google-client-secret`
-  (**owner**, 0600, owned by `oauth2-proxy`):
-  `incus exec rupert-core -- sh -c 'umask 077; cat > /var/lib/rrupert-auth/google-client-secret'` then paste, Enter, Ctrl-D.
+- `/var/lib/rrupert-auth/cookie-secret` (generated, 32 random bytes) and `/var/lib/rrupert-auth/google-client-secret`.
 - `/etc/systemd/system/rrupert-oauth2-proxy.service` (copy of the energy unit with this name, config and paths):
 ```
 [Unit]
