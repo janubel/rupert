@@ -144,7 +144,7 @@ class MoneyReconciliationReport
         @warnings << 'Square recorded sales include missing amounts; no sales total is inferred for that location and currency.'
         next
       end
-      account = Location.find_by(id: location_id)&.name || 'Unassigned location'
+      account = square_location_label(location_id)
       add('Square', account, currency, 'Recorded sales', BigDecimal(scoped.sum(:gross_cents).to_s) / 100, count,
         'Sale date; recorded order total including tax; compare payments separately')
     end
@@ -155,11 +155,19 @@ class MoneyReconciliationReport
         @warnings << 'Square recorded refunds include missing amounts; no refund total is inferred for that location and currency.'
         next
       end
-      account = Location.find_by(id: location_id)&.name || 'Unassigned location'
+      account = square_location_label(location_id)
       add('Square', account, currency, 'Recorded refunds', BigDecimal(scoped.sum(:amount_cents).to_s) / 100, count,
         'Refund date; local recorded evidence')
     end
     @warnings << 'No Square sales are stored for this period; confirm source coverage before treating that as zero activity.' unless orders.exists?
+  end
+
+  def square_location_label(location_id)
+    return 'Unassigned location' if location_id.blank?
+
+    locations = Location.where(source: 'square')
+    location = locations.find_by(externalId: location_id) || locations.find_by(id: location_id)
+    location ? "#{location.name} (#{location.externalId})" : "Location #{location_id}"
   end
 
   def ctrax

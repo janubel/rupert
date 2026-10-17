@@ -108,6 +108,24 @@ class MoneyReconciliationReportTest < ActiveSupport::TestCase
     assert report.payload['source_coverage'].all? { |item| item['stored_records'].zero? }
   end
 
+  test 'Square locations resolve native identities and preserve unknown historical locations' do
+    Location.create!(id: 'local-location', source: 'square', externalId: 'native-square-location', name: 'Front counter', active: true, syncedAt: Time.current)
+    native = order('native-location-order', '2026-10-15T15:00:00Z', 1000)
+    native.update!(source: 'square', location_id: 'native-square-location')
+    internal = order('internal-location-order', '2026-10-15T15:00:00Z', 500)
+    internal.update!(source: 'square', location_id: 'local-location')
+    historical = order('historical-location-order', '2026-10-15T15:00:00Z', 200)
+    historical.update!(source: 'square', location_id: 'archived-native-id')
+    rows = report.payload['rows'].select { |row| row['source'] == 'Square' }
+    assert_equal 2, rows.count { |row| row['account'] == 'Front counter (native-square-location)' }
+    assert rows.any? { |row| row['account'] == 'Location archived-native-id' }
+    tenant = Current.tenant
+    Current.tenant = Tenant.create!(name: 'Other location', subdomain: 'other-native-location')
+    Location.create!(source: 'square', externalId: 'archived-native-id', name: 'Private foreign location', active: true, syncedAt: Time.current)
+    Current.tenant = tenant
+    refute report.payload['rows'].any? { |row| row['account'].include?('Private foreign location') }
+  end
+
   test 'API observations override duplicate portal IDs with exact decimal currency amounts' do
     row = { 'transaction_id' => '1', 'status' => 'Settled Successfully', 'transaction_type' => 'Authorization w/ Auto Capture',
       'settled_at' => '2026-10-15T15:00:00Z', 'submitted_at' => '2026-10-14T15:00:00Z', 'currency' => 'USD', 'settlement_cents' => 100 }
