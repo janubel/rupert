@@ -223,6 +223,72 @@ class PointOfSaleTest < ActionDispatch::IntegrationTest
     assert_equal counts, [Core::Order.count, Core::Payment.count]
   end
 
+  test 'barcode and SKU lookup resolves scannable items without creating records' do
+    @variant.update!(barcode: '012345678905')
+    assert_no_difference ['Core::Order.count', 'Core::Payment.count', 'PosCheckout.count'] do
+      post lookup_point_of_sale_path, params: { q: '012345678905' }, as: :json
+    end
+    assert_response :success
+    result = response.parsed_body
+    assert_equal 1, result['matches'].size
+    match = result['matches'].first
+    assert_equal @variant.id, match['variant_id']
+    assert_equal 'POS-TEA', match['sku']
+    assert_equal '012345678905', match['barcode']
+    assert_equal '12.35', match['unit_price']
+    assert_equal true, match['available']
+    assert_match(%r{https://cdn.example.com/tea.jpg}, match['thumbnail_url'])
+  end
+
+  test 'lookup lists ambiguous matches instead of guessing and finds partial terms' do
+    ShopifyVariant.create!(productId: @product.id, title: 'Tin refill', sku: 'POS-TEA', price: 9)
+    post lookup_point_of_sale_path, params: { q: 'POS-TEA' }, as: :json
+    assert_response :success
+    assert_equal 2, response.parsed_body['matches'].size
+    post lookup_point_of_sale_path, params: { q: 'TEA' }, as: :json
+    assert_response :success
+    assert_equal 2, response.parsed_body['matches'].size
+  end
+
+  test 'lookup reports no match and a missing price without adding anything' do
+    post lookup_point_of_sale_path, params: { q: 'NOSUCHCODE' }, as: :json
+    assert_response :success
+    assert_equal [], response.parsed_body['matches']
+    @variant.update!(price: nil)
+    post lookup_point_of_sale_path, params: { q: 'POS-TEA' }, as: :json
+    assert_response :success
+    match = response.parsed_body['matches'].first
+    assert_nil match['unit_price']
+    assert_equal false, match['available']
+  end
+
+  test 'lookup rejects blank queries and stays tenant scoped and permission gated' do
+    post lookup_point_of_sale_path, params: { q: '   ' }, as: :json
+    assert_response :unprocessable_entity
+    other = Tenant.create!(name: 'Other lookup store', subdomain: 'other-pos-lookup')
+    foreign_product = ShopifyProduct.create!(id: 'lookup-foreign-product', title: 'Private lookup', tenant_id: other.id)
+    ShopifyVariant.create!(productId: foreign_product.id, title: 'Secret', sku: 'SECRET-LOOKUP',
+      barcode: '999999999999', price: 1, tenant_id: other.id)
+    post lookup_point_of_sale_path, params: { q: '999999999999' }, as: :json
+    assert_response :success
+    assert_equal [], response.parsed_body['matches']
+    @user.update_permission_overrides!(%w[sales.read sales.write])
+    post lookup_point_of_sale_path, params: { q: 'POS-TEA' }, as: :json
+    assert_response :forbidden
+  end
+
+  test 'preview page offers scannable quick add catalog readiness and quote handoff' do
+    get point_of_sale_path
+    assert_response :success
+    assert_select 'form[data-action="submit->pos-cart#lookup"] input#pos_barcode'
+    assert_select 'input#pos_search[data-pos-cart-target=searchInput]'
+    assert_select 'section[aria-label="Catalog readiness"]'
+    assert_select 'button[data-action="pos-cart#tipPreset"][data-tip-type-value=percentage][data-tip-preset-value="15"]'
+    assert_select 'button[data-action="pos-cart#copyQuote"]'
+    assert_select 'button[data-action="pos-cart#printQuote"]'
+    assert_select '[data-pos-cart-lookup-url-value=?]', lookup_point_of_sale_path
+  end
+
   private
 
   def post_quote(variant_id, quantity: '1')
