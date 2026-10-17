@@ -89,8 +89,8 @@ module Finance
           movement, index = candidate
           claimed << index
           result[line.id] = Suggestion.new(line: line, entry: movement[:entry],
-                                           amount_cents: line.amount_cents,
-                                           days_apart: (movement[:date] - line.posted_on).abs)
+            amount_cents: line.amount_cents,
+            days_apart: (movement[:date] - line.posted_on).abs)
         end
         result
       end
