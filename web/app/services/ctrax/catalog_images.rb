@@ -29,7 +29,7 @@ module Ctrax
 
     def url(record)
       product = product_for(record)
-      return unless product
+      return unless product && product.featuredImageUrl.present?
 
       uri = URI.parse(product.featuredImageUrl)
       return unless uri.scheme == 'https' && uri.userinfo.nil? && uri.port == 443 &&

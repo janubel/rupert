@@ -43,8 +43,8 @@ class CtraxPosController < PointOfSaleController
     @query = params[:q].to_s.strip.first(200)
     @category = params[:category].to_s.first(500)
     records = @snapshot&.records || []
+    records = records.select { |row| row['listed'] != false && @images.url(row).present? }
     @categories = records.map { |row| row['category'].presence || 'Uncategorized' }.uniq.sort
-    records = records.select { |row| row['listed'] != false }
     records = records.select { |row| (row['category'].presence || 'Uncategorized') == @category } if @category.present?
     records = records.select { |row| [row['name'], row['product_name'], row['sku'], row['barcode']].any? { |v| v.to_s.downcase.include?(@query.downcase) } } if @query.present?
     @total = records.size

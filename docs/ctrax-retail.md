@@ -32,6 +32,8 @@ The code and gateway fixtures are implemented, but card activation and a real pa
 
 ## Product images
 
+C-Trax retail is the single POS screen; the retired Shopify preview redirects there. Only listed variants with a usable website image appear in the product catalog, categories and search. Filtering happens before pagination. Adding or linking a website image makes the product visible on the next catalog load. Source stock remains the C-Trax snapshot.
+
 Images come from Rupert's existing read-only Shopify mirror of the main website (Herbal Healers uses herbalhealerscbd.com). Image association order is an explicit local mapping, native website product ID, unique exact SKU, then unique normalized parent title. Ambiguous and near-name matches are left unlinked. **Website image link** lets an inventory writer choose a mirrored website product. This changes only Rupert's image association; it never changes a source SKU, price or stock. Only HTTPS images from the Shopify CDN or the selected business website are displayed. There is no storefront crawl on each POS request.
 
 ## Daily source import

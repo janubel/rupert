@@ -44,7 +44,7 @@
           <div class="sm:col-span-2"><%= label_tag :q, 'Find a product', class: 'mb-1 block text-sm font-semibold' %><div class="flex gap-2"><%= search_field_tag :q, @query, placeholder: 'Name, SKU or barcode', class: 'input min-w-0 flex-1', aria: { label: 'Search C-Trax products' } %><%= submit_tag 'Search', class: 'btn-primary' %></div></div>
           <% if @query.present? || @category.present? %><%= link_to 'Clear filters', ctrax_pos_path(location_id: @snapshot.location_id, display_id: @display&.id), class: 'text-sm font-semibold text-olive-deep underline' %><% end %>
         <% end %>
-        <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="font-display text-xl">Products</h2><p class="text-sm text-mocha"><%= @total %> results · page <%= @page %></p></div>
+        <div class="flex flex-wrap items-baseline justify-between gap-2"><div><h2 class="font-display text-xl">Products</h2><p class="text-xs text-mocha">Only products with website images are shown.</p></div><p class="text-sm text-mocha"><%= @total %> results · page <%= @page %></p></div>
         <% if @records.empty? %><div class="card card-pad"><h3 class="font-semibold">No products match these filters</h3><p class="mt-2 text-sm text-mocha">Try a different name, SKU, barcode, or category.</p></div><% end %>
         <div class="retail-product-grid">
           <% @records.each do |record| %>
