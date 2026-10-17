@@ -4,7 +4,7 @@
 # messages, credentials, account IDs, queue arguments or hostnames enter HTML.
 class SourceHealth
   CHANNELS = {
-    'ctrax' => [['stock', 'Stock', 60.minutes], ['sales', 'Daily sales', 60.minutes]],
+    'ctrax' => [['stock', 'Stock', 60.minutes], ['sales', 'Daily sales', 60.minutes], ['timecards', 'Employee punches', 30.minutes]],
     'swipesimple' => [['web', 'Website exports', 60.minutes]],
     'authorize_net' => [['reporting', 'Reporting API', 10.minutes]],
     'shopify' => [['catalog', 'Catalog and orders', 60.minutes]],
@@ -113,7 +113,10 @@ class SourceHealth
 
   def enabled?(operation)
     case @source[:key]
-    when 'ctrax' then operation == 'stock' ? @connection&.hourly_sync_enabled : @connection&.reporting_enabled
+    when 'ctrax'
+      return CtraxLaborSync.enabled? if operation == 'timecards'
+
+      operation == 'stock' ? @connection&.hourly_sync_enabled : @connection&.reporting_enabled
     when 'swipesimple', 'authorize_net', 'bank' then @connection&.reporting_enabled
     when 'shopify' then @source[:ready]
     when 'square' then operation == 'timecards' ? SquareTimecardSync.enabled? : EnvStore.fetch('SQUARE_ACCESS_TOKEN', '').present?
@@ -123,6 +126,7 @@ class SourceHealth
 
   def legacy_success(operation)
     return SquareTimecard.maximum(:last_seen_at) if @source[:key] == 'square' && operation == 'timecards'
+    return CtraxLaborShift.maximum(:last_seen_at) if @source[:key] == 'ctrax' && operation == 'timecards'
 
     case @source[:key]
     when 'ctrax'
@@ -136,6 +140,7 @@ class SourceHealth
 
   def source_time(operation)
     return SquareTimecard.maximum(:source_updated_at) if @source[:key] == 'square' && operation == 'timecards'
+    return nil if @source[:key] == 'ctrax' && operation == 'timecards'
 
     return nil if @source[:key] == 'google_backup'
     return CtraxDay.maximum(:captured_at) if @source[:key] == 'ctrax' && operation == 'sales'
@@ -144,6 +149,9 @@ class SourceHealth
   end
 
   def coverage(operation)
+    if @source[:key] == 'ctrax' && operation == 'timecards'
+      return 'Complete bounded closed/open punch reads for the approved account. Original, latest and observation history remain separate from Rupert time and payroll. Missing store, unknown hours, corrections and overlaps require review; source event completeness is not a watermark.'
+    end
     if @source[:key] == 'square' && operation == 'timecards'
       return 'Complete timecard search. Closed matched shifts count once; open, unmatched and overlapping work waits for review. Corrections retain original hours; history does not establish payroll payment.'
     end

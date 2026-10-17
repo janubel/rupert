@@ -36,7 +36,7 @@ Square's previously counted historical days continue to appear once in personal 
 
 Rupert, Square and C-Trax can describe the same work. Their counts and hours remain separate; do not add overlapping records across sources or treat source verification as Rupert approval or proof of payment. Review conflicts and corrections before relying on the evidence.
 
-C-Trax automatic labor refresh is not scheduled. This release includes the verified manual source read; ongoing automatic refresh requires a separate explicit scheduler implementation and activation. Square retains its existing opt-in refresh schedule.
+The verified source-history release included a manual C-Trax read. Automatic C-Trax labor refresh is a separate implementation pending live deployment and activation verification, with a workspace opt-in and server dispatch at minutes 02, 17, 32 and 47. See [automatic C-Trax timesheet refresh](ctrax-timesheet-refresh.md) for authorization, freshness and pickup limits. Square retains its existing opt-in refresh schedule.
 
 ## Deployment and recovery
 
