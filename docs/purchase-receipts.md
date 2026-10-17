@@ -15,4 +15,4 @@ Review actions are version checked, serialized per workspace and recorded atomic
 
 Approval records a decision only. It does not create an expense, post a ledger entry or send reimbursement. Record accounting entries separately in the expense register after checking for existing entries. USD is the supported currency; other currencies need a separate accounting workflow. OCR, notification delivery and automated reimbursement are not implemented.
 
-Deployment requires migration `20261017230000_create_purchase_receipts` on both supported adapters. Back up the database and preserve the encryption keys before promotion. The migration adds two tables and does not backfill or change existing business records.
+Deployment requires migration `20261017235700_create_purchase_receipts` on both supported adapters. Back up the database and preserve the encryption keys before promotion. The migration adds two tables and does not backfill or change existing business records.
