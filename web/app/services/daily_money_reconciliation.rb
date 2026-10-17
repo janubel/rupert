@@ -74,7 +74,7 @@ class DailyMoneyReconciliation
   # Portal files stay separate from API observations. Their submitted and
   # settlement timestamps are shown explicitly; amounts are not added to sales.
   def portal
-    @portal ||= AuthorizeNetPortalExport.latest_records.select do |row|
+    @portal ||= AuthorizeNetPortalObservation.latest_between(day.in_time_zone...(day + 1).in_time_zone).select do |row|
       %w[submitted_at settled_at].any? { |key| row[key].present? && Time.iso8601(row[key]).in_time_zone.to_date == day }
     end.sort_by { |row| [row['gateway_id'], row['transaction_id']] }
   end
