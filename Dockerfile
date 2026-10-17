@@ -13,6 +13,11 @@ RUN bundle install --jobs 4 --retry 3
 
 COPY web .
 
+# Git-free images retain an explicit immutable build identity.
+ARG RUPERT_BUILD_SHA
+ARG RUPERT_BUILT_AT
+RUN ruby -rjson -e 'sha = ENV.fetch("RUPERT_BUILD_SHA", ""); abort "Pass --build-arg RUPERT_BUILD_SHA=<full commit SHA>" unless sha.match?(/\A[0-9a-f]{40,64}\z/i); File.write("config/build.json", JSON.generate(revision: sha.downcase, built_at: ENV["RUPERT_BUILT_AT"]))'
+
 # Precompile with a throwaway secret; the real SECRET_KEY_BASE comes from the
 # runtime .env. Nothing is baked into the image.
 RUN SECRET_KEY_BASE=build-time-only bin/rails tailwindcss:build \

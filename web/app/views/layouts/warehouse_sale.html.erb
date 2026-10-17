@@ -16,6 +16,8 @@
     <%= javascript_importmap_tags %>
   </head>
   <body class="min-h-full">
+  <%= render "layouts/build_version" %>
+
     <main id="main" tabindex="-1" class="mx-auto max-w-5xl px-6 py-10 focus:outline-none">
       <% if notice %><div aria-live="polite" role="status" class="flash flash-notice mb-4"><%= notice %></div><% end %>
       <% if alert %><div aria-live="assertive" role="alert" class="flash flash-alert mb-4"><%= alert %></div><% end %>

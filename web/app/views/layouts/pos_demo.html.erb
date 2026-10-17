@@ -10,5 +10,7 @@
   <%= stylesheet_link_tag 'tailwind', 'data-turbo-track': 'reload' %>
   <%= javascript_importmap_tags %>
 </head>
-<body class="min-h-screen bg-haze p-5 text-ink"><main><%= yield %></main></body>
+<body class="min-h-screen bg-haze p-5 text-ink">
+  <%= render "layouts/build_version" %>
+<main><%= yield %></main></body>
 </html>
