@@ -28,6 +28,7 @@ module OperationsWorkspaceHelper
       [['Accounts', finance_accounts_path, 'finance.read', 'finance/accounts'],
        ['Expenses', finance_expenses_path, 'finance.read', 'finance/expenses'],
        ['Vendor payments', finance_vendor_payments_path, 'finance.read', 'finance/vendor_payments'],
+       ['Bank statements', bank_statements_path, 'finance.read', 'bank_statements'],
        ['Account codes', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts'],
        ['Ledger', ledger_index_path, 'ledger.read', 'ledger']]
     else
@@ -43,7 +44,7 @@ module OperationsWorkspaceHelper
   end
 
   def operations_workspace_page?
-    controller_path.start_with?('finance/') || %w[sales inventory inventory_counts inventory_count_scans inventory_exceptions reconcile ledger financial_close book_approvals books_check daily_reconciliations reconciliation_follow_ups reconciliation_documents money_reconciliations cash_forecasts].include?(controller_path)
+    controller_path.start_with?('finance/') || %w[sales inventory inventory_counts inventory_count_scans inventory_exceptions reconcile ledger financial_close bank_statements book_approvals books_check daily_reconciliations reconciliation_follow_ups reconciliation_documents money_reconciliations cash_forecasts].include?(controller_path)
   end
 
   def operations_source_name(value)

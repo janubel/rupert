@@ -10,10 +10,31 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
+
+  create_table "bank_statement_lines", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "document_id", null: false
+    t.string "account_label", null: false
+    t.integer "line_no", null: false
+    t.date "posted_on", null: false
+    t.text "description", null: false
+    t.integer "amount_cents", null: false
+    t.string "fingerprint", null: false
+    t.string "status", default: "pending", null: false
+    t.integer "expense_id"
+    t.integer "vendor_payment_id"
+    t.integer "decided_by_id"
+    t.string "decided_by_name"
+    t.datetime "decided_at"
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "document_id", "status"], name: "idx_bank_lines_document"
+    t.index ["tenant_id", "fingerprint"], name: "idx_bank_lines_fingerprint", unique: true
+    t.index ["tenant_id"], name: "index_bank_statement_lines_on_tenant_id"
+  end
 
   create_table "money_reconciliations", force: :cascade do |t|
     t.string "tenant_id", null: false
