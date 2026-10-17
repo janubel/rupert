@@ -27,6 +27,7 @@ module OperationsWorkspaceHelper
        ['Receipts', receipts_path, 'finance.read', 'receipts', 'Records'],
        ['Expenses', finance_expenses_path, 'finance.read', 'finance/expenses', 'Records'],
        ['Vendor payments', finance_vendor_payments_path, 'finance.read', 'finance/vendor_payments', 'Records'],
+       ['By payee', finance_payees_path, 'finance.read', 'finance/payees', 'Records'],
        ['Chart of accounts', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts', 'Records'],
        ['Ledger', ledger_index_path, 'ledger.read', 'ledger', 'Records'],
        ['Source reports', money_reconciliations_path(date: date), 'reports.read', 'money_reconciliations', 'Reports & control'],
@@ -50,7 +51,7 @@ module OperationsWorkspaceHelper
   FINANCE_SHORTCUTS = {
     'Books desk' => 'd', 'Daily reconciliation' => 'r', 'Day close' => 'c', 'Book approvals' => 'a', 'Follow-ups' => 'f',
     'Bank statements' => 'b', 'Source documents' => 's', 'Accounts' => 'o', 'Receipts' => 'p', 'Expenses' => 'e',
-    'Vendor payments' => 'v', 'Chart of accounts' => 't', 'Ledger' => 'l', 'Source reports' => 'u',
+    'Vendor payments' => 'v', 'By payee' => 'y', 'Chart of accounts' => 't', 'Ledger' => 'l', 'Source reports' => 'u',
     'Cash forecast' => 'w', 'Business snapshot' => 'n', 'Books health' => 'h', 'Period locks' => 'k'
   }.freeze
 

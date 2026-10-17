@@ -1,0 +1,114 @@
+<% content_for :title, 'By payee' %>
+<% money = ->(cents) { number_to_currency(cents / 100.0) } %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">By payee</h1>
+      <p class="mt-1 text-sm text-mocha">Everything paid to one vendor or payee in the last <%= @range_days %> days, with the bank lines that mention them.</p>
+    </div>
+    <% if @selected %>
+      <%= link_to 'Export CSV', finance_payees_path(key: @key, days: @range_days, format: :csv), class: 'btn-ghost btn-sm', data: { turbo: false } %>
+    <% end %>
+  </section>
+
+  <%= form_tag finance_payees_path, method: :get, class: 'card card-pad operations-filters' do %>
+    <%= search_field_tag :q, @q, placeholder: 'Find a vendor or payee', class: 'input', aria: { label: 'Find a payee' } %>
+    <%= select_tag :days, options_for_select([['Last 30 days', 30], ['Last 90 days', 90], ['Last year', 365], ['Last 2 years', 730]], @range_days), class: 'select', aria: { label: 'Date range' } %>
+    <%= submit_tag 'Filter', class: 'btn-ghost btn-sm' %>
+  <% end %>
+
+  <p class="text-sm text-mocha"><%= @from %> through <%= @through %> · USD. Expenses and vendor payments are separate records and are not added together, since a payment can settle a bill that is also an expense. Removed records are excluded.</p>
+
+  <% if @selected %>
+    <section class="card card-pad space-y-4" aria-labelledby="payee-title">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="eyebrow text-mocha">Payee</p>
+          <h2 id="payee-title" class="font-display text-2xl"><%= @selected.label %></h2>
+          <% if @selected.vendor_id && retail_business_access?('purchasing.read') %>
+            <%= link_to 'Vendor profile and purchase orders', purchasing_vendor_path(@selected.vendor_id), class: 'text-sm font-semibold text-olive-deep underline' %>
+          <% end %>
+        </div>
+        <%= link_to 'All payees', finance_payees_path(days: @range_days), class: 'btn-ghost btn-sm' %>
+      </div>
+      <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="stat"><p class="stat-label">Expenses</p><p class="stat-value mt-1"><%= money.call(@selected.expense_cents) %></p><p class="mt-1 text-xs text-taupe"><%= pluralize(@selected.expense_count, 'record') %></p></div>
+        <div class="stat"><p class="stat-label">Vendor payments</p><p class="stat-value mt-1"><%= money.call(@selected.payment_cents) %></p><p class="mt-1 text-xs text-taupe"><%= pluralize(@selected.payment_count, 'record') %></p></div>
+        <div class="stat"><p class="stat-label">Last activity</p><p class="stat-value mt-1"><%= l(@selected.last_on, format: :short) %></p></div>
+      </div>
+
+      <div data-controller="table-filter" class="overflow-hidden rounded-xl border border-fog">
+        <div class="table-filter border-b border-fog px-4 py-3">
+          <input type="search" class="input" placeholder="Narrow these rows: category, method, reference…" aria-label="Filter this payee's records" data-table-filter-target="input" data-action="input->table-filter#filter keydown.esc->table-filter#clear">
+          <span class="table-filter-count" data-table-filter-target="count" aria-live="polite"></span>
+        </div>
+        <div class="operations-table-region" role="region" tabindex="0" aria-label="Payee records">
+          <table class="operations-table w-full text-sm">
+            <thead class="border-b border-fog bg-haze/60">
+              <tr><th scope="col" class="th">Date</th><th scope="col" class="th">Type</th><th scope="col" class="th">Category</th><th scope="col" class="th">Method</th><th scope="col" class="th">Reference</th><th scope="col" class="th text-right">Amount</th></tr>
+            </thead>
+            <tbody class="divide-y divide-fog">
+              <% @entries.each do |e| %>
+                <tr data-table-filter-target="row" class="hover:bg-cream">
+                  <td class="td whitespace-nowrap text-mocha"><%= l(e.on, format: :short) %></td>
+                  <td class="td"><%= e.kind == :expense ? link_to('Expense', edit_finance_expense_path(e.id), class: 'underline') : 'Vendor payment' %></td>
+                  <td class="td"><% if e.category %><span class="pill-taupe"><%= e.category.tr('_', ' ').titleize %></span><% end %></td>
+                  <td class="td text-mocha capitalize"><%= e.method.to_s.tr('_', ' ') %></td>
+                  <td class="td text-mocha"><%= e.reference %></td>
+                  <td class="td text-right font-medium text-ink"><%= money.call(e.cents) %></td>
+                </tr>
+              <% end %>
+              <tr data-table-filter-target="empty" hidden><td colspan="6" class="empty-row">No rows match. <button type="button" class="font-semibold text-olive-deep underline" data-action="table-filter#clear">Clear filter</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <h3 class="font-display text-xl">Bank lines that mention “<%= @selected.label %>”</h3>
+        <% if @bank_lines.empty? %>
+          <p class="text-sm text-mocha">No uploaded bank statement line in this range mentions this name. Bank descriptions often differ from the vendor name, so absence is not proof of a missing payment.</p>
+        <% else %>
+          <ul class="divide-y divide-fog text-sm">
+            <% @bank_lines.each do |line| %>
+              <li class="flex flex-wrap items-baseline justify-between gap-2 py-2">
+                <span class="min-w-0"><span class="text-mocha"><%= l(line.posted_on, format: :short) %></span> · <%= line.description.to_s.truncate(90) %> <span class="pill-taupe"><%= line.status.humanize %></span></span>
+                <span class="whitespace-nowrap">
+                  <strong><%= money.call(line.amount_cents) %></strong>
+                  <%= link_to 'Open statement', bank_statement_path(line.document_id), class: 'ml-2 underline' if line.document_id %>
+                </span>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+    </section>
+  <% elsif @key %>
+    <p class="card card-pad text-sm text-mocha" role="status">No activity for that payee in this range. <%= link_to 'Show all payees', finance_payees_path(days: @range_days), class: 'underline' %>.</p>
+  <% end %>
+
+  <div class="card overflow-hidden">
+    <div class="operations-table-region" role="region" tabindex="0" aria-label="Payees">
+      <table class="operations-table w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60">
+          <tr><th scope="col" class="th">Payee</th><th scope="col" class="th text-right">Expenses</th><th scope="col" class="th text-right">Vendor payments</th><th scope="col" class="th">Last</th></tr>
+        </thead>
+        <tbody class="divide-y divide-fog">
+          <% if @summaries.empty? %>
+            <tr><td colspan="4" class="empty-row">No expenses or vendor payments in this range.</td></tr>
+          <% end %>
+          <% @summaries.each do |s| %>
+            <tr class="hover:bg-cream <%= 'bg-cream' if s.key == @key %>">
+              <td class="td font-medium text-ink"><%= link_to s.label, finance_payees_path(key: s.key, days: @range_days, q: @q.presence), class: 'underline', aria: { current: (s.key == @key ? 'true' : nil) } %></td>
+              <td class="td text-right"><%= s.expense_count.zero? ? '—' : "#{money.call(s.expense_cents)} · #{s.expense_count}" %></td>
+              <td class="td text-right"><%= s.payment_count.zero? ? '—' : "#{money.call(s.payment_cents)} · #{s.payment_count}" %></td>
+              <td class="td whitespace-nowrap text-mocha"><%= l(s.last_on, format: :short) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

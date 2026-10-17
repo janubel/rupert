@@ -222,6 +222,7 @@ Rails.application.routes.draw do
       member { post :restore }
     end
     resources :journal_entries, only: %i[index show new create]
+    get 'payees', to: 'payees#index', as: :payees
     get 'reports', to: 'reports#index', as: :reports
     get 'reports/trial_balance', to: 'reports#trial_balance', as: :reports_trial_balance
     get 'reports/income_statement', to: 'reports#income_statement', as: :reports_income_statement

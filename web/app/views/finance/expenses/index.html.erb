@@ -63,7 +63,7 @@
           <% @expenses.each do |expense| %>
             <tr data-table-filter-target="row" class="hover:bg-cream <%= expense.discarded? ? "opacity-50" : "" %>">
               <td class="td whitespace-nowrap text-mocha"><%= l(expense.incurred_on, format: :short) %></td>
-              <td class="td font-medium text-ink"><%= expense.payee.presence || expense.vendor&.name || "—" %></td>
+              <td class="td font-medium text-ink"><% name = expense.vendor&.name || expense.payee.presence %><%= name ? link_to(name, finance_payees_path(key: (expense.vendor_id ? "v:#{expense.vendor_id}" : "p:#{name.strip.downcase}"), days: @range_days), class: "underline") : "—" %></td>
               <td class="td"><span class="pill-taupe"><%= expense.category_label %></span></td>
               <td class="td text-mocha capitalize"><%= expense.method %></td>
               <td class="td text-right font-medium text-ink"><%= number_to_currency(expense.amount_cents / 100.0) %></td>
