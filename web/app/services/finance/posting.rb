@@ -137,10 +137,13 @@ module Finance
       # have none; seed the standard chart (idempotent) instead of failing the
       # money record the user is saving.
       def account(code)
-        Finance::Account.find_by(code: code) || begin
-          Finance::ChartOfAccounts.seed!
-          Finance::Account.find_by!(code: code)
-        end
+        existing = Finance::Account.find_by(code: code)
+        return existing if existing
+
+        # Legacy workspaces may predate setup's chart seeding. Add only missing
+        # standard accounts; never replace the workspace's existing accounts.
+        Finance::ChartOfAccounts.seed!
+        Finance::Account.find_by!(code: code)
       end
 
       # Split a payment's tax out proportionally from its order (orders carry

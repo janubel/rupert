@@ -34,6 +34,35 @@ class CtraxPosTest < ActionDispatch::IntegrationTest
     assert_select 'nav', count: 0
   end
 
+  test 'only pictured products appear in categories search and pagination' do
+    unseen = 25.times.map { |i| { 'id' => "hidden-#{i}", 'name' => "No image #{i}", 'product_name' => "Unpictured #{i}", 'category' => 'Hidden category', 'listed' => true, 'price_cents' => 100 } }
+    @snapshot.update!(records_json: unseen + @snapshot.records)
+    get ctrax_pos_path
+    assert_response :success
+    assert_select 'article.retail-product-card', count: 1
+    assert_select 'article.retail-product-card img', count: 1
+    assert_select 'select[name=category] option', text: 'Hidden category', count: 0
+    assert_select 'p', /1 results/
+    get ctrax_pos_path, params: { q: 'No image' }
+    assert_select 'article.retail-product-card', count: 0
+    get ctrax_pos_path, params: { page: 2 }
+    assert_select 'article.retail-product-card', count: 0
+    @product.update!(featuredImageUrl: nil)
+    get ctrax_pos_path
+    assert_select 'article.retail-product-card', count: 0
+    @product.update!(featuredImageUrl: 'https://cdn.shopify.com/tea.jpg')
+    get ctrax_pos_path
+    assert_select 'article.retail-product-card', count: 1
+    assert_select 'nav a[href=?]', point_of_sale_path, count: 0
+    assert_select 'select#missing_image_variant option[value="hidden-0"]'
+    post ctrax_pos_images_path(@location.id), params: { variant_id: 'hidden-0', product_id: @product.id }
+    assert_redirected_to ctrax_pos_path(location_id: @location.id)
+    follow_redirect!
+    assert_select 'article.retail-product-card', count: 2
+    assert_equal 26, @snapshot.reload.records.size
+    assert_equal 'No image 0', @snapshot.records.find { |r| r['id'] == 'hidden-0' }['name']
+  end
+
   test 'server prices cart and keeps choice private until customer confirmation' do
     display = PosDisplaySession.create!(user: @user, location: @location)
     quote(display, quantity: 2)

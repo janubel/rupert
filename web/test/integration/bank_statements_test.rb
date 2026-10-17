@@ -51,10 +51,66 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     assert_equal @vendor.id, Finance::VendorPayment.last.vendor_id
     assert_equal %w[recorded ignored recorded], BankStatementLine.for_document(doc.id).map(&:status)
     assert_equal users(:regular_user).id, ups.reload.decided_by_id
+    expense_entry = Finance::JournalEntry.for_source('Finance::Expense', ups.expense_id).posted.first!
+    payment_entry = Finance::JournalEntry.for_source('Finance::VendorPayment', acme.reload.vendor_payment_id).posted.first!
+    assert_equal expense_entry.id, ups.reload.journal_entry_id
+    assert_equal payment_entry.id, acme.reload.journal_entry_id
+    assert expense_entry.balanced?
+    assert payment_entry.balanced?
+    assert_equal 4210, expense_entry.journal_lines.joins(:account).where(accounts: { code: '1100' }).sum(:credit_cents)
+    assert_equal 12_000, payment_entry.journal_lines.joins(:account).where(accounts: { code: '1100' }).sum(:credit_cents)
     assert last_entry('bank_statement_decided')
     # deciding again changes nothing
-    assert_no_difference ['Finance::Expense.count', 'Finance::VendorPayment.count'] do
+    assert_no_difference ['Finance::Expense.count', 'Finance::VendorPayment.count', 'Finance::JournalEntry.count'] do
       post decide_bank_statement_path(doc.id), params: { decisions: { ups.id => 'expense:shipping' } }
+    end
+  end
+
+  test 'recorded bank sources retain their journal links and reserve their ledger movements' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    post decide_bank_statement_path(doc.id), params: { decisions: { line.id => 'expense:shipping' } }
+    entry_id = line.reload.journal_entry_id
+    duplicate = BankStatementLine.create!(document_id: doc.id, line_no: 99, account_label: line.account_label,
+      posted_on: line.posted_on, description: 'Another withdrawal', amount_cents: line.amount_cents, fingerprint: SecureRandom.hex(24))
+    reconciliation = Finance::BankReconciliation.new(account_label: line.account_label, from: line.posted_on, to: line.posted_on)
+    assert_equal entry_id, reconciliation.suggestions.fetch(line.id).entry.id
+    assert_nil reconciliation.suggestions[duplicate.id]
+    assert_no_difference 'Finance::Expense.count' do
+      post finance_bank_reconciliation_unmatch_path, params: { line_id: line.id }
+      assert_redirected_to finance_bank_reconciliation_path
+      assert_equal 'recorded', line.reload.status
+      assert_equal entry_id, line.journal_entry_id
+      post finance_bank_reconciliation_match_path, params: { line_id: line.id, journal_entry_id: entry_id }
+      assert_equal 'recorded', line.reload.status
+      assert_equal entry_id, line.journal_entry_id
+      post finance_bank_reconciliation_ignore_path, params: { line_id: line.id }
+      assert_redirected_to finance_bank_reconciliation_path
+      assert_equal 'recorded', line.reload.status
+      assert_equal entry_id, line.journal_entry_id
+      post decide_bank_statement_path(doc.id), params: { decisions: { line.id => 'expense:shipping' } }
+    end
+  end
+
+  test 'manual ledger matching can be confirmed and cleared without creating another expense' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    expense = Finance::Expense.create!(payee: 'Courier', category: 'shipping', amount_cents: line.out_cents, incurred_on: line.posted_on, method: 'bank_transfer')
+    entry = Finance::Posting.expense(expense, created_by: users(:regular_user))
+    assert_no_difference ['Finance::Expense.count', 'Finance::JournalEntry.count'] do
+      post finance_bank_reconciliation_match_path, params: { line_id: line.id, journal_entry_id: entry.id }
+      assert_redirected_to finance_bank_reconciliation_path(account_label: line.account_label)
+      assert_equal 'matched', line.reload.status
+      assert_equal entry.id, line.journal_entry_id
+      post finance_bank_reconciliation_unmatch_path, params: { line_id: line.id }
+      assert_redirected_to finance_bank_reconciliation_path(account_label: line.account_label)
+      assert_equal 'pending', line.reload.status
+      assert_nil line.journal_entry_id
+      post finance_bank_reconciliation_ignore_path, params: { line_id: line.id }
+      assert_redirected_to finance_bank_reconciliation_path(account_label: line.account_label)
+      assert_equal 'ignored', line.reload.status
     end
   end
 
@@ -65,6 +121,20 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     post decide_bank_statement_path(doc.id), params: { decisions: { deposit.id => 'expense:other' } }
     assert_equal 0, Finance::Expense.count
     assert_equal 'pending', deposit.reload.status
+  end
+
+  test 'failed bank journal posting rolls back the expense and leaves the flagged line pending' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    line.update!(review_flag: true, review_note: 'Need receipt')
+    Finance::Posting.stubs(:expense).raises(ActiveRecord::RecordInvalid.new(Finance::JournalEntry.new))
+    assert_no_difference ['Finance::Expense.count', 'Finance::JournalEntry.count'] do
+      post decide_bank_statement_path(doc.id), params: { decisions: { line.id => 'expense:shipping' } }
+    end
+    assert_equal 'pending', line.reload.status
+    assert line.review_flag?
+    assert_nil line.expense_id
   end
 
   test 'roles without finance access cannot view, upload or decide' do

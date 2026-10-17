@@ -15,19 +15,9 @@ class PointOfSaleTest < ActionDispatch::IntegrationTest
 
   teardown { Current.reset }
 
-  test 'catalog has product images variant quantity controls and honest preview labels' do
+  test 'the retired preview opens the single C-Trax retail POS' do
     get point_of_sale_path
-    assert_response :success
-    assert_select 'h1', 'POS preview'
-    assert_select 'img[alt="Image Tea"][src*="tea.jpg"]'
-    assert_select 'input[name="items[0][variant_id]"][value=?]', @variant.id
-    assert_select 'input[name="items[0][quantity]"][min="1"][max="999"]'
-    assert_select 'p', /creates no sale, payment, receipt or stock reservation/
-    assert_select 'p', /currency code is not mirrored yet/
-    assert_select 'legend', 'Optional tip'
-    assert_select 'select[name=tip_type] option[selected][value=none]'
-    assert_select 'p', /no tip is collected/
-    assert_select 'meta[name=turbo-cache-control][content=no-cache]'
+    assert_redirected_to ctrax_pos_path
     assert_equal 'no-store', response.headers['Cache-Control']
   end
 
@@ -66,12 +56,9 @@ class PointOfSaleTest < ActionDispatch::IntegrationTest
     assert_equal '0.0', response.parsed_body['lines'].last['line_total']
   end
 
-  test 'HTML preview shows selected product image quantities and subtotal' do
+  test 'legacy HTML quote hands off to the C-Trax retail POS' do
     post quote_point_of_sale_path, params: { items: { '0' => { variant_id: @variant.id, quantity: '2' } } }
-    assert_response :success
-    assert_select '[data-pos-cart-target=items] img[alt="Image Tea"]'
-    assert_select '[data-pos-cart-target=items] input[name="items[0][quantity]"][value="2"]'
-    assert_select '[data-pos-cart-target=subtotal]', '24.70'
+    assert_redirected_to ctrax_pos_path
   end
 
   test 'missing foreign-tenant inactive and orphaned products cannot be quoted' do
@@ -100,10 +87,6 @@ class PointOfSaleTest < ActionDispatch::IntegrationTest
     ShopifyVariant.create!(productId: @product.id, title: 'Duplicate', sku: @variant.sku, price: 1)
     post_quote(@variant.id)
     assert_response :unprocessable_entity
-    get point_of_sale_path
-    assert_response :success
-    assert_select 'p', /Conflicting SKU/
-    assert_select 'input[name="items[0][variant_id]"][value=?]', @variant.id, count: 0
   end
 
   test 'strict positive whole quantities bounded cart and malformed rows are rejected' do
@@ -132,37 +115,10 @@ class PointOfSaleTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body['lines'].first['thumbnail_url']
   end
 
-  test 'catalog search stays tenant scoped and includes product titles' do
-    other = Tenant.create!(name: 'Other catalog', subdomain: 'other-pos-catalog')
-    foreign_product = ShopifyProduct.create!(id: 'private-pos-product', title: 'Image Private', tenant_id: other.id)
-    ShopifyVariant.create!(productId: foreign_product.id, title: 'Secret', sku: 'SECRET-POS', price: 1, tenant_id: other.id)
-    get point_of_sale_path, params: { q: 'image' }
-    assert_response :success
-    assert_select 'h2', 'Image Tea'
-    assert_not_includes response.body, 'Image Private'
-    get point_of_sale_path, params: { q: '%' }
-    assert_response :success
-    assert_select 'h2', text: 'Image Tea', count: 0
-  end
-
-  test 'catalog pages contain at most twenty-four stable variant tiles' do
-    25.times do |number|
-      ShopifyVariant.create!(productId: @product.id, title: "Page item #{number}",
-        sku: format('POS-PAGE-%02d', number), price: 1)
-    end
-    get point_of_sale_path, params: { q: 'POS-PAGE' }
-    assert_response :success
-    assert_select 'form[data-action="submit->pos-cart#add"]', count: 24
-    get point_of_sale_path, params: { q: 'POS-PAGE', page: 2 }
-    assert_response :success
-    assert_select 'form[data-action="submit->pos-cart#add"]', count: 1
-    assert_select 'article p', /POS-PAGE-24/
-  end
-
-  test 'cashiers can preview while missing sales write or inventory read forbids access' do
+  test 'cashiers reach retail POS while missing sales write or inventory read forbids access' do
     @user.update!(role: 'cashier')
     get point_of_sale_path
-    assert_response :success
+    assert_redirected_to ctrax_pos_path
     %w[sales.write inventory.read].each do |missing|
       @user.update_permission_overrides!(%w[sales.read sales.write inventory.read] - [missing])
       get point_of_sale_path
@@ -275,18 +231,6 @@ class PointOfSaleTest < ActionDispatch::IntegrationTest
     @user.update_permission_overrides!(%w[sales.read sales.write])
     post lookup_point_of_sale_path, params: { q: 'POS-TEA' }, as: :json
     assert_response :forbidden
-  end
-
-  test 'preview page offers scannable quick add catalog readiness and quote handoff' do
-    get point_of_sale_path
-    assert_response :success
-    assert_select 'form[data-action="submit->pos-cart#lookup"] input#pos_barcode'
-    assert_select 'input#pos_search[data-pos-cart-target=searchInput]'
-    assert_select 'section[aria-label="Catalog readiness"]'
-    assert_select 'button[data-action="pos-cart#tipPreset"][data-tip-type-value=percentage][data-tip-preset-value="15"]'
-    assert_select 'button[data-action="pos-cart#copyQuote"]'
-    assert_select 'button[data-action="pos-cart#printQuote"]'
-    assert_select '[data-pos-cart-lookup-url-value=?]', lookup_point_of_sale_path
   end
 
   private

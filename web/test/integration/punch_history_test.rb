@@ -12,12 +12,12 @@ class PunchHistoryTest < ActionDispatch::IntegrationTest
     @other = People::Employee.create!(first_name: 'PRIVATE', last_name: 'OTHER WORKER')
     EmployeeSourceIdentity.create!(employee: @worker, source: 'square', external_id: 'own-team')
     EmployeeSourceIdentity.create!(employee: @other, source: 'square', external_id: 'other-team')
-    SquareTimecardImport.new(rows: [source('own-card', 'own-team'), source('private-other-card', 'other-team')]).call(apply: true)
+    SquareTimecardImport.new(actor: @admin, rows: [source('own-card', 'own-team'), source('private-other-card', 'other-team')]).call(apply: true)
     @card = @worker.square_timecards.first
     @other_card = @other.square_timecards.first
     @shift = ClockShift.create!(user: @user, employee: @worker, employee_key: @worker.id.to_s,
       employee_name: @worker.name, employment_type: 'part_time', request_token: 'punch_history_token_123',
-      started_at: Time.zone.parse('2026-10-06 09:00'), ended_at: Time.zone.parse('2026-10-06 17:00'))
+      started_at: Time.zone.parse('2026-10-06 18:00'), ended_at: Time.zone.parse('2026-10-06 19:00'))
   end
   teardown { Current.reset }
 
@@ -53,6 +53,10 @@ class PunchHistoryTest < ActionDispatch::IntegrationTest
     get people_punch_history_path, params: { from: '2026-10-01', to: '2026-10-31' }
     assert_response :success
     assert_includes response.body, 'Own History'
+    refute_includes response.body, 'PRIVATE OTHER WORKER'
+    refute_includes response.body, 'private-other-card'
+    get people_punch_history_path(format: :csv), params: { from: '2026-10-01', to: '2026-10-31', employee_id: @other.id }
+    assert_response :success
     refute_includes response.body, 'PRIVATE OTHER WORKER'
     refute_includes response.body, 'private-other-card'
   end

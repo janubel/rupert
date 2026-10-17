@@ -4,13 +4,12 @@ module Finance
   # Record a payment to a vendor (accounts payable).
   class VendorPaymentsController < AuthenticatedController
     include ApprovedPeriodNotice
+    include FinanceRegisterPeriod
     before_action :set_payment, only: %i[destroy restore]
 
     def index
       authorize(:module, :finance_read?)
-      @range_days = params[:days].present? ? params[:days].to_i.clamp(7, 365) : 90
-      @from = Date.current - (@range_days - 1)
-      @through = Date.current
+      load_finance_register_period
       active = Finance::VendorPayment.where(paid_on: @from..@through)
       @include_deleted = params[:include_deleted] == '1'
       @total_cents = active.sum(:amount_cents)

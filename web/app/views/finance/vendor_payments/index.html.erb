@@ -5,7 +5,7 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Payments to vendors</h1>
-      <p class="mt-1 text-sm text-mocha">Money out against vendor purchase orders (accounts payable), last <%= @range_days %> days.</p>
+      <p class="mt-1 text-sm text-mocha">Money out against vendor purchase orders (accounts payable) · <%= @month ? @from.strftime('%B %Y') : "last #{@range_days} days" %>.</p>
     </div>
     <% if Current.user.can?("finance.write") %>
       <%= link_to "Record payment", new_finance_vendor_payment_path, class: "btn-primary" %>
@@ -21,6 +21,7 @@
   </section>
 
   <%= form_tag finance_vendor_payments_path, method: :get, class: "card card-pad operations-filters" do %>
+    <label class="field-label">Month (optional)<%= month_field_tag :month, @month, min: '2000-01', max: '2099-12', class: 'input' %></label>
     <%= select_tag :days, options_for_select([["Last 30 days", 30], ["Last 90 days", 90], ["Last year", 365]], @range_days), class: "select", aria: { label: "Date range" } %>
     <label class="flex items-center gap-1.5 text-sm text-mocha">
       <%= check_box_tag :include_deleted, "1", @include_deleted %> include removed history

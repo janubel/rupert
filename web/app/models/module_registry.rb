@@ -26,9 +26,6 @@ class ModuleRegistry
     Entry.new(key: 'sales', name: 'Sales', path: -> { sales_path }, permission: 'sales.read', position: 20),
     Entry.new(key: 'ctrax_pos', name: 'C-Trax retail', path: -> { ctrax_pos_path }, permission: %w[sales.read sales.write inventory.read], position: 21),
     Entry.new(key: 'ctrax_days', name: 'C-Trax daily close', path: -> { ctrax_days_path }, permission: 'sales.read', position: 24),
-    Entry.new(key: 'point_of_sale', name: 'POS preview', path: lambda {
-      point_of_sale_path
-    }, permission: %w[sales.read sales.write inventory.read], position: 22),
     Entry.new(key: 'registers', name: 'Registers', path: lambda {
       sales_pos_sessions_path
     }, permission: 'sales.read', position: 25),
@@ -67,7 +64,8 @@ class ModuleRegistry
     }, permission: 'reconcile.read', position: 50),
     Entry.new(key: 'sizes', name: 'Sizes', path: -> { size_families_path }, permission: 'settings.read', position: 51),
     Entry.new(key: 'reports', name: 'Reports', path: -> { reports_path }, permission: 'reports.read', position: 55),
-    Entry.new(key: 'books_desk', name: 'Books desk', path: -> { books_desk_path }, permission: 'reports.read', position: 46),
+    Entry.new(key: 'bookkeeping', name: 'Bookkeeping overview', path: -> { bookkeeping_path }, permission: 'finance.read', position: 45),
+    Entry.new(key: 'books_desk', name: 'Close & review', path: -> { books_desk_path }, permission: 'reports.read', position: 46),
     Entry.new(key: 'book_approvals', name: 'Book approvals', path: -> { book_approvals_path }, permission: 'reports.read', position: 57),
     Entry.new(key: 'bank_statements', name: 'Bank statements', path: -> { bank_statements_path }, permission: 'finance.read', position: 60),
     Entry.new(key: 'business_snapshot', name: 'Business snapshot', path: -> { business_snapshot_path }, permission: 'finance.read', position: 61),
@@ -202,12 +200,12 @@ class ModuleRegistry
     # Every registered module must appear in exactly one area.
     AREAS = [
       { key: 'overview', name: 'Overview', modules: ['dashboard'] },
-      { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos point_of_sale ctrax_days registers customers] },
+      { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos ctrax_days registers customers] },
       { key: 'marketing', name: 'Marketing', modules: %w[marketing influencers] },
       { key: 'stock', name: 'Stock',
         modules: %w[inventory inventory_exceptions locations inventory_counts stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
-      { key: 'money', name: 'Finance',
-        modules: %w[books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports bank_reconciliation ledger_export] },
+      { key: 'money', name: 'Bookkeeping',
+        modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports bank_reconciliation ledger_export] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
       { key: 'receipts', name: 'Receipts', modules: %w[receipts] },
       { key: 'timesheets', name: 'Timesheets', modules: %w[timesheets punch_history] },

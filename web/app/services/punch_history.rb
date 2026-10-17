@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'bigdecimal'
+
 # Unified punch history for administrators and reviewers.
 #
 # Two independent punch sources are read side by side and never merged into one
@@ -78,9 +80,9 @@ class PunchHistory
       rows.each do |row|
         out << [row.employee_name, row.source == 'rupert' ? 'Rupert clock' : 'Square',
           row.started_at&.iso8601, row.ended_at&.iso8601,
-          row.hours&.to_s('F'), row.status, row.counted ? 'yes' : 'no',
-          row.reference, row.issue, row.rate_cents && (row.rate_cents / 100.0).to_s('F'),
-          row.estimated_cents && (row.estimated_cents / 100.0).to_s('F')].map { |value| TimesheetCsv.cell(value) }
+          row.hours && BigDecimal(row.hours.to_s).to_s('F'), row.status, row.counted ? 'yes' : 'no',
+          row.reference, row.issue, row.rate_cents && (BigDecimal(row.rate_cents.to_s) / 100).to_s('F'),
+          row.estimated_cents && (BigDecimal(row.estimated_cents.to_s) / 100).to_s('F')].map { |value| TimesheetCsv.cell(value) }
       end
     end
   end
@@ -88,6 +90,7 @@ class PunchHistory
   private
 
   def rupert_rows
+    return [] unless @all_employees || @worker_id.present?
     return [] if @source == 'square'
 
     scope = ClockShift.all
@@ -108,6 +111,7 @@ class PunchHistory
   end
 
   def square_rows
+    return [] unless @all_employees || @worker_id.present?
     return [] if @source == 'rupert'
 
     scope = SquareTimecard.all

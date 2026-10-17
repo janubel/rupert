@@ -4,14 +4,13 @@ module Finance
   # Expense register: money-out records with categories.
   class ExpensesController < AuthenticatedController
     include ApprovedPeriodNotice
+    include FinanceRegisterPeriod
     before_action :set_expense, only: %i[edit update destroy restore]
 
     def index
       authorize(:module, :finance_read?)
       @category = params[:category].presence || 'all'
-      @range_days = params[:days].present? ? params[:days].to_i.clamp(7, 365) : 90
-      @from = Date.current - (@range_days - 1)
-      @through = Date.current
+      load_finance_register_period
       active = Finance::Expense.where(incurred_on: @from..@through)
       @category = Finance::Expense::CATEGORIES.include?(params[:category]) ? params[:category] : 'all'
       active = active.by_category(@category)
@@ -23,7 +22,7 @@ module Finance
       @removed_count = scope.count - @entry_count
       response.headers['Cache-Control'] = 'private, no-store'
       if request.format.csv?
-        send_data expenses_csv(scope.includes(:vendor).order(incurred_on: :desc, created_at: :desc)), filename: "expenses-#{@range_days}d.csv"
+        send_data expenses_csv(scope.includes(:vendor).order(incurred_on: :desc, created_at: :desc)), filename: "expenses-#{@month || "#{@range_days}d"}.csv"
         return
       end
       @pagy, @expenses = pagy(scope.includes(:vendor).order(incurred_on: :desc, created_at: :desc), items: 50)
@@ -39,20 +38,22 @@ module Finance
     def create
       authorize(:module, :finance_write?)
       @expense = Finance::Expense.new(expense_params)
-      if @expense.save
-        note_approved_period(@expense.incurred_on, 'Expense')
+      Finance::Expense.transaction do
+        @expense.save!
         Finance::Posting.expense(@expense, created_by: Current.user)
-        ActivityLogger.log(
-          'expense_recorded',
-          subject: @expense,
-          details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category}"
-        )
-        redirect_to(finance_expenses_path, notice: 'Expense recorded.')
-      else
-        @vendors = Purchasing::Vendor.ordered
-        @accounts = Finance::Account.active.ordered
-        render(:new, status: :unprocessable_entity)
       end
+      note_approved_period(@expense.incurred_on, 'Expense')
+      ActivityLogger.log(
+        'expense_recorded',
+        subject: @expense,
+        details: "$#{format('%.2f', @expense.amount_cents / 100.0)} · #{@expense.category}"
+      )
+      redirect_to(finance_expenses_path, notice: 'Expense recorded.')
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound
+      @expense.errors.add(:base, 'The expense could not be posted. Check the chart of accounts and try again.') if @expense.errors.empty?
+      @vendors = Purchasing::Vendor.ordered
+      @accounts = Finance::Account.active.ordered
+      render(:new, status: :unprocessable_entity)
     end
 
     def edit

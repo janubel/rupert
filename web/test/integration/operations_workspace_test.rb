@@ -28,7 +28,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     get new_finance_chart_of_account_path
     assert_select 'input[name="account[code]"]'
     get financial_close_path, params: { day: '2026-10-10' }
-    assert_select 'nav[aria-label="Finance workspace"] a[href=?]', daily_reconciliations_path(day: '2026-10-10')
+    assert_select 'nav[aria-label="Bookkeeping workspace"] a[href=?]', daily_reconciliations_path(day: '2026-10-10')
     assert_select 'nav[aria-label="Reconciliation workflow"]'
     assert_select '[aria-label="Close status overview"]'
   end
@@ -122,7 +122,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     @user.update_permission_overrides!(%w[reports.read inventory.read reconcile.read])
     get financial_close_path
     assert_response :success
-    assert_select 'nav[aria-label="Finance workspace"] a[href=?]', finance_accounts_path, count: 0
+    assert_select 'nav[aria-label="Bookkeeping workspace"] a[href=?]', finance_accounts_path, count: 0
     assert_select '#retain-close', count: 0
     get stock_comparison_path
     assert_response :success

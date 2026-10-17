@@ -29,7 +29,7 @@ class ModuleNavTest < ActionDispatch::IntegrationTest
   test 'header shows module areas and the active area is highlighted' do
     get inventory_index_path
     assert_response :success
-    %w[Overview Sell Stock Finance Work Team System].each do |name|
+    %w[Overview Sell Stock Bookkeeping Work Team System].each do |name|
       assert_select "nav[aria-label='Module areas'] a", text: name
     end
     assert_select "nav[aria-label='Module areas'] a.nav-pill-active", text: 'Stock'
@@ -63,7 +63,7 @@ class ModuleNavTest < ActionDispatch::IntegrationTest
 
     get ledger_index_path
     assert_response :success
-    assert_select "nav[aria-label='Module areas'] a", text: 'Finance'
+    assert_select "nav[aria-label='Module areas'] a", text: 'Bookkeeping'
     assert_select "nav[aria-label='Module'] a", text: 'Ledger'
     assert_select "nav[aria-label='Module'] a", text: 'Reports'
     assert_select "nav[aria-label='Module'] a", text: 'Projects', count: 0
@@ -84,7 +84,7 @@ class ModuleNavTest < ActionDispatch::IntegrationTest
   test "Finance Accounts module doesn't leak into the Team nav" do
     get finance_accounts_path
     assert_response :success
-    assert_select "nav[aria-label='Module areas'] a", text: 'Finance'
+    assert_select "nav[aria-label='Module areas'] a", text: 'Bookkeeping'
     assert_select "nav[aria-label='Module'] a", text: 'Accounts', count: 1
     assert_select "nav[aria-label='Module'] a.nav-pill-active-sm", text: 'Accounts'
 
