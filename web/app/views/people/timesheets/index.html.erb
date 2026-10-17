@@ -13,28 +13,40 @@
   </section>
 
   <% if @reviewer %>
+    <% week_base = @week_start || Date.current.beginning_of_week %>
+    <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Timesheet summary">
+      <div class="stat"><p class="stat-label">Needs review</p><p class="stat-value mt-1"><%= @status_counts.fetch('submitted', 0) %></p><p class="text-xs text-mocha"><%= @awaiting %> across all weeks</p></div>
+      <div class="stat"><p class="stat-label">Approved</p><p class="stat-value mt-1"><%= @status_counts.fetch('approved', 0) %></p></div>
+      <div class="stat"><p class="stat-label">Returned / drafts</p><p class="stat-value mt-1"><%= @status_counts.fetch('rejected', 0) %> / <%= @status_counts.fetch('draft', 0) %></p></div>
+      <div class="stat"><p class="stat-label">Hours in this view</p><p class="stat-value mt-1"><%= number_with_precision(@view_hours, precision: 1) %></p></div>
+    </section>
+
     <nav aria-label="Timesheet review" class="flex flex-wrap gap-2">
-      <% [['Needs review', 'submitted'], ['All timesheets', 'all'], ['Approved', 'approved'], ['Returned for correction', 'rejected']].each do |label, status| %>
-        <%= link_to (status == 'submitted' ? "#{label} (#{@awaiting})" : label), people_timesheets_path(status: status), class: "nav-pill #{@status == status ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@status == status ? 'page' : nil) } %>
+      <% [['Needs review', 'submitted'], ['All timesheets', 'all'], ['Approved', 'approved'], ['Returned for correction', 'rejected'], ['Drafts', 'draft']].each do |label, status| %>
+        <% count = status == 'all' ? @status_counts.values.sum : @status_counts.fetch(status, 0) %>
+        <%= link_to "#{label} (#{count})", people_timesheets_path(status: status, period: @period, q: @query), class: "nav-pill #{@status == status ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@status == status ? 'page' : nil) } %>
       <% end %>
+    </nav>
+
+    <nav aria-label="Week" class="flex flex-wrap items-center gap-2">
+      <%= link_to '← Previous week', people_timesheets_path(status: @status, q: @query, period: (week_base - 7).iso8601), class: 'btn-ghost btn-sm' %>
+      <span class="text-sm font-medium"><%= @period ? "Week of #{week_base.strftime('%b %d, %Y')}" : 'All weeks' %></span>
+      <%= link_to 'Next week →', people_timesheets_path(status: @status, q: @query, period: (week_base + 7).iso8601), class: 'btn-ghost btn-sm' %>
+      <%= link_to 'This week', people_timesheets_path(status: @status, q: @query, period: Date.current.beginning_of_week.iso8601), class: 'btn-ghost btn-sm' %>
+      <% if @period %><%= link_to 'All weeks', people_timesheets_path(status: @status, q: @query), class: 'btn-ghost btn-sm' %><% end %>
     </nav>
     <p class="text-sm text-mocha">Review each day's hours and notes, then approve or return for correction. Your own timesheets need another reviewer. Demo hours are always excluded from payroll.</p>
   <% end %>
 
-  <section class="space-y-3" aria-label="Employee time sources">
-    <h2 class="text-lg font-semibold"><%= Current.user.employee? ? 'Your time sources' : 'All employee time sources' %></h2>
-    <p class="text-sm text-mocha">Rupert submissions, Square timecards and C-Trax shifts are separate records. Review each source; overlapping hours must not be added together. Source records do not approve hours or create a payroll payment.</p>
-    <div class="grid gap-3 sm:grid-cols-3">
-      <article class="card card-pad space-y-2"><h3 class="font-semibold">Rupert timesheets</h3><p class="text-sm text-mocha">Weekly entries and approval history.</p><%= link_to 'View all Rupert timesheets', people_timesheets_path(status: 'all'), class: 'text-sm text-olive underline' %></article>
-      <article class="card card-pad space-y-2"><h3 class="font-semibold">Square timecards</h3><p class="text-sm text-mocha"><%= @square_history.count %> retained records, including open and held history. Counted Square history also appears in personal reports and calendars.</p><%= link_to 'View Square history', people_square_timesheets_path, class: 'text-sm text-olive underline' %></article>
-      <article class="card card-pad space-y-2"><h3 class="font-semibold">C-Trax shifts</h3><p class="text-sm text-mocha"><%= @ctrax_history.count %> retained records. Source-reported hours and elapsed time remain unapproved history.</p><%= link_to 'View C-Trax history', people_ctrax_timesheets_path, class: 'text-sm text-olive underline' %></article>
-    </div>
-  </section>
-  <% if @awaiting.positive? %>
-    <div class="rounded-xl border border-olive/30 bg-olive/10 px-4 py-2.5 text-sm text-olive"><%= @awaiting %> timesheet<%= @awaiting == 1 ? "" : "s" %> awaiting review.</div>
+  <% if @missing&.any? %>
+    <section class="card card-pad space-y-2" aria-label="Missing timesheets">
+      <h2 class="font-display text-lg">No timesheet yet for the week of <%= (@week_start || Date.current.beginning_of_week).strftime('%b %d') %> (<%= @missing.size %>)</h2>
+      <p class="flex flex-wrap gap-2 text-sm"><% @missing.first(30).each do |employee| %><span class="pill-taupe"><%= employee.name %></span><% end %><%= " and #{@missing.size - 30} more" if @missing.size > 30 %></p>
+    </section>
   <% end %>
 
   <%= form_tag people_timesheets_path, method: :get, class: "flex flex-wrap gap-2" do %>
+    <input type="search" name="q" value="<%= @query %>" placeholder="Search employee" aria-label="Search employee" class="input w-auto">
     <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
       <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
       <% People::Timesheet.aasm.states.map(&:name).each do |status| %>
@@ -42,33 +54,57 @@
       <% end %>
     </select>
     <input type="date" name="period" value="<%= params[:period] %>" class="input w-auto" title="Week of" aria-label="Week of">
-    <%= link_to 'Export Rupert CSV', people_timesheets_path(format: :csv, status: @status, period: @period), class: 'btn-ghost btn-sm' %>
+    <%= link_to 'Export CSV', people_timesheets_path(format: :csv, status: @status, period: @period, q: @query), class: 'btn-ghost btn-sm' %>
     <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
   <% end %>
 
+  <% approvable = @timesheets.select { |t| t.submitted? && policy(t).approve? } %>
+  <%= form_with url: bulk_approve_people_timesheets_path, method: :post, id: 'bulk-approve', data: { turbo_confirm: 'Approve the selected timesheets?' } do |f| %>
+    <%= hidden_field_tag :return_status, @status %><%= hidden_field_tag :return_period, @period %><%= hidden_field_tag :return_q, @query %>
+    <% if approvable.any? %>
+      <div class="mb-2 flex flex-wrap items-center gap-2">
+        <label class="flex items-center gap-1 text-sm"><input type="checkbox" onclick="document.querySelectorAll('#bulk-approve .bulk-box').forEach(function(b){b.checked=this.checked}.bind(this))"> Select all <%= approvable.size %></label>
+        <%= text_field_tag :review_note, nil, maxlength: 4000, placeholder: 'Optional comment for all', 'aria-label': 'Optional comment for all selected', class: 'input w-auto' %>
+        <%= f.submit 'Approve selected', class: 'btn-primary btn-sm' %>
+      </div>
+    <% end %>
   <div class="card overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
+            <% if approvable.any? %><th scope="col" class="th"><span class="sr-only">Select</span></th><% end %>
             <th scope="col" class="th">Employee</th>
             <th scope="col" class="th">Period</th>
-            <th scope="col" class="th text-right">Hours</th>
+            <th scope="col" class="th text-right">Regular</th>
+            <th scope="col" class="th text-right">Overtime</th>
+            <th scope="col" class="th text-right">Other</th>
+            <th scope="col" class="th text-right">Total</th>
+            <th scope="col" class="th">Check</th>
             <th scope="col" class="th">Status</th>
             <th scope="col" class="th">Review</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @timesheets.empty? %>
-            <tr><td colspan="5" class="empty-row"><%= @status == 'submitted' ? 'No timesheets awaiting review.' : 'No timesheets found.' %></td></tr>
+            <tr><td colspan="10" class="empty-row"><%= @status == 'submitted' ? 'Nothing awaiting review. Try All timesheets or another week.' : 'No timesheets found.' %></td></tr>
           <% end %>
           <% @timesheets.each do |timesheet| %>
+            <% sum = @summaries[timesheet.id] %>
             <tr class="hover:bg-cream">
+              <% if approvable.any? %>
+                <td class="td"><% if approvable.include?(timesheet) %><input type="checkbox" class="bulk-box" name="timesheet_ids[]" value="<%= timesheet.id %>" aria-label="Select <%= timesheet.employee&.name %>"><% end %></td>
+              <% end %>
               <td class="td font-medium text-ink"><%= timesheet.employee&.name %><% if timesheet.demo? %><span class="ml-2 pill-taupe">DEMO</span><% end %></td>
               <td class="td"><%= link_to timesheet.period_label, people_timesheet_path(timesheet), class: "text-olive hover:underline" %></td>
-              <td class="td text-right text-mocha"><%= number_with_precision(timesheet.total_hours, precision: 1) %></td>
+              <td class="td text-right text-mocha"><%= number_with_precision(sum.regular, precision: 1) %></td>
+              <td class="td text-right text-mocha"><%= number_with_precision(sum.overtime, precision: 1) %></td>
+              <td class="td text-right text-mocha"><%= number_with_precision(sum.other, precision: 1) %></td>
+              <td class="td text-right font-medium text-ink"><%= number_with_precision(sum.total, precision: 1) %></td>
+              <td class="td"><% sum.flags.each do |flag| %><span class="<%= flag.start_with?('Overtime') ? 'pill-olive' : 'pill-clay' %> mr-1 mb-1 inline-block"><%= flag %></span><% end %></td>
               <td class="td">
                 <span class="<%= timesheet.approved? ? "pill-fern" : timesheet.submitted? ? "pill-olive" : timesheet.rejected? ? "pill-rose" : "pill-taupe" %>"><%= timesheet.status %></span>
+                <% if timesheet.submitted? && timesheet.submitted_at %><p class="text-xs text-mocha">waiting <%= time_ago_in_words(timesheet.submitted_at) %></p><% end %>
               </td>
               <td class="td">
                 <%= link_to (timesheet.submitted? && policy(timesheet).approve? ? 'Review timesheet' : 'View timesheet'), people_timesheet_path(timesheet), class: 'text-olive underline' %>
@@ -81,5 +117,16 @@
       </table>
     </div>
   </div>
+  <% end %>
   <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+
+  <details class="space-y-3" aria-label="Employee time sources">
+    <summary class="cursor-pointer text-lg font-semibold"><%= Current.user.employee? ? 'Your time sources' : 'All employee time sources' %></summary>
+    <p class="text-sm text-mocha">Rupert submissions, Square timecards and C-Trax shifts are separate records. Review each source; overlapping hours must not be added together. Source records do not approve hours or create a payroll payment.</p>
+    <div class="grid gap-3 sm:grid-cols-3">
+      <article class="card card-pad space-y-2"><h3 class="font-semibold">Rupert timesheets</h3><p class="text-sm text-mocha">Weekly entries and approval history.</p><%= link_to 'View all Rupert timesheets', people_timesheets_path(status: 'all'), class: 'text-sm text-olive underline' %></article>
+      <article class="card card-pad space-y-2"><h3 class="font-semibold">Square timecards</h3><p class="text-sm text-mocha"><%= @square_history.count %> retained records, including open and held history. Counted Square history also appears in personal reports and calendars.</p><%= link_to 'View Square history', people_square_timesheets_path, class: 'text-sm text-olive underline' %></article>
+      <article class="card card-pad space-y-2"><h3 class="font-semibold">C-Trax shifts</h3><p class="text-sm text-mocha"><%= @ctrax_history.count %> retained records. Source-reported hours and elapsed time remain unapproved history.</p><%= link_to 'View C-Trax history', people_ctrax_timesheets_path, class: 'text-sm text-olive underline' %></article>
+    </div>
+  </details>
 </div>

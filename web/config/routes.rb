@@ -258,6 +258,7 @@ Rails.application.routes.draw do
     resources :positions, only: %i[index new create edit update]
     resources :scheduled_shifts, path: 'schedule', only: %i[index new create edit update destroy]
     resources :timesheets, only: %i[index show new create edit update destroy] do
+      collection { post :bulk_approve }
       member do
         post :submit
         post :approve
