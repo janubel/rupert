@@ -56,6 +56,10 @@ class DailyMoneyReconciliation
     @swipesimple ||= SwipesimpleDailyReport.new(day: day.iso8601).totals.sort_by { |row| [row[:account].to_s, row[:currency].to_s, row[:tender].to_s] }
   end
 
+  def source_coverage
+    @source_coverage ||= Finance::SourceCoverage.new(from: day, to: day).rows
+  end
+
   def iris
     @iris ||= IrisReport.where('window_from <= ? AND window_to >= ?', day, day).order(observed_at: :desc).limit(50).to_a
   end

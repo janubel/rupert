@@ -48,6 +48,7 @@ class MoneyReconciliationReport
         'Gateway totals use settlement dates; order totals use sale dates. Fees and funding delays require source evidence.'
       ]
       shopify
+      square
       ctrax
       swipesimple
       authorize_net
@@ -55,6 +56,7 @@ class MoneyReconciliationReport
       { 'kind' => kind, 'from' => from.iso8601, 'to' => to.iso8601, 'timezone' => ZONE,
         'generated_at' => Time.current.utc.iso8601(6), 'status' => 'Review required',
         'rows' => @rows, 'warnings' => @warnings.uniq,
+        'source_coverage' => Finance::SourceCoverage.new(from: from, to: to).rows,
         'sources' => SourceSyncStatus.all.map { |s| s.except(:ready).merge(last_at: s[:last_at]&.utc&.iso8601(6)) } }.deep_stringify_keys
     end
   end
@@ -85,6 +87,13 @@ class MoneyReconciliationReport
         out << cells.map { |value| value.is_a?(String) && value.match?(/\A[=+@\t\r-]/) && !value.match?(/\A-\d+(?:\.\d+)?\z/) ? "'#{value}" : value }
       end
       document.fetch('warnings').each { |warning| out << [kind, from.iso8601, to.iso8601, 'Review', nil, nil, warning] }
+      if document['source_coverage']
+        out << ['Source coverage', 'Evidence type', 'Records in selected period', 'Stored records', 'Earliest stored date', 'Latest stored date', 'Last source read']
+        document['source_coverage'].each do |source|
+          out << source.values_at('label', 'unit', 'period_records', 'stored_records', 'first_date', 'last_date', 'last_read')
+        end
+        out << ['Stored date ranges do not prove complete history. Missing evidence is not zero activity.']
+      end
     end
   end
 
@@ -125,6 +134,32 @@ class MoneyReconciliationReport
     end
     @warnings << 'SwipeSimple invoices are not added to transaction receipts; paid invoice and payment evidence can overlap.'
     @warnings << 'SwipeSimple exports do not establish complete coverage for this period.' if rows.empty?
+  end
+
+  def square
+    orders = Core::Order.where(source: 'square', status: %w[paid fulfilled refunded], occurred_at: @range)
+    orders.group(:currency, :location_id).count.each do |(currency, location_id), count|
+      scoped = orders.where(currency: currency, location_id: location_id)
+      if scoped.where(gross_cents: nil).exists?
+        @warnings << 'Square recorded sales include missing amounts; no sales total is inferred for that location and currency.'
+        next
+      end
+      account = Location.find_by(id: location_id)&.name || 'Unassigned location'
+      add('Square', account, currency, 'Recorded sales', BigDecimal(scoped.sum(:gross_cents).to_s) / 100, count,
+        'Sale date; recorded order total including tax; compare payments separately')
+    end
+    refunds = Core::Refund.joins(:order).where(orders: { tenant_id: Current.tenant_id, source: 'square' }, refunded_at: @range)
+    refunds.group('orders.currency', 'orders.location_id').count.each do |(currency, location_id), count|
+      scoped = refunds.where(orders: { currency: currency, location_id: location_id })
+      if scoped.where(amount_cents: nil).exists?
+        @warnings << 'Square recorded refunds include missing amounts; no refund total is inferred for that location and currency.'
+        next
+      end
+      account = Location.find_by(id: location_id)&.name || 'Unassigned location'
+      add('Square', account, currency, 'Recorded refunds', BigDecimal(scoped.sum(:amount_cents).to_s) / 100, count,
+        'Refund date; local recorded evidence')
+    end
+    @warnings << 'No Square sales are stored for this period; confirm source coverage before treating that as zero activity.' unless orders.exists?
   end
 
   def ctrax
