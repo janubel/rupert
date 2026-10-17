@@ -16,10 +16,10 @@ module LockedPeriodGuard
     def guard_locked_period(attribute = nil, range: nil)
       spans = lambda do |record|
         current = range ? Array(range.call(record)) : [record.public_send(attribute)]
-        before = if !record.persisted? then []
-                 elsif range then [record.attribute_in_database(:period_from), record.attribute_in_database(:period_to)].compact.presence || []
-                 else [record.attribute_in_database(attribute)]
-                 end
+        before = []
+        if record.persisted?
+          before = range ? [record.attribute_in_database(:period_from), record.attribute_in_database(:period_to)] : [record.attribute_in_database(attribute)]
+        end
         [current.compact, before.compact].reject(&:empty?).map { |dates| [dates.min, dates.max] }
       end
 

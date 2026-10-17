@@ -152,27 +152,50 @@ class BooksDesk
   end
 
   def stages_for(day, wf)
-    issues = wf.issues
-    quiet = wf.report.register.rows.sum { |r| r[:orders].to_i }.zero?
-    match_count = MATCH_KEYS.sum { |key| issues[key].to_i }
-    overdue = wf.open_follow_ups.count(&:overdue?)
-    package = wf.packages.first
     [
-      stage(:imported, if issues[:unconfirmed_imports].to_i.positive? then [:todo, issues[:unconfirmed_imports], "#{pluralize(issues[:unconfirmed_imports], 'source')} not confirmed", :unconfirmed_imports]
-                       elsif quiet then [:quiet, 0, 'No sales recorded. Confirm the day was genuinely quiet.', nil]
-                       else [:done, 0, 'All sources confirmed', nil] end),
-      stage(:matched, if match_count.positive? then [:todo, match_count, match_detail(issues), MATCH_KEYS.find { |key| issues[key].to_i.positive? }]
-                      else [:done, 0, quiet ? 'Nothing to compare' : 'Every register agrees', nil] end),
-      stage(:followed_up, if overdue.positive? then [:overdue, wf.open_follow_ups.size, "#{overdue} overdue", :open_follow_ups]
-                          elsif wf.open_follow_ups.any? then [:todo, wf.open_follow_ups.size, "#{wf.open_follow_ups.size} open", :open_follow_ups]
-                          else [:done, 0, 'None open', nil] end),
+      stage(:imported, import_state(wf)),
+      stage(:matched, match_state(wf)),
+      stage(:followed_up, follow_up_state(wf)),
       stage(:reviewed, review_state(wf)),
-      stage(:closed, if package.nil? then [:todo, nil, 'No close package yet', nil]
-                     elsif package.metadata['workflow_digest'] != wf.digest then [:todo, nil, 'Numbers changed since the close', nil]
-                     elsif package.metadata['disposition'] == 'with_exceptions' then [:exception, nil, 'Closed with exceptions', nil]
-                     else [:done, nil, 'Closed', nil] end),
+      stage(:closed, close_state(wf)),
       stage(:approved, approval_stage(day))
     ]
+  end
+
+  def quiet?(wf) = wf.report.register.rows.sum { |r| r[:orders].to_i }.zero?
+
+  def import_state(wf)
+    unconfirmed = wf.issues[:unconfirmed_imports].to_i
+    return [:todo, unconfirmed, "#{pluralize(unconfirmed, 'source')} not confirmed", :unconfirmed_imports] if unconfirmed.positive?
+    return [:quiet, 0, 'No sales recorded. Confirm the day was genuinely quiet.', nil] if quiet?(wf)
+
+    [:done, 0, 'All sources confirmed', nil]
+  end
+
+  def match_state(wf)
+    issues = wf.issues
+    count = MATCH_KEYS.sum { |key| issues[key].to_i }
+    return [:todo, count, match_detail(issues), MATCH_KEYS.find { |key| issues[key].to_i.positive? }] if count.positive?
+
+    [:done, 0, quiet?(wf) ? 'Nothing to compare' : 'Every register agrees', nil]
+  end
+
+  def follow_up_state(wf)
+    open = wf.open_follow_ups
+    overdue = open.count(&:overdue?)
+    return [:overdue, open.size, "#{overdue} overdue", :open_follow_ups] if overdue.positive?
+    return [:todo, open.size, "#{open.size} open", :open_follow_ups] if open.any?
+
+    [:done, 0, 'None open', nil]
+  end
+
+  def close_state(wf)
+    package = wf.packages.first
+    return [:todo, nil, 'No close package yet', nil] if package.nil?
+    return [:todo, nil, 'Numbers changed since the close', nil] if package.metadata['workflow_digest'] != wf.digest
+    return [:exception, nil, 'Closed with exceptions', nil] if package.metadata['disposition'] == 'with_exceptions'
+
+    [:done, nil, 'Closed', nil]
   end
 
   def stage(key, (state, count, detail, blocker))
