@@ -156,7 +156,7 @@
             <div class="mt-1 space-y-0.5">
               <% bucket[:timesheets].each do |ts| %>
                 <div class="truncate rounded px-1 py-0.5 text-[10px] font-semibold leading-tight <%= ts.approved? ? 'bg-fern/15 text-fern' : ts.submitted? ? 'bg-olive/15 text-olive-deep' : ts.rejected? ? 'bg-rose/15 text-rose' : 'bg-taupe/15 text-taupe' %>" title="<%= ts.employee&.name %> · <%= ts.period_label %> · #{number_with_precision(ts.total_hours, precision: 1)}h">
-                  <%= ts.employee&.name&.split&.first %> · <%= ts.status %>
+                  <%= ts.employee&.name %> · <%= ts.status %>
                 </div>
               <% end %>
             </div>
