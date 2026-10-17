@@ -1,10 +1,10 @@
 # Navigation and access levels
 
-Reviewed 2026-10-15. Rupert keeps everyday work areas named and uses small labelled icons for utilities. Access is enforced by the server as well as by the visible navigation.
+Reviewed 2026-10-17. Rupert keeps everyday work areas named and uses small labelled icons for utilities. Access is enforced by the server as well as by the visible navigation.
 
 ## Find the right tool
 
-Use the named **Overview, Sell, Stock, Money, Work, Team and System** areas that your account can access. Each area has a consistent local icon. Areas without available work are omitted; personal time and the feature roadmap stay in the account menu when broader Team or System access is unavailable.
+Use the named **Overview, Sell, Stock, Money, Work, Timesheets, Team and System** areas that your account can access. Each area has a consistent local icon. Areas without available work are omitted; personal time and the feature roadmap stay in the account menu when broader Team or System access is unavailable.
 
 Inside a work area, open the current-tool dropdown to see its permitted tools with their full names. This replaces the long second row of tabs. The current tool is marked. The account menu shows your role, personal time clock, feature roadmap and sign-out action.
 
@@ -18,6 +18,8 @@ These are the defaults. Store administrators can intentionally delegate supporte
 
 | Role | Default work |
 | --- | --- |
+| Employee | Restricted POS access and their own linked time workspace. No review of other workers, sales history, payroll administration or account management. Person/role overrides cannot expand this fixed boundary. |
+| Shift leader | Dashboard, POS and timesheet read/review. No payroll, account administration or editing another employee’s hours by default. |
 | Reader | Read-only sales, customers, inventory, reports and ledger. No company-wide personnel, timesheet, leave or payroll access. This is the automatic role for a new Google user on an enabled company domain. |
 | Cashier | Sales and POS work, customer lookup, inventory and alerts. No provider setup, personnel administration or platform access. |
 | Inventory staff | Inventory work and alerts, with catalog-link review. No sales/customer search or payroll by default. |
@@ -25,6 +27,8 @@ These are the defaults. Store administrators can intentionally delegate supporte
 | Manager | Business operations, customer/inventory/project work and operational team, timesheet and leave work. Payroll requires explicit delegation. |
 | Store administrator | Workspace business administration, provider settings, users, permissions and private owner records. Whole-instance administration remains separate. |
 | Platform administrator | Cross-workspace setup review, instance totals, host diagnostics, whole-database backup/restore and instance Drive backup configuration/history, plus workspace administration. |
+
+Timesheet reviewers require an active account with `timesheets.read` and either `timesheets.review` or `timesheets.write`. The named Timesheets area opens Needs review by default; employees retain their personal view. A reviewer cannot approve or return their own linked employee’s hours. The `shift_leader` role is available for explicit assignment; the release does not reassign existing staff. Per-person or role overrides may narrow its permissions.
 
 Personal time-clock actions still require an active employee linked to the signed-in account and remain limited to that person's records. A role label does not create an employee or authorize editing someone else's time.
 
