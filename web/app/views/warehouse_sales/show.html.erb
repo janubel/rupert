@@ -26,11 +26,10 @@
     </div>
   </section>
 
-  <% cached_fragment("warehouse_sales/catalog", share_id: @share.id) do %>
   <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <% @products.each do |product| %>
-      <% product.variants.each do |variant| %>
-        <% qty = variant.levels.sum(:quantity) %>
+      <% @variants.each do |variant| %>
+        <% product = variant.product %>
+        <% qty = @stock_by_variant.fetch(variant.id, 0) %>
         <% list = variant.price %>
         <article class="card card-pad flex flex-col">
           <div class="flex items-start gap-3">
@@ -93,13 +92,11 @@
           <% end %>
         </article>
       <% end %>
-    <% end %>
   </section>
 
-  <% if @products.empty? %>
+  <% if @variants.empty? %>
     <div class="card card-pad">
       <p class="py-4 text-center text-taupe">No products listed in this warehouse sale yet.</p>
     </div>
-  <% end %>
   <% end %>
 </section>

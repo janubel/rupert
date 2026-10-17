@@ -32,6 +32,15 @@ class InventoryLevel < ApplicationRecord
     where(shopifyVariantId: variant_id).sum(:quantity)
   end
 
+  def self.warehouse_quantities(tenant_id:, variant_ids:)
+    return {} if tenant_id.blank? || variant_ids.empty?
+
+    quantities = unscoped.where(tenant_id: tenant_id, source: 'shopify', shopifyVariantId: variant_ids)
+      .group(:shopifyVariantId).sum(:quantity)
+    holds = WarehouseStockHold.unscoped.held.where(tenant_id: tenant_id, variant_id: variant_ids).group(:variant_id).sum(:quantity)
+    variant_ids.to_h { |id| [id, [quantities.fetch(id, 0) - holds.fetch(id, 0), 0].max] }
+  end
+
   def self.total_for_variation(variation_id)
     where(squareVariationId: variation_id).sum(:quantity)
   end

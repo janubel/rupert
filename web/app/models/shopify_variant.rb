@@ -23,6 +23,17 @@ class ShopifyVariant < ApplicationRecord
 
   scope :tracked, -> { where(tracked: true) }
   scope :current_catalog, -> { where(catalog_present: true).where(productId: ShopifyProduct.where(status: 'ACTIVE', catalog_present: true).select(:id)) }
+
+  # Legacy rows may predate catalog presence stamps. Explicit tombstones and
+  # inactive products must never be sold, even through a remembered variant ID.
+  def self.warehouse_catalog(tenant_id:)
+    return none if tenant_id.blank?
+
+    products = ShopifyProduct.unscoped.active.where(tenant_id: tenant_id)
+    unscoped.where(tenant_id: tenant_id, catalog_present: [nil, true], productId: products.select(:id))
+      .where(arel_table[:price].gt(0))
+  end
+
   scope :search, lambda { |q|
     return all if q.blank?
 

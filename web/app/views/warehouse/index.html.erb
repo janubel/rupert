@@ -7,6 +7,27 @@
     </div>
   </section>
 
+  <% if @stock_holds %>
+    <section class="card card-pad">
+      <h2 class="font-display text-xl text-ink">Stock awaiting fulfillment confirmation</h2>
+      <p class="mt-1 text-sm text-mocha"><%= @hold_count %> held lines. Open the paid order after fulfillment and source inventory reconciliation. Uncertain payments require review in the original gateway account.</p>
+      <ul class="mt-3 space-y-2">
+        <% @stock_holds.each do |hold| %>
+          <% item = hold.warehouse_cart.items.find { |row| row.variant_id == hold.variant_id } %>
+          <li class="rounded-xl bg-haze px-4 py-3 text-sm">
+            <span class="font-semibold"><%= item&.title.presence || hold.variant_id %></span> · <%= hold.quantity %> units · <%= hold.warehouse_cart.share&.name || 'Retired vendor link' %>
+            <% if hold.order %>
+              · <%= link_to "Order #{hold.order.display_number}", order_path(hold.order), class: 'text-olive hover:underline' %>
+            <% else %>
+              · payment <%= hold.warehouse_payment_attempt&.status %> · reference <%= hold.warehouse_payment_attempt&.invoice_number %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+      <% if @hold_count > 100 %><p class="mt-2 text-xs text-taupe">Showing the oldest 100 held lines.</p><% end %>
+    </section>
+  <% end %>
+
   <section class="grid gap-4 lg:grid-cols-2">
     <div class="card card-pad">
       <h2 class="font-display text-xl text-ink">Global bulk tiers</h2>
