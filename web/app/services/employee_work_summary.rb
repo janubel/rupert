@@ -12,7 +12,8 @@ class EmployeeWorkSummary
     raise ActiveRecord::RecordNotFound unless employee&.tenant_id == Current.tenant_id
 
     @employee, @from, @to = employee, from, to
-    @entries = employee.timesheet_entries.where(worked_on: from..to).includes(:timesheet).order(:worked_on, :id).to_a
+    @entries = employee.timesheet_entries.joins(:timesheet).merge(People::Timesheet.non_demo)
+      .where(worked_on: from..to).includes(:timesheet).order(:worked_on, :id).to_a
     imported = SquareTimecardDay.joins(:square_timecard).where(square_timecards: { employee_id: employee.id, tenant_id: Current.tenant_id })
       .merge(SquareTimecard.counted).where(worked_on: from..to).includes(:square_timecard).to_a
     @entries = (@entries + imported).sort_by { |entry| [entry.worked_on, entry.id] }

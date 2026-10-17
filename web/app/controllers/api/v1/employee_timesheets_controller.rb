@@ -53,7 +53,7 @@ module Api
       end
 
       def summary(sheet)
-        sheet.as_json(only: %i[id period_start period_end status notes submitted_at reviewed_at review_note]).merge(total_hours: sheet.total_hours.to_s('F'))
+        sheet.as_json(only: %i[id period_start period_end status notes submitted_at reviewed_at review_note demo]).merge(total_hours: sheet.total_hours.to_s('F'))
       end
 
       def render_sheet(sheet, status: :ok)

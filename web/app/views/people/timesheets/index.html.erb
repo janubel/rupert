@@ -1,9 +1,10 @@
 <% content_for :title, "Timesheets" %>
 <div class="space-y-6">
+  <%= render 'people/timesheets/demo_header' if @has_demo_timesheets %>
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Timesheets</h1>
-      <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? 'Your hours by week, submitted for review.' : 'Hours by week per employee, submitted for review.' %></p>
+      <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? (@reviewer ? 'Your timesheets and assigned demo reviews.' : 'Your hours by week, submitted for review.') : 'Hours by week per employee, submitted for review.' %></p>
     </div>
     <% if policy(People::Timesheet).create? %>
       <%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %>
@@ -17,7 +18,7 @@
         <%= link_to (status == 'submitted' ? "#{label} (#{@awaiting})" : label), people_timesheets_path(status: status), class: "nav-pill #{@status == status ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@status == status ? 'page' : nil) } %>
       <% end %>
     </nav>
-    <p class="text-sm text-mocha">Review each day's hours and notes, then approve or return for correction. Your own timesheets need another reviewer. Approved hours can be included in payroll.</p>
+    <p class="text-sm text-mocha">Review each day's hours and notes, then approve or return for correction. Your own timesheets need another reviewer. Demo hours are always excluded from payroll.</p>
   <% end %>
 
   <section class="space-y-3" aria-label="Employee time sources">
@@ -63,7 +64,7 @@
           <% end %>
           <% @timesheets.each do |timesheet| %>
             <tr class="hover:bg-cream">
-              <td class="td font-medium text-ink"><%= timesheet.employee&.name %></td>
+              <td class="td font-medium text-ink"><%= timesheet.employee&.name %><% if timesheet.demo? %><span class="ml-2 pill-taupe">DEMO</span><% end %></td>
               <td class="td"><%= link_to timesheet.period_label, people_timesheet_path(timesheet), class: "text-olive hover:underline" %></td>
               <td class="td text-right text-mocha"><%= number_with_precision(timesheet.total_hours, precision: 1) %></td>
               <td class="td">
@@ -71,6 +72,7 @@
               </td>
               <td class="td">
                 <%= link_to (timesheet.submitted? && policy(timesheet).approve? ? 'Review timesheet' : 'View timesheet'), people_timesheet_path(timesheet), class: 'text-olive underline' %>
+                <% if timesheet.assigned_reviewer %><p class="text-xs text-mocha">Assigned to <%= timesheet.assigned_reviewer.display_name %></p><% end %>
                 <% if @reviewer && timesheet.submitted? && !policy(timesheet).approve? %><p class="text-xs text-mocha">Another reviewer required</p><% end %>
               </td>
             </tr>

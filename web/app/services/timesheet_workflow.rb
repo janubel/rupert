@@ -62,6 +62,7 @@ class TimesheetWorkflow
         sheet.update!(submitted_at: nil, reviewed_by: nil, reviewed_at: nil, review_note: nil)
       when 'import_shifts'
         draft!(sheet)
+        raise Error, 'Demo timesheets cannot import real clock shifts.' if sheet.demo?
         import_shifts(sheet)
         attrs = {}
       else
