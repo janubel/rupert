@@ -8,6 +8,7 @@ class BankStatementLine < ApplicationRecord
   include LockedPeriodGuard
 
   encrypts :description
+  encrypts :review_note
 
   STATUSES = %w[pending recorded ignored].freeze
   # Plain-keyword hints only. A suggestion is never applied without a person choosing it.
@@ -26,11 +27,20 @@ class BankStatementLine < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
 
   scope :pending, -> { where(status: 'pending') }
+  scope :flagged, -> { where(review_flag: true) }
   scope :for_document, ->(id) { where(document_id: id).order(:line_no) }
 
   def money_out? = amount_cents.negative?
   def out_cents = -amount_cents
   def pending? = status == 'pending'
+
+  def review_category_label
+    { 'processor_deposit' => 'Processor payout', 'owner_transfer' => 'Owner / personal transfer',
+      'bank_fees' => 'Bank & processing fees', 'tax_liability' => 'Tax remittance',
+      'needs_review' => 'Needs your review', 'unidentified_deposit' => 'Unidentified receipt',
+      'non_expense' => 'Excluded from expenses', 'vendor_payment' => 'Vendor payment' }
+      .fetch(review_category, review_category.to_s.humanize.presence || 'Uncategorized')
+  end
 
   def suggested_category
     text = description.to_s.downcase
@@ -39,6 +49,7 @@ class BankStatementLine < ApplicationRecord
 
   def decide!(status:, user:, expense: nil, vendor_payment: nil)
     update!(status: status, decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current,
-      expense_id: expense&.id, vendor_payment_id: vendor_payment&.id)
+      expense_id: expense&.id, vendor_payment_id: vendor_payment&.id, review_flag: false, reviewed_at: Time.current,
+      review_category: expense&.category || (vendor_payment ? 'vendor_payment' : review_category.presence || 'non_expense'))
   end
 end

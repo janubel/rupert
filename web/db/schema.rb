@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_235000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -72,6 +72,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_230000) do
     t.string "decided_by_name"
     t.datetime "decided_at"
     t.datetime "created_at", null: false
+    t.string "review_category"
+    t.text "review_note"
+    t.boolean "review_flag", default: false, null: false
+    t.datetime "reviewed_at"
     t.index ["tenant_id", "document_id", "status"], name: "idx_bank_lines_document"
     t.index ["tenant_id", "fingerprint"], name: "idx_bank_lines_fingerprint", unique: true
     t.index ["tenant_id"], name: "index_bank_statement_lines_on_tenant_id"

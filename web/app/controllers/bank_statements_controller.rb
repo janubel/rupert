@@ -41,10 +41,15 @@ class BankStatementsController < AuthenticatedController
     @document = ReconciliationDocument.find(params[:id])
     raise ActiveRecord::RecordNotFound unless @document.kind == 'bank_statement'
 
-    @filter = %w[pending all].include?(params[:show]) ? params[:show] : 'pending'
+    @filter = %w[pending flagged all].include?(params[:show]) ? params[:show] : 'pending'
     scope = BankStatementLine.for_document(@document.id)
     @counts = scope.reorder(nil).group(:status).count
-    @lines = (@filter == 'all' ? scope : scope.pending).to_a
+    @flagged_count = scope.flagged.pending.count
+    @lines = case @filter
+    when 'all' then scope.to_a
+    when 'flagged' then scope.flagged.pending.to_a
+    else scope.pending.to_a
+    end
     @vendors = Purchasing::Vendor.ordered.to_a
     @can_write = Current.user.can?('finance.write')
   end

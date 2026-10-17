@@ -15,7 +15,7 @@ class BooksDesksIntegrationTest < ActionDispatch::IntegrationTest
     get books_desk_path
     assert_response :success
     assert_equal 'private, no-store', response.headers['Cache-Control']
-    assert_select 'h1', 'Books desk'
+    assert_select 'h1', 'Close & review'
     assert_select '#desk-next-title'
     assert_select '#reconciliation-findings'
     assert_includes response.body, 'Bank deposit matching remains incomplete.'
@@ -26,8 +26,8 @@ class BooksDesksIntegrationTest < ActionDispatch::IntegrationTest
     assert_select 'article[aria-labelledby=close-monthly]'
     assert_select 'article[aria-labelledby=close-yearly]'
     assert_select 'turbo-frame#books-desk-checks[src=?]', checks_books_desk_path
-    assert_select 'nav[aria-label="Finance workspace"] a[aria-current=page]', text: 'Books desk'
-    assert_select 'nav[aria-label="Finance workspace"] .workspace-nav-group', text: 'Daily & weekly'
+    assert_select 'nav[aria-label="Bookkeeping workspace"] a[aria-current=page]', text: 'Close & review'
+    assert_select 'nav[aria-label="Bookkeeping workspace"] .workspace-nav-group', text: 'Reconcile & close'
   end
 
   test 'an earlier week can be chosen and a future week falls back to last week' do
@@ -66,12 +66,12 @@ class BooksDesksIntegrationTest < ActionDispatch::IntegrationTest
      finance_vendor_payments_path, finance_chart_of_accounts_path, ledger_index_path].each do |path|
       get path
       assert_response :success
-      assert_select 'nav[aria-label="Finance workspace"]', count: 1
-      assert_select 'nav[aria-label="Finance workspace"] a[aria-current="page"]', count: 1
-      assert_select 'nav[aria-label="Finance workspace"] .workspace-nav-group', text: 'Daily & weekly'
-      assert_select 'nav[aria-label="Finance workspace"] .workspace-nav-group', text: 'Records'
-      assert_select 'nav[aria-label="Finance workspace"] .workspace-nav-group', text: 'Reports & control'
-      assert_select 'nav[aria-label="Module areas"] a.nav-pill-active', text: 'Finance'
+      assert_select 'nav[aria-label="Bookkeeping workspace"]', count: 1
+      assert_select 'nav[aria-label="Bookkeeping workspace"] a[aria-current="page"]', count: 1
+      assert_select 'nav[aria-label="Bookkeeping workspace"] .workspace-nav-group', text: 'Reconcile & close'
+      assert_select 'nav[aria-label="Bookkeeping workspace"] .workspace-nav-group', text: 'Records'
+      assert_select 'nav[aria-label="Bookkeeping workspace"] .workspace-nav-group', text: 'Reports & control'
+      assert_select 'nav[aria-label="Module areas"] a.nav-pill-active', text: 'Bookkeeping'
     end
   end
 end

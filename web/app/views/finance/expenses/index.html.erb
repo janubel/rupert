@@ -5,10 +5,10 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Expenses</h1>
-      <p class="mt-1 text-sm text-mocha">Money out across the last <%= @range_days %> days.</p>
+      <p class="mt-1 text-sm text-mocha">Confirmed expenses · <%= @month ? @from.strftime('%B %Y') : "last #{@range_days} days" %>.</p>
     </div>
     <div class="flex gap-2">
-      <%= link_to "Export CSV", finance_expenses_path(category: @category, days: @range_days, include_deleted: (@include_deleted ? 1 : nil), format: :csv), class: "btn-ghost btn-sm", data: { turbo: false } %>
+      <%= link_to "Export CSV", finance_expenses_path(category: @category, month: @month, days: @range_days, include_deleted: (@include_deleted ? 1 : nil), format: :csv), class: "btn-ghost btn-sm", data: { turbo: false } %>
       <% if Current.user.can?("finance.write") %>
         <%= link_to "Record expense", new_finance_expense_path, class: "btn-primary" %>
       <% end %>
@@ -30,6 +30,7 @@
   </section>
 
   <%= form_tag finance_expenses_path, method: :get, class: "card card-pad operations-filters" do %>
+    <label class="field-label">Month (optional)<%= month_field_tag :month, @month, min: '2000-01', max: '2099-12', class: 'input' %></label>
     <%= select_tag :category, options_for_select([["All categories", "all"]] + Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, @category), class: "select", aria: { label: "Expense category" } %>
     <%= select_tag :days, options_for_select([["Last 30 days", 30], ["Last 90 days", 90], ["Last year", 365]], @range_days), class: "select", aria: { label: "Date range" } %>
     <label class="flex items-center gap-1.5 text-sm text-mocha">
