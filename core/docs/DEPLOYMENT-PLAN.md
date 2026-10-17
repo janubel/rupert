@@ -210,9 +210,10 @@ incus config set rupert-core raw.apparmor='signal (send,receive) peer=@{profile_
 It lets processes in the container signal each other (their label is this profile stacked with `unconfined`) and nothing
 else: the peer must be this container's own label, so it grants nothing toward the host or other containers (which also
 sit in separate PID namespaces). It does not disable AppArmor, make the container privileged or change any shared
-policy. Precedent on this host: the `sonder` container already carries an equivalent, slightly broader rule
-(`peer="incus-sonder_</var/lib/incus>//&*"`). No other container was changed (checked: `rupert`, `rupert-db`,
-`homeboard`, `daedalus-prod` have none).
+policy. Precedent on this host (checked with `incus config get <name> raw.apparmor` on every container): `energy-monitor` and
+`swartzit` already carry the same rule in the same form with the container name spelled out
+(`peer="incus-<name>_</var/lib/incus>//&unconfined"`), and `sonder` a slightly broader one (`//&*`). This change added the
+rule to `rupert-core` only; `rupert`, `rupert-db`, `homeboard`, `daedalus-prod` and the rest were not modified.
 
 **Proof, on a throwaway container running the same binary and unit (`scripts/signal-test.sh`):**
 
