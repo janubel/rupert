@@ -220,11 +220,16 @@ Rails.application.routes.draw do
     resources :vendor_payments, only: %i[index new create destroy] do
       member { post :restore }
     end
-    resources :journal_entries, only: %i[index show]
+    resources :journal_entries, only: %i[index show new create]
     get 'reports', to: 'reports#index', as: :reports
     get 'reports/trial_balance', to: 'reports#trial_balance', as: :reports_trial_balance
     get 'reports/income_statement', to: 'reports#income_statement', as: :reports_income_statement
     get 'reports/balance_sheet', to: 'reports#balance_sheet', as: :reports_balance_sheet
+    get 'bank_reconciliation', to: 'bank_reconciliations#index', as: :bank_reconciliation
+    post 'bank_reconciliation/match', to: 'bank_reconciliations#match', as: :bank_reconciliation_match
+    post 'bank_reconciliation/unmatch', to: 'bank_reconciliations#unmatch', as: :bank_reconciliation_unmatch
+    get 'ledger_export', to: 'ledger_exports#new', as: :ledger_export
+    post 'ledger_export', to: 'ledger_exports#create'
   end
   namespace :purchasing do
     resources :vendors

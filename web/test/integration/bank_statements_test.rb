@@ -53,6 +53,8 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     assert_equal users(:regular_user).id, ups.reload.decided_by_id
     expense_entry = Finance::JournalEntry.for_source('Finance::Expense', ups.expense_id).posted.first!
     payment_entry = Finance::JournalEntry.for_source('Finance::VendorPayment', acme.reload.vendor_payment_id).posted.first!
+    assert_equal expense_entry.id, ups.reload.journal_entry_id
+    assert_equal payment_entry.id, acme.reload.journal_entry_id
     assert expense_entry.balanced?
     assert payment_entry.balanced?
     assert_equal 4210, expense_entry.journal_lines.joins(:account).where(accounts: { code: '1100' }).sum(:credit_cents)

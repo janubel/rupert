@@ -7,7 +7,7 @@
     <div>
       <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Bank statement</p>
       <h1 class="page-title mt-2"><%= @document.filename %></h1>
-      <p class="mt-2 text-sm text-mocha"><%= @document.period_from %> to <%= @document.period_to %> · <%= @counts.fetch('pending', 0) %> to review · <%= @counts.fetch('recorded', 0) %> recorded · <%= @counts.fetch('ignored', 0) %> ignored.</p>
+      <p class="mt-2 text-sm text-mocha"><%= @document.period_from %> to <%= @document.period_to %> · <%= @counts.fetch('pending', 0) %> to review · <%= @counts.fetch('recorded', 0) %> recorded · <%= @counts.fetch('ignored', 0) %> ignored · <%= @counts.fetch('matched', 0) %> matched.</p>
       <% if @flagged_count.positive? %><p class="mt-2 text-sm font-semibold"><%= @flagged_count %> flagged for your clarification. Open questions stay pending until you decide.</p><% end %>
       <div class="desk-meter mt-3 max-w-sm" role="progressbar" aria-valuemin="0" aria-valuemax="<%= total_lines %>" aria-valuenow="<%= decided %>" aria-label="Lines decided"><span style="width: <%= total_lines.zero? ? 0 : decided * 100 / total_lines %>%"></span></div>
       <p class="mt-1 text-xs text-mocha"><%= decided %> of <%= pluralize(total_lines, 'line') %> decided</p>

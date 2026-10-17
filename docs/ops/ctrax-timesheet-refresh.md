@@ -1,6 +1,6 @@
 # Automatic C-Trax timesheet refresh
 
-Release status: **implementation pending live deployment and activation verification**. The previously verified [source-history release](employee-source-history-deployment-2026-10-17.md) performed a manual C-Trax read. It did not activate this schedule. This guide describes the automatic refresh implementation and its operating limits.
+Release status: **enabled and verified on SER8 on October 17, 2026**. The Herbal Healers workspace now refreshes C-Trax labor history automatically every 15 minutes. The earlier [source-history release](employee-source-history-deployment-2026-10-17.md) remains the receipt for the initial manual import; the activation evidence below covers this schedule.
 
 ## Enable or stop refresh
 
@@ -30,4 +30,14 @@ C-Trax reported hours and elapsed clock time can differ. Break punches and payab
 
 This scheduler uses existing encrypted tenant settings and retained source-history tables; it adds no database migration. Preserve the currently deployed authentication and business records, take consistent private recovery checkpoints and verify the restored copy before promotion. Enable only the intended workspace through an authorized administrator after the deployed build is verified. Then verify actual recurring dispatch, worker execution, complete read publication and page freshness without creating or approving real employee hours. Verify disable/revocation and unchanged-replay behavior with controlled tests; keep credentials, employee identifiers and raw source payloads outside public documentation.
 
-Record the actual live activation and recovery evidence before changing this guide's pending release status. The [manual source-history deployment receipt](employee-source-history-deployment-2026-10-17.md) remains a historical receipt rather than proof that this new schedule is active.
+### Live activation receipt
+
+[PR #124](https://github.com/techmore/rupert/pull/124) was included in combined live revision `ff3c9c58c2abea20c1f13c84667b6ee0af4ee3cb`, preserving the newer ledger, receipts and demo-payroll protections. An existing authorized administrator enabled only Herbal Healers' encrypted labor schedule. The registered recurring task uses `2,17,32,47 * * * *`; the production scheduler heartbeat was live. A deliberately queued dispatcher and its tenant job completed through the normal Solid Queue worker at **3:27:04 PM America/New_York on October 17, 2026**. The actual recurring timer subsequently dispatched at **3:32:00 PM**, and its tenant worker finished successfully at **3:32:01 PM**. That timed replay retained all 24 shifts and 24 observations without duplicates, independently verifying the automatic path.
+
+The successful complete read retained **24 shifts and 24 immutable observations**: 13 imported, seven conflicts, two unassigned and two unmatched. Original punch payloads were unchanged, and the identical read appended no duplicate observations. These review states stay visible to admins and do not become payable hours.
+
+Read-only live verification covered all four eligible reviewer scopes, eight employee own-record scopes, complete 911-record Square and 24-record C-Trax CSVs, latest punch values and 13 page/CSV renders with HTTP 200 and `no-store`. Canonical time, HR, accounts and login links were unchanged. All 32 encrypted model sets decrypted, all 796 retained originals were readable, 103 applied migrations matched the source, and SQLite integrity/foreign-key checks passed. The deployed public build matched the combined revision, and web/job services were active with zero recorded restarts.
+
+Fresh pre/post-activation database, source, environment/encryption keys, assets and service configuration were retained privately. The encrypted archives were decrypted, member checksums verified and SQLite integrity/foreign-key checks passed on SER8. Both archives also passed independent off-host decryption, member checksums and SQLite integrity/foreign-key verification. The restored post-activation copy retained the ledger/receipt migrations, demo payroll markers and C-Trax evidence. No production database was replaced. No upstream timecard, stock or payment write was made.
+
+The earlier implementation candidate passed all SQLite/PostgreSQL CI checks; the local SQLite suite passed 1,666 tests / 13,338 assertions and the focused scheduler/import/UI regressions passed 52 tests / 378 assertions. The combined ledger release had separate roadmap and expense-account test regressions tracked by its repair work; this activation receipt does not claim that every combined-release test passed. Live activation and access checks above are separate evidence.

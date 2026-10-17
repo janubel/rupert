@@ -88,8 +88,8 @@ class BankStatementsController < AuthenticatedController
 
       expense = Finance::Expense.create!(payee: line.description.first(100), category: value, amount_cents: line.out_cents, incurred_on: line.posted_on,
         method: 'bank_transfer', reference: "bank-line-#{line.id}", notes: note)
-      Finance::Posting.expense(expense, created_by: Current.user)
-      line.decide!(status: 'recorded', user: Current.user, expense: expense)
+      entry = Finance::Posting.expense(expense, created_by: Current.user)
+      line.decide!(status: 'recorded', user: Current.user, expense: expense, journal_entry: entry)
       ActivityLogger.log('expense_recorded', subject: expense, details: "$#{format('%.2f', line.out_cents / 100.0)} · #{value} · from bank statement")
       note_approved_period(line.posted_on, 'Expense')
       done['expense(s)'] += 1
@@ -99,8 +99,8 @@ class BankStatementsController < AuthenticatedController
 
       payment = Finance::VendorPayment.create!(vendor: vendor, amount_cents: line.out_cents, paid_on: line.posted_on, method: 'bank_transfer',
         reference: "bank-line-#{line.id}", notes: note)
-      Finance::Posting.vendor_payment(payment, created_by: Current.user)
-      line.decide!(status: 'recorded', user: Current.user, vendor_payment: payment)
+      entry = Finance::Posting.vendor_payment(payment, created_by: Current.user)
+      line.decide!(status: 'recorded', user: Current.user, vendor_payment: payment, journal_entry: entry)
       ActivityLogger.log('vendor_payment', subject: vendor, details: "$#{format('%.2f', line.out_cents / 100.0)} · from bank statement")
       note_approved_period(line.posted_on, 'Vendor payment')
       done['vendor payment(s)'] += 1
