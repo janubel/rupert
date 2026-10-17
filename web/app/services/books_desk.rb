@@ -266,9 +266,7 @@ class BooksDesk
         link: [:bank_statements]),
       Task.new(key: :bank_lines, title: 'Say what every bank line was',
         state: waiting.exists? ? :todo : :done,
-        detail: if waiting.exists? then "#{pluralize(waiting.count, 'line')} from this week still waiting for a decision."
-                elsif lines.exists? then "All #{pluralize(lines.count, 'line')} from this week are recorded or ignored."
-                else 'No bank lines uploaded for this week.' end,
+        detail: bank_lines_detail(waiting, lines),
         link: waiting.order(:document_id).pick(:document_id)&.then { |id| [:bank_statement, id] } || [:bank_statements]),
       Task.new(key: :money_out, title: 'Check money out',
         state: :info,
@@ -287,6 +285,13 @@ class BooksDesk
         detail: snapshot ? 'A snapshot was saved for this week.' : 'Optional. Keeps a printable record of sales, cash and vendors as they stood.',
         link: [:snapshot])
     ]
+  end
+
+  def bank_lines_detail(waiting, lines)
+    return "#{pluralize(waiting.count, 'line')} from this week still waiting for a decision." if waiting.exists?
+    return "All #{pluralize(lines.count, 'line')} from this week are recorded or ignored." if lines.exists?
+
+    'No bank lines uploaded for this week.'
   end
 
   def week_approval_detail(period)

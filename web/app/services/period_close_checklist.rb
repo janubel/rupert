@@ -132,12 +132,18 @@ class PeriodCloseChecklist
   end
 
   def lock_task(ready)
-    state, detail = if locked? && lock_current? then [:done, "Locked by #{lock_event.actor_name} on #{lock_event.acted_at.in_time_zone.strftime('%b %-d, %Y')}."]
-                    elsif locked? then [:overdue, "Locked, but records changed afterwards: #{changed_sections.join(', ').presence || 'details on the locks page'}."]
-                    elsif !complete? then [:todo, 'This period has not finished yet.']
-                    elsif ready then [:todo, 'Everything above is done. Lock it so history cannot be edited by accident.']
-                    else [:todo, 'You can lock now with a note about what is still open, or finish the steps above first.']
-                    end
+    state, detail = lock_state(ready)
     Task.new(key: :lock, title: "Lock the #{kind_label.downcase}", state: state, detail: detail, link: [:locks, kind, from])
+  end
+
+  def lock_state(ready)
+    if locked? && lock_current?
+      return [:done, "Locked by #{lock_event.actor_name} on #{lock_event.acted_at.in_time_zone.strftime('%b %-d, %Y')}."]
+    end
+    return [:overdue, "Locked, but records changed afterwards: #{changed_sections.join(', ').presence || 'details on the locks page'}."] if locked?
+    return [:todo, 'This period has not finished yet.'] unless complete?
+    return [:todo, 'Everything above is done. Lock it so history cannot be edited by accident.'] if ready
+
+    [:todo, 'You can lock now with a note about what is still open, or finish the steps above first.']
   end
 end
