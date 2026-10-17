@@ -10,10 +10,31 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
+
+  create_table "bank_statement_lines", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "document_id", null: false
+    t.string "account_label", null: false
+    t.integer "line_no", null: false
+    t.date "posted_on", null: false
+    t.text "description", null: false
+    t.integer "amount_cents", null: false
+    t.string "fingerprint", null: false
+    t.string "status", default: "pending", null: false
+    t.integer "expense_id"
+    t.integer "vendor_payment_id"
+    t.integer "decided_by_id"
+    t.string "decided_by_name"
+    t.datetime "decided_at"
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "document_id", "status"], name: "idx_bank_lines_document"
+    t.index ["tenant_id", "fingerprint"], name: "idx_bank_lines_fingerprint", unique: true
+    t.index ["tenant_id"], name: "index_bank_statement_lines_on_tenant_id"
+  end
 
   create_table "money_reconciliations", force: :cascade do |t|
     t.string "tenant_id", null: false
@@ -419,6 +440,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
     t.index ["tenant_id"], name: "index_authorize_net_batches_on_tenant_id"
   end
 
+  create_table "authorize_net_portal_observations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "authorize_net_portal_export_id", null: false
+    t.integer "position", null: false
+    t.string "gateway_id", null: false
+    t.string "transaction_id", null: false
+    t.datetime "exported_at", null: false
+    t.datetime "submitted_at"
+    t.datetime "settled_at"
+    t.string "status"
+    t.string "transaction_type"
+    t.string "currency"
+    t.bigint "settlement_cents"
+    t.text "record_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["authorize_net_portal_export_id", "position"], name: "idx_anet_portal_obs_row", unique: true
+    t.index ["tenant_id", "settled_at"], name: "idx_anet_portal_obs_settled"
+    t.index ["tenant_id", "submitted_at"], name: "idx_anet_portal_obs_submitted"
+    t.index ["tenant_id", "transaction_id", "gateway_id"], name: "idx_anet_portal_obs_key"
+  end
+
   create_table "authorize_net_portal_exports", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "gateway_id", null: false
@@ -479,6 +522,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
     t.text "invoice_number"
     t.index ["tenant_id", "environment", "gateway_id", "source_transaction_id"], name: "idx_anet_transaction_source", unique: true
     t.index ["tenant_id"], name: "index_authorize_net_transactions_on_tenant_id"
+  end
+
+  create_table "book_approvals", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "period_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.string "status", null: false
+    t.string "report_digest", null: false
+    t.text "summary_json", null: false
+    t.text "notes"
+    t.integer "approved_by_id"
+    t.string "approved_by_name", null: false
+    t.datetime "approved_at", null: false
+    t.string "ip"
+    t.string "user_agent"
+    t.string "prev_hash", null: false
+    t.string "entry_hash", null: false
+    t.datetime "created_at", null: false
+    t.index ["approved_by_id"], name: "index_book_approvals_on_approved_by_id"
+    t.index ["entry_hash"], name: "idx_book_approvals_entry_hash", unique: true
+    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_book_approvals_period"
+    t.index ["tenant_id"], name: "index_book_approvals_on_tenant_id"
   end
 
   create_table "bulk_consumptions", force: :cascade do |t|
@@ -1373,6 +1439,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "location_id"], name: "index_ctrax_stock_snapshots_on_tenant_id_and_location_id", unique: true
     t.index ["tenant_id"], name: "index_ctrax_stock_snapshots_on_tenant_id"
+  end
+
+  create_table "period_locks", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "action", null: false
+    t.string "period_kind", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.string "fingerprint", null: false
+    t.text "summary_json", null: false
+    t.text "reason"
+    t.integer "archive_document_id"
+    t.integer "actor_id"
+    t.string "actor_name", null: false
+    t.datetime "acted_at", null: false
+    t.string "ip"
+    t.string "user_agent"
+    t.string "prev_hash", null: false
+    t.string "entry_hash", null: false
+    t.datetime "created_at", null: false
+    t.index ["entry_hash"], name: "idx_period_locks_entry_hash", unique: true
+    t.index ["tenant_id", "period_from", "period_to"], name: "idx_period_locks_range"
+    t.index ["tenant_id", "period_kind", "period_from"], name: "idx_period_locks_period"
+    t.index ["tenant_id"], name: "index_period_locks_on_tenant_id"
   end
 
   create_table "pos_connections", force: :cascade do |t|
@@ -2396,4 +2486,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
   add_foreign_key "marketing_product_gift_items", "tenants"
   add_foreign_key "marketing_product_gifts", "marketing_engagements", column: "engagement_id"
   add_foreign_key "marketing_product_gifts", "tenants"
+  add_foreign_key "authorize_net_portal_observations", "authorize_net_portal_exports", on_delete: :cascade
+  add_foreign_key "authorize_net_portal_observations", "tenants"
 end

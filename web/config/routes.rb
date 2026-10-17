@@ -1,8 +1,18 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  resource :books_desk, only: :show, path: 'books' do
+    get :checks
+  end
+  resources :period_locks, only: %i[index create], path: 'books/locks'
   resource :financial_close, only: %i[show create], controller: 'financial_close'
   resource :cash_forecast, only: %i[show create]
+  resource :books_check, only: :show, controller: 'books_check'
+  resource :business_snapshot, only: %i[show create], path: 'snapshot'
+  resources :bank_statements, only: %i[index show create] do
+    member { post :decide }
+  end
+  resource :book_approvals, only: %i[show create], path: 'approve_books', controller: 'book_approvals'
   resource :retention_drive, only: :show do
     get :connect
     post :sync
@@ -439,6 +449,7 @@ Rails.application.routes.draw do
 
   get '/w/:token/checkout', to: 'warehouse_checkouts#show', as: :warehouse_checkout
   post '/w/:token/checkout', to: 'warehouse_checkouts#create', as: :warehouse_checkout_submit
+  post '/w/:token/apple_pay/session', to: 'warehouse_checkouts#apple_pay_session', as: :warehouse_apple_pay_session
 
   get '/w/:token/orders/:order_number', to: 'warehouse_orders#show', as: :warehouse_order
 

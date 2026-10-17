@@ -1,5 +1,6 @@
 <% count = @count %>
-<div class="space-y-6">
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :stock %>
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Manual count sheet</h1>
@@ -69,7 +70,7 @@
           <h2 class="font-display text-xl text-ink">Inventory sheet</h2>
           <span class="text-xs text-taupe"><%= @count.items.size %> SKUs</span>
         </div>
-        <div class="overflow-x-auto">
+        <div class="operations-table-region" role="region" tabindex="0" aria-label="Inventory Counts table">
           <table class="w-full text-sm" id="count-table">
             <thead class="border-b border-fog bg-haze/60">
               <tr>

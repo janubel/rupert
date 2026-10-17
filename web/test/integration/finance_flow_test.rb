@@ -87,9 +87,9 @@ class FinanceFlowTest < ActionDispatch::IntegrationTest
 
     get_page finance_accounts_path
     assert_response :success
-    assert_select 'h1', /Accounts/
-    assert_select 'td', /Supply Co/
-    assert_select 'td', /Ada/
+    assert_select 'h1', 'Finance overview'
+    assert_select 'th[scope=row]', /Supply Co/
+    assert_select 'th[scope=row]', /Ada/
   end
 
   test 'recording a vendor payment reduces the payable balance' do
@@ -117,7 +117,7 @@ class FinanceFlowTest < ActionDispatch::IntegrationTest
   test 'vendor payments index lists recent payments' do
     vendor = Purchasing::Vendor.create!(tenant_id: @tenant.id, name: 'Payment Co')
     Finance::VendorPayment.create!(tenant_id: @tenant.id, vendor_id: vendor.id, amount_cents: 2500,
-      paid_on: Date.today, method: 'ach')
+      paid_on: Date.current, method: 'ach')
 
     get_page finance_vendor_payments_path
     assert_response :success

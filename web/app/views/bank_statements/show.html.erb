@@ -1,0 +1,80 @@
+<% content_for :title, 'Review bank statement' %>
+<% money = ->(cents) { number_to_currency(cents.abs / 100.0) }
+   total_lines = @counts.values.sum; decided = total_lines - @counts.fetch('pending', 0) %>
+<div class="mx-auto max-w-6xl space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :finance %>
+  <header class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Bank statement</p>
+      <h1 class="page-title mt-2"><%= @document.filename %></h1>
+      <p class="mt-2 text-sm text-mocha"><%= @document.period_from %> to <%= @document.period_to %> · <%= @counts.fetch('pending', 0) %> to review · <%= @counts.fetch('recorded', 0) %> recorded · <%= @counts.fetch('ignored', 0) %> ignored.</p>
+      <div class="desk-meter mt-3 max-w-sm" role="progressbar" aria-valuemin="0" aria-valuemax="<%= total_lines %>" aria-valuenow="<%= decided %>" aria-label="Lines decided"><span style="width: <%= total_lines.zero? ? 0 : decided * 100 / total_lines %>%"></span></div>
+      <p class="mt-1 text-xs text-mocha"><%= decided %> of <%= pluralize(total_lines, 'line') %> decided</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <%= link_to 'Back to statements', bank_statements_path, class: 'btn-ghost btn-sm' %>
+      <%= link_to(@filter == 'all' ? 'Only waiting' : 'Show everything', bank_statement_path(@document.id, show: (@filter == 'all' ? 'pending' : 'all')), class: 'btn-ghost btn-sm') %>
+      <%= link_to 'Original file', document_daily_reconciliation_path(@document), class: 'btn-ghost btn-sm', data: { turbo: false } %>
+    </div>
+  </header>
+
+  <% if @lines.empty? %>
+    <div class="card card-pad space-y-2 text-sm">
+      <p class="font-semibold">Nothing waiting. Every line has a decision.</p>
+      <% if Current.user.can?('reports.read') %><p><%= link_to 'Back to the Books desk', books_desk_path, class: 'font-semibold text-olive-deep underline' %> for the rest of the week’s cleanup.</p><% end %>
+    </div>
+  <% else %>
+    <%= form_with url: decide_bank_statement_path(@document.id), class: 'space-y-4', data: { controller: 'bank-decisions', action: 'submit->bank-decisions#submit' } do |f| %>
+      <% if @can_write && @lines.any? { |l| l.pending? && l.money_out? && l.suggested_category != 'other' } %>
+        <div class="card card-pad flex flex-wrap items-center justify-between gap-3 text-sm">
+          <p class="max-w-xl text-mocha">Rupert recognised some payees from their description (rent, utilities, shipping, software and so on). Fill those in, check each one, then save. Nothing is recorded until you press Save.</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#fillSuggestions" data-bank-decisions-target="fill">Use suggestions</button>
+            <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#clear">Clear choices</button>
+          </div>
+        </div>
+      <% end %>
+      <%= hidden_field_tag :show, @filter %>
+      <div class="card overflow-x-auto"><table class="w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60"><tr>
+          <th scope="col" class="th">Date</th><th scope="col" class="th">Description</th><th scope="col" class="th text-right">Out</th><th scope="col" class="th text-right">In</th><th scope="col" class="th">What was it?</th>
+        </tr></thead>
+        <tbody class="divide-y divide-fog">
+          <% @lines.each do |line| %>
+            <tr>
+              <td class="td whitespace-nowrap"><%= line.posted_on.strftime('%b %-d, %Y') %></td>
+              <td class="td max-w-md break-words"><%= line.description %></td>
+              <td class="td text-right"><%= line.money_out? ? money.call(line.amount_cents) : '' %></td>
+              <td class="td text-right"><%= line.money_out? ? '' : money.call(line.amount_cents) %></td>
+              <td class="td">
+                <% if !line.pending? %>
+                  <%= line.status.humanize %><%= " by #{line.decided_by_name}" if line.decided_by_name %>
+                <% elsif @can_write %>
+                  <% groups = [['', [['Decide later', 'leave']]]] %>
+                  <% if line.money_out? %>
+                    <% groups << ['Expense', Finance::Expense::CATEGORIES.map { |c| [c.humanize, "expense:#{c}"] }] %>
+                    <% groups << ['Vendor payment', @vendors.map { |v| [v.name, "payment:#{v.id}"] }] if @vendors.any? %>
+                  <% end %>
+                  <% groups << ['Not a business expense', [['Ignore this line (transfer, deposit, personal)', 'ignore']]] %>
+                  <% suggestion = line.money_out? && line.suggested_category != 'other' ? "expense:#{line.suggested_category}" : nil %>
+                  <%= select_tag "decisions[#{line.id}]", grouped_options_for_select(groups, nil), class: 'select', 'aria-label': "Decision for #{line.description.first(40)}",
+                        data: { bank_decisions_target: 'choice', action: 'change->bank-decisions#change', suggestion: suggestion } %>
+                  <% if suggestion %><span class="block text-xs text-taupe">Suggestion: <%= line.suggested_category.humanize %></span><% end %>
+                <% else %>
+                  Waiting
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table></div>
+      <% if @can_write %>
+        <div class="bank-save-bar">
+          <p class="text-sm font-semibold" data-bank-decisions-target="count" aria-live="polite"><%= pluralize(@lines.count(&:pending?), 'line') %> waiting</p>
+          <%= f.submit 'Save my decisions', class: 'btn-primary', data: { bank_decisions_target: 'save' } %>
+        </div>
+        <p class="text-xs text-mocha">Only lines where you picked something are changed. Each one records your name and the time, appears in the Activity log, and is never deleted. If a line falls in a day you already approved, that approval will show as changed.</p>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

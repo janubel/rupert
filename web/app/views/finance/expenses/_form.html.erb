@@ -1,4 +1,5 @@
-<%= form_with model: expense, url: (expense.persisted? ? finance_expense_path(expense) : finance_expenses_path), class: "mt-6 space-y-4" do |f| %>
+<%= form_with model: expense, scope: :expense, url: (expense.persisted? ? finance_expense_path(expense) : finance_expenses_path), class: "mt-6 space-y-4" do |f| %>
+  <%= render "shared/form_errors", model: expense %>
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
       <%= f.label :payee, "Payee", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
@@ -16,10 +17,10 @@
       <%= f.select :category, Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, {}, class: "select w-full" %>
     </div>
     <div>
-      <%= f.label :amount, "Amount", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
+      <%= f.label :amount, "Amount (USD)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
       <div class="flex items-center gap-1">
-        <span class="text-sm text-mocha">$</span>
-        <%= f.number_field :amount, step: "0.01", min: "0.01", value: expense.amount_cents.to_i.positive? ? number_with_precision(expense.amount_cents / 100.0, precision: 2) : nil, class: "input" %>
+        <span class="text-sm text-mocha" aria-hidden="true">$</span>
+        <%= f.text_field :amount, required: true, inputmode: "decimal", placeholder: "0.00", class: "input", aria: { describedby: "finance-amount-help" } %>
       </div>
     </div>
   </div>
@@ -45,10 +46,11 @@
 
   <div>
     <%= f.label :notes, "Notes", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-    <%= f.text_area :notes, rows: 2, class: "input !rounded-2xl" %>
+    <%= f.text_area :notes, rows: 3, class: "input retail-notes" %>
   </div>
 
-  <div class="flex items-center gap-3 pt-2">
+  <p id="finance-amount-help" class="text-xs text-mocha">Enter dollars with up to two decimal places. This records an existing payment in Rupert; it does not transfer money.</p>
+  <div class="flex flex-wrap items-center gap-3 pt-2">
     <%= f.submit expense.persisted? ? "Save changes" : "Record expense", class: "btn-primary" %>
     <%= link_to "Cancel", finance_expenses_path, class: "btn-ghost" %>
   </div>

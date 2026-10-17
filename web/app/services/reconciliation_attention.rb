@@ -10,7 +10,7 @@ class ReconciliationAttention
   end
 
   def differences
-    report.comparisons.reject { |row| row[:status] == 'Matched recorded total' }
+    report.comparisons.reject { |row| ['Matched recorded total', DailyMoneyReconciliation::INFORMATIONAL].include?(row[:status]) }
       .sort_by { |row| self.class.sort_key(row) }
   end
 

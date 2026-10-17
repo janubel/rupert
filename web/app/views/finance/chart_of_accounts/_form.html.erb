@@ -1,4 +1,4 @@
-<%= form_with model: @account, url: (@account.persisted? ? finance_chart_of_account_path(@account) : finance_chart_of_accounts_path), class: "mt-6 space-y-4" do |f| %>
+<%= form_with model: @account, scope: :account, url: (@account.persisted? ? finance_chart_of_account_path(@account) : finance_chart_of_accounts_path), class: "mt-6 space-y-4" do |f| %>
   <% if @account.errors.any? %>
     <div role="alert" class="flash flash-alert">
       <%= @account.errors.full_messages.to_sentence %>

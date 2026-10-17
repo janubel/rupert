@@ -1,5 +1,6 @@
 <% count = @count %>
-<div class="space-y-6">
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :stock %>
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <div class="flex items-center gap-3">
@@ -16,9 +17,9 @@
         <%= link_to "Scan count", scan_inventory_count_path(count), class: "btn-primary" %>
         <%= link_to "Edit", edit_inventory_count_path(count), class: "btn-ghost" %>
         <%= button_to "Submit for approval", submit_inventory_count_path(count), method: :post, class: "btn-primary", data: { turbo: false } %>
-        <%= button_to "Delete", inventory_count_path(count), method: :delete, class: "btn-ghost", data: { confirm: "Delete this draft count?" } %>
+        <%= button_to "Delete", inventory_count_path(count), method: :delete, class: "btn-ghost", data: { turbo_confirm: "Delete this draft count?" } %>
       <% elsif count.pending? && Current.user.can?('inventory.write') %>
-        <%= button_to "Approve count", approve_inventory_count_path(count), method: :post, class: "btn-primary", data: { confirm: "Approve this count? It is recorded for audit and does not change platform inventory." } %>
+        <%= button_to "Approve count", approve_inventory_count_path(count), method: :post, class: "btn-primary", data: { turbo_confirm: "Approve this count? It is recorded for audit and does not change platform inventory." } %>
         <%= button_to "Reject", reject_inventory_count_path(count), method: :post, class: "btn-ghost", data: { turbo: false } %>
       <% elsif count.rejected? && Current.user.can?('inventory.write') %>
         <%= button_to "Reopen as draft", reopen_inventory_count_path(count), method: :post, class: "btn-ghost", data: { turbo: false } %>
@@ -42,7 +43,7 @@
     <div class="card-pad pb-3">
       <h2 class="font-display text-xl text-ink">Counted items</h2>
     </div>
-    <div class="overflow-x-auto">
+    <div class="operations-table-region" role="region" tabindex="0" aria-label="Inventory Counts table">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
@@ -56,7 +57,7 @@
         <tbody class="divide-y divide-fog">
           <% if count.items.empty? %>
             <tr>
-              <td class="empty-row">No items recorded.</td>
+              <td colspan="5" class="empty-row">No items recorded.</td>
             </tr>
           <% end %>
           <% count.items.order(:sku).each do |item| %>

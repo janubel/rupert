@@ -9,7 +9,6 @@ module Purchasing
       # Per-vendor AP: received PO value minus payments made.
       def by_vendor
         rows = Purchasing::Vendor.left_joins(:purchase_orders)
-                                 .where(purchase_orders: { status: %w[ordered received] })
                                  .group('vendors.id', 'vendors.name')
                                  .select(
                                    'vendors.id',
@@ -35,7 +34,7 @@ module Purchasing
             paid_cents: paid,
             balance_cents: [row.owed_cents.to_i - paid, 0].max
           }
-        end.sort_by { |r| -r[:balance_cents] }
+        end.select { |r| r.values_at(:owed_cents, :committed_cents, :paid_cents).any?(&:positive?) }.sort_by { |r| -r[:balance_cents] }
       end
 
       def total_cents

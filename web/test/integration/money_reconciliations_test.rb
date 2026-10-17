@@ -36,7 +36,7 @@ class MoneyReconciliationsTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     follow_redirect!
     assert_response :success
-    assert_includes response.body, 'Saved close / review'
+    assert_includes response.body, 'Saved source review'
   end
 
   test 'report readers can view but cannot save a review' do

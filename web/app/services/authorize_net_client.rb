@@ -7,7 +7,9 @@ require 'json'
 # Accept.js flow is used here: the browser tokenizes card data into a payment
 # nonce (opaqueData) so raw card numbers never reach the server.
 #
-# Credentials come from EnvStore so they can be managed from the Settings page
+# Credentials come first from the tenant's Valmar connection when its gateway is
+# Authorize.net (POS & payment connections page, stored encrypted), falling back
+# to EnvStore so existing Settings-page installs keep working
 # (AUTHORIZE_NET_LOGIN_ID / AUTHORIZE_NET_TRANSACTION_KEY /
 # AUTHORIZE_NET_CLIENT_KEY, plus AUTHORIZE_NET_SANDBOX=1 for the test gateway).
 class AuthorizeNetClient
@@ -23,6 +25,10 @@ class AuthorizeNetClient
     production: 'https://js.authorize.net/v1/Accept.js'
   }.freeze
 
+  # Accept.js card nonces and Apple Pay / Google Pay wallet tokens are the only payment
+  # descriptors accepted; anything else from the browser is ignored.
+  DATA_DESCRIPTORS = %w[COMMON.ACCEPT.INAPP.PAYMENT COMMON.APPLE.INAPP.PAYMENT COMMON.GOOGLE.INAPP.PAYMENT].freeze
+
   # Outcome of a transaction attempt.
   Result = Struct.new(:transaction_id, :auth_code, :response_code, :message, keyword_init: true) do
     def approved?
@@ -36,6 +42,9 @@ class AuthorizeNetClient
     end
 
     def sandbox?
+      connection = saved_connection
+      return connection.environment == 'sandbox' if connection
+
       EnvStore.fetch('AUTHORIZE_NET_SANDBOX', '0') == '1'
     end
 
@@ -49,6 +58,7 @@ class AuthorizeNetClient
                 ref_id: nil, invoice_number: nil, description: nil)
       raise Error, 'Authorize.net is not configured' unless configured?
 
+      data_descriptor = DATA_DESCRIPTORS.first unless DATA_DESCRIPTORS.include?(data_descriptor)
       transaction = {
         transactionType: 'authCaptureTransaction',
         amount: format('%.2f', amount_cents.to_i / 100.0),
@@ -63,10 +73,7 @@ class AuthorizeNetClient
 
       payload = {
         createTransactionRequest: {
-          merchantAuthentication: {
-            name: login_id,
-            transactionKey: transaction_key
-          },
+          merchantAuthentication: authentication,
           refId: ref_id,
           transactionRequest: transaction
         }
@@ -75,19 +82,76 @@ class AuthorizeNetClient
       parse(post(payload))
     end
 
+    # Cancel a charge that has not settled yet. Voids need only the original
+    # transaction id; once the batch settles the gateway rejects it and the
+    # caller must use refund! instead.
+    def void!(transaction_id:, ref_id: nil)
+      referenced_request!('voidTransaction', transaction_id: transaction_id, ref_id: ref_id)
+    end
+
+    # Return money for a settled charge. Authorize.net requires the last four
+    # digits of the original card (never the full number) and the original id.
+    def refund!(transaction_id:, amount_cents:, last_four:, ref_id: nil)
+      raise Error, 'Last four digits are required for a refund' unless last_four.to_s.match?(/\A\d{4}\z/)
+
+      referenced_request!('refundTransaction', transaction_id: transaction_id, ref_id: ref_id,
+        amount: format('%.2f', amount_cents.to_i / 100.0),
+        payment: { creditCard: { cardNumber: last_four.to_s, expirationDate: 'XXXX' } })
+    end
+
+    # Look up status and the card's last four so the caller can choose between
+    # void (unsettled) and refund (settled), or recover from a lost response.
+    def transaction_details(transaction_id)
+      raise Error, 'Authorize.net is not configured' unless configured?
+
+      doc = JSON.parse(post(getTransactionDetailsRequest: {
+        merchantAuthentication: authentication, transId: transaction_id.to_s
+      }).b.delete_prefix("\xEF\xBB\xBF".b).force_encoding(Encoding::UTF_8))
+      raise Error, doc.dig('messages', 'message', 0, 'text').to_s if doc.dig('messages', 'resultCode') == 'Error'
+
+      transaction = doc['transaction'] || {}
+      { status: transaction['transactionStatus'],
+        amount: transaction['authAmount'],
+        last_four: transaction.dig('payment', 'creditCard', 'cardNumber').to_s.delete('X') }
+    end
+
+    # Credential accessors read the Valmar connection when it is set up for
+    # Authorize.net, otherwise the legacy EnvStore settings.
     def login_id
-      EnvStore.fetch('AUTHORIZE_NET_LOGIN_ID', '')
+      connection = saved_connection
+      connection ? connection.credential_values['api_login_id'].to_s : EnvStore.fetch('AUTHORIZE_NET_LOGIN_ID', '')
     end
 
     def client_key
-      EnvStore.fetch('AUTHORIZE_NET_CLIENT_KEY', '')
+      connection = saved_connection
+      connection ? connection.credential_values['client_key'].to_s : EnvStore.fetch('AUTHORIZE_NET_CLIENT_KEY', '')
     end
 
     def transaction_key
-      EnvStore.fetch('AUTHORIZE_NET_TRANSACTION_KEY', '')
+      connection = saved_connection
+      connection ? connection.credential_values['transaction_key'].to_s : EnvStore.fetch('AUTHORIZE_NET_TRANSACTION_KEY', '')
     end
 
     private
+
+    def saved_connection
+      connection = PosConnection.find_by(provider: 'valmar')
+      connection if connection&.gateway == 'authorize_net' && connection.credentials_saved?
+    end
+
+    def authentication
+      { name: login_id, transactionKey: transaction_key }
+    end
+
+    def referenced_request!(type, transaction_id:, ref_id:, **extra)
+      raise Error, 'Authorize.net is not configured' unless configured?
+      raise Error, 'Transaction id is required' if transaction_id.blank?
+
+      request = { transactionType: type }.merge(extra).merge(refTransId: transaction_id.to_s)
+      parse(post(createTransactionRequest: {
+        merchantAuthentication: authentication, refId: ref_id, transactionRequest: request
+      }))
+    end
 
     def post(payload)
       uri = URI(ENDPOINTS[sandbox? ? :sandbox : :production])

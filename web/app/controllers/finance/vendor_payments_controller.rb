@@ -3,22 +3,27 @@
 module Finance
   # Record a payment to a vendor (accounts payable).
   class VendorPaymentsController < AuthenticatedController
+    include ApprovedPeriodNotice
     before_action :set_payment, only: %i[destroy restore]
 
     def index
       authorize(:module, :finance_read?)
       @range_days = params[:days].present? ? params[:days].to_i.clamp(7, 365) : 90
-      since = @range_days.days.ago.to_date
-      scope = Finance::VendorPayment.since(since)
-      scope = scope.with_discarded if params[:include_deleted] == '1'
-      @payments = scope.recent(200).includes(:vendor)
+      @from = Date.current - (@range_days - 1)
+      @through = Date.current
+      active = Finance::VendorPayment.where(paid_on: @from..@through)
       @include_deleted = params[:include_deleted] == '1'
-      @total_cents = @payments.sum(:amount_cents)
+      @total_cents = active.sum(:amount_cents)
+      @entry_count = active.count
+      scope = @include_deleted ? active.with_discarded : active
+      @removed_count = scope.count - @entry_count
+      response.headers['Cache-Control'] = 'private, no-store'
+      @pagy, @payments = pagy(scope.includes(:vendor).order(paid_on: :desc, created_at: :desc), items: 50)
     end
 
     def new
       authorize(:module, :finance_write?)
-      @payment = Finance::VendorPayment.new(paid_on: Date.today, vendor_id: params[:vendor_id])
+      @payment = Finance::VendorPayment.new(paid_on: Date.current, vendor_id: params[:vendor_id])
       @vendors = Purchasing::Vendor.ordered
     end
 
@@ -26,6 +31,7 @@ module Finance
       authorize(:module, :finance_write?)
       @payment = Finance::VendorPayment.new(payment_params)
       if @payment.save
+        note_approved_period(@payment.paid_on, 'Vendor payment')
         ActivityLogger.log(
           'vendor_payment',
           subject: @payment.vendor,
@@ -40,7 +46,9 @@ module Finance
 
     def destroy
       authorize(:module, :finance_write?)
-      @payment.discard
+      return redirect_to(finance_vendor_payments_path, alert: @payment.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @payment.discard
+
+      note_approved_period(@payment.paid_on, 'Vendor payment')
       ActivityLogger.log(
         'payment_deleted',
         subject: @payment.vendor,
@@ -51,7 +59,9 @@ module Finance
 
     def restore
       authorize(:module, :finance_write?)
-      @payment.undiscard
+      return redirect_to(finance_vendor_payments_path, alert: @payment.errors.full_messages.to_sentence.presence || 'Nothing was changed.') unless @payment.undiscard
+
+      note_approved_period(@payment.paid_on, 'Vendor payment')
       ActivityLogger.log('payment_restored', subject: @payment.vendor)
       redirect_to(finance_vendor_payments_path, notice: 'Payment restored.')
     end
@@ -64,10 +74,6 @@ module Finance
 
     def payment_params
       params.require(:vendor_payment).permit(:vendor_id, :amount, :paid_on, :method, :reference, :notes)
-            .tap do |p|
-              amount = p.delete(:amount)
-              p[:amount_cents] = (amount.to_f * 100).round if amount.present?
-            end
     end
   end
 end

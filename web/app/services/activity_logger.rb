@@ -10,7 +10,7 @@ class ActivityLogger
         user_id: actor&.id,
         actor_name: actor&.display_name || actor&.email || 'system',
         action: action,
-        subject_type: subject.class.name,
+        subject_type: subject&.class&.name,
         subject_id: subject.try(:id)&.to_s,
         subject_label: subject_label(subject),
         details: details

@@ -27,7 +27,13 @@ class MoneyReconciliationReportTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 10, 18), weekly.to
     assert_equal Date.new(2026, 9, 30), MoneyReconciliationReport.previous_period('monthly', today: Date.new(2026, 10, 1))
     assert_equal Date.new(2026, 10, 5), MoneyReconciliationReport.previous_period('weekly', today: Date.new(2026, 10, 15))
-    assert_raises(ArgumentError) { report('yearly', '2026-10-15') }
+    quarterly = report('quarterly', '2026-10-15')
+    assert_equal [Date.new(2026, 10, 1), Date.new(2026, 12, 31)], [quarterly.from, quarterly.to]
+    yearly = report('yearly', '2026-10-15')
+    assert_equal [Date.new(2026, 1, 1), Date.new(2026, 12, 31)], [yearly.from, yearly.to]
+    assert_equal Date.new(2026, 9, 30), MoneyReconciliationReport.previous_period('quarterly', today: Date.new(2026, 10, 15))
+    assert_equal Date.new(2025, 12, 31), MoneyReconciliationReport.previous_period('yearly', today: Date.new(2026, 10, 15))
+    assert_raises(ArgumentError) { report('hourly', '2026-10-15') }
   end
 
   test 'sales gateway and deposits stay separate with unknown currency and no false bank match' do

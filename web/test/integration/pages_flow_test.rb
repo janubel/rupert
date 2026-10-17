@@ -55,7 +55,8 @@ class PagesFlowTest < ActionDispatch::IntegrationTest
     get_page reconcile_index_path
     assert_response :success
     assert_select 'h1', 'Catalog Links'
-    assert_select 'main form', count: 0 # no apply/priority forms — read-only page
+    assert_select 'main form[method=post]', count: 0 # search is read-only; no apply or approval forms
+    assert_select 'main form[method=get]'
   end
 
   test 'ledger renders' do

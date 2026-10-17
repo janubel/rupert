@@ -5,3 +5,23 @@ en:
       long: "%A, %B %d, %Y"
       time: "%l:%M %p"
       datetime: "%A, %b %d, %Y · %l:%M %p"
+  activerecord:
+    attributes:
+      finance/expense:
+        amount_cents: "Amount"
+      finance/vendor_payment:
+        amount_cents: "Amount"
+    errors:
+      models:
+        finance/expense:
+          attributes:
+            amount_cents:
+              not_a_number: "must be a valid dollar amount"
+              greater_than: "must be at least USD 0.01"
+              less_than_or_equal_to: "must not exceed USD 21,474,836.47"
+        finance/vendor_payment:
+          attributes:
+            amount_cents:
+              not_a_number: "must be a valid dollar amount"
+              greater_than: "must be at least USD 0.01"
+              less_than_or_equal_to: "must not exceed USD 21,474,836.47"

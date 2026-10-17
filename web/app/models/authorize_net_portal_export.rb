@@ -5,26 +5,18 @@ class AuthorizeNetPortalExport < ApplicationRecord
   include TenantScoped
   encrypts :original_csv
   encrypts :records_json
+  has_many :observations, class_name: 'AuthorizeNetPortalObservation', dependent: :delete_all
 
   validates :gateway_id, :fingerprint, :exported_at, presence: true
   validates :kind, inclusion: { in: %w[settled unsettled] }
+  after_save -> { AuthorizeNetPortalObservation.record!(self) }, if: -> { saved_change_to_records_json? || saved_change_to_exported_at? || saved_change_to_gateway_id? }
 
   def records
     JSON.parse(records_json)
   end
 
+  # Whole-history view; day and period readers use AuthorizeNetPortalObservation.
   def self.latest_records
-    observations = {}
-    select(:id, :gateway_id, :records_json, :exported_at).find_each do |receipt|
-      receipt.records.each do |row|
-        key = [receipt.gateway_id, row.fetch('transaction_id')]
-        previous = observations[key]
-        next if previous && previous.fetch('exported_at') > receipt.exported_at.iso8601(6)
-
-        observations[key] = row.merge('gateway_id' => receipt.gateway_id,
-          'export_id' => receipt.id, 'exported_at' => receipt.exported_at.iso8601(6))
-      end
-    end
-    observations.values
+    AuthorizeNetPortalObservation.latest_all
   end
 end

@@ -1,0 +1,14 @@
+<% day = @baseline&.day %>
+<% if @prefill && day %><% doc = @prefill[:document]; horizon = @prefill[:values]['horizon'].to_i; shift = @prefill[:shift] %>
+<section id="cash-prefill" class="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm space-y-2" aria-labelledby="cash-prefill-heading">
+  <h2 id="cash-prefill-heading" class="font-semibold">Started from retained scenario #<%= doc.id %></h2>
+  <p><%= doc.metadata['currency'] %> · cash as of <%= @prefill[:as_of].strftime('%b %-d, %Y') %> · <%= pluralize(horizon, 'week') %> · retained <%= doc.created_at.to_date.strftime('%b %-d, %Y') %>. Review every amount before calculating.</p>
+  <p><% if @prefill[:days].zero? %>Same close date: opening cash, its basis, the assumptions and every weekly amount were copied.<% elsif shift.nil? %>Its close date is <%= @prefill[:days].negative? ? 'after' : 'not a whole number of weeks before' %> <%= day.strftime('%b %-d') %>, so weekly amounts were not carried. Only the assumptions, reserve and horizon were copied.<% elsif shift >= horizon %>None of its weeks overlap the weeks after <%= day.strftime('%b %-d') %>, so only the assumptions, reserve and horizon were copied.<% else %>Weekly amounts moved <%= pluralize(shift, 'week') %> earlier so each stays in its calendar week. <%= shift == 1 ? "Week #{horizon}" : "Weeks #{horizon - shift + 1}–#{horizon}" %> had no earlier amount and <%= shift == 1 ? 'is' : 'are' %> blank.<% end %><% unless @prefill[:days].zero? %> Opening cash is not carried: enter bank cash as of <%= day.strftime('%b %-d, %Y') %>.<% end %> Entries that scenario confirmed as blank stay blank.</p>
+  <%= link_to 'Clear prefill and start blank', cash_forecast_path(day: day.iso8601, currency: doc.metadata['currency'], prefill: 'none'), class: 'btn-ghost btn-sm' %>
+</section>
+<% elsif @values&.dig('prefilled_from').present? && action_name == 'create' %>
+<p class="text-sm text-mocha">Started from retained scenario #<%= @values['prefilled_from'] %>. A retained version records that source.</p>
+<% end %>
+<% if action_name == 'show' && day && (@prefill_currencies.present? || (params[:prefill] == 'none')) %>
+<p class="text-sm text-mocha"><% if params[:prefill] == 'none' %>Prefill cleared. <%= link_to "Start from the latest #{@values['currency']} scenario", cash_forecast_path(day: day.iso8601, currency: @values['currency']), class: 'text-olive underline' %><% end %><% @prefill_currencies.to_a.each do |currency| %> <%= link_to "Start from the latest #{currency} scenario", cash_forecast_path(day: day.iso8601, currency: currency), class: 'text-olive underline' %><% end %></p>
+<% end %>

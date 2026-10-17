@@ -45,12 +45,12 @@ class PageGuides
     ),
     'sales' => Guide.new(
       key: 'sales', title: 'Sales',
-      summary: 'The daily sales journal — every sale in arrival order with where it happened, hourly × location, and revenue trends you can split by source.',
+      summary: 'Recorded sales across channels and a separate canonical order journal, filtered by date and source.',
       sections: [
         { heading: "What you're seeing",
-          body: "Top row: the selected day's total, average sale, busiest hour, and the window total. The charts show daily revenue and the typical hour-by-hour shape. The 'Hourly × location' table is the storefloor ledger for the day. The bottom list is every sale in arrival order — tap one for the full order." },
+          body: "Summary and charts include USD paid/fulfilled canonical orders and completed native C-Trax orders once. The chart period ends on the selected business date. Payments, tips and deposits are separate. The canonical journal shows each order's own currency and selected status; C-Trax receipts stay in daily close." },
         { heading: 'The source toggle',
-          body: 'All / Shopify / Square switches every number, chart, and table to just that channel — useful to see online vs in-store separately. The choice is in the URL, so you can bookmark a filtered view.' }
+          body: 'All / Shopify / C-Trax / Square filters the selected source — useful to see online vs in-store separately. The choice is in the URL, so you can bookmark a filtered view.' }
       ],
       tips: [
         "Use the source toggle to verify a Square outage didn't lose POS sales.",
@@ -93,7 +93,7 @@ class PageGuides
       summary: 'Which items are the same across Shopify and Square — a read-only identity audit. Shopify and Square are separate locations with separate stock, so quantities here are informational, never corrected.',
       sections: [
         { heading: "What you're seeing",
-          body: "A row per linked item with its Shopify and Square names, SKUs, and current counts. 'Matched' means both platforms agree on the SKU. 'Mismatched' means the same item is identified differently on each side — those float to the top. Below, 'Size families' groups each root product with its derived sizes, plus the pending-approval queue." },
+          body: "A row per linked item with its Shopify and Square names, SKUs, and current counts. 'Matched' means both platforms agree on the SKU. 'Mismatched' means the same item is identified differently on each side — those float to the top. Search by product or either source SKU and filter mismatches first. Size families are reference details below; review changes in the Sizes workspace." },
         { heading: 'What to do about mismatches',
           body: "A mismatch is a labeling decision, not an emergency: pick one canonical SKU and apply it on both platforms (SKU writes always get owner sign-off first), or unlink if they're truly different items. Nothing here writes automatically." }
       ],
@@ -237,7 +237,7 @@ class PageGuides
       key: 'finance', title: 'Finance',
       summary: 'Chart of accounts, expenses, and vendor payments — the books that tie sales to money out.',
       sections: [
-        { heading: "What you're seeing", body: 'Your chart of accounts, expense records, and vendor payments. Expense entries keep inventory cost and overhead separated so reports reflect true margin.' }
+        { heading: "What you're seeing", body: 'Your chart of accounts, expense records, and vendor payments. Vendor credits, purchase commitments and received balances remain separate. Customer receivables are grouped by currency. These local records do not establish a bank balance or a complete accounting profit.' }
       ],
       tips: [
         'Keep the chart of accounts tidy — reports read straight from it.'
@@ -265,12 +265,12 @@ class PageGuides
     ),
     'ledger' => Guide.new(
       key: 'ledger', title: 'Ledger',
-      summary: 'Every money movement in and out — the source of truth for financials.',
+      summary: 'Imported order ledger observations by source and currency.',
       sections: [
-        { heading: "What you're seeing", body: 'Ledger entries built from sales and expenses: gross, payments, refunds. Reconcile totals against your bank to catch discrepancies.' }
+        { heading: "What you're seeing", body: 'This legacy mirror can describe orders already included in sales. Its currency totals stay separate and are not added to revenue, gateway payments or bank deposits. Financial close retains source controls and reviewer conclusions.' }
       ],
       tips: [
-        'Drill into any entry to see the originating order or expense.'
+        'Use financial close for original evidence and bank verification. Missing imports are not proof of zero activity.'
       ]
     ),
     'alerts' => Guide.new(

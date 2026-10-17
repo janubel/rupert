@@ -6,6 +6,8 @@ module Finance
   class VendorPayment < ApplicationRecord
     include Discard::Model
     include TenantScoped
+    include FinanceAmount
+    include LockedPeriodGuard
 
     self.table_name = 'vendor_payments'
 
@@ -16,7 +18,8 @@ module Finance
 
     belongs_to :vendor, class_name: 'Purchasing::Vendor'
 
-    validates :amount_cents, numericality: { greater_than: 0 }
+    guard_locked_period :paid_on
+    validates :amount_cents, numericality: { greater_than: 0, less_than_or_equal_to: 2_147_483_647 }
     validates :paid_on, presence: true
 
     scope :since, ->(date) { where('paid_on >= ?', date) }

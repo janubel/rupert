@@ -6,6 +6,10 @@ require 'digest'
 # Sales, gateway observations and processor reports are separate evidence layers.
 # Comparisons require an explicit source/currency/location and a dated control.
 class DailyMoneyReconciliation
+  # Rupert has canonical actuals only for these; other control amounts are
+  # recorded for review but cannot be unavailable, matched or a variance.
+  COMPARABLE = %w[order_total cash card refunds].freeze
+  INFORMATIONAL = 'Recorded on control (not compared)'
   attr_reader :day, :register
 
   def initialize(day: Date.current.iso8601)
@@ -38,9 +42,12 @@ class DailyMoneyReconciliation
         next if expected.nil?
         observed = actual[metric]
         difference = observed.nil? ? nil : observed - expected
+        status = if !COMPARABLE.include?(metric) then INFORMATIONAL
+        elsif difference.nil? then 'Unavailable in canonical records'
+        else difference.zero? ? 'Matched recorded total' : 'Variance'
+        end
         { source: source, currency: currency, location_id: location, metric: metric,
-          expected_cents: expected, actual_cents: observed, delta_cents: difference,
-          status: difference.nil? ? 'Unavailable in canonical records' : (difference.zero? ? 'Matched recorded total' : 'Variance'), document_ids: [doc.id] }
+          expected_cents: expected, actual_cents: observed, delta_cents: difference, status: status, document_ids: [doc.id] }
       end
     end
   end
@@ -67,7 +74,7 @@ class DailyMoneyReconciliation
   # Portal files stay separate from API observations. Their submitted and
   # settlement timestamps are shown explicitly; amounts are not added to sales.
   def portal
-    @portal ||= AuthorizeNetPortalExport.latest_records.select do |row|
+    @portal ||= AuthorizeNetPortalObservation.latest_between(day.in_time_zone...(day + 1).in_time_zone).select do |row|
       %w[submitted_at settled_at].any? { |key| row[key].present? && Time.iso8601(row[key]).in_time_zone.to_date == day }
     end.sort_by { |row| [row['gateway_id'], row['transaction_id']] }
   end
@@ -82,8 +89,13 @@ class DailyMoneyReconciliation
       documents: documents.map { |doc| [doc.id, doc.fingerprint] } }
   end
 
+  # Fingerprint of the evidence itself. Source-import timestamps are shown on
+  # the report but excluded here: every successful sync (every 15 minutes)
+  # would otherwise change the digest and silently invalidate reviews, closes
+  # and follow-ups bound to it. Whether an import is stale is reported as an
+  # issue, not as a data change.
   def digest
-    Digest::SHA256.hexdigest(payload.to_json)
+    Digest::SHA256.hexdigest(payload.except(:freshness).to_json)
   end
 
   def latest_review
@@ -131,7 +143,7 @@ class DailyMoneyReconciliation
       end
       csv << ['Evidence ID', 'Source', 'Kind', 'From', 'To', 'Filename', 'SHA256', 'Supersedes ID', 'Source context and entered amounts (integer cents)']
       documents.each { |doc| csv << [doc.id, doc.source, doc.kind, doc.period_from, doc.period_to, safe(doc.filename), doc.sha256, doc.supersedes_id, safe(doc.metadata.to_json)] }
-      csv << ['Source import status does not prove this day is complete. Tips, fees and deposits require source evidence when unavailable in canonical records.']
+      csv << ['Source import status does not prove this day is complete. Tips, fees and deposits are recorded from controls and not compared; verify them against source evidence.']
     end
   end
 

@@ -1,16 +1,18 @@
 <% content_for :title, 'Shopify & C-Trax stock' %>
-<div class="space-y-6">
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :stock %>
   <section class="space-y-3">
     <h1 class="page-title">Shopify &amp; C-Trax stock</h1>
     <p class="max-w-3xl text-sm text-mocha">Two views of shared stock. Compare one Shopify location with one C-Trax store; quantities are never added together. This page is read-only.</p>
     <div class="flex flex-wrap gap-2">
+      <%= link_to 'Review comparison results', '#stock-comparison-results', class: 'btn-primary' %>
       <%= link_to 'Download comparison CSV', stock_comparison_path(request.query_parameters.slice('q', 'filter', 'shopify_location_id', 'ctrax_location_id').merge(format: :csv)), class: 'btn-ghost' %>
       <%= link_to 'Physical count worksheets', inventory_counts_path, class: 'btn-ghost' %>
       <%= link_to 'Source reads', syncs_path, class: 'btn-ghost' if Current.user.can?('sync.write') %>
     </div>
   </section>
   <section class="card card-pad space-y-3">
-    <%= form_tag stock_comparison_path, method: :get, class: 'flex flex-wrap items-end gap-3' do %>
+    <%= form_tag stock_comparison_path, method: :get, class: 'operations-filters' do %>
       <label class="block text-sm">Shopify location
         <%= select_tag :shopify_location_id, options_for_select(@comparison.shopify_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.shopify&.location_id), include_blank: 'Choose location', class: 'input mt-1' %>
       </label>
@@ -23,7 +25,9 @@
       <label class="block text-sm">Search <%= text_field_tag :q, @comparison.query, class: 'input mt-1', placeholder: 'Item, SKU or native ID' %></label>
       <%= submit_tag 'Compare', class: 'btn-primary' %>
     <% end %>
-    <p class="text-xs text-taupe">Shopify stock read: <%= @comparison.shopify&.captured_at&.iso8601 || 'Not selected / not imported' %> · C-Trax stock read: <%= @comparison.ctrax&.captured_at&.iso8601 || 'Not selected / not imported' %></p>
+    <div class="grid gap-3 sm:grid-cols-2" aria-label="Stock source freshness">
+      <% [['Shopify', @comparison.shopify], ['C-Trax · physical reference', @comparison.ctrax]].each do |label, snapshot| %><div class="rounded-xl border border-fog bg-haze p-3 min-w-0"><div class="operations-header"><h2 class="font-semibold"><%= label %></h2><span class="<%= !snapshot || @comparison.stale?(snapshot) ? 'pill-clay' : 'pill-fern' %>"><%= !snapshot ? 'Missing read' : @comparison.stale?(snapshot) ? 'Stale read' : 'Read current' %></span></div><p class="mt-2 text-xs text-mocha">Last stock pull: <%= retail_source_time(snapshot&.captured_at) %></p></div><% end %>
+    </div>
     <p class="text-xs text-taupe">Catalog read: <%= @comparison.catalog_read_at&.iso8601 || 'Awaiting a complete Shopify read' %> · <%= @comparison.historical_catalog_count %> historical variants absent from that read are excluded. Only current active tracked Shopify variants appear.</p>
     <% unless @comparison.shopify && @comparison.ctrax %><p role="status" class="text-sm text-clay">Choose both sources after their stock reads complete. Missing stock stays unknown.</p><% end %>
   </section>
@@ -36,16 +40,19 @@
       <%= link_to 'Show investigation findings', stock_comparison_path(request.query_parameters.slice('q', 'shopify_location_id', 'ctrax_location_id').merge(filter: 'findings')), class: 'btn-ghost' %>
     </section>
   <% end %>
-  <section class="grid gap-3 sm:grid-cols-4">
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Stock comparison overview">
     <% [['Comparison rows', summary[:rows]], ['Identity pairs / candidates', summary[:paired]], ['Unknown stock rows', summary[:unknown]], ['Negative stock rows', summary[:negative]]].each do |label, value| %>
       <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value"><%= value %></p></div>
     <% end %>
   </section>
-  <p class="max-w-4xl text-sm text-mocha"><%= summary[:name_candidates] %> name/package candidates need equivalence review; <%= summary[:historical] %> C-Trax rows have historical Shopify candidates. Historical items remain excluded from current Shopify stock.</p>
+  <details class="card card-pad"><summary class="disclosure-trigger font-semibold">How to read stock and matching evidence</summary><div class="space-y-3">  <p class="max-w-4xl text-sm text-mocha"><%= summary[:name_candidates] %> name/package candidates need equivalence review; <%= summary[:historical] %> C-Trax rows have historical Shopify candidates. Historical items remain excluded from current Shopify stock.</p>
   <p class="max-w-4xl text-sm text-mocha">Shopify on-hand includes committed units; available is shown separately. Signed source values are preserved. SKU/barcode and name/package candidates are not approved mappings. Name/package candidates show both observations without a quantity difference. Unknown, fractional, untracked or over-one-hour-old observations also have no numerical difference. Missing packages, duplicate identifiers and conflicting source links stay unresolved.</p>
-  <div class="card overflow-hidden"><div class="overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead><tr><th class="th">Item / identity</th><th class="th text-right">Shopify on hand</th><th class="th text-right">Available</th><th class="th text-right">Committed</th><th class="th text-right">C-Trax stock</th><th class="th text-right">C-Trax − on hand</th><th class="th">Review</th></tr></thead>
+</div></details>
+  <div id="stock-comparison-results" tabindex="-1" class="operations-header retail-anchor"><h2 class="font-display text-xl">Stock comparison results</h2><p role="status" class="text-sm text-mocha"><%= @pagy.count %> matching rows · <%= @rows.size %> shown</p></div>
+  <p class="text-xs text-mocha sm:hidden">Swipe the table sideways to see each source quantity and the review flags.</p>
+  <div class="card overflow-hidden"><div class="operations-table-region" role="region" tabindex="0" aria-label="Stock Comparisons table">
+    <table class="operations-stock-table w-full text-sm">
+      <thead><tr><th scope="col" class="th">Item / identity</th><th class="th text-right">Shopify on hand</th><th class="th text-right">Available</th><th class="th text-right">Committed</th><th class="th text-right">C-Trax stock</th><th class="th text-right">C-Trax − on hand</th><th scope="col" class="th">Review</th></tr></thead>
       <tbody class="divide-y divide-fog">
         <% @rows.each do |row| %>
           <tr>

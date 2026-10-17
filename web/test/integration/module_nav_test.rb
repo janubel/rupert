@@ -85,12 +85,12 @@ class ModuleNavTest < ActionDispatch::IntegrationTest
     get finance_accounts_path
     assert_response :success
     assert_select "nav[aria-label='Module areas'] a", text: 'Money'
-    assert_select "nav[aria-label='Module'] a", text: 'Accounts', count: 1
-    assert_select "nav[aria-label='Module'] a.nav-pill-active-sm", text: 'Accounts'
+    assert_select "nav[aria-label='Module'] a", text: 'Finance overview', count: 1
+    assert_select "nav[aria-label='Module'] a.nav-pill-active-sm", text: 'Finance overview'
 
     get users_path
     assert_response :success
-    assert_select "nav[aria-label='Module'] a", text: 'Accounts', count: 0
+    assert_select "nav[aria-label='Module'] a", text: 'Finance overview', count: 0
     assert_select "nav[aria-label='Module'] a", text: 'Users', count: 1
     assert_select "nav[aria-label='Module'] a", text: 'Employees'
   end

@@ -15,18 +15,10 @@ class ReconciliationAcrossDays
     ending_on - 6
   end
 
+  # The seven workflows repeat identical source-freshness, Drive and history
+  # reads; one query cache serves them once per render, inside or outside a request.
   def days
-    @days ||= (starting_on..ending_on).to_a.reverse.map do |day|
-      workflow = FinancialCloseWorkflow.new(day: day.iso8601)
-      attention = workflow.attention
-      missing = attention.missing_controls.map do |row|
-        row.merge(request_id: requests[[day, row[:source], row[:currency], row[:location_id].presence]])
-      end
-      { day: day, counts: attention.counts, missing: missing,
-        untracked: missing.count { |row| row[:request_id].nil? },
-        follow_ups: workflow.open_follow_ups.size, overdue: workflow.open_follow_ups.count(&:overdue?),
-        close: workflow.status_summary }
-    end
+    @days ||= ActiveRecord::Base.cache { build_days }
   end
 
   def days_needing_attention
@@ -52,6 +44,20 @@ class ReconciliationAcrossDays
   end
 
   private
+
+  def build_days
+    (starting_on..ending_on).to_a.reverse.map do |day|
+      workflow = FinancialCloseWorkflow.new(day: day.iso8601)
+      attention = workflow.attention
+      missing = attention.missing_controls.map do |row|
+        row.merge(request_id: requests[[day, row[:source], row[:currency], row[:location_id].presence]])
+      end
+      { day: day, counts: attention.counts, missing: missing,
+        untracked: missing.count { |row| row[:request_id].nil? },
+        follow_ups: workflow.open_follow_ups.size, overdue: workflow.open_follow_ups.count(&:overdue?),
+        close: workflow.status_summary }
+    end
+  end
 
   def active
     ReconciliationFollowUp.active.where('period_from <= ? AND period_to >= ?', ending_on, starting_on)

@@ -23,7 +23,9 @@ class ReportsController < AuthenticatedController
       source: params[:source].presence, location_id: params[:location_id].presence)
     respond_to do |format|
       format.html
-      format.csv { send_data(@summary.csv, filename: "register-summary-#{@summary.day.iso8601}.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", @summary.day.iso8601)
+        send_data(@summary.csv, filename: "register-summary-#{@summary.day.iso8601}.csv") }
     end
   rescue ArgumentError
     redirect_to(register_summary_reports_path, alert: 'Choose a valid calendar day (YYYY-MM-DD).')
@@ -43,9 +45,7 @@ class ReportsController < AuthenticatedController
                               .transform_keys { |k| k.to_s.capitalize }.transform_values { |c| c / 100.0 },
         by_channel: Core::Order.since(since).group(:channel).sum(:gross_cents)
                                .transform_keys { |k| k.to_s.capitalize }.transform_values { |c| c / 100.0 },
-        by_location: Core::Order.since(since).joins(:location)
-                                .group('"Location".name').sum(:gross_cents)
-                                .transform_values { |c| c / 100.0 },
+        by_location: by_location_totals(since),
         aov: Core::Order.since(since).where(status: %w[paid fulfilled]).average(:gross_cents).to_f / 100.0,
         total_orders: Core::Order.since(since).where(status: %w[paid fulfilled]).count,
         total_revenue: Core::Order.since(since).where(status: %w[paid fulfilled]).sum(:gross_cents) / 100.0,
@@ -72,7 +72,9 @@ class ReportsController < AuthenticatedController
 
     respond_to do |format|
       format.html
-      format.csv { send_data(sales_csv, filename: "sales-report-#{@days}d.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", "#{@days || 1} days")
+        send_data(sales_csv, filename: "sales-report-#{@days}d.csv") }
     end
   end
 
@@ -82,6 +84,8 @@ class ReportsController < AuthenticatedController
 
     payload = DataCache.fetch("reports/financial/#{range_key}", ttl: 10.minutes) do
       revenue_cents = orders.sum(:gross_cents)
+      unrecorded_refunds = Core::Order.where(status: 'refunded', occurred_at: since..@range_end)
+                                      .where.not(id: Core::Refund.select(:order_id))
       refund_cents = Core::Refund.joins(:order)
                                  .where(orders: { occurred_at: since..@range_end })
                                  .sum('refunds.amount_cents')
@@ -89,6 +93,8 @@ class ReportsController < AuthenticatedController
         revenue_cents: revenue_cents,
         tax_cents: orders.sum(:tax_cents),
         refund_cents: refund_cents,
+        unrecorded_refund_orders: unrecorded_refunds.count,
+        unrecorded_refund_cents: unrecorded_refunds.sum(:gross_cents),
         net_cents: revenue_cents,
         avg_order_cents: orders.count.zero? ? 0 : (revenue_cents / orders.count),
         tenders: Core::Payment.joins(:order)
@@ -104,13 +110,17 @@ class ReportsController < AuthenticatedController
     @tax_cents = payload[:tax_cents]
     @refund_cents = payload[:refund_cents]
     @net_cents = payload[:net_cents] - payload[:refund_cents]
+    @unrecorded_refund_orders = payload[:unrecorded_refund_orders]
+    @unrecorded_refund_cents = payload[:unrecorded_refund_cents]
     @avg_order_cents = payload[:avg_order_cents]
     @tenders = payload[:tenders]
     @daily_net = payload[:daily_net]
 
     respond_to do |format|
       format.html
-      format.csv { send_data(financial_csv, filename: "financial-report-#{@days}d.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", "#{@days || 1} days")
+        send_data(financial_csv, filename: "financial-report-#{@days}d.csv") }
     end
   end
 
@@ -146,7 +156,9 @@ class ReportsController < AuthenticatedController
 
     respond_to do |format|
       format.html
-      format.csv { send_data(inventory_csv, filename: "inventory-report-#{@days}d.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", "#{@days || 1} days")
+        send_data(inventory_csv, filename: "inventory-report-#{@days}d.csv") }
     end
   end
 
@@ -164,7 +176,9 @@ class ReportsController < AuthenticatedController
 
     respond_to do |format|
       format.html
-      format.csv { send_data(operations_csv, filename: "operations-report-#{@days}d.csv") }
+      format.csv {
+        log_export("#{action_name.humanize} report CSV", "#{@days || 1} days")
+        send_data(operations_csv, filename: "operations-report-#{@days}d.csv") }
     end
   end
 
@@ -173,6 +187,7 @@ class ReportsController < AuthenticatedController
     respond_to do |format|
       format.html
       format.csv do
+        log_export('Inventory reconciliation CSV')
         send_data(@reconciliation.csv, filename: "inventory-reconciliation-#{Time.current.to_date.iso8601}.csv")
       end
     end
@@ -197,6 +212,16 @@ class ReportsController < AuthenticatedController
     @range = from.beginning_of_day
     @to_date = to
     @range_end = to.end_of_day
+  end
+
+  # Orders without a location (all Shopify web orders) used to vanish from the
+  # by-location chart because of an inner join; keep them as "Unassigned".
+  def by_location_totals(since)
+    names = Location.pluck(:externalId, :name).to_h
+    Core::Order.since(since).group(:location_id).sum(:gross_cents)
+               .each_with_object(Hash.new(0)) do |(external_id, cents), totals|
+      totals[external_id.present? ? names.fetch(external_id, 'Unknown location') : 'Unassigned'] += cents / 100.0
+    end
   end
 
   def window_days

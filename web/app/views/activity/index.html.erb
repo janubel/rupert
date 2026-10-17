@@ -2,8 +2,30 @@
 <div class="space-y-6">
   <section>
     <h1 class="page-title">Activity</h1>
-    <p class="mt-1 text-sm text-mocha">Audit trail — who did what, and when. Showing the most recent <%= @activities.length %> actions.</p>
+    <p class="mt-1 text-sm text-mocha">Audit trail — who did what, and when. <%= number_with_delimiter(@pagy.count) %> matching action<%= @pagy.count == 1 ? '' : 's' %>, newest first. Entries are kept for seven years.</p>
   </section>
+
+  <%= form_tag activity_path, method: :get, class: "flex flex-wrap items-end gap-2" do %>
+    <div>
+      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="group">Show</label>
+      <%= select_tag :group, options_for_select([["Everything", ""]] + ActivityController::GROUPS.map { |key, (label, _)| [label, key] }, params[:group]), class: "select" %>
+    </div>
+    <div class="w-56">
+      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="q">Search</label>
+      <input type="search" id="q" name="q" value="<%= params[:q] %>" placeholder="person, action or detail" class="input">
+    </div>
+    <div>
+      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="from">From</label>
+      <%= date_field_tag :from, params[:from], class: "select" %>
+    </div>
+    <div>
+      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="to">To</label>
+      <%= date_field_tag :to, params[:to], class: "select" %>
+    </div>
+    <%= submit_tag "Filter", class: "btn-primary" %>
+    <%= link_to "Clear", activity_path, class: "btn-ghost" %>
+    <%= link_to "CSV", activity_path(request.query_parameters.merge(format: :csv)), class: "btn-ghost", data: { turbo: false } %>
+  <% end %>
 
   <div class="card overflow-hidden">
     <div class="overflow-x-auto">
@@ -19,7 +41,7 @@
         </thead>
         <tbody class="divide-y divide-fog">
           <% if @activities.empty? %>
-            <tr><td colspan="5" class="empty-row">No activity recorded yet.</td></tr>
+            <tr><td colspan="5" class="empty-row">No matching activity.</td></tr>
           <% end %>
           <% @activities.each do |a| %>
             <tr class="hover:bg-cream">
@@ -27,18 +49,21 @@
               <td class="td font-medium text-ink"><%= a.actor_name %></td>
               <td class="td"><span class="pill-taupe"><%= a.action.tr("_", " ") %></span></td>
               <td class="td text-mocha">
-                <% if a.subject_type %>
+                <% if a.subject_type.present? && a.subject_type != 'NilClass' %>
                   <span class="text-xs text-taupe"><%= a.subject_type.demodulize.underscore %></span>
                   <% if a.subject_label %><span class="ml-1 font-medium text-ink"><%= a.subject_label %></span><% end %>
                 <% else %>
                   <span class="text-taupe">—</span>
                 <% end %>
               </td>
-              <td class="td max-w-[280px] truncate text-xs text-taupe"><%= a.details.presence || "—" %></td>
+              <td class="td max-w-[280px] truncate text-xs text-taupe" title="<%= a.details %>"><%= a.details.presence || "—" %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
   </div>
+  <% if @pagy.pages > 1 %>
+    <div class="text-xs text-taupe"><%== pagy_nav(@pagy) %></div>
+  <% end %>
 </div>

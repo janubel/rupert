@@ -5,9 +5,10 @@ import { Controller } from "@hotwired/stimulus"
 // new users actually see the guidance; stays collapsed afterwards.
 export default class extends Controller {
   static targets = ["panel", "trigger"]
-  static values = { autoKey: String }
+  static values = { autoKey: String, autoOpen: { type: Boolean, default: true } }
 
   connect() {
+    if (!this.autoOpenValue) return
     // On phones the open panel fills the first screen and pushes the page's own
     // content out of sight; leave it collapsed there (the button still opens it).
     if (window.matchMedia("(max-width: 639px)").matches) return

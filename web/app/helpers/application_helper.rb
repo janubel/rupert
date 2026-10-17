@@ -20,10 +20,11 @@ module ApplicationHelper
   def module_match_strength(path)
     return 0 if path.blank? || path == '#'
 
-    return request.path == '/' ? 100 : 0 if path == '/'
+    request_path = request.path == '/stock_comparison' ? '/inventory' : request.path
+    return request_path == '/' ? 100 : 0 if path == '/'
 
-    return path.length if request.path == path
-    return path.length if request.path.start_with?("#{path}/")
+    return path.length if request_path == path
+    return path.length if request_path.start_with?("#{path}/")
 
     0
   end

@@ -33,7 +33,9 @@ class DailyReconciliationsController < AuthenticatedController
     end
     respond_to do |format|
       format.html
-      format.csv { send_data(@report.csv, type: 'text/csv', filename: "daily-reconciliation-#{@report.day}.csv") }
+      format.csv {
+        log_export('Daily reconciliation CSV', @report.day.iso8601)
+        send_data(@report.csv, type: 'text/csv', filename: "daily-reconciliation-#{@report.day}.csv") }
     end
   end
 
@@ -48,12 +50,14 @@ class DailyReconciliationsController < AuthenticatedController
       raise ReconciliationEvidence::Error, 'Use the report archive action to retain generated Rupert reports.'
     end
     context = values['supersedes_id'].present? ? ReconciliationDocument.find(values['supersedes_id']).metadata.slice('merchant', 'api_origin', 'report_kind') : {}
-    metadata = context.merge(values.slice('currency', 'location_id', 'note').transform_values(&:strip))
+    metadata = context.merge(values.slice('currency', 'location_id', 'note').transform_values { |value| value.to_s.strip })
+    metadata['currency'] = metadata['currency'].upcase if metadata.key?('currency')
     raise ReconciliationEvidence::Error, 'Notes must be no longer than 4000 characters.' if metadata['note'].to_s.length > 4000
-    ReconciliationEvidence::AMOUNTS.each { |key| metadata[key] = ReconciliationEvidence.cents(values[key]) }
+    ReconciliationEvidence::AMOUNTS.each { |key| metadata[key] = ReconciliationEvidence.cents(values[key], metric: key) }
     doc = ReconciliationEvidence.retain!(bytes: file.read(ReconciliationEvidence::MAX_BYTES + 1), filename: file.original_filename,
       source: values['source'], kind: values['kind'], from: values['period_from'], to: values['period_to'], metadata: metadata,
       actor: Current.user, supersedes_id: values['supersedes_id'])
+    ActivityLogger.log('reconciliation_evidence_retained', subject: doc, details: "#{doc.source} #{doc.kind} #{doc.period_from}..#{doc.period_to}; sha256 #{doc.sha256.to_s.first(12)}")
     if @request
       redirect_to reconciliation_follow_up_path(@request, evidence: doc.id, close_day: @close_day&.iso8601, anchor: 'record-progress'), notice: 'Original retained in Rupert. Review the suggested evidence and save a progress note to link it. Uploading does not change the follow-up status.'
     else
@@ -63,6 +67,7 @@ class DailyReconciliationsController < AuthenticatedController
 
   def document
     doc = ReconciliationDocument.find(params[:id])
+    log_export('Retained original', "##{doc.id} #{doc.source} #{doc.kind} #{doc.filename}")
     send_data(doc.original_bytes, type: doc.content_type, filename: doc.filename, disposition: 'attachment')
   end
 
@@ -72,12 +77,14 @@ class DailyReconciliationsController < AuthenticatedController
     when 'authorize_net' then AuthorizeNetPortalExport.find(params[:id])
     else raise ActiveRecord::RecordNotFound
     end
+    log_export('Native source export', "#{params[:source]} ##{receipt.id}")
     send_data(receipt.original_csv, type: 'text/csv', disposition: 'attachment', filename: "#{params[:source]}-#{receipt.id}.csv")
   end
 
   def archive
     report = DailyMoneyReconciliation.new(day: selected_day)
     doc = report.archive!(actor: Current.user)
+    ActivityLogger.log('daily_report_archived', subject: doc, details: report.day.iso8601)
     redirect_to daily_reconciliations_path(day: report.day.iso8601), notice: "Daily report archived as evidence ##{doc.id}."
   end
 
@@ -92,6 +99,7 @@ class DailyReconciliationsController < AuthenticatedController
     ReconciliationEvidence.retain!(bytes: previous.original_bytes, filename: previous.filename, source: previous.source,
       kind: previous.kind, from: previous.period_from.iso8601, to: previous.period_to.iso8601,
       metadata: previous.metadata.merge('withdrawn' => true, 'note' => reason), supersedes_id: previous.id, actor: Current.user)
+    ActivityLogger.log('reconciliation_control_withdrawn', subject: previous, details: "#{previous.source} #{previous.period_from}; reason recorded")
     redirect_to daily_reconciliations_path(day: previous.period_from.iso8601), notice: 'Control withdrawn from comparisons; original evidence and explanation retained.'
   end
 
@@ -99,7 +107,9 @@ class DailyReconciliationsController < AuthenticatedController
     @review_values = params.permit(:status, :notes).to_h
     report = DailyMoneyReconciliation.new(day: selected_day)
     raise ReconciliationEvidence::Error, 'The report changed. Reload it before recording your review.' unless params[:report_digest] == report.digest
-    DailyReconciliationReview.create!(day: report.day, report_digest: report.digest, status: params[:status], notes: params[:notes], reviewed_by: Current.user)
+    if (lock = PeriodLock.lock_covering(report.day)) then raise ReconciliationEvidence::Error, PeriodLock.locked_message(lock) end
+    review = DailyReconciliationReview.create!(day: report.day, report_digest: report.digest, status: params[:status], notes: params[:notes], reviewed_by: Current.user)
+    ActivityLogger.log('daily_reconciliation_reviewed', subject: review, details: "#{report.day.iso8601}: #{review.status}")
     redirect_to daily_reconciliations_path(day: report.day.iso8601), notice: 'Review recorded against this report version. Source data was not changed.'
   rescue ActiveRecord::RecordInvalid
     raise ReconciliationEvidence::Error, 'Choose a review status and enter notes of 1 to 4000 characters.'
@@ -112,7 +122,7 @@ class DailyReconciliationsController < AuthenticatedController
     @attention = ReconciliationAttention.new(@report)
     @comparison_filter = %w[attention all matched variances unavailable conflicts].include?(params[:comparison]) ? params[:comparison] : 'attention'
     selected_status = { 'matched' => 'Matched recorded total', 'variances' => 'Variance', 'unavailable' => 'Unavailable in canonical records', 'conflicts' => 'Conflicting controls' }[@comparison_filter]
-    @comparison_rows = @report.comparisons.select { |row| @comparison_filter == 'all' || (selected_status ? row[:status] == selected_status : row[:status] != 'Matched recorded total') }
+    @comparison_rows = @report.comparisons.select { |row| @comparison_filter == 'all' || (selected_status ? row[:status] == selected_status : @attention.differences.include?(row)) }
     @comparison_rows = @comparison_rows.sort_by { |row| ReconciliationAttention.sort_key(row) }
     @day_follow_ups = ReconciliationFollowUp.covering(@report.day).active.includes(:owner).order(:due_on, :id).limit(6)
     @follow_up_open_count = ReconciliationFollowUp.active.count
@@ -131,7 +141,7 @@ class DailyReconciliationsController < AuthenticatedController
   end
 
   def selected_day
-    params[:day].presence || Date.current.iso8601
+    params[:day].presence || Date.yesterday.iso8601
   end
 
   def private_response

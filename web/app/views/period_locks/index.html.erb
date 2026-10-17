@@ -1,0 +1,132 @@
+<% content_for :title, 'Locked periods' %>
+<% c = @checklist; event = c.lock_event; locked = c.locked?
+   stamp = ->(time) { time.in_time_zone.strftime('%b %-d, %Y at %-I:%M %p') } %>
+<div class="mx-auto max-w-6xl space-y-8 operations-workspace books-desk">
+  <%= render 'shared/operations_navigation', workspace: :money, day: Date.yesterday %>
+
+  <header class="operations-header">
+    <div>
+      <p class="eyebrow text-mocha">Money · history and retention</p>
+      <h1 class="page-title mt-2">Locked periods</h1>
+      <p class="mt-2 max-w-2xl text-sm text-mocha">When a month, quarter or year is finished and checked, lock it. Nothing dated inside a locked period can then be added, changed or removed in Rupert: expenses, vendor payments, bank-line decisions, day reviews, closes and approvals. Each lock keeps a dated archive of the period’s totals. Reopening needs a written reason and is recorded.</p>
+    </div>
+    <%= link_to 'Back to Books desk', books_desk_path, class: 'btn-ghost btn-sm' %>
+  </header>
+
+  <% if @form_error %><p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><%= @form_error %></p><% end %>
+
+  <section id="lock-focus" class="card card-pad space-y-5" aria-labelledby="lock-focus-title">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p class="eyebrow text-olive-deep"><%= c.kind_label %> end</p>
+        <h2 id="lock-focus-title" class="font-display text-2xl"><%= c.label %></h2>
+        <p class="mt-1 text-sm text-mocha"><%= c.from.strftime('%b %-d, %Y') %> – <%= c.to.strftime('%b %-d, %Y') %></p>
+      </div>
+      <% if locked && c.lock_current? %>
+        <span class="pill-fern">Locked · records unchanged</span>
+      <% elsif locked %>
+        <span class="pill-rose">Locked · records changed since</span>
+      <% elsif event %>
+        <span class="pill-clay">Reopened</span>
+      <% else %>
+        <span class="pill-taupe">Open</span>
+      <% end %>
+    </div>
+
+    <% if locked && !c.lock_current? %>
+      <div class="rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm" role="status">
+        <p class="font-semibold">Something inside this locked period changed after it was locked.</p>
+        <p class="mt-1">Changed: <%= c.changed_sections.join(', ').presence || 'details unavailable' %>. Money-out and sign-offs are blocked while locked, so this is usually a late source import or correction. The lock archive (#<%= event.archive_document_id %>) still shows the totals as they were.</p>
+        <p class="mt-1 text-xs">To accept the new numbers: reopen with a reason, review, then lock again.</p>
+      </div>
+    <% end %>
+
+    <div class="grid gap-5 lg:grid-cols-2">
+      <div class="space-y-2">
+        <h3 class="font-semibold"><%= locked ? "Checklist" : "Before locking" %> · <%= c.done_count %> of <%= c.total_count %> done</h3>
+        <ol class="space-y-2">
+          <% c.tasks.each do |task| %>
+            <li class="desk-task" data-state="<%= task.state %>">
+              <span class="desk-glyph" aria-hidden="true"><%= books_desk_glyph(task.state) %></span>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold"><%= task.title %><span class="sr-only"> · <%= books_desk_state_label(task.state) %></span><% if task.optional %> <span class="pill-taupe">Optional</span><% end %></p>
+                <p class="text-xs text-mocha"><%= task.detail %></p>
+                <% unless task.done? || task.key == :lock %><%= link_to books_desk_task_action(task), books_desk_task_path(task), class: 'mt-1 inline-block text-sm font-semibold text-olive-deep underline' %><% end %>
+              </div>
+            </li>
+          <% end %>
+        </ol>
+      </div>
+
+      <div class="space-y-3">
+        <% if !c.complete? %>
+          <p class="rounded-xl border border-fog bg-haze p-4 text-sm">This <%= c.kind_label.downcase %> has not finished yet, so it cannot be locked.</p>
+        <% elsif locked %>
+          <div class="rounded-xl border border-fog bg-haze p-4 text-sm space-y-1">
+            <p>Locked by <strong><%= event.actor_name %></strong> on <%= stamp.call(event.acted_at) %>.</p>
+            <% if event.reason.present? %><p class="text-mocha">Note: <%= event.reason %></p><% end %>
+            <% if event.archive_document_id %><p><%= link_to 'Download the lock archive', document_daily_reconciliation_path(event.archive_document_id), class: 'font-semibold text-olive-deep underline', data: { turbo: false } %></p><% end %>
+          </div>
+          <% if @can_unlock %>
+            <%= form_with url: period_locks_path, scope: :period_lock, class: 'space-y-3', aria: { label: "Reopen #{c.label}" } do |f| %>
+              <%= f.hidden_field :kind, value: c.kind %><%= f.hidden_field :date, value: c.from.iso8601 %><%= f.hidden_field :act, value: 'unlock' %>
+              <div><%= f.label :reason, 'Why does this period need reopening? (required)', class: 'field-label' %><%= f.text_area :reason, value: @values&.dig('reason'), rows: 3, maxlength: 4000, required: true, class: 'input', placeholder: 'What has to change, who asked, and what will be checked before locking again.' %></div>
+              <label class="flex items-start gap-3 text-sm"><%= f.check_box :confirmed, { class: 'mt-1' }, '1', '0' %><span>I am reopening <strong><%= c.label %></strong> as <strong><%= Current.user.display_name || Current.user.email %></strong>. This is recorded permanently.</span></label>
+              <%= f.submit "Reopen #{c.label}", class: 'btn-ghost' %>
+            <% end %>
+          <% elsif @can_lock %>
+            <p class="text-xs text-mocha">Reopening a locked period needs a store administrator.</p>
+          <% end %>
+        <% elsif @can_lock %>
+          <%= form_with url: period_locks_path, scope: :period_lock, class: 'space-y-3', aria: { label: "Lock #{c.label}" } do |f| %>
+            <%= f.hidden_field :kind, value: c.kind %><%= f.hidden_field :date, value: c.from.iso8601 %><%= f.hidden_field :act, value: 'lock' %>
+            <div><%= f.label :reason, c.ready? ? 'Note (optional)' : 'What is still open? (required while steps remain)', class: 'field-label' %><%= f.text_area :reason, value: @values&.dig('reason'), rows: 3, maxlength: 4000, required: !c.ready?, class: 'input', placeholder: 'Anything a future reader should know about this period.' %></div>
+            <label class="flex items-start gap-3 text-sm"><%= f.check_box :confirmed, { class: 'mt-1' }, '1', '0' %><span>Lock <strong><%= c.label %></strong> as <strong><%= Current.user.display_name || Current.user.email %></strong>. Records dated <%= c.from.strftime('%b %-d') %> to <%= c.to.strftime('%b %-d, %Y') %> become read-only.</span></label>
+            <%= f.submit "Lock #{c.label}", class: 'btn-primary' %>
+            <p class="text-xs text-mocha">Rupert saves a dated JSON archive of the period’s totals with a checksum. Source imports keep arriving; if one changes a locked period, this page says so.</p>
+          <% end %>
+        <% else %>
+          <p class="text-sm text-mocha">You can see locks. A person with report-write access locks a period.</p>
+        <% end %>
+      </div>
+    </div>
+  </section>
+
+  <section class="space-y-4" aria-labelledby="lock-calendar">
+    <h2 id="lock-calendar" class="font-display text-2xl">Calendar</h2>
+    <div class="space-y-2"><h3 class="text-sm font-semibold">Years</h3><ol class="lock-grid" aria-label="Years"><%= render partial: 'period_locks/chip', collection: @years, as: :from, locals: { kind: 'yearly', checklist: c } %></ol></div>
+    <div class="space-y-2"><h3 class="text-sm font-semibold">Quarters</h3><ol class="lock-grid" aria-label="Quarters"><%= render partial: 'period_locks/chip', collection: @quarters, as: :from, locals: { kind: 'quarterly', checklist: c } %></ol></div>
+    <div class="space-y-2"><h3 class="text-sm font-semibold">Months</h3><ol class="lock-grid" aria-label="Months"><%= render partial: 'period_locks/chip', collection: @months, as: :from, locals: { kind: 'monthly', checklist: c } %></ol></div>
+  </section>
+
+  <section class="space-y-3" aria-labelledby="lock-ledger">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 id="lock-ledger" class="font-display text-2xl">Lock ledger</h2>
+      <% if @chain[:ok] %>
+        <span class="pill-taupe">Ledger intact · <%= pluralize(@chain[:count], 'entry') %></span>
+      <% else %>
+        <span role="alert" class="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-semibold">Ledger problem at entry <%= @chain[:broken_id] || '?' %>: <%= @chain[:reason] %></span>
+      <% end %>
+    </div>
+    <% if @ledger.empty? %>
+      <p class="card card-pad text-sm text-mocha">No period has been locked yet. Start with the most recent finished month.</p>
+    <% else %>
+      <div class="card operations-table-region" role="region" tabindex="0" aria-label="Lock ledger entries"><table class="operations-table w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60"><tr><% %w[When Who Period Action Note Fingerprint].each do |h| %><th scope="col" class="th"><%= h %></th><% end %></tr></thead>
+        <tbody class="divide-y divide-fog">
+          <% @ledger.each do |e| %>
+            <tr>
+              <td class="td whitespace-nowrap"><%= stamp.call(e.acted_at) %></td>
+              <td class="td"><%= e.actor_name %></td>
+              <td class="td"><%= link_to e.label, period_locks_path(kind: e.period_kind, date: e.period_from.iso8601, anchor: 'lock-focus'), class: 'underline' %></td>
+              <td class="td"><%= e.lock? ? 'Locked' : 'Reopened' %></td>
+              <td class="td"><% if e.reason.present? %><span class="block max-w-xs truncate text-xs" title="<%= e.reason %>"><%= e.reason %></span><% end %></td>
+              <td class="td font-mono text-xs"><%= e.entry_hash.first(12) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table></div>
+    <% end %>
+    <p class="text-xs text-mocha">Each entry carries a fingerprint that includes the one before it, so editing, removing or reordering any entry is detectable. Originals and archives stay encrypted in Rupert and are never deleted automatically; keep an off-host backup current.</p>
+  </section>
+</div>

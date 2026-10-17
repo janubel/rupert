@@ -45,7 +45,34 @@ class DailyMoneyReconciliationTest < ActiveSupport::TestCase
     card = rows.find { |row| row[:metric] == 'card' }
     assert_equal(-100, card[:delta_cents])
     assert_equal 'Variance', card[:status]
-    assert_nil rows.find { |row| row[:metric] == 'tips' }[:actual_cents]
+    tips = rows.find { |row| row[:metric] == 'tips' }
+    assert_nil tips[:actual_cents]
+    assert_equal 50, tips[:expected_cents]
+    assert_equal DailyMoneyReconciliation::INFORMATIONAL, tips[:status]
+  end
+
+  test 'tips fees and deposit stay visible but do not block a complete close while unavailable comparable metrics do' do
+    order = sale
+    order.payments.create!(method: 'card', amount_cents: 1000, paid_at: order.occurred_at)
+    SyncRun.create!(source: 'square', mode: 'manual', status: 'success', startedAt: 2.minutes.ago, finishedAt: 1.minute.ago)
+    evidence(metadata: { 'currency' => 'USD', 'order_total' => 1000, 'card' => 1000, 'tips' => 50, 'fees' => 30, 'deposit' => 920 })
+    report = DailyMoneyReconciliation.new(day: @day)
+    informational = report.comparisons.select { |row| row[:status] == DailyMoneyReconciliation::INFORMATIONAL }
+    assert_equal %w[deposit fees tips], informational.map { |row| row[:metric] }.sort
+    assert_includes report.csv, DailyMoneyReconciliation::INFORMATIONAL
+    attention = ReconciliationAttention.new(report)
+    assert_empty attention.differences
+    assert_equal({ variances: 0, unavailable: 0, conflicts: 0, missing_controls: 0 }, attention.counts)
+    DailyReconciliationReview.create!(day: @day, report_digest: report.digest, status: 'reviewed', notes: 'Checked.')
+    workflow = FinancialCloseWorkflow.new(day: @day)
+    assert workflow.clear_for_close?, workflow.blockers.inspect
+    assert_empty workflow.blockers
+
+    evidence(source: 'ctrax', bytes: "no canonical records\n", metadata: { 'currency' => 'USD', 'cash' => 0, 'tips' => 50 })
+    workflow = FinancialCloseWorkflow.new(day: @day)
+    assert_equal 1, workflow.issues[:unavailable]
+    assert_includes workflow.blockers.map { |row| row[:key] }, :unavailable
+    refute workflow.clear_for_close?
   end
 
   test 'missing source data is unavailable rather than zero or a match' do
@@ -147,8 +174,23 @@ class DailyMoneyReconciliationTest < ActiveSupport::TestCase
     assert_raises(ReconciliationEvidence::Error) { ReconciliationEvidence.cents('NaN') }
     assert_equal(-123, ReconciliationEvidence.cents('-1.23'))
     assert_nil ReconciliationEvidence.cents('')
+    assert_raises(ReconciliationEvidence::Error) { evidence(metadata: { 'currency' => 'USD', 'refunds' => -100 }) }
     assert_equal [Date.new(2100, 1, 1)] * 2, ReconciliationEvidence.dates('2100-01-01', '2100-01-01')
     assert_empty ReconciliationDocument.all
+  end
+
+  test 'amount entry accepts common written forms and rejects ambiguous or wrongly signed input' do
+    { '1,234.56' => 123_456, ' 12.00 ' => 1200, '.50' => 50, '$12.00' => 1200, '-$1,000' => -100_000, '12.5' => 1250,
+      '1234567.89' => 123_456_789, '0' => 0, '$.05' => 5 }.each { |input, cents| assert_equal cents, ReconciliationEvidence.cents(input), input }
+    { '1,23' => /groups of three/, '12,34.00' => /groups of three/, '1.234' => /two decimal/, '€12' => /1,234\.56/, '.' => /1,234\.56/,
+      '$' => /1,234\.56/, '12 34' => /1,234\.56/, '1234567890123' => /12 digits/ }.each do |input, message|
+      assert_match message, assert_raises(ReconciliationEvidence::Error, input) { ReconciliationEvidence.cents(input) }.message
+    end
+    %w[refunds tips fees deposit].each do |metric|
+      assert_match(/positive/, assert_raises(ReconciliationEvidence::Error) { ReconciliationEvidence.cents('-1.00', metric: metric) }.message)
+      assert_equal 100, ReconciliationEvidence.cents('1.00', metric: metric)
+    end
+    %w[order_total cash card].each { |metric| assert_equal(-100, ReconciliationEvidence.cents('-1.00', metric: metric)) }
   end
 
   test 'retention pruning does not remove old evidence archives or review notes' do

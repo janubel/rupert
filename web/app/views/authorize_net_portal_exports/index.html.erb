@@ -6,7 +6,7 @@
     <p class="mt-2 text-sm text-mocha">Use Manage Transactions → download → Expanded Fields/Comma Separated for settled and unsettled results. Import each file below. Portal sign-in may expire; no API key change is needed for this workflow.</p>
     <%= link_to 'Open sales portal', 'https://new.authorize.net/smb2/merchant/TransactionManagement/ManageTransactions', class: 'btn-ghost btn-sm mt-3', target: '_blank', rel: 'noopener noreferrer' %>
     <% @settled_totals.each do |currency, cents| %><p class="mt-3">Imported settled charges: <%= currency %> <%= number_with_precision(cents / 100.0, precision: 2) %>. Declines, errors, pending payments and refunds are excluded.</p><% end %>
-    <p class="mt-2 text-sm"><%= @rows.size %> latest payment observations. Coverage is limited to the exported windows; an empty or missing export does not establish zero sales.</p>
+    <p class="mt-2 text-sm"><%= @observation_count %> latest payment observations. Coverage is limited to the exported windows; an empty or missing export does not establish zero sales.</p>
   </section>
   <% if Current.user.can?('sync.write') %>
     <section class="card card-pad" id="import">
