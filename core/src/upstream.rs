@@ -55,6 +55,17 @@ fn call(agent: &ureq::Agent, method: &str, url: &str, headers: &[(&str, &str)], 
     Err("rate limited after retries".into())
 }
 
+/// Evidence that only reads were sent: one stderr line per upstream call, enabled with
+/// RUPERT_LOG_UPSTREAM=1. Method, host-less path without query string, GraphQL operation name
+/// and status only; never bodies, tokens or secrets.
+fn ledger(method: &str, url: &str, op: Option<&str>, status: u16) {
+    if std::env::var("RUPERT_LOG_UPSTREAM").is_err() { return; }
+    let path = url.split("://").nth(1).and_then(|r| r.find('/').map(|i| &r[i..])).unwrap_or(url);
+    eprintln!("upstream {method} {} {} -> {status}", path.split('?').next().unwrap_or(path), op.unwrap_or("-"));
+}
+
+fn gql_op(q: &str) -> &str { q.split_whitespace().nth(1).map(|w| w.split(|c: char| !c.is_alphanumeric()).next().unwrap_or("")).unwrap_or("") }
+
 fn short(v: &Value) -> String { v.to_string().chars().take(300).collect() }
 
 // ---------- Shopify ----------
@@ -73,7 +84,9 @@ impl Shopify {
         if let Some(t) = &self.token { return Ok(t.clone()); }
         // Client-credentials exchange: authenticates this app, changes nothing in the shop.
         let body = json!({ "client_id": self.client_id, "client_secret": self.secret, "grant_type": "client_credentials" });
-        let (s, v) = call(&self.agent, "POST", &format!("{}/admin/oauth/access_token", self.base), &[], Some(&body))?;
+        let url = format!("{}/admin/oauth/access_token", self.base);
+        let (s, v) = call(&self.agent, "POST", &url, &[], Some(&body))?;
+        ledger("POST", &url, Some("token_exchange"), s);
         if s != 200 { return Err(format!("Shopify token exchange failed ({s})")); }
         let t = v["access_token"].as_str().ok_or("Shopify token exchange returned no access_token")?.to_string();
         self.token = Some(t.clone());
@@ -85,6 +98,7 @@ impl Shopify {
         let t = self.token()?;
         let url = format!("{}/admin/api/{SHOPIFY_API_VERSION}/graphql.json", self.base);
         let (s, v) = call(&self.agent, "POST", &url, &[("X-Shopify-Access-Token", &t)], Some(&json!({ "query": query, "variables": vars })))?;
+        ledger("POST", &url, Some(gql_op(query)), s);
         if s != 200 { return Err(format!("Shopify GraphQL failed ({s})")); }
         if let Some(e) = v.get("errors").filter(|e| !e.is_null()) { return Err(format!("Shopify GraphQL errors: {}", short(e))); }
         Ok(v["data"].clone())
@@ -135,7 +149,9 @@ impl Square {
     fn req(&self, method: &str, path: &str, body: Option<Value>) -> Result<Value, String> {
         check_square(method, path)?;
         let auth = format!("Bearer {}", self.token);
-        let (s, v) = call(&self.agent, method, &format!("{}{path}", self.base), &[("Authorization", &auth), ("Square-Version", SQUARE_VERSION)], body.as_ref())?;
+        let url = format!("{}{path}", self.base);
+        let (s, v) = call(&self.agent, method, &url, &[("Authorization", &auth), ("Square-Version", SQUARE_VERSION)], body.as_ref())?;
+        ledger(method, &url, None, s);
         if s != 200 {
             let d = v["errors"].as_array().map(|a| a.iter().filter_map(|e| e["detail"].as_str()).collect::<Vec<_>>().join("; ")).unwrap_or_default();
             return Err(format!("Square {method} {} failed ({s}) {d}", path.split('?').next().unwrap_or(path)));
