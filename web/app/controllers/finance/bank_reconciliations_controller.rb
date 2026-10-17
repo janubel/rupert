@@ -24,14 +24,14 @@ module Finance
       line.match!(journal_entry: entry, user: Current.user)
       ActivityLogger.log('bank_line_matched', subject: line,
         details: "Statement line ##{line.id} (#{line.amount_cents}) matched to journal entry ##{entry.id}")
-      redirect_to bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
+      redirect_to finance_bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
         notice: 'Matched to the ledger.'
     end
 
     def unmatch
       line = BankStatementLine.find(params[:line_id])
       line.unmatch!(user: Current.user)
-      redirect_to bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
+      redirect_to finance_bank_reconciliation_path(account_label: line.account_label, from: params[:from], to: params[:to]),
         notice: 'Match cleared.'
     end
 

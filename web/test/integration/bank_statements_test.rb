@@ -89,6 +89,24 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'manual ledger matching can be confirmed and cleared without creating another expense' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    expense = Finance::Expense.create!(payee: 'Courier', category: 'shipping', amount_cents: line.out_cents, incurred_on: line.posted_on, method: 'bank_transfer')
+    entry = Finance::Posting.expense(expense, created_by: users(:regular_user))
+    assert_no_difference ['Finance::Expense.count', 'Finance::JournalEntry.count'] do
+      post finance_bank_reconciliation_match_path, params: { line_id: line.id, journal_entry_id: entry.id }
+      assert_redirected_to finance_bank_reconciliation_path(account_label: line.account_label)
+      assert_equal 'matched', line.reload.status
+      assert_equal entry.id, line.journal_entry_id
+      post finance_bank_reconciliation_unmatch_path, params: { line_id: line.id }
+      assert_redirected_to finance_bank_reconciliation_path(account_label: line.account_label)
+      assert_equal 'pending', line.reload.status
+      assert_nil line.journal_entry_id
+    end
+  end
+
   test 'a deposit cannot be recorded as an expense' do
     upload
     doc = ReconciliationDocument.where(kind: 'bank_statement').last
