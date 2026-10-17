@@ -13,7 +13,7 @@ module People
       @status = params[:status].presence || (@reviewer ? 'submitted' : 'all')
       @status = 'all' unless (People::Timesheet.aasm.states.map { |state| state.name.to_s } + ['all']).include?(@status)
       @period = params[:period].presence
-      @view = %w[calendar unified list].include?(params[:view]) ? params[:view] : 'unified'
+      @view = %w[calendar unified list].include?(params[:view]) ? params[:view] : 'calendar'
       @all_employees_for_punches = Current.user.can_review_timesheets? || (Current.user.can_manage_accounts? && Current.user.can?('timesheets.read'))
       visible = People::TimesheetPolicy.visible_to(Current.user)
       @has_demo_timesheets = visible.demo_records.exists?
