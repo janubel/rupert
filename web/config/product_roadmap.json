@@ -391,7 +391,7 @@
       "area": "Finance",
       "name": "Bank reconciliation and accounting exports",
       "status": "Partial",
-      "scope": "Statement-to-GL matching workbench (sign/amount/date) with confirm and difference reporting. QuickBooks/Xero export and automated duplicate review remain.",
+      "scope": "Statement-to-GL matching workbench (sign/amount/date) with confirm and difference reporting, plus QuickBooks IIF and CSV ledger export. Automated duplicate review remains.",
       "evidence": "docs/data/product-roadmap.json",
       "phase": "3"
     },
