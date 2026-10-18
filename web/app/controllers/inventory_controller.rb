@@ -39,12 +39,12 @@ class InventoryController < AuthenticatedController
     if request.format.csv?
       # Read stock in bounded batches, including pools beyond the displayed page.
       log_export('Inventory pool CSV')
-      headers = ['Source', 'Location', 'Item', 'Native ID', 'Mirror on hand', 'Mirror available', 'Local holds', 'Warehouse holds', 'Available to promise', 'Incoming', 'Waiting backorders', 'Read at']
+      headers = ['Source', 'Location', 'Item', 'Native ID', 'Mirror quantity', 'Mirror available', 'Local holds', 'Warehouse holds', 'Available to promise', 'Incoming', 'Waiting backorders', 'Read at']
       csv = CSV.generate do |out|
         out << headers
         scope.reorder(:id).find_in_batches(batch_size: 500) do |levels|
           InventoryWorkspace.new(levels).rows.each do |row|
-            out << [row[:level].source, row[:level].location&.name, row[:label], row[:native_id], row[:on_hand], row[:available], row[:held], row[:warehouse], row[:promise], row[:incoming], row[:demand], row[:level].updatedAt.iso8601].map { |value| value.is_a?(String) ? FinanceHelper.csv_safe(value) : value }
+            out << [row[:level].source, row[:level].location&.name, row[:label], row[:native_id], row[:mirror_quantity], row[:available], row[:held], row[:warehouse], row[:promise], row[:incoming], row[:demand], row[:level].updatedAt.iso8601].map { |value| value.is_a?(String) ? FinanceHelper.csv_safe(value) : value }
           end
         end
       end

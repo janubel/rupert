@@ -23,7 +23,7 @@
       <%= link_to 'Review native stock and identity evidence', stock_comparison_path, class: 'btn-ghost' %>
     </section>
   <% end %>
-  <div class="card card-pad text-sm text-mocha">Mirrored stock remains separate for each source and location. Local holds reduce Rupert availability; incoming transfers and waiting backorders never increase it. Warehouse holds have no assigned location, so each Shopify pool conservatively accounts for the full warehouse hold. Use the Shopify / C-Trax comparison for native on-hand and physical-reference evidence.</div>
+  <div class="card card-pad text-sm text-mocha">Mirrored stock remains separate for each source and location. Local holds reduce Rupert availability; incoming transfers and waiting backorders never increase it. Warehouse holds have no assigned location, so each Shopify pool conservatively accounts for the full warehouse hold. Shopify legacy mirror quantity is available stock or an aggregate fallback, rather than a physical on-hand count. Use the Shopify / C-Trax comparison for native on-hand, available, committed and physical-reference evidence.</div>
   <%= form_with url: workspace_inventory_index_path, method: :get, class: 'card card-pad flex flex-wrap gap-3 items-end' do %>
     <label>Search SKU or item<%= text_field_tag :q, params[:q], class: 'input' %></label>
     <label>Source<%= select_tag :source, options_for_select([['Shopify', 'shopify'], ['Square', 'square']], params[:source]), include_blank: 'All sources', class: 'input' %></label>
@@ -34,12 +34,12 @@
   <% end %>
   <p class="text-xs text-taupe"><%= @pagy.count %> mirrored pools · <%= @rows.size %> on this page. Stale or missing identities require review before allocation.</p>
   <div class="card overflow-x-auto"><table class="w-full text-sm">
-    <thead><tr><% ['Item / native ID', 'Source / location', 'Mirror on hand', 'Mirror available', 'Local holds', 'Warehouse holds', 'Available to promise', 'Incoming', 'Backorder demand', 'Stock read', 'Actions'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
+    <thead><tr><% ['Item / native ID', 'Source / location', 'Mirror quantity', 'Mirror available', 'Local holds', 'Warehouse holds', 'Available to promise', 'Incoming', 'Backorder demand', 'Stock read', 'Actions'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
     <tbody class="divide-y divide-fog">
       <% @rows.each do |row| %><% level = row[:level] %>
         <tr><td class="td"><% if level.source == 'shopify' && row[:native_id] %><%= link_to row[:label], shopify_variant_path(row[:native_id]), class: 'hover:underline' %><% else %><%= row[:label] %><% end %><p class="text-xs text-taupe break-all"><%= row[:native_id] %></p></td>
           <td class="td"><%= level.source.capitalize %><br><%= level.location&.name || 'Missing location' %></td>
-          <% [:on_hand, :available, :held, :warehouse, :promise, :incoming, :demand].each do |key| %><td class="td"><%= row[key].nil? ? 'Unknown' : row[key] %></td><% end %>
+          <% [:mirror_quantity, :available, :held, :warehouse, :promise, :incoming, :demand].each do |key| %><td class="td"><%= row[key].nil? ? 'Unknown' : row[key] %></td><% end %>
           <td class="td text-xs"><%= l(level.updatedAt, format: :short) %><br><%= row[:fresh] ? 'Current mirror' : 'Refresh / review' %></td>
           <td class="td"><% if Current.user.can?('inventory.write') %><div class="flex flex-col gap-2">
             <%= link_to 'Reserve', new_stock_reservation_path(inventory_level_id: level.id), class: 'hover:underline' %>

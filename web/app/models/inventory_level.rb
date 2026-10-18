@@ -32,10 +32,18 @@ class InventoryLevel < ApplicationRecord
     where(shopifyVariantId: variant_id).sum(:quantity)
   end
 
+  # Future read times cannot establish that this stock has been observed yet.
+  def local_capacity(at: Time.current)
+    return 0 if updatedAt.nil? || updatedAt > at || quantity.nil? || available.nil?
+
+    [quantity, available].min.clamp(0, Float::INFINITY)
+  end
+
   def self.warehouse_quantities(tenant_id:, variant_ids:)
     return {} if tenant_id.blank? || variant_ids.empty?
 
     quantities = unscoped.where(tenant_id: tenant_id, source: 'shopify', shopifyVariantId: variant_ids, squareVariationId: nil)
+      .where('"InventoryLevel"."updatedAt" <= ?', Time.current)
       .group(:shopifyVariantId).sum('CASE WHEN quantity IS NULL OR available IS NULL THEN 0 WHEN quantity < available THEN CASE WHEN quantity > 0 THEN quantity ELSE 0 END ELSE CASE WHEN available > 0 THEN available ELSE 0 END END')
     local = StockReservation.unscoped.active_at.joins(:stock_reservation_pool)
       .where(tenant_id: tenant_id, stock_reservation_pools: { tenant_id: tenant_id, source: 'shopify', source_item_id: variant_ids })
@@ -48,8 +56,9 @@ class InventoryLevel < ApplicationRecord
     where(squareVariationId: variation_id).sum(:quantity)
   end
 
-  # Mirrors for a single source: quantities (current on-hand) plus per-item
-  # totals. Used all over the sync engine and reports — centralizing here keeps
+  # Mirrors for a single source: legacy quantities plus per-item
+  # totals. Shopify normally stores available units or an aggregate fallback.
+  # Used all over the sync engine and reports — centralizing here keeps
   # the query convention in one place.
   scope :mirrored, ->(source) { where(source: source) }
 

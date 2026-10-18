@@ -17,7 +17,7 @@
           <% item = level.source == 'shopify' ? level.shopify_variant : level.square_variation %>
           <% next unless item && level.location && level.location.source == level.source %>
           <% label = [level.source.capitalize, level.location.name, item.sku, level.source == 'shopify' ? item.title : item.name].compact.join(' · ') %>
-          <% mirrored = [level.quantity.to_i, level.available.to_i].min.clamp(0, Float::INFINITY) %>
+          <% mirrored = level.local_capacity %>
           <% held = @held_by_pool.fetch([level.source, level.locationId, item.id], 0) + (level.source == 'shopify' ? @warehouse_holds.fetch(item.id, 0) : 0) %>
           <option value="<%= level.id %>" <%= 'selected' if @selected_level&.id == level.id %>><%= label %> (mirrored: <%= mirrored %>, local holds: <%= held %>, available-to-promise: <%= [mirrored - held, 0].max %>)</option>
         <% end %>

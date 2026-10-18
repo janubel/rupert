@@ -263,8 +263,8 @@ class InventoryPdf
     data = [
       ['Generated at', fmt(timestamps[:generated]), 'Products', summary[:products].to_s],
       ['Overall sync', fmt(timestamps[:overall]), 'Tracked variants', summary[:variants].to_s],
-      ['Shopify sync', fmt(timestamps[:shopify]), 'On-hand (Shopify)', summary[:shopify_units].to_s],
-      ['Square sync', fmt(timestamps[:square]), 'On-hand (Square, linked)', summary[:square_units].to_s],
+      ['Shopify sync', fmt(timestamps[:shopify]), 'Mirrored (Shopify)', summary[:shopify_units].to_s],
+      ['Square sync', fmt(timestamps[:square]), 'Mirrored (Square, linked)', summary[:square_units].to_s],
       ['', '', 'Sold last 7d (units)', summary[:sold_7d].to_s],
       ['', '', 'Retail value', format_currency(summary[:valuation])]
     ]

@@ -39,7 +39,7 @@ class StockReservationPool < ApplicationRecord
 
   def mirrored_available
     level = inventory_level
-    level ? [level.quantity.to_i, level.available.to_i].min.clamp(0, Float::INFINITY) : 0
+    level&.local_capacity || 0
   end
 
   def held_quantity(at: Time.current)

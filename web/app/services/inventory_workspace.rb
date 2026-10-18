@@ -34,11 +34,11 @@ class InventoryWorkspace
       pool = @pools[[level.source, level.locationId, item&.id]]
       held = @holds.fetch(pool&.id, 0)
       warehouse = level.source == 'shopify' ? @warehouse.fetch(item&.id, 0) : 0
-      available = level.quantity.nil? || level.available.nil? ? nil : [level.quantity, level.available].min.clamp(0, Float::INFINITY)
+      available = level.local_capacity
       valid_identity = item && item.tenant_id == Current.tenant_id && level.location&.tenant_id == Current.tenant_id &&
         level.location.source == level.source && (level.source == 'shopify' ? level.squareVariationId.nil? : level.shopifyVariantId.nil?)
       { level: level, label: item ? [item.sku.presence, level.source == 'shopify' ? item.title : item.name].compact.join(' · ') : 'Missing catalog identity',
-        native_id: item&.id, on_hand: level.sourceQuantity || level.quantity, available: level.available, held: held, warehouse: warehouse,
+        native_id: item&.id, mirror_quantity: level.sourceQuantity || level.quantity, available: level.available, held: held, warehouse: warehouse,
         promise: valid_identity ? [(available || 0) - held - warehouse, 0].max : 0,
         demand: @demand.fetch(pool&.id, 0), incoming: @incoming.fetch(pool&.id, 0),
         fresh: valid_identity && level.location.active && level.updatedAt.between?(1.hour.ago, Time.current) }

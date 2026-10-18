@@ -45,4 +45,34 @@ class WarehouseStockReleaseTest < ActionDispatch::IntegrationTest
     assert_redirected_to order_path(@order)
     assert_equal 'held', WarehouseStockHold.unscoped.sole.status
   end
+  test 'sales access without inventory read hides stock references and blocks direct release' do
+    Current.tenant = @tenant
+    actor = User.find_by!(email: 'admin@example.com')
+    actor.update_permission_overrides!(%w[sales.read sales.write inventory.write])
+    get order_path(@order)
+    assert_response :success
+    assert_select 'h2', text: 'Warehouse stock holds', count: 0
+    travel 2.minutes do
+      @level.update!(updatedAt: Time.current)
+      post release_warehouse_stock_order_path(@order), params: { fulfillment_confirmed: '1', source_stock_confirmed: '1',
+        source_adjusted_at: 1.minute.ago.iso8601, source_adjustment_reference: 'SHOULD-NOT-RELEASE' }
+      assert_response :redirect
+      assert_equal 'held', WarehouseStockHold.unscoped.sole.status
+    end
+  end
+
+  test 'released source references remain hidden from sales only readers' do
+    travel 2.minutes do
+      @level.update!(updatedAt: Time.current)
+      post release_warehouse_stock_order_path(@order), params: { fulfillment_confirmed: '1', source_stock_confirmed: '1',
+        source_adjusted_at: 1.minute.ago.iso8601, source_adjustment_reference: 'PRIVATE-RELEASE-EVIDENCE' }
+      assert_equal 'released', WarehouseStockHold.unscoped.sole.status
+      Current.tenant = @tenant
+      User.find_by!(email: 'admin@example.com').update_permission_overrides!(['sales.read'])
+      get order_path(@order)
+      assert_response :success
+      refute_includes response.body, 'PRIVATE-RELEASE-EVIDENCE'
+      assert_select 'h2', text: 'Warehouse stock holds', count: 0
+    end
+  end
 end
