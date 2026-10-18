@@ -4,9 +4,14 @@ require 'csv'
 require 'digest'
 
 class InventoryController < AuthenticatedController
-  before_action :authorize_read, only: %i[index movements pdf recommended_skus]
+  before_action :authorize_read, only: %i[index comparison workspace movements pdf recommended_skus]
 
   def index
+    workspace
+    render(:workspace) unless performed?
+  end
+
+  def comparison
     response.headers['Cache-Control'] = 'no-store'
     @comparison = StockComparison.new(shopify_location_id: params[:shopify_location_id],
       ctrax_location_id: params[:ctrax_location_id], query: params[:q], filter: params[:filter])
@@ -16,6 +21,41 @@ class InventoryController < AuthenticatedController
       @pagy = Pagy.new(count: @comparison.rows.size, page: params[:page], items: 50)
       @rows = @comparison.rows.slice(@pagy.offset, @pagy.items) || []
       render 'stock_comparisons/index'
+    end
+  end
+
+  def workspace
+    response.headers['Cache-Control'] = 'no-store'
+    @native_reads = [ShopifyStockSnapshot, CtraxStockSnapshot].flat_map do |model|
+      model.select(:id, :location_id, :captured_at).includes(:location).order(captured_at: :desc).limit(20).to_a
+    end
+    @locations = Location.where(source: %w[shopify square]).order(:source, :name)
+    scope = InventoryWorkspace.levels(query: params[:q].to_s.strip, source: params[:source], location_id: params[:location_id])
+    scope = case params[:sort]
+    when 'low' then scope.order(:available, :id)
+    when 'oldest' then scope.order(:updatedAt, :id)
+    else scope.order(:source, :locationId, :shopifyVariantId, :squareVariationId, :id)
+    end
+    if request.format.csv?
+      # Read stock in bounded batches, including pools beyond the displayed page.
+      log_export('Inventory pool CSV')
+      headers = ['Source', 'Location', 'Item', 'Native ID', 'Mirror on hand', 'Mirror available', 'Local holds', 'Warehouse holds', 'Available to promise', 'Incoming', 'Waiting backorders', 'Read at']
+      csv = CSV.generate do |out|
+        out << headers
+        scope.reorder(:id).find_in_batches(batch_size: 500) do |levels|
+          InventoryWorkspace.new(levels).rows.each do |row|
+            out << [row[:level].source, row[:level].location&.name, row[:label], row[:native_id], row[:on_hand], row[:available], row[:held], row[:warehouse], row[:promise], row[:incoming], row[:demand], row[:level].updatedAt.iso8601].map { |value| value.is_a?(String) ? FinanceHelper.csv_safe(value) : value }
+          end
+        end
+      end
+      send_data csv, filename: "inventory-pools-#{Date.current.iso8601}.csv", type: 'text/csv'
+    else
+      @counts = InventoryCount.where(status: 'pending').count
+      @transfers = StockRequest.where(request_kind: 'transfer', status: %w[allocated dispatched]).count
+      @backorders = StockRequest.where(request_kind: 'backorder', status: 'pending').count
+      @reservations = StockReservation.active_at.count
+      @pagy, levels = pagy(scope, items: 50)
+      @rows = InventoryWorkspace.new(levels.to_a).rows
     end
   end
 

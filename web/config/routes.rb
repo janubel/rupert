@@ -191,11 +191,12 @@ Rails.application.routes.draw do
     end
   end
 
-  get 'stock_comparison', to: 'inventory#index'
+  get 'stock_comparison', to: 'inventory#comparison'
   resources :inventory, only: :index do
     collection do
       get :pdf
       get :movements
+      get :workspace
       get :recommended_skus
     end
   end
@@ -311,6 +312,9 @@ Rails.application.routes.draw do
       post :reject
       post :reopen
     end
+  end
+  resources :stock_requests, only: %i[index new create show] do
+    member { post :transition }
   end
   resources :stock_reservations, only: %i[index new create] do
     member { post :release }

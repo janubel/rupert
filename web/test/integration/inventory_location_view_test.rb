@@ -21,8 +21,8 @@ class InventoryLocationViewTest < ActionDispatch::IntegrationTest
 
   teardown { Current.reset }
 
-  test 'inventory entry point opens the shared read-only comparison and preserves search' do
-    get inventory_index_path, params: { q: 'Tea' }
+  test 'comparison entry point opens the shared read-only comparison and preserves search' do
+    get stock_comparison_path, params: { q: 'Tea' }
     assert_response :success
     assert_select 'h1', 'Shopify & C-Trax stock'
     assert_includes response.body, 'Online stock'

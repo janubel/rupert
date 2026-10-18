@@ -1,0 +1,32 @@
+<% content_for :title, @stock_request.reference %>
+<% record = @stock_request %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :stock %>
+  <section class="space-y-2"><h1 class="page-title"><%= record.reference %></h1><p><%= record.request_kind.humanize %> · <%= record.status.humanize %></p>
+    <p class="text-sm"><%= record.source_pool.item_label %> · <%= record.source_pool.source.capitalize %> · <%= record.source_pool.location_name %><%= " → #{record.destination_pool.location_name}" if record.destination_pool %></p>
+    <p class="text-sm">Requested: <%= record.quantity %> · <%= record.transfer? ? 'Received' : 'Fulfilled' %>: <%= record.received_quantity %> · Due: <%= record.due_on || 'Not set' %></p>
+    <p class="text-xs text-taupe">Native item: <%= record.source_pool.source_item_id %> · Recorded by <%= record.created_by %></p>
+  </section>
+  <% if Current.user.can?('inventory.write') %>
+    <% if !record.transfer? && record.status == 'pending' %><%= button_to 'Allocate stock', transition_stock_request_path(record), params: { event: 'allocated', request_token: SecureRandom.uuid }, class: 'btn-primary' %><% end %>
+    <% event = record.transfer? && record.status == 'allocated' ? 'dispatched' : record.transfer? && record.status == 'dispatched' ? 'received' : !record.transfer? && record.status == 'allocated' ? 'fulfilled' : nil %>
+    <% if event %>
+      <section class="card card-pad space-y-3"><h2 class="font-display text-xl">Record <%= event == 'received' ? 'receipt' : event == 'dispatched' ? 'dispatch' : 'fulfillment' %></h2>
+        <p class="text-sm text-mocha">Confirm the physical movement and stock adjustment in <%= record.source_pool.source.capitalize %>, then refresh source stock in Rupert. This records your confirmation and leaves platform quantities unchanged.</p>
+        <%= form_with url: transition_stock_request_path(record), class: 'space-y-4' do %>
+          <%= hidden_field_tag :event, event %><%= hidden_field_tag :request_token, SecureRandom.uuid %>
+          <% if event == 'received' %><label class="block">Units arriving in this receipt<%= number_field_tag :quantity, record.outstanding_quantity, min: 1, max: record.outstanding_quantity, step: 1, required: true, class: 'input' %></label><% end %>
+          <label class="block">Source stock adjustment reference<%= text_field_tag :reference, nil, maxlength: 500, required: true, class: 'input' %></label>
+          <label class="block">Adjustment time (<%= Time.zone.name %>)<%= datetime_local_field_tag :adjusted_at, nil, step: 1, required: true, class: 'input' %></label>
+          <label class="flex gap-2"><%= check_box_tag :confirmed, '1', false, required: true %>I confirm the physical <%= event == 'received' ? 'receipt at the destination' : event == 'dispatched' ? 'dispatch from the source' : 'fulfillment of all allocated units' %> and the corresponding source stock adjustment.</label>
+          <%= submit_tag "Record #{event == 'dispatched' ? 'dispatch' : event == 'received' ? 'receipt' : 'fulfillment'}", class: 'btn-primary' %>
+        <% end %>
+      </section>
+    <% end %>
+    <% if %w[pending allocated].include?(record.status) %><%= button_to 'Cancel request and release its hold', transition_stock_request_path(record), params: { event: 'cancelled', request_token: SecureRandom.uuid }, class: 'btn-ghost', data: { turbo_confirm: 'Cancel this request? Confirm that no stock has left its location.' } %><% end %>
+  <% end %>
+  <section class="card card-pad space-y-3"><h2 class="font-display text-xl">Event history</h2>
+    <% @events.each do |event| %><div class="border-b border-fog pb-3"><p class="font-medium"><%= event.action.humanize %> · <%= event.quantity %> units</p><p class="text-xs text-taupe"><%= event.actor %> · <%= l(event.created_at, format: :short) %></p>
+      <% if event.reference %><p class="text-sm break-words">Reference: <%= event.reference %></p><p class="text-xs">Source adjusted: <%= l(event.source_adjusted_at, format: :short) %> · Source refreshed: <%= l(event.source_refreshed_at, format: :short) %></p><% end %></div><% end %>
+  </section>
+</div>

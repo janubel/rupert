@@ -7,6 +7,10 @@ module Purchasing
     before_action :set_purchase_order,
       only: %i[show edit update destroy place_order receive cancel add_line remove_line]
 
+    # Serialize all order mutations with receiving, including cancellation and
+    # draft line edits. Reload after the lock so stale tabs cannot edit placed POs.
+    around_action :serialize_change, only: %i[update destroy place_order receive cancel add_line remove_line]
+
     def index
       authorize(:module, :purchasing_read?)
       @status = params[:status].presence || 'all'
@@ -43,6 +47,8 @@ module Purchasing
 
     def update
       authorize(:module, :purchasing_write?)
+      return redirect_to(@purchase_order, alert: 'Only draft orders can be edited.') unless @purchase_order.draft?
+
       if @purchase_order.update(purchase_order_params)
         redirect_to(@purchase_order, notice: 'Purchase order updated.')
       else
@@ -61,6 +67,8 @@ module Purchasing
 
     def place_order
       authorize(:module, :purchasing_write?)
+      return redirect_to(@purchase_order, alert: 'Only draft orders can be placed.') unless @purchase_order.draft?
+
       if @purchase_order.lines.empty?
         return redirect_to(@purchase_order, alert: 'Add at least one line before placing the order.')
       end
@@ -74,20 +82,12 @@ module Purchasing
     # once everything has arrived.
     def receive
       authorize(:module, :purchasing_write?)
-      received = params[:received].presence || {}
-      ActiveRecord::Base.transaction do
-        received.to_unsafe_h.each do |line_id, qty|
-          line = @purchase_order.lines.find_by(id: line_id)
-          next if line.nil?
-
-          line.update!(received_quantity: qty.to_i.clamp(0, line.quantity))
-        end
-        @purchase_order.mark_received! if @purchase_order.fully_received? && @purchase_order.may_mark_received?
-      end
-      ActivityLogger.log('po_received', subject: @purchase_order)
-      redirect_to(@purchase_order, notice: 'Received quantities updated.')
-    rescue ActiveRecord::RecordInvalid => e
-      redirect_to(@purchase_order, alert: e.record.errors.full_messages.join(', '))
+      received = params[:received]
+      totals = received.respond_to?(:to_unsafe_h) ? received.to_unsafe_h : {}
+      PurchaseReceiving.call(order: @purchase_order, totals: totals, token: params.require(:request_token), actor: Current.user)
+      redirect_to(@purchase_order, notice: 'Delivery recorded. Source inventory was not changed.')
+    rescue PurchaseReceiving::Error, ActiveRecord::RecordInvalid => e
+      redirect_to(@purchase_order, alert: e.message)
     end
 
     def cancel
@@ -102,13 +102,20 @@ module Purchasing
       authorize(:module, :purchasing_write?)
       return redirect_to(@purchase_order, alert: 'Only draft orders can be edited.') unless @purchase_order.draft?
 
+      quantity = params[:quantity].to_s
+      cost = params[:unit_cost].presence || '0'
+      unless quantity.match?(/\A[1-9]\d*\z/) && quantity.to_i <= 2_147_483_647 && cost.match?(/\A\d+(?:\.\d{1,2})?\z/)
+        return redirect_to(@purchase_order, alert: 'Enter a positive whole quantity and a nonnegative cost with at most two decimals.')
+      end
       @purchase_order.lines.create!(
         sku: params[:sku].presence,
         name: params[:name].presence || 'Item',
-        quantity: params[:quantity].to_i.positive? ? params[:quantity].to_i : 1,
-        unit_cost_cents: (params[:unit_cost].to_f * 100).round
+        quantity: quantity.to_i,
+        unit_cost_cents: (BigDecimal(cost) * 100).to_i
       )
       redirect_to(@purchase_order, notice: 'Line added.')
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RangeError => e
+      redirect_to(@purchase_order, alert: e.is_a?(ActiveRecord::RecordInvalid) ? e.record.errors.full_messages.to_sentence : 'Quantity or cost is too large.')
     end
 
     # Draft-only: remove a line.
@@ -121,6 +128,14 @@ module Purchasing
     end
 
     private
+
+    def serialize_change
+      Purchasing::PurchaseOrder.transaction do
+        Tenant.where(id: Current.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
+        @purchase_order.reload
+        yield
+      end
+    end
 
     def set_purchase_order
       @purchase_order = Purchasing::PurchaseOrder.find_by!(tenant_id: Current.tenant_id, id: params[:id])

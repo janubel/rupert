@@ -32,7 +32,7 @@ class ModuleRegistry
     Entry.new(key: 'customers', name: 'Customer CRM', path: lambda {
       customers_path
     }, permission: 'customers.read', position: 30),
-    Entry.new(key: 'inventory', name: 'Stock comparison', path: lambda {
+    Entry.new(key: 'inventory', name: 'Inventory', path: lambda {
       inventory_index_path
     }, permission: 'inventory.read', position: 40),
     Entry.new(key: 'inventory_exceptions', name: 'Inventory review', path: lambda {
@@ -49,6 +49,9 @@ class ModuleRegistry
     }, permission: 'inventory.read', position: 42),
     Entry.new(key: 'inventory_counts', name: 'Counts', path: lambda {
       inventory_counts_path
+    }, permission: 'inventory.read', position: 44),
+    Entry.new(key: 'stock_requests', name: 'Transfers & backorders', path: lambda {
+      stock_requests_path
     }, permission: 'inventory.read', position: 44),
     Entry.new(key: 'stock_reservations', name: 'Reservations', path: lambda {
       stock_reservations_path
@@ -204,7 +207,7 @@ class ModuleRegistry
       { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos ctrax_days registers customers] },
       { key: 'marketing', name: 'Marketing', modules: %w[marketing influencers] },
       { key: 'stock', name: 'Stock',
-        modules: %w[inventory inventory_exceptions locations inventory_counts stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
+        modules: %w[inventory inventory_exceptions locations inventory_counts stock_requests stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
       { key: 'money', name: 'Bookkeeping',
         modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports bank_reconciliation ledger_export] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },

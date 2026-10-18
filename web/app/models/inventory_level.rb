@@ -35,10 +35,13 @@ class InventoryLevel < ApplicationRecord
   def self.warehouse_quantities(tenant_id:, variant_ids:)
     return {} if tenant_id.blank? || variant_ids.empty?
 
-    quantities = unscoped.where(tenant_id: tenant_id, source: 'shopify', shopifyVariantId: variant_ids)
-      .group(:shopifyVariantId).sum(:quantity)
+    quantities = unscoped.where(tenant_id: tenant_id, source: 'shopify', shopifyVariantId: variant_ids, squareVariationId: nil)
+      .group(:shopifyVariantId).sum('CASE WHEN quantity IS NULL OR available IS NULL THEN 0 WHEN quantity < available THEN CASE WHEN quantity > 0 THEN quantity ELSE 0 END ELSE CASE WHEN available > 0 THEN available ELSE 0 END END')
+    local = StockReservation.unscoped.active_at.joins(:stock_reservation_pool)
+      .where(tenant_id: tenant_id, stock_reservation_pools: { tenant_id: tenant_id, source: 'shopify', source_item_id: variant_ids })
+      .group('stock_reservation_pools.source_item_id').sum(:quantity)
     holds = WarehouseStockHold.unscoped.held.where(tenant_id: tenant_id, variant_id: variant_ids).group(:variant_id).sum(:quantity)
-    variant_ids.to_h { |id| [id, [quantities.fetch(id, 0) - holds.fetch(id, 0), 0].max] }
+    variant_ids.to_h { |id| [id, [quantities.fetch(id, 0) - holds.fetch(id, 0) - local.fetch(id, 0), 0].max] }
   end
 
   def self.total_for_variation(variation_id)

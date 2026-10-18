@@ -76,7 +76,17 @@ class PageGuides
       ]
     ),
     'inventory' => Guide.new(
-      key: 'inventory', title: 'Stock comparison',
+      key: 'inventory', title: 'Inventory',
+      summary: 'Stock, holds and inventory work queues by exact source, item and location.',
+      sections: [
+        { heading: 'Review stock', body: 'Browse mirrored stock pools and native source freshness. Open Shopify / C-Trax comparison for physical-reference evidence; independent platform quantities are never added together.' },
+        { heading: 'Move and allocate', body: 'Transfers reserve the native item at its source, record dispatch and receive full or partial deliveries. Backorders record demand first and allocate when stock is available.' },
+        { heading: 'Count and receive', body: 'Prepare counts, review exceptions, receive purchase orders and inspect material lots. Dispatch, receipt and fulfilled backorders require confirmation of the source adjustment and a newer stock read.' }
+      ],
+      tips: ['Local reservations share capacity with warehouse checkout. Waiting backorders and incoming stock do not increase available-to-promise.', 'These workflows record local execution and operator confirmations. Source stock adjustments remain a separate action in the source platform.']
+    ),
+    'stock_comparison' => Guide.new(
+      key: 'stock_comparison', title: 'Stock comparison',
       summary: 'Read-only Shopify and C-Trax observations of shared stock, with current catalog coverage and source read times.',
       sections: [
         { heading: 'Read the source states', body: 'Select one Shopify location and one C-Trax store. Shopify on-hand, available and committed quantities are separate. C-Trax retains signed stock. These are observations of shared stock; never add their quantities together.' },
@@ -440,7 +450,7 @@ class PageGuides
     ['/finance', 'finance'],
     ['/purchasing', 'purchasing'],
     ['/sales', 'sales'],
-    ['/stock_comparison', 'inventory'],
+    ['/stock_comparison', 'stock_comparison'],
     ['/inventory', 'inventory'],
     ['/reconcile', 'reconcile'],
     ['/warehouse', 'warehouse'],
