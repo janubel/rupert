@@ -1,0 +1,6 @@
+[Unit]
+Description=Check rupert-core health, sync freshness and backups (read-only)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rupert-core-watch

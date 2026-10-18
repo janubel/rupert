@@ -314,3 +314,29 @@ timer; recovery of `/root/.config/rupert-core/live-owner.json` and the oauth2-pr
 
 **To restore for real:** `systemctl stop rupert-core`, move `/var/lib/rupert-core` aside, `rupert-core-restore <run> /var/lib/rupert-core`,
 `chown -R rupertcore:rupertcore /var/lib/rupert-core`, `systemctl start rupert-core`, then `scripts/parity.py`.
+
+## 15. Unattended operation verified, and the watch (2026-10-18)
+
+**Overnight check (after the laptop reboot, a fresh Tailscale approval was needed first).** SER8 had been up 2 days 19 hours.
+`rupert-core` and Rails answered; the schedule had been running by itself: Shopify and Square every ~15 minutes, every run OK,
+0 throttled, 20 and 13 requests per pass (80 and 52 requests in the last hour of a 1000 budget). The timer produced 7 backup
+runs (newest 06:17 UTC) and the host holds the same 7 verified copies. `parity.py` after the unattended run: **no differences**
+(Shopify orders 203 and Square orders 109 in the 30-day window, variants/levels/locations/counts identical to Rails).
+`parity.py` is now installed as a tool on the host (`~/.local/bin/rupert-core-parity`) so it no longer depends on a release folder.
+
+**The watch (`rupert-core-watch`, host user timer every 15 minutes at :07/:22/:37/:52).** Read-only, same pattern as `rupert-sync-watch`:
+its unit fails visibly (`systemctl --user --failed`) when the service does not answer, its own health reports `degraded`
+(a scheduled sync more than three intervals late, or a first run that is late or failed), the newest container backup or the newest
+host copy is older than 420 minutes, or a provider has used more than 80% of the hourly request budget. The health call is made inside the
+container with a dedicated read-only token (`inventory:read` only, 730 days, file mode 600 in the container, never printed; **renew it
+before it expires**: it is listed under `GET /api/v1/tokens` as "host-watch"). Test knobs: `MAX_BACKUP_AGE_MIN=0`, `BUDGET_WARN_PCT=0`.
+Verified: healthy run exit 0; forced stale-backup and over-budget runs exit 1 with a message per problem; container unreachable,
+rejected token, malformed output and an empty reply all exit 1. **The tests found a real bug in the first version**: malformed
+health data crashed the parser and the script still exited 0 ("fine"). It now treats any failure to obtain or understand the data as a
+problem, and requires positive confirmation that health data was read.
+
+**Host tools now on SER8:** `rupert-core-backup-pull` (timer), `rupert-core-watch` (timer), `rupert-core-restore-drill`,
+`rupert-core-parity`, and the releases under `~/rupert-core-releases/`.
+
+**Still needing the owner:** the Hover A record, Google client id/secret/allowed emails, Caddy with sudo, webhook registration,
+master-key escrow, an off-host backup destination, the owner password/email change.
