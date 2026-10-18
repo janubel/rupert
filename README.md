@@ -103,10 +103,7 @@ and never write SKUs without explicit sign-off.**
 - **Sales** — daily sales journal in spreadsheet style: an hourly × location
   pivot plus every sale of the day in arrival order
 - **Customers** — unified CRM view (searchable, Ransack + Pagy)
-- **Inventory** — products/variants with stock held at each location (Shopify
-  and Square locations side by side, per platform totals, and a catalog
-  identity chip); the "Download PDF" button (`/inventory/pdf`) exports a
-  printable snapshot with per-platform last-sync timestamps and summary totals
+- **Inventory** — source/location stock, native source freshness, shared local/warehouse holds, incoming transfers, waiting backorders and CSV export. Transfers track allocation, dispatch and partial receipts; backorders track demand through confirmed fulfillment. Counts, purchasing receipts, material lots and exceptions share the workspace. See [inventory workflows](docs/ops/inventory-workflows.md).
 - **Catalog Links** (`/reconcile`) — read-only SKU identity audit between
   platforms: linked items, matched/mismatched SKUs, one-sided counts. Quantity
   differences across locations are normal and shown, never "corrected"

@@ -6,6 +6,8 @@ class StockReservationPool < ApplicationRecord
   include TenantScoped
 
   has_many :stock_reservations, dependent: :restrict_with_exception
+  has_many :source_requests, class_name: 'StockRequest', foreign_key: :source_pool_id, dependent: :restrict_with_exception
+  has_many :destination_requests, class_name: 'StockRequest', foreign_key: :destination_pool_id, dependent: :restrict_with_exception
 
   attr_readonly :tenant_id, :source, :location_id, :source_item_id
 
@@ -45,7 +47,10 @@ class StockReservationPool < ApplicationRecord
   end
 
   def available_to_promise(at: Time.current)
-    [mirrored_available - held_quantity(at: at), 0].max
+    # Warehouse checkouts do not yet choose a location. Charge every local
+    # Shopify pool conservatively rather than promising their stock twice.
+    warehouse = source == 'shopify' ? WarehouseStockHold.held.where(variant_id: source_item_id).sum(:quantity) : 0
+    [mirrored_available - held_quantity(at: at) - warehouse, 0].max
   end
 
   def serialize_allocation

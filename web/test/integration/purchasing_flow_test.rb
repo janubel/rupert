@@ -101,6 +101,7 @@ class PurchasingFlowTest < ActionDispatch::IntegrationTest
     # Partial receive (6 of 10)
     line = po.lines.first
     post receive_purchasing_purchase_order_path(po), params: {
+      request_token: SecureRandom.uuid,
       received: { line.id.to_s => '6' },
       shop: 'm11u0i-sb.myshopify.com',
       embedded: '1'
@@ -112,6 +113,7 @@ class PurchasingFlowTest < ActionDispatch::IntegrationTest
 
     # Full receive
     post receive_purchasing_purchase_order_path(po), params: {
+      request_token: SecureRandom.uuid,
       received: { line.id.to_s => '10' },
       shop: 'm11u0i-sb.myshopify.com',
       embedded: '1'

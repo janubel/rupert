@@ -20,7 +20,7 @@ class PageGuideFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'How this page works'
     assert_includes response.body, 'page-guide-panel'
-    assert_includes response.body, 'Read-only Shopify and C-Trax observations'
+    assert_includes response.body, 'Stock, holds and inventory work queues'
 
     get sales_path
     assert_includes response.body, 'How this page works'

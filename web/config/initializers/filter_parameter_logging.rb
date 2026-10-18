@@ -45,3 +45,5 @@ Rails.application.config.filter_parameters += [/\Aforecast\z/i, /\Aclose\z/i]
 # Public checkout addresses and signed review tokens stay out of request logs.
 Rails.application.config.filter_parameters += [/\Ashipping_/i, :checkout_quote]
 Rails.application.config.filter_parameters += %i[source_adjustment_reference source_adjusted_at]
+
+Rails.application.config.filter_parameters += %i[stock_request reference adjusted_at confirmed request_token]

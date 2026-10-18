@@ -48,7 +48,7 @@ class PagesFlowTest < ActionDispatch::IntegrationTest
   test 'inventory renders' do
     get_page inventory_index_path
     assert_response :success
-    assert_select 'h1', 'Shopify & C-Trax stock'
+    assert_select 'h1', 'Inventory'
   end
 
   test 'catalog links renders as a read-only identity audit' do

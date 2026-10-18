@@ -1,8 +1,34 @@
 # Inventory workflow operations
 
-Reviewed 2026-10-17. Shopify and C-Trax mostly share physical stock, with Square disabled. Stock → Stock comparison is the current read-only operational view; see [comparison and catalog freshness](shared-stock-comparison.md). Local counts, holds and bulk workflows do not push platform stock or guarantee availability in another channel. Legacy Shopify/Square catalog links and reservation pools do not establish shared Shopify/C-Trax allocation.
+Reviewed 2026-10-17. Shopify and C-Trax mostly share physical stock, with Square disabled. Stock → Inventory opens the inventory workspace. Stock → Stock comparison remains the read-only physical-reference view; see [comparison and catalog freshness](shared-stock-comparison.md). Local counts, holds and bulk workflows do not push platform stock or guarantee availability in another channel. Legacy Shopify/Square catalog links and reservation pools do not establish shared Shopify/C-Trax allocation.
 
 For an everyday explanation of the separate payment setup, see [Payments in plain English](https://techmore.github.io/rupert/payment-basics.html), including Valmar and Authorize.net contacts.
+
+## Inventory workspace
+
+Open **Stock → Inventory** (`/inventory`) for work queues, source freshness and exact mirrored source/item/location pools. Filter by item, source or location; sort by lowest mirrored available or oldest read. CSV exports every matching pool, including beyond the visible page. Text cells are spreadsheet-safe. Missing stock stays unknown, and signed source observations stay signed.
+
+Available-to-promise is advisory capacity, not a physical count. Incoming transfers and waiting demand never increase it. Native Shopify/C-Trax observations and physical-count evidence remain in their dedicated comparison; the operational pool grid uses the existing Shopify/Square mirrors and clearly labels their freshness. Shopify and C-Trax mostly observe shared physical stock, so their quantities are never summed.
+
+Counts, reservations, exceptions, material lots and purchase receiving are linked from this workspace with their existing role permissions. Purchasing remains a separately authorized module.
+
+## Transfers and backorders
+
+**Stock → Transfers → New transfer** reserves a positive whole quantity of one exact native item at one source location. Select a different location in the same platform with an existing mirror for that item. Allocation requires an active location and a stock read within one hour; retired Shopify catalog items cannot allocate. A reused SKU cannot identify a different native item. Source and destination native location identities freeze on creation.
+
+Move the stock and separately confirm its source-platform adjustment, then refresh stock in Rupert. Record dispatch with the adjustment time/reference and physical-movement confirmation. The source hold releases only when that same item/location has a stock read at or after the confirmed adjustment; stock is not added to the destination. At the destination, confirm the physical arrival and corresponding source adjustment, refresh its stock, and record the arriving units. Partial receipts remain in transit; the transfer completes only when all units arrive. Duplicate submissions return the existing event. Quantities cannot exceed the remaining units. Dispatched transfers cannot be cancelled and their original source/destination cannot be edited.
+
+**Stock → Backorders → New backorder** records demand at one exact fulfillment pool without reserving stock. **Allocate stock** reserves the whole requested quantity when capacity and freshness allow. Confirm fulfillment of all allocated units, its separate source stock adjustment and a subsequent stock read before completing the request and releasing its hold. Requests are one item per line; split demand into separate requests when only part should allocate or fulfill. Pending or allocated requests can be cancelled before physical movement, releasing their holds. No automatic or FIFO allocation is performed.
+
+Each request retains immutable pool identities and an append-only event history with actor, units, time and encrypted source adjustment reference. Its managed reservation links back to the request and cannot be independently released through the reservation page. Deleting mirrors never deletes request history or silently recreates capacity.
+
+Transfers/backorders currently execute locally against Shopify/Square pools. They do not send source mutations, infer C-Trax equivalence from a SKU, enforce reservations in another channel or reconcile financial payments. C-Trax transfer execution and automatic source writes are separate work.
+
+## Purchase deliveries
+
+Place a draft purchase order before receiving. Enter **cumulative totals received**, including earlier deliveries, for its lines. Whole-unit totals may increase up to the ordered quantity; they cannot decrease. Each delivery retains its exact per-line increases, actor and time. Retrying the same form cannot receive twice. Receiving, placement, cancellation and line edits serialize per workspace, and placed orders reject stale draft edits.
+
+Receipt history appears on the purchase order. Supplier and line associations must belong to the current workspace. Receiving records local purchasing evidence; it does not guess a native variant from the line SKU or increase mirrored source inventory. Make any source adjustment separately, then refresh stock before allocating it. Historical received quantities remain in place; new delivery records begin with this release.
 
 ## Inventory exception review
 
@@ -36,9 +62,9 @@ Label printing, camera decoding, offline scanning and scan-to-receive remain pla
 
 Open **Stock → Reservations**, choose a specific source, location and catalog item, enter a positive whole-unit quantity and reference, then create the hold. Release it when no longer needed. Optional expiry removes it from active availability without a background job.
 
-Available-to-promise uses the smaller of mirrored quantity and available quantity, floored at zero, minus active local holds for that exact pool. A Square hold cannot consume Shopify capacity or another location's capacity. Creation serializes within the pool before checking capacity.
+Available-to-promise uses the smaller of mirrored quantity and available quantity, floored at zero, minus active local holds for that exact pool and held warehouse quantities for the same Shopify variant. Warehouse holds have no assigned location, so each Shopify pool conservatively accounts for their full quantity. Warehouse checkout also subtracts active local reservations before charging. A Square hold cannot consume Shopify capacity or another location's capacity. Creation shares a tenant allocation lock with warehouse checkout and transfer/backorder allocation, then locks the exact pool before checking capacity.
 
-External sales can reduce stock after a hold. Later imports can leave a pool overcommitted; review the mirror, active holds and exception queue before promising fulfillment. Rupert does not create platform reservations, consume a hold on fulfillment or apply a physical count to the mirror. Transfers, backorders and automatic allocation remain planned.
+External sales can reduce stock after a hold. Later imports can leave a pool overcommitted; review the mirror, active holds and exception queue before promising fulfillment. Rupert does not create platform reservations or apply a physical count to the mirror. Transfer/backorder holds follow their confirmed fulfillment workflow; standalone reservations require manual release or expiry. Automatic allocation remains planned.
 
 ## Bulk lots and recipes
 

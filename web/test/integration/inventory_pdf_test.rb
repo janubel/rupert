@@ -61,7 +61,7 @@ class InventoryPdfTest < ActionDispatch::IntegrationTest
   end
 
   test 'operational inventory offers the shared stock CSV instead of the historical PDF' do
-    get inventory_index_path
+    get stock_comparison_path
     assert_response :success
     download_href = nil
     assert_select 'a', text: 'Download comparison CSV' do |links|

@@ -117,13 +117,14 @@
     <% if @purchase_order.status == "ordered" && Current.user.can?("purchasing.write") && @lines.any? %>
       <div class="border-t border-fog px-5 py-4">
         <h3 class="text-sm font-semibold text-ink">Receive goods</h3>
-        <p class="text-xs text-taupe">Enter what arrived for each line.</p>
+        <p class="text-xs text-taupe">Enter the cumulative total received for each line, including earlier deliveries. Receiving records the delivery locally; refresh source stock after its separate source adjustment.</p>
         <%= form_tag receive_purchasing_purchase_order_path(@purchase_order), method: :post, class: "mt-3 space-y-2" do %>
+          <%= hidden_field_tag :request_token, SecureRandom.uuid %>
           <% @lines.each do |line| %>
             <div class="flex flex-wrap items-center gap-3">
               <span class="min-w-0 flex-1 truncate text-sm text-ink"><%= line.name %></span>
               <span class="text-xs text-taupe">ordered <%= line.quantity %></span>
-              <input type="number" name="received[<%= line.id %>]" value="<%= line.received_quantity %>" min="0" max="<%= line.quantity %>" class="input w-24">
+              <input type="number" name="received[<%= line.id %>]" value="<%= line.received_quantity %>" min="<%= line.received_quantity %>" max="<%= line.quantity %>" class="input w-24">
             </div>
           <% end %>
           <%= submit_tag "Save received", class: "btn-primary" %>
@@ -131,6 +132,12 @@
       </div>
     <% end %>
   </div>
+
+  <% if @purchase_order.deliveries.any? %>
+    <section class="card card-pad space-y-3"><h2 class="font-display text-lg">Delivery history</h2>
+      <% @purchase_order.deliveries.order(:id).each do |delivery| %><p class="text-sm">Delivery #<%= delivery.id %> · <%= delivery.quantities_json.values.sum %> units · <%= delivery.actor %> · <%= l(delivery.created_at, format: :short) %></p><% end %>
+    </section>
+  <% end %>
 
   <% if @purchase_order.notes.present? %>
     <section class="card card-pad">

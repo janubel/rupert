@@ -112,7 +112,7 @@
       "area": "Stock",
       "name": "Location inventory",
       "status": "Available",
-      "scope": "Native Shopify on-hand/available/committed snapshots and complete catalog presence reads; read-only shared Shopify/C-Trax stock comparison with freshness, identity and unknown-state gates. Legacy mirrors remain for historical screens. Physical stock accuracy and source correction still require operator review.",
+      "scope": "Inventory workspace with filtered, paginated source/location pools, signed observations, local and warehouse holds, advisory availability, incoming transfers, waiting demand and complete CSV export. Native Shopify/C-Trax comparison retains source freshness and identity gates; physical reference stock is never summed across sources.",
       "evidence": "docs/ops/shared-stock-comparison.md",
       "phase": "0"
     },
@@ -157,7 +157,7 @@
       "area": "Purchasing",
       "name": "Vendors and purchase orders",
       "status": "Available",
-      "scope": "Supplier records, draft/place/receive lifecycle and partial receiving.",
+      "scope": "Supplier records, draft/place/receive lifecycle, whole-unit partial deliveries, immutable receipt deltas, monotonic cumulative totals and replay-safe receiving. Draft edits and receiving serialize with placement/cancellation; receipts do not mutate source stock.",
       "evidence": "web/app/controllers/purchasing/purchase_orders_controller.rb",
       "phase": "0"
     },
@@ -337,8 +337,8 @@
       "area": "Stock",
       "name": "Transfers, reservations and backorders",
       "status": "Partial",
-      "scope": "Tenant/location/source-specific local reservations and advisory available-to-promise, expiry and release. Transfers, backorders and source-enforced allocation remain planned.",
-      "evidence": "web/app/services/stock_reservation_service.rb",
+      "scope": "Exact source/item/location reservations, transfers with held allocation, confirmed dispatch, partial receipts, and backorders with demand/allocation/fulfillment/cancellation. Immutable actor/event history, replay protection, freshness/identity gates and shared warehouse/local capacity. Source-enforced reservations, C-Trax transfer execution, automatic source writes and partial backorder allocation remain planned.",
+      "evidence": "web/app/services/stock_request_workflow.rb",
       "phase": "1"
     },
     {

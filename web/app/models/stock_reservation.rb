@@ -3,6 +3,7 @@
 class StockReservation < ApplicationRecord
   include TenantScoped
 
+  has_one :stock_request, dependent: :restrict_with_exception
   belongs_to :stock_reservation_pool
 
   attr_accessor :allocation_checked

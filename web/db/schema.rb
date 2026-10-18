@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1649,6 +1649,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_220000) do
     t.index ["tenant_id", "sku"], name: "index_purchase_order_lines_on_tenant_id_and_sku"
   end
 
+  create_table "purchase_deliveries", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "purchase_order_id", null: false
+    t.string "request_token", null: false
+    t.string "payload_digest", null: false
+    t.string "actor", null: false
+    t.text "quantities_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["purchase_order_id"], name: "index_purchase_deliveries_on_purchase_order_id"
+    t.index ["tenant_id", "request_token"], name: "index_purchase_deliveries_on_tenant_id_and_request_token", unique: true
+  end
+
   create_table "purchase_orders", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.date "expected_date"
@@ -2063,6 +2076,49 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_220000) do
     t.index ["tenant_id", "employee_id", "started_at"], name: "idx_square_timecard_worker"
     t.index ["tenant_id", "external_id"], name: "idx_square_timecard_native", unique: true
     t.index ["tenant_id"], name: "index_square_timecards_on_tenant_id"
+  end
+
+  create_table "stock_request_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "stock_request_id", null: false
+    t.string "action", null: false
+    t.string "request_token", null: false
+    t.string "payload_digest", null: false
+    t.string "actor", null: false
+    t.integer "quantity", default: 0, null: false
+    t.text "reference"
+    t.datetime "source_adjusted_at"
+    t.datetime "source_refreshed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stock_request_id"], name: "index_stock_request_events_on_stock_request_id"
+    t.index ["tenant_id", "request_token"], name: "index_stock_request_events_on_tenant_id_and_request_token", unique: true
+  end
+
+  create_table "stock_requests", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "request_kind", null: false
+    t.bigint "source_pool_id", null: false
+    t.bigint "destination_pool_id"
+    t.bigint "stock_reservation_id"
+    t.integer "quantity", null: false
+    t.integer "received_quantity", default: 0, null: false
+    t.string "reference", null: false
+    t.date "due_on"
+    t.string "status", default: "pending", null: false
+    t.string "created_by", null: false
+    t.string "source_location_external_id", null: false
+    t.string "destination_location_external_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["destination_pool_id"], name: "index_stock_requests_on_destination_pool_id"
+    t.index ["source_pool_id"], name: "index_stock_requests_on_source_pool_id"
+    t.index ["stock_reservation_id"], name: "index_stock_requests_on_stock_reservation_id", unique: true
+    t.index ["tenant_id", "request_kind", "status", "id"], name: "idx_stock_requests_queue"
+    t.check_constraint "quantity > 0 AND received_quantity >= 0 AND received_quantity <= quantity", name: "stock_requests_quantities"
+    t.check_constraint "request_kind::text = 'transfer'::text AND destination_pool_id IS NOT NULL AND source_pool_id <> destination_pool_id OR request_kind::text = 'backorder'::text AND destination_pool_id IS NULL", name: "stock_requests_destination"
+    t.check_constraint "request_kind::text = ANY (ARRAY['transfer'::character varying, 'backorder'::character varying]::text[])", name: "stock_requests_kind"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'allocated'::character varying, 'dispatched'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "stock_requests_status"
   end
 
   create_table "stock_reservation_pools", force: :cascade do |t|
@@ -2687,4 +2743,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_220000) do
   add_foreign_key "authorize_net_portal_observations", "authorize_net_portal_exports", on_delete: :cascade
   add_foreign_key "authorize_net_portal_observations", "tenants"
   add_foreign_key "warehouse_payment_attempts", "warehouse_carts"
+  add_foreign_key "purchase_deliveries", "purchase_orders"
+  add_foreign_key "stock_request_events", "stock_requests"
+  add_foreign_key "stock_requests", "stock_reservation_pools", column: "destination_pool_id"
+  add_foreign_key "stock_requests", "stock_reservation_pools", column: "source_pool_id"
+  add_foreign_key "stock_requests", "stock_reservations"
 end

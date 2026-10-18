@@ -43,7 +43,7 @@ class EmployeeAccessReviewTest < ActionDispatch::IntegrationTest
     @user.update_permission_overrides!(%w[hr.read inventory.read])
     sign_in
     get people_employee_path(@worker)
-    assert_select '#access span', text: 'Stock comparison · View'
+    assert_select '#access span', text: 'Inventory · View'
     assert_select '#access span', text: /Sales ·|Reports ·|Financial close ·/, count: 0
     @user.update!(active: false)
     get people_employee_path(@worker)

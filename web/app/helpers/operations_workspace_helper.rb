@@ -11,7 +11,11 @@ module OperationsWorkspaceHelper
        ['C-Trax daily close', ctrax_days_path(date: date), 'sales.read', 'ctrax_days'],
        ['Registers', sales_pos_sessions_path, 'sales.read', 'sales/pos_sessions']]
     when :stock
-      [['Stock comparison', inventory_index_path, 'inventory.read', 'inventory'],
+      [['Inventory', workspace_inventory_index_path, 'inventory.read', 'inventory/workspace'],
+       ['Stock comparison', stock_comparison_path, 'inventory.read', 'inventory/comparison'],
+       ['Transfers', stock_requests_path(kind: 'transfer'), 'inventory.read', 'stock_requests/transfer'],
+       ['Backorders', stock_requests_path(kind: 'backorder'), 'inventory.read', 'stock_requests/backorder'],
+       ['Reservations', stock_reservations_path, 'inventory.read', 'stock_reservations'],
        ['Physical counts', inventory_counts_path, 'inventory.read', 'inventory_counts'],
        ['Stock review', inventory_exceptions_path, 'inventory.read', 'inventory_exceptions'],
        ['Movements', movements_inventory_index_path, 'inventory.read', 'inventory/movements'],
@@ -48,7 +52,13 @@ module OperationsWorkspaceHelper
       allowed = permission == 'pos' ? Current.user&.can_use_pos? : retail_business_access?(permission)
       next unless allowed
 
-      active_key = controller_path == 'inventory' && action_name == 'movements' ? 'inventory/movements' : controller_path
+      active_key = if controller_path == 'inventory' && %w[index comparison movements workspace].include?(action_name)
+        "inventory/#{action_name == 'index' ? 'workspace' : action_name}"
+      elsif controller_path == 'stock_requests'
+        "stock_requests/#{@kind || @stock_request&.request_kind || @attributes&.dig('request_kind')}"
+      else
+        controller_path
+      end
       [label, path, key == active_key || (key.end_with?('/*') && active_key.start_with?(key.delete_suffix('*'))), group]
     end
   end

@@ -1,0 +1,28 @@
+<% content_for :title, 'New inventory request' %>
+<div class="space-y-6">
+  <%= render 'shared/operations_navigation', workspace: :stock %>
+  <h1 class="page-title">New <%= @attributes['request_kind'] == 'backorder' ? 'backorder' : 'transfer' %></h1>
+  <p class="text-sm text-mocha">Transfers reserve stock now. Backorders record waiting demand and allocate later. Each request tracks one exact native item; different sources keep independent stock.</p>
+  <% if @error %><div class="card card-pad text-rose" role="alert"><%= @error %></div><% end %>
+  <%= form_with url: new_stock_request_path, method: :get, class: 'flex flex-wrap gap-3 items-end' do %>
+    <%= hidden_field_tag :kind, @attributes['request_kind'] %><label>Find item<%= text_field_tag :q, @query, class: 'input' %></label><%= submit_tag 'Search pools', class: 'btn-ghost' %>
+  <% end %>
+  <%= form_with url: stock_requests_path, class: 'card card-pad space-y-4' do %>
+    <%= hidden_field_tag :request_token, @token %>
+    <%= hidden_field_tag 'stock_request[request_kind]', @attributes['request_kind'] %>
+    <label class="block">Source / fulfillment pool
+      <select name="stock_request[inventory_level_id]" class="input" required><option value="">Choose source, location and item</option>
+        <% @levels.each do |level| %><% item = level.source == 'shopify' ? level.shopify_variant : level.square_variation %>
+          <option value="<%= level.id %>" <%= 'selected' if @attributes['inventory_level_id'] == level.id %>><%= [level.source.capitalize, level.location&.name, item&.sku, item && (level.source == 'shopify' ? item.title : item.name), item&.id].compact.join(' · ') %></option>
+        <% end %>
+      </select><span class="text-xs text-taupe">Up to 100 matching pools shown. Stock and freshness are checked when allocating.</span>
+    </label>
+    <% if @attributes['request_kind'] == 'transfer' %><label class="block">Destination location<%= select_tag 'stock_request[destination_location_id]', options_from_collection_for_select(@locations, :id, :name, @attributes['destination_location_id']), include_blank: 'Choose another location in the same source', required: true, class: 'input' %><span class="text-xs text-taupe">The same native item must have a mirrored pool at the destination.</span></label><% end %>
+    <div class="grid gap-4 sm:grid-cols-3">
+      <label>Quantity<%= number_field_tag 'stock_request[quantity]', @attributes['quantity'], min: 1, step: 1, required: true, class: 'input' %></label>
+      <label>Order / transfer reference<%= text_field_tag 'stock_request[reference]', @attributes['reference'], maxlength: 200, required: true, class: 'input' %></label>
+      <label>Due date (optional)<%= date_field_tag 'stock_request[due_on]', @attributes['due_on'], class: 'input' %></label>
+    </div>
+    <%= submit_tag @attributes['request_kind'] == 'transfer' ? 'Reserve transfer' : 'Record backorder', class: 'btn-primary' %>
+  <% end %>
+</div>

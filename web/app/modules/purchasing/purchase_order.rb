@@ -10,6 +10,8 @@ module Purchasing
 
     self.table_name = 'purchase_orders'
 
+    has_many :deliveries, class_name: 'Purchasing::PurchaseDelivery', dependent: :restrict_with_exception
+
     belongs_to :vendor, class_name: 'Purchasing::Vendor', foreign_key: :vendor_id
     has_many :lines,
       class_name: 'Purchasing::PurchaseOrderLine',
@@ -20,6 +22,10 @@ module Purchasing
     validates :vendor_id, presence: true
     validates :order_number, presence: true, uniqueness: { scope: :tenant_id }
     validates :status, presence: true
+
+    validate do
+      errors.add(:vendor, 'must belong to this workspace') unless vendor&.tenant_id == tenant_id
+    end
 
     scope :by_status, ->(status) { status.present? && status != 'all' ? where(status: status) : all }
     scope :recent, ->(limit = 100) { order(created_at: :desc).limit(limit) }

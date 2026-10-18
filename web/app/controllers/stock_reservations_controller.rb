@@ -3,11 +3,15 @@
 class StockReservationsController < AuthenticatedController
   rescue_from ActiveRecord::StatementInvalid, with: :handle_database_error
 
+  rescue_from StockReservationService::ManagedHold do |error|
+    redirect_to(stock_reservations_path, alert: error.message)
+  end
+
   before_action :authorize_read
   before_action :authorize_write, except: :index
 
   def index
-    scope = StockReservation.includes(:stock_reservation_pool).recent
+    scope = StockReservation.includes(:stock_reservation_pool, :stock_request).recent
     @pagy, @reservations = pagy(scope, items: 30)
   end
 
@@ -67,6 +71,7 @@ class StockReservationsController < AuthenticatedController
     end
     @levels = scope.order(:source, :locationId, :id).limit(100).to_a
     @levels.unshift(@selected_level) if @selected_level && @levels.none? { |level| level.id == @selected_level.id }
+    @warehouse_holds = WarehouseStockHold.held.group(:variant_id).sum(:quantity)
     @held_by_pool = StockReservation.active_at.joins(:stock_reservation_pool)
       .group('stock_reservation_pools.source', 'stock_reservation_pools.location_id', 'stock_reservation_pools.source_item_id')
       .sum(:quantity)

@@ -1,0 +1,54 @@
+<% content_for :title, 'Inventory' %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :stock %>
+  <section class="space-y-3">
+    <h1 class="page-title">Inventory</h1>
+    <p class="max-w-3xl text-sm text-mocha">Review stock by item, source and location. Reserve transfers, track backorders, receive purchases, and count physical stock from one workspace.</p>
+    <div class="flex flex-wrap gap-2">
+      <%= link_to 'Compare Shopify & C-Trax', stock_comparison_path, class: 'btn-primary' %>
+      <%= link_to 'Count stock', inventory_counts_path, class: 'btn-ghost' %>
+      <%= link_to 'Receive purchases', purchasing_purchase_orders_path, class: 'btn-ghost' if Current.user.can?('purchasing.read') %>
+      <%= link_to 'Material lots', bulk_materials_path, class: 'btn-ghost' %>
+      <%= link_to 'Review exceptions', inventory_exceptions_path, class: 'btn-ghost' %>
+    </div>
+  </section>
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Inventory work queues">
+    <% [['Pending counts', @counts], ['Open transfers', @transfers], ['Waiting backorders', @backorders], ['Active local reservations', @reservations]].each do |label, value| %>
+      <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value"><%= value %></p></div>
+    <% end %>
+  </section>
+  <% if @native_reads.any? %>
+    <section class="card card-pad space-y-2" aria-label="Native stock freshness"><h2 class="font-display text-xl">Native stock reads</h2>
+      <% @native_reads.each do |snapshot| %><p class="text-sm"><%= snapshot.location&.source == 'ctrax' ? 'C-Trax · physical reference' : 'Shopify' %> · <%= snapshot.location&.name %> · <%= l(snapshot.captured_at, format: :short) %> · <%= snapshot.captured_at.between?(1.hour.ago, Time.current) ? 'Current' : 'Refresh needed' %></p><% end %>
+      <%= link_to 'Review native stock and identity evidence', stock_comparison_path, class: 'btn-ghost' %>
+    </section>
+  <% end %>
+  <div class="card card-pad text-sm text-mocha">Mirrored stock remains separate for each source and location. Local holds reduce Rupert availability; incoming transfers and waiting backorders never increase it. Warehouse holds have no assigned location, so each Shopify pool conservatively accounts for the full warehouse hold. Use the Shopify / C-Trax comparison for native on-hand and physical-reference evidence.</div>
+  <%= form_with url: workspace_inventory_index_path, method: :get, class: 'card card-pad flex flex-wrap gap-3 items-end' do %>
+    <label>Search SKU or item<%= text_field_tag :q, params[:q], class: 'input' %></label>
+    <label>Source<%= select_tag :source, options_for_select([['Shopify', 'shopify'], ['Square', 'square']], params[:source]), include_blank: 'All sources', class: 'input' %></label>
+    <label>Location<%= select_tag :location_id, options_from_collection_for_select(@locations, :id, :name, params[:location_id]), include_blank: 'All locations', class: 'input' %></label>
+    <label>Sort<%= select_tag :sort, options_for_select([['Item / location', 'item'], ['Lowest mirrored available', 'low'], ['Oldest stock read', 'oldest']], params[:sort]), class: 'input' %></label>
+    <%= submit_tag 'Find stock', class: 'btn-primary' %>
+    <%= link_to 'Export these pools', workspace_inventory_index_path(request.query_parameters.except('page').merge(format: :csv)), class: 'btn-ghost' %>
+  <% end %>
+  <p class="text-xs text-taupe"><%= @pagy.count %> mirrored pools · <%= @rows.size %> on this page. Stale or missing identities require review before allocation.</p>
+  <div class="card overflow-x-auto"><table class="w-full text-sm">
+    <thead><tr><% ['Item / native ID', 'Source / location', 'Mirror on hand', 'Mirror available', 'Local holds', 'Warehouse holds', 'Available to promise', 'Incoming', 'Backorder demand', 'Stock read', 'Actions'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
+    <tbody class="divide-y divide-fog">
+      <% @rows.each do |row| %><% level = row[:level] %>
+        <tr><td class="td"><% if level.source == 'shopify' && row[:native_id] %><%= link_to row[:label], shopify_variant_path(row[:native_id]), class: 'hover:underline' %><% else %><%= row[:label] %><% end %><p class="text-xs text-taupe break-all"><%= row[:native_id] %></p></td>
+          <td class="td"><%= level.source.capitalize %><br><%= level.location&.name || 'Missing location' %></td>
+          <% [:on_hand, :available, :held, :warehouse, :promise, :incoming, :demand].each do |key| %><td class="td"><%= row[key].nil? ? 'Unknown' : row[key] %></td><% end %>
+          <td class="td text-xs"><%= l(level.updatedAt, format: :short) %><br><%= row[:fresh] ? 'Current mirror' : 'Refresh / review' %></td>
+          <td class="td"><% if Current.user.can?('inventory.write') %><div class="flex flex-col gap-2">
+            <%= link_to 'Reserve', new_stock_reservation_path(inventory_level_id: level.id), class: 'hover:underline' %>
+            <%= link_to 'Transfer', new_stock_request_path(kind: 'transfer', inventory_level_id: level.id), class: 'hover:underline' %>
+            <%= link_to 'Backorder', new_stock_request_path(kind: 'backorder', inventory_level_id: level.id), class: 'hover:underline' %>
+          </div><% end %></td></tr>
+      <% end %>
+      <% if @rows.empty? %><tr><td colspan="11" class="empty-row">No mirrored pools match. Read connected source stock, or change these filters.</td></tr><% end %>
+    </tbody>
+  </table></div>
+  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+</div>
