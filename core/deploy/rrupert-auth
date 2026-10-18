@@ -1,0 +1,49 @@
+#!/bin/sh
+# Finish or inspect the Google sign-in proxy for https://rrupert.stoverparc.org.
+# Installed as /usr/local/sbin/rrupert-auth inside the rupert-core container; run it as root:
+#   incus exec rupert-core -- rrupert-auth status
+#   incus exec rupert-core -- rrupert-auth set-client-id <id>.apps.googleusercontent.com
+#   incus exec rupert-core -- sh -c 'umask 077; cat > /var/lib/rrupert-auth/google-client-secret'   (paste, Enter, Ctrl-D)
+#   incus exec rupert-core -- sh -c 'echo you@example.com >> /etc/rrupert-oauth2-emails.txt'
+#   incus exec rupert-core -- rrupert-auth enable
+# The client secret is never printed by this script and never passes through chat.
+set -eu
+
+CFG=/etc/rrupert-oauth2-proxy.cfg
+EMAILS=/etc/rrupert-oauth2-emails.txt
+SECRET=/var/lib/rrupert-auth/google-client-secret
+COOKIE=/var/lib/rrupert-auth/cookie-secret
+UNIT=rrupert-oauth2-proxy
+
+client_id_ok() { grep -qE '^client_id = "[A-Za-z0-9._-]+\.apps\.googleusercontent\.com"$' "$CFG"; }
+secret_ok() { [ -s "$SECRET" ] && [ "$(stat -c %a "$SECRET")" = 600 ] && [ "$(stat -c %U "$SECRET")" = oauth2-proxy ]; }
+emails_ok() { [ "$(grep -cE '^[^#[:space:]]+@[^[:space:]]+$' "$EMAILS" 2>/dev/null || true)" -ge 1 ]; }
+cookie_ok() { [ -s "$COOKIE" ] && [ "$(stat -c %a "$COOKIE")" = 600 ]; }
+
+status() {
+  ok=0
+  printf 'cookie secret          : '; if cookie_ok; then echo OK; else echo MISSING; ok=1; fi
+  printf 'google client id       : '; if client_id_ok; then echo OK; else echo "MISSING (rrupert-auth set-client-id <id>.apps.googleusercontent.com)"; ok=1; fi
+  printf 'google client secret   : '; if secret_ok; then echo "OK ($(stat -c %s "$SECRET") bytes, mode 600)"; else echo "MISSING or wrong mode/owner (file: $SECRET)"; ok=1; fi
+  printf 'allowed emails         : '; if emails_ok; then echo "OK ($(grep -cE '^[^#[:space:]]+@[^[:space:]]+$' "$EMAILS") address(es))"; else echo "MISSING (one address per line in $EMAILS)"; ok=1; fi
+  printf 'service                : %s / %s\n' "$(systemctl is-enabled $UNIT 2>/dev/null || true)" "$(systemctl is-active $UNIT 2>/dev/null || true)"
+  return $ok
+}
+
+case "${1:-status}" in
+  set-client-id)
+    id="${2:?usage: rrupert-auth set-client-id <id>.apps.googleusercontent.com}"
+    case "$id" in *[!A-Za-z0-9._-]*) echo "unexpected characters in the client id" >&2; exit 1 ;; esac
+    case "$id" in *.apps.googleusercontent.com) ;; *) echo "that does not look like a Google client id (expected ...apps.googleusercontent.com)" >&2; exit 1 ;; esac
+    sed -i -E "s|^client_id = .*|client_id = \"$id\"|" "$CFG"
+    echo "client_id set" ;;
+  status|check) status ;;
+  enable)
+    if ! status >/dev/null; then status || true; echo; echo "not starting: fill in the MISSING items first" >&2; exit 1; fi
+    systemctl enable --now "$UNIT"
+    sleep 2
+    systemctl is-active "$UNIT"
+    printf 'proxy health: '; curl -s -m 3 -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4182/ping ;;
+  disable) systemctl disable --now "$UNIT" ;;
+  *) echo "usage: rrupert-auth [status|set-client-id <id>|enable|disable]" >&2; exit 2 ;;
+esac

@@ -1,0 +1,9 @@
+[Unit]
+Description=Copy the newest rupert-core backup to the host disk every 6 hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:40:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

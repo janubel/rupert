@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Runs on the SER8 host (user timer). Copies the newest rupert-core backup out of the container onto the host's disk,
+# verifies every file against its manifest, and keeps the newest KEEP copies. A backup that lives only inside the
+# container dies with it; this gives a second copy that survives container loss. (It is still the same physical
+# disk: an off-host copy is a separate, still-open step.)
+set -euo pipefail
+DEST="${DEST:-$HOME/rupert-core-backups}"
+KEEP="${KEEP:-28}"
+umask 077
+mkdir -p "$DEST/.partial"
+LATEST=$(incus exec rupert-core -- python3 -I -c 'import json;print(json.load(open("/var/backups/rupert-core/status.json"))["dir"])')
+[[ "$LATEST" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || { echo "unexpected backup name: $LATEST" >&2; exit 1; }
+if [ -d "$DEST/$LATEST" ]; then echo "already have $LATEST"; exit 0; fi
+rm -rf "$DEST/.partial/$LATEST"
+incus file pull -r "rupert-core/var/backups/rupert-core/$LATEST" "$DEST/.partial/"
+python3 -I - "$DEST/.partial/$LATEST" <<'PY'
+import hashlib, json, os, sys
+d = sys.argv[1]
+m = json.load(open(os.path.join(d, "MANIFEST.json")))
+for e in m["files"]:
+    h = hashlib.sha256(open(os.path.join(d, e["file"]), "rb").read()).hexdigest()
+    if h != e["sha256"]:
+        sys.exit("checksum mismatch after copy: " + e["file"])
+print("verified", len(m["files"]), "files")
+PY
+mv "$DEST/.partial/$LATEST" "$DEST/$LATEST"
+ls -d "$DEST"/20*Z 2>/dev/null | head -n -"$KEEP" | xargs -r rm -rf
+echo "pulled $LATEST"
