@@ -1,0 +1,23 @@
+name: Security
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 6 * * 1'
+permissions:
+  contents: read
+jobs:
+  scan:
+    name: Dependency and static scan
+    runs-on: ubuntu-latest
+    container:
+      image: ruby:4.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install scanners
+        run: gem install --no-document brakeman bundler-audit
+      - name: Audit gems for known vulnerabilities
+        run: bundler-audit check --update --gemfile-lock web/Gemfile.lock
+      - name: Brakeman static analysis (fails on warnings not in the baseline)
+        run: brakeman --path web --no-pager --quiet --confidence-level 2 --compare web/config/brakeman-baseline.json
