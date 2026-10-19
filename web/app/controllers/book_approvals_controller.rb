@@ -39,6 +39,8 @@ class BookApprovalsController < AuthenticatedController
     @values = values.to_h
     load_page(values[:kind], values[:date]) unless @period
     render :show, status: :unprocessable_entity
+  rescue Date::Error
+    redirect_to book_approvals_path, alert: 'Choose a valid date to approve.'
   end
 
   private

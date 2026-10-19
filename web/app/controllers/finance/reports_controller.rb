@@ -54,7 +54,10 @@ module Finance
     def render_statement(_title)
       respond_to do |format|
         format.html { render action_name.to_sym }
-        format.csv { send_data statement_csv, filename: "#{action_name}-#{@from}-#{@to}.csv" }
+        format.csv do
+          log_export("#{action_name.humanize} CSV", "#{@from} to #{@to}")
+          send_data statement_csv, filename: "#{action_name}-#{@from}-#{@to}.csv"
+        end
       end
     end
 

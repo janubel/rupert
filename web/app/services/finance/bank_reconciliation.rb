@@ -68,9 +68,12 @@ module Finance
           next unless entry
 
           result[line.id] = entry
-          gl_movements.each_with_index do |movement, index|
-            claimed << index if movement[:entry].id == entry.entry.id
-          end
+          # Claim one movement of the linked entry (the leg equal to the line,
+          # else its first unclaimed leg) so a compound entry's other bank leg
+          # stays available and visible.
+          legs = gl_movements.each_index.select { |index| gl_movements[index][:entry].id == entry.entry.id && !claimed.include?(index) }
+          leg = legs.find { |index| gl_movements[index][:signed_cents] == line.amount_cents } || legs.first
+          claimed << leg if leg
         end
 
         lines.each do |line|
@@ -93,8 +96,15 @@ module Finance
             amount_cents: line.amount_cents,
             days_apart: (movement[:date] - line.posted_on).abs)
         end
+        @claimed_movements = claimed
         result
       end
+    end
+
+    # Indexes into gl_movements that back a confirmed or suggested match.
+    def claimed_movements
+      suggestions
+      @claimed_movements
     end
 
     def matched_lines = lines.select { |l| suggestions.key?(l.id) }
@@ -123,7 +133,7 @@ module Finance
     end
 
     def matched_entry_ids = suggestions.values.filter_map { |s| s.is_a?(Suggestion) ? s.entry.id : s&.id }
-    def unmatched_gl = gl_movements.reject { |m| matched_entry_ids.include?(m[:entry].id) }
+    def unmatched_gl = gl_movements.reject.with_index { |_movement, index| claimed_movements.include?(index) }
 
     def summary
       stmt_in = lines.select { |l| l.amount_cents.positive? }.sum(&:amount_cents)
