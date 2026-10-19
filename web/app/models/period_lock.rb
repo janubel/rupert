@@ -149,7 +149,19 @@ class PeriodLock < ApplicationRecord
   end
 
   # True when the period's records still match what was locked.
-  def still_matches? = PeriodSnapshot.new(from: period_from, to: period_to).fingerprint == fingerprint
+  # Compares only the sections this lock recorded, so adding a new snapshot
+  # section later does not make older locks look changed.
+  def still_matches?
+    snapshot = PeriodSnapshot.new(from: period_from, to: period_to)
+    recorded = begin
+      JSON.parse(summary_json.to_s)
+    rescue JSON::ParserError
+      nil
+    end
+    return snapshot.fingerprint == fingerprint unless recorded.is_a?(Hash)
+
+    snapshot.fingerprint_for(recorded.keys) == fingerprint
+  end
 
   def canonical
     [tenant_id, action, period_kind, period_from.iso8601, period_to.iso8601, fingerprint, summary_json, reason,
