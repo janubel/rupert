@@ -17,6 +17,11 @@ module Finance
     validates :credit_cents, numericality: { greater_than_or_equal_to: 0, only_integer: true }
     validate :one_sided_amount
 
+    # Posted legs are permanent: corrections are made by voiding the entry and
+    # posting a new one, never by editing or deleting a leg in place (audit
+    # #169 M3). The database adds foreign keys and a one-sided CHECK.
+    def readonly? = persisted? || super
+
     def amount_cents = [debit_cents.to_i, credit_cents.to_i].max
     def debit? = debit_cents.to_i.positive?
     def credit? = credit_cents.to_i.positive?

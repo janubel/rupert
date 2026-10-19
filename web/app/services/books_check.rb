@@ -26,7 +26,7 @@ class BooksCheck
   def checks
     @checks ||= [source_freshness, sync_health, paid_without_payment, payment_mismatch, refund_records,
       orders_without_location, impossible_amounts, missing_controls, unreviewed_days,
-      overdue_follow_ups, evidence_integrity, approval_ledger, locked_periods, unapproved_days, offsite_backup, bank_lines_waiting].compact
+      overdue_follow_ups, evidence_integrity, approval_ledger, locked_periods, unapproved_days, offsite_backup, bank_lines_waiting, ledger_balance].compact
   end
 
   def summary
@@ -273,6 +273,26 @@ class BooksCheck
       detail_ok: 'Every uploaded bank line is recorded or ignored (or none uploaded).',
       detail_bad: 'Bank statement lines are waiting for someone to say what they were. Withdrawals left undecided are missing from money out.',
       action: 'Open Bank statements and decide the waiting lines.', path: routes.bank_statements_path)
+  end
+
+  # Every posted general-ledger entry has at least two legs and its debits equal
+  # its credits. Posting enforces this in the app; this catches anything written
+  # around it (console, raw SQL, a restored dump). Covers the whole ledger, not
+  # just the window, because an old unbalanced entry corrupts every later total.
+  def ledger_balance
+    sums = Finance::JournalLine.joins(:journal_entry).merge(Finance::JournalEntry.posted)
+      .group(:journal_entry_id)
+      .having('SUM(journal_lines.debit_cents) <> SUM(journal_lines.credit_cents) OR COUNT(*) < 2')
+      .pluck(:journal_entry_id, Arel.sql('SUM(journal_lines.debit_cents)'), Arel.sql('SUM(journal_lines.credit_cents)'))
+    legless = Finance::JournalEntry.posted.where.not(id: Finance::JournalLine.select(:journal_entry_id)).pluck(:id)
+    bad = sums.map { |id, debit, credit| [id, debit.to_i, credit.to_i] } + legless.map { |id| [id, 0, 0] }
+    build('ledger_balance', 'Every posted ledger entry balances', count: bad.size,
+      cents: bad.sum { |_, debit, credit| (debit - credit).abs },
+      rows: bad.first(SAMPLE).map { |id, debit, credit| ["Entry ##{id}", debit, credit] },
+      detail_ok: 'Debits equal credits on every posted journal entry.',
+      detail_bad: 'These posted journal entries are out of balance or have fewer than two lines. The trial balance and statements are wrong until they are fixed.',
+      action: 'Open each entry, void it and post a balanced correction. Find out how it was written outside normal posting.',
+      path: routes.finance_journal_entries_path)
   end
 
   def safe(value)

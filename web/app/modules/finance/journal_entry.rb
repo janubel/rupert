@@ -14,13 +14,15 @@ module Finance
     KINDS = %w[expense sale vendor_payment manual opening].freeze
     STATUSES = %w[posted void].freeze
 
-    has_many :journal_lines, foreign_key: :journal_entry_id, inverse_of: :journal_entry, dependent: :destroy
+    has_many :journal_lines, foreign_key: :journal_entry_id, inverse_of: :journal_entry, dependent: :restrict_with_exception
 
     validates :posted_on, presence: true
     validates :kind, presence: true, inclusion: { in: KINDS }
     validates :status, presence: true, inclusion: { in: STATUSES }
     guard_locked_period :posted_on
-    validate :lines_balance
+    validate :lines_balance, on: :create
+    validate :only_voiding_after_posting, on: :update
+    before_destroy { raise ActiveRecord::ReadOnlyRecord, 'Journal entries are permanent; void the entry instead.' }
 
     scope :posted, -> { where(status: 'posted') }
     scope :for_source, ->(type, id) { where(source_type: type.to_s, source_id: id.to_s) }
@@ -70,6 +72,15 @@ module Finance
     end
 
     private
+
+    # Once written, an entry's only permitted change is posted -> void.
+    def only_voiding_after_posting
+      changed_fields = changed - %w[status updated_at]
+      errors.add(:base, "A posted journal entry cannot be edited (#{changed_fields.join(', ')}); void it and post a correction.") if changed_fields.any?
+      return unless will_save_change_to_status?
+
+      errors.add(:status, 'can only change from posted to void.') unless status_in_database == 'posted' && status == 'void'
+    end
 
     def lines_balance
       return if journal_lines.empty? && new_record? == false # allow header-only during build

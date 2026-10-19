@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1039,8 +1039,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
     t.string "tenant_id", null: false
     t.bigint "journal_entry_id", null: false
     t.bigint "account_id", null: false
-    t.integer "debit_cents", default: 0, null: false
-    t.integer "credit_cents", default: 0, null: false
+    t.bigint "debit_cents", default: 0, null: false
+    t.bigint "credit_cents", default: 0, null: false
     t.text "memo"
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
@@ -1048,6 +1048,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
     t.index ["journal_entry_id"], name: "idx_journal_lines_entry"
     t.index ["tenant_id", "account_id"], name: "idx_journal_lines_account"
     t.index ["tenant_id"], name: "index_journal_lines_on_tenant_id"
+    t.check_constraint "(debit_cents >= 0 AND credit_cents >= 0) AND ((debit_cents = 0) <> (credit_cents = 0))", name: "chk_journal_lines_one_sided"
   end
 
   create_table "kpi_readings", force: :cascade do |t|
@@ -2625,6 +2626,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
   add_foreign_key "google_login_identities", "users", on_delete: :cascade
   add_foreign_key "inventory_count_scan_receipts", "InventoryCount", column: "count_id", on_delete: :cascade
   add_foreign_key "iris_reports", "tenants"
+  add_foreign_key "journal_lines", "accounts", on_delete: :restrict
+  add_foreign_key "journal_lines", "journal_entries", on_delete: :restrict
   add_foreign_key "marketing_campaigns", "tenants"
   add_foreign_key "marketing_cms_events", "tenants"
   add_foreign_key "marketing_cms_events", "users", column: "actor_id"
