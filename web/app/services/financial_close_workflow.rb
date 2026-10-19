@@ -34,7 +34,9 @@ class FinancialCloseWorkflow
   def issues
     @issues ||= attention.counts.merge(open_follow_ups: open_follow_ups.size,
       coverage: report.register.coverage.values.sum,
-      unconfirmed_imports: report.register.rows.map { |row| row[:source] }.uniq.count { |source| !report.register.source_freshness.dig(source, :finished_at) })
+      unconfirmed_imports: report.register.rows.map { |row| row[:source] }.uniq
+        .select { |source| DailyRegisterSummary::KNOWN_SOURCES.include?(source) }
+        .count { |source| !report.register.source_freshness.dig(source, :finished_at) })
   end
 
   def clear_for_close?

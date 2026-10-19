@@ -17,6 +17,7 @@ module Finance
       to = parse_date(params[:to]) || Date.current
       export = Finance::LedgerExport.new(from: from, to: to)
       format = export.format_for(params[:format])
+      log_export("General ledger #{format.key}", "#{from} to #{to}")
       send_data export.render(format.key),
         filename: export.filename(format.key),
         type: format.content_type,

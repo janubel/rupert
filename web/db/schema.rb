@@ -77,7 +77,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
     t.boolean "review_flag", default: false, null: false
     t.datetime "reviewed_at"
     t.bigint "journal_entry_id"
-    t.index ["journal_entry_id"], name: "idx_bank_lines_journal_entry"
+    t.index ["journal_entry_id"], name: "idx_bank_lines_journal_entry_unique", unique: true, where: "journal_entry_id IS NOT NULL"
     t.index ["tenant_id", "document_id", "status"], name: "idx_bank_lines_document"
     t.index ["tenant_id", "fingerprint"], name: "idx_bank_lines_fingerprint", unique: true
     t.index ["tenant_id"], name: "index_bank_statement_lines_on_tenant_id"

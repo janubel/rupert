@@ -168,8 +168,12 @@ class BooksCheck
   end
 
   def missing_controls
+    # Same rule as the close itself: withdrawn and superseded controls cover nothing.
+    superseded = ReconciliationDocument.where.not(supersedes_id: nil).pluck(:supersedes_id).to_set
     covered = ReconciliationDocument.where(kind: 'register_control').where('period_to >= ?', sales_days.first || Date.current)
-      .pluck(:period_from, :period_to)
+      .select(:id, :period_from, :period_to, :metadata_json).to_a
+      .reject { |doc| superseded.include?(doc.id) || doc.metadata['withdrawn'] }
+      .map { |doc| [doc.period_from, doc.period_to] }
     missing = sales_days.reject { |day| covered.any? { |from, to| from <= day && to >= day } }
     build('missing_controls', 'Recent days have a register report to compare against', count: missing.size,
       level: :watch, rows: missing.map { |d| [d.iso8601] },
@@ -180,12 +184,17 @@ class BooksCheck
   end
 
   def unreviewed_days
-    reviewed = DailyReconciliationReview.where(day: sales_days).where(status: 'reviewed').pluck(:day).to_set
-    missing = sales_days.reject { |d| reviewed.include?(d) }
+    # Same rule as the close: only the latest review counts, and only while it
+    # still matches the day's current evidence.
+    missing = sales_days.reject do |d|
+      report = DailyMoneyReconciliation.new(day: d.iso8601)
+      review = report.latest_review
+      review&.status == 'reviewed' && review.report_digest == report.digest
+    end
     build('unreviewed_days', 'Recent days have been reviewed', count: missing.size, level: :watch,
       rows: missing.map { |d| [d.iso8601] },
       detail_ok: 'Every recent sales day has a Reviewed sign-off.',
-      detail_bad: "Not yet reviewed: #{missing.map(&:iso8601).first(7).join(', ')}.",
+      detail_bad: "Not reviewed, or changed since review: #{missing.map(&:iso8601).first(7).join(', ')}.",
       action: 'Open Financial close for the day and record a review.',
       path: missing.first && routes.financial_close_path(day: missing.first.iso8601))
   end

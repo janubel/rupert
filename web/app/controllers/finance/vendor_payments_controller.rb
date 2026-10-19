@@ -29,6 +29,7 @@ module Finance
       response.headers['Cache-Control'] = 'private, no-store'
       ordered = scope.includes(:vendor).order(paid_on: :desc, created_at: :desc)
       if request.format.csv?
+        log_export('Vendor payment register CSV', "#{@from} to #{@through}")
         send_data payments_csv(ordered), filename: "vendor-payments-#{@from}-#{@through}.csv", type: 'text/csv'
         return
       end
