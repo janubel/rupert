@@ -65,9 +65,11 @@ class BankStatementsController < AuthenticatedController
         apply(line, choice, document, done)
       end
     end
+    stale = (decisions.keys - lines.keys).size
     ActivityLogger.log('bank_statement_decided', subject: document, details: done.map { |k, v| "#{v} #{k}" }.join(', ').presence || 'no changes')
-    redirect_to bank_statement_path(document.id, show: params[:show]),
-      notice: done.empty? ? 'Nothing was changed.' : "Recorded: #{done.map { |k, v| "#{v} #{k}" }.join(', ')}."
+    notice = done.empty? ? 'Nothing was changed.' : "Recorded: #{done.map { |k, v| "#{v} #{k}" }.join(', ')}."
+    notice += " #{stale} line(s) were already decided elsewhere and were left as they are." if stale.positive?
+    redirect_to bank_statement_path(document.id, show: params[:show]), notice: notice
   rescue BankStatementImport::Error => e
     redirect_to bank_statement_path(params[:id]), alert: "Nothing was saved: #{e.message}"
   rescue ActiveRecord::RecordInvalid => e
@@ -94,7 +96,8 @@ class BankStatementsController < AuthenticatedController
       note_approved_period(line.posted_on, 'Expense')
       done['expense(s)'] += 1
     when 'payment'
-      vendor = Purchasing::Vendor.find(value)
+      vendor = Purchasing::Vendor.find_by(id: value)
+      raise BankStatementImport::Error, 'Choose an existing vendor for each vendor payment.' unless vendor
       raise BankStatementImport::Error, 'Only withdrawals can be recorded as a vendor payment.' unless line.money_out?
 
       payment = Finance::VendorPayment.new(vendor: vendor, amount_cents: line.out_cents, paid_on: line.posted_on, method: 'bank_transfer',
@@ -105,6 +108,8 @@ class BankStatementsController < AuthenticatedController
       ActivityLogger.log('vendor_payment', subject: vendor, details: "$#{format('%.2f', line.out_cents / 100.0)} · from bank statement")
       note_approved_period(line.posted_on, 'Vendor payment')
       done['vendor payment(s)'] += 1
+    else
+      raise BankStatementImport::Error, "Line #{line.line_no} has an unrecognised choice."
     end
   end
 end

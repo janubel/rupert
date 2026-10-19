@@ -23,12 +23,12 @@ class MoneyReconciliationsController < AuthenticatedController
   end
 
   def create
-    authorize(:module, :sync_write?)
+    authorize(:module, :reports_write?)
     report = MoneyReconciliationReport.new(kind: params[:kind].presence || 'daily',
       date: params[:date].presence || Time.find_zone!(MoneyReconciliationReport::ZONE).today).save!
     ActivityLogger.log('money_reconciliation_saved', subject: report, details: "#{report.period_kind}: #{report.period_from}..#{report.period_to}")
     redirect_to money_reconciliations_path(saved: report.id), notice: 'Reconciliation review saved. Source records were not changed.'
   rescue ArgumentError
-    redirect_to money_reconciliations_path, alert: 'Choose a valid daily, weekly or monthly reporting date.'
+    redirect_to money_reconciliations_path, alert: 'Choose a valid daily, weekly, monthly, quarterly or yearly reporting date.'
   end
 end
