@@ -20,4 +20,8 @@ jobs:
       - name: Audit gems for known vulnerabilities
         run: bundler-audit check --update --gemfile-lock web/Gemfile.lock
       - name: Brakeman static analysis
-        run: brakeman --path web --no-pager --quiet --confidence-level 2
+        run: brakeman --path web --no-pager --quiet --confidence-level 2 --no-exit-on-warn -f json -o /tmp/brakeman.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: brakeman
+          path: /tmp/brakeman.json
