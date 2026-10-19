@@ -7,8 +7,8 @@ class WarehouseStockRelease
 
   def self.call(order:, actor:, fulfilled:, source_confirmed:, adjusted_at:, reference:)
     unless order.tenant_id == Current.tenant_id && actor&.active? &&
-        (actor.tenant_id == order.tenant_id || actor.super_admin?) && actor.can?('sales.write') && actor.can?('inventory.write')
-      raise Error, 'Sales and inventory write permissions are required in this workspace.'
+        (actor.tenant_id == order.tenant_id || actor.super_admin?) && %w[sales.read sales.write inventory.read inventory.write].all? { |permission| actor.can?(permission) }
+      raise Error, 'Sales and inventory read and write permissions are required in this workspace.'
     end
     raise Error, 'Confirm fulfillment and the source stock adjustment first.' unless fulfilled == '1' && source_confirmed == '1'
     time = Time.zone.parse(adjusted_at.to_s)
@@ -24,10 +24,11 @@ class WarehouseStockRelease
 
       latest = holds.map { |hold| hold.warehouse_payment_attempt&.submitted_at || order.occurred_at }.max
       raise Error, 'Source adjustment must be after the held checkout.' if time < latest
-      stamps = InventoryLevel.unscoped.where(tenant_id: order.tenant_id, source: 'shopify', shopifyVariantId: holds.map(&:variant_id))
-        .group(:shopifyVariantId).minimum(:updatedAt)
-      unless holds.all? { |hold| stamps[hold.variant_id] && stamps[hold.variant_id] >= time }
-        raise Error, 'Refresh Shopify inventory after the source adjustment before releasing these holds.'
+      levels = InventoryLevel.unscoped.where(tenant_id: order.tenant_id, source: 'shopify', shopifyVariantId: holds.map(&:variant_id))
+      stamps = levels.group(:shopifyVariantId).minimum(:updatedAt)
+      latest_stamps = levels.group(:shopifyVariantId).maximum(:updatedAt)
+      unless holds.all? { |hold| stamps[hold.variant_id] && stamps[hold.variant_id] >= time && latest_stamps[hold.variant_id] <= Time.current }
+        raise Error, 'Refresh Shopify inventory after the source adjustment before releasing these holds; future-dated reads are invalid.'
       end
       holds.each do |hold|
         hold.update!(status: 'released', release_reason: 'fulfilled_source_adjusted', released_at: Time.current,

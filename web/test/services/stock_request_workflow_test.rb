@@ -168,7 +168,7 @@ class StockRequestWorkflowTest < ActiveSupport::TestCase
     @target.update!(sourceQuantity: -3, quantity: 0, available: -3)
     create_request
     row = InventoryWorkspace.new([@target]).rows.first
-    assert_equal(-3, row[:on_hand])
+    assert_equal(-3, row[:mirror_quantity])
     assert_equal(-3, row[:available])
     assert_equal 0, row[:promise]
     assert_equal 0, row[:incoming]

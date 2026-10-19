@@ -6,7 +6,7 @@ For an everyday explanation of the separate payment setup, see [Payments in plai
 
 ## Inventory workspace
 
-Open **Stock → Inventory** (`/inventory`) for work queues, source freshness and exact mirrored source/item/location pools. Filter by item, source or location; sort by lowest mirrored available or oldest read. CSV exports every matching pool, including beyond the visible page. Text cells are spreadsheet-safe. Missing stock stays unknown, and signed source observations stay signed.
+Open **Stock → Inventory** (`/inventory`) for work queues, source freshness and exact mirrored source/item/location pools. Filter by item, source or location; sort by lowest mirrored available or oldest read. CSV exports every matching pool, including beyond the visible page. Text cells are spreadsheet-safe. Missing stock stays unknown, and signed source observations stay signed. The pool grid labels its legacy value **Mirror quantity**: Shopify mirrors normally store available units, with an aggregate fallback for missing level data. This is not native physical on-hand stock; use the native comparison for on-hand, available and committed values.
 
 Available-to-promise is advisory capacity, not a physical count. Incoming transfers and waiting demand never increase it. Native Shopify/C-Trax observations and physical-count evidence remain in their dedicated comparison; the operational pool grid uses the existing Shopify/Square mirrors and clearly labels their freshness. Shopify and C-Trax mostly observe shared physical stock, so their quantities are never summed.
 
@@ -101,3 +101,5 @@ Valmar is the business-reported payment-services provider; this store's actual g
 Run both adapter suites and review tenant isolation, source completeness, replay, concurrent deduction/mapping and reservation-capacity checks before promotion. Rehearse migrations on a private SQLite copy. Take a consistent backup, verify a separate restore, retain an Incus snapshot and migrate before starting the new code. Keep the SQLite single-worker default; greater concurrency requires measured evidence.
 
 Retain recipe versions, material-use receipts, movements, reservations and explicit mapping decisions during rollback. Dropping tables discards business records. Never switch to the frozen PostgreSQL cutover database without reconciling subsequent SQLite writes.
+
+Purchasing forms and mutations require purchasing read access as well as the relevant write permission. Warehouse hold details require inventory read access, and release requires both sales and inventory read/write access. Future-dated inventory reads contribute no local or warehouse capacity and cannot justify releasing a held checkout, even if another location has a valid read.

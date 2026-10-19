@@ -143,4 +143,32 @@ class PurchasingFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert Purchasing::Vendor.exists?(vendor.id)
   end
+  test 'write only purchasing cannot expose vendor or order forms' do
+    vendor = Purchasing::Vendor.create!(tenant_id: @tenant.id, name: 'Private supplier')
+    order = Purchasing::PurchaseOrder.create!(tenant_id: @tenant.id, vendor: vendor, order_number: 'PRIVATE-ORDER')
+    @user.update_permission_overrides!(['purchasing.write'])
+    [new_purchasing_vendor_path, edit_purchasing_vendor_path(vendor), new_purchasing_purchase_order_path, edit_purchasing_purchase_order_path(order)].each do |path|
+      get path
+      assert_response :redirect
+      refute_includes response.body, 'Private supplier'
+      refute_includes response.body, 'PRIVATE-ORDER'
+    end
+  end
+
+  test 'write only purchasing cannot create or mutate vendor and order records' do
+    vendor = Purchasing::Vendor.create!(tenant_id: @tenant.id, name: 'Private supplier')
+    order = Purchasing::PurchaseOrder.create!(tenant_id: @tenant.id, vendor: vendor, order_number: 'PRIVATE-ORDER')
+    @user.update_permission_overrides!(['purchasing.write'])
+    post purchasing_vendors_path, params: { vendor: { name: 'Forbidden supplier' } }
+    patch purchasing_vendor_path(vendor), params: { vendor: { name: 'Forbidden update' } }
+    post purchasing_purchase_orders_path, params: { purchase_order: { vendor_id: vendor.id, order_number: 'FORBIDDEN-ORDER' } }
+    post add_line_purchasing_purchase_order_path(order), params: { name: 'Forbidden line', quantity: '1', unit_cost: '1' }
+    post place_order_purchasing_purchase_order_path(order)
+    Current.tenant = @tenant
+    assert_equal 'Private supplier', vendor.reload.name
+    refute Purchasing::Vendor.exists?(name: 'Forbidden supplier')
+    refute Purchasing::PurchaseOrder.exists?(order_number: 'FORBIDDEN-ORDER')
+    assert_equal 0, order.lines.count
+    assert_equal 'draft', order.reload.status
+  end
 end

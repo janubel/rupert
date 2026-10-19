@@ -3,6 +3,7 @@
 module Purchasing
   # Vendor directory: who the shop buys from.
   class VendorsController < AuthenticatedController
+    before_action -> { authorize(:module, :purchasing_read?) }
     before_action :set_vendor, only: %i[show edit update destroy]
 
     def index

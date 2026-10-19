@@ -130,4 +130,15 @@ class InventoryExecutionTest < ActionDispatch::IntegrationTest
     { request_token: token, stock_request: { request_kind: 'transfer', inventory_level_id: @level.id, destination_location_id: @target.id,
       quantity: '3', reference: 'UI transfer 42', due_on: '' }.merge(attributes) }
   end
+  test 'legacy mirror quantities are never labelled as native on hand' do
+    get workspace_inventory_index_path, params: { q: 'EXEC-UI', location_id: @source.id }
+    assert_response :success
+    assert_select 'th', text: 'Mirror quantity'
+    assert_select 'th', text: 'Mirror on hand', count: 0
+    assert_includes response.body, 'Shopify legacy mirror quantity is available stock'
+    get workspace_inventory_index_path(format: :csv), params: { q: 'EXEC-UI', location_id: @source.id }
+    rows = CSV.parse(response.body, headers: true)
+    assert_includes rows.headers, 'Mirror quantity'
+    refute_includes rows.headers, 'Mirror on hand'
+  end
 end

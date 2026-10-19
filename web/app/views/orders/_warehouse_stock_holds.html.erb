@@ -8,7 +8,7 @@
         <li class="rounded-xl bg-haze px-4 py-3 text-sm">
           <span class="font-semibold"><%= item&.title.presence || hold.variant_id %></span> · <%= hold.quantity %> units · <%= hold.status %>
           <% if hold.release_reason == 'fulfilled_source_adjusted' %>
-            <p class="mt-1 text-xs text-taupe">Confirmed by <%= hold.released_by&.display_name %> at <%= l(hold.released_at, format: :long) %> · source reference <%= hold.source_adjustment_reference %></p>
+            <p class="mt-1 text-xs text-taupe">Confirmed by <%= hold.released_by&.display_name %> at <%= l(hold.released_at, format: :short) %> · source reference <%= hold.source_adjustment_reference %></p>
           <% end %>
         </li>
       <% end %>

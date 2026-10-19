@@ -10,10 +10,16 @@ class OrdersController < AuthenticatedController
     @fulfillments = @order.fulfillments.order(created_at: :desc)
     @refunds = @order.refunds.order(refunded_at: :desc)
     @doc = params[:doc].to_s == 'packing_slip' ? 'packing_slip' : 'invoice'
-    @warehouse_holds = @order.warehouse_stock_holds.includes(:released_by, warehouse_cart: :items).order(:id)
+    @warehouse_holds = if Current.user.can?('inventory.read')
+      @order.warehouse_stock_holds.includes(:released_by, warehouse_cart: :items).order(:id)
+    else
+      []
+    end
   end
 
   def release_warehouse_stock
+    authorize(:module, :sales_read?)
+    authorize(:module, :inventory_read?)
     authorize(:module, :sales_write?)
     authorize(:module, :inventory_write?)
     count = WarehouseStockRelease.call(order: @order, actor: Current.user, fulfilled: params[:fulfillment_confirmed],

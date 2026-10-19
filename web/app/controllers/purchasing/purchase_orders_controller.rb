@@ -4,6 +4,7 @@ module Purchasing
   # Purchase orders: build in draft, place the order, record what arrives, and
   # track what's owed to the vendor.
   class PurchaseOrdersController < AuthenticatedController
+    before_action -> { authorize(:module, :purchasing_read?) }
     before_action :set_purchase_order,
       only: %i[show edit update destroy place_order receive cancel add_line remove_line]
 

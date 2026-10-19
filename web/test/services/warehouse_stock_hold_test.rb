@@ -113,4 +113,49 @@ class WarehouseStockHoldTest < ActiveSupport::TestCase
     end
     assert_equal 3, WarehouseStockHold.held.sum(:quantity)
   end
+  test 'future dated stock cannot release a held checkout even beside a valid read' do
+    AuthorizeNetClient.stubs(:charge!).returns(approved)
+    order = checkout(cart).order
+    travel 2.minutes do
+      @level.update!(updatedAt: 1.hour.from_now)
+      assert_raises(WarehouseStockRelease::Error) { release(order) }
+      @level.update!(updatedAt: Time.current)
+      future = InventoryLevel.create!(source: 'shopify', locationId: 'future-hold-location', shopifyVariantId: @variant.id,
+        quantity: 5, available: 5, updatedAt: 1.hour.from_now)
+      assert_raises(WarehouseStockRelease::Error) { release(order) }
+      assert_equal 3, WarehouseStockHold.held.sum(:quantity)
+      future.update!(updatedAt: Time.current)
+      assert_equal 1, release(order)
+    end
+  end
+
+  test 'write permissions cannot release stock without both sales and inventory read access' do
+    AuthorizeNetClient.stubs(:charge!).returns(approved)
+    order = checkout(cart).order
+    travel 2.minutes do
+      @level.update!(updatedAt: Time.current)
+      actor = User.create!(tenant: Current.tenant, email: 'hold-write-only@example.test', role: 'manager', password: 'password123')
+      [%w[sales.write inventory.write], %w[sales.read sales.write inventory.write], %w[inventory.read sales.write inventory.write]].each do |permissions|
+        actor.update_permission_overrides!(permissions)
+        assert_raises(WarehouseStockRelease::Error) { release(order, actor: actor) }
+      end
+      assert_equal 3, WarehouseStockHold.held.sum(:quantity)
+    end
+  end
+
+  test 'future dated mirror stock cannot fund a new payment or standalone reservation' do
+    record = cart
+    @level.update!(updatedAt: 1.hour.from_now)
+    assert_equal 0, InventoryLevel.warehouse_quantities(tenant_id: Current.tenant_id, variant_ids: [@variant.id])[@variant.id]
+    AuthorizeNetClient.expects(:charge!).never
+    refute_predicate checkout(record), :success?
+    assert_equal 0, Core::Payment.count
+    assert_equal 0, WarehouseStockHold.count
+    location = Location.create!(id: 'hold-location', source: 'shopify', externalId: 'future-hold', name: 'Hold location')
+    hold = StockReservationService.reserve(inventory_level_id: @level.id, attributes: { quantity: 1, reference: 'Future stock' }, actor: @actor.email)
+    refute hold.persisted?
+    assert_equal 0, StockReservationPool.for_level!(@level).available_to_promise
+    assert_equal 0, InventoryWorkspace.new([@level.reload]).rows.first[:promise]
+    assert location.persisted?
+  end
 end
