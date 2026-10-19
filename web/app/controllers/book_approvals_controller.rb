@@ -36,11 +36,12 @@ class BookApprovalsController < AuthenticatedController
       notice: "#{approval.status_label} by #{approval.approved_by_name} on #{I18n.l(approval.approved_at.in_time_zone, format: :long)}. Recorded in the approval ledger."
   rescue BooksPeriod::Error, ActiveRecord::RecordInvalid => e
     @form_error = e.is_a?(ActiveRecord::RecordInvalid) ? 'Add a note of 1 to 4000 characters explaining the exception.' : e.message
+    # The period itself could not be built (e.g. a malformed date); rebuilding
+    # it here would raise again, so return to the page with the message.
+    return redirect_to(book_approvals_path, alert: @form_error) unless @period
+
     @values = values.to_h
-    load_page(values[:kind], values[:date]) unless @period
     render :show, status: :unprocessable_entity
-  rescue Date::Error
-    redirect_to book_approvals_path, alert: 'Choose a valid date to approve.'
   end
 
   private

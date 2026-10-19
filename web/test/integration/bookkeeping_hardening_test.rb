@@ -62,7 +62,8 @@ class BookkeepingHardeningTest < ActionDispatch::IntegrationTest
     file = Rack::Test::UploadedFile.new(StringIO.new("Date,Description,Amount\n#{entry.posted_on.iso8601},SPLIT PAYMENT,-2.00\n"),
       'text/csv', original_filename: 'split.csv')
     post bank_statements_path, params: { account_label: 'Split checking', file: file }
-    line = BankStatementLine.find_by!(description: 'SPLIT PAYMENT')
+    doc = ReconciliationDocument.where(kind: 'bank_statement').order(:id).last
+    line = BankStatementLine.for_document(doc.id).sole
     line.update_columns(status: 'matched', journal_entry_id: entry.id)
 
     recon = Finance::BankReconciliation.new(account_label: 'Split checking', from: entry.posted_on - 1, to: entry.posted_on + 1)
@@ -107,6 +108,7 @@ class BookkeepingHardeningTest < ActionDispatch::IntegrationTest
   test 'approving with a malformed date redirects instead of failing' do
     post book_approvals_path, params: { approval: { kind: 'daily', date: 'not-a-date', status: 'approved', confirmed: '1' } }
     assert_redirected_to book_approvals_path
+    assert_match(/YYYY-MM-DD/, flash[:alert])
   end
 
   test 'a vendor payment decision naming no vendor saves nothing' do
