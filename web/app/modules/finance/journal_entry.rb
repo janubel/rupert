@@ -22,7 +22,8 @@ module Finance
     guard_locked_period :posted_on
     validate :lines_balance, on: :create
     validate :only_voiding_after_posting, on: :update
-    before_destroy { raise ActiveRecord::ReadOnlyRecord, 'Journal entries are permanent; void the entry instead.' }
+    # Prepended so it runs before the has_many restrict callback registered above.
+    before_destroy(prepend: true) { raise ActiveRecord::ReadOnlyRecord, 'Journal entries are permanent; void the entry instead.' }
 
     scope :posted, -> { where(status: 'posted') }
     scope :for_source, ->(type, id) { where(source_type: type.to_s, source_id: id.to_s) }

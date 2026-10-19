@@ -56,8 +56,14 @@ class JournalLedgerIntegrityTest < ActiveSupport::TestCase
 
   test 'database rejects a leg pointing at a missing entry or account' do
     entry = post_entry
-    assert_raises(ActiveRecord::InvalidForeignKey) { raw_line(entry_id: entry.id + 10_000, account_id: @cash.id, debit: 5) }
-    assert_raises(ActiveRecord::InvalidForeignKey) { raw_line(entry_id: entry.id, account_id: @cash.id + 10_000, debit: 5) }
+    # Each violation in its own savepoint: PostgreSQL aborts the enclosing
+    # transaction after the first error, which would mask the second check.
+    assert_raises(ActiveRecord::InvalidForeignKey) do
+      Finance::JournalLine.transaction(requires_new: true) { raw_line(entry_id: entry.id + 10_000, account_id: @cash.id, debit: 5) }
+    end
+    assert_raises(ActiveRecord::InvalidForeignKey) do
+      Finance::JournalLine.transaction(requires_new: true) { raw_line(entry_id: entry.id, account_id: @cash.id + 10_000, debit: 5) }
+    end
   end
 
   test 'amounts beyond 32 bits are stored exactly' do
