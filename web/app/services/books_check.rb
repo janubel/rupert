@@ -267,7 +267,7 @@ class BooksCheck
   # A local database backup exists on the host, but a copy that survives losing
   # the machine only counts once an off-host upload has succeeded.
   def offsite_backup
-    recent = BackupLog.unscoped.where(status: 'success').where('"startedAt" >= ?', generated_at - 7.days).exists?
+    recent = BackupLog.unscoped.where(tenant_id: nil, status: 'success').where('"startedAt" >= ?', generated_at - 7.days).exists?
     build('offsite_backup', 'An off-host backup succeeded in the last 7 days', count: recent ? 0 : 1, level: :watch,
       detail_ok: 'A Google Drive backup upload succeeded this week.',
       detail_bad: 'No successful off-host backup is recorded. The books exist only on this machine and its local snapshots.',
