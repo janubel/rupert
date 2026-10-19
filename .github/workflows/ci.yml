@@ -77,7 +77,4 @@ jobs:
         run: bin/rails assets:precompile
 
       - name: Run tests
-        shell: bash
-        run: |
-          set -o pipefail
-          bin/rails test 2>&1 | tee /tmp/test.log || { grep -A12 -E '^(Failure|Error):' /tmp/test.log | head -c 60000 | awk 'BEGIN{RS="--\n"} {gsub(/%/,"%25");gsub(/\r/,"%0D");gsub(/\n/,"%0A"); print "::error::" $0}'; exit 1; }
+        run: bin/rails test
