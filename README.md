@@ -19,7 +19,6 @@ Square ───┼── sync engine ──▶ SQLite DB     ──▶ GUI
 | Path | Purpose |
 | --- | --- |
 | `web/` | The Rails 8.1 app: sync engine services, Oatmeal GUI, JSON APIs |
-| `core/` | Parallel Rust implementation that mirrors the Rails app (see `core/docs/SPEC.md`) |
 | `mobile/` | Staff iPhone/Android app (see `mobile/README.md`) |
 | `legacy/` | The original Node/React implementation, kept as reference |
 | `docs/` | Docs site, plans, audits and research (see `docs/README.md`) |
