@@ -29,6 +29,20 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
       .merge(FinancialCloseWorkflow::CHECKS.keys.to_h { |key| [key, '1'] })
   end
 
+  test 'locally-created sales are self-confirmed; imported sources without an import still flag' do
+    pos = Core::Order.create!(source: 'rupert_pos', source_order_id: SecureRandom.uuid,
+      occurred_at: Time.zone.parse("#{@day} 12:00"), gross_cents: 2500, tax_cents: 0, currency: 'USD')
+    pos.mark_paid!
+    assert_includes FinancialCloseWorkflow.new(day: @day).report.register.rows.map { |r| r[:source] }, 'rupert_pos'
+    assert_equal 0, FinancialCloseWorkflow.new(day: @day).issues[:unconfirmed_imports]
+
+    square = Core::Order.create!(source: 'square', source_order_id: SecureRandom.uuid,
+      occurred_at: Time.zone.parse("#{@day} 12:00"), gross_cents: 1000, tax_cents: 0, currency: 'USD')
+    square.mark_paid!
+    # square has an import pathway; with no SyncRun it remains an unconfirmed import
+    assert_equal 1, FinancialCloseWorkflow.new(day: @day).issues[:unconfirmed_imports]
+  end
+
   test 'close requires current review and checklist then retains stable replayable evidence without messaging' do
     get financial_close_path(day: @day)
     assert_response :success

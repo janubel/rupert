@@ -70,6 +70,10 @@ module Finance
 
     def update
       authorize(:module, :finance_write?)
+      if @expense.discarded?
+        redirect_to(finance_expenses_path, alert: 'Restore this expense before editing it.')
+        return
+      end
       old_date = @expense.incurred_on
       if save_with_posting { @expense.update(expense_params) && repost_expense(@expense) }
         ActivityLogger.log('expense_updated', subject: @expense, details: change_summary(@expense))
@@ -108,6 +112,8 @@ module Finance
     # Void the prior posting and re-post when a money-bearing field changed, so
     # the ledger always reflects the current expense.
     def repost_expense(expense)
+      return true unless expense.kept?
+
       financial = %w[amount_cents category method incurred_on account_id]
       return true unless (expense.saved_changes.keys & financial).any?
 
