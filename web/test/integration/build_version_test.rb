@@ -21,4 +21,16 @@ class BuildVersionTest < ActionDispatch::IntegrationTest
     assert_response :redirect
     assert_equal 'd' * 40, response.headers['X-Rupert-Build']
   end
+
+  test 'health check reports OK when the database answers and 503 when it does not' do
+    get '/up'
+    assert_response :success
+    assert_equal 'OK', response.body
+    assert_equal 'no-store', response.headers['cache-control']
+
+    HealthCheck.stubs(:database_reachable!).raises(ActiveRecord::ConnectionNotEstablished)
+    get '/up'
+    assert_response :service_unavailable
+    assert_equal 'DATABASE UNAVAILABLE', response.body
+  end
 end
