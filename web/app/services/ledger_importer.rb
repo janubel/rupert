@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'bigdecimal'
+
 # Port of shopifyLedgerEntries/squareLedgerEntries/upsertLedger from the
 # legacy console — mirrors order money data into the LedgerEntry table.
 class LedgerImporter
@@ -15,7 +17,7 @@ class LedgerImporter
         occurredAt: Time.zone.parse(order['createdAt']),
         syncedAt: Time.current,
         currency: money&.dig('currencyCode') || 'USD',
-        grossCents: (money&.dig('amount').to_f * 100).round,
+        grossCents: decimal_cents(money&.dig('amount')),
         status: order['displayFinancialStatus'] || 'ANY',
         lineItems: items.sum { |item| item['quantity'].to_i },
         summary: items.first(3).map { |item| item['title'] }.join(', ')
@@ -60,7 +62,22 @@ class LedgerImporter
     # Bulk writes skip callbacks, so rows carry tenant_id explicitly (this also
     # heals the historical NULL-tenant ledger rows on conflict).
     entries.each { |entry| entry[:tenant_id] = Current.tenant_id }
+    # Ids are source-scoped, not workspace-scoped: never let one workspace's
+    # sync overwrite a row another workspace already owns.
+    foreign = LedgerEntry.unscoped.where(id: entries.map { |entry| entry[:id] })
+                         .where.not(tenant_id: nil).where.not(tenant_id: Current.tenant_id).pluck(:id).to_set
+    if foreign.any?
+      Rails.logger.warn("LedgerImporter: skipped #{foreign.size} ledger row(s) owned by another workspace")
+      entries = entries.reject { |entry| foreign.include?(entry[:id]) }
+    end
     LedgerEntry.upsert_all(entries, unique_by: :id) if entries.any?
     entries.length
+  end
+
+  # Shopify sends decimal strings; avoid binary-float rounding on the way to cents.
+  def self.decimal_cents(amount)
+    (BigDecimal(amount.to_s.presence || '0') * 100).round.to_i
+  rescue ArgumentError
+    0
   end
 end
