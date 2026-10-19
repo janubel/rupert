@@ -1,0 +1,541 @@
+{
+  "scan_info": {
+    "app_path": "/__w/rupert/rupert/web",
+    "rails_version": "8.1.4",
+    "security_warnings": 20,
+    "start_time": "2026-10-19 21:46:27 +0000",
+    "end_time": "2026-10-19 21:46:43 +0000",
+    "duration": 16.785163095,
+    "checks_performed": [
+      "BasicAuth",
+      "BasicAuthTimingAttack",
+      "CSRFTokenForgeryCVE",
+      "ContentTag",
+      "CookieSerialization",
+      "CreateWith",
+      "CrossSiteScripting",
+      "DefaultRoutes",
+      "Deserialize",
+      "DetailedExceptions",
+      "DigestDoS",
+      "DynamicFinders",
+      "EOLRails",
+      "EOLRuby",
+      "EscapeFunction",
+      "Evaluation",
+      "Execute",
+      "FileAccess",
+      "FileDisclosure",
+      "FilterSkipping",
+      "ForgerySetting",
+      "HeaderDoS",
+      "I18nXSS",
+      "JRubyXML",
+      "JSONEncoding",
+      "JSONEntityEscape",
+      "JSONParsing",
+      "LinkTo",
+      "LinkToHref",
+      "MailTo",
+      "MassAssignment",
+      "MimeTypeDoS",
+      "ModelAttrAccessible",
+      "ModelAttributes",
+      "ModelSerialize",
+      "NestedAttributes",
+      "NestedAttributesBypass",
+      "NumberToCurrency",
+      "PageCachingCVE",
+      "Pathname",
+      "PermitAttributes",
+      "QuoteTableName",
+      "Ransack",
+      "Redirect",
+      "RegexDoS",
+      "Render",
+      "RenderDoS",
+      "RenderInline",
+      "RenderRCE",
+      "ResponseSplitting",
+      "RouteDoS",
+      "SQL",
+      "SQLCVEs",
+      "SSLVerify",
+      "SafeBufferManipulation",
+      "SanitizeConfigCve",
+      "SanitizeMethods",
+      "SelectTag",
+      "SelectVulnerability",
+      "Send",
+      "SendFile",
+      "SessionManipulation",
+      "SessionSettings",
+      "SimpleFormat",
+      "SingleQuotes",
+      "SkipBeforeFilter",
+      "SprocketsPathTraversal",
+      "StripTags",
+      "SymbolDoSCVE",
+      "TemplateInjection",
+      "TranslateBug",
+      "UnsafeReflection",
+      "UnsafeReflectionMethods",
+      "ValidationRegex",
+      "VerbConfusion",
+      "WeakRSAKey",
+      "WithoutProtection",
+      "XMLDoS",
+      "YAMLParsing"
+    ],
+    "number_of_controllers": 146,
+    "number_of_models": 134,
+    "number_of_templates": 317,
+    "ruby_version": "4.0.7",
+    "brakeman_version": "8.1.0"
+  },
+  "warnings": [
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "1d66040e5a2d5e2a453506d8eb5c42d99993a5d04abe12d7d657e5a8607c2b73",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/finance/expenses_controller.rb",
+      "line": 201,
+      "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
+      "code": "params.require(:expense).permit(:payee, :category, :amount, :incurred_on, :method, :reference, :notes, :vendor_id, :account_id)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Finance::ExpensesController",
+        "method": "expense_params"
+      },
+      "user_input": ":account_id",
+      "confidence": "High",
+      "cwe_id": [
+        915
+      ]
+    },
+    {
+      "warning_type": "Dangerous Send",
+      "warning_code": 23,
+      "fingerprint": "23e403c0c6b7be9b1427f6e85fa02be20c2446dc8c99d39c8ad88c440e2e511b",
+      "check_name": "Send",
+      "message": "User controlled method execution",
+      "file": "app/controllers/projects/projects_controller.rb",
+      "line": 59,
+      "link": "https://brakemanscanner.org/docs/warning_types/dangerous_send/",
+      "code": "Projects::Project.find(params[:id]).send(\"#{params[:event]}!\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Projects::ProjectsController",
+        "method": "transition"
+      },
+      "user_input": "params[:event]",
+      "confidence": "High",
+      "cwe_id": [
+        77
+      ]
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "27064ae826d5ff6a406a89461eed2e88daf91c80fcadf45e906c5d3bb0419805",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/users_controller.rb",
+      "line": 109,
+      "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
+      "code": "params.require(:user).permit(:name, :email, :password, :active, :role)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "UsersController",
+        "method": "user_params"
+      },
+      "user_input": ":role",
+      "confidence": "Medium",
+      "cwe_id": [
+        915
+      ]
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "2b8da1b9b3e12e1cc2e29f33f80dfc60ab17b672e6df70d6c89660bd6c37c0d7",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/search_sql.rb",
+      "line": 93,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "ActiveRecord::Base.connection.execute(\"INSERT INTO #{index}(#{index}) VALUES ('rebuild')\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "SearchSql",
+        "method": "ensure_fts_ready!"
+      },
+      "user_input": "index",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ]
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 70,
+      "fingerprint": "314e49a5aa17e9a2d50d45ef4baa965cfe112d5149e1f961b2636a0644d4f103",
+      "check_name": "MassAssignment",
+      "message": "Specify exact keys allowed for mass assignment instead of using `permit!` which allows any keys",
+      "file": "app/controllers/bank_statements_controller.rb",
+      "line": 59,
+      "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
+      "code": "params.fetch(:decisions, {}).permit!",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "BankStatementsController",
+        "method": "decide"
+      },
+      "user_input": null,
+      "confidence": "Medium",
+      "cwe_id": [
+        915
+      ]
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "3aa51471c02116e887181373dea80e62e94dfe8423b82a06b32eb8e39c481886",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/search_sql.rb",
+      "line": 89,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "ActiveRecord::Base.connection.execute(\"CREATE TRIGGER IF NOT EXISTS #{\"#{index}_sync\"}_delete AFTER DELETE ON #{ActiveRecord::Base.connection.quote_table_name(table_name)} BEGIN\\n  INSERT INTO #{index}(#{index}, rowid, #{columns.map do\n ActiveRecord::Base.connection.quote_column_name(column)\n end.join(\", \")}) VALUES ('delete', old.#{(\"rowid\" or ActiveRecord::Base.connection.quote_column_name(row_key))}, #{columns.map do\n \"old.#{ActiveRecord::Base.connection.quote_column_name(column)}\"\n end.join(\", \")});\\nEND\\n\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "SearchSql",
+        "method": "ensure_fts_ready!"
+      },
+      "user_input": "index",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ]
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "5253ded65a07c8fb8e6abd3fdc1227b2d45412fd2a4b51f2b1690e6e2613f65e",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/inventory_exceptions.rb",
+      "line": 170,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "StockReservationPool.joins(\"INNER JOIN (#{StockReservation.active_at(at).group(:stock_reservation_pool_id).select(\"stock_reservation_pool_id, SUM(quantity) AS held_units\").to_sql}) exception_holds ON exception_holds.stock_reservation_pool_id = stock_reservation_pools.id\").where(:source => source).where(:location_id => location_id).joins(\"LEFT JOIN \\\"InventoryLevel\\\" exception_level ON exception_level.tenant_id = #{quoted_tenant} AND\\nexception_level.source = stock_reservation_pools.source AND exception_level.\\\"locationId\\\" = stock_reservation_pools.location_id AND\\n((stock_reservation_pools.source = 'shopify' AND exception_level.\\\"shopifyVariantId\\\" = stock_reservation_pools.source_item_id AND exception_level.\\\"squareVariationId\\\" IS NULL) OR\\n (stock_reservation_pools.source = 'square' AND exception_level.\\\"squareVariationId\\\" = stock_reservation_pools.source_item_id AND exception_level.\\\"shopifyVariantId\\\" IS NULL))\\n\".squish).joins(\"LEFT JOIN \\\"Location\\\" exception_hold_location ON exception_hold_location.id = stock_reservation_pools.location_id AND exception_hold_location.tenant_id = #{quoted_tenant}\\nLEFT JOIN \\\"ShopifyVariant\\\" exception_hold_shopify ON exception_hold_shopify.id = stock_reservation_pools.source_item_id AND stock_reservation_pools.source = 'shopify' AND exception_hold_shopify.tenant_id = #{quoted_tenant}\\nLEFT JOIN \\\"SquareVariation\\\" exception_hold_square ON exception_hold_square.id = stock_reservation_pools.source_item_id AND stock_reservation_pools.source = 'square' AND exception_hold_square.tenant_id = #{quoted_tenant}\\n\".squish)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "InventoryExceptions",
+        "method": "hold_section"
+      },
+      "user_input": "quoted_tenant",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ]
+    },
+    {
+      "warning_type": "Dangerous Send",
+      "warning_code": 23,
+      "fingerprint": "528a62bfbd89b12764d705cd5635adafcc26bea3c78ead5ec4d21a9ec14dae54",
+      "check_name": "Send",
+      "message": "User controlled method execution",
+      "file": "app/controllers/projects/tasks_controller.rb",
+      "line": 52,
+      "link": "https://brakemanscanner.org/docs/warning_types/dangerous_send/",
+      "code": "Projects::Task.find(params[:id]).public_send(\"may_#{params[:event]}?\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Projects::TasksController",
+        "method": "transition"
+      },
+      "user_input": "params[:event]",
+      "confidence": "High",
+      "cwe_id": [
+        77
+      ]
+    },
+    {
+      "warning_type": "Dangerous Send",
+      "warning_code": 23,
+      "fingerprint": "5f4fb04a196806ef1473004aaa374a3698b196670a98fac73ee7c2e2e4064f9f",
+      "check_name": "Send",
+      "message": "User controlled method execution",
+      "file": "app/controllers/people/employees_controller.rb",
+      "line": 156,
+      "link": "https://brakemanscanner.org/docs/warning_types/dangerous_send/",
+      "code": "People::Employee.unscoped.find_by!(:tenant_id => Current.tenant_id, :id => params[:id]).public_send(\"may_#{params[:event]}?\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "People::EmployeesController",
+        "method": "transition"
+      },
+      "user_input": "params[:event]",
+      "confidence": "High",
+      "cwe_id": [
+        77
+      ]
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "63e22c054f1d140e3c0d70f2eb0c91f17928c26c5f5c2784ec47065b86755ae3",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/inventory_exceptions.rb",
+      "line": 164,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "StockReservationPool.joins(\"INNER JOIN (#{StockReservation.active_at(at).group(:stock_reservation_pool_id).select(\"stock_reservation_pool_id, SUM(quantity) AS held_units\").to_sql}) exception_holds ON exception_holds.stock_reservation_pool_id = stock_reservation_pools.id\").where(:source => source).where(:location_id => location_id).joins(\"LEFT JOIN \\\"InventoryLevel\\\" exception_level ON exception_level.tenant_id = #{quoted_tenant} AND\\nexception_level.source = stock_reservation_pools.source AND exception_level.\\\"locationId\\\" = stock_reservation_pools.location_id AND\\n((stock_reservation_pools.source = 'shopify' AND exception_level.\\\"shopifyVariantId\\\" = stock_reservation_pools.source_item_id AND exception_level.\\\"squareVariationId\\\" IS NULL) OR\\n (stock_reservation_pools.source = 'square' AND exception_level.\\\"squareVariationId\\\" = stock_reservation_pools.source_item_id AND exception_level.\\\"shopifyVariantId\\\" IS NULL))\\n\".squish)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "InventoryExceptions",
+        "method": "hold_section"
+      },
+      "user_input": "quoted_tenant",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ]
+    },
+    {
+      "warning_type": "Dangerous Send",
+      "warning_code": 23,
+      "fingerprint": "680f09f2dc41dfd5a8d8b0b6fb6db8e082fc5b01bb8aaf71a1cb1d7593e68df4",
+      "check_name": "Send",
+      "message": "User controlled method execution",
+      "file": "app/controllers/projects/tasks_controller.rb",
+      "line": 53,
+      "link": "https://brakemanscanner.org/docs/warning_types/dangerous_send/",
+      "code": "Projects::Task.find(params[:id]).send(\"#{params[:event]}!\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Projects::TasksController",
+        "method": "transition"
+      },
+      "user_input": "params[:event]",
+      "confidence": "High",
+      "cwe_id": [
+        77
+      ]
+    },
+    {
+      "warning_type": "Dangerous Send",
+      "warning_code": 23,
+      "fingerprint": "6f115d883b4dfea1ec5e07a75d1470680b4a15073d3f8e0617a465c77e8945d7",
+      "check_name": "Send",
+      "message": "User controlled method execution",
+      "file": "app/controllers/goals/goals_controller.rb",
+      "line": 56,
+      "link": "https://brakemanscanner.org/docs/warning_types/dangerous_send/",
+      "code": "Goals::Goal.find(params[:id]).send(\"#{params[:event]}!\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Goals::GoalsController",
+        "method": "transition"
+      },
+      "user_input": "params[:event]",
+      "confidence": "High",
+      "cwe_id": [
+        77
+      ]
+    },
+    {
+      "warning_type": "Dangerous Send",
+      "warning_code": 23,
+      "fingerprint": "74678d1800221cf5236c8e9acacd5836082516df1dacca41f7d1fd37b7d642ac",
+      "check_name": "Send",
+      "message": "User controlled method execution",
+      "file": "app/controllers/projects/projects_controller.rb",
+      "line": 58,
+      "link": "https://brakemanscanner.org/docs/warning_types/dangerous_send/",
+      "code": "Projects::Project.find(params[:id]).public_send(\"may_#{params[:event]}?\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Projects::ProjectsController",
+        "method": "transition"
+      },
+      "user_input": "params[:event]",
+      "confidence": "High",
+      "cwe_id": [
+        77
+      ]
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "7db015ea480f830f1cb4f352dae5851cae2b710e3e376ebff3c68ac9058e811a",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/inventory_exceptions.rb",
+      "line": 232,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "SkuLink.joins(\"LEFT JOIN \\\"ShopifyVariant\\\" exception_link_shopify ON exception_link_shopify.id = \\\"SkuLink\\\".\\\"shopifyVariantId\\\" AND exception_link_shopify.tenant_id = #{quoted_tenant}\\nLEFT JOIN \\\"SquareVariation\\\" exception_link_square ON exception_link_square.id = \\\"SkuLink\\\".\\\"squareVariationId\\\" AND exception_link_square.tenant_id = #{quoted_tenant}\\n\".squish)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "InventoryExceptions",
+        "method": "link_rows"
+      },
+      "user_input": "quoted_tenant",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ]
+    },
+    {
+      "warning_type": "Command Injection",
+      "warning_code": 14,
+      "fingerprint": "9bf38e3f2103b15dc226273eb876c89b210939bd85354ef73f78902f7cfef8e9",
+      "check_name": "Execute",
+      "message": "Possible command injection",
+      "file": "app/services/backup_service.rb",
+      "line": 57,
+      "link": "https://brakemanscanner.org/docs/warning_types/command_injection/",
+      "code": "system(\"PGPASSWORD\" => ActiveRecord::Base.connection_db_config.configuration_hash[:password].to_s, *[\"pg_dump\", \"--format=custom\", \"--no-owner\", \"--file=#{dir.join(\"rupert-backup-#{Time.now.to_i}-#{SecureRandom.hex(12)}.dump\")}\", \"--host=#{ActiveRecord::Base.connection_db_config.configuration_hash[:host]}\", \"--port=#{ActiveRecord::Base.connection_db_config.configuration_hash[:port]}\", \"--username=#{ActiveRecord::Base.connection_db_config.configuration_hash[:username]}\", ActiveRecord::Base.connection_db_config.configuration_hash[:database]], :out => (File::NULL), :err => (File::NULL))",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "BackupService",
+        "method": "self.postgres_snapshot_path"
+      },
+      "user_input": "dir.join(\"rupert-backup-#{Time.now.to_i}-#{SecureRandom.hex(12)}.dump\")",
+      "confidence": "Medium",
+      "cwe_id": [
+        77
+      ]
+    },
+    {
+      "warning_type": "Dangerous Send",
+      "warning_code": 23,
+      "fingerprint": "a0046f2d0e632c3e9f48d4615393e3dfaa6c4cecb12a67b09636288a3c247804",
+      "check_name": "Send",
+      "message": "User controlled method execution",
+      "file": "app/controllers/goals/goals_controller.rb",
+      "line": 55,
+      "link": "https://brakemanscanner.org/docs/warning_types/dangerous_send/",
+      "code": "Goals::Goal.find(params[:id]).public_send(\"may_#{params[:event]}?\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Goals::GoalsController",
+        "method": "transition"
+      },
+      "user_input": "params[:event]",
+      "confidence": "High",
+      "cwe_id": [
+        77
+      ]
+    },
+    {
+      "warning_type": "Dangerous Send",
+      "warning_code": 23,
+      "fingerprint": "a1b1e83b2233e0606d703f396c5e97d0b691f2d3530cc4ecaacd533001d42838",
+      "check_name": "Send",
+      "message": "User controlled method execution",
+      "file": "app/controllers/people/employees_controller.rb",
+      "line": 157,
+      "link": "https://brakemanscanner.org/docs/warning_types/dangerous_send/",
+      "code": "People::Employee.unscoped.find_by!(:tenant_id => Current.tenant_id, :id => params[:id]).send(\"#{params[:event]}!\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "People::EmployeesController",
+        "method": "transition"
+      },
+      "user_input": "params[:event]",
+      "confidence": "High",
+      "cwe_id": [
+        77
+      ]
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "ba90b0a709aa4b86f27f960b5f4f9d03257f93acfce3d0cc65f4c196d9d065ab",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/search_sql.rb",
+      "line": 78,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "ActiveRecord::Base.connection.execute(\"CREATE TRIGGER IF NOT EXISTS #{\"#{index}_sync\"}_insert AFTER INSERT ON #{ActiveRecord::Base.connection.quote_table_name(table_name)} BEGIN\\n  INSERT INTO #{index}(rowid, #{columns.map do\n ActiveRecord::Base.connection.quote_column_name(column)\n end.join(\", \")}) VALUES (new.#{(\"rowid\" or ActiveRecord::Base.connection.quote_column_name(row_key))}, #{columns.map do\n \"new.#{ActiveRecord::Base.connection.quote_column_name(column)}\"\n end.join(\", \")});\\nEND\\n\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "SearchSql",
+        "method": "ensure_fts_ready!"
+      },
+      "user_input": "index",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ]
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "bb5eb7b1ea28fda36dffbcc686add5da8b45a4a1218065d14a36e86f9152b12e",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/search_sql.rb",
+      "line": 83,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "ActiveRecord::Base.connection.execute(\"CREATE TRIGGER IF NOT EXISTS #{\"#{index}_sync\"}_update AFTER UPDATE ON #{ActiveRecord::Base.connection.quote_table_name(table_name)} BEGIN\\n  INSERT INTO #{index}(#{index}, rowid, #{columns.map do\n ActiveRecord::Base.connection.quote_column_name(column)\n end.join(\", \")}) VALUES ('delete', old.#{(\"rowid\" or ActiveRecord::Base.connection.quote_column_name(row_key))}, #{columns.map do\n \"old.#{ActiveRecord::Base.connection.quote_column_name(column)}\"\n end.join(\", \")});\\n  INSERT INTO #{index}(rowid, #{columns.map do\n ActiveRecord::Base.connection.quote_column_name(column)\n end.join(\", \")}) VALUES (new.#{(\"rowid\" or ActiveRecord::Base.connection.quote_column_name(row_key))}, #{columns.map do\n \"new.#{ActiveRecord::Base.connection.quote_column_name(column)}\"\n end.join(\", \")});\\nEND\\n\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "SearchSql",
+        "method": "ensure_fts_ready!"
+      },
+      "user_input": "index",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ]
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "ff163873e893de10e862093823709902d0f816a5f2d03faf00f2742315682c1b",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/search_sql.rb",
+      "line": 73,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "ActiveRecord::Base.connection.select_values(\"SELECT name FROM sqlite_master WHERE type = 'trigger' AND name IN (#{[\"insert\", \"update\", \"delete\"].map do\n \"#{\"#{index}_sync\"}_#{:BRAKEMAN_SAFE_LITERAL}\"\n end.map do\n ActiveRecord::Base.connection.quote(name)\n end.join(\", \")})\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "SearchSql",
+        "method": "ensure_fts_ready!"
+      },
+      "user_input": "[\"insert\", \"update\", \"delete\"].map do\n \"#{\"#{index}_sync\"}_#{:BRAKEMAN_SAFE_LITERAL}\"\n end.map do\n ActiveRecord::Base.connection.quote(name)\n end.join(\", \")",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ]
+    }
+  ],
+  "ignored_warnings": [],
+  "errors": [],
+  "obsolete": []
+}
