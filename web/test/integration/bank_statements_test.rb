@@ -114,6 +114,70 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'confirming a match requires the entry bank movement to equal the line amount' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    other = Finance::Expense.create!(payee: 'Different vendor', category: 'software', amount_cents: 9_999, incurred_on: line.posted_on, method: 'bank_transfer')
+    entry = Finance::Posting.expense(other, created_by: users(:regular_user))
+    assert_no_difference 'Finance::Expense.count' do
+      post finance_bank_reconciliation_match_path, params: { line_id: line.id, journal_entry_id: entry.id }
+    end
+    assert_redirected_to finance_bank_reconciliation_path
+    assert_equal 'pending', line.reload.status
+    assert_nil line.journal_entry_id
+    assert_includes flash[:alert], 'reconcile'
+  end
+
+  test 'one ledger entry cannot back two statement lines' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    expense = Finance::Expense.create!(payee: 'Courier', category: 'shipping', amount_cents: line.out_cents, incurred_on: line.posted_on, method: 'bank_transfer')
+    entry = Finance::Posting.expense(expense, created_by: users(:regular_user))
+    duplicate = BankStatementLine.create!(document_id: doc.id, line_no: 99, account_label: line.account_label,
+      posted_on: line.posted_on, description: 'UPS STORE 123 again', amount_cents: line.amount_cents, fingerprint: SecureRandom.hex(24))
+    post finance_bank_reconciliation_match_path, params: { line_id: line.id, journal_entry_id: entry.id }
+    assert_equal 'matched', line.reload.status
+    assert_equal entry.id, line.journal_entry_id
+    post finance_bank_reconciliation_match_path, params: { line_id: duplicate.id, journal_entry_id: entry.id }
+    assert_redirected_to finance_bank_reconciliation_path
+    assert_equal 'pending', duplicate.reload.status
+    assert_nil duplicate.journal_entry_id
+    assert_includes flash[:alert], 'already matched'
+  end
+
+  test 'an ignored line cannot be matched or have its match cleared' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    post finance_bank_reconciliation_ignore_path, params: { line_id: line.id }
+    assert_equal 'ignored', line.reload.status
+    expense = Finance::Expense.create!(payee: 'Courier', category: 'shipping', amount_cents: line.out_cents, incurred_on: line.posted_on, method: 'bank_transfer')
+    entry = Finance::Posting.expense(expense, created_by: users(:regular_user))
+    post finance_bank_reconciliation_match_path, params: { line_id: line.id, journal_entry_id: entry.id }
+    assert_equal 'ignored', line.reload.status
+    assert_nil line.journal_entry_id
+    post finance_bank_reconciliation_unmatch_path, params: { line_id: line.id }
+    assert_equal 'ignored', line.reload.status
+  end
+
+  test 'a line is no longer shown as matched once its ledger entry is voided' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    line = BankStatementLine.for_document(doc.id).first
+    expense = Finance::Expense.create!(payee: 'Courier', category: 'shipping', amount_cents: line.out_cents, incurred_on: line.posted_on, method: 'bank_transfer')
+    entry = Finance::Posting.expense(expense, created_by: users(:regular_user))
+    post finance_bank_reconciliation_match_path, params: { line_id: line.id, journal_entry_id: entry.id }
+    assert_equal 'matched', line.reload.status
+    reconciliation = Finance::BankReconciliation.new(account_label: line.account_label, from: line.posted_on, to: line.posted_on)
+    assert_equal entry.id, reconciliation.suggestions.fetch(line.id).entry.id
+    entry.void!
+    fresh = Finance::BankReconciliation.new(account_label: line.account_label, from: line.posted_on, to: line.posted_on)
+    assert_nil fresh.suggestions[line.id]
+    assert_includes fresh.unmatched_lines.map(&:id), line.id
+  end
+
   test 'a deposit cannot be recorded as an expense' do
     upload
     doc = ReconciliationDocument.where(kind: 'bank_statement').last

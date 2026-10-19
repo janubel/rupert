@@ -51,6 +51,11 @@ module Finance
         alert: error.record.errors.full_messages.to_sentence
     end
 
+    rescue_from ActiveRecord::RecordNotUnique do
+      redirect_to finance_bank_reconciliation_path(from: params[:from], to: params[:to]),
+        alert: 'That ledger entry is already matched to another statement line.'
+    end
+
     private
 
     def default_account_label
