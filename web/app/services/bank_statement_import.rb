@@ -33,23 +33,26 @@ class BankStatementImport
     raise Error, 'No transaction rows were found.' if rows.empty?
 
     from, to = rows.map(&:posted_on).minmax
-    doc = ReconciliationEvidence.retain!(bytes: @text, filename: filename, source: 'bank', kind: 'bank_statement',
-      from: from.iso8601, to: to.iso8601, metadata: { 'note' => "Statement for #{@label}" }, actor: actor)
+    refuse_mirrored_reupload!
     seen = Hash.new(0)
     created = duplicates = 0
+    doc = nil
+    # One transaction: if nothing new arrives, a newly retained evidence copy is
+    # rolled back with it instead of lingering as an empty statement.
     BankStatementLine.transaction do
+      doc = ReconciliationEvidence.retain!(bytes: @text, filename: filename, source: 'bank', kind: 'bank_statement',
+        from: from.iso8601, to: to.iso8601, metadata: { 'note' => "Statement for #{@label}", 'withdrawals_positive' => @flip }, actor: actor)
       rows.each do |row|
         key = [row.posted_on.iso8601, row.amount_cents, row.description.downcase.squish]
         seen[key] += 1
         fingerprint = Digest::SHA256.hexdigest([Current.tenant_id, @label.downcase, *key, seen[key]].to_json)
-        if BankStatementLine.exists?(fingerprint: fingerprint)
+        if BankStatementLine.exists?(fingerprint: fingerprint) || !create_line(doc, row, fingerprint)
           duplicates += 1
         else
-          BankStatementLine.create!(document_id: doc.id, account_label: @label, line_no: row.line_no, posted_on: row.posted_on,
-            description: row.description, amount_cents: row.amount_cents, fingerprint: fingerprint)
           created += 1
         end
       end
+      raise Error, 'Every line in this file was already imported, so nothing new was retained.' if created.zero? && doc.previously_new_record?
     end
     { document: doc, created: created, duplicates: duplicates, from: from, to: to }
   end
@@ -79,6 +82,29 @@ class BankStatementImport
 
   private
 
+  # A concurrent upload of the same lines can win the unique fingerprint index
+  # between the existence check and the insert; count that as already seen.
+  def create_line(doc, row, fingerprint)
+    BankStatementLine.transaction(requires_new: true) do
+      BankStatementLine.create!(document_id: doc.id, account_label: @label, line_no: row.line_no, posted_on: row.posted_on,
+        description: row.description, amount_cents: row.amount_cents, fingerprint: fingerprint)
+    end
+    true
+  rescue ActiveRecord::RecordNotUnique
+    false
+  end
+
+  # Re-uploading the same file with the withdrawals setting flipped would mirror
+  # every amount, defeat the fingerprints and duplicate the statement.
+  def refuse_mirrored_reupload!
+    sha = Digest::SHA256.hexdigest(@text.b)
+    earlier = ReconciliationDocument.where(kind: 'bank_statement', sha256: sha).select(:id, :metadata_json).to_a
+    return unless earlier.any? { |doc| doc.metadata['withdrawals_positive'].present? != @flip }
+
+    raise Error, "This file was already imported with withdrawals #{@flip ? 'as negative numbers' : 'as positive numbers'}. " \
+                 'Re-uploading it with the other setting would duplicate every line with the opposite sign.'
+  end
+
   def decode(bytes)
     text = bytes.to_s.dup.force_encoding('UTF-8').sub(/\A﻿/, '')
     raise Error, 'The file is not readable text. Export the statement as CSV.' unless text.valid_encoding?
@@ -92,7 +118,8 @@ class BankStatementImport
     header_at = lines.first(20).index { |l| l.downcase.match?(/date/) && l.downcase.match?(/amount|debit|credit|withdraw|deposit/) }
     raise Error, 'Could not find a header row with a date and an amount (or debit/credit) column.' unless header_at
 
-    table = CSV.parse(lines[header_at..].join, headers: true, skip_blanks: true)
+    # Blank rows are kept (and skipped below) so line numbers match the file.
+    table = CSV.parse(lines[header_at..].join, headers: true, skip_blanks: false)
     heads = table.headers.compact.to_h { |h| [h, h.to_s.downcase.strip] }
     pick = ->(pattern) { heads.find { |_, name| name.match?(pattern) }&.first }
     date_col = pick.call(/\A(posting |transaction |post |trans(action)? )?date\z/) || pick.call(/date/)

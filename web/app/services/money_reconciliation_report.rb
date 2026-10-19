@@ -8,6 +8,8 @@ require 'bigdecimal'
 class MoneyReconciliationReport
   ZONE = 'America/New_York'
   KINDS = %w[daily weekly monthly quarterly yearly].freeze
+  # Raised instead of overwriting a saved review inside a locked period.
+  Locked = Class.new(ReconciliationEvidence::Error)
   attr_reader :kind, :from, :to
 
   def self.previous_period(kind, today: Time.find_zone!(ZONE).today)
@@ -68,6 +70,9 @@ class MoneyReconciliationReport
       locked = Tenant.unscoped.where(id: Current.tenant_id, status: 'active').update_all(updated_at: Arel.sql('updated_at'))
       raise ArgumentError, 'An active workspace is required.' unless locked == 1
       report = MoneyReconciliation.find_or_initialize_by(period_kind: kind, period_from: from)
+      # A first save of a period adds evidence; replacing an existing saved
+      # review would change records a lock has frozen.
+      if report.persisted? && (lock = PeriodLock.lock_covering(from, to)) then raise Locked, PeriodLock.locked_message(lock) end
       report.update!(period_to: to, generated_at: Time.current, payload_json: payload.to_json)
       snapshot = payload.except('generated_at').to_json
       evidence_context = { 'period_kind' => kind, 'report_digest' => Digest::SHA256.hexdigest(snapshot) }

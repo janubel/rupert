@@ -37,6 +37,7 @@ module Finance
       authorize(:module, :finance_write?)
       @account = Account.new(account_params)
       if @account.save
+        ActivityLogger.log('account_created', subject: @account, details: account_summary(@account))
         redirect_to finance_chart_of_accounts_path, notice: "Account #{@account.code} created."
       else
         render(:new, status: :unprocessable_entity)
@@ -50,6 +51,8 @@ module Finance
     def update
       authorize(:module, :finance_write?)
       if @account.update(account_params)
+        changes = @account.saved_changes.except('updated_at')
+        ActivityLogger.log('account_updated', subject: @account, details: changes.map { |field, (from, to)| "#{field}: #{from.inspect} → #{to.inspect}" }.join('; ')) if changes.any?
         redirect_to finance_chart_of_accounts_path, notice: "Account #{@account.code} updated."
       else
         render(:edit, status: :unprocessable_entity)
@@ -59,12 +62,14 @@ module Finance
     def archive
       authorize(:module, :finance_write?)
       @account.update!(active: false)
+      ActivityLogger.log('account_archived', subject: @account, details: @account.code)
       redirect_to finance_chart_of_accounts_path, notice: "Account #{@account.code} archived."
     end
 
     def restore
       authorize(:module, :finance_write?)
       @account.update!(active: true)
+      ActivityLogger.log('account_restored', subject: @account, details: @account.code)
       redirect_to finance_chart_of_accounts_path, notice: "Account #{@account.code} restored."
     end
 
@@ -85,6 +90,10 @@ module Finance
       Date.parse(value)
     rescue Date::Error
       nil
+    end
+
+    def account_summary(account)
+      "#{account.code} · #{account.account_type} · #{account.normal_balance}"
     end
 
     def account_params

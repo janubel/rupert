@@ -62,4 +62,20 @@ class FinancePostingAtomicTest < ActionDispatch::IntegrationTest
     assert_match(/ledger refused/, flash[:alert])
     assert expense.reload.discarded?
   end
+
+  test 'editing a removed expense is refused and never re-creates its ledger posting' do
+    Finance::ChartOfAccounts.seed!
+    post finance_expenses_path, params: params_for
+    expense = Finance::Expense.last
+    delete finance_expense_path(expense)
+    assert expense.reload.discarded?
+    assert_equal 0, Finance::JournalEntry.posted.where(source_type: 'Finance::Expense', source_id: expense.id).count
+    assert_no_difference 'Finance::JournalEntry.posted.count' do
+      patch finance_expense_path(expense), params: { expense: { amount: '99.00' } }
+    end
+    assert_redirected_to finance_expenses_path
+    assert_includes flash[:alert], 'Restore'
+    assert_equal 0, Finance::JournalEntry.posted.where(source_type: 'Finance::Expense', source_id: expense.id).count
+    assert_equal 1250, expense.reload.amount_cents
+  end
 end

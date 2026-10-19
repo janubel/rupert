@@ -541,7 +541,7 @@ Rails.application.routes.draw do
     end
   end
 
-  get '/up', to: proc { [200, { 'content-type' => 'text/plain' }, ['OK']] }
+  get '/up', to: HealthCheck
 
   # Unknown paths get a real 404 (rendering the dashboard for any URL made
   # broken links invisible). The dashboard stays reachable at / and /dashboard.

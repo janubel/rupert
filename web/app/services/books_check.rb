@@ -26,7 +26,7 @@ class BooksCheck
   def checks
     @checks ||= [source_freshness, sync_health, paid_without_payment, payment_mismatch, refund_records,
       orders_without_location, impossible_amounts, missing_controls, unreviewed_days,
-      overdue_follow_ups, evidence_integrity, approval_ledger, locked_periods, unapproved_days, offsite_backup, bank_lines_waiting].compact
+      overdue_follow_ups, evidence_integrity, approval_ledger, locked_periods, unapproved_days, offsite_backup, bank_lines_waiting, ledger_balance].compact
   end
 
   def summary
@@ -168,8 +168,12 @@ class BooksCheck
   end
 
   def missing_controls
+    # Same rule as the close itself: withdrawn and superseded controls cover nothing.
+    superseded = ReconciliationDocument.where.not(supersedes_id: nil).pluck(:supersedes_id).to_set
     covered = ReconciliationDocument.where(kind: 'register_control').where('period_to >= ?', sales_days.first || Date.current)
-      .pluck(:period_from, :period_to)
+      .select(:id, :period_from, :period_to, :metadata_json).to_a
+      .reject { |doc| superseded.include?(doc.id) || doc.metadata['withdrawn'] }
+      .map { |doc| [doc.period_from, doc.period_to] }
     missing = sales_days.reject { |day| covered.any? { |from, to| from <= day && to >= day } }
     build('missing_controls', 'Recent days have a register report to compare against', count: missing.size,
       level: :watch, rows: missing.map { |d| [d.iso8601] },
@@ -180,12 +184,17 @@ class BooksCheck
   end
 
   def unreviewed_days
-    reviewed = DailyReconciliationReview.where(day: sales_days).where(status: 'reviewed').pluck(:day).to_set
-    missing = sales_days.reject { |d| reviewed.include?(d) }
+    # Same rule as the close: only the latest review counts, and only while it
+    # still matches the day's current evidence.
+    missing = sales_days.reject do |d|
+      report = DailyMoneyReconciliation.new(day: d.iso8601)
+      review = report.latest_review
+      review&.status == 'reviewed' && review.report_digest == report.digest
+    end
     build('unreviewed_days', 'Recent days have been reviewed', count: missing.size, level: :watch,
       rows: missing.map { |d| [d.iso8601] },
       detail_ok: 'Every recent sales day has a Reviewed sign-off.',
-      detail_bad: "Not yet reviewed: #{missing.map(&:iso8601).first(7).join(', ')}.",
+      detail_bad: "Not reviewed, or changed since review: #{missing.map(&:iso8601).first(7).join(', ')}.",
       action: 'Open Financial close for the day and record a review.',
       path: missing.first && routes.financial_close_path(day: missing.first.iso8601))
   end
@@ -258,7 +267,7 @@ class BooksCheck
   # A local database backup exists on the host, but a copy that survives losing
   # the machine only counts once an off-host upload has succeeded.
   def offsite_backup
-    recent = BackupLog.unscoped.where(status: 'success').where('"startedAt" >= ?', generated_at - 7.days).exists?
+    recent = BackupLog.unscoped.where(tenant_id: nil, status: 'success').where('"startedAt" >= ?', generated_at - 7.days).exists?
     build('offsite_backup', 'An off-host backup succeeded in the last 7 days', count: recent ? 0 : 1, level: :watch,
       detail_ok: 'A Google Drive backup upload succeeded this week.',
       detail_bad: 'No successful off-host backup is recorded. The books exist only on this machine and its local snapshots.',
@@ -273,6 +282,26 @@ class BooksCheck
       detail_ok: 'Every uploaded bank line is recorded or ignored (or none uploaded).',
       detail_bad: 'Bank statement lines are waiting for someone to say what they were. Withdrawals left undecided are missing from money out.',
       action: 'Open Bank statements and decide the waiting lines.', path: routes.bank_statements_path)
+  end
+
+  # Every posted general-ledger entry has at least two legs and its debits equal
+  # its credits. Posting enforces this in the app; this catches anything written
+  # around it (console, raw SQL, a restored dump). Covers the whole ledger, not
+  # just the window, because an old unbalanced entry corrupts every later total.
+  def ledger_balance
+    sums = Finance::JournalLine.joins(:journal_entry).merge(Finance::JournalEntry.posted)
+      .group(:journal_entry_id)
+      .having('SUM(journal_lines.debit_cents) <> SUM(journal_lines.credit_cents) OR COUNT(*) < 2')
+      .pluck(:journal_entry_id, Arel.sql('SUM(journal_lines.debit_cents)'), Arel.sql('SUM(journal_lines.credit_cents)'))
+    legless = Finance::JournalEntry.posted.where.not(id: Finance::JournalLine.select(:journal_entry_id)).pluck(:id)
+    bad = sums.map { |id, debit, credit| [id, debit.to_i, credit.to_i] } + legless.map { |id| [id, 0, 0] }
+    build('ledger_balance', 'Every posted ledger entry balances', count: bad.size,
+      cents: bad.sum { |_, debit, credit| (debit - credit).abs },
+      rows: bad.first(SAMPLE).map { |id, debit, credit| ["Entry ##{id}", debit, credit] },
+      detail_ok: 'Debits equal credits on every posted journal entry.',
+      detail_bad: 'These posted journal entries are out of balance or have fewer than two lines. The trial balance and statements are wrong until they are fixed.',
+      action: 'Open each entry, void it and post a balanced correction. Find out how it was written outside normal posting.',
+      path: routes.finance_journal_entries_path)
   end
 
   def safe(value)

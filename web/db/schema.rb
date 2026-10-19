@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -77,7 +77,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
     t.boolean "review_flag", default: false, null: false
     t.datetime "reviewed_at"
     t.bigint "journal_entry_id"
-    t.index ["journal_entry_id"], name: "idx_bank_lines_journal_entry"
+    t.index ["journal_entry_id"], name: "idx_bank_lines_journal_entry_unique", unique: true, where: "journal_entry_id IS NOT NULL"
     t.index ["tenant_id", "document_id", "status"], name: "idx_bank_lines_document"
     t.index ["tenant_id", "fingerprint"], name: "idx_bank_lines_fingerprint", unique: true
     t.index ["tenant_id"], name: "index_bank_statement_lines_on_tenant_id"
@@ -1028,8 +1028,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
     t.string "tenant_id", null: false
     t.bigint "journal_entry_id", null: false
     t.bigint "account_id", null: false
-    t.integer "debit_cents", default: 0, null: false
-    t.integer "credit_cents", default: 0, null: false
+    t.bigint "debit_cents", default: 0, null: false
+    t.bigint "credit_cents", default: 0, null: false
     t.text "memo"
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
@@ -1037,6 +1037,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
     t.index ["journal_entry_id"], name: "idx_journal_lines_entry"
     t.index ["tenant_id", "account_id"], name: "idx_journal_lines_account"
     t.index ["tenant_id"], name: "index_journal_lines_on_tenant_id"
+    t.check_constraint "(debit_cents >= 0) AND (credit_cents >= 0) AND ((debit_cents = 0) <> (credit_cents = 0))", name: "chk_journal_lines_one_sided"
   end
 
   create_table "kpi_readings", force: :cascade do |t|
@@ -2580,6 +2581,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_230000) do
   add_foreign_key "ctrax_labor_observations", "tenants"
   add_foreign_key "ctrax_labor_shifts", "employees"
   add_foreign_key "ctrax_labor_shifts", "tenants"
+  add_foreign_key "journal_lines", "accounts", on_delete: :restrict
+  add_foreign_key "journal_lines", "journal_entries", on_delete: :restrict
   add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify

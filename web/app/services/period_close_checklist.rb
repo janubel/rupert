@@ -89,7 +89,7 @@ class PeriodCloseChecklist
   def year_tasks
     quarters = (0..3).map { |n| from >> (n * 3) }
     locked = quarters.count { |q| PeriodLock.latest_for('quarterly', q)&.lock? }
-    backup = BackupLog.unscoped.where(status: 'success').where('"startedAt" >= ?', 7.days.ago).exists?
+    backup = BackupLog.unscoped.where(tenant_id: nil, status: 'success').where('"startedAt" >= ?', 7.days.ago).exists?
     drive = RetentionDriveConnection.first&.connected?
     [
       Task.new(key: :quarters, title: 'All four quarters locked', state: locked == 4 ? :done : :todo,
