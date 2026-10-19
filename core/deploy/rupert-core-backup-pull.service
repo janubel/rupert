@@ -1,6 +1,0 @@
-[Unit]
-Description=Copy the newest rupert-core backup out of the container
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/rupert-core-backup-pull
