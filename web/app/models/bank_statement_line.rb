@@ -26,6 +26,7 @@ class BankStatementLine < ApplicationRecord
   validates :account_label, :posted_on, :description, :fingerprint, presence: true
   validates :amount_cents, numericality: { only_integer: true, other_than: 0 }
   validates :status, inclusion: { in: STATUSES }
+  validate :journal_entry_not_already_matched
 
   scope :pending, -> { where(status: 'pending') }
   scope :flagged, -> { where(review_flag: true) }
@@ -55,12 +56,15 @@ class BankStatementLine < ApplicationRecord
   # when, like decide!, but does not create any money record.
   def match!(journal_entry:, user:)
     protect_recorded_source!
+    raise_if_ignored!
+    validate_bank_match!(journal_entry)
     update!(status: 'matched', journal_entry_id: journal_entry.id,
       decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
   end
 
   def unmatch!(user:)
     protect_recorded_source!
+    raise_if_ignored!
     update!(status: 'pending', journal_entry_id: nil,
       decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
   end
@@ -79,5 +83,39 @@ class BankStatementLine < ApplicationRecord
 
     errors.add(:base, 'This bank line is linked to its recorded expense or vendor payment. Review that source record before changing its journal link.')
     raise ActiveRecord::RecordInvalid, self
+  end
+
+  # An ignored line (e.g. a confirmed duplicate) has been deliberately dropped
+  # from reconciliation. Matching or clearing it here would silently resurrect
+  # it, so require an explicit restore from the statement page first.
+  def raise_if_ignored!
+    return unless status == 'ignored'
+
+    errors.add(:base, 'This line was ignored (for example as a duplicate). Restore it from the statement page before matching it.')
+    raise ActiveRecord::RecordInvalid, self
+  end
+
+  # A statement line may only be reconciled to a posted entry, in the same
+  # workspace, whose bank (Cash/Checking) movement equals the line's signed
+  # amount. Sign convention matches the workbench: money-in is positive on both
+  # the statement and the ledger (a debit to Cash); money-out is negative.
+  def validate_bank_match!(entry)
+    bank_codes = Finance::BankReconciliation::BANK_ACCOUNT_CODES
+    signed = entry.journal_lines.sum do |line|
+      bank_codes.include?(line.account&.code) ? line.debit_cents.to_i - line.credit_cents.to_i : 0
+    end
+    return if entry.status == 'posted' && entry.tenant_id == tenant_id && signed == amount_cents
+
+    errors.add(:base, "That ledger entry does not reconcile to this line. Confirm a posted entry in this workspace whose Cash or Checking movement equals #{amount_cents} cents.")
+    raise ActiveRecord::RecordInvalid, self
+  end
+
+  # One ledger entry backs at most one statement line. The partial unique index
+  # is the DB backstop; this gives the operator a plain-language message first.
+  def journal_entry_not_already_matched
+    return if journal_entry_id.blank?
+    return unless self.class.where.not(id: id).where(journal_entry_id: journal_entry_id).exists?
+
+    errors.add(:journal_entry_id, 'is already matched to another statement line')
   end
 end

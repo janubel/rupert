@@ -154,7 +154,7 @@ module Finance
     def same_sign(a, b) = (a.positive? && b.positive?) || (a.negative? && b.negative?)
 
     def existing_entry(line)
-      entry = JournalEntry.find_by(id: line.journal_entry_id)
+      entry = JournalEntry.posted.find_by(id: line.journal_entry_id)
       return nil unless entry
 
       Suggestion.new(line: line, entry: entry, amount_cents: line.amount_cents, days_apart: 0)
