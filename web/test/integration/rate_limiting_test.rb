@@ -4,12 +4,16 @@ require 'test_helper'
 
 class RateLimitingTest < ActionDispatch::IntegrationTest
   setup do
+    Rack::Attack.enabled = true
     Rack::Attack.cache.store.clear
     @tenant = tenants(:default_tenant)
     @admin = User.create!(email: 'limits@example.com', password: 'password123', role: 'super_admin', tenant_id: @tenant.id, name: 'Limits')
   end
 
-  teardown { Rack::Attack.cache.store.clear }
+  teardown do
+    Rack::Attack.cache.store.clear
+    Rack::Attack.enabled = false
+  end
 
   test 'secret-bearing settings endpoints are throttled per IP with a Retry-After header' do
     post login_path, params: { email: 'limits@example.com', password: 'password123' }

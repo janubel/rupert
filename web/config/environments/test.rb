@@ -64,9 +64,11 @@ Rails.application.configure do
   # Raise error when a before_action's only/except options reference missing actions
   config.action_controller.raise_on_missing_callback_actions = true
 
-  # Rack::Attack counts requests in its own store so parallel test workers
-  # never share counters with each other or with the app cache.
+  # Rack::Attack is off in tests (hundreds of requests from 127.0.0.1 per
+  # minute would trip the real limits) except inside RateLimitingTest, which
+  # enables it with an isolated memory store.
   config.after_initialize do
+    Rack::Attack.enabled = false
     Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
     # Platform-client retries must not sleep in tests; HttpRetryTest records the delays instead.
     HttpRetry.sleeper = ->(_seconds) {}
