@@ -62,6 +62,8 @@ an isolated checkout.
 
 ## Operations
 
+Start with the [operator runbook](docs/ops/operator-runbook.md) (daily checks, stuck syncs, GDPR requests, key rotation, onboarding), the [backup and restore runbook](docs/ops/backup-restore-runbook.md) (RPO/RTO, drill, restore procedure), the [environment reference](docs/ops/environment-reference.md), the [release process](docs/ops/release-process.md) and the [go-live checklist](docs/ops/go-live-checklist.md). The [production readiness audit](docs/audits/production-readiness.md) records what was verified and what the owner still has to decide.
+
 [Purchase receipt uploads and approvals](docs/purchase-receipts.md) are available from the Receipts tab, including staff self-service and an independent review queue.
 
 For the current daily-use limits and the next payment/inventory rollout gates, start with [Derrick's day-to-day pickup plan](docs/ops/day-to-day-readiness.md).
