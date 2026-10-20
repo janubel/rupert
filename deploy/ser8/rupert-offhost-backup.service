@@ -1,0 +1,11 @@
+# SER8 HOST user unit: install to ~/.config/systemd/user/ next to rupert-offhost-backup.timer, then
+#   systemctl --user daemon-reload && systemctl --user enable --now rupert-offhost-backup.timer
+# Requires the encryption key described at the top of rupert-offhost-backup.sh and `loginctl enable-linger $USER`.
+[Unit]
+Description=Rupert encrypted off-host backup copy
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rupert-offhost-backup.sh
+Nice=10
+IOSchedulingClass=idle

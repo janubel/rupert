@@ -1,0 +1,91 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Backup/restore drill for the SQLite production database. Proves, end to end
+# and without touching the live file, that a backup taken the way the timers
+# take it can be restored and is complete:
+#
+#   1. VACUUM INTO a consistent snapshot of SOURCE (the live DB or any copy)
+#   2. gzip it exactly like bin/backup.sh
+#   3. restore (gunzip) into a scratch path
+#   4. PRAGMA integrity_check / foreign_key_check on the restored file
+#   5. compare per-table row counts between the snapshot and the restore
+#   6. print the measured snapshot and restore times (your RTO evidence)
+#
+# Usage (from web/, with the app's bundle):
+#   bin/restore-drill --source /opt/rupert/web/storage/production.sqlite3 [--workdir /var/tmp/rupert-drill]
+# Exit status is non-zero when any step fails. Nothing is written to SOURCE.
+require 'bundler/setup'
+require 'sqlite3'
+require 'fileutils'
+require 'optparse'
+require 'tmpdir'
+require 'zlib'
+
+options = { workdir: nil, keep: false }
+OptionParser.new do |o|
+  o.on('--source PATH', 'SQLite database to drill against (never modified)') { |v| options[:source] = v }
+  o.on('--workdir PATH', 'Scratch directory (default: a new temp dir)') { |v| options[:workdir] = v }
+  o.on('--keep', 'Keep the scratch files for inspection') { options[:keep] = true }
+end.parse!
+abort('--source is required') unless options[:source]
+abort("source not found: #{options[:source]}") unless File.file?(options[:source])
+
+workdir = options[:workdir] || Dir.mktmpdir('rupert-restore-drill-')
+FileUtils.mkdir_p(workdir, mode: 0o700)
+stamp = Time.now.utc.strftime('%Y%m%dT%H%M%SZ')
+snapshot = File.join(workdir, "snapshot-#{stamp}.sqlite3")
+archive = "#{snapshot}.gz"
+restored = File.join(workdir, "restored-#{stamp}.sqlite3")
+
+def timed
+  start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  yield
+  Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+end
+
+def table_counts(path)
+  db = SQLite3::Database.new(path, readonly: true)
+  tables = db.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").flatten
+  tables.to_h { |t| [t, db.get_first_value("SELECT COUNT(*) FROM \"#{t.gsub('"', '""')}\"")] }
+ensure
+  db&.close
+end
+
+puts "Restore drill against #{options[:source]} (#{File.size(options[:source]) / 1024 / 1024} MB) in #{workdir}"
+
+snapshot_seconds = timed do
+  src = SQLite3::Database.new(options[:source], readonly: true)
+  src.execute("VACUUM INTO '#{snapshot.gsub("'", "''")}'")
+  src.close
+end
+check = SQLite3::Database.new(snapshot, readonly: true)
+abort('snapshot failed integrity_check') unless check.get_first_value('PRAGMA integrity_check') == 'ok'
+check.close
+puts format('1. snapshot (VACUUM INTO): %.2fs, %d MB, integrity ok', snapshot_seconds, File.size(snapshot) / 1024 / 1024)
+
+gzip_seconds = timed do
+  Zlib::GzipWriter.open(archive) { |gz| File.open(snapshot, 'rb') { |f| IO.copy_stream(f, gz) } }
+end
+puts format('2. gzip: %.2fs, %d MB archive', gzip_seconds, File.size(archive) / 1024 / 1024)
+
+restore_seconds = timed do
+  Zlib::GzipReader.open(archive) { |gz| File.open(restored, 'wb') { |f| IO.copy_stream(gz, f) } }
+end
+db = SQLite3::Database.new(restored, readonly: true)
+integrity = db.get_first_value('PRAGMA integrity_check')
+fk_violations = db.execute('PRAGMA foreign_key_check').length
+db.close
+abort("restored database failed integrity_check: #{integrity}") unless integrity == 'ok'
+abort("restored database has #{fk_violations} foreign key violation(s)") unless fk_violations.zero?
+puts format('3. restore (gunzip): %.2fs, integrity ok, 0 foreign-key violations', restore_seconds)
+
+before = table_counts(snapshot)
+after = table_counts(restored)
+diff = before.select { |t, n| after[t] != n }
+abort("row counts differ after restore: #{diff.inspect}") unless diff.empty?
+puts "4. #{before.size} tables, #{before.values.sum} rows: counts identical before and after restore"
+puts format('Measured restore time for this database: %.2fs (snapshot %.2fs + restore %.2fs); RPO is the backup interval.',
+  snapshot_seconds + restore_seconds, snapshot_seconds, restore_seconds)
+puts "DRILL OK #{stamp}"
+FileUtils.rm_rf(workdir) unless options[:keep] || options[:workdir]
