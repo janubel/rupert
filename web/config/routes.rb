@@ -167,6 +167,7 @@ Rails.application.routes.draw do
     resources :follow_ups, only: %i[create update], controller: 'customer_follow_ups'
   end
   namespace :projects do
+    get 'getting-started', to: 'guides#show', as: :getting_started
     resources :projects, only: %i[index show new create edit update destroy] do
       member { post :transition }
     end

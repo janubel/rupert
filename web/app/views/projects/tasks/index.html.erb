@@ -8,7 +8,8 @@
       <h1 class="page-title"><%= own_tasks ? "My tasks" : "Tasks" %></h1>
       <p class="mt-1 text-sm text-mocha"><%= own_tasks ? "Your assigned work. Update notes or move tasks between columns as you work." : "Everything in flight across projects. Drag cards between columns to update their status." %></p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm" %>
       <div class="inline-flex rounded-full bg-haze p-1" role="group" aria-label="View">
         <%= link_to "Board", tasks_filter_path(view: nil), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "board"}" %>
         <%= link_to "List", tasks_filter_path(view: "list"), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "list"}" %>
