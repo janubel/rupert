@@ -12,7 +12,11 @@
   <% end %>
   <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 pl-4 text-xs">
     <% if show_project && task.project %>
-      <%= link_to task.project.name, task.project, class: "max-w-[10rem] truncate font-semibold text-olive hover:underline" %>
+      <% if Current.user.employee? %>
+        <span class="max-w-[10rem] truncate font-semibold text-olive"><%= task.project.name %></span>
+      <% else %>
+        <%= link_to task.project.name, task.project, class: "max-w-[10rem] truncate font-semibold text-olive hover:underline" %>
+      <% end %>
     <% end %>
     <% if task.due_on %>
       <span class="<%= due_class(task) %>"><%= task.due_label %></span>
@@ -34,16 +38,20 @@
         <%= form_with model: task, scope: :task, url: projects_task_path(task), method: :patch, class: "mt-2 space-y-2 rounded-xl border border-fog bg-haze/60 p-3" do |f| %>
           <%= f.text_field :title, class: "input", "aria-label": "Title" %>
           <%= f.text_area :description, rows: 2, class: "input !rounded-2xl", placeholder: "Notes", "aria-label": "Notes" %>
-          <div class="flex flex-wrap gap-2">
-            <%= f.select :priority, Projects::Task::PRIORITIES, {}, class: "select" %>
-            <%= f.date_field :due_on, class: "select" %>
-          </div>
-          <%= f.select :assignee_id, project_person_options(task.assignee_id), { include_blank: "Unassigned" }, class: "select", "aria-label": "Assignee" %>
+          <% unless Current.user.employee? %>
+            <div class="flex flex-wrap gap-2">
+              <%= f.select :priority, Projects::Task::PRIORITIES, {}, class: "select" %>
+              <%= f.date_field :due_on, class: "select" %>
+            </div>
+            <%= f.select :assignee_id, project_person_options(task.assignee_id), { include_blank: "Unassigned" }, class: "select", "aria-label": "Assignee" %>
+          <% end %>
           <div class="flex items-center gap-2">
             <%= f.submit "Save", class: "btn-primary btn-sm" %>
           </div>
         <% end %>
-        <%= button_to "Delete", projects_task_path(task), method: :delete, form: { data: { turbo_confirm: "Delete this task?" } }, class: "btn-ghost btn-sm !text-rose" %>
+        <% unless Current.user.employee? %>
+          <%= button_to "Delete", projects_task_path(task), method: :delete, form: { data: { turbo_confirm: "Delete this task?" } }, class: "btn-ghost btn-sm !text-rose" %>
+        <% end %>
       </details>
     </div>
   <% end %>

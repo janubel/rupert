@@ -15,7 +15,7 @@ class EmployeeFinancialAccessTest < ActionDispatch::IntegrationTest
       @employee_user.user_permissions.create!(tenant_id: @employee_user.tenant_id, permission: permission, enabled: true)
       RolePermission.create!(tenant_id: @employee_user.tenant_id, role: 'employee', permission: permission, enabled: true)
     end
-    assert_equal %w[pos.use timesheets.self], @employee_user.reload.effective_permissions
+    assert_equal %w[pos.use timesheets.self tasks.self], @employee_user.reload.effective_permissions
     %w[sales.read reports.read reconcile.read inventory.read users.write].each { |permission| refute @employee_user.can?(permission) }
     refute @employee_user.can_manage_accounts?
     post login_path, params: { email: @employee_user.email, password: 'password123' }

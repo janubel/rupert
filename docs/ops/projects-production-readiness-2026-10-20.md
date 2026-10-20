@@ -68,3 +68,38 @@ These observations do not establish that the application or its own certificate
 is faulty. Live release, recovery freshness, and authenticated acceptance remain
 unverified until the intended environment is reachable. Local tests alone do
 not constitute production sign-off.
+
+## Employee assigned-task access follow-up
+
+The original review above preserved the old employee boundary. This follow-up
+adds a fixed `tasks.self` permission to the employee role without granting
+`projects.read` or `projects.write`. Employees have a **My tasks** entry in their
+staff workspace, with board and list views of tasks assigned to their user account
+in their authenticated workspace. Assignment is to a Rupert user account, so a
+separate HR employee record is not required to use this feature.
+
+Employees may edit task titles and notes, and start, block, complete, reopen or
+move their assigned tasks. Managers retain creation, deletion, reassignment,
+project moves, priority and due-date changes. The parent project's name provides
+context; project details, project-wide progress, other employees' tasks and
+unassigned tasks remain unavailable. Counts, search, filters, project selectors
+and pagination all use the same restricted task scope. Staff pages are not cached.
+
+Every task mutation reloads and reauthorizes the record under a database lock.
+Reassignment therefore removes access even when an employee already has a page
+open or their request has loaded the old assignment. Stale broad person/role
+overrides cannot expand the fixed employee role. Deactivated accounts are denied
+through the existing session checks. Other staff and management permissions are
+unchanged.
+
+Regression coverage includes both workspace and assignment boundaries, invalid
+legacy cross-workspace assignments, protected-field injection, list pagination,
+counts and metadata, stale overrides, in-flight reassignment, audit attribution,
+and existing financial/management access restrictions. A separate production-mode
+synthetic smoke checks CSRF-protected login and writes with outbound TCP blocked.
+No customer data or provider jobs are needed for these checks.
+
+This follow-up requires no database migration or dependency change. Deploy its
+tested revision and compiled assets using the existing backup/recovery procedure.
+Implementation and test completion do not themselves deploy this follow-up; its
+release status and exact validation totals are recorded in its pull request.
