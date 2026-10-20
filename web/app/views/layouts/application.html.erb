@@ -18,7 +18,8 @@
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
     <style type="text/turbo-progress-bar">
-      turbo-progress-bar { background: #108184; height: 3px; }
+      turbo-progress-bar { background: #48736d; height: 3px; }
+      @media (prefers-color-scheme: dark) { turbo-progress-bar { background: #5fa39b; } }
     </style>
   </head>
   <body class="min-h-full">
