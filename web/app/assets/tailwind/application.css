@@ -9,8 +9,8 @@
   --color-taupe: #6b655c; /* darkened for WCAG AA contrast on paper/oat */
   --color-fog: #e2e8e7;
   --color-haze: #eef2f1; /* quiet hover/panel tint */
-  --color-olive: #108184; /* site accent teal (herbalhealerscbd.com) */
-  --color-olive-deep: #0b5c5e; /* darker teal for hover states */
+  --color-olive: #34767a; /* calmer accent teal; 4.8:1 with cream text */
+  --color-olive-deep: #285f62; /* darker teal for hover states and text */
   --color-sage: #5c8a72; /* fresh gray-green */
   --color-clay: #7d5449;
   --color-butter: #e4be58;
@@ -121,13 +121,13 @@
   }
 
   .stat-value {
-    @apply font-display text-olive-deep;
+    @apply font-display text-ink;
     font-size: clamp(1.25rem, 15cqw, 2.25rem);
     line-height: 1.1;
   }
 
   .stat-value-sm {
-    @apply font-display text-olive-deep;
+    @apply font-display text-ink;
     font-size: clamp(1.125rem, 11cqw, 1.5rem);
     line-height: 1.2;
   }
@@ -201,7 +201,7 @@
   }
 
   .nav-pill-active {
-    @apply bg-olive text-cream;
+    @apply bg-olive/15 text-olive-deep;
   }
 
   .nav-pill-idle {
@@ -773,4 +773,12 @@ select.input {
     --color-fern: #4cb391;
     --color-rose: #de8a7e;
   }
+}
+
+/* Horizontally scrolling tab strips: a hairline, low-contrast scrollbar instead of the chunky default. */
+.workspace-navigation,
+.operations-navigation,
+.finance-navigation {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-taupe) 45%, transparent) transparent;
 }
