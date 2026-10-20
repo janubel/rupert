@@ -51,6 +51,9 @@
   <% end %>
 
   <% if @view == "board" %>
+    <% if @board_total > Projects::TasksController::BOARD_LIMIT %>
+      <p class="text-sm text-mocha" role="status">Showing <%= Projects::TasksController::BOARD_LIMIT %> of <%= @board_total %> matching tasks. <%= link_to "View all in the list", tasks_filter_path(view: "list"), class: "font-semibold text-olive hover:underline" %> or narrow the filters.</p>
+    <% end %>
     <% if @columns.values.all?(&:empty?) %>
       <div class="card card-pad py-10 text-center">
         <p class="font-display text-lg text-ink"><%= tasks_filtered? ? "No tasks match these filters." : "A clean slate." %></p>

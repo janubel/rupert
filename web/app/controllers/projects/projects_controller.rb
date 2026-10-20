@@ -27,9 +27,10 @@ module Projects
 
     def show
       authorize(@project)
-      tasks = @project.tasks.by_priority.to_a
+      @board_total = @project.tasks.count
+      tasks = @project.tasks.by_priority.limit(TasksController::BOARD_LIMIT).to_a
       @columns = Projects::Task::BOARD_STATUSES.index_with { |s| tasks.select { |t| t.status == s } }
-      @assignees = User.where(id: tasks.filter_map(&:assignee_id).uniq).to_h { |u| [u.id.to_s, u.display_name] }
+      @assignees = User.where(tenant_id: Current.tenant_id, id: tasks.filter_map(&:assignee_id).uniq).to_h { |u| [u.id.to_s, u.display_name] }
     end
 
     def new
@@ -40,9 +41,12 @@ module Projects
     def create
       authorize(:module, :projects_write?)
       @project = Projects::Project.new(project_params)
-      @project.owner_id = Current.user.id if params[:assign_self]
+      if ActiveModel::Type::Boolean.new.cast(params[:assign_self]) && !project_params.key?(:owner_id)
+        @project.owner_id = Current.user.id
+      end
 
       if @project.save
+        ActivityLogger.log('project_created', subject: @project, details: "Owner: #{@project.owner_id.presence || 'unassigned'}")
         redirect_to(@project, notice: 'Project created.')
       else
         render(:new, status: :unprocessable_entity)
@@ -56,6 +60,7 @@ module Projects
     def update
       authorize(@project)
       if @project.update(project_params)
+        ActivityLogger.log('project_updated', subject: @project, details: "Owner: #{@project.owner_id.presence || 'unassigned'}")
         redirect_to(@project, notice: 'Project updated.')
       else
         render(:edit, status: :unprocessable_entity)
@@ -65,19 +70,27 @@ module Projects
     def destroy
       authorize(@project)
       @project.destroy
-      redirect_to(projects_path, notice: 'Project deleted.')
+      ActivityLogger.log('project_deleted', subject: @project)
+      redirect_to(projects_projects_path, notice: 'Project deleted.')
     end
 
     # POST /projects/:id/transition?event=start
     def transition
       authorize(@project)
       event = params[:event]
-      if %w[start hold complete archive].include?(event) && @project.public_send("may_#{event}?")
-        @project.send("#{event}!")
+      transitioned = @project.with_lock do
+        if %w[start hold complete archive].include?(event) && @project.public_send("may_#{event}?")
+          @project.public_send("#{event}!")
+        end
+      end
+      if transitioned
+        ActivityLogger.log('project_transitioned', subject: @project, details: "Status: #{@project.status}")
         redirect_to(@project, notice: "Project #{event}d.")
       else
         redirect_to(@project, alert: "Cannot #{event} a #{@project.status} project.")
       end
+    rescue ActiveRecord::RecordInvalid => error
+      redirect_to(@project, alert: error.record.errors.full_messages.to_sentence)
     end
 
     private
@@ -98,7 +111,7 @@ module Projects
     end
 
     def project_params
-      params.require(:project).permit(:name, :description, :due_on)
+      params.require(:project).permit(:name, :description, :due_on, :owner_id)
     end
   end
 end

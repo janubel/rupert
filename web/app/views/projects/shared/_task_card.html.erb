@@ -38,11 +38,12 @@
             <%= f.select :priority, Projects::Task::PRIORITIES, {}, class: "select" %>
             <%= f.date_field :due_on, class: "select" %>
           </div>
+          <%= f.select :assignee_id, project_person_options(task.assignee_id), { include_blank: "Unassigned" }, class: "select", "aria-label": "Assignee" %>
           <div class="flex items-center gap-2">
             <%= f.submit "Save", class: "btn-primary btn-sm" %>
-            <%= button_to "Delete", projects_task_path(task), method: :delete, form: { data: { turbo_confirm: "Delete this task?" } }, class: "btn-ghost btn-sm !text-rose" %>
           </div>
         <% end %>
+        <%= button_to "Delete", projects_task_path(task), method: :delete, form: { data: { turbo_confirm: "Delete this task?" } }, class: "btn-ghost btn-sm !text-rose" %>
       </details>
     </div>
   <% end %>

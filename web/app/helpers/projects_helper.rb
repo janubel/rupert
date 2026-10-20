@@ -3,6 +3,16 @@
 # Shared look for the Projects and Tasks screens: one place for status colors,
 # priority marks and project health.
 module ProjectsHelper
+  def project_person_options(selected_id = nil)
+    @project_people ||= Projects::Task.available_people.to_a
+    options = @project_people.map { |person| [person.display_name, person.id.to_s] }
+    if selected_id.present? && options.none? { |_, id| id == selected_id.to_s }
+      person = User.find_by(tenant_id: Current.tenant_id, id: selected_id)
+      options << ["#{person.display_name} (inactive)", person.id.to_s] if person
+    end
+    options_for_select(options, selected_id.to_s)
+  end
+
   STATUS_LABELS = {
     'todo' => 'To do', 'in_progress' => 'In progress', 'blocked' => 'Blocked', 'done' => 'Done',
     'planned' => 'Planned', 'active' => 'Active', 'on_hold' => 'On hold', 'completed' => 'Completed',
