@@ -211,8 +211,9 @@ class ModuleRegistry
       { key: 'money', name: 'Bookkeeping',
         modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports bank_reconciliation ledger_export] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
-      { key: 'receipts', name: 'Receipts', modules: %w[receipts] },
-      { key: 'timesheets', name: 'Timesheets', modules: %w[timesheets punch_history] },
+      # Personal staff self-service (own receipts, own hours). Receipts has no permission, so
+      # this area is visible exactly where the separate Receipts area was before.
+      { key: 'me', name: 'Me', modules: %w[receipts timesheets punch_history] },
       { key: 'team', name: 'Team',
         modules: %w[accounts employees employee_reports departments positions schedule time_clock leave payroll permissions] },
       { key: 'system', name: 'System',
