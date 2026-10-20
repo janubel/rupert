@@ -3,6 +3,7 @@
 Run from a root-owned service environment; only sanitized state codes are logged.
 """
 import json
+import ipaddress
 import os
 import re
 import secrets
@@ -15,7 +16,7 @@ from urllib.parse import urlsplit
 
 UUID = re.compile(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z")
 PROJECT = "rupert-customers"
-NETWORK = "rupert-customer-net"
+ACL = "rupert-customer-egress"
 PROFILE = "rupert-customer"
 
 
@@ -73,6 +74,8 @@ class Worker:
             return None if response.status == 204 else json.load(response) if response.headers.get("Content-Type", "").startswith("application/json") else {}
 
     def validate(self, job):
+        if type(job.get("id")) is not int or not 0 < job["id"] < 1000:
+            raise ProvisionError("create_failed")
         if not UUID.fullmatch(job.get("instance_id", "")):
             raise ProvisionError("create_failed")
         if job.get("instance_name") != "rupert-customer-" + job["instance_id"]:
@@ -81,7 +84,7 @@ class Worker:
             raise ProvisionError("routing_failed")
         if not re.fullmatch(r"[a-z0-9-]{2,63}", job.get("subdomain", "")):
             raise ProvisionError("create_failed")
-        if type(job.get("port")) is not int or not 24000 < job["port"] < 25000:
+        if type(job.get("port")) is not int or job["port"] != 24000 + job["id"]:
             raise ProvisionError("create_failed")
         if not re.fullmatch(r"[0-9a-f]{64}", job.get("instance_secret", "")):
             raise ProvisionError("bootstrap_failed")
@@ -91,7 +94,37 @@ class Worker:
     def incus(self, *args, payload=None, timeout=180):
         return self.run(["incus", *args], payload=payload, timeout=timeout)
 
-    def verify_policy(self, instance):
+    def network_name(self, job):
+        return "rpc-" + job["instance_id"].replace("-", "")[:10]
+
+    def network_address(self, job):
+        return str(ipaddress.ip_network("10.216.0.0/14")[job["id"] * 256 + 1]) + "/24"
+
+    def ensure_network(self, job):
+        name = self.network_name(job)
+        networks = json.loads(self.incus("network", "list", "--format=json", "--project", "default"))
+        if not any(row["name"] == name for row in networks):
+            self.incus("network", "create", name, "--type", "bridge", "--project", "default",
+                "ipv4.address=" + self.network_address(job), "ipv4.nat=true", "ipv6.address=none",
+                "security.acls=" + ACL, "security.acls.default.ingress.action=reject", "security.acls.default.egress.action=allow",
+                "user.rupert.workspace_id=" + job["instance_id"])
+        network = json.loads(self.incus("query", "/1.0/networks/" + name))
+        config = network.get("config", {})
+        if config.get("user.rupert.workspace_id") != job["instance_id"] or config.get("security.acls") != ACL or config.get("ipv4.address") != self.network_address(job) or config.get("ipv6.address") != "none" or config.get("ipv4.nat") != "true" or config.get("security.acls.default.ingress.action") != "reject" or config.get("security.acls.default.egress.action") != "allow":
+            raise ProvisionError("create_failed")
+        peers = [url for url in network.get("used_by", []) if "/instances/" in url]
+        if any("/1.0/instances/" + job["instance_name"] + "?project=" + PROJECT != url for url in peers):
+            raise ProvisionError("create_failed")
+        project = json.loads(self.incus("query", "/1.0/projects/" + PROJECT))
+        allowed = project.get("config", {}).get("restricted.networks.access", "").split(",")
+        if name not in allowed:
+            allowed = [entry for entry in allowed if entry]
+            if any(entry != "rupert-cust0" and not re.fullmatch(r"rpc-[0-9a-f]{10}", entry) for entry in allowed):
+                raise ProvisionError("create_failed")
+            self.incus("project", "set", PROJECT, "restricted.networks.access=" + ",".join(allowed + [name]))
+        return name
+
+    def verify_policy(self, instance, job):
         config = instance.get("expanded_config", {})
         if config.get("security.privileged", "false") != "false" or config.get("security.nesting", "false") != "false" or config.get("security.idmap.isolated") != "true":
             raise ProvisionError("create_failed")
@@ -102,7 +135,7 @@ class Worker:
         if root.get("type") != "disk" or root.get("path") != "/" or root.get("source"):
             raise ProvisionError("create_failed")
         nic = devices.get("eth0", {})
-        if nic.get("type") != "nic" or nic.get("network") != NETWORK:
+        if nic.get("type") != "nic" or nic.get("network") != self.network_name(job) or nic.get("security.mac_filtering") != "true" or nic.get("security.ipv4_filtering") != "true":
             raise ProvisionError("create_failed")
 
     def progress(self, job, phase, failure_code=None):
@@ -119,9 +152,10 @@ class Worker:
             raise ProvisionError("image_unavailable")
         instances = json.loads(self.incus("list", "--project", PROJECT, "--format=json"))
         existing = next((row for row in instances if row["name"] == job["instance_name"]), None)
+        if existing is None and len(instances) >= self.quota:
+            raise ProvisionError("quota_exceeded")
+        network = self.ensure_network(job)
         if existing is None:
-            if len(instances) >= self.quota:
-                raise ProvisionError("quota_exceeded")
             self.incus("init", self.image, job["instance_name"], "--project", PROJECT, "--profile", PROFILE,
                 "-c", "security.privileged=false", "-c", "security.nesting=false", "-c", "security.idmap.isolated=true",
                 "-c", "limits.cpu=1", "-c", "limits.memory=1GiB", "-c", "limits.processes=256", "-c", "boot.autostart=true",
@@ -129,7 +163,11 @@ class Worker:
         instance = json.loads(self.incus("query", "/1.0/instances/" + job["instance_name"] + "?project=" + PROJECT))
         if instance.get("config", {}).get("user.rupert.workspace_id") != job["instance_id"]:
             raise ProvisionError("create_failed")
-        self.verify_policy(instance)
+        if "eth0" not in instance.get("expanded_devices", {}):
+            self.incus("config", "device", "add", job["instance_name"], "eth0", "nic", "--project", PROJECT,
+                "network=" + network, "name=eth0", "security.mac_filtering=true", "security.ipv4_filtering=true")
+            instance = json.loads(self.incus("query", "/1.0/instances/" + job["instance_name"] + "?project=" + PROJECT))
+        self.verify_policy(instance, job)
         web = instance.get("expanded_devices", {}).get("web")
         if web and (web.get("type") != "proxy" or web.get("listen") != "tcp:127.0.0.1:" + str(job["port"]) or web.get("connect") != "tcp:127.0.0.1:3000"):
             raise ProvisionError("create_failed")

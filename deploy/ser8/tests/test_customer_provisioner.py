@@ -22,12 +22,18 @@ class WorkerTest(unittest.TestCase):
         self.instance = {'name': self.job['instance_name'], 'status': 'Running',
             'config': {'user.rupert.workspace_id': self.job['instance_id']},
             'expanded_config': {'security.privileged': 'false', 'security.nesting': 'false', 'security.idmap.isolated': 'true'},
-            'expanded_devices': {'root': {'type': 'disk', 'path': '/', 'pool': 'default'}, 'eth0': {'type': 'nic', 'network': m.NETWORK}}}
+            'expanded_devices': {'root': {'type': 'disk', 'path': '/', 'pool': 'default'}, 'eth0': {'type': 'nic', 'network': m.Worker(self.env).network_name(self.job), 'security.mac_filtering': 'true', 'security.ipv4_filtering': 'true'}}}
 
     def run_command(self, args, payload=None, timeout=180):
         self.calls.append((args, payload))
         if args[1:3] == ['query', '/1.0/images/' + 'a' * 64]:
             return json.dumps({'properties': {'user.rupert.clean_template': 'true', 'user.rupert.revision': 'b' * 40}})
+        if args[1:3] == ['network', 'list']:
+            return '[]'
+        if args[1:3] == ['query', '/1.0/networks/' + m.Worker(self.env).network_name(self.job)]:
+            return json.dumps({'config': {'user.rupert.workspace_id': self.job['instance_id'], 'security.acls': m.ACL, 'ipv4.address': m.Worker(self.env).network_address(self.job), 'ipv6.address': 'none', 'ipv4.nat': 'true', 'security.acls.default.ingress.action': 'reject', 'security.acls.default.egress.action': 'allow'}, 'used_by': ['/1.0/instances/' + self.job['instance_name'] + '?project=' + m.PROJECT]})
+        if args[1:3] == ['query', '/1.0/projects/' + m.PROJECT]:
+            return json.dumps({'config': {'restricted.networks.access': 'rupert-cust0'}})
         if args[1] == 'list':
             return '[]'
         if args[1] == 'query':
@@ -36,7 +42,7 @@ class WorkerTest(unittest.TestCase):
 
     def test_malicious_job_fields_are_rejected_before_any_host_command(self):
         worker = m.Worker(self.env, self.run_command)
-        for field, value in [('hostname', 'evil.org'), ('instance_name', 'rupert'), ('port', '24001;cat /etc/shadow'), ('instance_id', '../rupert')]:
+        for field, value in [('hostname', 'evil.org'), ('instance_name', 'rupert'), ('port', '24001;cat /etc/shadow'), ('instance_id', '../rupert'), ('port', 24002), ('id', True)]:
             with self.assertRaises(m.ProvisionError):
                 worker.provision(dict(self.job, **{field: value}))
         self.assertFalse(self.calls)
@@ -46,11 +52,17 @@ class WorkerTest(unittest.TestCase):
         for field in ['security.privileged', 'security.nesting']:
             self.instance['expanded_config'][field] = 'true'
             with self.assertRaises(m.ProvisionError):
-                worker.verify_policy(self.instance)
+                worker.verify_policy(self.instance, self.job)
             self.instance['expanded_config'][field] = 'false'
         self.instance['expanded_devices']['hostfs'] = {'type': 'disk', 'path': '/host', 'source': '/'}
         with self.assertRaises(m.ProvisionError):
-            worker.verify_policy(self.instance)
+            worker.verify_policy(self.instance, self.job)
+
+    def test_shared_customer_bridge_is_rejected(self):
+        worker = m.Worker(self.env, self.run_command)
+        self.instance['expanded_devices']['eth0']['network'] = 'rupert-cust0'
+        with self.assertRaises(m.ProvisionError):
+            worker.verify_policy(self.instance, self.job)
 
     def test_success_separates_secrets_from_process_arguments_and_checks_health_before_ready(self):
         worker = m.Worker(self.env, self.run_command)
@@ -64,6 +76,23 @@ class WorkerTest(unittest.TestCase):
         bootstrap = [payload for args, payload in self.calls if '/usr/local/libexec/rupert-customer-bootstrap' in args]
         self.assertEqual(self.job['instance_secret'], json.loads(bootstrap[0])['instance_secret'])
         self.assertTrue(any('security.idmap.isolated=true' in args for args, _ in self.calls))
+
+    def test_customer_network_cannot_have_another_instance(self):
+        def fake(args, **kwargs):
+            result = self.run_command(args, **kwargs)
+            if args[1] == 'query' and '/1.0/networks/' in args[2]:
+                body = json.loads(result)
+                body['used_by'].append('/1.0/instances/another?project=' + m.PROJECT)
+                return json.dumps(body)
+            return result
+        with self.assertRaises(m.ProvisionError):
+            m.Worker(self.env, fake).ensure_network(self.job)
+
+    def test_network_subnets_are_unique_and_exclude_the_sentinel(self):
+        worker = m.Worker(self.env)
+        addresses = {worker.network_address(dict(self.job, id=i)) for i in range(1, 1000)}
+        self.assertEqual(999, len(addresses))
+        self.assertNotIn('10.215.255.1/24', addresses)
 
     def test_unreviewed_image_is_never_used(self):
         def fake(args, **kwargs):
