@@ -639,6 +639,85 @@ body:has(.finance-navigation) .module-navigation-wrap { display:none; }
   .nav-area { padding:.15rem .7rem;min-height:32px; }
 }
 
+/* Polish: translucent header material, tactile buttons, balanced type and
+   aligned figures. Purely visual; no layout or content changes. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .app-header {
+    background: color-mix(in srgb, var(--color-oat) 80%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    backdrop-filter: saturate(180%) blur(18px);
+  }
+}
+
+.btn,
+.btn-primary,
+.btn-ghost {
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease, transform 0.12s ease;
+}
+
+.btn-primary {
+  box-shadow: 0 1px 2px rgba(11, 92, 94, 0.28);
+}
+
+.btn-primary:active:not(:disabled):not([aria-disabled="true"]),
+.btn-ghost:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(0.97);
+}
+
+h1,
+h2,
+.page-title {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+.stat-value,
+.stat-value-sm,
+.td,
+.th,
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+.card,
+.stat {
+  transition: box-shadow 0.2s ease;
+}
+
+/* Unstyled labels that directly wrap a control read as quiet field captions
+   with the control stacked beneath, so mixed rows of inputs and selects align. */
+label:not([class]):has(> .input) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-mocha);
+}
+
+label:not([class]):has(> .input) > .input {
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--color-ink);
+}
+
+/* Selects get one consistent chevron instead of each browser's native arrow. */
+select.input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%2352504e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+}
 /* Folded explainer copy: a quiet "More detail" disclosure under the lead sentence. */
 .explainer { margin-top: 0.25rem; }
 
