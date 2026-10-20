@@ -14,7 +14,7 @@ export default class extends Controller {
     if (light) document.documentElement.setAttribute("data-theme", "light")
     else document.documentElement.removeAttribute("data-theme")
     try { localStorage.setItem("rupert-theme", light ? "light" : "dark") } catch (e) { /* private mode */ }
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", light ? "#fbf5ef" : "#171412")
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", light ? "#f5f7fa" : "#121418")
     window.dispatchEvent(new Event("rupert:theme"))
     this.render()
   }

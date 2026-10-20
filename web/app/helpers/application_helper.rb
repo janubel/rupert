@@ -51,14 +51,15 @@ module ApplicationHelper
 
   # Chart palette derived from the Tailwind @theme tokens in
   # app/assets/tailwind/application.css. Keep the two in sync.
+  # Mid-lightness values that read on both the light and the dark surface.
   CHART_COLORS = {
-    ink: '#1a393d',
-    olive_deep: '#48736d',
-    clay: '#7d5449',
-    butter: '#e4be58',
-    rose: '#b05b4f',
-    sage: '#5c8a72',
-    fern: '#2e7d64'
+    ink: '#3f4754',
+    olive_deep: '#3b6fe0',
+    clay: '#7b67c9',
+    butter: '#e8b63f',
+    rose: '#d2574a',
+    sage: '#2f9a8d',
+    fern: '#2f9a63'
   }.freeze
 
   def chart_color(*keys)
