@@ -19,7 +19,7 @@
           <th scope="col" class="th">Account</th>
           <th scope="col" class="th num">Debit</th>
           <th scope="col" class="th num">Credit</th>
-          <th scope="col" class="th num">Balance</th>
+          <th scope="col" class="th num">Balance<%= define('account_balance') %></th>
         </tr>
       </thead>
       <tbody>
@@ -36,7 +36,7 @@
       </tbody>
       <tfoot>
         <tr class="font-semibold">
-          <th scope="row" class="td" colspan="2">Totals</th>
+          <th scope="row" class="td" colspan="2">Totals<%= define('debit_credit') %></th>
           <td class="td num"><%= finance_money(@total_debit) %></td>
           <td class="td num"><%= finance_money(@total_credit) %></td>
           <td class="td num"></td>
@@ -46,4 +46,10 @@
   </div>
 
   <%= finance_balance_status(@total_debit - @total_credit, balanced_text: "Balanced: debits equal credits") %>
+  <%= explain_calculation(title: 'Does the trial balance balance?', id: 'trial-balance-check',
+        formula: 'Total debits − total credits across every account with posted activity in the dates. In order means the result is zero.',
+        rows: [["Accounts with activity · #{@from} through #{@to}", @rows.size], ['Total debits', finance_money(@total_debit)], ['Total credits', "− #{finance_money(@total_credit)}"],
+               ['Difference', finance_money(@total_debit - @total_credit)]],
+        note: 'Every posted entry has equal debits and credits, so the totals should agree. Equal totals do not prove each entry went to the right account; void entries are left out.',
+        term: 'trial_balance', lesson: 'books') %>
 </div>

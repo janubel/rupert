@@ -7,7 +7,7 @@
       <h1 class="page-title">Customer CRM</h1>
       <p class="mt-1 text-sm text-mocha">Your customers — contacts, relationship history, and follow-ups across your connected sources.</p>
     </div>
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2" <%= tour_anchor('actions') %>>
       <% if can_write && Current.user.can?("sync.write") %>
         <%= button_to "Sync customers now", sync_directory_customers_path, class: "btn-ghost btn-sm" %>
       <% end %>
@@ -18,7 +18,7 @@
     </div>
   </section>
 
-  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Customer summary">
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Customer summary" <%= tour_anchor('stats') %>>
     <%= link_to customers_path, class: "stat block hover:border-taupe" do %>
       <p class="stat-label">All customers</p>
       <p class="stat-value mt-1"><%= number_with_delimiter(@total_customers) %></p>
@@ -58,7 +58,7 @@
     </section>
   <% end %>
 
-  <section class="card card-pad space-y-4" aria-label="Find customers">
+  <section class="card card-pad space-y-4" aria-label="Find customers" <%= tour_anchor('search') %>>
     <%= search_form_for @q, url: customers_path, class: "flex flex-wrap items-center gap-3" do |f| %>
       <%= f.search_field search_key, placeholder: "Search name, email, or phone…", aria_label: "Search customers", class: "search min-w-0 flex-1 basis-60" %>
       <%= hidden_field_tag :sort, @sort if @sort != "recent" %>
@@ -138,7 +138,7 @@
       <% end %>
     </ul>
 
-    <div class="card hidden overflow-hidden md:block">
+    <div class="card hidden overflow-hidden md:block" <%= tour_anchor('table') %>>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <caption class="sr-only">Customers, <%= CustomersController::SORTS.fetch(@sort).last.downcase %></caption>
@@ -170,7 +170,7 @@
     <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
   <% end %>
 
-  <details class="card card-pad">
+  <details class="card card-pad" <%= tour_anchor('sources') %>>
     <summary class="cursor-pointer text-sm font-semibold text-ink">Where customers come from (directory sync status)</summary>
     <div class="mt-3"><%= render "shared/directory_sync_status", kind: "customers" %></div>
   </details>

@@ -33,14 +33,24 @@
 
   <section class="bookkeeping-stats" aria-label="Financial summary for selected month">
     <article class="bookkeeping-stat bookkeeping-stat-balance">
-      <p class="stat-label">Statement balance</p>
+      <div class="stat-label">Statement balance<%= define('statement_balance') %></div>
       <p class="bookkeeping-number"><%= balance ? operations_money(balance[:cents], currency: balance[:currency]) : 'Unavailable' %></p>
       <p class="text-xs"><%= balance ? "As of #{balance[:date].strftime('%b %-d, %Y')} · retained statement" : 'Upload a statement with a verified closing balance.' %></p>
       <p class="mt-3 text-xs">Historical statement balance. A live bank balance is not connected.</p>
     </article>
-    <article class="bookkeeping-stat"><p class="stat-label">Money in</p><p class="bookkeeping-number"><%= overview.line_count.positive? ? bank_money.call(overview.credits_cents) : 'No activity' %></p><p class="text-xs text-mocha">All statement credits, including transfers.</p></article>
-    <article class="bookkeeping-stat"><p class="stat-label">Money out</p><p class="bookkeeping-number"><%= overview.line_count.positive? ? bank_money.call(overview.debits_cents) : 'No activity' %></p><p class="text-xs text-mocha">All statement debits, including transfers.</p></article>
-    <article class="bookkeeping-stat"><p class="stat-label">Net cash movement</p><p class="bookkeeping-number"><%= overview.line_count.positive? ? bank_money.call(overview.net_cents) : 'No activity' %></p><p class="text-xs text-mocha">Money in less money out for this month.</p></article>
+    <article class="bookkeeping-stat"><div class="stat-label">Money in<%= define('deposit') %></div><p class="bookkeeping-number"><%= overview.line_count.positive? ? bank_money.call(overview.credits_cents) : 'No activity' %></p><p class="text-xs text-mocha">All statement credits, including transfers.</p></article>
+    <article class="bookkeeping-stat"><div class="stat-label">Money out<%= define('expense') %></div><p class="bookkeeping-number"><%= overview.line_count.positive? ? bank_money.call(overview.debits_cents) : 'No activity' %></p><p class="text-xs text-mocha">All statement debits, including transfers.</p></article>
+    <article class="bookkeeping-stat"><div class="stat-label">Net cash movement<%= define('net_cash_movement') %></div><p class="bookkeeping-number"><%= overview.line_count.positive? ? bank_money.call(overview.net_cents) : 'No activity' %></p><p class="text-xs text-mocha">Money in less money out for this month.</p>
+      <% if overview.line_count.positive? %>
+        <% money_in = overview.credits_cents; money_out = overview.debits_cents %>
+        <%= explain_calculation(title: "Net cash movement · #{overview.month.strftime('%B %Y')}", id: 'bookkeeping-net-cash',
+              formula: 'Statement credits (money in) − statement debits (money out) for the selected account and month, including transfers.',
+              rows: [["Statement lines · #{overview.account.presence || 'selected account'}", overview.line_count], ['Money in', bank_money.call(money_in)], ['Money out', "− #{bank_money.call(money_out)}"],
+                     ['Net cash movement', bank_money.call(money_in - money_out)]],
+              note: 'Bank movement is not profit: transfers between your own accounts count on both sides, and lines still waiting for a decision are included. Rupert has no live bank connection.',
+              term: 'net_cash_movement', lesson: 'books') %>
+      <% end %>
+    </article>
   </section>
 
   <section class="bookkeeping-review-banner" aria-labelledby="bookkeeping-review-heading">
@@ -55,7 +65,7 @@
 
   <div class="bookkeeping-columns">
     <section class="card card-pad space-y-4" aria-labelledby="bookkeeping-expenses">
-      <div class="bookkeeping-section-heading"><h2 id="bookkeeping-expenses" class="font-display text-2xl">Recorded expenses</h2><%= link_to 'View expenses →', finance_expenses_path(month: overview.month.strftime('%Y-%m')), class: 'text-sm font-semibold underline' %></div>
+      <div class="bookkeeping-section-heading"><h2 id="bookkeeping-expenses" class="font-display text-2xl">Recorded expenses<%= define('expense') %></h2><%= link_to 'View expenses →', finance_expenses_path(month: overview.month.strftime('%Y-%m')), class: 'text-sm font-semibold underline' %></div>
       <p class="bookkeeping-number"><%= operations_money(overview.expense_cents) %></p>
       <p class="text-xs text-mocha">Only confirmed expenses entered in Rupert. Pending lines and excluded transfers are separate.</p>
       <% if expense_categories.any? %>
@@ -68,7 +78,7 @@
           <% end %>
         </div>
       <% else %><p class="bookkeeping-empty">No expenses recorded for this month. Start with the bank transactions or add an expense.</p><% end %>
-      <div class="bookkeeping-divider text-sm"><span>Vendor payments, tracked separately</span><strong><%= operations_money(overview.vendor_payment_cents) %></strong></div>
+      <div class="bookkeeping-divider text-sm"><span>Vendor payments, tracked separately<%= define('vendor_payment') %></span><strong><%= operations_money(overview.vendor_payment_cents) %></strong></div>
     </section>
 
     <section class="card card-pad space-y-4" aria-labelledby="bookkeeping-questions">

@@ -1,0 +1,13 @@
+<%# Several definitions together, as a compact list: definitions_for('on_hand', 'available') %>
+<% entries = terms.filter_map { |key| LearningCatalog::TERMS[key]&.then { |(label, definition)| [key, label, definition] } } %>
+<% if entries.any? %>
+  <details class="term-list" data-controller="navigation-menu term">
+    <summary class="term-trigger">Words on this page <span class="term-mark" aria-hidden="true">?</span></summary>
+    <dl class="term-list-panel" role="note">
+      <% entries.each do |key, label, definition| %>
+        <div id="definition-<%= key %>"><dt class="term-name"><%= label %></dt><dd class="term-definition"><%= definition %></dd></div>
+      <% end %>
+      <%= link_to 'All definitions', learning_index_path(anchor: 'definitions-title'), class: 'term-more' %>
+    </dl>
+  </details>
+<% end %>

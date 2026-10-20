@@ -1,0 +1,35 @@
+<% content_for :title, 'Team training progress' %>
+<div class="mx-auto max-w-5xl space-y-6">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div><p class="eyebrow text-olive-deep">Learn Rupert</p><h1 class="page-title mt-2">Team training progress</h1><p class="mt-2 max-w-2xl text-sm text-mocha">Self-paced learning across the accounts in this workspace. Lessons are suggestions and practice, not certification, and finishing one never changes permissions. Use this to see who might appreciate a hand.</p></div>
+    <%= link_to 'Back to Learn Rupert', learning_index_path, class: 'btn-ghost btn-sm' %>
+  </header>
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Training summary">
+    <div class="stat"><p class="stat-label">Accounts</p><p class="stat-value mt-1"><%= @rows.size %></p></div>
+    <div class="stat"><p class="stat-label">Welcomed</p><p class="stat-value mt-1"><%= @rows.count { |row| row[:welcomed] } %></p><p class="mt-1 text-xs text-taupe">chose a path or skipped the welcome</p></div>
+    <div class="stat"><p class="stat-label">Started lessons</p><p class="stat-value mt-1"><%= @rows.count { |row| row[:lessons_done].positive? } %></p></div>
+    <div class="stat"><p class="stat-label">Finished their path</p><p class="stat-value mt-1"><%= @rows.count { |row| row[:journey].path_complete? } %></p></div>
+  </section>
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60"><tr><th scope="col" class="th">Person</th><th scope="col" class="th">Role</th><th scope="col" class="th">Path</th><th scope="col" class="th">Lessons</th><th scope="col" class="th text-right">Tours</th><th scope="col" class="th">Last lesson</th></tr></thead>
+        <tbody class="divide-y divide-fog">
+          <% @rows.each do |row| %>
+            <% done, total = row[:journey].path_progress %>
+            <tr>
+              <td class="td"><p class="font-medium text-ink"><%= row[:user].display_name %><% if row[:user] == Current.user %> <span class="text-xs text-taupe">(you)</span><% end %></p><p class="text-xs text-mocha"><%= row[:user].email %></p></td>
+              <td class="td"><span class="pill-taupe"><%= navigation_role_name(row[:user]) %></span></td>
+              <td class="td"><%= row[:path][:label] %><% unless row[:welcomed] %><span class="block text-xs text-taupe">Not yet welcomed</span><% end %></td>
+              <td class="td"><div class="flex items-center gap-2"><progress class="learning-progress w-24" value="<%= done %>" max="<%= [total, 1].max %>" aria-label="<%= row[:user].display_name %> path progress"></progress><span class="tabular-nums text-xs text-mocha"><%= done %>/<%= total %> in path · <%= row[:lessons_done] %>/<%= row[:lessons_total] %> overall</span></div><% if row[:journey].path_complete? %><span class="module-badge mt-1">✓ Path complete</span><% end %></td>
+              <td class="td text-right tabular-nums"><%= row[:tours_done] %></td>
+              <td class="td text-mocha"><%= row[:latest] ? l(row[:latest], format: :short) : '—' %></td>
+            </tr>
+          <% end %>
+          <% if @rows.empty? %><tr><td colspan="6" class="empty-row">No accounts in this workspace yet.</td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="text-xs text-mocha">Progress is stored with each account’s own preferences. Nobody can complete a lesson for someone else, and this page makes no changes.</p>
+</div>

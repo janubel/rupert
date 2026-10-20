@@ -1,15 +1,15 @@
 <%= render "reports/layout", title: "Inventory reconciliation", subtitle: "Side-by-side Shopify vs Square counts from the sync mirrors — refreshed every 15 minutes." do %>
   <section class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     <div class="stat">
-      <p class="stat-label">Linked SKUs</p>
+      <div class="stat-label">Linked SKUs<%= define('sku') %></div>
       <p class="stat-value mt-1"><%= @reconciliation.summary[:linked] %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Square only</p>
+      <div class="stat-label">Square only<%= define('shared_stock') %></div>
       <p class="stat-value mt-1 text-taupe"><%= @reconciliation.summary[:square_only] %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Shopify only</p>
+      <div class="stat-label">Shopify only<%= define('mirror') %></div>
       <p class="stat-value mt-1 text-taupe"><%= @reconciliation.summary[:shopify_only] %></p>
     </div>
   </section>

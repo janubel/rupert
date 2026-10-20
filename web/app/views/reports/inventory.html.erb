@@ -1,24 +1,24 @@
 <%= render "reports/layout", title: "Inventory report", subtitle: "Stock valuation, movement, and low-stock pipeline." do %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-5">
     <div class="stat">
-      <p class="stat-label">Stock value (retail)</p>
+      <div class="stat-label">Stock value (retail)<%= define('stock_value') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@valuation) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Variants</p>
+      <div class="stat-label">Variants<%= define('sku') %></div>
       <p class="stat-value mt-1"><%= @variants %></p>
       <p class="mt-1 text-xs text-taupe"><%= @tracked %> tracked</p>
     </div>
     <div class="stat">
-      <p class="stat-label">Movements · 30d</p>
+      <div class="stat-label">Movements · 30d<%= define('movement') %></div>
       <p class="stat-value mt-1"><%= @movements_30d %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Low stock</p>
+      <div class="stat-label">Low stock<%= define('threshold') %></div>
       <p class="stat-value mt-1 text-clay"><%= @low_stock %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Out of stock</p>
+      <div class="stat-label">Out of stock<%= define('mirror') %></div>
       <p class="stat-value mt-1 text-rose"><%= @out_of_stock %></p>
     </div>
   </section>
@@ -39,7 +39,7 @@
             <th scope="col" class="th">SKU</th>
             <th scope="col" class="th">Product</th>
             <th scope="col" class="th">Variant</th>
-            <th scope="col" class="th text-right">On hand</th>
+            <th scope="col" class="th text-right">On hand<%= define('on_hand') %></th>
             <th scope="col" class="th text-right">Price</th>
           </tr>
         </thead>

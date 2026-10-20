@@ -24,8 +24,8 @@ class AlertsRestockViewTest < ActionDispatch::IntegrationTest
     get alerts_path(status: 'open'), params: { shop: 'm11u0i-sb.myshopify.com', embedded: '1', host: 'test-host' }
 
     assert_response :success
-    assert_select 'th', text: 'Suggested'
-    assert_select 'th', text: 'Cover'
+    assert_select 'th', text: /\ASuggested/
+    assert_select 'th', text: /\ACover/
     assert_select 'td', text: /no sales/ # no orders in fixtures -> honest empty advice
   end
 end

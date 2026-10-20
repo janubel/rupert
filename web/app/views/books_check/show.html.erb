@@ -20,7 +20,7 @@
   <% verdict = { fix: ['Needs fixing', 'border-rose-300 bg-rose-50'], watch: ['Worth a look', 'border-amber-300 bg-amber-50'], ok: ['All clear', 'border-fog bg-paper'] }.fetch(check.verdict) %>
   <section class="rounded-2xl border p-5 <%= verdict[1] %>" role="status">
     <p class="font-display text-2xl"><%= verdict[0] %></p>
-    <p class="mt-1 text-sm text-mocha"><%= summary[:fix] %> to fix · <%= summary[:watch] %> to watch · <%= summary[:ok] %> passing of <%= summary[:total] %> checks. Checked <%= check.generated_at.in_time_zone.strftime('%b %-d, %-I:%M %p %Z') %>.</p>
+    <div class="mt-1 text-sm text-mocha"><%= summary[:fix] %> to fix · <%= summary[:watch] %> to watch · <%= summary[:ok] %> passing of <%= summary[:total] %> checks.<%= define('books_check') %> Checked <%= check.generated_at.in_time_zone.strftime('%b %-d, %-I:%M %p %Z') %>.</div>
   </section>
 
   <% %i[fix watch ok].each do |status| %>

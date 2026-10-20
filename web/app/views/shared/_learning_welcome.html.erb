@@ -1,13 +1,69 @@
+<%# First visit: a welcome that asks one question (what do you do?) and gets out of the way.
+    After that: a short, role-aware "first week" checklist until it is finished or hidden. %>
 <% journey = learning_journey %>
-<% if journey.welcome? %>
-  <% next_lesson = journey.next_lesson %>
-  <aside class="card card-pad space-y-3" aria-label="Getting started">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div><p class="eyebrow text-olive-deep">Get started at your pace</p><h2 class="mt-2 font-display text-xl"><%= next_lesson[:title] %></h2><p class="mt-1 text-sm text-mocha"><%= next_lesson[:summary] %></p></div>
-      <%= button_to 'Hide welcome', learning_preferences_path, method: :patch, params: { dismiss: '1' }, class: 'text-xs text-mocha underline' %>
+<% if !journey.welcomed? %>
+  <% first_name = Current.user.display_name.to_s.split(/\s+/).first %>
+  <aside class="card welcome-card" aria-label="Getting started" id="welcome">
+    <div class="welcome-head">
+      <div>
+        <p class="eyebrow text-olive-deep">Welcome to Rupert<%= ", #{first_name}" if first_name.present? %></p>
+        <h2 class="mt-2 font-display text-2xl">What will you mostly do here?</h2>
+        <p class="mt-2 max-w-xl text-sm text-mocha">Pick one and Rupert lines up a few short lessons for it, then points out the essentials on this page in about a minute. Your tools don’t change; only what we suggest. You can change your mind any time.</p>
+      </div>
+      <%= button_to 'Skip for now', onboard_path, method: :post, class: 'welcome-skip', form: { class: 'inline', data: { busy: false } } %>
     </div>
-    <div class="flex flex-wrap items-center gap-3"><%= link_to "#{journey.completed.include?('start') ? 'Continue learning' : 'Start here'} · #{next_lesson[:minutes]} min", learning_path(next_lesson[:key]), class: 'btn-ghost' %><%= link_to 'Choose my path', learning_index_path(anchor: 'your-path'), class: 'text-sm font-semibold text-olive-deep underline' %></div>
-    <% if Current.user.can?('settings.read') && journey.focus[:key] == 'setup' %><%= link_to 'Set up source connections', connections_path, class: 'inline-block text-sm font-semibold text-olive-deep underline' %><% end %>
-    <p class="text-xs text-mocha">Lessons and definitions stay available in Learn Rupert whenever you need them.</p>
+    <%= form_with url: onboard_path, method: :post, class: 'welcome-paths', data: { busy: false } do %>
+      <%= hidden_field_tag :next, 'tour' %>
+      <% journey.paths.each do |path| %>
+        <button type="submit" name="focus" value="<%= path[:key] %>" class="path-card <%= 'path-card-suggested' if path[:key] == journey.focus[:key] %>">
+          <span class="path-card-title"><%= path[:label] %></span>
+          <span class="path-card-body"><%= journey.path_description(path) %></span>
+          <span class="path-card-meta"><%= pluralize(journey.path_lessons(path).size, 'lesson') %> · <%= journey.path_lessons(path).sum { |lesson| lesson[:minutes] } %> min<%= ' · Suggested for you' if path[:key] == journey.focus[:key] %></span>
+        </button>
+      <% end %>
+    <% end %>
+    <p class="mt-4 text-xs text-mocha">Not sure? <%= link_to 'Start with the two-minute intro', learning_path('start'), class: 'font-semibold text-olive-deep underline' %>, or just explore; help is always one tap away.</p>
   </aside>
+<% elsif journey.welcome? && !journey.checklist_hidden? %>
+  <% checklist = getting_started_checklist %>
+  <% unless checklist.complete? %>
+    <% next_item = checklist.next_item; tour = learning_tour %>
+    <aside class="card checklist-card" aria-label="Getting started" id="getting-started">
+      <div class="checklist-head">
+        <div>
+          <p class="eyebrow text-olive-deep">Your first week · <%= checklist.done_count %> of <%= checklist.total %> done</p>
+          <h2 class="mt-1 font-display text-xl"><%= next_item ? next_item.title : 'All set' %></h2>
+          <% if next_item %><p class="mt-1 text-sm text-mocha"><%= next_item.hint %></p><% end %>
+        </div>
+        <div class="checklist-actions">
+          <% if next_item %>
+            <% if next_item.key == 'tour' && tour %>
+              <button type="button" class="btn-primary btn-sm" data-start-tour onclick="window.dispatchEvent(new CustomEvent('rupert:start-tour'))">Show me around · <%= tour.minutes %> min</button>
+            <% else %>
+              <%= link_to next_item.key == 'first_lesson' && journey.next_lesson ? "Start · #{journey.next_lesson[:minutes]} min" : 'Open', next_item.path, class: 'btn-primary btn-sm' %>
+            <% end %>
+          <% end %>
+          <%= button_to 'Hide', learning_preferences_path, method: :patch, params: { dismiss: '1' }, class: 'checklist-hide', form: { class: 'inline', data: { busy: false } }, title: 'Hide this checklist. Find it again in Learn Rupert.' %>
+        </div>
+      </div>
+      <progress class="learning-progress mt-3 w-full" value="<%= checklist.done_count %>" max="<%= checklist.total %>" aria-label="Getting started progress"><%= checklist.percent %>%</progress>
+      <details class="mt-3">
+        <summary class="cursor-pointer text-sm font-semibold text-olive-deep">All steps</summary>
+        <ol class="checklist-items mt-3">
+          <% checklist.items.each do |item| %>
+            <li class="checklist-item <%= 'checklist-item-done' if item.done? %>">
+              <span class="checklist-mark" aria-hidden="true"><%= item.done? ? '✓' : '' %></span>
+              <span class="checklist-text"><span class="<%= item.done? ? 'line-through text-mocha' : 'font-medium' %>"><%= item.title %></span><% unless item.done? %><span class="block text-xs text-mocha"><%= item.hint %></span><% end %></span>
+              <% unless item.done? %>
+                <span class="checklist-item-actions">
+                  <%= link_to 'Open', item.path, class: 'text-xs font-semibold text-olive-deep underline' %>
+                  <% if item.manual %><%= button_to 'Mark done', learning_preferences_path, method: :patch, params: { checklist: item.key }, class: 'text-xs text-mocha underline', form: { class: 'inline', data: { busy: false } } %><% end %>
+                </span>
+              <% end %>
+            </li>
+          <% end %>
+        </ol>
+      </details>
+    </aside>
+  <% end %>
 <% end %>

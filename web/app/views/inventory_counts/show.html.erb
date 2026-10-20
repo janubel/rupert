@@ -39,28 +39,38 @@
 
   <%= fold_explainer('Comparisons freeze one source, location and item at submission. New Shopify comparisons use signed native on-hand snapshots less than one hour old with matching catalog identity; available stock and legacy aggregates are excluded. Missing or ambiguous pools have no numerical delta. Historical comparisons retain their original labeled basis. Stored observations do not guarantee current shelf stock or reserve stock against other sales.', class: 'text-sm text-mocha') %>
 
+  <% items = count.items.order(:sku).to_a; known = items.reject { |item| item.delta.nil? } %>
   <div class="card overflow-hidden">
     <div class="card-pad pb-3">
       <h2 class="font-display text-xl text-ink">Counted items</h2>
+      <% if items.any? %>
+        <%= explain_calculation(title: 'Net variance for this sheet', id: 'count-variance',
+              formula: 'Counted − mirrored comparison, item by item, for items with a matched comparison; items without one have no numerical delta.',
+              rows: [['Items on the sheet', items.size], ['Items with a matched comparison', known.size], ['Items without a numerical delta', items.size - known.size],
+                     ['Counted units (matched items)', known.sum(&:quantity)], ['Comparison units (matched items)', known.sum(&:previousQuantity)],
+                     ['Net variance', known.empty? ? '—' : format('%+d', known.sum(&:delta))]],
+              note: 'A positive variance means more units were counted than the source mirror showed. Approving records the count for audit; no platform quantity changes.',
+              term: 'variance', lesson: 'counts') %>
+      <% end %>
     </div>
     <div class="operations-table-region" role="region" tabindex="0" aria-label="Inventory Counts table">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <th scope="col" class="th">Item</th>
-            <th scope="col" class="th text-right">Counted</th>
-            <th scope="col" class="th text-right">Mirrored stock</th>
+            <th scope="col" class="th text-right">Counted<%= define('counted') %></th>
+            <th scope="col" class="th text-right">Mirrored stock<%= define('comparison_quantity') %></th>
             <th scope="col" class="th text-right">Delta<%= render 'shared/definition', term: 'variance' %></th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
-          <% if count.items.empty? %>
+          <% if items.empty? %>
             <tr>
               <td colspan="5" class="empty-row">No items recorded.</td>
             </tr>
           <% end %>
-          <% count.items.order(:sku).each do |item| %>
+          <% items.each do |item| %>
             <tr class="hover:bg-cream">
               <td class="td">
                 <div class="flex items-center gap-3">

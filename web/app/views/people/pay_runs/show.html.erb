@@ -24,16 +24,22 @@
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
-      <p class="stat-label">Gross</p>
+      <div class="stat-label">Gross<%= define('gross_pay') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@pay_run.total_gross_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Deductions</p>
+      <div class="stat-label">Deductions<%= define('deductions') %></div>
       <p class="stat-value mt-1"><%= number_to_currency((@pay_run.total_gross_cents - @pay_run.total_net_cents) / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Net to pay</p>
+      <div class="stat-label">Net to pay<%= define('net_pay') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@pay_run.total_net_cents / 100.0) %></p>
+      <%= explain_calculation(title: 'Net to pay for this run', id: 'pay-run-net',
+            formula: 'Gross − deductions, payslip by payslip, then added across the run. Each payslip’s gross is hours × rate, or the salary share for the period, or a manual amount.',
+            rows: [['Gross (all payslips)', number_to_currency(@pay_run.total_gross_cents / 100.0)], ['Deductions', "− #{number_to_currency((@pay_run.total_gross_cents - @pay_run.total_net_cents) / 100.0)}"],
+                   ['Net to pay', number_to_currency(@pay_run.total_net_cents / 100.0)]],
+            note: 'Deductions not entered by hand are filled with a flat 15% estimate when the run is finalized. That is a placeholder, not a tax calculation, and marking the run paid moves no money.',
+            term: 'net_pay') %>
     </div>
     <div class="stat">
       <p class="stat-label">Staff</p>
@@ -80,10 +86,10 @@
           <tr>
             <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Rate</th>
-            <th scope="col" class="th text-right">Hours</th>
-            <th scope="col" class="th text-right">Gross</th>
-            <th scope="col" class="th text-right">Deductions</th>
-            <th scope="col" class="th text-right">Net</th>
+            <th scope="col" class="th text-right">Hours<%= define('timesheet') %></th>
+            <th scope="col" class="th text-right">Gross<%= define('gross_pay') %></th>
+            <th scope="col" class="th text-right">Deductions<%= define('deductions') %></th>
+            <th scope="col" class="th text-right">Net<%= define('net_pay') %></th>
             <% if @pay_run.draft? && Current.user.can?("payroll.write") %><th scope="col" class="th"></th><% end %>
           </tr>
         </thead>

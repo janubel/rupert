@@ -4,7 +4,7 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Stock reservations</h1>
-      <p class="mt-1 text-sm text-mocha">Local holds reduce Rupert's available-to-promise for one platform item at one location. Shopify and Square remain separate.</p>
+      <div class="mt-1 text-sm text-mocha">Local holds reduce Rupert's available-to-promise for one platform item at one location. Shopify and Square remain separate.<%= define('hold') %><%= define('promise') %></div>
     </div>
     <% if Current.user.can?('inventory.write') %><%= link_to 'Reserve stock', new_stock_reservation_path, class: 'btn-primary' %><% end %>
   </section>
@@ -12,7 +12,7 @@
   <div class="card overflow-x-auto">
     <table class="w-full text-sm">
       <thead class="border-b border-fog bg-haze/60"><tr>
-        <% ['Reference', 'Item / platform', 'Location', 'Quantity', 'Status', 'Expiry', 'Recorded by', ''].each do |label| %><th scope="col" class="th"><%= label %></th><% end %>
+        <% [['Reference', nil], ['Item / platform', 'native_id'], ['Location', 'pool'], ['Quantity', 'hold'], ['Status', nil], ['Expiry', nil], ['Recorded by', nil], ['', nil]].each do |label, term| %><th scope="col" class="th"><%= label %><%= define(term) if term %></th><% end %>
       </tr></thead>
       <tbody class="divide-y divide-fog">
         <% @reservations.each do |reservation| %>

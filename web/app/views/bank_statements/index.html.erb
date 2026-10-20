@@ -4,7 +4,7 @@
   <header>
     <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Finance · money out</p>
     <h1 class="page-title mt-2">Bank statements</h1>
-    <p class="mt-2 max-w-2xl text-sm text-mocha">Rupert has no connection to your bank. Download a statement as CSV from your bank, upload it here, then say what each withdrawal was. Nothing is recorded until you choose it, and a line is never imported twice.</p>
+    <div class="mt-2 max-w-2xl text-sm text-mocha">Rupert has no connection to your bank. Download a statement as CSV from your bank, upload it here, then say what each withdrawal was. Nothing is recorded until you choose it, and a line is never imported twice.<%= define('decision') %><%= define('statement_balance') %></div>
   </header>
 
   <% waiting_total = @statements.sum { |row| row[3].to_i } %>
@@ -20,7 +20,7 @@
       <p class="card card-pad text-sm text-mocha">No statements yet.</p>
     <% else %>
       <div class="card overflow-x-auto"><table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60"><tr><% %w[Account File Dates Lines Waiting].each do |h| %><th scope="col" class="th"><%= h %></th><% end %></tr></thead>
+        <thead class="border-b border-fog bg-haze/60"><tr><% %w[Account File Dates Lines Waiting].each do |h| %><th scope="col" class="th"><%= h %><%= define('decision') if h == 'Waiting' %></th><% end %></tr></thead>
         <tbody class="divide-y divide-fog">
           <% @statements.each do |doc_id, label, total, waiting, from, to| %>
             <tr>

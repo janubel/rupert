@@ -9,7 +9,8 @@ class PageGuidesTest < ActiveSupport::TestCase
     assert_equal 'sales', PageGuides.for_path('/sales?source=square').key
     assert_equal 'sizes', PageGuides.for_path('/size_families').key
     assert_equal 'access_log', PageGuides.for_path('/access_logs').key
-    assert_equal 'finance', PageGuides.for_path('/finance/accounts').key
+    assert_equal 'finance_accounts', PageGuides.for_path('/finance/accounts').key
+    assert_equal 'finance', PageGuides.for_path('/finance').key
     assert_equal 'users', PageGuides.for_path('/users').key
     assert_equal 'inventory', PageGuides.for_path('/inventory').key
     assert_equal 'inventory_exceptions', PageGuides.for_path('/inventory_exceptions').key

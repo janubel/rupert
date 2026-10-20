@@ -5,7 +5,7 @@
     <p class="mt-1 text-sm text-mocha">Low-stock flags raised from inventory levels.</p>
   </section>
 
-  <nav class="flex flex-wrap gap-1">
+  <nav class="flex flex-wrap gap-1" aria-label="Alert status" <%= tour_anchor('tabs') %>>
     <% ["open", "resolved", "ignored", "all"].each do |tab| %>
       <%= link_to "#{tab} #{@counts[tab] ? "(#{@counts[tab]})" : ""}", alerts_path(status: tab),
             class: (@status == tab ? "rounded-full bg-olive px-3.5 py-1.5 text-sm font-medium text-cream" : "rounded-full px-3.5 py-1.5 text-sm font-medium text-mocha hover:bg-haze hover:text-ink") %>
@@ -13,11 +13,20 @@
   </nav>
 
   <p class="text-xs text-taupe">Open alerts are sorted by urgency — least days of cover first. "Suggested" reorders ~30 days of stock at the recent sales pace; it's advice, nothing is ordered automatically.</p>
+  <% example = @alerts.map { |alert| [alert, @advice[alert.id]] }.find { |_alert, row| row&.days_of_cover } %>
+  <% if example %>
+    <% alert, row = example; on_hand = row.shop_qty.to_i + row.pos_qty.to_i; pace = row.sold_30.to_f / RestockAdvisor::COVER_DAYS %>
+    <%= explain_calculation(title: "Cover and suggested reorder for #{alert.sku.presence || alert.product_name.presence || 'the first alert'}", id: 'alert-calculation', summary: 'How are cover and suggested calculated?',
+          rows: [["On hand: #{row.shop_qty.to_i} shop + #{row.pos_qty.to_i} POS", "#{on_hand} units"], ['Sold in the last 30 days', "#{row.sold_30.to_i} units"], ["Pace: #{row.sold_30.to_i} ÷ 30 days", "#{number_with_precision(pace, precision: 2)} per day"], ["Days of cover: #{on_hand} ÷ #{number_with_precision(pace, precision: 2)}", "#{row.days_of_cover} days"], ["Suggested: 30 × #{number_with_precision(pace, precision: 2)} − #{on_hand}, never below zero", "#{row.suggested_qty} units"]],
+          formula: 'cover = on hand ÷ (sold in 30 days ÷ 30) · suggested = max(⌈30 × pace⌉ − on hand, 0)',
+          note: 'Pace counts every channel. Items with no recent sales show “no sales” because there is no pace to divide by. Nothing is ordered or written to a platform.',
+          lesson: 'alerts', term: 'days_of_cover') %>
+  <% end %>
 
   <%= form_tag bulk_update_alerts_path, method: :post do %>
     <%= hidden_field_tag :tab, @status %>
     <div class="card overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-fog bg-haze/40 px-5 py-3">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-fog bg-haze/40 px-5 py-3" <%= tour_anchor('bulk') %>>
         <span data-bulk-target="count" class="text-sm text-taupe">Select rows to update</span>
         <div data-bulk-target="actions" class="hidden items-center gap-2">
           <%= submit_tag "Resolve selected", name: "status", value: "resolved", class: "btn-primary btn-sm" %>
@@ -35,10 +44,10 @@
               <th scope="col" class="th">Product</th>
               <th scope="col" class="th text-right" title="Units held at Shopify locations">Shop</th>
               <th scope="col" class="th text-right" title="Units held at Square locations">POS</th>
-              <th scope="col" class="th text-right" title="Units sold in the last 14 days, all channels">Sold 14d</th>
+              <th scope="col" class="th text-right" title="Units sold in the last 14 days, all channels" <%= tour_anchor('pace') %>>Sold 14d<%= define('sales_pace') %></th>
               <th scope="col" class="th text-right" title="Units sold in the last 30 days, all channels">Sold 30d</th>
-              <th scope="col" class="th text-right" title="Days until you run out at the recent sales pace">Cover</th>
-              <th scope="col" class="th text-right" title="Units to reorder to cover ~30 days at recent pace">Suggested</th>
+              <th scope="col" class="th text-right" title="Days until you run out at the recent sales pace" <%= tour_anchor('cover') %>>Cover<%= define('days_of_cover') %></th>
+              <th scope="col" class="th text-right" title="Units to reorder to cover ~30 days at recent pace" <%= tour_anchor('suggested') %>>Suggested<%= define('suggested_reorder') %></th>
               <th scope="col" class="th">Raised</th>
               <th scope="col" class="th text-right">Action</th>
             </tr>

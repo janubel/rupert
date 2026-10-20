@@ -7,22 +7,22 @@
       <p class="mt-1 text-sm text-mocha">Login accounts for Rupert and their access level. HR records live under Staff.</p>
     </div>
     <div class="flex gap-2">
-      <%= link_to "Permissions", permissions_path, class: "btn-ghost" %>
+      <%= link_to "Permissions", permissions_path, class: "btn-ghost", data: { tour: 'permissions' } %>
       <% if can_manage_accounts %>
-      <%= link_to "Add account", new_user_path, class: "btn-primary" %>
+      <%= link_to "Add account", new_user_path, class: "btn-primary", data: { tour: 'add' } %>
       <% end %>
     </div>
   </section>
 
-  <div class="card overflow-hidden">
+  <div class="card overflow-hidden" <%= tour_anchor('table') %>>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Email</th>
-            <th scope="col" class="th">Role</th>
-            <th scope="col" class="th">Status</th>
+            <th scope="col" class="th" <%= tour_anchor('roles') %>>Role</th>
+            <th scope="col" class="th" <%= tour_anchor('status') %>>Status</th>
             <th scope="col" class="th text-right">Actions</th>
           </tr>
         </thead>

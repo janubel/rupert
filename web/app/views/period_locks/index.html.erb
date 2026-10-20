@@ -14,7 +14,7 @@
   <section id="lock-focus" class="card card-pad space-y-5" aria-labelledby="lock-focus-title">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p class="eyebrow text-olive-deep"><%= c.kind_label %> end</p>
+        <div class="eyebrow text-olive-deep"><%= c.kind_label %> end<%= define('period_lock') %></div>
         <h2 id="lock-focus-title" class="font-display text-2xl"><%= c.label %></h2>
         <p class="mt-1 text-sm text-mocha"><%= c.from.strftime('%b %-d, %Y') %> – <%= c.to.strftime('%b %-d, %Y') %></p>
       </div>
@@ -108,7 +108,7 @@
       <p class="card card-pad text-sm text-mocha">No period has been locked yet. Start with the most recent finished month.</p>
     <% else %>
       <div class="card operations-table-region" role="region" tabindex="0" aria-label="Lock ledger entries"><table class="operations-table w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60"><tr><% %w[When Who Period Action Note Fingerprint].each do |h| %><th scope="col" class="th"><%= h %></th><% end %></tr></thead>
+        <thead class="border-b border-fog bg-haze/60"><tr><% %w[When Who Period Action Note Fingerprint].each do |h| %><th scope="col" class="th"><%= h %><%= define('fingerprint') if h == 'Fingerprint' %></th><% end %></tr></thead>
         <tbody class="divide-y divide-fog">
           <% @ledger.each do |e| %>
             <tr>

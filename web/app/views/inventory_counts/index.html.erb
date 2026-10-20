@@ -7,21 +7,21 @@
       <p class="mt-1 text-sm text-mocha">Physical count worksheets retained for review. C-Trax is the retail physical-count reference. Approval records the count in Rupert without changing platform inventory.</p>
     </div>
     <% if Current.user.can?('inventory.write') %>
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap gap-2" <%= tour_anchor('start') %>>
         <%= link_to "Start scan count", new_inventory_count_path(prepared: 0, start_scanning: 1), class: "btn-primary" %>
         <%= link_to "New count sheet", new_inventory_count_path, class: "btn-ghost" %>
       </div>
     <% end %>
   </section>
 
-  <div class="flex flex-wrap items-center gap-2 text-sm">
+  <div class="flex flex-wrap items-center gap-2 text-sm" <%= tour_anchor('status') %>>
     <% { "" => "All", "draft" => "Draft", "pending" => "Pending", "approved" => "Approved", "rejected" => "Rejected" }.each do |status, label| %>
       <%= link_to label, inventory_counts_path(status: status.presence),
         class: (params[:status].to_s == status ? "rounded-full bg-olive px-3.5 py-1.5 font-medium text-cream" : "rounded-full px-3.5 py-1.5 font-medium text-mocha hover:bg-haze hover:text-ink") %>
     <% end %>
   </div>
 
-  <div class="card overflow-hidden">
+  <div class="card overflow-hidden" <%= tour_anchor('table') %>>
     <div class="operations-table-region" role="region" tabindex="0" aria-label="Inventory Counts table">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">

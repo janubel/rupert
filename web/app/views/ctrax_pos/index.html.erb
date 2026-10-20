@@ -10,12 +10,12 @@
   </header>
   <details class="text-sm text-mocha"><summary class="cursor-pointer text-olive-deep">New to the register?</summary><p class="mt-2">Check the store, review your cart, then verify the final receipt.</p><%= link_to "Take the three-minute checkout lesson", learning_path("checkout"), class: "mt-2 inline-block underline" %></details>
   <% if @unfinished_checkouts.any? %>
-    <section class="flash flash-alert space-y-2" aria-label="Unfinished checkouts"><h2 class="font-semibold">Resume an unfinished checkout</h2><p>Check the receipt before collecting another payment.</p><div class="flex flex-wrap gap-2"><% @unfinished_checkouts.each do |checkout| %><%= link_to "#{checkout.reference} · #{checkout.status.humanize}", pos_checkout_path(checkout), class: 'btn-ghost btn-sm' %><% end %></div></section>
+    <section class="flash flash-alert space-y-2" aria-label="Unfinished checkouts" <%= tour_anchor('unfinished') %>><h2 class="font-semibold">Resume an unfinished checkout</h2><p>Check the receipt before collecting another payment.</p><div class="flex flex-wrap gap-2"><% @unfinished_checkouts.each do |checkout| %><%= link_to "#{checkout.reference} · #{checkout.status.humanize}", pos_checkout_path(checkout), class: 'btn-ghost btn-sm' %><% end %></div></section>
   <% end %>
   <% if @snapshot %>
     <section class="card card-pad space-y-3" aria-label="Retail source and customer screen">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <div><p class="font-semibold"><%= @snapshot.location.name %> <span class="<%= stock_fresh ? 'pill-fern' : 'pill-clay' %>"><%= stock_fresh ? 'Stock read current' : 'Stock read stale' %></span></p><p class="mt-1 text-xs text-mocha"><%= @snapshot.records.size %> native variants · Last stock pull: <time datetime="<%= @snapshot.captured_at.iso8601 %>"><%= retail_source_time(@snapshot.captured_at) %></time></p></div>
+        <div <%= tour_anchor('store') %>><p class="font-semibold"><%= @snapshot.location.name %> <span class="<%= stock_fresh ? 'pill-fern' : 'pill-clay' %>"><%= stock_fresh ? 'Stock read current' : 'Stock read stale' %></span></p><p class="mt-1 text-xs text-mocha"><%= @snapshot.records.size %> native variants · Last stock pull: <time datetime="<%= @snapshot.captured_at.iso8601 %>"><%= retail_source_time(@snapshot.captured_at) %></time></p></div>
         <% if retail_business_access?('settings.read') || retail_business_access?('settings.write') %>
           <details><summary class="disclosure-trigger text-sm font-semibold text-olive-deep">Store setup</summary><div class="mt-2 flex flex-wrap gap-2">
             <% if retail_business_access?('settings.write') && Current.user.can?('inventory.write') %><%= link_to 'POS checkout setup', pos_setting_path(@snapshot.location_id), class: 'btn-ghost btn-sm' %><% end %>
@@ -34,7 +34,7 @@
         </details>
       <% end %>
       <% unless stock_fresh %><p class="text-sm text-clay">A new stock read is required to check this cart. <%= retail_business_access?('settings.read') ? 'Refresh the C-Trax connection before continuing.' : 'Ask a manager to refresh the C-Trax stock read.' %></p><% end %>
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2" <%= tour_anchor('display') %>>
         <% if @display %>
           <span class="pill-fern">Customer screen paired</span>
           <%= link_to 'Open customer screen', customer_display_path(display_token: @display.display_token), target: '_blank', rel: 'noopener noreferrer', class: 'btn-primary' %>
@@ -48,7 +48,7 @@
     </section>
     <div class="retail-pos-grid">
       <section id="retail-catalog" class="retail-anchor min-w-0 space-y-4" aria-label="Product catalog">
-        <%= form_tag ctrax_pos_path, method: :get, class: 'card card-pad grid gap-3 sm:grid-cols-2', data: { turbo: false } do %>
+        <%= form_tag ctrax_pos_path, method: :get, class: 'card card-pad grid gap-3 sm:grid-cols-2', data: { turbo: false, tour: 'search' } do %>
           <%= hidden_field_tag :display_id, @display&.id, id: 'catalog_display_id' %><%= hidden_field_tag :location_id, @snapshot.location_id, id: 'catalog_location_id' if @display %>
           <div><%= label_tag :location_id, 'Store', class: 'field-label' %><%= select_tag :location_id, options_for_select(@snapshots.map { |s| [s.location.name, s.location_id] }, @snapshot.location_id), disabled: @display.present?, class: 'input', aria: { label: 'C-Trax store' } %></div>
           <div><%= label_tag :category, 'Category', class: 'field-label' %><%= select_tag :category, options_for_select([['All categories', '']] + @categories.map { |c| [c, c] }, @category), class: 'input', aria: { label: 'Product category' } %></div>
@@ -57,7 +57,7 @@
         <% end %>
         <div class="flex flex-wrap items-baseline justify-between gap-2"><div><h2 class="font-display text-xl">Products</h2><p class="text-xs text-mocha">Only products with website images are shown.</p></div><p class="text-sm text-mocha"><%= @total %> results · page <%= @page %></p></div>
         <% if @records.empty? %><div class="card card-pad"><h3 class="font-semibold">No products match these filters</h3><p class="mt-2 text-sm text-mocha">Try a different name, SKU, barcode, or category.</p></div><% end %>
-        <div class="retail-product-grid">
+        <div class="retail-product-grid" <%= tour_anchor('products') %>>
           <% @records.each do |record| %>
             <article class="card retail-product-card overflow-hidden" aria-label="<%= record['name'] %>">
               <% if (image = @images.url(record)) %><%= image_tag image, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', class: 'w-full h-48 object-contain bg-haze' %><% else %><div class="w-full h-48 grid place-items-center text-xs text-taupe bg-haze">Image not linked</div><% end %>

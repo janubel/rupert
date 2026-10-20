@@ -52,8 +52,8 @@
     <h2 class="font-display text-2xl">2. Products and stock</h2>
     <% p = d['products'] %>
     <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <% [['Active products', p['active_products']], ['Variants', p['variants']], ['Linked Shopify↔Square SKUs', p['linked_skus']], ['Stock value at price', money.call(p['stock_value_cents'])], ['Low stock (≤ ' + p['low_stock_threshold'].to_s + ')', p['low_stock']], ['Out of stock', p['out_of_stock']]].each do |label, value| %>
-        <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value mt-1"><%= value %></p></div>
+      <% [['Active products', p['active_products'], nil], ['Variants', p['variants'], 'sku'], ['Linked Shopify↔Square SKUs', p['linked_skus'], 'shared_stock'], ['Stock value at price', money.call(p['stock_value_cents']), 'stock_value'], ['Low stock (≤ ' + p['low_stock_threshold'].to_s + ')', p['low_stock'], 'threshold'], ['Out of stock', p['out_of_stock'], 'mirror']].each do |label, value, term| %>
+        <div class="stat"><div class="stat-label"><%= label %><%= define(term) if term %></div><p class="stat-value mt-1"><%= value %></p></div>
       <% end %>
     </div>
     <% if p['top_sellers_90d'].any? %>
@@ -89,8 +89,8 @@
     <h2 class="font-display text-2xl">4. Money out and vendors</h2>
     <% m = d['money_out']; v = d['vendors'] %>
     <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <% [["Expenses, 90 days (#{m['expenses_90d_count']})", money.call(m['expenses_90d_cents'])], ["Vendor payments, 90 days (#{m['vendor_payments_90d_count']})", money.call(m['vendor_payments_90d_cents'])], ['Owed to vendors', money.call(v['owed_cents'])], ['Ordered, not received', money.call(v['committed_cents'])]].each do |label, value| %>
-        <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value mt-1"><%= value %></p></div>
+      <% [["Expenses, 90 days (#{m['expenses_90d_count']})", money.call(m['expenses_90d_cents']), 'expense'], ["Vendor payments, 90 days (#{m['vendor_payments_90d_count']})", money.call(m['vendor_payments_90d_cents']), 'vendor_payment'], ['Owed to vendors', money.call(v['owed_cents']), 'accounts_payable'], ['Ordered, not received', money.call(v['committed_cents']), 'po_pending']].each do |label, value, term| %>
+        <div class="stat"><div class="stat-label"><%= label %><%= define(term) %></div><p class="stat-value mt-1"><%= value %></p></div>
       <% end %>
     </div>
     <% if m['by_category'].any? %><p class="text-sm">Expenses by category: <%= m['by_category'].map { |k, c| "#{k.humanize} #{money.call(c)}" }.join(' · ') %>.</p><% end %>

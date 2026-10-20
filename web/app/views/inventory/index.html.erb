@@ -5,7 +5,7 @@
       <h1 class="page-title">Inventory</h1>
       <p class="mt-1 max-w-2xl text-sm text-mocha">Stock held at each location. Shopify and Square are separate locations with independent inventories — different numbers across columns are normal, not an error.</p>
     </div>
-    <div class="flex flex-wrap gap-2">
+    <div class="flex flex-wrap gap-2" <%= tour_anchor('actions') %>>
       <%= link_to "Download PDF", pdf_inventory_index_path, class: "btn-ghost", data: { turbo: false }, title: "Printable snapshot with per-location stock and sync timestamps" %>
       <%= link_to "Recommend SKU download", recommended_skus_inventory_index_path, class: "btn-ghost", data: { turbo: false }, title: "Download proposed unique SKUs for every SKU shared across different products (plan only — no changes made)" %>
       <%= link_to "Movement history", movements_inventory_index_path, class: "btn-ghost" %>
@@ -22,7 +22,7 @@
     </p>
   <% end %>
 
-  <%= form_tag inventory_index_path, method: :get, class: "max-w-sm" do %>
+  <%= form_tag inventory_index_path, method: :get, class: "max-w-sm", data: { tour: 'search' } do %>
     <input type="search" name="q" value="<%= @q %>" placeholder="Search products or SKUs…" aria-label="Search products or SKUs" class="search w-full" autocomplete="off">
   <% end %>
 
@@ -33,15 +33,15 @@
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <th scope="col" class="th">Product / Variant</th>
-            <th scope="col" class="th">SKU<%= render "shared/definition", term: "sku" %></th>
+            <th scope="col" class="th">SKU<%= define('sku') %></th>
             <th scope="col" class="th text-right">Price</th>
-            <% @stock_locations.each do |location| %>
-              <th scope="col" class="th text-right" title="<%= location.source == "shopify" ? "Shopify" : "Square" %> — <%= location.name %>">
+            <% @stock_locations.each_with_index do |location, location_index| %>
+              <th scope="col" class="th text-right" <%= tour_anchor('locations') if location_index.zero? %> title="<%= location.source == "shopify" ? "Shopify" : "Square" %> — <%= location.name %>">
                 <span class="block truncate max-w-[7rem] ml-auto"><%= location.name %></span>
                 <span class="block text-[9px] font-normal normal-case tracking-normal text-taupe"><%= location.source %></span>
               </th>
             <% end %>
-            <th scope="col" class="th text-right">Total mirror quantity<%= render "shared/definition", term: "mirror" %></th>
+            <th scope="col" class="th text-right" <%= tour_anchor('mirror') %>>Total mirror quantity<%= define('mirror') %></th>
             <th scope="col" class="th text-right">Catalog</th>
           </tr>
         </thead>
