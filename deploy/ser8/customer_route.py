@@ -3,12 +3,21 @@
 No wildcard DNS or existing route is changed by this helper.
 """
 import fcntl
+import ipaddress
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
 import tempfile
+
+
+def route_body(hostname, port):
+    # SER8 routes share an explicit LAN listener. Keep this operator-controlled;
+    # without it Caddy may try to bind all addresses alongside existing listeners.
+    address = os.environ.get('RUPERT_CUSTOMER_BIND_ADDRESS', '')
+    bind = '  bind ' + str(ipaddress.IPv4Address(address)) + '\n' if address else ''
+    return (f'{hostname} {{\n' + bind + f'  reverse_proxy 127.0.0.1:{port}\n}}\n').encode()
 
 
 def main():
@@ -31,7 +40,7 @@ def main():
         if target.is_symlink():
             raise ValueError('Refusing a symlink route')
         old = target.read_bytes() if target.exists() else None
-        body = f'{hostname} {{\n  reverse_proxy 127.0.0.1:{port}\n}}\n'.encode()
+        body = route_body(hostname, port)
         descriptor, name = tempfile.mkstemp(prefix='.pending-', dir=directory)
         with os.fdopen(descriptor, 'wb') as stream:
             stream.write(body)
