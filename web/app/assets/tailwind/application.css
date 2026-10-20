@@ -782,3 +782,12 @@ select.input {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--color-taupe) 45%, transparent) transparent;
 }
+
+/* On phones the area navigation scrolls sideways; fade its trailing edge so
+   the clipped items read as "more this way" instead of a layout bug. */
+@media (max-width: 760px) {
+  .area-navigation {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  }
+}
