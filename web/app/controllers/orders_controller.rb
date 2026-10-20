@@ -57,7 +57,7 @@ class OrdersController < AuthenticatedController
   # in `amount`; convert to cents here.
   def refund
     authorize(:module, :sales_write?)
-    cents = (params[:amount].to_f * 100).round
+    cents = Money.cents_from_amount!(params[:amount], field: 'Refund amount')
     refund = @order.record_refund!(
       amount_cents: cents,
       method: params[:method].presence || 'card',
@@ -65,8 +65,8 @@ class OrdersController < AuthenticatedController
       reference: params[:reference].presence
     )
     ActivityLogger.log('refund_recorded', subject: @order,
-      details: "$#{format('%.2f', cents / 100.0)} · #{refund.method}")
-    redirect_to(order_path(@order), notice: "Refund of $#{format('%.2f', cents / 100.0)} recorded.")
+      details: "$#{Money.format_cents(cents)} · #{refund.method}")
+    redirect_to(order_path(@order), notice: "Refund of $#{Money.format_cents(cents)} recorded.")
   rescue ArgumentError, ActiveRecord::RecordInvalid => e
     redirect_to(order_path(@order), alert: e.message)
   end

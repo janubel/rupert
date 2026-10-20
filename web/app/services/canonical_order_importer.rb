@@ -229,7 +229,7 @@ class CanonicalOrderImporter
     # Shopify returns a paymentGatewayNames array, not itemized tenders; infer
     # a single tender from the order total for tender-type reporting.
     def shopify_payments(node)
-      gross = (node.dig('currentTotalPriceSet', 'shopMoney', 'amount').to_f * 100).round
+      gross = money_cents(node.dig('currentTotalPriceSet', 'shopMoney')).to_i
       return [] if gross.zero?
 
       gateways = Array(node['paymentGatewayNames'])

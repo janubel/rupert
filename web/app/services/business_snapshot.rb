@@ -63,13 +63,20 @@ class BusinessSnapshot
     {
       'active_products' => ShopifyProduct.active.count, 'variants' => ShopifyVariant.count,
       'square_variations' => SquareVariation.count, 'linked_skus' => SkuLink.linked.count,
-      'stock_value_cents' => (ShopifyVariant.where.not(price: nil).where.not(inventoryQuantity: nil).sum(Arel.sql('price * "inventoryQuantity"')).to_f * 100).round,
+      'stock_value_cents' => stock_value_cents,
       'low_stock' => ShopifyVariant.where('"inventoryQuantity" > 0 AND "inventoryQuantity" <= ?', threshold).count,
       'out_of_stock' => ShopifyVariant.where('"inventoryQuantity" <= 0').count,
       'low_stock_threshold' => threshold,
       'top_sellers_90d' => top.map { |(name, sku), cents| { 'name' => name, 'sku' => sku, 'cents' => cents } },
       'note' => 'Catalog and stock come from Shopify and Square mirrors. Top sellers use the canonical order store only, so retail sales that arrive through C-Trax are not in this list.'
     }
+  end
+
+  # price is a float column in the mirror; convert each row through Money so
+  # the total is exact integer cents rather than a rounded Float sum.
+  def stock_value_cents
+    ShopifyVariant.where.not(price: nil).where.not(inventoryQuantity: nil).pluck(:price, :inventoryQuantity)
+      .sum { |price, quantity| Money.cents_from_amount(price).to_i * quantity.to_i }
   end
 
   def cash

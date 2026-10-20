@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'bigdecimal'
+
 # A secret warehouse-sale link shared with a vendor. The token in the URL is
 # the only access control — it is never listed in the app's navigation.
 class WarehouseShare < ApplicationRecord
@@ -59,16 +61,18 @@ class WarehouseShare < ApplicationRecord
   end
 
   def discount_for(qty)
-    tier_for(qty)&.discountPercent.to_f
+    BigDecimal(tier_for(qty)&.discountPercent.to_s.presence || '0')
   end
 
   # Per-vendor price before bulk discount (list price × vendor multiplier).
+  # Decimal arithmetic: list prices come from a float column, so they are
+  # re-read through their shortest decimal representation first.
   def unit_price(list_price)
-    list_price.to_f * priceMultiplier.to_f
+    BigDecimal(list_price.to_s.presence || '0') * BigDecimal(priceMultiplier.to_s.presence || '1')
   end
 
   def sale_price(list_price, qty)
-    (unit_price(list_price) * (1 - discount_for(qty) / 100.0)).round(2)
+    (unit_price(list_price) * (1 - discount_for(qty) / 100)).round(2)
   end
 
   private
