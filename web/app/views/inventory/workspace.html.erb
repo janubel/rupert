@@ -23,7 +23,7 @@
       <%= link_to 'Review native stock and identity evidence', stock_comparison_path, class: 'btn-ghost' %>
     </section>
   <% end %>
-  <div class="card card-pad text-sm text-mocha">Mirrored stock remains separate for each source and location. Local holds reduce Rupert availability; incoming transfers and waiting backorders never increase it. Warehouse holds have no assigned location, so each Shopify pool conservatively accounts for the full warehouse hold. Shopify legacy mirror quantity is available stock or an aggregate fallback, rather than a physical on-hand count. Use the Shopify / C-Trax comparison for native on-hand, available, committed and physical-reference evidence.</div>
+  <%= fold_explainer('Mirrored stock remains separate for each source and location. Local holds reduce Rupert availability; incoming transfers and waiting backorders never increase it. Warehouse holds have no assigned location, so each Shopify pool conservatively accounts for the full warehouse hold. Shopify legacy mirror quantity is available stock or an aggregate fallback, rather than a physical on-hand count. Use the Shopify / C-Trax comparison for native on-hand, available, committed and physical-reference evidence.', class: 'card card-pad text-sm text-mocha') %>
   <%= form_with url: workspace_inventory_index_path, method: :get, class: 'card card-pad flex flex-wrap gap-3 items-end' do %>
     <label>Search SKU or item<%= text_field_tag :q, params[:q], class: 'input' %></label>
     <label>Source<%= select_tag :source, options_for_select([['Shopify', 'shopify'], ['Square', 'square']], params[:source]), include_blank: 'All sources', class: 'input' %></label>

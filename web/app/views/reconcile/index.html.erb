@@ -4,7 +4,7 @@
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Catalog Links</h1>
-      <p class="mt-1 max-w-2xl text-sm text-mocha">Review which sellable items are linked across Shopify and Square. Financial reconciliation lives in Money → Financial close. This is an identity audit only — Shopify and Square are separate locations with independent inventories, so different quantities are normal and never auto-corrected.</p>
+      <%= fold_explainer('Review which sellable items are linked across Shopify and Square. Financial reconciliation lives in Money → Financial close. This is an identity audit only — Shopify and Square are separate locations with independent inventories, so different quantities are normal and never auto-corrected.', class: 'mt-1 max-w-2xl text-sm text-mocha') %>
     </div>
     <% if retail_business_access?('inventory.read') %><%= link_to 'Compare Shopify & C-Trax stock', inventory_index_path, class: 'btn-ghost' %><% end %>
   </section>
