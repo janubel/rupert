@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Whitespace errors (trailing spaces, blank lines at EOF)
+        run: git diff-tree --check "$(git hash-object -t tree /dev/null)" HEAD
       - run: python3 bin/build-product-site --check
       - run: python3 bin/check-doc-links
       - name: Run all browser-controller tests
@@ -76,5 +78,16 @@ jobs:
       - name: Precompile assets
         run: bin/rails assets:precompile
 
-      - name: Run tests
-        run: bin/rails test
+      - name: Run tests (with coverage)
+        run: COVERAGE=1 bin/rails test
+
+      - name: Enforce coverage floors on the sync engine and money paths
+        run: bin/check-coverage --report
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: coverage-${{ matrix.adapter }}
+          path: web/coverage
+          retention-days: 14

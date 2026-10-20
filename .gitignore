@@ -39,3 +39,4 @@ web/db/*.sqlite*
 # Rails generated types
 .react-router/
 node_modules/.cache/
+coverage/
