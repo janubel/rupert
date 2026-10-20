@@ -47,7 +47,7 @@ module Projects
         redirect_back(fallback_location: @task.project || projects_tasks_path, notice: 'Task updated.')
       else
         redirect_back(fallback_location: @task.project || projects_tasks_path,
-                      alert: @task.errors.full_messages.join(', '))
+          alert: @task.errors.full_messages.join(', '))
       end
     end
 
@@ -67,7 +67,7 @@ module Projects
         redirect_back(fallback_location: @task.project || projects_tasks_path, notice: "Task #{event}ed.")
       else
         redirect_back(fallback_location: @task.project || projects_tasks_path,
-                      alert: "Cannot #{event} a #{@task.status} task.")
+          alert: "Cannot #{event} a #{@task.status} task.")
       end
     end
 
@@ -81,7 +81,7 @@ module Projects
             render(json: { id: @task.id, status: @task.status, done_at: @task.completed_at })
           else
             render(json: { error: "Cannot move a #{@task.status} task to #{params[:status]}." },
-                   status: :unprocessable_entity)
+              status: :unprocessable_entity)
           end
         end
         format.html do

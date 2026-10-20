@@ -23,26 +23,28 @@ module ProjectsHelper
   end
 
   def project_status_pill(project)
-    css = if project.completed? then 'pill-fern'
-          elsif project.archived? then 'pill-taupe'
-          elsif project.active? then 'pill-olive'
-          else 'pill-clay'
-          end
+    css =
+      if project.completed? then 'pill-fern'
+      elsif project.archived? then 'pill-taupe'
+      elsif project.active? then 'pill-olive'
+      else 'pill-clay'
+      end
     tag.span(status_label(project.status), class: css)
   end
 
   def task_status_pill(task)
-    css = if task.done? then 'pill-fern'
-          elsif task.blocked? then 'pill-rose'
-          elsif task.in_progress? then 'pill-olive'
-          else 'pill-taupe'
-          end
+    css =
+      if task.done? then 'pill-fern'
+      elsif task.blocked? then 'pill-rose'
+      elsif task.in_progress? then 'pill-olive'
+      else 'pill-taupe'
+      end
     tag.span(status_label(task.status), class: css)
   end
 
   def priority_dot(priority)
     tag.span('', class: "inline-block h-2 w-2 shrink-0 rounded-full #{PRIORITY_DOT.fetch(priority.to_s, 'bg-olive')}",
-                 title: "#{priority.to_s.capitalize} priority", role: 'img', 'aria-label': "#{priority} priority")
+      title: "#{priority.to_s.capitalize} priority", role: 'img', 'aria-label': "#{priority} priority")
   end
 
   HEALTH = {

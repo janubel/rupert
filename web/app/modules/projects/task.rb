@@ -32,7 +32,7 @@ module Projects
     # Urgent first, then soonest due, undated last.
     scope :by_priority, lambda {
       order(Arel.sql("CASE tasks.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END"),
-            Arel.sql('CASE WHEN tasks.due_on IS NULL THEN 1 ELSE 0 END'), :due_on, :id)
+        Arel.sql('CASE WHEN tasks.due_on IS NULL THEN 1 ELSE 0 END'), :due_on, :id)
     }
 
     aasm column: 'status', no_direct_assignment: true do
