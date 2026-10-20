@@ -17,6 +17,10 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
   def upload(csv = CSV_TEXT, label: 'Operating checking')
     file = Rack::Test::UploadedFile.new(StringIO.new(csv), 'text/csv', original_filename: 'oct.csv')
     post bank_statements_path, params: { account_label: label, file: file }
+    Finance::ChartOfAccounts.seed!
+    BankStatementAccount.find_or_create_by!(account_label: label) do |mapping|
+      mapping.ledger_account = Finance::Account.find_by!(code: '1100')
+    end
   end
 
   def last_entry(action) = ActivityLog.where(tenant_id: @tenant.id, action: action).order(:id).last
