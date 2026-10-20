@@ -13,6 +13,7 @@ Influencer operators: [Influencer CMS](ops/influencer-cms.md) covers prospects, 
 | --- | --- |
 | `index.html`, `getting-started.html`, `architecture.html`, `modules.html`, `operations.html`, `deployment.html` | The published docs site (GitHub Pages, styled by `assets/style.css`) |
 | `BRANCHING.md` | Branch strategy: `main` = Rails production |
+| `ops/security-scanning.md` | Security CI (bundler-audit, Brakeman baseline) and the triage of accepted warnings |
 | `modules.md` | How to add an ERP module under `web/app/modules/` |
 | `plans/` | Design and migration plans (drift migration, phase plan, staffing model) |
 | `audits/` | Dated inventory/SKU audits with their findings. Raw CSV/JSON output sits in `audits/data/` |
