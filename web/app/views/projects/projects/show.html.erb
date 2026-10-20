@@ -25,6 +25,7 @@
         <% end %>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm" %>
         <% if can_write %>
           <% if @project.may_start? %><%= button_to (@project.on_hold? ? "Resume" : "Start"), transition_projects_project_path(@project, event: "start"), method: :post, class: "btn-primary btn-sm" %><% end %>
           <% if @project.may_hold? %><%= button_to "Hold", transition_projects_project_path(@project, event: "hold"), method: :post, class: "btn-ghost btn-sm" %><% end %>

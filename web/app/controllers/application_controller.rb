@@ -30,6 +30,8 @@ class ApplicationController < ActionController::Base
       %w[edit update].include?(action_name)
     when 'projects/tasks'
       %w[index update transition move].include?(action_name)
+    when 'projects/guides'
+      action_name == 'show'
     when 'receipts'
       %w[index new create show edit update download submit reopen].include?(action_name)
     when 'people/timesheets'
