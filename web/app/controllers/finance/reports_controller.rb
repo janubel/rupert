@@ -33,6 +33,21 @@ module Finance
       render_statement('Balance sheet')
     end
 
+    # Sales tax across Shopify/Square, C-Trax and SwipeSimple for any dates; reads imported sales, not the ledger.
+    def sales_tax
+      authorize(:module, :finance_read?)
+      @report = SalesTaxReport.new(from: @from, to: @to)
+      respond_to do |format|
+        format.html
+        format.csv do
+          log_export('Sales tax report CSV', "#{@from} to #{@to}")
+          send_data @report.csv, filename: "sales-tax-#{@from}-#{@to}.csv"
+        end
+      end
+    rescue SalesTaxReport::Error => e
+      redirect_to finance_reports_sales_tax_path, alert: e.message
+    end
+
     private
 
     def set_window

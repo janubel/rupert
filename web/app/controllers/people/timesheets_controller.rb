@@ -22,8 +22,8 @@ module People
       scoped = visible
       if @period
         day = Date.iso8601(@period)
-        @week_start = day.beginning_of_week
-        scoped = scoped.where('period_start <= ? AND period_end >= ?', day.end_of_week, day.beginning_of_week)
+        @week_start = week_start_for(day)
+        scoped = scoped.where('period_start <= ? AND period_end >= ?', @week_start + 6, @week_start)
       end
       scoped = scoped.joins(:employee).merge(search_employees(@query)) if @query
       @status_counts = scoped.group(:status).count
@@ -38,7 +38,7 @@ module People
       # The week schedule leads the page for anyone who can review time, with an employee key to switch people on and off.
       @calendar_view = @reviewer && Current.user.can?('timesheets.read')
       if @calendar_view
-        @week_start ||= Date.current.beginning_of_week
+        @week_start ||= week_start_for(Date.current)
         @calendar = TimesheetCalendar.new(@week_start, user: Current.user)
       end
       @missing = TimesheetInsights.missing_for_week(@week_start || Date.current) if @reviewer && Current.user.can?('timesheets.write') && !@query
@@ -181,6 +181,17 @@ module People
     end
 
     private
+
+    # Pay weeks may run Thursday through Wednesday. `wk=thu` snaps to Thursday,
+    # `wk=custom` starts the seven days exactly on the chosen date, anything else is Monday-Sunday.
+    def week_start_for(day)
+      case params[:wk]
+      when 'thu' then day.beginning_of_week(:thursday)
+      when 'custom' then day
+      else day.beginning_of_week
+      end
+    end
+    helper_method :week_start_for
 
     def prevent_caching
       response.headers['Cache-Control'] = 'no-store'

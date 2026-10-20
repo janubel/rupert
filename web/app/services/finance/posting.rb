@@ -32,6 +32,8 @@ module Finance
       'utilities' => '5300',
       'labor' => '5400',
       'marketing' => '5500',
+      'advertising' => '5510',
+      'store' => '5750',
       'software' => '5600',
       'supplies' => '5700',
       'insurance' => '5800',

@@ -32,6 +32,7 @@
     <a href="#documents" class="card card-pad block hover:ring-2 hover:ring-olive"><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Documents for this day</p><p class="mt-2 font-display text-xl tabular-nums"><%= @report.documents.size %></p><p class="mt-2 text-xs text-mocha">Originals and supporting report versions</p></a>
     <%= link_to retention_drive_path, class: 'card card-pad block hover:ring-2 hover:ring-olive' do %><p class="text-xs font-semibold uppercase tracking-wide text-mocha">Google Drive retention</p><p class="mt-2 font-display text-xl"><%= @drive_connection&.connected? && @drive_connection.enabled ? (@drive_connection.last_error.present? ? 'Needs attention' : 'Automatic copies on') : 'Setup pending' %></p><p class="mt-2 text-xs text-mocha"><%= @drive_verified || 0 %> verified copies · originals retained in Rupert</p><% end %>
   </section>
+  <%= render 'shared/daily_close_summary', day: @report.day %>
   <%= render 'shared/finance_source_coverage', coverage: @report.source_coverage %>
   <%= render 'daily_reconciliations/attention' %>
   <div id="review-day" class="scroll-mt-48 md:scroll-mt-32"><h2 class="font-display text-xl">1. Review the day</h2><p class="mt-1 text-sm text-mocha">Compare one source, location and currency at a time. Missing imports are not zero-sales days.</p><p class="mt-2 text-xs text-mocha md:hidden">Swipe wide tables sideways to see every metric.</p></div>
