@@ -19,7 +19,11 @@ module Projects
       @overdue_count = visible_tasks.overdue.count
       @mine_count = visible_tasks.assigned_to(Current.user.id).where.not(status: 'done').count
       @projects = Projects::Project.where.not(status: 'archived').order(:name)
-      @projects = @projects.where(id: visible_tasks.select(:project_id)) if Current.user.employee?
+      if Current.user.employee?
+        # Legacy task project IDs are strings; project primary keys are integers.
+        assigned_projects = visible_tasks.where('tasks.project_id = CAST(projects.id AS VARCHAR)')
+        @projects = @projects.where(assigned_projects.arel.exists)
+      end
 
       if @view == 'board'
         @board_total = @scope.count
