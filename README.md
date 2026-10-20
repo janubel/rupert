@@ -1,7 +1,7 @@
 # Rupert
 
 Centralized inventory operations: a Shopify + Square sync
-engine with an Oatmeal-styled web dashboard, backed by SQLite in production. Runs as a
+engine with a web dashboard (neutral blue palette, light and dark themes), backed by SQLite in production. Runs as a
 Ruby on Rails 8.1 app (based on the
 [Shopify Ruby app template](https://github.com/Shopify/shopify-app-template-ruby))
 and is currently hosted at [rupert.stoverparc.org](https://rupert.stoverparc.org/).
@@ -18,7 +18,7 @@ Square ───┼── sync engine ──▶ SQLite DB     ──▶ GUI
 
 | Path | Purpose |
 | --- | --- |
-| `web/` | The Rails 8.1 app: sync engine services, Oatmeal GUI, JSON APIs |
+| `web/` | The Rails 8.1 app: sync engine services, the dashboard GUI (`app/assets/tailwind/application.css` holds the palette; `bin/check-palette-contrast` verifies it), JSON APIs |
 | `mobile/` | Staff iPhone/Android app (see `mobile/README.md`) |
 | `legacy/` | The original Node/React implementation, kept as reference |
 | `docs/` | Docs site, plans, audits and research (see `docs/README.md`) |

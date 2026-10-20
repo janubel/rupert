@@ -108,7 +108,7 @@ into a single canonical stream:
 3. Pundit policy in `app/policies/<name>/` (or `ModulePolicy` for page-only gates).
 4. Controller in `app/controllers/<name>/`, extending `AuthenticatedController`,
    authorizing each action.
-5. Views under `app/views/<name>/` (Oatmeal/Tailwind classes: `card`, `stat`,
+5. Views under `app/views/<name>/` (theme/Tailwind classes: `card`, `stat`,
    `pill-*`, `btn-*`, `input`, `select`, `td`, `th`).
 6. Permissions: add `<name>.read` / `<name>.write` to `ModulePolicy`,
    `User::ROLE_PERMISSIONS`, and `User.permission_catalog`.

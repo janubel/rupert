@@ -64,6 +64,9 @@ jobs:
       - name: Run RuboCop
         run: bundle exec rubocop --parallel -c ./rubocop.yml
 
+      - name: Verify palette contrast (light and dark tokens, WCAG AA)
+        run: bin/check-palette-contrast
+
       - name: Prepare test database
         run: bin/rails db:prepare
 
