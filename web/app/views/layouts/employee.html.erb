@@ -4,7 +4,7 @@
   <%= render "layouts/favicon" %>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title><%= [content_for(:title), 'Rupert'].compact.join(' · ') %></title>
+  <title><%= safe_join([content_for(:title), 'Rupert'].compact, " · ") %></title>
   <meta name="turbo-cache-control" content="no-cache">
   <meta name="theme-color" content="#e6efea">
   <%= render 'layouts/theme' %>

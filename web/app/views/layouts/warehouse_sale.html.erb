@@ -4,7 +4,7 @@
     <%= render "layouts/favicon" %>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title><%= [content_for(:title), "Warehouse sale"].compact.join(" · ") %></title>
+    <title><%= safe_join([content_for(:title), "Warehouse sale"].compact, " · ") %></title>
     <meta name="color-scheme" content="light">
     <meta name="robots" content="noindex, nofollow">
     <%= csrf_meta_tags %>
