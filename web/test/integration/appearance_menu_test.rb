@@ -32,4 +32,26 @@ class AppearanceMenuTest < ActionDispatch::IntegrationTest
     end
     assert_not_includes css, ':root:not([data-theme])', 'no appearance may claim the attribute-less default'
   end
+
+  test 'the page color is the same in the stylesheet, the first-paint script and the picker for every appearance' do
+    css = File.read(Rails.root.join('app/assets/tailwind/application.css'))
+    script = File.read(Rails.root.join('app/views/layouts/_theme.html.erb'))
+    picker = File.read(Rails.root.join('app/javascript/controllers/theme_controller.js'))
+    expected = { 'herbal' => css[/@theme \{.*?--color-oat:\s*(#\h{6})/m, 1] }
+    (THEMES - ['herbal']).each do |theme|
+      expected[theme] = css[/:root\[data-theme="#{theme}"\]\s*\{.*?--color-oat:\s*(#\h{6})/m, 1]
+    end
+    expected.each do |theme, color|
+      assert color, "#{theme} defines --color-oat"
+      assert_includes script, %(#{theme}: "#{color}") unless theme == 'herbal'
+      assert_includes picker, %(#{theme}: "#{color}")
+    end
+    assert_includes response_layout_colors, expected['herbal'], 'layouts ship the Herbal default as theme-color'
+  end
+
+  private
+
+  def response_layout_colors
+    %w[application employee].map { |name| File.read(Rails.root.join("app/views/layouts/#{name}.html.erb"))[/theme-color" content="(#\h{6})"/, 1] }.uniq.join(' ')
+  end
 end
