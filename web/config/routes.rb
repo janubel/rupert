@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  post 'update_notice/dismiss', to: 'update_notices#dismiss', as: :dismiss_update_notice
   resource :bookkeeping, only: :show, controller: 'bookkeeping'
   resource :books_desk, only: :show, path: 'books' do
     get :checks
