@@ -12,17 +12,23 @@
 
   <section class="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Ledger summary">
     <div class="stat">
-      <p class="stat-label">Entries</p>
+      <div class="stat-label">Entries<%= define('void_entry') %></div>
       <p class="stat-value mt-1"><%= number_with_delimiter(@totals[:entries]) %></p>
       <p class="mt-1 text-sm text-mocha"><%= @totals[:void] %> of them void</p>
     </div>
     <div class="stat">
-      <p class="stat-label">Total debits · USD</p>
+      <div class="stat-label">Total debits · USD<%= define('debit_credit') %></div>
       <p class="stat-value mt-1"><%= finance_money(@totals[:debits]) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Total credits · USD</p>
+      <div class="stat-label">Total credits · USD<%= define('debit_credit') %></div>
       <p class="stat-value mt-1"><%= finance_money(@totals[:credits]) %></p>
+      <%= explain_calculation(title: 'Do the listed entries balance?', id: 'ledger-balance-check',
+            formula: 'Total debits − total credits across the entries matching these filters. Zero means every listed entry is balanced.',
+            rows: [['Entries listed', number_with_delimiter(@totals[:entries])], ['Total debits', finance_money(@totals[:debits])], ['Total credits', "− #{finance_money(@totals[:credits])}"],
+                   ['Difference', finance_money(@totals[:debits] - @totals[:credits])]],
+            note: "These totals include the #{@totals[:void]} void #{'entry'.pluralize(@totals[:void])} shown in the list; reports and exports leave void entries out.",
+            term: 'debit_credit', lesson: 'books') %>
     </div>
   </section>
   <%= finance_balance_status(@totals[:debits] - @totals[:credits], balanced_text: 'Balanced: debits equal credits') %>

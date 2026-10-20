@@ -13,7 +13,7 @@
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Expense summary">
     <div class="stat">
-      <p class="stat-label">Active expenses · USD</p>
+      <div class="stat-label">Active expenses · USD<%= define('expense') %></div>
       <p class="stat-value mt-1"><%= finance_money(@total_cents) %></p>
       <p class="mt-1 text-sm text-mocha"><%= pluralize(@entry_count, 'active expense') %> in range<%= ', filtered' if @q.present? || @min_cents || @max_cents || @category != 'all' %></p>
     </div>

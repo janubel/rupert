@@ -51,6 +51,48 @@ class LearningExamples
       rows: [['Recorded sales', '$100.00'], ['Bank funding evidence', '$97.00'], ['Difference to explain', '$3.00'], ['Possible explanation', 'A fee, only if evidence supports it']],
       takeaway: 'Do not invent a fee to force a match. Verify it in source evidence or assign a follow-up. Review again if the underlying evidence changes.'
     },
+    'sync' => {
+      title: 'A green pull is a start, not a proof',
+      context: 'The Shopify pull finished at 9:05 with no error. A customer says they ordered at 8:40.',
+      rows: [['Last Shopify pull', '9:05, success'], ['Customer’s order time', '8:40'], ['Order found in Rupert?', 'Check the journal'], ['If missing', 'Investigate the read; do not type it in']],
+      takeaway: 'A successful status means the read finished. Confirm a known record exists before trusting a total, and never hand-enter source data to patch a gap.'
+    },
+    'access' => {
+      title: 'The smallest access that does the job',
+      context: 'A fictional cashier, Priya, needs to check yesterday’s sales report once for a manager who is away.',
+      rows: [['Role today', 'Cashier'], ['Needed', 'Reports, read-only, once'], ['Poor fix', 'Promote to administrator'], ['Better fix', 'Run the report for her, or add a narrow reviewable override']],
+      takeaway: 'Roles describe everyday work. Exceptions should be rare, narrow and reviewed. Administrator and platform roles are never a shortcut.'
+    },
+    'customers' => {
+      title: 'Lifetime value only counts what is stored',
+      context: 'A fictional customer has three recorded orders and one cash sale that was never imported.',
+      rows: [['Recorded order A', '$40.00'], ['Recorded order B', '$25.00'], ['Recorded order C', '$35.00'], ['Lifetime value shown', '$100.00'], ['Unimported cash sale', 'Not included']],
+      takeaway: 'The figure is the sum of stored orders attributed to this profile. Check source coverage and profile matching before concluding a customer spends less than you remember.'
+    },
+    'alerts' => {
+      title: 'From pace to a suggestion',
+      context: 'A fictional item has 4 units at the website location and 2 at the register. It sold 30 units in the last 30 days.',
+      rows: [['On hand: 4 + 2', '6 units'], ['Sold in 30 days', '30 units'], ['Pace: 30 ÷ 30', '1 unit per day'], ['Days of cover: 6 ÷ 1', '6 days'], ['30 days of pace: 1 × 30', '30 units'], ['Suggested reorder: 30 − 6', '24 units']],
+      takeaway: 'Cover and the suggestion follow directly from on hand and pace. Check pack sizes, lead time and season before ordering; nothing is ordered automatically.'
+    },
+    'reports' => {
+      title: 'Profit depends on what was recorded',
+      context: 'A fictional 30-day financial report shows $5,000 recorded sales and $3,000 recorded expenses. A $600 supplier invoice has not been entered.',
+      rows: [['Recorded sales', '$5,000.00'], ['Recorded expenses', '$3,000.00'], ['Profit shown: 5,000 − 3,000', '$2,000.00'], ['Missing invoice', '$600.00'], ['Profit after recording it', '$1,400.00']],
+      takeaway: 'A missing expense inflates profit. Record what is missing, then read the report again for the same window.'
+    },
+    'timesheet_review' => {
+      title: 'Return with a reason, not a shrug',
+      context: 'A fictional submitted week shows 9 hours on Tuesday. Punches and the schedule both show 7.',
+      rows: [['Submitted Tuesday', '9.0 h'], ['Punches', '9:00 → 16:00 = 7.0 h'], ['Scheduled', '7.0 h'], ['Difference to explain', '2.0 h'], ['Decision', 'Return with a note']],
+      takeaway: 'Ask about the two hours in the note. The person corrects or explains, then resubmits. Approving the week as-is would pay time the evidence does not support.'
+    },
+    'receipts_review' => {
+      title: 'The image is the evidence',
+      context: 'A fictional receipt is submitted for $48.20 with the purpose “cleaning supplies”. The photo shows $43.20.',
+      rows: [['Typed total', '$48.20'], ['Total on the image', '$43.20'], ['Difference', '$5.00'], ['Decision', 'Reject with a note asking for the correct amount']],
+      takeaway: 'Approve only when the typed details match the original. Approval records a bookkeeping decision; it does not pay anyone.'
+    },
     'tasks' => {
       title: 'Make a blocker actionable',
       context: 'A fictional task asks you to prepare a shelf display. Its product list has not been provided.',

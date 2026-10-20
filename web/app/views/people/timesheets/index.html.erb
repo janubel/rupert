@@ -17,7 +17,7 @@
   </section>
 
   <% if @reviewer %>
-    <nav aria-label="Timesheet review" class="flex flex-wrap gap-2">
+    <nav aria-label="Timesheet review" class="flex flex-wrap gap-2" <%= tour_anchor('tabs') %>>
       <% [['Needs review', 'submitted'], ['All timesheets', 'all'], ['Approved', 'approved'], ['Returned for correction', 'rejected'], ['Drafts', 'draft']].each do |label, status| %>
         <% count = status == 'submitted' ? @awaiting : (@status_counts || {}).then { |c| status == 'all' ? c.values.sum : c.fetch(status, 0) } %>
         <%= link_to "#{label} (#{count})", people_timesheets_path(status: status, period: @period, q: @query, view: params[:view].presence), class: "nav-pill #{@status == status ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@status == status ? 'page' : nil) } %>
@@ -25,7 +25,7 @@
     </nav>
     <p class="text-sm text-mocha">Review each day's hours and notes, then approve or return for correction. Your own timesheets need another reviewer. Demo hours are always excluded from payroll.</p>
 
-    <section class="space-y-3" aria-label="Timesheet navigation">
+    <section class="space-y-3" aria-label="Timesheet navigation" <%= tour_anchor('next') %>>
       <h2 class="text-lg font-semibold">Where to go next</h2>
       <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <%= link_to people_employees_path, class: 'card card-pad space-y-1 hover:bg-cream' do %>
@@ -55,7 +55,7 @@
       </div>
     </section>
 
-    <section class="space-y-3" aria-label="Upcoming weeks">
+    <section class="space-y-3" aria-label="Upcoming weeks" <%= tour_anchor('weeks') %>>
       <div class="flex flex-wrap items-baseline justify-between gap-2">
         <h2 class="text-lg font-semibold">Upcoming weeks</h2>
         <p class="text-sm text-mocha">Timesheets on file per week. Open a week to review what is in it.</p>
@@ -112,7 +112,7 @@
     </section>
   <% end %>
 
-  <section class="space-y-3" aria-label="Staff member time sources">
+  <section class="space-y-3" aria-label="Staff member time sources" <%= tour_anchor('sources') %>>
     <h2 class="text-lg font-semibold"><%= Current.user.employee? ? 'Your time sources' : 'All staff member time sources' %></h2>
     <p class="text-sm text-mocha">Rupert submissions, Square timecards and C-Trax shifts are separate records. Review each source; overlapping hours must not be added together. Source records do not approve hours or create a payroll payment.</p>
     <div class="grid gap-3 sm:grid-cols-3">
@@ -127,7 +127,7 @@
     <div class="rounded-xl border border-olive/30 bg-olive/10 px-4 py-2.5 text-sm text-olive"><%= @awaiting %> timesheet<%= @awaiting == 1 ? "" : "s" %> awaiting review.</div>
   <% end %>
 
-  <nav aria-label="Timesheet view" class="flex flex-wrap gap-2">
+  <nav aria-label="Timesheet view" class="flex flex-wrap gap-2" <%= tour_anchor('views') %>>
     <%= link_to 'Rupert timesheets', people_timesheets_path(request.query_parameters.merge(view: 'list')), class: "nav-pill #{@view == 'list' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
     <%= link_to 'All sources (unified)', people_timesheets_path(request.query_parameters.merge(view: 'unified')), class: "nav-pill #{@view == 'unified' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
     <%= link_to 'Calendar', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: (@month || Date.current).strftime('%Y-%m'))), class: "nav-pill #{@view == 'calendar' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
@@ -245,7 +245,7 @@
         <%= f.submit 'Approve selected', class: 'btn-primary btn-sm' %>
       </div>
     <% end %>
-  <div class="card overflow-hidden">
+  <div class="card overflow-hidden" <%= tour_anchor('table') %>>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">

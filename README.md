@@ -114,6 +114,7 @@ and never write SKUs without explicit sign-off.**
   or written automatically
 - **Sync** — run syncs, view run history and logs
 - **SwipeSimple** — import sales from a SwipeSimple CSV export (no public API) into the canonical sales stream
+- **Learn Rupert** (`/learning`) — first-run welcome and learning paths, role-aware first-week checklist, guided page tours, lessons with worked examples and knowledge checks, a searchable glossary, in-place definitions and calculation explainers, a `?` help panel on every page, and a read-only team training view. See [in-app learning](docs/ops/in-app-learning.md)
 - **Connections** — plain-language guide to every service's keys: what's set, where to find each, and how to renew
 - **Settings** — `.env` import/export (JSON API included) and DB backup/restore:
   - `GET /settings/env.json` · masked env keys

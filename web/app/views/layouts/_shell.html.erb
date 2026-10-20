@@ -1,5 +1,5 @@
 <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-ink focus:fixed focus:left-4 focus:top-3">Skip to content</a>
-<div class="min-h-full">
+<div class="min-h-full" <% if Current.user %>data-controller="help-panel"<% end %>>
   <% if Current.user&.super_admin? && Current.tenant_id != Current.user.tenant_id %>
     <div role="status" class="flash flash-notice flex flex-wrap items-center justify-between gap-3"><span>Read-only customer support · <%= Current.tenant.name %></span><%= button_to 'Leave support session', leave_platform_support_path, method: :delete, class: 'btn-ghost' %></div>
   <% end %>
@@ -13,7 +13,7 @@
         <% end %>
       <% end %>
       <% if Current.user %>
-        <nav class="area-navigation" aria-label="Module areas" style="--nav-area-count: <%= [nav_areas.size, 1].max %>">
+        <nav class="area-navigation" aria-label="Module areas" <%= tour_anchor('areas') %> style="--nav-area-count: <%= [nav_areas.size, 1].max %>">
           <% nav_areas.each do |area| %>
             <%= link_to safe_module_path(area[:modules].first), class: "nav-area #{area[:key] == active_area_key ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { label: area[:name], current: (area[:key] == active_area_key ? 'page' : nil) }, title: area[:name] do %><%= navigation_icon(area[:key]) %><span><%= area[:name] %></span><% end %>
           <% end %>
@@ -29,6 +29,7 @@
             <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
           <% end %>
           <%= render 'shared/header_sync_pill', sync: @last_sync %>
+          <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>
           <div data-controller="dropdown" class="relative">
             <% initials = Current.user.display_name.split(/\s+/).map { |word| word[0] }.join.upcase[0, 2] %>
             <button type="button" data-action="dropdown#toggle" data-dropdown-target="trigger" aria-label="Account menu for <%= Current.user.display_name %>" aria-haspopup="menu" aria-expanded="false" title="<%= Current.user.display_name %> · <%= navigation_role_name(Current.user) %>" class="nav-utility"><span class="grid h-8 w-8 place-items-center rounded-full bg-olive text-xs font-semibold text-cream"><%= initials %></span><span class="nav-hint">Account · <%= navigation_role_name(Current.user) %></span></button>
@@ -56,7 +57,7 @@
     <% if Current.user && active_area_modules.length > 1 %>
       <div class="module-navigation-wrap">
         <nav class="module-navigation" aria-label="Module">
-          <details class="module-menu" data-controller="navigation-menu">
+          <details class="module-menu" data-controller="navigation-menu" <%= tour_anchor('tools') %>>
             <% current_entry = active_module_entry || active_area_modules.first %>
             <% area_name = nav_areas.find { |area| area[:key] == active_area_key }&.dig(:name) %>
             <summary class="module-menu-trigger" aria-label="<%= area_name %> tools; current page <%= current_entry.name %>"><%= navigation_icon(module_icon_key(current_entry)) %><span><%= current_entry.name %></span><%= navigation_icon('chevron') %><span class="tools-caption"><%= area_name %> tools</span></summary>
@@ -96,6 +97,7 @@
     <% if alert %><div aria-live="assertive" role="alert" class="flash flash-alert mb-4"><%= alert %></div><% end %>
     <%= yield %>
   </main>
+  <%= render 'shared/help_panel' if Current.user %>
 </div>
 
 <% if Current.user&.can?('dashboard.read') %>

@@ -11,16 +11,23 @@
 
   <section class="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Report totals">
     <div class="stat">
-      <p class="stat-label">Revenue</p>
+      <div class="stat-label">Revenue<%= define('profit_loss') %></div>
       <p class="stat-value mt-1"><%= finance_money(@statement[:total_revenue]) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Expenses</p>
+      <div class="stat-label">Expenses<%= define('expense') %></div>
       <p class="stat-value mt-1"><%= finance_money(@statement[:total_expense]) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Net income</p>
+      <div class="stat-label">Net income<%= define('net_income') %></div>
       <p class="stat-value mt-1"><%= finance_money(@statement[:net_income]) %></p>
+      <%= explain_calculation(title: 'Net income for the period', id: 'income-statement-net',
+            formula: 'Total revenue − total expenses, from entries posted to the ledger between the dates.',
+            rows: [["Revenue accounts with activity", @statement[:revenue].size], ['Total revenue', finance_money(@statement[:total_revenue])],
+                   ["Expense accounts with activity", @statement[:expense].size], ['Total expenses', "− #{finance_money(@statement[:total_expense])}"],
+                   ['Net income', finance_money(@statement[:net_income])]],
+            note: 'A negative result is a net loss. Only posted ledger entries count: bank lines still waiting for a decision and unrecorded expenses are not here, so the figure can look better than reality.',
+            term: 'net_income', lesson: 'books') %>
     </div>
   </section>
 

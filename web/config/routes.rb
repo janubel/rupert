@@ -2,6 +2,9 @@
 
 Rails.application.routes.draw do
   patch '/learning/preferences', to: 'learning#preferences', as: :learning_preferences
+  get '/learning/team', to: 'learning#team', as: :learning_team
+  get '/welcome', to: 'learning#welcome', as: :welcome
+  post '/welcome', to: 'learning#onboard', as: :onboard
   resources :learning, only: %i[index show] do
     post :complete, on: :member
   end

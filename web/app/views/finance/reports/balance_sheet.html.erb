@@ -11,16 +11,23 @@
 
   <section class="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Report totals">
     <div class="stat">
-      <p class="stat-label">Total assets</p>
+      <div class="stat-label">Total assets<%= define('account_balance') %></div>
       <p class="stat-value mt-1"><%= finance_money(@sheet[:total_assets]) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Total liabilities</p>
+      <div class="stat-label">Total liabilities<%= define('accounts_payable') %></div>
       <p class="stat-value mt-1"><%= finance_money(@sheet[:total_liabilities]) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Total equity</p>
+      <div class="stat-label">Total equity<%= define('equity') %></div>
       <p class="stat-value mt-1"><%= finance_money(@sheet[:total_equity]) %></p>
+      <%= explain_calculation(title: "Does the balance sheet balance? · as of #{@to}", id: 'balance-sheet-check',
+            formula: 'Assets must equal liabilities + equity. Equity includes current period earnings so both sides can agree.',
+            rows: [['Total liabilities', finance_money(@sheet[:total_liabilities])], ['Equity accounts', finance_money(@sheet[:total_equity] - @sheet[:current_period_earnings])],
+                   ['Current period earnings', finance_money(@sheet[:current_period_earnings])], ['Liabilities + equity', finance_money(@sheet[:total_liabilities] + @sheet[:total_equity])],
+                   ['Total assets', finance_money(@sheet[:total_assets])], ['Difference (assets − liabilities − equity)', finance_money(@sheet[:total_assets] - (@sheet[:total_liabilities] + @sheet[:total_equity]))]],
+            note: 'Built from posted ledger entries only. Mirrored stock, bank statements still waiting for decisions and vendor balances on the Accounts page are not part of these totals unless they were posted.',
+            term: 'equity', lesson: 'books') %>
     </div>
   </section>
 
@@ -47,7 +54,7 @@
         <% @sheet[:equity].each do |row| %>
           <tr><td class="td"><%= link_to finance_account_label(row.account), finance_chart_of_account_path(row.account, from: @from, to: @to), class: "link" %></td><td class="td num"><%= finance_money(row.balance) %></td></tr>
         <% end %>
-        <tr><td class="td">Current period earnings</td><td class="td num"><%= finance_money(@sheet[:current_period_earnings]) %></td></tr>
+        <tr><td class="td">Current period earnings<%= define('current_period_earnings') %></td><td class="td num"><%= finance_money(@sheet[:current_period_earnings]) %></td></tr>
         <tr class="subtotal-row"><th scope="row" class="td">Total equity</th><td class="td num"><%= finance_money(@sheet[:total_equity]) %></td></tr>
       </tbody>
     </table>

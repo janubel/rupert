@@ -18,7 +18,7 @@
   </section>
   <section class="card overflow-x-auto"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">Selected-day recorded activity</caption>
-    <thead><tr><% ['Source / location', 'Currency', 'Eligible orders', 'Order total', 'Recorded tax', 'Tenders less refunds'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
+    <thead><tr><% [['Source / location', 'source'], ['Currency', nil], ['Eligible orders', 'eligible_orders'], ['Order total', 'gross'], ['Recorded tax', 'tax_collected'], ['Tenders less refunds', 'net_tender']].each do |label, term| %><th scope="col" class="th"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
     <tbody class="divide-y divide-fog">
       <% @summary.rows.each do |row| %>
         <tr><td class="td"><%= row[:source] %><br><span class="text-xs text-taupe"><%= row[:location_id].presence || 'Unassigned' %></span></td><td class="td"><%= row[:currency].presence || 'Unknown' %></td><td class="td"><%= row[:orders] %></td>
@@ -27,10 +27,22 @@
       <% end %>
       <% if @summary.rows.empty? %><tr><td colspan="6" class="td py-8 text-center">No recorded activity for this day and filter.</td></tr><% end %>
     </tbody>
-  </table></section>
+  </table>
+  <% if (first = @summary.rows.first) %>
+    <div class="px-4 pb-4">
+      <%= explain_calculation(title: "Tenders less refunds · #{first[:source]} · #{first[:location_id].presence || 'Unassigned'} · #{first[:currency].presence || 'Unknown currency'}", id: 'register-net-tender',
+            summary: 'How is “Tenders less refunds” calculated? (first row)',
+            formula: 'For each tender type: recorded tender received − recorded refunds. The row total adds those results; any Unavailable amount makes the total Unavailable.',
+            rows: first[:net_tenders].keys.sort.map { |method| ["#{method.to_s.humanize}: #{money.call(first[:tenders].fetch(method, 0))} − #{money.call(first[:refund_tenders].fetch(method, 0))}", money.call(first[:net_tenders][method])] } +
+                  [['Tenders less refunds', money.call(first[:net_tender_cents])]],
+            note: 'An accounting comparison of imported records for this source, location and currency. It is not settled cash, a bank deposit or a processor payout; gift-card and store-credit activity is included.',
+            term: 'net_tender', lesson: 'books') %>
+    </div>
+  <% end %>
+  </section>
   <section class="card overflow-x-auto"><table class="w-full text-sm">
     <caption class="p-4 text-left font-semibold">Selected-day tender detail · Shopify amounts are inferred</caption>
-    <thead><tr><% ['Source / location', 'Currency', 'Tender', 'Recorded tender', 'Recorded refunds', 'Net tender'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
+    <thead><tr><% [['Source / location', 'source'], ['Currency', nil], ['Tender', 'tender'], ['Recorded tender', nil], ['Recorded refunds', 'refund'], ['Net tender', 'net_tender']].each do |label, term| %><th scope="col" class="th"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
     <tbody class="divide-y divide-fog">
       <% @summary.rows.each do |row| %>
         <% row[:net_tenders].keys.sort.each do |method| %>
@@ -46,7 +58,7 @@
     <h2 class="text-lg font-semibold">Payment reconciliation coverage</h2>
     <%= fold_explainer('Eligible orders are paid, fulfilled or refunded orders dated on the selected day. Missing means no imported completed payment; incomplete and overcovered compare the order total with all imported completed payments for that order, across all payment dates. This diagnoses current imported records, not the balance at that day\'s close. Unknown amounts cannot be compared. Refunds do not reduce the original payment coverage target.', class: 'text-sm text-mocha') %>
     <div class="overflow-x-auto"><table class="w-full text-sm">
-      <thead><tr><% ['Source / location', 'Currency', 'Missing payment', 'Incomplete payment', 'Overcovered payment', 'Unknown amounts', 'Missing tax', 'Excluded unsettled payments'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
+      <thead><tr><% [['Source / location', nil], ['Currency', nil], ['Missing payment', 'payment_coverage'], ['Incomplete payment', nil], ['Overcovered payment', nil], ['Unknown amounts', 'unavailable'], ['Missing tax', 'tax_collected'], ['Excluded unsettled payments', 'eligible_orders']].each do |label, term| %><th scope="col" class="th"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
       <tbody class="divide-y divide-fog"><% @summary.rows.each do |row| %>
         <tr><td class="td"><%= row[:source] %><br><span class="text-xs text-taupe"><%= row[:location_id].presence || 'Unassigned' %></span></td><td class="td"><%= row[:currency].presence || 'Unknown' %></td>
           <% [*DailyRegisterSummary::COVERAGE_KEYS, :missing_tax_orders, :excluded_payment_records].each do |key| %><td class="td"><%= row[key] %></td><% end %>

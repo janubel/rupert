@@ -44,8 +44,8 @@
           <tr>
             <th scope="col" class="th">Account</th>
             <th scope="col" class="th">Memo</th>
-            <th scope="col" class="th num">Debit</th>
-            <th scope="col" class="th num">Credit</th>
+            <th scope="col" class="th num">Debit<%= define('debit_credit') %></th>
+            <th scope="col" class="th num">Credit<%= define('debit_credit') %></th>
           </tr>
         </thead>
         <tbody>
@@ -73,7 +73,7 @@
 
   <% if reversible %>
     <section class="card card-pad max-w-2xl space-y-3" aria-labelledby="reverse-title">
-      <h2 id="reverse-title" class="font-display text-xl">Reverse this entry</h2>
+      <h2 id="reverse-title" class="font-display text-xl">Reverse this entry<%= define('reversal') %></h2>
       <p class="text-base text-mocha">Posts a new entry that swaps every debit and credit, so the net effect on the books is zero. This entry stays on record. Reversing needs a date and a reason.</p>
       <%= form_with url: reverse_finance_journal_entry_path(@entry), method: :post, class: "space-y-3",
             data: { controller: "confirm-submit", confirm_submit_message_value: "Reverse entry ##{@entry.id}?\n\nAmount: #{finance_money_text(@entry.debit_cents)}\nOriginal date: #{@entry.posted_on}\n\nA new entry with every debit and credit swapped is posted on the date below. Entry ##{@entry.id} is kept. This cannot be undone, but you can post another entry to correct it.", action: "submit->confirm-submit#confirm" } do %>

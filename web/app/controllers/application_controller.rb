@@ -29,7 +29,7 @@ class ApplicationController < ActionController::Base
 
     allowed = case controller_path
     when 'learning'
-      %w[index show complete preferences].include?(action_name)
+      %w[index show complete preferences welcome onboard].include?(action_name)
     when 'sessions', 'oauth', 'employee_app', 'employee_workspace', 'employee_preview', 'customer_displays'
       true
     when 'employee_access'

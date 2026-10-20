@@ -19,24 +19,31 @@
   <% s = @reconciliation.summary %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
-      <p class="stat-label">Lines</p>
+      <div class="stat-label">Lines<%= define('matched_line') %></div>
       <p class="stat-value mt-1"><%= s[:lines] %></p>
       <p class="mt-1 text-sm text-mocha"><%= s[:matched] %> matched · <%= s[:unmatched_lines] %> unmatched</p>
     </div>
     <div class="stat">
-      <p class="stat-label">Statement net · USD</p>
+      <div class="stat-label">Statement net · USD<%= define('statement_net') %></div>
       <p class="stat-value mt-1"><%= finance_money(s[:statement_net_cents]) %></p>
       <p class="mt-1 text-sm text-mocha">in <%= finance_money(s[:statement_in_cents]) %> · out <%= finance_money(s[:statement_out_cents]) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Ledger net · USD</p>
+      <div class="stat-label">Ledger net · USD<%= define('ledger_net') %></div>
       <p class="stat-value mt-1"><%= finance_money(s[:gl_net_cents]) %></p>
       <p class="mt-1 text-sm text-mocha">cash + checking accounts</p>
     </div>
     <div class="stat">
-      <p class="stat-label">Difference · USD</p>
+      <div class="stat-label">Difference · USD<%= define('bank_difference') %></div>
       <p class="stat-value mt-1"><%= finance_money(s[:difference_cents]) %></p>
       <p class="mt-1 text-sm font-semibold"><%= s[:difference_cents].zero? ? "✓ Statement and ledger agree." : "✗ Statement and ledger differ by #{finance_money_text(s[:difference_cents].abs)}." %></p>
+      <%= explain_calculation(title: 'Statement minus ledger', id: 'bank-difference',
+            formula: 'Statement net (in + out) − ledger net (cash and checking movements) for the same account and dates.',
+            rows: [['Statement in', finance_money(s[:statement_in_cents])], ['Statement out', finance_money(s[:statement_out_cents])], ['Statement net', finance_money(s[:statement_net_cents])],
+                   ['Ledger in', finance_money(s[:gl_in_cents])], ['Ledger out', finance_money(s[:gl_out_cents])], ['Ledger net', finance_money(s[:gl_net_cents])],
+                   ['Difference', finance_money(s[:difference_cents])]],
+            note: "#{s[:unmatched_lines]} statement #{'line'.pluralize(s[:unmatched_lines])} and #{s[:unmatched_gl]} ledger #{'movement'.pluralize(s[:unmatched_gl])} are still unmatched. Ignored lines are excluded. Confirming a match records the link only; nothing here changes an amount.",
+            term: 'bank_difference', lesson: 'books') %>
     </div>
   </section>
 

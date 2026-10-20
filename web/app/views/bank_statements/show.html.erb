@@ -40,7 +40,7 @@
       <%= hidden_field_tag :show, @filter %>
       <div class="card overflow-x-auto"><table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60"><tr>
-          <th scope="col" class="th">Date</th><th scope="col" class="th">Description</th><th scope="col" class="th text-right">Out</th><th scope="col" class="th text-right">In</th><th scope="col" class="th">What was it?</th>
+          <th scope="col" class="th">Date</th><th scope="col" class="th">Description</th><th scope="col" class="th text-right">Out<%= define('expense') %></th><th scope="col" class="th text-right">In<%= define('deposit') %></th><th scope="col" class="th">What was it?<%= define('decision') %></th>
         </tr></thead>
         <tbody class="divide-y divide-fog">
           <% @lines.each do |line| %>

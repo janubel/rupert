@@ -1,21 +1,27 @@
 <%= render "reports/layout", title: "Operations report", subtitle: "Sync health, reconciliation, and POS cash reconciliation." do %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
-      <p class="stat-label">Sync success rate</p>
+      <div class="stat-label">Sync success rate<%= define('sync') %></div>
       <p class="stat-value mt-1"><%= number_to_percentage(@sync_rate, precision: 1) %></p>
       <p class="mt-1 text-xs text-taupe"><%= @sync_success %> / <%= @sync_total %> runs</p>
+      <%= explain_calculation(title: 'Sync success rate', id: 'sync-success-rate',
+            formula: 'Successful sync runs ÷ all recorded sync runs × 100, across every source and all time.',
+            rows: [['Successful runs', @sync_success], ['Failed runs', @sync_failed], ['All runs', @sync_total],
+                   ['Success rate', @sync_total.to_i.zero? ? '—' : number_to_percentage(@sync_rate, precision: 1)]],
+            note: 'A successful run means Rupert finished reading the source; it does not prove the source contained every expected record. Runs that are still in progress count in the total but in neither success nor failure.',
+            term: 'sync', lesson: 'sync') %>
     </div>
     <div class="stat">
-      <p class="stat-label">Failed syncs</p>
+      <div class="stat-label">Failed syncs<%= define('freshness') %></div>
       <p class="stat-value mt-1 text-rose"><%= @sync_failed %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Reconcile runs</p>
+      <div class="stat-label">Reconcile runs<%= define('reconciliation') %></div>
       <p class="stat-value mt-1"><%= @reconcile_total %></p>
       <p class="mt-1 text-xs text-taupe"><%= @reconcile_success %> applied</p>
     </div>
     <div class="stat">
-      <p class="stat-label">POS cash variance</p>
+      <div class="stat-label">POS cash variance<%= define('cash_variance') %></div>
       <p class="stat-value mt-1 <%= @pos_variance_total.zero? ? "" : "text-clay" %>"><%= number_to_currency(@pos_variance_total) %></p>
       <p class="mt-1 text-xs text-taupe"><%= @pos_open %> register open</p>
     </div>

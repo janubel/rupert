@@ -24,7 +24,7 @@
   <% if !@preview && Current.user.can_use_pos? %>
     <nav aria-label="Daily work" class="flex flex-wrap gap-2"><%= link_to 'Open retail POS', ctrax_pos_path, class: 'btn-primary' %><%= link_to 'My time clock', personal_time_clock_path, class: 'btn-ghost' %></nav>
   <% end %>
-  <section class="card card-pad flex flex-wrap items-center justify-between gap-4">
+  <section class="card card-pad flex flex-wrap items-center justify-between gap-4" <%= tour_anchor('clock') %>>
     <div>
       <h2 class="text-lg font-semibold"><%= @open_shift ? 'You’re clocked in' : @worker.on_leave? ? 'You’re on leave' : 'Ready for your day?' %></h2>
       <% if @open_shift %>
@@ -36,12 +36,12 @@
     <% elsif @open_shift %><%= button_to 'Clock out', clock_out_time_clock_path, params: { shift_id: @open_shift.id }, class: 'btn-primary', data: { turbo: false } %>
     <% elsif @worker.active? %><%= button_to 'Clock in', clock_in_time_clock_path, params: { request_token: SecureRandom.uuid }, class: 'btn-primary', data: { turbo: false } %><% end %>
   </section>
-  <section class="card card-pad space-y-5">
+  <section class="card card-pad space-y-5" <%= tour_anchor('week') %>>
     <div class="flex flex-wrap justify-between gap-2"><h2 class="font-display text-xl">This week</h2><span class="text-sm text-mocha"><%= @summary.from.strftime('%b %-d') %> – <%= @summary.to.strftime('%b %-d') %></span></div>
     <%= render 'shared/square_timecard_sync' unless @preview %>
     <div class="grid grid-cols-2 gap-4">
-      <div class="stat"><p class="stat-label">Timesheet hours</p><p class="stat-value mt-2 tabular-nums"><%= number_with_precision(@summary.hours, precision: 2, strip_insignificant_zeros: true) %><span class="text-lg"> h</span></p></div>
-      <div class="stat"><p class="stat-label">Estimated gross pay</p><p class="stat-value mt-2 tabular-nums"><%= @summary.gross_cents.nil? ? '—' : number_to_currency(@summary.gross_cents / 100.0) %></p><%= render 'shared/definition', term: 'estimated_pay' %></div>
+      <div class="stat"><div class="stat-label">Timesheet hours<%= define('timesheet') %></div><p class="stat-value mt-2 tabular-nums"><%= number_with_precision(@summary.hours, precision: 2, strip_insignificant_zeros: true) %><span class="text-lg"> h</span></p></div>
+      <div class="stat"><div class="stat-label">Estimated gross pay<%= define('estimated_pay') %></div><p class="stat-value mt-2 tabular-nums"><%= @summary.gross_cents.nil? ? '—' : number_to_currency(@summary.gross_cents / 100.0) %></p><% if @summary.gross_cents && (rate = @summary.rate_for(Date.current)) && rate.pay_type == 'hourly' && rate.hourly_rate_cents.to_i.positive? %><%= explain_calculation(title: 'Estimated gross pay this week', id: 'pay-calculation', rows: [['Recorded hours', "#{number_with_precision(@summary.hours, precision: 2, strip_insignificant_zeros: true)} h"], ['× Hourly rate on record', number_to_currency(rate.hourly_rate_cents / 100.0)], ['= Estimated gross', number_to_currency(@summary.gross_cents / 100.0)]], formula: 'hours × hourly rate for each day, overtime at its multiplier', note: 'Before deductions, using the pay rate on record for each day. Overtime and PTO lines use their own multipliers, so the total can differ from plain hours × rate. This is not a payslip.', lesson: 'staff') %><% end %></div>
     </div>
     <div class="grid grid-cols-7 gap-1 text-center">
       <% (@summary.from..@summary.to).each do |day| %>

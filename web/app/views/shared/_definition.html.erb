@@ -1,6 +1,2 @@
-<% label, definition = LearningCatalog::TERMS.fetch(term) %>
-<details class="mt-2 text-xs normal-case tracking-normal text-mocha">
-  <summary class="cursor-pointer font-medium text-olive-deep">Explain <%= label.downcase %></summary>
-  <p class="mt-2 max-w-md font-normal leading-relaxed"><%= definition %></p>
-  <%= link_to 'More definitions', learning_index_path(anchor: "term-#{term}"), class: 'mt-2 inline-block font-normal underline' %>
-</details>
+<%# Backwards-compatible wrapper: render 'shared/definition', term: 'mirror' %>
+<%= define(term) %>

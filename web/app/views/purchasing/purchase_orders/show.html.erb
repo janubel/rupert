@@ -22,16 +22,23 @@
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
-      <p class="stat-label">Ordered</p>
+      <div class="stat-label">Ordered<%= define('po_total') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@purchase_order.total_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Received</p>
+      <div class="stat-label">Received<%= define('received_quantity') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@purchase_order.received_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Owed to vendor</p>
+      <div class="stat-label">Owed to vendor<%= define('po_pending') %></div>
       <p class="stat-value mt-1 <%= @purchase_order.pending_cents.positive? ? "text-clay" : "text-ink" %>"><%= number_to_currency(@purchase_order.pending_cents / 100.0) %></p>
+      <% po_ordered = @purchase_order.total_cents; po_received = @purchase_order.received_cents %>
+      <%= explain_calculation(title: "Owed to vendor · #{@purchase_order.order_number}", id: 'po-pending',
+            formula: 'Ordered value − received value. Each line is quantity × unit cost; received value uses the units received so far at the same unit cost.',
+            rows: [["Ordered · #{@lines.size} #{'line'.pluralize(@lines.size)}", number_to_currency(po_ordered / 100.0)], ['Received so far', "− #{number_to_currency(po_received / 100.0)}"],
+                   ['Owed to vendor (not yet received)', number_to_currency((po_ordered - po_received) / 100.0)]],
+            note: 'This is the value still to be delivered, not an invoice balance. What is owed after payments is on the Accounts page, and receiving goods here changes no platform stock.',
+            term: 'po_pending') %>
     </div>
     <div class="stat">
       <p class="stat-label">Expected</p>
@@ -79,9 +86,9 @@
             <th scope="col" class="th">Item</th>
             <th scope="col" class="th">SKU</th>
             <th scope="col" class="th text-right">Qty</th>
-            <th scope="col" class="th text-right">Unit cost</th>
-            <th scope="col" class="th text-right">Total</th>
-            <th scope="col" class="th text-right">Received</th>
+            <th scope="col" class="th text-right">Unit cost<%= define('unit_cost') %></th>
+            <th scope="col" class="th text-right">Total<%= define('po_total') %></th>
+            <th scope="col" class="th text-right">Received<%= define('received_quantity') %></th>
             <% if @purchase_order.draft? && Current.user.can?("purchasing.write") %><th scope="col" class="th"></th><% end %>
           </tr>
         </thead>

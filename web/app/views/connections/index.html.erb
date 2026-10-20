@@ -3,19 +3,19 @@
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div><h1 class="page-title">Master credentials &amp; sync</h1><p class="mt-2 text-sm text-mocha">Set up connections, find what stopped working, and choose the next repair step.</p></div>
-    <div class="flex flex-wrap gap-2">
+    <div class="flex flex-wrap gap-2" <%= tour_anchor('actions') %>>
       <%= link_to 'Credential setup', '#credentials', class: 'btn-primary btn-sm' %>
       <%= link_to 'Improvement plan', '#improvements', class: 'btn-ghost btn-sm' %>
       <% if Current.user.can?('sync.read') %><%= link_to 'Sync history', syncs_path, class: 'btn-ghost btn-sm' %><% end %>
       <% if Current.user.can?('system.read') %><%= link_to 'Worker status', system_path, class: 'btn-ghost btn-sm' %><% end %>
     </div>
   </section>
-  <section class="card card-pad text-sm text-mocha">
+  <section class="card card-pad text-sm text-mocha" <%= tour_anchor('flow') %>>
     <p><strong class="text-ink">Save credentials → check access → read once → review freshness.</strong> Choose automatic schedules on each provider's setup page after a successful read.</p>
     <p class="mt-2">Saved credentials and a successful check do not prove that new data is arriving. Credential completeness and source freshness are shown separately.</p>
     <p class="mt-2">Saved secrets stay hidden. Only people with settings-write permission can replace them; platform backup credentials remain with the platform operator. Opening this page starts no checks or syncs.</p>
   </section>
-  <section aria-label="Sync health" class="space-y-3">
+  <section aria-label="Sync health" class="space-y-3" <%= tour_anchor('health') %>>
     <h2 class="font-display text-xl">Sync health &amp; repair</h2>
     <% if @status_notice %><p role="alert" class="flash flash-alert"><%= @status_notice %></p><% end %>
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -38,7 +38,7 @@
       <% end %>
     </div>
   </section>
-  <section id="credentials" class="space-y-3">
+  <section id="credentials" class="space-y-3" <%= tour_anchor('credentials') %>>
     <h2 class="font-display text-xl">Credential setup</h2>
     <p class="text-sm text-mocha">Each connection keeps its existing credential store. “Configured” means required fields are present, not that vendor access has been checked. Blank secret fields keep their saved values.</p>
     <div class="grid gap-4 lg:grid-cols-2">
@@ -64,7 +64,7 @@
       <% end %>
     </div>
   </section>
-  <section id="improvements" class="card card-pad space-y-4">
+  <section id="improvements" class="card card-pad space-y-4" <%= tour_anchor('improvements') %>>
     <h2 class="font-display text-xl">Sync improvement plan</h2>
     <ol class="space-y-4 text-sm text-mocha">
       <li><strong class="text-ink">1. One setup desk — available in this change.</strong> Named credential forms, saved-field indicators, explicit access checks, source reads and repair guidance. Existing permissions and schedules stay in place.</li>

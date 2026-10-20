@@ -1,13 +1,19 @@
 <section class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
   <% if Current.user.can?("sales.read") %>
-  <%= render "home/stat", label: "Today's sales", value: number_to_currency(presenter.today_revenue.to_i / 100.0), note: "#{presenter.today_orders} orders" %>
-  <%= render "home/stat", label: "Yesterday", value: number_to_currency(presenter.yesterday_revenue.to_i / 100.0), note: vs_yesterday(presenter.today_revenue, presenter.yesterday_revenue) %>
-  <%= render "home/stat", label: "Last 7 days", value: number_to_currency(presenter.week_revenue.to_i / 100.0), note: "#{number_to_currency(presenter.month_revenue.to_i / 100.0, precision: 0)} last 30 days" %>
+  <% groups = presenter.today_groups; today_cents = presenter.today_revenue.to_i %>
+  <%= render "home/stat", label: "Today's sales", term: 'sales_total', value: number_to_currency(today_cents / 100.0), note: "#{presenter.today_orders} orders",
+        calculation: explain_calculation(title: "Today’s recorded sales, by source", summary: 'What’s in this total?', id: 'today-sales-calculation',
+          rows: groups.map { |source, cents, count| ["#{operations_source_name(source)} · #{pluralize(count, 'sale')}", number_to_currency(cents.to_i / 100.0)] } + [['Recorded sales today', number_to_currency(today_cents / 100.0)]],
+          formula: 'Paid or fulfilled canonical orders + completed C-Trax sales, USD, before refunds',
+          note: 'Tips, payment reports and deposits are never added. A source with an old pull can be under-counted; check Source pulls & coverage.',
+          lesson: 'sales') %>
+  <%= render "home/stat", label: "Yesterday", term: 'business_date', value: number_to_currency(presenter.yesterday_revenue.to_i / 100.0), note: vs_yesterday(presenter.today_revenue, presenter.yesterday_revenue) %>
+  <%= render "home/stat", label: "Last 7 days", term: 'date_window', value: number_to_currency(presenter.week_revenue.to_i / 100.0), note: "#{number_to_currency(presenter.month_revenue.to_i / 100.0, precision: 0)} last 30 days" %>
   <% end %>
   <% if Current.user.can?("alerts.read") %>
-  <%= render "home/stat", label: "Stored stock alerts", value: presenter.open_alerts, note: "#{presenter.stockouts} at zero" %>
+  <%= render "home/stat", label: "Stored stock alerts", term: 'stock_alert', value: presenter.open_alerts, note: "#{presenter.stockouts} at zero" %>
   <% end %>
   <% if Current.user.can?("inventory.read") %>
-  <%= render "home/stat", label: "Website products", value: presenter.product_count, note: "#{presenter.linked_count} stored Square links" %>
+  <%= render "home/stat", label: "Website products", term: 'mirror', value: presenter.product_count, note: "#{presenter.linked_count} stored Square links" %>
   <% end %>
 </section>
