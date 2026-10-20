@@ -53,7 +53,7 @@ module ApplicationHelper
   # app/assets/tailwind/application.css. Keep the two in sync.
   CHART_COLORS = {
     ink: '#1a393d',
-    olive_deep: '#108184',
+    olive_deep: '#48736d',
     clay: '#7d5449',
     butter: '#e4be58',
     rose: '#b05b4f',
