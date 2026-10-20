@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  patch '/learning/preferences', to: 'learning#preferences', as: :learning_preferences
   resources :learning, only: %i[index show] do
     post :complete, on: :member
   end

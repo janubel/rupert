@@ -1,0 +1,12 @@
+<% journey = learning_journey %>
+<% if journey.welcome? %>
+  <% next_lesson = journey.next_lesson %>
+  <aside class="card card-pad space-y-3" aria-label="Getting started">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div><p class="eyebrow text-olive-deep">Get started at your pace</p><h2 class="mt-2 font-display text-xl"><%= next_lesson[:title] %></h2><p class="mt-1 text-sm text-mocha"><%= next_lesson[:summary] %></p></div>
+      <%= button_to 'Hide welcome', learning_preferences_path, method: :patch, params: { dismiss: '1' }, class: 'text-xs text-mocha underline' %>
+    </div>
+    <div class="flex flex-wrap items-center gap-3"><%= link_to "#{journey.completed.include?('start') ? 'Continue learning' : 'Start here'} · #{next_lesson[:minutes]} min", learning_path(next_lesson[:key]), class: 'btn-ghost' %><%= link_to 'Choose my path', learning_index_path(anchor: 'your-path'), class: 'text-sm font-semibold text-olive-deep underline' %></div>
+    <p class="text-xs text-mocha">Lessons and definitions stay available in Learn Rupert whenever you need them.</p>
+  </aside>
+<% end %>

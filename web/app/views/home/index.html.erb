@@ -21,12 +21,7 @@
     </div>
   </section>
 
-  <% unless Array(Current.user.dashboard_config_hash['learning_completed']).include?('start') %>
-    <aside class="card card-pad flex flex-wrap items-center justify-between gap-4" aria-label="Getting started">
-      <div><h2 class="font-display text-xl">New to Rupert?</h2><p class="mt-1 text-sm text-mocha">Find your way around, understand the numbers, and learn your daily tasks.</p></div>
-      <%= link_to 'Get started · 2 minutes', learning_path('start'), class: 'btn-ghost' %>
-    </aside>
-  <% end %>
+  <%= render 'shared/learning_welcome' %>
   <% if Current.user.can?("sync.read") %>
     <%= render "syncs/banner" %>
   <% end %>

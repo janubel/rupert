@@ -42,6 +42,7 @@
     <% end %>
   </header>
   <main id="main" class="mx-auto <%= %w[ctrax_pos point_of_sale projects/tasks].include?(controller_path) ? 'max-w-7xl' : 'max-w-3xl' %> space-y-6 px-4 py-6 sm:px-6 sm:py-8" tabindex="-1">
+    <%= render 'shared/workspace_help' if Current.user && !@preview %>
     <% if notice %><p role="status" class="flash flash-notice"><%= notice %></p><% end %>
     <% if alert %><p role="alert" class="flash flash-alert"><%= alert %></p><% end %>
     <% if @preview %><p role="status" class="rounded-xl border border-olive/30 bg-olive/10 p-3 text-sm"><strong>Staff preview</strong> · Example data only. Browse freely; saving, clocking and sending are disabled. <%= link_to 'Close preview', employee_app_path, class: 'underline' %></p><% end %>

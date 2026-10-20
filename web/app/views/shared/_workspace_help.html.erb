@@ -1,0 +1,22 @@
+<% guide = PageGuides.for_path(request.path); lesson = LearningCatalog.for_path(request.path, Current.user) %>
+<% if guide || lesson %>
+  <div class="mb-4 flex flex-wrap items-start justify-end gap-3 text-sm">
+    <details class="workspace-help">
+      <summary class="cursor-pointer font-semibold text-olive-deep">How this page works</summary>
+      <div id="page-guide-panel" class="card card-pad mt-3 space-y-4">
+        <div><h2 class="font-display text-lg"><%= guide ? guide.title : lesson[:title] %></h2><p class="mt-2 text-sm text-mocha"><%= guide ? guide.summary : lesson[:summary] %></p></div>
+        <% if guide %>
+          <% guide.sections.each do |section| %><section><h3 class="font-semibold"><%= section[:heading] %></h3><p class="mt-1 text-sm text-mocha"><%= section[:body] %></p></section><% end %>
+          <% if guide.tips.any? %><ul class="list-disc space-y-2 pl-5 text-sm text-mocha"><% guide.tips.each do |tip| %><li><%= tip %></li><% end %></ul><% end %>
+        <% else %>
+          <ol class="list-decimal space-y-2 pl-5 text-sm text-mocha"><% lesson[:steps].each do |step| %><li><%= step %></li><% end %></ol>
+        <% end %>
+        <% if lesson %>
+          <div class="border-t border-fog pt-4"><h3 class="font-semibold">Words you’ll see here</h3><dl class="mt-3 space-y-3"><% lesson[:terms].first(4).each do |term| %><% label, definition = LearningCatalog::TERMS.fetch(term) %><div><dt class="text-sm font-semibold"><%= label %></dt><dd class="mt-1 text-sm text-mocha"><%= definition %></dd></div><% end %></dl></div>
+          <%= link_to "Practice this task · #{lesson[:minutes]} min", learning_path(lesson[:key]), class: 'btn-ghost btn-sm' %>
+        <% end %>
+      </div>
+    </details>
+    <%= link_to lesson ? "Learn this task · #{lesson[:minutes]} min" : 'Learn Rupert & definitions', lesson ? learning_path(lesson[:key]) : learning_index_path, class: 'font-semibold text-olive-deep underline' %>
+  </div>
+<% end %>

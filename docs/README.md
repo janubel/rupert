@@ -1,5 +1,7 @@
 # Rupert docs
 
+In-app onboarding, lessons and definitions: [how learning works and how to maintain it](ops/in-app-learning.md).
+
 NAB / IRIS deposits, transactions and Health Center summaries: [integration, access and ongoing operation](ops/iris-reporting.md).
 Expanded NAB / IRIS evidence, endpoint inventory, native exports and remaining access questions: [integration investigation](ops/iris-integration-investigation.md).
 
