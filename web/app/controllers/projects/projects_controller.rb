@@ -4,15 +4,32 @@ module Projects
   class ProjectsController < AuthenticatedController
     before_action :set_project, only: %i[show edit update destroy transition]
 
+    STATUS_FILTERS = %w[planned active on_hold completed archived].freeze
+
     def index
       authorize(:module, :projects_read?)
-      @q = Projects::Project.ransack(params[:q])
-      @pagy, @projects = pagy(@q.result.includes(:tasks).order(updated_at: :desc), items: 15)
+      @status = params[:status].presence_in(STATUS_FILTERS)
+      scope = Projects::Project.all
+      scope = @status ? scope.where(status: @status) : scope.where.not(status: 'archived')
+      scope = scope.search(params[:q]) if params[:q].present?
+      scope = case params[:sort]
+              when 'name' then scope.order(Arel.sql('LOWER(projects.name)'))
+              when 'due' then scope.order(Arel.sql('CASE WHEN projects.due_on IS NULL THEN 1 ELSE 0 END'), :due_on)
+              else scope.order(updated_at: :desc)
+              end
+      @pagy, @projects = pagy(scope, items: 18)
+      @status_counts = Projects::Project.group(:status).count
+      @overdue_tasks = Projects::Task.overdue.count
+      @due_this_week = Projects::Task.due_within(7).count
+      @open_tasks = Projects::Task.open.count + Projects::Task.where(status: 'blocked').count
+      preload_task_counts(@projects)
     end
 
     def show
       authorize(@project)
-      @tasks = @project.tasks.order(updated_at: :desc)
+      tasks = @project.tasks.by_priority.to_a
+      @columns = Projects::Task::BOARD_STATUSES.index_with { |s| tasks.select { |t| t.status == s } }
+      @assignees = User.where(id: tasks.filter_map(&:assignee_id).uniq).to_h { |u| [u.id.to_s, u.display_name] }
     end
 
     def new
@@ -64,6 +81,17 @@ module Projects
     end
 
     private
+
+    # One grouped query for every card instead of a count per project.
+    def preload_task_counts(projects)
+      ids = projects.map { |p| p.id.to_s }
+      grouped = Projects::Task.where(project_id: ids).group(:project_id, :status).count
+      overdue = Projects::Task.overdue.where(project_id: ids).group(:project_id).count
+      projects.each do |project|
+        counts = Projects::Task::BOARD_STATUSES.index_with { |status| grouped[[project.id.to_s, status]].to_i }
+        project.preload_task_stats(counts, overdue[project.id.to_s].to_i)
+      end
+    end
 
     def set_project
       @project = Projects::Project.find(params[:id])

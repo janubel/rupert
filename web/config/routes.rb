@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  post 'update_notice/dismiss', to: 'update_notices#dismiss', as: :dismiss_update_notice
   resource :bookkeeping, only: :show, controller: 'bookkeeping'
   resource :books_desk, only: :show, path: 'books' do
     get :checks
@@ -170,7 +171,10 @@ Rails.application.routes.draw do
       member { post :transition }
     end
     resources :tasks, only: %i[index create update destroy] do
-      member { post :transition }
+      member do
+        post :transition
+        post :move
+      end
     end
   end
   namespace :goals do

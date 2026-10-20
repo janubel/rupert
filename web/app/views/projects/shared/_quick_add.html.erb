@@ -1,0 +1,15 @@
+<%# Single-line task entry. locals: project (optional, fixed), projects (picker options when no fixed project) %>
+<% project = local_assigns[:project] %>
+<%= form_with model: Projects::Task.new, scope: :task, url: projects_tasks_path, class: "card card-pad !py-3" do |f| %>
+  <%= hidden_field_tag :project_id, project.id if project %>
+  <%= hidden_field_tag :assign_self, 1 if local_assigns[:assign_self] %>
+  <div class="flex flex-wrap items-center gap-2">
+    <%= f.text_field :title, placeholder: "Add a task and press Enter…", class: "input min-w-[14rem] flex-1", required: true, "aria-label": "Task title" %>
+    <%= f.select :priority, Projects::Task::PRIORITIES, { selected: "medium" }, class: "select", "aria-label": "Priority" %>
+    <%= f.date_field :due_on, class: "select", "aria-label": "Due date" %>
+    <% if !project && local_assigns[:projects] %>
+      <%= f.select :project_id, options_from_collection_for_select(projects, :id, :name, params[:project_id]), { include_blank: "No project" }, class: "select max-w-[12rem]", "aria-label": "Project" %>
+    <% end %>
+    <%= f.submit "Add task", class: "btn-primary btn-sm" %>
+  </div>
+<% end %>

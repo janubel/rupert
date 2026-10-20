@@ -1,36 +1,78 @@
 <% content_for :title, "Projects" %>
-<div class="space-y-6">
-  <section class="flex items-end justify-between gap-4">
+<% filters = [["Active work", nil], ["Planned", "planned"], ["Active", "active"], ["On hold", "on_hold"], ["Completed", "completed"], ["Archived", "archived"]] %>
+<div class="space-y-5">
+  <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
+      <p class="eyebrow text-olive">Work</p>
       <h1 class="page-title">Projects</h1>
       <p class="mt-1 text-sm text-mocha">Plan work, track tasks, and hit goals.</p>
     </div>
-    <% if Current.user.can?("projects.write") %>
-      <%= link_to "New project", new_projects_project_path, class: "btn-primary" %>
+    <div class="flex items-center gap-2">
+      <%= link_to "All tasks", projects_tasks_path, class: "btn-ghost btn-sm" %>
+      <% if Current.user.can?("projects.write") %>
+        <%= link_to "New project", new_projects_project_path, class: "btn-primary" %>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div class="stat"><p class="stat-label">Active projects</p><p class="stat-value"><%= @status_counts["active"].to_i %></p></div>
+    <div class="stat"><p class="stat-label">Open tasks</p><p class="stat-value"><%= @open_tasks %></p></div>
+    <%= link_to projects_tasks_path(due: "overdue"), class: "stat block hover:border-taupe" do %>
+      <p class="stat-label">Overdue tasks</p><p class="stat-value <%= "!text-rose" if @overdue_tasks.positive? %>"><%= @overdue_tasks %></p>
+    <% end %>
+    <%= link_to projects_tasks_path(due: "week"), class: "stat block hover:border-taupe" do %>
+      <p class="stat-label">Due this week</p><p class="stat-value"><%= @due_this_week %></p>
     <% end %>
   </section>
 
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <nav class="flex flex-wrap items-center gap-1 rounded-full bg-haze p-1" aria-label="Project status">
+      <% filters.each do |label, key| %>
+        <% count = key ? @status_counts[key].to_i : nil %>
+        <%= link_to projects_projects_path(status: key, q: params[:q].presence, sort: params[:sort].presence), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @status == key}" do %>
+          <%= label %><% if count&.positive? %><span class="ml-1.5 text-[11px] text-taupe"><%= count %></span><% end %>
+        <% end %>
+      <% end %>
+    </nav>
+    <%= form_with url: projects_projects_path, method: :get, class: "flex items-center gap-2", data: { controller: "auto-submit" } do %>
+      <%= hidden_field_tag :status, @status if @status %>
+      <%= search_field_tag :q, params[:q], placeholder: "Search projects…", class: "search w-52", "aria-label": "Search projects" %>
+      <%= select_tag :sort, options_for_select([["Recently updated", "updated"], ["Due date", "due"], ["Name", "name"]], params[:sort]), class: "select", "aria-label": "Sort", data: { action: "change->auto-submit#submit" } %>
+    <% end %>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
     <% if @projects.empty? %>
-      <div class="card card-pad col-span-full text-sm text-taupe">No projects yet — create one to start tracking tasks and goals.</div>
+      <div class="card card-pad col-span-full py-10 text-center">
+        <p class="font-display text-lg text-ink"><%= params[:q].present? || @status ? "No projects match." : "No projects yet." %></p>
+        <p class="mt-1 text-sm text-taupe">Create one to start tracking tasks and goals.</p>
+      </div>
     <% end %>
     <% @projects.each do |project| %>
-      <%= link_to project, class: "card card-pad block hover:border-taupe" do %>
-        <div class="flex items-center justify-between gap-2">
-          <h3 class="truncate font-display text-lg text-ink"><%= project.name %></h3>
-          <span class="<%= project.completed? ? "pill-fern" : project.archived? ? "pill-taupe" : project.active? ? "pill-olive" : "pill-clay" %>"><%= project.status %></span>
+      <%= link_to project, class: "card card-pad group block transition hover:-translate-y-0.5 hover:border-taupe hover:shadow-md" do %>
+        <div class="flex items-start justify-between gap-2">
+          <h3 class="min-w-0 truncate font-display text-lg text-ink group-hover:text-olive-deep"><%= project.name %></h3>
+          <%= project_status_pill(project) %>
         </div>
-        <p class="mt-1 line-clamp-2 text-sm text-mocha"><%= project.description.presence || "No description." %></p>
-        <div class="mt-3">
-          <div class="mb-1 flex items-center justify-between text-xs text-taupe">
-            <span><%= project.tasks.completed.count %>/<%= project.tasks.count %> tasks</span>
-            <span><%= project.progress_pct %>%</span>
+        <p class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-mocha"><%= project.description.presence || "No description." %></p>
+        <div class="mt-4">
+          <div class="mb-1.5 flex items-center justify-between text-xs text-taupe">
+            <span><%= project.task_counts["done"] %> of <%= project.task_total %> tasks</span>
+            <span class="font-semibold text-ink"><%= project.progress_pct %>%</span>
           </div>
-          <div class="h-1.5 overflow-hidden rounded-full bg-haze">
-            <div class="h-full rounded-full bg-olive" style="width: <%= project.progress_pct %>%"></div>
-          </div>
+          <%= render "projects/shared/progress_bar", counts: project.task_counts %>
         </div>
-        <% if project.due_on %><p class="mt-2 text-xs text-taupe">Due <%= l(project.due_on, format: :long) %></p><% end %>
+        <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <%= project_health_pill(project) %>
+          <% if project.overdue_count.positive? %><span class="font-semibold text-rose"><%= project.overdue_count %> overdue</span><% end %>
+          <% if project.task_counts["blocked"].positive? %><span class="text-rose"><%= project.task_counts["blocked"] %> blocked</span><% end %>
+          <% if project.due_on %>
+            <span class="ml-auto <%= project.due_on < Date.current && !project.completed? ? "font-semibold text-rose" : "text-taupe" %>">
+              <%= project.completed? ? "Finished" : project.due_on < Date.current ? "Due #{l(project.due_on, format: :short)}" : "#{pluralize(project.days_left, "day")} left" %>
+            </span>
+          <% end %>
+        </div>
       <% end %>
     <% end %>
   </div>

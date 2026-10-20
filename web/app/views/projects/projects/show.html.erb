@@ -1,74 +1,62 @@
-<% content_for :title, "Project" %>
-<div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= @project.name %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <span class="<%= @project.completed? ? "pill-fern" : @project.archived? ? "pill-taupe" : @project.active? ? "pill-olive" : "pill-clay" %>"><%= @project.status %></span>
-        <% if @project.due_on %><span class="ml-2 text-taupe">Due <%= l(@project.due_on, format: :long) %></span><% end %>
-      </p>
-      <p class="mt-3 max-w-2xl text-sm text-mocha"><%= @project.description.presence || "No description." %></p>
+<% content_for :title, @project.name %>
+<% can_write = Current.user.can?("projects.write") %>
+<div class="space-y-5">
+  <nav class="text-xs text-taupe" aria-label="Breadcrumb">
+    <%= link_to "Projects", projects_projects_path, class: "font-semibold text-olive hover:underline" %> <span aria-hidden="true">/</span> <%= @project.name %>
+  </nav>
+
+  <section class="card card-pad">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="min-w-0 max-w-2xl">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="page-title"><%= @project.name %></h1>
+          <%= project_status_pill(@project) %>
+          <%= project_health_pill(@project) %>
+        </div>
+        <p class="mt-2 text-sm text-mocha"><%= @project.description.presence || "No description." %></p>
+        <% if @project.due_on %>
+          <p class="mt-2 text-xs <%= @project.due_on < Date.current && !@project.completed? ? "font-semibold text-rose" : "text-taupe" %>">
+            Due <%= l(@project.due_on, format: :long) %>
+            <% unless @project.completed? %>(<%= @project.due_on < Date.current ? "#{pluralize(-@project.days_left, "day")} overdue" : "#{pluralize(@project.days_left, "day")} left" %>)<% end %>
+          </p>
+        <% end %>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <% if can_write %>
+          <% if @project.may_start? %><%= button_to (@project.on_hold? ? "Resume" : "Start"), transition_projects_project_path(@project, event: "start"), method: :post, class: "btn-primary btn-sm" %><% end %>
+          <% if @project.may_hold? %><%= button_to "Hold", transition_projects_project_path(@project, event: "hold"), method: :post, class: "btn-ghost btn-sm" %><% end %>
+          <% if @project.may_complete? %><%= button_to "Complete", transition_projects_project_path(@project, event: "complete"), method: :post, class: "btn-ghost btn-sm" %><% end %>
+          <% if @project.may_archive? %><%= button_to "Archive", transition_projects_project_path(@project, event: "archive"), method: :post, class: "btn-ghost btn-sm", form: { data: { turbo_confirm: "Archive this project? It leaves the default list." } } %><% end %>
+          <%= link_to "Edit", edit_projects_project_path(@project), class: "btn-ghost btn-sm" %>
+        <% end %>
+      </div>
     </div>
-    <div class="flex items-center gap-2">
-      <% if @project.may_start? %><%= button_to "Start", transition_projects_project_path(@project, event: "start"), method: :post, class: "btn-primary btn-sm" %><% end %>
-      <% if @project.may_hold? %><%= button_to "Hold", transition_projects_project_path(@project, event: "hold"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-      <% if @project.may_complete? %><%= button_to "Complete", transition_projects_project_path(@project, event: "complete"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-      <% if @project.may_archive? %><%= button_to "Archive", transition_projects_project_path(@project, event: "archive"), method: :post, class: "btn-ghost btn-sm", data: { confirm: "Archive this project? It stays visible but is no longer active." } %><% end %>
-      <% if Current.user.can?("projects.write") %>
-        <%= link_to "Edit", edit_projects_project_path(@project), class: "btn-ghost btn-sm" %>
-      <% end %>
+
+    <div class="mt-5">
+      <div class="mb-2 flex items-end justify-between">
+        <p class="font-display text-3xl text-ink"><%= @project.progress_pct %><span class="text-lg text-taupe">%</span></p>
+        <p class="text-xs text-taupe"><%= @project.task_counts["done"] %> of <%= @project.task_total %> tasks complete</p>
+      </div>
+      <%= render "projects/shared/progress_bar", counts: @project.task_counts, height: "h-3" %>
+      <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-mocha">
+        <% Projects::Task::BOARD_STATUSES.each do |status| %>
+          <li class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full <%= ProjectsHelper::STATUS_BAR[status] == "bg-fog" ? "bg-taupe/40" : ProjectsHelper::STATUS_BAR[status] %>"></span><%= status_label(status) %> <strong class="text-ink"><%= @project.task_counts[status] %></strong></li>
+        <% end %>
+        <% if @project.overdue_count.positive? %><li class="font-semibold text-rose"><%= @project.overdue_count %> overdue</li><% end %>
+      </ul>
     </div>
   </section>
 
-  <div class="grid gap-4 lg:grid-cols-3">
-    <div class="card card-pad lg:col-span-2">
-      <div class="flex items-baseline justify-between">
-        <h2 class="font-display text-lg text-ink">Tasks</h2>
-        <span class="text-xs text-taupe"><%= @project.tasks.count %></span>
-      </div>
+  <% if can_write %>
+    <%= render "projects/shared/quick_add", project: @project, assign_self: false %>
+  <% end %>
 
-      <div class="mt-3 space-y-2">
-        <% if @project.tasks.empty? %>
-          <p class="py-3 text-sm text-taupe">No tasks yet.</p>
-        <% end %>
-        <% @project.tasks.each do |task| %>
-          <div class="flex items-center justify-between gap-3 rounded-xl border border-fog px-4 py-2.5">
-            <div class="min-w-0">
-              <p class="<%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= task.title %></p>
-              <% if task.due_on %><p class="text-xs text-taupe">Due <%= l(task.due_on, format: :long) %> · <%= task.priority %></p><% end %>
-            </div>
-            <div class="flex shrink-0 items-center gap-2">
-              <% if task.may_start? %><%= button_to "Start", transition_projects_task_path(task, event: "start"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-              <% if task.may_finish? %><%= button_to "Done", transition_projects_task_path(task, event: "finish"), method: :post, class: "btn-primary btn-sm" %><% end %>
-              <% if task.may_block? %><%= button_to "Block", transition_projects_task_path(task, event: "block"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-              <% if task.may_reopen? %><%= button_to "Reopen", transition_projects_task_path(task, event: "reopen"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-              <span class="<%= task.done? ? "pill-fern" : task.blocked? ? "pill-rose" : task.in_progress? ? "pill-olive" : "pill-taupe" %>"><%= task.status %></span>
-            </div>
-          </div>
-        <% end %>
-      </div>
-
-      <% if Current.user.can?("projects.write") %>
-        <%= form_with model: Projects::Task.new, url: projects_tasks_path, class: "mt-4 rounded-xl border border-fog bg-haze/60 p-4" do |f| %>
-          <%= hidden_field_tag :project_id, @project.id %>
-          <h3 class="font-display text-base text-ink">Add task</h3>
-          <div class="mt-2 flex flex-wrap items-center gap-2">
-            <%= text_field_tag "task[title]", nil, placeholder: "Task title", class: "input flex-1" %>
-            <%= select_tag "task[priority]", options_for_select(%w[low medium high urgent]), class: "select" %>
-            <%= date_field_tag "task[due_on]", nil, class: "select" %>
-            <%= f.submit "Add", class: "btn-primary btn-sm" %>
-          </div>
-        <% end %>
-      <% end %>
+  <% if @columns.values.all?(&:empty?) %>
+    <div class="card card-pad py-10 text-center">
+      <p class="font-display text-lg text-ink">No tasks yet.</p>
+      <p class="mt-1 text-sm text-taupe"><%= can_write ? "Add the first one above to start the board." : "Nothing has been planned for this project." %></p>
     </div>
-
-    <div class="card card-pad">
-      <h2 class="font-display text-lg text-ink">Progress</h2>
-      <p class="mt-3 font-display text-4xl text-ink"><%= @project.progress_pct %>%</p>
-      <div class="mt-2 h-2 overflow-hidden rounded-full bg-haze">
-        <div class="h-full rounded-full bg-olive" style="width: <%= @project.progress_pct %>%"></div>
-      </div>
-      <p class="mt-3 text-sm text-taupe"><%= @project.tasks.completed.count %> of <%= @project.tasks.count %> tasks complete.</p>
-    </div>
-  </div>
+  <% else %>
+    <%= render "projects/shared/board", columns: @columns, assignees: @assignees, show_project: false, can_write: can_write %>
+  <% end %>
 </div>

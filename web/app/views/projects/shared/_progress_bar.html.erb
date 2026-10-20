@@ -1,0 +1,13 @@
+<%# Segmented bar: done / in progress / blocked / to do. locals: counts (status => n), height (class) %>
+<% total = counts.values.sum %>
+<% height = local_assigns.fetch(:height, "h-2") %>
+<div class="flex <%= height %> overflow-hidden rounded-full bg-haze" role="img"
+     aria-label="<%= counts["done"].to_i %> done, <%= counts["in_progress"].to_i %> in progress, <%= counts["blocked"].to_i %> blocked, <%= counts["todo"].to_i %> to do">
+  <% if total.positive? %>
+    <% %w[done in_progress blocked].each do |status| %>
+      <% n = counts[status].to_i %>
+      <% next if n.zero? %>
+      <div class="<%= ProjectsHelper::STATUS_BAR[status] %> transition-all duration-500" style="width: <%= (n * 100.0 / total).round(2) %>%" title="<%= status_label(status) %>: <%= n %>"></div>
+    <% end %>
+  <% end %>
+</div>

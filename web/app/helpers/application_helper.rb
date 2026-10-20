@@ -124,6 +124,15 @@ module ApplicationHelper
     Location.where(source: 'ctrax').where.not(id: ready).order(:name).first
   end
 
+  # Newer code exists on GitHub main than this build runs. Only for people who
+  # manage settings, and hidden once they dismiss it for this build.
+  def pending_update
+    return unless Current.user&.can?('settings.write')
+    return if session[:dismissed_update_for] == BuildInfo.current.revision
+
+    UpdateChecker.pending
+  end
+
   # Long explanatory copy shows its first sentence and keeps the rest one tap
   # away, so work screens stay scannable without hiding any caveat.
   def fold_explainer(text, **options)
