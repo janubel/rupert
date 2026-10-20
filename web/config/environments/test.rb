@@ -63,4 +63,10 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Rack::Attack counts requests in its own store so parallel test workers
+  # never share counters with each other or with the app cache.
+  config.after_initialize do
+    Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
+  end
 end
