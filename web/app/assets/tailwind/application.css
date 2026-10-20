@@ -41,6 +41,9 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-synthesis: none;
   }
 
   ::selection {
@@ -101,7 +104,7 @@
   }
 
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.16em];
+    @apply text-xs font-semibold uppercase tracking-[0.12em];
   }
 
   .stat {
@@ -117,7 +120,7 @@
   }
 
   .stat-label {
-    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-taupe;
+    @apply text-xs font-semibold uppercase tracking-[0.12em] text-taupe;
   }
 
   .stat-value {
@@ -133,7 +136,8 @@
   }
 
   .th {
-    @apply px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-taupe;
+    @apply px-4 py-2.5 text-left text-xs font-semibold normal-case tracking-normal text-taupe;
+    text-wrap: balance;
   }
 
   .td {
@@ -576,7 +580,7 @@
 .bookkeeping-question:hover { background:var(--color-haze); }
 .bookkeeping-question-top { display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;font-size:.8rem;font-variant-numeric:tabular-nums; }
 .bookkeeping-empty { padding:1rem 0;color:var(--color-mocha);font-size:.875rem; }
-.bookkeeping-table th { background:var(--color-haze);text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--color-mocha); }
+.bookkeeping-table th { background:var(--color-haze);text-align:left;font-size:.75rem;font-weight:600;text-transform:none;letter-spacing:normal;color:var(--color-mocha); }
 .bookkeeping-table th,.bookkeeping-table td { padding:.9rem 1.1rem;border-top:1px solid var(--color-fog);vertical-align:top; }
 .bookkeeping-table th.text-right { text-align:right; }
 .bookkeeping-amount { font-variant-numeric:tabular-nums;font-weight:600; }
