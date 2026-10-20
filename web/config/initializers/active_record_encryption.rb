@@ -23,3 +23,8 @@ end
 Rails.application.config.active_record.encryption.primary_key = ENV.fetch('RAILS_ENCRYPTION_PRIMARY_KEY')
 Rails.application.config.active_record.encryption.deterministic_key = ENV.fetch('RAILS_ENCRYPTION_DETERMINISTIC_KEY')
 Rails.application.config.active_record.encryption.key_derivation_salt = ENV.fetch('RAILS_ENCRYPTION_KEY_DERIVATION_SALT')
+
+# Columns that gained `encrypts` after rows already existed (shops.shopify_token,
+# 2026-10-20) keep reading their plaintext values until ops:encrypt_shop_tokens
+# has rewritten them. New writes are always encrypted.
+Rails.application.config.active_record.encryption.support_unencrypted_data = true

@@ -11,7 +11,7 @@ class ShopifyWebhooksTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
   SECRET = 'test-secret-key'
-  SHOP = 'm11u0i-sb.myshopify.com'
+  SHOP = 'testshop.myshopify.com' # matches tenants(:default_tenant)
 
   setup do
     @previous_secret = ShopifyApp.configuration.secret
