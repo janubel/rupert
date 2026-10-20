@@ -40,7 +40,12 @@
                 <%= link_to 'My time & time off', employee_app_path, class: 'nav-menu-item', role: 'menuitem' %>
                 <%= link_to 'My timesheets', people_timesheets_path, class: 'nav-menu-item', role: 'menuitem' if Current.user.can?('timesheets.self') %>
                 <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>My time clock</span><% end %>
-                <button type="button" class="nav-menu-item w-full" role="menuitem" data-controller="theme" data-action="theme#toggle" data-theme-target="label" aria-live="polite">Switch to light mode</button>
+                <div data-controller="theme" role="group" aria-label="Appearance" class="appearance-picker">
+                  <p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-[0.12em] text-taupe">Appearance</p>
+                  <% { 'dark' => 'Dark', 'light' => 'Light', 'mist' => 'Mist · softer light', 'sepia' => 'Sepia · warm paper', 'herbal' => 'Herbal · company colors' }.each do |value, label| %>
+                    <button type="button" class="nav-menu-item w-full appearance-option" role="menuitemradio" aria-checked="false" data-theme-value="<%= value %>" data-theme-target="option" data-action="theme#select"><span class="appearance-swatch appearance-swatch-<%= value %>" aria-hidden="true"></span><span><%= label %></span></button>
+                  <% end %>
+                </div>
                 <%= link_to roadmap_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('document') %><span>Features &amp; roadmap</span><% end %>
                 <% if Current.user.admin? && Current.user.tenant_id == Current.tenant_id %>
                   <%= link_to 'Subscription & billing', billing_path, class: 'nav-menu-item', role: 'menuitem' %>

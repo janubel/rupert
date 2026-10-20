@@ -829,9 +829,16 @@ select.input {
 
 /* Dark is the default appearance: a warm, low-glare counterpart; surfaces built
    from the tokens follow. People opt into light with the account-menu toggle
-   (data-theme="light"), and print/embedded layouts pin light the same way. */
+   (data-theme="light"), and print/embedded layouts pin light the same way.
+   Appearance options (account menu): dark (default), light, mist, sepia and
+   herbal. Every option is a complete token set checked by
+   bin/check-palette-contrast; "mist" is a dimmer light for people who find
+   plain white too bright, "sepia" is warm paper with a muted blue-teal
+   accent (the Solarized precedent: warm base, cool accent), and "herbal"
+   takes the company's teal, deep teal-black and mint with a warm off-white. */
 @media all {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]),
+  :root[data-theme="dark"] {
     color-scheme: dark;
     /* Dark grey, not black (Material: #121212-class surfaces; shadows and
        elevation stay visible, no halation around light text); accents are
@@ -866,8 +873,104 @@ select.input {
   }
 }
 
+:root[data-theme="mist"] {
+  color-scheme: light;
+  /* Dimmer light: blue-grey page, off-white cards; same blue accent. */
+  --color-oat: #e6ebf2;
+  --color-cream: #dde3ec;
+  --color-paper: #f3f6fa;
+  --color-ink: #141922;
+  --color-mocha: #3d4756;
+  --color-taupe: #596575;
+  --color-fog: #cdd5e0;
+  --color-haze: #e0e6ee;
+  --color-olive: #2457c4;
+  --color-olive-deep: #1b43a0;
+  --color-sage: #1f7a6f;
+  --color-clay: #5b48a8;
+  --color-butter: #efc14f;
+  --color-rose: #b0392c;
+  --color-fern: #1a6f44;
+  --color-edge: #7f8b9b;
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-danger-edge: #f3b7b0;
+  --color-success: #05603a;
+  --color-success-bg: #ecfdf3;
+  --color-success-edge: #a6d8bf;
+  --color-warn: #7a4b00;
+  --color-warn-bg: #fffaeb;
+  --color-warn-edge: #f1d49a;
+  --shadow-ink: 20 24 31;
+}
+
+:root[data-theme="sepia"] {
+  color-scheme: light;
+  /* Warm paper. Muted blue-teal accent keeps links and buttons */
+  /* distinct from the warm neutrals without a dark-yellow accent. */
+  --color-oat: #efe6d4;
+  --color-cream: #e7dcc6;
+  --color-paper: #f7f0e2;
+  --color-ink: #2b2419;
+  --color-mocha: #574a39;
+  --color-taupe: #665a49;
+  --color-fog: #d9ccb5;
+  --color-haze: #ece2cf;
+  --color-olive: #185f78;
+  --color-olive-deep: #114a5e;
+  --color-sage: #3f7a4e;
+  --color-clay: #7a4e8a;
+  --color-butter: #e3b84a;
+  --color-rose: #a0392a;
+  --color-fern: #2a6340;
+  --color-edge: #8f7e63;
+  --color-danger: #9f2416;
+  --color-danger-bg: #f6e4df;
+  --color-danger-edge: #e0ab9f;
+  --color-success: #1f5f3a;
+  --color-success-bg: #e6efdf;
+  --color-success-edge: #a9c9a3;
+  --color-warn: #6b4300;
+  --color-warn-bg: #f6ecd3;
+  --color-warn-edge: #e0c48a;
+  --shadow-ink: 43 36 25;
+}
+
+:root[data-theme="herbal"] {
+  color-scheme: light;
+  /* Company colors: deep teal-black text (#1a393d), teal accent */
+  /* (#108184 family), mint data color, warm off-white page. */
+  --color-oat: #f3f4f1;
+  --color-cream: #e9ece7;
+  --color-paper: #ffffff;
+  --color-ink: #1a393d;
+  --color-mocha: #3d555a;
+  --color-taupe: #526669;
+  --color-fog: #dbe3e0;
+  --color-haze: #e8efec;
+  --color-olive: #0e6f72;
+  --color-olive-deep: #0b585a;
+  --color-sage: #257d50;
+  --color-clay: #5b48a8;
+  --color-butter: #f2b530;
+  --color-rose: #b3382a;
+  --color-fern: #1b7046;
+  --color-edge: #829390;
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-danger-edge: #f3b7b0;
+  --color-success: #05603a;
+  --color-success-bg: #ecfdf3;
+  --color-success-edge: #a6d8bf;
+  --color-warn: #7a4b00;
+  --color-warn-bg: #fffaeb;
+  --color-warn-edge: #f1d49a;
+  --shadow-ink: 26 57 61;
+}
+
 /* Dark-only fixes that tokens cannot express. */
-:root:not([data-theme="light"]) {
+:root:not([data-theme]),
+:root[data-theme="dark"] {
   .entry-state-posted { border-left-color: var(--color-success); }
   select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23b8c0cc' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); }
 }
@@ -999,3 +1102,15 @@ a.card:focus-visible {
 .workspace-help[open] { width: 100%; }
 .workspace-help > summary:focus-visible,
 .learning-path-picker > summary:focus-visible { outline: 2px solid var(--color-olive); outline-offset: 4px; border-radius: .25rem; }
+
+
+/* Appearance picker: a page/accent swatch per option, check mark on the current one. */
+.appearance-option { gap: .6rem; }
+.appearance-option[aria-checked="true"] { background: var(--color-haze); font-weight: 600; }
+.appearance-option[aria-checked="true"]::after { content: "\2713"; margin-left: auto; color: var(--color-olive); }
+.appearance-swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: 999px; border: 1px solid var(--color-edge); box-shadow: inset 0 0 0 3px var(--swatch-page); background: var(--swatch-accent); flex: none; }
+.appearance-swatch-dark { --swatch-page: #121418; --swatch-accent: #6f9cf5; }
+.appearance-swatch-light { --swatch-page: #f5f7fa; --swatch-accent: #2a5fcf; }
+.appearance-swatch-mist { --swatch-page: #e6ebf2; --swatch-accent: #2457c4; }
+.appearance-swatch-sepia { --swatch-page: #efe6d4; --swatch-accent: #185f78; }
+.appearance-swatch-herbal { --swatch-page: #f3f4f1; --swatch-accent: #0e6f72; }

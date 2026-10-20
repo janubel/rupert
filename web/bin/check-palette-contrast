@@ -20,7 +20,10 @@ end
 
 css = File.read(CSS)
 light = tokens_in(css[/@theme \{.*?\n\}/m])
-dark = tokens_in(css[/:root:not\(\[data-theme="light"\]\) \{\s*color-scheme: dark;.*?\n  \}/m], light)
+dark = tokens_in(css[/:root:not\(\[data-theme\]\),\s*:root\[data-theme="dark"\] \{\s*color-scheme: dark;.*?\n  \}/m], light)
+themes = { 'light' => light, 'dark' => dark }
+css.scan(/^:root\[data-theme="(\w+)"\] \{\n(.*?)\n\}/m).each { |name, block| themes[name] = tokens_in(block, light) }
+raise 'expected five appearances (dark, light, mist, sepia, herbal)' unless themes.keys.sort == %w[dark herbal light mist sepia]
 
 def channel(value) = value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055)**2.4
 
@@ -60,7 +63,7 @@ end
 
 show_all = ARGV.include?('--all')
 failures = 0
-{ 'light' => light, 'dark' => dark }.each do |theme, t|
+themes.each do |theme, t|
   puts "== #{theme}"
   pairs(t).each do |name, a, b, need|
     r = ratio(a, b)
@@ -69,5 +72,5 @@ failures = 0
     puts format('  %s %5.2f (need %.1f) %s', ok ? 'ok  ' : 'FAIL', r, need, name) if show_all || !ok
   end
 end
-puts(failures.zero? ? 'Palette contrast: all pairs pass in both themes.' : "Palette contrast: #{failures} failing pair(s).")
+puts(failures.zero? ? "Palette contrast: all pairs pass in all #{themes.size} appearances." : "Palette contrast: #{failures} failing pair(s).")
 exit(failures.zero? ? 0 : 1)

@@ -1,26 +1,35 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Dark is the default. This flips the account-menu item between dark and light
-// and remembers the choice in this browser (the layout script applies it early).
+// Appearance picker in the account menu. Dark is the default (no data-theme
+// attribute); the other options set data-theme and are remembered per browser
+// (config/layouts/_theme.html.erb applies the saved choice before first paint).
+const THEMES = ["dark", "light", "mist", "sepia", "herbal"]
+// Page color per theme for the browser chrome (matches --color-oat).
+const PAGE_COLORS = { dark: "#121418", light: "#f5f7fa", mist: "#e6ebf2", sepia: "#efe6d4", herbal: "#f3f4f1" }
+
 export default class extends Controller {
-  static targets = ["label"]
+  static targets = ["option"]
 
   connect() {
     this.render()
   }
 
-  toggle() {
-    const light = document.documentElement.getAttribute("data-theme") !== "light"
-    if (light) document.documentElement.setAttribute("data-theme", "light")
-    else document.documentElement.removeAttribute("data-theme")
-    try { localStorage.setItem("rupert-theme", light ? "light" : "dark") } catch (e) { /* private mode */ }
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", light ? "#f5f7fa" : "#121418")
+  select(event) {
+    const theme = event.currentTarget.dataset.themeValue
+    if (!THEMES.includes(theme)) return
+    if (theme === "dark") document.documentElement.removeAttribute("data-theme")
+    else document.documentElement.setAttribute("data-theme", theme)
+    try { localStorage.setItem("rupert-theme", theme) } catch (e) { /* private mode */ }
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", PAGE_COLORS[theme])
     window.dispatchEvent(new Event("rupert:theme"))
     this.render()
   }
 
   render() {
-    const light = document.documentElement.getAttribute("data-theme") === "light"
-    this.element.textContent = light ? "Switch to dark mode" : "Switch to light mode"
+    const current = document.documentElement.getAttribute("data-theme") || "dark"
+    this.optionTargets.forEach((option) => {
+      const active = option.dataset.themeValue === current
+      option.setAttribute("aria-checked", active ? "true" : "false")
+    })
   }
 }
