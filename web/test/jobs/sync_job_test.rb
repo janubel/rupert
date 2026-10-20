@@ -30,4 +30,17 @@ class SyncJobTest < ActiveJob::TestCase
     assert_enqueued_with(job: BuzzNotifyJob)
     assert_no_enqueued_jobs(only: SyncJob)
   end
+
+  test 'a single-source payload runs run_source! and announces the result' do
+    run = SyncRun.new(status: 'success', source: 'square', mode: 'manual', details: { reconcile: { drift_count: 2 } }.to_json)
+    SyncEngine.expects(:run_source!).with('square', actor: 'ops@example.com', tenant: @tenant).returns(run)
+    SyncJob.perform_now('tenant_id' => @tenant.id, 'source' => 'square', 'actor' => 'ops@example.com')
+    assert_enqueued_with(job: BuzzNotifyJob, args: ['Sync complete · square · manual · drift 2'])
+    assert_enqueued_with(job: SalesAnnouncementJob, args: [@tenant.id])
+  end
+
+  test 'a missing tenant is a configuration error, not a retry' do
+    assert_raises(ArgumentError) { SyncJob.perform_now(mode: 'scheduled') }
+    assert_no_enqueued_jobs(only: SyncJob)
+  end
 end

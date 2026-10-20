@@ -70,7 +70,5 @@ Rails.application.configure do
   config.after_initialize do
     Rack::Attack.enabled = false
     Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
-    # Platform-client retries must not sleep in tests; HttpRetryTest records the delays instead.
-    HttpRetry.sleeper = ->(_seconds) {}
   end
 end

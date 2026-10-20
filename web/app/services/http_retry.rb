@@ -24,8 +24,11 @@ module HttpRetry
     end
   end
 
-  # How to wait between attempts. Tests replace this with a no-op (config/environments/test.rb).
-  mattr_accessor :sleeper, default: Kernel.method(:sleep)
+  # How to wait between attempts. Never sleeps in the test environment;
+  # HttpRetryTest swaps in a recorder to assert the delays. (Kept lazy so the
+  # file is not loaded before the parallel test workers fork, which would
+  # reset its coverage.)
+  mattr_accessor :sleeper, default: (Rails.env.test? ? ->(_seconds) {} : Kernel.method(:sleep))
 
   class << self
     # Yields the attempt number (1-based). The block raises HttpRetry::Retry to

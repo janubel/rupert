@@ -40,4 +40,24 @@ class ShopifyClientTest < ActiveSupport::TestCase
     toml = File.read(Rails.root.join('..', 'shopify.app.toml'))
     assert_equal 'https://rupert.stoverparc.org', toml[/^application_url\s*=\s*"([^"]+)"/, 1]
   end
+
+  test 'token exchange caches per workspace, refreshes when forced and fails with a typed credential error' do
+    ShopifyClient.instance_variable_get(:@tokens).delete(Current.tenant_id)
+    EnvStore.set('SHOPIFY_CLIENT_ID', 'id')
+    EnvStore.set('SHOPIFY_CLIENT_SECRET', 'secret')
+    stub = stub_request(:post, 'https://testshop.myshopify.com/admin/oauth/access_token')
+      .to_return(status: 200, body: { access_token: 'tok-1' }.to_json)
+      .then.to_return(status: 200, body: { access_token: 'tok-2' }.to_json)
+      .then.to_return(status: 401, body: '{}')
+    assert_equal 'tok-1', ShopifyClient.token
+    assert_equal 'tok-1', ShopifyClient.token, 'cached within TOKEN_TTL'
+    assert_equal 'tok-2', ShopifyClient.token(force: true)
+    error = assert_raises(ShopifyClient::Error) { ShopifyClient.token(force: true) }
+    assert_equal 'credentials', SyncFailure.category(error)
+    assert_requested stub, times: 3
+  ensure
+    ShopifyClient.instance_variable_get(:@tokens).delete(Current.tenant_id)
+    Setting.where(key: %w[SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET]).delete_all
+    EnvStore.clear_cache!
+  end
 end
