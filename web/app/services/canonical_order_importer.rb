@@ -41,6 +41,7 @@ class CanonicalOrderImporter
           fulfillments = node['fulfillments']
           fulfillments = fulfillments['nodes'] if fulfillments.is_a?(Hash)
           replace_fulfillments!(order, fulfillments)
+          sync_refunds!(order, shopify_refunds(node))
         end
       end
       Array(nodes).length
@@ -70,6 +71,7 @@ class CanonicalOrderImporter
           )
           replace_order_lines!(order, node['line_items'])
           replace_payments!(order, square_payments(node))
+          sync_refunds!(order, square_refunds(node))
         end
       end
       Array(orders).length
@@ -201,6 +203,53 @@ class CanonicalOrderImporter
 
       order.fulfill!
       order.update_columns(updated_at: Time.current)
+    end
+
+    # Platform refunds, keyed by the platform refund id in Core::Refund#reference
+    # so re-imports update rather than duplicate. Refunds recorded by hand in
+    # Rupert (no platform reference) are left alone. When the refunded total
+    # reaches the paid total the order moves to the refunded financial status.
+    def sync_refunds!(order, refunds)
+      refunds.each do |refund|
+        next unless refund[:amount_cents].to_i.positive? && refund[:reference].present?
+
+        row = Core::Refund.find_or_initialize_by(order_id: order.id, reference: refund[:reference])
+        row.tenant_id ||= Current.tenant_id
+        row.assign_attributes(amount_cents: refund[:amount_cents].to_i, method: refund[:method] || 'card',
+          refunded_at: refund[:refunded_at] || Time.current, reason: refund[:reason].presence || row.reason)
+        row.save! if row.new_record? || row.changed?
+      end
+      order.refunds.reset
+      order.refund! if order.fully_refunded? && order.may_refund?
+    end
+
+    def shopify_refunds(node)
+      Array(node['refunds']).filter_map do |refund|
+        next unless refund.is_a?(Hash) && refund['id'].to_s.match?(%r{\Agid://shopify/Refund/[1-9][0-9]{0,30}\z})
+
+        { reference: refund['id'], amount_cents: money_cents(refund.dig('totalRefundedSet', 'shopMoney')).to_i,
+          method: node['paymentGatewayNames'].to_a.any? { |g| g.to_s.downcase.include?('gift') } ? 'gift_card' : 'card',
+          refunded_at: parse_time(refund['createdAt']) }
+      end
+    end
+
+    # Square orders carry a `refunds` array (one per tender refund) and
+    # `return_amounts` for returns; the array wins when present.
+    def square_refunds(node)
+      rows = Array(node['refunds']).filter_map do |refund|
+        next unless refund.is_a?(Hash) && refund['id'].present?
+        next unless %w[APPROVED COMPLETED].include?(refund['status'].to_s.upcase) || refund['status'].blank?
+
+        { reference: "square-refund:#{refund['id']}", amount_cents: refund.dig('amount_money', 'amount').to_i.abs,
+          method: 'card', refunded_at: parse_time(refund['created_at']), reason: refund['reason'] }
+      end
+      return rows if rows.any?
+
+      returned = node.dig('return_amounts', 'total_money', 'amount').to_i
+      return [] unless returned.positive?
+
+      [{ reference: "square-return:#{node['id']}", amount_cents: returned, method: 'card',
+         refunded_at: parse_time(node['updated_at']) || parse_time(node['created_at']) }]
     end
 
     def replace_payments!(order, payments)

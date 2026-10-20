@@ -24,6 +24,17 @@ class CatalogSyncerTest < ActiveSupport::TestCase
     assert_equal 3650.days, CatalogSyncer.send(:history_lookback)
   end
 
+  test 'orders are selected by updated_at so later refunds and cancellations are re-read' do
+    captured = []
+    ShopifyClient.stubs(:graphql).with { |query, variables| captured.push([query, variables]) }
+                 .returns({ 'orders' => { 'nodes' => [], 'pageInfo' => { 'hasNextPage' => false } } })
+    CatalogSyncer.send(:paginate_orders, '2026-01-01')
+    query, variables = captured.first
+    assert_equal 'updated_at:>=2026-01-01', variables[:orderQuery]
+    assert_includes query, 'sortKey: UPDATED_AT'
+    assert_includes query, 'refunds { id createdAt totalRefundedSet'
+  end
+
   test 'paginate_orders walks all pages' do
     page1 = { 'orders' => { 'nodes' => [{ 'id' => 'a' }, { 'id' => 'b' }],
                             'pageInfo' => { 'hasNextPage' => true, 'endCursor' => 'c1' } } }

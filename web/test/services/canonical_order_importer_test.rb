@@ -232,4 +232,52 @@ class CanonicalOrderImporterTest < ActiveSupport::TestCase
     assert_equal legacy.id, Core::Order.find_by!(source: 'square', source_order_id: 'legacy-sale').customer_id
     assert_equal 'Historical context', legacy.reload.notes
   end
+
+  test 'from_shopify! records platform refunds idempotently and moves a fully refunded order to refunded' do
+    node = shopify_order
+    node['refunds'] = [{ 'id' => 'gid://shopify/Refund/1', 'createdAt' => Time.current.iso8601,
+                         'totalRefundedSet' => { 'shopMoney' => { 'amount' => '10.00', 'currencyCode' => 'USD' } } }]
+    CanonicalOrderImporter.from_shopify!([node])
+    order = Core::Order.find_by!(source: 'shopify', source_order_id: 'gid://shopify/Order/123')
+    assert_equal 1000, order.total_refunded_cents
+    assert_equal 'paid', order.status, 'a partial refund keeps the order paid'
+
+    CanonicalOrderImporter.from_shopify!([node])
+    assert_equal 1, order.refunds.reload.count, 're-import updates the same refund'
+
+    node['refunds'] << { 'id' => 'gid://shopify/Refund/2', 'createdAt' => Time.current.iso8601,
+                         'totalRefundedSet' => { 'shopMoney' => { 'amount' => '15.00', 'currencyCode' => 'USD' } } }
+    node['displayFinancialStatus'] = 'REFUNDED'
+    CanonicalOrderImporter.from_shopify!([node])
+    order.reload
+    assert_equal 2500, order.total_refunded_cents
+    assert_equal 'refunded', order.status
+    assert_equal %w[gid://shopify/Refund/1 gid://shopify/Refund/2], order.refunds.order(:reference).pluck(:reference)
+  end
+
+  test 'a refund recorded by hand in Rupert survives platform re-imports' do
+    CanonicalOrderImporter.from_shopify!([shopify_order])
+    order = Core::Order.find_by!(source: 'shopify', source_order_id: 'gid://shopify/Order/123')
+    order.record_refund!(amount_cents: 500, method: 'cash', reason: 'goodwill')
+    CanonicalOrderImporter.from_shopify!([shopify_order])
+    assert_equal 500, order.reload.total_refunded_cents
+    assert_equal 'goodwill', order.refunds.first.reason
+  end
+
+  test 'from_square! records refunds from the order refunds array, or from return_amounts when absent' do
+    node = square_order
+    node['refunds'] = [{ 'id' => 'rf-1', 'status' => 'APPROVED', 'amount_money' => { 'amount' => 200 }, 'created_at' => Time.current.iso8601 },
+                       { 'id' => 'rf-2', 'status' => 'REJECTED', 'amount_money' => { 'amount' => 999 } }]
+    CanonicalOrderImporter.from_square!([node])
+    order = Core::Order.find_by!(source: 'square', source_order_id: 'sq-abc')
+    assert_equal 200, order.total_refunded_cents
+    assert_equal ['square-refund:rf-1'], order.refunds.pluck(:reference)
+
+    returned = square_order(id: 'sq-ret')
+    returned['return_amounts'] = { 'total_money' => { 'amount' => 1200, 'currency' => 'USD' } }
+    CanonicalOrderImporter.from_square!([returned])
+    order = Core::Order.find_by!(source: 'square', source_order_id: 'sq-ret')
+    assert_equal 1200, order.total_refunded_cents
+    assert_equal 'refunded', order.status, 'the full sale came back'
+  end
 end

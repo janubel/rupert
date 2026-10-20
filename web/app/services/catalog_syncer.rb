@@ -71,14 +71,20 @@ class CatalogSyncer
   # Paginates every order matching the query, so the sync captures the full
   # history window rather than the first page. Keep order pages small because
   # each exact variant identity is nested inside up to 100 line items.
+  #
+  # Orders are selected by updated_at, not created_at: a refund, cancellation
+  # or fulfillment days after the sale changes the order without creating a
+  # new one, and the watermark window must re-read it. Refunds ride along so
+  # the canonical store carries platform refunds as Core::Refund rows.
   ORDERS_QUERY = <<~GRAPHQL
     query Orders($orderQuery: String!, $orderCursor: String) {
-      orders(first: 5, query: $orderQuery, sortKey: CREATED_AT, reverse: true, after: $orderCursor) {
+      orders(first: 5, query: $orderQuery, sortKey: UPDATED_AT, reverse: true, after: $orderCursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
-          id name createdAt cancelledAt displayFinancialStatus paymentGatewayNames
+          id name createdAt updatedAt cancelledAt displayFinancialStatus paymentGatewayNames
           currentTotalPriceSet { shopMoney { amount currencyCode } }
           currentTotalTaxSet { shopMoney { amount currencyCode } }
+          refunds { id createdAt totalRefundedSet { shopMoney { amount currencyCode } } }
           customer { id email firstName lastName phone }
           shippingAddress {
             address1 address2 city country province zip phone
@@ -302,7 +308,7 @@ class CatalogSyncer
       nodes = []
       cursor = nil
       loop do
-        data = ShopifyClient.graphql(ORDERS_QUERY, { orderQuery: "created_at:>=#{since}", orderCursor: cursor })
+        data = ShopifyClient.graphql(ORDERS_QUERY, { orderQuery: "updated_at:>=#{since}", orderCursor: cursor })
         page = data['orders']
         nodes.concat(page['nodes'] || [])
         info = page['pageInfo'] || {}

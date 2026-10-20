@@ -124,6 +124,9 @@ class SquareClient
       { counts: counts, counts_by_location: counts_by_location }
     end
 
+    # Orders changed since `since_iso`. Filtered on updated_at (Square requires
+    # the sort field to match the date filter) so a later refund or return
+    # re-selects the order; refunds arrive on the order payload.
     def orders(location_ids, since_iso, max: nil)
       orders = []
       cursor = nil
@@ -134,7 +137,7 @@ class SquareClient
           query: {
             filter: {
               state_filter: { states: ['COMPLETED'] },
-              date_time_filter: { created_at: { start_at: since_iso } }
+              date_time_filter: { updated_at: { start_at: since_iso } }
             },
             sort: { sort_field: 'UPDATED_AT', sort_order: 'DESC' }
           },
