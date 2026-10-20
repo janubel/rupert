@@ -16,11 +16,11 @@
   <div class="card card-pad"><p class="text-sm text-mocha">Awaiting review or match</p><p class="text-2xl font-semibold"><%= @held %></p></div>
 </section>
 <%= form_with url: people_ctrax_timesheets_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
-  <div><%= f.label :from, 'Original clock-in from', class: 'block text-sm mb-1' %><%= f.date_field :from, value: params[:from], class: 'input' %></div>
-  <div><%= f.label :to, 'Original clock-in through', class: 'block text-sm mb-1' %><%= f.date_field :to, value: params[:to], class: 'input' %></div>
-  <div><%= f.label :status, 'Source status', class: 'block text-sm mb-1' %><%= f.select :status, [['All', ''], *CtraxLaborShift::STATUSES.map { |value| [value.humanize, value] }], { selected: params[:status] }, class: 'select' %></div>
+  <div><%= f.label :from, 'Original clock-in from', class: 'field-label' %><%= f.date_field :from, value: params[:from], class: 'input' %></div>
+  <div><%= f.label :to, 'Original clock-in through', class: 'field-label' %><%= f.date_field :to, value: params[:to], class: 'input' %></div>
+  <div><%= f.label :status, 'Source status', class: 'field-label' %><%= f.select :status, [['All', ''], *CtraxLaborShift::STATUSES.map { |value| [value.humanize, value] }], { selected: params[:status] }, class: 'select' %></div>
   <% if @all_employees %>
-    <div><%= f.label :employee_id, 'Staff member', class: 'block text-sm mb-1' %><%= f.select :employee_id, [['All staff, including inactive', ''], ['Staff member not matched', 'unmatched'], *@employees.map { |employee| ["#{employee.name}#{employee.active? ? '' : ' (inactive)'}", employee.id] }], { selected: params[:employee_id] }, class: 'select' %></div>
+    <div><%= f.label :employee_id, 'Staff member', class: 'field-label' %><%= f.select :employee_id, [['All staff, including inactive', ''], ['Staff member not matched', 'unmatched'], *@employees.map { |employee| ["#{employee.name}#{employee.active? ? '' : ' (inactive)'}", employee.id] }], { selected: params[:employee_id] }, class: 'select' %></div>
   <% end %>
   <%= f.submit 'Filter', class: 'btn-primary' %>
 <% end %>

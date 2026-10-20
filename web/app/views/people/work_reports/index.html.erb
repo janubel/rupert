@@ -9,8 +9,8 @@
       <% if Current.user.can?('hr.write') %>
         <%= form_with url: people_work_report_path(report), method: :patch, scope: :work_report, class: 'space-y-3' do |f| %>
           <%= f.hidden_field :lock_version, value: report.lock_version %>
-          <div><%= f.label :status, 'Status', for: "report-status-#{report.id}", class: 'block text-sm mb-1' %><%= f.select :status, EmployeeWorkReport::STATUSES.map { |status| [status.humanize, status] }, { selected: report.status }, id: "report-status-#{report.id}", class: 'select' %></div>
-          <div><%= f.label :response, 'Response to staff member', for: "report-response-#{report.id}", class: 'block text-sm mb-1' %><%= f.text_area :response, value: report.response, id: "report-response-#{report.id}", required: true, maxlength: 2000, rows: 3, class: 'input w-full' %></div>
+          <div><%= f.label :status, 'Status', for: "report-status-#{report.id}", class: 'field-label' %><%= f.select :status, EmployeeWorkReport::STATUSES.map { |status| [status.humanize, status] }, { selected: report.status }, id: "report-status-#{report.id}", class: 'select' %></div>
+          <div><%= f.label :response, 'Response to staff member', for: "report-response-#{report.id}", class: 'field-label' %><%= f.text_area :response, value: report.response, id: "report-response-#{report.id}", required: true, maxlength: 2000, rows: 3, class: 'input w-full' %></div>
           <%= f.submit 'Save response', class: 'btn-primary btn-sm' %>
         <% end %>
       <% end %>

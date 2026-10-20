@@ -1,6 +1,6 @@
 <div class="max-w-3xl space-y-5">
   <%= link_to 'Back', @back_url, class: 'btn-ghost' %>
-  <h1 class="text-2xl font-semibold"><%= @record.persisted? ? 'Edit' : 'New' %> <%= @record.class.model_name.element.humanize.downcase %></h1>
+  <h1 class="page-title"><%= @record.persisted? ? 'Edit' : 'New' %> <%= @record.class.model_name.element.humanize.downcase %></h1>
   <%= form_with model: @record, scope: :cms_record, url: @form_url, class: 'card card-pad space-y-4' do |f| %>
     <%= f.hidden_field :lock_version if @record.persisted? %>
     <% influencer_cms_fields(@record).each do |field| %>

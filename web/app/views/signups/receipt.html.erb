@@ -1,7 +1,7 @@
 <% content_for :title, 'Workspace request' %>
 <div class="mx-auto max-w-xl pt-10">
   <div class="card card-pad space-y-4">
-    <h1 class="font-display text-2xl text-ink">Workspace request <%= @signup.status %></h1>
+    <h1 class="page-title">Workspace request <%= @signup.status %></h1>
     <% if @signup.status == 'approved' %>
       <p class="text-sm text-mocha">Your workspace has been approved. Sign in with the same Google account to continue.</p>
     <% elsif @signup.status == 'rejected' %>

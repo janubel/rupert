@@ -1,7 +1,7 @@
 <% content_for :title, 'Authorize.net portal reports' %>
 <div class="space-y-6">
   <section class="card card-pad">
-    <h1 class="font-display text-2xl text-ink">Authorize.net portal reports</h1>
+    <h1 class="page-title">Authorize.net portal reports</h1>
     <p class="mt-2 text-mocha">Dated transaction observations downloaded from the merchant webpage. These are separate from API reconciliation, Shopify sales and bank deposits.</p>
     <p class="mt-2 text-sm text-mocha">Use Manage Transactions → download → Expanded Fields/Comma Separated for settled and unsettled results. Import each file below. Portal sign-in may expire; no API key change is needed for this workflow.</p>
     <%= link_to 'Open sales portal', 'https://new.authorize.net/smb2/merchant/TransactionManagement/ManageTransactions', class: 'btn-ghost btn-sm mt-3', target: '_blank', rel: 'noopener noreferrer' %>

@@ -26,8 +26,8 @@
         <p class="text-sm text-mocha"><%= number_with_precision(shift.hours, precision: 2) %> hours</p>
         <details><summary class="cursor-pointer text-sm text-olive">Request a time correction</summary>
           <%= form_with url: request_correction_time_clock_path(shift), scope: :clock_correction, data: { turbo: false }, class: 'mt-3 space-y-3' do |form| %>
-            <div class="grid gap-3 sm:grid-cols-2"><div><%= form.label :proposed_started_at, 'Correct clock-in', class: 'block text-sm mb-1' %><%= form.datetime_local_field :proposed_started_at, value: shift.started_at.in_time_zone.strftime('%Y-%m-%dT%H:%M:%S'), step: 1, required: true, class: 'input' %></div><div><%= form.label :proposed_ended_at, 'Correct clock-out', class: 'block text-sm mb-1' %><%= form.datetime_local_field :proposed_ended_at, value: shift.ended_at&.in_time_zone&.strftime('%Y-%m-%dT%H:%M:%S'), step: 1, required: true, class: 'input' %></div></div>
-            <div><%= form.label :reason, 'Reason for correction', class: 'block text-sm mb-1' %><%= form.text_area :reason, required: true, maxlength: 1000, class: 'input', rows: 2 %></div>
+            <div class="grid gap-3 sm:grid-cols-2"><div><%= form.label :proposed_started_at, 'Correct clock-in', class: 'field-label' %><%= form.datetime_local_field :proposed_started_at, value: shift.started_at.in_time_zone.strftime('%Y-%m-%dT%H:%M:%S'), step: 1, required: true, class: 'input' %></div><div><%= form.label :proposed_ended_at, 'Correct clock-out', class: 'field-label' %><%= form.datetime_local_field :proposed_ended_at, value: shift.ended_at&.in_time_zone&.strftime('%Y-%m-%dT%H:%M:%S'), step: 1, required: true, class: 'input' %></div></div>
+            <div><%= form.label :reason, 'Reason for correction', class: 'field-label' %><%= form.text_area :reason, required: true, maxlength: 1000, class: 'input', rows: 2 %></div>
             <%= form.submit 'Request review', class: 'btn-ghost' %>
           <% end %>
         </details>
