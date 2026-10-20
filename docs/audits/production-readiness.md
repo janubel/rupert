@@ -10,12 +10,12 @@ Production at audit time ran build `4e45c061` (2026-10-19 12:09 EDT), 79 commits
 | Check | Result |
 | --- | --- |
 | `bin/rails test` (SQLite) on `main` | 1881 runs, 14676 assertions, 0 failures |
-| `COVERAGE=1 bin/rails test` (SQLite) on the branch | 1936 runs, 14918 assertions, 0 failures; line coverage 89.4%, all 14 coverage floors met (`bin/check-coverage --report`) |
-| `bin/rails test` (PostgreSQL 16, podman) on the branch | 1936 runs, 14894 assertions, 0 failures, 0 errors, 4 skips (SQLite-only tests) |
-| `bundle exec rubocop -c rubocop.yml` on the branch | 904 files, no offenses |
+| `COVERAGE=1 bin/rails test` (SQLite) on the branch, after merging `main` (cb2fa52) | 2012 runs, 15621 assertions, 0 failures; line coverage 89.1%, all 14 coverage floors met (`bin/check-coverage --report`) |
+| `bin/rails test` (PostgreSQL 16, podman) on the merged branch | 2012 runs, 15597 assertions, 0 failures, 0 errors, 4 skips (SQLite-only tests) |
+| `bundle exec rubocop -c rubocop.yml` on the merged branch | 942 files, no offenses |
 | `bundler-audit check --update` | No vulnerabilities (advisory db 2026-10-17) |
-| `brakeman --compare config/brakeman-baseline.json` on the branch | 0 new, 0 fixed, 0 obsolete (20 baselined, triaged in `docs/ops/security-scanning.md`) |
-| `node --test web/test/javascript/*_test.mjs` | 8 pass |
+| `brakeman --compare config/brakeman-baseline.json` | Branch before merge: 0 new/0 fixed. After merging `main`, a local run from `web/` reports the three baselined projects `Dangerous Send` warnings as moved (main refactored those controllers; the allow-list is intact); the PR's Security workflow passes (see P2-17) |
+| `node --test web/test/javascript/*_test.mjs` | 11 pass (after merge) |
 | `bin/build-product-site --check`, `bin/check-doc-links`, `git diff-tree --check` | pass |
 | `bin/rails runner 'CustomerRedactJob'` on `main` | `NameError: uninitialized constant CustomerRedactJob` (see P0-1) |
 | `podman build` of `Dockerfile` on `main` | **failed** at asset precompile (see P1-17) |
@@ -93,6 +93,7 @@ Severity: **P0** blocks go-live · **P1** needed in the first 30 days · **P2** 
 | P2-13 | A single Puma process (no `workers`) and `JOB_THREADS=1`; fine for one shop, documented limits in `sqlite-incus.md`. | `config/puma.rb` | 📝 |
 | P2-14 | **Both schema dumps are hand-maintained** and no longer match `db:schema:dump` output (table order, foreign-key placement, PostgreSQL 16's rendering of check constraints). Substantively equal today (checked by sorted-line diff), but the next regeneration will be a 1,000-line diff. | `git diff` after `db:migrate` on both adapters | 📝 Regenerate both in a dedicated commit after this branch merges; this branch inserts its one new table by hand to stay reviewable |
 | P2-15 | Rack::Attack counters use `Rails.cache` (file store) on SER8: correct for one host, slightly slower than a memory/Redis store. | `config/initializers/rack_attack.rb` | 📝 Move to `solid_cache` or Redis if a second web process is ever added |
+| P2-17 | Brakeman fingerprints for the three baselined projects `Dangerous Send` warnings moved when `main` refactored those controllers; the CI compare (run from the repo root) still passes, a local compare from `web/` reports them as new. Regenerate the baseline with the documented procedure in a follow-up so local and CI agree. | `brakeman --compare` output after the merge | 📝 |
 | P2-16 | `LocalEnvironmentTest` copies a hand-listed set of config files to boot in isolation; a new boot-time file silently breaks it (it did for `shopify_api_version.rb`). | `test/config/local_environment_test.rb:31` | 📝 List extended; consider copying `config/*.rb` |
 
 ## Docker image
