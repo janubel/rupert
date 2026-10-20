@@ -48,12 +48,20 @@
       <h2 class="text-base font-semibold"><time datetime="<%= week.iso8601 %>"><%= week.strftime('%b %-d') %> – <%= (week + 6).strftime(week.month == (week + 6).month ? '%-d, %Y' : '%b %-d, %Y') %></time></h2>
       <nav aria-label="Week" class="flex items-center gap-2">
         <span class="inline-flex overflow-hidden rounded-lg border border-fog bg-paper text-sm">
-          <%= link_to people_timesheets_path(status: params[:status], q: params[:q], period: (week - 7).iso8601), class: 'flex h-9 w-9 items-center justify-center hover:bg-haze', title: 'Previous week' do %><span class="sr-only">Previous week</span><span aria-hidden="true">‹</span><% end %>
-          <%= link_to 'Today', people_timesheets_path(status: params[:status], q: params[:q], period: Date.current.beginning_of_week.iso8601), class: 'flex items-center border-x border-fog px-3.5 font-semibold hover:bg-haze' %>
-          <%= link_to people_timesheets_path(status: params[:status], q: params[:q], period: (week + 7).iso8601), class: 'flex h-9 w-9 items-center justify-center hover:bg-haze', title: 'Next week' do %><span class="sr-only">Next week</span><span aria-hidden="true">›</span><% end %>
+          <%= link_to people_timesheets_path(status: params[:status], q: params[:q], wk: params[:wk].presence, period: (week - 7).iso8601), class: 'flex h-9 w-9 items-center justify-center hover:bg-haze', title: 'Previous week' do %><span class="sr-only">Previous week</span><span aria-hidden="true">‹</span><% end %>
+          <%= link_to 'Today', people_timesheets_path(status: params[:status], q: params[:q], wk: params[:wk].presence, period: week_start_for(Date.current).iso8601), class: 'flex items-center border-x border-fog px-3.5 font-semibold hover:bg-haze' %>
+          <%= link_to people_timesheets_path(status: params[:status], q: params[:q], wk: params[:wk].presence, period: (week + 7).iso8601), class: 'flex h-9 w-9 items-center justify-center hover:bg-haze', title: 'Next week' do %><span class="sr-only">Next week</span><span aria-hidden="true">›</span><% end %>
         </span>
+        <%= link_to 'Mon–Sun', people_timesheets_path(status: params[:status], q: params[:q], period: week.iso8601), class: "btn-sm #{params[:wk].blank? ? 'btn-primary' : 'btn-ghost'}" %>
+        <%= link_to 'Thu–Wed', people_timesheets_path(status: params[:status], q: params[:q], wk: 'thu', period: week.iso8601), class: "btn-sm #{params[:wk] == 'thu' ? 'btn-primary' : 'btn-ghost'}" %>
         <%= link_to 'All weeks', people_timesheets_path(status: params[:status], q: params[:q]), class: 'btn-ghost btn-sm' %>
       </nav>
+      <%= form_with url: people_timesheets_path, method: :get, class: 'flex flex-wrap items-center gap-2 text-sm', 'aria-label': 'Custom start date' do %>
+        <%= hidden_field_tag :status, params[:status] if params[:status].present? %><%= hidden_field_tag :q, params[:q] if params[:q].present? %><%= hidden_field_tag :wk, 'custom' %>
+        <label for="custom-start" class="text-mocha">Custom 7 days from</label>
+        <%= date_field_tag :period, (params[:wk] == 'custom' ? week.iso8601 : nil), id: 'custom-start', class: 'input w-auto', required: true %>
+        <%= submit_tag 'Custom', class: "btn-sm #{params[:wk] == 'custom' ? 'btn-primary' : 'btn-ghost'}" %>
+      <% end %>
     </header>
     <div class="grid border-b border-fog bg-haze/60 text-sm" style="grid-template-columns: 3.5rem repeat(7, minmax(0, 1fr))">
       <div></div>

@@ -22,6 +22,8 @@ module Finance
       rent
       utilities
       marketing
+      advertising
+      store
       software
       supplies
       insurance

@@ -8,7 +8,7 @@
     <p class="mt-1 text-sm text-mocha">Statements computed from the double-entry general ledger.</p>
   </section>
 
-  <section class="grid gap-4 sm:grid-cols-3">
+  <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <%= link_to finance_reports_trial_balance_path, class: "card card-pad hover:border-mocha" do %>
       <h2 class="font-semibold">Trial balance</h2>
       <p class="mt-1 text-sm text-mocha">Every account with debit, credit and balance for a period.</p>
@@ -20,6 +20,10 @@
     <%= link_to finance_reports_balance_sheet_path, class: "card card-pad hover:border-mocha" do %>
       <h2 class="font-semibold">Balance sheet</h2>
       <p class="mt-1 text-sm text-mocha">Assets, liabilities and equity as of a date.</p>
+    <% end %>
+    <%= link_to finance_reports_sales_tax_path, class: "card card-pad hover:border-mocha" do %>
+      <h2 class="font-semibold">Sales tax</h2>
+      <p class="mt-1 text-sm text-mocha">Tax collected from Shopify, C-Trax and SwipeSimple for any dates you choose.</p>
     <% end %>
   </section>
 

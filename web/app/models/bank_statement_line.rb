@@ -15,7 +15,7 @@ class BankStatementLine < ApplicationRecord
   CATEGORY_HINTS = {
     'rent' => %w[rent lease], 'utilities' => %w[electric power water gas internet comcast verizon at&t],
     'insurance' => %w[insurance geico progressive], 'shipping' => %w[usps ups fedex dhl postage stamps.com pirate],
-    'software' => %w[shopify square google adobe intuit quickbooks github slack zoom], 'marketing' => %w[facebook meta ads mailchimp klaviyo],
+    'software' => %w[shopify square google adobe intuit quickbooks github slack zoom], 'marketing' => %w[mailchimp klaviyo], 'advertising' => %w[facebook meta ads],
     'taxes' => %w[irs tax treasury], 'labor' => %w[payroll gusto adp], 'supplies' => %w[amazon staples uline walmart target home depot lowes]
   }.freeze
 

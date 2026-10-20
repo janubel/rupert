@@ -52,8 +52,8 @@ class CommissionPreview
       .distinct.pluck(:order_id).to_set
     groups = shifts.group_by(&:employee_key)
     totals = groups.transform_values do |worker_shifts|
-      { employee: worker_shifts.max_by(&:started_at).employee_name, employment_type: worker_shifts.first.employment_type,
-        sales_cents: 0, commission_cents: 0, order_count: 0 }
+      { employee: worker_shifts.max_by(&:started_at).employee_name, employee_id: worker_shifts.first.employee_id,
+        employment_type: worker_shifts.first.employment_type, sales_cents: 0, commission_cents: 0, order_count: 0, tip_cents: 0 }
     end
     @eligible_orders = 0
     @excluded_orders = 0
@@ -65,12 +65,16 @@ class CommissionPreview
         next
       end
       @eligible_orders += 1
-      groups.each do |key, intervals|
-        next unless intervals.any? { |shift| order.occurred_at >= shift.started_at && order.occurred_at < (shift.ended_at || now) }
-
+      on_shift = groups.select do |_key, intervals|
+        intervals.any? { |shift| order.occurred_at >= shift.started_at && order.occurred_at < (shift.ended_at || now) }
+      end
+      # Commission is never shared; a tip is split evenly between everyone on shift, rounded down.
+      tip_share = on_shift.empty? ? 0 : order.tip_cents.to_i / on_shift.size
+      on_shift.each_key do |key|
         totals[key][:sales_cents] += base
         totals[key][:commission_cents] += (base + 50) / 100
         totals[key][:order_count] += 1
+        totals[key][:tip_cents] += tip_share
       end
     end
     @rows = totals.values.sort_by { |row| row[:employee].downcase }

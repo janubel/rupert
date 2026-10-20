@@ -34,6 +34,40 @@
     </div>
   </section>
 
+  <% if @pay_week %>
+    <% pay = @pay_week %>
+    <% money = ->(cents) { cents.nil? ? 'Unavailable' : number_to_currency(cents / 100.0) } %>
+    <section id="pay-week" class="card card-pad space-y-4" aria-labelledby="pay-week-title">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 id="pay-week-title" class="font-display text-lg">Pay for the week</h2>
+          <p class="text-sm text-mocha"><%= pay.start_date.strftime('%a %b %-d') %> – <%= pay.end_date.strftime('%a %b %-d, %Y') %> · Thursday to Wednesday</p>
+        </div>
+        <nav aria-label="Pay week" class="flex flex-wrap items-center gap-2">
+          <%= link_to '← Previous week', people_employee_path(@employee, week: (pay.start_date - 7).iso8601, anchor: 'pay-week'), class: 'btn-ghost btn-sm' %>
+          <%= link_to 'This week', people_employee_path(@employee, anchor: 'pay-week'), class: 'btn-ghost btn-sm' %>
+          <%= link_to 'Next week →', people_employee_path(@employee, week: (pay.start_date + 7).iso8601, anchor: 'pay-week'), class: 'btn-ghost btn-sm' %>
+          <%= form_with url: people_employee_path(@employee), method: :get, class: 'flex items-center gap-2' do %>
+            <%= date_field_tag :week, pay.start_date, class: 'input w-auto', 'aria-label': 'Any date in the week to show' %>
+            <%= submit_tag 'Go', class: 'btn-ghost btn-sm' %>
+          <% end %>
+        </nav>
+      </div>
+      <dl class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <% [['Hours worked', "#{number_with_precision(pay.hours, precision: 2)} h"],
+            ['Rate per hour', pay.hourly_rate_cents ? money.call(pay.hourly_rate_cents) : (pay.pay_rate ? "#{pay.pay_rate.label}" : 'Unavailable')],
+            ['Base pay', money.call(pay.base_cents)],
+            ['Commission (1%)', money.call(pay.commission_cents)],
+            ['Tips', money.call(pay.tip_cents)],
+            ['Total for the week', money.call(pay.total_cents)]].each do |label, value| %>
+          <div class="stat"><dt class="stat-label"><%= label %></dt><dd class="stat-value mt-1 text-xl"><%= value %></dd></div>
+        <% end %>
+      </dl>
+      <p class="text-xs text-mocha">Commission is 1% of before-tax sales (<%= money.call(pay.sales_cents) %>) rung up while clocked in. Tips are split evenly between everyone clocked in. Hours come from Rupert clock punches. An estimate only: it does not post to payroll.</p>
+      <% pay.notes.each do |note| %><p class="text-xs text-mocha"><%= note %></p><% end %>
+    </section>
+  <% end %>
+
   <% if @employee.source_identities.any? %>
     <section class="card card-pad space-y-2">
       <h2 class="font-display text-lg">Linked app profiles</h2>

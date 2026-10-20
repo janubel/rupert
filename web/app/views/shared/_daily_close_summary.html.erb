@@ -1,0 +1,28 @@
+<%# Daily close overview: per-store figures plus SwipeSimple. Locals: day (Date). %>
+<% summary = DailyCloseSummary.new(day: day) %>
+<% columns = [['Gross sales', :gross], ['Refunds', :refunds], ['Net sales', :net], ['Collected tax', :tax], ['Collected tips', :tips], ['Collected cash', :cash], ['Collected credit', :credit]] %>
+<section id="daily-close-summary" class="card overflow-hidden scroll-mt-48" aria-labelledby="daily-close-summary-title">
+  <header class="space-y-1 border-b border-fog p-4">
+    <h2 id="daily-close-summary-title" class="font-display text-xl">Daily close summary · <%= day.strftime('%b %-d, %Y') %></h2>
+    <p class="text-xs text-mocha">Gross sales are after discounts and before tax and tips. Each store is its own line and stores are not added together. Unavailable means the source did not report the amount; it is not zero.</p>
+  </header>
+  <% if summary.empty? %>
+    <p class="p-4 text-sm text-mocha">No store or SwipeSimple figures are stored for this date. This does not establish a zero-sales day.</p>
+  <% else %>
+    <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Daily close summary, scroll horizontally for all columns">
+      <table class="w-full text-sm">
+        <caption class="sr-only">Gross sales, refunds, net sales, collected tax, tips, cash and credit for each store and SwipeSimple</caption>
+        <thead class="border-b border-fog bg-haze/60"><tr><th scope="col" class="th">Store</th><% columns.each do |label, _| %><th scope="col" class="th text-right"><%= label %></th><% end %></tr></thead>
+        <tbody class="divide-y divide-fog">
+          <% summary.rows.each do |row| %>
+            <tr class="<%= 'bg-haze/40' if row.kind == 'swipesimple' %>">
+              <th scope="row" class="td text-left font-medium"><%= row.path && Current.user.can?('sales.read') ? link_to(row.label, ctrax_day_path(row.path), class: 'text-olive underline') : row.label %><span class="block text-xs font-normal text-mocha"><%= row.currency %></span></th>
+              <% columns.each do |_, key| %><td class="td text-right tabular-nums <%= 'font-semibold' if key == :net %>"><%= reconciliation_money(row[key]) %></td><% end %>
+            </tr>
+            <% if row.notes %><tr><td class="td text-xs text-mocha" colspan="<%= columns.size + 1 %>"><%= row.label %>: <%= row.notes %></td></tr><% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</section>

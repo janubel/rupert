@@ -68,6 +68,7 @@ module People
       @leave_requests = @employee.leave_requests.recent(12) if Current.user.can?('leave.read')
       @pay_rates = @employee.pay_rates.recent if Current.user.can?('payroll.read')
       @payslips = @employee.payslips.order(id: :desc).limit(12) if Current.user.can?('payroll.read')
+      @pay_week = EmployeePayWeek.new(employee: @employee, week_of: pay_week_date) if Current.user.can?('payroll.read')
     end
 
     def new
@@ -166,6 +167,12 @@ module People
     end
 
     private
+
+    def pay_week_date
+      params[:week].present? ? Date.iso8601(params[:week]) : Date.current
+    rescue Date::Error
+      Date.current
+    end
 
     def set_employee
       record = People::Employee.unscoped.find_by!(tenant_id: Current.tenant_id, id: params[:id])
