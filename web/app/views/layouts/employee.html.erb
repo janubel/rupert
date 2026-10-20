@@ -48,6 +48,7 @@
     <%= yield %>
   </main>
   <footer class="mx-auto flex max-w-3xl flex-wrap gap-4 px-4 pb-8 text-xs text-mocha sm:px-6">
+    <%= link_to 'Learn Rupert & definitions', learning_index_path, class: 'underline' if Current.user && !@preview %>
     <%= link_to 'Privacy & support', employee_privacy_path(preview: @preview ? 1 : nil), class: 'underline' %>
     <%= link_to 'Signed-in devices', employee_devices_path, class: 'underline' if Current.user && !@preview %>
     <% if Current.user&.can_manage_accounts? %><%= link_to 'Back to management', root_path, class: 'underline' %><% end %>

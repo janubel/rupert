@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  resources :learning, only: %i[index show] do
+    post :complete, on: :member
+  end
   post 'update_notice/dismiss', to: 'update_notices#dismiss', as: :dismiss_update_notice
   resource :bookkeeping, only: :show, controller: 'bookkeeping'
   resource :books_desk, only: :show, path: 'books' do

@@ -5,6 +5,7 @@
     <p class="mt-1 text-sm text-mocha">Save the keys from your Shopify and Square developer dashboards for later use. Values are stored encrypted. Saving does not start a sync, test credentials or charge a payment.</p>
   </div>
 
+  <aside class="card card-pad mb-6 space-y-3"><h2 class="font-display text-xl">First, get to know your workspace</h2><p class="text-sm text-mocha">Learn where to find daily tasks and how to read Rupert’s numbers while your administrator finishes connections.</p><%= link_to 'Start your two-minute introduction', learning_path('start'), class: 'btn-ghost' %></aside>
   <%= form_with url: onboarding_connect_path, method: :post, class: "space-y-4" do %>
     <div class="card card-pad space-y-3">
       <div class="flex items-center justify-between">

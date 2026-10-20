@@ -1,6 +1,7 @@
 <% content_for :title, 'Sales' %>
 <div class="operations-workspace space-y-6">
   <%= render 'shared/operations_navigation', workspace: :sales, day: @date %>
+  <%= render "shared/definition", term: "sales_total" %>
   <header class="operations-header"><div><p class="eyebrow text-olive-deep">Sell · one sales view</p><h1 class="page-title mt-2">Sales</h1><p class="mt-2 text-sm text-mocha">Recorded sales across channels, with a separate order journal for status and fulfillment.</p></div><div class="flex flex-wrap gap-2"><%= link_to 'View order journal', '#sales-journal', class: 'btn-ghost' %><% if Current.user.can_use_pos? %><%= link_to 'Open retail POS', ctrax_pos_path, class: 'btn-primary' %><% end %></div></header>
   <section class="card card-pad space-y-4" aria-label="Sales filters">
     <nav class="operations-navigation" aria-label="Sales sources"><% (['all'] + @sources).each do |source| %><%= link_to(source == 'all' ? 'All' : operations_source_name(source), sales_path(source: source, date: @date, window: @window_days, status: @status), class: "nav-pill workspace-nav-link #{@source == source ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: @source == source ? 'page' : nil }) %><% end %></nav>

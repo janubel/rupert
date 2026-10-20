@@ -16,7 +16,7 @@ class HomeController < AuthenticatedController
   # Body: { widgets: [keys in display order], hidden: [keys] } or { reset: true }.
   def customize
     if params[:reset]
-      Current.user.update!(dashboard_config: Current.user.dashboard_config_hash.slice('start_page').presence)
+      Current.user.update!(dashboard_config: Current.user.dashboard_config_hash.slice('start_page', 'learning_completed').presence)
       return render(json: { ok: true, reset: true })
     end
 
