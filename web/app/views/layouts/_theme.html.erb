@@ -1,11 +1,13 @@
-<%# Dark by default. Applies the saved choice before first paint so there is no flash. %>
+<%# Herbal is the default (no attribute). Applies the saved appearance before first paint so there is no flash. %>
 <script>
   (function () {
     try {
-      if (localStorage.getItem("rupert-theme") === "light") {
-        document.documentElement.setAttribute("data-theme", "light");
+      var theme = localStorage.getItem("rupert-theme");
+      var colors = { light: "#f5f7fa", mist: "#e6ebf2", sepia: "#efe6d4", dark: "#121418" };
+      if (theme && colors[theme]) {
+        document.documentElement.setAttribute("data-theme", theme);
         var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute("content", "#fbf5ef");
+        if (meta) meta.setAttribute("content", colors[theme]);
       }
     } catch (e) {}
   })();

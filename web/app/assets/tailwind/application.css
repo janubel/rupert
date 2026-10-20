@@ -1,23 +1,47 @@
 @import "tailwindcss";
 
 @theme {
-  --color-oat: #fbf5ef; /* warm cream page background */
-  --color-cream: #f5f5f5;
-  --color-paper: #ffffff;
-  --color-ink: #1a393d;
-  --color-mocha: #5a524b;
-  --color-taupe: #70655a; /* WCAG AA on paper and oat */
-  --color-fog: #efe3d8;
-  --color-haze: #f7ece3; /* quiet hover/panel tint */
-  --color-olive: #48736d; /* dusty teal accent; 4.9:1 with cream text */
-  --color-olive-deep: #3a5f5a; /* darker teal for hover states and text */
-  --color-sage: #5c8a72; /* fresh gray-green */
-  --color-clay: #7d5449;
-  --color-butter: #e4be58;
-  --color-rose: #a24e42; /* AA on cream and tinted chips */
-  --color-fern: #287059; /* deep green; AA on tinted chips */
-  --color-edge: #9a8b7c; /* form-control borders: 3:1 against paper (WCAG 1.4.11) */
-  --color-danger: #b42318; /* negative money, errors, voided records */
+  /* Rupert palette (2026-10): Herbal is the default appearance, taken from the
+     company's own colors (herbalhealerscbd.com): deep teal-black text, a teal
+     accent, a mint data color, on a soft green-tinted page with near-white
+     cards. Other appearances (account menu): Light, Mist, Sepia, Dark; each is
+     a complete token set in the blocks below. Token names are kept from the
+     original Oatmeal theme so the 1,300+ class usages in views did not change;
+     each token has one job:
+       oat        page background          cream   secondary surface (inputs, sidebars)
+       paper      cards and panels         haze    hover / selected tint
+       fog        dividers and card edges  edge    form-control borders (3:1 on paper)
+       ink        primary text             mocha   secondary text
+       taupe      labels and tertiary text olive   accent: links, primary buttons, focus
+       olive-deep accent hover / accent text on tinted chips
+       sage, clay secondary data colors    butter  amber highlight (text uses on-butter)
+       rose       soft negative            fern    positive
+       danger / success / warn + -bg / -edge: semantic flashes and chips
+     Why this family: adults reliably prefer blues and greens and dislike dark
+     yellows, olives and browns (Palmer & Schloss 2010; Taylor et al. 2013);
+     low saturation and higher lightness read as calm rather than arousing
+     (Valdez & Mehrabian 1994; Wilms & Oberfeld 2018); similar hues with strong
+     lightness contrast are judged most harmonious (Schloss & Palmer 2011), so
+     the page is a pale tint of the same hue as the text and accent. Every
+     text/background pair meets WCAG AA 4.5:1 and every control border 3:1 in
+     every appearance (bin/check-palette-contrast). */
+  --color-oat: #e6efea;
+  --color-cream: #dce8e2;
+  --color-paper: #fbfdfc;
+  --color-ink: #17353a;
+  --color-mocha: #36504f;
+  --color-taupe: #47605f;
+  --color-fog: #cddad3;
+  --color-haze: #dfebe5;
+  --color-olive: #0e6f72;
+  --color-olive-deep: #0b585a;
+  --color-sage: #257d50;
+  --color-clay: #5b48a8;
+  --color-butter: #f2b530;
+  --color-rose: #b3382a;
+  --color-fern: #1b7046;
+  --color-edge: #778a86;
+  --color-danger: #b42318;
   --color-danger-bg: #fef3f2;
   --color-danger-edge: #f3b7b0;
   --color-success: #05603a;
@@ -26,7 +50,9 @@
   --color-warn: #7a4b00;
   --color-warn-bg: #fffaeb;
   --color-warn-edge: #f1d49a;
-  --color-on-butter: #2a2316; /* text on butter fills, both themes */
+  --color-on-butter: #2a2316;
+  /* Shadow tint follows the ink hue so shadows read as depth, not as dirt. */
+  --shadow-ink: 23 53 58;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter",
     ui-sans-serif, system-ui, "Segoe UI", sans-serif;
@@ -64,7 +90,7 @@
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-fog shadow-[0_1px_2px_rgba(26,57,61,0.06)];
+    @apply rounded-2xl border border-fog shadow-[0_1px_2px_rgb(var(--shadow-ink)/0.06)];
     background-image: linear-gradient(
       180deg,
       color-mix(in srgb, var(--color-olive) 3%, var(--color-paper)) 0%,
@@ -136,7 +162,7 @@
   }
 
   .stat {
-    @apply rounded-2xl border border-fog p-5 shadow-[0_1px_2px_rgba(26,57,61,0.06)];
+    @apply rounded-2xl border border-fog p-5 shadow-[0_1px_2px_rgb(var(--shadow-ink)/0.06)];
     /* Lets .stat-value size itself to the card so long amounts never overflow it. */
     container-type: inline-size;
     background-image: linear-gradient(
@@ -322,10 +348,10 @@
 .nav-utility { position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border-radius:999px;color:var(--color-mocha); }
 .nav-utility:hover { background:var(--color-haze);color:var(--color-ink); }
 .nav-utility:focus-visible,.nav-area:focus-visible,.module-menu-trigger:focus-visible,.nav-menu-item:focus-visible,.app-brand:focus-visible { outline:2px solid var(--color-olive);outline-offset:3px; }
-.nav-hint { display:none;position:absolute;right:0;top:calc(100% + 5px);z-index:50;width:max-content;max-width:min(20rem,calc(100vw - 2rem));padding:.5rem .7rem;border:1px solid var(--color-fog);border-radius:.65rem;background:var(--color-paper);color:var(--color-ink);font-size:.8rem;font-weight:500;line-height:1.5;box-shadow:0 4px 14px #1a393d18;pointer-events:none; }
+.nav-hint { display:none;position:absolute;right:0;top:calc(100% + 5px);z-index:50;width:max-content;max-width:min(20rem,calc(100vw - 2rem));padding:.5rem .7rem;border:1px solid var(--color-fog);border-radius:.65rem;background:var(--color-paper);color:var(--color-ink);font-size:.8rem;font-weight:500;line-height:1.5;box-shadow:0 4px 14px rgb(var(--shadow-ink)/0.09);pointer-events:none; }
 .nav-utility:hover .nav-hint,.nav-utility:focus-visible .nav-hint { display:block; }
 .sync-status-dot { position:absolute;right:8px;bottom:8px;width:6px;height:6px;border-radius:999px;outline:2px solid var(--color-oat); }
-.account-menu { position:absolute;right:0;top:calc(100% + 5px);z-index:40;width:min(17rem,calc(100vw - 2rem));border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px #1a393d26; }
+.account-menu { position:absolute;right:0;top:calc(100% + 5px);z-index:40;width:min(17rem,calc(100vw - 2rem));border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px rgb(var(--shadow-ink)/0.15); }
 .module-navigation-wrap { border-top:1px solid var(--color-fog);background:var(--color-cream); }
 .module-navigation { max-width:72rem;margin:auto;padding:.15rem 1.5rem; }
 .module-menu { position:relative;width:fit-content;max-width:100%; }
@@ -334,7 +360,7 @@
 .module-menu-trigger:hover,.module-menu[open] .module-menu-trigger { background:var(--color-haze); }
 .module-menu-trigger > span:first-of-type { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .tools-caption { margin-left:.5rem;font-size:.75rem;font-weight:400;color:var(--color-taupe); }
-.module-menu-panel { position:absolute;left:0;top:calc(100% + 4px);z-index:40;width:min(23rem,calc(100vw - 2rem));max-height:60vh;overflow:auto;padding:.65rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px #1a393d26; }
+.module-menu-panel { position:absolute;left:0;top:calc(100% + 4px);z-index:40;width:min(23rem,calc(100vw - 2rem));max-height:60vh;overflow:auto;padding:.65rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px rgb(var(--shadow-ink)/0.15); }
 .nav-menu-item { display:flex;align-items:center;gap:.65rem;min-height:44px;padding:.55rem .75rem;border-radius:.6rem;font-size:.9rem;text-align:left; }
 .nav-menu-item:hover { background:var(--color-haze); }
 @media(max-width:1450px) { .app-brand-name { display:none; }.nav-area { gap:.25rem;padding:.35rem .4rem;font-size:.82rem; } }
@@ -381,7 +407,7 @@
 .retail-product-actions { margin-top:auto;display:flex;flex-wrap:wrap;gap:.5rem; }
 .retail-product-actions .input { width:4.5rem;min-width:0;flex:1; }
 .retail-product-actions .btn-primary { justify-content:center;flex:1; }
-.retail-cart-link { position:fixed;right:1rem;bottom:max(1rem,env(safe-area-inset-bottom));z-index:30;box-shadow:0 4px 16px #1a393d30; }
+.retail-cart-link { position:fixed;right:1rem;bottom:max(1rem,env(safe-area-inset-bottom));z-index:30;box-shadow:0 4px 16px rgb(var(--shadow-ink)/0.19); }
 .retail-cart { scroll-margin-top:10rem; }
 .retail-anchor { scroll-margin-top:10rem; }
 .retail-money { font-variant-numeric:tabular-nums;overflow-wrap:anywhere; }
@@ -470,7 +496,7 @@
   .desk-chores { position:sticky;top:9rem; }
 }
 @media print { .desk-step { break-inside:avoid; } .books-desk nav, .books-desk .btn-primary { display:none; } }
-.bank-save-bar { position:sticky;bottom:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);padding:.75rem 1rem;box-shadow:0 -4px 16px #1a393d14; }
+.bank-save-bar { position:sticky;bottom:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);padding:.75rem 1rem;box-shadow:0 -4px 16px rgb(var(--shadow-ink)/0.08); }
 .bank-line-suggested { background:color-mix(in srgb,var(--color-butter) 12%,var(--color-paper)); }
 .lock-grid { display:grid;gap:.4rem;grid-template-columns:repeat(2,minmax(0,1fr)); }
 @media(min-width:640px) { .lock-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
@@ -513,7 +539,7 @@
 .shift { container-type:inline-size; }
 .shift-compact { display:none;text-align:center; }
 @container (max-width:92px) { .shift-full { display:none; }.shift-compact { display:block; } }
-.shift:hover,.shift:focus-visible { z-index:10;overflow:visible;box-shadow:0 4px 16px #1a393d40; }
+.shift:hover,.shift:focus-visible { z-index:10;overflow:visible;box-shadow:0 4px 16px rgb(var(--shadow-ink)/0.25); }
 .shift:hover .shift-full,.shift:focus-visible .shift-full { display:block;min-width:10.5rem; }
 .shift:hover .shift-compact,.shift:focus-visible .shift-compact { display:none; }
 .shift:hover,.shift:focus-visible { width:auto !important;min-width:11rem;background:var(--color-paper) !important; }
@@ -652,7 +678,7 @@ body:has(.finance-navigation) .module-navigation-wrap { display:none; }
 .finance-navigation-groups > .finance-navigation-group > summary::-webkit-details-marker { display:none; }
 .finance-navigation-groups > .finance-navigation-group > summary::after { content:"\25BE";font-size:.8rem; }
 .finance-navigation-groups > .finance-navigation-group[open] > summary { background:var(--color-haze);color:var(--color-ink); }
-.finance-navigation-links { position:absolute;left:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;gap:.1rem;min-width:13rem;padding:.4rem;border:1px solid var(--color-fog);border-radius:.8rem;background:var(--color-paper);box-shadow:0 8px 24px #1a393d22; }
+.finance-navigation-links { position:absolute;left:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;gap:.1rem;min-width:13rem;padding:.4rem;border:1px solid var(--color-fog);border-radius:.8rem;background:var(--color-paper);box-shadow:0 8px 24px rgb(var(--shadow-ink)/0.13); }
 .finance-navigation-links .nav-pill { justify-content:flex-start; }
 @media(max-width:760px) { .finance-navigation { overflow:visible; } }
 
@@ -806,11 +832,13 @@ select.input {
   .nav-area { gap: 0.25rem; padding: 0.4rem 0.45rem; font-size: 0.8rem; }
 }
 
-/* Dark is the default appearance: a warm, low-glare counterpart; surfaces built
-   from the tokens follow. People opt into light with the account-menu toggle
-   (data-theme="light"), and print/embedded layouts pin light the same way. */
+/* Appearances. Herbal is the base (@theme above, no attribute). The blocks
+   below override the tokens when the account menu sets data-theme on <html>:
+   light (pure white cards), mist (a dimmer blue-grey light), sepia (warm paper
+   with a muted blue-teal accent, the Solarized precedent), and dark. Print,
+   embedded and public warehouse layouts pin data-theme="light". */
 @media all {
-  :root:not([data-theme="light"]) {
+  :root[data-theme="dark"] {
     color-scheme: dark;
     --color-oat: #111514;
     --color-cream: #1a1f1e;
@@ -827,6 +855,8 @@ select.input {
     --color-rose: #e09a8d;
     --color-edge: #6f7d7a;
     --color-danger: #f19a8f;
+    --color-clay: #a894e8;
+    --color-butter: #e6c060;
     --color-danger-bg: #2a1b19;
     --color-danger-edge: #6a3a34;
     --color-success: #7fdcae;
@@ -835,11 +865,107 @@ select.input {
     --color-warn: #f0cf8a;
     --color-warn-bg: #2a2316;
     --color-warn-edge: #6b5427;
+    --shadow-ink: 0 0 0;
   }
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  /* Pure white cards on a cool blue-grey page: the brightest option. */
+  --color-oat: #f5f7fa;
+  --color-cream: #eef1f5;
+  --color-paper: #ffffff;
+  --color-ink: #14181f;
+  --color-mocha: #3f4754;
+  --color-taupe: #5b6572;
+  --color-fog: #dfe4ea;
+  --color-haze: #eaeef3;
+  --color-olive: #2a5fcf;
+  --color-olive-deep: #1f49a6;
+  --color-sage: #1f7a6f;
+  --color-clay: #5b48a8;
+  --color-butter: #f4c65b;
+  --color-rose: #b3382a;
+  --color-fern: #1f7a4d;
+  --color-edge: #8a94a3;
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-danger-edge: #f3b7b0;
+  --color-success: #05603a;
+  --color-success-bg: #ecfdf3;
+  --color-success-edge: #a6d8bf;
+  --color-warn: #7a4b00;
+  --color-warn-bg: #fffaeb;
+  --color-warn-edge: #f1d49a;
+  --shadow-ink: 20 24 31;
+}
+
+:root[data-theme="mist"] {
+  color-scheme: light;
+  /* Dimmer light: blue-grey page, off-white cards; same blue accent. */
+  --color-oat: #e6ebf2;
+  --color-cream: #dde3ec;
+  --color-paper: #f3f6fa;
+  --color-ink: #141922;
+  --color-mocha: #3d4756;
+  --color-taupe: #596575;
+  --color-fog: #cdd5e0;
+  --color-haze: #e0e6ee;
+  --color-olive: #2457c4;
+  --color-olive-deep: #1b43a0;
+  --color-sage: #1f7a6f;
+  --color-clay: #5b48a8;
+  --color-butter: #efc14f;
+  --color-rose: #b0392c;
+  --color-fern: #1a6f44;
+  --color-edge: #7f8b9b;
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-danger-edge: #f3b7b0;
+  --color-success: #05603a;
+  --color-success-bg: #ecfdf3;
+  --color-success-edge: #a6d8bf;
+  --color-warn: #7a4b00;
+  --color-warn-bg: #fffaeb;
+  --color-warn-edge: #f1d49a;
+  --shadow-ink: 20 24 31;
+}
+
+:root[data-theme="sepia"] {
+  color-scheme: light;
+  /* Warm paper. Muted blue-teal accent keeps links and buttons */
+  /* distinct from the warm neutrals without a dark-yellow accent. */
+  --color-oat: #efe6d4;
+  --color-cream: #e7dcc6;
+  --color-paper: #f7f0e2;
+  --color-ink: #2b2419;
+  --color-mocha: #574a39;
+  --color-taupe: #665a49;
+  --color-fog: #d9ccb5;
+  --color-haze: #ece2cf;
+  --color-olive: #185f78;
+  --color-olive-deep: #114a5e;
+  --color-sage: #3f7a4e;
+  --color-clay: #7a4e8a;
+  --color-butter: #e3b84a;
+  --color-rose: #a0392a;
+  --color-fern: #2a6340;
+  --color-edge: #8f7e63;
+  --color-danger: #9f2416;
+  --color-danger-bg: #f6e4df;
+  --color-danger-edge: #e0ab9f;
+  --color-success: #1f5f3a;
+  --color-success-bg: #e6efdf;
+  --color-success-edge: #a9c9a3;
+  --color-warn: #6b4300;
+  --color-warn-bg: #f6ecd3;
+  --color-warn-edge: #e0c48a;
+  --shadow-ink: 43 36 25;
+}
+
+
 /* Dark-only fixes that tokens cannot express. */
-:root:not([data-theme="light"]) {
+:root[data-theme="dark"] {
   .entry-state-posted { border-left-color: var(--color-success); }
   select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23b7c3c1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); }
 }
@@ -971,3 +1097,15 @@ a.card:focus-visible {
 .workspace-help[open] { width: 100%; }
 .workspace-help > summary:focus-visible,
 .learning-path-picker > summary:focus-visible { outline: 2px solid var(--color-olive); outline-offset: 4px; border-radius: .25rem; }
+
+
+/* Appearance picker: a page/accent swatch per option, check mark on the current one. */
+.appearance-option { gap: .6rem; }
+.appearance-option[aria-checked="true"] { background: var(--color-haze); font-weight: 600; }
+.appearance-option[aria-checked="true"]::after { content: "\2713"; margin-left: auto; color: var(--color-olive); }
+.appearance-swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: 999px; border: 1px solid var(--color-edge); box-shadow: inset 0 0 0 3px var(--swatch-page); background: var(--swatch-accent); flex: none; }
+.appearance-swatch-dark { --swatch-page: #121418; --swatch-accent: #6f9cf5; }
+.appearance-swatch-light { --swatch-page: #f5f7fa; --swatch-accent: #2a5fcf; }
+.appearance-swatch-mist { --swatch-page: #e6ebf2; --swatch-accent: #2457c4; }
+.appearance-swatch-sepia { --swatch-page: #efe6d4; --swatch-accent: #185f78; }
+.appearance-swatch-herbal { --swatch-page: #e6efea; --swatch-accent: #0e6f72; }
