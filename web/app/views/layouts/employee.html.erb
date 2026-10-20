@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title><%= [content_for(:title), 'Rupert'].compact.join(' · ') %></title>
   <meta name="turbo-cache-control" content="no-cache">
-  <meta name="theme-color" content="#171412">
+  <meta name="theme-color" content="#e6efea">
   <%= render 'layouts/theme' %>
   <link rel="manifest" href="/employee/manifest.webmanifest">
   <%= csrf_meta_tags %><%= csp_meta_tag %>
@@ -17,7 +17,7 @@
   <%= javascript_importmap_tags %>
   <%= yield :head %>
 </head>
-<body data-controller="employee-offline" class="min-h-screen bg-cream text-ink">
+<body data-controller="employee-offline<%= ' help-panel' if Current.user && !@preview %>" class="min-h-screen bg-cream text-ink">
   <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:fixed focus:left-4 focus:top-3">Skip to content</a>
   <header class="workspace-header">
     <%= render "layouts/build_version" %>
@@ -27,11 +27,11 @@
         <span>Rupert</span>
       <% end %>
       <% if Current.user %>
-        <div class="flex items-center gap-3 text-sm"><span><%= Current.user.display_name %></span><% unless @preview %><%= button_to 'Sign out', logout_path, method: :delete, class: 'text-mocha underline' %><% end %></div>
+        <div class="flex items-center gap-3 text-sm"><% unless @preview %><%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %><% end %><span><%= Current.user.display_name %></span><% unless @preview %><%= button_to 'Sign out', logout_path, method: :delete, class: 'text-mocha underline' %><% end %></div>
       <% end %>
     </div>
     <% if Current.user %>
-      <nav aria-label="My workspace" class="workspace-navigation mx-auto max-w-3xl px-4 pb-3 sm:px-6">
+      <nav aria-label="My workspace" class="workspace-navigation mx-auto max-w-3xl px-4 pb-3 sm:px-6" <%= tour_anchor('nav') %>>
         <% links = @preview ? [['Today', employee_app_path(preview: 1)], ['Timesheets', employee_preview_timesheets_path], ['Schedule', employee_preview_schedule_path], ['Pay', employee_preview_pay_path], ['Time off', employee_preview_time_off_path], ['Reports', employee_preview_reports_path]] : [['Today', employee_app_path], ['Receipts', receipts_path], ['Timesheets', people_timesheets_path], ['Schedule', employee_schedule_path], ['Time off', employee_time_off_path], ['Reports', employee_reports_path]] %>
         <% links << ['My tasks', projects_tasks_path] if !@preview && Current.user.employee? && Current.user.can?('tasks.self') %>
         <% links.unshift(['POS', ctrax_pos_path]) if !@preview && Current.user.can_use_pos? %>
@@ -48,6 +48,7 @@
     <% if @preview %><p role="status" class="rounded-xl border border-olive/30 bg-olive/10 p-3 text-sm"><strong>Staff preview</strong> · Example data only. Browse freely; saving, clocking and sending are disabled. <%= link_to 'Close preview', employee_app_path, class: 'underline' %></p><% end %>
     <%= yield %>
   </main>
+  <%= render 'shared/help_panel' if Current.user && !@preview %>
   <footer class="mx-auto flex max-w-3xl flex-wrap gap-4 px-4 pb-8 text-xs text-mocha sm:px-6">
     <%= link_to 'Learn Rupert & definitions', learning_index_path, class: 'underline' if Current.user && !@preview %>
     <%= link_to 'Privacy & support', employee_privacy_path(preview: @preview ? 1 : nil), class: 'underline' %>

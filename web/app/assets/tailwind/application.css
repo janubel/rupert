@@ -1,23 +1,47 @@
 @import "tailwindcss";
 
 @theme {
-  --color-oat: #fbf5ef; /* warm cream page background */
-  --color-cream: #f5f5f5;
-  --color-paper: #ffffff;
-  --color-ink: #1a393d;
-  --color-mocha: #5a524b;
-  --color-taupe: #70655a; /* WCAG AA on paper and oat */
-  --color-fog: #efe3d8;
-  --color-haze: #f7ece3; /* quiet hover/panel tint */
-  --color-olive: #48736d; /* dusty teal accent; 4.9:1 with cream text */
-  --color-olive-deep: #3a5f5a; /* darker teal for hover states and text */
-  --color-sage: #5c8a72; /* fresh gray-green */
-  --color-clay: #7d5449;
-  --color-butter: #e4be58;
-  --color-rose: #a24e42; /* AA on cream and tinted chips */
-  --color-fern: #287059; /* deep green; AA on tinted chips */
-  --color-edge: #9a8b7c; /* form-control borders: 3:1 against paper (WCAG 1.4.11) */
-  --color-danger: #b42318; /* negative money, errors, voided records */
+  /* Rupert palette (2026-10): Herbal is the default appearance, taken from the
+     company's own colors (herbalhealerscbd.com): deep teal-black text, a teal
+     accent, a mint data color, on a soft green-tinted page with near-white
+     cards. Other appearances (account menu): Light, Mist, Sepia, Dark; each is
+     a complete token set in the blocks below. Token names are kept from the
+     original Oatmeal theme so the 1,300+ class usages in views did not change;
+     each token has one job:
+       oat        page background          cream   secondary surface (inputs, sidebars)
+       paper      cards and panels         haze    hover / selected tint
+       fog        dividers and card edges  edge    form-control borders (3:1 on paper)
+       ink        primary text             mocha   secondary text
+       taupe      labels and tertiary text olive   accent: links, primary buttons, focus
+       olive-deep accent hover / accent text on tinted chips
+       sage, clay secondary data colors    butter  amber highlight (text uses on-butter)
+       rose       soft negative            fern    positive
+       danger / success / warn + -bg / -edge: semantic flashes and chips
+     Why this family: adults reliably prefer blues and greens and dislike dark
+     yellows, olives and browns (Palmer & Schloss 2010; Taylor et al. 2013);
+     low saturation and higher lightness read as calm rather than arousing
+     (Valdez & Mehrabian 1994; Wilms & Oberfeld 2018); similar hues with strong
+     lightness contrast are judged most harmonious (Schloss & Palmer 2011), so
+     the page is a pale tint of the same hue as the text and accent. Every
+     text/background pair meets WCAG AA 4.5:1 and every control border 3:1 in
+     every appearance (bin/check-palette-contrast). */
+  --color-oat: #e6efea;
+  --color-cream: #dce8e2;
+  --color-paper: #fbfdfc;
+  --color-ink: #17353a;
+  --color-mocha: #36504f;
+  --color-taupe: #47605f;
+  --color-fog: #cddad3;
+  --color-haze: #dfebe5;
+  --color-olive: #0e6f72;
+  --color-olive-deep: #0b585a;
+  --color-sage: #257d50;
+  --color-clay: #5b48a8;
+  --color-butter: #f2b530;
+  --color-rose: #b3382a;
+  --color-fern: #1b7046;
+  --color-edge: #778a86;
+  --color-danger: #b42318;
   --color-danger-bg: #fef3f2;
   --color-danger-edge: #f3b7b0;
   --color-success: #05603a;
@@ -26,7 +50,9 @@
   --color-warn: #7a4b00;
   --color-warn-bg: #fffaeb;
   --color-warn-edge: #f1d49a;
-  --color-on-butter: #2a2316; /* text on butter fills, both themes */
+  --color-on-butter: #2a2316;
+  /* Shadow tint follows the ink hue so shadows read as depth, not as dirt. */
+  --shadow-ink: 23 53 58;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter",
     ui-sans-serif, system-ui, "Segoe UI", sans-serif;
@@ -64,7 +90,7 @@
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-fog shadow-[0_1px_2px_rgba(26,57,61,0.06)];
+    @apply rounded-2xl border border-fog shadow-[0_1px_2px_rgb(var(--shadow-ink)/0.06)];
     background-image: linear-gradient(
       180deg,
       color-mix(in srgb, var(--color-olive) 3%, var(--color-paper)) 0%,
@@ -136,7 +162,7 @@
   }
 
   .stat {
-    @apply rounded-2xl border border-fog p-5 shadow-[0_1px_2px_rgba(26,57,61,0.06)];
+    @apply rounded-2xl border border-fog p-5 shadow-[0_1px_2px_rgb(var(--shadow-ink)/0.06)];
     /* Lets .stat-value size itself to the card so long amounts never overflow it. */
     container-type: inline-size;
     background-image: linear-gradient(
@@ -322,10 +348,10 @@
 .nav-utility { position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border-radius:999px;color:var(--color-mocha); }
 .nav-utility:hover { background:var(--color-haze);color:var(--color-ink); }
 .nav-utility:focus-visible,.nav-area:focus-visible,.module-menu-trigger:focus-visible,.nav-menu-item:focus-visible,.app-brand:focus-visible { outline:2px solid var(--color-olive);outline-offset:3px; }
-.nav-hint { display:none;position:absolute;right:0;top:calc(100% + 5px);z-index:50;width:max-content;max-width:min(20rem,calc(100vw - 2rem));padding:.5rem .7rem;border:1px solid var(--color-fog);border-radius:.65rem;background:var(--color-paper);color:var(--color-ink);font-size:.8rem;font-weight:500;line-height:1.5;box-shadow:0 4px 14px #1a393d18;pointer-events:none; }
+.nav-hint { display:none;position:absolute;right:0;top:calc(100% + 5px);z-index:50;width:max-content;max-width:min(20rem,calc(100vw - 2rem));padding:.5rem .7rem;border:1px solid var(--color-fog);border-radius:.65rem;background:var(--color-paper);color:var(--color-ink);font-size:.8rem;font-weight:500;line-height:1.5;box-shadow:0 4px 14px rgb(var(--shadow-ink)/0.09);pointer-events:none; }
 .nav-utility:hover .nav-hint,.nav-utility:focus-visible .nav-hint { display:block; }
 .sync-status-dot { position:absolute;right:8px;bottom:8px;width:6px;height:6px;border-radius:999px;outline:2px solid var(--color-oat); }
-.account-menu { position:absolute;right:0;top:calc(100% + 5px);z-index:40;width:min(17rem,calc(100vw - 2rem));border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px #1a393d26; }
+.account-menu { position:absolute;right:0;top:calc(100% + 5px);z-index:40;width:min(17rem,calc(100vw - 2rem));border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px rgb(var(--shadow-ink)/0.15); }
 .module-navigation-wrap { border-top:1px solid var(--color-fog);background:var(--color-cream); }
 .module-navigation { max-width:72rem;margin:auto;padding:.15rem 1.5rem; }
 .module-menu { position:relative;width:fit-content;max-width:100%; }
@@ -334,7 +360,7 @@
 .module-menu-trigger:hover,.module-menu[open] .module-menu-trigger { background:var(--color-haze); }
 .module-menu-trigger > span:first-of-type { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .tools-caption { margin-left:.5rem;font-size:.75rem;font-weight:400;color:var(--color-taupe); }
-.module-menu-panel { position:absolute;left:0;top:calc(100% + 4px);z-index:40;width:min(23rem,calc(100vw - 2rem));max-height:60vh;overflow:auto;padding:.65rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px #1a393d26; }
+.module-menu-panel { position:absolute;left:0;top:calc(100% + 4px);z-index:40;width:min(23rem,calc(100vw - 2rem));max-height:60vh;overflow:auto;padding:.65rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);box-shadow:0 8px 30px rgb(var(--shadow-ink)/0.15); }
 .nav-menu-item { display:flex;align-items:center;gap:.65rem;min-height:44px;padding:.55rem .75rem;border-radius:.6rem;font-size:.9rem;text-align:left; }
 .module-menu-group { margin:.6rem .75rem .15rem;padding-top:.6rem;border-top:1px solid var(--color-fog);font-size:.7rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--color-taupe); }
 .module-menu-panel > .module-menu-group:first-of-type { margin-top:.2rem;padding-top:0;border-top:0; }
@@ -383,7 +409,7 @@
 .retail-product-actions { margin-top:auto;display:flex;flex-wrap:wrap;gap:.5rem; }
 .retail-product-actions .input { width:4.5rem;min-width:0;flex:1; }
 .retail-product-actions .btn-primary { justify-content:center;flex:1; }
-.retail-cart-link { position:fixed;right:1rem;bottom:max(1rem,env(safe-area-inset-bottom));z-index:30;box-shadow:0 4px 16px #1a393d30; }
+.retail-cart-link { position:fixed;right:1rem;bottom:max(1rem,env(safe-area-inset-bottom));z-index:30;box-shadow:0 4px 16px rgb(var(--shadow-ink)/0.19); }
 .retail-cart { scroll-margin-top:10rem; }
 .retail-anchor { scroll-margin-top:10rem; }
 .retail-money { font-variant-numeric:tabular-nums;overflow-wrap:anywhere; }
@@ -472,7 +498,7 @@
   .desk-chores { position:sticky;top:9rem; }
 }
 @media print { .desk-step { break-inside:avoid; } .books-desk nav, .books-desk .btn-primary { display:none; } }
-.bank-save-bar { position:sticky;bottom:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);padding:.75rem 1rem;box-shadow:0 -4px 16px #1a393d14; }
+.bank-save-bar { position:sticky;bottom:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);padding:.75rem 1rem;box-shadow:0 -4px 16px rgb(var(--shadow-ink)/0.08); }
 .bank-line-suggested { background:color-mix(in srgb,var(--color-butter) 12%,var(--color-paper)); }
 .lock-grid { display:grid;gap:.4rem;grid-template-columns:repeat(2,minmax(0,1fr)); }
 @media(min-width:640px) { .lock-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
@@ -515,7 +541,7 @@
 .shift { container-type:inline-size; }
 .shift-compact { display:none;text-align:center; }
 @container (max-width:92px) { .shift-full { display:none; }.shift-compact { display:block; } }
-.shift:hover,.shift:focus-visible { z-index:10;overflow:visible;box-shadow:0 4px 16px #1a393d40; }
+.shift:hover,.shift:focus-visible { z-index:10;overflow:visible;box-shadow:0 4px 16px rgb(var(--shadow-ink)/0.25); }
 .shift:hover .shift-full,.shift:focus-visible .shift-full { display:block;min-width:10.5rem; }
 .shift:hover .shift-compact,.shift:focus-visible .shift-compact { display:none; }
 .shift:hover,.shift:focus-visible { width:auto !important;min-width:11rem;background:var(--color-paper) !important; }
@@ -654,7 +680,7 @@ body:has(.finance-navigation) .module-navigation-wrap { display:none; }
 .finance-navigation-groups > .finance-navigation-group > summary::-webkit-details-marker { display:none; }
 .finance-navigation-groups > .finance-navigation-group > summary::after { content:"\25BE";font-size:.8rem; }
 .finance-navigation-groups > .finance-navigation-group[open] > summary { background:var(--color-haze);color:var(--color-ink); }
-.finance-navigation-links { position:absolute;left:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;gap:.1rem;min-width:13rem;padding:.4rem;border:1px solid var(--color-fog);border-radius:.8rem;background:var(--color-paper);box-shadow:0 8px 24px #1a393d22; }
+.finance-navigation-links { position:absolute;left:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;gap:.1rem;min-width:13rem;padding:.4rem;border:1px solid var(--color-fog);border-radius:.8rem;background:var(--color-paper);box-shadow:0 8px 24px rgb(var(--shadow-ink)/0.13); }
 .finance-navigation-links .nav-pill { justify-content:flex-start; }
 @media(max-width:760px) { .finance-navigation { overflow:visible; } }
 
@@ -808,27 +834,31 @@ select.input {
   .nav-area { gap: 0.25rem; padding: 0.4rem 0.45rem; font-size: 0.8rem; }
 }
 
-/* Dark is the default appearance: a warm, low-glare counterpart; surfaces built
-   from the tokens follow. People opt into light with the account-menu toggle
-   (data-theme="light"), and print/embedded layouts pin light the same way. */
+/* Appearances. Herbal is the base (@theme above, no attribute). The blocks
+   below override the tokens when the account menu sets data-theme on <html>:
+   light (pure white cards), mist (a dimmer blue-grey light), sepia (warm paper
+   with a muted blue-teal accent, the Solarized precedent), and dark. Print,
+   embedded and public warehouse layouts pin data-theme="light". */
 @media all {
-  :root:not([data-theme="light"]) {
+  :root[data-theme="dark"] {
     color-scheme: dark;
-    --color-oat: #171412;
-    --color-cream: #1e1a17;
-    --color-paper: #201c19;
-    --color-ink: #f3ece4;
-    --color-mocha: #c4b9ad;
-    --color-taupe: #a2968a;
-    --color-fog: #332d28;
-    --color-haze: #28231f;
+    --color-oat: #111514;
+    --color-cream: #1a1f1e;
+    --color-paper: #1b2120;
+    --color-ink: #eaf0ef;
+    --color-mocha: #b7c3c1;
+    --color-taupe: #97a5a2;
+    --color-fog: #2b3331;
+    --color-haze: #232b29;
     --color-olive: #5fa39b;
     --color-olive-deep: #8fcbc3;
     --color-sage: #8fb59c;
     --color-fern: #6fbd9d;
     --color-rose: #e09a8d;
-    --color-edge: #7a6e63;
+    --color-edge: #6f7d7a;
     --color-danger: #f19a8f;
+    --color-clay: #a894e8;
+    --color-butter: #e6c060;
     --color-danger-bg: #2a1b19;
     --color-danger-edge: #6a3a34;
     --color-success: #7fdcae;
@@ -837,13 +867,109 @@ select.input {
     --color-warn: #f0cf8a;
     --color-warn-bg: #2a2316;
     --color-warn-edge: #6b5427;
+    --shadow-ink: 0 0 0;
   }
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  /* Pure white cards on a cool blue-grey page: the brightest option. */
+  --color-oat: #f5f7fa;
+  --color-cream: #eef1f5;
+  --color-paper: #ffffff;
+  --color-ink: #14181f;
+  --color-mocha: #3f4754;
+  --color-taupe: #5b6572;
+  --color-fog: #dfe4ea;
+  --color-haze: #eaeef3;
+  --color-olive: #2a5fcf;
+  --color-olive-deep: #1f49a6;
+  --color-sage: #1f7a6f;
+  --color-clay: #5b48a8;
+  --color-butter: #f4c65b;
+  --color-rose: #b3382a;
+  --color-fern: #1f7a4d;
+  --color-edge: #8a94a3;
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-danger-edge: #f3b7b0;
+  --color-success: #05603a;
+  --color-success-bg: #ecfdf3;
+  --color-success-edge: #a6d8bf;
+  --color-warn: #7a4b00;
+  --color-warn-bg: #fffaeb;
+  --color-warn-edge: #f1d49a;
+  --shadow-ink: 20 24 31;
+}
+
+:root[data-theme="mist"] {
+  color-scheme: light;
+  /* Dimmer light: blue-grey page, off-white cards; same blue accent. */
+  --color-oat: #e6ebf2;
+  --color-cream: #dde3ec;
+  --color-paper: #f3f6fa;
+  --color-ink: #141922;
+  --color-mocha: #3d4756;
+  --color-taupe: #596575;
+  --color-fog: #cdd5e0;
+  --color-haze: #e0e6ee;
+  --color-olive: #2457c4;
+  --color-olive-deep: #1b43a0;
+  --color-sage: #1f7a6f;
+  --color-clay: #5b48a8;
+  --color-butter: #efc14f;
+  --color-rose: #b0392c;
+  --color-fern: #1a6f44;
+  --color-edge: #7f8b9b;
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-danger-edge: #f3b7b0;
+  --color-success: #05603a;
+  --color-success-bg: #ecfdf3;
+  --color-success-edge: #a6d8bf;
+  --color-warn: #7a4b00;
+  --color-warn-bg: #fffaeb;
+  --color-warn-edge: #f1d49a;
+  --shadow-ink: 20 24 31;
+}
+
+:root[data-theme="sepia"] {
+  color-scheme: light;
+  /* Warm paper. Muted blue-teal accent keeps links and buttons */
+  /* distinct from the warm neutrals without a dark-yellow accent. */
+  --color-oat: #efe6d4;
+  --color-cream: #e7dcc6;
+  --color-paper: #f7f0e2;
+  --color-ink: #2b2419;
+  --color-mocha: #574a39;
+  --color-taupe: #665a49;
+  --color-fog: #d9ccb5;
+  --color-haze: #ece2cf;
+  --color-olive: #185f78;
+  --color-olive-deep: #114a5e;
+  --color-sage: #3f7a4e;
+  --color-clay: #7a4e8a;
+  --color-butter: #e3b84a;
+  --color-rose: #a0392a;
+  --color-fern: #2a6340;
+  --color-edge: #8f7e63;
+  --color-danger: #9f2416;
+  --color-danger-bg: #f6e4df;
+  --color-danger-edge: #e0ab9f;
+  --color-success: #1f5f3a;
+  --color-success-bg: #e6efdf;
+  --color-success-edge: #a9c9a3;
+  --color-warn: #6b4300;
+  --color-warn-bg: #f6ecd3;
+  --color-warn-edge: #e0c48a;
+  --shadow-ink: 43 36 25;
+}
+
+
 /* Dark-only fixes that tokens cannot express. */
-:root:not([data-theme="light"]) {
+:root[data-theme="dark"] {
   .entry-state-posted { border-left-color: var(--color-success); }
-  select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23c4b9ad' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); }
+  select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23b7c3c1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); }
 }
 
 /* Horizontally scrolling tab strips: a hairline, low-contrast scrollbar instead of the chunky default. */
@@ -973,3 +1099,113 @@ a.card:focus-visible {
 .workspace-help[open] { width: 100%; }
 .workspace-help > summary:focus-visible,
 .learning-path-picker > summary:focus-visible { outline: 2px solid var(--color-olive); outline-offset: 4px; border-radius: .25rem; }
+
+/* Learning: inline definitions, calculation explainers, the help bar and panel, page tours,
+   the welcome card and the getting-started checklist. Everything degrades to native
+   disclosures without JavaScript. */
+.term { display:inline-block;position:relative;vertical-align:baseline;font-size:.75rem;font-weight:500;letter-spacing:normal;text-transform:none;line-height:1.3; }
+.term-inline { margin-left:.35rem; }
+.term > summary { list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;color:var(--color-olive-deep);border-radius:999px; }
+.term > summary::-webkit-details-marker { display:none; }
+.term-trigger { padding:.1rem .15rem; }
+.term-label { font:inherit;color:inherit;text-decoration:underline dotted;text-decoration-color:var(--color-olive);text-underline-offset:3px; }
+.term-mark { display:inline-grid;place-items:center;width:1.05rem;height:1.05rem;border:1px solid var(--color-olive);border-radius:999px;font-size:.65rem;font-weight:700;line-height:1;color:var(--color-olive-deep);background:var(--color-paper); }
+.term > summary:hover .term-mark,.term[open] .term-mark { background:var(--color-olive);color:var(--color-cream); }
+.term > summary:focus-visible { outline:2px solid var(--color-olive);outline-offset:2px; }
+.term-panel,.term-list-panel { position:absolute;left:0;top:calc(100% + .4rem);z-index:45;width:min(20rem,calc(100vw - 2rem));padding:.85rem 1rem;border:1px solid var(--color-fog);border-radius:.9rem;background:var(--color-paper);color:var(--color-ink);box-shadow:0 10px 30px #1a393d26;text-align:left;font-weight:400;white-space:normal; }
+.th .term-panel,.stat .term-panel,.text-right .term-panel,.num .term-panel { left:auto;right:0; }
+.term-name { font-size:.85rem;font-weight:600;color:var(--color-ink); }
+.term-definition { margin-top:.3rem;font-size:.8rem;line-height:1.5;color:var(--color-mocha); }
+.term-more { display:inline-block;margin-top:.5rem;font-size:.75rem;font-weight:600;color:var(--color-olive-deep);text-decoration:underline; }
+.term-list { display:inline-block;position:relative;font-size:.8rem; }
+.term-list > summary { list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;color:var(--color-olive-deep);font-weight:600; }
+.term-list > summary::-webkit-details-marker { display:none; }
+.term-list-panel { width:min(24rem,calc(100vw - 2rem)); }
+.term-list-panel > div + div { margin-top:.65rem;padding-top:.65rem;border-top:1px solid var(--color-fog); }
+
+.calculation { font-size:.875rem; }
+.calculation-trigger { cursor:pointer;font-weight:600;color:var(--color-olive-deep); }
+.calculation-panel { margin-top:.75rem;padding:1rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-haze); }
+.calculation-title { font-weight:600;color:var(--color-ink); }
+.calculation-formula { margin-top:.35rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem;color:var(--color-mocha); }
+.calculation-rows { margin-top:.65rem;border-top:1px solid var(--color-fog); }
+.calculation-rows > div { display:flex;justify-content:space-between;gap:1rem;padding:.45rem 0;border-bottom:1px solid var(--color-fog); }
+.calculation-rows dt { color:var(--color-mocha); }
+.calculation-rows dd { font-weight:600;white-space:nowrap; }
+.calculation-rows > div:last-child dd { color:var(--color-olive-deep); }
+.calculation-note { margin-top:.65rem;color:var(--color-mocha); }
+.calculation-links { margin-top:.65rem;display:flex;flex-wrap:wrap;gap:1rem;font-weight:600; }
+.calculation-links a { color:var(--color-olive-deep);text-decoration:underline; }
+
+.help-bar { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end;gap:.5rem 1.1rem;font-size:.875rem; }
+.help-bar .workspace-help { order:-1;margin-right:auto;max-width:100%; }
+.help-bar .workspace-help[open] { flex-basis:100%; }
+.help-bar-link { display:inline-flex;align-items:center;gap:.4rem;min-height:1.75rem;font-weight:600;color:var(--color-olive-deep);text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;cursor:pointer;font-size:inherit; }
+.help-new { display:inline-block;padding:.05rem .45rem;border-radius:999px;background:var(--color-butter);color:var(--color-on-butter);font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;text-decoration:none; }
+
+.help-panel-backdrop { position:fixed;inset:0;z-index:60;background:#0008; }
+.help-panel { position:fixed;top:0;right:0;bottom:0;z-index:61;width:min(26rem,100vw);overflow-y:auto;border-left:1px solid var(--color-fog);background:var(--color-paper);color:var(--color-ink);box-shadow:-12px 0 40px #1a393d33; }
+.help-panel-head { position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--color-fog);background:var(--color-paper); }
+.help-panel-body { padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem; }
+.help-panel-section { padding-top:1rem;border-top:1px solid var(--color-fog); }
+.help-panel-link { font-weight:600;color:var(--color-olive-deep);text-decoration:underline;text-underline-offset:3px; }
+.help-panel-results:empty { display:none; }
+.help-panel-results > * + * { margin-top:.5rem; }
+.help-panel-terms > div + div,.help-panel-lessons > li + li { margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--color-fog); }
+.help-panel-empty { font-size:.875rem;color:var(--color-mocha); }
+.help-panel kbd { display:inline-block;min-width:1.4rem;padding:.05rem .35rem;border:1px solid var(--color-edge);border-bottom-width:2px;border-radius:.35rem;background:var(--color-haze);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.75rem;text-align:center;color:var(--color-ink); }
+
+.tour-backdrop { position:fixed;inset:0;z-index:70;background:transparent; }
+.tour-spotlight { position:absolute;z-index:71;border-radius:1rem;box-shadow:0 0 0 2px var(--color-olive),0 0 0 9999px #17141299;pointer-events:none;transition:top .18s,left .18s,width .18s,height .18s; }
+.tour-popover { position:absolute;z-index:72;padding:1rem 1.1rem 1.1rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);color:var(--color-ink);box-shadow:0 14px 40px #1a393d40; }
+.tour-popover::before { content:"";position:absolute;left:1.5rem;width:.8rem;height:.8rem;background:var(--color-paper);border-left:1px solid var(--color-fog);border-top:1px solid var(--color-fog);transform:rotate(45deg); }
+.tour-popover[data-placement=below]::before { top:-.45rem; }
+.tour-popover[data-placement=above]::before { bottom:-.45rem;transform:rotate(225deg); }
+.tour-progress { font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--color-taupe); }
+.tour-title { margin-top:.35rem;font:1.15rem var(--font-display); }
+.tour-body { margin-top:.4rem;font-size:.875rem;line-height:1.55;color:var(--color-mocha); }
+.tour-actions { display:flex;align-items:center;gap:.5rem;margin-top:.9rem; }
+.tour-spacer { flex:1; }
+.tour-skip { font-size:.75rem;color:var(--color-mocha);text-decoration:underline;background:none;border:0;padding:.25rem 0;cursor:pointer; }
+body.tour-active { overflow-x:hidden; }
+@media (prefers-reduced-motion: reduce) { .tour-spotlight { transition:none; } }
+
+.welcome-card { padding:1.5rem;border-color:color-mix(in srgb,var(--color-olive) 35%,var(--color-fog)); }
+.welcome-head { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:1rem; }
+.welcome-skip { font-size:.8rem;color:var(--color-mocha);text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:.25rem 0;cursor:pointer; }
+.welcome-paths { margin-top:1.25rem;display:grid;gap:.75rem;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr)); }
+.path-card { display:flex;flex-direction:column;gap:.35rem;min-height:7rem;padding:1rem;border:1px solid var(--color-edge);border-radius:1rem;background:var(--color-paper);text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s; }
+.path-card:hover { border-color:var(--color-olive);background:var(--color-haze); }
+.path-card:focus-visible { outline:2px solid var(--color-olive);outline-offset:3px; }
+.path-card-suggested { border-color:var(--color-olive);box-shadow:0 0 0 1px var(--color-olive); }
+.path-card-title { font:1.05rem var(--font-display);color:var(--color-ink); }
+.path-card-body { font-size:.8rem;line-height:1.5;color:var(--color-mocha); }
+.path-card-meta { margin-top:auto;font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-olive-deep); }
+
+.checklist-card { padding:1.25rem; }
+.checklist-head { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:.75rem 1rem; }
+.checklist-actions { display:flex;flex-wrap:wrap;align-items:center;gap:.75rem; }
+.checklist-hide { font-size:.75rem;color:var(--color-mocha);text-decoration:underline;background:none;border:0;padding:.25rem 0;cursor:pointer; }
+.checklist-items { display:flex;flex-direction:column;gap:.25rem; }
+.checklist-item { display:grid;grid-template-columns:1.5rem minmax(0,1fr) auto;align-items:start;gap:.5rem .75rem;padding:.55rem 0;border-top:1px solid var(--color-fog);font-size:.875rem; }
+.checklist-mark { display:grid;place-items:center;width:1.4rem;height:1.4rem;border:1px solid var(--color-edge);border-radius:999px;font-size:.75rem;font-weight:700;color:var(--color-cream); }
+.checklist-item-done .checklist-mark { border-color:var(--color-fern);background:var(--color-fern); }
+.checklist-item-actions { display:flex;flex-wrap:wrap;gap:.75rem;white-space:nowrap; }
+
+.module-badge { display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .7rem;border:1px solid var(--color-fern);border-radius:999px;background:color-mix(in srgb,var(--color-fern) 10%,var(--color-paper));color:var(--color-fern);font-size:.75rem;font-weight:600; }
+.practice-grid { display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr)); }
+.practice-result { font:1.5rem var(--font-display);color:var(--color-olive-deep); }
+.quiz-question + .quiz-question { margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--color-fog); }
+.quiz-wrong { border-color:var(--color-danger-edge);background:var(--color-danger-bg); }
+
+
+/* Appearance picker: a page/accent swatch per option, check mark on the current one. */
+.appearance-option { gap: .6rem; }
+.appearance-option[aria-checked="true"] { background: var(--color-haze); font-weight: 600; }
+.appearance-option[aria-checked="true"]::after { content: "\2713"; margin-left: auto; color: var(--color-olive); }
+.appearance-swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: 999px; border: 1px solid var(--color-edge); box-shadow: inset 0 0 0 3px var(--swatch-page); background: var(--swatch-accent); flex: none; }
+.appearance-swatch-dark { --swatch-page: #111514; --swatch-accent: #5fa39b; }
+.appearance-swatch-light { --swatch-page: #f5f7fa; --swatch-accent: #2a5fcf; }
+.appearance-swatch-mist { --swatch-page: #e6ebf2; --swatch-accent: #2457c4; }
+.appearance-swatch-sepia { --swatch-page: #efe6d4; --swatch-accent: #185f78; }
+.appearance-swatch-herbal { --swatch-page: #e6efea; --swatch-accent: #0e6f72; }

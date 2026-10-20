@@ -12,7 +12,7 @@
       <p class="mt-2 max-w-2xl text-sm text-mocha">Each finished day moves through six steps, and each finished week has a short list of chores. Rupert shows what is done and opens the right page for whatever is next. Nothing here changes a record by itself.</p>
     </div>
     <% if @can_write_finance || @can_write_reports %>
-      <nav class="flex flex-wrap gap-2" aria-label="Record something now">
+      <nav class="flex flex-wrap gap-2" aria-label="Record something now" <%= tour_anchor('record') %>>
         <% if @can_write_finance %>
           <%= link_to 'Upload bank statement', bank_statements_path, class: 'btn-ghost btn-sm' %>
           <%= link_to 'Add expense', new_finance_expense_path, class: 'btn-ghost btn-sm' %>
@@ -23,7 +23,7 @@
     <% end %>
   </header>
 
-  <section class="desk-next card card-pad" aria-labelledby="desk-next-title">
+  <section class="desk-next card card-pad" aria-labelledby="desk-next-title" <%= tour_anchor('next') %>>
     <div class="desk-next-body">
       <% if next_day %>
         <% stage = next_day.next_stage %>
@@ -62,7 +62,7 @@
     </div>
   </section>
 
-  <details class="desk-findings card" id="desk-findings">
+  <details class="desk-findings card" id="desk-findings" <%= tour_anchor('findings') %>>
     <summary class="desk-findings-summary disclosure-trigger">
       <span class="font-display text-xl">What needs reconciliation</span>
       <span class="flex flex-wrap gap-2">
@@ -74,7 +74,7 @@
   </details>
 
   <% if this_week.any? %>
-    <section class="space-y-3" aria-labelledby="desk-this-week">
+    <section class="space-y-3" aria-labelledby="desk-this-week" <%= tour_anchor('this_week') %>>
       <div class="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="desk-this-week" class="font-display text-2xl">This week so far</h2>
         <p class="text-xs text-mocha">Today is still open and appears tomorrow.</p>
@@ -83,7 +83,7 @@
     </section>
   <% end %>
 
-  <section class="space-y-4" aria-labelledby="desk-focus-week">
+  <section class="space-y-4" aria-labelledby="desk-focus-week" <%= tour_anchor('week') %>>
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 id="desk-focus-week" class="font-display text-2xl"><%= desk.focus_week == desk.current_week - 7 ? 'Last week' : 'Earlier week' %> · <%= desk.focus_label %></h2>
@@ -118,7 +118,7 @@
     </div>
   </section>
 
-  <section class="space-y-3" aria-labelledby="desk-period-end">
+  <section class="space-y-3" aria-labelledby="desk-period-end" <%= tour_anchor('periods') %>>
     <div class="flex flex-wrap items-baseline justify-between gap-2">
       <h2 id="desk-period-end" class="font-display text-2xl">Month, quarter and year end</h2>
       <%= link_to 'All locked periods', period_locks_path, class: 'text-sm font-semibold text-olive-deep underline' %>

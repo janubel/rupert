@@ -1,0 +1,19 @@
+<%# "How is this calculated?" — a closed disclosure that shows the page's own numbers step by step.
+    Locals: title, rows ([label, value] pairs), formula (one line), note, lesson (key), term (key), id, summary %>
+<details class="calculation" <%= tag.attributes(id: id) if local_assigns[:id] %> data-calculation="<%= local_assigns[:id] || title.to_s.parameterize %>">
+  <summary class="calculation-trigger"><%= local_assigns[:summary] || 'How is this calculated?' %></summary>
+  <div class="calculation-panel">
+    <p class="calculation-title"><%= title %></p>
+    <% if local_assigns[:formula].present? %><p class="calculation-formula"><%= formula %></p><% end %>
+    <dl class="calculation-rows">
+      <% rows.each do |label, value| %>
+        <div><dt><%= label %></dt><dd class="tabular-nums"><%= value %></dd></div>
+      <% end %>
+    </dl>
+    <% if local_assigns[:note].present? %><p class="calculation-note"><%= note %></p><% end %>
+    <p class="calculation-links">
+      <% if local_assigns[:term].present? && LearningCatalog::TERMS.key?(term.to_s) %><%= link_to "Define #{LearningCatalog::TERMS.fetch(term.to_s).first.downcase}", learning_index_path(anchor: "term-#{term}") %><% end %>
+      <% if local_assigns[:lesson].present? && LearningCatalog.find(lesson) %><%= link_to "Practice with an example · #{LearningCatalog.find(lesson)[:minutes]} min", learning_path(lesson, anchor: 'lesson-example') %><% end %>
+    </p>
+  </div>
+</details>

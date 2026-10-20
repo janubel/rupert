@@ -1,6 +1,6 @@
 <%# Kanban columns. locals: columns (status => tasks), assignees, show_project, can_write %>
 <% accents = { "todo" => "bg-taupe/60", "in_progress" => "bg-olive", "blocked" => "bg-rose", "done" => "bg-fern" } %>
-<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-controller="task-board" data-task-board-writable-value="<%= can_write %>">
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-controller="task-board" data-task-board-writable-value="<%= can_write %>" <%= tour_anchor('board') %>>
   <% columns.each do |status, tasks| %>
     <section class="flex min-h-[8rem] flex-col rounded-2xl border border-fog bg-haze/50 p-3 transition-colors"
              data-task-board-target="column" data-status="<%= status %>"

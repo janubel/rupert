@@ -8,6 +8,287 @@ class PageGuides
   Guide = Struct.new(:key, :title, :summary, :sections, :tips, keyword_init: true)
 
   GUIDES = {
+    # Stock
+    'stock_requests' => Guide.new(
+      key: 'stock_requests', title: 'Transfers and backorders',
+      summary: 'Record a stock transfer between locations or a backorder for waiting demand, then confirm each physical step as it happens.',
+      sections: [
+        { heading: 'Transfers', body: 'A transfer reserves one native item at its source location, records dispatch, then records receipt at the destination. Partial receipts stay in transit until every unit arrives. Each confirmation asks for the source stock adjustment reference and time because the adjustment itself is made in Shopify, Square or C-Trax by a person.' },
+        { heading: 'Backorders', body: 'A backorder records demand at a fulfillment location. Allocating sets units aside in Rupert and lowers advisory availability; fulfilling confirms the handover. Waiting demand holds no stock, and cancelling releases the hold.' }
+      ],
+      tips: ['Rupert never writes quantities to a platform; refresh source stock after you adjust it there.', 'Quantity / received shows requested units against units confirmed so far.', 'Use the event history on a request to see who confirmed each step and when.']
+    ),
+    'stock_reservations' => Guide.new(
+      key: 'stock_reservations', title: 'Stock reservations',
+      summary: 'Local holds that reduce Rupert’s available-to-promise for one platform item at one location.',
+      sections: [
+        { heading: 'What a hold does', body: 'A reservation lowers the advisory availability Rupert shows for that exact source item and location. It does not reserve stock in Shopify or Square, so a channel can still sell the units and a later sync can reduce availability further.' },
+        { heading: 'Lifecycle', body: 'Holds created by a transfer or backorder are released through that request. Manual holds can be released here; expired holds stop consuming availability automatically.' }
+      ],
+      tips: ['Set an expiry so forgotten holds do not hide sellable stock.', 'Shopify and Square pools stay separate; one hold applies to one pool.']
+    ),
+    'bulk_materials' => Guide.new(
+      key: 'bulk_materials', title: 'Bulk materials',
+      summary: 'Track raw material by material and lot inside Rupert, with receipts, consumption and an append-only movement ledger.',
+      sections: [
+        { heading: 'Materials and lots', body: 'Create a material, then receive lots against it. Each lot keeps its own code, note and remaining balance in whole milligrams; decimal inputs round once to the nearest milligram.' },
+        { heading: 'Consumption', body: 'Material leaves a lot through sale material-use receipts or manual movements. The ledger is append-only, so corrections are new entries rather than edits.' }
+      ],
+      tips: ['This ledger never changes Shopify or Square quantities or SKUs.', 'Export the ledger CSV for a spreadsheet; Sheets synchronisation is not automatic.']
+    ),
+    'bulk_recipes' => Guide.new(
+      key: 'bulk_recipes', title: 'Bulk recipes',
+      summary: 'Map an exact Shopify variant to grams of one raw material per sold unit.',
+      sections: [
+        { heading: 'Versions', body: 'Every recipe definition is a new immutable version with an effective time. Material-use receipts keep the version they were applied with, so changing a recipe never rewrites history.' },
+        { heading: 'Identity', body: 'Recipes attach to the exact source variant ID, never to a SKU. A reused SKU does not select a recipe.' }
+      ],
+      tips: ['Record lot receipts under Bulk materials before applying recipes to sales.', 'Review imported sale lines under Sale material use to apply a recipe.']
+    ),
+    'bulk_consumptions' => Guide.new(
+      key: 'bulk_consumptions', title: 'Sale material use',
+      summary: 'Review imported Shopify sale lines and record the raw material each one consumed from a chosen lot.',
+      sections: [
+        { heading: 'Readiness', body: 'Only complete, uncancelled, paid Shopify snapshots with exact source IDs and matching positive whole-unit quantities can be applied. Missing, legacy, reduced-quantity, truncated and refunded snapshots stay blocked until reviewed.' },
+        { heading: 'Receipts', body: 'Each source sale line can deduct once, producing an immutable material-use receipt that names the lot and recipe version. Refunds never return material automatically.' }
+      ],
+      tips: ['Verify the physical sale; a clean snapshot does not prove the order was never edited.', 'Independent platform stock is unchanged by anything recorded here.', 'Export receipts recorded in a date range as CSV.']
+    ),
+    'vendors' => Guide.new(
+      key: 'vendors', title: 'Vendors',
+      summary: 'Who the shop buys from, with contact details, payment terms and purchase-order history.',
+      sections: [
+        { heading: 'Directory', body: 'Add a vendor with contact, email and payment terms. The list shows how many purchase orders exist and how many are still open (draft or ordered).' },
+        { heading: 'Balances', body: 'What is owed to a vendor after payments is on the Accounts page, not here. Vendor payments are recorded under Payments to vendors.' }
+      ],
+      tips: ['Payment terms are a note for people; nothing is scheduled or paid automatically.', 'Open a vendor to start a purchase order for them.']
+    ),
+    'purchase_orders' => Guide.new(
+      key: 'purchase_orders', title: 'Purchase orders',
+      summary: 'What has been ordered from vendors and what has arrived, line by line.',
+      sections: [
+        { heading: 'Draft to received', body: 'Build lines on a draft (item, SKU, quantity, unit cost), place the order, then record cumulative received quantities as deliveries arrive. Ordered value is quantity × unit cost; Owed to vendor on an order is the ordered value not yet received.' },
+        { heading: 'Stock', body: 'Receiving records the delivery locally. Platform stock is adjusted separately in the source system; refresh source stock in Rupert afterwards.' }
+      ],
+      tips: ['Enter the total received so far for each line, including earlier deliveries.', 'Cancelling an ordered PO records the decision; it does not notify the vendor.']
+    ),
+    # Money
+    'bookkeeping' => Guide.new(
+      key: 'bookkeeping', title: 'Bookkeeping overview',
+      summary: 'One month of bank activity for a selected account beside recorded expenses, pending decisions and links to the statements.',
+      sections: [
+        { heading: 'Bank figures', body: 'Statement balance is the closing balance on the latest retained statement. Money in, money out and net cash movement add every statement line for the month, including transfers. Rupert has no live bank connection.' },
+        { heading: 'Decisions', body: 'Bank lines wait until you say what they were. The review banner counts lines decided, pending and flagged; Needs your attention lists the oldest open questions.' }
+      ],
+      tips: ['The default month is the latest imported activity for the selected account.', 'This overview does not certify reconciliation or calculate profit; use the income statement for posted results.']
+    ),
+    'books_desk' => Guide.new(
+      key: 'books_desk', title: 'Close and review',
+      summary: 'The weekly desk for closing days, reviewing differences and approving finished periods, in order.',
+      sections: [
+        { heading: 'Work the list', body: 'Each day shows its close checks, review state and retained package. Open a day to gather source reports, compare them with imported records and record your review.' },
+        { heading: 'Checks', body: 'The checks tab runs the read-only books health checks for the current window. Passing checks do not certify a bank reconciliation.' }
+      ],
+      tips: ['Lock a finished month under Period locks once its days are approved.', 'A changed fingerprint means evidence moved after a review; look again before relying on it.']
+    ),
+    'book_approvals' => Guide.new(
+      key: 'book_approvals', title: 'Book approvals',
+      summary: 'Look over a day’s or week’s numbers, then record a signed decision in a tamper-evident ledger.',
+      sections: [
+        { heading: 'What you approve', body: 'Money in by source and currency, money out from expenses and vendor payments, and the open checks for the period. Each source and currency stays on its own line; Unavailable means the source gave no amount, not zero.' },
+        { heading: 'The ledger', body: 'Your decision is stored with your name, time, network address and a fingerprint of the books it covered. If records change afterwards the approval shows as changed. Entries are never edited; a later decision is added after.' }
+      ],
+      tips: ['Approve with exceptions when checks remain, and explain them in the note.', 'This records a human review of Rupert’s records, not a bank reconciliation or tax filing.']
+    ),
+    'bank_statements' => Guide.new(
+      key: 'bank_statements', title: 'Bank statements',
+      summary: 'Upload a bank CSV, then say what each line was. Nothing is recorded until you choose.',
+      sections: [
+        { heading: 'Upload', body: 'Name the account (never the number) and upload the CSV. Tick the box if your bank lists withdrawals as positive numbers. The original is kept unchanged and encrypted, and a line is never imported twice.' },
+        { heading: 'Decide', body: 'For each waiting line pick an expense category, a vendor payment or Ignore for transfers and personal items. Suggestions come from the description and are only applied when you save. Each decision keeps your name and time.' }
+      ],
+      tips: ['Undecided withdrawals are missing from money out until you decide them.', 'Deciding a line inside an approved day marks that approval as changed.', 'Match statement lines to ledger entries on the Bank reconciliation page.']
+    ),
+    'business_snapshot' => Guide.new(
+      key: 'business_snapshot', title: 'Business snapshot',
+      summary: 'A printable picture of sales, stock, cash and vendors built from live records, each section stating its source and age.',
+      sections: [
+        { heading: 'Reading it', body: 'Sales windows end today and show totals with order counts. Stock value is mirrored quantity at current price. Cash lists recorded tenders, refunds, processor deposit reports and bank statement status. Unknown means unknown, not zero.' },
+        { heading: 'Saving a copy', body: 'Save a dated copy keeps an unchangeable JSON with a checksum as evidence. Printing uses the browser.' }
+      ],
+      tips: ['Check the data-health line first; a broken approval ledger means approvals are unverified.', 'This is an operational picture, not audited financial statements.']
+    ),
+    'books_check' => Guide.new(
+      key: 'books_check', title: 'Books health',
+      summary: 'Read-only checks on recent sales, payments, refunds and retained evidence, graded fix, watch or passing.',
+      sections: [
+        { heading: 'Verdict', body: 'Fix first lists records that disagree with each other, such as refunded orders with no refund amount. Worth a look flags gaps to confirm. Passing checks are listed so you can see what was tested.' },
+        { heading: 'Window', body: 'Choose 7, 30, 90 or 365 days. Each check names the records it looked at and links to where they are fixed.' }
+      ],
+      tips: ['Nothing on this page changes data.', 'Passing checks do not certify a bank reconciliation; bank funding, fees and timing still need source evidence.']
+    ),
+    'period_locks' => Guide.new(
+      key: 'period_locks', title: 'Period locks',
+      summary: 'Lock a finished month, quarter or year so nothing dated inside it can be added, changed or removed.',
+      sections: [
+        { heading: 'Before locking', body: 'The checklist shows what is still open for the period. Locking saves a dated JSON archive of the totals with a checksum; a note is required while steps remain.' },
+        { heading: 'After locking', body: 'Expenses, payments, bank decisions, reviews, closes and approvals dated inside the period become read-only. Source imports keep arriving; if one changes the period the page says so. Reopening needs a store administrator and a written reason, and is recorded in the lock ledger.' }
+      ],
+      tips: ['Start with the most recent finished month.', 'Each ledger entry carries a fingerprint that includes the previous one, so tampering is detectable.']
+    ),
+    'source_reports' => Guide.new(
+      key: 'source_reports', title: 'Source reports',
+      summary: 'Saved totals from each sales source for a day, week, month, quarter or year, shown separately and never added together.',
+      sections: [
+        { heading: 'Observations', body: 'Each row is one measure for one source, account scope and currency, with its evidence basis: imported orders, gateway payments, processor deposits or an uploaded report. Rows with different bases can describe the same money, so no combined total is shown.' },
+        { heading: 'Saved reviews', body: 'Rupert retains the previous completed period automatically each night, week, month, quarter and year. Save / refresh keeps a snapshot of the current observations. Saving does not certify bank reconciliation or close a day.' }
+      ],
+      tips: ['Check source freshness before trusting a period; a missing import is not zero activity.', 'Download the CSV for a spreadsheet comparison with processor statements.']
+    ),
+    'financial_close' => Guide.new(
+      key: 'financial_close', title: 'Day close',
+      summary: 'Work one business date from source originals to a retained close package.',
+      sections: [
+        { heading: 'Checks first', body: 'Checks needing action list missing register reports, differences, unavailable comparisons and open follow-ups. Counts describe checks and may overlap. A current review of the evidence is required before any package can be retained.' },
+        { heading: 'Retain the package', body: 'Choose Complete when checks are clear, or Close with documented exceptions and explain them. Rupert verifies the originals’ checksums and archives the reconciliation CSV with the package. Saving does not close follow-ups, post a ledger entry or send a message.' }
+      ],
+      tips: ['A package whose fingerprint no longer matches means evidence changed after it was retained.', 'Use Across days to see which dates still need work.']
+    ),
+    'cash_forecast' => Guide.new(
+      key: 'cash_forecast', title: 'Cash forecast',
+      summary: 'A weekly plan of bank receipts and payments built only from assumptions you enter, in one currency.',
+      sections: [
+        { heading: 'Inputs', body: 'Enter opening cash as of the close date, its basis, an optional minimum reserve and expected receipts and payments for each week. Blank weeks count as zero once you confirm them. Sales totals and processor deposits are not treated as bank cash.' },
+        { heading: 'Results', body: 'Each week closes at opening + receipts − payments and the next week opens there. Weeks below your reserve (or below zero) are highlighted. Calculate previews; Retain saves an encrypted version with its assumptions.' }
+      ],
+      tips: ['Recalculate after changing inputs before downloading or retaining.', 'Nothing here moves money, reads a bank or sends messages.']
+    ),
+    'reconciliation_overview' => Guide.new(
+      key: 'reconciliation_overview', title: 'Reconciliation across days',
+      summary: 'Compare close checks, reviews and follow-ups across a week of business dates to see what still needs attention.',
+      sections: [
+        { heading: 'Business days', body: 'Each date shows its close checks, review state, retained package and next action. Open a day to work it in Day close.' },
+        { heading: 'Report gaps and follow-ups', body: 'Register reports to request lists source pools with recorded activity but no tracked control report. Overdue and due-today follow-ups span all dates.' }
+      ],
+      tips: ['Only tracked expectations are known; add required invoices, bank and processor reports as follow-ups.', 'Change the ending date to review an earlier week.']
+    ),
+    'reconciliation_follow_ups' => Guide.new(
+      key: 'reconciliation_follow_ups', title: 'Report requests and follow-ups',
+      summary: 'Missing reports and differences to investigate, kept visible across business days until each is closed with a reason.',
+      sections: [
+        { heading: 'A follow-up', body: 'Each item has a category, period, owner, due date, notes and optionally a linked original. Record progress to add a dated note, reassign or change the due date; resolving needs a reason.' },
+        { heading: 'Queues', body: 'Shortcuts filter by overdue, due today, unassigned and reports without a linked original. Items created from a missing register report carry the source, currency and location they are waiting for.' }
+      ],
+      tips: ['Closing a day’s evidence package does not close its follow-ups.', 'No messages are sent; assignments and due dates live only in Rupert.']
+    ),
+    'reconciliation_documents' => Guide.new(
+      key: 'reconciliation_documents', title: 'Source documents',
+      summary: 'Find the original reports, invoices, statements and archives behind the books, including every saved version, across dates.',
+      sections: [
+        { heading: 'Search', body: 'Filter by source, category, dates and text. Each document shows its period, checksum, versions and the day it supports. Close packages, lock archives and forecast versions appear under the Rupert source as archives.' },
+        { heading: 'Versions', body: 'A corrected report is a new version; earlier versions stay available. Originals are encrypted and never deleted automatically.' }
+      ],
+      tips: ['Open a document’s day to see how it was used as a control.', 'Use Google Drive retention to keep an off-host second copy.']
+    ),
+    'retention_drive' => Guide.new(
+      key: 'retention_drive', title: 'Google Drive document retention',
+      summary: 'Keep an automatic second copy of retained originals and archives in a Google Drive folder.',
+      sections: [
+        { heading: 'Connection', body: 'A workspace administrator connects the destination account. Rupert copies original file bytes without converting them, downloads each copy back and checks it before marking it Copied.' },
+        { heading: 'Status', body: 'The page lists copied, waiting and failed files and the last error. Sync now retries. Only this workspace’s retained files are copied; whole-instance backups have their own schedule.' }
+      ],
+      tips: ['Originals remain available in Rupert while Drive setup waits.', 'Rupert does not share or delete retention files.']
+    ),
+    'daily_reconciliation' => Guide.new(
+      key: 'daily_reconciliation', title: 'Daily reconciliation',
+      summary: 'Check one business day against its source reports, keep the originals and record anything that needs follow-up.',
+      sections: [
+        { heading: 'Attention', body: 'Differences compare a register control report with imported records for the same source, currency and location; Rupert minus source is the delta. Unavailable comparisons have no comparable amount and are not zero. Conflicting controls means two current reports cover the same pool.' },
+        { heading: 'Evidence and review', body: 'Upload register reports, invoices and statements as controls. Record your review when done; it binds to the current evidence fingerprint and shows as changed if evidence moves.' }
+      ],
+      tips: ['Source, currency and location are never added together.', 'Track a missing report as a follow-up so it stays visible across days.', 'Download the CSV to keep with the close package.']
+    ),
+    'register_summary' => Guide.new(
+      key: 'register_summary', title: 'Daily register summary',
+      summary: 'Recorded sales, tenders and refunds for one day by source, location and currency, with payment-coverage diagnostics.',
+      sections: [
+        { heading: 'Rows', body: 'Eligible orders are paid, fulfilled or refunded orders dated on the day. Order total and recorded tax come from those orders; Tenders less refunds nets recorded payments against recorded refunds per tender type. Any unknown amount stays Unavailable rather than showing a false zero.' },
+        { heading: 'Coverage and freshness', body: 'Missing, incomplete and overcovered compare each order total with all imported completed payments for that order. Source import freshness shows when each source last completed; an old CSV imported today does not establish today’s coverage.' }
+      ],
+      tips: ['Shopify tenders are inferred from gateway names and may use order creation time, not collection time.', 'This is an accounting comparison, not settled cash or bank deposits.']
+    ),
+    'finance_accounts' => Guide.new(
+      key: 'finance_accounts', title: 'Accounts',
+      summary: 'Vendor balances and customer receivables from Rupert’s recorded purchase orders, orders and payments.',
+      sections: [
+        { heading: 'Vendor balances', body: 'Balance due is received goods less recorded payments per vendor. Payments above received goods show as a credit and never offset another vendor. Ordered, not received is a purchase commitment shown separately.' },
+        { heading: 'Customer receivables', body: 'Paid or fulfilled order gross less completed payments, grouped by customer and currency. A missing order amount keeps that balance Unknown.' }
+      ],
+      tips: ['These are local records, not bank balances or vendor invoices.', 'Record a vendor payment from the row once it has actually been paid.']
+    ),
+    'chart_of_accounts' => Guide.new(
+      key: 'chart_of_accounts', title: 'Chart of accounts',
+      summary: 'The accounts the ledger posts to, grouped by type in code order.',
+      sections: [
+        { heading: 'Accounts', body: 'Each account has a code, name, type and the side it increases with: assets and expenses with debits, liabilities, equity and revenue with credits. Select a code to see every entry posted to it.' },
+        { heading: 'Archiving', body: 'An archived account stays on record with its history but cannot be chosen for new entries. Existing entries and reports are unchanged, and it can be restored.' }
+      ],
+      tips: ['Keep codes stable so exports to accounting software stay consistent.', 'Cash (1000) and Checking (1100) are the accounts bank reconciliation compares against.']
+    ),
+    'expenses' => Guide.new(
+      key: 'expenses', title: 'Expenses',
+      summary: 'Money the business has already paid out, each posting an entry to the ledger.',
+      sections: [
+        { heading: 'Recording', body: 'Enter the date, payee or vendor, category, method and amount. Saving posts a balanced ledger entry. Totals count active expenses in the chosen range across all pages.' },
+        { heading: 'Changes', body: 'Removing an expense keeps it on the list as Removed, voids its ledger entry and can be undone. Expenses dated inside a locked period are read-only.' }
+      ],
+      tips: ['Many expenses arrive as bank statement decisions; recording them there avoids duplicates.', 'No money is transferred by this register.']
+    ),
+    'payments' => Guide.new(
+      key: 'payments', title: 'Payments to vendors',
+      summary: 'Payments already made against vendor purchase orders, recorded to lower the local balance due.',
+      sections: [
+        { heading: 'Recording', body: 'Choose the vendor, date, method, reference and amount. The payment lowers that vendor’s balance on the Accounts page and posts to the ledger.' },
+        { heading: 'Changes', body: 'Removing a payment keeps it listed as Removed and can be restored. Payments inside a locked period are read-only.' }
+      ],
+      tips: ['Record the payment after it has left the bank; Rupert does not send money.', 'Paying more than received goods shows as a vendor credit, not a negative balance.']
+    ),
+    'journal_entries' => Guide.new(
+      key: 'journal_entries', title: 'General ledger',
+      summary: 'Every posted entry, each with equal debits and credits, newest first.',
+      sections: [
+        { heading: 'Entries', body: 'Expenses, vendor payments and sales create entries automatically; manual and opening entries are posted by people. Totals on this page include void entries shown in the list; reports and exports leave them out.' },
+        { heading: 'Corrections', body: 'Posted entries are never edited. Reverse a manual entry to post one that swaps every debit and credit; to correct a generated entry, change or remove its source record and the ledger follows.' }
+      ],
+      tips: ['Filter by account to audit one balance.', 'Entries dated inside a locked period cannot change.']
+    ),
+    'finance_reports' => Guide.new(
+      key: 'finance_reports', title: 'Financial reports',
+      summary: 'Trial balance, income statement and balance sheet computed from posted ledger entries.',
+      sections: [
+        { heading: 'Which report', body: 'The trial balance lists every account with debits, credits and balance and should net to zero. The income statement is revenue less expenses for a period. The balance sheet shows assets, liabilities and equity on one date, where assets equal liabilities plus equity.' },
+        { heading: 'Scope', body: 'Only posted entries count; void entries, pending bank lines and unposted records are excluded. Mirrored stock and vendor balances appear only if they were posted.' }
+      ],
+      tips: ['Equal totals prove the arithmetic, not that each entry went to the right account.', 'Export CSV from each report for your accountant.']
+    ),
+    'bank_reconciliation' => Guide.new(
+      key: 'bank_reconciliation', title: 'Bank reconciliation',
+      summary: 'Match each bank statement line to a ledger entry and explain the difference between statement net and ledger net.',
+      sections: [
+        { heading: 'Matching', body: 'Rupert suggests a ledger entry for each line by amount and date within the chosen window. Confirming records the link only; no amounts change and a match can be cleared. Possible duplicates can be ignored so they drop out of reconciliation.' },
+        { heading: 'The difference', body: 'Statement net (in + out) minus ledger net for the Cash and Checking accounts over the same dates. Card sales post to Cash on receipt and settle later, so timing differences are normal and need explaining, not forcing.' }
+      ],
+      tips: ['Record bank withdrawals as expenses on Bank statements first, then reconcile here.', 'Widen the match window for slow-settling deposits.']
+    ),
+    'ledger_export' => Guide.new(
+      key: 'ledger_export', title: 'Export ledger',
+      summary: 'Download posted journal entries for your accountant or accounting software.',
+      sections: [
+        { heading: 'Formats', body: 'QuickBooks IIF imports as a general journal. The CSV lists debits and credits per line for Xero, Wave, Sage and similar tools.' },
+        { heading: 'Scope', body: 'Only posted entries in the chosen dates are exported; void entries are excluded.' }
+      ],
+      tips: ['Lock the period before exporting so the file matches what stays on record.']
+    ),
     'influencers' => Guide.new(
       key: 'influencers', title: 'Influencer collaborations',
       summary: 'Track prospects, campaign collaborations, product gifts, temporary code records and documents.',
@@ -432,6 +713,38 @@ class PageGuides
   # Path prefix -> guide key, most-specific first. Matched by the shell so help
   # appears automatically on the right page regardless of module-registry keys.
   PATH_MAP = [
+    # Most specific prefixes first: the list is matched in order with start_with?.
+    ['/books_check', 'books_check'],
+    ['/books/locks', 'period_locks'],
+    ['/books', 'books_desk'],
+    ['/bookkeeping', 'bookkeeping'],
+    ['/approve_books', 'book_approvals'],
+    ['/bank_statements', 'bank_statements'],
+    ['/snapshot', 'business_snapshot'],
+    ['/money_reconciliations', 'source_reports'],
+    ['/financial_close', 'financial_close'],
+    ['/cash_forecast', 'cash_forecast'],
+    ['/reconciliation_follow_ups/overview', 'reconciliation_overview'],
+    ['/reconciliation_follow_ups', 'reconciliation_follow_ups'],
+    ['/reconciliation_documents', 'reconciliation_documents'],
+    ['/retention_drive', 'retention_drive'],
+    ['/daily_reconciliations', 'daily_reconciliation'],
+    ['/reports/register_summary', 'register_summary'],
+    ['/finance/accounts', 'finance_accounts'],
+    ['/finance/chart_of_accounts', 'chart_of_accounts'],
+    ['/finance/expenses', 'expenses'],
+    ['/finance/vendor_payments', 'payments'],
+    ['/finance/journal_entries', 'journal_entries'],
+    ['/finance/reports', 'finance_reports'],
+    ['/finance/bank_reconciliation', 'bank_reconciliation'],
+    ['/finance/ledger_export', 'ledger_export'],
+    ['/purchasing/vendors', 'vendors'],
+    ['/purchasing/purchase_orders', 'purchase_orders'],
+    ['/stock_requests', 'stock_requests'],
+    ['/stock_reservations', 'stock_reservations'],
+    ['/bulk_materials', 'bulk_materials'],
+    ['/bulk_recipes', 'bulk_recipes'],
+    ['/bulk_consumptions', 'bulk_consumptions'],
     ['/size_families', 'sizes'],
     ['/access_logs', 'access_log'],
     ['/sales/pos_sessions', 'registers'],

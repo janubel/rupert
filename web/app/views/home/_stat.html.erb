@@ -1,8 +1,10 @@
 <div class="stat">
-  <p class="stat-label"><%= label %></p>
+  <div class="stat-label"><%= label %><%= define(local_assigns[:term]) if local_assigns[:term] %></div>
   <p class="stat-value mt-1"><%= value %></p>
   <p class="mt-1 text-xs text-taupe"><%= note %></p>
-  <% if label.to_s.match?(/sales|Yesterday|Last 7/) %>
-    <details class="mt-2 text-xs text-mocha"><summary class="cursor-pointer text-olive-deep">What’s in this total?</summary><p class="mt-2"><%= LearningCatalog::TERMS.fetch('sales_total').last %></p><%= link_to 'Learn about sales totals', learning_path('sales'), class: 'mt-2 inline-block underline' %></details>
+  <% if local_assigns[:calculation] %>
+    <div class="mt-2"><%= calculation %></div>
+  <% elsif label.to_s.match?(/sales|Yesterday|Last 7/) %>
+    <details class="calculation mt-2 text-xs"><summary class="calculation-trigger">What’s in this total?</summary><div class="calculation-panel"><p class="calculation-note"><%= LearningCatalog::TERMS.fetch('sales_total').last %></p><p class="calculation-links"><%= link_to 'Learn about sales totals', learning_path('sales') %></p></div></details>
   <% end %>
 </div>

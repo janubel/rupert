@@ -6,7 +6,7 @@
       <h1 class="page-title">Sync</h1>
       <p class="mt-1 text-sm text-mocha">Every pull from Shopify and Square is recorded here. Syncs run on a schedule and can be triggered manually.</p>
     </div>
-    <div class="flex gap-2">
+    <div class="flex gap-2" <%= tour_anchor('run') %>>
       <%= form_tag syncs_path, method: :post, class: "inline" do %>
         <%= submit_tag "Sync everything", class: "btn-primary" %>
       <% end %>
@@ -30,7 +30,7 @@
   <section class="grid gap-4 lg:grid-cols-2">
     <%= render "syncs/runs" %>
 
-    <div class="card card-pad">
+    <div class="card card-pad" <%= tour_anchor('movements') %>>
       <h2 class="font-display text-xl text-ink">Recent inventory activity</h2>
       <ul class="mt-4 space-y-2.5">
         <% if @recent_movements.empty? %>

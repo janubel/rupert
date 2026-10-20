@@ -16,14 +16,21 @@ class LearningFlowTest < ActionDispatch::IntegrationTest
 
   test 'correct answers save only personal progress and preserve dashboard preferences' do
     @user.update!(dashboard_config: { 'hidden' => ['stats'] })
-    post complete_learning_path('stock'), params: { answer: '0' }
+    post complete_learning_path('stock'), params: { answers: { '0' => '0', '1' => '1' } }
+    assert_response :unprocessable_entity
+    assert_select '#answer-feedback li', text: /Both systems can be observing the same units/
+    assert_select 'fieldset.quiz-question legend .pill-rose', count: 1
+    assert_nil @user.reload.dashboard_config_hash['learning_completed']
+    # Every question must be right in one go; a half-right submission saves nothing.
+    post complete_learning_path('stock'), params: { answers: { '0' => '2' } }
     assert_response :unprocessable_entity
     assert_nil @user.reload.dashboard_config_hash['learning_completed']
-    post complete_learning_path('stock'), params: { answer: '2', user_id: 'another-user' }
+    post complete_learning_path('stock'), params: { answers: { '0' => '2', '1' => '1' }, user_id: 'another-user' }
     assert_redirected_to learning_index_path
     assert_equal ['stock'], @user.reload.dashboard_config_hash['learning_completed']
     assert_equal ['stats'], @user.dashboard_config_hash['hidden']
-    post complete_learning_path('stock'), params: { answer: '2' }
+    assert @user.dashboard_config_hash.dig('learning_completed_at', 'stock').present?
+    post complete_learning_path('stock'), params: { answers: { '0' => '2', '1' => '1' } }
     assert_equal ['stock'], @user.reload.dashboard_config_hash['learning_completed']
   end
 
@@ -47,7 +54,7 @@ class LearningFlowTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     get learning_path('staff')
     assert_response :success
-    post complete_learning_path('staff'), params: { answer: '1' }
+    post complete_learning_path('staff'), params: { answers: { '0' => '1', '1' => '1' } }
     assert_redirected_to learning_index_path
   end
 
@@ -70,12 +77,12 @@ class LearningFlowTest < ActionDispatch::IntegrationTest
     patch learning_preferences_path, params: { focus: 'stock', user_id: 'someone-else' }
     assert_redirected_to learning_index_path
     assert_equal 'stock', @user.reload.dashboard_config_hash['learning_focus']
-    post complete_learning_path('start'), params: { answer: '1' }
+    post complete_learning_path('start'), params: { answers: { '0' => '1', '1' => '1' } }
     post login_path, params: { email: @user.email, password: 'password' }
     get learning_index_path
     assert_select '#path-title', text: 'Look after stock'
     assert_select '#your-path a.btn-primary[href=?]', learning_path('stock'), text: 'Start next step'
-    assert_select 'progress[value="1"][max="3"]'
+    assert_select '#path-progress[value="1"][max="4"]'
   end
 
   test 'welcome dismissal is personal and a dashboard reset preserves all learning preferences' do

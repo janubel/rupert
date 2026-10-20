@@ -78,7 +78,7 @@
     <% else %>
       <div class="card overflow-x-auto"><table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60"><tr>
-          <% %w[Source Orders Sales Tax Cash Card Refunds].each do |h| %><th scope="col" class="th <%= 'text-right' unless h == 'Source' %>"><%= h %></th><% end %>
+          <% { 'Source' => 'source', 'Orders' => 'eligible_orders', 'Sales' => 'sales_total', 'Tax' => 'tax_collected', 'Cash' => 'tender', 'Card' => 'tender', 'Refunds' => 'refund' }.each do |h, term| %><th scope="col" class="th <%= 'text-right' unless h == 'Source' %>"><%= h %><%= define(term) %></th><% end %>
         </tr></thead>
         <tbody class="divide-y divide-fog">
           <% period.pools.each do |p| %>
@@ -102,8 +102,8 @@
     <h2 class="font-display text-xl">Money out</h2>
     <% out = period.money_out %>
     <div class="grid grid-cols-2 gap-3">
-      <div class="stat"><p class="stat-label">Expenses (<%= out[:expense_count] %>)</p><p class="stat-value mt-1"><%= money.call(out[:expenses_cents]) %></p></div>
-      <div class="stat"><p class="stat-label">Vendor payments (<%= out[:vendor_payment_count] %>)</p><p class="stat-value mt-1"><%= money.call(out[:vendor_payments_cents]) %></p></div>
+      <div class="stat"><div class="stat-label">Expenses (<%= out[:expense_count] %>)<%= define('expense') %></div><p class="stat-value mt-1"><%= money.call(out[:expenses_cents]) %></p></div>
+      <div class="stat"><div class="stat-label">Vendor payments (<%= out[:vendor_payment_count] %>)<%= define('vendor_payment') %></div><p class="stat-value mt-1"><%= money.call(out[:vendor_payments_cents]) %></p></div>
     </div>
     <p class="text-xs"><%= link_to 'Open expenses', finance_expenses_path, class: 'underline' %> · <%= link_to 'Open vendor payments', finance_vendor_payments_path, class: 'underline' %></p>
   </section>
@@ -175,7 +175,7 @@
     <% else %>
       <div class="card overflow-x-auto"><table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60"><tr>
-          <% %w[When Who Period Decision Fingerprint From].each do |h| %><th scope="col" class="th"><%= h %></th><% end %>
+          <% %w[When Who Period Decision Fingerprint From].each do |h| %><th scope="col" class="th"><%= h %><%= define('fingerprint') if h == 'Fingerprint' %></th><% end %>
         </tr></thead>
         <tbody class="divide-y divide-fog">
           <% @history.each do |a| %>

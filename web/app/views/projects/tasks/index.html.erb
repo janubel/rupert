@@ -9,8 +9,8 @@
       <p class="mt-1 text-sm text-mocha"><%= own_tasks ? "Your assigned work. Update notes or move tasks between columns as you work." : "Everything in flight across projects. Drag cards between columns to update their status." %></p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm" %>
-      <div class="inline-flex rounded-full bg-haze p-1" role="group" aria-label="View">
+      <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm", data: { tour: 'guide' } %>
+      <div class="inline-flex rounded-full bg-haze p-1" role="group" aria-label="View" <%= tour_anchor('views') %>>
         <%= link_to "Board", tasks_filter_path(view: nil), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "board"}" %>
         <%= link_to "List", tasks_filter_path(view: "list"), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "list"}" %>
       </div>
@@ -18,7 +18,7 @@
     </div>
   </section>
 
-  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" <%= tour_anchor('stats') %>>
     <%= link_to tasks_filter_path(status: nil, due: nil, mine: nil), class: "stat block hover:border-taupe" do %>
       <p class="stat-label">Open</p><p class="stat-value"><%= @open_count %></p>
     <% end %>
@@ -33,7 +33,7 @@
     <% end %>
   </section>
 
-  <%= form_with url: projects_tasks_path, method: :get, class: "flex flex-wrap items-center gap-2", data: { controller: "auto-submit" } do %>
+  <%= form_with url: projects_tasks_path, method: :get, class: "flex flex-wrap items-center gap-2", data: { controller: "auto-submit", tour: 'filters' } do %>
     <%= hidden_field_tag :view, @view if @view == "list" %>
     <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
     <%= search_field_tag :q, params[:q], placeholder: "Search tasks…", class: "search w-56", "aria-label": "Search tasks" %>

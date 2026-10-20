@@ -10,7 +10,7 @@
     </div>
     <div class="flex flex-col items-end gap-2">
       <div class="flex items-center gap-2">
-        <button type="button" aria-expanded="false" aria-controls="dashboard-layout-editor" data-dashboard-customizer-target="toggle" data-action="click->dashboard-customizer#toggleEditor" class="btn-ghost btn-sm">Customize</button>
+        <button type="button" aria-expanded="false" aria-controls="dashboard-layout-editor" data-dashboard-customizer-target="toggle" data-action="click->dashboard-customizer#toggleEditor" class="btn-ghost btn-sm" <%= tour_anchor('customize') %>>Customize</button>
         <% if Current.user.can?("sync.write") %>
         <%= form_tag syncs_path, method: :post do %>
           <%= submit_tag "Sync now", class: "btn-primary", data: { turbo_submits_with: "Syncing…" } %>
@@ -56,7 +56,7 @@
   <%= render "home/daily_actions" %>
     <div id="dashboard-widgets" class="space-y-8">
       <% widgets.each do |widget, visible| %>
-        <section id="dashboard-widget-<%= widget.key %>" data-widget-key="<%= widget.key %>" <%= visible ? "" : "hidden" %>>
+        <section id="dashboard-widget-<%= widget.key %>" data-widget-key="<%= widget.key %>" <%= visible ? "" : "hidden" %> <%= tour_anchor(widget.key) if %w[stats attention].include?(widget.key) %>>
           <%= render widget.partial, presenter: presenter %>
         </section>
       <% end %>

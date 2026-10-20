@@ -5,7 +5,7 @@
       <h1 class="page-title">Staff</h1>
       <p class="mt-1 text-sm text-mocha">The team directory with their department, position, and employment status.</p>
     </div>
-    <div class="flex flex-wrap gap-2">
+    <div class="flex flex-wrap gap-2" <%= tour_anchor('actions') %>>
       <%= link_to 'Staff problem reports', people_work_reports_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
       <%= link_to "Departments", people_departments_path, class: "btn-ghost btn-sm" %>
       <%= link_to "Positions", people_positions_path, class: "btn-ghost btn-sm" %>
@@ -19,10 +19,10 @@
     </div>
   </section>
 
-  <%= render "shared/directory_sync_status", kind: "employees" %>
+  <%= render "shared/directory_sync_status", kind: "employees", tour: "sync" %>
   <p class="text-xs text-taupe">Each staff member can have accounts in several apps. Consolidated profiles retain every source identity. Confirm employment type and payroll details before payroll.</p>
 
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" <%= tour_anchor('stats') %>>
     <div class="stat">
       <p class="stat-label">Active</p>
       <p class="stat-value mt-1"><%= People::Employee.active.count %></p>
@@ -46,7 +46,7 @@
   </section>
 
   <p class="text-sm"><%= @missing_logins %> active employee records need a login. <%= link_to 'Review staff without logins', people_employees_path(login: 'missing'), class: 'font-semibold hover:underline' %></p>
-  <%= form_tag people_employees_path, method: :get, class: "flex flex-wrap gap-2" do %>
+  <%= form_tag people_employees_path, method: :get, class: "flex flex-wrap gap-2", data: { tour: 'filters' } do %>
     <input type="search" name="q" value="<%= params[:q] %>" placeholder="Search name, staff member #, email…" aria-label="Search staff" class="search w-full sm:max-w-xs" autocomplete="off">
     <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
       <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
@@ -59,7 +59,7 @@
     <%= submit_tag 'Filter', class: 'btn-ghost btn-sm' %>
   <% end %>
 
-  <div class="card overflow-hidden">
+  <div class="card overflow-hidden" <%= tour_anchor('table') %>>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">

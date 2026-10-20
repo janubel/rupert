@@ -1,4 +1,4 @@
-<section id="retail-cart" class="card card-pad retail-cart min-w-0 space-y-4" tabindex="-1" aria-label="Cashier cart">
+<section id="retail-cart" class="card card-pad retail-cart min-w-0 space-y-4" tabindex="-1" aria-label="Cashier cart" <%= tour_anchor('cart') %>>
   <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="font-display text-xl">Cashier cart</h2><a href="#retail-catalog" class="text-sm font-semibold text-olive-deep underline">Back to products</a></div>
   <p class="text-xs text-mocha">USD · source prices are checked before checkout. Adding items does not reserve stock.</p>
   <p role="status" aria-live="polite" class="text-sm" data-pos-cart-target="status"><%= @quote_error %></p>

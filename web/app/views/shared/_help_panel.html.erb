@@ -1,0 +1,43 @@
+<%# Help drawer behind the ? button: this page, a tour, a lesson, and live search across lessons and definitions. %>
+<% guide = PageGuides.for_path(request.path); lesson = LearningCatalog.for_path(request.path, Current.user); tour = learning_tour %>
+<% guide = nil if Current.user.employee? && request.path.start_with?('/projects/') %>
+<div class="help-panel-backdrop hidden" data-help-panel-target="backdrop" data-action="click->help-panel#close"></div>
+<aside class="help-panel hidden" role="dialog" aria-modal="true" aria-labelledby="help-panel-title" data-help-panel-target="panel" data-help-panel-search-url-value="<%= learning_index_path(format: :json) %>">
+  <div class="help-panel-head">
+    <h2 id="help-panel-title" class="font-display text-xl">Help</h2>
+    <button type="button" class="nav-utility" data-action="help-panel#close" aria-label="Close help"><span aria-hidden="true">×</span></button>
+  </div>
+  <div class="help-panel-body">
+    <label class="field-label" for="help-panel-search">Search lessons and definitions</label>
+    <input id="help-panel-search" type="search" class="input" placeholder="Try total, stock, hours or sync" autocomplete="off" data-help-panel-target="input" data-action="input->help-panel#search keydown->help-panel#keydown">
+    <div data-help-panel-target="results" class="help-panel-results" aria-live="polite"></div>
+    <section data-help-panel-target="page" class="help-panel-section">
+      <% if guide || lesson || tour %>
+        <p class="eyebrow text-olive-deep">This page</p>
+        <h3 class="mt-1 font-semibold"><%= guide ? guide.title : (lesson ? lesson[:title] : tour.title) %></h3>
+        <p class="mt-1 text-sm text-mocha"><%= guide ? guide.summary : (lesson ? lesson[:summary] : tour.intro) %></p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <% if tour %><button type="button" class="btn-primary btn-sm" data-action="help-panel#startTour">Show me around · <%= tour.minutes %> min</button><% end %>
+          <% if lesson %><%= link_to "Learn this task · #{lesson[:minutes]} min", learning_path(lesson[:key]), class: 'btn-ghost btn-sm' %><% end %>
+          <% if guide || lesson %><button type="button" class="btn-ghost btn-sm" data-action="help-panel#openGuide">How this page works</button><% end %>
+        </div>
+      <% else %>
+        <p class="eyebrow text-olive-deep">This page</p>
+        <p class="mt-1 text-sm text-mocha">No specific guide here yet. Search above or open Learn Rupert.</p>
+      <% end %>
+    </section>
+    <section class="help-panel-section">
+      <p class="eyebrow text-olive-deep">Learn</p>
+      <ul class="mt-2 space-y-1 text-sm">
+        <li><%= link_to 'All lessons & definitions', learning_index_path, class: 'help-panel-link' %></li>
+        <li><%= link_to 'Your first week checklist', learning_index_path(anchor: 'first-week'), class: 'help-panel-link' %></li>
+        <li><%= link_to 'Guided tours', learning_index_path(anchor: 'tours'), class: 'help-panel-link' %></li>
+        <% if !Current.user.employee? && (Current.user.can?('users.read') || Current.user.can?('hr.read')) %><li><%= link_to 'Team training progress', learning_team_path, class: 'help-panel-link' %></li><% end %>
+      </ul>
+    </section>
+    <section class="help-panel-section">
+      <p class="eyebrow text-olive-deep">Keyboard</p>
+      <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm text-mocha"><dt><kbd>?</kbd></dt><dd>Open or close help</dd><% if Current.user.can?('dashboard.read') %><dt><kbd>/</kbd></dt><dd>Search orders, customers, SKUs, staff</dd><% end %><dt><kbd>Esc</kbd></dt><dd>Close a panel, menu or tour</dd></dl>
+    </section>
+  </div>
+</aside>

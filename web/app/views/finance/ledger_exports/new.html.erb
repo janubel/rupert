@@ -30,7 +30,7 @@
     </div>
   <% end %>
 
-  <p class="text-sm text-mocha">
-    Exports only posted entries in the chosen range; voided entries are excluded. QuickBooks IIF imports as a general journal; the CSV lists debits and credits per line for Xero, Wave, Sage and similar.
-  </p>
+  <div class="text-sm text-mocha">
+    Exports only posted entries in the chosen range; voided entries are excluded.<%= define('void_entry') %> QuickBooks IIF imports as a general journal; the CSV lists debits and credits per line for Xero, Wave, Sage and similar.<%= define('debit_credit') %>
+  </div>
 </div>

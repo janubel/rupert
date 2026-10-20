@@ -3,7 +3,7 @@
 Deployment readiness: [blueprint and required gates](docs/deployment-readiness.md) · [live milestone](https://github.com/techmore/rupert/milestone/1).
 
 Centralized inventory operations: a Shopify + Square sync
-engine with an Oatmeal-styled web dashboard, backed by SQLite in production. Runs as a
+engine with a web dashboard (neutral blue palette, light and dark themes), backed by SQLite in production. Runs as a
 Ruby on Rails 8.1 app (based on the
 [Shopify Ruby app template](https://github.com/Shopify/shopify-app-template-ruby))
 and is currently hosted at [rupert.stoverparc.org](https://rupert.stoverparc.org/).
@@ -20,7 +20,7 @@ Square ───┼── sync engine ──▶ SQLite DB     ──▶ GUI
 
 | Path | Purpose |
 | --- | --- |
-| `web/` | The Rails 8.1 app: sync engine services, Oatmeal GUI, JSON APIs |
+| `web/` | The Rails 8.1 app: sync engine services, the dashboard GUI (`app/assets/tailwind/application.css` holds the palette; `bin/check-palette-contrast` verifies it), JSON APIs |
 | `mobile/` | Staff iPhone/Android app (see `mobile/README.md`) |
 | `docs/` | Docs site, plans, audits and research (see `docs/README.md`) |
 | `deploy/` | SER8 (Incus) systemd units (web, jobs, backup) and host-side watcher/backup scripts (see Production and deployment) |
@@ -117,6 +117,7 @@ and never write SKUs without explicit sign-off.**
   or written automatically
 - **Sync** — run syncs, view run history and logs
 - **SwipeSimple** — import sales from a SwipeSimple CSV export (no public API) into the canonical sales stream
+- **Learn Rupert** (`/learning`) — first-run welcome and learning paths, role-aware first-week checklist, guided page tours, lessons with worked examples and knowledge checks, a searchable glossary, in-place definitions and calculation explainers, a `?` help panel on every page, and a read-only team training view. See [in-app learning](docs/ops/in-app-learning.md)
 - **Connections** — plain-language guide to every service's keys: what's set, where to find each, and how to renew
 - **Settings** — `.env` import/export (JSON API included) and DB backup/restore:
   - `GET /settings/env.json` · masked env keys

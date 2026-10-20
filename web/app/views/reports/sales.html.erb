@@ -1,20 +1,33 @@
 <%= render "reports/layout", title: "Sales report", subtitle: "Revenue trends, channels, locations, and top products over the last #{@days} days." do %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
-      <p class="stat-label">Total revenue</p>
+      <div class="stat-label">Total revenue<%= define('sales_total') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@total_revenue) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Orders</p>
+      <div class="stat-label">Orders<%= define('date_window') %></div>
       <p class="stat-value mt-1"><%= @total_orders %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Avg order value</p>
+      <div class="stat-label">Avg order value<%= define('average_sale') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@aov) %></p>
+      <%= explain_calculation(title: 'Average order value', id: 'sales-aov',
+            formula: 'Total revenue ÷ paid or fulfilled orders in the window.',
+            rows: [['Total revenue', number_to_currency(@total_revenue)], ['Orders', @total_orders],
+                   ['Average order value', @total_orders.to_i.zero? ? '—' : number_to_currency(@aov)]],
+            note: 'Both figures use the same paid and fulfilled orders, so the average matches the two numbers above. No orders means no average.',
+            term: 'average_sale', lesson: 'sales') %>
     </div>
     <div class="stat">
-      <p class="stat-label">Revenue / day</p>
+      <div class="stat-label">Revenue / day<%= define('revenue_per_day') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@revenue_daily.values.sum / @revenue_daily.size) rescue number_to_currency(0) %></p>
+      <% daily_days = @revenue_daily.size; daily_total = @revenue_daily.values.sum %>
+      <%= explain_calculation(title: 'Revenue per day', id: 'sales-revenue-per-day',
+            formula: 'Daily revenue totals added together ÷ number of days shown.',
+            rows: [['Sum of daily revenue', number_to_currency(daily_total)], ['Days in the window', daily_days],
+                   ['Revenue per day', daily_days.zero? ? '—' : number_to_currency(daily_total / daily_days)]],
+            note: 'Daily totals include every order with a gross amount in the window, so this can differ slightly from Total revenue, which counts paid and fulfilled orders only. Days without sales count as zero.',
+            term: 'revenue_per_day', lesson: 'reports') %>
     </div>
   </section>
 

@@ -1,23 +1,29 @@
 <%= render "reports/layout", title: "Financial report", subtitle: "P&L summary and tender breakdown over the last #{@days} days." do %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-5">
     <div class="stat">
-      <p class="stat-label">Gross revenue</p>
+      <div class="stat-label">Gross revenue<%= define('gross') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@revenue_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Tax collected</p>
+      <div class="stat-label">Tax collected<%= define('tax_collected') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@tax_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Refunds</p>
+      <div class="stat-label">Refunds<%= define('refund') %></div>
       <p class="stat-value mt-1 text-rose"><%= number_to_currency(@refund_cents / 100.0) %></p>
     </div>
     <div class="stat">
-      <p class="stat-label">Net revenue</p>
+      <div class="stat-label">Net revenue<%= define('net_revenue') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@net_cents / 100.0) %></p>
+      <%= explain_calculation(title: 'Net revenue', id: 'financial-net-revenue',
+            formula: 'Gross revenue − refunds recorded in the window. Tax collected is shown separately and not subtracted.',
+            rows: [['Gross revenue', number_to_currency(@revenue_cents / 100.0)], ['Refunds recorded', "− #{number_to_currency(@refund_cents / 100.0)}"],
+                   ['Net revenue', number_to_currency(@net_cents / 100.0)]],
+            note: (@unrecorded_refund_orders.to_i.positive? ? "#{pluralize(@unrecorded_refund_orders, 'refunded order')} with no recorded refund amount are not subtracted, so net revenue is overstated by up to #{number_to_currency(@unrecorded_refund_cents / 100.0)}." : 'Every refunded order in the window has a recorded refund amount.'),
+            term: 'net_revenue', lesson: 'reports') %>
     </div>
     <div class="stat">
-      <p class="stat-label">Avg order</p>
+      <div class="stat-label">Avg order<%= define('average_sale') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@avg_order_cents / 100.0) %></p>
     </div>
   </section>
