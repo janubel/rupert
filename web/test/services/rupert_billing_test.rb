@@ -48,6 +48,26 @@ class RupertBillingTest < ActiveSupport::TestCase
     assert row.commitment_accepted_at
     assert_nil row.stripe_subscription_id
   end
+  test 'owner approved invitations allow only listed active customers without inventing a paid subscription' do
+    previous = ENV['RUPERT_APPROVED_REFERRAL_CODES']
+    ENV['RUPERT_APPROVED_REFERRAL_CODES'] = ' legacy-invite '
+    referrer = Tenant.create!(name: 'Legacy customer', subdomain: 'legacy-customer')
+    referral = CustomerReferral.create!(tenant: referrer, code: 'LEGACY-INVITE')
+    assert_equal referral, CustomerReferral.eligible(' legacy-invite ', tenant: @tenant)
+    assert_nil CustomerSubscription.find_by(tenant: referrer)
+    assert_nil CustomerReferral.eligible(referral.code, tenant: referrer)
+    other = Tenant.create!(name: 'Another customer', subdomain: 'another-customer')
+    CustomerSubscription.create!(tenant: other, status: 'active')
+    CustomerReferral.create!(tenant: other, code: 'OTHER-INVITE')
+    assert_nil CustomerReferral.eligible('OTHER-INVITE', tenant: @tenant)
+    referral.update!(active: false)
+    assert_nil CustomerReferral.eligible(referral.code, tenant: @tenant)
+    referral.update!(active: true)
+    referrer.update!(status: 'suspended')
+    assert_nil CustomerReferral.eligible(referral.code, tenant: @tenant)
+  ensure
+    previous.nil? ? ENV.delete('RUPERT_APPROVED_REFERRAL_CODES') : ENV['RUPERT_APPROVED_REFERRAL_CODES'] = previous
+  end
   test 'webhook retrieves provider state and repeated old deliveries cannot restore status' do
     row = CustomerSubscription.create!(tenant: @tenant, stripe_subscription_id: 'sub_test', stripe_customer_id: 'cus_test', plan: 'monthly')
     event = { 'type' => 'customer.subscription.updated', 'livemode' => false, 'data' => { 'object' => { 'id' => 'sub_test', 'status' => 'active' } } }

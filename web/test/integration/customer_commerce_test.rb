@@ -67,6 +67,25 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test 'owner issued referral mode cannot create extra codes even for paying customers' do
+    previous = ENV['RUPERT_APPROVED_REFERRAL_CODES']
+    ENV['RUPERT_APPROVED_REFERRAL_CODES'] = 'LEGACY-INVITE'
+    CustomerSubscription.create!(tenant: @tenant, status: 'active')
+    post login_path, params: { email: @owner.email, password: 'password' }
+    assert_no_difference 'CustomerReferral.count' do
+      post billing_referral_path
+    end
+    assert_redirected_to billing_path
+    assert_includes flash[:alert], 'issued by Rupert support'
+    CustomerReferral.create!(tenant: @tenant, code: 'LEGACY-INVITE')
+    assert_no_difference 'CustomerReferral.count' do
+      post billing_referral_path
+    end
+    assert_equal 'Your referral code is ready.', flash[:notice]
+  ensure
+    previous.nil? ? ENV.delete('RUPERT_APPROVED_REFERRAL_CODES') : ENV['RUPERT_APPROVED_REFERRAL_CODES'] = previous
+  end
+
   test 'customer grants expire and revoke while support has no write or credential access' do
     host! 'support-customer.example.com'
     post login_path, params: { email: @operator.email, password: 'password123' }

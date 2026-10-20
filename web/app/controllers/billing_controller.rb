@@ -19,6 +19,13 @@ class BillingController < AuthenticatedController
   end
 
   def referral
+    if CustomerReferral.approved_codes.any?
+      existing = CustomerReferral.find_by(tenant: Current.tenant, active: true)
+      if existing && CustomerReferral.approved_codes.include?(existing.code)
+        return redirect_to billing_path, notice: 'Your referral code is ready.'
+      end
+      return redirect_to billing_path, alert: 'Referral invitations are currently issued by Rupert support.'
+    end
     unless CustomerSubscription.exists?(tenant: Current.tenant, status: 'active')
       return redirect_to billing_path, alert: 'Referral codes are available to active paying customers.'
     end
