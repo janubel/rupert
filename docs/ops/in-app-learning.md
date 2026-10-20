@@ -15,6 +15,8 @@ workspace account. Public documentation does not grant application access.
 - Connection onboarding offers learning before collecting credentials. Only
   settings writers see its credential form. Saved credentials, a successful
   source read and checking a known record are separate setup milestones.
+  The dashboard remains available while connections are being set up; missing
+  Shopify keys do not block learning or tools for a store using other sources.
 - **How this page works** is a closed native disclosure. It combines existing
   page guidance, relevant definitions and a link to practice. It never opens
   itself or blocks a work action. Staff pages use the same contextual help.

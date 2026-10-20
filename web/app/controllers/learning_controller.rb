@@ -9,7 +9,11 @@ class LearningController < AuthenticatedController
     @query = params[:q].to_s.strip.first(100)
     @terms = LearningCatalog::TERMS.select { |_key, term| @query.blank? || term.join(' ').downcase.include?(@query.downcase) }
       .sort_by { |_key, term| term.first.downcase }.to_h
-    @matching_lessons = @lessons.select { |lesson| @query.blank? || [lesson[:title], lesson[:summary], *lesson[:steps]].join(' ').downcase.include?(@query.downcase) }
+    @matching_lessons = @lessons.select do |lesson|
+      vocabulary = lesson[:terms].flat_map { |term| LearningCatalog::TERMS.fetch(term) }
+      text = [lesson[:title], lesson[:summary], *lesson[:steps], *vocabulary].join(' ')
+      @query.blank? || text.downcase.include?(@query.downcase)
+    end
   end
 
   def show
@@ -37,7 +41,7 @@ class LearningController < AuthenticatedController
       redirect_to learning_index_path, notice: 'Your learning path is ready. You can change it anytime.'
     elsif params[:dismiss] == '1'
       @journey.dismiss!
-      redirect_to(Current.user.employee? ? employee_app_path : root_path)
+      redirect_to(Current.user.employee? ? employee_app_path : helpers.navigation_start_path)
     else
       head :unprocessable_entity
     end

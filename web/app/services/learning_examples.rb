@@ -51,6 +51,12 @@ class LearningExamples
       rows: [['Recorded sales', '$100.00'], ['Bank funding evidence', '$97.00'], ['Difference to explain', '$3.00'], ['Possible explanation', 'A fee, only if evidence supports it']],
       takeaway: 'Do not invent a fee to force a match. Verify it in source evidence or assign a follow-up. Review again if the underlying evidence changes.'
     },
+    'tasks' => {
+      title: 'Make a blocker actionable',
+      context: 'A fictional task asks you to prepare a shelf display. Its product list has not been provided.',
+      rows: [['Assignee', 'You'], ['Current obstacle', 'Missing product list'], ['Useful status', 'Blocked'], ['Useful note', 'Please attach the approved product list so I can finish the display.']],
+      takeaway: 'The note explains what is missing and what will let work continue. Keep the task open until its outcome is complete.'
+    },
     'work' => {
       title: 'A measure needs a target and a period',
       context: 'A fictional project aims to complete 20 follow-up calls this week. The recorded result is 12.',

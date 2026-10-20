@@ -6,8 +6,6 @@ class HomeController < AuthenticatedController
   def index
     return render('landing/index', layout: false) if public_landing?
 
-    return redirect_to(onboarding_path) unless OnboardingController.configured?
-
     @widgets = DashboardWidget.entries(Current.user.dashboard_config_hash, user: Current.user)
     render('home/index')
   end

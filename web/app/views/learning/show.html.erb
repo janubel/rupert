@@ -24,5 +24,5 @@
     <%= submit_tag 'Check understanding', class: 'btn-primary' %>
     <p class="text-xs text-mocha">Practice here only saves your learning progress. You can retry as often as you like.</p>
   <% end %>
-  <section class="space-y-3 border-t border-fog pt-5"><h2 class="font-display text-xl">Ready to use it?</h2><p class="text-sm text-mocha">This opens your real workspace. Use the steps above as a checklist.</p><%= link_to @lesson[:action], @lesson[:destination], class: 'btn-ghost' %></section>
+  <section class="space-y-3 border-t border-fog pt-5"><h2 class="font-display text-xl">Ready to use it?</h2><p class="text-sm text-mocha">This opens your real workspace. Use the steps above as a checklist.</p><div class="flex flex-wrap gap-3"><%= link_to @lesson[:action], @lesson[:destination], class: 'btn-ghost' %><% if %w[tasks work].include?(@lesson[:key]) %><%= link_to 'Step-by-step project & task guide', projects_getting_started_path, class: 'btn-ghost' %><% end %></div></section>
 </article>

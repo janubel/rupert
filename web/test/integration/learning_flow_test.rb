@@ -56,6 +56,8 @@ class LearningFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select '#term-shared_stock'
     assert_select '#term-kpi', count: 0
+    get learning_index_path, params: { q: 'cash change' }
+    assert_select '#lessons h3', text: 'Serve a customer at the register'
     get learning_path('missing')
     assert_response :not_found
     get learning_index_path, params: { q: '<script>alert(1)</script>' }
@@ -124,6 +126,23 @@ class LearningFlowTest < ActionDispatch::IntegrationTest
     assert_select 'form[action=?]', onboarding_connect_path, count: 0
     assert_select 'a[href=?]', learning_index_path
     assert_select 'h1', text: 'Start with your everyday work'
+    get root_path
+    assert_response :success
+    assert_select 'aside[aria-label="Getting started"]'
+    assert_select 'a[href=?]', learning_path('start')
+  end
+
+  test 'employee task training describes assigned work and links the detailed guide' do
+    @user.update!(role: 'employee')
+    get learning_path('tasks')
+    assert_response :success
+    assert_select 'a[href=?]', projects_getting_started_path
+    get projects_tasks_path
+    assert_response :success
+    assert_select 'a[href=?]', learning_path('tasks')
+    assert_not_includes response.body, "Every task across all projects in one list"
+    post complete_learning_path('tasks'), params: { answer: '1' }
+    assert_redirected_to learning_index_path
   end
 
   test 'contextual help starts closed and stock definitions are on the rendered workspace' do
@@ -159,5 +178,13 @@ class LearningFlowTest < ActionDispatch::IntegrationTest
     assert_redirected_to login_path
     patch learning_preferences_path, params: { focus: 'stock' }
     assert_redirected_to login_path
+  end
+
+  test 'dismissing welcome returns delegated users to a permitted tool' do
+    @user.update_permission_overrides!(%w[inventory.read])
+    patch learning_preferences_path, params: { dismiss: '1' }
+    assert_redirected_to inventory_index_path
+    follow_redirect!
+    assert_response :success
   end
 end

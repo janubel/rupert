@@ -42,7 +42,13 @@ class LearningCatalog
     'draft' => ['Draft', 'Work saved for you to review and change before submission. Saving a draft does not mean it has been approved or carried out.'],
     'sync' => ['Sync / source pull', 'A read of source records into Rupert’s local mirror. Saving credentials is a separate step and does not prove that a pull succeeded.'],
     'follow_up' => ['Follow-up', 'An unresolved task with an owner, next step and due date. Closing a day’s evidence package does not automatically close its follow-ups.'],
-    'promise' => ['Available to promise', 'Rupert’s advisory capacity for one source item at one location: the lower usable mirror quantity or mirror available, minus local and warehouse holds, never below zero. Missing or invalid evidence can give zero capacity without proving there is no physical stock. Incoming transfers and waiting demand do not increase it.']
+    'promise' => ['Available to promise', 'Rupert’s advisory capacity for one source item at one location: the lower usable mirror quantity or mirror available, minus local and warehouse holds, never below zero. Missing or invalid evidence can give zero capacity without proving there is no physical stock. Incoming transfers and waiting demand do not increase it.'],
+    'assignee' => ['Task assignee', 'The person responsible for a task. A project owner and task assignee are separate choices; employees see the tasks assigned to their own account.'],
+    'blocked' => ['Blocked task', 'Work that cannot continue until a problem is resolved. Mark it blocked and add a note explaining what you need.'],
+    'native_id' => ['Source item ID / native ID', 'The item or variant identifier assigned by its original system. Use the source, item ID and location together; a reused SKU is not enough to prove two records are the same item.'],
+    'pool' => ['Stock pool', 'One exact source item at one exact location. A hold or allocation applies to that pool, not to every product sharing its SKU.'],
+    'journal' => ['Canonical order journal', 'Orders stored in Rupert’s common order format. Native C-Trax receipts stay in daily close and can contribute to the sales summary without appearing in this journal.'],
+    'business_date' => ['Business date', 'The operating day selected for a report. Check the displayed time zone and source coverage when comparing it with another system’s day.']
   }.freeze
 
   LESSONS = [
@@ -66,7 +72,7 @@ class LearningCatalog
       steps: ['Use My time for your schedule, hours and time off. Check that you are signed in as yourself.', 'Review your punches and request a correction when something is wrong. Check the dates and hours before submitting your timesheet.', 'Attach a clear original receipt and check its date, amount and purpose before submitting it. Submission sends it for review; it does not mean payment has been approved.'],
       question: 'Your recorded hours are wrong. What should you do?', choices: ['Submit them anyway', 'Request a correction and review the result', 'Use another person’s account'], answer: 1,
       explanation: 'Correct and review your own hours before submission.', destination: '/employee', action: 'Open My time' },
-    { key: 'stock', title: 'Understand stock before acting', minutes: 3, permission: 'inventory.read', paths: ['/inventory', '/stock_comparison', '/reconcile', '/alerts', '/stock_reservations', '/stock_requests'], terms: %w[mirror sku shared_stock on_hand available committed hold],
+    { key: 'stock', title: 'Understand stock before acting', minutes: 3, permission: 'inventory.read', paths: ['/inventory', '/stock_comparison', '/reconcile', '/alerts', '/stock_reservations', '/stock_requests'], terms: %w[mirror sku native_id shared_stock on_hand available committed hold pool],
       summary: 'Read quantities, identify items and avoid counting shared stock twice.',
       steps: ['Identify the native item, variant and location. A SKU alone may not uniquely identify a product.', 'Read the quantity label and timestamp. Mirror quantity is not always physical on-hand stock; missing observations remain unknown.', 'Shopify and C-Trax mostly observe shared physical stock. Compare their observations without adding them. Local counts and holds do not automatically update a provider.'],
       question: 'Shopify and C-Trax each show 10 units of the same shared physical stock. How many units can you conclude are present?', choices: ['20 units', '100 units', 'Do not sum them; verify the physical reference'], answer: 2,
@@ -76,7 +82,7 @@ class LearningCatalog
       steps: ['Choose the location being counted. Identify the exact variants and record the physical quantities, including a real zero when no units are present.', 'Review the worksheet before submitting. The comparison is captured on submission; inspect the quantity label, source and any unknown or ambiguous item matches.', 'Review differences with the approver. Approval records the count locally; it does not change mirrored or platform stock. Any source adjustment is a separate authorized task.'],
       question: 'You count 8 units against a captured comparison of 10. What does the variance mean?', choices: ['−2 units compared with the captured quantity', '+2 units compared with the captured quantity', 'The source was automatically updated to 8'], answer: 0,
       explanation: 'Variance is counted minus comparison: 8 − 10 = −2. Recording or approving the worksheet does not push a source adjustment.', destination: '/inventory_counts', action: 'Review manual counts' },
-    { key: 'sales', title: 'Make sense of sales totals', minutes: 3, permission: 'sales.read', paths: ['/sales', '/reports', '/ctrax_days'], terms: %w[sales_total average_sale gross refund deposit source freshness],
+    { key: 'sales', title: 'Make sense of sales totals', minutes: 3, permission: 'sales.read', paths: ['/sales', '/reports', '/ctrax_days'], terms: %w[sales_total average_sale journal business_date gross refund deposit source freshness],
       summary: 'Understand what a total covers before comparing it.',
       steps: ['Select the business date and channels you intend to review.', 'Read the report’s included amounts and source coverage. Review refunds, taxes and tips separately where indicated.', 'Compare equivalent periods and sources. Processor reports and deposits must not be added to sales as extra revenue.'],
       question: 'Should you add a processor deposit to the sales total?', choices: ['Yes, it is another sale', 'No, it represents a different stage of the money flow', 'Only if it arrived today'], answer: 1,
@@ -86,7 +92,12 @@ class LearningCatalog
       steps: ['Open Close & review and follow the next unfinished day. Check that expected source reports and originals are present.', 'Compare matching dates, currencies and locations. Document timing, fees and unexplained differences with evidence.', 'Assign unresolved follow-ups, then review the current data. Changed evidence requires a fresh review; a retained close package does not finish open follow-ups.'],
       question: 'Source evidence changed after you reviewed the day. What next?', choices: ['Keep relying on the old review', 'Delete the source evidence', 'Review the updated evidence again'], answer: 2,
       explanation: 'Reviews refer to a particular version of the evidence. Recheck the changed day.', destination: '/books', action: 'Open Close & review' },
-    { key: 'work', title: 'Track work and goals', minutes: 2, permission: 'projects.read', paths: ['/projects', '/goals'], terms: %w[kpi],
+    { key: 'tasks', title: 'Find and update your assigned tasks', minutes: 2, permission: 'assigned_tasks', paths: ['/projects/tasks', '/projects/getting-started'], terms: %w[assignee blocked],
+      summary: 'Know what is yours, update its status and make blockers visible.',
+      steps: ['Open My tasks in the staff navigation, or Tasks in the Work area. Employees see their own assigned tasks; managers can see the work their account permits.', 'Choose Board or List and use the filters to find the task. Start it when work begins, then mark it Done when the outcome is complete.', 'If you cannot continue, mark it Blocked and add a note about the help you need. Ask your manager if work is missing, unassigned or assigned to the wrong person.'],
+      question: 'You need a missing document before you can finish a task. What should you do?', choices: ['Mark it Done so it disappears', 'Mark it Blocked and explain what you need', 'Change another person’s assignment'], answer: 1,
+      explanation: 'A blocked status and a clear note make the obstacle visible so the right person can help.', destination: '/projects/tasks', action: 'Open tasks' },
+    { key: 'work', title: 'Track work and goals', minutes: 2, permission: 'projects.read', paths: ['/projects', '/goals'], terms: %w[kpi assignee],
       summary: 'Give each task a clear outcome and each measure a useful target.',
       steps: ['Open the project and find the task that needs action. Check its owner and due date.', 'Move tasks as the work progresses and record enough detail for the next person.', 'Read each KPI’s unit, period and target together. A number without its definition cannot explain progress.'],
       question: 'What makes a KPI useful?', choices: ['A number with a clear unit, period and target', 'The largest possible number', 'A title alone'], answer: 0,
@@ -94,7 +105,14 @@ class LearningCatalog
   ].freeze
 
   def self.available(user)
-    LESSONS.select { |lesson| lesson[:permission].nil? || (lesson[:permission] == 'pos' ? user.can_use_pos? : user.can?(lesson[:permission])) }
+    LESSONS.select do |lesson|
+      case lesson[:permission]
+      when nil then true
+      when 'pos' then user.can_use_pos?
+      when 'assigned_tasks' then user.employee? || user.can?('projects.read')
+      else user.can?(lesson[:permission])
+      end
+    end
   end
 
   def self.for_path(path, user)

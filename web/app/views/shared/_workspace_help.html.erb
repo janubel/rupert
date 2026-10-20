@@ -1,4 +1,5 @@
 <% guide = PageGuides.for_path(request.path); lesson = LearningCatalog.for_path(request.path, Current.user) %>
+<% guide = nil if Current.user.employee? && request.path.start_with?('/projects/') %>
 <% if guide || lesson %>
   <div class="mb-4 flex flex-wrap items-start justify-end gap-3 text-sm">
     <details class="workspace-help">

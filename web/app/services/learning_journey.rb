@@ -8,8 +8,9 @@ class LearningJourney
     { key: 'checkout', label: 'Serve customers', lessons: %w[start checkout sales] },
     { key: 'stock', label: 'Look after stock', lessons: %w[start stock counts] },
     { key: 'books', label: 'Understand sales and close the books', lessons: %w[start sales books] },
-    { key: 'work', label: 'Organize projects and goals', lessons: %w[start work] },
-    { key: 'staff', label: 'Manage my hours and receipts', lessons: %w[start staff] }
+    { key: 'work', label: 'Organize projects and goals', lessons: %w[start tasks work] },
+    { key: 'tasks', label: 'Find and update my tasks', lessons: %w[start tasks] },
+    { key: 'staff', label: 'Manage my hours and receipts', lessons: %w[start staff tasks] }
   ].freeze
 
   attr_reader :user
