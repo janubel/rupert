@@ -1,67 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>The page you were looking for doesn't exist (404)</title>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Page not found — Rupert</title>
   <style>
-  .rails-default-error-page {
-    background-color: #EFEFEF;
-    color: #2E2F30;
-    text-align: center;
-    font-family: arial, sans-serif;
-    margin: 0;
-  }
-
-  .rails-default-error-page div.dialog {
-    width: 95%;
-    max-width: 33em;
-    margin: 4em auto 0;
-  }
-
-  .rails-default-error-page div.dialog > div {
-    border: 1px solid #CCC;
-    border-right-color: #999;
-    border-left-color: #999;
-    border-bottom-color: #BBB;
-    border-top: #B00100 solid 4px;
-    border-top-left-radius: 9px;
-    border-top-right-radius: 9px;
-    background-color: white;
-    padding: 7px 12% 0;
-    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);
-  }
-
-  .rails-default-error-page h1 {
-    font-size: 100%;
-    color: #730E15;
-    line-height: 1.5em;
-  }
-
-  .rails-default-error-page div.dialog > p {
-    margin: 0 0 1em;
-    padding: 1em;
-    background-color: #F7F7F7;
-    border: 1px solid #CCC;
-    border-right-color: #999;
-    border-left-color: #999;
-    border-bottom-color: #999;
-    border-bottom-left-radius: 4px;
-    border-bottom-right-radius: 4px;
-    border-top-color: #DADADA;
-    color: #666;
-    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);
-  }
+    :root { color-scheme: light dark; --bg:#fbf5ef; --card:#ffffff; --ink:#1a393d; --muted:#5a524b; --line:#efe3d8; --accent:#48736d; --accent-ink:#f5f5f5; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#171412; --card:#201c19; --ink:#f3ece4; --muted:#c4b9ad; --line:#332d28; --accent:#5fa39b; --accent-ink:#1e1a17; } }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:1.5rem; background:var(--bg); color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",ui-sans-serif,system-ui,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+    main { width:100%; max-width:30rem; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:1.5rem; padding:2.5rem 2rem; box-shadow:0 1px 2px rgba(26,57,61,.06); }
+    img { width:72px; height:72px; border-radius:50%; }
+    h1 { margin:1.25rem 0 .5rem; font-family:"New York",ui-serif,"Iowan Old Style","Cardo",Georgia,serif; font-weight:400; font-size:2rem; line-height:1.15; letter-spacing:-.01em; text-wrap:balance; }
+    p { margin:0 auto 1.75rem; max-width:24rem; color:var(--muted); line-height:1.55; text-wrap:pretty; }
+    a.btn { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 1.4rem; border-radius:999px; background:var(--accent); color:var(--accent-ink); font-weight:500; text-decoration:none; transition:transform .12s ease, background-color .18s ease; }
+    a.btn:active { transform:scale(.97); }
+    a.btn:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+    @media (prefers-reduced-motion: reduce) { a.btn { transition:none; } }
   </style>
 </head>
-
-<body class="rails-default-error-page">
-  <!-- This file lives in public/404.html -->
-  <div class="dialog">
-    <div>
-      <h1>The page you were looking for doesn't exist.</h1>
-      <p>You may have mistyped the address or the page may have moved.</p>
-    </div>
-    <p>If you are the application owner check the logs for more information.</p>
-  </div>
+<body>
+  <main>
+    <img src="/branding/rupert-80.png" alt="" width="72" height="72">
+    <h1>Page not found</h1>
+    <p>The page you were looking for doesn't exist or has moved.</p>
+    <a class="btn" href="/">Back to the dashboard</a>
+  </main>
 </body>
 </html>
