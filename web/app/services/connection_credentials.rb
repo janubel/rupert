@@ -24,10 +24,17 @@ class ConnectionCredentials
     ],
     'google_sign_in' => [
       ['GOOGLE_OAUTH_CLIENT_ID', 'Client ID', true], ['GOOGLE_OAUTH_CLIENT_SECRET', 'Client secret', true]
+    ],
+    # Apple Pay is deliberately absent: its identity certificate and key are
+    # multi-line PEM, which this single-line form rejects. Those keys are set
+    # from the Settings → Environment (.env) import instead.
+    'google_pay' => [
+      ['GOOGLE_PAY_MERCHANT_ID', 'Merchant ID (optional in sandbox)', false],
+      ['GOOGLE_PAY_MERCHANT_NAME', 'Merchant name shown on the Google Pay sheet', false]
     ]
   }.freeze
   OPTIONAL_KEYS = %w[SHOPIFY_LOCATION_ID SQUARE_APPLICATION_ID SQUARE_ENVIRONMENT SQUARE_LOCATION_ID
-    AUTHORIZE_NET_SANDBOX BUZZ_ANNOUNCEMENTS_CHANNEL].freeze
+    AUTHORIZE_NET_SANDBOX BUZZ_ANNOUNCEMENTS_CHANNEL GOOGLE_PAY_MERCHANT_ID].freeze
   CHOICES = { 'SQUARE_ENVIRONMENT' => %w[production sandbox], 'AUTHORIZE_NET_SANDBOX' => %w[true false] }.freeze
 
   def self.fields(service)

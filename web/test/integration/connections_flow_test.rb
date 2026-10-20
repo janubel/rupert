@@ -61,6 +61,33 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     assert_equal 'no-store', response.headers['Cache-Control']
   end
 
+  # Regression: Apple Pay and Google Pay were listed as services but had no
+  # managed credential form, so their "Manage setup" links answered 404.
+  test 'every setup link on the connections page leads to a page' do
+    get_page connections_path
+    assert_response :success
+
+    links = css_select('a').select { |a| a.text.match?(/\A(Manage|View|Review) setup\z/) }.map { |a| a['href'] }.uniq
+    assert_operator links.size, :>=, 6, 'expected a setup link per service'
+
+    links.each do |href|
+      get_page href
+      assert_response :success, "#{href} should render for a signed-in admin"
+    end
+  end
+
+  test 'google pay has a managed credential form and apple pay points at the env import' do
+    get_page edit_connection_path('google_pay')
+    assert_response :success
+    assert_select 'label', /Merchant name/
+    assert_select 'label', /Merchant ID/
+
+    get_page connections_path
+    apple = css_select('[data-credential-service=apple_pay] a').find { |a| a.text.match?(/setup/) }
+    assert apple, 'Apple Pay card should keep a setup link'
+    assert_equal settings_path(anchor: 'env'), apple['href']
+  end
+
   test 'only the platform operator sees Drive keys and legacy tenant configuration is ignored' do
     drive = ConnectionsGuide::SERVICES.find { |service| service.key == 'google_drive' }
     drive.keys.each { |key| EnvStore.set(key, 'untrusted-tenant-value') }
