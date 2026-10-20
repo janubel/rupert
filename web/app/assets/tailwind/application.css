@@ -792,3 +792,37 @@ select.input {
     mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
   }
 }
+
+/* Customer tip choice: large tap targets with an unmistakable selected state. */
+label:has(> input[type="radio"][name="choice"]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.5rem;
+  cursor: pointer;
+  background: var(--color-paper);
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+label:has(> input[type="radio"][name="choice"]):hover {
+  border-color: color-mix(in srgb, var(--color-olive) 45%, var(--color-fog));
+}
+
+label:has(> input[type="radio"][name="choice"]:checked) {
+  border-color: var(--color-olive);
+  background: color-mix(in srgb, var(--color-olive) 12%, var(--color-paper));
+  box-shadow: inset 0 0 0 1px var(--color-olive);
+  font-weight: 600;
+}
+
+label:has(> input[type="radio"][name="choice"]:focus-visible) {
+  outline: 2px solid var(--color-olive);
+  outline-offset: 2px;
+}
+
+input[type="radio"][name="choice"] {
+  accent-color: var(--color-olive);
+  width: 1.1rem;
+  height: 1.1rem;
+}
