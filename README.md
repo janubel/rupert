@@ -1,7 +1,9 @@
 # Rupert
 
+Deployment readiness: [blueprint and required gates](docs/deployment-readiness.md) · [live milestone](https://github.com/techmore/rupert/milestone/1).
+
 Centralized inventory operations: a Shopify + Square sync
-engine with an Oatmeal-styled web dashboard, backed by SQLite in production. Runs as a
+engine with a web dashboard (neutral blue palette, light and dark themes), backed by SQLite in production. Runs as a
 Ruby on Rails 8.1 app (based on the
 [Shopify Ruby app template](https://github.com/Shopify/shopify-app-template-ruby))
 and is currently hosted at [rupert.stoverparc.org](https://rupert.stoverparc.org/).
@@ -18,11 +20,10 @@ Square ───┼── sync engine ──▶ SQLite DB     ──▶ GUI
 
 | Path | Purpose |
 | --- | --- |
-| `web/` | The Rails 8.1 app: sync engine services, Oatmeal GUI, JSON APIs |
+| `web/` | The Rails 8.1 app: sync engine services, the dashboard GUI (`app/assets/tailwind/application.css` holds the palette; `bin/check-palette-contrast` verifies it), JSON APIs |
 | `mobile/` | Staff iPhone/Android app (see `mobile/README.md`) |
-| `legacy/` | The original Node/React implementation, kept as reference |
 | `docs/` | Docs site, plans, audits and research (see `docs/README.md`) |
-| `deploy/` | SER8 (Incus) systemd units and host freshness watcher; older droplet units kept for reference (see Production and deployment) |
+| `deploy/` | SER8 (Incus) systemd units (web, jobs, backup) and host-side watcher/backup scripts (see Production and deployment) |
 | `bin/` | Host scripts (`backup.sh`) |
 | `shopify.app.toml` | Shopify app config (scopes, webhooks) |
 | `Dockerfile`, `docker-compose.yml` | Optional container deployment |
@@ -62,6 +63,8 @@ work. Tests skip the repository-root `.env`; use explicit test settings and
 an isolated checkout.
 
 ## Operations
+
+Start with the [operator runbook](docs/ops/operator-runbook.md) (daily checks, stuck syncs, GDPR requests, key rotation, onboarding), the [backup and restore runbook](docs/ops/backup-restore-runbook.md) (RPO/RTO, drill, restore procedure), the [environment reference](docs/ops/environment-reference.md), the [release process](docs/ops/release-process.md) and the [go-live checklist](docs/ops/go-live-checklist.md). The [production readiness audit](docs/audits/production-readiness.md) records what was verified and what the owner still has to decide.
 
 [Purchase receipt uploads and approvals](docs/purchase-receipts.md) are available from the Receipts tab, including staff self-service and an independent review queue.
 
@@ -159,7 +162,7 @@ Production is hosted on SER8 in Incus and served at
 [rupert.stoverparc.org](https://rupert.stoverparc.org/). GitHub is the source
 repository; pushing a commit or creating a GitHub release does not deploy it.
 
-The SER8-specific worker/backup units and host freshness watcher are under `deploy/`. Older droplet units are reference material; do not substitute them for the Incus layout.
+The SER8 web/worker/backup units and the host-side watcher and off-host backup scripts are under `deploy/`. The pre-Incus droplet units and the original Node/React implementation (`legacy/`) were removed on 2026-10-20; they remain in git history (`git show 03db8bb:legacy/README.md`).
 
 The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 61 tables verified). Live hosting and the October 14 application deployment were verified; see the [deployment receipt](docs/ops/deployment-2026-10-14.md). Read [SQLite and Incus operations](docs/ops/sqlite-incus.md) and the [cutover report](docs/ops/sqlite-migration.md). The PostgreSQL copy is frozen at cutover; switching back after new SQLite writes requires reconciliation.
 
@@ -175,8 +178,8 @@ The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 
 
 ## Data model
 
-Mirrors the legacy Prisma schema (table/column names preserved for import
-compatibility): `ShopifyProduct`, `ShopifyVariant`, `SquareItem`,
+Mirrors the original Prisma schema (table/column names were preserved when
+the Rails app replaced it): `ShopifyProduct`, `ShopifyVariant`, `SquareItem`,
 `SquareVariation`, `SkuLink`, `ReconcileRun`, `ReconcileItem` (historical run
 records; no longer written), `Location`,
 `InventoryLevel`, `InventoryMovement`, `StockAlert`, `SyncRun`,

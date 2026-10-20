@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 ENV['RAILS_ENV'] ||= 'test'
+if ENV['COVERAGE'] == '1'
+  require 'simplecov'
+  SimpleCov.command_name "test-#{ENV.fetch('TEST_ENV_NUMBER', Process.pid)}"
+end
 require_relative '../config/environment'
 require 'rails/test_help'
 
@@ -29,6 +33,11 @@ module ActiveSupport
 
     # Run tests in parallel with specified workers
     parallelize(workers: :number_of_processors)
+
+    if ENV['COVERAGE'] == '1'
+      parallelize_setup { |worker| SimpleCov.command_name("test-worker-#{worker}") }
+      parallelize_teardown { SimpleCov.result }
+    end
 
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all

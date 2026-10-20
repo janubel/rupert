@@ -16,12 +16,26 @@
     <%= submit_tag "Show lines", class: "btn-ghost btn-sm" %>
   <% end %>
 
+  <section class="card card-pad">
+    <h2 class="font-display text-xl">Statement ledger account</h2>
+    <p class="text-sm text-mocha">Choose the single asset account represented by this statement label. Existing labels are not mapped automatically. One label represents one ledger account.</p>
+    <% unless @reconciliation.mapping %><p role="status">Choose a ledger account before matching. Ledger totals and the difference are unavailable until then.</p><% end %>
+    <% if Current.user.can?('finance.write') %>
+    <%= form_tag finance_bank_reconciliation_account_path, method: :post, class: "operations-filters" do %>
+      <%= hidden_field_tag :account_label, @account_label %>
+      <%= hidden_field_tag :from, @from %><%= hidden_field_tag :to, @to %>
+      <%= select_tag :ledger_account_id, options_from_collection_for_select(@reconciliation.bank_accounts, :id, :label, @reconciliation.mapping&.ledger_account_id), include_blank: 'Choose a ledger account', required: true, class: 'select', aria: { label: 'Statement ledger account' } %>
+      <%= submit_tag 'Save account mapping', class: 'btn-primary btn-sm' %>
+    <% end %>
+    <% else %><p class="text-sm text-mocha">A finance editor can set the statement ledger account.</p><% end %>
+  </section>
+
   <% s = @reconciliation.summary %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
       <div class="stat-label">Lines<%= define('matched_line') %></div>
       <p class="stat-value mt-1"><%= s[:lines] %></p>
-      <p class="mt-1 text-sm text-mocha"><%= s[:matched] %> matched · <%= s[:unmatched_lines] %> unmatched</p>
+      <p class="mt-1 text-sm text-mocha"><%= s[:matched] %> with a matching ledger movement · <%= s[:unmatched_lines] %> without one. Review and confirm suggestions below.</p>
     </div>
     <div class="stat">
       <div class="stat-label">Statement net · USD<%= define('statement_net') %></div>
@@ -30,20 +44,22 @@
     </div>
     <div class="stat">
       <div class="stat-label">Ledger net · USD<%= define('ledger_net') %></div>
-      <p class="stat-value mt-1"><%= finance_money(s[:gl_net_cents]) %></p>
-      <p class="mt-1 text-sm text-mocha">cash + checking accounts</p>
+      <p class="stat-value mt-1"><%= s[:gl_net_cents].nil? ? "Unavailable" : finance_money(s[:gl_net_cents]) %></p>
+      <p class="mt-1 text-sm text-mocha"><%= @reconciliation.mapping&.ledger_account&.label || "No account mapped" %></p>
     </div>
     <div class="stat">
       <div class="stat-label">Difference · USD<%= define('bank_difference') %></div>
-      <p class="stat-value mt-1"><%= finance_money(s[:difference_cents]) %></p>
-      <p class="mt-1 text-sm font-semibold"><%= s[:difference_cents].zero? ? "✓ Statement and ledger agree." : "✗ Statement and ledger differ by #{finance_money_text(s[:difference_cents].abs)}." %></p>
-      <%= explain_calculation(title: 'Statement minus ledger', id: 'bank-difference',
-            formula: 'Statement net (in + out) − ledger net (cash and checking movements) for the same account and dates.',
-            rows: [['Statement in', finance_money(s[:statement_in_cents])], ['Statement out', finance_money(s[:statement_out_cents])], ['Statement net', finance_money(s[:statement_net_cents])],
-                   ['Ledger in', finance_money(s[:gl_in_cents])], ['Ledger out', finance_money(s[:gl_out_cents])], ['Ledger net', finance_money(s[:gl_net_cents])],
-                   ['Difference', finance_money(s[:difference_cents])]],
-            note: "#{s[:unmatched_lines]} statement #{'line'.pluralize(s[:unmatched_lines])} and #{s[:unmatched_gl]} ledger #{'movement'.pluralize(s[:unmatched_gl])} are still unmatched. Ignored lines are excluded. Confirming a match records the link only; nothing here changes an amount.",
-            term: 'bank_difference', lesson: 'books') %>
+      <p class="stat-value mt-1"><%= s[:difference_cents].nil? ? "Unavailable" : finance_money(s[:difference_cents]) %></p>
+      <p class="mt-1 text-sm font-semibold"><%= s[:difference_cents].nil? ? "Choose the statement ledger account." : s[:difference_cents].zero? ? "Selected-period net movements agree; review unmatched lines." : "Selected-period net difference: #{finance_money_text(s[:difference_cents].abs)}." %></p>
+      <% unless s[:difference_cents].nil? %>
+        <%= explain_calculation(title: 'Statement minus ledger', id: 'bank-difference',
+              formula: 'Statement net (in + out) − ledger net (movements in the selected ledger account) for the selected period.',
+              rows: [['Statement in', finance_money(s[:statement_in_cents])], ['Statement out', finance_money(s[:statement_out_cents])], ['Statement net', finance_money(s[:statement_net_cents])],
+                     ['Ledger in', finance_money(s[:gl_in_cents])], ['Ledger out', finance_money(s[:gl_out_cents])], ['Ledger net', finance_money(s[:gl_net_cents])],
+                     ['Difference', finance_money(s[:difference_cents])]],
+              note: "#{s[:unmatched_lines]} statement #{'line'.pluralize(s[:unmatched_lines])} and #{s[:unmatched_gl]} ledger #{'movement'.pluralize(s[:unmatched_gl])} are still unmatched. Ignored lines are excluded. Confirming a match records the link only; nothing here changes an amount.",
+              term: 'bank_difference', lesson: 'books') %>
+      <% end %>
     </div>
   </section>
 
@@ -144,7 +160,6 @@
   <% end %>
 
   <p class="text-sm text-mocha">
-    Reconciles against the Cash (1000) and Checking (1100) accounts. Card sales are posted to Cash on receipt and settle to the bank later, so some statement deposits will not pair one-to-one — record bank withdrawals as expenses on the
-    <%= link_to "bank statements", bank_statements_path, class: "link" %> page first, then reconcile here.
+    Compares non-ignored statement lines with posted movements in the selected ledger account for the same dates. Matching suggestions require the same signed amount and use your date window. A zero net difference does not establish complete records or a reconciled bank balance; review unmatched items and settlement timing.
   </p>
 </div>

@@ -65,9 +65,11 @@ class BookkeepingHardeningTest < ActionDispatch::IntegrationTest
     doc = ReconciliationDocument.where(kind: 'bank_statement').order(:id).last
     line = BankStatementLine.for_document(doc.id).sole
     line.update_columns(status: 'matched', journal_entry_id: entry.id)
+    BankStatementAccount.create!(account_label: 'Split checking', ledger_account: account('1100'))
 
     recon = Finance::BankReconciliation.new(account_label: 'Split checking', from: entry.posted_on - 1, to: entry.posted_on + 1)
-    assert_equal [-100], recon.unmatched_gl.map { |m| m[:signed_cents] }
+    assert_empty recon.unmatched_gl
+    assert_equal(-200, recon.summary[:gl_net_cents]) # Cash belongs to its own statement account.
   end
 
   # M2

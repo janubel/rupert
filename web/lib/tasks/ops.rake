@@ -366,3 +366,15 @@ namespace :ops do
     end
   end
 end
+
+namespace :ops do
+  desc 'Re-encrypt Shop rows whose Shopify token was stored before encryption was enabled (idempotent)'
+  task encrypt_shop_tokens: :environment do
+    rewritten = 0
+    Shop.find_each do |shop|
+      shop.encrypt unless shop.encrypted_attribute?(:shopify_token)
+      rewritten += 1 if shop.saved_changes? || shop.previous_changes.any?
+    end
+    puts "Shop rows checked: #{Shop.count}; re-encrypted: #{rewritten}"
+  end
+end

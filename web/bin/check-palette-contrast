@@ -1,0 +1,75 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Verifies the dashboard palette against WCAG 2.x contrast minimums, for the
+# base tokens (@theme, the Herbal default) and every data-theme override, straight from
+# app/assets/tailwind/application.css so the two cannot drift apart.
+#
+#   bin/check-palette-contrast          # exit 1 on any failing pair
+#   bin/check-palette-contrast --all    # print every pair, not just failures
+CSS = File.expand_path('../app/assets/tailwind/application.css', __dir__)
+TOKENS = %w[oat cream paper ink mocha taupe fog haze olive olive-deep sage clay butter rose fern edge
+  danger danger-bg danger-edge success success-bg success-edge warn warn-bg warn-edge on-butter].freeze
+
+# Tokens a block does not override (on-butter) fall back to the base (Herbal) value.
+def tokens_in(block, fallback = {})
+  TOKENS.to_h do |name|
+    [name, block[/--color-#{Regexp.escape(name)}:\s*(#[0-9a-fA-F]{6})/, 1] || fallback[name] || raise("missing --color-#{name}")]
+  end
+end
+
+css = File.read(CSS)
+herbal = tokens_in(css[/@theme \{.*?\n\}/m])
+themes = { 'herbal' => herbal }
+css.scan(/^\s*:root\[data-theme="(\w+)"\] \{\n(.*?)\n\s*\}/m).each { |name, block| themes[name] = tokens_in(block, herbal) }
+raise 'expected five appearances (herbal, light, mist, sepia, dark)' unless themes.keys.sort == %w[dark herbal light mist sepia]
+
+def channel(value) = value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055)**2.4
+
+def rgb(hex) = hex.delete('#').scan(/../).map { |pair| pair.to_i(16) / 255.0 }
+
+def luminance(hex)
+  r, g, b = rgb(hex).map { |value| channel(value) }
+  (0.2126 * r) + (0.7152 * g) + (0.0722 * b)
+end
+
+def ratio(a, b)
+  high, low = [luminance(a), luminance(b)].sort.reverse
+  (high + 0.05) / (low + 0.05)
+end
+
+def blend(fg, bg, alpha) = format('#%02x%02x%02x', *rgb(fg).zip(rgb(bg)).map { |f, b| ((f * alpha) + (b * (1 - alpha))) * 255 }.map(&:round))
+
+def pairs(t)
+  chip = ->(name) { blend(t[name], t['paper'], 0.10) }
+  text = %w[ink mocha taupe].product(%w[paper oat haze cream]).map { |fg, bg| ["#{fg} on #{bg}", t[fg], t[bg], 4.5] }
+  text + [
+    ['olive text on paper', t['olive'], t['paper'], 4.5], ['olive text on oat', t['olive'], t['oat'], 4.5],
+    ['olive-deep on paper', t['olive-deep'], t['paper'], 4.5],
+    ['cream on olive (btn-primary)', t['cream'], t['olive'], 4.5], ['cream on olive-deep (hover)', t['cream'], t['olive-deep'], 4.5],
+    ['olive-deep on olive chip', t['olive-deep'], chip.call('olive'), 4.5], ['clay on clay chip', t['clay'], chip.call('clay'), 4.5],
+    ['rose on rose chip', t['rose'], chip.call('rose'), 4.5], ['fern on fern chip', t['fern'], chip.call('fern'), 4.5],
+    ['clay on paper', t['clay'], t['paper'], 4.5], ['rose on paper', t['rose'], t['paper'], 4.5],
+    ['fern on paper', t['fern'], t['paper'], 4.5], ['sage on paper', t['sage'], t['paper'], 4.5],
+    ['cream on fern', t['cream'], t['fern'], 4.5], ['cream on rose', t['cream'], t['rose'], 4.5], ['cream on clay', t['cream'], t['clay'], 4.5],
+    ['on-butter on butter', t['on-butter'], t['butter'], 4.5],
+    ['danger on danger-bg', t['danger'], t['danger-bg'], 4.5], ['success on success-bg', t['success'], t['success-bg'], 4.5],
+    ['warn on warn-bg', t['warn'], t['warn-bg'], 4.5], ['danger on paper', t['danger'], t['paper'], 4.5],
+    ['success on paper', t['success'], t['paper'], 4.5], ['warn on paper', t['warn'], t['paper'], 4.5],
+    ['edge vs paper (control border, 1.4.11)', t['edge'], t['paper'], 3.0], ['olive vs paper (focus ring)', t['olive'], t['paper'], 3.0]
+  ]
+end
+
+show_all = ARGV.include?('--all')
+failures = 0
+themes.each do |theme, t|
+  puts "== #{theme}"
+  pairs(t).each do |name, a, b, need|
+    r = ratio(a, b)
+    ok = r >= need
+    failures += 1 unless ok
+    puts format('  %s %5.2f (need %.1f) %s', ok ? 'ok  ' : 'FAIL', r, need, name) if show_all || !ok
+  end
+end
+puts(failures.zero? ? "Palette contrast: all pairs pass in all #{themes.size} appearances." : "Palette contrast: #{failures} failing pair(s).")
+exit(failures.zero? ? 0 : 1)

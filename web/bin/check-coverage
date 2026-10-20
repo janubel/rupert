@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Enforce a line-coverage floor on the files a shop depends on most: the sync
+# engine, platform clients, order/money import and the webhook path. Reads the
+# merged SimpleCov result produced by `COVERAGE=1 bin/rails test`.
+#
+#   bin/check-coverage            # exit 1 when any critical file is under its floor
+#   bin/check-coverage --report   # print every critical file's coverage
+require 'json'
+
+ROOT = File.expand_path('..', __dir__)
+RESULTSET = File.join(ROOT, 'coverage', '.resultset.json')
+FLOORS = {
+  'app/services/sync_engine.rb' => 80,
+  'app/services/catalog_syncer.rb' => 80,
+  'app/services/square_syncer.rb' => 80,
+  'app/services/shopify_client.rb' => 85,
+  'app/services/square_client.rb' => 85,
+  'app/services/http_retry.rb' => 85,
+  'app/services/ledger_importer.rb' => 85,
+  'app/services/canonical_order_importer.rb' => 80,
+  'app/services/inventory_writer.rb' => 85,
+  'app/services/money.rb' => 95,
+  'app/jobs/sync_job.rb' => 85,
+  'app/controllers/concerns/webhooks/shopify_ingestion.rb' => 85,
+  'app/jobs/customers_redact_job.rb' => 85,
+  'app/models/webhook_delivery.rb' => 85
+}.freeze
+
+abort("No coverage result at #{RESULTSET}; run COVERAGE=1 bin/rails test first.") unless File.exist?(RESULTSET)
+
+merged = Hash.new { |h, k| h[k] = nil }
+JSON.parse(File.read(RESULTSET)).each_value do |command|
+  command.fetch('coverage').each do |file, data|
+    lines = data.is_a?(Hash) ? data['lines'] : data
+    next unless lines
+
+    merged[file] = merged[file] ? merged[file].zip(lines).map { |a, b| a.nil? && b.nil? ? nil : a.to_i + b.to_i } : lines
+  end
+end
+
+report = ARGV.include?('--report')
+failures = []
+FLOORS.each do |relative, floor|
+  lines = merged[File.join(ROOT, relative)]
+  if lines.nil?
+    failures << "#{relative}: not in the coverage result"
+    next
+  end
+  relevant = lines.compact
+  covered = relevant.count(&:positive?)
+  pct = relevant.empty? ? 100.0 : (covered * 100.0 / relevant.size)
+  puts format('%-62s %6.1f%% (floor %d%%)', relative, pct, floor) if report
+  failures << format('%s: %.1f%% < %d%%', relative, pct, floor) if pct < floor
+end
+
+if failures.empty?
+  puts "Coverage floors met for #{FLOORS.size} critical files."
+else
+  warn "Coverage below floor:\n  #{failures.join("\n  ")}"
+  exit 1
+end

@@ -4,7 +4,7 @@
   <% if @reviewer && @calendar_view %>
     <%= render 'people/timesheets/calendar', calendar: @calendar, week: (@week_start || Date.current.beginning_of_week) %>
   <% end %>
-  
+
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Timesheets</h1>

@@ -61,4 +61,3 @@ Source: unpublished design (project-internal; created from the 2026-08-13 audit)
   InventoryMovement.journal!; split Settings/Reports controllers; fix the
   size-families collection approve_all 404; kill three N+1 hotspots; test
   bootstrap helper.
-
