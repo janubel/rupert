@@ -468,6 +468,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
     t.index ["tenant_id"], name: "index_authorize_net_transactions_on_tenant_id"
   end
 
+  create_table "bank_statement_accounts", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "account_label", null: false
+    t.integer "ledger_account_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ledger_account_id"], name: "index_bank_statement_accounts_on_ledger_account_id"
+    t.index ["tenant_id", "account_label"], name: "idx_bank_account_labels", unique: true
+    t.index ["tenant_id", "ledger_account_id"], name: "idx_bank_account_ledgers", unique: true
+    t.index ["tenant_id"], name: "index_bank_statement_accounts_on_tenant_id"
+  end
+
   create_table "bank_statement_lines", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.integer "document_id", null: false
@@ -489,7 +501,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
     t.boolean "review_flag", default: false, null: false
     t.datetime "reviewed_at"
     t.bigint "journal_entry_id"
-    t.index ["journal_entry_id"], name: "idx_bank_lines_journal_entry_unique", unique: true, where: "journal_entry_id IS NOT NULL"
+    t.index ["tenant_id", "account_label", "journal_entry_id"], name: "idx_bank_lines_account_journal_unique", unique: true, where: "journal_entry_id IS NOT NULL"
     t.index ["tenant_id", "document_id", "status"], name: "idx_bank_lines_document"
     t.index ["tenant_id", "fingerprint"], name: "idx_bank_lines_fingerprint", unique: true
     t.index ["tenant_id"], name: "index_bank_statement_lines_on_tenant_id"
@@ -2681,6 +2693,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
   add_foreign_key "authorize_net_sale_links", "users", column: "reviewed_by_id"
   add_foreign_key "authorize_net_sale_links", "users", column: "revoked_by_id"
   add_foreign_key "authorize_net_transactions", "tenants"
+  add_foreign_key "bank_statement_accounts", "accounts", column: "ledger_account_id"
+  add_foreign_key "bank_statement_accounts", "tenants"
   add_foreign_key "bulk_consumptions", "bulk_lots"
   add_foreign_key "bulk_consumptions", "bulk_movements"
   add_foreign_key "bulk_consumptions", "bulk_recipes"

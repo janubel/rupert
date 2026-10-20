@@ -6,7 +6,7 @@ module Finance
   # pairing. Suggestions are computed read-only; confirming persists the link.
   class BankReconciliationsController < AuthenticatedController
     before_action -> { authorize(:module, :finance_read?) }
-    before_action -> { authorize(:module, :finance_write?) }, only: %i[match unmatch ignore]
+    before_action -> { authorize(:module, :finance_write?) }, only: %i[match unmatch ignore map_account]
 
     def index
       @account_label = params[:account_label].presence || default_account_label
@@ -16,6 +16,24 @@ module Finance
         window_days: params[:window_days])
       @account_labels = BankStatementLine.distinct.order(:account_label).pluck(:account_label)
       response.headers['Cache-Control'] = 'private, no-store'
+    end
+
+    def map_account
+      label = BankStatementLine.where(account_label: params[:account_label]).limit(1).pick(:account_label)
+      raise ActiveRecord::RecordNotFound unless label
+
+      account = BankStatementAccount.available_accounts.find(params[:ledger_account_id])
+      mapping = BankStatementAccount.find_or_initialize_by(account_label: label)
+      save_mapping = -> { mapping.update!(ledger_account: account) }
+      BankStatementAccount.transaction do
+        # Serialize first-time mappings with statement decisions, including legacy labels.
+        Tenant.where(id: Current.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
+        mapping.persisted? ? mapping.with_lock(&save_mapping) : save_mapping.call
+      end
+      ActivityLogger.log('bank_statement_account_mapped', subject: mapping,
+        details: "Statement account mapped to ledger account ##{account.id}")
+      redirect_to finance_bank_reconciliation_path(account_label: label, from: params[:from], to: params[:to]),
+        notice: 'Statement ledger account saved. Existing records were preserved.'
     end
 
     def match
