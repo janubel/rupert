@@ -30,6 +30,9 @@ authorization, tenant isolation, state transitions, and board behavior.
 - Successful project/task creation, edits, deletion, and transitions record
   actor-attributed tenant-scoped activity entries using the existing logger.
   This inherits its best-effort logging behavior; it is not an immutable ledger.
+- The production image supplies throwaway values to the asset compilation
+  process for required production initializers. These are not runtime defaults.
+  The entrypoint uses the POSIX shell available in the Alpine base image.
 
 ## Verification
 
