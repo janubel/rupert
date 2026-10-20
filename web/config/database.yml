@@ -48,7 +48,7 @@ production:
   # The well-known "rupert" default must never run in production. Set
   # POSTGRES_PASSWORD in the droplet .env or the app refuses to boot. ERB
   # renders every block, so only raise when production is the running env.
-<% if Rails.env.production? %>
+<% if Rails.env.production? && ENV["SECRET_KEY_BASE_DUMMY"].blank? %>
   password: <%= ENV.fetch("POSTGRES_PASSWORD") { raise "POSTGRES_PASSWORD must be set in the production environment" } %>
 <% end %>
 <% end %>

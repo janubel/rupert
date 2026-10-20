@@ -6,7 +6,9 @@
 # client secret, Drive refresh, Buzz keys) in a way anyone with the source can
 # decrypt. Development/test use fixed keys so encrypted settings work out of
 # the box locally.
-if Rails.env.production?
+# SECRET_KEY_BASE_DUMMY marks a build-time run (asset precompile in the Docker
+# image) where no real keys exist and no database is touched.
+if Rails.env.production? && ENV['SECRET_KEY_BASE_DUMMY'].blank?
   %w[RAILS_ENCRYPTION_PRIMARY_KEY RAILS_ENCRYPTION_DETERMINISTIC_KEY RAILS_ENCRYPTION_KEY_DERIVATION_SALT].each do |key|
     if ENV[key].blank?
       raise "Missing #{key} in the environment — set it (bin/rails db:encryption:init) or encrypted settings will be unreadable"
