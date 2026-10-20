@@ -37,7 +37,7 @@
           <div>
             <%= f.label :tenant_subdomain, "Web address", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
             <div class="flex items-center gap-2">
-              <%= f.text_field :tenant_subdomain, required: true, pattern: "[a-z0-9][a-z0-9-]*[a-z0-9]", placeholder: "my-business", class: "input", data: { setup_slug_target: "slug", action: "input->setup-slug#onSlugInput" } %>
+              <%= f.text_field :tenant_subdomain, required: true, pattern: '[a-z0-9][a-z0-9\-]*[a-z0-9]', placeholder: "my-business", class: "input", data: { setup_slug_target: "slug", action: "input->setup-slug#onSlugInput" } %>
               <span class="whitespace-nowrap text-sm text-taupe">.<%= request.domain %></span>
             </div>
             <p class="mt-1 text-xs text-taupe">Filled in from your business name — edit it if you like.</p>

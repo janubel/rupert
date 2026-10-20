@@ -12,6 +12,9 @@ module ConnectionsHelper
   def connection_service_setup_path(service)
     return pos_connection_path(service[:key]) if service[:kind] == 'provider'
     return settings_path(anchor: 'drive') if service[:key] == 'google_drive'
+    # Services whose keys have no managed form (Apple Pay's PEM certificate and
+    # key) are set from the .env import; linking to the edit form would 404.
+    return settings_path(anchor: 'env') unless ConnectionCredentials::FIELDS.key?(service[:key])
 
     edit_connection_path(service[:key])
   end
