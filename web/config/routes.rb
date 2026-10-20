@@ -545,11 +545,5 @@ Rails.application.routes.draw do
 
   # Unknown paths get a real 404 (rendering the dashboard for any URL made
   # broken links invisible). The dashboard stays reachable at / and /dashboard.
-  get '*path', to: ->(_env) { [404, { 'Content-Type' => 'text/html' }, [<<~HTML]] }
-    <!doctype html><html><head><meta charset="utf-8"><title>Page not found — Rupert</title></head>
-    <body style="font-family: system-ui; padding: 3rem;">
-      <h1>Page not found</h1>
-      <p>The page you were looking for doesn't exist. <a href="/">Back to the dashboard</a>.</p>
-    </body></html>
-  HTML
+  get '*path', to: ->(_env) { [404, { 'Content-Type' => 'text/html' }, [Rails.public_path.join('404.html').read]] }
 end
