@@ -115,6 +115,19 @@ class ShopifyWebhooksTest < ActionDispatch::IntegrationTest
     assert_not Shop.exists?(shopify_domain: SHOP)
   end
 
+  test 'a replayed delivery id is acknowledged once and processed once' do
+    payload = { 'id' => 1, 'domain' => SHOP }
+    body = payload.to_json
+    headers = headers_for('app/uninstalled', body)
+    assert_enqueued_jobs(1, only: AppUninstalledJob) do
+      post '/api/webhooks/app_uninstalled', params: body, headers: headers
+      assert_response :no_content
+      post '/api/webhooks/app_uninstalled', params: body, headers: headers
+      assert_response :no_content
+    end
+    assert_equal 1, WebhookDelivery.where(provider: 'shopify', topic: 'app/uninstalled').count
+  end
+
   test 'a delivery for an unknown shop is acknowledged and the job does nothing' do
     deliver('/api/webhooks/customers_redact', 'customers/redact', { 'customer' => { 'id' => 1 } }, shop: 'unknown.myshopify.com')
     assert_response :no_content

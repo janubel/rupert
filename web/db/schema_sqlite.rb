@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_100000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -2529,6 +2529,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
     t.index ["warehouse_payment_attempt_id"], name: "index_warehouse_stock_holds_on_warehouse_payment_attempt_id"
     t.check_constraint "quantity > 0", name: "warehouse_holds_positive_quantity"
     t.check_constraint "status IN ('held', 'released')", name: "warehouse_holds_valid_status"
+  end
+
+  create_table "webhook_deliveries", force: :cascade do |t|
+    t.string "provider", null: false
+    t.string "delivery_id", null: false
+    t.string "topic", null: false
+    t.string "shop_domain"
+    t.string "status", default: "queued", null: false
+    t.string "job_id"
+    t.datetime "received_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "delivery_id"], name: "index_webhook_deliveries_on_provider_and_delivery_id", unique: true
+    t.index ["received_at"], name: "index_webhook_deliveries_on_received_at"
   end
 
   create_table "workspace_signup_events", force: :cascade do |t|
