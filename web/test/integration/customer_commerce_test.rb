@@ -29,7 +29,7 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
     assert_difference ['Tenant.count', 'User.count', 'CustomerSubscription.count'], 1 do
       get google_callback_path, params: { state: session[:oauth_state], code: 'verified-code' }
     end
-    assert_redirected_to billing_path
+    assert_redirected_to workspace_path
     user = User.find_by!(email: 'newperson@gmail.com')
     assert_equal 'admin', user.role
     assert_equal user.id, session[:user_id]

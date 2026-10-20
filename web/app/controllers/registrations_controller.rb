@@ -5,9 +5,11 @@ class RegistrationsController < ApplicationController
   before_action { response.headers['Cache-Control'] = 'no-store' }
   rate_limit to: 10, within: 1.hour, only: :create
   def new
+    head :not_found if WorkspaceNode.isolated?
   end
 
   def create
+    return head :not_found if WorkspaceNode.isolated?
     fields = params.require(:registration).permit(:workspace_name, :requested_subdomain).to_h.transform_values { |value| value.to_s.strip }
     tenant = Tenant.new(name: fields['workspace_name'], subdomain: fields['requested_subdomain'])
     unless tenant.valid? && !WorkspaceSignup::RESERVED_SUBDOMAINS.include?(tenant.subdomain)

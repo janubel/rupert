@@ -52,3 +52,5 @@ Rails.application.config.filter_parameters += %i[registration reason referral_co
 
 # Stripe event objects can contain customer contact and invoice information.
 Rails.application.config.filter_parameters += [/\Adata\z/i]
+
+Rails.application.config.filter_parameters += %i[handoff lease instance_secret owner_email owner_name google_subject]

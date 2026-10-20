@@ -7,11 +7,12 @@
       <p class="mt-1 text-sm text-mocha">Sign in to continue</p>
       <p class="mt-3 rounded-xl bg-haze px-3 py-2 text-left text-xs leading-relaxed text-mocha">
         <span class="font-semibold text-ink">First time here?</span>
-        Sign in with Google if your company domain is enabled — you'll get a staff account automatically. Otherwise, ask your admin to grant you access.
+        <% if WorkspaceNode.isolated? %>Use the account provided by your workspace administrator, or open your workspace through your Rupert account.<% else %>Sign in with Google if your company domain is enabled — you'll get a staff account automatically. Otherwise, ask your admin to grant you access.<% end %>
       </p>
-      <p class="mt-3 text-sm text-mocha"><%= link_to "Create a free account", start_path, class: "font-semibold text-olive hover:underline" %></p>
+      <% unless WorkspaceNode.isolated? %><p class="mt-3 text-sm text-mocha"><%= link_to "Create a free account", start_path, class: "font-semibold text-olive hover:underline" %></p><% end %>
     </div>
 
+    <% if WorkspaceNode.isolated? %><%= link_to 'Open with my Rupert account', WorkspaceNode.control_origin + '/login', class: 'btn-primary w-full justify-center', data: {turbo: false} %><% end %>
     <% if GoogleOauthService.configured? %>
       <%= link_to google_auth_path, class: "btn-primary w-full justify-center", data: { turbo: false } do %>
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" class="shrink-0">

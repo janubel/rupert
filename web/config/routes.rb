@@ -79,6 +79,15 @@ Rails.application.routes.draw do
   get '/auth/google', to: 'oauth#authorize', as: :google_auth
   get '/auth/google/callback', to: 'oauth#callback', as: :google_callback
 
+  get '/workspace', to: 'workspaces#show', as: :workspace
+  post '/workspace/session', to: 'workspaces#session_start', as: :workspace_session
+  get '/instance/health', to: 'instance_health#show'
+  post '/instance/session', to: 'instance_sessions#create'
+  post '/internal/workspaces/claim', to: 'internal/workspace_provisioning#claim'
+  post '/internal/workspaces/:id/progress', to: 'internal/workspace_provisioning#update'
+  post '/internal/workspaces/:id/exchange', to: 'internal/workspace_sessions#exchange'
+  post '/internal/workspaces/:id/support', to: 'internal/workspace_sessions#support'
+
   get '/start', to: 'registrations#new', as: :start
   post '/start', to: 'registrations#create'
   get '/billing', to: 'billing#show', as: :billing
@@ -92,6 +101,7 @@ Rails.application.routes.draw do
 
   get '/signup', to: 'signups#new', as: :signup
   post '/signup', to: 'signups#create'
+  post '/platform/deployments/:id/retry', to: 'platform#retry_deployment', as: :retry_platform_deployment
   post '/platform/workspaces/:id/support', to: 'platform#enter_support', as: :enter_platform_support
   delete '/platform/support-session', to: 'platform#leave_support', as: :leave_platform_support
   get '/platform', to: 'platform#index', as: :platform

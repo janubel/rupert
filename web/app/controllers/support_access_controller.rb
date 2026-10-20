@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class SupportAccessController < AuthenticatedController
+  before_action do
+    redirect_to(WorkspaceNode.control_origin + '/support-access', allow_other_host: true) if WorkspaceNode.isolated?
+  end
   before_action :require_customer_owner
   before_action { response.headers['Cache-Control'] = 'no-store' }
   rescue_from ActiveRecord::RecordNotFound do

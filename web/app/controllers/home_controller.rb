@@ -36,7 +36,7 @@ class HomeController < AuthenticatedController
   private
 
   def public_landing?
-    Current.user.nil? && request.path == root_path && action_name == 'index'
+    !WorkspaceNode.isolated? && Current.user.nil? && request.path == root_path && action_name == 'index'
   end
 
   def require_login

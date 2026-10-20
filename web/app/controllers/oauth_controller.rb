@@ -23,6 +23,7 @@ class OauthController < ApplicationController
   skip_before_action :require_login, only: %i[authorize callback]
 
   def authorize
+    return redirect_to(WorkspaceNode.control_origin + '/login', allow_other_host: true) if WorkspaceNode.isolated?
     state = SecureRandom.hex(24)
     session[:oauth_state] = state
     session[:oauth_started_at] = Time.current.to_i
@@ -74,7 +75,7 @@ class OauthController < ApplicationController
       user = VerifiedWorkspaceRegistration.call(info: info, attributes: registration_intent)
       identity = user.google_login_identities.find_by!(email: user.email)
       start_browser_session(user, method: 'google', google_email: user.email, google_identity: identity)
-      return redirect_to(billing_path, notice: 'Your free workspace is ready.')
+      return redirect_to(workspace_path, notice: 'Your free account is ready.')
     end
 
     if signup_intent

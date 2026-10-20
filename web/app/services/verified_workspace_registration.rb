@@ -17,7 +17,7 @@ class VerifiedWorkspaceRegistration
       user = User.create!(tenant: tenant, email: email, name: info['name'].presence || email, role: 'admin', active: true, password: SecureRandom.hex(32))
       GoogleLoginIdentity.create!(user: user, email: email, google_subject: info['sub'])
       CustomerSubscription.create!(tenant: tenant)
-      Current.set(tenant: tenant) { Finance::ChartOfAccounts.seed! }
+      WorkspaceDeployment.request!(tenant: tenant, owner: user)
       user
     end
   rescue ActiveRecord::RecordNotUnique

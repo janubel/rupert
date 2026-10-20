@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class BillingController < AuthenticatedController
+  before_action :redirect_isolated_billing
   before_action :require_workspace_owner
   before_action { response.headers['Cache-Control'] = 'no-store' }
   rescue_from RupertBilling::Error do |error|
@@ -38,6 +39,10 @@ class BillingController < AuthenticatedController
   end
 
   private
+
+  def redirect_isolated_billing
+    redirect_to(WorkspaceNode.control_origin + '/billing', allow_other_host: true) if WorkspaceNode.isolated?
+  end
 
   def require_workspace_owner
     head :forbidden unless Current.user&.admin? && Current.user.tenant_id == Current.tenant&.id

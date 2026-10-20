@@ -9,10 +9,12 @@ class SignupsController < ApplicationController
     with: -> { redirect_to(signup_path, alert: 'Too many requests. Please try again later.') }
 
   def new
+    return head :not_found if WorkspaceNode.isolated?
     @signup = WorkspaceSignup.new
   end
 
   def create
+    return head :not_found if WorkspaceNode.isolated?
     attributes = WorkspaceSignup.intent(params.require(:workspace_signup).permit(:workspace_name, :requested_subdomain, :domain).to_h)
     @signup = WorkspaceSignup.new(attributes.merge(email: "applicant@#{attributes['domain']}", google_subject: 'form-preview',
       applicant_name: 'Applicant', writer_checked: true))

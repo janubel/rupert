@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -2523,6 +2523,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_120000) do
     t.index ["workspace_signup_id"], name: "index_workspace_signup_events_on_workspace_signup_id"
   end
 
+  create_table "workspace_deployments", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "owner_id", null: false
+    t.string "instance_id", null: false
+    t.string "hostname", null: false
+    t.text "instance_secret", null: false
+    t.string "status", default: "requested", null: false
+    t.string "phase", default: "queued", null: false
+    t.integer "attempts", default: 0, null: false
+    t.string "lease_digest"
+    t.datetime "lease_expires_at"
+    t.string "failure_code"
+    t.datetime "ready_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hostname"], name: "index_workspace_deployments_on_hostname", unique: true
+    t.index ["instance_id"], name: "index_workspace_deployments_on_instance_id", unique: true
+    t.index ["owner_id"], name: "index_workspace_deployments_on_owner_id"
+    t.index ["status", "id"], name: "index_workspace_deployments_on_status_and_id"
+    t.index ["tenant_id"], name: "index_workspace_deployments_on_tenant_id", unique: true
+  end
+
+  create_table "workspace_handoffs", force: :cascade do |t|
+    t.bigint "workspace_deployment_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "support_access_grant_id"
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "consumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["support_access_grant_id"], name: "index_workspace_handoffs_on_support_access_grant_id"
+    t.index ["token_digest"], name: "index_workspace_handoffs_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_workspace_handoffs_on_user_id"
+    t.index ["workspace_deployment_id"], name: "index_workspace_handoffs_on_workspace_deployment_id"
+  end
+
   create_table "workspace_signups", force: :cascade do |t|
     t.string "google_subject", null: false
     t.string "applicant_name", null: false
@@ -2633,6 +2670,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_120000) do
     t.index ["tenant_id", "nonce_digest"], name: "index_pos_payment_attempts_on_tenant_id_and_nonce_digest", unique: true
   end
 
+  add_foreign_key "workspace_deployments", "tenants"
+  add_foreign_key "workspace_deployments", "users", column: "owner_id"
+  add_foreign_key "workspace_handoffs", "support_access_grants"
+  add_foreign_key "workspace_handoffs", "users"
+  add_foreign_key "workspace_handoffs", "workspace_deployments"
   add_foreign_key "customer_referrals", "tenants"
   add_foreign_key "customer_subscriptions", "tenants"
   add_foreign_key "support_access_events", "support_access_grants"
