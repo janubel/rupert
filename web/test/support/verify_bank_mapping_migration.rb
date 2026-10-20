@@ -30,5 +30,10 @@ migration.migrate(:up)
 BankStatementLine.reset_column_information
 raise 'Migration changed historical statement evidence' unless first.reload.attributes == original
 raise 'Migration removed the original journal' unless Finance::JournalEntry.exists?(entry.id)
+BankStatementLine.where(tenant_id: tenant.id).delete_all
+Finance::JournalLine.where(tenant_id: tenant.id).delete_all
+Finance::JournalEntry.where(tenant_id: tenant.id).delete_all
+Finance::Account.where(tenant_id: tenant.id).delete_all
+tenant.destroy!
 puts 'PASS bank mapping migration: down/up preserves evidence; rollback refuses cross-account matches before changing schema'
 Current.reset

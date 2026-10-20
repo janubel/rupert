@@ -70,6 +70,9 @@ jobs:
       - name: Verify warehouse hold migration and legacy backfill
         run: bin/rails runner test/support/verify_warehouse_hold_migration.rb
 
+      - name: Verify bank mapping migration and preserved evidence
+        run: bin/rails runner test/support/verify_bank_mapping_migration.rb
+
       - name: Build Tailwind CSS
         run: bin/rails tailwindcss:build
 
