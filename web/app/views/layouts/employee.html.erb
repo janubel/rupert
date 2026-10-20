@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title><%= [content_for(:title), 'Rupert'].compact.join(' · ') %></title>
   <meta name="turbo-cache-control" content="no-cache">
-  <meta name="theme-color" content="#108184">
+  <meta name="theme-color" content="#fbf5ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#171412" media="(prefers-color-scheme: dark)">
   <link rel="manifest" href="/employee/manifest.webmanifest">
   <%= csrf_meta_tags %><%= csp_meta_tag %>
   <link rel="preconnect" href="https://fonts.googleapis.com">
