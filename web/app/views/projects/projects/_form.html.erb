@@ -1,0 +1,33 @@
+<%# locals: project, url, method, submit, cancel_path %>
+<div class="card card-pad max-w-2xl">
+  <%= form_with model: project, scope: :project, url: url, method: method, class: "space-y-4" do |f| %>
+    <% if project.errors.any? %>
+      <div class="flash flash-alert" role="alert"><%= project.errors.full_messages.to_sentence %></div>
+    <% end %>
+    <div>
+      <%= f.label :name, "Name", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
+      <%= f.text_field :name, class: "input", required: true, autofocus: true, placeholder: "e.g. Spring window display" %>
+    </div>
+    <div>
+      <%= f.label :description, "What does done look like?", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
+      <%= f.text_area :description, rows: 4, class: "input !rounded-2xl" %>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <%= f.label :due_on, "Due date", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
+        <%= f.date_field :due_on, class: "input" %>
+      </div>
+      <% unless project.persisted? %>
+        <div class="flex items-end">
+          <label class="flex items-center gap-2 text-sm text-mocha">
+            <%= check_box_tag :assign_self, 1, true %> Assign to me
+          </label>
+        </div>
+      <% end %>
+    </div>
+    <div class="flex items-center gap-3">
+      <%= f.submit submit, class: "btn-primary" %>
+      <%= link_to "Cancel", cancel_path, class: "btn-ghost" %>
+    </div>
+  <% end %>
+</div>

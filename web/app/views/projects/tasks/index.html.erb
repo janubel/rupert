@@ -1,53 +1,96 @@
 <% content_for :title, "Tasks" %>
-<div class="space-y-6">
+<% can_write = Current.user.can?("projects.write") %>
+<div class="space-y-5">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
+      <p class="eyebrow text-olive">Work</p>
       <h1 class="page-title">Tasks</h1>
-      <p class="mt-1 text-sm text-mocha">Every task across projects — inventory, data hygiene, and follow-ups.</p>
+      <p class="mt-1 text-sm text-mocha">Everything in flight across projects. Drag cards between columns to update their status.</p>
     </div>
-    <div class="flex items-center gap-2 text-xs">
-      <span class="rounded-full bg-haze px-3 py-1 text-mocha"><%= @open_count %> open</span>
-      <span class="rounded-full bg-haze px-3 py-1 text-mocha"><%= @done_count %> done</span>
+    <div class="flex items-center gap-2">
+      <div class="inline-flex rounded-full bg-haze p-1" role="group" aria-label="View">
+        <%= link_to "Board", tasks_filter_path(view: nil), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "board"}" %>
+        <%= link_to "List", tasks_filter_path(view: "list"), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "list"}" %>
+      </div>
       <%= link_to "Projects", projects_projects_path, class: "btn-ghost btn-sm" %>
     </div>
   </section>
 
-  <div class="flex flex-wrap items-center gap-1.5">
-    <% [{ key: nil, label: "All" }, { key: "todo", label: "Todo" }, { key: "in_progress", label: "In progress" }, { key: "blocked", label: "Blocked" }, { key: "done", label: "Done" }].each do |filter| %>
-      <%= link_to filter[:label], projects_tasks_path(status: filter[:key]), class: "nav-pill nav-pill-idle-sm #{params[:status] == filter[:key] ? "nav-pill-active-sm" : ""}" %>
+  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <%= link_to tasks_filter_path(status: nil, due: nil, mine: nil), class: "stat block hover:border-taupe" do %>
+      <p class="stat-label">Open</p><p class="stat-value"><%= @open_count %></p>
     <% end %>
-  </div>
+    <%= link_to tasks_filter_path(status: "blocked"), class: "stat block hover:border-taupe" do %>
+      <p class="stat-label">Blocked</p><p class="stat-value <%= "!text-rose" if @blocked_count.positive? %>"><%= @blocked_count %></p>
+    <% end %>
+    <%= link_to tasks_filter_path(due: "overdue"), class: "stat block hover:border-taupe" do %>
+      <p class="stat-label">Overdue</p><p class="stat-value <%= "!text-rose" if @overdue_count.positive? %>"><%= @overdue_count %></p>
+    <% end %>
+    <%= link_to tasks_filter_path(status: "done"), class: "stat block hover:border-taupe" do %>
+      <p class="stat-label">Done</p><p class="stat-value"><%= @done_count %></p>
+    <% end %>
+  </section>
 
-  <div class="space-y-2">
-    <% if @tasks.empty? %>
-      <div class="card card-pad text-sm text-taupe">No tasks yet.</div>
+  <%= form_with url: projects_tasks_path, method: :get, class: "flex flex-wrap items-center gap-2", data: { controller: "auto-submit" } do %>
+    <%= hidden_field_tag :view, @view if @view == "list" %>
+    <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
+    <%= search_field_tag :q, params[:q], placeholder: "Search tasks…", class: "search w-56", "aria-label": "Search tasks" %>
+    <%= select_tag :project_id, options_from_collection_for_select(@projects, :id, :name, params[:project_id]), include_blank: "All projects", class: "select", "aria-label": "Project", data: { action: "change->auto-submit#submit" } %>
+    <%= select_tag :priority, options_for_select(Projects::Task::PRIORITIES.map { |p| [p.capitalize, p] }, params[:priority]), include_blank: "Any priority", class: "select", "aria-label": "Priority", data: { action: "change->auto-submit#submit" } %>
+    <%= link_to "Mine (#{@mine_count})", tasks_filter_path(mine: params[:mine] == "1" ? nil : "1"), class: "nav-pill nav-pill-idle-sm border border-fog #{"nav-pill-active-sm" if params[:mine] == "1"}" %>
+    <%= link_to "Overdue", tasks_filter_path(due: params[:due] == "overdue" ? nil : "overdue"), class: "nav-pill nav-pill-idle-sm border border-fog #{"nav-pill-active-sm" if params[:due] == "overdue"}" %>
+    <%= link_to "Due this week", tasks_filter_path(due: params[:due] == "week" ? nil : "week"), class: "nav-pill nav-pill-idle-sm border border-fog #{"nav-pill-active-sm" if params[:due] == "week"}" %>
+    <% if tasks_filtered? %>
+      <%= link_to "Clear", projects_tasks_path(view: (@view == "list" ? "list" : nil)), class: "text-xs font-semibold text-olive hover:underline" %>
     <% end %>
-    <% @tasks.each do |task| %>
-      <div class="card card-pad flex flex-wrap items-center justify-between gap-3">
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <p class="<%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= task.title %></p>
-            <span class="<%= task.priority == "urgent" ? "pill-rose" : task.priority == "high" ? "pill-clay" : task.priority == "low" ? "pill-taupe" : "pill-olive" %> shrink-0"><%= task.priority %></span>
-          </div>
-          <% if task.description.present? %>
-            <p class="mt-0.5 text-sm text-mocha"><%= task.description %></p>
-          <% end %>
-          <p class="mt-1 text-xs text-taupe">
-            <% if task.project %><%= link_to task.project.name, task.project, class: "font-semibold text-olive hover:underline" %> · <% end %>
-            <% if task.due_on %>Due <%= l(task.due_on, format: :long) %> · <% end %>
-            Updated <%= time_ago_in_words(task.updated_at) %> ago
-          </p>
-        </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <% if task.may_start? %><%= button_to "Start", transition_projects_task_path(task, event: "start"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-          <% if task.may_finish? %><%= button_to "Done", transition_projects_task_path(task, event: "finish"), method: :post, class: "btn-primary btn-sm" %><% end %>
-          <% if task.may_block? %><%= button_to "Block", transition_projects_task_path(task, event: "block"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-          <% if task.may_reopen? %><%= button_to "Reopen", transition_projects_task_path(task, event: "reopen"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-          <span class="<%= task.done? ? "pill-fern" : task.blocked? ? "pill-rose" : task.in_progress? ? "pill-olive" : "pill-taupe" %>"><%= task.status %></span>
-        </div>
+    <noscript><%= submit_tag "Filter", class: "btn-ghost btn-sm" %></noscript>
+  <% end %>
+
+  <% if can_write %>
+    <%= render "projects/shared/quick_add", projects: @projects, assign_self: true %>
+  <% end %>
+
+  <% if @view == "board" %>
+    <% if @columns.values.all?(&:empty?) %>
+      <div class="card card-pad py-10 text-center">
+        <p class="font-display text-lg text-ink"><%= tasks_filtered? ? "No tasks match these filters." : "A clean slate." %></p>
+        <p class="mt-1 text-sm text-taupe"><%= tasks_filtered? ? "Try clearing a filter." : "Add your first task above, or open a project to plan it." %></p>
       </div>
+    <% else %>
+      <%= render "projects/shared/board", columns: @columns, assignees: @assignees, show_project: true, can_write: can_write %>
     <% end %>
-  </div>
-
-  <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
+  <% else %>
+    <div class="space-y-2">
+      <% if @tasks.empty? %>
+        <div class="card card-pad text-sm text-taupe">No tasks match.</div>
+      <% end %>
+      <% @tasks.each do |task| %>
+        <div class="card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div class="flex min-w-0 flex-1 items-start gap-3">
+            <span class="mt-1.5"><%= priority_dot(task.priority) %></span>
+            <div class="min-w-0">
+              <p class="<%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= task.title %></p>
+              <% if task.description.present? %><p class="mt-0.5 text-sm text-mocha"><%= task.description %></p><% end %>
+              <p class="mt-1 text-xs text-taupe">
+                <% if task.project %><%= link_to task.project.name, task.project, class: "font-semibold text-olive hover:underline" %> · <% end %>
+                <% if task.due_on %><span class="<%= due_class(task) %>"><%= task.due_label %></span> · <% end %>
+                <% if (name = @assignees[task.assignee_id.to_s]) %><%= name %> · <% end %>
+                Updated <%= time_ago_in_words(task.updated_at) %> ago
+              </p>
+            </div>
+          </div>
+          <div class="flex shrink-0 items-center gap-2">
+            <% if can_write %>
+              <% if task.may_start? %><%= button_to "Start", transition_projects_task_path(task, event: "start"), method: :post, class: "btn-ghost btn-sm" %><% end %>
+              <% if task.may_finish? %><%= button_to "Done", transition_projects_task_path(task, event: "finish"), method: :post, class: "btn-primary btn-sm" %><% end %>
+              <% if task.may_block? && !task.done? %><%= button_to "Block", transition_projects_task_path(task, event: "block"), method: :post, class: "btn-ghost btn-sm" %><% end %>
+              <% if task.may_reopen? %><%= button_to "Reopen", transition_projects_task_path(task, event: "reopen"), method: :post, class: "btn-ghost btn-sm" %><% end %>
+            <% end %>
+            <%= task_status_pill(task) %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
+  <% end %>
 </div>

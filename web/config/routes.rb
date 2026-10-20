@@ -170,7 +170,10 @@ Rails.application.routes.draw do
       member { post :transition }
     end
     resources :tasks, only: %i[index create update destroy] do
-      member { post :transition }
+      member do
+        post :transition
+        post :move
+      end
     end
   end
   namespace :goals do

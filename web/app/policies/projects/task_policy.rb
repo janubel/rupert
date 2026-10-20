@@ -17,5 +17,9 @@ module Projects
     def transition?
       update?
     end
+
+    def move?
+      update?
+    end
   end
 end

@@ -1,32 +1,7 @@
-<div class="space-y-6">
+<div class="space-y-5">
   <section>
+    <p class="eyebrow text-olive">Projects</p>
     <h1 class="page-title">New project</h1>
   </section>
-  <div class="card card-pad max-w-2xl">
-    <%= form_with model: @project, url: projects_projects_path, class: "space-y-4" do |f| %>
-      <div>
-        <%= f.label :name, "Name", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-        <%= f.text_field :name, class: "input" %>
-      </div>
-      <div>
-        <%= f.label :description, "Description", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-        <%= f.text_area :description, rows: 4, class: "input" %>
-      </div>
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div>
-          <%= f.label :due_on, "Due date", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-          <%= f.date_field :due_on, class: "input" %>
-        </div>
-        <div class="flex items-end">
-          <label class="flex items-center gap-2 text-sm text-mocha">
-            <%= check_box_tag :assign_self, 1, true %> Assign to me
-          </label>
-        </div>
-      </div>
-      <div class="flex items-center gap-3">
-        <%= f.submit "Create project", class: "btn-primary" %>
-        <%= link_to "Cancel", projects_projects_path, class: "btn-ghost" %>
-      </div>
-    <% end %>
-  </div>
+  <%= render "form", project: @project, url: projects_projects_path, method: :post, submit: "Create project", cancel_path: projects_projects_path %>
 </div>
