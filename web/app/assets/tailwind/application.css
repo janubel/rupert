@@ -52,6 +52,9 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-synthesis: none;
   }
 
   ::selection {
@@ -129,7 +132,7 @@
   }
 
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.16em];
+    @apply text-xs font-semibold uppercase tracking-[0.12em];
   }
 
   .stat {
@@ -145,7 +148,7 @@
   }
 
   .stat-label {
-    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-taupe;
+    @apply text-xs font-semibold uppercase tracking-[0.12em] text-taupe;
   }
 
   .stat-value {
@@ -167,7 +170,8 @@
   }
 
   .th {
-    @apply px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-taupe;
+    @apply px-4 py-2.5 text-left text-xs font-semibold normal-case tracking-normal text-taupe;
+    text-wrap: balance;
   }
 
   .td {
@@ -622,7 +626,7 @@
 .bookkeeping-question:hover { background:var(--color-haze); }
 .bookkeeping-question-top { display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;font-size:.8rem;font-variant-numeric:tabular-nums; }
 .bookkeeping-empty { padding:1rem 0;color:var(--color-mocha);font-size:.875rem; }
-.bookkeeping-table th { background:var(--color-haze);text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--color-mocha); }
+.bookkeeping-table th { background:var(--color-haze);text-align:left;font-size:.75rem;font-weight:600;text-transform:none;letter-spacing:normal;color:var(--color-mocha); }
 .bookkeeping-table th,.bookkeeping-table td { padding:.9rem 1.1rem;border-top:1px solid var(--color-fog);vertical-align:top; }
 .bookkeeping-table th.text-right { text-align:right; }
 .bookkeeping-amount { font-variant-numeric:tabular-nums;font-weight:600; }
@@ -918,4 +922,40 @@ form[aria-busy="true"] .btn-primary::after {
 
 @media (forced-colors: active) {
   .btn-primary, .btn-ghost, .btn-danger, .input, .select, .pill { border: 1px solid ButtonText; }
+}
+
+/* Micro-motion: menus and notices ease in; clickable cards lift slightly.
+   The global reduced-motion rule above shortens all of these to instant. */
+@keyframes rupert-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.account-menu:not(.hidden),
+details[open] > .module-menu-panel {
+  animation: rupert-pop-in 0.14s ease-out;
+  transform-origin: top;
+}
+
+.flash {
+  animation: rupert-pop-in 0.2s ease-out;
+}
+
+a.card {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+a.card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--color-olive) 35%, var(--color-fog));
+  box-shadow: 0 6px 18px rgba(26, 57, 61, 0.08);
+}
+
+a.card:active {
+  transform: none;
+}
+
+a.card:focus-visible {
+  outline: 2px solid var(--color-olive);
+  outline-offset: 2px;
 }

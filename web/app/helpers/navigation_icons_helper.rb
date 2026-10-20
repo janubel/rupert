@@ -10,6 +10,7 @@ module NavigationIconsHelper
     'work' => ['M9 5V3h6v2M3 5h18v15H3Z', 'M3 10c6 4 12 4 18 0M12 10v4'],
     'team' => ['M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z', 'M1 21v-2a7 7 0 0 1 14 0v2M17 4a4 4 0 0 1 0 8M18 15a6 6 0 0 1 5 6'],
     'system' => ['M4 4h16v6H4ZM4 14h16v6H4Z', 'M7 7h.01M7 17h.01M11 7h6M11 17h6'],
+    'me' => ['M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z', 'M4 21a8 8 0 0 1 16 0'],
     'search' => ['M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z', 'm15 15 6 6'],
     'sync' => ['M20 7a9 9 0 0 0-16-2M4 3v5h5', 'M4 17a9 9 0 0 0 16 2M20 21v-5h-5'],
     'platform' => ['M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z'],
