@@ -3,6 +3,7 @@
 module Projects
   class Task < ApplicationRecord
     include TenantScoped
+    include ProjectsPeople
     include AASM
 
     self.table_name = 'tasks'
@@ -18,6 +19,7 @@ module Projects
     validates :title, presence: true
     validates :priority, inclusion: { in: PRIORITIES }
     validate :project_belongs_to_tenant
+    validate { validate_project_person(:assignee_id) }
 
     scope :recent, ->(limit = 20) { order(updated_at: :desc).limit(limit) }
     scope :open, -> { where(status: %w[todo in_progress]) }
@@ -65,18 +67,20 @@ module Projects
     # Moves the task to a board column through its state machine. Returns
     # false when the task is already there or the move is not allowed.
     def move_to!(target)
-      return false if target == status || BOARD_STATUSES.exclude?(target)
+      with_lock do
+        next false if target == status || BOARD_STATUSES.exclude?(target)
 
-      event = case target
-              when 'in_progress' then :start
-              when 'done' then :finish
-              when 'blocked' then :block
-              else in_progress? ? :unstart : :reopen
-              end
-      return false unless public_send(:"may_#{event}?")
+        event = case target
+                when 'in_progress' then :start
+                when 'done' then :finish
+                when 'blocked' then :block
+                else in_progress? ? :unstart : :reopen
+                end
+        next false unless public_send(:"may_#{event}?")
 
-      public_send(:"#{event}!")
-      true
+        public_send(:"#{event}!")
+        true
+      end
     end
 
     def overdue?
@@ -103,7 +107,6 @@ module Projects
 
     def project_belongs_to_tenant
       return if project_id.blank?
-      return unless new_record? || project_id_changed?
       return if Projects::Project.unscoped.exists?(id: project_id, tenant_id: tenant_id || Current.tenant_id)
 
       errors.add(:project, 'was not found')

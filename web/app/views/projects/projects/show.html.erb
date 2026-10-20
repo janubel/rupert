@@ -14,6 +14,9 @@
           <%= project_health_pill(@project) %>
         </div>
         <p class="mt-2 text-sm text-mocha"><%= @project.description.presence || "No description." %></p>
+        <% if (owner = User.find_by(tenant_id: Current.tenant_id, id: @project.owner_id)) %>
+          <p class="mt-2 text-xs text-taupe">Owner: <%= owner.display_name %></p>
+        <% end %>
         <% if @project.due_on %>
           <p class="mt-2 text-xs <%= @project.due_on < Date.current && !@project.completed? ? "font-semibold text-rose" : "text-taupe" %>">
             Due <%= l(@project.due_on, format: :long) %>
@@ -57,6 +60,9 @@
       <p class="mt-1 text-sm text-taupe"><%= can_write ? "Add the first one above to start the board." : "Nothing has been planned for this project." %></p>
     </div>
   <% else %>
+    <% if @board_total > Projects::TasksController::BOARD_LIMIT %>
+      <p class="text-sm text-mocha" role="status">Showing <%= Projects::TasksController::BOARD_LIMIT %> of <%= @board_total %> tasks. <%= link_to "View all in the list", projects_tasks_path(project_id: @project.id, view: "list"), class: "font-semibold text-olive hover:underline" %>.</p>
+    <% end %>
     <%= render "projects/shared/board", columns: @columns, assignees: @assignees, show_project: false, can_write: can_write %>
   <% end %>
 </div>
