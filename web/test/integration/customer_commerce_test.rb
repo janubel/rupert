@@ -23,11 +23,11 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
 
   test 'Google registration verifies identity and provisions isolated tenant records atomically' do
     GoogleOauthService.stubs(:auth_url).returns('https://accounts.google.com/')
-    post start_path, params: {registration: {workspace_name: 'New business', requested_subdomain: 'fresh-business', role: 'super_admin'}}
+    post start_path, params: { registration: { workspace_name: 'New business', requested_subdomain: 'fresh-business', role: 'super_admin' } }
     assert_redirected_to 'https://accounts.google.com/'
-    GoogleOauthService.stubs(:exchange_code!).returns({'email' => 'newperson@gmail.com', 'sub' => 'verified-new-person', 'email_verified' => true, 'name' => 'New person'})
+    GoogleOauthService.stubs(:exchange_code!).returns({ 'email' => 'newperson@gmail.com', 'sub' => 'verified-new-person', 'email_verified' => true, 'name' => 'New person' })
     assert_difference ['Tenant.count', 'User.count', 'CustomerSubscription.count'], 1 do
-      get google_callback_path, params: {state: session[:oauth_state], code: 'verified-code'}
+      get google_callback_path, params: { state: session[:oauth_state], code: 'verified-code' }
     end
     assert_redirected_to billing_path
     user = User.find_by!(email: 'newperson@gmail.com')
@@ -42,7 +42,7 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
 
   test 'registration rejects unverified identities and operator mailbox self provisioning' do
     PlatformOwnerIdentities.stubs(:emails).returns(['reserved@operations.example'])
-    info = {'email' => 'new@gmail.com', 'sub' => 'new', 'email_verified' => false}
+    info = { 'email' => 'new@gmail.com', 'sub' => 'new', 'email_verified' => false }
     assert_no_difference ['Tenant.count', 'User.count'] do
       assert_raises(GoogleOauthService::ExchangeError) { VerifiedWorkspaceRegistration.call(info: info, attributes: {}) }
       assert_raises(GoogleOauthService::ExchangeError) { VerifiedWorkspaceRegistration.call(info: info.merge('email_verified' => true, 'email' => 'reserved@operations.example'), attributes: {}) }
@@ -52,7 +52,7 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
   test 'registration rollback leaves no partial tenant if account fails' do
     assert_no_difference 'Tenant.count' do
       assert_raises(ActiveRecord::RecordInvalid) do
-        VerifiedWorkspaceRegistration.call(info: {'email' => 'bad-email', 'sub' => 'new', 'email_verified' => true}, attributes: {'workspace_name' => 'Failed', 'requested_subdomain' => 'failed-registration'})
+        VerifiedWorkspaceRegistration.call(info: { 'email' => 'bad-email', 'sub' => 'new', 'email_verified' => true }, attributes: { 'workspace_name' => 'Failed', 'requested_subdomain' => 'failed-registration' })
       end
     end
   end
@@ -60,16 +60,16 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
   test 'billing and grants cannot be used by other roles or anonymously' do
     get billing_path
     assert_redirected_to login_path
-    post login_path, params: {email: @operator.email, password: 'password123'}
+    post login_path, params: { email: @operator.email, password: 'password123' }
     get billing_path
     assert_response :forbidden
-    post support_access_path, params: {support_user_id: @operator.id, reason: 'Self grant'}
+    post support_access_path, params: { support_user_id: @operator.id, reason: 'Self grant' }
     assert_response :forbidden
   end
 
   test 'customer grants expire and revoke while support has no write or credential access' do
     host! 'support-customer.example.com'
-    post login_path, params: {email: @operator.email, password: 'password123'}
+    post login_path, params: { email: @operator.email, password: 'password123' }
     @tenant.update!(subdomain: 'support-customer')
     get '/inventory'
     assert_response :forbidden
@@ -91,8 +91,8 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
   end
 
   test 'customer can grant and revoke access with audit events' do
-    post login_path, params: {email: @owner.email, password: 'password'}
-    post support_access_path, params: {support_user_id: @operator.id, reason: 'Help with inventory'}
+    post login_path, params: { email: @owner.email, password: 'password' }
+    post support_access_path, params: { support_user_id: @operator.id, reason: 'Help with inventory' }
     assert_redirected_to support_access_path
     grant = SupportAccessGrant.last
     assert_equal @tenant.id, grant.tenant_id
@@ -106,12 +106,12 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
 
   test 'cross tenant bearer tokens are never valid support access' do
     Current.tenant = @tenant
-    token, secret = ApiAccessToken.issue(attributes: {name: 'Bypass', scopes: ['inventory:read']}, user: @operator, tenant: @tenant)
+    token, secret = ApiAccessToken.issue(attributes: { name: 'Bypass', scopes: ['inventory:read'] }, user: @operator, tenant: @tenant)
     assert_nil secret
     assert token.errors.any?
   end
   test 'operator enters customer workspace only through a valid grant and exits after revocation' do
-    post login_path, params: {email: @operator.email, password: 'password123'}
+    post login_path, params: { email: @operator.email, password: 'password123' }
     post enter_platform_support_path(@tenant.id)
     assert_response :forbidden
     grant = SupportAccessGrant.create!(tenant: @tenant, granted_by: @owner, support_user: @operator, reason: 'Read inventory', expires_at: 1.hour.from_now)
@@ -137,7 +137,7 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
 
   test 'full instance backup downloads cannot bypass customer support permission' do
     CustomerSubscription.create!(tenant: @tenant)
-    post login_path, params: {email: @operator.email, password: 'password123'}
+    post login_path, params: { email: @operator.email, password: 'password123' }
     BackupService.expects(:snapshot_path).never
     get backup_settings_path
     assert_response :forbidden
@@ -148,5 +148,4 @@ class CustomerCommerceTest < ActionDispatch::IntegrationTest
     post drive_backup_settings_path
     assert_response :forbidden
   end
-
 end

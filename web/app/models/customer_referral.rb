@@ -3,7 +3,7 @@
 class CustomerReferral < ApplicationRecord
   belongs_to :tenant
   before_validation { self.code = code.to_s.strip.upcase }
-  validates :code, uniqueness: true, format: {with: /\A[A-Z0-9-]{6,40}\z/}
+  validates :code, uniqueness: true, format: { with: /\A[A-Z0-9-]{6,40}\z/ }
   validates :tenant_id, uniqueness: true
   def self.eligible(code, tenant:)
     referral = find_by(code: code.to_s.strip.upcase, active: true)

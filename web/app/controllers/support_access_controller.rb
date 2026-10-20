@@ -11,6 +11,7 @@ class SupportAccessController < AuthenticatedController
     @events = SupportAccessEvent.where(tenant: Current.tenant).includes(:actor).order(id: :desc).limit(50)
     @operators = User.where(role: 'super_admin', active: true).order(:email)
   end
+
   def create
     SupportAccessGrant.transaction do
       grant = SupportAccessGrant.create!(tenant: Current.tenant, granted_by: Current.user,
@@ -21,6 +22,7 @@ class SupportAccessController < AuthenticatedController
   rescue ActiveRecord::RecordInvalid
     redirect_to support_access_path, alert: 'Choose an active support administrator and enter a reason (up to 300 characters).'
   end
+
   def destroy
     SupportAccessGrant.transaction do
       grant = SupportAccessGrant.find_by!(id: params[:id], tenant: Current.tenant)
@@ -29,7 +31,9 @@ class SupportAccessController < AuthenticatedController
     end
     redirect_to support_access_path, notice: 'Support access revoked.'
   end
+
   private
+
   def require_customer_owner
     head :forbidden unless Current.user&.admin? && Current.user.tenant_id == Current.tenant&.id
   end

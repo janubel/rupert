@@ -41,7 +41,7 @@ class RupertBillingTest < ActiveSupport::TestCase
     CustomerSubscription.create!(tenant: referrer, status: 'active')
     CustomerReferral.create!(tenant: referrer, code: 'RUPERT-TEST')
     RupertBilling.stubs(:verify_configuration!)
-    RupertBilling.expects(:api).with(:post, 'checkout/sessions', has_entries('mode' => 'subscription', 'line_items[0][price]' => 'price_monthly', 'discounts[0][coupon]' => 'coupon_year', 'subscription_data[metadata][referral_code]' => 'RUPERT-TEST'), idempotency: regexp_matches(/rupert-/)).once.returns({'id' => 'cs_test', 'url' => 'https://checkout.stripe.com/c/test'})
+    RupertBilling.expects(:api).with(:post, 'checkout/sessions', has_entries('mode' => 'subscription', 'line_items[0][price]' => 'price_monthly', 'discounts[0][coupon]' => 'coupon_year', 'subscription_data[metadata][referral_code]' => 'RUPERT-TEST'), idempotency: regexp_matches(/rupert-/)).once.returns({ 'id' => 'cs_test', 'url' => 'https://checkout.stripe.com/c/test' })
     2.times { assert_equal 'https://checkout.stripe.com/c/test', RupertBilling.checkout(tenant: @tenant, actor: @owner, plan: 'referral_year', referral_code: 'RUPERT-TEST', accepted: '1') }
     row = CustomerSubscription.find_by!(tenant: @tenant)
     assert_equal 'free', row.status
@@ -50,8 +50,8 @@ class RupertBillingTest < ActiveSupport::TestCase
   end
   test 'webhook retrieves provider state and repeated old deliveries cannot restore status' do
     row = CustomerSubscription.create!(tenant: @tenant, stripe_subscription_id: 'sub_test', stripe_customer_id: 'cus_test', plan: 'monthly')
-    event = {'type' => 'customer.subscription.updated', 'livemode' => false, 'data' => {'object' => {'id' => 'sub_test', 'status' => 'active'}}}
-    fresh = {'customer' => 'cus_test', 'status' => 'past_due', 'metadata' => {'rupert_tenant_id' => @tenant.id}, 'items' => {'data' => [{'price' => {'id' => 'price_monthly'}, 'quantity' => 1}]}}
+    event = { 'type' => 'customer.subscription.updated', 'livemode' => false, 'data' => { 'object' => { 'id' => 'sub_test', 'status' => 'active' } } }
+    fresh = { 'customer' => 'cus_test', 'status' => 'past_due', 'metadata' => { 'rupert_tenant_id' => @tenant.id }, 'items' => { 'data' => [{ 'price' => { 'id' => 'price_monthly' }, 'quantity' => 1 }] } }
     RupertBilling.stubs(:api).with(:get, 'subscriptions/sub_test').returns(fresh)
     2.times { RupertBilling.receive(event) }
     assert_equal 'past_due', row.reload.status
@@ -60,10 +60,10 @@ class RupertBillingTest < ActiveSupport::TestCase
     assert_equal 'past_due', row.reload.status
   end
   test 'configuration refuses another account and mispriced products' do
-    RupertBilling.stubs(:api).with(:get, 'account').returns({'id' => 'acct_wrong'})
+    RupertBilling.stubs(:api).with(:get, 'account').returns({ 'id' => 'acct_wrong' })
     assert_raises(RupertBilling::Error) { RupertBilling.verify_configuration! }
-    RupertBilling.stubs(:api).with(:get, 'account').returns({'id' => 'acct_csp'})
-    RupertBilling.stubs(:api).with(:get, 'prices/price_monthly').returns({'active' => true, 'currency' => 'usd', 'unit_amount' => 24950, 'recurring' => {'interval' => 'month', 'interval_count' => 1}})
+    RupertBilling.stubs(:api).with(:get, 'account').returns({ 'id' => 'acct_csp' })
+    RupertBilling.stubs(:api).with(:get, 'prices/price_monthly').returns({ 'active' => true, 'currency' => 'usd', 'unit_amount' => 24950, 'recurring' => { 'interval' => 'month', 'interval_count' => 1 } })
     assert_raises(RupertBilling::Error) { RupertBilling.verify_configuration! }
   end
   test 'unsafe provider redirects are rejected' do
@@ -74,12 +74,12 @@ class RupertBillingTest < ActiveSupport::TestCase
   test 'an expired local checkout cannot create a duplicate while Stripe confirmation is delayed' do
     RupertBilling.stubs(:verify_configuration!)
     CustomerSubscription.create!(tenant: @tenant, checkout_token: 'attempt', checkout_session_id: 'cs_old', checkout_expires_at: 1.minute.ago, plan: 'monthly')
-    RupertBilling.expects(:api).with(:get, 'checkout/sessions/cs_old').returns({'status' => 'complete'})
+    RupertBilling.expects(:api).with(:get, 'checkout/sessions/cs_old').returns({ 'status' => 'complete' })
     assert_raises(RupertBilling::Error) { RupertBilling.checkout(tenant: @tenant, actor: @owner, plan: 'monthly', referral_code: nil, accepted: '1') }
   end
   test 'unknown checkout bindings are retried and never acknowledged as paid' do
     CustomerSubscription.create!(tenant: @tenant, checkout_token: 'pending')
-    event = {'type' => 'checkout.session.completed', 'livemode' => false, 'data' => {'object' => {'id' => 'cs_pending', 'client_reference_id' => @tenant.id}}}
+    event = { 'type' => 'checkout.session.completed', 'livemode' => false, 'data' => { 'object' => { 'id' => 'cs_pending', 'client_reference_id' => @tenant.id } } }
     assert_raises(RupertBilling::Error) { RupertBilling.receive(event) }
     assert_equal 'free', CustomerSubscription.find_by!(tenant: @tenant).status
   end
@@ -90,5 +90,4 @@ class RupertBillingTest < ActiveSupport::TestCase
     refute_includes raw, 'Private inventory issue'
     assert_equal 'Private inventory issue', grant.reload.reason
   end
-
 end

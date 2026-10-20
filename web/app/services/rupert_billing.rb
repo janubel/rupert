@@ -68,14 +68,14 @@ class RupertBilling
     # Canonical configured origin, never an untrusted Host header.
     origin = ENV.fetch('RUPERT_PUBLIC_ORIGIN', 'https://rupertpos.com')
     raise Error, 'An HTTPS public origin is required.' unless origin.match?(%r{\Ahttps://[a-z0-9.-]+(?::[0-9]+)?\z}i)
-    fields = {'mode' => 'subscription', 'line_items[0][price]' => ENV.fetch('CSP_STRIPE_MONTHLY_PRICE_ID'),
+    fields = { 'mode' => 'subscription', 'line_items[0][price]' => ENV.fetch('CSP_STRIPE_MONTHLY_PRICE_ID'),
       'line_items[0][quantity]' => '1', 'client_reference_id' => tenant.id, 'customer_email' => actor.email,
       'success_url' => "#{origin}/billing?checkout=returned", 'cancel_url' => "#{origin}/billing",
       'expires_at' => subscription.checkout_expires_at.to_i.to_s,
       'subscription_data[metadata][rupert_tenant_id]' => tenant.id,
       'subscription_data[metadata][rupert_plan]' => plan,
       'subscription_data[metadata][terms_version]' => TERMS_VERSION,
-      'custom_text[submit][message]' => plan == 'referral_year' ? 'USD 249.50/month for 12 months (USD 2,994 total commitment), then USD 499/month. Taxes may apply. Billed by CSP Cyber Security Pilot.' : 'USD 499/month. Taxes may apply. Billed by CSP Cyber Security Pilot.'}
+      'custom_text[submit][message]' => plan == 'referral_year' ? 'USD 249.50/month for 12 months (USD 2,994 total commitment), then USD 499/month. Taxes may apply. Billed by CSP Cyber Security Pilot.' : 'USD 499/month. Taxes may apply. Billed by CSP Cyber Security Pilot.' }
     if referral
       fields['discounts[0][coupon]'] = ENV.fetch('CSP_STRIPE_REFERRAL_COUPON_ID')
       fields['subscription_data[metadata][referral_code]'] = referral.code

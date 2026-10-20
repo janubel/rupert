@@ -6,6 +6,7 @@ class CustomerSupportAccess
   def self.grant_for(actor:, tenant:)
     SupportAccessGrant.current.find_by(tenant_id: tenant.id, support_user_id: actor.id)
   end
+
   def self.record!(actor:, tenant:, grant:, action:, resource: nil)
     SupportAccessEvent.create!(actor: actor, tenant: tenant, support_access_grant: grant, action: action, resource: resource)
   end
