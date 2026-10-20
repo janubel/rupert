@@ -1,0 +1,12 @@
+<%# Dark by default. Applies the saved choice before first paint so there is no flash. %>
+<script>
+  (function () {
+    try {
+      if (localStorage.getItem("rupert-theme") === "light") {
+        document.documentElement.setAttribute("data-theme", "light");
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", "#fbf5ef");
+      }
+    } catch (e) {}
+  })();
+</script>

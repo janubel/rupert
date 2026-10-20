@@ -756,9 +756,11 @@ select.input {
   .nav-area { gap: 0.25rem; padding: 0.4rem 0.45rem; font-size: 0.8rem; }
 }
 
-/* Dark appearance: a warm, low-glare counterpart; surfaces built from the tokens follow. */
-@media (prefers-color-scheme: dark) {
-  :root {
+/* Dark is the default appearance: a warm, low-glare counterpart; surfaces built
+   from the tokens follow. People opt into light with the account-menu toggle
+   (data-theme="light"), and print/embedded layouts pin light the same way. */
+@media all {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --color-oat: #171412;
     --color-cream: #1e1a17;
@@ -774,6 +776,22 @@ select.input {
     --color-fern: #6fbd9d;
     --color-rose: #e09a8d;
   }
+}
+
+/* Status chips and banners that were authored with fixed light colors. */
+:root:not([data-theme="light"]) {
+  .money-negative, .status-removed { color: #f19a8f; }
+  .balance-ok, .balance-status[data-balance="ok"] { color: #7fdcae; border-color: #2c5a45; background: #16281f; }
+  .balance-bad, .balance-status[data-balance="bad"] { color: #f19a8f; border-color: #6a3a34; background: #2a1b19; }
+  .form-reasons { border-color: #6b5427; background: #2a2316; color: #f0cf8a; }
+  .line-invalid, .entry-state-void { background: #2a1b19; }
+  .entry-state-posted { border-left-color: #7fdcae; }
+  .entry-state-void { border-left-color: #f19a8f; }
+  .status-active { color: #7fdcae; }
+  .status-locked { color: #f0cf8a; }
+  .bookkeeping-review-banner { border-color: #6b5427; background: #2a2316; }
+  .bank-flagged { border-left-color: #c9a45a; background: #2a231640; }
+  .shift:hover, .shift:focus-visible { background: var(--color-paper) !important; }
 }
 
 /* Horizontally scrolling tab strips: a hairline, low-contrast scrollbar instead of the chunky default. */

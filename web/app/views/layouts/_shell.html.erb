@@ -36,6 +36,7 @@
                 <%= link_to 'My time & time off', employee_app_path, class: 'nav-menu-item', role: 'menuitem' %>
                 <%= link_to 'My timesheets', people_timesheets_path, class: 'nav-menu-item', role: 'menuitem' if Current.user.can?('timesheets.self') %>
                 <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>My time clock</span><% end %>
+                <button type="button" class="nav-menu-item w-full" role="menuitem" data-controller="theme" data-action="theme#toggle" data-theme-target="label" aria-live="polite">Switch to light mode</button>
                 <%= link_to roadmap_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('document') %><span>Features &amp; roadmap</span><% end %>
                 <%= button_to logout_path, method: :delete, class: 'nav-menu-item w-full text-rose', role: 'menuitem' do %><%= navigation_icon('logout') %><span>Sign out</span><% end %>
               </div>

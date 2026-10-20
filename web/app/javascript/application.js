@@ -19,4 +19,4 @@ const themeCharts = () => {
   if (grid) Chart.defaults.borderColor = grid;
 };
 themeCharts();
-window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeCharts);
+window.addEventListener("rupert:theme", themeCharts);
