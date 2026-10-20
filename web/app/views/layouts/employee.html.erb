@@ -42,12 +42,14 @@
     <% end %>
   </header>
   <main id="main" class="mx-auto <%= %w[ctrax_pos point_of_sale projects/tasks].include?(controller_path) ? 'max-w-7xl' : 'max-w-3xl' %> space-y-6 px-4 py-6 sm:px-6 sm:py-8" tabindex="-1">
+    <%= render 'shared/workspace_help' if Current.user && !@preview %>
     <% if notice %><p role="status" class="flash flash-notice"><%= notice %></p><% end %>
     <% if alert %><p role="alert" class="flash flash-alert"><%= alert %></p><% end %>
     <% if @preview %><p role="status" class="rounded-xl border border-olive/30 bg-olive/10 p-3 text-sm"><strong>Staff preview</strong> · Example data only. Browse freely; saving, clocking and sending are disabled. <%= link_to 'Close preview', employee_app_path, class: 'underline' %></p><% end %>
     <%= yield %>
   </main>
   <footer class="mx-auto flex max-w-3xl flex-wrap gap-4 px-4 pb-8 text-xs text-mocha sm:px-6">
+    <%= link_to 'Learn Rupert & definitions', learning_index_path, class: 'underline' if Current.user && !@preview %>
     <%= link_to 'Privacy & support', employee_privacy_path(preview: @preview ? 1 : nil), class: 'underline' %>
     <%= link_to 'Signed-in devices', employee_devices_path, class: 'underline' if Current.user && !@preview %>
     <% if Current.user&.can_manage_accounts? %><%= link_to 'Back to management', root_path, class: 'underline' %><% end %>

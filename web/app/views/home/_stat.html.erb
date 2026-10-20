@@ -2,4 +2,7 @@
   <p class="stat-label"><%= label %></p>
   <p class="stat-value mt-1"><%= value %></p>
   <p class="mt-1 text-xs text-taupe"><%= note %></p>
+  <% if label.to_s.match?(/sales|Yesterday|Last 7/) %>
+    <details class="mt-2 text-xs text-mocha"><summary class="cursor-pointer text-olive-deep">What’s in this total?</summary><p class="mt-2"><%= LearningCatalog::TERMS.fetch('sales_total').last %></p><%= link_to 'Learn about sales totals', learning_path('sales'), class: 'mt-2 inline-block underline' %></details>
+  <% end %>
 </div>

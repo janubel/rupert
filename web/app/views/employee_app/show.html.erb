@@ -1,4 +1,5 @@
 <% content_for :title, 'My time' %>
+<%= render 'shared/learning_welcome' if Current.user && !@preview %>
 <% if !Current.user %>
   <section class="card card-pad space-y-4">
     <h1 class="page-title">My time</h1>
@@ -40,7 +41,7 @@
     <%= render 'shared/square_timecard_sync' unless @preview %>
     <div class="grid grid-cols-2 gap-4">
       <div class="stat"><p class="stat-label">Timesheet hours</p><p class="stat-value mt-2 tabular-nums"><%= number_with_precision(@summary.hours, precision: 2, strip_insignificant_zeros: true) %><span class="text-lg"> h</span></p></div>
-      <div class="stat"><p class="stat-label">Estimated gross pay</p><p class="stat-value mt-2 tabular-nums"><%= @summary.gross_cents.nil? ? '—' : number_to_currency(@summary.gross_cents / 100.0) %></p></div>
+      <div class="stat"><p class="stat-label">Estimated gross pay</p><p class="stat-value mt-2 tabular-nums"><%= @summary.gross_cents.nil? ? '—' : number_to_currency(@summary.gross_cents / 100.0) %></p><%= render 'shared/definition', term: 'estimated_pay' %></div>
     </div>
     <div class="grid grid-cols-7 gap-1 text-center">
       <% (@summary.from..@summary.to).each do |day| %>
