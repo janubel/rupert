@@ -1,5 +1,7 @@
 # Rupert
 
+Deployment readiness: [blueprint and required gates](docs/deployment-readiness.md) · [live milestone](https://github.com/techmore/rupert/milestone/1).
+
 Centralized inventory operations: a Shopify + Square sync
 engine with an Oatmeal-styled web dashboard, backed by SQLite in production. Runs as a
 Ruby on Rails 8.1 app (based on the
