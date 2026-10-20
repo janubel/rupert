@@ -812,20 +812,20 @@ select.input {
 @media all {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --color-oat: #171412;
-    --color-cream: #1e1a17;
-    --color-paper: #201c19;
-    --color-ink: #f3ece4;
-    --color-mocha: #c4b9ad;
-    --color-taupe: #a2968a;
-    --color-fog: #332d28;
-    --color-haze: #28231f;
+    --color-oat: #111514;
+    --color-cream: #1a1f1e;
+    --color-paper: #1b2120;
+    --color-ink: #eaf0ef;
+    --color-mocha: #b7c3c1;
+    --color-taupe: #97a5a2;
+    --color-fog: #2b3331;
+    --color-haze: #232b29;
     --color-olive: #5fa39b;
     --color-olive-deep: #8fcbc3;
     --color-sage: #8fb59c;
     --color-fern: #6fbd9d;
     --color-rose: #e09a8d;
-    --color-edge: #7a6e63;
+    --color-edge: #6f7d7a;
     --color-danger: #f19a8f;
     --color-danger-bg: #2a1b19;
     --color-danger-edge: #6a3a34;
@@ -841,7 +841,7 @@ select.input {
 /* Dark-only fixes that tokens cannot express. */
 :root:not([data-theme="light"]) {
   .entry-state-posted { border-left-color: var(--color-success); }
-  select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23c4b9ad' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); }
+  select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23b7c3c1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); }
 }
 
 /* Horizontally scrolling tab strips: a hairline, low-contrast scrollbar instead of the chunky default. */
