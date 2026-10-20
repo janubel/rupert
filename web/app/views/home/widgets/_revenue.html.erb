@@ -6,7 +6,7 @@
   <%# A flat zero line with 0 / 0.5 / 1 axes says nothing; show the chart only once there are sales. %>
   <% if presenter.ledger_groups.any? %>
     <div class="mt-4">
-      <%= area_chart presenter.revenue_series, height: "220px", legend: false, colors: chart_color(:olive_deep), library: { scales: { x: { ticks: { maxTicksLimit: 8 } }, y: { grid: { color: "#dde8e6" } } } } %>
+      <%= area_chart presenter.revenue_series, height: "220px", legend: false, colors: chart_color(:olive_deep), library: { scales: { x: { ticks: { maxTicksLimit: 8 } } } } %>
     </div>
   <% end %>
   <dl class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
