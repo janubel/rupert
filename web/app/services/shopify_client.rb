@@ -14,15 +14,21 @@ class ShopifyClient
     end
   end
 
-  API_VERSION = '2026-07'
+  API_VERSION = SHOPIFY_ADMIN_API_VERSION
   TOKEN_TTL = 10 * 60 # seconds
 
   @mutex = Mutex.new
   @tokens = {} # tenant_id => { token:, at: }
 
   class << self
+    # The store to talk to: the managed SHOPIFY_SHOP_DOMAIN setting, else the
+    # workspace's own shop domain. There is deliberately no hard-coded default:
+    # a misconfigured workspace must fail loudly rather than sync another shop.
     def shop_domain
-      EnvStore.fetch('SHOPIFY_SHOP_DOMAIN', 'm11u0i-sb.myshopify.com')
+      domain = EnvStore.fetch('SHOPIFY_SHOP_DOMAIN', '').to_s.strip.presence || Current.tenant&.shopify_shop_domain.to_s.strip.presence
+      raise Error.new('SHOPIFY_SHOP_DOMAIN is not set for this workspace.', reason: :invalid) if domain.blank?
+
+      domain
     end
 
     def token(force: false)

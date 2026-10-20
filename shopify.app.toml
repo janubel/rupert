@@ -3,7 +3,7 @@
 client_id = "44770e333ebb5a3f6dacd7a15906f455"
 name = "Rupert"
 embedded = true
-application_url = "https://rupert.cybersecuritypilot.org"
+application_url = "https://rupert.stoverparc.org"
 
 [auth]
 # Matches ShopifyApp's login_callback_url (/api/auth/callback, mounted at /api)

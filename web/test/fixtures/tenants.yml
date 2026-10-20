@@ -4,5 +4,5 @@ default_tenant:
   id: 'test-tenant-default'
   name: Test Shop
   subdomain: testshop
-  shopify_shop_domain: m11u0i-sb.myshopify.com
+  shopify_shop_domain: testshop.myshopify.com
   status: active
