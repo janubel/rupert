@@ -7,7 +7,6 @@ web/config/master.key
 web/.env
 .git
 .github
-legacy/
 .gitignore
 Dockerfile
 docker-compose.yml

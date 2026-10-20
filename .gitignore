@@ -17,8 +17,6 @@ dist/
 !web/public/dist/
 web/public/dist/*
 !web/public/dist/.keep
-legacy/build/
-legacy/node_modules/
 .turbo/
 
 # Logs + runtime artifacts
@@ -31,8 +29,6 @@ shopify-operations-snapshot.json
 square-snapshot.json
 
 # Local database (contains sessions + mirrored data)
-legacy/prisma/dev.sqlite
-legacy/prisma/dev.sqlite-journal
 web/storage/*.sqlite*
 web/db/*.sqlite*
 
