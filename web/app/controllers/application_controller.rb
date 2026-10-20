@@ -18,6 +18,7 @@ class ApplicationController < ActionController::Base
   # Deny unlisted modules even if a new controller omits its permission check.
   def restrict_employee_workspace
     return unless Current.user&.employee?
+    response.headers['Cache-Control'] = 'no-store'
     if controller_path == 'home' && action_name == 'index'
       return redirect_to ctrax_pos_path
     end
@@ -27,6 +28,8 @@ class ApplicationController < ActionController::Base
       true
     when 'employee_access'
       %w[edit update].include?(action_name)
+    when 'projects/tasks'
+      %w[index update transition move].include?(action_name)
     when 'receipts'
       %w[index new create show edit update download submit reopen].include?(action_name)
     when 'people/timesheets'
@@ -49,7 +52,7 @@ class ApplicationController < ActionController::Base
 
     response.headers['Cache-Control'] = 'no-store'
     if request.format.html?
-      redirect_to employee_app_path, alert: 'Your account can use POS and your own time records.'
+      redirect_to employee_app_path, alert: 'Your account can use POS, your own time records and assigned tasks.'
     else
       head :forbidden
     end

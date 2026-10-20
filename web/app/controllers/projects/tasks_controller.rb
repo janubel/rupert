@@ -9,16 +9,17 @@ module Projects
 
     # Cross-project work, as a drag-and-drop board (default) or a sortable list.
     def index
-      authorize(:module, :projects_read?)
+      authorize(Projects::Task, :index?)
       @view = params[:view] == 'list' ? 'list' : 'board'
       @scope = filtered_tasks
-      @counts = Projects::Task.group(:status).count
+      @counts = visible_tasks.group(:status).count
       @open_count = @counts.slice('todo', 'in_progress', 'blocked').values.sum
       @done_count = @counts['done'].to_i
       @blocked_count = @counts['blocked'].to_i
-      @overdue_count = Projects::Task.overdue.count
-      @mine_count = Projects::Task.assigned_to(Current.user.id).where.not(status: 'done').count
+      @overdue_count = visible_tasks.overdue.count
+      @mine_count = visible_tasks.assigned_to(Current.user.id).where.not(status: 'done').count
       @projects = Projects::Project.where.not(status: 'archived').order(:name)
+      @projects = @projects.where(id: visible_tasks.select(:project_id)) if Current.user.employee?
 
       if @view == 'board'
         @board_total = @scope.count
@@ -47,12 +48,15 @@ module Projects
     end
 
     def update
-      authorize(@task)
-      if @task.update(task_params)
+      saved = @task.with_lock do
+        authorize(@task)
+        @task.update(task_params)
+      end
+      if saved
         ActivityLogger.log('task_updated', subject: @task, details: "Assignee: #{@task.assignee_id.presence || 'unassigned'}")
-        redirect_back(fallback_location: @task.project || projects_tasks_path, notice: 'Task updated.')
+        redirect_back(fallback_location: task_fallback_location, notice: 'Task updated.')
       else
-        redirect_back(fallback_location: @task.project || projects_tasks_path,
+        redirect_back(fallback_location: task_fallback_location,
           alert: @task.errors.full_messages.join(', '))
       end
     end
@@ -67,26 +71,28 @@ module Projects
 
     # POST /tasks/:id/transition?event=start|finish|block|reopen
     def transition
-      authorize(@task)
       event = params[:event]
       transitioned = @task.with_lock do
+        authorize(@task)
         if %w[start finish block reopen unstart].include?(event) && @task.public_send("may_#{event}?")
           @task.public_send("#{event}!")
         end
       end
       if transitioned
         ActivityLogger.log('task_transitioned', subject: @task, details: "Status: #{@task.status}")
-        redirect_back(fallback_location: @task.project || projects_tasks_path, notice: "Task #{event}ed.")
+        redirect_back(fallback_location: task_fallback_location, notice: "Task #{event}ed.")
       else
-        redirect_back(fallback_location: @task.project || projects_tasks_path,
+        redirect_back(fallback_location: task_fallback_location,
           alert: "Cannot #{event} a #{@task.status} task.")
       end
     end
 
     # POST /tasks/:id/move?status=in_progress — used by the board's drag and drop.
     def move
-      authorize(@task)
-      moved = @task.move_to!(params[:status].to_s)
+      moved = @task.with_lock do
+        authorize(@task)
+        @task.move_to!(params[:status].to_s)
+      end
       ActivityLogger.log('task_moved', subject: @task, details: "Status: #{@task.status}") if moved
       respond_to do |format|
         format.json do
@@ -115,11 +121,19 @@ module Projects
     end
 
     def set_task
-      @task = Projects::Task.find(params[:id])
+      @task = visible_tasks.find(params[:id])
+    end
+
+    def visible_tasks
+      policy_scope(Projects::Task)
+    end
+
+    def task_fallback_location
+      Current.user.employee? ? projects_tasks_path : (@task.project || projects_tasks_path)
     end
 
     def filtered_tasks
-      tasks = Projects::Task.includes(:project)
+      tasks = visible_tasks.includes(:project)
       tasks = tasks.search(params[:q]) if params[:q].present?
       tasks = tasks.where(priority: params[:priority]) if params[:priority].in?(Projects::Task::PRIORITIES)
       tasks = tasks.where(project_id: params[:project_id]) if params[:project_id].present?
@@ -139,6 +153,8 @@ module Projects
     end
 
     def task_params
+      return params.require(:task).permit(:title, :description) if Current.user.employee?
+
       params.require(:task).permit(:title, :description, :priority, :due_on, :project_id, :assignee_id)
     end
   end

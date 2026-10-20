@@ -1,18 +1,19 @@
 <% content_for :title, "Tasks" %>
-<% can_write = Current.user.can?("projects.write") %>
+<% own_tasks = Current.user.employee? %>
+<% can_write = own_tasks || Current.user.can?("projects.write") %>
 <div class="space-y-5">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <p class="eyebrow text-olive">Work</p>
-      <h1 class="page-title">Tasks</h1>
-      <p class="mt-1 text-sm text-mocha">Everything in flight across projects. Drag cards between columns to update their status.</p>
+      <h1 class="page-title"><%= own_tasks ? "My tasks" : "Tasks" %></h1>
+      <p class="mt-1 text-sm text-mocha"><%= own_tasks ? "Your assigned work. Update notes or move tasks between columns as you work." : "Everything in flight across projects. Drag cards between columns to update their status." %></p>
     </div>
     <div class="flex items-center gap-2">
       <div class="inline-flex rounded-full bg-haze p-1" role="group" aria-label="View">
         <%= link_to "Board", tasks_filter_path(view: nil), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "board"}" %>
         <%= link_to "List", tasks_filter_path(view: "list"), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "list"}" %>
       </div>
-      <%= link_to "Projects", projects_projects_path, class: "btn-ghost btn-sm" %>
+      <%= link_to "Projects", projects_projects_path, class: "btn-ghost btn-sm" unless own_tasks %>
     </div>
   </section>
 
@@ -46,7 +47,7 @@
     <noscript><%= submit_tag "Filter", class: "btn-ghost btn-sm" %></noscript>
   <% end %>
 
-  <% if can_write %>
+  <% if can_write && !own_tasks %>
     <%= render "projects/shared/quick_add", projects: @projects, assign_self: true %>
   <% end %>
 
@@ -57,7 +58,7 @@
     <% if @columns.values.all?(&:empty?) %>
       <div class="card card-pad py-10 text-center">
         <p class="font-display text-lg text-ink"><%= tasks_filtered? ? "No tasks match these filters." : "A clean slate." %></p>
-        <p class="mt-1 text-sm text-taupe"><%= tasks_filtered? ? "Try clearing a filter." : "Add your first task above, or open a project to plan it." %></p>
+        <p class="mt-1 text-sm text-taupe"><%= tasks_filtered? ? "Try clearing a filter." : (own_tasks ? "Tasks assigned to you will appear here." : "Add your first task above, or open a project to plan it.") %></p>
       </div>
     <% else %>
       <%= render "projects/shared/board", columns: @columns, assignees: @assignees, show_project: true, can_write: can_write %>
@@ -75,7 +76,9 @@
               <p class="<%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= task.title %></p>
               <% if task.description.present? %><p class="mt-0.5 text-sm text-mocha"><%= task.description %></p><% end %>
               <p class="mt-1 text-xs text-taupe">
-                <% if task.project %><%= link_to task.project.name, task.project, class: "font-semibold text-olive hover:underline" %> · <% end %>
+                <% if task.project %>
+                  <% if own_tasks %><span><%= task.project.name %></span><% else %><%= link_to task.project.name, task.project, class: "font-semibold text-olive hover:underline" %><% end %> ·
+                <% end %>
                 <% if task.due_on %><span class="<%= due_class(task) %>"><%= task.due_label %></span> · <% end %>
                 <% if (name = @assignees[task.assignee_id.to_s]) %><%= name %> · <% end %>
                 Updated <%= time_ago_in_words(task.updated_at) %> ago
