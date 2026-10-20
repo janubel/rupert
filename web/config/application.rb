@@ -3,6 +3,7 @@
 require_relative 'boot'
 
 require 'rails/all'
+require_relative 'shopify_api_version'
 
 # Load the repo-root .env (credentials for the sync engine live there). Skipped
 # in the test environment so real credentials on the dev box never leak into

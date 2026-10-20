@@ -41,6 +41,10 @@ module Sales
       else
         render(:new, status: :unprocessable_entity)
       end
+    rescue ArgumentError => e
+      @session ||= Sales::PosSession.new
+      flash.now[:alert] = e.message
+      render(:new, status: :unprocessable_entity)
     end
 
     def refresh
@@ -81,7 +85,7 @@ module Sales
     # here — asking users to type cents was a real wrong-entry source.
     def pos_session_params
       allowed = params.require(:pos_session).permit(:name, :location_id, :opening_cash_cents, :opening_cash)
-      allowed[:opening_cash_cents] = (allowed[:opening_cash].to_f * 100).round if allowed[:opening_cash].present?
+      allowed[:opening_cash_cents] = Money.cents_from_amount!(allowed[:opening_cash], field: 'Opening cash') if allowed[:opening_cash].present?
       allowed.except(:opening_cash)
     end
   end

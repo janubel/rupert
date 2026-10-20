@@ -28,7 +28,7 @@ class LocalEnvironmentTest < ActiveSupport::TestCase
     Dir.mktmpdir('rupert-boot-') do |root|
       config = File.join(root, 'web', 'config')
       FileUtils.mkdir_p(config)
-      %w[application.rb boot.rb].each { |name| FileUtils.cp(Rails.root.join('config', name), config) }
+      %w[application.rb boot.rb shopify_api_version.rb].each { |name| FileUtils.cp(Rails.root.join('config', name), config) }
       File.write(File.join(root, '.env'), "RUPERT_BOOT_TEST_SENTINEL=local-example\nHOST=local.example\n")
       script = "require #{File.join(config, 'application.rb').inspect}; puts({ sentinel: ENV['RUPERT_BOOT_TEST_SENTINEL'], host: ENV['HOST'] }.to_json)"
       env = { 'RAILS_ENV' => environment, 'RACK_ENV' => nil, 'HOST' => host, 'RUPERT_BOOT_TEST_SENTINEL' => nil,

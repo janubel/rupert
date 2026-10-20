@@ -55,18 +55,31 @@ class BankStatementLine < ApplicationRecord
   # Link this line to the ledger entry it reconciles to (F40). Records who and
   # when, like decide!, but does not create any money record.
   def match!(journal_entry:, user:)
-    protect_recorded_source!
-    raise_if_ignored!
-    validate_bank_match!(journal_entry)
-    update!(status: 'matched', journal_entry_id: journal_entry.id,
-      decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
+    mapping = BankStatementAccount.find_by(account_label: account_label)
+    unless mapping
+      errors.add(:base, 'Choose the ledger account for this statement before matching.')
+      raise ActiveRecord::RecordInvalid, self
+    end
+    mapping.with_lock do
+      with_lock do
+        protect_recorded_source!
+        raise_if_ignored!
+        journal_entry.with_lock do
+          validate_bank_match!(journal_entry, mapping)
+          update!(status: 'matched', journal_entry_id: journal_entry.id,
+            decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
+        end
+      end
+    end
   end
 
   def unmatch!(user:)
-    protect_recorded_source!
-    raise_if_ignored!
-    update!(status: 'pending', journal_entry_id: nil,
-      decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
+    with_lock do
+      protect_recorded_source!
+      raise_if_ignored!
+      update!(status: 'pending', journal_entry_id: nil,
+        decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current)
+    end
   end
 
   def decide!(status:, user:, expense: nil, vendor_payment: nil, journal_entry: nil)
@@ -99,14 +112,14 @@ class BankStatementLine < ApplicationRecord
   # workspace, whose bank (Cash/Checking) movement equals the line's signed
   # amount. Sign convention matches the workbench: money-in is positive on both
   # the statement and the ledger (a debit to Cash); money-out is negative.
-  def validate_bank_match!(entry)
-    bank_codes = Finance::BankReconciliation::BANK_ACCOUNT_CODES
+  def validate_bank_match!(entry, mapping)
     signed = entry.journal_lines.sum do |line|
-      bank_codes.include?(line.account&.code) ? line.debit_cents.to_i - line.credit_cents.to_i : 0
+      line.account_id == mapping.ledger_account_id ? line.debit_cents.to_i - line.credit_cents.to_i : 0
     end
-    return if entry.status == 'posted' && entry.tenant_id == tenant_id && signed == amount_cents
+    return if entry.status == 'posted' && entry.tenant_id == tenant_id && mapping.tenant_id == tenant_id &&
+      mapping.account_label == account_label && mapping.ledger_account.active? && signed == amount_cents
 
-    errors.add(:base, "That ledger entry does not reconcile to this line. Confirm a posted entry in this workspace whose Cash or Checking movement equals #{amount_cents} cents.")
+    errors.add(:base, "That ledger entry does not reconcile to this line. Confirm a posted entry in this workspace whose selected account movement equals #{amount_cents} cents.")
     raise ActiveRecord::RecordInvalid, self
   end
 
@@ -114,7 +127,7 @@ class BankStatementLine < ApplicationRecord
   # is the DB backstop; this gives the operator a plain-language message first.
   def journal_entry_not_already_matched
     return if journal_entry_id.blank?
-    return unless self.class.where.not(id: id).where(journal_entry_id: journal_entry_id).exists?
+    return unless self.class.where.not(id: id).where(account_label: account_label, journal_entry_id: journal_entry_id).exists?
 
     errors.add(:journal_entry_id, 'is already matched to another statement line')
   end

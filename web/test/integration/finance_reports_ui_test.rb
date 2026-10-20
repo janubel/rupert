@@ -91,6 +91,7 @@ class FinanceReportsUiTest < ActionDispatch::IntegrationTest
 
   test 'bank reconciliation confirm names both records and the effect' do
     entry = post_entry(4200, memo: 'Deposit')
+    BankStatementAccount.create!(account_label: 'Main', ledger_account: @cash)
     BankStatementLine.create!(document_id: 1, account_label: 'Main', line_no: 1, posted_on: Date.current, description: 'DEPOSIT',
       amount_cents: 4200, fingerprint: 'fp-1')
     get finance_bank_reconciliation_path(account_label: 'Main', from: Date.current - 3, to: Date.current)

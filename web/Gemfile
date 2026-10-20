@@ -93,6 +93,13 @@ gem "prawn-table", "~> 0.2"
 # Faster JSON serialization
 gem "oj"
 
+# Request throttling (login, webhooks, API, settings) — config/initializers/rack_attack.rb
+gem "rack-attack", "~> 6.7"
+
+# Error tracking; inert unless SENTRY_DSN is set — config/initializers/sentry.rb
+gem "sentry-ruby", "~> 5.22"
+gem "sentry-rails", "~> 5.22"
+
 # Use Sass to process CSS
 # gem "sassc-rails"
 
@@ -119,6 +126,8 @@ group :development do
 end
 
 group :test do
+  # Coverage for the sync engine and money paths (bin/check-coverage)
+  gem "simplecov", require: false
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver", ">= 4.14"

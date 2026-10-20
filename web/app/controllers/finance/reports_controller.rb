@@ -5,6 +5,8 @@ module Finance
   # window drives trial balance and the income statement; the balance sheet is
   # cumulative through the chosen date.
   class ReportsController < AuthenticatedController
+    COVERAGE_NOTICE = 'Incomplete ledger coverage: sales receipts, settlements and refunds are not automatically posted. These reports show posted entries only; a balanced ledger does not establish complete business accounts.'
+
     before_action :set_window
 
     def index
@@ -65,6 +67,7 @@ module Finance
       require 'csv'
       CSV.generate do |csv|
         csv << [action_name.humanize, "From #{@from}", "To #{@to}", 'Amounts in USD']
+        csv << ['Coverage', COVERAGE_NOTICE]
         csv << ['Status', balance_state] if action_name != 'income_statement'
         case action_name
         when 'trial_balance'

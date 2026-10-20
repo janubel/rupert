@@ -1,7 +1,7 @@
 # Repository maintenance
 
 The Rails application in `web/` is the active web service. `mobile/` is the
-employee client; `legacy/` is retained reference material. The generated
+employee client; the original Node implementation was removed in October 2026. The generated
 product site in `docs/` is checked against `web/config/product_roadmap.json`.
 
 ## Validation

@@ -74,10 +74,8 @@ class LedgerImporter
     entries.length
   end
 
-  # Shopify sends decimal strings; avoid binary-float rounding on the way to cents.
+  # Shopify sends decimal strings; Money converts them without a Float.
   def self.decimal_cents(amount)
-    (BigDecimal(amount.to_s.presence || '0') * 100).round.to_i
-  rescue ArgumentError
-    0
+    Money.cents_from_amount(amount).to_i
   end
 end

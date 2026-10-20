@@ -60,6 +60,7 @@ class BankStatementsController < AuthenticatedController
     lines = BankStatementLine.for_document(document.id).pending.where(id: decisions.keys).index_by { |l| l.id.to_s }
     done = Hash.new(0)
     BankStatementLine.transaction do
+      Tenant.where(id: Current.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
       decisions.each do |id, choice|
         line = lines[id] or next
         apply(line, choice, document, done)
@@ -80,6 +81,10 @@ class BankStatementsController < AuthenticatedController
 
   def apply(line, choice, document, done)
     kind, value = choice.split(':', 2)
+    mapping = BankStatementAccount.find_by(account_label: line.account_label)
+    if %w[expense payment].include?(kind) && mapping && mapping.ledger_account.code != '1100'
+      raise BankStatementImport::Error, 'Statement expense and vendor-payment creation currently posts to Checking (1100). For this mapped account, create the correct journal entry and confirm its match in Bank reconciliation. Nothing was recorded.'
+    end
     note = "From bank statement #{document.filename} line #{line.line_no}"
     case kind
     when 'ignore'

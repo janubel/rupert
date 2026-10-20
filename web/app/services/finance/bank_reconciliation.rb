@@ -13,18 +13,18 @@ module Finance
   # so a receipt (debit to Cash) is positive and a payment (credit to Checking)
   # is negative — the two line up directly.
   class BankReconciliation
-    BANK_ACCOUNT_CODES = %w[1000 1100].freeze # Cash, Checking
     DEFAULT_WINDOW_DAYS = 5
 
     Suggestion = Struct.new(:line, :entry, :amount_cents, :days_apart, keyword_init: true)
 
-    attr_reader :account_label, :from, :to, :window_days
+    attr_reader :account_label, :from, :to, :window_days, :mapping
 
     def initialize(account_label:, from:, to:, window_days: DEFAULT_WINDOW_DAYS)
       @account_label = account_label
+      @mapping = BankStatementAccount.find_by(account_label: account_label)
       @from = from
       @to = to
-      @window_days = window_days.to_i.clamp(0, 31)
+      @window_days = (window_days.presence || DEFAULT_WINDOW_DAYS).to_i.clamp(0, 31)
     end
 
     def lines
@@ -36,20 +36,21 @@ module Finance
     # Posted ledger movements against bank accounts in the window, each signed
     # debit-minus-credit, tagged with the entry and its date.
     def gl_movements
-      @gl_movements ||= begin
-        account_ids = Finance::Account.where(code: BANK_ACCOUNT_CODES).pluck(:id)
-        JournalLine.joins(:journal_entry).merge(JournalEntry.posted)
-                   .where(account_id: account_ids)
+      return [] unless mapping
+
+      @gl_movements ||= JournalLine.joins(:journal_entry).merge(JournalEntry.posted)
+                   .where(account_id: mapping.ledger_account_id)
                    .where(journal_entries: { posted_on: from..to })
                    .includes(:journal_entry)
-                   .map do |line|
+                   .group_by(&:journal_entry).filter_map do |entry, legs|
+          signed = legs.sum { |leg| leg.debit_cents - leg.credit_cents }
+          next if signed.zero?
           {
-            entry: line.journal_entry,
-            signed_cents: line.debit_cents.to_i - line.credit_cents.to_i,
-            date: line.journal_entry.posted_on
+            entry: entry,
+            signed_cents: signed,
+            date: entry.posted_on
           }
         end
-      end
     end
 
     # Greedy sign + amount + date-window matching. Lines already linked to an
@@ -78,6 +79,7 @@ module Finance
 
         lines.each do |line|
           next if result.key?(line.id)
+          next if line.journal_entry_id.present?
           next unless line.pending? || line.status == 'matched'
 
           candidate = gl_movements.each_with_index.find do |movement, index|
@@ -150,13 +152,13 @@ module Finance
         statement_net_cents: stmt_in + stmt_out,
         gl_in_cents: gl_in,
         gl_out_cents: gl_out,
-        gl_net_cents: gl_in + gl_out,
-        difference_cents: (stmt_in + stmt_out) - (gl_in + gl_out)
+        gl_net_cents: mapping ? gl_in + gl_out : nil,
+        difference_cents: mapping ? (stmt_in + stmt_out) - (gl_in + gl_out) : nil
       }
     end
 
     def bank_accounts
-      Finance::Account.where(code: BANK_ACCOUNT_CODES).ordered
+      BankStatementAccount.available_accounts
     end
 
     private
@@ -164,8 +166,10 @@ module Finance
     def same_sign(a, b) = (a.positive? && b.positive?) || (a.negative? && b.negative?)
 
     def existing_entry(line)
-      entry = JournalEntry.posted.find_by(id: line.journal_entry_id)
-      return nil unless entry
+      movement = gl_movements.find { |m| m[:entry].id == line.journal_entry_id && m[:signed_cents] == line.amount_cents }
+      return nil unless movement
+
+      entry = movement[:entry]
 
       Suggestion.new(line: line, entry: entry, amount_cents: line.amount_cents, days_apart: 0)
     end

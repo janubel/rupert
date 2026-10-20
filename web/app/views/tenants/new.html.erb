@@ -16,7 +16,7 @@
     <div>
       <%= f.label :subdomain, "Subdomain", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
       <div class="flex items-center gap-2">
-        <%= f.text_field :subdomain, required: true, pattern: "[a-z0-9][a-z0-9-]*[a-z0-9]", placeholder: "my-business", class: "input" %>
+        <%= f.text_field :subdomain, required: true, pattern: '[a-z0-9][a-z0-9\-]*[a-z0-9]', placeholder: "my-business", class: "input" %>
         <span class="whitespace-nowrap text-sm text-taupe">.<%= request.domain %></span>
       </div>
     </div>
