@@ -747,3 +747,12 @@ select.input {
 .explainer[open] > .explainer-summary::after { transform: rotate(-135deg); }
 
 .explainer-summary:focus-visible { outline: 2px solid var(--color-olive); outline-offset: 2px; border-radius: 0.25rem; }
+
+/* On phones the area navigation scrolls sideways; fade its trailing edge so
+   the clipped items read as "more this way" instead of a layout bug. */
+@media (max-width: 760px) {
+  .area-navigation {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  }
+}
