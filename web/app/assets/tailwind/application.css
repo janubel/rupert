@@ -840,27 +840,23 @@ select.input {
 @media all {
   :root[data-theme="dark"] {
     color-scheme: dark;
-    /* Dark grey, not black (Material: #121212-class surfaces; shadows and
-       elevation stay visible, no halation around light text); accents are
-       lighter and less saturated than in light mode so they do not vibrate
-       against the dark surface. Primary text is 14:1 on cards. */
-    --color-oat: #121418;
-    --color-cream: #171a20;
-    --color-paper: #1b1f26;
-    --color-ink: #e9edf3;
-    --color-mocha: #b8c0cc;
-    --color-taupe: #8e98a6;
-    --color-fog: #2f3540;
-    --color-haze: #242932;
-    --color-olive: #6f9cf5;
-    --color-olive-deep: #9dbcff;
-    --color-sage: #5fb8ab;
+    --color-oat: #111514;
+    --color-cream: #1a1f1e;
+    --color-paper: #1b2120;
+    --color-ink: #eaf0ef;
+    --color-mocha: #b7c3c1;
+    --color-taupe: #97a5a2;
+    --color-fog: #2b3331;
+    --color-haze: #232b29;
+    --color-olive: #5fa39b;
+    --color-olive-deep: #8fcbc3;
+    --color-sage: #8fb59c;
+    --color-fern: #6fbd9d;
+    --color-rose: #e09a8d;
+    --color-edge: #6f7d7a;
+    --color-danger: #f19a8f;
     --color-clay: #a894e8;
     --color-butter: #e6c060;
-    --color-rose: #ef8a7c;
-    --color-fern: #5fcf98;
-    --color-edge: #68727f;
-    --color-danger: #f29c92;
     --color-danger-bg: #2a1b19;
     --color-danger-edge: #6a3a34;
     --color-success: #7fdcae;
@@ -971,7 +967,7 @@ select.input {
 /* Dark-only fixes that tokens cannot express. */
 :root[data-theme="dark"] {
   .entry-state-posted { border-left-color: var(--color-success); }
-  select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23b8c0cc' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); }
+  select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23b7c3c1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); }
 }
 
 /* Horizontally scrolling tab strips: a hairline, low-contrast scrollbar instead of the chunky default. */

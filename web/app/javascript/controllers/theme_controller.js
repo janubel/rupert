@@ -6,7 +6,7 @@ import { Controller } from "@hotwired/stimulus"
 // it before first paint, so there is no flash).
 const THEMES = ["herbal", "light", "mist", "sepia", "dark"]
 // Page color per theme for the browser chrome (matches --color-oat).
-const PAGE_COLORS = { herbal: "#e6efea", light: "#f5f7fa", mist: "#e6ebf2", sepia: "#efe6d4", dark: "#121418" }
+const PAGE_COLORS = { herbal: "#e6efea", light: "#f5f7fa", mist: "#e6ebf2", sepia: "#efe6d4", dark: "#111514" }
 
 export default class extends Controller {
   static targets = ["option"]
