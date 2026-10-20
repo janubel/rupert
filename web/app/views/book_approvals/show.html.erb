@@ -149,7 +149,7 @@
           <% end %>
         </fieldset>
         <div>
-          <%= f.label :notes, 'Note (required unless plainly approved)', class: 'block text-sm font-semibold', data: { approval_form_target: 'label' } %>
+          <%= f.label :notes, 'Note (required unless plainly approved)', class: 'field-label', data: { approval_form_target: 'label' } %>
           <%= f.text_area :notes, value: @values&.dig('notes'), rows: 3, maxlength: 4000, class: 'input', placeholder: 'What you checked, what is outstanding, who owns it.', data: { approval_form_target: 'notes' } %>
         </div>
         <label class="flex items-start gap-3 text-sm"><%= f.check_box :confirmed, { checked: @values&.dig('confirmed') == '1', class: 'mt-1', data: { approval_form_target: 'confirm', action: 'change->approval-form#sync' } }, '1', '0' %><span>I looked at these numbers (version <code><%= period.digest.first(10) %></code>) as <strong><%= Current.user.display_name || Current.user.email %></strong>.</span></label>

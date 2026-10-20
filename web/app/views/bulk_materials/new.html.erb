@@ -3,8 +3,8 @@
   <h1 class="page-title">New bulk material</h1>
   <% if @material.errors.any? %><div role="alert" class="card card-pad text-rose"><%= @material.errors.full_messages.to_sentence %></div><% end %>
   <%= form_with model: @material, class: 'card card-pad space-y-4' do |form| %>
-    <div><%= form.label :name, class: 'block text-sm font-medium mb-1' %><%= form.text_field :name, required: true, maxlength: 120, class: 'input' %></div>
-    <div><%= form.label :unit, 'Preferred display unit', class: 'block text-sm font-medium mb-1' %><%= form.select :unit, BulkMass::FACTORS.keys, {}, class: 'input' %><p class="mt-1 text-xs text-taupe">Every receipt and movement can use mg, g, kg, oz or lb. Stored balances always use integer milligrams.</p></div>
+    <div><%= form.label :name, class: 'field-label' %><%= form.text_field :name, required: true, maxlength: 120, class: 'input' %></div>
+    <div><%= form.label :unit, 'Preferred display unit', class: 'field-label' %><%= form.select :unit, BulkMass::FACTORS.keys, {}, class: 'input' %><p class="mt-1 text-xs text-taupe">Every receipt and movement can use mg, g, kg, oz or lb. Stored balances always use integer milligrams.</p></div>
     <div class="flex gap-3"><%= form.submit 'Create material', class: 'btn-primary' %><%= link_to 'Cancel', bulk_materials_path, class: 'btn-ghost' %></div>
   <% end %>
 </div>

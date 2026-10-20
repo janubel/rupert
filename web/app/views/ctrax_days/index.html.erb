@@ -5,7 +5,7 @@
   <header><p class="eyebrow text-olive-deep">Review · native C-Trax records</p><h1 class="page-title mt-2">C-Trax daily close</h1><p class="mt-2 max-w-3xl text-sm text-mocha">Review recorded sales, tender details, and register cash for one business date. A local review does not close a C-Trax register or confirm bank settlement.</p></header>
   <section class="card card-pad space-y-4" aria-label="Choose business date">
     <div class="flex flex-wrap items-end justify-between gap-3">
-      <%= form_tag ctrax_days_path, method: :get, class: 'flex flex-wrap items-end gap-3' do %><div><%= label_tag :date, 'Business date', class: 'mb-1 block text-sm font-semibold' %><%= date_field_tag :date, @date, class: 'input' %></div><%= submit_tag 'View day', class: 'btn-primary' %><% end %>
+      <%= form_tag ctrax_days_path, method: :get, class: 'flex flex-wrap items-end gap-3' do %><div><%= label_tag :date, 'Business date', class: 'field-label' %><%= date_field_tag :date, @date, class: 'input' %></div><%= submit_tag 'View day', class: 'btn-primary' %><% end %>
       <nav aria-label="Business dates" class="flex flex-wrap gap-2"><%= link_to 'Previous day', ctrax_days_path(date: @date - 1), class: 'btn-ghost btn-sm' %><%= link_to 'Today', ctrax_days_path(date: today), class: 'btn-ghost btn-sm', aria: { current: @date == today ? 'date' : nil } %><%= link_to 'Next day', ctrax_days_path(date: @date + 1), class: 'btn-ghost btn-sm' %></nav>
     </div>
     <div class="flex flex-wrap items-center justify-between gap-3 border-t border-fog pt-3"><p class="text-sm text-mocha">Viewing <strong class="text-ink"><%= @date.strftime('%A, %b %-d, %Y') %></strong> · Each store uses its own source timezone.</p>

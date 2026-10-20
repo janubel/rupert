@@ -20,8 +20,8 @@
     <% if @token.errors.any? %><p role="alert" class="text-sm text-rose"><%= @token.errors.full_messages.to_sentence %></p><% end %>
     <%= form_with model: @issued_secret ? ApiAccessToken.new(expires_at: 90.days.from_now) : @token, url: api_access_tokens_path, data: { turbo: false }, class: 'space-y-4' do |form| %>
       <div class="grid gap-4 sm:grid-cols-2">
-        <div><%= form.label :name, 'Integration name', class: 'block text-sm font-medium mb-1' %><%= form.text_field :name, required: true, maxlength: 100, placeholder: 'e.g. Reporting dashboard', class: 'input' %></div>
-        <div><%= form.label :expires_at, 'Expires at (optional)', class: 'block text-sm font-medium mb-1' %><%= form.datetime_local_field :expires_at, class: 'input' %></div>
+        <div><%= form.label :name, 'Integration name', class: 'field-label' %><%= form.text_field :name, required: true, maxlength: 100, placeholder: 'e.g. Reporting dashboard', class: 'input' %></div>
+        <div><%= form.label :expires_at, 'Expires at (optional)', class: 'field-label' %><%= form.datetime_local_field :expires_at, class: 'input' %></div>
       </div>
       <fieldset class="space-y-2">
         <legend class="mb-2 text-sm font-medium">Allowed reads</legend>

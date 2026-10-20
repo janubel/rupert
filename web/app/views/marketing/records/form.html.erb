@@ -5,7 +5,7 @@
   <%= form_with model: @record, scope: :record, url: @record.persisted? ? public_send("marketing_#{@record.class.model_name.element}_path", @record) : marketing_record_path(@record), class: 'card card-pad space-y-4' do |f| %>
     <%= f.hidden_field :lock_version if @record.persisted? %>
     <% marketing_record_fields(@record).each do |field| %>
-      <div><%= f.label field, class: 'block text-sm font-medium mb-1' %>
+      <div><%= f.label field, class: 'field-label' %>
         <% if (choices = marketing_choices(field)) %>
           <%= f.select field, choices, { include_blank: 'Choose…' }, class: 'select w-full' %>
         <% elsif %i[topics include_terms exclude_terms promotion_rules excerpt triage_note terms].include?(field) %>

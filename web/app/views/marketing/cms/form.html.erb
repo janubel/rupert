@@ -4,7 +4,7 @@
   <%= form_with model: @record, scope: :cms_record, url: @form_url, class: 'card card-pad space-y-4' do |f| %>
     <%= f.hidden_field :lock_version if @record.persisted? %>
     <% influencer_cms_fields(@record).each do |field| %>
-      <div><%= f.label field, class: 'block text-sm font-medium mb-1' %>
+      <div><%= f.label field, class: 'field-label' %>
         <% if (choices = influencer_cms_choices(@record, field)) %>
           <%= f.select field, choices, { include_blank: 'Choose…' }, class: 'select w-full' %>
         <% elsif %i[topics notes private_notes shipping_details deliverables terms body note].include?(field) %>

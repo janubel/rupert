@@ -8,11 +8,11 @@
       <h2 class="font-display text-xl">Record movement</h2>
       <%= form.hidden_field :request_token %>
       <div class="grid gap-4 sm:grid-cols-3">
-        <div><%= form.label :kind, 'Movement', class: 'block text-sm font-medium mb-1' %><%= form.select :kind, [['Use material', 'consume'], ['Receive more', 'receipt'], ['Signed correction', 'adjustment']], {}, class: 'input' %></div>
-        <div><%= label_tag 'bulk_movement_quantity', 'Weight', class: 'block text-sm font-medium mb-1' %><%= text_field_tag 'bulk_movement[quantity]', @movement.input_quantity, required: true, inputmode: 'decimal', class: 'input' %></div>
-        <div><%= label_tag 'bulk_movement_unit', 'Unit', class: 'block text-sm font-medium mb-1' %><%= select_tag 'bulk_movement[unit]', options_for_select(BulkMass::FACTORS.keys, @movement.input_unit), class: 'input' %></div>
+        <div><%= form.label :kind, 'Movement', class: 'field-label' %><%= form.select :kind, [['Use material', 'consume'], ['Receive more', 'receipt'], ['Signed correction', 'adjustment']], {}, class: 'input' %></div>
+        <div><%= label_tag 'bulk_movement_quantity', 'Weight', class: 'field-label' %><%= text_field_tag 'bulk_movement[quantity]', @movement.input_quantity, required: true, inputmode: 'decimal', class: 'input' %></div>
+        <div><%= label_tag 'bulk_movement_unit', 'Unit', class: 'field-label' %><%= select_tag 'bulk_movement[unit]', options_for_select(BulkMass::FACTORS.keys, @movement.input_unit), class: 'input' %></div>
       </div>
-      <div><%= form.label :reference, 'Use / receipt / correction reference', class: 'block text-sm font-medium mb-1' %><%= form.text_field :reference, required: true, maxlength: 200, class: 'input' %></div>
+      <div><%= form.label :reference, 'Use / receipt / correction reference', class: 'field-label' %><%= form.text_field :reference, required: true, maxlength: 200, class: 'input' %></div>
       <p class="text-xs text-taupe">Use and receipts take a positive weight. Corrections take a signed weight (+ adds, − removes). Corrections append a new record; earlier movements stay intact. Inputs round half-up to integer milligrams; no movement may make this lot negative.</p>
       <%= form.submit 'Record movement', class: 'btn-primary' %>
     <% end %>

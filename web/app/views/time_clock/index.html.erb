@@ -6,15 +6,15 @@
     <% if @worker %>
       <h2 class="font-display text-xl"><%= @worker.name %> · <%= @worker.employment_type.humanize %></h2>
       <% unless @open_shift %>
-        <p class="text-sm text-mocha">You are clocked out.</p>
-        <%= button_to 'Clock in', clock_in_time_clock_path, params: { request_token: SecureRandom.uuid }, method: :post, class: 'btn-primary', data: { turbo: false } %>
+        <p class="text-sm text-mocha"><span class="pill-taupe">Clocked out</span></p>
+        <%= button_to 'Clock in', clock_in_time_clock_path, params: { request_token: SecureRandom.uuid }, method: :post, class: 'btn-primary btn-lg', data: { turbo: false } %>
       <% end %>
     <% else %>
       <h2 class="font-display text-xl">Link your worker record</h2><p class="text-sm text-mocha">Ask an administrator to connect exactly one active Staff record to your sign-in account. Contractors can use the same time clock. Your existing shift history stays below.</p>
     <% end %>
     <% if @open_shift %>
-      <p>Clocked in <%= l(@open_shift.started_at, format: '%b %d, %Y %H:%M:%S %Z') %> · <%= number_with_precision(@open_shift.hours, precision: 2) %> hours so far</p>
-      <%= button_to 'Clock out', clock_out_time_clock_path, params: { shift_id: @open_shift.id }, method: :post, class: 'btn-primary', data: { turbo: false } %>
+      <p><span class="pill-fern">Clocked in</span> <%= l(@open_shift.started_at, format: '%b %d, %Y %H:%M:%S %Z') %> · <%= number_with_precision(@open_shift.hours, precision: 2) %> hours so far</p>
+      <%= button_to 'Clock out', clock_out_time_clock_path, params: { shift_id: @open_shift.id }, method: :post, class: 'btn-primary btn-lg', data: { turbo: false } %>
     <% end %>
     <% if Current.user.can?('payroll.read') %><%= link_to 'Commission preview', commission_preview_time_clock_path, class: 'btn-ghost' %><% end %>
   </section>
@@ -34,7 +34,7 @@
         <% shift.corrections.sort_by(&:created_at).reverse.each do |correction| %><p class="text-xs text-taupe"><%= correction.status.capitalize %> correction: <%= l(correction.proposed_started_at, format: :short) %> → <%= l(correction.proposed_ended_at, format: :short) %> · <%= correction.reason %><% if correction.reviewed_at %> · reviewed <%= l(correction.reviewed_at, format: :short) %><% end %></p><% end %>
       </article>
     <% end %>
-    <% if @shifts.empty? %><p class="card card-pad text-sm text-taupe">No shifts recorded yet.</p><% end %>
+    <% if @shifts.empty? %><div class="card empty-state"><p class="empty-state-title">No shifts yet</p><p class="empty-state-hint">Your shifts appear here after you clock in.</p></div><% end %>
     <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
   </section>
 

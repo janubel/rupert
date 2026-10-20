@@ -205,6 +205,11 @@
     color: var(--color-danger);
   }
 
+  /* Primary action on tablet/phone screens (clock in, charge, save): full-width, thumb-sized. */
+  .btn-lg {
+    @apply min-h-14 w-full justify-center px-6 py-3 text-base sm:w-auto sm:min-w-48;
+  }
+
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
   }
