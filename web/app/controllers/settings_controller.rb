@@ -6,6 +6,8 @@ class SettingsController < AuthenticatedController
   before_action :authorize_write, except: %i[show env drive_status drive_logs backup]
   before_action :authorize_super_admin, only: %i[backup restore drive_backup new_env_export env_export drive_auth drive_oauth_callback drive_disconnect drive_status drive_logs]
 
+  before_action :protect_customer_backup_exports, only: %i[backup drive_status drive_logs drive_backup]
+
   def show; end
 
   # GET /settings/env.json — masked view of managed env keys
@@ -275,6 +277,14 @@ class SettingsController < AuthenticatedController
     return if platform_admin? || (EnvStore.parse(text).keys & EnvStore::PLATFORM_KEYS).empty?
 
     raise ArgumentError, 'Google Drive instance backup settings require a platform super administrator'
+  end
+
+  # A shared database snapshot contains every customer's business data.
+  # Read-only support permission must never become full-instance export access.
+  def protect_customer_backup_exports
+    if CustomerSubscription.where.not(tenant_id: Current.user.tenant_id).exists?
+      render plain: 'Customer databases require offline backup operations. Full-instance downloads and backup links are unavailable from the browser.', status: :forbidden
+    end
   end
 
   def authorize_super_admin

@@ -11,6 +11,8 @@ class Tenant < ApplicationRecord
   before_create :generate_id
 
   validates :name, presence: true
+  validates :subdomain, length: { maximum: 63 }
+  validates :name, length: { maximum: 160 }
   validates :subdomain,
     presence: true,
     uniqueness: true,

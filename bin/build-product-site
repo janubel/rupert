@@ -77,7 +77,7 @@ def feature_table():
 counts = {s: sum(f['status'] == s for f in CATALOG['features']) for s in ['Available','Partial','Planned']}
 metrics = ''.join(f'<div><strong>{n}</strong><span>{s.lower()}</span></div>' for s,n in counts.items())
 outputs = {}
-outputs['index.html'] = page('Small business operations, connected', f'''
+outputs['overview.html'] = page('Small business operations, connected', f'''
 <section class="product-hero"><div><p class="eyebrow">Commerce → inventory → people → finance</p><h1>A clear view of<br>your whole shop.</h1><p class="lede">Rupert brings Shopify and Square into one back office, with independent location inventory, purchasing, sales, people and operational reporting.</p><div class="actions"><a class="btn btn-primary" href="roadmap.html">Explore the roadmap</a><a class="btn btn-ghost" href="competitors.html">Compare functionality</a></div></div><aside class="summary-card"><p class="eyebrow">Built for your operation</p><h2>One app.<br>Your infrastructure.</h2><p>Rails modular monolith<br>SQLite with FTS5 search<br>SER8 · Incus</p><div class="metrics">{metrics}</div><small>Implemented code is separated from partial and planned functionality.</small></aside></section>
 <section class="notice"><strong>Production record:</strong> {E(CATALOG['production'])} GitHub Pages hosts this documentation; the Rails application runs separately in Incus.</section>
 <section class="product-section"><p class="eyebrow">Built today</p><h2>Follow the work through the business</h2><div class="product-grid">
@@ -175,6 +175,12 @@ writer.writerow(['Capability','Rupert','Rupert scope','Phase']+[v['name'] for v 
 for x in MATRIX['capabilities']:
     writer.writerow([x['name'],x['rupert'],x['scope'],x['phase']]+[x['competitors'][v['id']] for v in vs])
 outputs['data/competitor-matrix.csv']=stream.getvalue()
+# Commercial landing source is hand-authored; keep Rails and Pages in sync.
+landing = (DOCS / 'index.html').read_text().replace('assets/landing.css', '/marketing/landing.css').replace('href="index.html"', 'href="/"')
+for filename in ['overview.html', 'roadmap.html']:
+    landing = landing.replace('href="'+filename+'"', 'href="https://techmore.github.io/rupert/'+filename+'"')
+outputs['../web/app/views/landing/index.html.erb'] = landing
+outputs['../web/public/marketing/landing.css'] = (DOCS / 'assets/landing.css').read_text()
 parser=argparse.ArgumentParser();parser.add_argument('--check',action='store_true');args=parser.parse_args()
 stale=[]
 for name, content in outputs.items():

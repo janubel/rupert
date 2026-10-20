@@ -31,6 +31,9 @@ module Api
         end
         Current.user = @api_token.user
         Current.tenant = @api_token.tenant
+        if Current.user.tenant_id != Current.tenant.id
+          head :forbidden
+        end
       end
 
       def require_scope(scope)

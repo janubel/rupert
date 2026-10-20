@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 class HomeController < AuthenticatedController
-  before_action :require_dashboard_access
+  before_action :require_dashboard_access, unless: :public_landing?
 
   def index
+    return render('landing/index', layout: false) if public_landing?
+
     return redirect_to(onboarding_path) unless OnboardingController.configured?
 
     @widgets = DashboardWidget.entries(Current.user.dashboard_config_hash, user: Current.user)
@@ -32,6 +34,14 @@ class HomeController < AuthenticatedController
   end
 
   private
+
+  def public_landing?
+    !WorkspaceNode.isolated? && Current.user.nil? && request.path == root_path && action_name == 'index'
+  end
+
+  def require_login
+    super unless public_landing?
+  end
 
   def require_dashboard_access
     head :forbidden unless Current.user&.can?('dashboard.read')

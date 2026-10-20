@@ -40,7 +40,7 @@ class PagesFlowTest < ActionDispatch::IntegrationTest
   end
 
   test 'dashboard renders' do
-    get_page '/'
+    get_page '/dashboard'
     assert_response :success
     assert_select 'h1', /Good (morning|afternoon|evening)/
   end

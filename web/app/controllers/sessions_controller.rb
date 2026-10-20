@@ -33,7 +33,8 @@ class SessionsController < ApplicationController
     else
       User.find_by(email: email)
            end
-    if user&.active? && user.tenant&.status == 'active' && user.authenticate(params[:password])
+    local_identity_allowed = !WorkspaceNode.isolated? || (user && !user.super_admin? && !user.email.end_with?('@support.invalid'))
+    if local_identity_allowed && user&.active? && user.tenant&.status == 'active' && user.authenticate(params[:password])
       start_browser_session(user, method: 'password')
       AccessLogger.record(
         source: 'password',
