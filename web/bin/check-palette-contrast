@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 # Verifies the dashboard palette against WCAG 2.x contrast minimums, for the
-# light tokens (@theme) and the dark overrides, straight from
+# base tokens (@theme, the Herbal default) and every data-theme override, straight from
 # app/assets/tailwind/application.css so the two cannot drift apart.
 #
 #   bin/check-palette-contrast          # exit 1 on any failing pair
@@ -11,7 +11,7 @@ CSS = File.expand_path('../app/assets/tailwind/application.css', __dir__)
 TOKENS = %w[oat cream paper ink mocha taupe fog haze olive olive-deep sage clay butter rose fern edge
   danger danger-bg danger-edge success success-bg success-edge warn warn-bg warn-edge on-butter].freeze
 
-# Tokens the dark block does not override (on-butter) fall back to the light value.
+# Tokens a block does not override (on-butter) fall back to the base (Herbal) value.
 def tokens_in(block, fallback = {})
   TOKENS.to_h do |name|
     [name, block[/--color-#{Regexp.escape(name)}:\s*(#[0-9a-fA-F]{6})/, 1] || fallback[name] || raise("missing --color-#{name}")]
@@ -19,11 +19,10 @@ def tokens_in(block, fallback = {})
 end
 
 css = File.read(CSS)
-light = tokens_in(css[/@theme \{.*?\n\}/m])
-dark = tokens_in(css[/:root:not\(\[data-theme\]\),\s*:root\[data-theme="dark"\] \{\s*color-scheme: dark;.*?\n  \}/m], light)
-themes = { 'light' => light, 'dark' => dark }
-css.scan(/^:root\[data-theme="(\w+)"\] \{\n(.*?)\n\}/m).each { |name, block| themes[name] = tokens_in(block, light) }
-raise 'expected five appearances (dark, light, mist, sepia, herbal)' unless themes.keys.sort == %w[dark herbal light mist sepia]
+herbal = tokens_in(css[/@theme \{.*?\n\}/m])
+themes = { 'herbal' => herbal }
+css.scan(/^\s*:root\[data-theme="(\w+)"\] \{\n(.*?)\n\s*\}/m).each { |name, block| themes[name] = tokens_in(block, herbal) }
+raise 'expected five appearances (herbal, light, mist, sepia, dark)' unless themes.keys.sort == %w[dark herbal light mist sepia]
 
 def channel(value) = value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055)**2.4
 

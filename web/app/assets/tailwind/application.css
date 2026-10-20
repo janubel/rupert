@@ -1,9 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  /* Rupert palette (2026-10): a blue-tinted neutral base with one restrained
-     blue accent. Token names are kept from the original Oatmeal theme so the
-     1,300+ class usages in views did not change; each token has one job:
+  /* Rupert palette (2026-10): Herbal is the default appearance, taken from the
+     company's own colors (herbalhealerscbd.com): deep teal-black text, a teal
+     accent, a mint data color, on a soft green-tinted page with near-white
+     cards. Other appearances (account menu): Light, Mist, Sepia, Dark; each is
+     a complete token set in the blocks below. Token names are kept from the
+     original Oatmeal theme so the 1,300+ class usages in views did not change;
+     each token has one job:
        oat        page background          cream   secondary surface (inputs, sidebars)
        paper      cards and panels         haze    hover / selected tint
        fog        dividers and card edges  edge    form-control borders (3:1 on paper)
@@ -13,29 +17,30 @@
        sage, clay secondary data colors    butter  amber highlight (text uses on-butter)
        rose       soft negative            fern    positive
        danger / success / warn + -bg / -edge: semantic flashes and chips
-     Why blue and neutral: adults reliably prefer blues and dislike dark
+     Why this family: adults reliably prefer blues and greens and dislike dark
      yellows, olives and browns (Palmer & Schloss 2010; Taylor et al. 2013);
      low saturation and higher lightness read as calm rather than arousing
-     (Valdez & Mehrabian 1994; Wilms & Oberfeld 2018); pairs of similar hues
-     with strong lightness contrast are judged most harmonious (Schloss &
-     Palmer 2011). Every text/background pair below meets WCAG AA 4.5:1 and
-     every control border 3:1 in both themes (checked by script, see PR). */
-  --color-oat: #f5f7fa;
-  --color-cream: #eef1f5;
-  --color-paper: #ffffff;
-  --color-ink: #14181f;
-  --color-mocha: #3f4754;
-  --color-taupe: #5b6572;
-  --color-fog: #dfe4ea;
-  --color-haze: #eaeef3;
-  --color-olive: #2a5fcf;
-  --color-olive-deep: #1f49a6;
-  --color-sage: #1f7a6f;
+     (Valdez & Mehrabian 1994; Wilms & Oberfeld 2018); similar hues with strong
+     lightness contrast are judged most harmonious (Schloss & Palmer 2011), so
+     the page is a pale tint of the same hue as the text and accent. Every
+     text/background pair meets WCAG AA 4.5:1 and every control border 3:1 in
+     every appearance (bin/check-palette-contrast). */
+  --color-oat: #e6efea;
+  --color-cream: #dce8e2;
+  --color-paper: #fbfdfc;
+  --color-ink: #17353a;
+  --color-mocha: #36504f;
+  --color-taupe: #47605f;
+  --color-fog: #cddad3;
+  --color-haze: #dfebe5;
+  --color-olive: #0e6f72;
+  --color-olive-deep: #0b585a;
+  --color-sage: #257d50;
   --color-clay: #5b48a8;
-  --color-butter: #f4c65b;
+  --color-butter: #f2b530;
   --color-rose: #b3382a;
-  --color-fern: #1f7a4d;
-  --color-edge: #8a94a3;
+  --color-fern: #1b7046;
+  --color-edge: #778a86;
   --color-danger: #b42318;
   --color-danger-bg: #fef3f2;
   --color-danger-edge: #f3b7b0;
@@ -47,7 +52,7 @@
   --color-warn-edge: #f1d49a;
   --color-on-butter: #2a2316;
   /* Shadow tint follows the ink hue so shadows read as depth, not as dirt. */
-  --shadow-ink: 20 24 31;
+  --shadow-ink: 23 53 58;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter",
     ui-sans-serif, system-ui, "Segoe UI", sans-serif;
@@ -827,17 +832,12 @@ select.input {
   .nav-area { gap: 0.25rem; padding: 0.4rem 0.45rem; font-size: 0.8rem; }
 }
 
-/* Dark is the default appearance: a warm, low-glare counterpart; surfaces built
-   from the tokens follow. People opt into light with the account-menu toggle
-   (data-theme="light"), and print/embedded layouts pin light the same way.
-   Appearance options (account menu): dark (default), light, mist, sepia and
-   herbal. Every option is a complete token set checked by
-   bin/check-palette-contrast; "mist" is a dimmer light for people who find
-   plain white too bright, "sepia" is warm paper with a muted blue-teal
-   accent (the Solarized precedent: warm base, cool accent), and "herbal"
-   takes the company's teal, deep teal-black and mint with a warm off-white. */
+/* Appearances. Herbal is the base (@theme above, no attribute). The blocks
+   below override the tokens when the account menu sets data-theme on <html>:
+   light (pure white cards), mist (a dimmer blue-grey light), sepia (warm paper
+   with a muted blue-teal accent, the Solarized precedent), and dark. Print,
+   embedded and public warehouse layouts pin data-theme="light". */
 @media all {
-  :root:not([data-theme]),
   :root[data-theme="dark"] {
     color-scheme: dark;
     /* Dark grey, not black (Material: #121212-class surfaces; shadows and
@@ -871,6 +871,37 @@ select.input {
     --color-warn-edge: #6b5427;
     --shadow-ink: 0 0 0;
   }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  /* Pure white cards on a cool blue-grey page: the brightest option. */
+  --color-oat: #f5f7fa;
+  --color-cream: #eef1f5;
+  --color-paper: #ffffff;
+  --color-ink: #14181f;
+  --color-mocha: #3f4754;
+  --color-taupe: #5b6572;
+  --color-fog: #dfe4ea;
+  --color-haze: #eaeef3;
+  --color-olive: #2a5fcf;
+  --color-olive-deep: #1f49a6;
+  --color-sage: #1f7a6f;
+  --color-clay: #5b48a8;
+  --color-butter: #f4c65b;
+  --color-rose: #b3382a;
+  --color-fern: #1f7a4d;
+  --color-edge: #8a94a3;
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-danger-edge: #f3b7b0;
+  --color-success: #05603a;
+  --color-success-bg: #ecfdf3;
+  --color-success-edge: #a6d8bf;
+  --color-warn: #7a4b00;
+  --color-warn-bg: #fffaeb;
+  --color-warn-edge: #f1d49a;
+  --shadow-ink: 20 24 31;
 }
 
 :root[data-theme="mist"] {
@@ -936,40 +967,8 @@ select.input {
   --shadow-ink: 43 36 25;
 }
 
-:root[data-theme="herbal"] {
-  color-scheme: light;
-  /* Company colors: deep teal-black text (#1a393d), teal accent */
-  /* (#108184 family), mint data color, warm off-white page. */
-  --color-oat: #f3f4f1;
-  --color-cream: #e9ece7;
-  --color-paper: #ffffff;
-  --color-ink: #1a393d;
-  --color-mocha: #3d555a;
-  --color-taupe: #526669;
-  --color-fog: #dbe3e0;
-  --color-haze: #e8efec;
-  --color-olive: #0e6f72;
-  --color-olive-deep: #0b585a;
-  --color-sage: #257d50;
-  --color-clay: #5b48a8;
-  --color-butter: #f2b530;
-  --color-rose: #b3382a;
-  --color-fern: #1b7046;
-  --color-edge: #829390;
-  --color-danger: #b42318;
-  --color-danger-bg: #fef3f2;
-  --color-danger-edge: #f3b7b0;
-  --color-success: #05603a;
-  --color-success-bg: #ecfdf3;
-  --color-success-edge: #a6d8bf;
-  --color-warn: #7a4b00;
-  --color-warn-bg: #fffaeb;
-  --color-warn-edge: #f1d49a;
-  --shadow-ink: 26 57 61;
-}
 
 /* Dark-only fixes that tokens cannot express. */
-:root:not([data-theme]),
 :root[data-theme="dark"] {
   .entry-state-posted { border-left-color: var(--color-success); }
   select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23b8c0cc' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"); }
@@ -1113,4 +1112,4 @@ a.card:focus-visible {
 .appearance-swatch-light { --swatch-page: #f5f7fa; --swatch-accent: #2a5fcf; }
 .appearance-swatch-mist { --swatch-page: #e6ebf2; --swatch-accent: #2457c4; }
 .appearance-swatch-sepia { --swatch-page: #efe6d4; --swatch-accent: #185f78; }
-.appearance-swatch-herbal { --swatch-page: #f3f4f1; --swatch-accent: #0e6f72; }
+.appearance-swatch-herbal { --swatch-page: #e6efea; --swatch-accent: #0e6f72; }

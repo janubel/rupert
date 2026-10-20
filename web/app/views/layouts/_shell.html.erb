@@ -42,7 +42,7 @@
                 <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>My time clock</span><% end %>
                 <div data-controller="theme" role="group" aria-label="Appearance" class="appearance-picker">
                   <p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-[0.12em] text-taupe">Appearance</p>
-                  <% { 'dark' => 'Dark', 'light' => 'Light', 'mist' => 'Mist · softer light', 'sepia' => 'Sepia · warm paper', 'herbal' => 'Herbal · company colors' }.each do |value, label| %>
+                  <% { 'herbal' => 'Herbal · company colors', 'light' => 'Light · white', 'mist' => 'Mist · softer light', 'sepia' => 'Sepia · warm paper', 'dark' => 'Dark' }.each do |value, label| %>
                     <button type="button" class="nav-menu-item w-full appearance-option" role="menuitemradio" aria-checked="false" data-theme-value="<%= value %>" data-theme-target="option" data-action="theme#select"><span class="appearance-swatch appearance-swatch-<%= value %>" aria-hidden="true"></span><span><%= label %></span></button>
                   <% end %>
                 </div>
