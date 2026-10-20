@@ -28,7 +28,7 @@
         <% calendar.employees.each do |id, name| %>
           <li>
             <button type="button" role="switch" data-schedule-filter-target="toggle" data-employee-id="<%= id %>" data-action="schedule-filter#toggle" aria-checked="true" aria-pressed="true"
-              class="emp-key flex w-full items-center gap-2 rounded-lg border border-fog bg-white px-2.5 py-1.5 text-left text-sm">
+              class="emp-key flex w-full items-center gap-2 rounded-lg border border-fog bg-paper px-2.5 py-1.5 text-left text-sm">
               <span class="emp-swatch inline-block size-3.5 flex-none rounded border-2" style="background: hsl(<%= hue.call(id) %> 70% 50%); border-color: hsl(<%= hue.call(id) %> 70% 50%)"></span>
               <span class="min-w-0 flex-1 truncate"><%= name %></span>
               <% if hours[id] %><span class="flex-none text-xs text-mocha"><%= number_with_precision(hours[id].values.max, precision: 1, strip_insignificant_zeros: true) %>h</span><% end %>
@@ -47,7 +47,7 @@
     <header class="flex flex-wrap items-center justify-between gap-2 border-b border-fog px-4 py-3">
       <h2 class="text-base font-semibold"><time datetime="<%= week.iso8601 %>"><%= week.strftime('%b %-d') %> – <%= (week + 6).strftime(week.month == (week + 6).month ? '%-d, %Y' : '%b %-d, %Y') %></time></h2>
       <nav aria-label="Week" class="flex items-center gap-2">
-        <span class="inline-flex overflow-hidden rounded-lg border border-fog bg-white text-sm">
+        <span class="inline-flex overflow-hidden rounded-lg border border-fog bg-paper text-sm">
           <%= link_to people_timesheets_path(status: params[:status], q: params[:q], period: (week - 7).iso8601), class: 'flex h-9 w-9 items-center justify-center hover:bg-haze', title: 'Previous week' do %><span class="sr-only">Previous week</span><span aria-hidden="true">‹</span><% end %>
           <%= link_to 'Today', people_timesheets_path(status: params[:status], q: params[:q], period: Date.current.beginning_of_week.iso8601), class: 'flex items-center border-x border-fog px-3.5 font-semibold hover:bg-haze' %>
           <%= link_to people_timesheets_path(status: params[:status], q: params[:q], period: (week + 7).iso8601), class: 'flex h-9 w-9 items-center justify-center hover:bg-haze', title: 'Next week' do %><span class="sr-only">Next week</span><span aria-hidden="true">›</span><% end %>

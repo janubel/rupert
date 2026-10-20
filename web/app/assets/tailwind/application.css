@@ -1,25 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-oat: #e3edeb; /* light teal page background */
+  --color-oat: #fbf5ef; /* warm cream page background */
   --color-cream: #f5f5f5;
   --color-paper: #ffffff;
   --color-ink: #1a393d;
-  --color-mocha: #52504e;
-  --color-taupe: #6b655c; /* darkened for WCAG AA contrast on paper/oat */
-  --color-fog: #dde8e6;
-  --color-haze: #ebf1ef; /* teal-tinted hover/panel tint */
-  --color-olive: #108184; /* site accent teal (herbalhealerscbd.com) */
-  --color-olive-deep: #0b5c5e; /* darker teal for hover states */
+  --color-mocha: #5a524b;
+  --color-taupe: #70655a; /* WCAG AA on paper and oat */
+  --color-fog: #efe3d8;
+  --color-haze: #f7ece3; /* quiet hover/panel tint */
+  --color-olive: #48736d; /* dusty teal accent; 4.9:1 with cream text */
+  --color-olive-deep: #3a5f5a; /* darker teal for hover states and text */
   --color-sage: #5c8a72; /* fresh gray-green */
   --color-clay: #7d5449;
   --color-butter: #e4be58;
-  --color-rose: #b05b4f;
-  --color-fern: #2e7d64; /* livelier green */
+  --color-rose: #a24e42; /* AA on cream and tinted chips */
+  --color-fern: #287059; /* deep green; AA on tinted chips */
 
-  --font-sans: "Barlow Semi Condensed", ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", sans-serif;
-  --font-display: "Cardo", Georgia, "Times New Roman", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter",
+    ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-display: "New York", ui-serif, "Iowan Old Style", "Cardo", Georgia,
+    "Times New Roman", serif;
 }
 
 @layer base {
@@ -32,9 +33,9 @@
     background-color: var(--color-oat);
     background-image: linear-gradient(
       175deg,
-      color-mix(in srgb, var(--color-olive) 6%, var(--color-oat)) 0%,
+      color-mix(in srgb, var(--color-olive) 3%, var(--color-oat)) 0%,
       var(--color-oat) 34%,
-      color-mix(in srgb, var(--color-fern) 5%, var(--color-oat)) 100%
+      color-mix(in srgb, var(--color-fern) 2%, var(--color-oat)) 100%
     );
     background-attachment: fixed;
     color: var(--color-ink);
@@ -52,8 +53,8 @@
     @apply rounded-2xl border border-fog shadow-[0_1px_2px_rgba(26,57,61,0.06)];
     background-image: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--color-olive) 3%, #ffffff) 0%,
-      #ffffff 46%
+      color-mix(in srgb, var(--color-olive) 3%, var(--color-paper)) 0%,
+      var(--color-paper) 46%
     );
   }
 
@@ -65,8 +66,8 @@
     @apply border-fern/30;
     background-image: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--color-fern) 12%, #ffffff) 0%,
-      color-mix(in srgb, var(--color-fern) 6%, #ffffff) 100%
+      color-mix(in srgb, var(--color-fern) 12%, var(--color-paper)) 0%,
+      color-mix(in srgb, var(--color-fern) 6%, var(--color-paper)) 100%
     );
   }
 
@@ -74,8 +75,8 @@
     @apply border-rose/30;
     background-image: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--color-rose) 12%, #ffffff) 0%,
-      color-mix(in srgb, var(--color-rose) 6%, #ffffff) 100%
+      color-mix(in srgb, var(--color-rose) 12%, var(--color-paper)) 0%,
+      color-mix(in srgb, var(--color-rose) 6%, var(--color-paper)) 100%
     );
   }
 
@@ -109,9 +110,9 @@
     container-type: inline-size;
     background-image: linear-gradient(
       160deg,
-      color-mix(in srgb, var(--color-olive) 6%, #ffffff) 0%,
-      color-mix(in srgb, var(--color-olive) 2%, #ffffff) 60%,
-      #ffffff 100%
+      color-mix(in srgb, var(--color-olive) 6%, var(--color-paper)) 0%,
+      color-mix(in srgb, var(--color-olive) 2%, var(--color-paper)) 60%,
+      var(--color-paper) 100%
     );
   }
 
@@ -120,13 +121,13 @@
   }
 
   .stat-value {
-    @apply font-display text-olive-deep;
+    @apply font-display text-ink;
     font-size: clamp(1.25rem, 15cqw, 2.25rem);
     line-height: 1.1;
   }
 
   .stat-value-sm {
-    @apply font-display text-olive-deep;
+    @apply font-display text-ink;
     font-size: clamp(1.125rem, 11cqw, 1.5rem);
     line-height: 1.2;
   }
@@ -200,7 +201,7 @@
   }
 
   .nav-pill-active {
-    @apply bg-olive text-cream;
+    @apply bg-olive/15 text-olive-deep;
   }
 
   .nav-pill-idle {
@@ -258,7 +259,7 @@
 }
 
 /* Compact role-filtered navigation: named areas, labelled icon utilities. */
-.app-header { position:sticky;top:0;z-index:20;border-bottom:1px solid var(--color-fog);background:color-mix(in srgb,var(--color-oat) 96%,white); }
+.app-header { position:sticky;top:0;z-index:20;border-bottom:1px solid var(--color-fog);background:color-mix(in srgb,var(--color-oat) 96%,var(--color-paper)); }
 .app-header-grid { max-width:72rem;margin:auto;padding:.65rem 1.5rem;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:1rem; }
 .app-brand { display:flex;align-items:center;gap:.6rem;min-height:44px; }
 .app-brand-name { font:1.15rem var(--font-display); }
@@ -400,12 +401,12 @@
 .desk-step-label { overflow-wrap:anywhere; }
 .desk-step-detail { color:var(--color-mocha);font-size:.72rem;overflow-wrap:anywhere; }
 .desk-glyph { display:inline-flex;flex:none;align-items:center;justify-content:center;width:1.25rem;height:1.25rem;border-radius:999px;font-size:.75rem;font-weight:700;background:var(--color-fog);color:var(--color-mocha); }
-.desk-step[data-state=done] { border-color:color-mix(in srgb,var(--color-fern) 35%,#fff);background:color-mix(in srgb,var(--color-fern) 7%,#fff); }
+.desk-step[data-state=done] { border-color:color-mix(in srgb,var(--color-fern) 35%,var(--color-paper));background:color-mix(in srgb,var(--color-fern) 7%,var(--color-paper)); }
 [data-state=done] .desk-glyph { background:var(--color-fern);color:#fff; }
-.desk-step[data-state=exception] { border-color:color-mix(in srgb,var(--color-butter) 70%,#fff);background:color-mix(in srgb,var(--color-butter) 14%,#fff); }
+.desk-step[data-state=exception] { border-color:color-mix(in srgb,var(--color-butter) 70%,var(--color-paper));background:color-mix(in srgb,var(--color-butter) 14%,var(--color-paper)); }
 [data-state=exception] .desk-glyph { background:var(--color-butter);color:var(--color-ink); }
 .desk-step[data-state=quiet],.desk-step[data-state=later] { background:var(--color-haze);border-style:dashed; }
-.desk-step[data-state=overdue] { border-color:color-mix(in srgb,var(--color-rose) 45%,#fff);background:color-mix(in srgb,var(--color-rose) 8%,#fff); }
+.desk-step[data-state=overdue] { border-color:color-mix(in srgb,var(--color-rose) 45%,var(--color-paper));background:color-mix(in srgb,var(--color-rose) 8%,var(--color-paper)); }
 [data-state=overdue] .desk-glyph { background:var(--color-rose);color:#fff; }
 [data-state=info] .desk-glyph { background:var(--color-olive);color:#fff; }
 .desk-task { display:flex;gap:.65rem;align-items:flex-start;min-width:0; }
@@ -420,7 +421,7 @@
 }
 @media print { .desk-step { break-inside:avoid; } .books-desk nav, .books-desk .btn-primary { display:none; } }
 .bank-save-bar { position:sticky;bottom:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);padding:.75rem 1rem;box-shadow:0 -4px 16px #1a393d14; }
-.bank-line-suggested { background:color-mix(in srgb,var(--color-butter) 12%,#fff); }
+.bank-line-suggested { background:color-mix(in srgb,var(--color-butter) 12%,var(--color-paper)); }
 .lock-grid { display:grid;gap:.4rem;grid-template-columns:repeat(2,minmax(0,1fr)); }
 @media(min-width:640px) { .lock-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 @media(min-width:1024px) { .lock-grid { grid-template-columns:repeat(6,minmax(0,1fr)); } }
@@ -436,7 +437,7 @@
 /* Dense record tables: figures line up, headers stay in view while scrolling. */
 .operations-table td.text-right,.operations-table th.text-right,.table-figures { font-variant-numeric:tabular-nums; }
 .operations-table-region { max-height:75vh; }
-.operations-table thead th { position:sticky;top:0;z-index:1;background:color-mix(in srgb, var(--color-haze) 96%, white); }
+.operations-table thead th { position:sticky;top:0;z-index:1;background:color-mix(in srgb, var(--color-haze) 96%, var(--color-paper)); }
 .table-filter { display:flex;align-items:center;gap:.6rem;flex-wrap:wrap; }
 .table-filter .input { max-width:22rem; }
 .table-filter-count { font-size:.8rem;color:var(--color-mocha); }
@@ -559,7 +560,7 @@
 .bookkeeping-period .operations-filters { flex:1 1 24rem;max-width:38rem; }
 .bookkeeping-stats { display:grid;gap:1rem;grid-template-columns:repeat(2,minmax(0,1fr)); }
 .bookkeeping-stat { min-width:0;border:1px solid var(--color-fog);border-radius:1rem;background:var(--color-paper);padding:1.25rem; }
-.bookkeeping-stat-balance { background:#193e3a;color:#fff;border-color:#193e3a; }
+.bookkeeping-stat-balance { background:#2f4a46;color:#fff;border-color:#2f4a46; }
 .bookkeeping-stat-balance .stat-label { color:#cae1d4; }
 .bookkeeping-number { margin:.6rem 0;font-size:clamp(1.25rem,2vw,1.8rem);font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.035em;line-height:1.25;overflow-wrap:anywhere; }
 .bookkeeping-review-banner { display:flex;flex-wrap:wrap;align-items:center;gap:1rem;border:1px solid #d8c59b;border-radius:1rem;background:#faf4e6;padding:1.25rem; }
@@ -657,7 +658,8 @@ body:has(.finance-navigation) .module-navigation-wrap { display:none; }
 }
 
 .btn-primary {
-  box-shadow: 0 1px 2px rgba(11, 92, 94, 0.28);
+  box-shadow: none;
+  font-weight: 500;
 }
 
 .btn-primary:active:not(:disabled):not([aria-disabled="true"]),
@@ -747,6 +749,40 @@ select.input {
 .explainer[open] > .explainer-summary::after { transform: rotate(-135deg); }
 
 .explainer-summary:focus-visible { outline: 2px solid var(--color-olive); outline-offset: 2px; border-radius: 0.25rem; }
+
+/* The system sans is wider than the condensed face it replaces; keep all
+   area pills on one row on laptop-width screens. */
+@media (max-width: 1100px) and (min-width: 761px) {
+  .nav-area { gap: 0.25rem; padding: 0.4rem 0.45rem; font-size: 0.8rem; }
+}
+
+/* Dark appearance: a warm, low-glare counterpart; surfaces built from the tokens follow. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-oat: #171412;
+    --color-cream: #1e1a17;
+    --color-paper: #201c19;
+    --color-ink: #f3ece4;
+    --color-mocha: #c4b9ad;
+    --color-taupe: #a2968a;
+    --color-fog: #332d28;
+    --color-haze: #28231f;
+    --color-olive: #5fa39b;
+    --color-olive-deep: #8fcbc3;
+    --color-sage: #8fb59c;
+    --color-fern: #6fbd9d;
+    --color-rose: #e09a8d;
+  }
+}
+
+/* Horizontally scrolling tab strips: a hairline, low-contrast scrollbar instead of the chunky default. */
+.workspace-navigation,
+.operations-navigation,
+.finance-navigation {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-taupe) 45%, transparent) transparent;
+}
 
 /* On phones the area navigation scrolls sideways; fade its trailing edge so
    the clipped items read as "more this way" instead of a layout bug. */
