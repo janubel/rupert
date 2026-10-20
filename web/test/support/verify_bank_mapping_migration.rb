@@ -3,7 +3,7 @@
 # Run only against a disposable test DB: bin/rails runner test/support/verify_bank_mapping_migration.rb
 raise 'Disposable test environment required' unless Rails.env.test?
 
-require Rails.root.join('db/migrate/20261020140000_create_bank_statement_accounts')
+require Rails.root.join('db/migrate/20261020150000_create_bank_statement_accounts')
 tenant = Tenant.create!(name: 'Migration fixture', subdomain: "mapping-migration-#{SecureRandom.hex(4)}")
 Current.tenant = tenant
 Finance::ChartOfAccounts.seed!
