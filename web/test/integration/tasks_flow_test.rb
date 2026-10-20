@@ -154,8 +154,8 @@ class TasksFlowTest < ActionDispatch::IntegrationTest
   test 'projects index shows stats and filters by search' do
     get_page projects_projects_path, params: { q: 'clean' }
     assert_response :success
-    assert_select 'h3', /Cleanup/
+    assert_select 'a h3', /Cleanup/
     get_page projects_projects_path, params: { q: 'zzz' }
-    assert_select 'h3', count: 0
+    assert_select 'a h3', count: 0
   end
 end

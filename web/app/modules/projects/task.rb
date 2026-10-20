@@ -43,22 +43,22 @@ module Projects
 
       event :start do
         transitions from: %i[todo blocked done], to: :in_progress
-        after { self.completed_at = nil }
+        before { self.completed_at = nil }
       end
       event :unstart do
         transitions from: :in_progress, to: :todo
       end
       event :finish do
         transitions from: %i[in_progress todo blocked], to: :done
-        after { self.completed_at = Time.current }
+        before { self.completed_at = Time.current }
       end
       event :block do
         transitions from: %i[todo in_progress done], to: :blocked
-        after { self.completed_at = nil }
+        before { self.completed_at = nil }
       end
       event :reopen do
         transitions from: %i[done blocked], to: :todo
-        after { self.completed_at = nil }
+        before { self.completed_at = nil }
       end
     end
 
