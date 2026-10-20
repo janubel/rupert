@@ -3,8 +3,11 @@
   <header class="app-header">
     <%= render "layouts/build_version" %>
     <div class="app-header-grid">
-      <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
-        <%= render "shared/rupert_face", size: 40 %><span class="app-brand-name">Rupert</span>
+      <%# The sign-in card carries its own large mark; skip the duplicate header brand there. %>
+      <% unless controller_name == 'sessions' && action_name == 'new' %>
+        <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
+          <%= render "shared/rupert_face", size: 40 %><span class="app-brand-name">Rupert</span>
+        <% end %>
       <% end %>
       <% if Current.user %>
         <nav class="area-navigation" aria-label="Module areas" style="--nav-area-count: <%= [nav_areas.size, 1].max %>">
