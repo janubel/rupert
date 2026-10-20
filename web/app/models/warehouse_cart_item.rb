@@ -21,7 +21,7 @@ class WarehouseCartItem < ApplicationRecord
   # tier schedule. Must be called after any quantity change.
   def assign_price!(share, variant)
     qty = quantity.to_i.clamp(1, MAX_QUANTITY)
-    self.unit_cents = (share.sale_price(variant.price.to_f, qty) * 100).round
+    self.unit_cents = Money.cents_from_amount(share.sale_price(variant.price, qty)).to_i
     self.line_cents = unit_cents * qty
   end
 

@@ -1,6 +1,6 @@
 FROM ruby:4.0.6-alpine
 
-RUN apk add --no-cache build-base postgresql-dev git openssl-dev
+RUN apk add --no-cache build-base postgresql-dev git openssl-dev bash sqlite
 
 ENV RAILS_ENV=production \
     RAILS_LOG_TO_STDOUT=1 \
@@ -18,15 +18,12 @@ ARG RUPERT_BUILD_SHA
 ARG RUPERT_BUILT_AT
 RUN ruby -rjson -e 'sha = ENV.fetch("RUPERT_BUILD_SHA", ""); abort "Pass --build-arg RUPERT_BUILD_SHA=<full commit SHA>" unless sha.match?(/\A[0-9a-f]{40,64}\z/i); File.write("config/build.json", JSON.generate(revision: sha.downcase, built_at: ENV["RUPERT_BUILT_AT"]))'
 
-# Asset compilation boots production initializers. Supply placeholders only to
-# this process; real secrets are still required from the runtime environment.
-RUN SECRET_KEY_BASE=build-time-only \
-    POSTGRES_PASSWORD=build-time-only \
-    HOST=https://build.invalid \
-    RAILS_ENCRYPTION_PRIMARY_KEY=build-time-only-primary \
-    RAILS_ENCRYPTION_DETERMINISTIC_KEY=build-time-only-deterministic \
-    RAILS_ENCRYPTION_KEY_DERIVATION_SALT=build-time-only-salt \
-    sh -c 'bin/rails tailwindcss:build && bin/rails assets:precompile'
+# Precompile with Rails' build-time marker: SECRET_KEY_BASE_DUMMY makes the
+# database and encryption-key checks stand down for this step only. The real
+# SECRET_KEY_BASE / RAILS_ENCRYPTION_* come from the runtime .env; nothing is
+# baked into the image.
+RUN SECRET_KEY_BASE_DUMMY=1 bin/rails tailwindcss:build \
+    && SECRET_KEY_BASE_DUMMY=1 bin/rails assets:precompile
 
 COPY entrypoint.sh /usr/bin/
 RUN chmod +x /usr/bin/entrypoint.sh

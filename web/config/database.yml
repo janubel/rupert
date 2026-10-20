@@ -9,6 +9,14 @@ default: &default
   journal_mode: wal
   synchronous: normal
   schema_dump: schema_sqlite.rb
+  # One writer, many readers: keep the WAL bounded, enforce FK integrity, and
+  # give the single process a useful page cache. See docs/ops/sqlite-incus.md.
+  pragmas:
+    foreign_keys: true
+    journal_size_limit: 67108864   # 64 MB: WAL is truncated after checkpoints
+    mmap_size: 134217728           # 128 MB read-only mmap of the database file
+    cache_size: -20000             # ~20 MB per connection (negative = KiB)
+    temp_store: memory
 <% else %>
   encoding: unicode
   username: <%= ENV.fetch("POSTGRES_USER", "rupert") %>
@@ -48,7 +56,7 @@ production:
   # The well-known "rupert" default must never run in production. Set
   # POSTGRES_PASSWORD in the droplet .env or the app refuses to boot. ERB
   # renders every block, so only raise when production is the running env.
-<% if Rails.env.production? %>
+<% if Rails.env.production? && ENV["SECRET_KEY_BASE_DUMMY"].blank? %>
   password: <%= ENV.fetch("POSTGRES_PASSWORD") { raise "POSTGRES_PASSWORD must be set in the production environment" } %>
 <% end %>
 <% end %>

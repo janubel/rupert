@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Production readiness (2026-10-20)
+
+- **Fix the Shopify GDPR webhooks.** `customers/data_request` and `customers/redact` crashed (route/controller/job names did not match) and all three compliance jobs were empty. They now verify, acknowledge fast, deduplicate on the delivery id, and redact mirrored customer data / record data requests for the operator. First tests for every webhook endpoint.
+- **Refunds and cancellations reach Rupert.** Orders are fetched by `updated_at` on both platforms and Shopify/Square refunds become `Core::Refund` rows, so a refund issued days after the sale no longer overstates revenue.
+- **Money is decimal.** Every amount conversion goes through `Money` on `BigDecimal`; typed refund/opening-cash amounts are validated.
+- **Platform clients retry** rate limits (including Shopify `THROTTLED` with cost-based waits), 5xx and connection failures with bounded backoff; `SyncJob` retries transient failures and alerts once when it gives up.
+- **Request throttling** (`rack-attack`) on login, signup, webhooks, the bearer API, public portals and the secret-bearing settings endpoints. **Optional Sentry** error tracking via `SENTRY_DSN`.
+- **Encrypted Shopify offline tokens** (`ops:encrypt_shop_tokens` re-encrypts existing rows).
+- **`GET /up/ready`**: database, worker heartbeat, sync freshness and disk in one readiness signal; the host watcher checks disk and the endpoint.
+- **SQLite pragmas** (foreign keys, bounded WAL, cache) and a web-vs-job write-contention test.
+- **Backups**: `bin/restore-drill` proves restore end to end with measured times; the off-host copy is encrypted, verified and shipped as a host timer; a backup/restore runbook states RPO/RTO.
+- **Docker image builds and boots again** (build-time dummy secrets, explicit `HOST` requirement, bash on Alpine).
+- **Shopify configuration**: API version pinned once (`config/shopify_api_version.rb`, checked against `shopify.app.toml`), `application_url` moved off a dead host, no built-in shop-domain default.
+- **Repository hygiene**: `legacy/` (44 Dependabot alerts) and droplet-era units removed; `deploy/rupert-web-ser8.service` added; CI gains coverage floors on the sync engine and money paths, a whitespace check and a pinned artifact upload.
+- **Docs**: operator runbook, backup/restore runbook, environment reference, release process, go-live checklist and the production readiness audit.
 - Add Learn Rupert with personal getting-started paths, ten permission-aware lessons, worked examples, knowledge checks, saved progress and a searchable glossary. Dashboard and staff welcomes suggest the next step and can be hidden. Contextual help stays closed until requested and works without JavaScript. Sales totals explain the selected data and average; stock, count variance, checkout and pay figures offer definitions beside the work. Connection onboarding guides setup and shows its credential form only to settings writers. Assigned-task training links to the detailed project guide. Dashboard layout resets preserve learning preferences.
 
 - Add an **in-app update check**. Admins who manage settings see an "Update available" banner when GitHub `main` has newer changes than the running build, with the newest change title and a link to what changed; it can be dismissed per build. The comparison runs in a background job, is cached for six hours, never installs anything and fails silently when offline. Disable with `RUPERT_UPDATE_CHECK=off`.

@@ -6,7 +6,7 @@ ShopifyApp.configure do |config|
   # Consult this page for more scope options: https://shopify.dev/api/usage/access-scopes
   config.embedded_app = true
   config.after_authenticate_job = false
-  config.api_version = '2026-07'
+  config.api_version = SHOPIFY_ADMIN_API_VERSION # single pin: config/shopify_api_version.rb
 
   # Offline Access Tokens Configuration
   # https://shopify.dev/docs/apps/build/authentication-authorization/access-token-types/offline-access-tokens

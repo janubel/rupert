@@ -89,12 +89,18 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
+  # Enable DNS rebinding protection and other `Host` header attacks. HOST is
+  # required for a real production boot; the build-time asset precompile
+  # (SECRET_KEY_BASE_DUMMY) has no host and skips host authorization.
   hostname = URI(ENV.fetch('HOST', '')).host
-  base_domain = hostname&.split('.')&.last(2)&.join('.')
   additional_hosts = ENV.fetch('ADDITIONAL_HOSTS', '').split(',').map(&:strip).reject(&:blank?)
-  config.hosts = [hostname, /^.*\.#{Regexp.escape(base_domain)}$/, *additional_hosts].compact
-  config.host_authorization = { exclude: ->(request) { request.path == '/up' } }
+  if hostname.present?
+    base_domain = hostname.split('.').last(2).join('.')
+    config.hosts = [hostname, /\A.*\.#{Regexp.escape(base_domain)}\z/, *additional_hosts]
+  elsif ENV['SECRET_KEY_BASE_DUMMY'].blank?
+    raise 'HOST must be set in the production environment (for example HOST=https://rupert.example.com) so host authorization is enforced'
+  end
+  config.host_authorization = { exclude: ->(request) { request.path.start_with?('/up') } }
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end
