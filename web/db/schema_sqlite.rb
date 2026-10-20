@@ -804,6 +804,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
     t.index ["tenant_id"], name: "index_customer_subscriptions_on_tenant_id", unique: true
   end
 
+  create_table "support_access_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "actor_id", null: false
+    t.integer "support_access_grant_id"
+    t.string "action", null: false
+    t.string "resource"
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_support_access_events_on_actor_id"
+    t.index ["support_access_grant_id"], name: "index_support_access_events_on_support_access_grant_id"
+  end
+
+  create_table "support_access_grants", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "granted_by_id", null: false
+    t.integer "support_user_id", null: false
+    t.text "reason", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["granted_by_id"], name: "index_support_access_grants_on_granted_by_id"
+    t.index ["support_user_id"], name: "index_support_access_grants_on_support_user_id"
+    t.index ["tenant_id", "support_user_id"], name: "index_support_access_grants_on_tenant_id_and_support_user_id"
+  end
+
   create_table "customers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email"
@@ -1772,19 +1797,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
     t.index ["tenant_id", "status"], name: "index_projects_on_tenant_id_and_status"
   end
 
-  create_table "purchase_deliveries", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.integer "purchase_order_id", null: false
-    t.string "request_token", null: false
-    t.string "payload_digest", null: false
-    t.string "actor", null: false
-    t.text "quantities_json", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["purchase_order_id"], name: "index_purchase_deliveries_on_purchase_order_id"
-    t.index ["tenant_id", "request_token"], name: "index_purchase_deliveries_on_tenant_id_and_request_token", unique: true
-  end
-
   create_table "purchase_order_lines", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -1797,6 +1809,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "purchase_order_id"], name: "index_purchase_order_lines_on_tenant_id_and_purchase_order_id"
     t.index ["tenant_id", "sku"], name: "index_purchase_order_lines_on_tenant_id_and_sku"
+  end
+
+  create_table "purchase_deliveries", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "purchase_order_id", null: false
+    t.string "request_token", null: false
+    t.string "payload_digest", null: false
+    t.string "actor", null: false
+    t.text "quantities_json", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["purchase_order_id"], name: "index_purchase_deliveries_on_purchase_order_id"
+    t.index ["tenant_id", "request_token"], name: "index_purchase_deliveries_on_tenant_id_and_request_token", unique: true
   end
 
   create_table "purchase_orders", force: :cascade do |t|
@@ -2305,31 +2330,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
     t.check_constraint "status IN ('active', 'released')", name: "stock_reservations_status"
   end
 
-  create_table "support_access_events", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.integer "actor_id", null: false
-    t.integer "support_access_grant_id"
-    t.string "action", null: false
-    t.string "resource"
-    t.datetime "created_at", null: false
-    t.index ["actor_id"], name: "index_support_access_events_on_actor_id"
-    t.index ["support_access_grant_id"], name: "index_support_access_events_on_support_access_grant_id"
-  end
-
-  create_table "support_access_grants", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.integer "granted_by_id", null: false
-    t.integer "support_user_id", null: false
-    t.text "reason", null: false
-    t.datetime "expires_at", null: false
-    t.datetime "revoked_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["granted_by_id"], name: "index_support_access_grants_on_granted_by_id"
-    t.index ["support_user_id"], name: "index_support_access_grants_on_support_user_id"
-    t.index ["tenant_id", "support_user_id"], name: "index_support_access_grants_on_tenant_id_and_support_user_id"
-  end
-
   create_table "swipesimple_exports", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "merchant_account", null: false
@@ -2661,17 +2661,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
     t.index ["workspace_deployment_id"], name: "index_workspace_handoffs_on_workspace_deployment_id"
   end
 
-  create_table "workspace_signup_events", force: :cascade do |t|
-    t.integer "workspace_signup_id", null: false
-    t.integer "actor_id"
-    t.string "action", null: false
-    t.text "payload_json", null: false
-    t.datetime "created_at", null: false
-    t.index ["actor_id"], name: "index_workspace_signup_events_on_actor_id"
-    t.index ["created_at", "id"], name: "index_workspace_signup_events_on_created_at_and_id"
-    t.index ["workspace_signup_id"], name: "index_workspace_signup_events_on_workspace_signup_id"
-  end
-
   create_table "workspace_signups", force: :cascade do |t|
     t.string "google_subject", null: false
     t.string "applicant_name", null: false
@@ -2695,6 +2684,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
+  add_foreign_key "workspace_deployments", "tenants"
+  add_foreign_key "workspace_deployments", "users", column: "owner_id"
+  add_foreign_key "workspace_handoffs", "support_access_grants"
+  add_foreign_key "workspace_handoffs", "users"
+  add_foreign_key "workspace_handoffs", "workspace_deployments"
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade
@@ -2744,8 +2738,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
   add_foreign_key "customer_follow_ups", "tenants"
   add_foreign_key "customer_interactions", "customers"
   add_foreign_key "customer_interactions", "tenants"
-  add_foreign_key "customer_referrals", "tenants"
-  add_foreign_key "customer_subscriptions", "tenants"
   add_foreign_key "daily_reconciliation_reviews", "tenants"
   add_foreign_key "daily_reconciliation_reviews", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "departments", "employees", column: "manager_id"
@@ -2824,7 +2816,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
   add_foreign_key "pos_stock_allocations", "Location", column: "location_id"
   add_foreign_key "pos_stock_allocations", "pos_checkouts"
   add_foreign_key "pos_stock_allocations", "tenants"
-  add_foreign_key "purchase_deliveries", "purchase_orders"
   add_foreign_key "purchase_receipt_events", "purchase_receipts"
   add_foreign_key "purchase_receipt_events", "tenants"
   add_foreign_key "purchase_receipt_events", "users", column: "actor_id"
@@ -2861,30 +2852,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
   add_foreign_key "square_timecard_days", "tenants"
   add_foreign_key "square_timecards", "employees"
   add_foreign_key "square_timecards", "tenants"
-  add_foreign_key "stock_request_events", "stock_requests"
-  add_foreign_key "stock_requests", "stock_reservation_pools", column: "destination_pool_id"
-  add_foreign_key "stock_requests", "stock_reservation_pools", column: "source_pool_id"
-  add_foreign_key "stock_requests", "stock_reservations"
   add_foreign_key "stock_reservations", "stock_reservation_pools"
-  add_foreign_key "support_access_events", "support_access_grants"
-  add_foreign_key "support_access_events", "tenants"
-  add_foreign_key "support_access_events", "users", column: "actor_id"
-  add_foreign_key "support_access_grants", "tenants"
-  add_foreign_key "support_access_grants", "users", column: "granted_by_id"
-  add_foreign_key "support_access_grants", "users", column: "support_user_id"
   add_foreign_key "swipesimple_exports", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "swipesimple_report_rows", "swipesimple_exports"
   add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
-  add_foreign_key "warehouse_payment_attempts", "warehouse_carts"
   add_foreign_key "warehouse_stock_holds", "orders"
   add_foreign_key "warehouse_stock_holds", "users", column: "released_by_id"
   add_foreign_key "warehouse_stock_holds", "warehouse_carts"
   add_foreign_key "warehouse_stock_holds", "warehouse_payment_attempts"
-  add_foreign_key "workspace_deployments", "tenants"
-  add_foreign_key "workspace_deployments", "users", column: "owner_id"
-  add_foreign_key "workspace_handoffs", "support_access_grants"
-  add_foreign_key "workspace_handoffs", "users"
-  add_foreign_key "workspace_handoffs", "workspace_deployments"
   add_foreign_key "workspace_signup_events", "users", column: "actor_id", on_delete: :nullify
   add_foreign_key "workspace_signup_events", "workspace_signups"
   add_foreign_key "workspace_signups", "tenants"
@@ -2892,7 +2867,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
 
   # Virtual tables defined in this database.
   # Note that virtual tables may not work with other database engines. Be careful if changing database.
+  add_foreign_key "customer_referrals", "tenants"
+  add_foreign_key "customer_subscriptions", "tenants"
+  add_foreign_key "support_access_events", "support_access_grants"
+  add_foreign_key "support_access_events", "tenants"
+  add_foreign_key "support_access_events", "users", column: "actor_id"
+  add_foreign_key "support_access_grants", "tenants"
+  add_foreign_key "support_access_grants", "users", column: "granted_by_id"
+  add_foreign_key "support_access_grants", "users", column: "support_user_id"
+
   create_virtual_table "rupert_customers_fts", "fts5", ["\"email\"", "\"phone\"", "\"first_name\"", "\"last_name\"", "tokenize='trigram'", "content='customers'", "content_rowid='id'"]
   create_virtual_table "rupert_orders_fts", "fts5", ["\"order_number\"", "\"source_order_id\"", "tokenize='trigram'", "content='orders'", "content_rowid='id'"]
   create_virtual_table "rupert_shopifyvariant_fts", "fts5", ["\"sku\"", "\"title\"", "tokenize='trigram'", "content='ShopifyVariant'", "content_rowid='rowid'"]
+  add_foreign_key "warehouse_payment_attempts", "warehouse_carts"
+  add_foreign_key "purchase_deliveries", "purchase_orders"
+  add_foreign_key "stock_request_events", "stock_requests"
+  add_foreign_key "stock_requests", "stock_reservation_pools", column: "destination_pool_id"
+  add_foreign_key "stock_requests", "stock_reservation_pools", column: "source_pool_id"
+  add_foreign_key "stock_requests", "stock_reservations"
 end
