@@ -10,9 +10,50 @@ class PlatformController < AuthenticatedController
   rescue_from ActiveRecord::RecordInvalid, with: :invalid_request
 
   def index
+    subscriptions = CustomerSubscription.joins(:tenant).includes(:tenant)
+    if params[:customer].present?
+      query = ActiveRecord::Base.sanitize_sql_like(params[:customer].to_s.strip.downcase.first(100))
+      subscriptions = subscriptions.where('LOWER(tenants.name) LIKE ? OR LOWER(tenants.subdomain) LIKE ?', "%#{query}%", "%#{query}%")
+    end
+    subscriptions = subscriptions.where(status: params[:billing_status]) if params[:billing_status].present?
+    @subscriptions = subscriptions.order(updated_at: :desc).limit(50)
+    @billing_totals = CustomerSubscription.group(:status).count
+    @deployments = WorkspaceDeployment.includes(:tenant).order(id: :desc).limit(30)
+    @support_grants = SupportAccessGrant.current.where(support_user_id: Current.user.id).includes(:tenant).order(expires_at: :asc).limit(30)
+    @support_events = SupportAccessEvent.includes(:actor).order(id: :desc).limit(30)
+    @operator_identities = GoogleLoginIdentity.includes(:user).where(email: PlatformOwnerIdentities.emails)
     @overview = InstanceOverview.call(actor: Current.user, before_signup_id: params[:before_signup_id])
   rescue ArgumentError
     invalid_form
+  end
+
+  def retry_deployment
+    row = WorkspaceDeployment.find(params[:id])
+    allowed = row.status == 'failed' || (row.status == 'provisioning' && row.lease_expires_at && row.lease_expires_at < Time.current)
+    return head :conflict unless allowed
+    count = WorkspaceDeployment.where(id: row.id, status: row.status, lease_digest: row.lease_digest).update_all(
+      status: 'requested', phase: 'queued', lease_digest: nil, lease_expires_at: nil, failure_code: nil, updated_at: Time.current)
+    return head :conflict unless count == 1
+    redirect_to platform_path, notice: 'Instance setup queued for a safe retry. Existing instance identity and keys are preserved.'
+  end
+
+  def enter_support
+    tenant = Tenant.find(params[:id])
+    grant = CustomerSupportAccess.grant_for(actor: Current.user, tenant: tenant)
+    return head :forbidden unless grant && tenant.status == 'active'
+    if (deployment = WorkspaceDeployment.find_by(tenant: tenant))
+      @deployment = deployment
+      @handoff = WorkspaceHandoff.issue!(deployment: deployment, user: Current.user, grant: grant)
+      return render 'workspaces/handoff', layout: false
+    end
+    session[:support_tenant_id] = tenant.id
+    CustomerSupportAccess.record!(actor: Current.user, tenant: tenant, grant: grant, action: 'viewed', resource: 'support_session')
+    redirect_to inventory_index_path, notice: 'Customer-authorized read-only support session started.'
+  end
+
+  def leave_support
+    session.delete(:support_tenant_id)
+    redirect_to platform_path, notice: 'Support session ended.'
   end
 
   def approve

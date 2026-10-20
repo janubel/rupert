@@ -26,14 +26,14 @@
     <input type="search" name="q" value="<%= @q %>" placeholder="Search products or SKUs…" aria-label="Search products or SKUs" class="search w-full" autocomplete="off">
   <% end %>
 
-  <% cached_fragment("inventory/table/v3", q: @q, page: @pagy.page) do %>
+  <% cached_fragment("inventory/table/v4", q: @q, page: @pagy.page) do %>
   <div class="card overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <th scope="col" class="th">Product / Variant</th>
-            <th scope="col" class="th">SKU</th>
+            <th scope="col" class="th">SKU<%= render "shared/definition", term: "sku" %></th>
             <th scope="col" class="th text-right">Price</th>
             <% @stock_locations.each do |location| %>
               <th scope="col" class="th text-right" title="<%= location.source == "shopify" ? "Shopify" : "Square" %> — <%= location.name %>">
@@ -41,7 +41,7 @@
                 <span class="block text-[9px] font-normal normal-case tracking-normal text-taupe"><%= location.source %></span>
               </th>
             <% end %>
-            <th scope="col" class="th text-right">Total mirror quantity</th>
+            <th scope="col" class="th text-right">Total mirror quantity<%= render "shared/definition", term: "mirror" %></th>
             <th scope="col" class="th text-right">Catalog</th>
           </tr>
         </thead>

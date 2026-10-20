@@ -8,6 +8,7 @@
     <div><p class="eyebrow text-olive-deep">Sell · retail workspace</p><h1 class="page-title mt-2">C-Trax retail</h1><p class="mt-2 text-sm text-mocha">Find products, check your cart, then let the customer confirm their tip privately.</p></div>
     <% if @snapshot %><a href="#retail-cart" class="btn-ghost">Review cart · <span data-pos-cart-target="count">0</span> items</a><% end %>
   </header>
+  <details class="text-sm text-mocha"><summary class="cursor-pointer text-olive-deep">New to the register?</summary><p class="mt-2">Check the store, review your cart, then verify the final receipt.</p><%= link_to "Take the three-minute checkout lesson", learning_path("checkout"), class: "mt-2 inline-block underline" %></details>
   <% if @unfinished_checkouts.any? %>
     <section class="flash flash-alert space-y-2" aria-label="Unfinished checkouts"><h2 class="font-semibold">Resume an unfinished checkout</h2><p>Check the receipt before collecting another payment.</p><div class="flex flex-wrap gap-2"><% @unfinished_checkouts.each do |checkout| %><%= link_to "#{checkout.reference} · #{checkout.status.humanize}", pos_checkout_path(checkout), class: 'btn-ghost btn-sm' %><% end %></div></section>
   <% end %>

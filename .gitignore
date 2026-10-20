@@ -40,3 +40,7 @@ web/db/*.sqlite*
 .react-router/
 node_modules/.cache/
 coverage/
+
+# Python host tooling bytecode
+__pycache__/
+*.pyc

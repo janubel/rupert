@@ -1,10 +1,19 @@
-<% content_for :title, "Save connection details" %>
+<% content_for :title, @can_connect ? 'Get your workspace ready' : 'Welcome to Rupert' %>
 <div class="mx-auto max-w-xl">
   <div class="mb-6">
-    <h1 class="page-title">Save connection details</h1>
-    <p class="mt-1 text-sm text-mocha">Save the keys from your Shopify and Square developer dashboards for later use. Values are stored encrypted. Saving does not start a sync, test credentials or charge a payment.</p>
+    <p class="eyebrow text-olive-deep">Welcome to Rupert</p>
+    <h1 class="page-title mt-2"><%= @can_connect ? 'Get your workspace ready' : 'Start with your everyday work' %></h1>
+    <p class="mt-3 text-sm text-mocha"><%= @can_connect ? 'First save connection details, then verify a source read and check a familiar day. Your team can start learning while you finish setup.' : 'An administrator is finishing source connections. You can learn your daily tasks and use the tools your account can access now.' %></p>
   </div>
 
+  <aside class="card card-pad mb-6 space-y-3"><h2 class="font-display text-xl">Make Rupert feel familiar</h2><p class="text-sm text-mocha">Choose the work you do and follow a short path with examples.</p><%= link_to 'Choose my getting-started path', learning_index_path, class: 'btn-primary' %><%= link_to 'My time & receipts', employee_app_path, class: 'btn-ghost' %></aside>
+  <% if @can_connect %>
+  <section class="mb-6 space-y-3" aria-label="Workspace setup steps">
+    <h2 class="font-display text-xl">Your setup checklist</h2>
+    <ol class="list-decimal space-y-2 pl-5 text-sm text-mocha"><li><strong>Save details.</strong> Add Shopify below; Square is optional.</li><li><strong>Verify a source read.</strong> Review Credentials & sync and run the relevant read when ready.</li><li><strong>Check your first day.</strong> Find a familiar sale or stock observation and compare it with the source.</li></ol>
+    <%= link_to 'Walk through setup · 3 min', learning_path('setup'), class: 'text-sm font-semibold text-olive-deep underline' if Current.user.can?('settings.read') %>
+  </section>
+  <p class="mb-4 text-sm text-mocha">Values are stored encrypted. Saving does not start a sync, test credentials or charge a payment.</p>
   <%= form_with url: onboarding_connect_path, method: :post, class: "space-y-4" do %>
     <div class="card card-pad space-y-3">
       <div class="flex items-center justify-between">
@@ -55,5 +64,6 @@
       <button type="submit" class="btn-primary">Save connection details</button>
       <%= link_to "Advanced: paste a full .env file", settings_path, class: "btn-ghost btn-sm" %>
     </div>
+  <% end %>
   <% end %>
 </div>

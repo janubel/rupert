@@ -89,6 +89,6 @@ class EmployeeRoleBoundariesTest < ActionDispatch::IntegrationTest
     Current.tenant = tenants(:default_tenant)
     user = User.create!(tenant: Current.tenant, email: "#{role}-boundary@example.com", password: 'password123', role: role)
     post login_path, params: { email: user.email, password: 'password123' }
-    assert_redirected_to root_path
+    assert_redirected_to(role == 'super_admin' ? platform_path : root_path)
   end
 end

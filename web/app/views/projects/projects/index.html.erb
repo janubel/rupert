@@ -7,7 +7,8 @@
       <h1 class="page-title">Projects</h1>
       <p class="mt-1 text-sm text-mocha">Plan work, track tasks, and hit goals.</p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm" %>
       <%= link_to "All tasks", projects_tasks_path, class: "btn-ghost btn-sm" %>
       <% if Current.user.can?("projects.write") %>
         <%= link_to "New project", new_projects_project_path, class: "btn-primary" %>

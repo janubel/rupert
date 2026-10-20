@@ -11,6 +11,11 @@ class TenantScopeGuardTest < ActiveSupport::TestCase
     'Setting' => 'keyed by (key, tenant_id) explicitly; platform keys use a nil tenant',
     'RolePermission' => 'always queried with an explicit tenant_id (users/permissions controllers, User#effective_permissions)',
     'UserPermission' => 'reached through its owning User, which is tenant-checked',
+    'WorkspaceDeployment' => 'control-plane provisioning and authenticated instance health; customer reads explicitly bind tenant',
+    'CustomerSubscription' => 'control-plane billing and signed webhooks; customer controllers bind explicit tenant, platform requires super admin',
+    'CustomerReferral' => 'cross-customer eligibility lookup; only own workspace can issue a code',
+    'SupportAccessGrant' => 'cross-tenant authorization boundary; grants bind explicit tenant and named operator',
+    'SupportAccessEvent' => 'platform audit; customer history is explicitly tenant-filtered',
     'WorkspaceSignup' => 'platform-owner review queue; rows exist before a tenant does',
     'WarehouseCart' => 'anonymous vendor carts resolved by token with the tenant taken from the share',
     'WarehouseCartItem' => 'belongs to a WarehouseCart; tenant set from the cart'

@@ -105,7 +105,7 @@ class User < ActiveRecord::Base
       'leave.write'
     ],
     'shift_leader' => %w[dashboard.read pos.use timesheets.read timesheets.review],
-    'employee' => %w[pos.use timesheets.self],
+    'employee' => %w[pos.use timesheets.self tasks.self],
     'cashier' => [
       'dashboard.read',
       'sales.read',
@@ -200,7 +200,7 @@ class User < ActiveRecord::Base
   # An empty list removes all overrides (falls back to role permissions).
   def update_permission_overrides!(permissions)
     if employee? && (permissions.to_a - ROLE_PERMISSIONS.fetch('employee')).any?
-      raise ArgumentError, 'Staff access is limited to POS and their own time records.'
+      raise ArgumentError, 'Staff access is limited to POS, their own time records and assigned tasks.'
     end
     @effective_permissions = nil
     user_permissions.reset
@@ -237,7 +237,7 @@ class User < ActiveRecord::Base
       {
         area: 'Operations',
         permissions: ['reconcile.read', 'reconcile.write', 'reports.read', 'reports.write', 'ledger.read',
-                      'ledger.write', 'projects.read', 'projects.write']
+                      'ledger.write', 'projects.read', 'projects.write', 'tasks.self']
       },
       {
         area: 'System',

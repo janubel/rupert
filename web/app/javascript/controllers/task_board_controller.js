@@ -10,6 +10,7 @@ export default class extends Controller {
 
   connect() {
     this.dragged = null
+    this.pending = new WeakSet()
     this.element.addEventListener("dragstart", this.start)
     this.element.addEventListener("dragend", this.end)
   }
@@ -21,7 +22,7 @@ export default class extends Controller {
 
   start = (event) => {
     const card = event.target.closest?.("[data-task-id]")
-    if (!card || !this.writableValue) return
+    if (!card || !this.writableValue || this.pending.has(card)) return
     this.dragged = card
     event.dataTransfer.effectAllowed = "move"
     event.dataTransfer.setData("text/plain", card.dataset.taskId)
@@ -60,9 +61,16 @@ export default class extends Controller {
 
   async move(card, status) {
     const from = card.dataset.status
+    if (!this.writableValue || this.pending.has(card)) {
+      const select = card.querySelector("select")
+      if (select) select.value = from
+      return
+    }
     if (from === status) return
     const column = this.columnTargets.find((c) => c.dataset.status === status)
-    const previous = card.parentElement
+    if (!column) return
+    const previous = this.columnTargets.find((c) => c.dataset.status === from)
+    this.pending.add(card)
     this.place(card, column, status)
 
     try {
@@ -77,15 +85,18 @@ export default class extends Controller {
         body: JSON.stringify({ status })
       })
       if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || "Could not move the task.")
+      const saved = await response.json()
+      if (String(saved.id) !== card.dataset.taskId || saved.status !== status) throw new Error("Could not confirm the task move. Reload and try again.")
       this.announce(`Moved to ${column.querySelector("h3").textContent}.`)
+      // Reconcile project progress, overdue labels and active filters with the
+      // saved record. Moving between columns alone leaves those values stale.
+      window.location.reload()
     } catch (error) {
-      previous.append(card)
-      card.dataset.status = from
-      const select = card.querySelector("select")
-      if (select) select.value = from
-      this.refresh()
+      this.place(card, previous, from)
       this.announce(error.message)
       card.animate([{ transform: "translateX(-4px)" }, { transform: "translateX(4px)" }, { transform: "none" }], 200)
+    } finally {
+      this.pending.delete(card)
     }
   }
 
@@ -97,6 +108,8 @@ export default class extends Controller {
     const title = card.querySelector("p")
     title?.classList.toggle("line-through", status === "done")
     title?.classList.toggle("text-taupe", status === "done")
+    title?.classList.toggle("font-medium", status !== "done")
+    title?.classList.toggle("text-ink", status !== "done")
     this.refresh()
   }
 

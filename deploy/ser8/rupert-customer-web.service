@@ -1,0 +1,19 @@
+[Unit]
+Description=Rupert customer workspace
+After=network.target
+
+[Service]
+Type=simple
+User=rupert
+Group=rupert
+WorkingDirectory=/opt/rupert/web
+EnvironmentFile=/etc/rupert.env
+ExecStart=/opt/rbenv/versions/4.0.6/bin/bundle exec puma -C config/puma.rb -b tcp://127.0.0.1:3000
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

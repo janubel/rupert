@@ -33,6 +33,7 @@
     <%= link_to 'Export these pools', workspace_inventory_index_path(request.query_parameters.except('page').merge(format: :csv)), class: 'btn-ghost' %>
   <% end %>
   <p class="text-xs text-taupe"><%= @pagy.count %> mirrored pools · <%= @rows.size %> on this page. Stale or missing identities require review before allocation.</p>
+  <details class="card card-pad"><summary class="cursor-pointer text-sm font-semibold text-olive-deep">How to read these stock numbers</summary><dl class="mt-3 space-y-3"><% %w[mirror available hold promise].each do |term| %><% label, definition = LearningCatalog::TERMS.fetch(term) %><div><dt class="text-sm font-semibold"><%= label %></dt><dd class="mt-1 text-sm text-mocha"><%= definition %></dd></div><% end %></dl><%= link_to 'Practice with a stock example', learning_path('stock', anchor: 'lesson-example'), class: 'mt-4 inline-block text-sm text-olive-deep underline' %></details>
   <div class="card overflow-x-auto"><table class="w-full text-sm">
     <thead><tr><% ['Item / native ID', 'Source / location', 'Mirror quantity', 'Mirror available', 'Local holds', 'Warehouse holds', 'Available to promise', 'Incoming', 'Backorder demand', 'Stock read', 'Actions'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
     <tbody class="divide-y divide-fog">

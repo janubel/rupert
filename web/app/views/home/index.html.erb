@@ -21,6 +21,7 @@
     </div>
   </section>
 
+  <%= render 'shared/learning_welcome' %>
   <% if Current.user.can?("sync.read") %>
     <%= render "syncs/banner" %>
   <% end %>
