@@ -40,9 +40,9 @@
     <% unless @journey.next_lesson %><p class="text-sm font-semibold text-olive-deep">You’ve finished this path. Use the tools below or choose another path when you’re ready.</p><% end %>
   </section>
   <% end %>
-  <%= form_with url: learning_index_path, method: :get, class: 'space-y-2', role: 'search' do |form| %>
+  <%= form_with url: learning_index_path, method: :get, class: 'space-y-2', role: 'search', data: { busy: false } do |form| %>
     <%= form.label :q, 'Find a lesson or definition', class: 'field-label' %>
-    <div class="flex flex-wrap gap-2"><%= form.search_field :q, value: @query, class: 'input min-w-0 flex-1', placeholder: 'Try total, stock, hours or sync', maxlength: 100 %><%= form.submit 'Find', class: 'btn-ghost' %><% if @query.present? %><%= link_to 'Clear', learning_index_path(anchor: 'lessons'), class: 'btn-ghost' %><% end %></div>
+    <div class="flex flex-wrap gap-2"><%= form.search_field :q, value: @query, class: 'input min-w-0 flex-1', placeholder: 'Try total, stock, hours or sync', maxlength: 100 %><%= form.submit 'Find', class: 'btn-ghost', data: { turbo_submits_with: 'Searching…' } %><% if @query.present? %><%= link_to 'Clear', learning_index_path(anchor: 'lessons'), class: 'btn-ghost' %><% end %></div>
   <% end %>
   <section id="lessons" class="space-y-4 scroll-mt-6" aria-labelledby="lessons-title">
     <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 id="lessons-title" class="font-display text-2xl"><%= @query.present? ? 'Matching lessons' : 'Explore all lessons' %></h2><p class="text-sm text-mocha"><%= @completed.size %> of <%= @lessons.size %> complete</p></div>
