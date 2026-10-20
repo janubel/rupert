@@ -68,5 +68,7 @@ Rails.application.configure do
   # never share counters with each other or with the app cache.
   config.after_initialize do
     Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
+    # Platform-client retries must not sleep in tests; HttpRetryTest records the delays instead.
+    HttpRetry.sleeper = ->(_seconds) {}
   end
 end

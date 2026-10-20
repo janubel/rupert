@@ -56,35 +56,64 @@ class ShopifyClient
       end
     end
 
+    # Retries rate limits (HTTP 429 and GraphQL THROTTLED, waiting for the cost
+    # bucket to refill), 5xx and connection failures; see HttpRetry.
     def graphql(query, variables = {})
-      response = http_post(
-        "https://#{shop_domain}/admin/api/#{API_VERSION}/graphql.json",
-        { query: query, variables: variables },
-        { 'X-Shopify-Access-Token' => token }
-      )
-      unless response.is_a?(Net::HTTPSuccess)
-        raise Error.new("GraphQL failed (HTTP #{response.code}).", reason: SyncFailure.http_reason(response.code))
-      end
-
-      payload = JSON.parse(response.body)
-      if payload['errors'].present?
-        codes = Array(payload['errors']).filter_map { |entry| entry.dig('extensions', 'code') if entry.is_a?(Hash) }
-        reason = if codes.include?('ACCESS_DENIED')
-          :access
-        elsif codes.include?('THROTTLED')
-          :rate_limit
-        elsif codes.include?('INTERNAL_SERVER_ERROR')
-          :vendor
-        else
-          :response
+      HttpRetry.with_retries('shopify') do
+        response = begin
+          http_post(
+            "https://#{shop_domain}/admin/api/#{API_VERSION}/graphql.json",
+            { query: query, variables: variables },
+            { 'X-Shopify-Access-Token' => token }
+          )
+        rescue *HttpRetry::NETWORK_ERRORS => e
+          raise HttpRetry::Retry.new("#{e.class}: #{e.message}"), cause: e
         end
-        raise Error.new('Shopify returned a GraphQL error; previous source data was retained.', reason: reason)
-      end
 
-      payload['data']
+        unless response.is_a?(Net::HTTPSuccess)
+          error = Error.new("GraphQL failed (HTTP #{response.code}).", reason: SyncFailure.http_reason(response.code))
+          raise HttpRetry::Retry.new(error.message, after: HttpRetry.retry_after(response)), cause: error if HttpRetry.retryable_status?(response.code)
+
+          raise error
+        end
+
+        payload = JSON.parse(response.body)
+        if payload['errors'].present?
+          codes = Array(payload['errors']).filter_map { |entry| entry.dig('extensions', 'code') if entry.is_a?(Hash) }
+          reason = if codes.include?('ACCESS_DENIED')
+            :access
+          elsif codes.include?('THROTTLED')
+            :rate_limit
+          elsif codes.include?('INTERNAL_SERVER_ERROR')
+            :vendor
+          else
+            :response
+          end
+          error = Error.new('Shopify returned a GraphQL error; previous source data was retained.', reason: reason)
+          raise HttpRetry::Retry.new('Shopify THROTTLED', after: throttle_wait(payload)), cause: error if reason == :rate_limit
+          raise HttpRetry::Retry.new('Shopify INTERNAL_SERVER_ERROR'), cause: error if reason == :vendor
+
+          raise error
+        end
+
+        payload['data']
+      end
     end
 
     private
+
+    # Seconds until the GraphQL cost bucket can serve the throttled query:
+    # (requested - available) / restoreRate, from extensions.cost when present.
+    def throttle_wait(payload)
+      cost = payload.dig('extensions', 'cost') || {}
+      requested = cost['requestedQueryCost'].to_f
+      status = cost['throttleStatus'] || {}
+      available = status['currentlyAvailable'].to_f
+      rate = status['restoreRate'].to_f
+      return nil unless requested.positive? && rate.positive?
+
+      ((requested - available) / rate).clamp(0.5, 60.0)
+    end
 
     def http_post(url, body, headers = {})
       uri = URI(url)

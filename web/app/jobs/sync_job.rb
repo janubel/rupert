@@ -3,7 +3,19 @@
 class SyncJob < ApplicationJob
   queue_as :default
 
+  # Raised (wrapping the original) when a sync failed for a reason that
+  # usually clears on its own: network, timeout, vendor 5xx, rate limit.
+  # Each retry starts a fresh SyncRun; the mirror is idempotent and the
+  # previous run was already marked failed, so the per-tenant lock is free.
+  class TransientFailure < StandardError; end
+
+  TRANSIENT_CATEGORIES = %w[network timeout rate_limit vendor storage].freeze
+
   retry_on ActiveRecord::PreparedStatementCacheExpired, wait: 5.seconds, attempts: 2
+  retry_on TransientFailure, wait: :polynomially_longer, attempts: 4 do |job, error|
+    BuzzNotifyJob.perform_later("Sync failed after #{job.executions} attempts: #{error.message.to_s[0, 300]}")
+    raise error # keep the failed execution visible in the queue (System page / readiness)
+  end
 
   def perform(payload = {})
     mode = payload['mode'] || payload[:mode] || 'manual'
@@ -24,7 +36,13 @@ class SyncJob < ApplicationJob
 
     BuzzNotifyJob.perform_later(sync_message(run))
     SalesAnnouncementJob.perform_later(tenant_id)
+  rescue TransientFailure
+    raise
   rescue StandardError => e
+    if TRANSIENT_CATEGORIES.include?(SyncFailure.category(e)) || HttpRetry::NETWORK_ERRORS.any? { |type| e.is_a?(type) }
+      raise TransientFailure, "#{e.class}: #{e.message.to_s[0, 300]}"
+    end
+
     BuzzNotifyJob.perform_later("Sync failed: #{e.message.to_s[0, 300]}")
     raise
   ensure
