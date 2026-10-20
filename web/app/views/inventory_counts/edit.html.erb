@@ -14,11 +14,11 @@
     <div class="card card-pad space-y-4">
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <label class="mb-1 block text-sm font-medium text-ink">Date &amp; time counted</label>
+          <label class="field-label">Date &amp; time counted</label>
           <%= datetime_field_tag "inventory_count[countedAt]", count.countedAt&.strftime("%Y-%m-%dT%H:%M"), class: "input" %>
         </div>
         <div>
-          <label class="mb-1 block text-sm font-medium text-ink">Location <span class="text-taupe">(optional)</span></label>
+          <label class="field-label">Location <span class="text-taupe">(optional)</span></label>
           <select name="inventory_count[locationId]" class="input">
             <option value="">— no specific location —</option>
             <% @locations.each do |loc| %>
@@ -28,7 +28,7 @@
         </div>
       </div>
       <div>
-        <label class="mb-1 block text-sm font-medium text-ink">Note <span class="text-taupe">(optional)</span></label>
+        <label class="field-label">Note <span class="text-taupe">(optional)</span></label>
         <textarea name="inventory_count[note]" rows="2" class="input"><%= count.note %></textarea>
       </div>
     </div>

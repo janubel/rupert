@@ -1,4 +1,4 @@
-<a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:fixed focus:left-4 focus:top-3">Skip to content</a>
+<a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-ink focus:fixed focus:left-4 focus:top-3">Skip to content</a>
 <div class="min-h-full">
   <header class="app-header">
     <%= render "layouts/build_version" %>
@@ -20,7 +20,7 @@
             <%= link_to platform_path, class: 'nav-utility', aria: { label: 'Instance overview' }, title: 'Instance overview' do %><%= navigation_icon('platform') %><span class="nav-hint">Instance overview</span><% end %>
           <% end %>
           <% if Current.user.can?('customers.read') %>
-            <%= link_to customers_path, class: "nav-utility #{'bg-haze text-ink' if request.path.start_with?('/customers')}", aria: { label: 'Customers', current: (request.path.start_with?('/customers') ? 'page' : nil) }, title: 'Customers', data: { customers_link: true } do %><%= navigation_icon('customers') %><span class="nav-hint">Customers</span><% end %>
+            <%= link_to customers_path, class: 'nav-utility', aria: { label: 'Customers', current: (request.path.start_with?('/customers') ? 'page' : nil) }, title: 'Customers', data: { customers_link: true } do %><%= navigation_icon('customers') %><span class="nav-hint">Customers</span><% end %>
           <% end %>
           <% if Current.user.can?('dashboard.read') %>
             <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
@@ -64,7 +64,7 @@
   </header>
 
   <% if (down_location = card_processing_down_location) %>
-    <div role="alert" class="mx-auto mt-4 max-w-6xl px-6" data-card-processing-banner>
+    <div role="alert" class="mx-auto mt-4 max-w-6xl px-4 sm:px-6" data-card-processing-banner>
       <div class="flash flash-alert flex flex-wrap items-center justify-between gap-3">
         <span><strong>Card processing is down.</strong> Customers cannot pay by card until the payment gateway is connected and verified.</span>
         <%= link_to 'Click here to resolve', pos_setting_path(down_location.id), class: 'font-semibold underline' %>
@@ -94,12 +94,12 @@
 
 <% if Current.user&.can?('dashboard.read') %>
   <div data-controller="search" data-action="rupert:open-search@window->search#open" class="fixed inset-0 z-50 hidden items-start justify-center px-4 pt-[12vh]">
-    <div class="fixed inset-0 bg-ink/30" data-action="click->search#close"></div>
-    <div class="relative w-full max-w-xl overflow-hidden rounded-2xl border border-fog bg-paper shadow-2xl" role="dialog" aria-label="Search">
+    <div class="fixed inset-0 bg-black/50" data-action="click->search#close"></div>
+    <div class="relative w-full max-w-xl overflow-hidden rounded-2xl border border-fog bg-paper shadow-2xl" role="dialog" aria-modal="true" aria-label="Search">
       <div class="flex items-center gap-2 border-b border-fog px-4 py-3">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-taupe" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" data-search-target="input" data-action="input->search#search keydown->search#keydown" placeholder="Search orders, customers, SKUs, staff…" class="w-full bg-transparent text-sm text-ink outline-none placeholder:text-taupe" autocomplete="off" aria-label="Search">
-        <button type="button" data-action="search#close" class="rounded-full bg-haze px-2 py-0.5 text-xs text-taupe hover:text-ink" aria-label="Close">esc</button>
+        <input type="search" data-search-target="input" data-action="input->search#search keydown->search#keydown" placeholder="Search orders, customers, SKUs, staff…" class="w-full bg-transparent text-sm text-ink outline-none placeholder:text-taupe focus-visible:outline-none" autocomplete="off" aria-label="Search">
+        <button type="button" data-action="search#close" class="min-h-7 rounded-full bg-haze px-2.5 py-1 text-xs text-mocha hover:text-ink" aria-label="Close search">esc</button>
       </div>
       <div data-search-target="results" class="max-h-[50vh] overflow-y-auto py-1"></div>
       <div data-search-target="empty" class="hidden px-4 py-6 text-center text-sm text-taupe">No matches — try an order number, customer, or SKU.</div>

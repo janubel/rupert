@@ -19,9 +19,9 @@
     <%= hidden_field_tag :from, @from.iso8601, data: { punch_calendar_target: 'from' } %>
     <%= hidden_field_tag :to, @to.iso8601, data: { punch_calendar_target: 'to' } %>
     <div class="flex flex-wrap items-end gap-3">
-      <div><%= label_tag :employee_id, 'Staff member', class: 'block text-sm mb-1' %><%= select_tag :employee_id, options_for_select([['All staff', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
-      <div><%= label_tag :source, 'Source', class: 'block text-sm mb-1' %><%= select_tag :source, options_for_select([['All sources', ''], ['Rupert clock', 'rupert'], ['Square', 'square']], params[:source]), class: 'select' %></div>
-      <div><%= label_tag :status, 'Status', class: 'block text-sm mb-1' %><%= select_tag :status, options_for_select([['All statuses', ''], ['Closed', 'closed'], ['Open (still punched in)', 'open'], ['Imported', 'imported'], ['Conflict', 'conflict'], ['Unmatched', 'unmatched']], params[:status]), class: 'select' %></div>
+      <div><%= label_tag :employee_id, 'Staff member', class: 'field-label' %><%= select_tag :employee_id, options_for_select([['All staff', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
+      <div><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', ''], ['Rupert clock', 'rupert'], ['Square', 'square']], params[:source]), class: 'select' %></div>
+      <div><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select([['All statuses', ''], ['Closed', 'closed'], ['Open (still punched in)', 'open'], ['Imported', 'imported'], ['Conflict', 'conflict'], ['Unmatched', 'unmatched']], params[:status]), class: 'select' %></div>
       <%= submit_tag 'Run report', class: 'btn-primary' %>
       <%= link_to 'Reset', people_punch_history_path, class: 'btn-ghost btn-sm' %>
     </div>

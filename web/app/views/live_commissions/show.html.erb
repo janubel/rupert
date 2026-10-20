@@ -3,8 +3,8 @@
     <div class="flex flex-wrap justify-between gap-3"><h2 class="font-display text-xl">Shift commissions · today</h2><%= link_to 'Match gateway payments', authorize_net_sale_links_path, class: 'btn-ghost btn-sm', data: { turbo_frame: '_top' } %><%= link_to 'Review date range', commission_preview_time_clock_path, class: 'btn-ghost btn-sm', data: { turbo_frame: '_top' } %></div>
     <p class="text-sm text-mocha">Each clocked-in worker earns an estimated 1% of eligible item sales during their shift. Overlapping workers each receive 1%. This estimate refreshes every 30 seconds from imported data; source delays still apply.</p>
     <%= form_with url: live_commissions_path, method: :get, class: 'flex flex-wrap gap-3 items-end' do %>
-      <div><%= label_tag :source, 'Sales source', class: 'block text-sm' %><%= select_tag :source, options_for_select(CommissionPreview::SOURCES.map { |source| [source.capitalize, source] }, @source), class: 'input' %></div>
-      <div><%= label_tag :currency, 'Currency', class: 'block text-sm' %><%= text_field_tag :currency, @currency, maxlength: 3, required: true, class: 'input' %></div>
+      <div><%= label_tag :source, 'Sales source', class: 'field-label' %><%= select_tag :source, options_for_select(CommissionPreview::SOURCES.map { |source| [source.capitalize, source] }, @source), class: 'input' %></div>
+      <div><%= label_tag :currency, 'Currency', class: 'field-label' %><%= text_field_tag :currency, @currency, maxlength: 3, required: true, class: 'input' %></div>
       <%= submit_tag 'View commissions', class: 'btn-ghost' %>
     <% end %>
     <% if @preview_error %><p role="alert"><%= @preview_error %></p><% else %>

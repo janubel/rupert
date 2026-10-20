@@ -13,16 +13,16 @@
   </section>
   <section class="card card-pad space-y-3">
     <%= form_tag stock_comparison_path, method: :get, class: 'operations-filters' do %>
-      <label class="block text-sm">Shopify location
+      <label class="field-label">Shopify location
         <%= select_tag :shopify_location_id, options_for_select(@comparison.shopify_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.shopify&.location_id), include_blank: 'Choose location', class: 'input mt-1' %>
       </label>
-      <label class="block text-sm">C-Trax store
+      <label class="field-label">C-Trax store
         <%= select_tag :ctrax_location_id, options_for_select(@comparison.ctrax_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.ctrax&.location_id), include_blank: 'Choose store', class: 'input mt-1' %>
       </label>
-      <label class="block text-sm">Show
+      <label class="field-label">Show
         <%= select_tag :filter, options_for_select([['All items', 'all'], ['Needs attention', 'attention'], ['No current pair', 'unmatched'], ['Product/package candidates', 'candidates'], ['Saved investigation findings', 'findings'], ['Historical Shopify candidates', 'historical']], @comparison.filter), class: 'input mt-1' %>
       </label>
-      <label class="block text-sm">Search <%= text_field_tag :q, @comparison.query, class: 'input mt-1', placeholder: 'Item, SKU or native ID' %></label>
+      <label class="field-label">Search <%= text_field_tag :q, @comparison.query, class: 'input mt-1', placeholder: 'Item, SKU or native ID' %></label>
       <%= submit_tag 'Compare', class: 'btn-primary' %>
     <% end %>
     <div class="grid gap-3 sm:grid-cols-2" aria-label="Stock source freshness">

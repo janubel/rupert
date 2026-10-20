@@ -1,5 +1,5 @@
 <div class="max-w-4xl space-y-5">
-  <%= link_to 'Back to Marketing', marketing_path, class: 'btn-ghost' %><h1 class="text-2xl font-semibold">Review reply</h1>
+  <%= link_to 'Back to Marketing', marketing_path, class: 'btn-ghost' %><h1 class="page-title">Review reply</h1>
   <section class="card card-pad space-y-3"><h2 class="font-semibold"><%= @reply.thread.title %> · <%= @reply.status.humanize %></h2><%= link_to 'Read original discussion', @reply.thread.url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><p class="whitespace-pre-wrap"><%= @reply.thread.excerpt %></p><p>Group: <%= @reply.thread.community.name %></p><p class="whitespace-pre-wrap"><%= @reply.thread.community.promotion_rules %></p><%= link_to 'Read group rules', @reply.thread.community.rules_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></section>
   <% if Current.user.can?('marketing.write') && !%w[published removed].include?(@reply.status) %>
     <%= form_with model: @reply, scope: :reply, url: @reply.persisted? ? marketing_reply_path(@reply) : marketing_replies_path, class: 'card card-pad space-y-4' do |f| %>

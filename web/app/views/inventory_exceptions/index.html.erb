@@ -6,10 +6,10 @@
     <div class="flex flex-wrap gap-2"><%= link_to 'Inventory', inventory_index_path, class: 'btn-ghost' %><%= link_to 'Local holds', stock_reservations_path, class: 'btn-ghost' %><%= link_to 'Manual counts', inventory_counts_path, class: 'btn-ghost' %><%= link_to 'Bulk materials', bulk_materials_path, class: 'btn-ghost' %></div>
   </section>
   <%= form_with url: inventory_exceptions_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
-    <div><%= f.label :source, 'Platform stock', class: 'block text-sm' %><%= f.select :source, [['All sources', ''], ['Shopify', 'shopify'], ['Square', 'square']], { selected: @queue.source }, class: 'input' %></div>
-    <div><%= f.label :location_id, 'Stock location', class: 'block text-sm' %><%= f.select :location_id, [['All locations', '']] + @locations.map { |location| ["#{location.source} · #{location.name}", location.id] }, { selected: @queue.location_id }, class: 'input' %><% if @locations_limited %><p class="mt-1 text-xs text-mocha">Location selector limited to the first 200 locations.</p><% end %></div>
-    <div><%= f.label :stale_hours, 'Flag snapshots older than (hours)', class: 'block text-sm' %><%= f.number_field :stale_hours, value: @queue.stale_hours, min: 1, max: 168, required: true, class: 'input w-28' %></div>
-    <div><%= f.label :section, 'Work type', class: 'block text-sm' %><%= f.select :section, [['All work', '']] + InventoryExceptions::SECTION_LABELS.map { |key, label| [label, key] }, { selected: @queue.section }, class: 'input' %></div>
+    <div><%= f.label :source, 'Platform stock', class: 'field-label' %><%= f.select :source, [['All sources', ''], ['Shopify', 'shopify'], ['Square', 'square']], { selected: @queue.source }, class: 'input' %></div>
+    <div><%= f.label :location_id, 'Stock location', class: 'field-label' %><%= f.select :location_id, [['All locations', '']] + @locations.map { |location| ["#{location.source} · #{location.name}", location.id] }, { selected: @queue.location_id }, class: 'input' %><% if @locations_limited %><p class="mt-1 text-xs text-mocha">Location selector limited to the first 200 locations.</p><% end %></div>
+    <div><%= f.label :stale_hours, 'Flag snapshots older than (hours)', class: 'field-label' %><%= f.number_field :stale_hours, value: @queue.stale_hours, min: 1, max: 168, required: true, class: 'input w-28' %></div>
+    <div><%= f.label :section, 'Work type', class: 'field-label' %><%= f.select :section, [['All work', '']] + InventoryExceptions::SECTION_LABELS.map { |key, label| [label, key] }, { selected: @queue.section }, class: 'input' %></div>
     <%= f.submit 'Review exceptions', class: 'btn-primary' %>
   <% end %>
   <section class="card card-pad space-y-2 text-sm text-mocha">

@@ -40,11 +40,11 @@
     <div class="card card-pad space-y-4">
       <div class="grid gap-4 sm:grid-cols-3">
         <div>
-          <label class="mb-1 block text-sm font-medium text-ink">Date &amp; time counted</label>
+          <label class="field-label">Date &amp; time counted</label>
           <%= datetime_field_tag "inventory_count[countedAt]", count.countedAt&.strftime("%Y-%m-%dT%H:%M"), class: "input" %>
         </div>
         <div>
-          <label class="mb-1 block text-sm font-medium text-ink">Location <span class="text-taupe">(optional)</span></label>
+          <label class="field-label">Location <span class="text-taupe">(optional)</span></label>
           <% if @prepared %>
             <%= hidden_field_tag "inventory_count[locationId]", count.locationId %>
             <p class="text-sm text-ink"><%= count.location ? "#{count.location.source.titleize} · #{count.location.name}" : "Choose a location above and load its sheet." %></p>
@@ -58,7 +58,7 @@
           <% end %>
         </div>
         <div>
-          <label class="mb-1 block text-sm font-medium text-ink">Note <span class="text-taupe">(optional)</span></label>
+          <label class="field-label">Note <span class="text-taupe">(optional)</span></label>
           <input type="text" name="inventory_count[note]" value="<%= count.note %>" placeholder="e.g. end-of-week stocktake" class="input">
         </div>
       </div>

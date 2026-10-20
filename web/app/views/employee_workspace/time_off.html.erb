@@ -22,10 +22,10 @@
   <% if @request.errors.any? %><p role="alert" class="text-sm text-rose"><%= @request.errors.full_messages.to_sentence %></p><% end %>
   <%= form_with model: @request, scope: :leave_request, url: (@preview ? employee_preview_time_off_path(preview: 1) : employee_time_off_path), class: 'space-y-3' do |f| %>
     <fieldset <%= 'disabled' if @preview %> class="space-y-3">
-    <div><%= f.label :leave_type, 'Type', class: 'block text-sm mb-1' %><%= f.select :leave_type, People::LeaveRequest::LEAVE_TYPES.map { |type| [type == 'unpaid' ? 'Unpaid day off' : type.humanize, type] }, {}, class: 'select w-full' %></div>
-    <div class="grid grid-cols-2 gap-3"><div><%= f.label :starts_on, 'First day', class: 'block text-sm mb-1' %><%= f.date_field :starts_on, required: true, class: 'input w-full' %></div><div><%= f.label :ends_on, 'Last day', class: 'block text-sm mb-1' %><%= f.date_field :ends_on, required: true, class: 'input w-full' %></div></div>
-    <div><%= f.label :hours, 'Hours off', class: 'block text-sm mb-1' %><%= f.number_field :hours, min: 0.01, step: 0.01, class: 'input w-full', aria: { describedby: 'time-off-hours-help' } %><p id="time-off-hours-help" class="mt-1 text-xs text-mocha">Enter your total working hours off. Optional for unpaid days. Approval is required.</p></div>
-    <div><%= f.label :reason, 'Note (optional)', class: 'block text-sm mb-1' %><%= f.text_area :reason, rows: 2, maxlength: 2000, class: 'input w-full' %></div>
+    <div><%= f.label :leave_type, 'Type', class: 'field-label' %><%= f.select :leave_type, People::LeaveRequest::LEAVE_TYPES.map { |type| [type == 'unpaid' ? 'Unpaid day off' : type.humanize, type] }, {}, class: 'select w-full' %></div>
+    <div class="grid grid-cols-2 gap-3"><div><%= f.label :starts_on, 'First day', class: 'field-label' %><%= f.date_field :starts_on, required: true, class: 'input w-full' %></div><div><%= f.label :ends_on, 'Last day', class: 'field-label' %><%= f.date_field :ends_on, required: true, class: 'input w-full' %></div></div>
+    <div><%= f.label :hours, 'Hours off', class: 'field-label' %><%= f.number_field :hours, min: 0.01, step: 0.01, class: 'input w-full', aria: { describedby: 'time-off-hours-help' } %><p id="time-off-hours-help" class="mt-1 text-xs text-mocha">Enter your total working hours off. Optional for unpaid days. Approval is required.</p></div>
+    <div><%= f.label :reason, 'Note (optional)', class: 'field-label' %><%= f.text_area :reason, rows: 2, maxlength: 2000, class: 'input w-full' %></div>
     <%= f.submit 'Send request', class: 'btn-primary' %>
     </fieldset>
     <% if @preview %><p class="text-sm text-mocha">Example form · Sending is disabled in preview.</p><% end %>
