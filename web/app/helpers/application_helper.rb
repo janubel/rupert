@@ -49,6 +49,13 @@ module ApplicationHelper
     nav_areas.find { |area| area[:key] == active_area_key }&.dig(:modules) || []
   end
 
+  # Sub-sections of the active area for the tools menu. Areas without groups get
+  # one unnamed group so the menu renders a plain list as before.
+  def active_area_groups
+    groups = nav_areas.find { |area| area[:key] == active_area_key }&.dig(:groups)
+    groups.presence || [{ name: nil, modules: active_area_modules }]
+  end
+
   # Chart palette derived from the Tailwind @theme tokens in
   # app/assets/tailwind/application.css. Keep the two in sync.
   CHART_COLORS = {

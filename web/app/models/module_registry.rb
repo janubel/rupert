@@ -209,7 +209,16 @@ class ModuleRegistry
       { key: 'stock', name: 'Stock',
         modules: %w[inventory inventory_exceptions locations inventory_counts stock_requests stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
       { key: 'money', name: 'Bookkeeping',
-        modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports bank_reconciliation ledger_export] },
+        modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports bank_reconciliation ledger_export],
+        # Optional sub-sections for long menus. Order here is display order; every
+        # module of the area must appear in exactly one group.
+        groups: [
+          { name: 'Overview', modules: %w[bookkeeping business_snapshot books_check] },
+          { name: 'Daily close', modules: %w[financial_close daily_reconciliation register_summary reconciliation_overview reconciliation_follow_ups reconciliation_documents] },
+          { name: 'Books & review', modules: %w[books_desk book_approvals period_locks bank_statements bank_reconciliation source_reports retention_drive] },
+          { name: 'Ledger & accounts', modules: %w[ledger journal_entries chart_of_accounts finance_accounts expenses payments ledger_export] },
+          { name: 'Reports & planning', modules: %w[reports finance_reports cash_forecast] }
+        ] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
       # Personal staff self-service (own receipts, own hours). Receipts has no permission, so
       # this area is visible exactly where the separate Receipts area was before.
@@ -219,6 +228,14 @@ class ModuleRegistry
       { key: 'system', name: 'System',
         modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap owner_checklists] }
     ].freeze
+
+    # Sub-sections of an area with only the visible modules; empty groups drop out.
+    def groups_for(area, modules)
+      Array(area[:groups]).filter_map do |group|
+        entries = group[:modules].filter_map { |key| modules.find { |entry| entry.key == key } }
+        { name: group[:name], modules: entries } if entries.any?
+      end
+    end
 
     def area_key_for(module_key)
       AREAS.find { |area| area[:modules].include?(module_key.to_s) }&.dig(:key)
@@ -235,7 +252,7 @@ class ModuleRegistry
         next if area[:key] == 'team' && modules.all? { |entry| entry.key == 'time_clock' }
         next if area[:key] == 'system' && modules.all? { |entry| entry.key == 'roadmap' }
 
-        { key: area[:key], name: area[:name], modules: modules }
+        { key: area[:key], name: area[:name], modules: modules, groups: groups_for(area, modules) }
       end
     end
   end
