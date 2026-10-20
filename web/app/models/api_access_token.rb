@@ -45,7 +45,7 @@ class ApiAccessToken < ApplicationRecord
 
   def usable?
     !user&.employee? && revoked_at.nil? && (expires_at.nil? || expires_at > Time.current) && user&.active? &&
-      tenant&.status == 'active' && (user.super_admin? || user.tenant_id == tenant_id)
+      tenant&.status == 'active' && (user.tenant_id == tenant_id)
   end
 
   def allows?(scope)
@@ -76,7 +76,7 @@ class ApiAccessToken < ApplicationRecord
   end
 
   def owner_belongs_to_tenant
-    return if user && (user.super_admin? || user.tenant_id == tenant_id)
+    return if user && (user.tenant_id == tenant_id)
 
     errors.add(:user, 'must belong to this store')
   end

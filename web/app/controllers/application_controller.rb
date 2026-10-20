@@ -3,9 +3,13 @@
 class ApplicationController < ActionController::Base
   layout :workspace_layout
   before_action :reject_preview_mutation
+  before_action :enforce_workspace_hostname
   before_action :set_current_context
-  before_action :load_last_sync
   before_action :require_login
+  before_action :enforce_instance_support_access
+  before_action :enforce_workspace_location
+  before_action :enforce_customer_support_access
+  before_action :load_last_sync
   before_action :restrict_employee_workspace
 
   private
@@ -18,15 +22,22 @@ class ApplicationController < ActionController::Base
   # Deny unlisted modules even if a new controller omits its permission check.
   def restrict_employee_workspace
     return unless Current.user&.employee?
+    response.headers['Cache-Control'] = 'no-store'
     if controller_path == 'home' && action_name == 'index'
       return redirect_to ctrax_pos_path
     end
 
     allowed = case controller_path
+    when 'learning'
+      %w[index show complete preferences].include?(action_name)
     when 'sessions', 'oauth', 'employee_app', 'employee_workspace', 'employee_preview', 'customer_displays'
       true
     when 'employee_access'
       %w[edit update].include?(action_name)
+    when 'projects/tasks'
+      %w[index update transition move].include?(action_name)
+    when 'projects/guides'
+      action_name == 'show'
     when 'receipts'
       %w[index new create show edit update download submit reopen].include?(action_name)
     when 'people/timesheets'
@@ -49,7 +60,7 @@ class ApplicationController < ActionController::Base
 
     response.headers['Cache-Control'] = 'no-store'
     if request.format.html?
-      redirect_to employee_app_path, alert: 'Your account can use POS and your own time records.'
+      redirect_to employee_app_path, alert: 'Your account can use POS, your own time records and assigned tasks.'
     else
       head :forbidden
     end
@@ -57,14 +68,58 @@ class ApplicationController < ActionController::Base
 
   # A fixed, permission-checked landing page keeps personal defaults separate from roles.
   def sign_in_landing_path(user)
+    return workspace_path if !WorkspaceNode.isolated? && WorkspaceDeployment.exists?(tenant_id: user.tenant_id)
     return employee_app_path if user.employee?
     return books_check_path if user.dashboard_config_hash['start_page'] == 'bookkeeping' && user.can?('reports.read')
+
+    return platform_path if user.super_admin?
 
     root_path
   end
 
   def workspace_layout
     Current.user&.employee? ? 'employee' : 'application'
+  end
+
+  def enforce_workspace_hostname
+    return unless WorkspaceNode.isolated?
+    head :misdirected_request unless request.host == ENV['RUPERT_INSTANCE_HOSTNAME']
+  end
+
+  def enforce_workspace_location
+    return unless Current.user && !WorkspaceNode.isolated? && WorkspaceDeployment.exists?(tenant_id: Current.user.tenant_id)
+    return if %w[workspaces billing support_access sessions oauth instance_sessions].include?(controller_path)
+    redirect_to workspace_path
+  end
+
+  def enforce_instance_support_access
+    return unless WorkspaceNode.isolated? && session[:auth_method] == 'instance_support'
+    return if controller_path == 'sessions' && action_name == 'destroy'
+    allowed = request.get? && CustomerSupportAccess::READ_CONTROLLERS.include?(controller_path)
+    begin
+      allowed &&= WorkspaceNode.check_support(session[:instance_support_grant_id], session[:instance_support_user_id], "#{controller_path}##{action_name}")['active'] == true
+    rescue RupertBilling::Error
+      allowed = false
+    end
+    render plain: 'Customer support permission is missing, expired or revoked.', status: :forbidden unless allowed
+  end
+
+  def enforce_customer_support_access
+    actor = Current.user
+    tenant = Current.tenant
+    return unless actor&.super_admin? && tenant && actor.tenant_id != tenant.id
+    return if (controller_path == 'platform' && action_name == 'leave_support') || (controller_path == 'sessions' && action_name == 'destroy')
+    response.headers['Cache-Control'] = 'no-store'
+    grant = CustomerSupportAccess.grant_for(actor: actor, tenant: tenant)
+    allowed = grant && request.get? && CustomerSupportAccess::READ_CONTROLLERS.include?(controller_path)
+    CustomerSupportAccess.record!(actor: actor, tenant: tenant, grant: grant,
+      action: allowed ? 'viewed' : 'denied', resource: "#{controller_path}##{action_name}")
+    unless allowed
+      render html: view_context.safe_join([
+        view_context.content_tag(:p, 'Customer permission is required. Support grants allow selected read-only screens only.'),
+        view_context.button_to('Leave support session', leave_platform_support_path, method: :delete)
+      ]), status: :forbidden
+    end
   end
 
   # Bind every role to its authenticated credentials. Legacy administrator cookies
@@ -99,11 +154,17 @@ class ApplicationController < ActionController::Base
       Current.user = nil
     end
 
-    if Current.user&.super_admin?
+    if WorkspaceNode.isolated?
+      Current.tenant = Tenant.find_by(id: ENV['RUPERT_TENANT_ID'])
+      if Current.user && Current.user.tenant_id != Current.tenant&.id
+        reset_session
+        Current.user = nil
+      end
+    elsif Current.user&.super_admin?
       # Super admins are platform-wide and may scope to any store via its
       # subdomain; fall back to their own tenant when the host has no matching
       # subdomain so tenant-scoped data (syncs, inventory, etc.) isn't hidden.
-      Current.tenant = Tenant.find_by(subdomain: request.subdomain) || Current.user.tenant
+      Current.tenant = Tenant.find_by(id: session[:support_tenant_id]) || Tenant.find_by(subdomain: request.subdomain) || Current.user.tenant
     else
       Current.tenant = Current.user&.tenant
       Current.tenant ||= Tenant.find_by(subdomain: request.subdomain) if Current.user.nil?

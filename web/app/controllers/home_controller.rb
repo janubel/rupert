@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 class HomeController < AuthenticatedController
-  before_action :require_dashboard_access
+  before_action :require_dashboard_access, unless: :public_landing?
 
   def index
-    return redirect_to(onboarding_path) unless OnboardingController.configured?
+    return render('landing/index', layout: false) if public_landing?
 
     @widgets = DashboardWidget.entries(Current.user.dashboard_config_hash, user: Current.user)
     render('home/index')
@@ -14,7 +14,9 @@ class HomeController < AuthenticatedController
   # Body: { widgets: [keys in display order], hidden: [keys] } or { reset: true }.
   def customize
     if params[:reset]
-      Current.user.update!(dashboard_config: Current.user.dashboard_config_hash.slice('start_page').presence)
+      Current.user.with_lock do
+        Current.user.update!(dashboard_config: Current.user.dashboard_config_hash.except('widgets', 'hidden').presence)
+      end
       return render(json: { ok: true, reset: true })
     end
 
@@ -25,13 +27,23 @@ class HomeController < AuthenticatedController
       return render(json: { ok: false, error: 'Unknown or unavailable widget in layout' }, status: :unprocessable_entity)
     end
 
-    Current.user.update!(dashboard_config: Current.user.dashboard_config_hash.merge('widgets' => widgets, 'hidden' => hidden))
+    Current.user.with_lock do
+      Current.user.update!(dashboard_config: Current.user.dashboard_config_hash.merge('widgets' => widgets, 'hidden' => hidden))
+    end
     render(json: { ok: true, widgets: widgets, hidden: hidden })
   rescue ActiveRecord::RecordInvalid => e
     render(json: { ok: false, error: e.message }, status: :unprocessable_entity)
   end
 
   private
+
+  def public_landing?
+    !WorkspaceNode.isolated? && Current.user.nil? && request.path == root_path && action_name == 'index'
+  end
+
+  def require_login
+    super unless public_landing?
+  end
 
   def require_dashboard_access
     head :forbidden unless Current.user&.can?('dashboard.read')

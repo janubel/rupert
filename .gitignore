@@ -43,3 +43,7 @@ web/db/*.sqlite*
 # Rails generated types
 .react-router/
 node_modules/.cache/
+
+# Python host tooling bytecode
+__pycache__/
+*.pyc

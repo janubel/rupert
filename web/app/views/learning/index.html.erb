@@ -1,0 +1,72 @@
+<% content_for :title, 'Learn Rupert' %>
+<div class="mx-auto max-w-4xl space-y-8">
+  <header>
+    <p class="eyebrow text-olive-deep">Your Rupert guide</p>
+    <h1 class="page-title mt-2">Get comfortable. Get things done.</h1>
+    <p class="mt-3 max-w-2xl text-mocha">Learn one task at a time, try an example, then open the tool you need. Your progress stays with your account.</p>
+    <nav class="mt-4 flex flex-wrap gap-3 text-sm font-semibold text-olive-deep" aria-label="Learning sections">
+      <%= link_to 'Your next step', learning_index_path(anchor: 'your-path'), class: 'underline' %>
+      <%= link_to 'All lessons', '#lessons', class: 'underline' %>
+      <%= link_to 'Words & numbers', '#definitions-title', class: 'underline' %>
+    </nav>
+  </header>
+  <% if @query.blank? %>
+  <section id="your-path" class="card card-pad space-y-5 scroll-mt-6" aria-labelledby="path-title">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="eyebrow text-olive-deep">Your learning path</p>
+        <h2 id="path-title" class="mt-2 font-display text-2xl"><%= @journey.focus[:label] %></h2>
+        <p class="mt-2 text-sm text-mocha">Suggested for your work. Choose another path anytime.</p>
+      </div>
+      <details class="learning-path-picker">
+        <summary class="cursor-pointer text-sm font-semibold text-olive-deep underline">Change my path</summary>
+        <%= form_with url: learning_preferences_path, method: :patch, class: 'mt-3 space-y-3' do |form| %>
+          <%= form.label :focus, 'What would you like to do?', class: 'field-label' %>
+          <%= form.select :focus, @journey.paths.map { |path| [path[:label], path[:key]] }, { selected: @journey.focus[:key] }, class: 'input' %>
+          <%= form.submit 'Use this path', class: 'btn-ghost btn-sm' %>
+        <% end %>
+      </details>
+    </div>
+    <% path_lessons = @journey.path_lessons; path_done = path_lessons.count { |lesson| @completed.include?(lesson[:key]) } %>
+    <div><label for="path-progress" class="text-sm text-mocha"><%= path_done %> of <%= path_lessons.size %> steps complete</label><progress id="path-progress" value="<%= path_done %>" max="<%= path_lessons.size %>" class="learning-progress mt-2 w-full"><%= path_done %> of <%= path_lessons.size %></progress></div>
+    <ol class="divide-y divide-fog">
+      <% path_lessons.each_with_index do |lesson, index| %>
+        <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+          <span class="text-sm"><span class="mr-2 text-olive-deep"><%= @completed.include?(lesson[:key]) ? '✓' : "#{index + 1}." %></span><%= lesson[:title] %><span class="ml-2 text-xs text-mocha"><%= @completed.include?(lesson[:key]) ? 'Complete' : "#{lesson[:minutes]} min" %></span></span>
+          <%= link_to @completed.include?(lesson[:key]) ? 'Review' : @journey.next_lesson == lesson ? 'Start next step' : 'Open lesson', learning_path(lesson[:key]), class: @journey.next_lesson == lesson ? 'btn-primary btn-sm' : 'text-sm text-olive-deep underline' %>
+        </li>
+      <% end %>
+    </ol>
+    <% unless @journey.next_lesson %><p class="text-sm font-semibold text-olive-deep">You’ve finished this path. Use the tools below or choose another path when you’re ready.</p><% end %>
+  </section>
+  <% end %>
+  <%= form_with url: learning_index_path, method: :get, class: 'space-y-2', role: 'search', data: { busy: false } do |form| %>
+    <%= form.label :q, 'Find a lesson or definition', class: 'field-label' %>
+    <div class="flex flex-wrap gap-2"><%= form.search_field :q, value: @query, class: 'input min-w-0 flex-1', placeholder: 'Try total, stock, hours or sync', maxlength: 100 %><%= form.submit 'Find', class: 'btn-ghost', data: { turbo_submits_with: 'Searching…' } %><% if @query.present? %><%= link_to 'Clear', learning_index_path(anchor: 'lessons'), class: 'btn-ghost' %><% end %></div>
+  <% end %>
+  <section id="lessons" class="space-y-4 scroll-mt-6" aria-labelledby="lessons-title">
+    <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 id="lessons-title" class="font-display text-2xl"><%= @query.present? ? 'Matching lessons' : 'Explore all lessons' %></h2><p class="text-sm text-mocha"><%= @completed.size %> of <%= @lessons.size %> complete</p></div>
+    <% if @matching_lessons.empty? %><p class="text-sm text-mocha">No lessons match “<%= @query %>”. Check the definitions below or try a shorter phrase.</p><% end %>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <% @matching_lessons.each do |lesson| %>
+        <article class="card card-pad flex flex-col items-start gap-3">
+          <p class="text-xs text-olive-deep"><%= @completed.include?(lesson[:key]) ? 'Completed · Review anytime' : "#{lesson[:minutes]} minute lesson · Example + practice" %></p>
+          <h3 class="font-display text-xl"><%= lesson[:title] %></h3>
+          <p class="text-sm text-mocha"><%= lesson[:summary] %></p>
+          <%= link_to @completed.include?(lesson[:key]) ? 'Review lesson' : 'Start lesson', learning_path(lesson[:key]), class: 'btn-ghost mt-auto' %>
+        </article>
+      <% end %>
+    </div>
+  </section>
+  <section class="space-y-4" aria-labelledby="definitions-title">
+    <h2 id="definitions-title" class="scroll-mt-6 font-display text-2xl">Words and numbers, explained</h2>
+    <p class="text-sm text-mocha">Plain-language definitions, with the same wording beside the work.</p>
+    <% if @terms.empty? %><p class="text-mocha">No matching definition. Try a shorter word or clear your search.</p><% else %>
+      <dl class="card card-pad divide-y divide-fog">
+        <% @terms.each do |key, (label, definition)| %>
+          <div id="term-<%= key %>" class="py-3 scroll-mt-6"><dt class="font-semibold"><%= label %></dt><dd class="mt-1 text-sm text-mocha"><%= definition %></dd></div>
+        <% end %>
+      </dl>
+    <% end %>
+  </section>
+</div>

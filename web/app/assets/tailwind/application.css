@@ -987,3 +987,15 @@ a.card:focus-visible {
   outline: 2px solid var(--color-olive);
   outline-offset: 2px;
 }
+
+/* Learning uses native disclosures and progress, including without JavaScript. */
+.learning-progress { display: block; height: .45rem; border: 0; border-radius: 999px; overflow: hidden; background: var(--color-fog); accent-color: var(--color-olive); }
+.learning-progress::-webkit-progress-bar { background: var(--color-fog); border-radius: 999px; }
+.learning-progress::-webkit-progress-value { background: var(--color-olive); border-radius: 999px; }
+.learning-progress::-moz-progress-bar { background: var(--color-olive); border-radius: 999px; }
+.learning-path-picker { max-width: 100%; }
+.learning-path-picker[open] { flex-basis: 100%; }
+.workspace-help { max-width: 100%; }
+.workspace-help[open] { width: 100%; }
+.workspace-help > summary:focus-visible,
+.learning-path-picker > summary:focus-visible { outline: 2px solid var(--color-olive); outline-offset: 4px; border-radius: .25rem; }

@@ -32,7 +32,7 @@ class OauthFlowTest < ActionDispatch::IntegrationTest
                       .returns('email' => 'sean.dolbec@cybersecuritypilot.org', 'name' => 'Sean Dolbec')
 
     get google_callback_path, params: { code: 'code123', state: state }
-    assert_redirected_to(root_path)
+    assert_redirected_to(platform_path)
     assert_equal sean.id, session[:user_id]
   end
 

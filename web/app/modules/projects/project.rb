@@ -3,6 +3,7 @@
 module Projects
   class Project < ApplicationRecord
     include TenantScoped
+    include ProjectsPeople
     include AASM
 
     self.table_name = 'projects'
@@ -11,6 +12,7 @@ module Projects
     has_many :tasks, class_name: 'Projects::Task', foreign_key: :project_id, dependent: :destroy
 
     validates :name, presence: true
+    validate { validate_project_person(:owner_id) }
 
     scope :recent, ->(limit = 20) { order(updated_at: :desc).limit(limit) }
     scope :search, lambda { |term|

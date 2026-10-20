@@ -7,10 +7,12 @@ class SetupController < ApplicationController
   skip_before_action :require_login, only: %i[new create]
 
   def new
+    return head :not_found if WorkspaceNode.isolated?
     redirect_to(login_path) if Tenant.exists?
   end
 
   def create
+    return head :not_found if WorkspaceNode.isolated?
     return redirect_to(login_path) if Tenant.exists?
 
     tenant = Tenant.new(name: params[:tenant_name], subdomain: params[:tenant_subdomain])

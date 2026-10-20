@@ -17,13 +17,10 @@
         <%= f.label :due_on, "Due date", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
         <%= f.date_field :due_on, class: "input" %>
       </div>
-      <% unless project.persisted? %>
-        <div class="flex items-end">
-          <label class="flex items-center gap-2 text-sm text-mocha">
-            <%= check_box_tag :assign_self, 1, true %> Assign to me
-          </label>
-        </div>
-      <% end %>
+      <div>
+        <%= f.label :owner_id, "Owner", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
+        <%= f.select :owner_id, project_person_options(project.persisted? || project.errors.any? ? project.owner_id : Current.user.id), { include_blank: "Unassigned" }, class: "select" %>
+      </div>
     </div>
     <div class="flex items-center gap-3">
       <%= f.submit submit, class: "btn-primary" %>

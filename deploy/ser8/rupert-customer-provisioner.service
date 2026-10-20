@@ -1,0 +1,19 @@
+[Unit]
+Description=Rupert isolated customer instance provisioner
+After=network-online.target incus.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=/etc/rupert-customer-provisioner.env
+ExecStart=/usr/bin/python3 /usr/local/libexec/rupert-customer-provisioner.py
+Restart=on-failure
+RestartSec=15
+UMask=0077
+# This privileged worker stays on the host; its API token is never a browser secret.
+PrivateTmp=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -24,6 +24,9 @@ class OnboardingController < ApplicationController
   def index
     return redirect_to(root_path) if self.class.configured?
 
+    @can_connect = Current.user.can?('settings.write')
+    return unless @can_connect
+
     @status = EnvStore.export.each_with_object({}) do |(key, value), out|
       out[key] = value.present?
     end
