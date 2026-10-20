@@ -4,8 +4,9 @@ class ApplicationController < ActionController::Base
   layout :workspace_layout
   before_action :reject_preview_mutation
   before_action :set_current_context
-  before_action :load_last_sync
   before_action :require_login
+  before_action :enforce_customer_support_access
+  before_action :load_last_sync
   before_action :restrict_employee_workspace
 
   private
@@ -60,11 +61,31 @@ class ApplicationController < ActionController::Base
     return employee_app_path if user.employee?
     return books_check_path if user.dashboard_config_hash['start_page'] == 'bookkeeping' && user.can?('reports.read')
 
+    return platform_path if user.super_admin?
+
     root_path
   end
 
   def workspace_layout
     Current.user&.employee? ? 'employee' : 'application'
+  end
+
+  def enforce_customer_support_access
+    actor = Current.user
+    tenant = Current.tenant
+    return unless actor&.super_admin? && tenant && actor.tenant_id != tenant.id
+    return if (controller_path == 'platform' && action_name == 'leave_support') || (controller_path == 'sessions' && action_name == 'destroy')
+    response.headers['Cache-Control'] = 'no-store'
+    grant = CustomerSupportAccess.grant_for(actor: actor, tenant: tenant)
+    allowed = grant && request.get? && CustomerSupportAccess::READ_CONTROLLERS.include?(controller_path)
+    CustomerSupportAccess.record!(actor: actor, tenant: tenant, grant: grant,
+      action: allowed ? 'viewed' : 'denied', resource: "#{controller_path}##{action_name}")
+    unless allowed
+      render html: view_context.safe_join([
+        view_context.content_tag(:p, 'Customer permission is required. Support grants allow selected read-only screens only.'),
+        view_context.button_to('Leave support session', leave_platform_support_path, method: :delete)
+      ]), status: :forbidden
+    end
   end
 
   # Bind every role to its authenticated credentials. Legacy administrator cookies
@@ -103,7 +124,7 @@ class ApplicationController < ActionController::Base
       # Super admins are platform-wide and may scope to any store via its
       # subdomain; fall back to their own tenant when the host has no matching
       # subdomain so tenant-scoped data (syncs, inventory, etc.) isn't hidden.
-      Current.tenant = Tenant.find_by(subdomain: request.subdomain) || Current.user.tenant
+      Current.tenant = Tenant.find_by(id: session[:support_tenant_id]) || Tenant.find_by(subdomain: request.subdomain) || Current.user.tenant
     else
       Current.tenant = Current.user&.tenant
       Current.tenant ||= Tenant.find_by(subdomain: request.subdomain) if Current.user.nil?

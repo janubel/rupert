@@ -47,3 +47,8 @@ Rails.application.config.filter_parameters += [/\Ashipping_/i, :checkout_quote]
 Rails.application.config.filter_parameters += %i[source_adjustment_reference source_adjusted_at]
 
 Rails.application.config.filter_parameters += %i[stock_request reference adjusted_at confirmed request_token]
+
+Rails.application.config.filter_parameters += %i[registration reason referral_code]
+
+# Stripe event objects can contain customer contact and invoice information.
+Rails.application.config.filter_parameters += [/\Adata\z/i]

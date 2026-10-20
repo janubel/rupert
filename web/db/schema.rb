@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -761,6 +761,62 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
     t.datetime "updated_at", null: false
     t.index ["customer_id"], name: "index_customer_interactions_on_customer_id"
     t.index ["tenant_id", "customer_id", "created_at"], name: "idx_customer_interactions_timeline"
+  end
+
+  create_table "customer_referrals", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "code", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_customer_referrals_on_code", unique: true
+    t.index ["tenant_id"], name: "index_customer_referrals_on_tenant_id", unique: true
+  end
+
+  create_table "customer_subscriptions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "stripe_customer_id"
+    t.string "stripe_subscription_id"
+    t.string "checkout_token"
+    t.string "checkout_session_id"
+    t.text "checkout_url"
+    t.datetime "checkout_expires_at"
+    t.string "status", default: "free", null: false
+    t.string "plan", default: "free", null: false
+    t.string "referral_code"
+    t.datetime "commitment_accepted_at"
+    t.string "terms_version"
+    t.datetime "commitment_ends_at"
+    t.datetime "last_synced_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stripe_subscription_id"], name: "index_customer_subscriptions_on_stripe_subscription_id", unique: true
+    t.index ["tenant_id"], name: "index_customer_subscriptions_on_tenant_id", unique: true
+  end
+
+  create_table "support_access_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "actor_id", null: false
+    t.bigint "support_access_grant_id"
+    t.string "action", null: false
+    t.string "resource"
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_support_access_events_on_actor_id"
+    t.index ["support_access_grant_id"], name: "index_support_access_events_on_support_access_grant_id"
+  end
+
+  create_table "support_access_grants", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "granted_by_id", null: false
+    t.bigint "support_user_id", null: false
+    t.text "reason", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["granted_by_id"], name: "index_support_access_grants_on_granted_by_id"
+    t.index ["support_user_id"], name: "index_support_access_grants_on_support_user_id"
+    t.index ["tenant_id", "support_user_id"], name: "index_support_access_grants_on_tenant_id_and_support_user_id"
   end
 
   create_table "customers", force: :cascade do |t|
@@ -2577,6 +2633,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
     t.index ["tenant_id", "nonce_digest"], name: "index_pos_payment_attempts_on_tenant_id_and_nonce_digest", unique: true
   end
 
+  add_foreign_key "customer_referrals", "tenants"
+  add_foreign_key "customer_subscriptions", "tenants"
+  add_foreign_key "support_access_events", "support_access_grants"
+  add_foreign_key "support_access_events", "tenants"
+  add_foreign_key "support_access_events", "users", column: "actor_id"
+  add_foreign_key "support_access_grants", "tenants"
+  add_foreign_key "support_access_grants", "users", column: "granted_by_id"
+  add_foreign_key "support_access_grants", "users", column: "support_user_id"
   add_foreign_key "ctrax_labor_observations", "ctrax_labor_shifts"
   add_foreign_key "ctrax_labor_observations", "tenants"
   add_foreign_key "ctrax_labor_shifts", "employees"

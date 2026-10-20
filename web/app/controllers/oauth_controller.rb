@@ -27,6 +27,7 @@ class OauthController < ApplicationController
     session[:oauth_state] = state
     session[:oauth_started_at] = Time.current.to_i
     session.delete(:workspace_signup_intent)
+    session.delete(:registration_intent)
     AccessLogger.record(source: 'google', status: 'attempt', request: request, detail: 'Google sign-in started')
     redirect_to(
       GoogleOauthService.auth_url(redirect_uri: google_callback_url, state: state),
@@ -62,11 +63,19 @@ class OauthController < ApplicationController
       return redirect_to(login_path, alert: 'Google sign-in failed the state check. Try again.')
     end
 
+    registration_intent = session.delete(:registration_intent)
     signup_intent = session.delete(:workspace_signup_intent)
     session.delete(:oauth_state)
     session.delete(:oauth_started_at)
     info = GoogleOauthService.exchange_code!(params[:code], redirect_uri: google_callback_url)
     session.delete(:oauth_state)
+
+    if registration_intent
+      user = VerifiedWorkspaceRegistration.call(info: info, attributes: registration_intent)
+      identity = user.google_login_identities.find_by!(email: user.email)
+      start_browser_session(user, method: 'google', google_email: user.email, google_identity: identity)
+      return redirect_to(billing_path, notice: 'Your free workspace is ready.')
+    end
 
     if signup_intent
       @signup = WorkspaceSignupProvisioner.request_signup(info: info, attributes: signup_intent)
@@ -146,6 +155,7 @@ class OauthController < ApplicationController
   private
 
   def clear_oauth_intent
+    session.delete(:registration_intent)
     session.delete(:oauth_state)
     session.delete(:oauth_started_at)
     session.delete(:workspace_signup_intent)

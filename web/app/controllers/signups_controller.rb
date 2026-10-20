@@ -19,6 +19,7 @@ class SignupsController < ApplicationController
     unless @signup.valid?
       return render(:new, status: :unprocessable_entity)
     end
+    session.delete(:registration_intent)
     state = SecureRandom.hex(24)
     session[:oauth_state] = state
     session[:oauth_started_at] = Time.current.to_i

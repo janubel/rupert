@@ -20,7 +20,7 @@ class GoogleLoginIdentityTest < ActionDispatch::IntegrationTest
     assert_no_difference 'User.count' do
       sign_in_google
     end
-    assert_redirected_to root_path
+    assert_redirected_to platform_path
     assert_equal @owner.id, session[:user_id]
     assert_equal 'linked-google-subject', @identity.reload.google_subject
     assert_equal 'owner@company.example', @owner.reload.email
@@ -40,13 +40,13 @@ class GoogleLoginIdentityTest < ActionDispatch::IntegrationTest
   test 'linked login works on its own workspace subdomain' do
     host! "#{@tenant.subdomain}.example.com"
     sign_in_google
-    assert_redirected_to root_path
+    assert_redirected_to platform_path
     assert_equal @owner.id, session[:user_id]
   end
 
   test 'canonical Google login remains available' do
     sign_in_google(email: @owner.email, subject: 'work-google-subject')
-    assert_redirected_to root_path
+    assert_redirected_to platform_path
     assert_equal @owner.id, session[:user_id]
     assert_nil @identity.reload.google_subject
   end
@@ -101,7 +101,7 @@ class GoogleLoginIdentityTest < ActionDispatch::IntegrationTest
   test 'an established identity can sign in again' do
     @identity.update!(google_subject: 'linked-google-subject')
     sign_in_google
-    assert_redirected_to root_path
+    assert_redirected_to platform_path
     assert_equal @owner.id, session[:user_id]
   end
 

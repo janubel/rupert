@@ -65,7 +65,7 @@ class InstanceOverview
     ApiAccessToken.unscoped.joins(:user, :tenant).where(revoked_at: nil)
       .where('api_access_tokens.expires_at IS NULL OR api_access_tokens.expires_at > ?', @now)
       .where(users: { active: true }, tenants: { status: 'active' })
-      .where('users.role = ? OR users.tenant_id = api_access_tokens.tenant_id', 'super_admin')
+      .where('users.tenant_id = api_access_tokens.tenant_id')
   end
 
   def workspaces
