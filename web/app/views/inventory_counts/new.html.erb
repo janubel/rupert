@@ -31,7 +31,7 @@
       </div>
       <%= submit_tag "Load location sheet", class: "btn-ghost" %>
     <% end %>
-    <p class="rounded-xl bg-haze px-4 py-3 text-sm text-mocha">Only unambiguous stored rows at the selected location appear. Shopify sheets use native on-hand stock from a current, tracked catalog read less than one hour old; available stock and legacy aggregates are excluded. Missing stock is not zero. C-Trax and Square retain their separate source bases. Replace pre-filled values with the physically counted totals.</p>
+    <%= fold_explainer('Only unambiguous stored rows at the selected location appear. Shopify sheets use native on-hand stock from a current, tracked catalog read less than one hour old; available stock and legacy aggregates are excluded. Missing stock is not zero. C-Trax and Square retain their separate source bases. Replace pre-filled values with the physically counted totals.', class: 'rounded-xl bg-haze px-4 py-3 text-sm text-mocha') %>
   <% end %>
 
   <%= form_tag inventory_counts_path, method: :post, class: "space-y-6", data: { controller: "count-sheet", action: "keydown->count-sheet#advanceOnEnter" } do %>

@@ -123,4 +123,21 @@ module ApplicationHelper
     ready = PosSetting.where(card_enabled: true).where.not(verified_at: nil).pluck(:location_id)
     Location.where(source: 'ctrax').where.not(id: ready).order(:name).first
   end
+
+  # Long explanatory copy shows its first sentence and keeps the rest one tap
+  # away, so work screens stay scannable without hiding any caveat.
+  def fold_explainer(text, **options)
+    lead, rest = text.to_s.strip.split(/(?<=[.!?])\s+/, 2)
+    classes = options[:class]
+    return tag.p(text, class: classes) if rest.blank? || text.length < 140
+
+    tag.div(class: classes) do
+      safe_join([
+        tag.p(lead),
+        tag.details(class: 'explainer') do
+          safe_join([tag.summary('More detail', class: 'explainer-summary'), tag.p(rest, class: 'mt-1')])
+        end
+      ])
+    end
+  end
 end

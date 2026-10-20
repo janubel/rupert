@@ -44,7 +44,7 @@
   </table></section>
   <section class="card card-pad space-y-3">
     <h2 class="text-lg font-semibold">Payment reconciliation coverage</h2>
-    <p class="text-sm text-mocha">Eligible orders are paid, fulfilled or refunded orders dated on the selected day. Missing means no imported completed payment; incomplete and overcovered compare the order total with all imported completed payments for that order, across all payment dates. This diagnoses current imported records, not the balance at that day's close. Unknown amounts cannot be compared. Refunds do not reduce the original payment coverage target.</p>
+    <%= fold_explainer('Eligible orders are paid, fulfilled or refunded orders dated on the selected day. Missing means no imported completed payment; incomplete and overcovered compare the order total with all imported completed payments for that order, across all payment dates. This diagnoses current imported records, not the balance at that day\'s close. Unknown amounts cannot be compared. Refunds do not reduce the original payment coverage target.', class: 'text-sm text-mocha') %>
     <div class="overflow-x-auto"><table class="w-full text-sm">
       <thead><tr><% ['Source / location', 'Currency', 'Missing payment', 'Incomplete payment', 'Overcovered payment', 'Unknown amounts', 'Missing tax', 'Excluded unsettled payments'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
       <tbody class="divide-y divide-fog"><% @summary.rows.each do |row| %>

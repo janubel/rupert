@@ -2,7 +2,7 @@
 <div class="space-y-6">
   <section class="card card-pad space-y-3"><h1 class="page-title">Match Authorize.net payments to sales</h1>
     <p>Confirm that a gateway charge paid for an existing sale. Each match stays with that sale as payment statuses change. Refunds and voids remove it from the 1% estimate; replayed events never add another sale.</p>
-    <p class="text-sm text-mocha">Suggestions use an exact invoice reference, currency and full amount. A suggestion still needs review. When no shared reference is available, verify both source receipts before entering the exact sale number and source. Matching by amount or time alone is insufficient. Partial and split payments are not supported here.</p>
+    <%= fold_explainer('Suggestions use an exact invoice reference, currency and full amount. A suggestion still needs review. When no shared reference is available, verify both source receipts before entering the exact sale number and source. Matching by amount or time alone is insufficient. Partial and split payments are not supported here.', class: 'text-sm text-mocha') %>
     <div class="flex gap-3"><%= link_to 'Connection & live payment reports', pos_connection_path('authorize_net_reporting'), class: 'btn-ghost' if Current.user.can?('settings.read') %><%= link_to 'Commission preview', commission_preview_time_clock_path, class: 'btn-ghost' %></div>
   </section>
   <% if @payments.empty? %><section class="card card-pad"><p>No production API payments have been imported. Save the existing reporting credentials, check access and import payments first. Manual portal exports remain available as evidence but do not activate this live matching workflow.</p></section><% end %>

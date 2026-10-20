@@ -718,3 +718,32 @@ select.input {
   background-repeat: no-repeat;
   background-position: right 0.9rem center;
 }
+/* Folded explainer copy: a quiet "More detail" disclosure under the lead sentence. */
+.explainer { margin-top: 0.25rem; }
+
+.explainer-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-olive-deep);
+}
+
+.explainer-summary::-webkit-details-marker { display: none; }
+
+.explainer-summary::after {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform 0.15s ease;
+}
+
+.explainer[open] > .explainer-summary::after { transform: rotate(-135deg); }
+
+.explainer-summary:focus-visible { outline: 2px solid var(--color-olive); outline-offset: 2px; border-radius: 0.25rem; }
