@@ -37,6 +37,9 @@ class UploadsQuickbooksAdapterTest < ActiveSupport::TestCase
       end
     end
     stage.const_set(:Error, Class.new(ArgumentError))
+    # The real classes exist now; swap the stand-ins in and put the real ones back afterwards.
+    @real = { QuickbooksCsv: (::QuickbooksCsv if defined?(::QuickbooksCsv)), QuickbooksImport: (::QuickbooksImport if defined?(::QuickbooksImport)) }
+    @real.each_key { |name| Object.send(:remove_const, name) if Object.const_defined?(name, false) }
     Object.const_set(:QuickbooksCsv, csv)
     Object.const_set(:QuickbooksImport, stage)
   end
@@ -44,6 +47,7 @@ class UploadsQuickbooksAdapterTest < ActiveSupport::TestCase
   teardown do
     Object.send(:remove_const, :QuickbooksCsv)
     Object.send(:remove_const, :QuickbooksImport)
+    @real.each { |name, klass| Object.const_set(name, klass) if klass }
     Current.reset
   end
 
