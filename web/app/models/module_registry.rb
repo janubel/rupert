@@ -21,6 +21,7 @@ class ModuleRegistry
     Entry.new(key: 'api_access_tokens', name: 'API access', path: lambda {
       api_access_tokens_path
     }, permission: 'settings.write', position: 108),
+    Entry.new(key: 'ask_rupert_usage', name: 'Ask Rupert usage', path: -> { ask_rupert_usage_path }, permission: 'settings.read', position: 108.5),
     Entry.new(key: 'agent_feedback', name: 'AI assistant feedback', path: -> { agent_feedbacks_path }, permission: 'settings.read', position: 108),
     Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: 'dashboard.read', position: 10),
     Entry.new(key: 'platform', name: 'Instance overview', path: -> { platform_path }, permission: nil, position: 89),
@@ -237,7 +238,7 @@ class ModuleRegistry
       { key: 'team', name: 'Team',
         modules: %w[accounts employees employee_reports departments positions time_keeping schedule time_clock leave payroll permissions] },
       { key: 'system', name: 'System',
-        modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens agent_feedback roadmap owner_checklists] }
+        modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens agent_feedback ask_rupert_usage roadmap owner_checklists] }
     ].freeze
 
     # Sub-sections of an area with only the visible modules; empty groups drop out.

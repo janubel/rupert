@@ -9,10 +9,14 @@ export default class extends Controller {
   connect() {
     this.onDocumentKeydown = (event) => this.documentKeydown(event)
     document.addEventListener("keydown", this.onDocumentKeydown)
+    // Ask Rupert shares the right edge of the screen: opening one closes the others.
+    this.onPanelOpened = (event) => { if (event.detail !== "help") this.close() }
+    document.addEventListener("rupert:panel-opened", this.onPanelOpened)
   }
 
   disconnect() {
     document.removeEventListener("keydown", this.onDocumentKeydown)
+    document.removeEventListener("rupert:panel-opened", this.onPanelOpened)
   }
 
   toggle(event) {
@@ -27,6 +31,7 @@ export default class extends Controller {
     if (this.hasBackdropTarget) this.backdropTarget.classList.remove("hidden")
     this.triggerTargets.forEach((button) => button.setAttribute("aria-expanded", "true"))
     document.body.classList.add("help-panel-open")
+    if (typeof document.dispatchEvent === "function") document.dispatchEvent(new CustomEvent("rupert:panel-opened", { detail: "help" }))
     if (this.hasInputTarget) this.inputTarget.focus()
   }
 
