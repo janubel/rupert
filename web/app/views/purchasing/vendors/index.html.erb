@@ -1,14 +1,10 @@
 <% content_for :title, "Vendors" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Vendors</h1>
-      <p class="mt-1 text-sm text-mocha">Who the shop buys from, with their purchase-order history.</p>
-    </div>
+  <%= page_header 'Vendors', subtitle: 'Who the shop buys from, with their purchase-order history.' do %>
     <% if Current.user.can?("purchasing.write") %>
       <%= link_to "Add vendor", new_purchasing_vendor_path, class: "btn-primary" %>
     <% end %>
-  </section>
+  <% end %>
 
   <%= form_tag purchasing_vendors_path, method: :get, class: "max-w-sm" do %>
     <input type="search" name="q" value="<%= @q %>" placeholder="Search vendors…" aria-label="Search vendors" class="search w-full" autocomplete="off">

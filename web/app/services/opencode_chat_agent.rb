@@ -13,6 +13,12 @@ require 'timeout'
 # `--agent chat` — an opencode config agent with every tool disabled (bash,
 # write, webfetch, ...) and `--pure` to skip external plugins. The model can
 # only produce text; it cannot execute commands on this host.
+#
+# When an administrator turns on Ask Rupert for Buzz (AskRupert::Config
+# buzz_enabled) the agent also listens in the other channels and direct messages
+# it is a member of, and hands those messages to AskRupert::BuzzSurface, which
+# answers linked people with navigation help only. Outside the configured team
+# channel the agent never uses the operations snapshot or the free-form prompt.
 class OpencodeChatAgent
   NAME = 'rupert'
   CONTEXT_WINDOW = 24
@@ -49,13 +55,22 @@ class OpencodeChatAgent
   end
 
   def filters(since)
-    [
-      { kinds: [9], "#h": [@channel], since: since },
+    channels = [@channel] + (@ask_rupert_on ? @channels.ids : [])
+    list = [
+      { kinds: [9], "#h": channels.uniq, since: since },
       { kinds: [1], "#p": [@pubkey], since: since }
     ]
+    # Which channels the agent is in, and who is in them (and when that changes).
+    list << { kinds: AskRupert::BuzzChannels::GROUP_KINDS, "#p": [@pubkey] } if @ask_rupert_on
+    list
   end
 
   def process_event(event)
+    if @ask_rupert_on && AskRupert::BuzzChannels::GROUP_KINDS.include?(event['kind'].to_i)
+      resubscribe if @channels.observe(event)
+      return
+    end
+
     id = event['id']
     return if @seen_ids&.include?(id)
     return if event['pubkey'] == @pubkey
@@ -67,17 +82,23 @@ class OpencodeChatAgent
     content = event['content'].to_s
     return if content.blank?
 
-    push_context(event)
+    channel_id = event_channel(event)
+    push_context(event, channel_id)
     return if trivial?(content)
 
     mentioned = content.downcase.include?("@#{NAME}") ||
                 Array(event['tags']).any? { |tag| tag[0] == 'p' && tag[1] == @pubkey }
+    if @ask_rupert_on
+      return if ask_rupert_reply(event, content, channel_id, mentioned)
+      # Outside the team channel only the Ask Rupert rules apply.
+      return unless channel_id == @channel
+    end
     return unless mentioned || proactive_ok?
 
     reply = generate_reply(content, author: author_label(event), mentioned: mentioned)
     return if reply.blank? || skip?(reply)
 
-    publish_reply(reply, event)
+    publish_reply(reply, event, @channel)
   rescue StandardError => e
     Rails.logger.error "[OpencodeAgent] process_event: #{e.class}: #{e.message}"
   end
@@ -106,7 +127,10 @@ class OpencodeChatAgent
     @priv = Nostr::PrivateKey.new(key_hex)
     @pub = Nostr::PublicKey.new(Nostr::Keygen.new.extract_public_key(@priv))
     @pubkey = @pub.to_s
-    @context = []
+    # What was said, per channel: a direct message must never reach another channel's prompt.
+    @contexts = Hash.new { |hash, key| hash[key] = [] }
+    @channels = AskRupert::BuzzChannels.new(@pubkey)
+    @ask_rupert_on = AskRupert::Config.current.buzz_enabled?
     @last_post_at = nil
     Rails.logger.info "[OpencodeAgent] @#{NAME} listening as #{@pubkey[0, 12]} on #{@relay} channel #{@channel}"
   end
@@ -114,6 +138,8 @@ class OpencodeChatAgent
   def listen_once
     require 'websocket-client-simple'
 
+    # Picks up a changed Ask Rupert setting each time the agent (re)connects.
+    @ask_rupert_on = AskRupert::Config.current.buzz_enabled?
     since = state_since
     authed = false
     agent = self
@@ -123,6 +149,7 @@ class OpencodeChatAgent
     pub = @pub
     last_inbound = Time.now
     ws = WebSocket::Client::Simple.connect(@relay)
+    @ws = ws
 
     ws.on(:message) do |m|
       # Any inbound frame proves the relay is still talking to us.
@@ -187,6 +214,7 @@ class OpencodeChatAgent
   rescue Timeout::Error
     nil
   ensure
+    @ws = nil
     begin
       ws&.close
     rescue StandardError
@@ -194,10 +222,34 @@ class OpencodeChatAgent
     end
   end
 
-  def push_context(event)
-    author = author_label(event)
-    @context << "#{author}: #{event['content']}"
-    @context = @context.last(CONTEXT_WINDOW)
+  def push_context(event, channel_id)
+    lines = @contexts[channel_id]
+    lines << "#{author_label(event)}: #{event['content']}"
+    @contexts[channel_id] = lines.last(CONTEXT_WINDOW)
+  end
+
+  # The channel an event belongs to; a note that mentions the agent has none and counts as the team channel.
+  def event_channel(event)
+    Array(event['tags']).find { |tag| tag[0] == 'h' }&.at(1).presence || @channel
+  end
+
+  # Gives the message to Ask Rupert's Buzz rules. True when they dealt with it (even by staying quiet).
+  def ask_rupert_reply(event, content, channel_id, mentioned)
+    kind = @channels.kind_for(channel_id, event['pubkey'])
+    earlier = @contexts[channel_id].last(CONTEXT_WINDOW)[0...-1]
+    reply = AskRupert::BuzzSurface.new.call(pubkey: event['pubkey'].to_s, content: content, channel: kind, addressed: mentioned,
+      team_channel: channel_id == @channel, context: earlier)
+    return false unless reply
+
+    publish_reply(reply.text, event, channel_id) if reply.text.present?
+    true
+  end
+
+  # Asks the relay again, with the channel list as it now stands.
+  def resubscribe
+    @ws&.send(['REQ', 'rupert', *filters(state_since)].to_json)
+  rescue StandardError => e
+    Rails.logger.warn "[OpencodeAgent] resubscribe failed: #{e.class}"
   end
 
   def author_label(event)
@@ -223,7 +275,7 @@ class OpencodeChatAgent
 
   def generate_reply(content, author:, mentioned:)
     snapshot = ops_snapshot
-    history = @context.last(CONTEXT_WINDOW).join("\n")
+    history = @contexts[@channel].last(CONTEXT_WINDOW).join("\n")
     instruction = if mentioned
       'You were addressed directly. Reply helpfully and concisely.'
     else
@@ -300,9 +352,9 @@ class OpencodeChatAgent
     reply.strip.upcase.start_with?('SKIP')
   end
 
-  def publish_reply(reply, event)
+  def publish_reply(reply, event, channel_id)
     event = NostrPublisher.build_event(private_key: @priv, public_key: @pub,
-      kind: 9, content: reply, tags: reply_tags(event))
+      kind: 9, content: reply, tags: reply_tags(event, channel_id))
     _, msg = NostrPublisher.publish(relay: @relay, private_key: @priv, public_key: @pub, event: event)
     @last_post_at = Time.now
     Rails.logger.info "[OpencodeAgent] replied to #{event.id.to_s[0, 12]}: #{msg}"
@@ -312,8 +364,8 @@ class OpencodeChatAgent
   # NIP-10 thread tags. Buzz is strict about thread ancestry: a reply to a root
   # message references it as "root"; a reply within a thread references the
   # existing root plus the message being answered.
-  def reply_tags(event)
-    tags = [['h', @channel]]
+  def reply_tags(event, channel_id)
+    tags = [['h', channel_id]]
     tags << ['p', event['pubkey']] if event['pubkey']
 
     e_tags = Array(event['tags']).select { |tag| tag[0] == 'e' }

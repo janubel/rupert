@@ -1,9 +1,6 @@
 <% content_for :title, "New pay run" %>
 <div class="space-y-6">
-  <section>
-    <h1 class="page-title">New pay run</h1>
-    <p class="mt-1 text-sm text-mocha">Payslips are generated from approved timesheets in the period.</p>
-  </section>
+  <%= page_header 'New pay run', subtitle: 'Payslips are generated from approved timesheets in the period.' %>
 
   <%= form_with model: @pay_run, url: people_pay_runs_path, class: "mt-6 space-y-4" do |f| %>
     <div>

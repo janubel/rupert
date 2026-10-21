@@ -133,6 +133,28 @@
     @apply font-display text-2xl text-ink sm:text-3xl;
   }
 
+  /* Shared page header (page_header helper): title block left, actions right. */
+  .page-header {
+    @apply flex flex-wrap items-end justify-between gap-x-4 gap-y-3;
+  }
+
+  .page-subtitle {
+    @apply mt-1 text-sm text-mocha;
+  }
+
+  .page-header-actions {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  /* Page width tiers. The default (no class) is the layout's max-w-6xl. */
+  .page-narrow {
+    @apply max-w-2xl;
+  }
+
+  .page-medium {
+    @apply max-w-4xl;
+  }
+
   /* Empty list: say what is missing, then the one thing to do about it. */
   .empty-state {
     @apply mx-auto flex max-w-md flex-col items-center gap-2 px-4 py-10 text-center;

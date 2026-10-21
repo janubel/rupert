@@ -1,9 +1,6 @@
 <% content_for :title, "New size family" %>
 <div class="mx-auto max-w-xl space-y-6">
-  <section>
-    <h1 class="page-title">New size family</h1>
-    <p class="mt-1 text-sm text-mocha">Group a base-gram product's sizes. The root SKU (optional) seeds the gram bank from its Square count the first time you derive.</p>
-  </section>
+  <%= page_header 'New size family', subtitle: 'Group a base-gram product\'s sizes. The root SKU (optional) seeds the gram bank from its Square count the first time you derive.' %>
 
   <div class="card card-pad">
     <%= form_with(model: @family, url: size_families_path) do |form| %>

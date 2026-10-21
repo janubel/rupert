@@ -1,6 +1,8 @@
 <% content_for :title, 'My schedule' %>
 <% week_hours = @shifts.sum(&:hours) %>
-<section class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="page-title">Schedule</h1><p class="mt-1 text-sm text-mocha">The shifts your manager has planned for you.</p></div><%= link_to 'Request time off', personal_time_off_path(anchor: 'time-off-request'), class: 'text-sm text-olive underline' %></section>
+<%= page_header 'Schedule', subtitle: 'The shifts your manager has planned for you.' do %>
+  <%= link_to 'Request time off', personal_time_off_path(anchor: 'time-off-request'), class: 'text-sm text-olive underline' %>
+<% end %>
 <section class="card card-pad space-y-4">
   <div class="flex items-center justify-between gap-2">
     <%= link_to '←', personal_schedule_path(week: (@week - 7).iso8601), class: 'btn-ghost btn-sm', aria: { label: 'Previous week' } %>
