@@ -166,6 +166,7 @@ Rails.application.routes.draw do
       get :catalog, to: 'catalog#index'
       get :inventory, to: 'inventory#index'
       get :roadmap, to: 'roadmap#index'
+      resources :uploads, only: %i[index show create]
     end
   end
   resources :api_access_tokens, only: %i[index create] do
@@ -427,6 +428,18 @@ Rails.application.routes.draw do
       post :push_guard_approve
       post :push_guard_freeze
       post :push_guard_unfreeze
+    end
+  end
+  resources :uploads, only: %i[index show create] do
+    collection { post :recognize_all }
+    member do
+      patch :choose
+      post :dry_run
+      post :approve
+      post :discard
+      post :reopen
+      post :recognize
+      get :original
     end
   end
   resources :swipesimple_items, only: %i[index create]
