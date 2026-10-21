@@ -5,7 +5,11 @@
 # DRY_RUN=1 reports what it would do without changing anything.
 # The RUPERT_AUTODEPLOY_* variables exist for the tests in deploy/ser8/tests.
 set -uo pipefail
-umask 077
+# Normal umask: git checkout and bundle install run as root here, and the app
+# runs as the rupert user, so code and gems must stay world-readable. (umask
+# 077 made Gemfile.lock and a new gem unreadable and took the site down on
+# 2026-10-21.) Backups get a private umask of their own below.
+umask 022
 APP=${RUPERT_AUTODEPLOY_APP:-/opt/rupert}
 REPO=techmore/rupert
 HOST=rupert.stoverparc.org
@@ -50,7 +54,7 @@ log "deploying ${CUR:0:8} -> ${NEW:0:8} ($migrations new migration(s))"
 
 mkdir -p "$BACKUPS" "$STATE"; chmod 700 "$BACKUPS" "$STATE"
 backup="$BACKUPS/production-$(date +%Y%m%d-%H%M%S)-${CUR:0:8}.sqlite3"
-sqlite3 web/storage/production.sqlite3 ".backup $backup" || { log "backup failed, aborting"; exit 1; }
+( umask 077; sqlite3 web/storage/production.sqlite3 ".backup $backup" ) || { log "backup failed, aborting"; exit 1; }
 ls -1t "$BACKUPS"/*.sqlite3 | tail -n +6 | xargs -r rm -f
 
 health() {

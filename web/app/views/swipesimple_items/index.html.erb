@@ -1,0 +1,103 @@
+<% content_for :title, 'SwipeSimple items' %>
+<% pill = { 'Matched' => 'pill-fern', 'Review name match' => 'pill-clay', 'Not matched' => 'pill-rose' } %>
+<div class="space-y-6">
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">SwipeSimple items</h1>
+      <p class="mt-1 max-w-3xl text-sm text-mocha">SwipeSimple's item list next to the same item in Shopify, Square and C-Trax, with names that don't match called out and a suggested name. Matching uses exact SKU or barcode first, then exact product words and package size (shown as “review”). Nothing is written to SwipeSimple or any other system.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <% if @match %><%= link_to 'Download match CSV', swipesimple_items_path(snapshot_id: @snapshot.id, format: :csv), class: 'btn-primary btn-sm', data: { turbo: false } %><% end %>
+      <%= link_to 'Catalog links', reconcile_index_path, class: 'btn-ghost btn-sm' %>
+      <%= link_to 'C-Trax stock', ctrax_stock_index_path, class: 'btn-ghost btn-sm' %>
+    </div>
+  </section>
+
+  <% if Current.user.can?('inventory.write') %>
+    <%= form_with url: swipesimple_items_path, method: :post, multipart: true, class: 'card card-pad space-y-3' do %>
+      <h2 class="font-display text-lg text-ink"><%= @snapshot ? 'Import a newer item list' : 'Import your SwipeSimple items' %></h2>
+      <ol class="list-decimal space-y-1 pl-5 text-sm text-mocha">
+        <li>In SwipeSimple, open <strong>Items</strong> (or Inventory) and choose <strong>Export</strong> to download a CSV.</li>
+        <li>Upload it here. Columns such as Name/Item, Variant/Option, SKU, Barcode/UPC, Price, Quantity/Stock and Category are recognised automatically.</li>
+        <li>The whole file is checked first; if anything is wrong nothing changes. A new import replaces the previous list for that merchant account.</li>
+      </ol>
+      <div class="flex flex-wrap items-end gap-3">
+        <div><%= label_tag :file, 'SwipeSimple item CSV', class: 'field-label' %><%= file_field_tag :file, accept: '.csv,text/csv', required: true, class: 'input' %></div>
+        <div><%= label_tag :merchant_account, 'Merchant account', class: 'field-label' %><%= text_field_tag :merchant_account, @default_account, class: 'input', maxlength: 120, placeholder: 'SwipeSimple' %></div>
+        <%= submit_tag 'Import items', class: 'btn-primary', name: nil %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% if @snapshot.nil? %>
+    <section class="card card-pad text-sm text-mocha">No SwipeSimple item list has been imported yet.</section>
+  <% else %>
+    <% s = @match.summary %>
+    <% if @snapshots.many? %>
+      <nav class="flex flex-wrap gap-2" aria-label="Merchant accounts">
+        <% @snapshots.each do |snap| %><%= link_to snap.merchant_account, swipesimple_items_path(snapshot_id: snap.id), class: "nav-pill #{snap == @snapshot ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}" %><% end %>
+      </nav>
+    <% end %>
+    <p class="text-xs text-taupe"><%= @snapshot.merchant_account %> · <%= pluralize(@snapshot.row_count, 'item') %> · imported <%= l(@snapshot.captured_at, format: :long) %><%= " from #{@snapshot.source_filename}" if @snapshot.source_filename %><%= " by #{@snapshot.imported_by.email}" if @snapshot.imported_by %></p>
+
+    <section class="grid grid-cols-2 gap-3 sm:grid-cols-5" aria-label="Match summary">
+      <div class="stat"><p class="stat-label">SwipeSimple items</p><p class="stat-value mt-1"><%= s[:items] %></p><p class="text-xs text-mocha"><%= s[:unknown_stock] %> with unknown stock</p></div>
+      <div class="stat"><p class="stat-label">Matched</p><p class="stat-value mt-1 text-fern"><%= s[:matched] %></p><p class="text-xs text-mocha">by SKU, barcode or ID</p></div>
+      <div class="stat"><p class="stat-label">Review name match</p><p class="stat-value mt-1"><%= s[:review] %></p><p class="text-xs text-mocha">same words and package</p></div>
+      <div class="stat"><p class="stat-label">Not matched</p><p class="stat-value mt-1 <%= 'text-rose' if s[:unmatched].positive? %>"><%= s[:unmatched] %></p></div>
+      <div class="stat"><p class="stat-label">Names differ</p><p class="stat-value mt-1"><%= s[:names_differ] %></p><p class="text-xs text-mocha">suggested name shown</p></div>
+    </section>
+
+    <nav class="flex flex-wrap gap-2" aria-label="Filter by match">
+      <%= link_to 'All', swipesimple_items_path(snapshot_id: @snapshot.id), class: "nav-pill #{@status ? 'nav-pill-idle-sm' : 'nav-pill-active-sm'}" %>
+      <% SwipesimpleItemMatch::STATUSES.each do |status| %><%= link_to status, swipesimple_items_path(snapshot_id: @snapshot.id, status: status), class: "nav-pill #{@status == status ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}" %><% end %>
+    </nav>
+
+    <div class="card overflow-hidden">
+      <%= report_table 'swipesimple-items', label: 'SwipeSimple items matched to other systems' do %>
+        <table class="operations-table w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr>
+              <th scope="col" class="th" data-col="swipesimple">SwipeSimple item</th>
+              <th scope="col" class="th" data-col="sku">SKU</th>
+              <th scope="col" class="th" data-col="barcode" data-default-hidden>Barcode</th>
+              <th scope="col" class="th" data-col="category" data-default-hidden>Category</th>
+              <th scope="col" class="th num" data-col="price" data-default-hidden>Price</th>
+              <th scope="col" class="th num" data-col="stock">SwipeSimple stock</th>
+              <th scope="col" class="th" data-col="match">Match</th>
+              <th scope="col" class="th" data-col="shopify">Shopify</th>
+              <th scope="col" class="th" data-col="square">Square</th>
+              <th scope="col" class="th" data-col="ctrax">C-Trax</th>
+              <th scope="col" class="th" data-col="name">Name</th>
+              <th scope="col" class="th" data-col="suggested">Suggested SwipeSimple name</th>
+              <th scope="col" class="th" data-col="notes" data-default-hidden>Notes</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-fog">
+            <% rows = @status ? @match.rows.select { |row| row.status == @status } : @match.rows %>
+            <% rows.each do |row| %>
+              <% r = row.record %>
+              <tr class="hover:bg-cream">
+                <td class="td font-medium text-ink"><%= row.swipesimple_name %></td>
+                <td class="td font-mono text-xs"><%= r['sku'].presence || '—' %></td>
+                <td class="td font-mono text-xs"><%= r['barcode'].presence || '—' %></td>
+                <td class="td text-mocha"><%= r['category'].presence || '—' %></td>
+                <td class="td num"><%= r['price'] ? number_to_currency(r['price']) : '—' %></td>
+                <td class="td num"><%= r['quantity'] || 'Unknown' %></td>
+                <td class="td"><span class="<%= pill[row.status] %>"><%= row.status %></span><span class="block text-xs text-mocha"><%= row.identity %></span></td>
+                <td class="td"><%= row.shopify_name || '—' %><% if row.shopify_sku.present? %><span class="block font-mono text-xs text-mocha"><%= row.shopify_sku %></span><% end %></td>
+                <td class="td"><%= row.square_name.presence || '—' %></td>
+                <td class="td"><%= row.ctrax_name.presence || '—' %></td>
+                <td class="td"><span class="<%= { 'Same name' => 'pill-fern', 'Different name' => 'pill-clay' }.fetch(row.name_status, 'pill-taupe') %>"><%= row.name_status %></span></td>
+                <td class="td"><%= row.suggested_name || '—' %></td>
+                <td class="td text-xs text-mocha"><%= (row.evidence + row.issues).join('; ').presence || '—' %></td>
+              </tr>
+            <% end %>
+            <% if rows.empty? %><tr><td class="empty-row" colspan="13">No items in this filter.</td></tr><% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </div>
+    <p class="text-xs text-mocha">To make names match, rename the item in SwipeSimple using the suggested name (the match CSV doubles as a rename list). Rupert does not change SwipeSimple, Shopify, Square or C-Trax. Stock figures are each system's own count and are never added together.</p>
+  <% end %>
+</div>

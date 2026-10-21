@@ -52,7 +52,9 @@ module Finance
         posted = JournalEntry.for_source('Finance::Expense', expense.id).posted.first
         return posted if posted
 
-        account = expense.account || account(EXPENSE_BY_CATEGORY.fetch(expense.category, FALLBACK_EXPENSE_CODE))
+        mapped = Finance::ExpenseCategory.find_key(expense.category)&.ledger_account
+        mapped = nil unless mapped&.active?
+        account = expense.account || mapped || account(EXPENSE_BY_CATEGORY.fetch(expense.category, FALLBACK_EXPENSE_CODE))
         cash = account(CASH_BY_METHOD.fetch(expense.method, FALLBACK_CASH_CODE))
         JournalEntry.post!(
           kind: 'expense',

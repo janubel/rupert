@@ -15,8 +15,13 @@ module People
         scope = params[:employee_id] == 'unmatched' ? scope.where(employee_id: nil) : scope.where(employee_id: params[:employee_id])
       end
       scope = scope.where(import_status: params[:status]) if SquareTimecard::STATUSES.include?(params[:status])
-      scope = scope.where('started_at >= ?', Date.iso8601(params[:from]).in_time_zone) if params[:from].present?
-      scope = scope.where('started_at < ?', (Date.iso8601(params[:to]) + 1).in_time_zone) if params[:to].present?
+      range = TimeRangePicker.resolve(params)
+      @from = range.from
+      @to = range.to
+      return redirect_to(people_square_timesheets_path, alert: 'Choose an end date on or after the start date.') if @from && @to && @to < @from
+
+      scope = scope.where('started_at >= ?', @from.in_time_zone) if @from
+      scope = scope.where('started_at < ?', (@to + 1).in_time_zone) if @to
       @count = scope.count
       @seconds = scope.counted.sum(:payable_seconds)
       @held = scope.where(imported_at: nil).count
