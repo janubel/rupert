@@ -2,6 +2,8 @@
 
 Nightly maintenance: [releases, build totals and counting rules](ops/nightly-releases.md).
 
+In-app help chat (Ask Rupert): [what it can do, models, limits and safety](ops/ask-rupert.md).
+
 In-app onboarding, lessons and definitions: [how learning works and how to maintain it](ops/in-app-learning.md).
 
 NAB / IRIS deposits, transactions and Health Center summaries: [integration, access and ongoing operation](ops/iris-reporting.md).

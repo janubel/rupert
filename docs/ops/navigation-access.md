@@ -8,7 +8,7 @@ Use the named **Overview, Sell, Stock, Money, Work, Timesheets, Team and System*
 
 Inside a work area, open the current-tool dropdown to see its permitted tools with their full names. This replaces the long second row of tabs. The current tool is marked. The account menu shows your role, personal time clock, feature roadmap and sign-out action.
 
-The magnifying glass opens search. The circular arrows show the latest recorded sync status and link to Sync for users with sync-read permission. The four-square icon opens the private instance overview for platform administrators. Icon controls retain accessible names, hover/focus descriptions and keyboard focus. Sync status describes a recorded run, not continuous provider health.
+The chat-bubble icon beside Help opens [Ask Rupert](ask-rupert.md), a help chat that answers from the navigation and lessons your account can reach. The magnifying glass opens search. The circular arrows show the latest recorded sync status and link to Sync for users with sync-read permission. The four-square icon opens the private instance overview for platform administrators. Icon controls retain accessible names, hover/focus descriptions and keyboard focus. Sync status describes a recorded run, not continuous provider health.
 
 Tools menus open using Enter or Space. Tab moves through links; Escape closes the menu and returns focus to its trigger. Native tool disclosures remain usable without JavaScript. The public GitHub Pages header separately groups documentation under **Guides**, with Home, Roadmap and Compare kept close at hand. Public documentation grants no application access.
 

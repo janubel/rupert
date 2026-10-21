@@ -179,6 +179,15 @@ Rails.application.routes.draw do
   resources :feedback_reports, only: %i[index show create] do
     get :screenshot, on: :member
   end
+  # Ask Rupert: the in-app help chat (docs/ops/ask-rupert.md).
+  get '/ask_rupert', to: 'ask_rupert#show', as: :ask_rupert
+  get '/ask_rupert/usage', to: 'ask_rupert_usage#show', as: :ask_rupert_usage
+  patch '/ask_rupert/usage', to: 'ask_rupert_usage#update'
+  post '/ask_rupert/conversations', to: 'ask_rupert#create_conversation', as: :ask_rupert_conversations
+  get '/ask_rupert/conversations/:id', to: 'ask_rupert#conversation', as: :ask_rupert_conversation
+  delete '/ask_rupert/conversations/:id', to: 'ask_rupert#destroy'
+  post '/ask_rupert/conversations/:id/messages', to: 'ask_rupert#ask', as: :ask_rupert_messages
+  post '/ask_rupert/conversations/:id/report', to: 'ask_rupert#report', as: :ask_rupert_report
 
   mount ShopifyApp::Engine, at: '/api'
 
