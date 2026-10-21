@@ -72,6 +72,42 @@ class PunchHistoryTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'c-trax shifts appear uncounted, long punches are flagged and presets filter the range' do
+    payload = { started_at: '2026-10-07T09:00:00-04:00', ended_at: '2026-10-08T09:30:00-04:00', number_of_hours: 24.5,
+      is_in_progress: false, is_verified: false }.to_json
+    CtraxLaborShift.create!(source_origin: 'https://source.example.invalid', external_id: 'ctrax-long', store_id: 'store-one',
+      user_external_id: 'user-long', employee: @worker, status: 'imported', last_seen_at: Time.current, original_digest: 'o', latest_digest: 'l',
+      started_at: '2026-10-07T09:00:00-04:00', ended_at: '2026-10-08T09:30:00-04:00', reported_hours: 24.5, elapsed_hours: 24.5,
+      in_progress: false, verified: false, source_payload: payload, latest_payload: payload)
+    post login_path, params: { email: @admin.email, password: 'password' }
+    get people_punch_history_path, params: { from: '2026-10-01', to: '2026-10-31' }
+    assert_response :success
+    assert_includes response.body, 'C-Trax ctrax-long'
+    assert_includes response.body, 'missed clock-out'
+    assert_select 'nav[aria-label="Time workspace"] a', text: 'Punch report'
+    assert_select 'nav[aria-label="Time workspace"] a', text: 'Timesheets'
+    assert_select 'a', text: 'This pay week'
+    assert_select '[data-time-source="ctrax"]'
+
+    history = PunchHistory.new(from: Date.new(2026, 10, 1), to: Date.new(2026, 10, 31), all_employees: true)
+    ctrax = history.rows.find { |row| row.source == 'ctrax' }
+    assert ctrax.implausible?
+    refute ctrax.counted
+    assert_equal 1, history.summary.implausible
+    assert_equal 0.0, history.summary.by_employee_source.fetch('Own History').fetch('ctrax') - 24.5
+    # C-Trax hours never enter counted totals.
+    assert_equal 17.0, history.summary.counted_hours
+
+    get people_punch_history_path, params: { from: '2026-10-01', to: '2026-10-31', source: 'ctrax' }
+    assert_response :success
+    assert_includes response.body, 'ctrax-long'
+    refute_includes response.body, 'Clock shift #'
+
+    get people_punch_history_path(format: :csv), params: { from: '2026-10-01', to: '2026-10-31' }
+    assert_includes response.body, 'C-Trax'
+    assert_includes response.body, 'missed clock-out'
+  end
+
   test 'reversed ranges are rejected and no record is created' do
     post login_path, params: { email: @admin.email, password: 'password' }
     assert_no_difference ['ClockShift.count', 'SquareTimecard.count'] do

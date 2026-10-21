@@ -1,11 +1,11 @@
 <% content_for :title, 'C-Trax shifts' %>
+<%= render 'shared/time_navigation' %>
 <section class="space-y-3">
   <h1 class="page-title">C-Trax shifts</h1>
   <p class="text-sm text-mocha">Read-only source history, including inactive staff, open shifts and records awaiting a match or review. C-Trax reported hours and elapsed clock time can differ; neither establishes overtime, Rupert approval or payment.</p>
   <p class="text-sm text-mocha">Latest source punches appear below; each shift retains its original observation and a dated change history. These records stay separate from Square history and Rupert timesheets. Do not add overlapping source hours together. C-Trax shifts do not enter Rupert payroll or personal hour totals.</p>
   <div class="flex flex-wrap gap-3">
-    <%= link_to 'Rupert timesheets', people_timesheets_path(status: 'all'), class: 'btn-ghost btn-sm' %>
-    <%= link_to 'Square history', people_square_timesheets_path, class: 'btn-ghost btn-sm' %>
+    <%= link_to 'Run punch report', people_punch_history_path(source: 'ctrax'), class: 'btn-ghost btn-sm' %>
     <%= link_to 'Download this history', people_ctrax_timesheets_path(request.query_parameters.merge(format: :csv)), class: 'btn-ghost btn-sm' %>
   </div>
 </section>

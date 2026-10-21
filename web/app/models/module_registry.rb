@@ -123,7 +123,7 @@ class ModuleRegistry
     Entry.new(key: 'timesheets', name: 'Timesheets', path: lambda {
       people_timesheets_path
     }, permission: 'timesheets.self', position: 88),
-    Entry.new(key: 'punch_history', name: 'Punch history', path: lambda {
+    Entry.new(key: 'punch_history', name: 'Punch report', path: lambda {
       people_punch_history_path
     }, permission: 'timesheets.read', position: 88),
     Entry.new(key: 'leave', name: 'Leave & PTO', path: lambda {
