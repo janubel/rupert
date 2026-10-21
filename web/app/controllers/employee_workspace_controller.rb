@@ -85,8 +85,9 @@ class EmployeeWorkspaceController < AuthenticatedController
   end
 
   def load_report_data
-    @from = params[:from].present? ? Date.iso8601(params[:from]) : Date.current.beginning_of_week
-    @to = params[:to].present? ? Date.iso8601(params[:to]) : Date.current.end_of_week
+    range = TimeRangePicker.resolve(params)
+    @from = range.from || Date.current.beginning_of_week
+    @to = range.to || Date.current.end_of_week
     @summary = EmployeeWorkSummary.new(employee: @worker, from: @from, to: @to)
     @payslips = @worker.payslips.joins(:pay_run).where(pay_runs: { tenant_id: Current.tenant_id, status: %w[finalized paid] })
       .where('pay_runs.period_start <= ? AND pay_runs.period_end >= ?', @to, @from).includes(:pay_run).order('pay_runs.period_end DESC')

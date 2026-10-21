@@ -21,16 +21,8 @@
 
   <%= form_with url: people_time_keeping_path, method: :get, class: 'card card-pad space-y-3' do %>
     <%= hidden_field_tag :view, @view %>
-    <nav class="flex flex-wrap gap-2" aria-label="Quick date ranges">
-      <% presets = time_report_presets.reject { |label, _, _| label == 'All history' } + [['Next pay week', Date.current.beginning_of_week(:thursday) + 7, Date.current.beginning_of_week(:thursday) + 13], ['Last quarter', *report_date_presets.assoc('Last quarter')[1..]]] %>
-      <% presets.each do |label, from, to| %>
-        <% active = @from == from && @to == to %>
-        <%= link_to label, people_time_keeping_path(base.merge(view: @view, from: from.iso8601, to: to.iso8601)), class: "nav-pill #{active ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}", aria: { current: active ? 'true' : nil } %>
-      <% end %>
-    </nav>
     <div class="flex flex-wrap items-end gap-3">
-      <div><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from.iso8601, class: 'input', required: true %></div>
-      <div><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @to.iso8601, class: 'input', required: true %></div>
+      <%= render 'shared/time_range_picker', from: @from, to: @to %>
       <% if @all_employees %>
         <div><%= label_tag :employee_id, 'Staff member', class: 'field-label' %><%= select_tag :employee_id, options_for_select([['All staff', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
       <% end %>
