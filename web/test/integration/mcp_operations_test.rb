@@ -183,6 +183,58 @@ class McpOperationsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'submit_feedback from chat follows the intake rules: one report per message, ready only for allow-listed senders with tasks:write' do
+    allowed = 'f' * 64
+    stranger = '9' * 64
+    Current.tenant = @tenant
+    EnvStore.set('FEEDBACK_READY_SENDERS', allowed)
+    _, secret = issue(scopes: ['tasks:write'])
+    args = { kind: 'request', summary: 'Add a tip button', details: 'Cashiers asked', source: 'buzz', source_ref: 'evt-mcp-1', open_task: true }
+
+    result = call(secret, 'submit_feedback', args.merge(source_sender: stranger, ready_for_development: true))
+    assert_equal false, result['isError'], result.dig('content', 0, 'text')
+    assert_equal false, result.dig('structuredContent', 'ready_for_development')
+    assert result.dig('structuredContent', 'ready_denied_reason')
+    assert_match(/NOT marked ready/, result.dig('content', 0, 'text'))
+    assert result.dig('structuredContent', 'task_id')
+    report = AgentFeedback.find(result.dig('structuredContent', 'id'))
+    assert_equal ['buzz', 'evt-mcp-1'], [report.source, report.source_ref]
+
+    again = call(secret, 'submit_feedback', args.merge(source_sender: allowed, ready_for_development: true))
+    assert_equal report.id, again.dig('structuredContent', 'id')
+    assert_match(/already filed/, again.dig('content', 0, 'text'))
+    assert_equal false, report.reload.ready_for_development
+
+    ready = call(secret, 'submit_feedback', args.merge(source_ref: 'evt-mcp-2', source_sender: allowed, ready_for_development: true))
+    assert_equal true, ready.dig('structuredContent', 'ready_for_development')
+
+    _, read_only = issue(scopes: ['roadmap:read'])
+    denied = call(read_only, 'submit_feedback', args.merge(source_ref: 'evt-mcp-3', source_sender: allowed, ready_for_development: true))
+    assert_equal false, denied.dig('structuredContent', 'ready_for_development')
+    assert_equal false, AgentFeedback.find(denied.dig('structuredContent', 'id')).ready_for_development
+  end
+
+  test 'plain submit_feedback keeps its old behaviour and opens no task' do
+    _, secret = issue(scopes: ['roadmap:read'])
+    assert_no_difference('Projects::Task.count') { call(secret, 'submit_feedback', { kind: 'suggestion', summary: 'Plain one' }) }
+    assert_equal 'agent', AgentFeedback.last.source
+  end
+
+  test 'the owner can mark and clear ready for development when triaging' do
+    report = AgentFeedback.create!(kind: 'request', summary: 'Triage me', source: 'buzz', source_sender: '8' * 64)
+    post login_path, params: { email: @admin.email, password: 'password' }
+    patch agent_feedback_path(report), params: { agent_feedback: { status: 'triaged', ready_for_development: '1' } }
+    assert report.reload.ready_for_development
+    assert_equal "user:#{@admin.id}", report.ready_marked_by
+    get agent_feedbacks_path(source: 'buzz')
+    assert_includes response.body, 'Ready for development'
+    assert_includes response.body, 'Triage me'
+    patch agent_feedback_path(report), params: { agent_feedback: { ready_for_development: '0' } }
+    assert_not report.reload.ready_for_development
+    patch agent_feedback_path(report), params: { agent_feedback: { status: 'planned' } }
+    assert_equal 'planned', report.reload.status
+  end
+
   private
 
   def issue(scopes:)
