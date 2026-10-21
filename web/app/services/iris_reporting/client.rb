@@ -23,7 +23,13 @@ module IrisReporting
       response: 'IRIS returned incomplete or unexpected report data. Previous reports were retained.',
       network: 'IRIS could not be reached securely. Previous reports were retained.',
       limit: 'IRIS reporting exceeded its size or time limit. Choose a smaller date range.',
-      stale: 'IRIS setup changed during import. Retry with the current configuration.'
+      stale: 'IRIS setup changed during import. Retry with the current configuration.',
+      # Upload problems are about the file chosen, not about IRIS.
+      no_file: 'Choose the CSV file to upload.',
+      empty_file: 'The file is empty. Choose the CSV you exported from the IRIS portal and try again.',
+      file_size: 'The file is larger than 1 MiB. Export a shorter period so each file is smaller.',
+      summary_rows: 'The file has more than 200 rows. A monthly summary export has at most 200 rows; export a shorter period.',
+      deposit_rows: 'The file has more than 10,000 deposit records. Export one month at a time.'
     }.freeze
 
     class Error < StandardError
