@@ -13,7 +13,10 @@
       <h1 class="page-title">System health</h1>
       <p class="mt-1 text-sm text-mocha">Server resources, database, and query health. Uptime <%= distance_of_time_in_words(@system.uptime_seconds) %> on <%= @system.cpu_count %> cores.</p>
     </div>
-    <a href="/system" class="btn-ghost btn-sm">Refresh</a>
+    <span class="flex items-center gap-2">
+      <%= link_to "Updates · #{BuildInfo.current.label}", system_updates_path, class: "btn-ghost btn-sm" %>
+      <a href="/system" class="btn-ghost btn-sm">Refresh</a>
+    </span>
   </section>
 
   <% load1 = @system.load_averages[0].to_f %>

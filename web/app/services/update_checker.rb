@@ -23,14 +23,20 @@ class UpdateChecker
       !Rails.env.test? && ENV.fetch('RUPERT_UPDATE_CHECK', 'on').downcase != 'off'
     end
 
-    # Cached answer for the running build, or nil while unknown. Starts one
-    # background refresh when the cache is empty.
+    # Cached answer for the running build when an update is available.
     def pending(current: BuildInfo.current.revision)
+      result = latest(current: current)
+      result if result&.available?
+    end
+
+    # Cached comparison for the running build, or nil while unknown. Starts one
+    # background refresh when the cache is empty.
+    def latest(current: BuildInfo.current.revision)
       return unless enabled? && current != 'unversioned'
 
       result = Rails.cache.read(cache_key(current))
       UpdateCheckJob.perform_later if result.nil? && Rails.cache.write('update_checker/queued', true, expires_in: RETRY_AFTER, unless_exist: true)
-      result if result&.available?
+      result
     end
 
     # Fetches the GitHub comparison and caches it. The block is the HTTP

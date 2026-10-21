@@ -29,6 +29,8 @@ Two kinds of configuration exist. **Boot-time variables** live in `/etc/rupert.e
 | `SHOP_CUSTOM_DOMAIN`, `SHOPIFY_APP_PRIVATE_SHOP` | no | Shopify app template options; unused on SER8 |
 | `SENTRY_DSN` | no | Enables error tracking; `SENTRY_ENVIRONMENT` (default `production`), `SENTRY_TRACES_SAMPLE_RATE` (default 0) |
 | `RUPERT_UPDATE_CHECK` | no | `off` disables the in-app "update available" banner |
+| `RUPERT_AUTODEPLOY_STATE` | no | Where System → Updates reads the updater's `status.json` (default `/var/lib/rupert-autodeploy`); must match the updater's |
+| `RUPERT_AUTODEPLOY_INBOX` | no | Where System → Updates leaves install requests and the manual-mode flag (default `web/storage/autodeploy`); must match the updater's and `rupert-autodeploy.path` |
 | `RUPERT_BUILD_SHA`, `RUPERT_BUILT_AT` | Docker only | Build identity for git-free deployments |
 | `RUPERT_INITIALIZE_DATABASE` | Compose first start only | Set to `1` only to explicitly initialize a genuinely new empty SQLite database; remove it after successful initialization. Otherwise Compose requires a nonempty existing SQLite file. |
 | `REDIS_URL` | compose only | Action Cable in the optional Docker Compose layout |

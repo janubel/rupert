@@ -1,0 +1,129 @@
+<% content_for :title, "Updates" %>
+<div class="space-y-6">
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">Updates</h1>
+      <p class="mt-1 text-sm text-mocha">Rupert installs new code from GitHub main only after its checks pass, backs up the database first and rolls back if the new build is unhealthy. Updates apply to every workspace on this server.</p>
+    </div>
+    <%= link_to "System health", system_path, class: "btn-ghost btn-sm" %>
+  </section>
+
+  <section class="grid gap-4 lg:grid-cols-2">
+    <div class="card card-pad" data-update-build>
+      <h2 class="font-display text-lg text-ink">This server</h2>
+      <dl class="mt-3 space-y-2 text-sm">
+        <div class="flex flex-wrap justify-between gap-2">
+          <dt class="text-mocha">Running build</dt>
+          <dd><%= commit_link(@build.revision) %><% if @build.built_at %> <span class="text-xs text-taupe">built <%= time_ago_in_words(@build.built_at) %> ago</span><% end %></dd>
+        </div>
+        <div class="flex flex-wrap justify-between gap-2">
+          <dt class="text-mocha">GitHub main</dt>
+          <dd data-update-check>
+            <% if !UpdateChecker.enabled? %>
+              Update checks are off (<code>RUPERT_UPDATE_CHECK=off</code>)
+            <% elsif @build.revision == "unversioned" %>
+              Can't compare: this build has no git revision
+            <% elsif @check.nil? %>
+              Checking…
+            <% elsif @check.available? %>
+              <span class="pill-olive"><%= pluralize(@check.behind_by, "newer change") %></span>
+              <% if @check.url&.start_with?("https://github.com/") %><%= link_to "See what changed", @check.url, target: "_blank", rel: "noopener", class: "ml-2 underline" %><% end %>
+            <% else %>
+              <span class="pill-fern">No newer changes</span>
+            <% end %>
+          </dd>
+        </div>
+        <% if @check&.latest_message %>
+          <div class="flex flex-wrap justify-between gap-2">
+            <dt class="text-mocha">Newest change</dt>
+            <dd class="text-right"><%= @check.latest_message %></dd>
+          </div>
+        <% end %>
+      </dl>
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <% if @check %><p class="text-xs text-taupe">Checked <%= time_ago_in_words(@check.checked_at) %> ago</p><% end %>
+        <% if @can_control && UpdateChecker.enabled? && @build.revision != "unversioned" %>
+          <%= button_to "Check now", check_system_updates_path, method: :post, class: "btn-ghost btn-sm" %>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card card-pad" data-updater>
+      <h2 class="font-display text-lg text-ink">Updater</h2>
+      <% if @status.nil? %>
+        <p class="mt-3 text-sm">The updater is not installed on this server, so Rupert can tell you about updates but not install them. Whoever runs this server installs updates outside Rupert.</p>
+        <p class="mt-2 text-xs text-taupe">To let Rupert install updates, install <code>rupert-autodeploy</code> on the server (see <%= link_to "deploy/ser8/README.md", "https://github.com/#{UpdateChecker::REPO}/blob/main/deploy/ser8/README.md", target: "_blank", rel: "noopener", class: "underline" %>).</p>
+      <% else %>
+        <p class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <%= update_state_pill(@status) %>
+          <span class="pill-taupe"><%= @manual ? "Manual installs" : "Automatic installs" %></span>
+        </p>
+        <p class="mt-2 text-sm"><%= update_state_summary(@status) %></p>
+        <p class="mt-1 font-mono text-xs text-taupe" data-updater-message><%= @status.message %></p>
+        <% if AutoUpdate.stale?(@status) %>
+          <p class="mt-2 text-sm font-semibold text-clay" data-updater-stale>The updater last reported <%= @status.at ? "#{time_ago_in_words(@status.at)} ago" : "at an unknown time" %>. It normally checks every 5 minutes; check that <code>rupert-autodeploy.timer</code> is running.</p>
+        <% else %>
+          <p class="mt-2 text-xs text-taupe">Last report <%= time_ago_in_words(@status.at) %> ago · checks every 5 minutes</p>
+        <% end %>
+
+        <% unseen = AutoUpdate.request_unseen?(@status) %>
+        <% waiting = @requested_at.present? && (unseen || @status.install_requested) %>
+        <% if waiting %>
+          <div class="mt-4 rounded-xl bg-haze px-4 py-3 text-sm" data-update-request>
+            Install requested <%= time_ago_in_words(@requested_at) %> ago.
+            <%= unseen ? "The updater picks it up within a few minutes." : "It runs as soon as CI passes." %>
+            <% if @can_control && !@status.busy? %>
+              <%= button_to "Cancel request", cancel_system_updates_path, method: :delete, class: "btn-ghost btn-sm mt-2" %>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if @can_control && !@status.busy? %>
+          <% if !waiting && (@status.failed? || @status.state.in?(%w[ready waiting_ci]) || @check&.available?) %>
+            <div class="mt-4">
+              <%= button_to (@status.failed? ? "Retry update" : "Install update now"), install_system_updates_path, method: :post, class: "btn-primary",
+                    form: { data: { turbo_confirm: "Install the newest code from GitHub main?\n\nThe updater installs it only if its checks passed. It backs up the database first, and Rupert restarts, so everyone on this server is briefly disconnected." } } %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  </section>
+
+  <% if @status %>
+    <section class="grid gap-4 lg:grid-cols-2">
+      <div class="card card-pad" data-last-deploy>
+        <h2 class="font-display text-lg text-ink">Last install</h2>
+        <% if @last_deploy %>
+          <p class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <%= update_state_pill(@last_deploy) %>
+            <span><%= commit_link(@last_deploy.current) %> → <%= commit_link(@last_deploy.target) %></span>
+          </p>
+          <p class="mt-2 font-mono text-xs text-taupe"><%= @last_deploy.message %></p>
+          <% if @last_deploy.at %><p class="mt-2 text-xs text-taupe" title="<%= @last_deploy.at.in_time_zone.iso8601 %>"><%= time_ago_in_words(@last_deploy.at) %> ago</p><% end %>
+        <% else %>
+          <p class="mt-3 text-sm text-mocha">No update has been installed since the updater was set up.</p>
+        <% end %>
+      </div>
+
+      <div class="card card-pad" data-update-mode>
+        <h2 class="font-display text-lg text-ink">When to install</h2>
+        <% if @can_control %>
+          <%= form_with url: system_updates_mode_path, method: :patch, class: "mt-3 space-y-3 text-sm" do %>
+            <label class="flex items-start gap-3">
+              <%= radio_button_tag :mode, "automatic", !@manual, class: "mt-1" %>
+              <span><strong>Automatically</strong><br><span class="text-mocha">Install each update from GitHub main once its checks pass.</span></span>
+            </label>
+            <label class="flex items-start gap-3">
+              <%= radio_button_tag :mode, "manual", @manual, class: "mt-1" %>
+              <span><strong>Only when I click Install</strong><br><span class="text-mocha">Rupert shows when an update is ready and waits for you.</span></span>
+            </label>
+            <%= submit_tag "Save", class: "btn-ghost btn-sm" %>
+          <% end %>
+        <% else %>
+          <p class="mt-3 text-sm"><%= @manual ? "Updates install only when an operator clicks Install." : "Updates install automatically once their checks pass." %></p>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+</div>

@@ -53,7 +53,10 @@ class AutodeployTest(unittest.TestCase):
             'RUPERT_AUTODEPLOY_LOCK': str(self.tmp / 'lock'),
             'RUPERT_AUTODEPLOY_ENV_FILE': str(self.tmp / 'rupert.env'),
             'RUPERT_AUTODEPLOY_PATH': f'{bin_dir}:/usr/bin:/bin',
+            'RUPERT_AUTODEPLOY_INBOX': str(self.tmp / 'inbox'),
         }
+        self.inbox = self.tmp / 'inbox'
+        self.inbox.mkdir()
         self.origin = self.tmp / 'origin'
         self.git('init', '-q', '-b', 'main', str(self.origin))
         (self.origin / 'web' / 'storage').mkdir(parents=True)
@@ -85,6 +88,14 @@ class AutodeployTest(unittest.TestCase):
         result = subprocess.run(['bash', str(SCRIPT)], env={**self.env, **env}, capture_output=True, text=True)
         calls = self.calls.read_text() if self.calls.exists() else ''
         return result, calls
+
+    def status(self, name='status.json'):
+        return json.loads((self.tmp / 'state' / name).read_text())
+
+    def request_install(self, at):
+        path = self.inbox / 'install-requested'
+        path.write_text('')
+        os.utime(path, (at, at))
 
     def test_up_to_date_does_nothing(self):
         result, calls = self.run_deploy()
@@ -173,6 +184,104 @@ class AutodeployTest(unittest.TestCase):
         self.assertIn('no new migrations', result.stdout)
         self.assertIn('ROLLBACK ALSO UNHEALTHY', result.stdout)
         self.assertEqual(self.head(self.tmp / 'app'), self.old)
+        self.assertEqual(self.status('last-deploy.json')['state'], 'failed')
+        self.assertIn('needs a human', self.status()['message'])
+
+    def test_status_is_reported_to_the_app_and_readable_by_it(self):
+        result, _ = self.run_deploy()
+        self.assertEqual(result.returncode, 0)
+        status = self.status()
+        self.assertEqual((status['state'], status['current'], status['mode']), ('up_to_date', self.old, 'automatic'))
+        self.assertFalse(status['install_requested'])
+        self.assertEqual((self.tmp / 'state').stat().st_mode & 0o777, 0o755)
+        self.assertEqual((self.tmp / 'state' / 'status.json').stat().st_mode & 0o777, 0o644)
+
+        self.set_checks(check_runs(('CI (sqlite3)', 'failure')))
+        new = self.commit('feature')
+        self.run_deploy()
+        self.assertEqual((self.status()['state'], self.status()['target']), ('ci_failed', new))
+
+        self.set_checks(GREEN)
+        self.run_deploy()
+        self.assertEqual(self.status()['state'], 'deployed')
+        self.assertEqual((self.status('last-deploy.json')['state'], self.status('last-deploy.json')['target']), ('deployed', new))
+
+    def test_dry_run_reports_nothing(self):
+        self.commit('feature')
+        self.run_deploy(DRY_RUN='1')
+        self.assertFalse((self.tmp / 'state' / 'status.json').exists())
+
+    def test_manual_mode_waits_for_a_request_then_installs_once(self):
+        (self.inbox / 'manual').write_text('')
+        new = self.commit('feature')
+        result, calls = self.run_deploy()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn('ready to install', result.stdout)
+        self.assertNotIn('systemctl', calls)
+        self.assertEqual((self.status()['state'], self.status()['mode']), ('ready', 'manual'))
+        self.assertEqual(self.head(self.tmp / 'app'), self.old)
+
+        self.request_install(1_800_000_000)
+        result, _ = self.run_deploy()
+        self.assertIn(f'deployed {new[:8]}, healthy', result.stdout)
+        self.assertFalse(self.status()['install_requested'])
+
+        # The same request is spent: the next commit waits for a new one.
+        self.commit('another')
+        result, calls = self.run_deploy()
+        self.assertIn('ready to install', result.stdout)
+        self.assertNotIn('systemctl', calls)
+
+    def test_request_waits_for_green_ci(self):
+        (self.inbox / 'manual').write_text('')
+        self.set_checks(check_runs(('Product site consistency', 'success')))
+        new = self.commit('feature')
+        self.request_install(1_800_000_000)
+        self.run_deploy()
+        self.assertEqual(self.status()['state'], 'waiting_ci')
+        self.assertTrue(self.status()['install_requested'])
+
+        self.set_checks(GREEN)
+        result, _ = self.run_deploy()
+        self.assertIn(f'deployed {new[:8]}, healthy', result.stdout)
+
+    def test_request_while_up_to_date_does_not_approve_a_later_commit(self):
+        (self.inbox / 'manual').write_text('')
+        self.request_install(1_800_000_000)
+        self.run_deploy()
+        self.commit('feature')
+        result, calls = self.run_deploy()
+        self.assertIn('ready to install', result.stdout)
+        self.assertNotIn('systemctl', calls)
+
+    def test_request_retries_a_failed_commit_once(self):
+        new = self.commit('broken migration', path='web/db/migrate/20261020000000_broken.rb')
+        self.run_deploy(MIGRATE_EXIT='1')
+        self.assertEqual(self.status()['state'], 'failed')
+        self.assertEqual(self.status('last-deploy.json')['state'], 'failed')
+
+        self.request_install(1_800_000_000)
+        result, _ = self.run_deploy()
+        self.assertIn(f'deployed {new[:8]}, healthy', result.stdout)
+        self.assertFalse((self.tmp / 'state' / 'failed-sha').exists())
+
+    def test_failed_retry_is_not_repeated_by_the_same_request(self):
+        new = self.commit('broken migration', path='web/db/migrate/20261020000000_broken.rb')
+        self.run_deploy(MIGRATE_EXIT='1')
+        self.request_install(1_800_000_000)
+        self.run_deploy(MIGRATE_EXIT='1')
+        result, calls = self.run_deploy(MIGRATE_EXIT='1')
+        self.assertIn(f'{new[:8]} already failed', result.stdout)
+        self.assertNotIn('systemctl', calls)
+
+    def test_inbox_files_are_never_followed_or_changed(self):
+        secret = self.tmp / 'secret'
+        secret.write_text('do not read')
+        (self.inbox / 'install-requested').symlink_to(secret)
+        self.run_deploy()
+        self.assertTrue((self.inbox / 'install-requested').is_symlink())
+        self.assertEqual(secret.read_text(), 'do not read')
+        self.assertNotIn('do not read', (self.tmp / 'state' / 'status.json').read_text())
 
 
 if __name__ == '__main__':
