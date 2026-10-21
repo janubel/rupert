@@ -3,7 +3,7 @@
 module Mcp
   module Tools
     class ReportContext < Tool
-      TEXT_LIMITS = { 'client_context' => 8_000, 'js_errors' => 20_000, 'server_log' => 40_000, 'sql_queries' => 30_000, 'dom_snapshot' => 30_000 }.freeze
+      TEXT_LIMITS = { 'client_context' => 8_000, 'js_errors' => 20_000, 'server_log' => 40_000, 'sql_queries' => 30_000, 'dom_snapshot' => 30_000, 'conversation' => 20_000 }.freeze
 
       tool 'report_context',
         title: 'Everything attached to a report',
