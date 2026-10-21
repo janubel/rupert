@@ -1,0 +1,24 @@
+{
+  "fixes": [
+    {
+      "id": "shopify-order-line-item-pagination",
+      "commit": "ad654b642888b24de7edd3de387f03284d0234de",
+      "summary": "Complete Shopify order line-item pagination rather than silently truncating oversized orders. Regression fixtures cover continuation and malformed/repeated pages."
+    },
+    {
+      "id": "swipesimple-empty-report",
+      "commit": "09be30f3f671a5c33bcb40f636aa118e3875285a",
+      "summary": "Accept a header-only SwipeSimple tax report as an empty period instead of stopping the backfill. A parser regression fixture covers the empty export."
+    },
+    {
+      "id": "mcp-body-limit",
+      "commit": "40904580d55bc5e60a1e9f1b97d9d56233be67ec",
+      "summary": "Bound MCP request-body reads even when Content-Length is absent or understated. Request regression tests exercise the actual byte limit."
+    },
+    {
+      "id": "updater-request-time-precision",
+      "commit": "4cb18c75553898038eff724817203edecc0b6c4b",
+      "summary": "Compare update requests and updater reports in whole seconds so an already handled request no longer appears pending. A same-second regression test covers this case."
+    }
+  ]
+}

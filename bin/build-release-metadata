@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'optparse'
+require_relative '../web/lib/nightly_release'
+
+options = { root: File.expand_path('..', __dir__) }
+output = File.join(options[:root], 'web/config/release_metadata.json')
+notes = nil
+OptionParser.new do |parser|
+  parser.banner = 'Usage: bin/build-release-metadata [--revision SHA] [--base SHA] [--output PATH] [--notes PATH]'
+  parser.on('--revision SHA') { |value| options[:revision] = value }
+  parser.on('--base SHA') { |value| options[:base] = value }
+  parser.on('--output PATH') { |value| output = value }
+  parser.on('--notes PATH') { |value| notes = value }
+end.parse!
+release = NightlyRelease.new(**options)
+metadata = release.generate
+File.write("#{output}.tmp", "#{JSON.pretty_generate(metadata)}\n")
+File.rename("#{output}.tmp", output)
+File.write(notes, release.notes(metadata)) if notes
+puts JSON.generate(metadata.slice('revision', 'nightly', 'cumulative', 'source_lines'))

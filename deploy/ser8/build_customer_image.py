@@ -42,6 +42,7 @@ git clone -q https://github.com/techmore/rupert.git /opt/rupert
 cd /opt/rupert
 git checkout -q REVISION
 [ "$(git rev-parse HEAD)" = REVISION ]
+ruby bin/build-release-metadata
 rm -rf .git
 useradd --system --home-dir /var/lib/rupert --shell /usr/sbin/nologin rupert
 install -Dm755 deploy/ser8/customer_bootstrap.py /usr/local/libexec/rupert-customer-bootstrap

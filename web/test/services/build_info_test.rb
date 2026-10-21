@@ -30,4 +30,17 @@ class BuildInfoTest < ActiveSupport::TestCase
     assert_equal 'unversioned', build.revision
     assert_nil build.built_at
   end
+
+  test 'stale or malformed release totals are never attributed to a running build' do
+    totals = {
+      'schema_version' => 1, 'revision' => 'a' * 40, 'version' => '0.2.0', 'as_of' => '2026-10-21T12:00:00Z',
+      'base_revision' => 'b' * 40, 'source_lines' => 200,
+      'nightly' => { 'patch_commits' => 2, 'lines_added' => 20, 'lines_deleted' => 3, 'confirmed_bugs_fixed' => 1 },
+      'cumulative' => { 'patch_commits' => 10, 'lines_added' => 300, 'lines_deleted' => 100 }
+    }
+    assert_equal totals, BuildInfo.new(revision: 'a' * 40, release_totals: totals).release_totals
+    assert_nil BuildInfo.new(revision: 'c' * 40, release_totals: totals).release_totals
+    assert_nil BuildInfo.new(revision: 'a' * 40, release_totals: totals.merge('nightly' => [])).release_totals
+    assert_nil BuildInfo.new(revision: 'a' * 40, release_totals: totals.merge('as_of' => 'bad')).release_totals
+  end
 end

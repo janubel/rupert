@@ -12,6 +12,8 @@ Thumbs.db
 *.swp
 
 # Build output
+web/config/release_metadata.json
+web/config/release_metadata.json.tmp
 build/
 dist/
 !web/public/dist/
