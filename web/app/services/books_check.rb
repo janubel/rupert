@@ -211,16 +211,20 @@ class BooksCheck
   # Re-verifies the stored checksum of recently retained originals. A failure
   # means retained evidence no longer matches what was uploaded.
   def evidence_integrity
-    docs = ReconciliationDocument.where('created_at >= ?', since).order(id: :desc).limit(200)
-    failed = docs.filter_map do |doc|
+    ids = ReconciliationDocument.where('created_at >= ?', since).order(id: :desc).limit(200).pluck(:id)
+    failed = []
+    # Only the columns the check needs, five documents at a time, each decoded
+    # on its own: an 8 MiB original is held about three times over while it is
+    # verified, so 200 at once could exhaust memory.
+    ReconciliationDocument.where(id: ids).select(:id, :filename, :content_base64, :sha256, :byte_size)
+      .find_each(batch_size: 5, order: :desc) do |doc|
       doc.original_bytes
-      nil
     rescue StandardError => e
-      [doc.id, doc.filename, e.class.name]
+      failed << [doc.id, doc.filename, e.class.name]
     end
     build('evidence_integrity', "Retained originals still match their checksums", count: failed.size,
       rows: failed.first(SAMPLE),
-      detail_ok: "#{docs.size} recently retained original(s) re-verified against their SHA-256.",
+      detail_ok: "#{ids.size} recently retained original(s) re-verified against their SHA-256.",
       detail_bad: 'These retained documents failed checksum verification. Do not rely on them.',
       action: 'Restore from backup and re-retain the original; keep the failed record for the audit trail.')
   end
