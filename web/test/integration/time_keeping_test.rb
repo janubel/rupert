@@ -90,8 +90,8 @@ class TimeKeepingTest < ActionDispatch::IntegrationTest
         assert_select 'select#range option[selected][value="this_month"]', 'This month'
         %w[today yesterday this_pay_week last_pay_week next_pay_week this_week last_week this_month last_month this_quarter
            last_quarter year_to_date last_year custom].each { |key| assert_select "select#range option[value=#{key}]" }
-        assert_select 'label[for="from"]', 'Start'
-        assert_select 'label[for="to"]', 'Finish'
+        assert_select 'label[for="from"]', 'Start date'
+        assert_select 'label[for="to"]', 'End date'
         assert_select 'input[type=date][name=from][value="2026-10-01"][aria-describedby="time-range-error"]'
         assert_select 'input[type=date][name=to][value="2026-10-31"][aria-describedby="time-range-error"]'
         assert_select '#time-range-error[role=alert]'

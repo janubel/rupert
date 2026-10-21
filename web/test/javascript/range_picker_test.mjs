@@ -31,7 +31,7 @@ assert.deepEqual([...datesFor(presets, 'all')], ['', '']);
 assert.equal(datesFor(presets, 'custom'), null);
 assert.equal(rangeProblem('2026-10-08', '2026-10-14'), '');
 assert.equal(rangeProblem('2026-10-08', '2026-10-08'), '');
-assert.equal(rangeProblem('2026-10-14', '2026-10-08'), 'Finish must be on or after Start.');
+assert.equal(rangeProblem('2026-10-14', '2026-10-08'), 'End date must be on or after the start date.');
 assert.equal(rangeProblem('', '2026-10-08'), '');
 
 // The controller wires those rules to the select, the date inputs and the error.
@@ -70,8 +70,8 @@ assert.equal(picker.selectTarget.value, 'custom');
 picker.fromTarget.value = '2026-10-15';
 picker.edit();
 assert.equal(picker.errorTarget.hidden, false);
-assert.equal(picker.errorTarget.textContent, 'Finish must be on or after Start.');
-assert.equal(picker.toTarget.validity, 'Finish must be on or after Start.');
+assert.equal(picker.errorTarget.textContent, 'End date must be on or after the start date.');
+assert.equal(picker.toTarget.validity, 'End date must be on or after the start date.');
 assert.equal(picker.toTarget.attributes['aria-invalid'], 'true');
 
 picker.toTarget.value = '2026-10-21';

@@ -30,7 +30,7 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
       get people_timesheets_path(view: 'list')
       assert_response :success
       assert_select 'nav[aria-label="Module areas"] a[aria-current="page"]', minimum: 1
-      assert_select 'nav[aria-label="Timesheet review"] a', text: 'Needs review (1)'
+      assert_select 'select[name=status] option[value=submitted]', text: 'Needs review (1)'
       assert_select 'a[href=?]', people_timesheet_path(@sheet), text: 'Review timesheet'
       assert_select 'a[href=?]', people_timesheet_path(@draft), count: 0
       get people_timesheets_path(status: 'all', view: 'list')
@@ -86,7 +86,7 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     get people_timesheet_path(@sheet)
     assert_select 'input[type="submit"][value="Approve"]', count: 0
     get people_timesheets_path(status: 'approved')
-    assert_select 'nav[aria-label="Timesheet review"]', count: 0
+    assert_select 'select[name=status][aria-label="Timesheet review"]', count: 0
   end
 
   test 'approval rechecks clock changes and pending corrections since submission' do
@@ -166,7 +166,31 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     assert_select 'section[aria-label="Week calendar"]'
     assert_select 'aside#emp-key-title, aside[aria-labelledby="emp-key-title"]'
     body = response.body
-    assert_operator body.index('aria-label="Timesheet review"'), :<, body.index('aria-label="Week calendar"')
+    assert_operator body.index('aria-label="Timesheet filters"'), :<, body.index('aria-label="Week calendar"')
     assert_operator body.index('<h1 class="page-title">Timesheets'), :<, body.index('aria-label="Week calendar"')
+  end
+
+  test 'timesheets filter by any start and end date from one focused filter bar' do
+    sign_in
+    get people_timesheets_path(view: 'list', status: 'all')
+    assert_response :success
+    assert_select 'form[aria-label="Timesheet filters"]' do
+      assert_select 'select[name=range] option[value=custom]', 'Custom'
+      assert_select 'label[for=from]', 'Start date'
+      assert_select 'input[type=date][name=from]'
+      assert_select 'label[for=to]', 'End date'
+      assert_select 'input[type=date][name=to]'
+      assert_select 'select[name=status]'
+    end
+    assert_select 'nav[aria-label="Time workspace"] details summary', /More/
+
+    inside = (@sheet.period_start + 1).iso8601
+    get people_timesheets_path(view: 'list', status: 'all', range: 'custom', from: inside, to: inside)
+    assert_select 'a[href=?]', people_timesheet_path(@sheet), minimum: 1
+    far = (@sheet.period_end + 60).iso8601
+    get people_timesheets_path(view: 'list', status: 'all', range: 'custom', from: far, to: far)
+    assert_select 'a[href=?]', people_timesheet_path(@sheet), count: 0
+    get people_timesheets_path(view: 'list', status: 'all', from: 'nope')
+    assert_redirected_to people_timesheets_path
   end
 end
