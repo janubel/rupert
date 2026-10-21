@@ -10,6 +10,7 @@ module RetailWorkspaceHelper
     links << ['Retail POS', ctrax_pos_path, controller_path == 'ctrax_pos' || controller_path == 'pos_checkouts'] if Current.user&.can_use_pos?
     if retail_business_access?('sales.read')
       links << ['C-Trax daily close', ctrax_days_path, controller_path == 'ctrax_days']
+      links << ['SwipeSimple daily close', swipesimple_days_path, controller_path == 'swipesimple_days']
       links << ['Rupert registers', sales_pos_sessions_path, controller_path == 'sales/pos_sessions']
     end
     links
