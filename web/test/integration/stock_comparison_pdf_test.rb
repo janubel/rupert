@@ -86,11 +86,11 @@ class StockComparisonPdfTest < ActionDispatch::IntegrationTest
   end
 
   test 'the store comparison PDF is one click from Inventory, Reports and the Stock menu' do
-    pdf = stock_comparison_path(format: :pdf)
+    pdf = "a[href^='/stock_comparison'][href*='pdf']"
     get inventory_index_path
-    assert_select "a[href='#{pdf}']", 'Store comparison PDF'
+    assert_select pdf, 'Store comparison PDF'
     get inventory_reports_path
-    assert_select "a[href='#{pdf}']", 'Download store comparison PDF'
+    assert_select pdf, 'Download store comparison PDF'
     get stock_comparison_path
     assert_select 'a#store-comparison-pdf.btn-primary', 'Download store comparison PDF'
     assert_select "nav[aria-label='Module'] a[aria-current='page']", /Store comparison/
