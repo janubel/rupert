@@ -130,4 +130,24 @@ class IrisReportingIntegrationTest < ActionDispatch::IntegrationTest
       assert_equal 1, IrisReport.count
     end
   end
+
+  test 'upload problems are described as file problems, not as IRIS errors' do
+    params = { merchant_number: '12345', report_kind: 'sales_health_csv' }
+    upload = ->(text) { Rack::Test::UploadedFile.new(StringIO.new(text), 'text/csv', original_filename: 'iris.csv') }
+    post import_iris_csv_pos_connection_path('iris_reporting'), params: params.merge(report_file: upload.call(''))
+    assert_redirected_to @path
+    assert_equal 'The file is empty. Choose the CSV you exported from the IRIS portal and try again.', flash[:alert]
+    post import_iris_csv_pos_connection_path('iris_reporting'), params: params.merge(report_file: upload.call("period,metric,value\n#{'x' * (1024 * 1024)}\n"))
+    assert_equal 'The file is larger than 1 MiB. Export a shorter period so each file is smaller.', flash[:alert]
+    many = "period,metric,value\n#{(1..201).map { |i| "2026-#{format('%02d', (i % 12) + 1)},gross_sales,#{i}.00" }.join("\n")}\n"
+    post import_iris_csv_pos_connection_path('iris_reporting'), params: params.merge(report_file: upload.call(many))
+    assert_equal 'The file has more than 200 rows. A monthly summary export has at most 200 rows; export a shorter period.', flash[:alert]
+    deposits = "Daily Deposits\nRecords exported: 10001\n\nDate,Amount,Transactions,Batch,Terminal Number,Type\n10/1/2026,12.34,1,000001,,0\nMonthly Total,12.34,1,\n"
+    post import_iris_csv_pos_connection_path('iris_reporting'), params: { merchant_number: '12345', report_kind: 'daily_deposits_csv', report_period: '2026-10', report_file: upload.call(deposits) }
+    assert_equal 'The file has more than 10,000 deposit records. Export one month at a time.', flash[:alert]
+    post import_iris_csv_pos_connection_path('iris_reporting'), params: params
+    assert_equal 'Choose the CSV file to upload.', flash[:alert]
+    assert_equal 0, IrisReport.count
+    assert_equal 0, ReconciliationDocument.count
+  end
 end

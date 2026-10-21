@@ -27,18 +27,22 @@ module IrisReporting
     end
 
     def self.parse(text:, period:)
-      raise Client::Error, :response unless text.is_a?(String) && text.valid_encoding? && text.bytesize.between?(1, MAX_BYTES)
+      raise Client::Error, :response unless text.is_a?(String) && text.valid_encoding?
+      raise Client::Error, :empty_file if text.empty?
+      raise Client::Error, :file_size if text.bytesize > MAX_BYTES
       raise Client::Error, :response unless period.to_s.match?(/\A20[0-9]{2}-(?:0[1-9]|1[0-2])\z/)
 
       month = Date.iso8601("#{period}-01")
       csv = CSV.parse(text.delete_prefix("\uFEFF"), field_size_limit: 4096).reject { |row| row.all?(&:blank?) }
-      raise Client::Error, :response unless csv.size.between?(4, MAX_ROWS + 4) && csv.shift == ['Daily Deposits']
+      raise Client::Error, :deposit_rows if csv.size > MAX_ROWS + 4
+      raise Client::Error, :response unless csv.size >= 4 && csv.shift == ['Daily Deposits']
 
       preamble = csv.shift
       raise Client::Error, :response unless preamble.size == 1 && preamble.first.to_s.match?(/\ARecords exported: (?:0|[1-9][0-9]{0,4})\z/)
 
       expected = preamble.first.delete_prefix('Records exported: ').to_i
-      raise Client::Error, :response unless expected <= MAX_ROWS && csv.shift == HEADER
+      raise Client::Error, :deposit_rows if expected > MAX_ROWS
+      raise Client::Error, :response unless csv.shift == HEADER
 
       total = csv.pop
       raise Client::Error, :response unless total.size.between?(4, HEADER.size) && total[0] == 'Monthly Total' && total.drop(3).all?(&:blank?) && csv.size == expected
