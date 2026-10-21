@@ -28,8 +28,9 @@ class EmployeePreviewController < AuthenticatedController
   end
 
   def reports
-    @from = params[:from].present? ? Date.iso8601(params[:from]) : Date.current.beginning_of_week - 7
-    @to = params[:to].present? ? Date.iso8601(params[:to]) : Date.current.end_of_week
+    range = TimeRangePicker.resolve(params)
+    @from = range.from || (Date.current.beginning_of_week - 7)
+    @to = range.to || Date.current.end_of_week
     @summary = @examples.summary(from: @from, to: @to)
     @payslips = @examples.payslips.select { |slip| slip.pay_run.period_start <= @to && slip.pay_run.period_end >= @from }
     @work_reports = @examples.work_reports
