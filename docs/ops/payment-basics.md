@@ -55,7 +55,7 @@ Public contact details checked 2026-10-15. These are company contacts, not a ver
 
 **Please confirm the payment setup already serving our business:** gateway name; backend processor and acquiring bank; merchant account/reference; enabled in-store and website channels; supported PAX model and installed payment application; approved integration documentation and test access; tipping/refund support; and how daily batches match bank deposits. Please identify our account support contact and any integration or recurring fees.
 
-Record their answers, support contacts and review/renewal dates in Rupert's [private owner checklist](https://rupert.stoverparc.org/owner_checklists). Use the vendor's secure channel for account verification and the approved credential form for API secrets. The checklist stores references, not passwords.
+Record their answers, support contacts and review/renewal dates in Rupert's [private owner checklist](https://herbalhealers.rupertpos.com/owner_checklists). Use the vendor's secure channel for account verification and the approved credential form for API secrets. The checklist stores references, not passwords.
 
 ## What Rupert can claim today
 

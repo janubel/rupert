@@ -7,8 +7,9 @@ Two kinds of configuration exist. **Boot-time variables** live in `/etc/rupert.e
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `RAILS_ENV` | yes | `production` |
-| `HOST` | yes | Public origin, e.g. `https://rupert.stoverparc.org`. Enables host authorization (the app refuses to boot without it) and builds OAuth callbacks |
+| `HOST` | yes | Public origin, e.g. `https://herbalhealers.rupertpos.com`. Enables host authorization (the app refuses to boot without it) and builds OAuth callbacks |
 | `ADDITIONAL_HOSTS` | no | Comma-separated extra hostnames allowed by host authorization |
+| `RUPERT_LEGACY_HOSTS` | no | Comma-separated retired hostnames (production: `rupert.stoverparc.org,rupert.cybersecuritypilot.org,herbalhealers.cybersecuritypilot.org`). Requests to them are redirected to `HOST` with the same path (301 for GET/HEAD, 308 otherwise); `/up` health checks are still answered. They do not need to be in `ADDITIONAL_HOSTS` |
 | `SECRET_KEY_BASE` | yes | Session/cookie signing. `bin/rails secret` |
 | `RAILS_ENCRYPTION_PRIMARY_KEY`, `RAILS_ENCRYPTION_DETERMINISTIC_KEY`, `RAILS_ENCRYPTION_KEY_DERIVATION_SALT` | yes | Active Record encryption for every credential and document column. Generate once with `bin/rails db:encryption:init`; **never change without re-encrypting** |
 | `RUPERT_SQLITE_DATABASE_PRODUCTION` | no | Path of the SQLite file (default `storage/production.sqlite3`) |

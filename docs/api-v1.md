@@ -43,10 +43,10 @@ JSON `400`. Responses use `Cache-Control: no-store`.
 
 ```sh
 curl -H "Authorization: Bearer $RUPERT_API_TOKEN" \
-  'https://rupert.stoverparc.org/api/v1/catalog?source=shopify&per_page=50'
+  'https://herbalhealers.rupertpos.com/api/v1/catalog?source=shopify&per_page=50'
 
 curl -H "Authorization: Bearer $RUPERT_API_TOKEN" \
-  'https://rupert.stoverparc.org/api/v1/inventory?source=square&per_page=50'
+  'https://herbalhealers.rupertpos.com/api/v1/inventory?source=square&per_page=50'
 ```
 
 ## List contract

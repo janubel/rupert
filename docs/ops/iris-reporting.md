@@ -32,7 +32,7 @@ The current specification also documents a flat reporting-transaction endpoint a
 
 ## REST API setup and operation
 
-1. Sign into production Rupert at [rupert.stoverparc.org](https://rupert.stoverparc.org/). After this branch is deployed and migrated, open **POS & payment connections → NAB / IRIS merchant reporting** (`/pos_connections/iris_reporting`).
+1. Sign into production Rupert at [herbalhealers.rupertpos.com](https://herbalhealers.rupertpos.com/). After this branch is deployed and migrated, open **POS & payment connections → NAB / IRIS merchant reporting** (`/pos_connections/iris_reporting`).
 2. Obtain an approved API token from an IRIS user with access to the intended merchants and reporting. Official documentation states that tokens inherit the issuer's permissions. A token is not automatically read-only; use the narrowest available user/processor permissions. Creating a token or broadening permissions requires the owner's explicit action-time approval. A merchant portal password is not API authentication.
 3. Choose Production, enter comma-separated merchant IDs (up to 10), confirm approved access, and save the IRIS origin and API token in Rupert's encrypted form. The origin has no `/api/v1` suffix. Blank secret fields retain saved values; fields are never filled with saved secrets. Saving performs no network request or import.
 4. Run **Check read access**. It reads today's general deposits and batch/transaction reports for every configured merchant, without importing. A successful portal login alone is insufficient.

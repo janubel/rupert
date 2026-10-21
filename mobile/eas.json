@@ -14,7 +14,7 @@
       },
       "environment": "development",
       "env": {
-        "EXPO_PUBLIC_RUPERT_URL": "https://rupert.stoverparc.org"
+        "EXPO_PUBLIC_RUPERT_URL": "https://herbalhealers.rupertpos.com"
       }
     },
     "preview": {
@@ -24,7 +24,7 @@
       },
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_RUPERT_URL": "https://rupert.stoverparc.org"
+        "EXPO_PUBLIC_RUPERT_URL": "https://herbalhealers.rupertpos.com"
       },
       "credentialsSource": "remote",
       "ios": {
@@ -35,7 +35,7 @@
       "autoIncrement": true,
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_RUPERT_URL": "https://rupert.stoverparc.org"
+        "EXPO_PUBLIC_RUPERT_URL": "https://herbalhealers.rupertpos.com"
       },
       "credentialsSource": "remote",
       "distribution": "store",

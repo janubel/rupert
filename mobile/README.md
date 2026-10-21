@@ -58,7 +58,7 @@ See [staff timesheets](../docs/employee-timesheets.md) for account provisioning,
 
 The supported SDK 58 patch and lockfile now use Expo **58.0.12**. `npm run check` runs the online Expo compatibility check, TypeScript validation, staff boundaries, exploit regression tests, verified security backports and the fail-closed advisory gate. CI additionally runs Expo Doctor and exports **iOS and Android with Hermes bytecode** on x86-64 Ubuntu. Its `employee-native-js-exports-<commit>` artifact contains JavaScript/assets for verification; it is not an installable or signed app. Dependency checks remain enabled.
 
-All EAS profiles prefill the staff app with `https://rupert.stoverparc.org`. The instance field stays editable, and this public URL contains no staff identity or credentials. For a separate staging build, change the selected profile's `EXPO_PUBLIC_RUPERT_URL` before building. The development profile uses the EAS `development` environment, preview uses `preview`, and store builds use `production`.
+All EAS profiles prefill the staff app with `https://herbalhealers.rupertpos.com`. The instance field stays editable, and this public URL contains no staff identity or credentials. For a separate staging build, change the selected profile's `EXPO_PUBLIC_RUPERT_URL` before building. The development profile uses the EAS `development` environment, preview uses `preview`, and store builds use `production`.
 
 | Profile | iPhone / iPad | Android | Intended handoff |
 | --- | --- | --- | --- |
