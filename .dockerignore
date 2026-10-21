@@ -11,3 +11,5 @@ web/.env
 Dockerfile
 docker-compose.yml
 .DS_Store
+web/.cache
+web/coverage

@@ -9,8 +9,8 @@
 #
 # * foreign keys from journal_lines to journal_entries and accounts;
 # * a CHECK that every line carries exactly one non-negative, non-zero side;
-# * 64-bit amount columns so a large manual entry cannot overflow PostgreSQL's
-#   32-bit integer (audit #169 M11).
+# * 64-bit amount columns so a large manual entry cannot overflow the prior
+#   32-bit integer columns (audit #169 M11).
 #
 # Per-entry balance (sum of debits = sum of credits) cannot be a row-level
 # constraint on SQLite, so it is reported by BooksCheck#ledger_balance instead.

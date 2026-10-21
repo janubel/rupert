@@ -53,6 +53,9 @@ jobs:
       - name: Prepare test database
         run: bin/rails db:prepare
 
+      - name: Verify all migrations on a fresh isolated SQLite database
+        run: bin/rails runner test/support/verify_fresh_sqlite_migrations.rb
+
       - name: Verify warehouse hold migration and legacy backfill
         run: bin/rails runner test/support/verify_warehouse_hold_migration.rb
 

@@ -242,7 +242,7 @@ class SwipesimpleImporterTest < ActiveSupport::TestCase
     end
   end
 
-  test 'aggregate order quantities respect the integer limit on both database adapters' do
+  test 'aggregate order quantities respect the integer limit' do
     rows = Array.new(2148) do |i|
       { 'Item' => "Free item #{i}", 'SKU' => "FREE-#{i}", 'Qty' => '1000000', 'Unit Price' => '0', 'Total' => '0' }
     end

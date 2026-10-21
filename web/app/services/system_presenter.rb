@@ -23,14 +23,7 @@ class SystemPresenter
     :puma_threads,
     :db_connections,
     :db_max_connections,
-    :db_cache_hit_pct,
-    :db_deadlocks,
     :db_size_mb,
-    :slow_queries,
-    :active_queries,
-    :locked_queries,
-    :bloat_tables,
-    :big_tables,
     :job_pending,
     :job_queued,
     :job_failed,
@@ -78,24 +71,15 @@ class SystemPresenter
     @puma_threads = pids.sum { |pid| threads_for(pid) }
   end
 
-  # SQLite has no buffer, lock or bloat statistics views, so show the file and
-  # pool data that is available and leave unsupported counters blank in the UI.
   def collect_db
     conn = ActiveRecord::Base.connection
     pool = ActiveRecord::Base.connection_pool
     @db_connections = pool.stat[:connections].to_i
     @db_max_connections = pool.size
-    @db_cache_hit_pct = nil
-    @db_deadlocks = nil
     path = conn.pool.db_config.database.to_s
     path = Rails.root.join(path).to_s unless path.start_with?('/') || path == ':memory:'
     bytes = [path, "#{path}-wal"].sum { |file| File.file?(file) ? File.size(file) : 0 }
     @db_size_mb = (bytes / 1024.0 / 1024).round(1)
-    @slow_queries = []
-    @active_queries = []
-    @locked_queries = []
-    @bloat_tables = []
-    @big_tables = []
   end
 
   def collect_jobs

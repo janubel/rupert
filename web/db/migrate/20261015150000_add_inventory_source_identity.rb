@@ -17,15 +17,11 @@ class AddInventorySourceIdentity < ActiveRecord::Migration[8.1]
   end
 
   def down
-    if connection.adapter_name == 'SQLite'
-      # SQLite rebuilds the parent orders table to remove columns. With
-      # foreign keys enabled, DROP TABLE would cascade-delete its children.
-      raise ActiveRecord::IrreversibleMigration, 'Run this SQLite rollback outside an existing transaction.' if connection.transaction_open?
+    # SQLite rebuilds the parent orders table to remove columns. With foreign
+    # keys enabled, DROP TABLE would cascade-delete its children.
+    raise ActiveRecord::IrreversibleMigration, 'Run this SQLite rollback outside an existing transaction.' if connection.transaction_open?
 
-      connection.disable_referential_integrity { remove_identity_columns }
-    else
-      remove_identity_columns
-    end
+    connection.disable_referential_integrity { remove_identity_columns }
   end
 
   private

@@ -46,6 +46,11 @@ bin/rails server        # http://localhost:3000
 The development database is `web/storage/development.sqlite3` (override with
 `RUPERT_SQLITE_DATABASE_DEVELOPMENT`). For production operations, tuning and
 recovery see [SQLite and Incus operations](docs/ops/sqlite-incus.md).
+Leave `DATABASE_URL` unset: Rupert rejects every nonempty value, including a
+SQLite URL. Set database locations with the per-environment
+`RUPERT_SQLITE_DATABASE_*` variables. `RUPERT_DB_ADAPTER=sqlite3` is accepted
+for compatibility but is unnecessary; other explicit adapter values are
+rejected.
 
 The `.env` at the repo root is loaded at boot (Dotenv) and holds the sync
 engine credentials (`SHOPIFY_CLIENT_ID/SECRET`, `SQUARE_ACCESS_TOKEN`, …).
@@ -163,6 +168,24 @@ repository; pushing a commit or creating a GitHub release does not deploy it.
 The SER8 web/worker/backup units and the host-side watcher and off-host backup scripts are under `deploy/`. The pre-Incus droplet units and the original Node/React implementation (`legacy/`) were removed on 2026-10-20; they remain in git history (`git show 03db8bb:legacy/README.md`).
 
 The cutover report records production SQLite as of **2026-10-13** (78,573 rows, 61 tables verified). Live hosting and the October 14 application deployment were verified; see the [deployment receipt](docs/ops/deployment-2026-10-14.md). Read [SQLite and Incus operations](docs/ops/sqlite-incus.md) and the [cutover report](docs/ops/sqlite-migration.md). The PostgreSQL copy is frozen at cutover; switching back after new SQLite writes requires reconciliation.
+
+### Optional Docker Compose deployment
+
+Compose stores production data in the persistent `rupert-storage` volume and
+runs `bin/prepare-sqlite` before starting web or jobs. The preflight requires
+a nonempty SQLite database at `/app/storage/production.sqlite3`. For an
+existing Rupert database, place a verified SQLite copy at that path in the
+Compose volume before starting services. Existing PostgreSQL volumes or
+backups are not imported by Compose; preserve them and plan any data
+transition separately.
+
+For a genuinely new, empty installation only, set
+`RUPERT_INITIALIZE_DATABASE=1` for the first `docker compose up -d`, then
+remove it after initialization succeeds. This explicitly creates the initial
+SQLite database. Do not use it to bypass the check for an existing deployment.
+Keep Docker volumes and backups when upgrading; do not use `docker compose
+down -v` for routine maintenance. `DATABASE_URL` must remain unset, and any
+`RUPERT_DB_ADAPTER` value must be omitted or exactly `sqlite3`.
 
 ## Features, roadmap and comparison
 

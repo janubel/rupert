@@ -45,7 +45,7 @@ The [October 14 performance receipt](https://github.com/techmore/rupert/blob/mai
 
 Capture a baseline and candidate on the same sanitized snapshot and SER8 allocation. Exercise dashboard, location inventory, customer/SKU search, receiving and sync concurrently. Record p50/p95 request duration, sync duration, oldest ready job, failed-job count, SQLite busy errors, RSS, database/WAL bytes and query plans. Proposed initial gates: no errors or row-count drift; no more than 10% p95 or sync-duration regression; sync finishes before the next 15-minute schedule; backlog drains; no persistent WAL growth across two idle intervals. These are acceptance targets, not measured results.
 
-CI must pass on both database adapters. Before production promotion, make a fresh consistent backup, restore into an isolated instance, check `PRAGMA integrity_check`, foreign-key exceptions against a known baseline, row counts and tenant-scoped business totals. Smoke-test login, inventory/search, read-only sync and a downloaded backup. Never test production credentials in CI.
+The current CI suite runs against the only supported database, SQLite. Before production promotion, make a fresh consistent backup, restore into an isolated instance, check `PRAGMA integrity_check`, foreign-key exceptions against a known baseline, row counts and tenant-scoped business totals. Smoke-test login, inventory/search, read-only sync and a downloaded backup. Never test production credentials in CI.
 
 ## Incus operations and recovery
 
@@ -71,3 +71,11 @@ Any retained pre-cutover PostgreSQL database is frozen history and the applicati
 | Odoo / ERPNext / Dolibarr | Broad standard ERP modules matter more than custom Rails workflows | Data migration, connector fit and operating/training costs; compare the functionality matrix |
 
 [SQLite's deployment guidance](https://www.sqlite.org/whentouse.html) supports an application-server database but recommends a client/server engine when many concurrent writers or multiple networked database clients become necessary. Incus remains a reasonable host for either database. There is no measured reason in this review to replace it.
+
+## Database environment guard
+
+Leave `DATABASE_URL` unset in development, production and Compose. Rupert rejects every nonempty value, including a URL that points to SQLite, so environment-specific database files must be configured with `RUPERT_SQLITE_DATABASE_DEVELOPMENT`, `RUPERT_SQLITE_DATABASE_TEST` or `RUPERT_SQLITE_DATABASE_PRODUCTION`. `RUPERT_DB_ADAPTER=sqlite3` remains accepted for compatibility, but can be omitted; unsupported adapter values fail configuration.
+
+## Optional Docker Compose initialization
+
+Compose mounts `rupert-storage` at `/app/storage` and runs `web/bin/prepare-sqlite` (packaged as `bin/prepare-sqlite`) before web or jobs start. It runs migrations only when that path contains a nonempty SQLite database. Before starting an existing installation, put a verified SQLite copy at `/app/storage/production.sqlite3` in the same persistent volume. For a brand new installation only, set `RUPERT_INITIALIZE_DATABASE=1` for the first start to create the database and schema, then unset it. This flag bypasses the existing-file check and must not be used to silently replace or import an existing database. Preserve old Docker volumes and backups; Compose does not convert a PostgreSQL volume into SQLite.

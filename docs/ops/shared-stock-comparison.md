@@ -30,6 +30,6 @@ The existing Shopify/C-Trax read schedules supply the observations. Complete a S
 
 ## Deployment and recovery
 
-The additive migration adds nullable catalog presence/read-time fields and a separate Shopify stock-snapshot table. Rehearse on a consistent production copy, preserve prior business records/count values and runtime encryption keys, and check both adapters. Promote under `/var/lock/rupert-deploy.lock`, checking the exact prior revision and incorporating newer live changes first. Rebuild assets and restart web/jobs. Verify a complete catalog read, signed stock states, real-data HTML/CSV permissions and backup restoration.
+The additive migration adds nullable catalog presence/read-time fields and a separate Shopify stock-snapshot table. Rehearse on a consistent production copy, preserve prior business records/count values and runtime encryption keys, and validate against SQLite, the only supported database. Promote under `/var/lock/rupert-deploy.lock`, checking the exact prior revision and incorporating newer live changes first. Rebuild assets and restart web/jobs. Verify a complete catalog read, signed stock states, real-data HTML/CSV permissions and backup restoration.
 
 Roll back code without dropping the added fields/table. Never restore an old business database over newer transactions automatically. This rollout does not authorize stock pushes or SKU edits.

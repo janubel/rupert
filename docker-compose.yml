@@ -19,7 +19,9 @@ services:
     env_file: .env
     environment:
       RAILS_ENV: production
-    command: ["bin/rails", "db:prepare"]
+      RUPERT_INITIALIZE_DATABASE: ${RUPERT_INITIALIZE_DATABASE:-0}
+      RUPERT_SQLITE_DATABASE_PRODUCTION: /app/storage/production.sqlite3
+    command: ["bin/prepare-sqlite"]
     # SQLite lives on this shared volume (/app/storage/production.sqlite3).
     volumes:
       - rupert-storage:/app/storage
@@ -32,6 +34,7 @@ services:
     env_file: .env
     environment:
       RAILS_ENV: production
+      RUPERT_SQLITE_DATABASE_PRODUCTION: /app/storage/production.sqlite3
       RAILS_LOG_TO_STDOUT: "1"
       RAILS_SERVE_STATIC_FILES: "1"
       REDIS_URL: redis://redis:6379/1
@@ -55,6 +58,7 @@ services:
     env_file: .env
     environment:
       RAILS_ENV: production
+      RUPERT_SQLITE_DATABASE_PRODUCTION: /app/storage/production.sqlite3
       RAILS_LOG_TO_STDOUT: "1"
       REDIS_URL: redis://redis:6379/1
     volumes:

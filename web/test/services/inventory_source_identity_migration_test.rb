@@ -14,8 +14,8 @@ class InventorySourceIdentityMigrationTest < ActiveSupport::TestCase
   NEW_COLUMNS = %w[source_lines_complete source_financial_status source_line_id source_variant_id].freeze
 
   setup do
-    # Always exercise SQLite in a separate in-memory pool, including on PG CI.
-    # Never rebuild the application test database or its fixture tables.
+    # Exercise the SQLite migration in a separate in-memory pool. Never rebuild
+    # the application test database or its fixture tables.
     IsolatedDatabase.establish_connection(adapter: 'sqlite3', database: ':memory:')
     @pool = IsolatedDatabase.connection_pool
     @connection = @pool.lease_connection

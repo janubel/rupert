@@ -26,7 +26,7 @@ class SystemPageTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'h1', /System health/
     assert_select 'p', /Load average|Memory|Swap|Disk/
-    assert_select 'h2', %r{Web server|Background jobs|Database|Slow / stuck queries}
+    assert_select 'h2', %r{Web server|Background jobs|Database}
   end
 
   test 'store admin cannot view instance diagnostics despite the system permission' do

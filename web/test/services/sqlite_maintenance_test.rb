@@ -3,7 +3,7 @@
 require 'test_helper'
 
 class SqliteMaintenanceTest < ActiveSupport::TestCase
-  test 'diagnostics and optimization preserve business rows' do
+  test 'diagnostics and optimization respect the active adapter and preserve business rows' do
     before = User.order(:id).pluck(:id, :email, :role)
     report = SqliteMaintenance.report
 

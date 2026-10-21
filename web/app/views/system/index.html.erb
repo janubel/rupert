@@ -82,120 +82,18 @@
 
   <section class="card card-pad">
     <h2 class="font-display text-lg text-ink">Database</h2>
-    <dl class="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+    <dl class="mt-3 grid max-w-2xl grid-cols-2 gap-3 text-sm">
       <div class="rounded-xl bg-haze px-4 py-3">
         <dt class="text-xs font-medium text-mocha">Connections</dt>
         <dd class="font-display text-2xl text-ink"><%= @system.db_connections %> / <%= @system.db_max_connections %></dd>
       </div>
       <div class="rounded-xl bg-haze px-4 py-3">
-        <dt class="text-xs font-medium text-mocha">Cache hit rate</dt>
-        <% if @system.db_cache_hit_pct %>
-          <dd class="font-display text-2xl <%= @system.db_cache_hit_pct >= 99 ? "text-fern" : "text-clay" %>"><%= @system.db_cache_hit_pct %>%</dd>
-        <% else %>
-          <dd class="font-display text-2xl text-taupe">n/a</dd>
-        <% end %>
-      </div>
-      <div class="rounded-xl bg-haze px-4 py-3">
         <dt class="text-xs font-medium text-mocha">Size</dt>
         <dd class="font-display text-2xl text-ink"><%= @system.db_size_mb %> MB</dd>
-      </div>
-      <div class="rounded-xl bg-haze px-4 py-3">
-        <dt class="text-xs font-medium text-mocha">Deadlocks</dt>
-        <% if @system.db_deadlocks %>
-          <dd class="font-display text-2xl <%= @system.db_deadlocks.positive? ? "text-rose" : "text-ink" %>"><%= @system.db_deadlocks %></dd>
-        <% else %>
-          <dd class="font-display text-2xl text-taupe">n/a</dd>
-        <% end %>
       </div>
     </dl>
     <div class="mt-4 text-xs text-taupe">
       App cache: <%= @system.cache_entries || "n/a" %> entries · <%= @system.cache_dir_mb %> MB on disk
     </div>
   </section>
-
-  <div class="grid gap-4 lg:grid-cols-2">
-    <div class="card card-pad">
-      <div class="flex items-baseline justify-between">
-        <h2 class="font-display text-lg text-ink">Slow / stuck queries</h2>
-        <span class="text-xs text-taupe">&gt; 1s</span>
-      </div>
-      <% if @system.slow_queries.empty? %>
-        <p class="mt-3 text-sm text-fern">No slow queries right now.</p>
-      <% else %>
-        <ul class="mt-3 divide-y divide-fog text-sm">
-          <% @system.slow_queries.each do |q| %>
-            <li class="py-2">
-              <code class="block truncate font-mono text-xs text-ink"><%= q["query"] %></code>
-              <span class="text-xs <%= q["seconds"].to_f > 5 ? "text-rose" : "text-taupe" %>"><%= q["seconds"] %>s · pid <%= q["pid"] %></span>
-            </li>
-          <% end %>
-        </ul>
-      <% end %>
-    </div>
-
-    <div class="card card-pad">
-      <div class="flex items-baseline justify-between">
-        <h2 class="font-display text-lg text-ink">Locked / blocked queries</h2>
-        <span class="text-xs text-taupe">deadlock risk</span>
-      </div>
-      <% if @system.locked_queries.empty? %>
-        <p class="mt-3 text-sm text-fern">No blocking locks detected.</p>
-      <% else %>
-        <ul class="mt-3 divide-y divide-fog text-sm">
-          <% @system.locked_queries.each do |q| %>
-            <li class="py-2">
-              <code class="block truncate font-mono text-xs text-rose"><%= q["query"] %></code>
-              <span class="text-xs text-taupe">blocked by: <%= q["blocked_by"] %> · <%= q["seconds"] %>s</span>
-            </li>
-          <% end %>
-        </ul>
-      <% end %>
-    </div>
-  </div>
-
-  <div class="grid gap-4 lg:grid-cols-2">
-    <div class="card card-pad">
-      <h2 class="font-display text-lg text-ink">Table bloat</h2>
-      <% if @system.bloat_tables.empty? %>
-        <p class="mt-3 text-sm text-taupe">No tables with heavy dead tuples.</p>
-      <% else %>
-        <table class="mt-2 w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
-            <tr><th scope="col" class="th">Table</th><th scope="col" class="th text-right">Dead tuples</th><th scope="col" class="th text-right">% dead</th></tr>
-          </thead>
-          <tbody class="divide-y divide-fog">
-            <% @system.bloat_tables.each do |t| %>
-              <tr>
-                <td class="td font-mono text-xs text-ink"><%= t["table"] %></td>
-                <td class="td text-right text-mocha"><%= t["n_dead_tup"] %></td>
-                <td class="td text-right <%= t["dead_pct"].to_f > 30 ? "text-clay" : "text-mocha" %>"><%= t["dead_pct"] %>%</td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-        <p class="mt-2 text-xs text-taupe">Run <code class="rounded bg-haze px-1 font-mono">VACUUM (ANALYZE)</code> on hot tables to reclaim space.</p>
-      <% end %>
-    </div>
-
-    <div class="card card-pad">
-      <h2 class="font-display text-lg text-ink">Largest tables</h2>
-      <table class="mt-2 w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
-          <tr><th scope="col" class="th">Table</th><th scope="col" class="th text-right">Size</th><th scope="col" class="th text-right">Rows</th></tr>
-        </thead>
-        <tbody class="divide-y divide-fog">
-          <% if @system.big_tables.empty? %>
-            <tr><td colspan="3" class="empty-row">No tables reported yet.</td></tr>
-          <% end %>
-          <% @system.big_tables.each do |t| %>
-            <tr>
-              <td class="td font-mono text-xs text-ink"><%= t["table"] %></td>
-              <td class="td text-right text-mocha"><%= t["mb"] %> MB</td>
-              <td class="td text-right text-mocha"><%= t["n_live_tup"] %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
 </div>

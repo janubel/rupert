@@ -23,7 +23,8 @@ class CreatePosCheckout < ActiveRecord::Migration[8.0]
       t.string :tenant_id, null: false
       t.string :location_id, null: false
       t.references :user, null: false, foreign_key: true
-      t.references :pos_display_session, null: false, foreign_key: true
+      # The display-session table is created by the later reconciliation migration.
+      t.references :pos_display_session, null: false
       t.references :pos_session, foreign_key: true
       t.integer :cart_revision, null: false
       t.string :reference, null: false

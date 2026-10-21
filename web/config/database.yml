@@ -1,7 +1,13 @@
+<%
+requested_adapter = ENV.fetch("RUPERT_DB_ADAPTER", "sqlite3")
+raise "Rupert supports SQLite only; remove RUPERT_DB_ADAPTER or set it to sqlite3" unless requested_adapter == "sqlite3"
+raise "Rupert supports SQLite only; unset DATABASE_URL and use RUPERT_SQLITE_DATABASE_* paths" unless ENV.fetch("DATABASE_URL", "").empty?
+%>
 # SQLite is the only supported database (production, CI, development, test).
 # See docs/ops/sqlite-incus.md for deployment tradeoffs and tuning.
 default: &default
   adapter: sqlite3
+  schema_dump: schema.rb
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   timeout: <%= ENV.fetch("SQLITE_BUSY_TIMEOUT_MS", 5000) %>
   journal_mode: wal

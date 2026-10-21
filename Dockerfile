@@ -31,6 +31,7 @@ RUN chmod +x /usr/bin/entrypoint.sh
 # Run as a non-root user so a compromise of the app can't root the container
 # or the mounted storage volume.
 RUN addgroup -S app && adduser -S app -G app \
+    && mkdir -p /app/storage \
     && chown -R app:app /app /usr/bin/entrypoint.sh
 
 USER app

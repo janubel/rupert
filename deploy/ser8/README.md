@@ -40,3 +40,5 @@ systemctl daemon-reload && systemctl enable --now rupert-autodeploy.timer
 
 Check by hand: `DRY_RUN=1 /usr/local/sbin/rupert-autodeploy.sh`. Logs: `journalctl -u rupert-autodeploy`.
 Stop it with `systemctl disable --now rupert-autodeploy.timer`.
+
+When updating an installed watcher, replace the copied `/usr/local/sbin/rupert-autodeploy.sh` with the current repository version before re-enabling the timer. Older copies may still require the retired PostgreSQL CI check and otherwise keep deployments blocked. The source script now gates on `CI (sqlite3)` only.
