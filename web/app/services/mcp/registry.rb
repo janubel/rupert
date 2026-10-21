@@ -7,7 +7,9 @@ module Mcp
       [
         Tools::GetWorkspaceInfo, Tools::ListReports, Tools::SalesSummary, Tools::SalesTaxReport,
         Tools::InventorySearch, Tools::StockComparison, Tools::SwipesimpleItems, Tools::TimeKeepingReport, Tools::ListTasks,
-        Tools::CreateTask, Tools::ListAlerts, Tools::AiHealth, Tools::SubmitFeedback, Tools::ListMyFeedback
+        Tools::CreateTask, Tools::ListAlerts, Tools::AiHealth, Tools::SubmitFeedback, Tools::ListMyFeedback,
+        Tools::InstanceStatus, Tools::RecentErrors, Tools::SyncHealth, Tools::BackupFreshness, Tools::DeployStatus,
+        Tools::ListFeedback, Tools::ReportContext
       ]
     end
 
