@@ -1,0 +1,49 @@
+# SER8 (Incus container "rupert"): install to /etc/systemd/system/rupert-buzz.service. Runs the ONE @rupert Buzz agent:
+# buzz-acp (the Buzz harness) driving opencode. Needs /usr/local/bin/{buzz-acp,buzz,opencode}, the opencode config
+# (deploy/ser8/buzz/opencode.json at /etc/rupert-buzz/opencode.json) and BUZZ_* settings; see docs/ops/buzz-relay-ser8.md.
+# /etc/rupert-buzz.env (root-only, optional) holds RUPERT_MCP_TOKEN (read-only Rupert MCP token); the opencode key
+# OPENCODE_API_KEY belongs in /etc/rupert.env so the AI-health card can validate the same key.
+# Run exactly one agent: do not also start bin/opencode_agent or bin/buzz_listener (they speak as the same identity).
+[Unit]
+Description=Rupert @rupert Buzz agent (buzz-acp driving opencode)
+After=network-online.target rupert-web.service
+Wants=network-online.target
+ConditionPathExists=/usr/local/bin/buzz-acp
+ConditionPathExists=/usr/local/bin/opencode
+
+[Service]
+Type=simple
+User=rupert
+Group=rupert
+WorkingDirectory=/opt/rupert/web
+EnvironmentFile=/etc/rupert.env
+EnvironmentFile=-/etc/rupert-buzz.env
+Environment=RAILS_ENV=production
+Environment=RAILS_LOG_TO_STDOUT=1
+Environment=BUNDLE_FROZEN=true
+Environment=PATH=/opt/rbenv/versions/4.0.6/bin:/opt/rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# opencode keeps its sessions, cache and logs here, away from the app checkout (a dirty checkout blocks auto-deploy).
+StateDirectory=rupert-buzz
+Environment=XDG_CONFIG_HOME=/var/lib/rupert-buzz/config
+Environment=XDG_DATA_HOME=/var/lib/rupert-buzz/data
+Environment=XDG_CACHE_HOME=/var/lib/rupert-buzz/cache
+Environment=XDG_STATE_HOME=/var/lib/rupert-buzz/state
+Environment=OPENCODE_CONFIG=/etc/rupert-buzz/opencode.json
+ExecStart=/opt/rupert/web/bin/buzz_acp_agent
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+UMask=0077
+# No network exposure: the agent only dials out (relay, opencode.ai) and talks to Rupert on localhost.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/rupert/web/storage /opt/rupert/web/tmp /opt/rupert/web/log
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -68,3 +68,17 @@ Check by hand: `DRY_RUN=1 /usr/local/sbin/rupert-autodeploy.sh`. Logs: `journalc
 Stop it with `systemctl disable --now rupert-autodeploy.timer`.
 
 When updating an installed watcher, replace the copied `/usr/local/sbin/rupert-autodeploy.sh` with the current repository version before re-enabling the timer. Older copies may still require the retired PostgreSQL CI check and otherwise keep deployments blocked. The source script now gates on `CI (sqlite3)` only.
+
+## Buzz relay and the @rupert agent
+
+The self-hosted Buzz relay is an Incus container (`buzz`) on SER8; its files are not installed from this directory.
+This directory holds what runs around it:
+
+- `rupert-buzz.service`: the one `@rupert` agent (buzz-acp driving opencode), inside the `rupert` container.
+- `buzz/opencode.json`: the opencode config (agent `buzz` limited to the buzz CLI and Rupert's report scripts; agent
+  `chat` with every tool denied). Install as `/etc/rupert-buzz/opencode.json`.
+- `buzz/backup-buzz.sh`, `buzz-backup.service`, `buzz-backup.timer`: encrypted off-container backup of the relay's
+  Postgres, media and secrets (host user timer, same key as `rupert-offhost-backup.sh`).
+- `buzz/permission-test/`: mock-model check that the agent's permission rules hold.
+
+Full runbook, install steps, rollback and what is unverified: [docs/ops/buzz-relay-ser8.md](../../docs/ops/buzz-relay-ser8.md).
