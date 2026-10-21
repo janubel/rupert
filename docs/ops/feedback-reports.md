@@ -97,7 +97,7 @@ Give a development agent a token with only `system:read` and `feedback:read` (pl
 ## Chat intake: the `@rupert` Buzz agent
 
 A teammate writes to `@rupert` in plain English. The agent prompt
-(`docs/ops/buzz-agent-prompt.txt`) tells it to decide whether the message is a
+(`web/config/buzz_agent/acp.md`, rendered to `docs/ops/buzz-agent-prompt.txt` by `rake buzz:prompt`) tells it to decide whether the message is a
 **question**, **bug**, **request** or **direction**, to answer questions from the
 read-only quick reports, and otherwise to file it with
 `bin/rails runner scripts/feedback_intake.rb file` (JSON on standard input, so
