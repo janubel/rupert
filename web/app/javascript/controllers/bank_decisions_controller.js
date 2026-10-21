@@ -105,8 +105,18 @@ export default class extends Controller {
     this.sync()
   }
 
+  // Only real choices and changed names travel with the form. Lines left on
+  // "Decide later" and untouched name fields are disabled for the submission
+  // so a long page stays well under the server's limit on form fields.
   submit() {
     this.submitting = true
+    this.choiceTargets.forEach((select) => {
+      if (!select.value || select.value === "leave") select.disabled = true
+    })
+    const changed = this.namedPayers()
+    this.payerTargets.forEach((input) => {
+      if (!changed.includes(input)) input.disabled = true
+    })
   }
 
   sync() {
