@@ -2,7 +2,7 @@
 # Weekly restore drill for Rupert's encrypted off-host backups. Runs on the SER8 HOST as the same user as
 # rupert-offhost-backup.sh. A backup that was never restored is a hope, not a backup: this decrypts the newest set
 # into memory-backed temp space (never the disk), gunzips it, runs SQLite integrity and foreign-key checks, counts
-# the business tables and checks the settings dump and env copy decrypt. Result goes to System → Backups
+# the business tables (with python3's sqlite3 module; the host has no sqlite3 CLI) and checks the settings dump and env copy decrypt. Result goes to System → Backups
 # (layer "verify") and to the journal. Nothing touches the live database or the container's files.
 #
 #   install -Dm755 deploy/ser8/rupert-backup-verify.sh ~/.local/bin/rupert-backup-verify.sh
@@ -44,16 +44,28 @@ trap 'rm -rf "$WORK"' EXIT
 ( cd "$OUT" && sha256sum -c --quiet "$(basename "$ENC").sha256" ) || fail "ciphertext digest mismatch for $ENC"
 
 openssl enc -d -aes-256-cbc -pbkdf2 -pass "file:$KEY_FILE" -in "$ENC" | gunzip -c > "$WORK/restored.sqlite3" || fail "could not decrypt or decompress $ENC"
-[ "$(sqlite3 "$WORK/restored.sqlite3" 'PRAGMA integrity_check')" = "ok" ] || fail "integrity_check failed on restored copy of $ENC"
-fk=$(sqlite3 "$WORK/restored.sqlite3" 'PRAGMA foreign_key_check' | wc -l)
-[ "$fk" -eq 0 ] || fail "foreign_key_check reported $fk problem rows on restored copy of $ENC"
 
-counts=""
-for t in $TABLES; do
-  n=$(sqlite3 "$WORK/restored.sqlite3" "SELECT COUNT(*) FROM \"$t\"" 2>/dev/null) || fail "table $t missing from restored copy"
-  counts="$counts$t=$n "
-done
-[ "$(sqlite3 "$WORK/restored.sqlite3" 'SELECT COUNT(*) FROM users')" -gt 0 ] || fail "restored copy has no users"
+# The host has python3 but no sqlite3 CLI; python's sqlite3 module runs the same PRAGMAs.
+# Prints "ok <fk-problem-count> table=count ..." or the integrity_check text on failure.
+checks=$(python3 - "$WORK/restored.sqlite3" $TABLES <<'PYEOF'
+import sqlite3, sys
+db = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+integrity = db.execute("PRAGMA integrity_check").fetchone()[0]
+if integrity != "ok":
+    print(integrity); sys.exit(2)
+fk = len(db.execute("PRAGMA foreign_key_check").fetchall())
+counts = []
+for table in sys.argv[2:]:
+    try:
+        counts.append(f"{table}={db.execute(f'SELECT COUNT(*) FROM \"{table}\"').fetchone()[0]}")
+    except sqlite3.Error:
+        print(f"table {table} missing"); sys.exit(3)
+print("ok", fk, *counts)
+PYEOF
+) || fail "restored copy of $ENC failed: ${checks:-sqlite check error}"
+read -r _ fk counts <<<"$checks"
+[ "$fk" -eq 0 ] || fail "foreign_key_check reported $fk problem rows on restored copy of $ENC"
+case " $counts " in *" users=0 "*) fail "restored copy has no users";; esac
 
 for side in "settings-$stamp.sql.enc" "env-sqlite-$stamp.enc"; do
   [ -f "$OUT/$side" ] || fail "sidecar $side missing"
@@ -62,6 +74,6 @@ for side in "settings-$stamp.sql.enc" "env-sqlite-$stamp.enc"; do
 done
 grep -q '^RAILS_ENCRYPTION_PRIMARY_KEY=' "$WORK/side" || fail "env copy has no RAILS_ENCRYPTION_PRIMARY_KEY; settings could not be decrypted after a restore"
 
-msg="restore drill ok on set $stamp (${age_h}h old): integrity ok, no FK errors; ${counts% }"
+msg="restore drill ok on set $stamp (${age_h}h old): integrity ok, no FK errors; $counts"
 write_status ok "$msg" "$ENC" "$(stat -c %s "$ENC")"
 echo "$msg"
