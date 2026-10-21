@@ -4,12 +4,11 @@ require 'test_helper'
 require 'sqlite3'
 
 class BackupServiceTest < ActiveSupport::TestCase
-  test 'PostgreSQL restore refuses before invoking any database command' do
-    BackupService.stubs(:postgres?).returns(true)
+  test 'restore refuses before invoking any database command' do
     BackupService.expects(:system).never
     Dir.mktmpdir do |dir|
-      path = File.join(dir, 'synthetic.dump')
-      File.binwrite(path, 'PGDMP synthetic archive')
+      path = File.join(dir, 'synthetic.sqlite3')
+      File.binwrite(path, 'SQLite format 3 synthetic snapshot')
       error = assert_raises(BackupService::RestoreError) { BackupService.restore!(path) }
       assert_match(/offline maintenance/, error.message)
     end

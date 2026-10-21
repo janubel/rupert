@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-# Adapter-aware contains search. PostgreSQL uses ILIKE and pg_trgm; the
-# SQLite experiment uses FTS5 trigram indexes for longer queries and a
+# SQLite contains search: FTS5 trigram indexes for longer queries and a
 # case-insensitive LIKE fallback for short queries or schema-loaded DBs.
 module SearchSql
   module_function
@@ -13,7 +12,7 @@ module SearchSql
   }.freeze
 
   def match(scope, model:, fts_table:, columns:, term:, row_key: 'id')
-    if sqlite? && term.length >= 3 && table_exists?(fts_table)
+    if term.length >= 3 && table_exists?(fts_table)
       ensure_fts_ready!(fts_table)
       connection = ActiveRecord::Base.connection
       table = connection.quote_table_name(model.table_name)
@@ -27,26 +26,14 @@ module SearchSql
   end
 
   def contains_any(columns)
-    if sqlite?
-      columns.map { |column| "#{column} LIKE ? COLLATE NOCASE" }.join(' OR ')
-    else
-      columns.map { |column| "#{column} ILIKE ?" }.join(' OR ')
-    end
-  end
-
-  def sqlite?
-    ActiveRecord::Base.connection.adapter_name.downcase.include?('sqlite')
+    columns.map { |column| "#{column} LIKE ? COLLATE NOCASE" }.join(' OR ')
   end
 
   def table_exists?(name)
     connection = ActiveRecord::Base.connection
-    if sqlite?
-      connection.select_value(
-        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = #{connection.quote(name)} LIMIT 1"
-      ).present?
-    else
-      connection.data_source_exists?(name)
-    end
+    connection.select_value(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = #{connection.quote(name)} LIMIT 1"
+    ).present?
   rescue ActiveRecord::StatementInvalid
     false
   end

@@ -31,23 +31,21 @@ Square ───┼── sync engine ──▶ SQLite DB     ──▶ GUI
 ## Local development
 
 Requirements: Ruby 4.0.6 (rbenv), Bundler, and Node (for the Shopify CLI
-and JavaScript tests). SQLite is the simplest local setup; PostgreSQL 16
-is also supported.
+and JavaScript tests). SQLite is the only supported database; no database
+server is needed.
 
 ```bash
 cp .env.example .env    # from repo root; configure local credentials
 cd web
 bundle install
-export RUPERT_DB_ADAPTER=sqlite3
 bin/rails db:prepare
 bin/rails tailwindcss:build
 bin/rails server        # http://localhost:3000
 ```
 
-For PostgreSQL, set `RUPERT_DB_ADAPTER=postgresql` and `POSTGRES_*`, then
-create a local `rupert_development` database before `db:prepare`. Legacy
-imports and production adapter migrations are separate operations; see
-[SQLite and Incus operations](docs/ops/sqlite-incus.md).
+The development database is `web/storage/development.sqlite3` (override with
+`RUPERT_SQLITE_DATABASE_DEVELOPMENT`). For production operations, tuning and
+recovery see [SQLite and Incus operations](docs/ops/sqlite-incus.md).
 
 The `.env` at the repo root is loaded at boot (Dotenv) and holds the sync
 engine credentials (`SHOPIFY_CLIENT_ID/SECRET`, `SQUARE_ACCESS_TOKEN`, …).
@@ -123,7 +121,7 @@ and never write SKUs without explicit sign-off.**
   - `GET /settings/env.json` · masked env keys
   - `POST /settings/env_import` · body `{ "text": "KEY=VALUE\n…" }`
   - `GET /settings/env_export` · full `.env` text
-  - `GET /settings/backup` · consistent adapter-aware snapshot (SQLite or PostgreSQL)
+  - `GET /settings/backup` · consistent SQLite snapshot (`VACUUM INTO`)
   - `POST /settings/restore` · multipart `file` upload
 - **Team / People (HR)** — full staff lifecycle:
   - **Staff** · HR records with department, position, and status lifecycle
@@ -154,7 +152,7 @@ manual source (`SwipesimpleImporter`) feeds CSV exports through the same seam.
 - HR: `app/modules/people/` (staff, departments, positions, timesheets,
   leave & PTO, payroll) with `PayrollCalculator` turning approved timesheets
   into payslips
-- DB: SQLite with FTS5 search runs in production as recorded by the October 13 cutover report. PostgreSQL remains the default for unconfigured environments; CI covers both adapters. See `docs/ops/sqlite-incus.md` for tuning, recovery and scaling triggers.
+- DB: SQLite with FTS5 search runs in production as recorded by the October 13 cutover report. SQLite is the only supported database and CI runs the suite on it. See `docs/ops/sqlite-incus.md` for tuning, recovery and scaling triggers.
 
 ## Production and deployment
 
@@ -193,7 +191,7 @@ records; no longer written), `Location`,
   rejected (`[API] Invalid API key or access token`), re-install the app on
   the store or regenerate the secret in the Shopify admin — the sync will
   fail loudly in the Sync page until then.
-- **SQLite** is the recorded production database; PostgreSQL remains supported for development and scaling alternatives. Mirror/journal tables are pruned
+- **SQLite** is the only supported database (production, CI, development). Mirror/journal tables are pruned
   nightly by `DataRetentionJob`; canonical business data is never pruned.
 - **Shopify and Square are separate locations with independent inventories.**
   The sync is a read-only mirror; nothing equalizes quantities across them.

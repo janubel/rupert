@@ -42,9 +42,9 @@ Sales-tax allocation separates the amount including tip from the order's collect
 
 ## Database restoration
 
-Live database restoration through the web UI is disabled for both adapters. An HTTP request cannot stop other web/job writers. PostgreSQL transaction rollback does not preserve writes committed after an older recovery dump if that dump is replayed; even a successful replacement discards newer activity. SQLite cannot safely replace an open WAL database. Snapshot downloads remain available, use unique private filenames for overlapping requests, and retain the adapter-specific file extension.
+Live database restoration through the web UI is disabled. An HTTP request cannot stop other web/job writers; even a successful replacement discards newer activity. SQLite cannot safely replace an open WAL database. Snapshot downloads remain available, use unique private filenames for overlapping requests, and retain the `.sqlite3` file extension.
 
-An instance operator restoring a database must first take a consistent database backup using the SQLite backup API or PostgreSQL pg_dump, verify a restored copy with integrity and foreign-key checks, preserve configuration and encryption keys privately, stop all web/job writers and close their connections, then restore and verify before starting services. Preserve subsequent business writes and an explicit reconciliation plan before choosing an older backup. A plain copy of the live main database file does not include uncheckpointed WAL commits.
+An instance operator restoring a database must first take a consistent database backup using the SQLite backup API (`VACUUM INTO`), verify a restored copy with integrity and foreign-key checks, preserve configuration and encryption keys privately, stop all web/job writers and close their connections, then restore and verify before starting services. Preserve subsequent business writes and an explicit reconciliation plan before choosing an older backup. A plain copy of the live main database file does not include uncheckpointed WAL commits.
 
 ## Local Orchard instance
 

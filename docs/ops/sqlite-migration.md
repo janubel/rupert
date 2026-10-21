@@ -1,5 +1,10 @@
 # Moving the live Rupert instance (SER8) from PostgreSQL to SQLite
 
+> **Historical record.** PostgreSQL support was removed from the codebase (issue #263): the `pg` gem, the
+> `db:postgres_to_sqlite` / `db:sqlite_to_postgres` tasks, `bin/migrate-to-sqlite` and `cutover-ser8.sh` described
+> below no longer exist in the tree. They remain in git history (last present at commit `6383a25c`). Treat the
+> sections below as cutover evidence, not instructions.
+
 Status: **DONE on SER8, 2026-10-13.** 78,573 rows in 61 tables copied with every count verified; the app runs on
 SQLite (`/opt/rupert/web/storage/production.sqlite3`) and `rupert-backup.timer` snapshots it every 6 hours.
 PostgreSQL on `rupert-db` still holds the pre-cutover data and was never modified, but it is frozen at cutover. Switching back now requires migrating/reconciling all subsequent SQLite writes; simply unsetting the adapter would lose those changes.

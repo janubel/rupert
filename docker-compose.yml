@@ -1,20 +1,4 @@
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      POSTGRES_DB: rupert_production
-      POSTGRES_USER: rupert
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Compose environment}
-    volumes:
-      - rupert-pg:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rupert"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -35,14 +19,10 @@ services:
     env_file: .env
     environment:
       RAILS_ENV: production
-      POSTGRES_HOST: db
-      POSTGRES_USER: rupert
-      POSTGRES_DB: rupert_production
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Compose environment}
     command: ["bin/rails", "db:prepare"]
-    depends_on:
-      db:
-        condition: service_healthy
+    # SQLite lives on this shared volume (/app/storage/production.sqlite3).
+    volumes:
+      - rupert-storage:/app/storage
 
   web:
     image: ghcr.io/techmore/rupert:latest
@@ -54,10 +34,6 @@ services:
       RAILS_ENV: production
       RAILS_LOG_TO_STDOUT: "1"
       RAILS_SERVE_STATIC_FILES: "1"
-      POSTGRES_HOST: db
-      POSTGRES_USER: rupert
-      POSTGRES_DB: rupert_production
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Compose environment}
       REDIS_URL: redis://redis:6379/1
     volumes:
       - rupert-storage:/app/storage
@@ -80,10 +56,6 @@ services:
     environment:
       RAILS_ENV: production
       RAILS_LOG_TO_STDOUT: "1"
-      POSTGRES_HOST: db
-      POSTGRES_USER: rupert
-      POSTGRES_DB: rupert_production
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Compose environment}
       REDIS_URL: redis://redis:6379/1
     volumes:
       - rupert-storage:/app/storage
@@ -95,6 +67,5 @@ services:
         condition: service_healthy
 
 volumes:
-  rupert-pg:
   rupert-redis:
   rupert-storage:

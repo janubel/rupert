@@ -21,7 +21,7 @@ Check by hand: `~/.local/bin/rupert-sync-watch.sh` (exit 0 = fresh). `MAX_AGE_MI
 
 Runs **inside the `rupert` Incus container** as root. Every 5 minutes it fetches `origin/main` and deploys it to
 `/opt/rupert` only when all of these hold: the move is a fast-forward, the checkout is clean, and the `CI (sqlite3)`
-and `CI (postgresql)` checks are green for that commit (read from the public GitHub API, no token; for a re-run job
+check is green for that commit (read from the public GitHub API, no token; for a re-run job
 only its latest run counts).
 
 Each deploy takes a SQLite backup first (last 5 kept in `/var/backups/rupert-autodeploy`), then runs `bundle install`,

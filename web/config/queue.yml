@@ -5,8 +5,8 @@ default: &default
   workers:
     - queues: "*"
       # SQLite has one writer; default to one job thread to reduce contention
-      # with web requests. PostgreSQL retains the existing three-thread default.
-      threads: <%= ENV.fetch("JOB_THREADS", ENV.fetch("RUPERT_DB_ADAPTER", "postgresql") == "sqlite3" ? 1 : 3) %>
+      # with web requests.
+      threads: <%= ENV.fetch("JOB_THREADS", 1) %>
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
       polling_interval: 1
 

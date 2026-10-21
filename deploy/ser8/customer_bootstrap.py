@@ -36,7 +36,7 @@ def main():
             'RUPERT_NODE_MODE': 'workspace', 'RUPERT_TENANT_ID': payload['tenant_id'],
             'RUPERT_WORKSPACE_ID': payload['instance_id'], 'RUPERT_INSTANCE_HOSTNAME': payload['hostname'],
             'RUPERT_INSTANCE_SECRET': payload['instance_secret'], 'RUPERT_CONTROL_PLANE_ORIGIN': payload['control_origin'],
-            'RUPERT_BUILD_SHA': payload['revision'], 'RUPERT_DB_ADAPTER': 'sqlite3',
+            'RUPERT_BUILD_SHA': payload['revision'],
             'RUPERT_SQLITE_DATABASE_PRODUCTION': '/var/lib/rupert/production.sqlite3',
             'SECRET_KEY_BASE': secrets.token_hex(64), 'RAILS_ENCRYPTION_PRIMARY_KEY': secrets.token_hex(32),
             'RAILS_ENCRYPTION_DETERMINISTIC_KEY': secrets.token_hex(32), 'RAILS_ENCRYPTION_KEY_DERIVATION_SALT': secrets.token_hex(32),

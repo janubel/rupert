@@ -4,7 +4,7 @@ require Rails.root.join('db/migrate/20261018220000_create_warehouse_stock_holds'
 raise 'Test-only migration check' unless Rails.env.test?
 raise 'Requires an empty synthetic warehouse database' unless WarehouseStockHold.unscoped.count.zero? && WarehouseCart.count.zero? && WarehousePaymentAttempt.unscoped.count.zero?
 config = ActiveRecord::Base.connection_db_config
-raise 'Unexpected test database' unless config.adapter == 'postgresql' && config.database == 'rupert_test' || config.adapter == 'sqlite3' && File.basename(config.database).include?('test')
+raise 'Unexpected test database' unless config.adapter == 'sqlite3' && File.basename(config.database).include?('test')
 migration = CreateWarehouseStockHolds.new('CreateWarehouseStockHolds', 20261018220000)
 migration.migrate(:down)
 tenant = Tenant.create!(name: 'Synthetic migration tenant', subdomain: 'synthetic-hold-migration')

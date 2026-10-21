@@ -57,7 +57,7 @@ Never restore an older database over newer transactions as a test. A restore is 
 9. **Re-sync**: run a full sync from the Sync page. The mirror is idempotent; the watermark re-reads the last 48 hours of orders plus whatever was lost.
 10. **Record** what was restored, from which stamp, the data gap (RPO actually incurred) and the elapsed time (RTO actually achieved).
 
-PostgreSQL copies from before the October 2026 cutover are frozen history and are not a restore source.
+PostgreSQL copies from before the October 2026 cutover are frozen history and are not a restore source; the application can no longer read them.
 
 ## Keys and rotation
 
