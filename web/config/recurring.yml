@@ -120,3 +120,7 @@ production:
     class: AskRupertRetentionJob
     queue: default
     schedule: "50 3 * * * America/New_York"
+  buzz_chat_retention:
+    class: BuzzChatRetentionJob
+    queue: default
+    schedule: "55 3 * * * America/New_York"
