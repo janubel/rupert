@@ -24,7 +24,7 @@ class InventoryLocationViewTest < ActionDispatch::IntegrationTest
   test 'comparison entry point opens the shared read-only comparison and preserves search' do
     get stock_comparison_path, params: { q: 'Tea' }
     assert_response :success
-    assert_select 'h1', 'Shopify & C-Trax stock'
+    assert_select 'h1', 'Store comparison'
     assert_includes response.body, 'Online stock'
     assert_includes response.body, 'Retail stock'
     assert_not_includes response.body, 'OLD-SQUARE-STOCK'

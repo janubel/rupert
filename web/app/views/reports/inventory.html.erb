@@ -1,4 +1,13 @@
 <%= render "reports/layout", title: "Inventory report", subtitle: "Stock valuation, movement, and low-stock pipeline." do %>
+  <% if Current.user.can?('inventory.read') %>
+    <div class="card card-pad flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-mocha"><strong class="text-ink">Store comparison</strong> — Shopify vs C-Trax stock for each item, ready to print.</p>
+      <div class="flex flex-wrap gap-2">
+        <%= link_to 'Download store comparison PDF', stock_comparison_path(format: :pdf), class: 'btn-primary btn-sm', data: { turbo: false } %>
+        <%= link_to 'Open store comparison', stock_comparison_path, class: 'btn-ghost btn-sm' %>
+      </div>
+    </div>
+  <% end %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-5">
     <div class="stat">
       <div class="stat-label">Stock value (retail)<%= define('stock_value') %></div>

@@ -71,7 +71,7 @@ class DemoTimesheetsTest < ActionDispatch::IntegrationTest
     sign_in(@reviewer)
     get people_timesheets_path
     assert_response :success
-    assert_select 'nav[aria-label="Timesheet review"]'
+    assert_select 'select[name=status][aria-label="Timesheet review"]'
     get people_timesheet_path(@sheets.first)
     assert_response :success
     assert_select 'form[action=?]', approve_people_timesheet_path(@sheets.first)
