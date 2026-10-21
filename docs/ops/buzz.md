@@ -2,7 +2,10 @@
 
 Buzz is the team's chat. Rupert's agent, `@rupert`, is a member of the channel with its own identity. This note covers what Buzz is, how people connect their own devices from Rupert, how it is configured, and how the agent is defined and run.
 
-Status on 2026-10-21: **Buzz is not configured in production** (no relay, key or channel) and **no agent process runs on SER8** (`opencode`, `buzz` and `buzz-acp` are not installed in the `rupert` container). Everything below is ready to switch on; nothing needs a deploy to do so except installing the agent runtime.
+Status on 2026-10-21 (updated): the team's own relay now runs on SER8 and Rupert's Buzz settings point at it; the agent is
+installed but waits on a public hostname (Caddy and DNS) and a new opencode key. **Everything about the relay, its
+containers, keys, channels, backups, the agent service and the permission rules is in
+[buzz-relay-ser8.md](buzz-relay-ser8.md).** The sections below describe Buzz and Rupert's side in general.
 
 ## What Buzz is (verified against github.com/block/buzz, 2026-10-21)
 
@@ -55,8 +58,8 @@ Audit on 2026-10-21 found three overlapping implementations with three different
 
 | Implementation | What it is | Decision |
 | --- | --- | --- |
-| `OpencodeChatAgent` (`bin/opencode_agent`) | LLM reply through `opencode run` with every tool disabled, plus a one-line operations snapshot | **The runner to deploy.** Uses `BuzzAgentPrompt` in `text_only` mode |
-| `bin/buzz_acp_agent` + `docs/ops/buzz-agent-prompt.txt` | The upstream `buzz-acp` harness driving opencode; can run read-only quick reports | Optional. The prompt file is `BuzzAgentPrompt` in `acp` mode; keep the opencode agent it drives restricted to the listed commands |
+| `OpencodeChatAgent` (`bin/opencode_agent`) | LLM reply through `opencode run` with every tool disabled, plus a one-line operations snapshot | Text-only fallback. Uses `BuzzAgentPrompt` in `text_only` mode |
+| `bin/buzz_acp_agent` + `docs/ops/buzz-agent-prompt.txt` | The upstream `buzz-acp` harness driving `opencode acp`; runs read-only quick reports and files reports | **The runner deployed on SER8** (`deploy/ser8/rupert-buzz.service`, see [buzz-relay-ser8.md](buzz-relay-ser8.md)). The opencode agent it drives is limited to the listed commands (`deploy/ser8/buzz/opencode.json`) |
 | `BuzzListener` + `BuzzResponder` | Regex rules ("sync now", "status", "counts"), no LLM | Legacy fallback; not the recommended runner. It can start a sync from chat, which the LLM agent cannot |
 
 One agent is enough: they all speak as `@rupert` with the same key, so run exactly one. The acp prompt in `docs/ops/` is generated; after editing `config/buzz_agent/*.md` refresh it with
@@ -79,7 +82,7 @@ People can link their Buzz account to their Rupert account (Buzz page, *Link you
 2. In Rupert: Settings, set `BUZZ_RELAY_URL` and `BUZZ_CHANNEL`, Generate agent keypair, Publish agent profile, Check status.
 3. In Buzz, add the agent's npub to the channel (closed relays also need each person added).
 4. Open the Buzz card from the header and share it with the team.
-5. To have the agent answer: install `opencode` on the host and add a service unit for `bin/opencode_agent` (none exists yet under `deploy/`).
+5. To have the agent answer: install `buzz-acp`, `buzz` and the pinned `opencode`, then the `rupert-buzz` unit; all of it, with a tested recipe for SER8, is in [buzz-relay-ser8.md](buzz-relay-ser8.md).
 
 ## Team chat inside Rupert (Buzz page, "Team chat" tab)
 
@@ -143,4 +146,4 @@ Why polling and not Turbo Streams / Action Cable: production runs SQLite with no
 - Whether the Buzz mobile apps are installable by the public (no store listing found); set `BUZZ_DOWNLOAD_IOS` / `BUZZ_DOWNLOAD_ANDROID` when you have a TestFlight or store link.
 - That scanning the QR in a phone camera opens the Buzz mobile app: the `buzz` scheme is registered in the mobile manifests, and the mobile app accepts `add-community` links, but this was not tried on a device.
 - `buzz://channel/<uuid>` is handled by the desktop app source; whether mobile opens it was not checked.
-- No live relay was available, so **Check status** and the agent runner were exercised with stubs only.
+- ~~No live relay was available~~ A live relay now exists (see [buzz-relay-ser8.md](buzz-relay-ser8.md) for what was and was not verified against it).
