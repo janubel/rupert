@@ -59,6 +59,10 @@ class SwipesimpleWebReportsTest < ActiveSupport::TestCase
     assert_equal [-1_000, -60, -1_060], refund.values_at(:pre_tax_cents, :tax_cents, :total_cents)
   end
 
+  test 'a month with no taxed sales is the header row alone and parses as no days' do
+    assert_equal [], parse("Date,Tax Rate,Pre-Tax Subtotal,Total $ of Sales Tax,Total $ of Sales\n")
+  end
+
   test 'parses the sales report keeping blank amounts unknown' do
     rows = parse(SALES_CSV, topic: 'sales')
     assert_equal 2, rows.size
