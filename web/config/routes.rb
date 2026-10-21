@@ -195,6 +195,7 @@ Rails.application.routes.draw do
   get '/search', to: 'search#index', as: :search
   get '/dashboard', to: 'home#index'
   get '/roadmap', to: 'roadmap#index', as: :roadmap
+  get '/buzz', to: 'buzz#show', as: :buzz
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)
@@ -530,6 +531,7 @@ Rails.application.routes.draw do
     post :buzz_generate
     post :buzz_register
     post :buzz_test
+    post :buzz_status
   end
 
   resources :size_families, only: %i[index new create edit update destroy] do

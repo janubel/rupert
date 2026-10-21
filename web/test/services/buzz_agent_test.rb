@@ -141,4 +141,27 @@ class BuzzAgentTest < ActiveSupport::TestCase
     assert_includes event.tags, %w[challenge challenge-xyz]
     assert event.verify_signature
   end
+
+  test 'check_status reports not configured without probing' do
+    EnvStore.set('BUZZ_PRIVATE_KEY', nil)
+    BuzzAgent.expects(:probe_relay).never
+    status = BuzzAgent.check_status
+    refute status[:configured]
+    assert_nil status[:relay_reachable]
+  end
+
+  test 'check_status records the probe result and exposes it as last_status' do
+    store = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(store)
+    BuzzAgent.expects(:probe_relay).returns([true, false])
+    status = BuzzAgent.check_status
+    assert status[:relay_reachable]
+    assert_equal false, status[:registered]
+    assert_equal false, BuzzAgent.last_status[:registered]
+  end
+
+  test 'probe_relay reports an unreachable relay without raising' do
+    WebSocket::Client::Simple.stubs(:connect).raises(Errno::ECONNREFUSED)
+    assert_equal [false, nil], BuzzAgent.probe_relay
+  end
 end
