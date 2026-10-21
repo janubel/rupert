@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -2276,6 +2276,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_030000) do
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'released'::character varying]::text[])", name: "stock_reservations_status"
   end
 
+  create_table "swipesimple_day_reviews", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.date "business_date", null: false
+    t.bigint "reviewed_by_id", null: false
+    t.datetime "reviewed_at", null: false
+    t.string "reviewed_digest", null: false
+    t.string "review_note", limit: 1000
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reviewed_by_id"], name: "index_swipesimple_day_reviews_on_reviewed_by_id"
+    t.index ["tenant_id", "business_date"], name: "index_swipesimple_day_reviews_on_tenant_id_and_business_date", unique: true
+    t.index ["tenant_id"], name: "index_swipesimple_day_reviews_on_tenant_id"
+  end
+
   create_table "swipesimple_exports", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "merchant_account", null: false
@@ -2882,6 +2896,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_030000) do
   add_foreign_key "square_timecards", "employees"
   add_foreign_key "square_timecards", "tenants"
   add_foreign_key "stock_reservations", "stock_reservation_pools"
+  add_foreign_key "swipesimple_day_reviews", "tenants"
+  add_foreign_key "swipesimple_day_reviews", "users", column: "reviewed_by_id"
   add_foreign_key "swipesimple_exports", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "swipesimple_report_rows", "swipesimple_exports"
   add_foreign_key "warehouse_stock_holds", "orders"
