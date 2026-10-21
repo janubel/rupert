@@ -100,6 +100,7 @@ class McpServerTest < ActionDispatch::IntegrationTest
   end
 
   test 'every tool answers without an internal error for a full-scope token' do
+    @owner.update!(role: 'super_admin') # the server-wide operations tools are for platform administrators
     full_token, full = issue
     order = Core::Order.create!(source: 'shopify', source_order_id: 'mcp-order', occurred_at: 2.days.ago, gross_cents: 4200, tax_cents: 252, currency: 'USD')
     order.mark_paid!
@@ -123,6 +124,7 @@ class McpServerTest < ActionDispatch::IntegrationTest
       arguments = case tool.tool_name
       when 'submit_feedback' then { kind: 'task_report', summary: 'Smoke test done' }
       when 'create_task' then { title: 'Check the tea shelf', priority: 'low', due_on: '2026-11-01' }
+      when 'report_context' then { report_id: AgentFeedback.create!(kind: 'bug', summary: 'Smoke report').id }
       else {}
       end
       result = call_tool(full, tool.tool_name, arguments)
