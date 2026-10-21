@@ -9,8 +9,11 @@ class AgentFeedback < ApplicationRecord
 
   KINDS = {
     'bug' => 'Bug', 'struggle' => 'Struggle', 'task_report' => 'Task report',
-    'suggestion' => 'Suggestion', 'question' => 'Question', 'report_issue' => 'Report issue'
+    'suggestion' => 'Suggestion', 'question' => 'Question', 'report_issue' => 'Report issue',
+    'request' => 'Request', 'direction' => 'Direction'
   }.freeze
+  # agent = an AI assistant over MCP, app = the ladybug in Rupert, buzz = a teammate's chat message.
+  SOURCES = %w[agent app buzz].freeze
   SEVERITIES = %w[low normal high].freeze
   STATUSES = {
     'new' => 'New', 'triaged' => 'Triaged', 'planned' => 'Planned', 'done' => 'Done', 'wont_fix' => "Won't fix"
@@ -23,11 +26,16 @@ class AgentFeedback < ApplicationRecord
   belongs_to :api_access_token, optional: true
   belongs_to :user, optional: true
   belongs_to :triaged_by, class_name: 'User', optional: true
+  belongs_to :task, class_name: 'Projects::Task', optional: true
+  has_many :attachments, class_name: 'FeedbackAttachment', dependent: :destroy
 
   validates :tenant_id, presence: true
   validates :kind, inclusion: { in: KINDS.keys }
   validates :severity, inclusion: { in: SEVERITIES }
   validates :status, inclusion: { in: STATUSES.keys }
+  validates :source, inclusion: { in: SOURCES }
+  validates :source_ref, length: { maximum: 120 }
+  validates :source_sender, :ready_marked_by, length: { maximum: 160 }
   validates :summary, presence: true, length: { maximum: SUMMARY_MAX }
   validates :details, length: { maximum: DETAILS_MAX }
   validates :related_tool, :agent_name, :agent_model, length: { maximum: 100 }
@@ -36,6 +44,7 @@ class AgentFeedback < ApplicationRecord
   validates :owner_notes, length: { maximum: NOTES_MAX }
 
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
+  scope :reported_by, ->(user) { where(user_id: user.id) }
 
   # Removes control characters (except newlines/tabs in long text) and trims.
   def self.clean(value, max, multiline: false)
@@ -53,6 +62,11 @@ class AgentFeedback < ApplicationRecord
     context.present? ? JSON.parse(context) : {}
   rescue JSON::ParserError
     {}
+  end
+
+  # What the person who filed an in-app report may see: its status, never owner notes or attachments.
+  def reporter_view
+    agent_view.merge(task_id: task_id)
   end
 
   # What an assistant may see about its own submission: never owner notes.
