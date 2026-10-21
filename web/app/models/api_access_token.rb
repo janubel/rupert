@@ -19,7 +19,9 @@ class ApiAccessToken < ApplicationRecord
     'tasks:read' => 'projects.read',
     'alerts:read' => 'alerts.read',
     'system:read' => 'system.read',
-    'tasks:write' => 'projects.write'
+    'tasks:write' => 'projects.write',
+    # Ladybug reports with their attachments: needs settings.read and an administrator owner.
+    'feedback:read' => 'settings.read'
   }.freeze
   # Scopes that let an integration change Rupert's own records. None of them
   # writes to Shopify, Square or C-Trax.

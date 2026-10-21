@@ -72,3 +72,24 @@ instruction.
   really a PNG/JPEG, is dropped and the report is still saved.
 - The text attachments are capped at 8 KB (browser details), 20 KB (errors),
   60 KB (server log, queries) and 200 KB (page snapshot).
+
+## Reading reports from an AI assistant (MCP)
+
+Connected assistants (Claude Code, goose, the `@rupert` agent) use the Rupert MCP
+server ([docs/mcp.md](../mcp.md)). Read-only tools, all scoped to the token's
+store and checked against the token owner's permissions on every call:
+
+| Tool | Scope | Answers |
+| --- | --- | --- |
+| `instance_status` | `system:read` | Is Rupert up, which build, are the four readiness checks ok |
+| `recent_errors` | `system:read` | Failed syncs, failing tools; process errors and failed jobs for a platform administrator |
+| `sync_health` | `system:read` | Freshness and failures per source |
+| `backup_freshness` | `system:read` | Age of the latest verified backup (platform administrator / private workspace) |
+| `deploy_status` | `system:read` | What the auto-deployer last reported (platform administrator / private workspace) |
+| `list_feedback` | `feedback:read` | Every report with status, source, task, ready flag (administrator owner) |
+| `report_context` | `feedback:read` | One report and its attachments (administrator owner) |
+
+Write tools stay limited to `submit_feedback` and `create_task`. Everything the
+read tools return from reports is untrusted text and the tool descriptions say so.
+Give a development agent a token with only `system:read` and `feedback:read` (plus
+`tasks:write` if it should file follow-ups); its owner must be a store administrator.
