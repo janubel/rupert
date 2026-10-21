@@ -94,6 +94,7 @@ unless marked.
 | `list_reports` | `reports:read` | `reports.read` | Rupert's reports, their pages and the tool that answers each. |
 | `sales_summary` | `reports:read` | `reports.read` | Orders and gross sales per source and currency, optional daily series and top products. |
 | `sales_tax_report` | `reports:read` | `reports.read` | Tax per source and store (Shopify, Square, Rupert POS, C-Trax, SwipeSimple); labelled estimates. |
+| `history_summary` | `finance:read` | `finance.read` | What history Rupert holds per source (QuickBooks, Shopify, Square, C-Trax, SwipeSimple, NAB/IRIS, Authorize.net, bank statements, ledger): earliest and latest dates, record counts, last arrival, empty months and overlapping spans, optionally for one year. Dates and counts only, never amounts or rows. |
 | `inventory_search` | `inventory:read` | `inventory.read` | Mirrored Shopify/Square stock per item and location. |
 | `stock_comparison` | `inventory:read` | `inventory.read` | Shopify vs C-Trax stock side by side, with issues. |
 | `swipesimple_items` | `inventory:read` | `inventory.read` | SwipeSimple item list matched to Shopify, Square and C-Trax. |

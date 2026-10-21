@@ -1,0 +1,131 @@
+<% content_for :title, 'History' %>
+<% number = ->(n) { number_with_delimiter(n) } %>
+<% cents = ->(c) { finance_money_text(c, zero: :show) } %>
+<div class="space-y-8 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+
+  <%= page_header 'History', eyebrow: 'Bookkeeping · records', subtitle: 'What Rupert retains from each source, in one place. A source’s oldest record shows the coverage that was available to Rupert, not when the business began or proof that nothing older exists. Counts are records, not sales totals.' %>
+
+  <section aria-labelledby="sources-heading" class="space-y-3">
+    <h2 id="sources-heading" class="font-display text-xl">By source</h2>
+    <div class="grid gap-4 md:grid-cols-2">
+      <% @sources.each do |source| %>
+        <article class="card card-pad space-y-2" aria-labelledby="source-<%= source.key %>">
+          <h3 id="source-<%= source.key %>" class="font-display text-lg"><%= link_to source.label, source.path, class: 'link' %></h3>
+          <p class="text-xs text-mocha"><%= source.role %></p>
+          <% if source.records.zero? %>
+            <p class="text-sm">Nothing retained from this source yet.</p>
+          <% else %>
+            <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              <dt class="text-mocha">Earliest</dt><dd><%= source.first_date || '—' %></dd>
+              <dt class="text-mocha">Latest</dt><dd><%= source.last_date || '—' %></dd>
+              <dt class="text-mocha">Records</dt><dd><%= number.call(source.records) %> <span class="text-xs text-mocha"><%= source.unit %></span></dd>
+              <dt class="text-mocha">Last arrived</dt><dd><%= source.last_import_at ? l(source.last_import_at.in_time_zone, format: :short) : 'Unknown' %></dd>
+            </dl>
+            <p class="text-sm"><span class="text-mocha">By year:</span> <%= source.by_year.map { |year, count| "#{year} · #{number.call(count)}" }.join(' · ') %></p>
+            <% if source.gap_total.positive? %>
+              <p class="text-sm"><strong><%= pluralize(source.gap_total, 'month') %></strong> inside this span <%= source.gap_total == 1 ? 'has' : 'have' %> no records: <span class="text-mocha"><%= source.gap_months.first(12).join(', ') %><%= '…' if source.gap_total > 12 %></span>. They may be quiet months or missing imports.</p>
+            <% else %>
+              <p class="text-sm text-mocha">Every month between the earliest and latest has at least one record.</p>
+            <% end %>
+            <% if source.overlaps.any? %>
+              <details class="text-sm"><summary class="disclosure-trigger">Same dates as <%= source.overlaps.size %> other source<%= 's' unless source.overlaps.size == 1 %></summary>
+                <ul class="mt-1 list-disc pl-5 text-mocha"><% source.overlaps.each do |o| %><li><%= o['label'] %>: <%= o['from'] %> to <%= o['to'] %></li><% end %></ul>
+                <p class="mt-1 text-xs text-mocha">Overlapping dates say nothing about whether the records agree.</p>
+              </details>
+            <% end %>
+            <% if source.detail.present? %>
+              <p class="text-xs text-mocha">
+                <% if source.key == 'quickbooks' %>
+                  <%= number.call(source.detail['posted_transactions']) %> posted to the ledger · <%= number.call(source.detail['staged_transactions']) %> staged, not posted
+                <% elsif source.key == 'iris' %>
+                  <%= source.detail['overlapping_window_pairs'] %> overlapping report-window pair<%= 's' unless source.detail['overlapping_window_pairs'] == 1 %> (never summed)
+                <% end %>
+              </p>
+            <% end %>
+          <% end %>
+          <p class="text-xs text-mocha"><%= source.caveat %></p>
+        </article>
+      <% end %>
+    </div>
+  </section>
+
+  <section aria-labelledby="years-heading" class="hidden space-y-3 md:block">
+    <h2 id="years-heading" class="font-display text-xl">Records by year and source</h2>
+    <div class="card overflow-hidden">
+      <div class="operations-table-region" role="region" tabindex="0" aria-label="Records by year and source">
+        <table class="operations-table finance-table w-full">
+          <caption class="sr-only">Number of retained records per source for each calendar year; a dash means none are held</caption>
+          <thead><tr><th scope="col" class="th">Source</th><% @years.each do |year| %><th scope="col" class="th num"><%= year %></th><% end %></tr></thead>
+          <tbody>
+            <% @sources.each do |source| %>
+              <tr>
+                <th scope="row" class="td text-left font-medium"><%= source.label %></th>
+                <% @years.each do |year| %><td class="td num"><%= source.by_year[year] ? number.call(source.by_year[year]) : '—' %></td><% end %>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="text-xs text-mocha">Time-stamped sources are bucketed by the stored UTC date, so a record just after midnight at a boundary can fall in the neighbouring period.</p>
+  </section>
+
+  <section aria-labelledby="recon-heading" class="space-y-4">
+    <h2 id="recon-heading" class="font-display text-xl">QuickBooks compared with Rupert</h2>
+    <p class="text-sm text-mocha">Differences are listed, never adjusted or matched for you. Amounts are net debit (positive) or credit (negative) in USD, from imported QuickBooks lines you have mapped to Rupert accounts.</p>
+
+    <% comparisons = [@ledger_comparison, *@trial_balances] %>
+    <% comparisons.each do |comparison| %>
+      <div class="card card-pad space-y-2">
+        <h3 class="font-display text-lg"><%= comparison.title %></h3>
+        <% if comparison.period&.first %><p class="text-xs text-mocha">Days in common: <%= comparison.period.first %> to <%= comparison.period.last %></p><% end %>
+        <% if comparison.message %>
+          <p class="text-sm text-mocha"><%= comparison.message %></p>
+        <% elsif comparison.rows.empty? %>
+          <p class="text-sm text-mocha">No mapped accounts have activity to compare.</p>
+        <% else %>
+          <div class="operations-table-region" role="region" tabindex="0" aria-label="<%= comparison.title %>">
+            <table class="operations-table finance-table w-full">
+              <caption class="sr-only"><%= comparison.title %>, in USD</caption>
+              <thead><tr><th scope="col" class="th">Account</th><th scope="col" class="th num">QuickBooks</th><th scope="col" class="th num">Rupert</th><th scope="col" class="th num">Difference</th></tr></thead>
+              <tbody>
+                <% comparison.rows.each do |row| %>
+                  <tr>
+                    <td class="td"><%= link_to row.account_label, finance_chart_of_account_path(row.account_id), class: 'link' %><% if row.note %><br><span class="text-xs text-mocha"><%= row.note %></span><% end %></td>
+                    <td class="td num"><%= cents.call(row.quickbooks_cents) %></td>
+                    <td class="td num"><%= cents.call(row.rupert_cents) %></td>
+                    <td class="td num"><% if row.difference_cents.zero? %><span class="text-mocha">Agrees</span><% else %><strong><%= cents.call(row.difference_cents) %></strong><% end %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+        <% if comparison.unmapped.present? %><p class="text-xs text-mocha">Not compared because not mapped yet: <%= comparison.unmapped.first(8).join(', ') %><%= '…' if comparison.unmapped.size > 8 %>.</p><% end %>
+      </div>
+    <% end %>
+
+    <% @bank_comparisons.each do |comparison| %>
+      <div class="card card-pad space-y-2">
+        <h3 class="font-display text-lg"><%= comparison.title %></h3>
+        <div class="operations-table-region" role="region" tabindex="0" aria-label="<%= comparison.title %>">
+          <table class="operations-table finance-table w-full">
+            <caption class="sr-only"><%= comparison.title %> by month, in USD</caption>
+            <thead><tr><th scope="col" class="th">Month</th><th scope="col" class="th num">QuickBooks</th><th scope="col" class="th num">Bank lines</th><th scope="col" class="th num">Difference</th></tr></thead>
+            <tbody>
+              <% comparison.rows.each do |row| %>
+                <tr>
+                  <td class="td"><%= row.month %><% if row.note %><br><span class="text-xs text-mocha"><%= row.note %></span><% end %></td>
+                  <td class="td num"><%= row.quickbooks_cents ? cents.call(row.quickbooks_cents) : '—' %></td>
+                  <td class="td num"><%= row.bank_cents ? cents.call(row.bank_cents) : '—' %></td>
+                  <td class="td num"><% if row.difference_cents.zero? && row.quickbooks_cents && row.bank_cents %><span class="text-mocha">Agrees</span><% else %><strong><%= cents.call(row.difference_cents) %></strong><% end %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+  </section>
+</div>

@@ -43,6 +43,7 @@ module OperationsWorkspaceHelper
        ['Expense categories', finance_expense_categories_path, 'finance.read', 'finance/expense_categories', 'Records'],
        ['General ledger', finance_journal_entries_path, 'finance.read', 'finance/journal_entries', 'Records'],
        ['Imported orders', ledger_index_path, 'ledger.read', 'ledger', 'Records'],
+       ['History', finance_history_path, 'finance.read', 'finance/history', 'Records'],
        ['QuickBooks import', finance_quickbooks_imports_path, 'finance.read', 'finance/quickbooks_imports', 'Records'],
        ['Ledger export', finance_ledger_export_path, 'finance.read', 'finance/ledger_exports', 'Reports & control'],
        ['Financial statements', finance_reports_path, 'finance.read', 'finance/reports', 'Reports & control'],

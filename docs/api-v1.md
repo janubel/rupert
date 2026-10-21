@@ -36,7 +36,7 @@ hostnames and query parameters cannot change the token's tenant.
 
 `POST /api/v1/uploads` sends a file to the Uploads inbox (multipart field `file`, or repeated `files[]`; up to 10 files, 10 MiB each, 25 MiB per request). It can receive a file but never approve an import. See [Uploads inbox](ops/uploads-inbox.md) for the request, status codes and a `curl` example.
 
-The scopes `reports:read`, `timesheets:read`, `tasks:read`, `alerts:read`,
+The scopes `reports:read`, `finance:read`, `timesheets:read`, `tasks:read`, `alerts:read`,
 `system:read`, `feedback:read` and `tasks:write` currently gate only tools on the MCP server for AI assistants
 (`POST /mcp`). See [docs/mcp.md](mcp.md) for connecting Claude, ChatGPT and
 other assistants with the same tokens, the tool list and the feedback channel.

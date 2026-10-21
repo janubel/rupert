@@ -57,6 +57,10 @@ Also unverified, and handled defensively: date format (the parser reads `MM/DD/Y
 
 The down migration refuses to run while any retained document exists, as earlier evidence migrations do.
 
+## Uploads inbox
+
+**System → Uploads** (see [Uploads inbox](uploads-inbox.md)) recognizes QuickBooks files and, after a dry run and a person's approval, only **stages** them here with `QuickbooksImport.stage!`. It never posts: mapping, approving and reversing stay on this page, so a file sent from the inbox, the API or the drop folder has exactly the same safety as one uploaded here. Both paths retain the original in their own evidence tables; staging the same file twice returns the same batch.
+
 ## Operating it
 
 1. Export from QuickBooks as CSV (Online: report → Export as CSV; Desktop: Excel → Create a comma separated values file). Prefer a Journal covering the whole history in one or a few files.
@@ -69,4 +73,10 @@ Do not import anything into production from a development machine. Take the usua
 
 ## History view
 
-The History page (Bookkeeping → Records → **History**) arrives in a second change set; this document is extended there.
+**Bookkeeping → Records → History** (`/finance/history`, finance read) shows what Rupert retains for each source, built from the stored records by `HistorySummary`:
+
+- Per source (QuickBooks, Shopify, Square, C-Trax, SwipeSimple, NAB/IRIS, Authorize.net, bank statements, Rupert ledger, and the 365-day order mirror, labelled as not an archive): earliest and latest date, record count, records per year, when the source last arrived, **calendar months inside the span with no records** (a quiet month and a missing import look the same, and the page says so), and **other sources covering the same dates**. An overlap of time spans says nothing about whether records agree.
+- **Coverage honesty.** The earliest record is the coverage that was available, not proof of when the business began or that nothing older exists. Each card carries its own caveat (Shopify access scopes, inactive Square locations, SwipeSimple's 10,000-row cap, IRIS windows that overlap and are never summed, no live bank feed). Counts are records, not sales totals. Time-stamped sources are bucketed by their stored UTC date for the months and years, and first/last dates are shown in the store zone (America/New_York).
+- **QuickBooks compared with Rupert** (`HistoryReconciliation`), read-only: the QuickBooks journal against Rupert's *own* ledger entries (imported entries are excluded, so the import is never compared with itself) per mapped account over the days both cover; each QuickBooks trial balance against Rupert's cumulative balances as of its date (a difference is expected where Rupert has no opening balance); and monthly QuickBooks movement on a mapped bank account against the uploaded statement lines for that account. Differences are listed with the reason; accounts not yet mapped are named. Nothing is adjusted, matched or resolved.
+
+The same numbers are available to assistants as the read-only `history_summary` tool (scope `finance:read`, owner permission `finance.read`; see [MCP](../mcp.md)) and to [Ask Rupert](ask-rupert.md) through `run_report`, so a question like "what history do we have for 2025 and from where?" is answered from per-source counts, dates and empty months, never raw rows or amounts. Ask Rupert only offers the tool to people with finance access.
