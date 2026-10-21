@@ -105,6 +105,7 @@ class ModuleRegistry
       access_logs_path
     }, permission: 'settings.read', position: 81),
     Entry.new(key: 'sync', name: 'Sync', path: -> { syncs_path }, permission: 'sync.read', position: 90),
+    Entry.new(key: 'uploads', name: 'Uploads', path: -> { uploads_path }, permission: 'uploads.read', position: 90.5),
     Entry.new(key: 'system', name: 'System', path: -> { system_path }, permission: 'system.read', position: 95),
     Entry.new(key: 'pos_connections', name: 'POS & payments', path: lambda {
       pos_connections_path
@@ -238,7 +239,7 @@ class ModuleRegistry
       { key: 'team', name: 'Team',
         modules: %w[accounts employees employee_reports departments positions time_keeping schedule time_clock leave payroll permissions] },
       { key: 'system', name: 'System',
-        modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens agent_feedback ask_rupert_usage roadmap owner_checklists] }
+        modules: %w[system platform connections pos_connections sync uploads settings warehouse activity access_log api_access_tokens agent_feedback ask_rupert_usage roadmap owner_checklists] }
     ].freeze
 
     # Sub-sections of an area with only the visible modules; empty groups drop out.

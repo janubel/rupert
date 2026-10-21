@@ -282,6 +282,53 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
     t.index ["tenant_id"], name: "index_SyncRun_on_tenant_id"
   end
 
+  create_table "uploads", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "status", default: "received", null: false
+    t.string "origin", default: "web", null: false
+    t.string "filename", null: false
+    t.string "client_content_type"
+    t.string "file_format"
+    t.integer "byte_size", default: 0, null: false
+    t.string "sha256"
+    t.boolean "retained", default: false, null: false
+    t.text "content_base64"
+    t.integer "duplicate_of_id"
+    t.string "detected_type"
+    t.string "detected_label"
+    t.integer "confidence"
+    t.text "detected_reason"
+    t.string "source_guess"
+    t.text "candidates_json"
+    t.string "importer_key"
+    t.boolean "operator_chosen", default: false, null: false
+    t.text "params_json"
+    t.integer "row_count"
+    t.text "reason"
+    t.text "summary_json"
+    t.string "dry_run_digest"
+    t.datetime "dry_run_at"
+    t.string "dry_run_by_name"
+    t.string "recognizer_version"
+    t.datetime "recognized_at"
+    t.integer "uploaded_by_id"
+    t.string "uploaded_by_name"
+    t.string "via_token_label"
+    t.datetime "imported_at"
+    t.integer "imported_by_id"
+    t.string "imported_by_name"
+    t.string "result_path"
+    t.datetime "discarded_at"
+    t.string "discarded_by_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["duplicate_of_id"], name: "index_uploads_on_duplicate_of_id"
+    t.index ["tenant_id", "created_at"], name: "idx_uploads_recent"
+    t.index ["tenant_id", "sha256"], name: "idx_uploads_retained_replay", unique: true, where: "retained = 1"
+    t.index ["tenant_id", "status"], name: "idx_uploads_status"
+    t.index ["tenant_id"], name: "index_uploads_on_tenant_id"
+  end
+
   create_table "WarehouseShare", id: :string, force: :cascade do |t|
     t.datetime "createdAt", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.datetime "expires_at"
@@ -666,6 +713,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
     t.index ["entry_hash"], name: "idx_book_approvals_entry_hash", unique: true
     t.index ["tenant_id", "period_kind", "period_from"], name: "idx_book_approvals_period"
     t.index ["tenant_id"], name: "index_book_approvals_on_tenant_id"
+  end
+
+  create_table "buzz_chat_states", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.datetime "last_attempt_at"
+    t.datetime "last_success_at"
+    t.string "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id"], name: "idx_buzz_chat_states_tenant", unique: true
+  end
+
+  create_table "buzz_messages", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "event_id", limit: 64, null: false
+    t.string "pubkey", limit: 64, null: false
+    t.integer "kind", null: false
+    t.string "channel", null: false
+    t.text "content", default: "", null: false
+    t.string "reply_to", limit: 64
+    t.string "client", limit: 40
+    t.bigint "rupert_user_id"
+    t.bigint "posted_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "channel", "posted_at", "event_id"], name: "idx_buzz_messages_timeline"
+    t.index ["tenant_id", "event_id"], name: "idx_buzz_messages_event", unique: true
+  end
+
+  create_table "buzz_profiles", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "pubkey", limit: 64, null: false
+    t.string "name", limit: 100
+    t.string "display_name", limit: 100
+    t.datetime "fetched_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "pubkey"], name: "idx_buzz_profiles_pubkey", unique: true
   end
 
   create_table "bulk_consumptions", force: :cascade do |t|

@@ -31,6 +31,11 @@ hostnames and query parameters cannot change the token's tenant.
 | `inventory:read` | `GET /api/v1/inventory` | `inventory.read` |
 | `roadmap:read` | `GET /api/v1/roadmap` | Active owner |
 
+| `uploads:write` | `POST /api/v1/uploads` | `uploads.write` |
+| `uploads:read` | `GET /api/v1/uploads`, `GET /api/v1/uploads/:id` | `uploads.read` |
+
+`POST /api/v1/uploads` sends a file to the Uploads inbox (multipart field `file`, or repeated `files[]`; up to 10 files, 10 MiB each, 25 MiB per request). It can receive a file but never approve an import. See [Uploads inbox](ops/uploads-inbox.md) for the request, status codes and a `curl` example.
+
 The scopes `reports:read`, `timesheets:read`, `tasks:read`, `alerts:read`,
 `system:read`, `feedback:read` and `tasks:write` currently gate only tools on the MCP server for AI assistants
 (`POST /mcp`). See [docs/mcp.md](mcp.md) for connecting Claude, ChatGPT and

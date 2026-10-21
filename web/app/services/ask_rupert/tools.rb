@@ -12,7 +12,7 @@ module AskRupert
   class Tools
     MAX_RESULT_CHARS = 5_000
     REPORT_TOOLS = %w[sales_summary sales_tax_report inventory_search stock_comparison swipesimple_items
-                      time_keeping_report list_tasks list_alerts list_reports].freeze
+                      time_keeping_report list_tasks list_alerts list_reports list_uploads].freeze
     REPORT_KINDS = %w[bug request question].freeze
     # What may be offered where other people can read the reply (a Buzz channel):
     # navigation help only, never records, figures or settings.
