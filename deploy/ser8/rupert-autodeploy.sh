@@ -62,6 +62,11 @@ requested=0; [ "$requested_at" -gt "$handled_at" ] && requested=1
 cd "$APP" || exit 1
 if [ -n "$(git status --porcelain)" ]; then report blocked "checkout is dirty, skipping"; exit 0; fi
 git fetch -q origin main || { report blocked "fetch failed"; exit 0; }
+# The build records release totals from full history (NightlyRelease refuses a
+# shallow checkout), so a shallow /opt/rupert would fail every deploy and roll back.
+if [ "${DRY_RUN:-0}" != 1 ] && [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+  git fetch -q --unshallow origin main || { report blocked "could not fetch full git history"; exit 0; }
+fi
 CUR=$(git rev-parse HEAD); NEW=$(git rev-parse origin/main)
 [ "$CUR" = "$NEW" ] && { handle_request; report up_to_date "up to date at ${CUR:0:8}"; exit 0; }
 git merge-base --is-ancestor "$CUR" "$NEW" || { report blocked "origin/main is not a fast-forward of ${CUR:0:8}, skipping"; exit 0; }
