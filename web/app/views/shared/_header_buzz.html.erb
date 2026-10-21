@@ -1,0 +1,2 @@
+<%# Header entry for the team chat: opens the Buzz card (agent profile, open chat, connect, get the app). %>
+<%= link_to buzz_path, class: "nav-utility#{' nav-pill-active' if controller_name == 'buzz'}", aria: { label: 'Buzz team chat', current: (controller_name == 'buzz' ? 'page' : nil) }, title: 'Buzz team chat' do %><%= navigation_icon('chat') %><span class="nav-hint">Buzz</span><% end %>
