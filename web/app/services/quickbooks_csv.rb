@@ -17,7 +17,7 @@ class QuickbooksCsv
   Error = Class.new(ArgumentError)
 
   MAX_BYTES = 10 * 1024 * 1024
-  MAX_ROWS = 50_000
+  MAX_ROWS = 30_000
   YEARS = (1990..2099)
 
   Row = Struct.new(:row_no, :record_type, :date, :txn_type, :doc_number, :name, :memo, :account, :account_number, :account_type,
