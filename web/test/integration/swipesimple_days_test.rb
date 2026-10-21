@@ -89,6 +89,49 @@ class SwipesimpleDaysTest < ActionDispatch::IntegrationTest
     assert_equal digest, review.reload.reviewed_digest, 'a review of the old data cannot be recorded'
   end
 
+  test 'settings writers choose the funding merchant from a masked list; others see a read-only line' do
+    import(ROWS)
+    retail = '000000004321'
+    other = '000000008765'
+    Current.tenant = @tenant
+    [[retail, '2026-10-15', '80.00'], [other, '2026-10-15', '999.00']].each do |merchant, date, amount|
+      IrisReport.create!(api_origin: 'https://fixture.iriscrm.com', merchant_number: merchant, report_kind: 'daily_deposits_csv',
+        window_from: '2026-10-01', window_to: '2026-10-31', status: 'complete', observed_at: 1.hour.ago,
+        payload_json: { 'currency' => nil, 'data' => [{ 'date' => date, 'amount' => amount, 'batch' => 'SYN' }] }.to_json)
+    end
+
+    get swipesimple_days_path(date: '2026-10-14')
+    assert_select 'select[name=merchant_token] option', text: 'NAB merchant ••4321'
+    assert_select 'select[name=merchant_token] option', text: 'NAB merchant ••8765'
+    assert_not_includes response.body, retail
+    assert_not_includes response.body, other
+
+    post deposit_merchant_swipesimple_days_path, params: { date: '2026-10-14', merchant_token: 'not-a-merchant' }
+    Current.tenant = @tenant
+    assert_equal '', TenantSettings.swipesimple_deposit_merchant
+    post deposit_merchant_swipesimple_days_path, params: { date: '2026-10-14', merchant_token: SwipesimpleDayClose.merchant_token(retail) }
+    assert_redirected_to swipesimple_days_path(date: '2026-10-14', anchor: 'close-deposit')
+    Current.tenant = @tenant
+    assert_equal retail, TenantSettings.swipesimple_deposit_merchant
+
+    get swipesimple_days_path(date: '2026-10-14')
+    assert_select 'select[name=merchant_token] option[selected]', text: 'NAB merchant ••4321'
+    assert_select '[data-deposit-amount]', '$80.00'
+    assert_select '[data-deposit-difference]', '$0.00'
+    assert_not_includes response.body, 'not a verified variance'
+    assert_not_includes response.body, '$999.00'
+
+    reader = User.create!(email: 'ss-merchant-reader@example.invalid', password: 'password123', role: 'manager', tenant: @tenant)
+    switch_to(reader)
+    get swipesimple_days_path(date: '2026-10-14')
+    assert_select 'select[name=merchant_token]', count: 0
+    assert_select '[data-deposit-merchant]', text: /NAB merchant ••4321/
+    post deposit_merchant_swipesimple_days_path, params: { date: '2026-10-14', merchant_token: SwipesimpleDayClose.merchant_token(other) }
+    assert_response :forbidden
+    Current.tenant = @tenant
+    assert_equal retail, TenantSettings.swipesimple_deposit_merchant
+  end
+
   test 'sales readers can view but not review, others are refused' do
     import(ROWS)
     reader = User.create!(email: 'ss-reader@example.invalid', password: 'password123', role: 'reader', tenant: @tenant)

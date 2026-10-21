@@ -41,7 +41,68 @@ class SwipesimpleDayCloseTest < ActiveSupport::TestCase
     split = close.tender_split.first
     assert_equal [2000, 6800, nil, 8800], split.values_at(:cash, :card, :unknown, :total)
     assert_equal 2, close.excluded.size
-    assert_includes close.checks.map(&:key), :declines
+    refute_includes close.checks.map(&:key), :declines, 'a tiny day never fires the decline flag'
+  end
+
+  test 'decline flag fires at 5 percent of attempts once there are enough attempts' do
+    approved = (1..19).map { |n| "SYN-A#{n},10/14/2026 9:#{format('%02d', n)} AM,Sale,$1.00,Approved,Swiped,Visa,Example Wholesale,$0.00" }
+    import(approved + ['SYN-D1,10/14/2026 10:00 AM,Sale,$1.00,Declined,Swiped,Visa,Example Wholesale,'])
+    assert_includes SwipesimpleDayClose.new(Date.new(2026, 10, 14)).checks.map(&:key), :declines
+    more = (20..39).map { |n| "SYN-A#{n},10/14/2026 11:#{format('%02d', n)} AM,Sale,$1.00,Approved,Swiped,Visa,Example Wholesale,$0.00" }
+    import(approved + more + ['SYN-D1,10/14/2026 10:00 AM,Sale,$1.00,Declined,Swiped,Visa,Example Wholesale,'], exported_at: '2026-10-15T22:30:00-04:00')
+    refute_includes SwipesimpleDayClose.new(Date.new(2026, 10, 14)).checks.map(&:key), :declines, '1 of 40 is 2.5%'
+    small = (1..8).map { |n| "SYN-S#{n},10/13/2026 9:#{format('%02d', n)} AM,Sale,$1.00,Approved,Swiped,Visa,Example Wholesale,$0.00" }
+    import(small + ['SYN-SD,10/13/2026 10:00 AM,Sale,$1.00,Declined,Swiped,Visa,Example Wholesale,'], exported_at: '2026-10-15T22:40:00-04:00')
+    refute_includes SwipesimpleDayClose.new(Date.new(2026, 10, 13)).checks.map(&:key), :declines, 'fewer than 10 attempts'
+  end
+
+  test 'chosen funding merchant matches the first later deposit and groups a weekend into one comparison' do
+    card = ->(n, day, amount) { "SYN-L#{n},#{day} 1:00 PM,Sale,$#{amount},Approved,Swiped,Visa,Example Wholesale,$0.00" }
+    import([card.call(1, '10/08/2026', '10.00'), card.call(2, '10/09/2026', '20.00'), card.call(3, '10/10/2026', '30.00'),
+      card.call(4, '10/11/2026', '40.00'), card.call(5, '10/12/2026', '50.00'), card.call(7, '10/14/2026', '7.00'),
+      'SYN-L6,10/12/2026 2:00 PM,Sale,$5.00,Approved,Cash,,Example Wholesale,$0.00'])
+    retail = '000000004321'
+    deposit_report('daily_deposits_csv', '2026-10-01', '2026-10-31', 1.hour.ago,
+      [['2026-10-09', '10.00'], ['2026-10-12', '60.00'], ['2026-10-12', '30.00'], ['2026-10-13', '49.50']], merchant: retail)
+    deposit_report('deposits', '2026-10-12', '2026-10-12', 3.hours.ago, [['2026-10-12', '500.00']], key: 'deposits', merchant: retail)
+    deposit_report('daily_deposits_csv', '2026-10-01', '2026-10-31', 1.hour.ago, [['2026-10-09', '999.00']], merchant: '000000008765')
+
+    assert_nil SwipesimpleDayClose.new(Date.new(2026, 10, 9)).deposit_merchant, 'no merchant is chosen by default'
+    TenantSettings.set(:swipesimple_deposit_merchant, retail)
+
+    thursday = SwipesimpleDayClose.new(Date.new(2026, 10, 8)).deposit_match
+    assert_equal [Date.new(2026, 10, 9), [Date.new(2026, 10, 8)], 1000, 0], [thursday.deposit_date, thursday.business_days, thursday.amount_cents, thursday.difference_cents]
+
+    weekend = (9..11).map { |day| SwipesimpleDayClose.new(Date.new(2026, 10, day)) }
+    weekend.each do |close|
+      match = close.deposit_match
+      assert_equal Date.new(2026, 10, 12), match.deposit_date
+      assert_equal (Date.new(2026, 10, 9)..Date.new(2026, 10, 11)).to_a, match.business_days
+      assert_equal [9000, 9000, 0], [match.amount_cents, match.card_net_cents, match.difference_cents], 'newest snapshot only, never the overlapping $500'
+      assert_includes close.checks.map(&:key), :grouped_deposit
+      refute_includes close.checks.map(&:key), :deposit_difference
+    end
+
+    monday = SwipesimpleDayClose.new(Date.new(2026, 10, 12))
+    assert_equal [Date.new(2026, 10, 13), [Date.new(2026, 10, 12)], 5000, -50], monday.deposit_match.to_h.values_at(:deposit_date, :business_days, :card_net_cents, :difference_cents)
+    assert(monday.checks.any? { |item| item.key == :deposit_difference && item.level == :warn && item.message.include?('••4321') && item.message.include?('-$0.50') })
+
+    matches = (8..12).map { |day| SwipesimpleDayClose.new(Date.new(2026, 10, day)).deposit_match }
+    by_deposit = matches.group_by(&:deposit_date).transform_values { |list| list.map(&:business_days).uniq }
+    assert(by_deposit.values.all? { |sets| sets.one? }, 'every day of a deposit sees the same group')
+    days = by_deposit.values.flatten
+    assert_equal days.uniq, days, 'no business day is counted against two deposits'
+
+    assert_nil SwipesimpleDayClose.new(Date.new(2026, 10, 14)).deposit_match
+    assert_includes SwipesimpleDayClose.new(Date.new(2026, 10, 14)).checks.map(&:key), :no_deposit
+  end
+
+  test 'daily close summary uses SwipeSimple cash and card tenders instead of calling everything credit' do
+    import(ROWS + ['SYN-U,10/14/2026 3:00 PM,Sale,$4.00,Approved,On File,,Example Wholesale,$0.00'])
+    row = DailyCloseSummary.new(day: Date.new(2026, 10, 14)).swipesimple_row
+    assert_equal [9200, 2000, 6800], [row.net, row.cash, row.credit]
+    assert_includes row.notes, '$4.00 has no identified tender'
+    refute_includes row.notes, 'does not report tax or cash'
   end
 
   test 'unknown tips stay unknown instead of zero' do
@@ -119,8 +180,8 @@ class SwipesimpleDayCloseTest < ActiveSupport::TestCase
     SwipesimpleReportImporter.import!(csv, options, expected_fingerprint: prepared.fingerprint)
   end
 
-  def deposit_report(kind, from, to, observed, records, key: 'data')
-    IrisReport.create!(api_origin: 'https://fixture.iriscrm.com', merchant_number: '000000001234', report_kind: kind,
+  def deposit_report(kind, from, to, observed, records, key: 'data', merchant: '000000001234')
+    IrisReport.create!(api_origin: 'https://fixture.iriscrm.com', merchant_number: merchant, report_kind: kind,
       window_from: from, window_to: to, status: 'complete', observed_at: observed,
       payload_json: { 'currency' => nil, key => records.map { |date, amount| { 'date' => date, 'amount' => amount, 'batch' => 'SYN' } } }.to_json)
   end

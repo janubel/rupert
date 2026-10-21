@@ -22,6 +22,22 @@ class SwipesimpleDaysController < AuthenticatedController
     redirect_to swipesimple_days_path, alert: 'Choose a valid business date.'
   end
 
+  # Owner choice of the NAB merchant whose deposits fund SwipeSimple card
+  # sales. The form carries an opaque token, never the merchant number.
+  def deposit_merchant
+    return head(:forbidden) unless Current.user.can?('settings.write')
+
+    back = swipesimple_days_path(date: params[:date].to_s.match?(/\A\d{4}-\d{2}-\d{2}\z/) ? params[:date] : nil, anchor: 'close-deposit')
+    token = params[:merchant_token].to_s
+    merchant = SwipesimpleDayClose.deposit_merchants.find { |candidate| SwipesimpleDayClose.merchant_token(candidate) == token }
+    return redirect_to(back, alert: 'Choose a NAB merchant from the list.') if token.present? && merchant.nil?
+
+    TenantSettings.set(:swipesimple_deposit_merchant, merchant.to_s)
+    label = merchant ? SwipesimpleDayClose.mask(merchant) : 'none'
+    ActivityLogger.log('swipesimple_deposit_merchant_set', details: "NAB merchant #{label}")
+    redirect_to back, notice: merchant ? "SwipeSimple card sales are now compared with NAB merchant #{label} deposits." : 'Deposit merchant cleared.'
+  end
+
   def review
     return head(:forbidden) unless Current.user.can?('sales.write')
 

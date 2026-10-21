@@ -87,7 +87,44 @@
 
   <section id="close-deposit" class="retail-anchor card card-pad space-y-4">
     <h2 class="font-display text-xl">Expected processor deposit vs actual</h2>
-    <% if close.deposits_with_records.empty? %>
+    <% merchants = SwipesimpleDayClose.deposit_merchants %>
+    <% chosen = close.deposit_merchant %>
+    <% if Current.user.can?('settings.write') %>
+      <%= form_tag deposit_merchant_swipesimple_days_path, method: :post, class: 'flex flex-wrap items-end gap-3', aria: { label: 'NAB merchant that funds SwipeSimple' } do %>
+        <%= hidden_field_tag :date, @date.iso8601 %>
+        <div><%= label_tag :merchant_token, 'NAB merchant that funds SwipeSimple card sales', class: 'field-label' %>
+          <%= select_tag :merchant_token, options_for_select(merchants.map { |m| ["NAB merchant #{SwipesimpleDayClose.mask(m)}", SwipesimpleDayClose.merchant_token(m)] }, chosen && SwipesimpleDayClose.merchant_token(chosen)), include_blank: 'Not chosen — compare every merchant', class: 'input' %></div>
+        <%= submit_tag 'Save merchant', class: 'btn-ghost btn-sm' %>
+      <% end %>
+      <% if merchants.empty? %><p class="text-xs text-mocha">No NAB deposit snapshots are stored yet, so there is nothing to choose. Pull NAB Daily Deposits from the IRIS connection first.</p><% end %>
+    <% else %>
+      <p class="text-sm text-mocha" data-deposit-merchant><%= chosen ? "Deposits are compared with NAB merchant #{SwipesimpleDayClose.mask(chosen)}." : 'No NAB merchant has been chosen for SwipeSimple yet; someone with settings access can choose it here.' %></p>
+    <% end %>
+    <% if chosen %>
+      <% match = close.deposit_match %>
+      <% if match.nil? %>
+        <p class="text-sm"><strong>No deposit from NAB merchant <%= SwipesimpleDayClose.mask(chosen) %> is stored for the <%= SwipesimpleDayClose::FUNDING_LAG_DAYS %> days after <%= @date.strftime('%b %-d, %Y') %> yet.</strong></p>
+        <p class="text-sm text-mocha">Card net to expect from SwipeSimple: <strong><%= money.call(close.card_net_cents) %></strong>. Card sales usually fund one to three days later; check again after the next NAB Daily Deposits pull.</p>
+      <% else %>
+        <div class="retail-table-region" role="region" tabindex="0" aria-label="Processor deposit comparison">
+          <table class="w-full text-sm"><caption class="sr-only">NAB deposit funded after this day next to the SwipeSimple card net it covers</caption>
+            <thead class="border-b border-fog bg-haze"><tr><th scope="col" class="th">Business day</th><th scope="col" class="th text-right">SwipeSimple card net</th></tr></thead>
+            <tbody class="divide-y divide-fog">
+              <% match.business_days.each do |day| %><tr class="<%= 'font-semibold' if day == @date %>"><th scope="row" class="td text-left"><%= link_to_unless day == @date, day.strftime('%a %b %-d'), swipesimple_days_path(date: day), class: 'underline' %></th><td class="td retail-money text-right"><%= match.card_net_by_day[day].nil? ? 'No card sales stored' : money.call(match.card_net_by_day[day]) %></td></tr><% end %>
+              <tr><th scope="row" class="td text-left">Card net covered</th><td class="td retail-money text-right font-semibold"><%= money.call(match.card_net_cents) %></td></tr>
+              <tr><th scope="row" class="td text-left">NAB deposit <%= match.deposit_date.strftime('%a %b %-d') %> · <%= pluralize(match.records.size, 'batch') %></th><td class="td retail-money text-right font-semibold" data-deposit-amount><%= money.call(match.amount_cents) %></td></tr>
+              <tr><th scope="row" class="td text-left">Difference (deposit − card net)</th><td class="td retail-money text-right <%= match.difference_cents.zero? ? '' : 'text-clay font-semibold' %>" data-deposit-difference><%= money.call(match.difference_cents) %></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="list-disc space-y-1 pl-5 text-xs text-mocha">
+          <li>Matched to the first NAB merchant <%= SwipesimpleDayClose.mask(chosen) %> deposit dated 1–<%= SwipesimpleDayClose::FUNDING_LAG_DAYS %> days after the business day. NAB Daily Deposits have no batch date, so days that share a deposit (such as a weekend) are compared together, and each deposit is compared once.</li>
+          <li>One NAB snapshot per date (the newest that covers it); overlapping snapshots are never added together.</li>
+          <% if match.currency.nil? %><li>NAB does not state the currency of these amounts; they are assumed to match SwipeSimple’s USD only for this comparison.</li><% end %>
+          <li>NAB amounts are batch deposits, not proof the bank received them; fees and adjustments can make them differ.</li>
+        </ul>
+      <% end %>
+    <% elsif close.deposits_with_records.empty? %>
       <p class="text-sm"><strong>The processor deposit isn’t available for this day.</strong> No stored NAB / IRIS Daily Deposits record is dated <%= @date.strftime('%b %-d, %Y') %>.</p>
       <p class="text-sm text-mocha">Card net to expect from SwipeSimple: <strong><%= money.call(close.card_net_cents) %></strong>. Deposits usually land on a later date; check the next days, or pull NAB Daily Deposits from the IRIS connection.</p>
     <% else %>
@@ -103,7 +140,7 @@
       </div>
       <ul class="list-disc space-y-1 pl-5 text-xs text-mocha">
         <li>Each merchant uses one NAB snapshot (the newest that covers this date); overlapping snapshots are never added together.</li>
-        <li>Rupert does not yet know which NAB merchant funds SwipeSimple, and NAB currency is not confirmed. The difference is arithmetic for review, not a verified variance.</li>
+        <li>No NAB merchant has been chosen for SwipeSimple, and NAB currency is not confirmed. The difference is arithmetic for review, not a verified variance.</li>
         <li>NAB dates are batch/deposit dates; a day’s card sales often fund on a later date. These are batch amounts, not proof of bank receipt.</li>
       </ul>
     <% end %>

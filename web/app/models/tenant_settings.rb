@@ -9,7 +9,10 @@ class TenantSettings
     low_stock_threshold: 5,
     # Percent used only to estimate tax for sources that do not report it
     # (SwipeSimple). Blank means no estimate is shown.
-    sales_tax_rate: ''
+    sales_tax_rate: '',
+    # NAB / IRIS merchant number whose deposits fund SwipeSimple card sales.
+    # Chosen by the owner on the SwipeSimple daily close page; never defaulted.
+    swipesimple_deposit_merchant: ''
   }.freeze
 
   class << self
