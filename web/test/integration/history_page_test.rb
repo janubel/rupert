@@ -17,7 +17,7 @@ class HistoryPageTest < ActionDispatch::IntegrationTest
     get finance_history_path
     assert_response :success
     %w[QuickBooks Shopify Square C-Trax SwipeSimple NAB Authorize.net Bank\ statements Rupert\ ledger].each { |label| assert_includes response.body, label }
-    assert_includes response.body, 'not</strong> when the business began'
+    assert_includes response.body, 'not when the business began'
     assert_includes response.body, '2024-01-10'
     assert_not_includes response.body, 'SECRET PAYEE'
     assert_not_includes response.body, '9,876.54'
