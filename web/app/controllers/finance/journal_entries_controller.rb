@@ -138,6 +138,9 @@ module Finance
       case entry.source_type
       when 'Finance::Expense' then ['Expense register', finance_expenses_path(include_deleted: 1)]
       when 'Finance::VendorPayment' then ['Vendor payments register', finance_vendor_payments_path(include_deleted: 1)]
+      when 'ImportTransaction'
+        batch_id = ImportTransaction.find_by(id: entry.source_id)&.batch_id
+        batch_id ? ["QuickBooks import batch ##{batch_id}", finance_quickbooks_import_path(batch_id)] : nil
       when 'Core::Payment'
         order = Core::Payment.find_by(id: entry.source_id)&.order
         order ? ["Order #{order.order_number}", order_path(order)] : nil

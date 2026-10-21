@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_020000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -940,6 +940,133 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_010000) do
     t.datetime "updated_at", null: false
     t.index ["stripe_subscription_id"], name: "index_customer_subscriptions_on_stripe_subscription_id", unique: true
     t.index ["tenant_id"], name: "index_customer_subscriptions_on_tenant_id", unique: true
+  end
+
+  create_table "import_batches", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "source", null: false
+    t.string "kind", null: false
+    t.string "status", default: "staged", null: false
+    t.integer "source_document_id", null: false
+    t.string "filename", null: false
+    t.date "date_from"
+    t.date "date_to"
+    t.date "as_of"
+    t.integer "row_count", default: 0, null: false
+    t.integer "transaction_count", default: 0, null: false
+    t.integer "accepted_count", default: 0, null: false
+    t.integer "duplicate_count", default: 0, null: false
+    t.integer "rejected_count", default: 0, null: false
+    t.text "summary_json", null: false
+    t.date "post_through"
+    t.integer "created_by_id"
+    t.string "created_by_name"
+    t.integer "approved_by_id"
+    t.string "approved_by_name"
+    t.datetime "approved_at"
+    t.string "closed_by_name"
+    t.datetime "closed_at"
+    t.text "closed_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["source_document_id"], name: "index_import_batches_on_source_document_id"
+    t.index ["tenant_id", "created_at"], name: "idx_import_batches_recent"
+    t.index ["tenant_id", "source", "status"], name: "idx_import_batches_status"
+    t.index ["tenant_id"], name: "index_import_batches_on_tenant_id"
+  end
+
+  create_table "import_entity_mappings", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "source", null: false
+    t.string "entity_type", null: false
+    t.string "source_key", null: false
+    t.string "source_name", null: false
+    t.string "source_number"
+    t.string "source_type"
+    t.string "decision", default: "unmapped", null: false
+    t.integer "target_id"
+    t.string "proposed_code"
+    t.string "proposed_type"
+    t.integer "first_batch_id"
+    t.integer "decided_by_id"
+    t.string "decided_by_name"
+    t.datetime "decided_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "entity_type", "target_id"], name: "idx_import_mappings_target"
+    t.index ["tenant_id", "source", "entity_type", "source_key"], name: "idx_import_mappings_key", unique: true
+    t.index ["tenant_id"], name: "index_import_entity_mappings_on_tenant_id"
+  end
+
+  create_table "import_lines", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "batch_id", null: false
+    t.integer "transaction_id"
+    t.integer "row_no", null: false
+    t.string "record_type", null: false
+    t.string "fingerprint", null: false
+    t.string "status", default: "staged", null: false
+    t.text "reason"
+    t.date "txn_date"
+    t.string "txn_type"
+    t.string "doc_number"
+    t.text "name"
+    t.text "memo"
+    t.string "account_name"
+    t.string "account_number"
+    t.string "account_type"
+    t.string "class_name"
+    t.string "location_name"
+    t.bigint "debit_cents", default: 0, null: false
+    t.bigint "credit_cents", default: 0, null: false
+    t.text "raw_json"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "batch_id", "row_no"], name: "idx_import_lines_row"
+    t.index ["tenant_id", "batch_id", "status"], name: "idx_import_lines_batch"
+    t.index ["tenant_id", "fingerprint"], name: "idx_import_lines_live_fingerprint", unique: true, where: "status IN ('staged', 'posted')"
+    t.index ["tenant_id"], name: "index_import_lines_on_tenant_id"
+    t.index ["transaction_id"], name: "index_import_lines_on_transaction_id"
+  end
+
+  create_table "import_source_documents", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "source", null: false
+    t.string "kind", null: false
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.integer "byte_size", null: false
+    t.string "sha256", null: false
+    t.text "content_base64", null: false
+    t.integer "uploaded_by_id"
+    t.datetime "created_at", null: false
+    t.index ["tenant_id", "source", "sha256"], name: "idx_import_documents_replay", unique: true
+    t.index ["tenant_id"], name: "index_import_source_documents_on_tenant_id"
+  end
+
+  create_table "import_transactions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "batch_id", null: false
+    t.string "txn_key", null: false
+    t.date "txn_date", null: false
+    t.string "txn_type"
+    t.string "doc_number"
+    t.text "name"
+    t.integer "line_count", default: 0, null: false
+    t.bigint "debit_cents", default: 0, null: false
+    t.bigint "credit_cents", default: 0, null: false
+    t.string "fingerprint", null: false
+    t.string "status", default: "staged", null: false
+    t.text "reason"
+    t.bigint "journal_entry_id"
+    t.datetime "posted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["journal_entry_id"], name: "index_import_transactions_on_journal_entry_id"
+    t.index ["tenant_id", "batch_id", "status"], name: "idx_import_txn_batch"
+    t.index ["tenant_id", "fingerprint"], name: "idx_import_txn_live_fingerprint", unique: true, where: "status IN ('staged', 'posted')"
+    t.index ["tenant_id", "txn_date"], name: "idx_import_txn_date"
+    t.index ["tenant_id"], name: "index_import_transactions_on_tenant_id"
   end
 
   create_table "support_access_events", force: :cascade do |t|

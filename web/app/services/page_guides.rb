@@ -109,6 +109,16 @@ class PageGuides
       ],
       tips: ['Undecided withdrawals are missing from money out until you decide them.', 'Deciding a line inside an approved day marks that approval as changed.', 'Match statement lines to ledger entries on the Bank reconciliation page.']
     ),
+    'quickbooks_import' => Guide.new(
+      key: 'quickbooks_import', title: 'QuickBooks import',
+      summary: 'Bring QuickBooks history into Rupert safely: upload a CSV, review it, match accounts, then approve. Reversible as a whole.',
+      sections: [
+        { heading: 'Read, then decide', body: 'Uploading keeps the original file unchanged and shows what Rupert read: dates, totals by account, transactions that do not balance, duplicates and rejected rows. Your books do not change until you approve.' },
+        { heading: 'Match accounts yourself', body: 'Each QuickBooks account needs your decision: map it to a Rupert account, create one, or skip it. Rupert only suggests similar names. Only the Journal posts; charts, vendor and customer lists set up the matching and a trial balance is kept for checking.' },
+        { heading: 'Approve and reverse', body: 'Choose the last date to post. Locked periods, skipped accounts and look-alike transactions stay staged with the reason shown. Reversing a batch voids everything it posted, unless a period was locked since.' }
+      ],
+      tips: ['A report with a single Amount column cannot be posted; export the Journal, or add separate Debit and Credit columns.', 'Overlapping exports are safe: transactions already imported are skipped.', 'The day before Rupert’s own first entry is suggested as the last date, so the same days are never recorded twice.']
+    ),
     'business_snapshot' => Guide.new(
       key: 'business_snapshot', title: 'Business snapshot',
       summary: 'A printable picture of sales, stock, cash and vendors built from live records, each section stating its source and age.',
@@ -761,6 +771,7 @@ class PageGuides
     ['/finance/chart_of_accounts', 'chart_of_accounts'],
     ['/finance/expenses', 'expenses'],
     ['/finance/vendor_payments', 'payments'],
+    ['/finance/quickbooks_imports', 'quickbooks_import'],
     ['/finance/journal_entries', 'journal_entries'],
     ['/finance/reports', 'finance_reports'],
     ['/finance/bank_reconciliation', 'bank_reconciliation'],
