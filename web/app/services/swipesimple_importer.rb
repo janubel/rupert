@@ -20,7 +20,7 @@ class SwipesimpleImporter
   SUPPORTED_CURRENCIES = %w[USD CAD EUR GBP AUD NZD].freeze
   MAX_FIELD_BYTES = 1024
   Error = Class.new(ArgumentError)
-  Result = Struct.new(:orders, :lines, :payments, :skipped_rows, :unchanged_orders, keyword_init: true)
+  Result = Struct.new(:orders, :lines, :payments, :skipped_rows, :unchanged_orders, :refunded_orders, keyword_init: true)
 
   COLUMN_ALIASES = {
     order_id: %w[orderid order id invoice invoiceid receipt receiptid transactionid transaction transactionnumber],
@@ -121,7 +121,7 @@ class SwipesimpleImporter
       tenant_id = Current.tenant_id
       raise Error, 'An active workspace is required for this import.' if tenant_id.blank?
 
-      unchanged = 0
+      unchanged = refunded_orders = 0
       result = nil
       Core::Order.transaction do
         # Acquire the writer/tenant row lock before replay reads, avoiding SQLite
@@ -136,9 +136,15 @@ class SwipesimpleImporter
           end
           order = existing[record[:source_order_id]]
           ledger = ledgers[ledger_id(tenant_id, record[:source_order_id])]
-          if order
-            unless !refunded.include?(order.id) && unchanged_order?(order, record) && unchanged_ledger?(ledger, record)
-              raise Error, 'An existing transaction differs or has refund history. Nothing was imported; review a correction separately.'
+          if order && refunded.include?(order.id)
+            # Refunds live on the order, not in the export. The sale itself must
+            # still match; the order is then left exactly as it is.
+            raise Error, 'An existing transaction differs. Nothing was imported; review a correction separately.' unless same_sale?(order, record)
+
+            refunded_orders += 1
+          elsif order
+            unless unchanged_order?(order, record) && unchanged_ledger?(ledger, record)
+              raise Error, 'An existing transaction differs. Nothing was imported; review a correction separately.'
             end
             unchanged += 1
           elsif ledger
@@ -148,7 +154,7 @@ class SwipesimpleImporter
         created = prepared.records.reject { |record| existing.key?(record[:source_order_id]) }
         created.each { |record| create_order!(record, tenant_id) }
         result = Result.new(orders: created.length, lines: created.sum { |record| record[:lines].length },
-          payments: created.length, skipped_rows: prepared.summary[:skipped_rows], unchanged_orders: unchanged)
+          payments: created.length, skipped_rows: prepared.summary[:skipped_rows], unchanged_orders: unchanged, refunded_orders: refunded_orders)
         begin
           yield result if block_given?
         rescue ActiveRecord::Rollback
@@ -320,12 +326,17 @@ class SwipesimpleImporter
 
     def unchanged_order?(order, record)
       order.status == 'paid' && order.channel == 'pos' && order.location_id.nil? && order.tax_cents.nil? &&
-        order.order_number == record[:order_number] && order.currency == record[:currency] &&
+        same_sale?(order, record) && unchanged_payments?(order, record)
+    end
+
+    # The sale as exported: when, what, how much. Status and payments are
+    # compared separately because a refund changes them without changing the sale.
+    def same_sale?(order, record)
+      order.order_number == record[:order_number] && order.currency == record[:currency] &&
         order.gross_cents == record[:gross_cents] && order.line_items == record[:lines].length &&
         same_time?(order.occurred_at, record[:occurred_at]) &&
         order.order_lines.map { |line| line.attributes.symbolize_keys.slice(:sku, :name, :quantity, :unit_cents, :line_cents) }
-          .sort_by { |line| JSON.generate(line) } == record[:lines] &&
-        unchanged_payments?(order, record)
+          .sort_by { |line| JSON.generate(line) } == record[:lines]
     end
 
     def unchanged_payments?(order, record)
@@ -335,8 +346,13 @@ class SwipesimpleImporter
         same_time?(payments.first.paid_at, record[:occurred_at])
     end
 
+    # The ledger mirror is pruned after a year (DataRetention); a sale older than
+    # that with no mirror is unchanged if the order itself matches. The pruned
+    # mirror is not recreated. A missing mirror for a recent sale is a conflict.
     def unchanged_ledger?(ledger, record)
-      ledger && ledger.source == 'swipesimple' && ledger.sourceOrderId == record[:source_order_id] &&
+      return record[:occurred_at] < Time.current - DataRetention::POLICIES.fetch('LedgerEntry').first if ledger.nil?
+
+      ledger.source == 'swipesimple' && ledger.sourceOrderId == record[:source_order_id] &&
         ledger.orderName == record[:order_number] && ledger.currency == record[:currency] &&
         ledger.grossCents == record[:gross_cents] && ledger.status == 'COMPLETED' &&
         ledger.lineItems == record[:lines].sum { |line| line[:quantity] } &&

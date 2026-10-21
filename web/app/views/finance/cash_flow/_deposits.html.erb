@@ -1,0 +1,13 @@
+<aside id="cash-flow-deposits" class="card card-pad">
+  <h2 class="font-display text-xl text-ink">From sale to bank</h2>
+  <p class="mt-1 text-xs text-taupe">Card sales reach the bank as processor payouts, later and net of fees. This compares the two totals for the range; it is not a reconciliation.</p>
+  <% d = { sales: report.sales_cents, refunds: report.refunds_cents, deposits: report.processor_deposits_cents } %>
+  <% gap = d[:sales] - d[:refunds] - d[:deposits] %>
+  <ol class="cash-flow-flow mt-4">
+    <li><span class="cash-flow-flow-label">Sales taken</span><span class="money"><%= finance_money_text(d[:sales]) %></span></li>
+    <li><span class="cash-flow-flow-label">Refunds given</span><span class="money"><%= finance_money_text(-d[:refunds]) %></span></li>
+    <li><span class="cash-flow-flow-label">Processor payouts into the bank</span><span class="money"><%= finance_money_text(d[:deposits]) %></span></li>
+    <li class="cash-flow-flow-total"><span class="cash-flow-flow-label">Not yet in the bank, or fees, cash and timing</span><span class="money <%= 'money-negative' if gap.negative? %>"><%= finance_money_text(gap) %></span></li>
+  </ol>
+  <p class="mt-3 text-xs text-taupe">Payouts count only statement lines reviewed as "Processor payout"<% if report.pending_count.positive? %>; <%= report.pending_count %> lines are still undecided<% end %>. <%= link_to 'Review bank lines', bank_statements_path, class: 'underline' %>.</p>
+</aside>
