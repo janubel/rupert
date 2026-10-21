@@ -486,6 +486,17 @@ class PageGuides
         'Environment secrets (Square/Shopify tokens) live in the .env card and are encrypted at rest.'
       ]
     ),
+    'buzz' => Guide.new(
+      key: 'buzz', title: 'Buzz team chat',
+      summary: "Buzz is the team's chat, and Rupert's agent @rupert lives in it. This card opens the chat and helps you connect your own phone or computer.",
+      sections: [
+        { heading: "What's here", body: "The agent's profile, an Open chat button, the relay address and channel to copy or scan with a phone, and download links for the Buzz app on each platform." }
+      ],
+      tips: [
+        'You use your own Buzz identity in your own app. Never paste a private key (starting nsec1) into Rupert or the chat.',
+        'If Open chat does nothing, install the Buzz app first (Get Buzz), then try again.'
+      ]
+    ),
     'employees' => Guide.new(
       key: 'employees', title: 'Staff',
       summary: 'Your team directory — who works where, linked to their login accounts.',
@@ -787,6 +798,7 @@ class PageGuides
     ['/activity', 'activity'],
     ['/syncs', 'sync'],
     ['/settings', 'settings'],
+    ['/buzz', 'buzz'],
     ['/employees', 'employees'],
     ['/users', 'users'],
     ['/permissions', 'permissions'],

@@ -82,6 +82,7 @@ from directory to payroll.
 | System health | Server load, memory, disk, database, and slow-query monitoring. |
 | Connections | Human-readable guide to every service's keys: what's set, where to find each key, and how to renew it. |
 | Settings | Business settings, env import/export, database backup/restore, Google Drive backup, Buzz agent, feature flags. |
+| Buzz | Header card for the team chat: the @rupert agent's profile, open chat, connect-your-device relay/channel/QR and per-platform Buzz downloads (`/buzz`). Needs Overview access. |
 | Accounts | Login accounts (who can sign in) and role assignment. |
 | Permissions | Role × permission matrix with per-person overrides. |
 | Warehouse | Secret vendor links with price multipliers, tiers, and a token-gated storefront. |

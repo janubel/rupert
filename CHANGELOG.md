@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Buzz team chat card, and one prompt for the @rupert agent.** A **Buzz** speech-bubble icon in the header (staff with Overview access) opens `/buzz`: the agent's profile (name, public key, description), **Open chat** (deep link into the Buzz app for the configured relay and channel), **Get Buzz** (per-platform downloads for macOS, Windows, Linux, iPhone/iPad, Android and Web, each saying "Not available yet" when there is no link) and **Connect your own device** (relay and channel with copy buttons, plus a QR code for phones, drawn in the browser). It shows only public details and says "Buzz is not set up yet" until a relay is set. Link templates and download links are settings (`BUZZ_CHAT_LINK_TEMPLATE`, `BUZZ_CONNECT_LINK_TEMPLATE`, `BUZZ_DOWNLOAD_*`, `BUZZ_WEB_URL`; `buzz:` and `https:` only). Settings gains a Buzz status row with an on-demand **Check status** (relay reachable, agent registered). The agent's role, limits and tone now live in one place, `web/config/buzz_agent/`, used by the opencode chat agent and the `buzz-acp` prompt in `docs/ops/`. See `docs/ops/buzz.md`, including what could not be verified (mobile store links, a live relay).
+
 - Fix the stock-comparison PDF test reader dropping a valid compressed byte and intermittently reporting empty PDF text; add a deterministic regression fixture. Production PDF generation is unchanged.
 
 - Add reproducible nightly and cumulative patch/line totals to the build header, with a compact accessible disclosure, confirmed-fix evidence and release-note links. Totals are generated during asset builds, bound to the serving revision and unavailable when missing/stale; historical bug totals remain unknown.

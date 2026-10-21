@@ -52,6 +52,7 @@ Two kinds of configuration exist. **Boot-time variables** live in `/etc/rupert.e
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Google sign-in |
 | `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, `GOOGLE_DRIVE_REFRESH_TOKEN`, `GOOGLE_DRIVE_FOLDER_ID`, `GOOGLE_DRIVE_RETENTION` | Instance backups to Drive (platform administrator only) |
 | `BUZZ_RELAY_URL`, `BUZZ_PRIVATE_KEY`, `BUZZ_CHANNEL`, `BUZZ_ANNOUNCEMENTS_CHANNEL`, `BUZZ_INV_ADJUSTMENTS_CHANNEL`, `OPCODE_BUZZ_PRIVATE_KEY` | Buzz (Nostr) notifications |
+| `BUZZ_CHAT_LINK_TEMPLATE`, `BUZZ_CONNECT_LINK_TEMPLATE`, `BUZZ_DOWNLOAD_MACOS`, `BUZZ_DOWNLOAD_WINDOWS`, `BUZZ_DOWNLOAD_LINUX`, `BUZZ_DOWNLOAD_IOS`, `BUZZ_DOWNLOAD_ANDROID`, `BUZZ_WEB_URL` | Links on the Buzz card (open chat, add workspace and QR, per-platform downloads); defaults and rules in [buzz.md](buzz.md) |
 | `FULFILLMENT_ALERT_HOURS` | Unfulfilled-order alert threshold |
 | `PUSH_GUARD_*`, `PUSH_FREEZE_*` | Informational freeze/approval state (no longer enforced) |
 

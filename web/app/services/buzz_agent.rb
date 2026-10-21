@@ -10,7 +10,7 @@ require 'timeout'
 # Configuration (Settings page / EnvStore):
 #   BUZZ_RELAY_URL   wss://your-buzz-relay
 #   BUZZ_PRIVATE_KEY the agent's nsec/hex private key (generated in Settings)
-#   BUZZ_CHANNEL     the channel's Nostr event id (kind 40) to post into
+#   BUZZ_CHANNEL     the channel's id (a UUID in Buzz) to post into
 class BuzzAgent
   class << self
     def configured?
@@ -85,10 +85,86 @@ class BuzzAgent
       profile = {
         name: 'Rupert',
         display_name: 'Rupert',
-        about: "Rupert — the team's AI agent (powered by opencode + deepseek-v4). Inventory & ops for the techmore store.",
+        about: BuzzAgentPrompt.about,
         nip05: ''
       }.to_json
       publish(build_event(kind: 0, content: profile))
+    end
+
+    # What Rupert can see of Buzz right now, for the Settings status row.
+    # relay_reachable / registered are nil when they were not checked (not
+    # configured) and registered is nil when the relay could not be asked.
+    # Never raises and never includes a key.
+    def check_status
+      status = { configured: configured?, relay_reachable: nil, registered: nil }
+      return status unless status[:configured]
+
+      status[:relay_reachable], status[:registered] = probe_relay
+      status[:checked_at] = Time.current
+      Rails.cache.write(status_cache_key, status, expires_in: 7.days)
+      status
+    end
+
+    # The result of the last check_status, or nil when none has run recently.
+    def last_status
+      Rails.cache.read(status_cache_key)
+    end
+
+    def status_cache_key
+      "buzz_agent/status/#{Current.tenant_id}"
+    end
+
+    # Connects, authenticates (NIP-42) and asks the relay for the agent's kind 0
+    # profile. Returns [reachable, registered]; registered is nil when the relay
+    # never got as far as answering.
+    def probe_relay
+      require 'websocket-client-simple'
+
+      relay = relay_url
+      pubkey = public_key_hex
+      authed = false
+      sent_req = false
+      answered = false
+      found = false
+      req = ['REQ', 'rupert-status', { kinds: [0], authors: [pubkey], limit: 1 }].to_json
+      ws = WebSocket::Client::Simple.connect(relay)
+
+      ws.on(:message) do |msg|
+        next if msg.respond_to?(:type) && msg.type != :text
+
+        data = JSON.parse(msg.data.to_s)
+        case data[0]
+        when 'AUTH'
+          unless authed
+            authed = true
+            ws.send(['AUTH', BuzzAgent.build_auth_event(data[1], relay: relay).to_h].to_json)
+            ws.send(req)
+            sent_req = true
+          end
+        when 'EVENT' then found = true
+        when 'EOSE' then answered = true
+        end
+      rescue StandardError
+        nil
+      end
+      ws.on(:error) { |_e| nil }
+
+      Timeout.timeout(8) { sleep 0.05 until ws.open? }
+      deadline = Time.current + 3.0
+      sleep 0.05 until authed || Time.current > deadline
+      ws.send(req) unless sent_req
+      deadline = Time.current + 5.0
+      sleep 0.05 until answered || found || Time.current > deadline
+
+      [true, found ? true : (answered ? false : nil)]
+    rescue StandardError
+      [false, nil]
+    ensure
+      begin
+        ws&.close
+      rescue StandardError
+        nil
+      end
     end
 
     # Opens a WebSocket to the relay, authenticates (NIP-42) against the
