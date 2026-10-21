@@ -72,10 +72,7 @@ class ReadinessCheck
   end
 
   def self.database_directory
-    config = ActiveRecord::Base.connection_db_config
-    return Rails.root.join('storage').to_s unless config.adapter == 'sqlite3'
-
-    database = config.database.to_s
+    database = ActiveRecord::Base.connection_db_config.database.to_s
     return nil if database == ':memory:'
 
     File.dirname(database.start_with?('/') ? database : Rails.root.join(database).to_s)

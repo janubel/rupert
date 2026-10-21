@@ -49,7 +49,7 @@ Never restore an older database over newer transactions as a test. A restore is 
 1. **Stop writers** inside the container: `systemctl stop rupert-jobs rupert-web`. Confirm nothing holds the file: `fuser /opt/rupert/web/storage/production.sqlite3` prints nothing.
 2. **Preserve the current file** even if it looks broken: `cp -a production.sqlite3 production.sqlite3.broken-$(date +%s)` (and `-wal`/`-shm` if present).
 3. **Pick the backup.** Newest rolling snapshot for an application mistake (`/var/backups/rupert/frequent/`), newest full set for disk loss (`/var/backups/rupert/` or the decrypted off-host copy). For off-host: `openssl enc -d -aes-256-cbc -pbkdf2 -pass file:... -in rupert-sqlite-<stamp>.sql.gz.enc > rupert-<stamp>.sql.gz`.
-4. **Restore to a new file, never in place**: `gunzip -c rupert-<stamp>.sql.gz > production.restored.sqlite3`.
+4. **Restore to a new file, never in place**: `gunzip -c rupert-<stamp>.sql.gz > production.restored.sqlite3`. The archive contains a SQLite database, despite the historical `.sql.gz` filename.
 5. **Verify**: `sqlite3 production.restored.sqlite3 'PRAGMA integrity_check; PRAGMA foreign_key_check;'` must print `ok` and nothing else. Compare row counts of `orders`, `customers`, `ShopifyVariant`, `settings` with the operator log or the drill output.
 6. **Keys**: if `/etc/rupert.env` was lost too, restore it from the `env-<stamp>` file of the same set (off-host: `env-sqlite-<stamp>.enc`). The `RAILS_ENCRYPTION_*` values must be the originals; new keys cannot read old ciphertext.
 7. **Swap**: `mv production.restored.sqlite3 production.sqlite3 && rm -f production.sqlite3-wal production.sqlite3-shm && chown rupert:rupert production.sqlite3`.
@@ -57,7 +57,7 @@ Never restore an older database over newer transactions as a test. A restore is 
 9. **Re-sync**: run a full sync from the Sync page. The mirror is idempotent; the watermark re-reads the last 48 hours of orders plus whatever was lost.
 10. **Record** what was restored, from which stamp, the data gap (RPO actually incurred) and the elapsed time (RTO actually achieved).
 
-PostgreSQL copies from before the October 2026 cutover are frozen history and are not a restore source.
+PostgreSQL copies from before the October 2026 cutover are frozen history, outside the supported runtime, and are not a restore source.
 
 ## Keys and rotation
 

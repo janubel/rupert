@@ -11,19 +11,11 @@ class AddExpiresAtToWarehouseShare < ActiveRecord::Migration[8.1]
 
     # Backfill: existing shares get a window starting from now so nothing that
     # is actively in use breaks mid-sale, but very old links age out too.
-    if connection.adapter_name.downcase.include?('sqlite')
-      execute <<~SQL
-        UPDATE "WarehouseShare"
-        SET "expires_at" = datetime('now', '+#{DEFAULT_WINDOW.to_i / 86_400} days')
-        WHERE "expires_at" IS NULL AND status = 'active'
-      SQL
-    else
-      execute <<~SQL
-        UPDATE "WarehouseShare"
-        SET "expires_at" = NOW() + INTERVAL '#{DEFAULT_WINDOW.to_i / 86_400} days'
-        WHERE "expires_at" IS NULL AND status = 'active'
-      SQL
-    end
+    execute <<~SQL
+      UPDATE "WarehouseShare"
+      SET "expires_at" = datetime('now', '+#{DEFAULT_WINDOW.to_i / 86_400} days')
+      WHERE "expires_at" IS NULL AND status = 'active'
+    SQL
 
     add_index :WarehouseShare, %i[token expires_at], name: 'idx_warehouse_share_token_expiry'
   end

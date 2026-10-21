@@ -2,7 +2,7 @@
 # boot credentials; production data and merchant credentials are never copied.
 FROM ruby:4.0.6-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev libsqlite3-dev git ca-certificates curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential libsqlite3-dev git ca-certificates curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY web/Gemfile web/Gemfile.lock ./
 RUN bundle install --jobs 4 --retry 3

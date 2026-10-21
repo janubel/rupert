@@ -20,7 +20,7 @@ New commercial registrations always queue a separate SER8 instance and cannot op
 
 ## Phase 1 — validate and activate the commercial flow
 
-1. Merge only after review and green PostgreSQL/SQLite CI. Use the existing SER8 deployment runbooks; GitHub merge is not a Rails deployment. Backup production and verify a restore in a disposable instance before migrations. Apply the new migration and asset build; preserve all existing tenants/providers.
+1. Merge only after review and green SQLite CI. Use the existing SER8 deployment runbooks; GitHub merge is not a Rails deployment. Backup production and verify a restore in a disposable instance before migrations. Apply the new migration and asset build; preserve all existing tenants/providers.
 2. In the CSP Stripe account, create a Rupert USD 499.00 monthly recurring Price and a Rupert-product-scoped 50% repeating coupon lasting 12 months. Record IDs only in deployment configuration. Verify the CSP business identity and customer-facing billing descriptor in the actual account before launch.
 3. Configure `CSP_STRIPE_SECRET_KEY`, `CSP_STRIPE_ACCOUNT_ID`, `CSP_STRIPE_MONTHLY_PRICE_ID`, `CSP_STRIPE_REFERRAL_COUPON_ID`, `CSP_STRIPE_WEBHOOK_SECRET`, `RUPERT_PUBLIC_ORIGIN`. Keep `RUPERT_BILLING_ENABLED=false` until test-mode acceptance. Never store secret values in source, browser JS, screenshots, issue bodies or chat.
 4. Register `https://rupertpos.com/webhooks/stripe` for `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`. Integration pins Stripe API version `2025-06-30.basil`; use the same event schema on the endpoint. Test-mode and live-mode credentials/endpoints are separate.

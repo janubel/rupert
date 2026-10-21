@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Getting started — Rupert</title>
-  <meta name="description" content="Run Rupert locally with Ruby 4.0, PostgreSQL, and Shopify tooling.">
+  <meta name="description" content="Run Rupert locally with Ruby 4.0, SQLite, and Shopify tooling.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap">
@@ -17,14 +17,14 @@
 
 <main class="page wrap">
   <h1>Getting started</h1>
-  <p class="lede">Run Rupert locally with Ruby, PostgreSQL, and the Shopify tooling it needs.</p>
+  <p class="lede">Run Rupert locally with Ruby, SQLite, and the Shopify tooling it needs.</p>
 
   <section>
     <h2>Requirements</h2>
     <ul>
       <li>Ruby 4.0.6 (via rbenv — see <code>.ruby-version</code>)</li>
       <li>Bundler</li>
-      <li>PostgreSQL 16</li>
+      <li>SQLite (bundled through the Ruby gem)</li>
       <li>Node (for the Shopify CLI, if developing the app install)</li>
     </ul>
   </section>
@@ -37,12 +37,8 @@ bundle install
 # 2. Copy the env template and fill in credentials
 cp .env.example .env
 
-# 3. Create the postgres role + db (or set POSTGRES_* env vars)
-createuser -s rupert
-createdb -O rupert rupert_development
-
-# 4. Prepare the database
-bin/rails db:create db:migrate
+# 3. Prepare the SQLite database
+bin/rails db:prepare
 
 # 5. Build the Tailwind CSS
 bin/rails tailwindcss:build
@@ -65,9 +61,8 @@ bin/rails server          # http://localhost:3000</code></pre>
   </section>
 
   <section>
-    <h2>One-time data migration</h2>
-    <pre><code># Pull historical data from the legacy SQLite mirror into PostgreSQL
-bin/rails db:import_legacy</code></pre>
+    <h2>Production cutover history</h2>
+    <p>The one-time production migration to SQLite was completed in October 2026. Its PostgreSQL conversion scripts have been retired; new local and production databases are prepared with <code>bin/rails db:prepare</code>. See the <a href="https://github.com/techmore/rupert/blob/main/docs/ops/sqlite-migration.md">historical cutover record</a> for evidence, not a current setup procedure.</p>
   </section>
 
   <section>

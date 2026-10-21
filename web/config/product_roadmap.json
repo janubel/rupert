@@ -7,7 +7,7 @@
       "id": "0",
       "name": "Now \u00b7 reliable SQLite operations",
       "goal": "Ship the feature catalog, planner maintenance and conservative worker concurrency. Reconcile production documentation.",
-      "acceptance": "Both adapter CI jobs pass; authenticated catalog renders; diagnostics contain no customer data; Pages links and mobile layout verified."
+      "acceptance": "SQLite CI passes; authenticated catalog renders; diagnostics contain no customer data; Pages links and mobile layout verified."
     },
     {
       "id": "1",
@@ -274,7 +274,7 @@
       "area": "System",
       "name": "Global search",
       "status": "Available",
-      "scope": "SQLite FTS5 trigram or PostgreSQL search, tenant-scoped results.",
+      "scope": "SQLite FTS5 trigram search, tenant-scoped results.",
       "evidence": "web/app/services/search_sql.rb",
       "phase": "0"
     },

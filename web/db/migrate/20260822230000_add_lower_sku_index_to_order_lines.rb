@@ -1,21 +1,8 @@
 # frozen_string_literal: true
 
-# The restock advisor and ledger queries match SKUs case-insensitively
-# (LOWER(sku) IN (...)), which can't use the plain btree index. This functional
-# index lets PostgreSQL use an index scan for those lookups instead of
-# filtering every row after a fetch.
+# Keep tenant-scoped SKU lookups on a compact composite SQLite index.
 class AddLowerSkuIndexToOrderLines < ActiveRecord::Migration[8.1]
-  disable_ddl_transaction!
-
   def change
-    if connection.adapter_name.downcase.include?('sqlite')
-      add_index :order_lines, %i[tenant_id sku],
-                name: 'idx_order_lines_tenant_sku_sqlite'
-      return
-    end
-
-    add_index :order_lines, 'tenant_id, lower(sku)',
-              name: 'index_order_lines_on_tenant_id_and_lower_sku',
-              algorithm: :concurrently
+    add_index :order_lines, %i[tenant_id sku], name: 'idx_order_lines_tenant_sku_sqlite'
   end
 end

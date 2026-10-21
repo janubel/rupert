@@ -7,20 +7,14 @@ class SearchSqlProbe < ActiveRecord::Base
 end
 
 class SearchSqlTest < ActiveSupport::TestCase
-  test 'adapter-aware fallback uses the right case-insensitive operator' do
+  test 'fallback matches case-insensitively with SQLite LIKE' do
     sql = SearchSql.contains_any(%w[sku title])
 
-    if SearchSql.sqlite?
-      assert_includes sql, 'LIKE ? COLLATE NOCASE'
-      refute_includes sql, 'ILIKE'
-    else
-      assert_includes sql, 'ILIKE ?'
-    end
+    assert_includes sql, 'LIKE ? COLLATE NOCASE'
+    refute_includes sql, 'ILIKE'
   end
 
   test 'SQLite FTS5 trigram search finds middle-of-field substrings' do
-    skip 'SQLite-specific FTS5 experiment' unless SearchSql.sqlite?
-
     connection = ActiveRecord::Base.connection
     connection.create_table(:rupert_search_sql_probes) do |table|
       table.string :value

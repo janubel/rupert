@@ -224,8 +224,6 @@ class InventoryCountScansTest < ActionDispatch::IntegrationTest
   end
 
   test 'sqlite busy response permits a safe retry with the same token' do
-    skip 'SQLite-specific lock error' unless ActiveRecord::Base.connection.adapter_name == 'SQLite'
-
     database_error = begin
       raise ActiveRecord::StatementInvalid.new('busy'), cause: SQLite3::BusyException.new('database is locked')
     rescue ActiveRecord::StatementInvalid => e

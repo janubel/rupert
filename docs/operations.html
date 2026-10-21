@@ -53,7 +53,7 @@ bin/rails test                      # page + API smoke tests</code></pre>
     <h2>Backups</h2>
     <p>Two whole-database backup paths exist on the Settings page for platform administrators. Both contain every workspace in the instance:</p>
     <ul>
-      <li><strong>Database backup</strong> — download a consistent adapter-aware SQLite snapshot or PostgreSQL <code>pg_dump</code>, or restore from a previous upload.</li>
+      <li><strong>Database backup</strong> — download a consistent SQLite snapshot, or restore from a previous upload.</li>
       <li><strong>Google Drive backup</strong> — a platform administrator explicitly configures instance credentials in Settings → Environment and completes Google consent for the destination. Trusted host configuration can also supply these values. Status, history and disconnect controls are platform-only. Scheduled uploads run once per instance every 6 hours when connected, keeping 7 snapshots by default.</li>
     </ul>
     <p>Existing workspace-owned Drive settings and connections are ignored; they are never automatically migrated or approved. Disconnect disables the instance connection, including any refresh token supplied by host configuration. Local snapshot timers run independently of this connection; an upload history entry alone is not proof of a tested restore.</p>

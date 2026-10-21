@@ -17,12 +17,8 @@ jobs:
       - name: Run all browser-controller tests
         run: node --test web/test/javascript/*_test.mjs
   CI:
-    name: CI (${{ matrix.adapter }})
+    name: CI (sqlite3)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        adapter: [postgresql, sqlite3]
     # The app requires Ruby ~> 4.0, which the ruby/setup-ruby action does not
     # provide on GitHub-hosted runners (max 3.5). Run inside the official
     # ruby:4.0 image instead.
@@ -35,24 +31,6 @@ jobs:
       HOST: app-host-name.io
       BUNDLE_GEMFILE: ${{ github.workspace }}/web/Gemfile
       RAILS_ENV: test
-      RUPERT_DB_ADAPTER: ${{ matrix.adapter }}
-      # Container jobs reach service containers by their label, not localhost.
-      POSTGRES_HOST: postgres
-      POSTGRES_USER: rupert
-      POSTGRES_PASSWORD: rupert
-      POSTGRES_DB: rupert_test
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: rupert
-          POSTGRES_PASSWORD: rupert
-          POSTGRES_DB: rupert_test
-        options: >-
-          --health-cmd "pg_isready -U rupert"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     defaults:
       run:
         working-directory: ./web
@@ -72,6 +50,9 @@ jobs:
 
       - name: Prepare test database
         run: bin/rails db:prepare
+
+      - name: Verify all migrations on a fresh isolated SQLite database
+        run: bin/rails runner test/support/verify_fresh_sqlite_migrations.rb
 
       - name: Verify warehouse hold migration and legacy backfill
         run: bin/rails runner test/support/verify_warehouse_hold_migration.rb
@@ -95,6 +76,6 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
-          name: coverage-${{ matrix.adapter }}
+          name: coverage-sqlite3
           path: web/coverage
           retention-days: 14

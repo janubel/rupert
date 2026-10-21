@@ -27,7 +27,7 @@ def check_runs(*runs):
     return {'check_runs': [{'id': i, 'name': n, 'conclusion': c} for i, (n, c) in enumerate(runs)]}
 
 
-GREEN = check_runs(('CI (sqlite3)', 'success'), ('CI (postgresql)', 'success'))
+GREEN = check_runs(('CI (sqlite3)', 'success'))
 
 
 class AutodeployTest(unittest.TestCase):
@@ -114,8 +114,8 @@ class AutodeployTest(unittest.TestCase):
 
     def test_pending_or_red_ci_is_not_deployed(self):
         self.commit('feature')
-        for checks, word in [(check_runs(('CI (sqlite3)', 'success')), 'pending'),
-                             (check_runs(('CI (sqlite3)', 'success'), ('CI (postgresql)', 'failure')), 'red')]:
+        for checks, word in [(check_runs(), 'pending'),
+                             (check_runs(('CI (sqlite3)', 'failure')), 'red')]:
             self.set_checks(checks)
             result, calls = self.run_deploy()
             self.assertIn(f'is {word}, not deploying', result.stdout)
@@ -123,8 +123,7 @@ class AutodeployTest(unittest.TestCase):
 
     def test_rerun_that_passed_supersedes_earlier_failure(self):
         self.commit('feature')
-        self.set_checks(check_runs(('CI (postgresql)', 'failure'), ('CI (sqlite3)', 'success'),
-                                   ('CI (postgresql)', 'success')))
+        self.set_checks(check_runs(('CI (sqlite3)', 'failure'), ('CI (sqlite3)', 'success')))
         result, _ = self.run_deploy()
         self.assertIn('healthy', result.stdout)
 

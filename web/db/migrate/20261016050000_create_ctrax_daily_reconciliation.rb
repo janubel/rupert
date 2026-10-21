@@ -52,5 +52,6 @@ class CreateCtraxDailyReconciliation < ActiveRecord::Migration[8.0]
     end
     add_index :pos_display_sessions, :token_digest, unique: true
     add_foreign_key :pos_display_sessions, 'Location', column: :location_id, on_delete: :cascade
+    add_foreign_key :pos_checkouts, :pos_display_sessions
   end
 end

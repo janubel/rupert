@@ -3,6 +3,8 @@
 Audited at `main` commit `03db8bb` (2026-10-19). Fixes are on branch `claude/production-readiness` (small commits, each with tests).
 Production at audit time ran build `4e45c061` (2026-10-19 12:09 EDT), 79 commits behind `main`; nothing on the branch is live until promoted.
 
+**Database policy follow-up (2026-10-21):** Rupert now supports SQLite only. The multi-adapter test results below remain historical audit evidence. Any current branch-protection setup should require `CI (sqlite3)` and retain the other required checks.
+
 ## How this audit was done
 
 **Verified by running** (inside a `ruby:4.0` podman container against a fresh clone of `main`):
@@ -98,7 +100,7 @@ Severity: **P0** blocks go-live · **P1** needed in the first 30 days · **P2** 
 
 ## Docker image
 
-On `main` the image did not build (P1-17). On the branch `podman build --from docker.io/library/ruby:4.0.6-alpine --build-arg RUPERT_BUILD_SHA=…` succeeds and `bin/rails runner` inside the image boots production on SQLite (`[:booted, "production", "SQLite", <sha>]`). The plain `ruby:4.0.6-alpine` short name needs a qualified registry on podman hosts; Docker resolves it. Compose still assumes PostgreSQL + Redis and remains an optional path; SER8 runs from the git checkout.
+On `main` the image did not build (P1-17). On the branch `podman build --from docker.io/library/ruby:4.0.6-alpine --build-arg RUPERT_BUILD_SHA=…` succeeds and `bin/rails runner` inside the image boots production on SQLite (`[:booted, "production", "SQLite", <sha>]`). The plain `ruby:4.0.6-alpine` short name needs a qualified registry on podman hosts; Docker resolves it. At audit time Compose still assumed PostgreSQL + Redis; current Compose uses SQLite with a guarded initialization preflight. SER8 runs from the git checkout.
 
 ## What the branch contains
 
@@ -111,7 +113,7 @@ Sixteen-plus small commits: GDPR webhooks fixed and tested; webhook deduplicatio
 3. **Provision the off-host backup key**: `openssl rand -base64 48 > ~/.config/rupert/offhost.key && chmod 600 …` on the SER8 host, store a copy in the password manager, then enable the off-host timer. Without the key the script refuses to run.
 4. **Enable branch protection and Dependabot security updates**:
    ```bash
-   gh api -X PUT repos/techmore/rupert/branches/main/protection -F required_status_checks[strict]=true -f 'required_status_checks[contexts][]=CI (sqlite3)' -f 'required_status_checks[contexts][]=CI (postgresql)' -f 'required_status_checks[contexts][]=Dependency and static scan' -F enforce_admins=true -F required_pull_request_reviews[required_approving_review_count]=0 -F restrictions=null
+   gh api -X PUT repos/techmore/rupert/branches/main/protection -F required_status_checks[strict]=true -f 'required_status_checks[contexts][]=CI (sqlite3)' -f 'required_status_checks[contexts][]=Product site consistency' -f 'required_status_checks[contexts][]=Dependency and static scan' -f 'required_status_checks[contexts][]=cla' -F enforce_admins=true -F required_pull_request_reviews[required_approving_review_count]=0 -F restrictions=null
    gh api -X PUT repos/techmore/rupert/automated-security-fixes
    ```
 5. **Decide the Square environment** (sandbox vs production token) before saving a Square token; the code honours `SQUARE_ENVIRONMENT`.

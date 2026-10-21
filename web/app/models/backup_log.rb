@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# A single Google Drive backup attempt: SQLite snapshot or pg_dump, uploaded
-# to Drive, with the shareable link and any error recorded for verification.
+# A single Google Drive SQLite snapshot backup attempt, uploaded to Drive with
+# its link and any error recorded for verification.
 class BackupLog < ApplicationRecord
   include HasCuid
   include TenantScoped

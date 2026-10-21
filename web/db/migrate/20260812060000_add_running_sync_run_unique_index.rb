@@ -6,16 +6,9 @@
 # RecordNotUnique that the engine can recover from. Only one "running" row may
 # exist per tenant at a time.
 class AddRunningSyncRunUniqueIndex < ActiveRecord::Migration[8.1]
-  disable_ddl_transaction!
-
   def up
-    options = {
-              name: 'index_SyncRun_on_running_per_tenant',
-              where: "status = 'running'",
-              unique: true
-    }
-    options[:algorithm] = :concurrently if connection.adapter_name.downcase.include?('postgres')
-    add_index 'SyncRun', :tenant_id, **options
+    add_index 'SyncRun', :tenant_id, name: 'index_SyncRun_on_running_per_tenant',
+      where: "status = 'running'", unique: true
   end
 
   def down

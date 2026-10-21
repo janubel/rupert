@@ -10,9 +10,9 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
     EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', 'refresh-token')
     EnvStore.platform_set('GOOGLE_DRIVE_FOLDER_ID', nil)
 
-    @snapshot = Rails.root.join('tmp', 'backups', "test-snapshot-#{SecureRandom.hex(8)}.dump")
+    @snapshot = Rails.root.join('tmp', 'backups', "test-snapshot-#{SecureRandom.hex(8)}.sqlite3")
     FileUtils.mkdir_p(@snapshot.dirname)
-    File.write(@snapshot, 'PGDMP test backup')
+    File.write(@snapshot, 'synthetic SQLite backup')
     BackupService.stubs(:snapshot_path).returns(@snapshot)
   end
 
@@ -87,7 +87,7 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
     assert_equal 'success', log.status
     assert_equal 'FILE1', log.driveFileId
     assert_includes log.driveUrl, 'FILE1'
-    assert_match(/rupert-backup-\d{8}-\d{6}\.dump/, log.fileName)
+    assert_match(/rupert-backup-\d{8}-\d{6}\.sqlite3/, log.fileName)
     assert_equal expected_size, log.fileSize
     refute File.exist?(@snapshot), 'snapshot temp file should be cleaned up'
   end

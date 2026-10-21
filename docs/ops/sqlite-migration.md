@@ -1,8 +1,10 @@
-# Moving the live Rupert instance (SER8) from PostgreSQL to SQLite
+# Historical record: moving Rupert on SER8 from PostgreSQL to SQLite
+
+> **Historical procedure only.** This records the cutover performed on 2026-10-13. Rupert now supports SQLite only; the PostgreSQL adapter and its conversion scripts have been retired. Do not run the commands below or use the frozen pre-cutover database as a runtime or restore source. This record preserves the migration evidence and decisions.
 
 Status: **DONE on SER8, 2026-10-13.** 78,573 rows in 61 tables copied with every count verified; the app runs on
 SQLite (`/opt/rupert/web/storage/production.sqlite3`) and `rupert-backup.timer` snapshots it every 6 hours.
-PostgreSQL on `rupert-db` still holds the pre-cutover data and was never modified, but it is frozen at cutover. Switching back now requires migrating/reconciling all subsequent SQLite writes; simply unsetting the adapter would lose those changes.
+PostgreSQL on `rupert-db` still holds the pre-cutover data and was never modified, but it is frozen at cutover. It is not a current replica, supported runtime, or restore source; do not switch back to it.
 
 ### What the live run taught us
 - Row-count verification caught a real bug the synthetic rehearsal could not: one row was dropped per 500-row batch
@@ -25,17 +27,18 @@ PostgreSQL on `rupert-db` still holds the pre-cutover data and was never modifie
 - Before this work the container had no database backup at all. It now has `/var/backups/rupert` (SQLite snapshots +
   settings + env copy) on a 6-hourly timer; copy that directory off the host periodically.
 
-## What changed in the code
+## What changed in the code at cutover
 
-- `bin/rails db:postgres_to_sqlite` copies a PostgreSQL database into an empty SQLite one. It refuses a non-empty
+- At cutover, `bin/rails db:postgres_to_sqlite` copied a PostgreSQL database into an empty SQLite one. It refused a non-empty
   target, verifies row counts per table inside one transaction, rebuilds the FTS5 search indexes and reports foreign
   key problems that already existed in the source data.
-- `bin/migrate-to-sqlite` wraps it: safety `pg_dump`, schema creation, copy, `PRAGMA integrity_check`.
-- `bin/backup.sh` snapshots SQLite (`VACUUM INTO` + integrity check) when `RUPERT_DB_ADAPTER=sqlite3`.
-- The app was already SQLite-capable (`config/database.yml`, backups in Settings, system page); the full test suite
-  passes on both adapters.
+- `bin/migrate-to-sqlite` wrapped it with a safety dump, schema creation, copy and `PRAGMA integrity_check`. Both conversion tools have since been removed.
+- At cutover, `bin/backup.sh` selected SQLite snapshots when `RUPERT_DB_ADAPTER=sqlite3`. It now snapshots SQLite unconditionally.
+- The application then supported both database adapters; current code, CI and deployment use SQLite only.
 
-## Before you start
+## Historical cutover procedure (do not rerun)
+
+The following checklist records the one-time operation that was completed. The conversion script and adapter switch no longer exist in supported code.
 
 1. Merge and deploy the code that contains these files to the Rupert container (deploying is a separate step from
    merging; see the README's Production section).
@@ -45,7 +48,7 @@ PostgreSQL on `rupert-db` still holds the pre-cutover data and was never modifie
    Shopify tokens) is copied as-is and decrypted with them.
 4. Pick a quiet window. Sync is a read-only mirror, so a short outage loses nothing; the copy takes seconds to minutes.
 
-## Cutover
+### Steps performed
 
 ```bash
 # 1. stop the web server and the job worker (unit names are whatever the Incus container uses)
@@ -62,13 +65,12 @@ echo 'RUPERT_DB_ADAPTER=sqlite3' >> .env
 
 ## Rollback
 
-The PostgreSQL copy is a pre-cutover recovery point, not a current replica. Prefer rolling back code against the current SQLite database when schema-compatible. Before any database rollback, stop writers, take a fresh consistent SQLite backup and reconcile every post-cutover business write into the target. Only then change the adapter and verify business totals. The safety dump `pre-sqlite-*.dump` can rebuild the pre-cutover state but cannot recover later writes.
+The PostgreSQL copy is a pre-cutover recovery point, not a current replica or supported restore source. Roll back code against the current SQLite database when schema-compatible. Before any database rollback, stop writers, take a fresh consistent SQLite backup and preserve all later business writes. Do not switch adapters or attempt to restore the frozen copy over current data. The safety dump `pre-sqlite-*.dump` can rebuild only the pre-cutover state.
 
-## After a week
+## Follow-up status
 
-- Make sure the timer-driven `bin/backup.sh` has produced SQLite snapshots (`rupert-*.sql.gz` now holds a gzipped
-  `.sqlite3` file) and restore one on a scratch machine: `gunzip -c rupert-X.sql.gz > test.sqlite3`.
-- Then retire PostgreSQL on the host and drop the `pg` dependency in a follow-up change.
+- The timer-driven `bin/backup.sh` produces consistent SQLite snapshots (`rupert-*.sql.gz` contains a gzipped `.sqlite3` file); the current backup and restore procedures are in the [backup runbook](backup-restore-runbook.md).
+- The application adapter, conversion scripts and runtime dependency have been removed from supported source. The retained pre-cutover host copy remains historical data; this source change does not alter or delete it.
 
 ## Known differences
 

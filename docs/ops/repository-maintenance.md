@@ -26,7 +26,7 @@ Run Rails checks from `web/` in an isolated checkout with a dedicated test
 database. No production environment file is needed:
 
 ```sh
-export RAILS_ENV=test RUPERT_DB_ADAPTER=sqlite3
+export RAILS_ENV=test
 export SHOPIFY_API_KEY=test-api-key SHOPIFY_API_SECRET=test-secret-key
 export HOST=app-host-name.io
 bundle install
@@ -37,7 +37,7 @@ bin/rails assets:precompile
 bin/rails test
 ```
 
-CI repeats the Rails suite with PostgreSQL and SQLite. Browser tests are
+CI runs the Rails suite against SQLite. Browser tests are
 discovered by filename rather than an explicit list. New browser tests use
 `web/test/javascript/*_test.mjs`. Native export verification remains in the
 Employee mobile workflow; signing and distributing a binary are separate.

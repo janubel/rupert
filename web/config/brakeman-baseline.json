@@ -2,7 +2,7 @@
   "scan_info": {
     "app_path": "/__w/rupert/rupert/web",
     "rails_version": "8.1.4",
-    "security_warnings": 20,
+    "security_warnings": 19,
     "start_time": "2026-10-19 21:46:27 +0000",
     "end_time": "2026-10-19 21:46:43 +0000",
     "duration": 16.785163095,
@@ -400,28 +400,6 @@
       "confidence": "Medium",
       "cwe_id": [
         89
-      ]
-    },
-    {
-      "warning_type": "Command Injection",
-      "warning_code": 14,
-      "fingerprint": "9bf38e3f2103b15dc226273eb876c89b210939bd85354ef73f78902f7cfef8e9",
-      "check_name": "Execute",
-      "message": "Possible command injection",
-      "file": "app/services/backup_service.rb",
-      "line": 57,
-      "link": "https://brakemanscanner.org/docs/warning_types/command_injection/",
-      "code": "system(\"PGPASSWORD\" => ActiveRecord::Base.connection_db_config.configuration_hash[:password].to_s, *[\"pg_dump\", \"--format=custom\", \"--no-owner\", \"--file=#{dir.join(\"rupert-backup-#{Time.now.to_i}-#{SecureRandom.hex(12)}.dump\")}\", \"--host=#{ActiveRecord::Base.connection_db_config.configuration_hash[:host]}\", \"--port=#{ActiveRecord::Base.connection_db_config.configuration_hash[:port]}\", \"--username=#{ActiveRecord::Base.connection_db_config.configuration_hash[:username]}\", ActiveRecord::Base.connection_db_config.configuration_hash[:database]], :out => (File::NULL), :err => (File::NULL))",
-      "render_path": null,
-      "location": {
-        "type": "method",
-        "class": "BackupService",
-        "method": "self.postgres_snapshot_path"
-      },
-      "user_input": "dir.join(\"rupert-backup-#{Time.now.to_i}-#{SecureRandom.hex(12)}.dump\")",
-      "confidence": "Medium",
-      "cwe_id": [
-        77
       ]
     },
     {

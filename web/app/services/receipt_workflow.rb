@@ -33,7 +33,7 @@ class ReceiptWorkflow
   def change(receipt, action, attributes: {}, version:, note: nil, confirmed: nil)
     authorize_actor!
     PurchaseReceipt.transaction do
-      # Acquire the workspace write lock first on SQLite as well as PostgreSQL.
+      # Acquire the workspace write lock before reading or changing the receipt.
       Tenant.unscoped.where(id: Current.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
       receipt.reload
       raise Error, 'This receipt changed. Refresh and review it again.' unless version.to_s == receipt.lock_version.to_s

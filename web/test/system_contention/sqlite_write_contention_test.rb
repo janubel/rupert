@@ -15,7 +15,6 @@ class SqliteWriteContentionTest < ActiveSupport::TestCase
   ROWS_PER_WRITER = 25
 
   setup do
-    skip 'SQLite only' unless ActiveRecord::Base.connection.adapter_name.casecmp?('sqlite')
     @tenant = tenants(:default_tenant)
     WebhookDelivery.where(provider: 'contention-test').delete_all
   end

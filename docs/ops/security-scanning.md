@@ -16,7 +16,6 @@ Each baseline warning was read in context. None is an open vulnerability.
 | Mass assignment | `users_controller.rb` (`:role`) | `guard_role_assignment` limits assignable roles; only a super admin can assign `admin` or `super_admin`. |
 | Mass assignment | `expenses_controller.rb` (`:account_id`, `:vendor_id`) | Fields are an explicit permit-list; ids are tenant-scoped on lookup. |
 | Mass assignment | `bank_statements_controller.rb#decide` (`permit!`) | The hash is only `line id => choice`; ids are re-queried through `for_document(...).pending`, and `apply` validates every choice (category allow-list, withdrawals only). |
-| Command injection | `backup_service.rb` (`pg_dump`) | Array form of `system` (no shell); arguments come from the database config, not from a request. |
 
 ## Changing the baseline
 
