@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -320,10 +320,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
     t.string "result_path"
     t.datetime "discarded_at"
     t.string "discarded_by_name"
+    t.string "reason_code"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["duplicate_of_id"], name: "index_uploads_on_duplicate_of_id"
     t.index ["tenant_id", "created_at"], name: "idx_uploads_recent"
+    t.index ["tenant_id", "reason_code"], name: "idx_uploads_reason_code"
     t.index ["tenant_id", "sha256"], name: "idx_uploads_retained_replay", unique: true, where: "retained = 1"
     t.index ["tenant_id", "status"], name: "idx_uploads_status"
     t.index ["tenant_id"], name: "index_uploads_on_tenant_id"
