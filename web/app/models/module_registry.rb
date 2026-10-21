@@ -121,6 +121,7 @@ class ModuleRegistry
       people_positions_path
     }, permission: 'hr.read', position: 87),
     Entry.new(key: 'schedule', name: 'Schedule', path: -> { people_scheduled_shifts_path }, permission: 'hr.read', position: 88),
+    Entry.new(key: 'time_keeping', name: 'Time keeping', path: -> { people_time_keeping_path }, permission: 'timesheets.read', position: 87),
     Entry.new(key: 'timesheets', name: 'Timesheets', path: lambda {
       people_timesheets_path
     }, permission: 'timesheets.self', position: 88),
@@ -227,7 +228,7 @@ class ModuleRegistry
       # this area is visible exactly where the separate Receipts area was before.
       { key: 'me', name: 'Me', modules: %w[receipts timesheets punch_history] },
       { key: 'team', name: 'Team',
-        modules: %w[accounts employees employee_reports departments positions schedule time_clock leave payroll permissions] },
+        modules: %w[accounts employees employee_reports departments positions time_keeping schedule time_clock leave payroll permissions] },
       { key: 'system', name: 'System',
         modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap owner_checklists] }
     ].freeze
