@@ -100,7 +100,6 @@ class McpServerTest < ActionDispatch::IntegrationTest
   end
 
   test 'every tool answers without an internal error for a full-scope token' do
-    @owner.update!(role: 'super_admin') # the server-wide operations tools are for platform administrators
     full_token, full = issue
     order = Core::Order.create!(source: 'shopify', source_order_id: 'mcp-order', occurred_at: 2.days.ago, gross_cents: 4200, tax_cents: 252, currency: 'USD')
     order.mark_paid!
@@ -121,6 +120,8 @@ class McpServerTest < ActionDispatch::IntegrationTest
     # ai_health is instance-operator only (covered by its own tests below).
     assert_not_includes Mcp::Registry.available_to(full_token).map(&:tool_name), 'ai_health'
     Mcp::Registry.available_to(full_token).each do |tool|
+      next if %w[backup_freshness deploy_status].include?(tool.tool_name) # platform administrators only; see mcp_operations_test
+
       arguments = case tool.tool_name
       when 'submit_feedback' then { kind: 'task_report', summary: 'Smoke test done' }
       when 'create_task' then { title: 'Check the tea shelf', priority: 'low', due_on: '2026-11-01' }
