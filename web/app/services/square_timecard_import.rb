@@ -3,6 +3,11 @@
 require 'digest'
 
 class SquareTimecardImport
+  # A Rupert clock-in that was never closed only blocks Square hours that
+  # start within this window; past it the clock-out was almost certainly
+  # missed, and treating the shift as endless would hold every later Square
+  # card for that person.
+  OPEN_SHIFT_REACH = PunchHistory::IMPLAUSIBLE_HOURS.hours
   class Error < StandardError; end
   RELEVANT = %w[id team_member_id location_id timezone start_at end_at status wage breaks].freeze
 
@@ -135,7 +140,8 @@ class SquareTimecardImport
       start_at, end_at = attrs.values_at(:started_at, :ended_at)
       next unless start_at && end_at && end_at > start_at
       if SquareTimecard.overlapping(worker.id, start_at, end_at).exists? ||
-          ClockShift.where(employee_id: worker.id).where('started_at < ? AND (ended_at IS NULL OR ended_at > ?)', end_at, start_at).exists? ||
+          ClockShift.where(employee_id: worker.id).where('started_at < ?', end_at)
+            .where('ended_at > ? OR (ended_at IS NULL AND started_at > ?)', start_at, start_at - OPEN_SHIFT_REACH).exists? ||
           local_day_overlap?(worker, start_at, end_at)
         hold(item)
       end
@@ -159,7 +165,8 @@ class SquareTimecardImport
   def local_day_overlap?(worker, start_at, end_at)
     worker.timesheet_entries.where(work_type: %w[regular overtime]).where(worked_on: start_at.in_time_zone.to_date..end_at.in_time_zone.to_date).includes(:clock_shift).any? do |entry|
       if entry.clock_shift
-        entry.clock_shift.started_at < end_at && (!entry.clock_shift.ended_at || entry.clock_shift.ended_at > start_at)
+        shift_end = entry.clock_shift.ended_at || (entry.clock_shift.started_at + OPEN_SHIFT_REACH)
+        entry.clock_shift.started_at < end_at && shift_end > start_at
       else
         entry.worked_on.in_time_zone < end_at && (entry.worked_on + 1).in_time_zone > start_at
       end

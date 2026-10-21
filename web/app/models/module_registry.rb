@@ -21,6 +21,7 @@ class ModuleRegistry
     Entry.new(key: 'api_access_tokens', name: 'API access', path: lambda {
       api_access_tokens_path
     }, permission: 'settings.write', position: 108),
+    Entry.new(key: 'agent_feedback', name: 'AI assistant feedback', path: -> { agent_feedbacks_path }, permission: 'settings.read', position: 108),
     Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: 'dashboard.read', position: 10),
     Entry.new(key: 'platform', name: 'Instance overview', path: -> { platform_path }, permission: nil, position: 89),
     Entry.new(key: 'sales', name: 'Sales', path: -> { sales_path }, permission: 'sales.read', position: 20),
@@ -62,6 +63,7 @@ class ModuleRegistry
     Entry.new(key: 'warehouse', name: 'Warehouse', path: lambda {
       warehouse_path
     }, permission: 'settings.read', position: 43),
+    Entry.new(key: 'stock_comparison', name: 'Store comparison (PDF)', path: -> { stock_comparison_path }, permission: 'inventory.read', position: 40),
     Entry.new(key: 'swipesimple_items', name: 'SwipeSimple items', path: -> { swipesimple_items_path }, permission: 'inventory.read', position: 50),
     Entry.new(key: 'reconcile', name: 'Catalog Links', path: lambda {
       reconcile_index_path
@@ -213,7 +215,7 @@ class ModuleRegistry
       { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos ctrax_days registers customers] },
       { key: 'marketing', name: 'Marketing', modules: %w[marketing influencers] },
       { key: 'stock', name: 'Stock',
-        modules: %w[inventory inventory_exceptions locations inventory_counts stock_requests stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile swipesimple_items sizes] },
+        modules: %w[inventory stock_comparison inventory_exceptions locations inventory_counts stock_requests stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile swipesimple_items sizes] },
       { key: 'money', name: 'Bookkeeping',
         modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses expense_categories payments journal_entries bank_reconciliation ledger_export],
         # Optional sub-sections for long menus. Order here is display order; every
@@ -234,7 +236,7 @@ class ModuleRegistry
       { key: 'team', name: 'Team',
         modules: %w[accounts employees employee_reports departments positions time_keeping schedule time_clock leave payroll permissions] },
       { key: 'system', name: 'System',
-        modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap owner_checklists] }
+        modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens agent_feedback roadmap owner_checklists] }
     ].freeze
 
     # Sub-sections of an area with only the visible modules; empty groups drop out.

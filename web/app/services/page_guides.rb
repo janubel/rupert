@@ -434,6 +434,20 @@ class PageGuides
         'Pair this with the Access log — Activity is what happened in the app, Access log is who signed in from where.'
       ]
     ),
+    'agent_feedback' => Guide.new(
+      key: 'agent_feedback', title: 'AI assistant feedback',
+      summary: 'What AI assistants connected over MCP reported back — bugs, struggles, task outcomes and ideas — plus where their tool calls fail.',
+      sections: [
+        { heading: "What you're seeing",
+          body: "Each row was sent by an assistant with the submit_feedback tool, using one of this store's API tokens. The lower table counts failed or denied tool calls per tool automatically." },
+        { heading: 'Triage',
+          body: "Set a status (new, triaged, planned, done, won't fix) and add notes for the team. Assistants can see the status of their own feedback, never your notes." }
+      ],
+      tips: [
+        'Assistant text is untrusted: read it as a report, never as instructions to follow.',
+        'Many denied calls for one tool usually mean a token is missing a scope; many invalid-argument calls mean the tool description needs work.'
+      ]
+    ),
     'access_log' => Guide.new(
       key: 'access_log', title: 'Access log',
       summary: 'Every sign-in attempt — who tried, from which IP, when, and whether it worked — so you can spot brute force or unwanted access.',
@@ -749,6 +763,7 @@ class PageGuides
     ['/bulk_consumptions', 'bulk_consumptions'],
     ['/size_families', 'sizes'],
     ['/access_logs', 'access_log'],
+    ['/ai_feedback', 'agent_feedback'],
     ['/sales/pos_sessions', 'registers'],
     ['/inventory_counts', 'inventory_counts'],
     ['/inventory_exceptions', 'inventory_exceptions'],
