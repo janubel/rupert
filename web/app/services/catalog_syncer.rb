@@ -69,8 +69,8 @@ class CatalogSyncer
   GRAPHQL
 
   # Paginates every order matching the query, so the sync captures the full
-  # history window rather than the first page. Keep order pages small because
-  # each exact variant identity is nested inside up to 100 line items.
+  # history window rather than the first page. Order line items are completed
+  # separately when an order exceeds the first 100 nodes.
   #
   # Orders are selected by updated_at, not created_at: a refund, cancellation
   # or fulfillment days after the sale changes the order without creating a
@@ -94,13 +94,32 @@ class CatalogSyncer
             trackingInfo { company number url }
           }
           lineItems(first: 100) {
-            pageInfo { hasNextPage }
+            pageInfo { hasNextPage endCursor }
             nodes {
               id title variantTitle sku quantity currentQuantity
               variant { id }
               originalUnitPriceSet { shopMoney { amount currencyCode } }
               originalTotalSet { shopMoney { amount currencyCode } }
             }
+          }
+        }
+      }
+    }
+  GRAPHQL
+
+  # Each order has its own line-item cursor, so oversized orders are continued
+  # with a singular order lookup rather than nested in the orders connection.
+  ORDER_LINE_ITEMS_QUERY = <<~GRAPHQL
+    query OrderLineItems($orderId: ID!, $lineItemCursor: String!) {
+      order(id: $orderId) {
+        id updatedAt
+        lineItems(first: 100, after: $lineItemCursor) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            id title variantTitle sku quantity currentQuantity
+            variant { id }
+            originalUnitPriceSet { shopMoney { amount currencyCode } }
+            originalTotalSet { shopMoney { amount currencyCode } }
           }
         }
       }
@@ -307,16 +326,68 @@ class CatalogSyncer
     def paginate_orders(since)
       nodes = []
       cursor = nil
+      seen_cursors = {}
       loop do
         data = ShopifyClient.graphql(ORDERS_QUERY, { orderQuery: "updated_at:>=#{since}", orderCursor: cursor })
-        page = data['orders']
-        nodes.concat(page['nodes'] || [])
-        info = page['pageInfo'] || {}
-        break unless info['hasNextPage'] && info['endCursor']
+        page = data.is_a?(Hash) && data['orders']
+        validate_page!(page)
+        page.fetch('nodes').each { |order| complete_order_line_items!(order) }
+        nodes.concat(page.fetch('nodes'))
+        break unless page.dig('pageInfo', 'hasNextPage')
 
-        cursor = info['endCursor']
+        next_cursor = page.dig('pageInfo', 'endCursor')
+        raise ShopifyClient::Error, 'Shopify repeated an order cursor' if seen_cursors.key?(next_cursor)
+
+        seen_cursors[next_cursor] = true
+        cursor = next_cursor
       end
       { 'nodes' => nodes, 'pageInfo' => { 'hasNextPage' => false, 'endCursor' => cursor } }
+    end
+
+    # The nested first: 100 line-item connection is not complete for large
+    # orders. Follow that order's cursor to exhaustion before importing it.
+    def complete_order_line_items!(order)
+      connection = order['lineItems']
+      validate_page!(connection)
+      return order unless connection.dig('pageInfo', 'hasNextPage')
+
+      order_id = order['id']
+      updated_at = order['updatedAt']
+      unless order_id.to_s.match?(%r{\Agid://shopify/Order/[1-9][0-9]{0,30}\z}) && updated_at.is_a?(String) && updated_at.present?
+        raise ShopifyClient::Error, 'Shopify returned an invalid order identity for line-item pagination'
+      end
+
+      line_items = connection.fetch('nodes').dup
+      cursor = connection.dig('pageInfo', 'endCursor')
+      seen_cursors = { cursor => true }
+      loop do
+        data = ShopifyClient.graphql(ORDER_LINE_ITEMS_QUERY, { orderId: order_id, lineItemCursor: cursor })
+        continued_order = data.is_a?(Hash) && data['order']
+        unless continued_order.is_a?(Hash) && continued_order['id'] == order_id && continued_order['updatedAt'] == updated_at
+          raise ShopifyClient::Error, 'Shopify order changed during line-item pagination'
+        end
+
+        page = continued_order['lineItems']
+        validate_page!(page)
+        line_items.concat(page.fetch('nodes'))
+        raise ShopifyClient::Error, 'Shopify order line-item read exceeded its bound' if line_items.length > 20_000
+        info = page.fetch('pageInfo')
+        break unless info['hasNextPage']
+
+        next_cursor = info['endCursor']
+        raise ShopifyClient::Error, 'Shopify repeated an order line-item cursor' if seen_cursors.key?(next_cursor)
+
+        seen_cursors[next_cursor] = true
+        cursor = next_cursor
+      end
+
+      line_item_ids = line_items.filter_map { |item| item['id'] if item['id'].present? }
+      if line_item_ids.uniq.length != line_item_ids.length
+        raise ShopifyClient::Error, 'Shopify repeated an order line item'
+      end
+
+      order['lineItems'] = { 'nodes' => line_items, 'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } }
+      order
     end
 
     def fetch_locations

@@ -381,7 +381,7 @@ class CanonicalOrderImporter
       return false unless connection.is_a?(Hash) && connection.dig('pageInfo', 'hasNextPage') == false
 
       nodes = connection['nodes']
-      return false unless nodes.is_a?(Array) && nodes.any? && nodes.length <= 100
+      return false unless nodes.is_a?(Array) && nodes.any?
       return false unless nodes.all? do |item|
         item.is_a?(Hash) && line_identity(item, 'shopify') && variant_identity(item, 'shopify') &&
           item['quantity'].is_a?(Integer) && item['quantity'].between?(1, 2_147_483_647) &&
