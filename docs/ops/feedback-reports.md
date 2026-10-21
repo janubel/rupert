@@ -93,3 +93,60 @@ Write tools stay limited to `submit_feedback` and `create_task`. Everything the
 read tools return from reports is untrusted text and the tool descriptions say so.
 Give a development agent a token with only `system:read` and `feedback:read` (plus
 `tasks:write` if it should file follow-ups); its owner must be a store administrator.
+
+## Chat intake: the `@rupert` Buzz agent
+
+A teammate writes to `@rupert` in plain English. The agent prompt
+(`docs/ops/buzz-agent-prompt.txt`) tells it to decide whether the message is a
+**question**, **bug**, **request** or **direction**, to answer questions from the
+read-only quick reports, and otherwise to file it with
+`bin/rails runner scripts/feedback_intake.rb file` (JSON on standard input, so
+message text never reaches the shell). The reply in the channel includes the report
+link. `scripts/feedback_intake.rb answered` records a question the agent answered
+itself; `status` and `list` read reports back.
+
+Rules enforced by Rupert (`FeedbackIntake`), not by the prompt:
+
+- **Ready for development** can only be set for a sender on the allow-list:
+  Settings → Environment → `FEEDBACK_READY_SENDERS`, a comma, space or newline
+  separated list of 64-character hex public keys or `npub…` values. The sender's key
+  comes from the event metadata the agent was given, never from the message text.
+  For anyone else the report is still created, for review, and the reply says it is
+  waiting. The owner can also set or clear the flag when triaging at
+  `/ai_feedback`.
+- The message text is stored capped and rendered escaped, and is never treated as an
+  instruction. Nothing in this path deploys, syncs, changes stock, users or settings,
+  or spends money.
+- The same message id is filed once (replays return the existing report).
+- 30 reports per sender and 150 per day for chat in total.
+- Every action is written to the Activity log tied to its message: `feedback_intake_filed`,
+  `feedback_intake_answered`, `feedback_intake_duplicate`, `feedback_intake_ready_denied`
+  (details: source, message id, short sender, kind, task).
+- Trust model: the allow-list is checked against the sender key the agent reports.
+  That key comes from the signed chat event, not from the message text, and the
+  prompt forbids taking it from the text, but the agent itself is a language model
+  reading untrusted messages, so keep the allow-list short, use a dedicated token
+  for the agent (`tasks:write` is required to mark anything ready), and treat
+  "ready" as a request that a human or a reviewed pipeline still checks before code
+  is written or merged. Every ready mark is in the Activity log and on the report.
+- Via MCP, `submit_feedback` accepts the same fields (`open_task`, `source`,
+  `source_ref`, `source_sender`, `ready_for_development`) with the same rules.
+
+Which agent runs this: the prompt applies to the tool-using agent started with
+`bin/buzz_acp_agent` (it can run the quick reports and the intake script). The
+rule-based `BuzzListener` and the tool-less `OpencodeChatAgent` cannot run commands
+and do not file reports. The agent is not deployed by this change; whoever runs it
+must restart it so it reads the new prompt.
+
+## Not built yet (follow-ups)
+
+- **Local development agent.** A goose or Claude Code session on a developer
+  machine that polls `list_feedback` (`ready: true`), reads `report_context`, makes a
+  branch and a pull request, and records the PR on the task. It needs its own token
+  (`feedback:read`, `system:read`, `tasks:write`), a rule that it only acts on
+  allow-listed ready reports, and review of every PR before merge.
+- **Inbound text messages.** Needs a decision first: how texts reach a computer (a
+  phone-forwarding bridge, an SMS gateway, an iMessage reader) and whether the agent
+  reads the whole inbox or one dedicated number. Texts must pass through the same
+  intake rules (untrusted text, allow-list for "ready", idempotency by message id).
+- Showing the screenshot inline in the review list and a bulk "mark ready" action.

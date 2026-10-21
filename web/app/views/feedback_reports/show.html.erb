@@ -11,6 +11,7 @@
     </div>
     <div class="flex flex-wrap items-center gap-2">
       <span class="<%= status_pill.fetch(@report.status, 'pill-taupe') %>"><%= @report.status_label %></span>
+      <% if @report.ready_for_development && FeedbackAttachment.viewable_by?(Current.user) %><span class="pill-fern">Ready for development</span><% end %>
       <%= link_to 'My reports', feedback_reports_path, class: 'btn-ghost btn-sm' %>
       <% if FeedbackAttachment.viewable_by?(Current.user) %><%= link_to 'Triage', agent_feedbacks_path(anchor: dom_id(@report)), class: 'btn-ghost btn-sm' %><% end %>
     </div>
