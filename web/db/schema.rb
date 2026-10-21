@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -789,6 +789,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
     t.index ["tenant_id", "source", "source_variant_id", "effective_from"], name: "idx_bulk_recipe_effective"
     t.index ["tenant_id", "source", "source_variant_id", "version"], name: "idx_bulk_recipe_version", unique: true
     t.check_constraint "source = 'shopify' AND version > 0 AND mg_per_unit > 0", name: "bulk_recipe_positive"
+  end
+
+  create_table "buzz_identities", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.string "status", default: "code", null: false
+    t.string "pubkey"
+    t.string "code_digest"
+    t.datetime "code_expires_at"
+    t.datetime "claimed_at"
+    t.datetime "linked_at"
+    t.datetime "last_used_at"
+    t.datetime "disclosed_at"
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "code_digest"], name: "idx_buzz_identities_code"
+    t.index ["tenant_id", "pubkey"], name: "idx_buzz_identities_live_pubkey", unique: true, where: "pubkey IS NOT NULL AND status IN ('pending', 'active')"
+    t.index ["tenant_id", "user_id"], name: "idx_buzz_identities_user"
   end
 
   create_table "clock_corrections", force: :cascade do |t|
