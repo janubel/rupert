@@ -269,6 +269,7 @@ Rails.application.routes.draw do
   end
 
   namespace :finance do
+    get 'cash_flow', to: 'cash_flow#show', as: :cash_flow
     get '/accounts', to: 'accounts#show', as: :accounts
     resources :chart_of_accounts, only: %i[index show new create edit update] do
       member do
