@@ -1,14 +1,10 @@
 <% content_for :title, "Departments" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Departments</h1>
-      <p class="mt-1 text-sm text-mocha">The org chart: who runs each team and how big it is.</p>
-    </div>
+  <%= page_header 'Departments', subtitle: 'The org chart: who runs each team and how big it is.' do %>
     <% if Current.user.can?("hr.write") %>
       <%= link_to "New department", new_people_department_path, class: "btn-primary" %>
     <% end %>
-  </section>
+  <% end %>
 
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <% if @departments.empty? %>

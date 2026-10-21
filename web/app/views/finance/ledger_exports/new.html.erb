@@ -2,13 +2,9 @@
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Export ledger</h1>
-      <p class="mt-1 text-sm text-mocha">Download posted journal entries for your accountant or accounting software.</p>
-    </div>
+  <%= page_header 'Export ledger', subtitle: 'Download posted journal entries for your accountant or accounting software.' do %>
     <%= link_to "All reports", finance_reports_path, class: "btn-ghost btn-sm" %>
-  </section>
+  <% end %>
 
   <%= form_with url: finance_ledger_export_path, method: :post, class: "card card-pad space-y-4" do |f| %>
     <div class="grid gap-4 sm:grid-cols-3">

@@ -1,7 +1,7 @@
 <% content_for :title, 'Record bulk recipe' %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
-  <section><h1 class="page-title">Record bulk recipe version</h1><p class="mt-2 text-sm text-mocha">Choose the exact product variant and verified grams used for one sold unit. New versions must take effect after the previous version.</p></section>
+  <%= page_header 'Record bulk recipe version', subtitle: 'Choose the exact product variant and verified grams used for one sold unit. New versions must take effect after the previous version.' %>
   <% if @recipe.errors.any? %><div class="card card-pad text-rose" role="alert"><% @recipe.errors.full_messages.each do |error| %><p><%= error %></p><% end %></div><% end %>
   <%= form_with url: new_bulk_recipe_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %><div><%= f.label :q, 'Find variant by product, title or SKU' %><%= f.text_field :q, value: @query, class: 'input' %></div><%= f.submit 'Find variants', class: 'btn-ghost' %><% end %>
   <%= form_with url: bulk_recipes_path, scope: :bulk_recipe, class: 'card card-pad space-y-4' do |f| %>

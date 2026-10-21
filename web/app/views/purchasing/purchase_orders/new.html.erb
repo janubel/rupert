@@ -1,10 +1,7 @@
 <% content_for :title, "New purchase order" %>
 <div class="space-y-6">
-  <section>
-    <h1 class="page-title">New purchase order</h1>
-    <p class="mt-1 text-sm text-mocha">Start a draft; add lines, then place it with the vendor.</p>
-  </section>
-  <div class="card card-pad max-w-2xl">
+  <%= page_header 'New purchase order', subtitle: 'Start a draft; add lines, then place it with the vendor.' %>
+  <div class="card card-pad page-narrow">
     <%= render "form", purchase_order: @purchase_order %>
   </div>
 </div>

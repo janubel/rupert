@@ -17,10 +17,9 @@
     <% end %>
   </section>
 <% else %>
-  <section class="flex flex-wrap items-end justify-between gap-3">
-    <div><p class="eyebrow text-olive-deep"><%= Date.current.strftime('%A, %B %-d') %></p><h1 class="page-title">Hi, <%= @worker.first_name %></h1></div>
+  <%= page_header "Hi, #{@worker.first_name}", eyebrow: Date.current.strftime('%A, %B %-d') do %>
     <%= link_to 'My time clock', personal_time_clock_path, class: 'text-sm text-olive underline' %>
-  </section>
+  <% end %>
   <% if !@preview && Current.user.can_use_pos? %>
     <nav aria-label="Daily work" class="flex flex-wrap gap-2"><%= link_to 'Open retail POS', ctrax_pos_path, class: 'btn-primary' %><%= link_to 'My time clock', personal_time_clock_path, class: 'btn-ghost' %></nav>
   <% end %>

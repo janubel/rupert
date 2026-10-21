@@ -1,5 +1,7 @@
 <% content_for :title, 'My time off' %>
-<section class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="page-title">Time off</h1><p class="mt-1 text-sm text-mocha">Your calendar, vacations and days off.</p></div><a href="#time-off-request" class="text-sm text-olive underline">Request time off</a></section>
+<%= page_header 'Time off', subtitle: 'Your calendar, vacations and days off.' do %>
+  <a href="#time-off-request" class="text-sm text-olive underline">Request time off</a>
+<% end %>
 <section class="card card-pad space-y-4">
   <div class="flex items-center justify-between gap-2"><%= link_to '←', personal_time_off_path(month: @month.prev_month.strftime('%Y-%m')), class: 'btn-ghost btn-sm', aria: { label: 'Previous month' } %><h2 class="text-lg font-semibold"><%= @month.strftime('%B %Y') %></h2><%= link_to '→', personal_time_off_path(month: @month.next_month.strftime('%Y-%m')), class: 'btn-ghost btn-sm', aria: { label: 'Next month' } %></div>
   <div class="grid grid-cols-7 gap-1" role="table" aria-label="Your calendar">
