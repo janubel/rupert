@@ -50,6 +50,13 @@ class InventoryPdfTest < ActionDispatch::IntegrationTest
     Current.tenant = nil
   end
 
+  test 'the inventory page links to the PDF snapshot' do
+    get inventory_index_path
+
+    assert_response :success
+    assert_select 'a[href=?]', pdf_inventory_index_path, text: 'Inventory snapshot PDF'
+  end
+
   test 'downloads a PDF snapshot of the current inventory' do
     get pdf_inventory_index_path
 
