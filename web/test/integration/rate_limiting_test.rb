@@ -4,6 +4,9 @@ require 'test_helper'
 
 class RateLimitingTest < ActionDispatch::IntegrationTest
   setup do
+    # Rack::Attack counts per fixed time window; a run that crossed a window
+    # boundary reset the counter and the expected 429 never came. Freeze time.
+    freeze_time
     Rack::Attack.enabled = true
     Rack::Attack.cache.store.clear
     @tenant = tenants(:default_tenant)
@@ -13,6 +16,7 @@ class RateLimitingTest < ActionDispatch::IntegrationTest
   teardown do
     Rack::Attack.cache.store.clear
     Rack::Attack.enabled = false
+    unfreeze_time
   end
 
   test 'secret-bearing settings endpoints are throttled per IP with a Retry-After header' do

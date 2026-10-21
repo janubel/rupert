@@ -96,6 +96,10 @@ gem "oj"
 # Request throttling (login, webhooks, API, settings) — config/initializers/rack_attack.rb
 gem "rack-attack", "~> 6.7"
 
+# Blocks risky migrations (table rewrites, long locks, data loss) when they are
+# written; auto-deploy migrates unattended — config/initializers/strong_migrations.rb
+gem "strong_migrations", "~> 2.5"
+
 # Error tracking; inert unless SENTRY_DSN is set — config/initializers/sentry.rb
 gem "sentry-ruby", "~> 5.22"
 gem "sentry-rails", "~> 5.22"

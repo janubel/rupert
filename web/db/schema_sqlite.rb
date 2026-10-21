@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_010000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -2346,6 +2346,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_150000) do
     t.index ["imported_by_id"], name: "index_swipesimple_exports_on_imported_by_id"
     t.index ["tenant_id", "fingerprint"], name: "index_swipesimple_exports_on_tenant_id_and_fingerprint", unique: true
     t.index ["tenant_id", "merchant_account", "kind", "exported_at", "id"], name: "idx_swipesimple_snapshot_scope"
+  end
+
+  create_table "swipesimple_item_snapshots", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "merchant_account", null: false
+    t.text "records_json", null: false
+    t.string "source_filename"
+    t.string "sha256", null: false
+    t.integer "row_count", null: false
+    t.datetime "captured_at", null: false
+    t.bigint "imported_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "merchant_account"], name: "idx_swipesimple_items_account", unique: true
   end
 
   create_table "swipesimple_report_rows", force: :cascade do |t|
