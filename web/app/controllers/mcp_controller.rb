@@ -13,7 +13,10 @@ class McpController < ActionController::API
   before_action :authenticate_token, only: :create
 
   def create
-    return render_error(413, Mcp::Server::INVALID_REQUEST, 'Request body is too large (limit 256 KB).') if request.content_length.to_i > MAX_BODY_BYTES
+    if request.get_header('CONTENT_LENGTH').to_i > MAX_BODY_BYTES
+      return render_error(413, Mcp::Server::INVALID_REQUEST, 'Request body is too large (limit 256 KB).')
+    end
+
     return render_error(400, Mcp::Server::INVALID_REQUEST, "Unsupported MCP-Protocol-Version. Supported: #{Mcp::Server::PROTOCOL_VERSIONS.join(', ')}.") unless supported_protocol_header?
 
     message = parse_body
@@ -79,11 +82,28 @@ class McpController < ActionController::API
   end
 
   def parse_body
-    body = request.raw_post.to_s
+    # ActionDispatch#raw_post trusts Content-Length; read Rack input directly so
+    # an absent or understated length cannot hide bytes from this check.
+    body = read_request_body
+    if body.bytesize > MAX_BODY_BYTES
+      return render_error(413, Mcp::Server::INVALID_REQUEST, 'Request body is too large (limit 256 KB).')
+    end
+
     JSON.parse(body)
   rescue JSON::ParserError
     render_error(400, Mcp::Server::PARSE_ERROR, 'Parse error: the request body is not valid JSON.')
     nil
+  end
+
+  def read_request_body
+    body = String.new(encoding: Encoding::BINARY)
+    while body.bytesize <= MAX_BODY_BYTES
+      chunk = request.body_stream.read(MAX_BODY_BYTES + 1 - body.bytesize)
+      break if chunk.nil? || chunk.empty?
+
+      body << chunk
+    end
+    body
   end
 
   def render_error(status, code, message)
