@@ -1,17 +1,82 @@
+# Automatic dependency updates. Every ecosystem is checked weekly; minor and
+# patch bumps arrive as one grouped PR per ecosystem, majors as separate PRs.
+# Each PR runs the normal CI/Security/Employee mobile workflows. Merging to
+# main deploys to production via deploy/ser8/rupert-autodeploy.sh once CI is
+# green, so review before merging. Labels must already exist in the repo.
 version: 2
 updates:
+  - package-ecosystem: bundler
+    directory: "/web"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
+    groups:
+      gems-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 3
+    groups:
+      root-npm-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Expo SDK 58 pins these packages; `expo install --check` (run in the
+  # Employee mobile workflow) fails on versions the SDK does not ship. Move
+  # them by upgrading the SDK (`npx expo install expo@^NN --fix`), not here.
+  - package-ecosystem: npm
+    directory: "/mobile"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native-*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+    groups:
+      expo-sdk-patches:
+        patterns: ["expo", "expo-*", "react", "react-native", "react-native-*", "@types/react"]
+        update-types: ["minor", "patch"]
+      mobile-minor-and-patch:
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
-  - package-ecosystem: bundler
-    directory: "/"
-    schedule:
-      interval: "daily"
-      time: "00:00"
-      timezone: "UTC"
-    reviewers:
-      - Shopify/client-libraries-atc
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
     labels:
-      - "Bundler upgrades"
-    open-pull-requests-limit: 100
+      - "dependencies"
+      - "github_actions"
+    open-pull-requests-limit: 3
+    groups:
+      actions-minor-and-patch:
+        update-types: ["minor", "patch"]
