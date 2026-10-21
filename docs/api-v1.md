@@ -32,7 +32,7 @@ hostnames and query parameters cannot change the token's tenant.
 | `roadmap:read` | `GET /api/v1/roadmap` | Active owner |
 
 The scopes `reports:read`, `timesheets:read`, `tasks:read`, `alerts:read`,
-`system:read` and `tasks:write` currently gate only tools on the MCP server for AI assistants
+`system:read`, `feedback:read` and `tasks:write` currently gate only tools on the MCP server for AI assistants
 (`POST /mcp`). See [docs/mcp.md](mcp.md) for connecting Claude, ChatGPT and
 other assistants with the same tokens, the tool list and the feedback channel.
 

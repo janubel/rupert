@@ -120,9 +120,12 @@ class McpServerTest < ActionDispatch::IntegrationTest
     # ai_health is instance-operator only (covered by its own tests below).
     assert_not_includes Mcp::Registry.available_to(full_token).map(&:tool_name), 'ai_health'
     Mcp::Registry.available_to(full_token).each do |tool|
+      next if %w[backup_freshness deploy_status].include?(tool.tool_name) # platform administrators only; see mcp_operations_test
+
       arguments = case tool.tool_name
       when 'submit_feedback' then { kind: 'task_report', summary: 'Smoke test done' }
       when 'create_task' then { title: 'Check the tea shelf', priority: 'low', due_on: '2026-11-01' }
+      when 'report_context' then { report_id: AgentFeedback.create!(kind: 'bug', summary: 'Smoke report').id }
       else {}
       end
       result = call_tool(full, tool.tool_name, arguments)
