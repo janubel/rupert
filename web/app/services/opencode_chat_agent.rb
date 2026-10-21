@@ -11,8 +11,8 @@ require 'timeout'
 #
 # Channel messages come from untrusted peers, so the CLI is invoked with
 # `--agent chat` — an opencode config agent with every tool disabled (bash,
-# write, webfetch, ...) and `--pure` to skip external plugins. The model can
-# only produce text; it cannot execute commands on this host.
+# write, webfetch, ...) and no plugins installed. The model can only produce
+# text; it cannot execute commands on this host. See OpencodeCli for the flags.
 #
 # When an administrator turns on Ask Rupert for Buzz (AskRupert::Config
 # buzz_enabled) the agent also listens in the other channels and direct messages
@@ -297,10 +297,7 @@ class OpencodeChatAgent
     PROMPT
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     output = Timeout.timeout(90) do
-      IO.popen(
-        ['opencode', 'run', '--format', 'json', '--pure', '--agent', 'chat', '--dir', '/tmp/opencode', prompt],
-        err: %i[child out], &:read
-      )
+      IO.popen(OpencodeCli.run_command(binary: 'opencode', agent: 'chat', prompt: prompt), **OpencodeCli.popen_options, &:read)
     end
     reply = extract_text(output)
     record_usage(output, reply_present: reply.present?, started: started)

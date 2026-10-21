@@ -112,15 +112,18 @@ class BuzzAgentTest < ActiveSupport::TestCase
     fake = Object.new
     handlers = {}
     sent = []
+    events_sent = 0
     fake.define_singleton_method(:on) { |event, &blk| handlers[event] = blk }
     fake.define_singleton_method(:open?) { true }
     fake.define_singleton_method(:send) do |data|
       sent << data
       payload = JSON.parse(data)
       if payload[0] == 'AUTH'
-        handlers[:message]&.call(Struct.new(:data).new(['OK', 'event-id', true, ''].to_json))
-      else
+        handlers[:message]&.call(Struct.new(:data).new(['OK', 'auth-event-id', true, ''].to_json))
+      elsif (events_sent += 1) == 1
         handlers[:message]&.call(Struct.new(:data).new(%w[AUTH challenge-xyz].to_json))
+      else
+        handlers[:message]&.call(Struct.new(:data).new(['OK', payload[1]['id'], true, ''].to_json))
       end
     end
     fake.define_singleton_method(:close) {}
@@ -132,6 +135,38 @@ class BuzzAgentTest < ActiveSupport::TestCase
     auth_event = JSON.parse(auth)[1]
     assert_equal 22_242, auth_event['kind']
     assert_includes auth_event['tags'], %w[challenge challenge-xyz]
+  end
+
+  test 'publish waits for the relay to acknowledge the event, not the AUTH reply' do
+    fake = Object.new
+    handlers = {}
+    order = []
+    challenged = false
+    fake.define_singleton_method(:on) { |event, &blk| handlers[event] = blk }
+    fake.define_singleton_method(:open?) { true }
+    fake.define_singleton_method(:send) do |data|
+      payload = JSON.parse(data)
+      if payload[0] == 'AUTH'
+        order << :auth_ok
+        handlers[:message]&.call(Struct.new(:data).new(['OK', 'auth-event-id', true, ''].to_json))
+      elsif !challenged
+        challenged = true
+        handlers[:message]&.call(Struct.new(:data).new(%w[AUTH challenge-xyz].to_json))
+      else
+        Thread.new do
+          sleep 0.3
+          order << :event_ok
+          handlers[:message]&.call(Struct.new(:data).new(['OK', payload[1]['id'], true, ''].to_json))
+        end
+      end
+    end
+    fake.define_singleton_method(:close) { order << :close }
+
+    WebSocket::Client::Simple.stubs(:connect).returns(fake)
+    ok, = BuzzAgent.publish(BuzzAgent.build_event(content: 'hi'))
+    assert ok
+    assert_equal :close, order.last, "closed before the event was acknowledged: #{order.inspect}"
+    assert_includes order, :event_ok
   end
 
   test 'build_auth_event signs a valid NIP-42 event with challenge tag' do
