@@ -85,4 +85,28 @@ class BooksCheckTest < ActiveSupport::TestCase
     order!(number: 'nopay')
     assert_equal :fix, BooksCheck.new.verdict
   end
+
+  test 'evidence integrity verifies retained originals a few at a time and names the ones that fail' do
+    docs = (1..7).map do |i|
+      ReconciliationEvidence.retain!(bytes: "Date,Amount\n2026-10-0#{i},#{i}.00\n", filename: "doc-#{i}.csv", source: 'bank', kind: 'bank_statement',
+        from: '2026-10-01', to: '2026-10-31', metadata: { 'note' => "doc #{i}" }, actor: nil)
+    end
+    selects = []
+    subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
+      selects << payload[:sql] if payload[:sql].include?('reconciliation_documents') && payload[:sql].start_with?('SELECT')
+    end
+    check = result('evidence_integrity')
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+    assert_equal 0, check.count
+    assert_includes check.detail, '7 recently retained original(s)'
+    content_queries = selects.select { |sql| sql.include?('content_base64') }
+    assert_equal 2, content_queries.size, 'documents are loaded five at a time'
+    refute content_queries.any? { |sql| sql.include?('"reconciliation_documents".*') }, 'only the columns the check needs'
+
+    docs[2].update_columns(sha256: '0' * 64)
+    check = result('evidence_integrity')
+    assert_equal 1, check.count
+    assert_equal [[docs[2].id, 'doc-3.csv', 'RuntimeError']], check.rows
+    assert_includes check.detail, 'failed checksum verification'
+  end
 end
