@@ -94,6 +94,7 @@ unless marked.
 | `list_tasks` | `tasks:read` | `projects.read` | Tasks board, most urgent first. |
 | `create_task` | `tasks:write` | `projects.write` | **Writes:** adds a task to Rupert's own Tasks board, marked as added by an AI assistant. |
 | `list_alerts` | `alerts:read` | `alerts.read` | Low-stock alerts with counts per status. |
+| `ai_health` | `system:read` | `system.read` + instance operator | Health of the opencode integration behind the @rupert Buzz agent: key state, live free models, agent model status, tokens in/out today and over 7 days, rate-limit hits, warnings. Counts only — never the key or message content. Hidden from tokens whose owner is not a platform administrator. See [AI health monitor](ops/ai-health-monitor.md). |
 
 Conventions every tool follows (also in the `rupert://guide/getting-started`
 resource):

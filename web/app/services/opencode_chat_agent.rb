@@ -245,19 +245,31 @@ class OpencodeChatAgent
       Be concise (1-4 sentences), friendly, and accurate. Do not claim live access you don't have; if you can't know something, say so.
       IMPORTANT: This is a text-only chat. Do not use tools, do not run commands, do not explore the filesystem. Reply with only your message text.
     PROMPT
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     output = Timeout.timeout(90) do
       IO.popen(
         ['opencode', 'run', '--format', 'json', '--pure', '--agent', 'chat', '--dir', '/tmp/opencode', prompt],
         err: %i[child out], &:read
       )
     end
-    extract_text(output)
+    reply = extract_text(output)
+    record_usage(output, reply_present: reply.present?, started: started)
+    reply
   rescue Timeout::Error
     Rails.logger.error '[OpencodeAgent] opencode run timed out'
+    record_usage('', reply_present: false, started: started, timed_out: true)
     nil
   rescue StandardError => e
     Rails.logger.error "[OpencodeAgent] opencode run failed: #{e.message}"
     'Sorry — I hit an error thinking about that. Try again in a moment.'
+  end
+
+  # Token counts and the outcome of this run, for the System page's AI health
+  # card. Counters only; the prompt, the reply and any error text stay out.
+  def record_usage(output, reply_present:, started:, timed_out: false)
+    summary = OpencodeUsage.parse(output, reply_present: reply_present, timed_out: timed_out)
+    duration = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+    OpencodeUsage.record!(summary, model: OpencodeHealth.new.model, duration_ms: duration)
   end
 
   # Pulls the model's text parts out of opencode's JSON event stream, ignoring
