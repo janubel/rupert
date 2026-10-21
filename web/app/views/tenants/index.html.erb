@@ -1,11 +1,7 @@
 <% content_for :title, "Tenants" %>
-<div class="mb-6 flex items-center justify-between">
-  <div>
-    <h1 class="page-title">Tenants</h1>
-    <p class="mt-1 text-sm text-mocha">Workspaces on this instance</p>
-  </div>
+<%= page_header 'Tenants', subtitle: 'Workspaces on this instance' do %>
   <%= link_to "New tenant", new_tenant_path, class: "btn-primary" %>
-</div>
+<% end %>
 
 <div class="card overflow-hidden">
   <table class="w-full">

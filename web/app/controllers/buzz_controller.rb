@@ -9,5 +9,8 @@ class BuzzController < AuthenticatedController
     @state = BuzzConnect.state
     @platforms = BuzzConnect.platforms
     @can_configure = Current.user.can?('settings.write')
+    @can_link = AskRupert::Config.current.buzz_enabled? && BuzzIdentity.eligible?(Current.user)
+    @links = @can_link ? BuzzIdentity.where(user_id: Current.user.id).where(status: %w[pending active]).order(:id) : []
+    @open_code = BuzzIdentity.where(user_id: Current.user.id).open_codes.exists? if @can_link
   end
 end

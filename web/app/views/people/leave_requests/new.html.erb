@@ -1,9 +1,6 @@
 <% content_for :title, "New leave request" %>
 <div class="space-y-6">
-  <section>
-    <h1 class="page-title">New leave request</h1>
-    <p class="mt-1 text-sm text-mocha">Request time off for a staff member.</p>
-  </section>
+  <%= page_header 'New leave request', subtitle: 'Request time off for a staff member.' %>
 
   <%= form_with model: @leave_request, url: people_leave_requests_path, class: "mt-6 space-y-4" do |f| %>
     <div class="grid gap-4 sm:grid-cols-2">

@@ -1,14 +1,10 @@
 <% content_for :title, "Locations" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Locations</h1>
-      <p class="mt-1 text-sm text-mocha">Where stock lives — Shopify and Square locations plus any manual ones.</p>
-    </div>
+  <%= page_header 'Locations', subtitle: 'Where stock lives — Shopify and Square locations plus any manual ones.' do %>
     <% if Current.user.can?("inventory.write") %>
       <%= link_to "Add location", new_location_path, class: "btn-primary" %>
     <% end %>
-  </section>
+  <% end %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">

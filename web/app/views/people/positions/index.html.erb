@@ -1,14 +1,10 @@
 <% content_for :title, "Positions" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Positions</h1>
-      <p class="mt-1 text-sm text-mocha">Job titles and pay grades across the org.</p>
-    </div>
+  <%= page_header 'Positions', subtitle: 'Job titles and pay grades across the org.' do %>
     <% if Current.user.can?("hr.write") %>
       <%= link_to "New position", new_people_position_path, class: "btn-primary" %>
     <% end %>
-  </section>
+  <% end %>
 
   <div class="card overflow-hidden">
     <div class="overflow-x-auto">
