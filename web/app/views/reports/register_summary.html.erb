@@ -2,6 +2,16 @@
 <% money = ->(cents) { cents.nil? ? 'Unavailable' : number_with_precision(BigDecimal(cents.to_s) / 100, precision: 2) } %>
 <div class="space-y-6">
   <%= render 'reports/tabs' %>
+  <% summary_query = { source: @summary.source, location_id: @summary.location_id }.compact_blank %>
+  <nav class="flex flex-wrap items-center gap-3" aria-label="Report period">
+    <%= link_to '← Previous day', register_summary_reports_path(summary_query.merge(day: (@summary.day - 1).iso8601)), class: 'btn-ghost', rel: 'prev' %>
+    <strong class="text-lg text-ink"><%= @summary.day.strftime('%a %b %-d, %Y') %></strong>
+    <% if @summary.day < Date.current %>
+      <%= link_to 'Next day →', register_summary_reports_path(summary_query.merge(day: (@summary.day + 1).iso8601)), class: 'btn-ghost', rel: 'next' %>
+    <% else %>
+      <span class="btn-ghost cursor-not-allowed opacity-50" aria-disabled="true">Next day →</span>
+    <% end %>
+  </nav>
   <%= link_to 'Reconcile totals and retain source documents', daily_reconciliations_path(day: @summary.day.iso8601), class: 'btn-ghost' %>
   <section><h1 class="page-title">Daily register summary</h1><p class="mt-2 text-sm text-mocha">Recorded sales, tenders and refunds by platform, location and currency.</p></section>
   <%= form_with url: register_summary_reports_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
