@@ -404,6 +404,7 @@ Rails.application.routes.draw do
       post :push_guard_unfreeze
     end
   end
+  resources :swipesimple_items, only: %i[index create]
   resources :swipesimple_reports, only: %i[index create] do
     collection { post :preview }
     member { get :document }
