@@ -1,15 +1,11 @@
 <% content_for :title, "Registers" %>
 <div class="space-y-6">
   <%= render "shared/retail_navigation" %>
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Rupert registers</h1>
-      <p class="mt-1 text-sm text-mocha">Checkout shifts and local cash counts. Native C-Trax sessions and bank deposits are reviewed separately.</p>
-    </div>
+  <%= page_header 'Rupert registers', subtitle: 'Checkout shifts and local cash counts. Native C-Trax sessions and bank deposits are reviewed separately.' do %>
     <% if Current.user.can?("sales.write") %>
       <%= link_to "Open register", new_sales_pos_session_path, class: "btn-primary" %>
     <% end %>
-  </section>
+  <% end %>
 
   <% if @open_sessions.any? %>
     <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

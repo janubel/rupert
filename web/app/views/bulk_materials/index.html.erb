@@ -1,9 +1,8 @@
 <% content_for :title, 'Bulk materials' %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div><h1 class="page-title">Bulk materials</h1><p class="mt-1 text-sm text-mocha">Track local bulk stock by material and lot, with receipts, consumption and an append-only movement ledger.</p></div>
-    <div class="flex flex-wrap gap-3"><%= link_to 'Export ledger CSV', export_bulk_materials_path, class: 'btn-ghost' %><% if Current.user.can?('inventory.write') %><%= link_to 'New material', new_bulk_material_path, class: 'btn-primary' %><% end %></div>
-  </section>
+  <%= page_header 'Bulk materials', subtitle: 'Track local bulk stock by material and lot, with receipts, consumption and an append-only movement ledger.' do %>
+    <%= link_to 'Export ledger CSV', export_bulk_materials_path, class: 'btn-ghost' %><% if Current.user.can?('inventory.write') %><%= link_to 'New material', new_bulk_material_path, class: 'btn-primary' %><% end %>
+  <% end %>
   <%= fold_explainer('This ledger tracks bulk material inside Rupert. It does not change Shopify or Square quantities or SKUs. Weights use integer milligrams; decimal inputs round once to the nearest milligram. Automatic sale-to-gram mappings and Google Sheets synchronization are pending. Export the ledger CSV for manual import into Sheets.', class: 'card card-pad text-sm text-mocha') %>
   <div class="card overflow-x-auto"><table class="w-full text-sm">
     <thead class="border-b border-fog bg-haze/60"><tr><th class="th" scope="col">Material</th><th class="th" scope="col">Lots<%= define('lot') %></th><th class="th" scope="col">Remaining<%= define('lot_balance') %></th><th class="th" scope="col"></th></tr></thead>
