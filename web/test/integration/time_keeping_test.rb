@@ -1,0 +1,95 @@
+# frozen_string_literal: true
+
+require 'test_helper'
+
+class TimeKeepingTest < ActionDispatch::IntegrationTest
+  setup do
+    @tenant = tenants(:default_tenant)
+    Current.tenant = @tenant
+    @admin = users(:regular_user)
+    @user = User.create!(tenant: @tenant, email: 'time-keeping-worker@example.invalid', password: 'password123', role: 'employee')
+    @worker = People::Employee.create!(first_name: 'Own', last_name: 'Keeper', user: @user)
+    @other = People::Employee.create!(first_name: 'PRIVATE', last_name: 'COWORKER')
+    EmployeeSourceIdentity.create!(employee: @worker, source: 'square', external_id: 'tk-own')
+    EmployeeSourceIdentity.create!(employee: @other, source: 'square', external_id: 'tk-other')
+    SquareTimecardImport.new(actor: @admin, rows: [card('tk-own-card', 'tk-own'), card('tk-other-card', 'tk-other')]).call(apply: true)
+    ClockShift.create!(user: @user, employee: @worker, employee_key: @worker.id.to_s, employee_name: @worker.name,
+      employment_type: 'part_time', request_token: 'time_keeping_token_123',
+      started_at: Time.zone.parse('2026-10-06 18:00'), ended_at: Time.zone.parse('2026-10-06 19:00'))
+    People::ScheduledShift.create!(employee: @worker, starts_at: Time.zone.parse('2026-10-06 09:00'), ends_at: Time.zone.parse('2026-10-06 17:00'), role_label: 'Floor')
+    People::ScheduledShift.create!(employee: @other, starts_at: Time.zone.parse('2026-10-07 10:00'), ends_at: Time.zone.parse('2026-10-07 14:00'))
+  end
+  teardown { Current.reset }
+
+  def card(id, team)
+    { 'id' => id, 'team_member_id' => team, 'location_id' => 'native-location', 'timezone' => 'America/New_York',
+      'start_at' => '2026-10-06T09:00:00-04:00', 'end_at' => '2026-10-06T17:00:00-04:00', 'status' => 'CLOSED',
+      'wage' => { 'hourly_rate' => { 'amount' => 2000, 'currency' => 'USD' } } }
+  end
+
+  def report(**options)
+    TimeKeepingReport.new(from: Date.new(2026, 10, 1), to: Date.new(2026, 10, 31), all_employees: true, **options)
+  end
+
+  test 'compares scheduled with counted hours and names each person-day' do
+    days = report.days.index_by { |day| [day.employee_id, day.date] }
+    own = days.fetch([@worker.id, Date.new(2026, 10, 6)])
+    assert_equal [8.0, 9.0, 1.0], [own.scheduled_hours, own.worked_hours, own.variance]
+    assert_equal 'Over schedule', own.status
+    assert_equal 'Unscheduled', days.fetch([@other.id, Date.new(2026, 10, 6)]).status
+    assert_equal 'No punches', days.fetch([@other.id, Date.new(2026, 10, 7)]).status
+    staff = report.staff.index_by(&:employee_id)
+    assert_equal 1, staff.fetch(@other.id).no_punch_days
+    assert_equal({ scheduled: 12.0, worked: 17.0 }, report.totals.slice(:scheduled, :worked))
+    assert_equal [@worker.id], report(employee_id: @worker.id.to_s).staff.map(&:employee_id)
+    assert_raises(TimeKeepingReport::Error) { TimeKeepingReport.new(from: Date.new(2026, 10, 2), to: Date.new(2026, 10, 1)) }
+  end
+
+  test 'Team shows Time keeping with calendar, roster, daily and staff views plus CSV and PDF' do
+    post login_path, params: { email: @admin.email, password: 'password' }
+    range = { from: '2026-10-01', to: '2026-10-31' }
+    get people_time_keeping_path, params: range
+    assert_response :success
+    assert_equal 'no-store', response.headers['Cache-Control']
+    assert_select 'h1', 'Time keeping'
+    assert_select 'table.time-keeping-calendar', /Own Keeper/
+    assert_select 'nav[aria-label="Time keeping views"] a', 4
+
+    %w[roster daily staff].each do |view|
+      get people_time_keeping_path, params: range.merge(view: view)
+      assert_response :success
+      assert_select '[data-controller=report-table] table', /PRIVATE COWORKER/
+    end
+    get people_time_keeping_path, params: range.merge(view: 'daily')
+    assert_includes response.body, 'No punches'
+
+    assert_no_difference ['ClockShift.count', 'SquareTimecard.count', 'People::ScheduledShift.count', 'People::Timesheet.count'] do
+      get people_time_keeping_path(format: :csv), params: range.merge(kind: 'staff')
+      assert_response :success
+      assert_equal 'text/csv', response.media_type
+      assert_includes response.body, 'Scheduled hours'
+      assert_includes response.body, 'Own Keeper'
+      get people_time_keeping_path(format: :pdf), params: range
+      assert_response :success
+      assert_equal 'application/pdf', response.media_type
+      assert response.body.start_with?('%PDF')
+    end
+
+    get people_time_keeping_path, params: { from: '2026-10-09', to: '2026-10-01' }
+    assert_redirected_to people_time_keeping_path
+  end
+
+  test 'staff see only their own schedule and time' do
+    post login_path, params: { email: @user.email, password: 'password123' }
+    get people_time_keeping_path, params: { from: '2026-10-01', to: '2026-10-31', view: 'daily', employee_id: @other.id }
+    assert_response :success
+    assert_includes response.body, 'Own Keeper'
+    refute_includes response.body, 'PRIVATE COWORKER'
+    get people_time_keeping_path(format: :csv), params: { from: '2026-10-01', to: '2026-10-31', kind: 'shifts' }
+    refute_includes response.body, 'PRIVATE COWORKER'
+  end
+
+  test 'Time keeping sits in the Team area' do
+    assert_equal 'team', ModuleRegistry.area_key_for('time_keeping')
+  end
+end
