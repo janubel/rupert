@@ -174,4 +174,16 @@ class ReportsFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "nav[aria-label=Reports] a[href*='from=2026-07-01'][href*='to=2026-09-30']", minimum: 5
   end
+
+  test 'every report has previous and next period links that keep the window length' do
+    get sales_tax_reports_path(from: '2026-09-01', to: '2026-09-30')
+    assert_select 'nav[aria-label="Report period"] strong', 'September 2026'
+    assert_select "nav[aria-label='Report period'] a[rel=prev][href*='from=2026-08-01'][href*='to=2026-08-31']"
+    assert_select "nav[aria-label='Report period'] a[rel=next][href*='from=2026-10-01'][href*='to=2026-10-31']"
+    get sales_reports_path(from: '2026-07-01', to: '2026-09-30')
+    assert_select "nav[aria-label='Report period'] a[rel=prev][href*='from=2026-04-01'][href*='to=2026-06-30']"
+    get register_summary_reports_path(day: '2026-10-08')
+    assert_select "nav[aria-label='Report period'] a[rel=prev][href*='day=2026-10-07']", /Previous day/
+    assert_select "nav[aria-label='Report period'] a[rel=next][href*='day=2026-10-09']", /Next day/
+  end
 end
