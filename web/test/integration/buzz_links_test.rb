@@ -65,6 +65,17 @@ class BuzzLinksTest < ActionDispatch::IntegrationTest
     assert_equal 'buzz_link_confirmed', ActivityLog.order(:id).last.action
   end
 
+  test 'a linked account is listed with a way to remove it' do
+    claim_for(@admin).confirm!
+    BuzzIdentity.user_for(@key)
+    sign_in(@admin)
+    get buzz_path
+    assert_response :success
+    assert_select '#buzz-link', text: /Linked/
+    assert_select '#buzz-link', text: /#{@key.first(4)}/
+    assert_select "#buzz-link form[action^='/buzz/link/'] button", text: 'Remove link'
+  end
+
   test 'declining or removing a link ends it' do
     identity = claim_for(@admin)
     sign_in(@admin)
