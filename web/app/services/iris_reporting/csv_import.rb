@@ -15,13 +15,17 @@ module IrisReporting
         'Chargebacks (Count)' => 'chargebacks_count', 'Retrievals (Count)' => 'retrievals_count' }
     }.freeze
     MAX_BYTES = 1024 * 1024
+    MAX_ROWS = 200
 
     def self.call(text:, merchant:, kind:, year:, origin: 'https://nabankco.iriscrm.com')
       raise Client::Error, :invalid unless Current.tenant&.status == 'active' && Client.merchants(merchant) == [merchant] && Client::ORIGIN_PATTERN.match?(origin)
-      raise Client::Error, :response unless METRICS.key?(kind) && text.is_a?(String) && text.bytesize.between?(1, MAX_BYTES)
+      raise Client::Error, :response unless METRICS.key?(kind) && text.is_a?(String)
+      raise Client::Error, :empty_file if text.empty?
+      raise Client::Error, :file_size if text.bytesize > MAX_BYTES
 
       csv = CSV.parse(text.delete_prefix("\uFEFF"), field_size_limit: 4096).reject { |row| row.all?(&:blank?) }
-      raise Client::Error, :response if csv.empty? || csv.size > 200
+      raise Client::Error, :summary_rows if csv.size > MAX_ROWS
+      raise Client::Error, :response if csv.empty?
 
       rows = csv.first == %w[period metric value] ? long_rows(csv.drop(1), kind) : matrix_rows(csv, kind, year)
       raise Client::Error, :response if rows.empty? || rows.map { |row| [row['period'], row['metric']] }.uniq.size != rows.size

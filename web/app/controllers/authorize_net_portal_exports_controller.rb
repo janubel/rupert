@@ -14,12 +14,14 @@ class AuthorizeNetPortalExportsController < AuthenticatedController
 
   def create
     file = params[:file]
-    raise AuthorizeNetPortalImporter::Error, 'Attach a native expanded CSV export.' unless file.is_a?(ActionDispatch::Http::UploadedFile) && file.size <= AuthorizeNetPortalImporter::MAX_BYTES
+    raise AuthorizeNetPortalImporter::Error, 'Attach a native expanded CSV export no larger than 8 MiB.' unless file.is_a?(ActionDispatch::Http::UploadedFile) && file.size <= AuthorizeNetPortalImporter::MAX_BYTES
 
     receipt = AuthorizeNetPortalImporter.import!(text: file.read(AuthorizeNetPortalImporter::MAX_BYTES + 1),
       gateway_id: params[:gateway_id], kind: params[:kind], exported_at: params[:exported_at])
     redirect_to authorize_net_portal_exports_path, notice: "Portal export saved: #{receipt.records.size} transaction observations."
-  rescue AuthorizeNetPortalImporter::Error, ArgumentError
+  rescue AuthorizeNetPortalImporter::Error => e
+    redirect_to authorize_net_portal_exports_path, alert: e.message
+  rescue ArgumentError
     redirect_to authorize_net_portal_exports_path, alert: 'Portal import could not be validated. Check the native CSV, Gateway ID, kind and export time.'
   end
 

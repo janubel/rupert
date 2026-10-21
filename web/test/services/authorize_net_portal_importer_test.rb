@@ -35,6 +35,14 @@ class AuthorizeNetPortalImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test 'an export over the row limit says so and how to fix it' do
+    rows = csv.lines
+    text = rows.first + (rows.last * 10_001)
+    error = assert_raises(AuthorizeNetPortalImporter::Error) { import(text: text) }
+    assert_equal 'Export has 10001 rows; the limit is 10,000. Export a shorter date range.', error.message
+    assert_equal 0, AuthorizeNetPortalExport.count
+  end
+
   test 'another tenant cannot see portal observations or source files' do
     import
     Current.tenant = Tenant.create!(name: 'Other portal', subdomain: 'other-portal')
