@@ -56,9 +56,11 @@ class AutoUpdate
       nil
     end
 
-    # A request the deployer has not reported on yet.
+    # A request the deployer has not reported on yet. Whole seconds, like the
+    # deployer (stat %Y, status times): the file's sub-second mtime would
+    # otherwise look newer than a report written in the same second.
     def request_unseen?(report = status)
-      (at = requested_at).present? && (report&.at.nil? || at > report.at)
+      (at = requested_at).present? && (report&.at.nil? || at.to_i > report.at.to_i)
     end
 
     private

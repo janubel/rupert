@@ -71,6 +71,14 @@ class AutoUpdateTest < ActiveSupport::TestCase
     assert_not AutoUpdate.request_unseen?
   end
 
+  test 'a report in the same second as the request has seen it' do
+    AutoUpdate.request_install!(actor: nil)
+    at = Time.at(AutoUpdate.requested_at.to_i).utc
+    File.utime(at + 0.9, at + 0.9, AutoUpdate.inbox.join('install-requested'))
+    write_status(at: at.iso8601)
+    assert_not AutoUpdate.request_unseen?
+  end
+
   test 'only instance operators manage updates' do
     user = users(:regular_user)
     assert_not AutoUpdate.manager?(user)

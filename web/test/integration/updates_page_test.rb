@@ -63,7 +63,7 @@ class UpdatesPageTest < ActionDispatch::IntegrationTest
     @user.update!(role: 'super_admin')
     UpdateChecker.stubs(:enabled?).returns(true)
     UpdateChecker.stubs(:latest).returns(available)
-    write_status
+    write_status(at: 1.minute.ago.utc.iso8601)
     write_status('last-deploy.json', state: 'deployed', message: 'deployed aaaaaaaa, healthy', current: 'c' * 40, target: CURRENT)
     AutoUpdate.manual!(true)
 
