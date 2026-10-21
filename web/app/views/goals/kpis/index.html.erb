@@ -1,14 +1,10 @@
 <% content_for :title, "KPIs" %>
 <div class="space-y-6">
-  <section class="flex items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">KPIs</h1>
-      <p class="mt-1 text-sm text-mocha">Key performance indicators with historical readings.</p>
-    </div>
+  <%= page_header 'KPIs', subtitle: 'Key performance indicators with historical readings.' do %>
     <% if Current.user.can?("projects.write") %>
       <%= link_to "New KPI", new_goals_kpi_path, class: "btn-primary" %>
     <% end %>
-  </section>
+  <% end %>
 
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <% if @kpis.empty? %>

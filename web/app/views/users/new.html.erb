@@ -1,11 +1,8 @@
 <% content_for :title, "Add staff member" %>
 <div class="space-y-6">
-  <section>
-    <h1 class="page-title">Add staff member</h1>
-    <p class="mt-1 text-sm text-mocha">Create a sign-in for a team member and pick their starting role.</p>
-  </section>
+  <%= page_header 'Add staff member', subtitle: 'Create a sign-in for a team member and pick their starting role.' %>
 
-  <div class="card card-pad max-w-xl">
+  <div class="card card-pad page-narrow">
     <%= render "form", user: @user %>
   </div>
 </div>
