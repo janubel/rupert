@@ -40,7 +40,7 @@ Mode is set per workspace on **System → Ask Rupert usage**:
 
 | Mode | Behaviour |
 | --- | --- |
-| Cloud model (default) | `opencode run --agent chat --pure` (the same CLI and tool-less `chat` agent the @rupert Buzz agent uses; model from `OPENCODE_MODEL`, default `deepseek-v4-flash`). |
+| Cloud model (default) | `opencode run --standalone --agent chat` (see `OpencodeCli`) (the same CLI and tool-less `chat` agent the @rupert Buzz agent uses; model from `OPENCODE_MODEL`, default `deepseek-v4-flash`). |
 | Local first, cloud as backup | Short how-to or where-is questions go to a local Ollama model; anything with numbers or data words, or a local failure, goes to the cloud. |
 | Local only | Only the local model. Nothing leaves the server. If it is not configured or is down, people get a friendly "can't reach the assistant" message. |
 

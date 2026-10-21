@@ -66,7 +66,8 @@ service (or mount the auth file) wherever the jobs and the agent run.
   "Expired" once the monitor can read a key.
 - opencode on SER8 is v2.0.32, and `opencode run` there **rejects `--pure` and
   `--dir`** (`Unrecognized flag`). `OpencodeChatAgent` still passes both, so the
-  agent would produce no reply; the monitor now records such runs as
+  agent would produce no reply (fixed 2026-10-21: `OpencodeCli` builds flags 2.0.32 accepts, see
+  [buzz-relay-ser8.md](buzz-relay-ser8.md)); the monitor now records such runs as
   `error / no_output` and warns "N of the agent's last runs failed". No agent
   process or `chat` agent config was found on SER8 either — this was left
   unchanged (out of scope for the monitor) and needs its own fix.

@@ -1,40 +1,51 @@
 #!/usr/bin/env bash
-# Run the @rupert Buzz agent via the officially supported buzz-acp harness,
-# driving opencode's ACP server. The agent keypair lives in the tenant
-# settings DB (Settings page), so resolve it here before exec'ing buzz-acp.
+# Run the @rupert Buzz agent via the buzz-acp harness, driving opencode's ACP server.
+# The agent keypair, relay and channel live in the tenant settings DB (Settings page), so one Rails call
+# resolves them here (and renders the agent prompt) before exec'ing buzz-acp. See docs/ops/buzz-relay-ser8.md.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 export RAILS_ENV="${RAILS_ENV:-production}"
 
-key="$(
-  bin/rails runner 't = Tenant.find_by(status: "active") || Tenant.first; Current.tenant = t; print EnvStore.fetch("BUZZ_PRIVATE_KEY").to_s' 2>/dev/null |
-    grep -oE '[0-9a-f]{64}' | head -1
+prompt_file="tmp/buzz_acp_prompt.txt"
+mkdir -p tmp
+
+# One line per value, prefixed so Rails boot noise on stdout cannot be mistaken for a setting.
+settings="$(
+  PROMPT_FILE="$prompt_file" bin/rails runner '
+    Current.tenant = Tenant.find_by(status: "active") || Tenant.first
+    File.write(ENV.fetch("PROMPT_FILE"), BuzzAgentPrompt.render(mode: :acp), perm: 0o600)
+    %w[BUZZ_PRIVATE_KEY BUZZ_RELAY_URL BUZZ_AUTH_TAG].each { |k| puts "rupert-buzz:#{k}=#{EnvStore.fetch(k).to_s.strip}" }
+  ' 2>/dev/null | grep '^rupert-buzz:' || true
 )"
 
+value() { printf '%s\n' "$settings" | sed -n "s/^rupert-buzz:$1=//p" | head -1; }
+
+key="$(value BUZZ_PRIVATE_KEY | grep -oE '^[0-9a-f]{64}$' || true)"
 if [ -z "$key" ]; then
   echo "[buzz_acp_agent] BUZZ_PRIVATE_KEY not found in tenant settings — refusing to start" >&2
   exit 1
 fi
-
 export BUZZ_PRIVATE_KEY="$key"
 
-relay="$(
-  bin/rails runner 't = Tenant.find_by(status: "active") || Tenant.first; Current.tenant = t; print EnvStore.fetch("BUZZ_RELAY_URL").to_s' 2>/dev/null |
-    grep -oE 'wss?://[^[:space:]]+' | head -1 || true
-)"
-
-if [ -n "$relay" ]; then
-  export BUZZ_RELAY_URL="$relay"
+relay="$(value BUZZ_RELAY_URL | grep -oE '^wss?://[^[:space:]]+' || true)"
+if [ -z "$relay" ]; then
+  echo "[buzz_acp_agent] BUZZ_RELAY_URL not found in tenant settings — refusing to start" >&2
+  exit 1
 fi
+export BUZZ_RELAY_URL="$relay"
 
-auth_tag="$(
-  bin/rails runner 't = Tenant.find_by(status: "active") || Tenant.first; Current.tenant = t; print EnvStore.fetch("BUZZ_AUTH_TAG").to_s' 2>/dev/null |
-    grep -oE '\{"[^}]*"\}' | head -1 || true
-)"
-
+auth_tag="$(value BUZZ_AUTH_TAG | grep -oE '^\{"[^}]*"\}$' || true)"
 if [ -n "$auth_tag" ]; then
   export BUZZ_AUTH_TAG="$auth_tag"
 fi
+
+# opencode is the ACP agent. The `buzz` agent in OPENCODE_CONFIG (deploy/ser8/buzz/opencode.json) is its default
+# and is limited to the buzz CLI, the read-only report scripts and the read-only Rupert MCP.
+export BUZZ_ACP_AGENT_COMMAND="${BUZZ_ACP_AGENT_COMMAND:-/usr/local/bin/opencode}"
+export BUZZ_ACP_AGENT_ARGS="${BUZZ_ACP_AGENT_ARGS:-acp}"
+export BUZZ_ACP_SYSTEM_PROMPT_FILE="$PWD/$prompt_file"
+# Channel membership is the gate: the relay is closed, so only people added to it can talk to the agent.
+export BUZZ_ACP_RESPOND_TO="${BUZZ_ACP_RESPOND_TO:-anyone}"
 
 exec /usr/local/bin/buzz-acp "$@"

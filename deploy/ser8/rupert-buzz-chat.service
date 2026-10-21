@@ -1,0 +1,45 @@
+# SER8 (Incus container "rupert"): OPTIONAL alternative to rupert-buzz.service. Runs the text-only runner
+# (bin/opencode_agent -> OpencodeChatAgent): replies with no tools, and is the runner Ask Rupert in Buzz (linked people,
+# direct messages; System -> Ask Rupert usage) depends on. It cannot file reports or run the quick reports.
+# Install as /etc/systemd/system/rupert-buzz-chat.service. It conflicts with rupert-buzz.service: only one of the two
+# may run, because both speak as the same Nostr identity. See docs/ops/buzz-relay-ser8.md.
+[Unit]
+Description=Rupert @rupert Buzz agent (text-only runner)
+After=network-online.target rupert-web.service
+Wants=network-online.target
+Conflicts=rupert-buzz.service
+ConditionPathExists=/usr/local/bin/opencode
+
+[Service]
+Type=simple
+User=rupert
+Group=rupert
+WorkingDirectory=/opt/rupert/web
+EnvironmentFile=/etc/rupert.env
+Environment=RAILS_ENV=production
+Environment=RAILS_LOG_TO_STDOUT=1
+Environment=BUNDLE_FROZEN=true
+Environment=PATH=/opt/rbenv/versions/4.0.6/bin:/opt/rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+StateDirectory=rupert-buzz
+Environment=XDG_CONFIG_HOME=/var/lib/rupert-buzz/config
+Environment=XDG_DATA_HOME=/var/lib/rupert-buzz/data
+Environment=XDG_CACHE_HOME=/var/lib/rupert-buzz/cache
+Environment=XDG_STATE_HOME=/var/lib/rupert-buzz/state
+Environment=OPENCODE_CONFIG=/etc/rupert-buzz/opencode.json
+ExecStart=/opt/rupert/web/bin/opencode_agent
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/rupert/web/storage /opt/rupert/web/tmp /opt/rupert/web/log
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

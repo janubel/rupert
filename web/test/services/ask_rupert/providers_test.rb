@@ -80,7 +80,8 @@ class AskRupertProvidersTest < ActiveSupport::TestCase
       assert_equal [40, 7], [reply.tokens_in, reply.tokens_out]
       args = File.read(File.join(dir, 'args'))
       assert_match(/--agent chat/, args)
-      assert_match(/--pure/, args)
+      assert_match(/--standalone/, args)
+      refute_match(/--pure|--dir/, args)
     end
   end
 
