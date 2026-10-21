@@ -535,7 +535,7 @@
       "area": "Commerce",
       "name": "Daily register summaries",
       "status": "Partial",
-      "scope": "Event-dated canonical register detail and CSV plus native C-Trax source sales/tax/discount/tip/tender controls and local review. Missing/open/cross-day cash evidence remains unknown. Source register closing, complete refund/fee coverage and payout-to-bank reconciliation remain separate.",
+      "scope": "Event-dated canonical register detail and CSV, native C-Trax source sales/tax/discount/tip/tender controls and local review, plus a source-separated daily close summary with SwipeSimple transaction cash/card/refund/tip evidence. SwipeSimple transaction tax and missing/open/cross-day C-Trax cash evidence remain unknown. Source register closing, complete refund/fee coverage and payout-to-bank reconciliation remain separate.",
       "evidence": "docs/ctrax-retail.md",
       "phase": "0"
     },
@@ -625,7 +625,7 @@
       "area": "Commerce",
       "name": "C-Trax daily sales and register reconciliation",
       "status": "Partial",
-      "scope": "Encrypted native store/day order, payment and per-unit line snapshots; independent source report checks, conservative register cash variance, CSV and digest-bound local review. Opt-in scheduled today/yesterday reads. Detailed refunds, cash-tip drawer handling, settlement and terminal execution remain unverified or separate.",
+      "scope": "Encrypted native store/day order, payment and per-unit line snapshots; independent source report checks, conservative register cash variance, CSV and digest-bound local review. Native-ID items-sold summaries expose line/order tie-outs; item discount/net/refund values stay unknown without matching line evidence. Opt-in scheduled today/yesterday reads. Detailed refunds, cash-tip drawer handling, settlement and terminal execution remain unverified or separate.",
       "evidence": "web/app/services/ctrax/sales_sync.rb",
       "phase": "1"
     },

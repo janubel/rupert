@@ -184,7 +184,7 @@
       "category": "Payments / compact POS benchmark",
       "url": "https://home.swipesimple.com/features",
       "reviewed": "2026-10-15",
-      "caveat": "Payment acceptance, customer/item catalog, invoices and reporting; merchant provider, plan and hardware determine availability. Daily reports and batch reports use different cutoff rules. Rupert currently imports CSV sales; it does not operate a native SwipeSimple API adapter.",
+      "caveat": "Payment acceptance, customer/item catalog, invoices and reporting; merchant provider, plan and hardware determine availability. Daily reports and batch reports use different cutoff rules. Rupert imports CSV sales and reads authenticated website exports into separate transaction, report and item snapshots. Website access is not a native or vendor-supported partner API adapter.",
       "sources": [
         {
           "title": "Product features",
@@ -1358,7 +1358,7 @@
     {
       "name": "Daily cash/card register summary",
       "rupert": "Partial",
-      "scope": "Canonical event-dated tender/refund/net evidence plus native C-Trax day/register controls and local review. Missing/open/cross-day cash remains unknown; complete refunds/fees, source closing and bank settlement remain separate gates.",
+      "scope": "Canonical event-dated tender/refund/net evidence, native C-Trax day/register controls and local review, plus source-separated daily close and SwipeSimple transaction cash/card/refund/tip evidence. SwipeSimple transaction tax and missing/open/cross-day C-Trax cash remain unknown; complete refunds/fees, source closing and bank settlement remain separate gates.",
       "phase": "0",
       "competitors": {
         "odoo": "Not established",
