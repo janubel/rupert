@@ -4,12 +4,12 @@ module AskRupert
   # Hands a conversation to the Rupert team as a bug, request or question report.
   # It only ever runs because the person pressed Send (or Report this chat); a
   # model can prepare a draft but cannot file one. The words of the chat travel
-  # with the report, with keys and card-like numbers removed, so the team can see
-  # what was tried. Reports are visible only to people who review feedback.
+  # with the report as an administrator-only attachment, with keys and card-like
+  # numbers removed, so the team can see what was tried.
   class Reporter
     class Error < StandardError; end
 
-    KINDS = { 'bug' => 'bug', 'request' => 'suggestion', 'question' => 'question' }.freeze
+    KINDS = FeedbackReport::KINDS.keys.index_with(&:itself).freeze
     DAILY_LIMIT = 10
     TURNS = 12
     TURN_CHARS = 600
@@ -34,12 +34,16 @@ module AskRupert
       raise Error, 'Add a line saying what the report is about.' if summary.length < 3
       raise Error, "You have sent #{DAILY_LIMIT} reports from Ask Rupert today. Please try again tomorrow." if recent_reports >= DAILY_LIMIT
 
-      feedback = AgentFeedback.create!(
-        user_id: @user.id, kind: KINDS.fetch(@kind), severity: 'normal', summary: summary, agent_name: AGENT_NAME,
-        details: AgentFeedback.clean(body, AgentFeedback::DETAILS_MAX, multiline: true),
+      feedback = AgentFeedback.new(
+        source: 'app', user_id: @user.id, kind: KINDS.fetch(@kind), severity: 'normal', summary: summary, agent_name: AGENT_NAME,
+        details: AgentFeedback.clean(Redactor.clean(@details), AgentFeedback::DETAILS_MAX, multiline: true).presence,
         related_reference: 'Ask Rupert chat',
         context: JSON.generate('source' => 'ask_rupert', 'conversation' => @conversation.id, 'role' => @user.role, 'build' => BuildInfo.current.short_revision)
       )
+      AgentFeedback.transaction do
+        feedback.save!
+        feedback.attachments.create!(kind: 'conversation', content_type: 'text/plain', text_body: FeedbackAttachment.clip('conversation', transcript))
+      end
       open_task(feedback)
       ActivityLogger.log('feedback_reported', subject: feedback, actor: @user,
         details: "source=ask_rupert; kind=#{feedback.kind}; conversation=#{@conversation.id}")
@@ -54,19 +58,16 @@ module AskRupert
       AgentFeedback.where(user_id: @user.id, agent_name: AGENT_NAME, created_at: 24.hours.ago..).count
     end
 
-    def body
-      [Redactor.clean(@details.to_s), "--- Ask Rupert conversation (last #{TURNS} turns; the person's own words and the assistant's replies) ---", transcript].compact_blank.join("\n\n")
-    end
-
+    # What was said, as the team will read it. Secrets and card-like numbers are already removed.
     def transcript
       @conversation.messages.where(status: %w[done failed]).order(:id).last(TURNS).map do |message|
         "#{message.role == 'user' ? 'Person' : 'Ask Rupert'}: #{Redactor.clean(message.content).first(TURN_CHARS)}"
       end.join("\n")
     end
 
-    # The Rupert Feedback task and attachment arrive with the ladybug reporter.
+    # Same path as the ladybug: a task in the Rupert Feedback project linking to the report.
     def open_task(feedback)
-      FeedbackTask.create_for!(feedback, context_line: 'From an Ask Rupert chat; the conversation is in the report details.') if defined?(FeedbackTask)
+      FeedbackTask.create_for!(feedback, context_line: 'From an Ask Rupert chat; the conversation is attached to the report (administrators only).')
     rescue StandardError => e
       Rails.error.report(e, handled: true, context: { feedback_id: feedback.id })
     end

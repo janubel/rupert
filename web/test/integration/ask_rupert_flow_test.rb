@@ -190,8 +190,14 @@ class AskRupertFlowTest < ActionDispatch::IntegrationTest
     feedback = AgentFeedback.unscoped.order(:id).last
     assert_equal @user.id, feedback.user_id
     assert_equal 'Ask Rupert', feedback.agent_name
+    assert_equal 'app', feedback.source
     assert_includes feedback.details, 'Nothing loads'
-    assert_includes feedback.details, 'the sync page is blank'
+    transcript = feedback.attachments.unscope(where: :tenant_id).find_by(kind: 'conversation')
+    assert_includes transcript.text_body, 'the sync page is blank'
+    assert_includes transcript.text_body, 'I prepared a report for you to review.'
+    task = Projects::Task.unscoped.find(feedback.task_id)
+    assert_equal 'Rupert Feedback', Projects::Project.unscoped.find(task.project_id).name
+    assert_includes task.title, 'Sync page is blank'
     get ask_rupert_conversation_path(id), as: :json
     assert json['messages'].last['report_draft']['filed']
   end
