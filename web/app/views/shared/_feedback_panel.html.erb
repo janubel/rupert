@@ -1,0 +1,59 @@
+<%# Report panel behind the ladybug: a bug, a request or a question, with the page's details attached. %>
+<% kinds = [['bug', 'Bug', 'Something is broken or wrong'], ['request', 'Request', 'Something you would like Rupert to do'], ['question', 'Question', 'Something you cannot work out']] %>
+<div class="help-panel-backdrop hidden" data-feedback-target="backdrop" data-feedback-ignore data-action="click->feedback#close"></div>
+<aside id="feedback-panel" class="help-panel feedback-panel hidden" role="dialog" aria-modal="true" aria-labelledby="feedback-title" data-feedback-target="panel" data-feedback-ignore data-action="keydown->feedback#keydown">
+  <div class="help-panel-head">
+    <h2 id="feedback-title" class="font-display text-xl">Tell the Rupert team</h2>
+    <button type="button" class="nav-utility" data-action="feedback#close" aria-label="Close report panel"><span aria-hidden="true">×</span></button>
+  </div>
+  <div class="help-panel-body">
+    <form data-feedback-target="form" data-action="submit->feedback#submit" novalidate class="feedback-form">
+      <fieldset>
+        <legend class="field-label">What is this?</legend>
+        <div class="feedback-kinds">
+          <% kinds.each_with_index do |(value, label, hint), index| %>
+            <label class="feedback-kind">
+              <input type="radio" name="feedback_kind" value="<%= value %>" <%= 'checked' if index.zero? %> data-feedback-target="kind" data-action="change->feedback#kindChanged">
+              <span class="feedback-kind-label"><strong><%= label %></strong><span><%= hint %></span></span>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+      <div data-feedback-target="severityField">
+        <label class="field-label" for="feedback-severity">How bad is it? <span class="text-taupe">(optional)</span></label>
+        <select id="feedback-severity" class="select" data-feedback-target="severity">
+          <option value="normal">Not sure</option>
+          <option value="low">Small annoyance</option>
+          <option value="high">Stops me working</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label" for="feedback-description">What happened?</label>
+        <textarea id="feedback-description" class="input" rows="6" maxlength="<%= AgentFeedback::DETAILS_MAX %>" required aria-describedby="feedback-hint" data-feedback-target="description" data-action="input->feedback#countCharacters"></textarea>
+        <p id="feedback-hint" class="mt-1 text-xs text-mocha">What you did, what you expected and what you saw. Please do not type passwords or card numbers.</p>
+      </div>
+      <details class="feedback-sends">
+        <summary>What gets sent with this</summary>
+        <div class="space-y-2 pt-2 text-sm">
+          <label class="flex items-start gap-2"><input type="checkbox" checked data-feedback-target="screenshot"><span>A screenshot of this page</span></label>
+          <label class="flex items-start gap-2"><input type="checkbox" checked data-feedback-target="details"><span>Page details: address, build <code><%= BuildInfo.current.short_revision %></code>, browser and screen size, recent errors and a copy of the page text</span></label>
+          <p class="text-xs text-mocha">Always included: your last few requests to Rupert (log lines and database queries, with values removed). Password, card and token fields are hidden. Only store administrators can see these; you see just the status.</p>
+        </div>
+      </details>
+      <p role="status" aria-live="polite" class="min-h-[1.25rem] text-sm" data-feedback-target="status"></p>
+      <div class="feedback-actions">
+        <button type="submit" class="btn-primary" data-feedback-target="submit">Send report</button>
+        <%= link_to 'My reports', feedback_reports_path, class: 'btn-ghost' %>
+      </div>
+    </form>
+    <div data-feedback-target="done" hidden class="feedback-done">
+      <p class="font-semibold" tabindex="-1" data-feedback-target="doneMessage"></p>
+      <p class="mt-1 text-sm text-mocha">You can follow its status under My reports.</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a class="btn-primary" href="<%= feedback_reports_path %>" data-feedback-target="doneLink">See its status</a>
+        <button type="button" class="btn-ghost" data-action="feedback#another">Send another</button>
+        <button type="button" class="btn-ghost" data-action="feedback#close">Close</button>
+      </div>
+    </div>
+  </div>
+</aside>

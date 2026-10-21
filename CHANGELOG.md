@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **The ladybug: report a bug, ask for something, ask a question.** A ladybug in the header opens a panel (Bug / Request / Question, what happened, how bad) that sends the report with the page address, build, browser details, recent JavaScript errors, a sanitized page snapshot and a screenshot (vendored `html2canvas-pro`, loaded only when used). It works on phones, in light and dark, with Escape and focus handling; password, card and token fields are hidden. Staff follow their reports' status under **My reports**; administrators see the attachments. See `docs/ops/feedback-reports.md`.
+
 - **Report a bug, ask for something, ask a question (backend).** Any signed-in staff member can send a report to `POST /feedback_reports`; each one becomes an `AgentFeedback` row and a task in a new **Rupert Feedback** project assigned to the store owner, with a status page at **My reports**. Reports can carry admin-only attachments (screenshot, page snapshot, browser details, JavaScript errors, the session's recent server log lines and SQL queries with literals removed, all passed through the request-log parameter filter). New `feedback_attachments` table and `agent_feedbacks` columns (`source`, `task_id`, `ready_for_development`, ...). See `docs/ops/feedback-reports.md`.
 
 - Fix the stock-comparison PDF test reader dropping a valid compressed byte and intermittently reporting empty PDF text; add a deterministic regression fixture. Production PDF generation is unchanged.
