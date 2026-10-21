@@ -14,6 +14,7 @@
       data: { controller: "finance-form", finance_form_locks_value: finance_locks_json, finance_form_confirm_value: confirm_text,
               action: "submit->finance-form#confirm input->finance-form#sync change->finance-form#sync" } do |f| %>
   <%= render "shared/form_errors", model: expense %>
+  <%= hidden_field_tag :return_to, params[:return_to] if params[:return_to].to_s.start_with?('/') && !params[:return_to].to_s.start_with?('//') %>
   <fieldset <%= 'disabled' if lock %> class="space-y-4 min-w-0">
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
@@ -29,7 +30,7 @@
   <div class="grid gap-4 sm:grid-cols-2">
     <div>
       <%= f.label :category, "Category", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.select :category, Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, {}, class: "select w-full" %>
+      <%= f.select :category, Finance::ExpenseCategory.options(include_key: f.object.category), {}, class: "select w-full" %>
     </div>
     <div>
       <%= f.label :amount, "Amount (USD)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>

@@ -28,7 +28,7 @@
     </div>
   <% else %>
     <%= form_with url: decide_bank_statement_path(@document.id), class: 'space-y-4', data: { controller: 'bank-decisions', action: 'submit->bank-decisions#submit' } do |f| %>
-      <% if @can_write && @lines.any? { |l| l.pending? && l.money_out? && l.suggested_category != 'other' } %>
+      <% if @can_write && @lines.any? { |l| l.pending? && l.money_out? && @suggestions[l.id] != 'other' } %>
         <div class="card card-pad flex flex-wrap items-center justify-between gap-3 text-sm">
           <p class="max-w-xl text-mocha">Rupert recognised some payees from their description (rent, utilities, shipping, software and so on). Fill those in, check each one, then save. Nothing is recorded until you press Save.</p>
           <div class="flex flex-wrap gap-2">
@@ -37,6 +37,13 @@
           </div>
         </div>
       <% end %>
+      <% if @can_write && @lines.any? { |l| l.pending? && l.money_in? } %>
+        <div class="card card-pad flex flex-wrap items-center justify-between gap-3 text-sm">
+          <p class="max-w-xl text-mocha">Deposits are money received, never expenses. Accept them in one go and add who each one came from if you like. Nothing is saved until you press Save.</p>
+          <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#acceptDeposits" data-bank-decisions-target="deposits">Accept all deposits</button>
+        </div>
+      <% end %>
+      <p class="text-sm"><%= link_to 'Edit expense categories', finance_expense_categories_path, class: 'font-semibold text-olive-deep underline' if Current.user.can?('finance.read') %></p>
       <%= hidden_field_tag :show, @filter %>
       <div class="card overflow-x-auto"><table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60"><tr>
@@ -49,23 +56,38 @@
               <td class="td max-w-md break-words"><%= line.description %>
                 <% if line.review_category.present? %><span class="block mt-1 text-xs font-semibold"><%= '⚑ ' if line.review_flag? %><%= line.review_category_label %></span><% end %>
                 <% if line.review_note.present? %><span class="bank-review-note"><%= line.review_note %></span><% end %>
+                <% if line.money_in? %>
+                  <% if @can_write %>
+                    <label class="mt-2 block text-xs text-mocha" for="payer-<%= line.id %>">Received from</label>
+                    <%= text_field_tag "payers[#{line.id}]", line.counterparty, id: "payer-#{line.id}", class: 'input mt-1 max-w-xs py-1 text-sm', maxlength: 120, placeholder: 'e.g. Shopify payout, customer name',
+                          data: { bank_decisions_target: 'payer', original: line.counterparty.to_s, action: 'input->bank-decisions#sync' } %>
+                  <% elsif line.counterparty.present? %>
+                    <span class="mt-1 block text-xs">Received from <strong><%= line.counterparty %></strong></span>
+                  <% end %>
+                <% end %>
               </td>
               <td class="td text-right"><%= line.money_out? ? money.call(line.amount_cents) : '' %></td>
               <td class="td text-right"><%= line.money_out? ? '' : money.call(line.amount_cents) %></td>
               <td class="td">
                 <% if !line.pending? %>
                   <%= line.status.humanize %><%= " by #{line.decided_by_name}" if line.decided_by_name %>
+                  <% if line.expense_id && (expense = @expenses_by_id[line.expense_id]) %>
+                    <span class="block text-xs">Category: <strong><%= expense.category_label %></strong>
+                      <% if @can_write %> · <%= link_to 'Change', edit_finance_expense_path(expense, return_to: bank_statement_path(@document.id, anchor: "bank-line-#{line.id}")), class: 'font-semibold text-olive-deep underline', 'aria-label': "Change category for #{line.description.first(40)}" %><% end %>
+                    </span>
+                  <% end %>
                 <% elsif @can_write %>
                   <% groups = [['', [['Decide later', 'leave']]]] %>
                   <% if line.money_out? %>
-                    <% groups << ['Expense', Finance::Expense::CATEGORIES.map { |c| [c.humanize, "expense:#{c}"] }] %>
+                    <% groups << ['Expense', @expense_options] %>
                     <% groups << ['Vendor payment', @vendors.map { |v| [v.name, "payment:#{v.id}"] }] if @vendors.any? %>
                   <% end %>
+                  <% groups << ['Deposit', [['Accept deposit (money received)', 'deposit']]] if line.money_in? %>
                   <% groups << ['Not a business expense', [['Ignore this line (transfer, deposit, personal)', 'ignore']]] %>
-                  <% suggestion = line.money_out? && line.suggested_category != 'other' ? "expense:#{line.suggested_category}" : nil %>
+                  <% suggestion = line.money_out? && @suggestions[line.id] != 'other' ? "expense:#{@suggestions[line.id]}" : nil %>
                   <%= select_tag "decisions[#{line.id}]", grouped_options_for_select(groups, nil), class: 'select', 'aria-label': "Decision for #{line.description.first(40)}",
                         data: { bank_decisions_target: 'choice', action: 'change->bank-decisions#change', suggestion: suggestion } %>
-                  <% if suggestion %><span class="block text-xs text-taupe">Suggestion: <%= line.suggested_category.humanize %></span><% end %>
+                  <% if suggestion %><span class="block text-xs text-taupe">Suggestion: <%= @category_labels.fetch(@suggestions[line.id], @suggestions[line.id].to_s.humanize) %></span><% end %>
                 <% else %>
                   Waiting
                 <% end %>

@@ -28,7 +28,7 @@
   <%= form_tag finance_expenses_path, method: :get, class: "card card-pad operations-filters", role: "search", aria: { label: "Filter expenses" } do %>
     <div><%= label_tag :q, "Payee, vendor or reference", class: "field-label" %><%= search_field_tag :q, @q, class: "input", autocomplete: "off" %></div>
     <div><%= label_tag :category, "Category", class: "field-label" %>
-      <%= select_tag :category, options_for_select([["All categories", "all"]] + Finance::Expense::CATEGORIES.map { |c| [c.tr("_", " ").titleize, c] }, @category), class: "select w-full" %></div>
+      <%= select_tag :category, options_for_select([["All categories", "all"]] + Finance::ExpenseCategory.catalog.map { |c| [c.name, c.key] }, @category), class: "select w-full" %></div>
     <div><%= label_tag :month, "Month (optional)", class: "field-label" %><%= month_field_tag :month, @month, min: '2000-01', max: '2099-12', class: "input" %></div>
     <div><%= label_tag :from, "From", class: "field-label" %><%= date_field_tag :from, @from, class: "select w-full" %></div>
     <div><%= label_tag :to, "To", class: "field-label" %><%= date_field_tag :to, @through, class: "select w-full" %></div>

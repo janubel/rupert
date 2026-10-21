@@ -17,7 +17,7 @@ class PurchaseReceipt < ApplicationRecord
   validates :tenant_id, :payee, :incurred_on, :filename, :sha256, :content_base64, presence: true
   validates :status, inclusion: { in: STATUSES }
   validates :currency, inclusion: { in: %w[USD] }
-  validates :category, inclusion: { in: Finance::Expense::CATEGORIES }
+  validate -> { errors.add(:category, 'is not an active expense category') unless (category_changed? || new_record? ? Finance::ExpenseCategory.active_keys : Finance::ExpenseCategory.known_keys).include?(category) }
   validates :amount_cents, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 2_147_483_647 }
   validates :byte_size, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_BYTES }
   validates :payee, length: { maximum: 200 }
