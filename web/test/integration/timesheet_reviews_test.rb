@@ -175,20 +175,21 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     get people_timesheets_path(view: 'list', status: 'all')
     assert_response :success
     assert_select 'form[aria-label="Timesheet filters"]' do
-      assert_select 'select[name=range] option[value=custom]', 'Custom'
-      assert_select 'label[for=from]', 'Start date'
-      assert_select 'input[type=date][name=from]'
-      assert_select 'label[for=to]', 'End date'
-      assert_select 'input[type=date][name=to]'
+      assert_select 'label[for=from]', 'From'
+      assert_select 'select[name=from] option', minimum: 50
+      assert_select 'select[name=from] option[value=""]', 'All dates'
+      assert_select 'label[for=to]', 'To'
+      assert_select 'select[name=to] option', minimum: 50
       assert_select 'select[name=status]'
     end
     assert_select 'nav[aria-label="Time workspace"] details summary', /More/
 
     inside = (@sheet.period_start + 1).iso8601
-    get people_timesheets_path(view: 'list', status: 'all', range: 'custom', from: inside, to: inside)
+    get people_timesheets_path(view: 'list', status: 'all', from: inside, to: inside)
     assert_select 'a[href=?]', people_timesheet_path(@sheet), minimum: 1
+    assert_select "select[name=from] option[selected][value='#{inside}']", 1, 'a chosen date outside the list is still shown selected'
     far = (@sheet.period_end + 60).iso8601
-    get people_timesheets_path(view: 'list', status: 'all', range: 'custom', from: far, to: far)
+    get people_timesheets_path(view: 'list', status: 'all', from: far, to: far)
     assert_select 'a[href=?]', people_timesheet_path(@sheet), count: 0
     get people_timesheets_path(view: 'list', status: 'all', from: 'nope')
     assert_redirected_to people_timesheets_path

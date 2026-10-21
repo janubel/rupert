@@ -16,7 +16,17 @@
   <%= form_with url: people_timesheets_path, method: :get, class: 'card card-pad space-y-3', html: { 'aria-label': 'Timesheet filters' }, data: { turbo: false } do %>
     <%= hidden_field_tag :view, @view %>
     <div class="flex flex-wrap items-end gap-3">
-      <%= render 'shared/time_range_picker', from: @from, to: @to, optional: true %>
+      <% weeks = (0..52).map { |n| Date.current.beginning_of_week - (n - 2).weeks } %>
+      <% from_choices = ([@from] + weeks).compact.uniq.sort.reverse %>
+      <% to_choices = ([@to] + weeks.map { |w| w + 6 }).compact.uniq.sort.reverse %>
+      <div class="min-w-0">
+        <%= label_tag :from, 'From', class: 'field-label' %>
+        <%= select_tag :from, options_for_select([['All dates', '']] + from_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @from&.iso8601), class: 'select' %>
+      </div>
+      <div class="min-w-0">
+        <%= label_tag :to, 'To', class: 'field-label' %>
+        <%= select_tag :to, options_for_select([['All dates', '']] + to_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @to&.iso8601), class: 'select' %>
+      </div>
       <div class="min-w-0" <%= tour_anchor('tabs') %>>
         <%= label_tag :status, 'Status', class: 'field-label' %>
         <%= select_tag :status, options_for_select(status_labels.map { |key, label| ["#{label} (#{status_count.call(key)})", key] }, @status), class: 'select',
