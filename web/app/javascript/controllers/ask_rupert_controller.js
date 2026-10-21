@@ -19,8 +19,8 @@ export default class extends Controller {
     this.cardCount = 0
     this.onDocumentKeydown = (event) => { if (event.key === "Escape" && this.isOpen) this.close() }
     document.addEventListener("keydown", this.onDocumentKeydown)
-    // Help and Ask Rupert share the right edge of the screen: opening one closes the other.
-    this.onPanelOpened = (event) => { if (event.detail === "help") this.close() }
+    // Help, the ladybug and Ask Rupert share the right edge of the screen: opening one closes the others.
+    this.onPanelOpened = (event) => { if (event.detail !== "ask") this.close() }
     document.addEventListener("rupert:panel-opened", this.onPanelOpened)
   }
 

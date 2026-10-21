@@ -9,8 +9,8 @@ export default class extends Controller {
   connect() {
     this.onDocumentKeydown = (event) => this.documentKeydown(event)
     document.addEventListener("keydown", this.onDocumentKeydown)
-    // Ask Rupert shares the right edge of the screen: opening one closes the other.
-    this.onPanelOpened = (event) => { if (event.detail === "ask") this.close() }
+    // Ask Rupert shares the right edge of the screen: opening one closes the others.
+    this.onPanelOpened = (event) => { if (event.detail !== "help") this.close() }
     document.addEventListener("rupert:panel-opened", this.onPanelOpened)
   }
 

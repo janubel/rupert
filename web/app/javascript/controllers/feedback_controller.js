@@ -18,6 +18,9 @@ export default class extends Controller {
     window.addEventListener("error", this.onError)
     window.addEventListener("unhandledrejection", this.onError)
     document.addEventListener("keydown", this.onKeydown)
+    // The ladybug, Help and Ask Rupert share the right edge of the screen: opening one closes the others.
+    this.onPanelOpened = (event) => { if (event.detail !== "feedback") this.close() }
+    document.addEventListener("rupert:panel-opened", this.onPanelOpened)
     this.kindChanged()
   }
 
@@ -25,6 +28,7 @@ export default class extends Controller {
     window.removeEventListener("error", this.onError)
     window.removeEventListener("unhandledrejection", this.onError)
     document.removeEventListener("keydown", this.onKeydown)
+    document.removeEventListener("rupert:panel-opened", this.onPanelOpened)
   }
 
   toggle(event) {
@@ -39,6 +43,7 @@ export default class extends Controller {
     this.backdropTarget.classList.remove("hidden")
     this.triggerTargets.forEach((button) => button.setAttribute("aria-expanded", "true"))
     document.body.classList.add("feedback-panel-open")
+    if (typeof document.dispatchEvent === "function") document.dispatchEvent(new CustomEvent("rupert:panel-opened", { detail: "feedback" }))
     this.descriptionTarget.focus()
   }
 
