@@ -22,11 +22,16 @@ class ApiAccessToken < ApplicationRecord
     'system:read' => 'system.read',
     'tasks:write' => 'projects.write',
     # Ladybug reports with their attachments: needs settings.read and an administrator owner.
-    'feedback:read' => 'settings.read'
+    'feedback:read' => 'settings.read',
+    # Files sent to the Uploads inbox. uploads:write can send a file in (never approve an import);
+    # uploads:read can see what happened to the files. Both also need the owner's uploads permissions.
+    'uploads:read' => 'uploads.read',
+    'uploads:write' => 'uploads.write'
   }.freeze
   # Scopes that let an integration change Rupert's own records. None of them
   # writes to Shopify, Square or C-Trax.
-  WRITE_SCOPES = %w[tasks:write].freeze
+  WRITE_SCOPES = %w[tasks:write uploads:write].freeze
+  WRITE_SCOPE_NOTES = { 'tasks:write' => 'writes Rupert tasks', 'uploads:write' => 'sends files to the Uploads inbox' }.freeze
   TOKEN_FORMAT = /\Arupert_[A-Za-z0-9_-]{43}\z/
 
   belongs_to :user

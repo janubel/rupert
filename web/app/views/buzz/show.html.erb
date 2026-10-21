@@ -5,6 +5,7 @@
 <% chat_url = BuzzConnect.chat_url %>
 <% connect_url = BuzzConnect.connect_url %>
 <div class="mx-auto max-w-3xl space-y-6">
+  <%= render 'buzz/tabs', current: :card %>
   <section class="card card-pad" aria-labelledby="buzz-profile-title">
     <div class="flex flex-wrap items-start gap-4">
       <span class="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-haze"><%= render 'shared/rupert_face', size: 56 %></span>
@@ -101,6 +102,8 @@
       </div>
     </section>
   <% end %>
+
+  <%= render 'buzz/link' if @can_link %>
 
   <section id="get-buzz" class="card card-pad scroll-mt-24" aria-labelledby="buzz-get-title">
     <h2 id="buzz-get-title" class="font-display text-xl">Get Buzz</h2>

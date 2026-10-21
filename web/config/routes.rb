@@ -166,6 +166,7 @@ Rails.application.routes.draw do
       get :catalog, to: 'catalog#index'
       get :inventory, to: 'inventory#index'
       get :roadmap, to: 'roadmap#index'
+      resources :uploads, only: %i[index show create]
     end
   end
   resources :api_access_tokens, only: %i[index create] do
@@ -196,6 +197,12 @@ Rails.application.routes.draw do
   get '/dashboard', to: 'home#index'
   get '/roadmap', to: 'roadmap#index', as: :roadmap
   get '/buzz', to: 'buzz#show', as: :buzz
+  get '/buzz/chat', to: 'buzz_chat#show', as: :buzz_chat
+  get '/buzz/chat/messages', to: 'buzz_chat#messages', as: :buzz_chat_messages
+  post '/buzz/chat/messages', to: 'buzz_chat#create'
+  post '/buzz/link', to: 'buzz_links#create', as: :buzz_link
+  post '/buzz/link/:id/confirm', to: 'buzz_links#confirm', as: :confirm_buzz_link
+  delete '/buzz/link/:id', to: 'buzz_links#destroy', as: :remove_buzz_link
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)
@@ -434,6 +441,18 @@ Rails.application.routes.draw do
       post :push_guard_approve
       post :push_guard_freeze
       post :push_guard_unfreeze
+    end
+  end
+  resources :uploads, only: %i[index show create] do
+    collection { post :recognize_all }
+    member do
+      patch :choose
+      post :dry_run
+      post :approve
+      post :discard
+      post :reopen
+      post :recognize
+      get :original
     end
   end
   resources :swipesimple_items, only: %i[index create]

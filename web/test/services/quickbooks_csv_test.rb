@@ -85,4 +85,11 @@ class QuickbooksCsvTest < ActiveSupport::TestCase
     assert_equal [120_000, 0], [tb.rows[0].debit_cents, tb.rows[0].credit_cents]
     assert_equal 120_000, tb.control['debit_cents']
   end
+
+  test 'a trial balance whose account column header is blank is read' do
+    tb = parse("Trial Balance\nAs of October 31, 2026\n\n,Debit,Credit\nChecking,100.00,\nEquity,,100.00\nTOTAL,100.00,100.00\n", kind: 'trial_balance')
+    assert_equal %w[Checking Equity], tb.rows.map(&:account)
+    assert_equal [10_000, 0], [tb.rows[0].debit_cents, tb.rows[0].credit_cents]
+    assert_equal 10_000, tb.control['debit_cents']
+  end
 end

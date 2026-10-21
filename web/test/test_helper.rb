@@ -7,6 +7,7 @@ if ENV['COVERAGE'] == '1'
 end
 require_relative '../config/environment'
 require 'rails/test_help'
+require_relative 'support/upload_fixtures'
 
 require 'minitest/autorun'
 require 'minitest/mock'

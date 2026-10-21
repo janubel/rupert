@@ -57,6 +57,10 @@ Also unverified, and handled defensively: date format (the parser reads `MM/DD/Y
 
 The down migration refuses to run while any retained document exists, as earlier evidence migrations do.
 
+## Uploads inbox
+
+**System → Uploads** (see [Uploads inbox](uploads-inbox.md)) recognizes QuickBooks files and, after a dry run and a person's approval, only **stages** them here with `QuickbooksImport.stage!`. It never posts: mapping, approving and reversing stay on this page, so a file sent from the inbox, the API or the drop folder has exactly the same safety as one uploaded here. Both paths retain the original in their own evidence tables; staging the same file twice returns the same batch.
+
 ## Operating it
 
 1. Export from QuickBooks as CSV (Online: report → Export as CSV; Desktop: Excel → Create a comma separated values file). Prefer a Journal covering the whole history in one or a few files.

@@ -94,17 +94,16 @@ class QuickbooksImport
   # --- journal -------------------------------------------------------------
 
   def stage_transactions(batch, parsed)
-    groups = parsed.rows.reject(&:rejected?).group_by(&:txn_key)
-    rejected_rows = parsed.rows.select(&:rejected?)
     seen = Hash.new(0)
-    drafts = groups.map do |key, lines|
-      draft = draft_for(key, lines, seen)
-      bad = rejected_rows.find { |r| r.row_no.between?(lines.map(&:row_no).min, lines.map(&:row_no).max) }
-      if bad && draft[:status] == 'staged'
-        draft[:status] = 'rejected'
-        draft[:reason] = "The transaction contains a line that could not be read (row #{bad.row_no})."
+    drafts = []
+    loose = []
+    parsed.rows.group_by(&:txn_key).each do |key, rows|
+      good, bad = rows.partition { |row| !row.rejected? }
+      if good.empty?
+        loose.concat(bad)
+      else
+        drafts << draft_for(key, good, seen, bad)
       end
-      draft
     end
     mark_duplicates(drafts)
     mark_resemblances(drafts)
@@ -116,35 +115,41 @@ class QuickbooksImport
       draft[:lines].each_with_index do |line, index|
         rows << line_attrs(batch, line, transaction_id: txn_id, fingerprint: draft[:line_fingerprints][index], status: line_status(draft), reason: draft[:reason])
       end
+      draft[:bad_lines].each { |line| rows << rejected_line_attrs(batch, line, txn_id) }
     end
-    parsed.rows.select(&:rejected?).each do |line|
-      rows << line_attrs(batch, line, transaction_id: nil, fingerprint: Digest::SHA256.hexdigest([batch.id, line.row_no, 'rejected'].to_json), status: 'rejected', reason: line.reason)
-    end
+    loose.each { |line| rows << rejected_line_attrs(batch, line, nil) }
     insert_lines(rows)
     { transactions: drafts.size, accepted: drafts.select { |d| d[:status] == 'staged' }.sum { |d| d[:lines].size },
       duplicates: drafts.select { |d| d[:status] == 'duplicate' }.sum { |d| d[:lines].size },
       rejected: rows.count { |r| r[:status] == 'rejected' }, drafts: drafts }
   end
 
-  def draft_for(key, lines, seen)
+  def rejected_line_attrs(batch, line, transaction_id)
+    line_attrs(batch, line, transaction_id: transaction_id, fingerprint: Digest::SHA256.hexdigest([batch.id, line.row_no, 'rejected'].to_json), status: 'rejected', reason: line.reason)
+  end
+
+  def draft_for(key, lines, seen, bad)
     first = lines.first
     debit = lines.sum(&:debit_cents)
     credit = lines.sum(&:credit_cents)
     line_sigs = lines.map { |l| [QuickbooksImport.fold(l.account), l.debit_cents, l.credit_cents, QuickbooksImport.fold(l.memo), QuickbooksImport.fold(l.class_name), QuickbooksImport.fold(l.location)] }
+    reason = if bad.any? then "The transaction contains a line that could not be read (row #{bad.first.row_no}); none of it was imported."
+    elsif lines.size < 2 then 'A transaction needs at least two lines; this one has one.'
+    elsif debit != credit then "Out of balance: debits #{cents_text(debit)} and credits #{cents_text(credit)} differ by #{cents_text((debit - credit).abs)}."
+    elsif lines.map(&:date).uniq.size > 1 then 'Lines of one Trans # have different dates.'
+    end
     base = Digest::SHA256.hexdigest([Current.tenant_id, 'quickbooks', 'journal', first.date.iso8601, QuickbooksImport.fold(first.txn_type),
       QuickbooksImport.fold(first.doc_number), QuickbooksImport.fold(first.name), line_sigs.sort].to_json)
-    seen[base] += 1
-    fingerprint = seen[base] == 1 ? base : Digest::SHA256.hexdigest([base, seen[base]].to_json)
+    # Only transactions that can be imported count as occurrences, so a rejected
+    # look-alike cannot shift the fingerprint of a good one.
+    seen[base] += 1 unless reason
+    fingerprint = seen[base] <= 1 ? base : Digest::SHA256.hexdigest([base, seen[base]].to_json)
     per_line = Hash.new(0)
     line_fps = line_sigs.map do |sig|
       per_line[sig] += 1
       Digest::SHA256.hexdigest([fingerprint, sig, per_line[sig]].to_json)
     end
-    reason = if lines.size < 2 then 'A transaction needs at least two lines; this one has one.'
-    elsif debit != credit then "Out of balance: debits #{cents_text(debit)} and credits #{cents_text(credit)} differ by #{cents_text((debit - credit).abs)}."
-    elsif lines.map(&:date).uniq.size > 1 then 'Lines of one Trans # have different dates.'
-    end
-    { key: key, lines: lines, debit: debit, credit: credit, fingerprint: fingerprint, line_fingerprints: line_fps, date: first.date, txn_type: first.txn_type,
+    { key: key, lines: lines, bad_lines: bad, debit: debit, credit: credit, fingerprint: fingerprint, line_fingerprints: line_fps, date: first.date, txn_type: first.txn_type,
       doc_number: first.doc_number, name: first.name, reason: reason, status: reason ? 'rejected' : 'staged', duplicate_of: nil }
   end
 
@@ -316,5 +321,9 @@ class QuickbooksImport
     out
   end
 
-  def cents_text(cents) = format('%.2f', cents / 100.0)
+  # Integer cents to a decimal string without floating point.
+  def cents_text(cents)
+    whole, fraction = cents.abs.divmod(100)
+    "#{'-' if cents.negative?}#{whole}.#{format('%02d', fraction)}"
+  end
 end

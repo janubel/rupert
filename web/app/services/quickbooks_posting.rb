@@ -66,6 +66,9 @@ class QuickbooksPosting
 
       ImportBatch.transaction do
         lock_workspace!
+        batch.reload
+        raise Error, 'Only an approved batch can be reversed. Discard a batch that was never approved.' unless batch.approved?
+
         txns = batch.transactions.where(status: 'posted').to_a
         entries = Finance::JournalEntry.where(id: txns.filter_map(&:journal_entry_id)).to_a
         locked = entries.filter_map { |entry| PeriodLock.lock_covering(entry.posted_on) }.uniq(&:id)
@@ -79,6 +82,7 @@ class QuickbooksPosting
         batch.lines.where(status: 'posted').update_all(status: 'reversed', updated_at: Time.current)
         batch.lines.where(status: 'staged').update_all(status: 'discarded', updated_at: Time.current)
         batch.update!(status: 'reversed', closed_by_name: actor_name(actor), closed_at: Time.current, closed_reason: reason)
+        release_duplicates(batch)
         ActivityLogger.log('import_batch_reversed', subject: batch, actor: actor, details: "#{entries.size} journal entr#{entries.size == 1 ? 'y' : 'ies'} voided: #{reason.first(200)}")
         entries.size
       end
@@ -89,14 +93,35 @@ class QuickbooksPosting
 
       ImportBatch.transaction do
         lock_workspace!
+        batch.reload
+        raise Error, 'Only a batch that was never approved can be discarded; reverse an approved one.' unless batch.staged?
+
         batch.transactions.where(status: %w[staged]).update_all(status: 'discarded', updated_at: Time.current)
         batch.lines.where(status: 'staged').update_all(status: 'discarded', updated_at: Time.current)
         batch.update!(status: 'discarded', closed_by_name: actor_name(actor), closed_at: Time.current, closed_reason: 'Discarded before approval')
+        release_duplicates(batch)
         ActivityLogger.log('import_batch_discarded', subject: batch, actor: actor, details: batch.filename)
       end
     end
 
     private
+
+    # Transactions in other batches that were skipped as copies of this batch's
+    # transactions become staged again once this batch no longer holds them.
+    def release_duplicates(batch)
+      fingerprints = batch.transactions.pluck(:fingerprint)
+      affected = Set.new
+      ImportTransaction.where(status: 'duplicate', fingerprint: fingerprints).where.not(batch_id: batch.id).find_each do |copy|
+        next if ImportTransaction.where(fingerprint: copy.fingerprint, status: %w[staged posted]).exists?
+
+        copy.update_columns(status: 'staged', reason: nil, updated_at: Time.current)
+        copy.lines.where(status: 'duplicate').update_all(status: 'staged', updated_at: Time.current)
+        affected << copy.batch_id
+      end
+      ImportBatch.where(id: affected.to_a).find_each do |other|
+        other.update_columns(accepted_count: other.lines.where(status: %w[staged posted]).count, duplicate_count: other.lines.where(status: 'duplicate').count)
+      end
+    end
 
     def lock_workspace!
       Tenant.unscoped.where(id: Current.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
@@ -107,6 +132,9 @@ class QuickbooksPosting
     def approve_list!(batch, actor)
       ImportBatch.transaction do
         lock_workspace!
+        batch.reload
+        raise Error, 'This batch has already been closed.' unless %w[staged approved].include?(batch.status)
+
         case batch.kind
         when 'chart_of_accounts'
           mappings = batch_mappings(batch, 'account').select { |m| m.decision == 'create' && m.target_id.nil? }
@@ -177,7 +205,8 @@ class QuickbooksPosting
           reason = hold_reason(txn, post_through, allow_resembling, allow_approved, ranges, mappings)
           if reason
             held[reason.first] += 1
-            txn.update_columns(reason: reason.last, updated_at: Time.current)
+            # A look-alike flag survives other holds, so it is still asked about once they clear.
+            txn.update_columns(reason: reason.last, updated_at: Time.current) unless txn.reason.to_s.start_with?('Resembles')
             next
           end
           entry = post_transaction(txn, mappings, batch, actor)

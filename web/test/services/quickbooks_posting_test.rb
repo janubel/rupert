@@ -97,6 +97,10 @@ class QuickbooksPostingTest < ActiveSupport::TestCase
     @batch = QuickbooksImport.stage!(bytes: edited, kind: 'journal', filename: 'edited.csv', actor: @user).batch
     result = approve
     assert_equal 1, result.held['resembles an earlier import']
+    earlier = approve(through: Date.new(2024, 1, 1))
+    assert_equal 1, earlier.held['after the chosen date'], 'the look-alike is also after this date'
+    assert_match(/Resembles/, @batch.transactions.find_by(doc_number: '1001').reload.reason, 'another hold must not erase the look-alike flag')
+    assert_equal 0, approve.posted
     assert_equal 1, approve(allow_resembling: true).posted
   end
 
@@ -153,5 +157,30 @@ class QuickbooksPostingTest < ActiveSupport::TestCase
     assert_equal ['Vendor One'], Purchasing::Vendor.pluck(:name)
     assert_equal 'map', ImportEntityMapping.find_by!(entity_type: 'vendor', source_key: 'vendor one').decision
     assert_nil Purchasing::Vendor.find_by(name: 'Vendor Two')
+  end
+
+  test 'a stale discard or reverse cannot undo an approval that already happened' do
+    map_all!
+    stale = ImportBatch.find(@batch.id)
+    approve
+    error = assert_raises(QuickbooksPosting::Error) { QuickbooksPosting.discard!(stale, actor: @user) }
+    assert_match(/never approved/, error.message)
+    assert_equal 'approved', @batch.reload.status
+    assert_equal 3, Finance::JournalEntry.posted.where(kind: 'imported').count
+
+    stale_approved = ImportBatch.find(@batch.id)
+    QuickbooksPosting.reverse!(@batch, actor: @user, reason: 'first')
+    assert_raises(QuickbooksPosting::Error) { QuickbooksPosting.reverse!(stale_approved, actor: @user, reason: 'second') }
+    assert_equal 'first', @batch.reload.closed_reason
+  end
+
+  test 'discarding a batch lets its overlapping copy in another batch be staged again' do
+    map_all!
+    wider = File.binread(FIXTURES.join('journal_basic.csv')).sub(',"TOTAL"', ",03/01/2024,Check,9,Vendor One,Rent,Rent Expense,10.00,\n,,,,,Rent,Checking,,10.00\n,\"TOTAL\"")
+    other = QuickbooksImport.stage!(bytes: wider, kind: 'journal', filename: 'wider.csv', actor: @user).batch
+    assert_equal [1, 3], [other.transaction_count - other.transactions.where(status: 'duplicate').count, other.transactions.where(status: 'duplicate').count]
+    QuickbooksPosting.discard!(@batch, actor: @user)
+    assert_equal 4, other.transactions.where(status: 'staged').count
+    assert_equal [8, 0], [other.reload.accepted_count, other.duplicate_count]
   end
 end

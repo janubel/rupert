@@ -1,0 +1,135 @@
+# frozen_string_literal: true
+
+require 'test_helper'
+
+class UploadsIntakeTest < ActiveSupport::TestCase
+  include UploadFixtures
+
+  setup do
+    @tenant = tenants(:default_tenant)
+    Current.tenant = @tenant
+    @admin = users(:regular_user)
+    Current.user = @admin
+  end
+
+  teardown { Current.reset }
+
+  def intake(content, name = 'statement.csv', **options)
+    Uploads::Intake.call(StringIO.new(content), filename: name, origin: 'web', actor: @admin, **options)
+  end
+
+  test 'keeps the original byte for byte, encrypted, and recognizes it' do
+    bytes = "\xEF\xBB\xBF#{BANK_CSV}".b
+    result = intake(bytes)
+    upload = result.upload
+    assert result.created
+    assert_equal bytes, upload.original_bytes
+    assert_equal Digest::SHA256.hexdigest(bytes), upload.sha256
+    assert_equal 'recognized', upload.status
+    assert_equal 'bank_statement', upload.importer_key
+    assert_equal 4, upload.row_count
+    assert_not_includes Upload.connection.select_value("SELECT content_base64 FROM uploads WHERE id = #{upload.id}"), Base64.strict_encode64(bytes)
+    assert_equal 'Regular User', upload.uploaded_by_name if @admin.display_name == 'Regular User'
+  end
+
+  test 'the same bytes are stored once and the repeat is recorded as a duplicate' do
+    first = intake(BANK_CSV).upload
+    second = intake(BANK_CSV, 'renamed.csv')
+    assert_not second.created
+    assert_equal 'duplicate', second.upload.status
+    assert_equal first.id, second.upload.duplicate_of_id
+    assert_not second.upload.retained
+    assert_nil second.upload.content_base64
+    assert_equal 1, Upload.where(retained: true).count
+    assert_equal 2, Upload.count
+  end
+
+  test 'the same file in another workspace is its own upload' do
+    intake(BANK_CSV)
+    other = Tenant.create!(name: 'Other uploads tenant', subdomain: 'other-uploads')
+    Current.tenant = other
+    assert_equal 0, Upload.count
+    assert intake(BANK_CSV).created
+    Current.tenant = @tenant
+    assert_equal 1, Upload.count
+  end
+
+  test 'unsupported, empty, binary, oversized and malformed files are refused with a reason and not kept' do
+    {
+      'run.exe' => ['MZ binary', /Unsupported file type/],
+      'noext' => ['abc', /Unsupported file type/],
+      'empty.csv' => ['', /empty/],
+      'fake.csv' => ["MZ\x90\x00\x03\x00".b, /binary/],
+      'fake.pdf' => ['<html>not a pdf</html>', /PDF/],
+      'bad.json' => ['{"a":', /not valid JSON/],
+      'bad.xlsx' => ['not a zip', /Excel/]
+    }.each do |name, (content, pattern)|
+      result = intake(content, name)
+      assert_equal 'rejected', result.upload.status, name
+      assert_match(pattern, result.upload.reason, name)
+      assert_not result.upload.retained, name
+      assert_nil result.upload.content_base64, name
+    end
+  end
+
+  test 'a file over the size cap is refused without reading it all' do
+    stub_const(Uploads::Limits, :MAX_FILE_BYTES, 100) do
+      result = intake('x' * 500, 'big.csv')
+      assert_equal 'rejected', result.upload.status
+      assert_match(/larger than/, result.upload.reason)
+      assert_nil result.upload.content_base64
+    end
+  end
+
+  test 'a zip bomb disguised as a workbook is refused' do
+    bomb = build_zip({ '[Content_Types].xml' => '<a/>', 'xl/workbook.xml' => '0' * (30 * 1024 * 1024) }, deflate: true)
+    result = intake(bomb, 'budget.xlsx')
+    assert_equal 'rejected', result.upload.status
+    assert_match(/compressed far more|more than 100 MiB/, result.upload.reason)
+    assert_not result.upload.retained
+  end
+
+  test 'a hostile file name is only ever a label' do
+    result = intake(BANK_CSV, "../../../etc/cron.d/x‮;rm -rf.csv")
+    assert_no_match(%r{[/\\‮;]}, result.upload.filename)
+    assert_match(/\.csv\z/, result.upload.filename)
+  end
+
+  test 'logs carry hashes, sizes and outcomes but never file contents or the file name' do
+    io = StringIO.new
+    previous = Rails.logger
+    Rails.logger = ActiveSupport::Logger.new(io)
+    intake("Date,Description,Amount\n2026-10-14,SECRETPAYEE,-1.00\n", 'secret-name.csv')
+    Rails.logger = previous
+    logged = io.string
+    assert_match(/\[uploads\] .*event=received/, logged)
+    assert_match(/sha256=\h{64}/, logged)
+    assert_no_match(/SECRETPAYEE|secret-name/, logged)
+    assert_no_match(/SECRETPAYEE/, ActivityLog.where(tenant_id: @tenant.id).pluck(:details).join)
+  end
+
+  test 'a flood is stopped by the daily limit instead of growing the table' do
+    stub_const(Uploads::Intake, :DAILY_LIMIT, 2) do
+      intake(BANK_CSV)
+      intake(UNKNOWN_CSV, 'a.csv')
+      before = Upload.count
+      assert_raises(Uploads::Intake::Error) { intake(SQUARE_CSV, 'b.csv') }
+      assert_equal before, Upload.count
+    end
+  end
+
+  test 'a workspace that is not active cannot receive files' do
+    Current.tenant = Tenant.create!(name: 'Paused uploads tenant', subdomain: 'paused-uploads', status: 'suspended')
+    assert_raises(Uploads::Intake::Error) { intake(BANK_CSV) }
+  end
+
+  def stub_const(mod, name, value)
+    old = mod.const_get(name)
+    mod.send(:remove_const, name)
+    mod.const_set(name, value)
+    yield
+  ensure
+    mod.send(:remove_const, name)
+    mod.const_set(name, old)
+  end
+end

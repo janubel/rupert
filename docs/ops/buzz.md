@@ -69,6 +69,10 @@ bin/rails buzz:prompt > ../docs/ops/buzz-agent-prompt.txt
 
 Behaviour notes from the audit, now in the prompt: unaddressed replies are rare (the model answers `SKIP` otherwise; the runner also waits 45 seconds between unsolicited replies); the agent is told to name Rupert areas and pages instead of guessing URLs; it never has write access, so approvals, stock or SKU pushes and settings stay with people.
 
+## Ask Rupert in Buzz (off by default)
+
+People can link their Buzz account to their Rupert account (Buzz page, *Link your Buzz account*) and, once an administrator turns on **Let the @rupert agent in Buzz answer linked people** (System → Ask Rupert usage), `@rupert` answers them in direct messages and when mentioned in other channels with where-things-are and how-to help only. The team channel is unchanged. Details, limits and what is stored are in `ask-rupert.md` ("In Buzz") and `buzz-ask-rupert-design.md`. The agent needs a restart after the switch changes, and must be a member of any channel it should answer in.
+
 ## Turning it on
 
 1. Run a Buzz relay (<https://github.com/block/buzz>, Railway one-click or the Compose bundle) and create the team channel.
@@ -76,6 +80,63 @@ Behaviour notes from the audit, now in the prompt: unaddressed replies are rare 
 3. In Buzz, add the agent's npub to the channel (closed relays also need each person added).
 4. Open the Buzz card from the header and share it with the team.
 5. To have the agent answer: install `opencode` on the host and add a service unit for `bin/opencode_agent` (none exists yet under `deploy/`).
+
+## Team chat inside Rupert (Buzz page, "Team chat" tab)
+
+Added 2026-10-22. `/buzz/chat` shows the configured channel inside Rupert so people can read recent history and post without leaving the app. Code: `BuzzChat` (cache, history, posting), `BuzzRelayClient` (relay reads and publishes), `BuzzChatController`, `buzz_chat_controller.js`.
+
+### What people see
+
+- A **Team chat** tab beside **Agent & setup**, shown to people with `buzz.read`. Newest message at the bottom, day dividers, local times, grouped runs from the same person. **Load earlier messages** goes back through history (first from Rupert's copy, then from the relay). New messages arrive within about 5 seconds; a **New messages** button appears when someone has scrolled up.
+- Names come from each person's Buzz profile (kind 0 `display_name`, else `name`). Without a profile the message shows a short npub (`npub1abcdefg…wxyz`) in a monospace face; hovering shows the key. The Rupert agent is recognised by its **public key** (never by a name someone chose) and badged **AI agent**; a name anyone sets, including "Rupert", gets no badge.
+- Text is shown as text: `**bold**`, `` `code` `` and http(s) links (shown as their address, opened in a new tab with `noopener noreferrer nofollow`, never fetched or previewed). Everything else, including HTML, stays literal. A one-line disclosure at the top says the channel is wider than Rupert permissions.
+- A status line says **Live · updated just now**, or **Not live. The relay is not reachable. Showing saved messages from 4 min ago.** (also: not a member of the channel, relay did not answer, sign-in refused). Not configured or no channel gives an explanatory card, not an error page.
+
+### Permissions
+
+| Permission | Allows | Default |
+| --- | --- | --- |
+| `buzz.read` | open the tab and read the channel (the Buzz card itself still needs Overview access) | administrators |
+| `buzz.post` | post to the channel | administrators |
+
+Grant either per role or per person on the Permissions screen ("Team chat (Buzz)"). Employee-app accounts never see it. Reading through Rupert shows everything the Rupert agent can see in the channel, so give `buzz.read` only to people who may see all of it.
+
+### How it works
+
+1. `GET /buzz/chat/messages` returns messages from the local copy (`buzz_messages`, per workspace) as JSON, plus a status block. With `?after=<cursor>` it returns only newer messages (what the page polls); with `?before=<cursor>` an earlier page.
+2. The copy is filled by `BuzzChat.sync!`: connect to the relay as the agent, answer the NIP-42 challenge, send one REQ `{"kinds":[9,40002],"#h":[channel],"limit":100}` (later `since` = newest cached minus 2 minutes, `limit` 500), read until EOSE, then one REQ for the authors' kind 0 profiles. The first request with an empty copy syncs inline; after that the page's polling starts `BuzzChatSyncJob` in the background, at most once every 6 seconds per workspace however many pages are open (`buzz_chat_states` is the lock and keeps the last result). Nothing runs while nobody has the tab open. If the relay returned a full 500 since the last look, the copy is no longer contiguous, so older cached rows are dropped and scrollback refetches them.
+3. Every relay event is checked before it is stored: id is the SHA-256 of the serialized event, the Schnorr signature verifies, kind is 9 or 40002, the event carries the channel's `h` tag, `created_at` is sane, text is scrubbed, control characters removed, `nsec` keys replaced, and capped at 4,000 characters. Edits (40003), reactions, deletions and threads are not shown in v1; replies appear as ordinary messages.
+4. `BuzzChatRetentionJob` (nightly, 03:55 New York) deletes copies older than 30 days (`BuzzChat::RETENTION`) and profiles unused for 90 days. Buzz keeps the full history.
+
+Why polling and not Turbo Streams / Action Cable: production runs SQLite with no Redis requirement, a WebSocket from the browser to Rupert would add a second long-lived connection per tab, and a poll that reads local rows is cheap and survives deploys and relay hiccups. The poll interval is a Stimulus value (`interval`, default 4 s).
+
+### Posting identity (v1) and the allow-list
+
+- Posts are signed by the **Rupert agent key** with the text `Sam via Rupert: <message>` and a `["client","rupert-chat"]` tag, as a kind 9 message with the channel's `h` tag. In Rupert the page strips the prefix and shows the person's name with a **via Rupert** badge, but only for events signed by the agent key that carry the client tag, so nobody else can borrow that look.
+- Rupert stores no per-person Nostr keys. Per-person keys would need encrypted storage, a kind 0 profile and channel membership per person, which could not be verified against a real relay here. A possible later design is a key derived from the agent key and the Rupert user id (nothing stored), with an invitation step.
+- **The allow-list is not bypassed.** `FEEDBACK_READY_SENDERS` lists people's own Nostr keys; the chat intake only trusts the event's signing key. A message posted from the Team chat is signed by the agent, which `FeedbackIntake` now refuses as a "ready" sender even when someone lists it (`FeedbackIntake.ready_senders` subtracts the agent's key; tested). So work can never be marked ready from this UI, whatever the text says or whose name is on it. To mark work ready, a listed person posts from their own Buzz app, or the owner uses `/ai_feedback`.
+- The agent does not answer messages posted here: `BuzzListener` ignores its own key, and `buzz-acp` answers only its owner or an allow-list unless set to `anyone` (not verified against a running agent).
+- Safeguards on posting: 1,500 characters, empty text refused, `nsec` keys refused, 6 posts per minute and 60 per hour per person, the Activity log records `buzz_chat_post` with the event id prefix and length (never the text), `BUZZ_PRIVATE_KEY` and any nsec are never shown or logged. The post is sent synchronously and reported as not sent if the relay does not acknowledge the event's own id.
+- Everything a message links to is plain text: nothing is fetched, embedded or previewed server-side or in the browser.
+
+### Protocol facts used (verified against github.com/block/buzz, 2026-10-22)
+
+- Channel messages are kind 9 (NIP-29 group chat) and kind 40002 ("stream message v2"); the channel is the `h` tag, a UUID; the REQ must carry `"#h":[uuid]`.
+- The relay sends `["AUTH", challenge]` on connect; REQ and EVENT before a successful NIP-42 AUTH are refused (`auth-required`). Rupert waits for the relay's OK to its AUTH before sending anything else.
+- A REQ for a channel the key is not a member of is answered `["CLOSED", sub, "restricted: not a channel member"]`: the agent's npub must be added to the channel in Buzz (the tab says so).
+- At most 500 stored events per filter, newest first, then EOSE; frames are capped at 64 KB.
+- `BUZZ_AUTH_TAG` is the NIP-OA owner attestation `buzz-acp` and `buzz` receive from the managed-agent launcher. Rupert's own connection (this tab, the Buzz card, notices) does not send it; whether a particular relay needs it for events from agent keys was **not** verified.
+
+### Trying it without a Buzz relay
+
+`bin/rails runner scripts/dev_buzz_relay.rb [port] [--live]` (development only) starts a stand-in relay (`test/support/fake_buzz_relay.rb`: AUTH challenge, REQ filters, EVENT/OK, fan-out), points the development database's Buzz settings at it and fills a channel with sample history; `--live` adds a message every 15 seconds. The tests use the same stand-in over a real local socket.
+
+### Not verified
+
+- **Never run against a real Buzz relay.** The relay behaviour above comes from upstream source and docs and from the stand-in; the first live check is: set the relay and channel, add the agent's npub to the channel, open the tab and compare with the Buzz app.
+- Whether the real relay accepts an agent-key EVENT without a `BUZZ_AUTH_TAG`/NIP-OA attestation, and its per-key rate limits.
+- `BuzzAgent.publish` (used by the existing notices, not by the chat) sends its EVENT without waiting for the relay's OK to the AUTH reply and can count that AUTH OK as the event's acknowledgement; the Team chat uses `BuzzRelayClient.publish`, which waits for the right OK. `BuzzAgent`'s connections (`publish`, `probe_relay`, `BuzzListener`) also add their message handler after connecting, so a relay's AUTH challenge sent at once can be missed (they fall back after a wait); `BuzzRelayClient` registers handlers first. Consider moving the notices to it.
+- Per-person identities, edits, reactions and threads are not part of v1.
 
 ## Not verified
 
