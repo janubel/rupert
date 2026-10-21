@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_120000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1289,6 +1289,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
     t.index ["tenant_id", "created_at"], name: "idx_import_batches_recent"
     t.index ["tenant_id", "source", "status"], name: "idx_import_batches_status"
     t.index ["tenant_id"], name: "index_import_batches_on_tenant_id"
+  end
+
+  create_table "import_drive_connections", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.text "refresh_token"
+    t.text "account_email"
+    t.string "folder_id"
+    t.text "folder_name"
+    t.integer "connected_by_id"
+    t.datetime "last_listed_at"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id"], name: "index_import_drive_connections_on_tenant_id", unique: true
   end
 
   create_table "import_entity_mappings", force: :cascade do |t|

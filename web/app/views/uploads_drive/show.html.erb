@@ -1,0 +1,79 @@
+<% content_for :title, 'Uploads from Google Drive' %>
+<div class="space-y-6 operations-workspace">
+  <%= page_header 'Google Drive', eyebrow: 'System · files in',
+        subtitle: 'Authorize read-only access once, choose one folder, and copy files from it into the Uploads inbox. Uploading from a device still works. Nothing is imported until you run a dry run and approve, exactly like any other upload.' do %>
+    <%= link_to 'Back to Uploads', uploads_path, class: 'btn-ghost btn-sm' %>
+  <% end %>
+
+  <% unless @configured %>
+    <p class="card card-pad text-sm" role="status">Google Drive is not set up for this Rupert yet. A platform administrator needs to add the Drive app credentials first (see <code>docs/ops/uploads-inbox.md</code>).</p>
+  <% end %>
+
+  <% if @connection&.last_error.present? %><p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><%= @connection.last_error %></p><% end %>
+
+  <% if @connection&.connected? %>
+    <section class="card card-pad space-y-2" aria-labelledby="drive-account">
+      <h2 id="drive-account" class="font-display text-xl">Connected</h2>
+      <p class="text-sm">Account: <strong><%= @connection.account_email.presence || 'unknown' %></strong> · read-only.
+        <% if @connection.folder_chosen? %>Folder: <strong><%= @connection.folder_name %></strong><% else %>No folder chosen yet.<% end %></p>
+      <p class="text-xs text-mocha">Rupert only lists and reads the chosen folder. It never writes, shares, moves or deletes anything in Drive. Google offers no narrower read permission for files you made elsewhere, so the limit is enforced by Rupert, and you can revoke access any time at myaccount.google.com/permissions.</p>
+      <% if Current.user.can?('settings.write') %>
+        <%= button_to 'Disconnect Google Drive', disconnect_uploads_drive_path, class: 'btn-ghost btn-sm', form: { data: { turbo_confirm: 'Disconnect Google Drive? Files already in the inbox stay.' } } %>
+      <% end %>
+    </section>
+
+    <% if @connection.folder_chosen? %>
+      <section class="space-y-3" aria-labelledby="drive-files">
+        <h2 id="drive-files" class="font-display text-xl">Files in “<%= @connection.folder_name %>”</h2>
+        <% if @files.blank? %>
+          <p class="card card-pad text-sm text-mocha">The folder has no files. Put CSV, Excel, text, JSON or PDF files in it, then reload.</p>
+        <% else %>
+          <%= form_with url: import_uploads_drive_path, class: 'space-y-3' do |f| %>
+            <ul class="card divide-y divide-fog">
+              <% @files.each do |file| %>
+                <li class="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
+                  <%= check_box_tag 'file_ids[]', file.id, false, id: "file-#{file.id}", disabled: !file.importable, aria: { label: "Copy #{file.name}" } %>
+                  <label for="file-<%= file.id %>" class="font-medium"><%= file.name %></label>
+                  <span class="text-xs text-mocha"><%= number_to_human_size(file.size) if file.size %> <%= "· #{l(file.modified_at.in_time_zone, format: :short)}" if file.modified_at %></span>
+                  <% if file.note %><span class="text-xs text-mocha">— <%= file.note %></span><% end %>
+                </li>
+              <% end %>
+            </ul>
+            <%= f.submit 'Copy selected files into the inbox', class: 'btn-primary' %>
+            <p class="text-xs text-mocha">Up to <%= DriveSource::MAX_PER_IMPORT %> files at a time, <%= Uploads::Limits.human_max %> each. Each is checked again with Google, kept unchanged and encrypted, and recognized. Google Docs and Sheets are not converted; download them as CSV or Excel into the folder.</p>
+          <% end %>
+        <% end %>
+      </section>
+    <% else %>
+      <section class="space-y-3" aria-labelledby="drive-folders">
+        <h2 id="drive-folders" class="font-display text-xl">Choose the folder Rupert may read</h2>
+        <% if @folders.blank? %>
+          <p class="card card-pad text-sm text-mocha">No folders found here.</p>
+        <% else %>
+          <ul class="card divide-y divide-fog">
+            <% @folders.each do |folder| %>
+              <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+                <span class="font-medium"><%= folder[:name] %></span>
+                <span class="flex gap-2">
+                  <%= link_to 'Open', uploads_drive_path(parent: folder[:id]), class: 'btn-ghost btn-sm' %>
+                  <%= button_to 'Use this folder', folder_uploads_drive_path, params: { folder_id: folder[:id] }, class: 'btn-primary btn-sm' %>
+                </span>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+        <% if @folder_parent != 'root' %><p><%= link_to 'Back to the top of My Drive', uploads_drive_path, class: 'underline text-sm' %></p><% end %>
+      </section>
+    <% end %>
+  <% elsif @configured %>
+    <section class="card card-pad space-y-3">
+      <h2 class="font-display text-xl">Connect Google Drive</h2>
+      <p class="text-sm text-mocha">You will be sent to Google to approve <strong>read-only</strong> access to your Drive. Rupert stores the lasting token encrypted, and uses it only to list and copy files from the folder you choose, when you ask.</p>
+      <% if Current.user.can?('settings.write') %>
+        <%= button_to 'Connect Google Drive', connect_uploads_drive_path, class: 'btn-primary', form: { data: { turbo: false } } %>
+      <% else %>
+        <p class="text-sm">Ask a workspace administrator to connect Google Drive.</p>
+      <% end %>
+    </section>
+  <% end %>
+</div>

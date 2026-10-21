@@ -10,7 +10,7 @@ class Upload < ApplicationRecord
   include TenantScoped
 
   STATUSES = %w[received recognized needs_review imported rejected duplicate].freeze
-  ORIGINS = %w[web api drop].freeze
+  ORIGINS = %w[web api drop drive].freeze
   OPEN_STATUSES = %w[received recognized needs_review].freeze
 
   encrypts :content_base64

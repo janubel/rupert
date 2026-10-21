@@ -20,6 +20,7 @@
       <p id="upload-status" class="text-sm" role="status" aria-live="polite" data-dropzone-target="message"></p>
       <div class="flex flex-wrap items-center gap-3">
         <%= f.button 'Upload', type: 'submit', class: 'btn-primary', disabled: true, data: { dropzone_target: 'submit' } %>
+        <%= link_to 'Or copy from Google Drive', uploads_drive_path, class: 'btn-ghost btn-sm' %>
         <span class="text-xs text-mocha">Sending from another computer or a script? See <code>docs/ops/uploads-inbox.md</code> for the API and the drop folder.</span>
       </div>
     <% end %>
