@@ -3,13 +3,14 @@
 module ApplicationHelper
   include Pagy::Frontend
 
-  # Ask Rupert, the help chat, is for signed-in staff in their own workspace (not
-  # customer-support views, not the employee app) while an administrator keeps it on.
+  # Ask Rupert, the help chat, is for signed-in staff with the Rupert Chat permission
+  # (administrators by default) in their own workspace (not customer-support views,
+  # not the employee app) while an administrator keeps it on.
   def ask_rupert_available?
     return @ask_rupert_available if defined?(@ask_rupert_available)
 
     user = Current.user
-    @ask_rupert_available = !!(user&.active? && !user.employee? && Current.tenant_id == user.tenant_id && AskRupert::Config.current.enabled?)
+    @ask_rupert_available = !!(user&.active? && !user.employee? && user.can?('chat.use') && Current.tenant_id == user.tenant_id && AskRupert::Config.current.enabled?)
   end
 
   # --- Module-area navigation helpers (see ModuleRegistry) ---

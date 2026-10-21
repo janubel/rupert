@@ -8,10 +8,10 @@ It is a help assistant, not an operator: it changes nothing in Rupert except a r
 
 - **Header button** (`Ask Rupert`) and a right-hand drawer. Full width on a phone. Light and dark follow the account's Appearance setting.
 - A one-line disclosure at the top says where answers come from (cloud model, local model, or both) and what leaves the server.
-- Starter questions on an empty chat, chosen from what the person can actually do. **New chat** starts a fresh conversation; **Clear** deletes the current one.
+- Starter questions on an empty chat, chosen from what the person can actually do. **New chat** starts a fresh conversation; **Clear** deletes the current one. **History** (also *Ask Rupert chats* in the account menu) lists the person's saved chats to reopen.
 - Replies grow on screen while they are written (the page polls the conversation every second or so). Answers carry links into Rupert and the matching Learn Rupert lesson when one exists.
 - **Report it to the Rupert team** is always at the foot. The model can also prepare a draft report; the person reads it, edits it and presses **Send report**. Nothing is filed by the model.
-- Not available to the employee app or in customer-support views.
+- Available to people with the **Rupert Chat** permission (`chat.use`): administrators by default, and it can be given to other roles or people on the Permissions screen. Not available to the employee app or in customer-support views.
 
 ## How an answer is made
 
@@ -68,12 +68,13 @@ Counts live in `ask_rupert_usages` (counters only: person, time, provider, model
 - Permissions are decided by the server, not the prompt: tools the person lacks are not offered and are refused again when called; each tool re-checks.
 - Typed text and tool results pass through `AskRupert::Redactor` (API keys, bearer tokens, card-like numbers; emails and phone numbers in tool results) before reaching any model.
 - Replies are rendered as text in the browser with a small Markdown subset (paragraphs, lists, bold, code and **same-site** links). HTML is never parsed, and links to other sites are shown as plain text.
-- A conversation is private to its owner and workspace. **Clear** deletes it and its messages. Chats are deleted after the retention window (default 30 days) by `AskRupertRetentionJob` (nightly).
+- A conversation is private to its owner and workspace. **Clear** deletes it and its messages. Chats are saved until their owner clears them. A workspace can set a retention window in days (usage page) and `AskRupertRetentionJob` (nightly) then deletes older chats; the default is to keep them.
 - The report attaches the last 12 turns of the chat (secrets removed) to the feedback row. It is visible only to people who review feedback.
 
 ## Operating notes
 
-- Turn it off for a workspace with the checkbox on the usage page. The header button and its endpoints disappear.
+- Turn it off for a workspace with the checkbox on the usage page, or take **Rupert Chat** away from a role. The header button and its endpoints disappear for whoever lacks it.
+- Sharing a chat with others and group chats are not built. Buzz already does group conversation; add it here if and when it is needed.
 - If answers stop, check **System → Ask Rupert usage** for failed replies, then the opencode CLI and its key on the host (the AI-health page, when present, shows the provider state).
 - Deleting a user does not delete usage counters; the retention job removes them after 35 days.
-- Routes: `GET /ask_rupert.json`, `POST /ask_rupert/conversations`, `GET|DELETE /ask_rupert/conversations/:id`, `POST …/messages`, `POST …/report`, `GET|PATCH /ask_rupert/usage`.
+- Routes: `GET /ask_rupert.json`, `POST /ask_rupert/conversations`, `GET /ask_rupert/conversations` (history), `GET|DELETE /ask_rupert/conversations/:id`, `POST …/messages`, `POST …/report`, `GET|PATCH /ask_rupert/usage`.

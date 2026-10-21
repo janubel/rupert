@@ -152,6 +152,27 @@ class AskRupertFlowTest < ActionDispatch::IntegrationTest
     assert AskRupert::Conversation.unscoped.exists?(id)
   end
 
+  test 'saved chats are listed for their owner only, newest first, without empty ones' do
+    stub_model('One.', 'Two.')
+    first = start_chat
+    perform_enqueued_jobs { ask(first, 'first question') }
+    start_chat # an empty chat is not worth listing
+    second = start_chat
+    perform_enqueued_jobs { ask(second, 'second question') }
+    get '/ask_rupert/conversations', as: :json
+    assert_response :success
+    assert_equal ['second question', 'first question'], json['conversations'].map { |row| row['title'] }
+    delete logout_path
+    sign_in(person('admin', email: 'neighbour@example.com'))
+    get '/ask_rupert/conversations', as: :json
+    assert_empty json['conversations']
+  end
+
+  test 'the account menu offers Ask Rupert chats' do
+    get root_path
+    assert_select 'button[role="menuitem"]', text: /Ask Rupert chats/
+  end
+
   test 'Clear deletes the chat and its messages, and New chat starts fresh' do
     stub_model('Hello.')
     id = start_chat
@@ -214,6 +235,23 @@ class AskRupertFlowTest < ActionDispatch::IntegrationTest
     assert_match(/try again tomorrow/, json['error'])
   end
 
+  test 'Rupert Chat is a permission: administrators have it, others only when it is granted' do
+    assert_includes User::ROLE_PERMISSIONS['admin'], 'chat.use'
+    assert_includes User.all_permissions, 'chat.use'
+    delete logout_path
+    manager = person('manager', email: 'mgr@example.com')
+    sign_in(manager)
+    get root_path
+    assert_select 'button[aria-label="Ask Rupert"]', count: 0
+    get ask_rupert_path(format: :json)
+    assert_response :forbidden
+    manager.update_permission_overrides!(User::ROLE_PERMISSIONS['manager'] + ['chat.use'])
+    get root_path
+    assert_select 'button[aria-label="Ask Rupert"]'
+    get ask_rupert_path(format: :json)
+    assert_response :success
+  end
+
   test 'the employee app has no Ask Rupert' do
     delete logout_path
     employee = person('employee', email: 'floor@example.com')
@@ -246,8 +284,13 @@ class AskRupertFlowTest < ActionDispatch::IntegrationTest
     assert_equal 9, AskRupert::Config.current['rate_limit_count']
   end
 
-  test 'retention removes old chats and keeps recent ones' do
+  test 'chats are saved by default; a retention window removes old ones and keeps recent ones' do
     Current.tenant = @tenant
+    old = AskRupert::Conversation.create!(user: @user, last_message_at: 400.days.ago)
+    assert_equal 0, AskRupert::Retention.purge!
+    assert AskRupert::Conversation.exists?(old.id)
+    old.destroy
+    AskRupert::Config.update!('retention_days' => '30')
     old = AskRupert::Conversation.create!(user: @user, last_message_at: 40.days.ago)
     old.messages.create!(user: @user, role: 'user', content: 'old')
     fresh = AskRupert::Conversation.create!(user: @user, last_message_at: 2.days.ago)

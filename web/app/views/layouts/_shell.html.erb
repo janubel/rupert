@@ -39,6 +39,9 @@
               <div class="border-b border-fog px-4 py-3"><p class="truncate text-sm font-semibold text-ink"><%= Current.user.display_name %></p><p class="truncate text-xs text-mocha"><%= Current.user.email %></p><p class="mt-2 text-xs font-semibold text-olive"><%= navigation_role_name(Current.user) %></p><p class="text-xs text-mocha" data-signin-method><%= navigation_signin_method %></p></div>
               <div class="p-2">
                 <%= link_to 'My time & time off', employee_app_path, class: 'nav-menu-item', role: 'menuitem' %>
+                <% if ask_rupert_available? %>
+                  <button type="button" class="nav-menu-item w-full" role="menuitem" onclick="window.dispatchEvent(new CustomEvent('rupert:open-ask', { detail: 'history' }))"><%= navigation_icon('ask') %><span>Ask Rupert chats</span></button>
+                <% end %>
                 <% unless nav_area?('team') %>
                   <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>My time clock</span><% end %>
                 <% end %>

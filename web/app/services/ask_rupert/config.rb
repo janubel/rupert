@@ -15,14 +15,15 @@ module AskRupert
     BOUNDS = {
       'rate_limit_count' => 1..200, 'rate_limit_window_minutes' => 1..120, 'daily_cap' => 1..2_000,
       'max_message_chars' => 100..4_000, 'context_messages' => 2..30, 'context_chars' => 1_000..20_000,
-      'retention_days' => 1..365
+      'retention_days' => 0..365
     }.freeze
     EDITABLE = (%w[enabled provider_mode] + BOUNDS.keys).freeze
 
     DEFAULTS = {
       'enabled' => true, 'provider_mode' => 'cloud', 'rate_limit_count' => 20, 'rate_limit_window_minutes' => 10,
       'daily_cap' => 200, 'max_message_chars' => 1_000, 'context_messages' => 12, 'context_chars' => 8_000,
-      'retention_days' => 30
+      # Chats are saved until someone clears them. Set a number of days to expire them instead.
+      'retention_days' => 0
     }.freeze
 
     def self.current

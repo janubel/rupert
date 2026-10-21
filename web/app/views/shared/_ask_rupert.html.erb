@@ -5,6 +5,7 @@
   <div class="help-panel-head">
     <h2 id="ask-rupert-title" class="font-display text-xl">Ask Rupert</h2>
     <div class="ask-head-actions">
+      <button type="button" class="btn-ghost btn-sm" data-action="ask-rupert#toggleHistory" data-ask-rupert-target="historyButton" aria-expanded="false">History</button>
       <button type="button" class="btn-ghost btn-sm" data-action="ask-rupert#newChat" data-ask-rupert-target="newButton">New chat</button>
       <button type="button" class="btn-ghost btn-sm" data-action="ask-rupert#clear" data-ask-rupert-target="clearButton">Clear</button>
       <button type="button" class="nav-utility" data-action="ask-rupert#close" aria-label="Close Ask Rupert"><span aria-hidden="true">×</span></button>
@@ -12,6 +13,7 @@
   </div>
   <p class="ask-disclosure" data-ask-rupert-target="disclosure">Checking how answers are written…</p>
   <div class="ask-log" role="log" tabindex="0" aria-label="Conversation with Ask Rupert" aria-live="polite" data-ask-rupert-target="log"></div>
+  <div class="ask-history hidden" data-ask-rupert-target="history" role="region" aria-label="Your earlier chats"></div>
   <div class="ask-starters hidden" data-ask-rupert-target="starters" role="group" aria-label="Suggested questions"></div>
   <p class="ask-notice hidden" role="status" data-ask-rupert-target="notice"></p>
   <form class="ask-form" data-action="submit->ask-rupert#send" data-ask-rupert-target="form">

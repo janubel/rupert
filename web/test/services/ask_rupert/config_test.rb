@@ -22,7 +22,7 @@ class AskRupertConfigTest < ActiveSupport::TestCase
     assert_equal 1, config['daily_cap']
     assert config.local_only?
     assert_not config.enabled?
-    assert_equal 30, config['retention_days']
+    assert_equal 0, config['retention_days'], 'chats are saved by default'
     assert_nil config.local_url, 'the local model address is instance configuration, not a setting'
   end
 

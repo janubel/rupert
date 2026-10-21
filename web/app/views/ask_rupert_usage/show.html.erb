@@ -3,7 +3,7 @@
 <div class="space-y-6">
   <section>
     <h1 class="page-title">Ask Rupert usage</h1>
-    <p class="mt-1 max-w-3xl text-sm text-mocha">Ask Rupert is the help chat behind the chat-bubble button in the header. These are counts only: who asked how often and how many tokens it used, never what anyone asked. Limits are light on purpose. Nobody is locked out; a person who goes over is asked to wait a little.</p>
+    <p class="mt-1 max-w-3xl text-sm text-mocha">Ask Rupert is the help chat behind the chat-bubble button in the header. Who can use it is the <strong>Rupert Chat</strong> permission on the <%= link_to 'Permissions', permissions_path, class: 'underline' %> screen: administrators by default, and you can give it to other roles or people. These are counts only: who asked how often and how many tokens it used, never what anyone asked. Limits are light on purpose. Nobody is locked out; a person who goes over is asked to wait a little.</p>
   </section>
 
   <section class="grid grid-cols-2 gap-3 sm:grid-cols-5" aria-label="Last seven days">
@@ -33,7 +33,7 @@
         </div>
         <% [['rate_limit_count', 'Questions allowed per window', 'default 20'], ['rate_limit_window_minutes', 'Window (minutes)', 'default 10'], ['daily_cap', 'Daily cap per person', 'default 200'],
             ['max_message_chars', 'Longest question (characters)', ''], ['context_messages', 'Earlier turns the assistant sees', ''], ['context_chars', 'Most earlier text the assistant sees (characters)', ''],
-            ['retention_days', 'Keep chats for (days)', 'default 30, then deleted']].each do |key, label, hint| %>
+            ['retention_days', 'Delete chats after (days)', '0 keeps chats until their owner clears them (default)']].each do |key, label, hint| %>
           <div>
             <%= label_tag "ask_rupert_#{key}", label, class: 'field-label' %>
             <%= number_field_tag "ask_rupert[#{key}]", @config[key], id: "ask_rupert_#{key}", class: 'input', min: AskRupert::Config::BOUNDS[key].begin, max: AskRupert::Config::BOUNDS[key].end %>
@@ -68,6 +68,6 @@
     <% if @by_provider.any? %>
       <p class="px-5 py-3 text-xs text-taupe">By model: <%= @by_provider.map { |provider, model, count, tokens| "#{provider || 'none'}#{" / #{model}" if model} — #{count} questions, #{number_with_delimiter(tokens.to_i)} tokens" }.join(' · ') %></p>
     <% end %>
-    <p class="px-5 pb-4 text-xs text-taupe"><%= pluralize(@conversations, 'chat') %> stored right now. People can delete their own with Clear; the rest are removed after <%= @config['retention_days'] %> days. Every lookup the assistant runs is recorded in <%= link_to 'Activity', activity_path, class: 'underline' %> by tool name and time only.</p>
+    <p class="px-5 pb-4 text-xs text-taupe"><%= pluralize(@conversations, 'chat') %> stored right now. People can delete their own with Clear. <%= @config['retention_days'].zero? ? 'Chats are otherwise saved.' : "The rest are removed after #{@config['retention_days']} days." %> Every lookup the assistant runs is recorded in <%= link_to 'Activity', activity_path, class: 'underline' %> by tool name and time only.</p>
   </section>
 </div>

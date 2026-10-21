@@ -7,7 +7,7 @@ import { Controller } from "@hotwired/stimulus"
 // links) is built with DOM nodes, never innerHTML. Without JavaScript the
 // header button is not shown; Help (?) and Learn Rupert stay available.
 export default class extends Controller {
-  static targets = ["panel", "backdrop", "trigger", "log", "starters", "notice", "input", "submit", "form", "disclosure", "newButton", "clearButton"]
+  static targets = ["panel", "backdrop", "trigger", "log", "starters", "notice", "input", "submit", "form", "disclosure", "newButton", "clearButton", "history", "historyButton"]
 
   static VIA = { opencode: "cloud AI model", ollama: "model on this server" }
   static REPORT_KINDS = [["bug", "Something is broken"], ["request", "I'd like a change"], ["question", "I have a question"]]
@@ -22,11 +22,18 @@ export default class extends Controller {
     // Help, the ladybug and Ask Rupert share the right edge of the screen: opening one closes the others.
     this.onPanelOpened = (event) => { if (event.detail !== "ask") this.close() }
     document.addEventListener("rupert:panel-opened", this.onPanelOpened)
+    // The account menu's "Ask Rupert chats" opens the panel on the history list.
+    this.onOpenAsk = async (event) => {
+      if (!this.isOpen) await this.open()
+      if (event.detail === "history") this.showHistory()
+    }
+    window.addEventListener("rupert:open-ask", this.onOpenAsk)
   }
 
   disconnect() {
     document.removeEventListener("keydown", this.onDocumentKeydown)
     document.removeEventListener("rupert:panel-opened", this.onPanelOpened)
+    window.removeEventListener("rupert:open-ask", this.onOpenAsk)
     this.stopPolling()
   }
 
@@ -51,6 +58,7 @@ export default class extends Controller {
 
   close() {
     if (!this.isOpen) return
+    if (this.historyOpen) this.setHistoryVisible(false)
     this.panelTarget.classList.add("hidden")
     this.backdropTarget.classList.add("hidden")
     this.triggerTargets.forEach((button) => button.setAttribute("aria-expanded", "false"))
@@ -202,9 +210,91 @@ export default class extends Controller {
     this.logTarget.setAttribute("aria-busy", busy ? "true" : "false")
   }
 
+  // --- chat history ---
+
+  toggleHistory() {
+    this.historyOpen ? this.hideHistory() : this.showHistory()
+  }
+
+  get historyOpen() {
+    return !this.historyTarget.classList.contains("hidden")
+  }
+
+  async showHistory() {
+    this.stopPolling()
+    this.setHistoryVisible(true)
+    this.historyTarget.replaceChildren(this.note("Loading your chats…", "ask-history-empty"))
+    try {
+      const response = await fetch(this.conversationsUrl, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = await response.json()
+      this.renderHistory(data.conversations)
+    } catch (error) {
+      this.historyTarget.replaceChildren(this.note("Could not load your chats. Try again.", "ask-history-empty"))
+    }
+  }
+
+  hideHistory() {
+    this.setHistoryVisible(false)
+    if (this.busy) this.startPolling()
+    this.inputTarget.focus()
+  }
+
+  setHistoryVisible(visible) {
+    this.historyTarget.classList.toggle("hidden", !visible)
+    this.logTarget.classList.toggle("hidden", visible)
+    this.formTarget.classList.toggle("hidden", visible)
+    if (visible) this.startersTarget.classList.add("hidden")
+    else this.renderStarters(!this.logTarget.querySelector(".ask-msg"))
+    this.historyButtonTarget.setAttribute("aria-expanded", visible ? "true" : "false")
+    this.historyButtonTarget.textContent = visible ? "Back to chat" : "History"
+  }
+
+  renderHistory(conversations) {
+    this.historyTarget.replaceChildren()
+    if (!conversations.length) {
+      this.historyTarget.append(this.note("No saved chats yet. Ask a question and it will be saved here.", "ask-history-empty"))
+      return
+    }
+    const list = document.createElement("ul")
+    list.className = "ask-history-list"
+    conversations.forEach((conversation) => {
+      const item = document.createElement("li")
+      const open = document.createElement("button")
+      open.type = "button"
+      open.className = "ask-history-open"
+      const title = document.createElement("span")
+      title.className = "ask-history-title"
+      title.textContent = conversation.title
+      const when = document.createElement("span")
+      when.className = "ask-history-when"
+      when.textContent = new Date(conversation.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })
+      open.append(title, when)
+      open.addEventListener("click", () => this.openConversation(conversation.id))
+      item.append(open)
+      list.append(item)
+    })
+    this.historyTarget.append(list)
+  }
+
+  async openConversation(id) {
+    try {
+      const response = await fetch(`${this.conversationsUrl}/${id}`, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = await response.json()
+      this.setHistoryVisible(false)
+      this.showConversation(data)
+      if (data.busy) this.startPolling()
+      this.inputTarget.focus()
+    } catch (error) {
+      this.showNotice("Could not open that chat.")
+    }
+  }
+
   // --- chat management ---
 
   async newChat() {
+    if (this.historyOpen) this.setHistoryVisible(false)
     if (this.busy) return
     const empty = !this.logTarget.querySelector(".ask-msg")
     if (!empty) {

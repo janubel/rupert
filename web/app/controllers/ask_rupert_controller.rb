@@ -19,6 +19,7 @@ class AskRupertController < AuthenticatedController
   ].freeze
   REPORT_STARTER = 'Something looks wrong. How do I report it?'
   MESSAGES_SHOWN = 60
+  HISTORY_SHOWN = 50
 
   # GET /ask_rupert — what the panel needs when it opens.
   def show
@@ -26,6 +27,12 @@ class AskRupertController < AuthenticatedController
 
     conversation = AskRupert::Conversation.latest_for(Current.user)
     render json: state(conversation)
+  end
+
+  # GET /ask_rupert/conversations — this person's saved chats, newest first, for the history list.
+  def conversations
+    rows = AskRupert::Conversation.owned_by(Current.user).where(id: AskRupert::Message.where(user_id: Current.user.id).select(:conversation_id)).recent_first.limit(HISTORY_SHOWN)
+    render json: { conversations: rows.map { |row| { id: row.id, title: row.title.presence || 'Chat', at: (row.last_message_at || row.created_at).iso8601 } } }
   end
 
   # POST /ask_rupert/conversations — New chat.
@@ -82,7 +89,7 @@ class AskRupertController < AuthenticatedController
 
   def require_available
     return head :not_found unless AskRupert::Config.current.enabled?
-    head :forbidden if Current.user.employee? || Current.tenant_id != Current.user.tenant_id
+    head :forbidden if Current.user.employee? || !Current.user.can?('chat.use') || Current.tenant_id != Current.user.tenant_id
   end
 
   def config_now = @config_now ||= AskRupert::Config.current
