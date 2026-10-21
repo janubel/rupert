@@ -58,7 +58,7 @@ bin/rails server          # http://localhost:3000</code></pre>
       <li><code>SQUARE_ACCESS_TOKEN</code> (+ optional <code>SQUARE_LOCATION_ID</code>, <code>SQUARE_ENVIRONMENT</code>)</li>
       <li><code>SYNC_MINUTES</code> — how often scheduled syncs run</li>
       <li><code>GOOGLE_DRIVE_*</code> — automated database backups</li>
-      <li><code>BUZZ_*</code> — the Nostr relay + keys for the team agent</li>
+      <li><code>BUZZ_*</code> — the Nostr relay, keys and download links for the Buzz team chat and its agent; staff open the <strong>Buzz</strong> card from the header to install the app and connect their own devices (see <code>docs/ops/buzz.md</code>)</li>
     </ul>
     <p style="margin-top:0.8rem;">When developing through the Shopify CLI, the OAuth pair (<code>SHOPIFY_API_KEY</code> / <code>SHOPIFY_API_SECRET</code>) comes from <code>shopify app info --web-env</code>.</p>
   </section>
