@@ -13,7 +13,7 @@ class AgentFeedbacksController < AuthenticatedController
   before_action -> { response.headers['Cache-Control'] = 'no-store' }
 
   CSV_HEADERS = ['ID', 'Submitted', 'Kind', 'Severity', 'Status', 'Summary', 'Details', 'Related tool', 'Related page/report',
-                 'Assistant', 'Model', 'Token', 'Owner notes', 'Triaged at'].freeze
+                 'Assistant', 'Model', 'Token', 'Owner notes', 'Triaged at', 'Source', 'Ready for development'].freeze
   CSV_LIMIT = 5000
 
   def index
@@ -35,15 +35,16 @@ class AgentFeedbacksController < AuthenticatedController
 
   def update
     feedback = AgentFeedback.find(params[:id])
-    attributes = params.require(:agent_feedback).permit(:status, :owner_notes)
+    attributes = params.require(:agent_feedback).permit(:status, :owner_notes, :ready_for_development)
     feedback.assign_attributes(status: attributes[:status].presence || feedback.status,
       owner_notes: AgentFeedback.clean(attributes[:owner_notes], AgentFeedback::NOTES_MAX, multiline: true))
-    if feedback.status_changed? || feedback.owner_notes_changed?
+    mark_ready(feedback, attributes[:ready_for_development]) if attributes.key?(:ready_for_development)
+    if feedback.status_changed? || feedback.owner_notes_changed? || feedback.ready_for_development_changed?
       feedback.triaged_by = Current.user
       feedback.triaged_at = Time.current
     end
     if feedback.save
-      ActivityLogger.log('agent_feedback_triaged', subject: feedback, details: "status=#{feedback.status}")
+      ActivityLogger.log('agent_feedback_triaged', subject: feedback, details: "status=#{feedback.status}; ready=#{feedback.ready_for_development ? 'yes' : 'no'}")
       redirect_to agent_feedbacks_path(filter_params.compact_blank), notice: "Feedback ##{feedback.id} updated."
     else
       redirect_to agent_feedbacks_path(filter_params.compact_blank), alert: feedback.errors.full_messages.to_sentence
@@ -52,12 +53,22 @@ class AgentFeedbacksController < AuthenticatedController
 
   private
 
+  # The owner can mark or clear "ready for development" themselves, whatever the source.
+  def mark_ready(feedback, value)
+    ready = ActiveModel::Type::Boolean.new.cast(value) ? true : false
+    return if ready == feedback.ready_for_development
+
+    feedback.assign_attributes(ready_for_development: ready, ready_marked_at: (Time.current if ready),
+      ready_marked_by: ("user:#{Current.user.id}" if ready))
+  end
+
   def filter_params
     {
       kind: allowed(params[:kind], AgentFeedback::KINDS.keys),
       status: allowed(params[:status], AgentFeedback::STATUSES.keys + ['open']),
       severity: allowed(params[:severity], AgentFeedback::SEVERITIES),
-      tool: params[:tool].to_s.strip.first(100).presence
+      tool: params[:tool].to_s.strip.first(100).presence,
+      source: allowed(params[:source], AgentFeedback::SOURCES)
     }
   end
 
@@ -70,6 +81,7 @@ class AgentFeedbacksController < AuthenticatedController
     scope = @filters[:status] == 'open' ? scope.where(status: %w[new triaged planned]) : scope.where(status: @filters[:status]) if @filters[:status]
     scope = scope.where(severity: @filters[:severity]) if @filters[:severity]
     scope = scope.where(related_tool: @filters[:tool]) if @filters[:tool]
+    scope = scope.where(source: @filters[:source]) if @filters[:source]
     scope
   end
 
@@ -79,7 +91,7 @@ class AgentFeedbacksController < AuthenticatedController
       scope.each do |feedback|
         rows << [feedback.id, feedback.created_at&.iso8601, feedback.kind, feedback.severity, feedback.status, feedback.summary,
                  feedback.details, feedback.related_tool, feedback.related_reference, feedback.agent_name, feedback.agent_model,
-                 feedback.api_access_token&.name, feedback.owner_notes, feedback.triaged_at&.iso8601].map { |cell| csv_safe(cell) }
+                 feedback.api_access_token&.name, feedback.owner_notes, feedback.triaged_at&.iso8601, feedback.source, feedback.ready_for_development].map { |cell| csv_safe(cell) }
       end
     end
   end

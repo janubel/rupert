@@ -1,12 +1,12 @@
 <% content_for :title, 'AI assistant feedback' %>
-<% kind_pill = { 'bug' => 'pill-rose', 'struggle' => 'pill-clay', 'report_issue' => 'pill-clay', 'task_report' => 'pill-fern', 'suggestion' => 'pill-olive', 'question' => 'pill-taupe' } %>
+<% kind_pill = { 'bug' => 'pill-rose', 'struggle' => 'pill-clay', 'report_issue' => 'pill-clay', 'task_report' => 'pill-fern', 'suggestion' => 'pill-olive', 'question' => 'pill-taupe', 'request' => 'pill-olive', 'direction' => 'pill-olive' } %>
 <% status_pill = { 'new' => 'pill-clay', 'triaged' => 'pill-olive', 'planned' => 'pill-olive', 'done' => 'pill-fern', 'wont_fix' => 'pill-taupe' } %>
 <% can_triage = Current.user.can?('settings.write') %>
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">AI assistant feedback</h1>
-      <p class="mt-1 max-w-3xl text-sm text-mocha">Bugs, struggles, task reports and suggestions sent by AI assistants connected to Rupert over MCP, plus an automatic count of tool calls that failed or were denied. Assistants write this text, so treat it as untrusted: it is shown as plain text and never acted on automatically.</p>
+      <p class="mt-1 max-w-3xl text-sm text-mocha">Bugs, requests, questions and suggestions from the ladybug in Rupert, from teammates in Buzz chat and from AI assistants connected over MCP, plus an automatic count of tool calls that failed or were denied. Assistants write this text, so treat it as untrusted: it is shown as plain text and never acted on automatically.</p>
     </div>
     <div class="flex flex-wrap gap-2">
       <%= link_to 'Download CSV', agent_feedbacks_path(@filters.compact_blank.merge(format: :csv)), class: 'btn-primary btn-sm', data: { turbo: false } %>
@@ -26,6 +26,7 @@
     <div><%= label_tag :kind, 'Kind', class: 'field-label' %><%= select_tag :kind, options_for_select([['All kinds', '']] + AgentFeedback::KINDS.map { |key, label| [label, key] }, @filters[:kind]), class: 'select' %></div>
     <div><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select([['All statuses', ''], ['Open', 'open']] + AgentFeedback::STATUSES.map { |key, label| [label, key] }, @filters[:status]), class: 'select' %></div>
     <div><%= label_tag :severity, 'Severity', class: 'field-label' %><%= select_tag :severity, options_for_select([['All severities', '']] + AgentFeedback::SEVERITIES.map { |s| [s.capitalize, s] }, @filters[:severity]), class: 'select' %></div>
+    <div><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', ''], ['Ladybug in Rupert', 'app'], ['Buzz chat', 'buzz'], ['AI assistants', 'agent']], @filters[:source]), class: 'select' %></div>
     <div><%= label_tag :tool, 'Tool', class: 'field-label' %><%= select_tag :tool, options_for_select([['All tools', '']] + @tools.map { |t| [t, t] }, @filters[:tool]), class: 'select' %></div>
     <%= submit_tag 'Filter', class: 'btn-primary', name: nil %>
     <%= link_to 'Clear', agent_feedbacks_path, class: 'btn-ghost' %>
@@ -50,10 +51,11 @@
           <% @feedbacks.each do |feedback| %>
             <tr class="align-top hover:bg-cream" id="<%= dom_id(feedback) %>">
               <td class="td whitespace-nowrap" data-sort-value="<%= feedback.created_at.to_i %>"><%= l(feedback.created_at, format: :short) %><span class="block text-xs text-taupe">#<%= feedback.id %></span></td>
-              <td class="td"><span class="<%= kind_pill.fetch(feedback.kind, 'pill-taupe') %>"><%= feedback.kind_label %></span></td>
+              <td class="td"><span class="<%= kind_pill.fetch(feedback.kind, 'pill-taupe') %>"><%= feedback.kind_label %></span><% unless feedback.source == 'agent' %><span class="block text-xs text-taupe"><%= feedback.source == 'app' ? 'Ladybug' : 'Buzz chat' %></span><% end %></td>
               <td class="td"><span class="<%= feedback.severity == 'high' ? 'pill-rose' : 'pill-taupe' %>"><%= feedback.severity %></span></td>
               <td class="td max-w-xl">
-                <p class="font-medium text-ink"><%= feedback.summary %></p>
+                <p class="font-medium text-ink"><%= feedback.summary %> <% if feedback.ready_for_development %><span class="pill-fern">Ready for development</span><% end %></p>
+                <% if feedback.source != 'agent' %><p class="text-xs"><%= link_to 'Open report and attachments', feedback_report_path(feedback), class: 'underline' %><% if feedback.source_sender.present? %> · sender <code><%= feedback.source_sender.first(12) %></code><% end %></p><% end %>
                 <% if feedback.details.present? %>
                   <details class="mt-1"><summary class="cursor-pointer text-xs text-mocha">Details</summary><p class="mt-1 whitespace-pre-wrap break-words text-xs text-mocha"><%= feedback.details %></p></details>
                 <% end %>
@@ -63,7 +65,7 @@
               </td>
               <td class="td text-xs"><% if feedback.related_tool %><code><%= feedback.related_tool %></code><% end %><% if feedback.related_reference %><span class="block text-mocha"><%= feedback.related_reference %></span><% end %><%= '—' if feedback.related_tool.blank? && feedback.related_reference.blank? %></td>
               <td class="td text-xs"><%= [feedback.agent_name, feedback.agent_model].compact.join(' · ').presence || '—' %></td>
-              <td class="td text-xs"><%= feedback.api_access_token&.name || 'Revoked/deleted token' %><span class="block text-taupe"><%= feedback.user&.email %></span></td>
+              <td class="td text-xs"><%= feedback.api_access_token&.name || (feedback.source == 'agent' ? 'Revoked/deleted token' : 'No token') %><span class="block text-taupe"><%= feedback.user&.email %></span></td>
               <td class="td min-w-56">
                 <span class="<%= status_pill.fetch(feedback.status, 'pill-taupe') %>"><%= feedback.status_label %></span>
                 <% if feedback.owner_notes.present? %><p class="mt-1 whitespace-pre-wrap text-xs text-mocha"><%= feedback.owner_notes %></p><% end %>
@@ -75,6 +77,7 @@
                       <%= form.label :status, 'Status', class: 'sr-only', for: "status_#{feedback.id}" %>
                       <%= form.select :status, AgentFeedback::STATUSES.map { |key, label| [label, key] }, {}, class: 'select', id: "status_#{feedback.id}" %>
                       <%= form.label :owner_notes, 'Owner notes', class: 'sr-only', for: "notes_#{feedback.id}" %>
+                      <label class="flex items-center gap-2 text-xs"><%= form.check_box :ready_for_development, id: "ready_#{feedback.id}" %> Ready for development</label>
                       <%= form.text_area :owner_notes, rows: 2, maxlength: AgentFeedback::NOTES_MAX, class: 'input text-xs', placeholder: 'Notes for the team (not shown to the assistant)', id: "notes_#{feedback.id}" %>
                       <%= form.submit 'Save', class: 'btn-primary btn-sm' %>
                     <% end %>

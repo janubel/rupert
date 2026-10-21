@@ -52,6 +52,7 @@ Two kinds of configuration exist. **Boot-time variables** live in `/etc/rupert.e
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Google sign-in |
 | `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, `GOOGLE_DRIVE_REFRESH_TOKEN`, `GOOGLE_DRIVE_FOLDER_ID`, `GOOGLE_DRIVE_RETENTION` | Instance backups to Drive (platform administrator only) |
 | `BUZZ_RELAY_URL`, `BUZZ_PRIVATE_KEY`, `BUZZ_CHANNEL`, `BUZZ_ANNOUNCEMENTS_CHANNEL`, `BUZZ_INV_ADJUSTMENTS_CHANNEL`, `OPCODE_BUZZ_PRIVATE_KEY` | Buzz (Nostr) notifications |
+| `FEEDBACK_READY_SENDERS` | Who may mark chat reports "ready for development": comma, space or newline separated 64-hex Nostr public keys or `npub…` values (Settings → Environment). Empty means nobody; reports are then always for review. See `docs/ops/feedback-reports.md` |
 | `FULFILLMENT_ALERT_HOURS` | Unfulfilled-order alert threshold |
 | `PUSH_GUARD_*`, `PUSH_FREEZE_*` | Informational freeze/approval state (no longer enforced) |
 
