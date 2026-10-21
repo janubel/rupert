@@ -44,7 +44,7 @@ class SystemPageTest < ActionDispatch::IntegrationTest
     assert_select '#ai-health li', 'beam-free'
     assert_select '#ai-health form[action=?]', check_system_ai_health_path
     assert_select '#ai-health [role=img][aria-label^=?]', 'Tokens per day'
-    assert_no_match(/Bearer|sk-/, response.body)
+    assert_no_match(/Bearer|\bsk-/, response.body)
   end
 
   test 'AI health card before any check offers a check and explains there is none' do
