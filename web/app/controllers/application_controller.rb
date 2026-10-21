@@ -43,7 +43,7 @@ class ApplicationController < ActionController::Base
     when 'people/timesheets'
       %w[index show new create edit update destroy submit reopen import_shifts add_entry update_entry remove_entry].include?(action_name) ||
         (%w[approve reject].include?(action_name) && People::TimesheetPolicy.assigned_demos(Current.user).where(id: params[:id]).exists?)
-    when 'people/punch_history'
+    when 'people/punch_history', 'people/time_keeping'
       action_name == 'index'
     when 'people/square_timesheets', 'people/ctrax_timesheets'
       %w[index show].include?(action_name)

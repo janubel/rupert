@@ -10,6 +10,7 @@ module TimeWorkspaceHelper
 
     reviewer = user.can_review_timesheets? || (user.can_manage_accounts? && user.can?('timesheets.read'))
     links = []
+    links << ['Time keeping', people_time_keeping_path, controller_path == 'people/time_keeping'] if user.can?('timesheets.read')
     links << ['Timesheets', people_timesheets_path, controller_path == 'people/timesheets']
     if user.can?('timesheets.read')
       links << ['Punch report', people_punch_history_path, controller_path == 'people/punch_history']
