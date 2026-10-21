@@ -21,11 +21,13 @@ class ModuleRegistry
     Entry.new(key: 'api_access_tokens', name: 'API access', path: lambda {
       api_access_tokens_path
     }, permission: 'settings.write', position: 108),
+    Entry.new(key: 'agent_feedback', name: 'AI assistant feedback', path: -> { agent_feedbacks_path }, permission: 'settings.read', position: 108),
     Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: 'dashboard.read', position: 10),
     Entry.new(key: 'platform', name: 'Instance overview', path: -> { platform_path }, permission: nil, position: 89),
     Entry.new(key: 'sales', name: 'Sales', path: -> { sales_path }, permission: 'sales.read', position: 20),
     Entry.new(key: 'ctrax_pos', name: 'C-Trax retail', path: -> { ctrax_pos_path }, permission: %w[sales.read sales.write inventory.read], position: 21),
     Entry.new(key: 'ctrax_days', name: 'C-Trax daily close', path: -> { ctrax_days_path }, permission: 'sales.read', position: 24),
+    Entry.new(key: 'swipesimple_days', name: 'SwipeSimple daily close', path: -> { swipesimple_days_path }, permission: 'sales.read', position: 24.5),
     Entry.new(key: 'registers', name: 'Registers', path: lambda {
       sales_pos_sessions_path
     }, permission: 'sales.read', position: 25),
@@ -211,7 +213,7 @@ class ModuleRegistry
     # Every registered module must appear in exactly one area.
     AREAS = [
       { key: 'overview', name: 'Overview', modules: ['dashboard'] },
-      { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos ctrax_days registers customers] },
+      { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos ctrax_days swipesimple_days registers customers] },
       { key: 'marketing', name: 'Marketing', modules: %w[marketing influencers] },
       { key: 'stock', name: 'Stock',
         modules: %w[inventory stock_comparison inventory_exceptions locations inventory_counts stock_requests stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile swipesimple_items sizes] },
@@ -235,7 +237,7 @@ class ModuleRegistry
       { key: 'team', name: 'Team',
         modules: %w[accounts employees employee_reports departments positions time_keeping schedule time_clock leave payroll permissions] },
       { key: 'system', name: 'System',
-        modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap owner_checklists] }
+        modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens agent_feedback roadmap owner_checklists] }
     ].freeze
 
     # Sub-sections of an area with only the visible modules; empty groups drop out.

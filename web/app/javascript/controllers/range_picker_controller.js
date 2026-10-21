@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Shared time-report range picker (shared/_time_range_picker.html.erb).
-// Choosing a named range fills Start and Finish; editing either date switches
+// Choosing a named range fills Start date and End date; editing either date switches
 // the dropdown to the matching range or "Custom"; Finish before Start shows a
 // message and blocks submit. The server resolves the same params without JS.
 
@@ -24,9 +24,9 @@ function datesFor(presets, key) {
   return found ? [found[1], found[2]] : null
 }
 
-// A message when Finish is before Start (ISO dates compare as strings).
+// A message when the End date is before the Start date (ISO dates compare as strings).
 function rangeProblem(from, to) {
-  if (from && to && to < from) return "Finish must be on or after Start."
+  if (from && to && to < from) return "End date must be on or after the start date."
   return ""
 }
 
@@ -44,7 +44,9 @@ export default class extends Controller {
       this.fromTarget.value = dates[0]
       this.toTarget.value = dates[1]
     } else {
+      // Custom: go straight to the Start date calendar.
       this.fromTarget.focus()
+      try { this.fromTarget.showPicker?.() } catch (_error) { /* not allowed here; focus is enough */ }
     }
     this.validate()
   }

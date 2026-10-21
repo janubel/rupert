@@ -1,0 +1,189 @@
+<% content_for :title, "SwipeSimple daily close · #{@date.iso8601}" %>
+<% today = Time.current.in_time_zone(SwipesimpleDayClose::ZONE).to_date %>
+<% close = @close %>
+<% money = ->(value, currency = 'USD') { ctrax_money(value, currency: currency) } %>
+<% usd = close.groups.select { |group| group.currency == 'USD' } %>
+<% connection = close.connection %>
+<% latest = close.latest_transaction_export %>
+<div class="space-y-6">
+  <%= render 'shared/retail_navigation' %>
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <div><p class="eyebrow text-olive-deep">Review · SwipeSimple exports</p><h1 class="page-title mt-2">SwipeSimple daily close</h1><p class="mt-2 max-w-3xl text-sm text-mocha">Approved SwipeSimple sales, refunds and tips for one business day (Eastern time), from the exports Rupert pulls from the SwipeSimple website. A local review does not close anything at SwipeSimple or confirm a bank deposit.</p></div>
+    <div class="flex flex-wrap gap-2"><%= link_to 'Download transactions (CSV)', swipesimple_days_path(date: @date, format: :csv), class: 'btn-ghost' %><%= link_to 'C-Trax daily close', ctrax_days_path(date: @date), class: 'btn-ghost' %></div>
+  </header>
+
+  <section class="card card-pad space-y-4" aria-label="Choose business date">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <%= form_tag swipesimple_days_path, method: :get, class: 'flex flex-wrap items-end gap-3' do %><div><%= label_tag :date, 'Business date', class: 'field-label' %><%= date_field_tag :date, @date, class: 'input' %></div><%= submit_tag 'View day', class: 'btn-primary' %><% end %>
+      <nav aria-label="Business dates" class="flex flex-wrap gap-2"><%= link_to 'Previous day', swipesimple_days_path(date: @date - 1), class: 'btn-ghost btn-sm' %><%= link_to 'Today', swipesimple_days_path(date: today), class: 'btn-ghost btn-sm', aria: { current: @date == today ? 'date' : nil } %><%= link_to 'Next day', swipesimple_days_path(date: @date + 1), class: 'btn-ghost btn-sm' %></nav>
+    </div>
+    <p class="border-t border-fog pt-3 text-sm text-mocha">Viewing <strong class="text-ink"><%= @date.strftime('%A, %b %-d, %Y') %></strong> · midnight to midnight, America/New_York.</p>
+  </section>
+
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Daily SwipeSimple summary">
+    <div class="stat"><p class="stat-label">Approved sales</p><p class="stat-value mt-2"><%= usd.empty? ? 'None stored' : money.call(usd.sum(&:sale_cents)) %></p><p class="mt-1 text-xs text-mocha"><%= pluralize(usd.sum(&:sale_count), 'sale') %></p></div>
+    <div class="stat"><p class="stat-label">Refunds</p><p class="stat-value mt-2"><%= usd.empty? ? 'None stored' : money.call(usd.sum(&:refund_cents)) %></p><p class="mt-1 text-xs text-mocha"><%= pluralize(usd.sum(&:refund_count), 'refund') %></p></div>
+    <div class="stat"><p class="stat-label">Net</p><p class="stat-value mt-2"><%= usd.empty? ? 'None stored' : money.call(usd.sum(&:net_cents)) %></p><p class="mt-1 text-xs text-mocha">Card <%= money.call(close.card_net_cents) %></p></div>
+    <div class="stat"><p class="stat-label">Tips · inside sales</p><p class="stat-value mt-2"><%= usd.empty? ? 'None stored' : money.call(usd.all?(&:tip_cents) ? usd.sum(&:tip_cents) : nil) %></p><p class="mt-1 text-xs text-mocha"><%= pluralize(close.excluded.size, 'declined or voided attempt') %> excluded</p></div>
+  </section>
+
+  <nav aria-label="Daily close sections" class="flex flex-wrap gap-2"><a href="#close-checks" class="btn-ghost btn-sm">1 · Checks</a><a href="#close-totals" class="btn-ghost btn-sm">2 · Totals</a><a href="#close-deposit" class="btn-ghost btn-sm">3 · Processor deposit</a><a href="#close-transactions" class="btn-ghost btn-sm">Transactions</a><% if retail_business_access?('sales.write') %><a href="#close-review" class="btn-ghost btn-sm">4 · Local review</a><% end %></nav>
+
+  <section id="close-checks" class="retail-anchor card card-pad space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-display text-xl">Checks</h2><span class="<%= close.warnings.empty? ? 'pill-fern' : 'pill-clay' %>"><%= close.warnings.empty? ? 'No flags' : 'Needs review' %></span></div>
+    <dl class="grid gap-3 sm:grid-cols-3 text-sm">
+      <div class="rounded-xl bg-haze p-3"><dt class="text-xs text-mocha">Newest stored export</dt><dd class="mt-1 font-semibold"><%= latest ? retail_source_time(latest.exported_at) : 'None stored' %></dd></div>
+      <div class="rounded-xl bg-haze p-3"><dt class="text-xs text-mocha">Last successful website pull</dt><dd class="mt-1 font-semibold"><%= retail_source_time(connection&.last_reported_at) %></dd></div>
+      <div class="rounded-xl bg-haze p-3"><dt class="text-xs text-mocha">Pull status</dt><dd class="mt-1 font-semibold"><%= connection&.last_report_status.to_s.humanize.presence || 'No SwipeSimple connection' %></dd></div>
+    </dl>
+    <% if close.checks.any? %>
+      <ul class="space-y-2 text-sm"><% close.checks.each do |item| %><li class="rounded-xl border p-3 <%= item.level == :warn ? 'border-clay/30 bg-clay/10' : 'border-fog' %>" data-check="<%= item.key %>"><span class="font-semibold"><%= item.level == :warn ? 'Review' : 'Note' %>:</span> <%= item.message %></li><% end %></ul>
+    <% else %>
+      <p class="text-sm text-mocha">The export covers this whole day, and no refunds, missing tips or unusual declines were found.</p>
+    <% end %>
+    <% if close.coverage != :covered && retail_business_access?('settings.read') %><p><%= link_to 'SwipeSimple connection', pos_connection_path('swipesimple'), class: 'btn-ghost btn-sm' %> <%= link_to 'Import an export by hand', swipesimple_reports_path(anchor: 'import'), class: 'btn-ghost btn-sm' %></p><% end %>
+  </section>
+
+  <section id="close-totals" class="retail-anchor card card-pad space-y-4">
+    <h2 class="font-display text-xl">Totals by account and tender</h2>
+    <p class="text-sm text-mocha">Approved transactions only. Tips are already inside the sale amounts. Declined, voided, errored and canceled attempts are counted separately and left out of every amount. Unknown means the export did not report it; it is not zero.</p>
+    <% if close.groups.empty? %>
+      <p class="text-sm text-mocha">No SwipeSimple transactions are stored for this day. That does not prove a zero-sales day — check the export freshness above.</p>
+    <% else %>
+      <div class="retail-table-region" role="region" tabindex="0" aria-label="SwipeSimple totals by account and tender">
+        <table class="w-full text-sm"><caption class="sr-only">SwipeSimple totals for <%= @date %> by merchant account and tender</caption>
+          <thead class="border-b border-fog bg-haze"><tr><th scope="col" class="th">Account</th><th scope="col" class="th">Tender</th><th scope="col" class="th text-right">Sales</th><th scope="col" class="th text-right">Sales amount</th><th scope="col" class="th text-right">Refunds</th><th scope="col" class="th text-right">Refund amount</th><th scope="col" class="th text-right">Net</th><th scope="col" class="th text-right">Tips</th><th scope="col" class="th text-right">Declined</th><th scope="col" class="th text-right">Voided</th><th scope="col" class="th text-right">Errored / canceled</th></tr></thead>
+          <tbody class="divide-y divide-fog"><% close.groups.each do |group| %><tr>
+            <th scope="row" class="td text-left font-medium"><%= group.account %><span class="block text-xs font-normal text-mocha"><%= group.currency %></span></th><td class="td"><%= group.tender.capitalize %></td>
+            <td class="td text-right tabular-nums"><%= group.sale_count %></td><td class="td retail-money text-right"><%= money.call(group.sale_cents, group.currency) %></td>
+            <td class="td text-right tabular-nums"><%= group.refund_count %></td><td class="td retail-money text-right"><%= money.call(group.refund_cents, group.currency) %></td>
+            <td class="td retail-money text-right font-semibold"><%= money.call(group.net_cents, group.currency) %></td>
+            <td class="td retail-money text-right"><%= money.call(group.tip_cents, group.currency) %><% if group.missing_tip_rows.positive? %><span class="block text-xs text-clay"><%= group.missing_tip_rows %> without tip</span><% end %></td>
+            <td class="td text-right tabular-nums"><%= group.declined_count %></td><td class="td text-right tabular-nums"><%= group.voided_count %></td><td class="td text-right tabular-nums"><%= group.other_excluded_count %></td>
+          </tr><% end %></tbody>
+        </table>
+      </div>
+      <h3 class="font-semibold">Cash vs card</h3>
+      <div class="retail-table-region" role="region" tabindex="0" aria-label="SwipeSimple cash and card split">
+        <table class="w-full text-sm"><caption class="sr-only">Net cash, card and unknown tender per account</caption>
+          <thead class="border-b border-fog bg-haze"><tr><th scope="col" class="th">Account</th><th scope="col" class="th text-right">Cash net</th><th scope="col" class="th text-right">Card net</th><th scope="col" class="th text-right">Unknown tender</th><th scope="col" class="th text-right">Total net</th></tr></thead>
+          <tbody class="divide-y divide-fog"><% close.tender_split.each do |split| %><tr><th scope="row" class="td text-left font-medium"><%= split[:account] %></th><% %i[cash card unknown total].each do |key| %><td class="td retail-money text-right"><%= split[key].nil? ? '—' : money.call(split[key], split[:currency]) %></td><% end %></tr><% end %></tbody>
+        </table>
+      </div>
+      <p class="text-xs text-mocha">“—” means no transactions of that tender. Cash recorded in SwipeSimple is not proof that cash reached the drawer or bank.</p>
+    <% end %>
+    <%# SwipeSimple Reporting "sales"/"tax" daily CSVs (feature/swipesimple-tax-reports, planned tables
+        swipesimple_sales_days / swipesimple_tax_days) belong here once they land: render an optional
+        "SwipeSimple's own daily report" block (subtotal, discounts, sales tax, tips, refunds, net card,
+        net cash) only when a row exists for @date, shown next to these export totals, never added to them. %>
+    <h3 class="font-semibold">Invoices created this day</h3>
+    <% if close.invoices.empty? %>
+      <p class="text-sm text-mocha">No invoices created on this day in the latest full invoice export.</p>
+    <% else %>
+      <ul class="space-y-1 text-sm"><% close.invoices.each do |invoice| %><li><%= invoice.source_number %> · <%= invoice.swipesimple_export.merchant_account %> · <%= money.call(invoice.amount_cents, invoice.swipesimple_export.currency) %> · <span class="pill-taupe"><%= invoice.status.capitalize %></span></li><% end %></ul>
+    <% end %>
+    <p class="text-xs text-mocha">The SwipeSimple invoice export has no payment date, so invoices <em>paid</em> on a given day can’t be listed. A card payment on an invoice appears in the transactions above. Invoice amounts are never added to sales.</p>
+  </section>
+
+  <section id="close-deposit" class="retail-anchor card card-pad space-y-4">
+    <h2 class="font-display text-xl">Expected processor deposit vs actual</h2>
+    <% merchants = SwipesimpleDayClose.deposit_merchants %>
+    <% chosen = close.deposit_merchant %>
+    <% if Current.user.can?('settings.write') %>
+      <%= form_tag deposit_merchant_swipesimple_days_path, method: :post, class: 'flex flex-wrap items-end gap-3', aria: { label: 'NAB merchant that funds SwipeSimple' } do %>
+        <%= hidden_field_tag :date, @date.iso8601 %>
+        <div><%= label_tag :merchant_token, 'NAB merchant that funds SwipeSimple card sales', class: 'field-label' %>
+          <%= select_tag :merchant_token, options_for_select(merchants.map { |m| ["NAB merchant #{SwipesimpleDayClose.mask(m)}", SwipesimpleDayClose.merchant_token(m)] }, chosen && SwipesimpleDayClose.merchant_token(chosen)), include_blank: 'Not chosen — compare every merchant', class: 'input' %></div>
+        <%= submit_tag 'Save merchant', class: 'btn-ghost btn-sm' %>
+      <% end %>
+      <% if merchants.empty? %><p class="text-xs text-mocha">No NAB deposit snapshots are stored yet, so there is nothing to choose. Pull NAB Daily Deposits from the IRIS connection first.</p><% end %>
+    <% else %>
+      <p class="text-sm text-mocha" data-deposit-merchant><%= chosen ? "Deposits are compared with NAB merchant #{SwipesimpleDayClose.mask(chosen)}." : 'No NAB merchant has been chosen for SwipeSimple yet; someone with settings access can choose it here.' %></p>
+    <% end %>
+    <% if chosen %>
+      <% match = close.deposit_match %>
+      <% if match.nil? %>
+        <p class="text-sm"><strong>No deposit from NAB merchant <%= SwipesimpleDayClose.mask(chosen) %> is stored for the <%= SwipesimpleDayClose::FUNDING_LAG_DAYS %> days after <%= @date.strftime('%b %-d, %Y') %> yet.</strong></p>
+        <p class="text-sm text-mocha">Card net to expect from SwipeSimple: <strong><%= money.call(close.card_net_cents) %></strong>. Card sales usually fund one to three days later; check again after the next NAB Daily Deposits pull.</p>
+      <% else %>
+        <div class="retail-table-region" role="region" tabindex="0" aria-label="Processor deposit comparison">
+          <table class="w-full text-sm"><caption class="sr-only">NAB deposit funded after this day next to the SwipeSimple card net it covers</caption>
+            <thead class="border-b border-fog bg-haze"><tr><th scope="col" class="th">Business day</th><th scope="col" class="th text-right">SwipeSimple card net</th></tr></thead>
+            <tbody class="divide-y divide-fog">
+              <% match.business_days.each do |day| %><tr class="<%= 'font-semibold' if day == @date %>"><th scope="row" class="td text-left"><%= link_to_unless day == @date, day.strftime('%a %b %-d'), swipesimple_days_path(date: day), class: 'underline' %></th><td class="td retail-money text-right"><%= match.card_net_by_day[day].nil? ? 'No card sales stored' : money.call(match.card_net_by_day[day]) %></td></tr><% end %>
+              <tr><th scope="row" class="td text-left">Card net covered</th><td class="td retail-money text-right font-semibold"><%= money.call(match.card_net_cents) %></td></tr>
+              <tr><th scope="row" class="td text-left">NAB deposit <%= match.deposit_date.strftime('%a %b %-d') %> · <%= pluralize(match.records.size, 'batch') %></th><td class="td retail-money text-right font-semibold" data-deposit-amount><%= money.call(match.amount_cents) %></td></tr>
+              <tr><th scope="row" class="td text-left">Difference (deposit − card net)</th><td class="td retail-money text-right <%= match.difference_cents.zero? ? '' : 'text-clay font-semibold' %>" data-deposit-difference><%= money.call(match.difference_cents) %></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="list-disc space-y-1 pl-5 text-xs text-mocha">
+          <li>Matched to the first NAB merchant <%= SwipesimpleDayClose.mask(chosen) %> deposit dated 1–<%= SwipesimpleDayClose::FUNDING_LAG_DAYS %> days after the business day. NAB Daily Deposits have no batch date, so days that share a deposit (such as a weekend) are compared together, and each deposit is compared once.</li>
+          <li>One NAB snapshot per date (the newest that covers it); overlapping snapshots are never added together.</li>
+          <% if match.currency.nil? %><li>NAB does not state the currency of these amounts; they are assumed to match SwipeSimple’s USD only for this comparison.</li><% end %>
+          <li>NAB amounts are batch deposits, not proof the bank received them; fees and adjustments can make them differ.</li>
+        </ul>
+      <% end %>
+    <% elsif close.deposits_with_records.empty? %>
+      <p class="text-sm"><strong>The processor deposit isn’t available for this day.</strong> No stored NAB / IRIS Daily Deposits record is dated <%= @date.strftime('%b %-d, %Y') %>.</p>
+      <p class="text-sm text-mocha">Card net to expect from SwipeSimple: <strong><%= money.call(close.card_net_cents) %></strong>. Deposits usually land on a later date; check the next days, or pull NAB Daily Deposits from the IRIS connection.</p>
+    <% else %>
+      <div class="retail-table-region" role="region" tabindex="0" aria-label="Processor deposit comparison">
+        <table class="w-full text-sm"><caption class="sr-only">NAB deposit records dated this day next to SwipeSimple card net</caption>
+          <thead class="border-b border-fog bg-haze"><tr><th scope="col" class="th">NAB merchant</th><th scope="col" class="th text-right">Batches</th><th scope="col" class="th text-right">NAB amount dated this day</th><th scope="col" class="th text-right">SwipeSimple card net</th><th scope="col" class="th text-right">Difference</th></tr></thead>
+          <tbody class="divide-y divide-fog"><% close.deposits_with_records.each do |deposit| %><% difference = close.deposit_difference_cents(deposit) %><tr>
+            <th scope="row" class="td text-left font-medium"><%= deposit.merchant_label %><span class="block text-xs font-normal text-mocha">Snapshot <%= retail_source_time(deposit.observed_at) %></span></th>
+            <td class="td text-right tabular-nums"><%= deposit.records.size %></td><td class="td retail-money text-right"><%= money.call(deposit.amount_cents) %></td><td class="td retail-money text-right"><%= money.call(close.card_net_cents) %></td>
+            <td class="td retail-money text-right <%= 'text-clay font-semibold' if difference && difference != 0 %>"><%= money.call(difference) %></td>
+          </tr><% end %></tbody>
+        </table>
+      </div>
+      <ul class="list-disc space-y-1 pl-5 text-xs text-mocha">
+        <li>Each merchant uses one NAB snapshot (the newest that covers this date); overlapping snapshots are never added together.</li>
+        <li>No NAB merchant has been chosen for SwipeSimple, and NAB currency is not confirmed. The difference is arithmetic for review, not a verified variance.</li>
+        <li>NAB dates are batch/deposit dates; a day’s card sales often fund on a later date. These are batch amounts, not proof of bank receipt.</li>
+      </ul>
+    <% end %>
+  </section>
+
+  <section id="close-transactions" class="retail-anchor card card-pad space-y-4">
+    <h2 class="font-display text-xl">Transactions</h2>
+    <p class="text-sm text-mocha">Every transaction on this day in the latest export, including excluded attempts. Download the full list as CSV from the header.</p>
+    <% if close.rows.empty? %>
+      <p class="text-sm text-mocha">No transactions are stored for this day.</p>
+    <% else %>
+      <%= report_table 'swipesimple-day', label: "SwipeSimple transactions on #{@date}", filename: "swipesimple-#{@date}" do %>
+        <table class="operations-table w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60"><tr>
+            <th scope="col" class="th" data-col="time">Time</th><th scope="col" class="th" data-col="number">Transaction #</th><th scope="col" class="th" data-col="account" data-default-hidden>Account</th>
+            <th scope="col" class="th" data-col="type">Type</th><th scope="col" class="th" data-col="status">Status</th><th scope="col" class="th" data-col="tender">Tender</th>
+            <th scope="col" class="th num" data-col="amount">Amount</th><th scope="col" class="th num" data-col="tip">Tip</th><th scope="col" class="th" data-col="totals">In totals</th>
+            <th scope="col" class="th" data-col="export" data-default-hidden>Export / row</th>
+          </tr></thead>
+          <tbody class="divide-y divide-fog"><% close.rows.each do |row| %><tr class="<%= 'text-mocha' unless row.status == 'Approved' %>">
+            <td class="td" data-sort-value="<%= row.occurred_at.to_i %>"><%= row.occurred_at.in_time_zone(SwipesimpleDayClose::ZONE).strftime('%-I:%M %p') %></td><td class="td font-mono text-xs"><%= row.source_number %></td><td class="td"><%= row.swipesimple_export.merchant_account %></td>
+            <td class="td"><%= row.transaction_type %></td><td class="td"><%= row.status %></td><td class="td"><%= (row.tender.presence || 'unknown').capitalize %></td>
+            <td class="td num retail-money" data-sort-value="<%= row.amount_cents %>"><%= money.call(row.amount_cents, row.swipesimple_export.currency) %></td>
+            <td class="td num retail-money" data-sort-value="<%= report_sort_cents(row.tip_cents) %>"><%= money.call(row.tip_cents, row.swipesimple_export.currency) %></td>
+            <td class="td"><%= row.status == 'Approved' ? 'Yes' : 'No · excluded' %></td><td class="td text-xs">#<%= row.swipesimple_export_id %> / <%= row.source_row %></td>
+          </tr><% end %></tbody>
+        </table>
+      <% end %>
+    <% end %>
+  </section>
+
+  <% if retail_business_access?('sales.write') %>
+    <section id="close-review" class="retail-anchor card card-pad space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-display text-xl">Record a local review</h2><span class="<%= close.reviewed? ? 'pill-fern' : 'pill-clay' %>"><%= close.reviewed? ? 'Current version reviewed' : 'Review needed' %></span></div>
+      <% if close.review %>
+        <p class="text-sm"><%= close.reviewed? ? 'Reviewed' : 'Last reviewed' %> by <strong><%= close.review.reviewed_by.display_name.presence || close.review.reviewed_by.email %></strong> on <time datetime="<%= close.review.reviewed_at.iso8601 %>"><%= retail_source_time(close.review.reviewed_at) %></time><% unless close.reviewed? %> · <span class="text-clay font-semibold">the SwipeSimple data changed since, so it needs another review</span><% end %>.</p>
+      <% end %>
+      <p class="text-sm text-mocha">Review the checks, totals and deposit above. A changed export requires another review. This records your review in Rupert only; it does not close a batch at SwipeSimple or post a deposit.</p>
+      <%= form_tag review_swipesimple_days_path, method: :post, class: 'space-y-3' do %>
+        <%= hidden_field_tag :date, @date.iso8601 %><%= hidden_field_tag :source_digest, close.source_digest %>
+        <div><%= label_tag :note, 'Review note / unresolved items', class: 'field-label' %><%= text_area_tag :note, close.review&.review_note, maxlength: 1000, rows: 4, class: 'input retail-notes', aria: { describedby: 'close-review-help' } %><p id="close-review-help" class="mt-1 text-xs text-mocha">A note is required when a check is flagged for review. Maximum 1,000 characters.</p></div>
+        <%= submit_tag 'Record review', class: 'btn-primary' %>
+      <% end %>
+    </section>
+  <% end %>
+</div>

@@ -3,41 +3,53 @@
 <div class="space-y-6">
   <%= render 'shared/time_navigation' %>
 
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Timesheets</h1>
-      <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? (@reviewer ? 'Your timesheets and assigned demo reviews.' : 'Your hours by week, submitted for review.') : 'Hours by week per staff member, submitted for review.' %></p>
-    </div>
+  <section class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="page-title">Timesheets</h1>
     <div class="flex flex-wrap gap-2">
-      <% if @reviewer && Current.user.can?('timesheets.read') %>
-        <%= link_to 'Run punch report', people_punch_history_path, class: 'btn-ghost btn-sm' %>
-      <% end %>
-      <% if policy(People::Timesheet).create? %>
-        <%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %>
-      <% end %>
+      <% if policy(People::Timesheet).create? %><%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %><% end %>
       <% unless @reviewer %><%= link_to "My time home", employee_app_path, class: "btn-ghost btn-sm" %><% end %>
     </div>
   </section>
 
-  <% if @reviewer %>
-    <nav aria-label="Timesheet review" class="flex flex-wrap gap-2" <%= tour_anchor('tabs') %>>
-      <% [['Needs review', 'submitted'], ['All timesheets', 'all'], ['Approved', 'approved'], ['Returned for correction', 'rejected'], ['Drafts', 'draft']].each do |label, status| %>
-        <% count = status == 'submitted' ? @awaiting : (@status_counts || {}).then { |c| status == 'all' ? c.values.sum : c.fetch(status, 0) } %>
-        <%= link_to "#{label} (#{count})", people_timesheets_path(status: status, period: @period, q: @query, view: params[:view].presence), class: "nav-pill #{@status == status ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@status == status ? 'page' : nil) } %>
+  <% status_labels = { 'submitted' => 'Needs review', 'all' => 'All timesheets', 'approved' => 'Approved', 'rejected' => 'Returned for correction', 'draft' => 'Drafts' } %>
+  <% status_count = ->(status) { status == 'submitted' ? @awaiting : status == 'all' ? (@status_counts || {}).values.sum : (@status_counts || {}).fetch(status, 0) } %>
+  <%= form_with url: people_timesheets_path, method: :get, class: 'card card-pad space-y-3', html: { 'aria-label': 'Timesheet filters' }, data: { turbo: false } do %>
+    <%= hidden_field_tag :view, @view %>
+    <div class="flex flex-wrap items-end gap-3">
+      <% weeks = (0..52).map { |n| Date.current.beginning_of_week - (n - 2).weeks } %>
+      <% from_choices = ([@from] + weeks).compact.uniq.sort.reverse %>
+      <% to_choices = ([@to] + weeks.map { |w| w + 6 }).compact.uniq.sort.reverse %>
+      <div class="min-w-0">
+        <%= label_tag :from, 'From', class: 'field-label' %>
+        <%= select_tag :from, options_for_select([['All dates', '']] + from_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @from&.iso8601), class: 'select' %>
+      </div>
+      <div class="min-w-0">
+        <%= label_tag :to, 'To', class: 'field-label' %>
+        <%= select_tag :to, options_for_select([['All dates', '']] + to_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @to&.iso8601), class: 'select' %>
+      </div>
+      <div class="min-w-0" <%= tour_anchor('tabs') %>>
+        <%= label_tag :status, 'Status', class: 'field-label' %>
+        <%= select_tag :status, options_for_select(status_labels.map { |key, label| ["#{label} (#{status_count.call(key)})", key] }, @status), class: 'select',
+              aria: { label: @reviewer ? 'Timesheet review' : 'Status' } %>
+      </div>
+      <div class="min-w-0">
+        <%= label_tag :q, 'Staff member', class: 'field-label' %>
+        <%= search_field_tag :q, @query, class: 'input', placeholder: 'Search by name' %>
+      </div>
+      <%= submit_tag 'Show', class: 'btn-primary', name: nil %>
+      <%= link_to 'Clear', people_timesheets_path(view: @view), class: 'btn-ghost btn-sm' %>
+      <%= link_to 'Export CSV', people_timesheets_path(format: :csv, status: @status, from: @from&.iso8601, to: @to&.iso8601, q: @query), class: 'btn-ghost btn-sm', data: { turbo: false } %>
+    </div>
+    <nav aria-label="Timesheet view" class="flex flex-wrap items-center gap-2 border-t border-fog pt-3 text-sm" <%= tour_anchor('views') %>>
+      <span class="text-mocha">Show as</span>
+      <% [['list', 'Rupert timesheets'], ['unified', 'All sources'], ['calendar', 'Calendar']].each do |key, label| %>
+        <%= link_to label, people_timesheets_path(request.query_parameters.merge(view: key, month: (key == 'calendar' ? (@month || @from || Date.current).strftime('%Y-%m') : nil)).compact), class: "nav-pill #{@view == key ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}", aria: { current: (@view == key ? 'page' : nil) } %>
+      <% end %>
+      <% if @reviewer && @awaiting.positive? && @status != 'submitted' %>
+        <%= link_to "#{@awaiting} waiting for review →", people_timesheets_path(status: 'submitted', view: 'list'), class: 'ml-auto font-semibold text-olive-deep underline' %>
       <% end %>
     </nav>
-    <% if @awaiting.positive? %>
-      <div class="rounded-xl border border-olive/30 bg-olive/10 px-4 py-2.5 text-sm text-olive"><%= @awaiting %> timesheet<%= @awaiting == 1 ? "" : "s" %> awaiting review. Review each day's hours and notes, then approve or return for correction. Your own timesheets need another reviewer. Demo hours are always excluded from payroll.</div>
-    <% end %>
-  <% elsif @awaiting.positive? %>
-    <div class="rounded-xl border border-olive/30 bg-olive/10 px-4 py-2.5 text-sm text-olive"><%= @awaiting %> timesheet<%= @awaiting == 1 ? "" : "s" %> awaiting review.</div>
   <% end %>
-
-  <nav aria-label="Timesheet view" class="flex flex-wrap gap-2" <%= tour_anchor('views') %>>
-    <%= link_to 'Rupert timesheets', people_timesheets_path(request.query_parameters.merge(view: 'list')), class: "nav-pill #{@view == 'list' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
-    <%= link_to 'All sources (unified)', people_timesheets_path(request.query_parameters.merge(view: 'unified')), class: "nav-pill #{@view == 'unified' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
-    <%= link_to 'Calendar', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: (@month || Date.current).strftime('%Y-%m'))), class: "nav-pill #{@view == 'calendar' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
-  </nav>
 
   <% if @view == 'calendar' %>
   <section class="card card-pad space-y-3">
@@ -110,41 +122,19 @@
   <%== pagy_nav(@pagy) if @pagy && @pagy.pages > 1 %>
   <% else %>
   <% if @reviewer %>
-    <% week_base = @week_start || week_start_for(Date.current) %>
     <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Timesheet summary">
-      <div class="stat"><p class="stat-label">Needs review</p><p class="stat-value mt-1"><%= @status_counts.fetch('submitted', 0) %></p><p class="text-xs text-mocha"><%= @awaiting %> across all weeks</p></div>
+      <div class="stat"><p class="stat-label">Needs review</p><p class="stat-value mt-1"><%= @status_counts.fetch('submitted', 0) %></p><p class="text-xs text-mocha"><%= @awaiting %> across all dates</p></div>
       <div class="stat"><p class="stat-label">Approved</p><p class="stat-value mt-1"><%= @status_counts.fetch('approved', 0) %></p></div>
       <div class="stat"><p class="stat-label">Returned / drafts</p><p class="stat-value mt-1"><%= @status_counts.fetch('rejected', 0) %> / <%= @status_counts.fetch('draft', 0) %></p></div>
       <div class="stat"><p class="stat-label">Hours in this view</p><p class="stat-value mt-1"><%= number_with_precision(@view_hours, precision: 1) %></p></div>
     </section>
 
-    <nav aria-label="Week" class="flex flex-wrap items-center gap-2">
-      <%= link_to '← Previous week', people_timesheets_path(status: @status, q: @query, wk: params[:wk].presence, period: (week_base - 7).iso8601), class: 'btn-ghost btn-sm' %>
-      <span class="text-sm font-medium"><%= @period ? "Week of #{week_base.strftime('%b %d, %Y')}" : 'All weeks' %></span>
-      <%= link_to 'Next week →', people_timesheets_path(status: @status, q: @query, wk: params[:wk].presence, period: (week_base + 7).iso8601), class: 'btn-ghost btn-sm' %>
-      <%= link_to 'This week', people_timesheets_path(status: @status, q: @query, view: 'list', wk: params[:wk].presence, period: week_start_for(Date.current).iso8601), class: 'btn-ghost btn-sm' %>
-      <% if @period %><%= link_to 'All weeks', people_timesheets_path(status: @status, q: @query, view: 'list'), class: 'btn-ghost btn-sm' %><% end %>
-    </nav>
   <% end %>
 
-  <%= form_tag people_timesheets_path, method: :get, class: "flex flex-wrap gap-2" do %>
-    <%= hidden_field_tag :view, "list" %>
-    <input type="search" name="q" value="<%= @query %>" placeholder="Search staff member" aria-label="Search staff member" class="input w-auto">
-    <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
-      <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
-      <% People::Timesheet.aasm.states.map(&:name).each do |status| %>
-        <option value="<%= status %>" <%= @status == status.to_s ? "selected" : "" %>><%= status.to_s.titleize %></option>
-      <% end %>
-    </select>
-    <input type="date" name="period" value="<%= params[:period] %>" class="input w-auto" title="Week of" aria-label="Week of">
-    <select name="wk" class="select w-auto" aria-label="Week runs"><% [['Mon–Sun', ''], ['Thu–Wed', 'thu'], ['Custom 7 days from date', 'custom']].each do |label, value| %><option value="<%= value %>" <%= params[:wk].to_s == value ? 'selected' : '' %>><%= label %></option><% end %></select>
-    <%= link_to 'Export CSV', people_timesheets_path(format: :csv, status: @status, period: @period, wk: params[:wk].presence, q: @query), class: 'btn-ghost btn-sm' %>
-    <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
-  <% end %>
 
   <% approvable = @timesheets.select { |t| t.submitted? && policy(t).approve? } %>
   <%= form_with url: bulk_approve_people_timesheets_path, method: :post, id: 'bulk-approve', data: { turbo_confirm: 'Approve the selected timesheets?' } do |f| %>
-    <%= hidden_field_tag :return_status, @status %><%= hidden_field_tag :return_period, @period %><%= hidden_field_tag :return_view, 'list' %><%= hidden_field_tag :return_q, @query %>
+    <%= hidden_field_tag :return_status, @status %><%= hidden_field_tag :return_period, @period %><%= hidden_field_tag :return_from, @from&.iso8601 %><%= hidden_field_tag :return_to, @to&.iso8601 %><%= hidden_field_tag :return_view, 'list' %><%= hidden_field_tag :return_q, @query %>
     <% if approvable.any? %>
       <div class="mb-2 flex flex-wrap items-center gap-2">
         <label class="flex items-center gap-1 text-sm"><input type="checkbox" onclick="document.querySelectorAll('#bulk-approve .bulk-box').forEach(function(b){b.checked=this.checked}.bind(this))"> Select all <%= approvable.size %></label>

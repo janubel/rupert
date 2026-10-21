@@ -50,6 +50,14 @@ Register cash variance is shown only for a closed session wholly contained in th
 
 A local review records the source digest and reviewer. An unchanged re-read preserves review; changed source facts require another review. Unresolved differences require a note. CSV exports include explicit count/minor-unit labels. Source registers are never closed or modified by Rupert. All store/day and image records are workspace scoped; only the creating cashier can manage a paired display.
 
+## Items sold
+
+Each store's daily close, and **View items sold** on the date page for all stores (`/ctrax_days/items?date=`), summarize completed, non-deleted receipt lines by C-Trax product/variant: units (one native line per unit), receipts, gross line amount, line tax, discounts, refunded units and net, with a CSV in minor units. Stored days have no line discounts, refund lines or SKUs. Order discounts are never allocated to items, so an item's discount/net stays **Unknown** when any of its receipts was discounted; refunded units stay Unknown when a receipt had a refund. SKU, barcode and category come from the current C-Trax stock read by native variant ID and stay Unknown when the variant is absent.
+
+The tie-out compares item line amounts with order subtotals, line tax with order tax, and items − order discounts + tax + shipping + shipping tax with order totals. Any difference is shown. Tips, card surcharges and source report refunds are listed separately because they are outside order totals.
+
+**Not in Rupert's catalog** lists sold variants without exact evidence (website IDs, SKU, barcode) for a current Shopify catalog item, using the Stock comparison matcher. An exact normalized name + explicit package match is only a review candidate. Nothing is created in Rupert, Shopify, Square or C-Trax.
+
 ## Operations and recovery
 
 Publish a new version only after migration, loader/assets, regression and real read checks. Back up the production database consistently with its encryption/runtime keys before migration. Never put live reports, account credentials or those keys in the public source repository. Keep an encrypted off-machine runtime backup in the owner's verified private repository. A source bundle restores code, not authentication. See [stock identity and API limits](ctrax.md).

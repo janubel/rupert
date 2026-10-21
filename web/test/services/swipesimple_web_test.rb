@@ -2,9 +2,12 @@
 
 require 'test_helper'
 require 'csv'
+require_relative '../support/swipesimple_web_stubs'
 
 class SwipesimpleWebTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
+  include SwipesimpleWebStubs
+
   setup do
     Current.tenant = tenants(:default_tenant)
     travel_to Time.iso8601('2026-10-16T03:00:00Z')
@@ -13,6 +16,8 @@ class SwipesimpleWebTest < ActiveSupport::TestCase
       vendor_approved: true, reporting_enabled: true, credentials_json: @credentials.to_json)
     stub_login
     stub_exports
+    stub_reports
+    stub_items
   end
 
   teardown do
@@ -22,7 +27,7 @@ class SwipesimpleWebTest < ActiveSupport::TestCase
 
   test 'own login reads full exports with isolated cookies and never makes business writes' do
     assert_no_difference ['Core::Order.count', 'Core::Payment.count', 'LedgerEntry.count'] do
-      assert_equal({ transactions: 13, invoices: 7 }, SwipesimpleWeb::Sync.call(connection: @connection))
+      assert_equal({ transactions: 13, invoices: 7, reports: :pulled, items: :updated }, SwipesimpleWeb::Sync.call(connection: @connection))
     end
     assert_equal 2, SwipesimpleExport.count
     assert_equal 20, SwipesimpleReportRow.count
@@ -164,27 +169,6 @@ class SwipesimpleWebTest < ActiveSupport::TestCase
 
   def fixture(kind)
     File.binread(Rails.root.join("test/fixtures/files/swipesimple_#{kind}.csv")).force_encoding(Encoding::UTF_8).gsub('\\r\\n', "\r\n")
-  end
-
-  def json_response(document)
-    { status: 200, body: document.to_json, headers: { 'Content-Type' => 'application/json' } }
-  end
-
-  def stub_login
-    return_url = '/connect/authorize/callback?state=fixture'
-    login_url = "https://login.cardflight.com/login?ReturnUrl=#{URI.encode_www_form_component(return_url)}"
-    stub_request(:get, 'https://swipesimple.com/sign_in').to_return(status: 302,
-      headers: { 'Location' => login_url, 'Set-Cookie' => 'swipe=own-session; Path=/; Secure' })
-    stub_request(:get, login_url).to_return(status: 200, body: '<html>Sign in</html>')
-    stub_request(:get, "https://login.cardflight.com/api/v1/login/context?returnUrl=#{URI.encode_www_form_component(return_url)}")
-      .to_return(json_response(data: { clientId: 'fixture-client' }))
-    stub_request(:post, 'https://login.cardflight.com/api/v1/login').with { |request| !request.headers['Cookie'].to_s.include?('swipe=') }
-      .to_return(json_response(data: { status: 'Authenticated' }).merge(headers: { 'Content-Type' => 'application/json', 'Set-Cookie' => 'cardflight=own-login; Path=/; Secure' }))
-    stub_request(:get, "https://login.cardflight.com#{return_url}").to_return(status: 302,
-      headers: { 'Location' => 'https://swipesimple.com/companies/42/dashboard' })
-    stub_request(:get, 'https://swipesimple.com/companies/42/dashboard').to_return(status: 200, body: '<html>Dashboard</html>')
-    stub_request(:get, 'https://swipesimple.com/transactions').with { |request| !request.headers['Cookie'].to_s.include?('cardflight=') }
-      .to_return(status: 200, body: '<a href="/companies/42/dashboard">Company</a>')
   end
 
   def stub_exports(transaction_text: fixture('transactions'))

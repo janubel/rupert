@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_020100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_050000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -351,6 +351,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_020100) do
     t.bigint "user_id"
     t.index ["tenant_id", "created_at"], name: "index_activity_logs_on_tenant_id_and_created_at"
     t.index ["tenant_id", "subject_type", "subject_id"], name: "idx_on_tenant_id_subject_type_subject_id_034734a708"
+  end
+
+  create_table "agent_feedbacks", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "api_access_token_id"
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.string "severity", default: "normal", null: false
+    t.string "status", default: "new", null: false
+    t.string "summary", null: false
+    t.text "details"
+    t.string "related_tool"
+    t.string "related_reference"
+    t.string "agent_name"
+    t.string "agent_model"
+    t.text "context"
+    t.text "owner_notes"
+    t.bigint "triaged_by_id"
+    t.datetime "triaged_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["api_access_token_id"], name: "index_agent_feedbacks_on_api_access_token_id"
+    t.index ["tenant_id", "created_at"], name: "index_agent_feedbacks_on_tenant_id_and_created_at"
+    t.index ["tenant_id", "status"], name: "index_agent_feedbacks_on_tenant_id_and_status"
+  end
+
+  create_table "agent_tool_issues", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "tool_name", null: false
+    t.string "error_kind", null: false
+    t.integer "occurrences", default: 0, null: false
+    t.string "last_message"
+    t.string "last_api_access_token_id"
+    t.datetime "first_seen_at", null: false
+    t.datetime "last_seen_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "last_seen_at"], name: "index_agent_tool_issues_on_tenant_id_and_last_seen_at"
+    t.index ["tenant_id", "tool_name", "error_kind"], name: "idx_agent_tool_issues_unique", unique: true
   end
 
   create_table "api_access_tokens", id: :string, force: :cascade do |t|
@@ -2345,6 +2384,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_020100) do
     t.check_constraint "status IN ('active', 'released')", name: "stock_reservations_status"
   end
 
+  create_table "swipesimple_day_reviews", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.date "business_date", null: false
+    t.integer "reviewed_by_id", null: false
+    t.datetime "reviewed_at", null: false
+    t.string "reviewed_digest", null: false
+    t.string "review_note", limit: 1000
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reviewed_by_id"], name: "index_swipesimple_day_reviews_on_reviewed_by_id"
+    t.index ["tenant_id", "business_date"], name: "index_swipesimple_day_reviews_on_tenant_id_and_business_date", unique: true
+    t.index ["tenant_id"], name: "index_swipesimple_day_reviews_on_tenant_id"
+  end
+
   create_table "swipesimple_exports", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.string "merchant_account", null: false
@@ -2377,6 +2430,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_020100) do
     t.index ["tenant_id", "merchant_account"], name: "idx_swipesimple_items_account", unique: true
   end
 
+  create_table "swipesimple_report_pulls", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "merchant_account", null: false
+    t.string "topic", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.integer "row_count", null: false
+    t.string "source_digest", null: false
+    t.text "original_csv", null: false
+    t.bigint "reconciliation_document_id"
+    t.datetime "pulled_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "merchant_account", "topic", "period_from"], name: "idx_swipesimple_report_pulls_scope"
+  end
+
   create_table "swipesimple_report_rows", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.integer "swipesimple_export_id", null: false
@@ -2395,6 +2464,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_020100) do
     t.index ["swipesimple_export_id", "identity"], name: "idx_swipesimple_export_identity", unique: true
     t.index ["swipesimple_export_id"], name: "index_swipesimple_report_rows_on_swipesimple_export_id"
     t.index ["tenant_id", "identity"], name: "idx_swipesimple_tenant_identity"
+  end
+
+  create_table "swipesimple_sales_days", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "merchant_account", null: false
+    t.date "business_date", null: false
+    t.bigint "subtotal_cents"
+    t.bigint "discounts_cents"
+    t.bigint "tax_cents"
+    t.bigint "tips_cents"
+    t.bigint "refunds_cents"
+    t.bigint "net_sales_cents"
+    t.bigint "net_card_cents"
+    t.bigint "net_cash_cents"
+    t.string "source_digest", null: false
+    t.datetime "pulled_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "merchant_account", "business_date"], name: "idx_swipesimple_sales_days_unique", unique: true
+  end
+
+  create_table "swipesimple_tax_days", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "merchant_account", null: false
+    t.date "business_date", null: false
+    t.string "tax_rate_label", null: false
+    t.decimal "rate_percent", precision: 7, scale: 4
+    t.bigint "pre_tax_cents"
+    t.bigint "tax_cents"
+    t.bigint "total_cents"
+    t.string "source_digest", null: false
+    t.datetime "pulled_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "merchant_account", "business_date", "tax_rate_label"], name: "idx_swipesimple_tax_days_unique", unique: true
   end
 
   create_table "sync_attempts", force: :cascade do |t|
@@ -2882,6 +2986,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_020100) do
   add_foreign_key "square_timecards", "employees"
   add_foreign_key "square_timecards", "tenants"
   add_foreign_key "stock_reservations", "stock_reservation_pools"
+  add_foreign_key "swipesimple_day_reviews", "tenants"
+  add_foreign_key "swipesimple_day_reviews", "users", column: "reviewed_by_id"
   add_foreign_key "swipesimple_exports", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "swipesimple_report_rows", "swipesimple_exports"
   add_foreign_key "sync_attempts", "tenants", on_delete: :cascade

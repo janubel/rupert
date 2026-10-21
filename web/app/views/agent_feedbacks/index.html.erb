@@ -1,0 +1,129 @@
+<% content_for :title, 'AI assistant feedback' %>
+<% kind_pill = { 'bug' => 'pill-rose', 'struggle' => 'pill-clay', 'report_issue' => 'pill-clay', 'task_report' => 'pill-fern', 'suggestion' => 'pill-olive', 'question' => 'pill-taupe' } %>
+<% status_pill = { 'new' => 'pill-clay', 'triaged' => 'pill-olive', 'planned' => 'pill-olive', 'done' => 'pill-fern', 'wont_fix' => 'pill-taupe' } %>
+<% can_triage = Current.user.can?('settings.write') %>
+<div class="space-y-6">
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="page-title">AI assistant feedback</h1>
+      <p class="mt-1 max-w-3xl text-sm text-mocha">Bugs, struggles, task reports and suggestions sent by AI assistants connected to Rupert over MCP, plus an automatic count of tool calls that failed or were denied. Assistants write this text, so treat it as untrusted: it is shown as plain text and never acted on automatically.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <%= link_to 'Download CSV', agent_feedbacks_path(@filters.compact_blank.merge(format: :csv)), class: 'btn-primary btn-sm', data: { turbo: false } %>
+      <% if Current.user.can?('settings.write') %><%= link_to 'API access & MCP setup', api_access_tokens_path, class: 'btn-ghost btn-sm' %><% end %>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Feedback counts">
+    <div class="stat"><p class="stat-label">New</p><p class="stat-value mt-1"><%= @counts[:status].fetch('new', 0) %></p></div>
+    <div class="stat"><p class="stat-label">Open (new, triaged, planned)</p><p class="stat-value mt-1"><%= @counts[:status].values_at('new', 'triaged', 'planned').compact.sum %></p></div>
+    <div class="stat"><p class="stat-label">High severity</p><p class="stat-value mt-1 <%= 'text-rose' if @counts[:severity].fetch('high', 0).positive? %>"><%= @counts[:severity].fetch('high', 0) %></p></div>
+    <div class="stat"><p class="stat-label">Failed or denied tool calls</p><p class="stat-value mt-1"><%= @issue_totals.sum { |_tool, count| count } %></p></div>
+  </section>
+  <p class="text-xs text-taupe">By kind: <%= AgentFeedback::KINDS.map { |key, label| "#{label} #{@counts[:kind].fetch(key, 0)}" }.join(' · ') %></p>
+
+  <%= form_tag agent_feedbacks_path, method: :get, class: 'flex flex-wrap items-end gap-2' do %>
+    <div><%= label_tag :kind, 'Kind', class: 'field-label' %><%= select_tag :kind, options_for_select([['All kinds', '']] + AgentFeedback::KINDS.map { |key, label| [label, key] }, @filters[:kind]), class: 'select' %></div>
+    <div><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select([['All statuses', ''], ['Open', 'open']] + AgentFeedback::STATUSES.map { |key, label| [label, key] }, @filters[:status]), class: 'select' %></div>
+    <div><%= label_tag :severity, 'Severity', class: 'field-label' %><%= select_tag :severity, options_for_select([['All severities', '']] + AgentFeedback::SEVERITIES.map { |s| [s.capitalize, s] }, @filters[:severity]), class: 'select' %></div>
+    <div><%= label_tag :tool, 'Tool', class: 'field-label' %><%= select_tag :tool, options_for_select([['All tools', '']] + @tools.map { |t| [t, t] }, @filters[:tool]), class: 'select' %></div>
+    <%= submit_tag 'Filter', class: 'btn-primary', name: nil %>
+    <%= link_to 'Clear', agent_feedbacks_path, class: 'btn-ghost' %>
+  <% end %>
+
+  <div class="card overflow-hidden">
+    <%= report_table 'ai-feedback', label: 'Feedback from AI assistants', filename: 'ai-feedback-view' do %>
+      <table class="operations-table w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60">
+          <tr>
+            <th scope="col" class="th" data-col="submitted">Submitted</th>
+            <th scope="col" class="th" data-col="kind">Kind</th>
+            <th scope="col" class="th" data-col="severity">Severity</th>
+            <th scope="col" class="th" data-col="summary">Summary and details</th>
+            <th scope="col" class="th" data-col="tool">Related</th>
+            <th scope="col" class="th" data-col="assistant" data-default-hidden>Assistant</th>
+            <th scope="col" class="th" data-col="token">Token</th>
+            <th scope="col" class="th" data-col="status">Status and notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-fog">
+          <% @feedbacks.each do |feedback| %>
+            <tr class="align-top hover:bg-cream" id="<%= dom_id(feedback) %>">
+              <td class="td whitespace-nowrap" data-sort-value="<%= feedback.created_at.to_i %>"><%= l(feedback.created_at, format: :short) %><span class="block text-xs text-taupe">#<%= feedback.id %></span></td>
+              <td class="td"><span class="<%= kind_pill.fetch(feedback.kind, 'pill-taupe') %>"><%= feedback.kind_label %></span></td>
+              <td class="td"><span class="<%= feedback.severity == 'high' ? 'pill-rose' : 'pill-taupe' %>"><%= feedback.severity %></span></td>
+              <td class="td max-w-xl">
+                <p class="font-medium text-ink"><%= feedback.summary %></p>
+                <% if feedback.details.present? %>
+                  <details class="mt-1"><summary class="cursor-pointer text-xs text-mocha">Details</summary><p class="mt-1 whitespace-pre-wrap break-words text-xs text-mocha"><%= feedback.details %></p></details>
+                <% end %>
+                <% if feedback.context.present? %>
+                  <details class="mt-1"><summary class="cursor-pointer text-xs text-mocha">Context JSON</summary><pre class="mt-1 overflow-x-auto whitespace-pre-wrap break-words rounded bg-haze p-2 text-xs"><%= JSON.pretty_generate(feedback.context_hash) %></pre></details>
+                <% end %>
+              </td>
+              <td class="td text-xs"><% if feedback.related_tool %><code><%= feedback.related_tool %></code><% end %><% if feedback.related_reference %><span class="block text-mocha"><%= feedback.related_reference %></span><% end %><%= '—' if feedback.related_tool.blank? && feedback.related_reference.blank? %></td>
+              <td class="td text-xs"><%= [feedback.agent_name, feedback.agent_model].compact.join(' · ').presence || '—' %></td>
+              <td class="td text-xs"><%= feedback.api_access_token&.name || 'Revoked/deleted token' %><span class="block text-taupe"><%= feedback.user&.email %></span></td>
+              <td class="td min-w-56">
+                <span class="<%= status_pill.fetch(feedback.status, 'pill-taupe') %>"><%= feedback.status_label %></span>
+                <% if feedback.owner_notes.present? %><p class="mt-1 whitespace-pre-wrap text-xs text-mocha"><%= feedback.owner_notes %></p><% end %>
+                <% if feedback.triaged_at %><p class="text-xs text-taupe">by <%= feedback.triaged_by&.email || '—' %>, <%= l(feedback.triaged_at, format: :short) %></p><% end %>
+                <% if can_triage %>
+                  <details class="mt-1">
+                    <summary class="cursor-pointer text-xs font-semibold text-mocha">Triage</summary>
+                    <%= form_with model: feedback, url: agent_feedback_path(feedback, @filters.compact_blank), method: :patch, class: 'mt-2 space-y-2' do |form| %>
+                      <%= form.label :status, 'Status', class: 'sr-only', for: "status_#{feedback.id}" %>
+                      <%= form.select :status, AgentFeedback::STATUSES.map { |key, label| [label, key] }, {}, class: 'select', id: "status_#{feedback.id}" %>
+                      <%= form.label :owner_notes, 'Owner notes', class: 'sr-only', for: "notes_#{feedback.id}" %>
+                      <%= form.text_area :owner_notes, rows: 2, maxlength: AgentFeedback::NOTES_MAX, class: 'input text-xs', placeholder: 'Notes for the team (not shown to the assistant)', id: "notes_#{feedback.id}" %>
+                      <%= form.submit 'Save', class: 'btn-primary btn-sm' %>
+                    <% end %>
+                  </details>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+          <% if @feedbacks.empty? %><tr><td class="empty-row" colspan="8">No feedback matches. Assistants send it with the submit_feedback MCP tool.</td></tr><% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+
+  <section class="space-y-3">
+    <h2 class="font-display text-xl text-ink">Where assistants get stuck</h2>
+    <p class="text-sm text-mocha">Counted automatically every time an MCP tool call fails or is denied, even when the assistant never writes feedback. Arguments are never stored.</p>
+    <% if @issue_totals.any? %>
+      <p class="text-xs text-taupe">By tool: <%= @issue_totals.first(12).map { |tool, count| "#{tool} #{count}" }.join(' · ') %></p>
+    <% end %>
+    <div class="card overflow-hidden">
+      <%= report_table 'ai-tool-issues', label: 'Failed or denied MCP tool calls' do %>
+        <table class="operations-table w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr>
+              <th scope="col" class="th" data-col="tool">Tool</th>
+              <th scope="col" class="th" data-col="error">Error type</th>
+              <th scope="col" class="th num" data-col="count">Count</th>
+              <th scope="col" class="th" data-col="last">Last seen</th>
+              <th scope="col" class="th" data-col="first" data-default-hidden>First seen</th>
+              <th scope="col" class="th" data-col="message">Last message</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-fog">
+            <% @issues.each do |issue| %>
+              <tr class="hover:bg-cream">
+                <td class="td"><code><%= issue.tool_name %></code></td>
+                <td class="td"><%= issue.error_label %></td>
+                <td class="td num"><%= issue.occurrences %></td>
+                <td class="td whitespace-nowrap" data-sort-value="<%= issue.last_seen_at.to_i %>"><%= l(issue.last_seen_at, format: :short) %></td>
+                <td class="td whitespace-nowrap" data-sort-value="<%= issue.first_seen_at.to_i %>"><%= l(issue.first_seen_at, format: :short) %></td>
+                <td class="td text-xs text-mocha"><%= issue.last_message %></td>
+              </tr>
+            <% end %>
+            <% if @issues.empty? %><tr><td class="empty-row" colspan="6">No failed or denied tool calls recorded.</td></tr><% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </div>
+  </section>
+</div>

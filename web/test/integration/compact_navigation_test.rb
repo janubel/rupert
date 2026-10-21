@@ -48,6 +48,18 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select '.account-menu', text: /Cashier/
   end
 
+  test 'account menu repeats nothing the area tabs already offer' do
+    get inventory_index_path
+    assert_response :success
+    assert_select '.account-menu a[href=?]', people_timesheets_path, count: 0
+    assert_select '.account-menu a[href=?]', learning_index_path, count: 0
+    assert_select '.account-menu a[href=?]', employee_app_path
+    assert_select 'nav[aria-label="Module areas"] a[aria-label="Team"]'
+    assert_select '.account-menu a[href=?]', time_clock_path, count: 0
+    assert_select 'nav[aria-label="Module areas"] a[aria-label="System"]'
+    assert_select '.account-menu a[href=?]', roadmap_path, count: 0
+  end
+
   test 'delegated sales writer without inventory read has no POS shortcut' do
     @admin.update_permission_overrides!(%w[dashboard.read sales.read sales.write])
     get sales_path
