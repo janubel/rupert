@@ -4,13 +4,13 @@
   <%= render 'shared/retail_navigation' %>
   <header class="flex flex-wrap items-start justify-between gap-3">
     <div><p class="eyebrow text-olive-deep">C-Trax daily close · <%= @day.business_date.strftime('%b %-d, %Y') %></p><h1 class="page-title mt-2"><%= @day.location.name %></h1><p class="mt-2 text-sm text-mocha"><%= @day.timezone %> · <%= @day.currency %> · Last pulled <time datetime="<%= @day.captured_at.iso8601 %>"><%= retail_source_time(@day.captured_at) %></time></p></div>
-    <div class="flex flex-wrap gap-2"><%= link_to 'Other days', ctrax_days_path(date: @day.business_date), class: 'btn-ghost' %><%= link_to 'Download checks', ctrax_day_path(@day, format: :csv), class: 'btn-ghost' %></div>
+    <div class="flex flex-wrap gap-2"><%= link_to 'Other days', ctrax_days_path(date: @day.business_date), class: 'btn-ghost' %><%= link_to 'Download checks', ctrax_day_path(@day, format: :csv), class: 'btn-ghost' %><%= link_to 'Download items sold', items_ctrax_days_path(date: @day.business_date, location_id: @day.location_id, format: :csv), class: 'btn-ghost' %></div>
   </header>
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Daily sales summary">
     <% [['Recorded sales', @reconciliation.sum(@reconciliation.orders, 'total')], ['Tax included', @reconciliation.sum(@reconciliation.orders, 'tax')], ['Tips · separate', @reconciliation.sum(@reconciliation.orders, 'tip')]].each do |label, value| %><div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value mt-2"><%= money.call(value) %></p></div><% end %>
     <div class="stat"><p class="stat-label">Completed orders</p><p class="stat-value mt-2"><%= @reconciliation.orders.size %></p><p class="mt-1 text-xs text-mocha">Source detail only</p></div>
   </section>
-  <nav aria-label="Daily close sections" class="flex flex-wrap gap-2"><a href="#close-controls" class="btn-ghost btn-sm">1 · Source checks</a><a href="#close-registers" class="btn-ghost btn-sm">2 · Register cash</a><a href="#close-orders" class="btn-ghost btn-sm">Sales journal</a><% if retail_business_access?('sales.write') %><a href="#close-review" class="btn-ghost btn-sm">3 · Local review</a><% end %></nav>
+  <nav aria-label="Daily close sections" class="flex flex-wrap gap-2"><a href="#close-controls" class="btn-ghost btn-sm">1 · Source checks</a><a href="#close-registers" class="btn-ghost btn-sm">2 · Register cash</a><a href="#close-items" class="btn-ghost btn-sm">Items sold</a><a href="#close-not-in-catalog" class="btn-ghost btn-sm">Not in catalog</a><a href="#close-orders" class="btn-ghost btn-sm">Sales journal</a><% if retail_business_access?('sales.write') %><a href="#close-review" class="btn-ghost btn-sm">3 · Local review</a><% end %></nav>
   <section id="close-controls" class="retail-anchor card card-pad space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-display text-xl">Source checks</h2><span class="<%= @reconciliation.matched? ? 'pill-fern' : 'pill-clay' %>"><%= @reconciliation.matched? ? 'Controls match' : 'Needs review' %></span></div>
     <p class="text-sm text-mocha">Order detail is compared with C-Trax’s independent report. Tender receipts, tips, processor fees, and bank deposits are separate evidence; do not add them to sales again.</p>
@@ -30,6 +30,7 @@
       </article>
     <% end %></div>
   </section>
+  <%= render 'items', items: @items, date: @day.business_date, location_id: @day.location_id %>
   <section id="close-orders" class="retail-anchor card card-pad space-y-4">
     <h2 class="font-display text-xl">Sales journal</h2><p class="text-sm text-mocha">Each receipt keeps its source products and tender records. Order totals, base tender, tips, and surcharges stay separate.</p>
     <% if @day.orders.empty? %><p class="text-sm text-mocha">No source orders are stored for this business date.</p><% end %>

@@ -16,6 +16,9 @@
   <% if @days.empty? %>
     <section class="card card-pad space-y-3"><h2 class="font-display text-xl">No stored sales for this date</h2><p class="text-sm text-mocha">Pull this business date to read source orders, register sessions, and report controls. Missing imports do not mean zero sales.</p><% if retail_business_access?('settings.read') %><%= link_to 'C-Trax connection', pos_connection_path('ctrax'), class: 'btn-ghost' %><% else %><p class="text-sm text-mocha">Ask a manager with sync access to pull this business date.</p><% end %></section>
   <% end %>
+  <% if @days.any? %>
+    <section class="card card-pad flex flex-wrap items-center justify-between gap-3" aria-label="Items sold on this date"><div><h2 class="font-display text-xl">Items sold</h2><p class="mt-1 text-sm text-mocha">Item totals, a tie-out to order totals and sold items missing from Rupert’s catalog<%= ' for every store' if @days.many? %>.</p></div><div class="flex flex-wrap gap-2"><%= link_to 'View items sold', items_ctrax_days_path(date: @date), class: 'btn-primary' %><%= link_to 'Download CSV', items_ctrax_days_path(date: @date, format: :csv), class: 'btn-ghost' %></div></section>
+  <% end %>
   <div class="grid gap-4 lg:grid-cols-2">
     <% @days.each do |day| %>
       <% reconciliation = Ctrax::Reconciliation.new(day) %>
