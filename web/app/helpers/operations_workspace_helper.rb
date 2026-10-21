@@ -13,6 +13,7 @@ module OperationsWorkspaceHelper
     when :stock
       [['Inventory', workspace_inventory_index_path, 'inventory.read', 'inventory/workspace'],
        ['Stock comparison', stock_comparison_path, 'inventory.read', 'inventory/comparison'],
+       ['Product names', product_names_path, 'inventory.read', 'product_names/index'],
        ['Transfers', stock_requests_path(kind: 'transfer'), 'inventory.read', 'stock_requests/transfer'],
        ['Backorders', stock_requests_path(kind: 'backorder'), 'inventory.read', 'stock_requests/backorder'],
        ['Reservations', stock_reservations_path, 'inventory.read', 'stock_reservations'],
@@ -78,7 +79,7 @@ module OperationsWorkspaceHelper
   end
 
   def operations_workspace_page?
-    controller_path.start_with?('finance/') || %w[bookkeeping books_desks period_locks sales inventory inventory_counts inventory_count_scans inventory_exceptions reconcile ledger financial_close business_snapshots bank_statements book_approvals books_check daily_reconciliations reconciliation_follow_ups reconciliation_documents money_reconciliations cash_forecasts].include?(controller_path)
+    controller_path.start_with?('finance/') || %w[bookkeeping books_desks period_locks sales inventory product_names inventory_counts inventory_count_scans inventory_exceptions reconcile ledger financial_close business_snapshots bank_statements book_approvals books_check daily_reconciliations reconciliation_follow_ups reconciliation_documents money_reconciliations cash_forecasts].include?(controller_path)
   end
 
   def operations_source_name(value)
