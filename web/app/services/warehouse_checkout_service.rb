@@ -68,7 +68,7 @@ class WarehouseCheckoutService
   def prepare_attempt
     WarehouseCart.transaction do
       # First statement is a write: serialize the budget across Puma processes
-      # in SQLite. No transaction spans the gateway request.
+      # on SQLite. No transaction spans the gateway request.
       Tenant.where(id: @cart.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
       @cart.lock!
       if @cart.checked_out?

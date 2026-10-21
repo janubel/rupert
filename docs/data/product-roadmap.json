@@ -7,7 +7,7 @@
       "id": "0",
       "name": "Now \u00b7 reliable SQLite operations",
       "goal": "Ship the feature catalog, planner maintenance and conservative worker concurrency. Reconcile production documentation.",
-      "acceptance": "SQLite CI passes; authenticated catalog renders; diagnostics contain no customer data; Pages links and mobile layout verified."
+      "acceptance": "Both adapter CI jobs pass; authenticated catalog renders; diagnostics contain no customer data; Pages links and mobile layout verified."
     },
     {
       "id": "1",

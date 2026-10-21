@@ -32,7 +32,7 @@ These source views do not approve hours or generate payroll. Counted Square hist
 
 Automatic C-Trax labor refresh is enabled and verified on SER8 for Herbal Healers as of October 17, 2026. An active account administrator with account-management and timesheet-write permission can opt the workspace in from C-Trax history. Server reads dispatch every 15 minutes at minutes 02, 17, 32 and 47; queue delays and complete-source validation affect actual pickup time. Reviewer status visibility does not grant configuration permission. See the [automatic refresh workflow and limits](ops/ctrax-timesheet-refresh.md).
 
-The workflow uses a transaction and tenant writer lock before overlap checks, daily totals, mutations, and reviews. Payroll generation takes the same lock before reading approved hours. Timesheet events preserve changes, actor, and review history. The existing activity trail records creation/deletion and workflow actions.
+The workflow uses a transaction and tenant writer lock before overlap checks, daily totals, mutations, and reviews; this uses SQLite's writer lock. Payroll generation takes the same lock before reading approved hours. Timesheet events preserve changes, actor, and review history. The existing activity trail records creation/deletion and workflow actions.
 
 ## Web app installation and device sessions
 

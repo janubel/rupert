@@ -4,13 +4,13 @@ require 'test_helper'
 require 'sqlite3'
 
 class BackupServiceTest < ActiveSupport::TestCase
-  test 'restore refuses before changing the supplied snapshot' do
+  test 'restore refuses before invoking any database command' do
+    BackupService.expects(:system).never
     Dir.mktmpdir do |dir|
       path = File.join(dir, 'synthetic.sqlite3')
-      File.binwrite(path, 'synthetic SQLite snapshot')
+      File.binwrite(path, 'SQLite format 3 synthetic snapshot')
       error = assert_raises(BackupService::RestoreError) { BackupService.restore!(path) }
       assert_match(/offline maintenance/, error.message)
-      assert_equal 'synthetic SQLite snapshot', File.binread(path)
     end
   end
 

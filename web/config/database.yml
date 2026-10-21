@@ -1,29 +1,33 @@
-# SQLite is the only supported database. Keep data on local persistent storage.
 <%
 requested_adapter = ENV.fetch("RUPERT_DB_ADAPTER", "sqlite3")
 raise "Rupert supports SQLite only; remove RUPERT_DB_ADAPTER or set it to sqlite3" unless requested_adapter == "sqlite3"
-database_url = ENV.fetch("DATABASE_URL", "")
-raise "Rupert supports SQLite only; unset DATABASE_URL and use RUPERT_SQLITE_DATABASE_* paths" unless database_url.empty?
+raise "Rupert supports SQLite only; unset DATABASE_URL and use RUPERT_SQLITE_DATABASE_* paths" unless ENV.fetch("DATABASE_URL", "").empty?
 %>
+# SQLite is the only supported database (production, CI, development, test).
+# See docs/ops/sqlite-incus.md for deployment tradeoffs and tuning.
 default: &default
   adapter: sqlite3
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+  schema_dump: schema.rb
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   timeout: <%= ENV.fetch("SQLITE_BUSY_TIMEOUT_MS", 5000) %>
   journal_mode: wal
   synchronous: normal
-  schema_dump: schema_sqlite.rb
+  # One writer, many readers: keep the WAL bounded, enforce FK integrity, and
+  # give the single process a useful page cache. See docs/ops/sqlite-incus.md.
   pragmas:
     foreign_keys: true
-    journal_size_limit: 67108864
-    mmap_size: 134217728
-    cache_size: -20000
+    journal_size_limit: 67108864   # 64 MB: WAL is truncated after checkpoints
+    mmap_size: 134217728           # 128 MB read-only mmap of the database file
+    cache_size: -20000             # ~20 MB per connection (negative = KiB)
     temp_store: memory
 
 development:
   <<: *default
   database: <%= ENV.fetch("RUPERT_SQLITE_DATABASE_DEVELOPMENT", "storage/development.sqlite3") %>
 
-# Tests always use a separate file, independent of the production setting.
+# Warning: The database defined as "test" will be erased and
+# re-generated from your development database when you run "rake".
+# Do not set this db to the same as development or production.
 test:
   <<: *default
   database: <%= ENV.fetch("RUPERT_SQLITE_DATABASE_TEST", "storage/test.sqlite3") %>

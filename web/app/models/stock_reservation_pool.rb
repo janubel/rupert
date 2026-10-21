@@ -55,7 +55,7 @@ class StockReservationPool < ApplicationRecord
 
   def serialize_allocation
     self.class.transaction do
-      # Write before reading availability so SQLite acquires its writer lock
+      # Write before reading availability: SQLite acquires its writer lock
       # without a read-to-write upgrade race.
       self.class.where(id: id).update_all('lock_version = lock_version + 1')
       yield

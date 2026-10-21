@@ -17,6 +17,8 @@ jobs:
       - name: Run all browser-controller tests
         run: node --test web/test/javascript/*_test.mjs
   CI:
+    # The job name is a required status check and is read by
+    # deploy/ser8/rupert-autodeploy.sh; keep it in sync with both.
     name: CI (sqlite3)
     runs-on: ubuntu-latest
     # The app requires Ruby ~> 4.0, which the ruby/setup-ruby action does not

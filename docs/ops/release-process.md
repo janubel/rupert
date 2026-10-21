@@ -1,6 +1,6 @@
 # Release process
 
-GitHub does not deploy Rupert. A release is a tag plus a human promotion on SER8. `main` is always deployable; every PR must pass SQLite CI, Security (bundler-audit, Brakeman baseline) and the product-site/doc-link checks.
+GitHub does not deploy Rupert. A release is a tag plus a human promotion on SER8. `main` is always deployable; every PR must pass CI (SQLite), Security (bundler-audit, Brakeman baseline) and the product-site/doc-link checks.
 
 ## 1. Cut the release (on a laptop)
 
@@ -53,5 +53,5 @@ Code: `git checkout <previous tag>` in `/opt/rupert`, rebuild assets, reload/res
 
 - Prefer additive migrations (new tables, nullable columns, new indexes). Backfill in a separate step; drop old columns in a later release.
 - Never run a migration that rewrites a large table during opening hours; SQLite holds the write lock for its duration.
-- `db/schema_sqlite.rb` is the canonical schema dump; CI loads it against SQLite.
+- `db/schema.rb` is the single SQLite schema dump and changes with every migration; CI loads it.
 - Rehearse every migration on a restored copy (`bin/restore-drill --keep`, then `RUPERT_SQLITE_DATABASE_PRODUCTION=<copy> bin/rails db:migrate`) before promoting.

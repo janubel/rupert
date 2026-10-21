@@ -27,7 +27,12 @@
 
   <section>
     <h2>Database</h2>
-    <p>The October 13, 2026 cutover report records production on SQLite with FTS5 search. The live instance and release <code>11af6b8</code> were verified on October 14; see the <a href="https://github.com/techmore/rupert/blob/main/docs/ops/deployment-2026-10-14.md">deployment receipt</a>. See <a href="sqlite-incus.html">SQLite and Incus operations</a> for tuning, recovery and scaling decisions.</p>
+    <p>SQLite with FTS5 is the only supported database. Leave <code>DATABASE_URL</code> unset; configure the SQLite file with <code>RUPERT_SQLITE_DATABASE_PRODUCTION</code>. The October 13, 2026 cutover report records the original production migration. The live instance and release <code>11af6b8</code> were verified on October 14; see the <a href="https://github.com/techmore/rupert/blob/main/docs/ops/deployment-2026-10-14.md">deployment receipt</a>. See <a href="sqlite-incus.html">SQLite and Incus operations</a> for tuning, recovery and scaling decisions.</p>
+  </section>
+
+  <section>
+    <h2>Optional Docker Compose</h2>
+    <p>Compose runs a SQLite preflight and migrations before starting web/jobs. An existing deployment must supply a verified, nonempty SQLite database in the persistent <code>rupert-storage</code> volume at <code>/app/storage/production.sqlite3</code>. Only a brand new installation should set <code>RUPERT_INITIALIZE_DATABASE=1</code> for its first start; unset it after initialization. Existing PostgreSQL data is not converted by Compose. Preserve old volumes and backups during any transition.</p>
   </section>
 
   <section>
@@ -37,7 +42,7 @@
 
   <section>
     <h2>Continuous integration</h2>
-    <p>CI runs in the official <code>ruby:4.0</code> container against SQLite: RuboCop, migrations, Tailwind build, asset precompile, and the full test suite. Every push or pull request triggers it.</p>
+    <p>CI runs in the official <code>ruby:4.0</code> container against SQLite, including RuboCop, migrations, Tailwind build, asset precompile, and the full test suite. Every push or pull request triggers it.</p>
   </section>
 </main>
 

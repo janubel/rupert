@@ -5,7 +5,7 @@ Tick every line before Rupert is the system a shift depends on. Owner items are 
 ## Code and configuration
 - [ ] `main` deployed to SER8 and `curl -sI https://rupert.stoverparc.org/up | grep x-rupert-build` matches the release tag (release process doc).
 - [ ] `shopify app deploy` run after merging, so the Partner Dashboard `application_url` and compliance webhook URIs point at `rupert.stoverparc.org` (owner).
-- [ ] `/etc/rupert.env` has `HOST`, `SECRET_KEY_BASE`, all three `RAILS_ENCRYPTION_*`, `SHOPIFY_API_KEY/SECRET`, and optionally `SENTRY_DSN` (environment reference doc). Rupert selects SQLite without a database-adapter variable.
+- [ ] `/etc/rupert.env` has `HOST`, `SECRET_KEY_BASE`, all three `RAILS_ENCRYPTION_*`, `SHOPIFY_API_KEY/SECRET`, and optionally `SENTRY_DSN` (environment reference doc).
 - [ ] Shopify sync credentials saved in Settings (client id/secret, shop domain, `SHOPIFY_LOCATION_ID` if more than one location).
 - [ ] Square: token saved only if Square is actually in use; `SQUARE_ENVIRONMENT` matches the token (owner decision).
 - [ ] `bin/rails ops:encrypt_shop_tokens` run once after the upgrade that encrypted `shops.shopify_token`.

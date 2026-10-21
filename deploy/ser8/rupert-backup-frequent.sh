@@ -18,7 +18,6 @@ set +a
 OUT="${OUT:-/var/backups/rupert/frequent}"
 RETAIN_MIN="${RETAIN_MIN:-1440}"
 SQLITE_DB="${RUPERT_SQLITE_DATABASE_PRODUCTION:-${APP_DIR:-/opt/rupert}/web/storage/production.sqlite3}"
-[ -r "$SQLITE_DB" ] || { echo "SQLite database is missing or unreadable: $SQLITE_DB" >&2; exit 1; }
 install -d -m 0700 "$OUT"
 
 # One run at a time: a slow snapshot must not stack up behind the next tick.

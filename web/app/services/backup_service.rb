@@ -2,8 +2,8 @@
 
 require 'fileutils'
 
-# Instance snapshot downloads for the Settings GUI and backup jobs. SQLite
-# snapshots use VACUUM INTO; restore requires offline maintenance.
+# Instance snapshot downloads for the Settings GUI and backup jobs, taken with
+# SQLite VACUUM INTO. Restore requires offline maintenance.
 class BackupService
   class RestoreError < StandardError; end
 
@@ -20,9 +20,9 @@ class BackupService
     end
 
     def restore!(_source_path)
-      # A request cannot quiesce other web/job writers. Even a transactional
-      # restore can discard writes committed since its recovery backup; replaying
-      # that older snapshot after a failed restore makes the loss worse.
+      # A request cannot quiesce other web/job writers. Replacing the database
+      # file underneath them can discard committed writes, and replaying an older
+      # snapshot after a failed restore makes the loss worse.
       raise RestoreError, 'Database restore requires offline maintenance with web and jobs stopped and a verified consistent recovery backup. No database files were changed.'
     end
 

@@ -114,7 +114,7 @@ class AutodeployTest(unittest.TestCase):
 
     def test_pending_or_red_ci_is_not_deployed(self):
         self.commit('feature')
-        for checks, word in [(check_runs(), 'pending'),
+        for checks, word in [(check_runs(('Product site consistency', 'success')), 'pending'),
                              (check_runs(('CI (sqlite3)', 'failure')), 'red')]:
             self.set_checks(checks)
             result, calls = self.run_deploy()
@@ -124,6 +124,12 @@ class AutodeployTest(unittest.TestCase):
     def test_rerun_that_passed_supersedes_earlier_failure(self):
         self.commit('feature')
         self.set_checks(check_runs(('CI (sqlite3)', 'failure'), ('CI (sqlite3)', 'success')))
+        result, _ = self.run_deploy()
+        self.assertIn('healthy', result.stdout)
+
+    def test_retired_postgresql_check_is_ignored(self):
+        self.commit('feature')
+        self.set_checks(check_runs(('CI (postgresql)', 'failure'), ('CI (sqlite3)', 'success')))
         result, _ = self.run_deploy()
         self.assertIn('healthy', result.stdout)
 

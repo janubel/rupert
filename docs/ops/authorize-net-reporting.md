@@ -59,7 +59,7 @@ Daily totals reflect the **latest imported state**, not a historical ledger of e
 
 ## Verification
 
-Local validation: 835 SQLite Rails tests / 6,077 assertions passed; all 444 Ruby files passed repository RuboCop. Generated product-site consistency, 19 documentation-page link checks and `git diff --check` passed. The application and CI support SQLite only.
+At implementation time, local validation passed 835 SQLite Rails tests / 6,077 assertions; all 444 Ruby files passed repository RuboCop. Generated product-site consistency, 19 documentation-page link checks and `git diff --check` passed. Current repository CI runs the suite against SQLite only; these local counts are historical evidence.
 
 Official schema and reference were downloaded directly over HTTPS. Synthetic API fixtures test pagination, source IDs, settlement/refund/void transitions, optional tips, exact decimal parsing, merchant mismatch, tenant/environment isolation, atomic failures, setup changes, OAuth read scopes/refresh rotation, bounded TLS transport and sanitized errors. Request/integration tests cover encrypted blank forms, explicit saves, queued imports, read-only permissions and daily totals beyond the display limit. Portal reporting visibility was inspected, but live API entitlement, processor field population, bank deposits and initial OAuth onboarding remain unverified. Existing Transaction Keys are not redisplayed by the portal; obtain the existing key securely from the owner or current checkout integration instead of rotating it during setup.
 

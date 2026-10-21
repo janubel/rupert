@@ -7,7 +7,7 @@ class SearchSqlProbe < ActiveRecord::Base
 end
 
 class SearchSqlTest < ActiveSupport::TestCase
-  test 'fallback matches case-insensitively with SQLite LIKE' do
+  test 'fallback uses a case-insensitive LIKE' do
     sql = SearchSql.contains_any(%w[sku title])
 
     assert_includes sql, 'LIKE ? COLLATE NOCASE'

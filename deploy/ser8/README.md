@@ -20,9 +20,9 @@ Check by hand: `~/.local/bin/rupert-sync-watch.sh` (exit 0 = fresh). `MAX_AGE_MI
 ## Auto-deploy (`rupert-autodeploy`)
 
 Runs **inside the `rupert` Incus container** as root. Every 5 minutes it fetches `origin/main` and deploys it to
-`/opt/rupert` only when all of these hold: the move is a fast-forward, the checkout is clean, and the latest
-`CI (sqlite3)` check is green for that commit (read from the public GitHub API, no token; for a re-run job only its
-latest run counts).
+`/opt/rupert` only when all of these hold: the move is a fast-forward, the checkout is clean, and the `CI (sqlite3)`
+check is green for that commit (read from the public GitHub API, no token; for a re-run job
+only its latest run counts).
 
 Each deploy takes a SQLite backup first (last 5 kept in `/var/backups/rupert-autodeploy`), then runs `bundle install`,
 `db:migrate` and `assets:precompile`, restarts `rupert-web` and `rupert-jobs`, and checks `/up`. If the health check
@@ -41,8 +41,4 @@ systemctl daemon-reload && systemctl enable --now rupert-autodeploy.timer
 Check by hand: `DRY_RUN=1 /usr/local/sbin/rupert-autodeploy.sh`. Logs: `journalctl -u rupert-autodeploy`.
 Stop it with `systemctl disable --now rupert-autodeploy.timer`.
 
-The unit runs the installed `/usr/local/sbin/rupert-autodeploy.sh` copy, not
-the repository file. When updating its CI gate, install the SQLite-only source
-script to that path before relying on auto-deploy; an older installed copy can
-still wait for a retired PostgreSQL check. This repository change does not
-update host files or enable/disable the timer.
+When updating an installed watcher, replace the copied `/usr/local/sbin/rupert-autodeploy.sh` with the current repository version before re-enabling the timer. Older copies may still require the retired PostgreSQL CI check and otherwise keep deployments blocked. The source script now gates on `CI (sqlite3)` only.

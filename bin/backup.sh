@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rupert SQLite database backup: snapshot the production database (gzip) plus a copy of
+# Rupert database backup: snapshot the SQLite production database (gzip) plus a copy of
 # the .env (boot keys + encryption keys) and the encrypted settings table
 # (DB-managed credentials such as Square/Shopify tokens). Restoring needs all
 # three: .env holds the RAILS_ENCRYPTION_* keys that decrypt the settings dump.
@@ -20,14 +20,13 @@ install -d -m 0700 "$OUT"
 chmod 0700 "$OUT"
 
 TS="$(date +%Y%m%d-%H%M)"
-DUMP="$OUT/rupert-$TS.sql.gz"   # Historical filename; the archive contains a gzipped SQLite database.
+DUMP="$OUT/rupert-$TS.sql.gz"   # historical name: the file is a gzipped .sqlite3 snapshot
 DUMP_TMP="$DUMP.partial"
 SETTINGS_TMP="$OUT/settings-$TS.sql.partial"
 ENV_TMP="$OUT/env-$TS.partial"
 
 # Consistent snapshot while the app is writing (VACUUM INTO never blocks readers/writers for long).
 SQLITE_DB="${RUPERT_SQLITE_DATABASE_PRODUCTION:-${APP_DIR:-/opt/rupert}/web/storage/production.sqlite3}"
-[ -r "$SQLITE_DB" ] || { echo "SQLite database is missing or unreadable: $SQLITE_DB" >&2; exit 1; }
 SNAP="$OUT/.snapshot-$TS.sqlite3"
 rm -f "$SNAP"
 sqlite3 "$SQLITE_DB" "VACUUM INTO '$SNAP'"

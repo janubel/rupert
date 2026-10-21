@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Contains search uses SQLite FTS5 trigram indexes for longer queries and a
-# case-insensitive LIKE fallback for short queries or schema-loaded databases.
+# SQLite contains search: FTS5 trigram indexes for longer queries and a
+# case-insensitive LIKE fallback for short queries or schema-loaded DBs.
 module SearchSql
   module_function
 
@@ -38,7 +38,7 @@ module SearchSql
     false
   end
 
-  # schema_sqlite.rb preserves SQLite virtual tables but not their triggers. Test
+  # schema.rb preserves SQLite virtual tables but not their triggers. Test
   # worker databases and production instances created from the schema dump can
   # therefore start with an empty external-content index. Repair it on the
   # first search, before returning any FTS results.

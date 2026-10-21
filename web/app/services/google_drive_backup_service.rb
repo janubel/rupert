@@ -8,9 +8,9 @@ require 'tempfile'
 
 # Whole-instance Google Drive backup, configured only by the platform operator.
 # Tenant-owned Drive settings are never trusted as a snapshot destination.
-# Backups are a consistent SQLite snapshot, uploaded to the owner's Drive with
-# no external sharing, pruned to the retention window, and every attempt is
-# recorded in the BackupLog table for verification.
+# Backups are a consistent DB snapshot (SQLite VACUUM INTO), uploaded to the
+# owner's Drive with no external sharing, pruned to the retention window, and
+# every attempt is recorded in the BackupLog table for verification.
 class GoogleDriveBackupService
   class NotConfiguredError < StandardError; end
   class NotConnectedError < StandardError; end

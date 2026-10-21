@@ -2,7 +2,7 @@
   "scan_info": {
     "app_path": "/__w/rupert/rupert/web",
     "rails_version": "8.1.4",
-    "security_warnings": 19,
+    "security_warnings": 20,
     "start_time": "2026-10-19 21:46:27 +0000",
     "end_time": "2026-10-19 21:46:43 +0000",
     "duration": 16.785163095,

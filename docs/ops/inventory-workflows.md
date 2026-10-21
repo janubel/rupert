@@ -100,6 +100,6 @@ Valmar is the business-reported payment-services provider; this store's actual g
 
 Run both adapter suites and review tenant isolation, source completeness, replay, concurrent deduction/mapping and reservation-capacity checks before promotion. Rehearse migrations on a private SQLite copy. Take a consistent backup, verify a separate restore, retain an Incus snapshot and migrate before starting the new code. Keep the SQLite single-worker default; greater concurrency requires measured evidence.
 
-Retain recipe versions, material-use receipts, movements, reservations and explicit mapping decisions during rollback. Dropping tables discards business records. The frozen pre-cutover PostgreSQL database is historical evidence, not a supported runtime or restore source.
+Retain recipe versions, material-use receipts, movements, reservations and explicit mapping decisions during rollback. Dropping tables discards business records. Never switch to the frozen PostgreSQL cutover database without reconciling subsequent SQLite writes.
 
 Purchasing forms and mutations require purchasing read access as well as the relevant write permission. Warehouse hold details require inventory read access, and release requires both sales and inventory read/write access. Future-dated inventory reads contribute no local or warehouse capacity and cannot justify releasing a held checkout, even if another location has a valid read.

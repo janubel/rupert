@@ -11,12 +11,15 @@ Two kinds of configuration exist. **Boot-time variables** live in `/etc/rupert.e
 | `ADDITIONAL_HOSTS` | no | Comma-separated extra hostnames allowed by host authorization |
 | `SECRET_KEY_BASE` | yes | Session/cookie signing. `bin/rails secret` |
 | `RAILS_ENCRYPTION_PRIMARY_KEY`, `RAILS_ENCRYPTION_DETERMINISTIC_KEY`, `RAILS_ENCRYPTION_KEY_DERIVATION_SALT` | yes | Active Record encryption for every credential and document column. Generate once with `bin/rails db:encryption:init`; **never change without re-encrypting** |
-| `RUPERT_SQLITE_DATABASE_DEVELOPMENT` / `RUPERT_SQLITE_DATABASE_TEST` / `RUPERT_SQLITE_DATABASE_PRODUCTION` | no | Per-environment SQLite file path; test always uses a separate file. SQLite is the only supported database |
+| `RUPERT_SQLITE_DATABASE_PRODUCTION` | no | Path of the SQLite file (default `storage/production.sqlite3`) |
+| `RUPERT_SQLITE_DATABASE_DEVELOPMENT`, `RUPERT_SQLITE_DATABASE_TEST` | no | Per-environment SQLite paths; defaults are under `storage/` |
+| `DATABASE_URL` | must be unset | Any nonempty value is rejected, including a SQLite URL. Configure the database with the `RUPERT_SQLITE_DATABASE_*` path variables instead. |
+| `RUPERT_DB_ADAPTER` | no | Omit it; legacy value `sqlite3` is accepted. Any other explicit adapter value is rejected. |
 | `SQLITE_BUSY_TIMEOUT_MS` | no | Writer wait before `SQLITE_BUSY` (default 5000) |
 | `RAILS_MAX_THREADS` / `RAILS_MIN_THREADS` | no | Puma threads and AR pool (default 5) |
 | `WEB_CONCURRENCY` | no | Puma workers (unset: single process, right for SER8) |
 | `PORT` | no | Puma port (3000) |
-| `JOB_THREADS` | no | Solid Queue worker threads (default 1) |
+| `JOB_THREADS` | no | Solid Queue worker threads (default 1: SQLite has one writer) |
 | `JOB_CONCURRENCY` | no | Solid Queue worker processes (default 1) |
 | `RAILS_LOG_LEVEL` | no | `info` (default) or `debug` |
 | `RAILS_LOG_TO_STDOUT` | no | `1` to log to journald/stdout |
@@ -27,33 +30,9 @@ Two kinds of configuration exist. **Boot-time variables** live in `/etc/rupert.e
 | `SENTRY_DSN` | no | Enables error tracking; `SENTRY_ENVIRONMENT` (default `production`), `SENTRY_TRACES_SAMPLE_RATE` (default 0) |
 | `RUPERT_UPDATE_CHECK` | no | `off` disables the in-app "update available" banner |
 | `RUPERT_BUILD_SHA`, `RUPERT_BUILT_AT` | Docker only | Build identity for git-free deployments |
+| `RUPERT_INITIALIZE_DATABASE` | Compose first start only | Set to `1` only to explicitly initialize a genuinely new empty SQLite database; remove it after successful initialization. Otherwise Compose requires a nonempty existing SQLite file. |
 | `REDIS_URL` | compose only | Action Cable in the optional Docker Compose layout |
-| `RUPERT_INITIALIZE_DATABASE` | compose first-run only | `1` permits creating a new empty SQLite production database. Leave unset/`0` for existing installations; the preflight requires a nonempty existing database. |
 | `SECRET_KEY_BASE_DUMMY` | build only | Set by the Dockerfile during asset precompile; never at runtime |
-
-SQLite is the only supported database. `RUPERT_DB_ADAPTER` is optional; if
-present for compatibility with an existing environment, only `sqlite3` is
-accepted. `DATABASE_URL` must be unset; any nonempty value prevents boot. Set
-database files with the per-environment `RUPERT_SQLITE_DATABASE_*` paths. Do
-not configure PostgreSQL connection variables.
-
-## Docker Compose database setup
-
-Compose stores the SQLite database in the named `rupert-storage` volume at
-`/app/storage/production.sqlite3`. Its `migrate` preflight refuses to prepare
-an absent or empty production file by default. For a genuinely new instance
-with no existing business data, opt in explicitly:
-
-```sh
-RUPERT_INITIALIZE_DATABASE=1 docker compose up -d
-```
-
-For an existing installation, first place a verified SQLite database copy
-at that volume path, then start Compose with initialization unset. Remove
-`DATABASE_URL` and any obsolete PostgreSQL adapter value from `.env`; no
-PostgreSQL database or old database volume is imported. Keep old Docker
-volumes and backups until their retention is decided separately. Do not use
-`docker compose down -v` as part of this change.
 
 ## Managed settings (Settings → Environment, encrypted in the database)
 

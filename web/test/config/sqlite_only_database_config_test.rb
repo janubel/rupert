@@ -16,7 +16,7 @@ class SqliteOnlyDatabaseConfigTest < ActiveSupport::TestCase
 
     %w[development test production].each do |environment|
       assert_equal 'sqlite3', config.fetch(environment).fetch('adapter')
-      assert_equal 'schema_sqlite.rb', config.fetch(environment).fetch('schema_dump')
+      assert_equal 'schema.rb', config.fetch(environment).fetch('schema_dump')
     end
     assert_equal 'storage/test.sqlite3', config.fetch('test').fetch('database')
   end

@@ -37,7 +37,7 @@ bin/rails assets:precompile
 bin/rails test
 ```
 
-CI runs the Rails suite against SQLite. Browser tests are
+CI repeats the Rails suite on SQLite (`CI (sqlite3)`). Browser tests are
 discovered by filename rather than an explicit list. New browser tests use
 `web/test/javascript/*_test.mjs`. Native export verification remains in the
 Employee mobile workflow; signing and distributing a binary are separate.
