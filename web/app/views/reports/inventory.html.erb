@@ -32,15 +32,16 @@
     <div class="border-b border-fog px-5 py-3">
       <h2 class="font-display text-lg text-ink">Low stock · on hand ≤ 5</h2>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    <%= report_table 'inventory-low-stock', label: 'Low stock' do %>
+      <table class="operations-table w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
-            <th scope="col" class="th">SKU</th>
-            <th scope="col" class="th">Product</th>
-            <th scope="col" class="th">Variant</th>
-            <th scope="col" class="th text-right">On hand<%= define('on_hand') %></th>
-            <th scope="col" class="th text-right">Price</th>
+            <th scope="col" class="th" data-col="sku">SKU</th>
+            <th scope="col" class="th" data-col="product">Product</th>
+            <th scope="col" class="th" data-col="variant">Variant</th>
+            <th scope="col" class="th text-right" data-col="on_hand">On hand<%= define('on_hand') %></th>
+            <th scope="col" class="th text-right" data-col="price">Price</th>
+            <th scope="col" class="th text-right" data-col="value" data-default-hidden>Stock value</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
@@ -50,14 +51,15 @@
               <td class="td font-medium text-ink"><%= row[:product] %></td>
               <td class="td text-mocha"><%= row[:variant] %></td>
               <td class="td text-right <%= row[:qty].zero? ? "font-semibold text-rose" : "font-semibold text-clay" %>"><%= row[:qty] %></td>
-              <td class="td text-right text-mocha"><%= number_to_currency(row[:price]) %></td>
+              <td class="td text-right text-mocha" data-sort-value="<%= row[:price] %>"><%= number_to_currency(row[:price]) %></td>
+              <td class="td text-right text-mocha" data-sort-value="<%= row[:price] ? (row[:price].to_f * [row[:qty].to_i, 0].max).round(2) : "" %>"><%= row[:price] ? number_to_currency(row[:price].to_f * [row[:qty].to_i, 0].max) : '—' %></td>
             </tr>
           <% end %>
           <% if @low_stock_items.empty? %>
-            <tr><td class="empty-row">No low-stock items — all good.</td></tr>
+            <tr><td class="empty-row" colspan="6">No low-stock items — all good.</td></tr>
           <% end %>
         </tbody>
       </table>
-    </div>
+    <% end %>
   </div>
 <% end %>

@@ -1,0 +1,26 @@
+<% content_for :report_filters do %><%= render 'reports/sales_tax_filters', report: @report %><% end %>
+<%= render "reports/layout", title: "Sales tax report", subtitle: "Tax collected from #{@report.from.strftime('%b %-d, %Y')} through #{@report.to.strftime('%b %-d, %Y')}, by source and store — Shopify, Square, Rupert POS, C-Trax and SwipeSimple." do %>
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <% reported = @report.lines.select(&:tax_collected) %>
+    <div class="stat">
+      <div class="stat-label">Lines with reported tax</div>
+      <p class="stat-value mt-1"><%= reported.size %> of <%= @report.lines.size %></p>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Sources shown</div>
+      <p class="stat-value mt-1 text-base"><%= @report.sources.map { |key| SalesTaxReport::SOURCES[key] }.join(', ') %></p>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Days in range</div>
+      <p class="stat-value mt-1"><%= (@report.to - @report.from).to_i + 1 %></p>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Estimate rate</div>
+      <p class="stat-value mt-1"><%= @report.estimating? ? "#{@report.rate.to_s('F')}%" : 'None' %></p>
+    </div>
+  </section>
+
+  <p class="text-sm text-mocha">Each source and store is its own line and lines are not added together: a card sale can appear in a store and in its processor (for example C-Trax and SwipeSimple). <strong>Unavailable</strong> means the source did not report the amount. Estimated tax is shown only for lines without reported tax, assumes every sale was taxed at the rate given, and is not a filing figure.</p>
+
+  <%= render 'reports/sales_tax_table', report: @report %>
+<% end %>
