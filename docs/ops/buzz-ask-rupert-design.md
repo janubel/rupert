@@ -1,6 +1,6 @@
 # Buzz and Ask Rupert: design and recommendation
 
-Written 2026-10-21. Status: **proposal, nothing built.** It answers: how can Buzz (the Nostr chat with the `@rupert` agent) use Ask Rupert's brain, and where should chat history, sharing and group chats live? Read `ask-rupert.md` and `buzz.md` first.
+Written 2026-10-21. Status: **phases 1 and 2 built** (linking and help-only replies, behind a switch that is off by default; see `ask-rupert.md`, "In Buzz"). Phase 3 (data tools in direct messages) and phase 4 (history tag, sharing) are **not built** and need the owner's decision on the relay. Differences from the proposal below: the team channel keeps the agent's own replies (only link codes are handled there), and unlinked people get a link hint instead of lessons. It answers: how can Buzz (the Nostr chat with the `@rupert` agent) use Ask Rupert's brain, and where should chat history, sharing and group chats live? Read `ask-rupert.md` and `buzz.md` first.
 
 ## Facts this rests on
 
