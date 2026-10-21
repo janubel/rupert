@@ -45,7 +45,7 @@ Also unverified, and handled defensively: date format (the parser reads `MM/DD/Y
 5. **Idempotent.** Transactions are fingerprinted by content (date, type, number, name, and the sorted account/amount/memo/class/location of each line), not by Trans #, so overlapping exports skip what is already staged or posted. A same-number transaction whose lines differ is held as "resembles", not double counted.
 6. **Reversible by batch.** Reversal voids every entry the batch posted (all or nothing; refused while any sits in a locked period) and frees the fingerprints. Originals and staged rows stay as evidence. Accounts and vendors created on approval are not deleted.
 7. **Exact money and dates.** Integer cents; amounts with more than two significant decimals are rejected, never rounded. Dates are calendar dates with no time-zone shift.
-8. **Access.** Viewing needs finance read; uploading, mapping, approving, discarding and reversing need finance write (store administrators by default). All are tenant-scoped, logged to the activity log, and limited to 10 MiB and 50,000 rows.
+8. **Access.** Viewing needs finance read; uploading, mapping, approving, discarding and reversing need finance write (store administrators by default). All are tenant-scoped, logged to the activity log, and limited to 10 MiB and 30,000 rows.
 
 ## Tables (migration `20261022020000_create_history_imports`)
 

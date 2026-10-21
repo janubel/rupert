@@ -254,13 +254,17 @@ class QuickbooksImport
   # --- mappings ------------------------------------------------------------
 
   def register_mappings(batch, parsed)
+    seen = {}
     parsed.rows.reject(&:rejected?).each do |row|
-      case row.record_type
-      when 'transaction_line', 'balance' then register(batch, 'account', row.account, nil, nil)
-      when 'account' then register(batch, 'account', row.account, row.account_number, row.account_type)
-      when 'vendor' then register(batch, 'vendor', row.account, nil, nil)
-      when 'customer' then register(batch, 'customer', row.account, nil, nil)
-      end
+      entity_type = { 'transaction_line' => 'account', 'balance' => 'account', 'account' => 'account', 'vendor' => 'vendor', 'customer' => 'customer' }[row.record_type]
+      next if entity_type.nil? || row.account.blank?
+
+      key = [entity_type, ImportEntityMapping.key_for(row.account)]
+      # One lookup per distinct name; a chart row carries the number and type, so it wins over a bare journal line.
+      next if seen[key] && row.record_type != 'account'
+
+      seen[key] = true
+      register(batch, entity_type, row.account, row.account_number, row.account_type)
     end
   end
 
