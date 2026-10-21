@@ -30,11 +30,11 @@ class BankStatementsController < AuthenticatedController
     notice += "; #{result[:duplicates]} already seen and skipped" if result[:duplicates].positive?
     redirect_to bank_statement_path(result[:document].id), notice: "#{notice}. The original file is retained unchanged."
   rescue BankStatementImport::Error, ReconciliationEvidence::Error => e
-    @statements = []
-    @documents = {}
-    @can_write = true
-    @form_error = e.message
-    render :index, status: :unprocessable_entity
+    upload_failed(e.message)
+  rescue ActiveRecord::StatementInvalid => e
+    raise unless database_busy?(e)
+
+    upload_failed('The database is busy with another import or sync. Try again in a minute.')
   end
 
   def show
@@ -85,6 +85,20 @@ class BankStatementsController < AuthenticatedController
   end
 
   private
+
+  def upload_failed(message)
+    @statements = []
+    @documents = {}
+    @can_write = true
+    @form_error = message
+    render :index, status: :unprocessable_entity
+  end
+
+  # SQLite has one writer; a long sync or import elsewhere surfaces here as a
+  # busy/locked error after the busy timeout rather than as a broken file.
+  def database_busy?(error)
+    error.is_a?(ActiveRecord::StatementTimeout) || error.cause.is_a?(SQLite3::BusyException) || error.message.match?(/database is (busy|locked)/i)
+  end
 
   # "Received from" names for deposits. Editable before or after a decision;
   # only changed names are written.

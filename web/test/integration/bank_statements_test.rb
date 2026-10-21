@@ -219,4 +219,12 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
       post decide_bank_statement_path(doc.id), params: { decisions: { line.id => 'expense:shipping' } }
     end
   end
+
+  test 'a busy database during upload shows a plain message instead of an error page' do
+    BankStatementImport.any_instance.stubs(:import!).raises(ActiveRecord::StatementInvalid.new('SQLite3::BusyException: database is locked'))
+    upload
+    assert_response :unprocessable_entity
+    assert_includes response.body, 'The database is busy with another import or sync. Try again in a minute.'
+    assert_equal 0, BankStatementLine.count
+  end
 end
