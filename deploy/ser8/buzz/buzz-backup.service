@@ -1,0 +1,7 @@
+[Unit]
+Description=Encrypted backup of the self-hosted Buzz relay (Incus container buzz)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/buzz-backup.sh
+Nice=10

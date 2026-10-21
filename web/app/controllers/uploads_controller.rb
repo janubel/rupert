@@ -9,9 +9,9 @@ class UploadsController < AuthenticatedController
               'rejected' => %w[rejected], 'duplicate' => %w[duplicate] }.freeze
 
   before_action -> { authorize(:module, :uploads_read?) }
-  before_action -> { authorize(:module, :uploads_write?) }, except: %i[index show original]
+  before_action -> { authorize(:module, :uploads_write?) }, except: %i[index show original insights]
   before_action { response.headers['Cache-Control'] = 'private, no-store' }
-  before_action :load_upload, except: %i[index create recognize_all]
+  before_action :load_upload, except: %i[index create recognize_all insights]
   rescue_from Uploads::Workflow::Error, Uploads::Intake::Error, with: :workflow_failed
 
   def index
@@ -23,6 +23,12 @@ class UploadsController < AuthenticatedController
     @counts = Upload.group(:status).count
     @stale = Upload.where(status: 'needs_review', retained: true).where.not(recognizer_version: Uploads::Registry.signature).count
     @can_write = Current.user.can?('uploads.write')
+  end
+
+  # How the inbox is doing: volume, outcomes, why files wait, importer health.
+  # Aggregates only; see Uploads::Insights.
+  def insights
+    @insights = Uploads::Insights.new(days: params[:days])
   end
 
   def create

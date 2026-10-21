@@ -31,14 +31,14 @@ module Uploads
 
       check_capacity!
       refusal = prefilter
-      return reject(refusal, byte_size: @declared_size.to_i) if refusal
+      return reject(*refusal, byte_size: @declared_size.to_i) if refusal
 
       bytes = read_bytes
-      return reject("The file is larger than #{Limits.human_max}.", byte_size: @declared_size || Limits::MAX_FILE_BYTES + 1) if bytes.nil?
-      return reject('The file is empty.', byte_size: 0) if bytes.empty?
+      return reject('too_large', "The file is larger than #{Limits.human_max}.", byte_size: @declared_size || Limits::MAX_FILE_BYTES + 1) if bytes.nil?
+      return reject('empty', 'The file is empty.', byte_size: 0) if bytes.empty?
 
-      reason = Validator.check(bytes, format)
-      return reject(reason, bytes: bytes) if reason
+      problem = Validator.problem(bytes, format)
+      return reject(*problem, bytes: bytes) if problem
 
       keep(bytes)
     end
@@ -55,9 +55,11 @@ module Uploads
 
     def prefilter
       @declared_size = @file.size if @file.respond_to?(:size)
-      return "Unsupported file type “#{Filename.extension(@filename).presence || 'none'}”. Send #{Limits::FORMATS.keys.to_sentence(last_word_connector: ', or ')}." unless format
+      unless format
+        return ['unsupported_type', "Unsupported file type “#{Filename.extension(@filename).presence || 'none'}”. Send #{Limits::FORMATS.keys.to_sentence(last_word_connector: ', or ')}."]
+      end
 
-      'The file is empty.' if @declared_size&.zero?
+      ['empty', 'The file is empty.'] if @declared_size&.zero?
     end
 
     # Reads at most one byte past the cap so an oversized body is never held whole.
@@ -79,7 +81,7 @@ module Uploads
         earlier = Upload.find_by(sha256: sha, retained: true)
         if earlier
           upload = create_row(status: 'duplicate', byte_size: bytes.bytesize, sha256: sha, duplicate_of_id: earlier.id,
-            reason: duplicate_reason(earlier))
+            reason: duplicate_reason(earlier), reason_code: 'duplicate')
         else
           upload = create_row(status: 'received', byte_size: bytes.bytesize, sha256: sha, retained: true, content_base64: Base64.strict_encode64(bytes))
           created = true
@@ -94,11 +96,11 @@ module Uploads
       Recognizer.call(upload)
     rescue StandardError => e
       Rails.error.report(e, handled: true, context: { uploads_recognize: upload.id })
-      upload.update!(reason: 'Recognition failed unexpectedly. The file is kept; use Re-run recognition.')
+      upload.update!(reason: 'Recognition failed unexpectedly. The file is kept; use Re-run recognition.', reason_code: 'recognition_failed')
     end
 
-    def reject(reason, bytes: nil, byte_size: nil)
-      upload = create_row(status: 'rejected', reason: reason, byte_size: byte_size || bytes&.bytesize || 0, sha256: bytes && Digest::SHA256.hexdigest(bytes))
+    def reject(code, reason, bytes: nil, byte_size: nil)
+      upload = create_row(status: 'rejected', reason_code: code, reason: reason, byte_size: byte_size || bytes&.bytesize || 0, sha256: bytes && Digest::SHA256.hexdigest(bytes))
       Audit.record('rejected', upload, actor: @actor)
       Result.new(upload: upload, created: false)
     end

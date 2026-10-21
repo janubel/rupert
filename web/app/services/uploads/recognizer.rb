@@ -31,33 +31,33 @@ module Uploads
     def self.decide(upload, document, detections)
       if upload.operator_chosen && (chosen = Registry.find(upload.importer_key)) && chosen.available?
         match = detections.find { |detection| detection.importer == chosen.key && detection.type == upload.detected_type }
-        return { status: 'recognized', reason: nil, params_json: merged_params(upload, chosen, document, match).to_json }
+        return { status: 'recognized', reason: nil, reason_code: nil, params_json: merged_params(upload, chosen, document, match).to_json }
       end
 
       top, second = detections
       unless top
-        return decision('needs_review', nil, unknown_reason(document)).merge(detected_type: nil, detected_label: nil, confidence: nil, detected_reason: nil)
+        return decision('needs_review', nil, unknown_reason(document), 'unrecognized').merge(detected_type: nil, detected_label: nil, confidence: nil, detected_reason: nil)
       end
 
       fields = { detected_type: top.type, detected_label: top.label, confidence: top.percent, detected_reason: top.reason }
       importer = top.importer && Registry.find(top.importer)
       fields.merge(
         if top.importer.nil?
-          decision('needs_review', nil, "Recognized as #{top.label} (#{top.percent}%), but Rupert has no importer for it yet. The file is kept; use Re-run recognition after one ships.")
+          decision('needs_review', nil, "Recognized as #{top.label} (#{top.percent}%), but Rupert has no importer for it yet. The file is kept; use Re-run recognition after one ships.", 'no_importer')
         elsif importer.nil? || !importer.available?
-          decision('needs_review', nil, "Recognized as #{top.label} (#{top.percent}%), but that importer is not installed yet. The file is kept; use Re-run recognition after it ships.")
+          decision('needs_review', nil, "Recognized as #{top.label} (#{top.percent}%), but that importer is not installed yet. The file is kept; use Re-run recognition after it ships.", 'not_installed')
         elsif top.confidence < AUTO_CONFIDENCE
-          decision('needs_review', nil, "Possibly #{top.label} (#{top.percent}%), which is not certain enough to go ahead. Confirm the type below, or choose another importer.")
+          decision('needs_review', nil, "Possibly #{top.label} (#{top.percent}%), which is not certain enough to go ahead. Confirm the type below, or choose another importer.", 'low_confidence')
         elsif second && top.confidence - second.confidence < MARGIN && second.type != top.type
-          decision('needs_review', nil, "Could be #{top.label} (#{top.percent}%) or #{second.label} (#{second.percent}%). Say which.")
+          decision('needs_review', nil, "Could be #{top.label} (#{top.percent}%) or #{second.label} (#{second.percent}%). Say which.", 'ambiguous')
         else
-          decision('recognized', top.importer, nil).merge(params_json: merged_params(upload, importer, document, top).to_json)
+          decision('recognized', top.importer, nil, nil).merge(params_json: merged_params(upload, importer, document, top).to_json)
         end
       )
     end
 
-    def self.decision(status, importer_key, reason)
-      { status: status, importer_key: importer_key, reason: reason, operator_chosen: false }
+    def self.decision(status, importer_key, reason, code)
+      { status: status, importer_key: importer_key, reason: reason, reason_code: code, operator_chosen: false }
     end
 
     # Suggestions fill blanks only; anything a person already typed stays.

@@ -14,6 +14,7 @@ module NostrPublisher
     ack = nil
     authed = false
     sent_event = false
+    event_id = event.id.to_s
     ws = WebSocket::Client::Simple.connect(relay)
 
     ws.on(:message) do |m|
@@ -33,7 +34,9 @@ module NostrPublisher
           ws.send(['EVENT', event.to_h].to_json) if sent_event
         end
       when 'OK'
-        ack = data
+        # The relay also acknowledges our NIP-42 AUTH event with an OK; only the
+        # answer to this event counts, or we close before it is stored.
+        ack = data if data[1].to_s == event_id
       end
     rescue StandardError
       nil
