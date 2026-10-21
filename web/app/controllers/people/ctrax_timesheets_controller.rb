@@ -15,8 +15,13 @@ module People
         scope = params[:employee_id] == 'unmatched' ? scope.where(employee_id: nil) : scope.where(employee_id: params[:employee_id])
       end
       scope = scope.where(status: params[:status]) if CtraxLaborShift::STATUSES.include?(params[:status])
-      scope = scope.where('started_at >= ?', Date.iso8601(params[:from]).in_time_zone) if params[:from].present?
-      scope = scope.where('started_at < ?', (Date.iso8601(params[:to]) + 1).in_time_zone) if params[:to].present?
+      range = TimeRangePicker.resolve(params)
+      @from = range.from
+      @to = range.to
+      return redirect_to(people_ctrax_timesheets_path, alert: 'Choose an end date on or after the start date.') if @from && @to && @to < @from
+
+      scope = scope.where('started_at >= ?', @from.in_time_zone) if @from
+      scope = scope.where('started_at < ?', (@to + 1).in_time_zone) if @to
       if request.format.csv?
         data = CSV.generate do |csv|
           csv << ['Staff member', 'C-Trax shift ID', 'Store ID', 'Latest clock-in', 'Latest clock-out', 'Latest source-reported hours', 'Latest elapsed hours', 'Latest in progress', 'Latest source verified', 'Status', 'Review issue', 'Original clock-in', 'Original clock-out', 'Original source-reported hours', 'Original elapsed hours']

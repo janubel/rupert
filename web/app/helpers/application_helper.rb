@@ -26,7 +26,7 @@ module ApplicationHelper
   def module_match_strength(path)
     return 0 if path.blank? || path == '#'
 
-    request_path = request.path == '/stock_comparison' ? '/inventory' : request.path
+    request_path = request.path
     return request_path == '/' ? 100 : 0 if path == '/'
 
     return path.length if request_path == path

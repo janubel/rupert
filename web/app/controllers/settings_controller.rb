@@ -205,7 +205,15 @@ class SettingsController < AuthenticatedController
     TenantSettings.set(:business_name, params[:business_name]) if params[:business_name].present?
     TenantSettings.set(:invoice_prefix, params[:invoice_prefix]) if params[:invoice_prefix].present?
     TenantSettings.set(:low_stock_threshold, params[:low_stock_threshold].to_i) if params[:low_stock_threshold].present?
-    ActivityLogger.log('business_settings_saved', details: %w[business_name invoice_prefix low_stock_threshold].select { |k| params[k].present? }.join(', '))
+    if params.key?(:sales_tax_rate)
+      rate = params[:sales_tax_rate].to_s.strip.delete('%')
+      unless rate.empty? || (rate.match?(/\A\d{1,2}(\.\d{1,4})?\z/) && rate.to_d.positive? && rate.to_d <= SalesTaxReport::MAX_RATE)
+        return redirect_to(settings_path, alert: "Sales tax rate must be a percent between 0 and #{SalesTaxReport::MAX_RATE}, or blank.")
+      end
+
+      TenantSettings.set(:sales_tax_rate, rate)
+    end
+    ActivityLogger.log('business_settings_saved', details: %w[business_name invoice_prefix low_stock_threshold sales_tax_rate].select { |k| params[k].present? }.join(', '))
     redirect_to(settings_path, notice: 'Business settings saved.')
   end
 

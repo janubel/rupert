@@ -1,0 +1,42 @@
+<%# Sales tax lines as a customizable table. Sources are never summed: the same card sale can appear in a store and in its processor. %>
+<% money = ->(cents) { cents.nil? ? 'Unavailable' : number_with_precision(BigDecimal(cents.to_s) / 100, precision: 2, delimiter: ',') } %>
+<% columns = [['source', 'Source'], ['store', 'Store'], ['currency', 'Currency'], ['orders', 'Orders'], ['gross', 'Gross sales'], ['before_tax', 'Sales before tax'],
+              ['tax', 'Tax collected'], ['refunded', 'Tax refunded'], ['net', 'Net tax'], ['estimated', 'Estimated tax'], ['note', 'Note']] %>
+<% default_hidden = %w[gross refunded] + (report.estimating? ? [] : %w[estimated]) %>
+<% numeric = %w[orders gross before_tax tax refunded net estimated] %>
+<div class="card overflow-hidden">
+  <%= report_table 'sales-tax', label: 'Sales tax by source and store', filename: "sales-tax-#{report.from}-#{report.to}" do %>
+    <table class="operations-table finance-table w-full text-sm">
+      <caption class="sr-only">Sales tax by source and store from <%= report.from %> through <%= report.to %></caption>
+      <thead class="border-b border-fog bg-haze/60">
+        <tr>
+          <% columns.each do |key, label| %>
+            <th scope="col" class="th<%= ' num' if numeric.include?(key) %>" data-col="<%= key %>" <%= 'data-default-hidden' if default_hidden.include?(key) %>><%= label %><%= " (#{report.rate.to_s('F')}%)" if key == 'estimated' && report.estimating? %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-fog">
+        <% report.lines.each do |line| %>
+          <tr class="hover:bg-cream">
+            <td class="td font-medium text-ink"><%= line.source %></td>
+            <td class="td"><%= line.store %></td>
+            <td class="td"><%= line.currency %></td>
+            <td class="td num"><%= line.orders %></td>
+            <% [line.gross_sales, line.sales_before_tax].each do |cents| %>
+              <td class="td num" data-sort-value="<%= report_sort_cents(cents) %>"><%= money.call(cents) %></td>
+            <% end %>
+            <td class="td num font-semibold" data-sort-value="<%= report_sort_cents(line.tax_collected) %>"><%= money.call(line.tax_collected) %></td>
+            <% [line.tax_refunded, line.net_tax].each do |cents| %>
+              <td class="td num" data-sort-value="<%= report_sort_cents(cents) %>"><%= money.call(cents) %></td>
+            <% end %>
+            <td class="td num" data-sort-value="<%= report_sort_cents(line.estimated_tax) %>"><% if line.estimated_tax %><span title="Estimate, not reported by the source">≈ <%= money.call(line.estimated_tax) %></span><% elsif line.tax_collected %>Reported<% else %>—<% end %></td>
+            <td class="td text-xs text-mocha"><%= line.note %></td>
+          </tr>
+        <% end %>
+        <% if report.lines.empty? %>
+          <tr><td class="td" colspan="<%= columns.size %>">No sales are stored for these dates and sources. This does not establish a zero-sales period.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

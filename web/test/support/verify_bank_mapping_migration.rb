@@ -15,7 +15,7 @@ first = BankStatementLine.create!(document_id: 1, line_no: 1, account_label: 'Ca
   description: 'Synthetic transfer in', amount_cents: 500, fingerprint: 'migration-in', journal_entry_id: entry.id)
 second = BankStatementLine.create!(document_id: 1, line_no: 2, account_label: 'Checking', posted_on: Date.current,
   description: 'Synthetic transfer out', amount_cents: -500, fingerprint: 'migration-out', journal_entry_id: entry.id)
-migration = CreateBankStatementAccounts.new
+migration = CreateBankStatementAccounts.new('CreateBankStatementAccounts', 20261020150000)
 begin
   migration.migrate(:down)
   raise 'Rollback discarded valid cross-account matches'

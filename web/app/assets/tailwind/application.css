@@ -521,6 +521,27 @@
 .table-filter-count { font-size:.8rem;color:var(--color-mocha); }
 [data-table-filter-target="row"][hidden] { display:none; }
 
+/* Customizable report tables (report_table_controller.js). The toolbar only
+   appears once the controller is running; without JavaScript the plain table shows. */
+.report-table { display:flex;flex-direction:column; }
+.report-table-toolbar { display:none;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.6rem 1rem;border-bottom:1px solid var(--color-fog); }
+.report-table-ready > .report-table-toolbar { display:flex; }
+.report-table-filter { max-width:16rem;min-height:36px;padding-block:.3rem; }
+.report-table-count { font-size:.8rem;color:var(--color-mocha);font-variant-numeric:tabular-nums;margin-left:auto; }
+.report-table-menu { position:relative; }
+.report-table-menu > summary { list-style:none;cursor:pointer; }
+.report-table-menu > summary::-webkit-details-marker { display:none; }
+.report-table-columns { position:absolute;z-index:20;top:calc(100% + .35rem);left:0;min-width:14rem;max-height:60vh;overflow:auto;padding:.5rem;border:1px solid var(--color-fog);border-radius:.75rem;background:var(--color-paper);box-shadow:0 8px 24px rgb(0 0 0 / .12); }
+.report-table-column { display:flex;align-items:center;gap:.5rem;padding:.3rem .4rem;border-radius:.5rem;font-size:.85rem;color:var(--color-ink);cursor:pointer; }
+.report-table-column:hover { background:var(--color-haze); }
+.report-table-column input:disabled + span { color:var(--color-mocha); }
+.report-table-scroll { overflow-x:auto; }
+.report-table th[hidden],.report-table td[hidden],.report-table tr[hidden] { display:none !important; }
+.report-table-sort { margin-left:.3rem;padding:0 .2rem;border-radius:.3rem;font-size:.75rem;line-height:1;color:var(--color-taupe);vertical-align:middle; }
+.report-table-sort:hover,.report-table th[aria-sort] .report-table-sort { color:var(--color-ink); }
+.report-table-empty { padding:1rem;font-size:.85rem;color:var(--color-mocha); }
+@media(max-width:640px) { .report-table-filter { max-width:none;flex:1 1 100%; } .report-table-count { margin-left:0;flex-basis:100%; } .report-table-columns { left:auto;right:0; } }
+
 .build-version { display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.65rem;padding:.2rem 1rem;border-bottom:1px solid var(--color-fog);background:var(--color-paper);font-size:11px;line-height:1.4;color:var(--color-mocha);font-variant-numeric:tabular-nums; }
 
 /* Books desk: findings tuck under the next action; the summary carries the counts. */

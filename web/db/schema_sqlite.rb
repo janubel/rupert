@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_030000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -353,6 +353,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_150000) do
     t.index ["tenant_id", "subject_type", "subject_id"], name: "idx_on_tenant_id_subject_type_subject_id_034734a708"
   end
 
+  create_table "agent_feedbacks", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "api_access_token_id"
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.string "severity", default: "normal", null: false
+    t.string "status", default: "new", null: false
+    t.string "summary", null: false
+    t.text "details"
+    t.string "related_tool"
+    t.string "related_reference"
+    t.string "agent_name"
+    t.string "agent_model"
+    t.text "context"
+    t.text "owner_notes"
+    t.bigint "triaged_by_id"
+    t.datetime "triaged_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["api_access_token_id"], name: "index_agent_feedbacks_on_api_access_token_id"
+    t.index ["tenant_id", "created_at"], name: "index_agent_feedbacks_on_tenant_id_and_created_at"
+    t.index ["tenant_id", "status"], name: "index_agent_feedbacks_on_tenant_id_and_status"
+  end
+
+  create_table "agent_tool_issues", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "tool_name", null: false
+    t.string "error_kind", null: false
+    t.integer "occurrences", default: 0, null: false
+    t.string "last_message"
+    t.string "last_api_access_token_id"
+    t.datetime "first_seen_at", null: false
+    t.datetime "last_seen_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "last_seen_at"], name: "index_agent_tool_issues_on_tenant_id_and_last_seen_at"
+    t.index ["tenant_id", "tool_name", "error_kind"], name: "idx_agent_tool_issues_unique", unique: true
+  end
+
   create_table "api_access_tokens", id: :string, force: :cascade do |t|
     t.string "tenant_id", null: false
     t.integer "user_id", null: false
@@ -501,6 +540,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_150000) do
     t.boolean "review_flag", default: false, null: false
     t.datetime "reviewed_at"
     t.bigint "journal_entry_id"
+    t.text "counterparty"
     t.index ["tenant_id", "account_label", "journal_entry_id"], name: "idx_bank_lines_account_journal_unique", unique: true, where: "journal_entry_id IS NOT NULL"
     t.index ["tenant_id", "document_id", "status"], name: "idx_bank_lines_document"
     t.index ["tenant_id", "fingerprint"], name: "idx_bank_lines_fingerprint", unique: true
@@ -995,6 +1035,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_150000) do
     t.index ["tenant_id", "source", "external_id"], name: "idx_employees_source_identity", unique: true
     t.index ["tenant_id", "status"], name: "index_employees_on_tenant_id_and_status"
     t.index ["tenant_id", "user_id"], name: "index_employees_on_tenant_id_and_user_id"
+  end
+
+  create_table "expense_categories", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "key", null: false
+    t.string "name", null: false
+    t.bigint "ledger_account_id"
+    t.text "keywords"
+    t.boolean "active", default: true, null: false
+    t.boolean "built_in", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "key"], name: "idx_expense_categories_key", unique: true
   end
 
   create_table "expenses", force: :cascade do |t|
@@ -2346,6 +2400,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_150000) do
     t.index ["imported_by_id"], name: "index_swipesimple_exports_on_imported_by_id"
     t.index ["tenant_id", "fingerprint"], name: "index_swipesimple_exports_on_tenant_id_and_fingerprint", unique: true
     t.index ["tenant_id", "merchant_account", "kind", "exported_at", "id"], name: "idx_swipesimple_snapshot_scope"
+  end
+
+  create_table "swipesimple_item_snapshots", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "merchant_account", null: false
+    t.text "records_json", null: false
+    t.string "source_filename"
+    t.string "sha256", null: false
+    t.integer "row_count", null: false
+    t.datetime "captured_at", null: false
+    t.bigint "imported_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "merchant_account"], name: "idx_swipesimple_items_account", unique: true
   end
 
   create_table "swipesimple_report_rows", force: :cascade do |t|

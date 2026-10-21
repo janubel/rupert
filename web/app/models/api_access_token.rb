@@ -7,11 +7,22 @@ class ApiAccessToken < ApplicationRecord
   include HasCuid
   include TenantScoped
 
+  # Scope => the owner permission it also requires (checked on every request,
+  # so removing the owner's permission disables the scope immediately).
+  # The same scopes gate the REST API (/api/v1) and the MCP tools (/mcp).
   SCOPES = {
     'catalog:read' => 'inventory.read',
     'inventory:read' => 'inventory.read',
-    'roadmap:read' => nil
+    'roadmap:read' => nil,
+    'reports:read' => 'reports.read',
+    'timesheets:read' => 'timesheets.read',
+    'tasks:read' => 'projects.read',
+    'alerts:read' => 'alerts.read',
+    'tasks:write' => 'projects.write'
   }.freeze
+  # Scopes that let an integration change Rupert's own records. None of them
+  # writes to Shopify, Square or C-Trax.
+  WRITE_SCOPES = %w[tasks:write].freeze
   TOKEN_FORMAT = /\Arupert_[A-Za-z0-9_-]{43}\z/
 
   belongs_to :user
@@ -66,7 +77,7 @@ class ApiAccessToken < ApplicationRecord
 
   def valid_scopes
     unless scopes.is_a?(Array) && scopes.any? && scopes.uniq == scopes && (scopes - SCOPES.keys).empty?
-      errors.add(:scopes, 'must contain one or more supported, distinct read scopes')
+      errors.add(:scopes, 'must contain one or more supported, distinct scopes')
       return
     end
     scopes.each do |scope|

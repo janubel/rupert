@@ -6,7 +6,10 @@ class TenantSettings
   DEFAULTS = {
     business_name: 'Herbal Healers',
     invoice_prefix: 'INV',
-    low_stock_threshold: 5
+    low_stock_threshold: 5,
+    # Percent used only to estimate tax for sources that do not report it
+    # (SwipeSimple). Blank means no estimate is shown.
+    sales_tax_rate: ''
   }.freeze
 
   class << self
