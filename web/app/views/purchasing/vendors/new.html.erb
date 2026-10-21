@@ -1,10 +1,7 @@
 <% content_for :title, "Add vendor" %>
 <div class="space-y-6">
-  <section>
-    <h1 class="page-title">Add vendor</h1>
-    <p class="mt-1 text-sm text-mocha">A supplier the shop buys from.</p>
-  </section>
-  <div class="card card-pad max-w-2xl">
+  <%= page_header 'Add vendor', subtitle: 'A supplier the shop buys from.' %>
+  <div class="card card-pad page-narrow">
     <%= render "form", vendor: @vendor %>
   </div>
 </div>

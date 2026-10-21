@@ -2,10 +2,8 @@
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
-  <section>
-    <h1 class="page-title">Edit expense</h1>
-  </section>
-  <div class="card card-pad max-w-2xl">
+  <%= page_header 'Edit expense' %>
+  <div class="card card-pad page-narrow">
     <%= render "form", expense: @expense %>
   </div>
 </div>

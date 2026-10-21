@@ -102,6 +102,8 @@
     </section>
   <% end %>
 
+  <%= render 'buzz/link' if @can_link %>
+
   <section id="get-buzz" class="card card-pad scroll-mt-24" aria-labelledby="buzz-get-title">
     <h2 id="buzz-get-title" class="font-display text-xl">Get Buzz</h2>
     <p class="mt-1 text-sm text-mocha">Buzz is the open-source team chat Rupert's agent lives in. Install it on each device you want to use.</p>
