@@ -84,4 +84,60 @@ class SalesTaxReportTest < ActiveSupport::TestCase
       assert_raises(SalesTaxReport::Error, rate) { SalesTaxReport.new(from: Date.new(2026, 10, 8), to: Date.new(2026, 10, 8), rate: rate) }
     end
   end
+
+  def tax_pull!(account, from, to, days)
+    SwipesimpleReportPull.create!(merchant_account: account, topic: 'tax', period_from: from, period_to: to, row_count: days.size,
+      source_digest: 'fixture', original_csv: 'Date', pulled_at: Time.current)
+    days.each do |date, label, rate, before, tax, total|
+      SwipesimpleTaxDay.create!(merchant_account: account, business_date: date, tax_rate_label: label, rate_percent: rate,
+        pre_tax_cents: before, tax_cents: tax, total_cents: total, source_digest: 'fixture', pulled_at: Time.current)
+    end
+  end
+
+  def card_sale!(account, day)
+    bytes = "Transaction #,Date\n#{account}"
+    export = SwipesimpleExport.create!(merchant_account: account, currency: 'USD', source_timezone: 'America/New_York', kind: 'transactions',
+      fingerprint: SecureRandom.hex, sha256: Digest::SHA256.hexdigest(bytes), exported_at: Time.current, original_csv: bytes)
+    SwipesimpleReportRow.create!(swipesimple_export: export, identity: SecureRandom.hex, source_number: 'T1', transaction_type: 'Sale',
+      status: 'Approved', amount_cents: 10_600, tip_cents: 0, occurred_at: Time.zone.parse("#{day} 15:00"), source_row: 1)
+  end
+
+  test 'uses SwipeSimple reported tax with the taxable split instead of the transaction estimate' do
+    tax_pull!('Card shop', Date.new(2026, 10, 1), Date.new(2026, 10, 31), [
+      [Date.new(2026, 10, 8), 'PA Tax Rate (6.0%)', 6, 10_000, 600, 10_600],
+      [Date.new(2026, 10, 8), 'No Tax', nil, 500, 0, 500],
+      [Date.new(2026, 10, 9), 'PA Tax Rate (6.0%)', 6, 5_000, 300, 5_300],
+      [Date.new(2026, 10, 12), 'PA Tax Rate (6.0%)', 6, 9_999, 999, 99_999]
+    ])
+    card_sale!('Card shop', '2026-10-08')
+    report = SalesTaxReport.new(from: Date.new(2026, 10, 8), to: Date.new(2026, 10, 9), rate: '6')
+    line = report.lines.select { |l| l.source == 'SwipeSimple' }.sole
+    assert_equal ['Card shop', 15_500, 900, 16_400], [line.store, line.sales_before_tax, line.tax_collected, line.gross_sales]
+    assert_nil line.estimated_tax
+    assert_nil line.orders
+    assert_includes line.note, 'PA Tax Rate (6.0%) (taxable): sales before tax 150.00, tax 9.00'
+    assert_includes line.note, 'No Tax (not taxed): sales before tax 5.00, tax 0.00'
+    assert_includes line.note, 'cover every day in this range'
+    assert_includes report.csv, '900'
+  end
+
+  test 'notes partial SwipeSimple coverage and falls back to transactions where no report was pulled' do
+    tax_pull!('Card shop', Date.new(2026, 10, 1), Date.new(2026, 10, 8), [[Date.new(2026, 10, 8), 'PA Tax Rate (6.0%)', 6, 10_000, 600, 10_600]])
+    card_sale!('Other shop', '2026-10-09')
+    lines = SalesTaxReport.new(from: Date.new(2026, 10, 8), to: Date.new(2026, 10, 10), rate: '6').lines.select { |l| l.source == 'SwipeSimple' }
+    reported = lines.find { |l| l.store == 'Card shop' }
+    assert_equal 600, reported.tax_collected
+    assert_includes reported.note, 'cover 1 of 3 days, pulled through 2026-10-08'
+    assert_includes reported.note, 'not zero'
+    fallback = lines.find { |l| l.store == 'Other shop' }
+    assert_nil fallback.tax_collected
+    assert_equal 600, fallback.estimated_tax
+    assert_includes fallback.note, 'No SwipeSimple tax report has been pulled'
+  end
+
+  test 'a pulled day range with no sales reports zero tax rather than unavailable' do
+    tax_pull!('Card shop', Date.new(2026, 10, 1), Date.new(2026, 10, 31), [])
+    line = SalesTaxReport.new(from: Date.new(2026, 10, 8), to: Date.new(2026, 10, 9)).lines.sole
+    assert_equal [0, 0, 0], [line.tax_collected, line.sales_before_tax, line.gross_sales]
+  end
 end

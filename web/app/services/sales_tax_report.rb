@@ -4,8 +4,9 @@ require 'csv'
 
 # Sales tax collected over any date range, one line per source and store.
 # Shopify/Square/Rupert POS come from stored orders, C-Trax from its stored
-# store-days, SwipeSimple from its transaction exports (which carry no tax
-# figure). When a tax rate is given, sources without a reported tax figure get a
+# store-days, SwipeSimple from its pulled Reporting → tax CSV (falling back to its
+# transaction exports, which carry no tax figure, when no report was pulled; the
+# two are never both shown). When a tax rate is given, sources without a reported tax figure get a
 # separate, clearly labelled estimate; reported tax is never replaced.
 # Sources are separate lines and are never added into one total, because the
 # same card sale can appear in a store and in its processor. Unknown amounts
@@ -129,7 +130,40 @@ class SalesTaxReport
     day.controls['refund_count'] == 0 ? 0 : nil
   end
 
+  # SwipeSimple's own tax report where it has been pulled for any day in the
+  # range; the transaction-export line (with its optional estimate) only for
+  # accounts with no pulled tax report. The two are never both shown.
   def swipesimple_lines
+    coverage = SwipesimpleReportPull.coverage('tax', from, to)
+    days = SwipesimpleTaxDay.where(merchant_account: coverage.keys, business_date: from..to).to_a.group_by(&:merchant_account)
+    reported = coverage.map { |account, dates| swipesimple_report_line(account, (days[account] || []).select { |day| dates.include?(day.business_date) }, dates) }
+    reported + swipesimple_transaction_lines.reject { |line| coverage.key?(line.store) }
+  end
+
+  def swipesimple_report_line(account, days, covered)
+    split = days.group_by(&:tax_rate_label).sort_by { |label, list| [-(list.first.rate_percent || 0), label] }.map do |label, list|
+      before = known_sum(list.map(&:pre_tax_cents))
+      tax = known_sum(list.map(&:tax_cents))
+      kind = list.any? { |day| day.rate_percent.to_d.positive? || day.tax_cents.to_i.nonzero? } ? 'taxable' : 'not taxed'
+      "#{label} (#{kind}): sales before tax #{dollars(before)}, tax #{dollars(tax)}"
+    end
+    span = (to - from).to_i + 1
+    coverage = if covered.size == span
+      "SwipeSimple tax reports cover every day in this range; a day without a row had no sales."
+    else
+      "SwipeSimple tax reports cover #{covered.size} of #{span} days, pulled through #{covered.max}; days without a pulled report are not counted and are not zero."
+    end
+    Line.new(source: 'SwipeSimple', store: account, currency: 'USD', orders: nil, gross_sales: known_sum(days.map(&:total_cents)),
+      sales_before_tax: known_sum(days.map(&:pre_tax_cents)), tax_collected: known_sum(days.map(&:tax_cents)), tax_refunded: nil, net_tax: nil,
+      estimated_tax: nil, note: [split.join('; ').presence&.then { |text| "#{text}." }, coverage,
+                                 'Reported by SwipeSimple (Reporting → Sales tax); refunded tax is not broken out.'].compact.join(' '))
+  end
+
+  def dollars(cents)
+    cents.nil? ? 'unavailable' : ActiveSupport::NumberHelper.number_to_delimited(format('%.2f', BigDecimal(cents.to_s) / 100))
+  end
+
+  def swipesimple_transaction_lines
     rows = SwipesimpleReportRow.latest.where(swipesimple_exports: { kind: 'transactions' }).where(occurred_at: window).includes(:swipesimple_export)
       .select { |row| row.status == 'Approved' }
     rows.group_by { |row| [row.swipesimple_export.merchant_account, row.swipesimple_export.currency] }.map do |(account, currency), group|
@@ -139,7 +173,7 @@ class SalesTaxReport
       taxable = sales - refunds.abs - tips.to_i
       Line.new(source: 'SwipeSimple', store: account, currency: currency, orders: group.count { |row| row.transaction_type == 'Sale' },
         gross_sales: sales, sales_before_tax: nil, tax_collected: nil, tax_refunded: nil, net_tax: nil, estimated_tax: estimate(taxable),
-        note: "Card sales #{format('%.2f', sales / 100.0)} less refunds #{format('%.2f', refunds.abs / 100.0)} (tax-inclusive#{tips ? '' : ', tips may be included'}). SwipeSimple exports do not report tax, so collected tax is unavailable#{estimating? ? "; the estimate assumes every sale was taxed at #{rate.to_s('F')}%" : ''}.")
+        note: "Card sales #{format('%.2f', sales / 100.0)} less refunds #{format('%.2f', refunds.abs / 100.0)} (tax-inclusive#{tips ? '' : ', tips may be included'}). No SwipeSimple tax report has been pulled for these dates and transaction exports do not report tax, so collected tax is unavailable#{estimating? ? "; the estimate assumes every sale was taxed at #{rate.to_s('F')}%" : ''}.")
     end
   end
 
