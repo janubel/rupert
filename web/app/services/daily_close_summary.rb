@@ -8,8 +8,9 @@
 # Each store is its own row and stores are never added together. Missing
 # source amounts stay nil (shown as unavailable), never zero.
 #
-# SwipeSimple is a card processor, so its row describes card money that is
-# usually already inside a store's sales. It is shown for comparison only.
+# SwipeSimple is the store register (from Oct 2026), so its row carries its
+# own cash and card split from each transaction's tender. It stays its own
+# row and is never added to another source's sales.
 class DailyCloseSummary
   CTRAX_CARD_TYPES = %w[credit standaloneCardTerminal].freeze
   STORE_SOURCES = %w[shopify square].freeze
@@ -43,13 +44,22 @@ class DailyCloseSummary
 
   private
 
+  # Cash and card come from each SwipeSimple transaction's own tender. Rows
+  # whose tender the export does not identify stay out of both columns.
   def build_swipesimple_row(totals)
     sales = totals.sum { |row| row[:sale_cents] }
     refunds = totals.sum { |row| row[:refund_cents] }
     tips = totals.all? { |row| row[:sale_tip_cents] } ? totals.sum { |row| row[:sale_tip_cents] } : nil
-    Row.new(label: 'SwipeSimple card processor', kind: 'swipesimple', currency: totals.first[:currency], gross: sales, refunds: refunds,
-      net: sales - refunds, tax: nil, tips: tips, cash: nil, credit: sales - refunds,
-      notes: 'Approved card transactions only. SwipeSimple does not report tax or cash, and these card amounts are normally already inside the store sales above — do not add them.')
+    net_for = ->(tender) { totals.select { |row| row[:tender] == tender }.sum { |row| row[:net_cents] } }
+    unknown = totals.reject { |row| %w[cash card].include?(row[:tender]) }.sum { |row| row[:net_cents] }
+    notes = 'Approved SwipeSimple transactions; cash and card follow each transaction’s tender. The export does not report sales tax.'
+    notes += " #{reconciliation_note_money(unknown)} has no identified tender and is in neither cash nor credit." unless unknown.zero?
+    Row.new(label: 'SwipeSimple register', kind: 'swipesimple', currency: totals.first[:currency], gross: sales, refunds: refunds,
+      net: sales - refunds, tax: nil, tips: tips, cash: net_for.call('cash'), credit: net_for.call('card'), notes: notes)
+  end
+
+  def reconciliation_note_money(cents)
+    format('%<sign>s$%<amount>.2f', sign: cents.negative? ? '-' : '', amount: cents.abs / 100.0)
   end
 
   def ctrax_rows

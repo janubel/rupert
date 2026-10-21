@@ -16,6 +16,18 @@
       </div>
     </div>
     <%= render 'reports/tabs' %>
+    <% win_from, win_to = report_window_dates %>
+    <% prev_from, prev_to = report_shift(win_from, win_to, -1) %>
+    <% next_from, next_to = report_shift(win_from, win_to, 1) %>
+    <nav class="flex flex-wrap items-center gap-3" aria-label="Report period">
+      <%= link_to url_for(extra.merge(action: params[:action], from: prev_from.iso8601, to: prev_to.iso8601)), class: 'btn-ghost', rel: 'prev', title: report_range_label(prev_from, prev_to) do %>← Previous<% end %>
+      <strong class="text-lg text-ink" aria-live="polite"><%= report_range_label(win_from, win_to) %></strong>
+      <% if next_from <= Date.current %>
+        <%= link_to url_for(extra.merge(action: params[:action], from: next_from.iso8601, to: next_to.iso8601)), class: 'btn-ghost', rel: 'next', title: report_range_label(next_from, next_to) do %>Next →<% end %>
+      <% else %>
+        <span class="btn-ghost cursor-not-allowed opacity-50" aria-disabled="true">Next →</span>
+      <% end %>
+    </nav>
     <div class="card card-pad space-y-3" data-tour="window">
       <%= form_tag url_for(action: params[:action]), method: :get, class: "flex flex-wrap items-end gap-2" do %>
         <label class="text-xs text-taupe">Window

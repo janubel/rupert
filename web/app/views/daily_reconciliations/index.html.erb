@@ -85,7 +85,7 @@
     <tbody><% @report.swipesimple.each do |row| %><tr><td class="td"><%= row[:account] %></td><td class="td"><%= row[:currency] %></td><td class="td"><%= row[:tender].presence || 'Unknown' %></td>
       <% [:sale_cents, :refund_cents, :net_cents, :sale_tip_cents, :refund_tip_cents].each do |key| %><td class="td"><%= money.call(row[key]) %></td><% end %><td class="td"><%= row[:excluded_rows] %></td></tr><% end %>
       <% if @report.swipesimple.empty? %><tr><td class="td" colspan="9">No native transaction observations for this day.</td></tr><% end %></tbody>
-  </table><p class="p-4 text-xs"><%= link_to 'SwipeSimple reporting and native imports', swipesimple_reports_path(day: @report.day.iso8601), class: 'underline' %></p></section>
+  </table><p class="p-4 text-xs"><% if Current.user.can?('sales.read') %><%= link_to 'SwipeSimple daily close', swipesimple_days_path(date: @report.day.iso8601), class: 'underline' %> · <% end %><%= link_to 'SwipeSimple reporting and native imports', swipesimple_reports_path(day: @report.day.iso8601), class: 'underline' %></p></section>
   </details>
   <details class="card"><summary class="cursor-pointer p-4 font-semibold">Authorize.net API settlement observations <span class="ml-2 text-xs font-normal text-mocha"><%= "#{@report.gateway.size} groups" %></span></summary>
   <section class="operations-table-region" tabindex="0" role="region" aria-label="Source evidence table, scroll horizontally for all columns"><table class="w-full text-sm">

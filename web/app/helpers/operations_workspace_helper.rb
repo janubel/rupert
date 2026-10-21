@@ -9,6 +9,7 @@ module OperationsWorkspaceHelper
       [['Sales journal', sales_path(date: date), 'sales.read', 'sales'],
        ['Retail POS', ctrax_pos_path, 'pos', 'ctrax_pos'],
        ['C-Trax daily close', ctrax_days_path(date: date), 'sales.read', 'ctrax_days'],
+       ['SwipeSimple daily close', swipesimple_days_path(date: date), 'sales.read', 'swipesimple_days'],
        ['Registers', sales_pos_sessions_path, 'sales.read', 'sales/pos_sessions']]
     when :stock
       [['Inventory', workspace_inventory_index_path, 'inventory.read', 'inventory/workspace'],

@@ -447,6 +447,13 @@ Rails.application.routes.draw do
   post '/customer_display/pay', to: 'customer_displays#pay', as: :customer_pay
   resources :ctrax_days, only: %i[index show create] do
     member { post :review }
+    collection { get :items }
+  end
+  resources :swipesimple_days, only: :index do
+    collection do
+      post :review
+      post :deposit_merchant
+    end
   end
   get '/ctrax_pos', to: 'ctrax_pos#index', as: :ctrax_pos
   post '/ctrax_pos/:location_id/quote', to: 'ctrax_pos#quote', as: :quote_ctrax_pos

@@ -16,6 +16,36 @@ module ReportTableHelper
     { from: @range.to_date.iso8601, to: @to_date.iso8601 }
   end
 
+  # The window a report page is showing, as explicit dates.
+  def report_window_dates
+    from = @range&.to_date || Date.current
+    to = @to_date || Date.current
+    [from, to]
+  end
+
+  # The same-length window before (-1) or after (+1) from..to. Whole calendar
+  # months move by their number of months (a quarter by a quarter); anything
+  # else moves by its number of days.
+  def report_shift(from, to, direction)
+    if from == from.beginning_of_month && to == to.end_of_month
+      months = ((to.year * 12) + to.month) - ((from.year * 12) + from.month) + 1
+      new_from = from >> (months * direction)
+      [new_from, (new_from >> months) - 1]
+    else
+      days = (to - from).to_i + 1
+      [from + (days * direction), to + (days * direction)]
+    end
+  end
+
+  def report_range_label(from, to)
+    return from.strftime('%B %Y') if from == from.beginning_of_month && to == from.end_of_month
+    return "Q#{((from.month - 1) / 3) + 1} #{from.year}" if from == from.beginning_of_quarter && to == from.end_of_quarter
+    return from.strftime('%a %b %-d, %Y') if from == to
+
+    same_year = from.year == to.year
+    "#{from.strftime(same_year ? '%b %-d' : '%b %-d, %Y')} – #{to.strftime('%b %-d, %Y')}"
+  end
+
   # Quick ranges for report date pickers, as [label, from, to].
   def report_date_presets(today = Date.current)
     last_month = today.prev_month
