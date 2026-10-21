@@ -134,21 +134,23 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Unverified / historical'
   end
 
-  test 'index is discoverable from the header and dashboard shortcuts' do
+  test 'index is discoverable from the Sell area and dashboard shortcuts, not a duplicate header icon' do
     get customers_path
     assert_response :success
-    assert_select 'a[data-customers-link][href=?][aria-label="Customers"][aria-current="page"]', customers_path
+    assert_select 'nav[aria-label="Module areas"] a[aria-current="page"]', text: /Sell/
+    assert_select 'nav[aria-label="Module"] .module-menu-panel a[href=?][aria-current="page"]', customers_path
+    assert_select 'a.nav-utility[href=?]', customers_path, count: 0
     OnboardingController.stubs(:configured?).returns(true)
     get root_path
     assert_response :success
-    assert_select 'a[data-customers-link][href=?]', customers_path
+    assert_select 'a.nav-utility[href=?]', customers_path, count: 0
     assert_select 'nav[aria-label="Daily work"] a[href=?]', customers_path
   end
 
   test 'users without customers.read get an explanation instead of a silent redirect' do
     @user.update!(role: 'inventory_employee')
     get root_path
-    assert_select 'a[data-customers-link]', count: 0
+    assert_select 'nav[aria-label="Module"] .module-menu-panel a[href=?]', customers_path, count: 0
     get customers_path
     assert_response :forbidden
     assert_select '[role=alert]', text: /doesn't include customers/

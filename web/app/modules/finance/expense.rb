@@ -36,7 +36,7 @@ module Finance
     belongs_to :account, class_name: 'Finance::Account', optional: true
     guard_locked_period :incurred_on
 
-    validates :category, inclusion: { in: CATEGORIES }
+    validate :category_known
     validates :amount_cents, numericality: { greater_than: 0, less_than_or_equal_to: 2_147_483_647 }
     validates :incurred_on, presence: true
 
@@ -45,7 +45,16 @@ module Finance
     scope :recent, ->(limit = 200) { order(incurred_on: :desc, created_at: :desc).limit(limit) }
 
     def category_label
-      category.tr('_', ' ').titleize
+      Finance::ExpenseCategory.label_for(category)
+    end
+
+    private
+
+    # Any category this workspace has; a new or changed category must be active.
+    def category_known
+      known = Finance::ExpenseCategory.known_keys
+      allowed = new_record? || category_changed? ? Finance::ExpenseCategory.active_keys : known
+      errors.add(:category, 'is not an active expense category') unless allowed.include?(category)
     end
   end
 end

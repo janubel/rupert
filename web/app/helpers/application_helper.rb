@@ -9,6 +9,12 @@ module ApplicationHelper
     @nav_areas ||= ModuleRegistry.areas_for(Current.user)
   end
 
+  # Whether the header already offers this area. Account-menu shortcuts that an
+  # area tab would repeat (My time clock, Features & roadmap) show only without it.
+  def nav_area?(key)
+    nav_areas.any? { |area| area[:key] == key.to_s }
+  end
+
   # Safely evaluate a module's lazy path; "#" keeps the nav alive if a route
   # helper is missing (e.g. mid-development).
   def safe_module_path(entry)
@@ -20,7 +26,7 @@ module ApplicationHelper
   def module_match_strength(path)
     return 0 if path.blank? || path == '#'
 
-    request_path = request.path == '/stock_comparison' ? '/inventory' : request.path
+    request_path = request.path
     return request_path == '/' ? 100 : 0 if path == '/'
 
     return path.length if request_path == path

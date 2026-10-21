@@ -3,7 +3,7 @@
 <div class="space-y-6">
   <section>
     <h1 class="page-title">API integrations</h1>
-    <p class="mt-2 text-sm text-mocha">Connect your tools to Rupert's versioned read API. Each token belongs to this store, has selected read scopes, and can be revoked here.</p>
+    <p class="mt-2 text-sm text-mocha">Connect your tools to Rupert's versioned read API. Each token belongs to this store, has selected scopes, and can be revoked here. The same token can connect an AI assistant over MCP (see below).</p>
   </section>
 
   <% if @issued_secret %>
@@ -16,7 +16,7 @@
   <% end %>
 
   <section class="card card-pad space-y-3">
-    <h2 class="font-display text-xl text-ink">Create a read token</h2>
+    <h2 class="font-display text-xl text-ink">Create a token</h2>
     <% if @token.errors.any? %><p role="alert" class="text-sm text-rose"><%= @token.errors.full_messages.to_sentence %></p><% end %>
     <%= form_with model: @issued_secret ? ApiAccessToken.new(expires_at: 90.days.from_now) : @token, url: api_access_tokens_path, data: { turbo: false }, class: 'space-y-4' do |form| %>
       <div class="grid gap-4 sm:grid-cols-2">
@@ -24,10 +24,11 @@
         <div><%= form.label :expires_at, 'Expires at (optional)', class: 'field-label' %><%= form.datetime_local_field :expires_at, class: 'input' %></div>
       </div>
       <fieldset class="space-y-2">
-        <legend class="mb-2 text-sm font-medium">Allowed reads</legend>
+        <legend class="mb-2 text-sm font-medium">Allowed access</legend>
+        <p class="text-xs text-taupe">Every scope is read-only except those marked “writes”, which change only Rupert's own records. No scope writes to Shopify, Square or C-Trax.</p>
         <% ApiAccessToken::SCOPES.each do |scope, permission| %>
           <% next if permission && !Current.user.can?(permission) %>
-          <label class="flex items-center gap-2 text-sm"><%= check_box_tag 'api_access_token[scopes][]', scope, @token.scopes.to_a.include?(scope), id: "api_scope_#{scope.tr(':', '_')}" %><span class="font-mono"><%= scope %></span></label>
+          <label class="flex items-center gap-2 text-sm"><%= check_box_tag 'api_access_token[scopes][]', scope, @token.scopes.to_a.include?(scope), id: "api_scope_#{scope.tr(':', '_')}" %><span class="font-mono"><%= scope %></span><% if ApiAccessToken::WRITE_SCOPES.include?(scope) %><span class="pill-clay">writes Rupert tasks</span><% end %></label>
         <% end %>
       </fieldset>
       <%= form.submit 'Create API token', class: 'btn-primary' %>
@@ -42,6 +43,13 @@ curl -H 'Authorization: Bearer YOUR_TOKEN' '<%= request.base_url %>/api/v1/catal
 curl -H 'Authorization: Bearer YOUR_TOKEN' '<%= request.base_url %>/api/v1/inventory?page=1&amp;per_page=50'
 curl -H 'Authorization: Bearer YOUR_TOKEN' '<%= request.base_url %>/api/v1/roadmap'</code></pre>
     <p class="text-xs text-taupe">Catalog defaults to Shopify; request Square separately. List responses include data and pagination meta. Follow meta.next_page while present. per_page is 1–100 (default 50), page is 1–1000. Inventory supports source and location_id filters. 401 means invalid, expired, revoked or inactive owner; 403 means the scope or owner's current permission is missing.</p>
+  </section>
+
+  <section class="card card-pad space-y-3" aria-labelledby="mcp-heading">
+    <h2 id="mcp-heading" class="font-display text-xl text-ink">Connect an AI assistant (MCP)</h2>
+    <p class="text-sm text-mocha">AI assistants such as Claude or ChatGPT can use Rupert through its Model Context Protocol server at <code><%= request.base_url %>/mcp</code>. Create a token above for the assistant (only the scopes it needs), then add it to the assistant. It sees only the tools its scopes and your current permissions allow, and every tool call is recorded in Activity.</p>
+    <pre class="overflow-x-auto rounded-lg bg-haze p-3 text-xs"><code>claude mcp add --transport http rupert <%= request.base_url %>/mcp --header "Authorization: Bearer YOUR_TOKEN"</code></pre>
+    <p class="text-xs text-taupe">Any token can send feedback (bugs, struggles, task reports, suggestions) with the submit_feedback tool; review it under <%= Current.user.can?('settings.read') ? link_to('AI assistant feedback', agent_feedbacks_path, class: 'underline') : 'AI assistant feedback' %>. Setup for other clients, the tool list and the scopes each tool needs are in docs/mcp.md.</p>
   </section>
 
   <section class="card overflow-x-auto">

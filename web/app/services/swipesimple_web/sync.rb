@@ -2,8 +2,17 @@
 
 module SwipesimpleWeb
   class Sync
+    REPORT_DAYS = 45
+
     def self.call(connection:)
       SyncObservability.observe('swipesimple', 'web') { new(connection).call }
+    end
+
+    # The calendar months covering at least the last REPORT_DAYS days, so each
+    # stored month is replaced whole and ended months are retained once.
+    def self.report_window
+      today = ReportStore.today
+      (today - (REPORT_DAYS - 1)).beginning_of_month..today
     end
 
     def initialize(connection)
@@ -24,7 +33,8 @@ module SwipesimpleWeb
       return { busy: true } unless claimed == 1
 
       version += 1
-      snapshots = Client.new(@connection.credential_values, company_id: @connection.account_reference).fetch
+      client = Client.new(@connection.credential_values, company_id: @connection.account_reference)
+      snapshots = client.fetch
       prepared = snapshots.map do |snapshot|
         options = { kind: snapshot.kind, merchant_account: snapshot.merchant_account, currency: 'USD',
           source_timezone: 'America/New_York', exported_at: snapshot.exported_at, invoice_scope: 'full' }
@@ -32,6 +42,11 @@ module SwipesimpleWeb
       end
       raise Client::Error, :response unless prepared.map { |item| item.context['kind'] }.sort == %w[invoices transactions]
 
+      # Reports and items are read after the transaction exports and fail on
+      # their own: a problem there never blocks the transaction pull.
+      window = self.class.report_window
+      reports = isolated { Client::REPORT_TOPICS.flat_map { |topic| client.report(topic, from: window.first, to: window.last) } }
+      items = isolated { client.items_workbook }
       counts = prepared.to_h { |item| [item.context['kind'].to_sym, item.rows.size] }
       @connection.with_lock do
         raise Client::Error, :changed unless @connection.lock_version == version
@@ -48,7 +63,11 @@ module SwipesimpleWeb
 
           SwipesimpleReportImporter.import!(item.text, item.context, expected_fingerprint: item.fingerprint)
         end
-        @connection.update!(last_report_status: 'succeeded', last_report_message: "Website pull completed: #{counts[:transactions]} transactions, #{counts[:invoices]} invoices.",
+        account = prepared.first.context['merchant_account']
+        counts[:reports], report_note = store_reports(reports, account)
+        counts[:items], items_note = store_items(items, account)
+        @connection.update!(last_report_status: 'succeeded',
+          last_report_message: "Website pull completed: #{counts[:transactions]} transactions, #{counts[:invoices]} invoices. #{report_note} #{items_note}",
           last_reported_at: snapshots.map { |snapshot| Time.iso8601(snapshot.exported_at) }.min,
           last_check_status: 'verified', last_checked_at: Time.current, last_check_message: 'SwipeSimple website read access verified.')
       end
@@ -60,6 +79,30 @@ module SwipesimpleWeb
     end
 
     private
+
+    def isolated
+      yield
+    rescue Client::Error => e
+      e
+    end
+
+    def store_reports(result, account)
+      return [:failed, "Tax and sales reports were not updated: #{result.message}"] if result.is_a?(Client::Error)
+
+      ActiveRecord::Base.transaction(requires_new: true) { result.each { |chunk| ReportStore.replace!(chunk, merchant_account: account) } }
+      [:pulled, "Tax and sales reports pulled for #{result.map(&:from).min} through #{result.map(&:to).max}."]
+    rescue ActiveRecord::ActiveRecordError, ReconciliationEvidence::Error
+      [:failed, 'Tax and sales reports could not be stored; the previous report days were retained.']
+    end
+
+    def store_items(result, account)
+      return [:failed, "Items were not updated: #{result.message}"] if result.is_a?(Client::Error)
+
+      changed = ActiveRecord::Base.transaction(requires_new: true) { ReportStore.replace_items!(result, merchant_account: account) }
+      changed ? [:updated, "#{result.records.size} active items pulled."] : [:unchanged, 'Item list unchanged.']
+    rescue ActiveRecord::ActiveRecordError
+      [:failed, 'Items could not be stored; the previous item list was retained.']
+    end
 
     def fail_pull(version, error)
       if version

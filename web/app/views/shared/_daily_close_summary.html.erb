@@ -16,7 +16,7 @@
         <tbody class="divide-y divide-fog">
           <% summary.rows.each do |row| %>
             <tr class="<%= 'bg-haze/40' if row.kind == 'swipesimple' %>">
-              <th scope="row" class="td text-left font-medium"><%= row.path && Current.user.can?('sales.read') ? link_to(row.label, ctrax_day_path(row.path), class: 'text-olive underline') : row.label %><span class="block text-xs font-normal text-mocha"><%= row.currency %></span></th>
+              <th scope="row" class="td text-left font-medium"><% if row.kind == 'swipesimple' && Current.user.can?('sales.read') %><%= link_to(row.label, swipesimple_days_path(date: day), class: 'text-olive underline') %><% else %><%= row.path && Current.user.can?('sales.read') ? link_to(row.label, ctrax_day_path(row.path), class: 'text-olive underline') : row.label %><% end %><span class="block text-xs font-normal text-mocha"><%= row.currency %></span></th>
               <% columns.each do |_, key| %><td class="td text-right tabular-nums <%= 'font-semibold' if key == :net %>"><%= reconciliation_money(row[key]) %></td><% end %>
             </tr>
             <% if row.notes %><tr><td class="td text-xs text-mocha" colspan="<%= columns.size + 1 %>"><%= row.label %>: <%= row.notes %></td></tr><% end %>

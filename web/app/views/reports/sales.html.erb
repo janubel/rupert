@@ -66,15 +66,18 @@
   <div class="card overflow-hidden">
     <div class="border-b border-fog px-5 py-3">
       <h2 class="font-display text-lg text-ink">Top products</h2>
+      <p class="text-xs text-mocha">The 50 best sellers by line revenue in this window.</p>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    <%= report_table 'sales-top-products', label: 'Top products' do %>
+      <table class="operations-table w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
-            <th scope="col" class="th">#</th>
-            <th scope="col" class="th">Product</th>
-            <th scope="col" class="th">SKU</th>
-            <th scope="col" class="th text-right">Revenue</th>
+            <th scope="col" class="th" data-col="rank">#</th>
+            <th scope="col" class="th" data-col="product">Product</th>
+            <th scope="col" class="th" data-col="sku">SKU</th>
+            <th scope="col" class="th num" data-col="units">Units</th>
+            <th scope="col" class="th num" data-col="orders" data-default-hidden>Orders</th>
+            <th scope="col" class="th num" data-col="revenue">Revenue</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fog">
@@ -83,14 +86,40 @@
               <td class="td text-taupe"><%= i + 1 %></td>
               <td class="td font-medium text-ink"><%= row[:name] %></td>
               <td class="td font-mono text-xs text-mocha"><%= row[:sku].presence || "—" %></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(row[:revenue]) %></td>
+              <td class="td num text-mocha"><%= row[:units] || "—" %></td>
+              <td class="td num text-mocha"><%= row[:orders] || "—" %></td>
+              <td class="td num font-medium text-ink" data-sort-value="<%= row[:revenue] %>"><%= number_to_currency(row[:revenue]) %></td>
             </tr>
           <% end %>
           <% if @top_products.empty? %>
-            <tr><td class="empty-row">No line-item data in this window.</td></tr>
+            <tr><td class="empty-row" colspan="6">No line-item data in this window.</td></tr>
           <% end %>
         </tbody>
       </table>
+    <% end %>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="border-b border-fog px-5 py-3">
+      <h2 class="font-display text-lg text-ink">Revenue by day</h2>
     </div>
+    <%= report_table 'sales-daily', label: 'Revenue by day' do %>
+      <table class="operations-table w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60">
+          <tr><th scope="col" class="th" data-col="day">Day</th><th scope="col" class="th num" data-col="orders">Orders</th><th scope="col" class="th num" data-col="revenue">Revenue</th><th scope="col" class="th num" data-col="average" data-default-hidden>Average order</th></tr>
+        </thead>
+        <tbody class="divide-y divide-fog">
+          <% @revenue_daily.sort_by { |day, _| day }.reverse_each do |day, revenue| %>
+            <% count = @orders_daily.fetch(day, 0) %>
+            <tr class="hover:bg-cream">
+              <td class="td whitespace-nowrap" data-sort-value="<%= day.iso8601 %>"><%= day.strftime('%a %b %-d, %Y') %></td>
+              <td class="td num"><%= count %></td>
+              <td class="td num" data-sort-value="<%= revenue %>"><%= number_to_currency(revenue) %></td>
+              <td class="td num" data-sort-value="<%= count.zero? ? '' : (revenue / count).round(2) %>"><%= count.zero? ? '—' : number_to_currency(revenue / count) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
   </div>
 <% end %>

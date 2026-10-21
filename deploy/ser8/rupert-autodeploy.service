@@ -1,0 +1,8 @@
+[Unit]
+Description=Deploy Rupert origin/main when CI is green
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rupert-autodeploy.sh
+TimeoutStartSec=20min

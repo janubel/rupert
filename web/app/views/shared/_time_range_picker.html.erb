@@ -1,0 +1,32 @@
+<%# Shared date-range picker for every time report: a dropdown of named ranges
+    (pay weeks run Thursday–Wednesday) plus Start date and End date calendars. Submits
+    range, from, to and range_shown; TimeRangePicker.resolve reads them, so it
+    works without JavaScript. Locals: from, to (Date or nil); optional: true
+    allows blank dates and adds "All dates"; hint: short help text under the
+    fields; from_data / to_data: extra data attributes for the date inputs. %>
+<% optional = local_assigns.fetch(:optional, false) %>
+<% hint = local_assigns[:hint] %>
+<% presets = time_range_presets %>
+<% error_id = 'time-range-error' %>
+<%= tag.div class: 'flex max-w-full flex-wrap items-end gap-3', role: 'group', aria: { label: 'Report dates' },
+      data: { controller: 'range-picker', range_picker_presets_value: presets.map { |preset| [preset.key, preset.from.iso8601, preset.to.iso8601] }.to_json,
+              range_picker_optional_value: optional } do %>
+  <%= hidden_field_tag :range_shown, "#{from&.iso8601}..#{to&.iso8601}", id: nil %>
+  <div class="min-w-0">
+    <%= label_tag :range, 'Date range', class: 'field-label' %>
+    <%= select_tag :range, options_for_select(time_range_options(optional: optional), TimeRangePicker.key_for(from, to)), class: 'select',
+          data: { range_picker_target: 'select', action: 'range-picker#choose' } %>
+  </div>
+  <div class="min-w-0">
+    <%= label_tag :from, 'Start date', class: 'field-label' %>
+    <%= date_field_tag :from, from&.iso8601, class: 'input', required: !optional, aria: { describedby: error_id },
+          data: { range_picker_target: 'from', action: 'input->range-picker#edit change->range-picker#edit' }.merge(local_assigns.fetch(:from_data, {})) %>
+  </div>
+  <div class="min-w-0">
+    <%= label_tag :to, 'End date', class: 'field-label' %>
+    <%= date_field_tag :to, to&.iso8601, class: 'input', required: !optional, aria: { describedby: error_id },
+          data: { range_picker_target: 'to', action: 'input->range-picker#edit change->range-picker#edit' }.merge(local_assigns.fetch(:to_data, {})) %>
+  </div>
+  <p id="<%= error_id %>" class="basis-full text-sm font-medium text-rose" role="alert" data-range-picker-target="error" hidden></p>
+  <% if hint %><p class="basis-full text-xs text-mocha"><%= hint %></p><% end %>
+<% end %>

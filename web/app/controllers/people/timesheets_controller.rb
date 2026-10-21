@@ -20,19 +20,25 @@ module People
       @has_demo_timesheets = visible.demo_records.exists?
       @awaiting = visible.awaiting_review.count
       scoped = visible
-      if @period
-        day = Date.iso8601(@period)
-        @week_start = week_start_for(day)
-        scoped = scoped.where('period_start <= ? AND period_end >= ?', @week_start + 6, @week_start)
+      # Date range: dropdown preset or any Start/End date. An older week link
+      # (?period=) still works and becomes that week's range.
+      range = TimeRangePicker.resolve(params)
+      @from, @to = range.from, range.to
+      if @from.nil? && @to.nil? && @period
+        @week_start = week_start_for(Date.iso8601(@period))
+        @from, @to = @week_start, @week_start + 6
       end
+      @from, @to = @to, @from if @from && @to && @to < @from
+      scoped = scoped.where('period_end >= ?', @from) if @from
+      scoped = scoped.where('period_start <= ?', @to) if @to
+      @week_start ||= week_start_for(@from) if @from
       scoped = scoped.joins(:employee).merge(search_employees(@query)) if @query
       @status_counts = scoped.group(:status).count
       scope = scoped.by_status(@status)
       if request.format.csv?
         return send_data TimesheetCsv.generate(scope), filename: 'timesheets.csv', type: 'text/csv'
       end
-      @square_history = SquareTimecard.visible_to(Current.user)
-      @ctrax_history = CtraxLaborShift.visible_to(Current.user)
+      @coverage = TimeSourceCoverage.for(Current.user)
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)
       @summaries = TimesheetInsights.summaries(@timesheets.to_a)
       # The week schedule leads the page for anyone who can review time, with an employee key to switch people on and off.
@@ -102,7 +108,7 @@ module People
       flash[:notice] = "#{approved} timesheet#{approved == 1 ? '' : 's'} approved." if approved.positive?
       flash[:alert] = "Not approved — #{failures.to_sentence}" if failures.any?
       redirect_to people_timesheets_path(status: params[:return_status].presence, period: params[:return_period].presence,
-        q: params[:return_q].presence, view: 'list')
+        from: params[:return_from].presence, to: params[:return_to].presence, q: params[:return_q].presence, view: 'list')
     end
 
     def show
