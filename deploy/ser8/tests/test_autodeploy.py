@@ -151,6 +151,15 @@ class AutodeployTest(unittest.TestCase):
         self.assertIn('dirty', result.stdout)
         self.assertEqual(self.head(self.tmp / 'app'), self.old)
 
+    def test_shallow_checkout_is_completed_before_deploying(self):
+        shutil.rmtree(self.tmp / 'app')
+        self.git('clone', '-q', '--depth', '1', f'file://{self.origin}', str(self.tmp / 'app'))
+        new = self.commit('feature')
+        self.assertEqual(self.git('rev-parse', '--is-shallow-repository', cwd=self.tmp / 'app'), 'true')
+        result, _ = self.run_deploy()
+        self.assertIn(f'deployed {new[:8]}, healthy', result.stdout)
+        self.assertEqual(self.git('rev-parse', '--is-shallow-repository', cwd=self.tmp / 'app'), 'false')
+
     def test_dry_run_changes_nothing(self):
         self.commit('feature')
         result, calls = self.run_deploy(DRY_RUN='1')
