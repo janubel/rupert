@@ -1,0 +1,10 @@
+[Unit]
+Description=Rupert encrypted backup mirror, every 6 hours and shortly after boot
+
+[Timer]
+OnBootSec=15min
+OnCalendar=*-*-* 01/6:20:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

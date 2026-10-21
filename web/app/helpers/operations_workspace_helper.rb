@@ -37,6 +37,7 @@ module OperationsWorkspaceHelper
        ['Source documents', reconciliation_documents_path(from: date, to: date, close_day: date), 'reports.read', 'reconciliation_documents', 'Records'],
        ['Accounts', finance_accounts_path, 'finance.read', 'finance/accounts', 'Records'],
        ['Receipts', receipts_path, 'finance.read', 'receipts', 'Records'],
+       ['Uploads', uploads_path, 'uploads.read', 'uploads', 'Records'],
        ['Chart of accounts', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts', 'Records'],
        ['Expense categories', finance_expense_categories_path, 'finance.read', 'finance/expense_categories', 'Records'],
        ['General ledger', finance_journal_entries_path, 'finance.read', 'finance/journal_entries', 'Records'],

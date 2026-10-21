@@ -39,6 +39,7 @@ The current operating decision and restore/scaling guidance are in `ops/sqlite-i
 - [Main / SER8 reconciliation and preserved PR work](ops/repository-reconciliation-2026-10-16.md).
 - [Historical record backfills and recovery checks](ops/historical-records.md).
 - [QuickBooks CSV import and the History view](ops/quickbooks-import.md).
+- [Uploads inbox: one front door for files, with dry run and approval](ops/uploads-inbox.md).
 - [Community and influencer implementation plan (historical)](plans/community-and-influencer-marketing.md).
 
 Preserved research: [Authorize.net API investigation](ops/authorize-net-api-investigation.md), [earlier gateway investigation](ops/authorize-net-integration-investigation.md), and [historical C-Trax investigation](ctrax-integration-research.md). Provider enablement remains separate from documentation reconciliation.

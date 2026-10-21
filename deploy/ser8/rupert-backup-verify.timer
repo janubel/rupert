@@ -1,0 +1,10 @@
+[Unit]
+Description=Rupert backup restore drill, weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00
+RandomizedDelaySec=20min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
