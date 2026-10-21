@@ -1,0 +1,8 @@
+<div id="cash-flow-meta" class="cash-flow-meta">
+  <p class="cash-flow-live" data-cash-flow-target="live"><span class="cash-flow-live-dot" aria-hidden="true"></span><span data-cash-flow-target="liveText">Live · refreshed just now</span></p>
+  <p class="text-xs text-taupe">
+    <%= report.range_label %> · <%= report.from.strftime('%b %-d') %> – <%= report.to.strftime('%b %-d, %Y') %> · USD<br>
+    Bank data through <%= report.bank_data_through ? report.bank_data_through.strftime('%b %-d') : 'no statements yet' %><% if report.account %> · <%= report.account %><% end %>
+    · Sales synced <%= report.last_sync_at ? "#{time_ago_in_words(report.last_sync_at)} ago" : 'never' %>
+  </p>
+</div>

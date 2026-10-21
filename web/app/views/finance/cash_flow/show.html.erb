@@ -1,0 +1,68 @@
+<% content_for :title, 'Cash flow' %>
+<% report = @report %>
+<div class="mx-auto max-w-7xl space-y-6 operations-workspace cash-flow-workspace" data-controller="cash-flow" data-cash-flow-interval-value="30000" data-cash-flow-url-value="<%= finance_cash_flow_path(request.query_parameters) %>">
+  <%= render 'shared/operations_navigation', workspace: :finance %>
+
+  <header class="operations-header">
+    <div>
+      <p class="eyebrow text-mocha">Money, as it moves</p>
+      <h1 class="page-title mt-2">Cash flow</h1>
+      <p class="mt-2 max-w-2xl text-sm text-mocha">What came into the bank, what went out, what was sold and what was spent, for the dates you choose. Bank figures come from your imported statements; sales from your connected channels; spend from what you recorded. Nothing here is matched or guessed.</p>
+    </div>
+    <%= render 'finance/cash_flow/meta', report: report %>
+  </header>
+
+  <%# One filter row above everything it scopes. The server resolves the same params without JavaScript. %>
+  <%= form_with url: finance_cash_flow_path, method: :get, class: 'card card-pad cash-flow-filters', data: { turbo: false } do |f| %>
+    <div class="cash-flow-presets" role="group" aria-label="Date range">
+      <% CashFlowReport::PRESETS.each do |key, label| %>
+        <%= link_to label, finance_cash_flow_path(range: key, account: report.account), class: "nav-pill #{report.range_key == key ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: report.range_key == key ? 'true' : nil } %>
+      <% end %>
+      <span class="nav-pill <%= report.range_key == 'custom' ? 'nav-pill-active' : 'nav-pill-idle' %>">Custom</span>
+    </div>
+    <div class="cash-flow-filter-fields">
+      <div><%= f.label :from, 'From', class: 'field-label' %><%= f.date_field :from, value: report.from.iso8601, class: 'input', required: true %></div>
+      <div><%= f.label :to, 'To', class: 'field-label' %><%= f.date_field :to, value: report.to.iso8601, class: 'input', required: true %></div>
+      <% if report.accounts.size > 1 %>
+        <div><%= f.label :account, 'Bank account', class: 'field-label' %><%= f.select :account, [['All accounts', '']] + report.accounts.map { |a| [a, a] }, { selected: report.account.to_s }, class: 'select' %></div>
+      <% end %>
+      <%= f.submit 'Apply', class: 'btn-ghost' %>
+    </div>
+  <% end %>
+
+  <%= render 'finance/cash_flow/kpis', report: report %>
+
+  <section class="grid gap-4 lg:grid-cols-3">
+    <div class="card card-pad lg:col-span-2 cash-flow-chart-card">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 class="font-display text-xl text-ink">Money in and out of the bank</h2>
+          <p class="text-xs text-taupe">Per <%= report.bucket %> · deposits above the line, withdrawals below</p>
+        </div>
+      </div>
+      <div class="cash-flow-canvas" style="height:240px"><canvas data-cash-flow-target="bankChart" role="img" aria-label="Money in and out of the bank per <%= report.bucket %>. The table below lists every value."></canvas></div>
+      <p class="mt-4 text-xs text-taupe">Running net since <%= report.from.strftime('%b %-d') %> · where the range's cash stands after each <%= report.bucket %></p>
+      <div class="cash-flow-canvas" style="height:120px;margin-top:.5rem"><canvas data-cash-flow-target="netChart" role="img" aria-label="Running net cash since <%= report.from.strftime('%b %-d') %>. The table below lists every value."></canvas></div>
+      <%= render 'finance/cash_flow/bank_table', report: report %>
+    </div>
+    <%= render 'finance/cash_flow/position', report: report %>
+  </section>
+
+  <section class="grid gap-4 lg:grid-cols-3">
+    <div class="card card-pad lg:col-span-2 cash-flow-chart-card">
+      <div>
+        <h2 class="font-display text-xl text-ink">Sales taken, by channel</h2>
+        <p class="text-xs text-taupe">Per <%= report.bucket %> · paid or fulfilled orders and completed C-Trax sales, before refunds · what was sold, not yet what reached the bank</p>
+      </div>
+      <div class="cash-flow-canvas" style="height:280px"><canvas data-cash-flow-target="channelChart" role="img" aria-label="Sales by channel per <%= report.bucket %>. The table below lists every value."></canvas></div>
+      <%= render 'finance/cash_flow/channels_table', report: report %>
+    </div>
+    <%= render 'finance/cash_flow/deposits', report: report %>
+  </section>
+
+  <%= render 'finance/cash_flow/spend', report: report %>
+
+  <%= render 'finance/cash_flow/events', report: report %>
+
+  <%= render 'finance/cash_flow/data', report: report %>
+</div>

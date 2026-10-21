@@ -11,8 +11,8 @@ class DashboardWidgetTest < ActiveSupport::TestCase
   teardown { Current.tenant = nil }
 
   test 'default_order lists all widgets' do
-    assert_equal 9, DashboardWidget.default_order.length
-    assert_equal %w[stats today_channels revenue attention stock_alerts sync_history goals commissions people],
+    assert_equal 10, DashboardWidget.default_order.length
+    assert_equal %w[stats today_channels revenue cash_flow attention stock_alerts sync_history goals commissions people],
       DashboardWidget.default_order
   end
 
@@ -27,7 +27,7 @@ class DashboardWidgetTest < ActiveSupport::TestCase
                                         'widgets' => %w[revenue stats sync_history],
                                         'hidden' => ['stats']
                                       })
-    assert_equal(%w[revenue stats sync_history today_channels attention stock_alerts goals commissions people],
+    assert_equal(%w[revenue stats sync_history today_channels cash_flow attention stock_alerts goals commissions people],
       entries.map { |widget, _| widget.key })
     visible = entries.select { |_, v| v }.map { |widget, _| widget.key }
     assert_includes visible, 'revenue'

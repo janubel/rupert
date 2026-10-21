@@ -53,6 +53,15 @@
   --color-on-butter: #2a2316;
   /* Shadow tint follows the ink hue so shadows read as depth, not as dirt. */
   --shadow-ink: 23 53 58;
+  /* Chart palette (dataviz-validated: lightness band, chroma, CVD ΔE ≥ 6 with legend + gaps, ≥ 3:1 on paper).
+     chart-1..4 are categorical slots in fixed order; in/out are the diverging pair for money in vs out. */
+  --chart-1: #2f6fd8;
+  --chart-2: #d9641e;
+  --chart-3: #1f8a5a;
+  --chart-4: #6b55c8;
+  --chart-in: #2f6fd8;
+  --chart-out: #d9641e;
+  --chart-muted: #9aa7a4;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter",
     ui-sans-serif, system-ui, "Segoe UI", sans-serif;
@@ -919,6 +928,13 @@ select.input {
     --color-warn-bg: #2a2316;
     --color-warn-edge: #6b5427;
     --shadow-ink: 0 0 0;
+    --chart-1: #5b8fe6;
+    --chart-2: #d46a2b;
+    --chart-3: #3fa576;
+    --chart-4: #9a82e0;
+    --chart-in: #5b8fe6;
+    --chart-out: #d46a2b;
+    --chart-muted: #5f6b69;
   }
 }
 
@@ -1405,6 +1421,44 @@ body.tour-active { overflow-x:hidden; }
 .appearance-swatch-mist { --swatch-page: #e6ebf2; --swatch-accent: #2457c4; }
 .appearance-swatch-sepia { --swatch-page: #efe6d4; --swatch-accent: #185f78; }
 .appearance-swatch-herbal { --swatch-page: #e6efea; --swatch-accent: #0e6f72; }
+
+/* Cash flow dashboard (finance/cash_flow). Filters in one row above the charts; thin marks; the
+   figures beside each sparkline and the "Show as table" twins carry the exact values. */
+.cash-flow-filters { display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem; }
+.cash-flow-presets { display:flex;flex-wrap:wrap;gap:.4rem; }
+.cash-flow-filter-fields { display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem; }
+.cash-flow-filter-fields > div { min-width:9rem; }
+.cash-flow-meta { text-align:right; }
+.cash-flow-live { display:inline-flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:600;color:var(--color-fern); }
+.cash-flow-live[data-stale="1"] { color:var(--color-taupe); }
+.cash-flow-live-dot { width:.5rem;height:.5rem;border-radius:9999px;background:currentColor;box-shadow:0 0 0 0 color-mix(in srgb, currentColor 45%, transparent);animation:cash-flow-pulse 2.4s ease-out infinite; }
+.cash-flow-live[data-stale="1"] .cash-flow-live-dot { animation:none; }
+@keyframes cash-flow-pulse { 0% { box-shadow:0 0 0 0 color-mix(in srgb, currentColor 45%, transparent); } 70% { box-shadow:0 0 0 .45rem transparent; } 100% { box-shadow:0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .cash-flow-live-dot { animation:none; } }
+.cash-flow-stat .stat-value { font-variant-numeric:normal; }
+.cash-flow-sparkline { display:block;max-width:100%;overflow:visible; }
+.cash-flow-delta { line-height:1.3; }
+.cash-flow-canvas { position:relative;margin-top:1rem; }
+.cash-flow-table { margin-top:.75rem; }
+.cash-flow-table th { font-weight:600;color:var(--color-mocha);padding:.25rem .5rem;border-bottom:1px solid var(--color-fog); }
+.cash-flow-table td { padding:.25rem .5rem;border-bottom:1px solid var(--color-fog);font-variant-numeric:tabular-nums; }
+.cash-flow-table tfoot td { border-bottom:0; }
+.cash-flow-bars { display:grid;gap:.5rem; }
+.cash-flow-bar-row { display:grid;grid-template-columns:minmax(7rem,11rem) 1fr auto;align-items:center;gap:.75rem;font-size:.875rem; }
+.cash-flow-bar-label { color:var(--color-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.cash-flow-bar-track { height:.75rem;border-radius:9999px;background:var(--color-haze);overflow:hidden; }
+.cash-flow-bar-fill { display:block;height:100%;border-radius:0 9999px 9999px 0;min-width:2px;transition:width .3s ease; }
+.cash-flow-bar-value { font-variant-numeric:tabular-nums;color:var(--color-ink); }
+@media (max-width:640px) { .cash-flow-bar-row { grid-template-columns:1fr auto; }.cash-flow-bar-track { grid-column:1 / -1; } }
+.cash-flow-flow { display:grid;gap:.5rem;font-size:.9375rem; }
+.cash-flow-flow li { display:flex;justify-content:space-between;gap:1rem;padding:.4rem 0;border-bottom:1px solid var(--color-fog); }
+.cash-flow-flow-label { color:var(--color-mocha); }
+.cash-flow-flow-total { font-weight:600;border-bottom:0 !important; }
+.cash-flow-flow-total .cash-flow-flow-label { color:var(--color-ink); }
+.cash-flow-event-icon { width:1.5rem;height:1.5rem;border-radius:9999px;display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;background:var(--color-haze);color:var(--color-mocha);flex:none; }
+.cash-flow-event-sale { color:var(--chart-1); }
+.cash-flow-event-bank_in { color:var(--chart-in); }
+.cash-flow-event-bank_out,.cash-flow-event-expense,.cash-flow-event-vendor_payment { color:var(--chart-out); }
 
 /* Uploads inbox: drop zone, preview table and facts list. Tokens only, so every appearance and dark mode follows. */
 .upload-dropzone { position:relative;display:grid;place-items:center;min-height:9rem;padding:1.25rem;border:2px dashed var(--color-edge);border-radius:1rem;background:color-mix(in srgb,var(--color-olive) 4%,var(--color-paper));text-align:center;transition:border-color .15s,background-color .15s; }
