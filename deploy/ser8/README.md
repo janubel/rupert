@@ -32,6 +32,12 @@ rupert-logs errors            # also: request <id>, user <id>, upload, slow, noi
 [`docs/ops/logging.md`](../../docs/ops/logging.md). The customer provisioner (`customer_provisioner.py`) backs off to
 one poll a minute while idle; `RUPERT_PROVISIONER_MAX_IDLE_SECONDS=15` keeps the old 15 s rate.
 
+## Backups
+
+Five layers (5-minute rolling snapshot and 6-hourly sets inside the container, an encrypted copy on the host, a mirror on
+another machine and a weekly restore drill), each reporting to **System → Backups**. Scripts, units, install steps and the
+restore procedure are in [docs/ops/backups.md](../../docs/ops/backups.md).
+
 ## Auto-deploy (`rupert-autodeploy`)
 
 Runs **inside the `rupert` Incus container** as root. Every 5 minutes it fetches `origin/main` and deploys it to

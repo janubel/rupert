@@ -10,6 +10,7 @@ class SystemController < AuthenticatedController
     @sqlite = SqliteMaintenance.report
     @ai_health = AiHealthSnapshot.build
     @ops_activity = OpsActivitySnapshot.build
+    @backups = BackupStatus.layers
     render('system/index')
   end
 
