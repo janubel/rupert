@@ -18,6 +18,7 @@ class ApiAccessToken < ApplicationRecord
     'timesheets:read' => 'timesheets.read',
     'tasks:read' => 'projects.read',
     'alerts:read' => 'alerts.read',
+    'system:read' => 'system.read',
     'tasks:write' => 'projects.write'
   }.freeze
   # Scopes that let an integration change Rupert's own records. None of them

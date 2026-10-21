@@ -17,6 +17,7 @@ class DataRetentionJob < ActiveJob::Base
     Current.set(tenant: nil) do
       DataRetention.prune(SyncAttempt.where(source: 'google_backup'), column: 'queued_at', older_than: 90.days.ago)
       DataRetention.prune(WebhookDelivery.all, column: 'received_at', older_than: WebhookDelivery::RETENTION.ago)
+      DataRetention.prune(AiAgentRun.all, column: 'occurred_at', older_than: 180.days.ago)
     end
   end
 end

@@ -64,7 +64,7 @@ class McpServerTest < ActionDispatch::IntegrationTest
     _, full = issue
     rpc(full, 'tools/list')
     tools = response.parsed_body.dig('result', 'tools')
-    assert_equal Mcp::Registry.tools.map(&:tool_name).sort, tools.map { |tool| tool['name'] }.sort
+    assert_equal (Mcp::Registry.tools.map(&:tool_name) - ['ai_health']).sort, tools.map { |tool| tool['name'] }.sort
     tools.each do |tool|
       assert tool['description'].present?, tool['name']
       assert_equal 'object', tool.dig('inputSchema', 'type'), tool['name']
@@ -100,7 +100,7 @@ class McpServerTest < ActionDispatch::IntegrationTest
   end
 
   test 'every tool answers without an internal error for a full-scope token' do
-    _, full = issue
+    full_token, full = issue
     order = Core::Order.create!(source: 'shopify', source_order_id: 'mcp-order', occurred_at: 2.days.ago, gross_cents: 4200, tax_cents: 252, currency: 'USD')
     order.mark_paid!
     order.order_lines.create!(name: 'Tea 50g', sku: 'MCP-TEA', unit_cents: 4200, quantity: 1, line_cents: 4200)
@@ -117,7 +117,9 @@ class McpServerTest < ActionDispatch::IntegrationTest
     assert_equal 2, swipe.dig('structuredContent', 'summary', 'items')
     assert_equal 1, call_tool(full, 'list_alerts').dig('structuredContent', 'rows').size
 
-    Mcp::Registry.tools.each do |tool|
+    # ai_health is instance-operator only (covered by its own tests below).
+    assert_not_includes Mcp::Registry.available_to(full_token).map(&:tool_name), 'ai_health'
+    Mcp::Registry.available_to(full_token).each do |tool|
       arguments = case tool.tool_name
       when 'submit_feedback' then { kind: 'task_report', summary: 'Smoke test done' }
       when 'create_task' then { title: 'Check the tea shelf', priority: 'low', due_on: '2026-11-01' }
@@ -308,6 +310,41 @@ class McpServerTest < ActionDispatch::IntegrationTest
     assert_match(/tool=sales_summary; .*outcome=invalid_arguments/, logs.last.details)
     assert_equal [@owner.id, @tenant.id], [logs.first.user_id, logs.first.tenant_id]
     logs.each { |log| assert_no_match(/MCP-TEA|not-a-date/, log.details) }
+  end
+
+  test 'ai_health reports counts and classifications for an instance operator, never a key' do
+    @owner.update!(role: 'super_admin')
+    AiHealthCheck.create!(status: 'error', key_state: 'expired', error_code: 'api_key_expired', configured_model: 'deepseek-v4-flash',
+      free_models: %w[beam-free], free_model_count: 1, checked_at: 1.minute.ago)
+    AiAgentRun.create!(outcome: 'ok', tokens_in: 400, tokens_out: 40, occurred_at: 1.hour.ago)
+    _, secret = issue(scopes: ['system:read'])
+    result = call_tool(secret, 'ai_health')
+    assert_equal false, result['isError']
+    data = result['structuredContent']
+    assert_equal 'error', data['state']
+    assert_equal 'expired', data.dig('key', 'state')
+    assert_equal %w[beam-free], data.dig('free_models', 'ids')
+    assert_equal [400, 40], data.dig('tokens', 'today').values_at('tokens_in', 'tokens_out')
+    assert_equal false, data.dig('usage_api', 'available')
+    assert_no_match(/sk-|Bearer|OPENCODE_API_KEY/, result.to_json)
+  end
+
+  test 'ai_health needs the system scope and an instance operator' do
+    _, limited = issue(scopes: ['roadmap:read'])
+    rpc(limited, 'tools/list')
+    assert_not_includes response.parsed_body.dig('result', 'tools').map { |t| t['name'] }, 'ai_health'
+
+    _, store_admin = issue(scopes: ['system:read'])
+    rpc(store_admin, 'tools/list')
+    assert_not_includes response.parsed_body.dig('result', 'tools').map { |t| t['name'] }, 'ai_health'
+    result = call_tool(store_admin, 'ai_health')
+    assert result['isError']
+    assert AgentToolIssue.exists?(tool_name: 'ai_health', error_kind: 'denied')
+
+    @owner.update!(role: 'super_admin')
+    _, operator = issue(scopes: ['system:read'])
+    rpc(operator, 'tools/list')
+    assert_includes response.parsed_body.dig('result', 'tools').map { |t| t['name'] }, 'ai_health'
   end
 
   private

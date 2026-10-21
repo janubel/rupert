@@ -108,6 +108,10 @@ production:
     class: BackupJob
     queue: default
     schedule: every 6 hours
+  ai_health_check:
+    class: AiHealthCheckJob
+    queue: default
+    schedule: every 30 minutes
   data_retention:
     class: DataRetentionJob
     queue: default
