@@ -1,5 +1,5 @@
 <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-ink focus:fixed focus:left-4 focus:top-3">Skip to content</a>
-<div class="min-h-full" <% if Current.user %>data-controller="help-panel"<% end %>>
+<div class="min-h-full" <% if Current.user %>data-controller="help-panel feedback" data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %>>
   <% if Current.user&.super_admin? && Current.tenant_id != Current.user.tenant_id %>
     <div role="status" class="flash flash-notice flex flex-wrap items-center justify-between gap-3"><span>Read-only customer support · <%= Current.tenant.name %></span><%= button_to 'Leave support session', leave_platform_support_path, method: :delete, class: 'btn-ghost' %></div>
   <% end %>
@@ -27,6 +27,7 @@
           <% end %>
           <%= render 'shared/header_buzz' if Current.user.can?('dashboard.read') %>
           <%= render 'shared/header_sync_pill', sync: @last_sync %>
+          <%= render 'shared/feedback_button' %>
           <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>
           <div data-controller="dropdown" class="relative">
             <% initials = Current.user.display_name.split(/\s+/).map { |word| word[0] }.join.upcase[0, 2] %>
@@ -110,6 +111,7 @@
     <%= yield %>
   </main>
   <%= render 'shared/help_panel' if Current.user %>
+  <%= render 'shared/feedback_panel' if Current.user %>
 </div>
 
 <% if Current.user&.can?('dashboard.read') %>

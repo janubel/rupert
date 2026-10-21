@@ -17,7 +17,7 @@
   <%= javascript_importmap_tags %>
   <%= yield :head %>
 </head>
-<body data-controller="employee-offline<%= ' help-panel' if Current.user && !@preview %>" class="min-h-screen bg-cream text-ink">
+<body data-controller="employee-offline<%= ' help-panel feedback' if Current.user && !@preview %>"<% if Current.user && !@preview %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %> class="min-h-screen bg-cream text-ink">
   <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:fixed focus:left-4 focus:top-3">Skip to content</a>
   <header class="workspace-header">
     <%= render "layouts/build_version" %>
@@ -27,7 +27,7 @@
         <span>Rupert</span>
       <% end %>
       <% if Current.user %>
-        <div class="flex items-center gap-3 text-sm"><% unless @preview %><%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %><% end %><span><%= Current.user.display_name %></span><% unless @preview %><%= button_to 'Sign out', logout_path, method: :delete, class: 'text-mocha underline' %><% end %></div>
+        <div class="flex items-center gap-3 text-sm"><% unless @preview %><%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %><%= render 'shared/feedback_button' %><% end %><span><%= Current.user.display_name %></span><% unless @preview %><%= button_to 'Sign out', logout_path, method: :delete, class: 'text-mocha underline' %><% end %></div>
       <% end %>
     </div>
     <% if Current.user %>
@@ -49,6 +49,7 @@
     <%= yield %>
   </main>
   <%= render 'shared/help_panel' if Current.user && !@preview %>
+  <%= render 'shared/feedback_panel' if Current.user && !@preview %>
   <footer class="mx-auto flex max-w-3xl flex-wrap gap-4 px-4 pb-8 text-xs text-mocha sm:px-6">
     <%= link_to 'Learn Rupert & definitions', learning_index_path, class: 'underline' if Current.user && !@preview %>
     <%= link_to 'Privacy & support', employee_privacy_path(preview: @preview ? 1 : nil), class: 'underline' %>
