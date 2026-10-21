@@ -70,6 +70,30 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'editing a recorded expense moves its statement line to the replacement entry' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    ups = BankStatementLine.for_document(doc.id).first
+    post decide_bank_statement_path(doc.id), params: { decisions: { ups.id => 'expense:shipping' } }
+    expense = Finance::Expense.find(ups.reload.expense_id)
+    original = ups.journal_entry_id
+    patch finance_expense_path(expense), params: { expense: { category: 'supplies' } }
+    assert_equal 'void', Finance::JournalEntry.find(original).status
+    replacement = Finance::JournalEntry.for_source('Finance::Expense', expense.id).posted.first!
+    assert_equal replacement.id, ups.reload.journal_entry_id
+    assert_equal 'recorded', ups.status
+  end
+
+  test 'changing a recorded expense amount does not silently reconcile the statement line' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    ups = BankStatementLine.for_document(doc.id).first
+    post decide_bank_statement_path(doc.id), params: { decisions: { ups.id => 'expense:shipping' } }
+    original = ups.reload.journal_entry_id
+    patch finance_expense_path(Finance::Expense.find(ups.expense_id)), params: { expense: { amount: '99.00' } }
+    assert_equal original, ups.reload.journal_entry_id
+  end
+
   test 'recorded bank sources retain their journal links and reserve their ledger movements' do
     upload
     doc = ReconciliationDocument.where(kind: 'bank_statement').last

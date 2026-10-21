@@ -115,4 +115,28 @@ class AskRupertToolsTest < ActiveSupport::TestCase
     Current.user = admin
     assert_match(/No results/, AskRupert::Tools.new(user: admin).call('search', { 'query' => 'Zed' }).text)
   end
+
+  test 'where others can read the reply only the two help tools exist, and the rest are refused' do
+    admin = person('admin')
+    %i[shared direct_help].each do |audience|
+      tools = AskRupert::Tools.new(user: admin, audience: audience)
+      assert_equal %w[where_is how_do_i].sort, tools.names.sort, audience.to_s
+      %w[search run_report system_status file_report].each do |name|
+        assert_match(/No tool named #{name}/, tools.call(name, { 'query' => 'abc', 'report' => 'sales_summary', 'kind' => 'bug', 'summary' => 'x' }).text)
+      end
+    end
+    assert_includes AskRupert::Tools.new(user: admin).names, 'search', 'the panel is unchanged'
+  end
+
+  test 'a shared reply does not reveal which pages this person lacks, a private one does' do
+    cashier = person('cashier')
+    shared = AskRupert::Tools.new(user: cashier, audience: :shared).call('where_is', { 'query' => 'payroll' })
+    direct = AskRupert::Tools.new(user: cashier, audience: :direct_help).call('where_is', { 'query' => 'payroll' })
+    assert_not_includes shared.text, 'not part of this person'
+    assert_includes direct.text, 'not part of this person'
+  end
+
+  test 'an unknown audience is refused' do
+    assert_raises(ArgumentError) { AskRupert::Tools.new(user: person('admin'), audience: :everyone) }
+  end
 end
