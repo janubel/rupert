@@ -10,6 +10,7 @@
       <%= link_to 'Receive purchases', purchasing_purchase_orders_path, class: 'btn-ghost' if Current.user.can?('purchasing.read') %>
       <%= link_to 'Material lots', bulk_materials_path, class: 'btn-ghost' %>
       <%= link_to 'Review exceptions', inventory_exceptions_path, class: 'btn-ghost' %>
+      <%= link_to 'Download PDF', pdf_inventory_index_path, class: 'btn-ghost', data: { turbo: false }, title: 'Printable snapshot with per-location stock, sync times and exceptions first' %>
     </div>
   </section>
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Inventory work queues">
