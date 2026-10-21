@@ -131,7 +131,7 @@ Why polling and not Turbo Streams / Action Cable: production runs SQLite with no
 
 - **Never run against a real Buzz relay.** The relay behaviour above comes from upstream source and docs and from the stand-in; the first live check is: set the relay and channel, add the agent's npub to the channel, open the tab and compare with the Buzz app.
 - Whether the real relay accepts an agent-key EVENT without a `BUZZ_AUTH_TAG`/NIP-OA attestation, and its per-key rate limits.
-- `BuzzAgent.publish` (used by the existing notices, not by the chat) sends its EVENT without waiting for the relay's OK to the AUTH reply and can count that AUTH OK as the event's acknowledgement; the Team chat uses `BuzzRelayClient.publish`, which waits for the right OK. Consider moving the notices to it.
+- `BuzzAgent.publish` (used by the existing notices, not by the chat) sends its EVENT without waiting for the relay's OK to the AUTH reply and can count that AUTH OK as the event's acknowledgement; the Team chat uses `BuzzRelayClient.publish`, which waits for the right OK. `BuzzAgent`'s connections (`publish`, `probe_relay`, `BuzzListener`) also add their message handler after connecting, so a relay's AUTH challenge sent at once can be missed (they fall back after a wait); `BuzzRelayClient` registers handlers first. Consider moving the notices to it.
 - Per-person identities, edits, reactions and threads are not part of v1.
 
 ## Not verified

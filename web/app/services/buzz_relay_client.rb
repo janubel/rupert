@@ -23,7 +23,7 @@ class BuzzRelayClient
 
   MAX_EVENTS = 600
   CONNECT_TIMEOUT = 6
-  AUTH_WAIT = 2.0
+  AUTH_WAIT = 5.0
 
   class << self
     # Events matching the filters (newest first as the relay sends them).
@@ -94,22 +94,25 @@ class BuzzRelayClient
 
   # websocket-client-simple evaluates handler blocks with self = the socket, so
   # they only use the locals they close over.
+  # Handlers are registered before the connection starts (the block form of
+  # connect): a relay sends its AUTH challenge the moment the socket opens, and
+  # a handler added afterwards can miss it.
   def open_socket(relay, frames)
-    ws = WebSocket::Client::Simple.connect(relay)
-    ws.on(:message) do |msg|
-      if msg.respond_to?(:type) && msg.type == :ping
-        ws.send(msg.data.to_s, type: :pong)
-        next
-      end
-      next if msg.respond_to?(:type) && msg.type != :text
+    WebSocket::Client::Simple.connect(relay) do |ws|
+      ws.on(:message) do |msg|
+        if msg.respond_to?(:type) && msg.type == :ping
+          ws.send(msg.data.to_s, type: :pong)
+          next
+        end
+        next if msg.respond_to?(:type) && msg.type != :text
 
-      frames << JSON.parse(msg.data.to_s)
-    rescue JSON::ParserError
-      nil
+        frames << JSON.parse(msg.data.to_s)
+      rescue JSON::ParserError
+        nil
+      end
+      ws.on(:error) { |e| frames << ['ERROR', e.message.to_s[0, 120]] }
+      ws.on(:close) { frames << ['CLOSE'] }
     end
-    ws.on(:error) { |e| frames << ['ERROR', e.message.to_s[0, 120]] }
-    ws.on(:close) { frames << ['CLOSE'] }
-    ws
   end
 
   def wait_until_open(ws, frames)
