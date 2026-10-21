@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -2322,6 +2322,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_040000) do
     t.index ["tenant_id", "merchant_account"], name: "idx_swipesimple_items_account", unique: true
   end
 
+  create_table "swipesimple_report_pulls", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "merchant_account", null: false
+    t.string "topic", null: false
+    t.date "period_from", null: false
+    t.date "period_to", null: false
+    t.integer "row_count", null: false
+    t.string "source_digest", null: false
+    t.text "original_csv", null: false
+    t.bigint "reconciliation_document_id"
+    t.datetime "pulled_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "merchant_account", "topic", "period_from"], name: "idx_swipesimple_report_pulls_scope"
+  end
+
   create_table "swipesimple_report_rows", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.bigint "swipesimple_export_id", null: false
@@ -2340,6 +2356,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_040000) do
     t.index ["swipesimple_export_id", "identity"], name: "idx_swipesimple_export_identity", unique: true
     t.index ["swipesimple_export_id"], name: "index_swipesimple_report_rows_on_swipesimple_export_id"
     t.index ["tenant_id", "identity"], name: "idx_swipesimple_tenant_identity"
+  end
+
+  create_table "swipesimple_sales_days", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "merchant_account", null: false
+    t.date "business_date", null: false
+    t.bigint "subtotal_cents"
+    t.bigint "discounts_cents"
+    t.bigint "tax_cents"
+    t.bigint "tips_cents"
+    t.bigint "refunds_cents"
+    t.bigint "net_sales_cents"
+    t.bigint "net_card_cents"
+    t.bigint "net_cash_cents"
+    t.string "source_digest", null: false
+    t.datetime "pulled_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "merchant_account", "business_date"], name: "idx_swipesimple_sales_days_unique", unique: true
+  end
+
+  create_table "swipesimple_tax_days", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "merchant_account", null: false
+    t.date "business_date", null: false
+    t.string "tax_rate_label", null: false
+    t.decimal "rate_percent", precision: 7, scale: 4
+    t.bigint "pre_tax_cents"
+    t.bigint "tax_cents"
+    t.bigint "total_cents"
+    t.string "source_digest", null: false
+    t.datetime "pulled_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "merchant_account", "business_date", "tax_rate_label"], name: "idx_swipesimple_tax_days_unique", unique: true
   end
 
   create_table "tasks", force: :cascade do |t|

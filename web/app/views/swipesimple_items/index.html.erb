@@ -1,5 +1,12 @@
 <% content_for :title, 'SwipeSimple items' %>
 <% pill = { 'Matched' => 'pill-fern', 'Review name match' => 'pill-clay', 'Not matched' => 'pill-rose' } %>
+<% tax_text = lambda do |r|
+  rate = r['tax_rate'].presence && BigDecimal(r['tax_rate'])
+  if rate then "#{rate.positive? ? 'Taxable' : 'Not taxed'} · #{r['tax_label']}#{" (#{rate.to_s('F')}%)" if rate.positive?}"
+  elsif r['tax_label'] then "#{r['tax_label']} (rate unknown)"
+  else '—'
+  end
+end %>
 <div class="space-y-6">
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
@@ -15,9 +22,10 @@
 
   <% if Current.user.can?('inventory.write') %>
     <%= form_with url: swipesimple_items_path, method: :post, multipart: true, class: 'card card-pad space-y-3' do %>
-      <h2 class="font-display text-lg text-ink"><%= @snapshot ? 'Import a newer item list' : 'Import your SwipeSimple items' %></h2>
+      <h2 class="font-display text-lg text-ink">Upload an item list by hand (fallback)</h2>
+      <p class="text-sm text-mocha">The SwipeSimple website pull reads the item list automatically with each pull (Settings → SwipeSimple). Use this only if that pull is paused or failing.</p>
       <ol class="list-decimal space-y-1 pl-5 text-sm text-mocha">
-        <li>In SwipeSimple, open <strong>Items</strong> (or Inventory) and choose <strong>Export</strong> to download a CSV.</li>
+        <li>In SwipeSimple, open <strong>Items</strong> (or Inventory), choose <strong>Export</strong> and save it as a CSV.</li>
         <li>Upload it here. Columns such as Name/Item, Variant/Option, SKU, Barcode/UPC, Price, Quantity/Stock and Category are recognised automatically.</li>
         <li>The whole file is checked first; if anything is wrong nothing changes. A new import replaces the previous list for that merchant account.</li>
       </ol>
@@ -30,7 +38,7 @@
   <% end %>
 
   <% if @snapshot.nil? %>
-    <section class="card card-pad text-sm text-mocha">No SwipeSimple item list has been imported yet.</section>
+    <section class="card card-pad text-sm text-mocha">No SwipeSimple item list has been pulled or imported yet. Once SwipeSimple website access is set up, the next pull reads it automatically.</section>
   <% else %>
     <% s = @match.summary %>
     <% if @snapshots.many? %>
@@ -38,7 +46,11 @@
         <% @snapshots.each do |snap| %><%= link_to snap.merchant_account, swipesimple_items_path(snapshot_id: snap.id), class: "nav-pill #{snap == @snapshot ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}" %><% end %>
       </nav>
     <% end %>
-    <p class="text-xs text-taupe"><%= @snapshot.merchant_account %> · <%= pluralize(@snapshot.row_count, 'item') %> · imported <%= l(@snapshot.captured_at, format: :long) %><%= " from #{@snapshot.source_filename}" if @snapshot.source_filename %><%= " by #{@snapshot.imported_by.email}" if @snapshot.imported_by %></p>
+    <% if @snapshot.automatic? %>
+      <p class="text-xs text-taupe"><%= @snapshot.merchant_account %> · <%= pluralize(@snapshot.row_count, 'active item') %> · Pulled automatically at <%= l(@snapshot.captured_at, format: :long) %> (refreshed when SwipeSimple's item list changes; removed items are left out)</p>
+    <% else %>
+      <p class="text-xs text-taupe"><%= @snapshot.merchant_account %> · <%= pluralize(@snapshot.row_count, 'item') %> · imported <%= l(@snapshot.captured_at, format: :long) %><%= " from #{@snapshot.source_filename}" if @snapshot.source_filename %><%= " by #{@snapshot.imported_by.email}" if @snapshot.imported_by %></p>
+    <% end %>
 
     <section class="grid grid-cols-2 gap-3 sm:grid-cols-5" aria-label="Match summary">
       <div class="stat"><p class="stat-label">SwipeSimple items</p><p class="stat-value mt-1"><%= s[:items] %></p><p class="text-xs text-mocha"><%= s[:unknown_stock] %> with unknown stock</p></div>
@@ -63,6 +75,7 @@
               <th scope="col" class="th" data-col="barcode" data-default-hidden>Barcode</th>
               <th scope="col" class="th" data-col="category" data-default-hidden>Category</th>
               <th scope="col" class="th num" data-col="price" data-default-hidden>Price</th>
+              <th scope="col" class="th" data-col="tax">Tax</th>
               <th scope="col" class="th num" data-col="stock">SwipeSimple stock</th>
               <th scope="col" class="th" data-col="match">Match</th>
               <th scope="col" class="th" data-col="shopify">Shopify</th>
@@ -83,6 +96,7 @@
                 <td class="td font-mono text-xs"><%= r['barcode'].presence || '—' %></td>
                 <td class="td text-mocha"><%= r['category'].presence || '—' %></td>
                 <td class="td num"><%= r['price'] ? number_to_currency(r['price']) : '—' %></td>
+                <td class="td"><%= tax_text.call(r) %></td>
                 <td class="td num"><%= r['quantity'] || 'Unknown' %></td>
                 <td class="td"><span class="<%= pill[row.status] %>"><%= row.status %></span><span class="block text-xs text-mocha"><%= row.identity %></span></td>
                 <td class="td"><%= row.shopify_name || '—' %><% if row.shopify_sku.present? %><span class="block font-mono text-xs text-mocha"><%= row.shopify_sku %></span><% end %></td>
@@ -93,7 +107,7 @@
                 <td class="td text-xs text-mocha"><%= (row.evidence + row.issues).join('; ').presence || '—' %></td>
               </tr>
             <% end %>
-            <% if rows.empty? %><tr><td class="empty-row" colspan="13">No items in this filter.</td></tr><% end %>
+            <% if rows.empty? %><tr><td class="empty-row" colspan="14">No items in this filter.</td></tr><% end %>
           </tbody>
         </table>
       <% end %>

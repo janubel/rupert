@@ -12,6 +12,12 @@ class SwipesimpleItemSnapshot < ApplicationRecord
   validates :tenant_id, :merchant_account, :sha256, :captured_at, presence: true
   validates :merchant_account, uniqueness: { scope: :tenant_id }, length: { maximum: 120 }
 
+  AUTOMATIC_SOURCE = 'SwipeSimple items.xlsx (automatic pull)'
+
+  def automatic?
+    source_filename == AUTOMATIC_SOURCE && imported_by_id.nil?
+  end
+
   def records
     records_json.is_a?(Array) ? records_json : []
   end

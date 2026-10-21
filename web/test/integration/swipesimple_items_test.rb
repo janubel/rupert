@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require_relative '../support/swipesimple_web_stubs'
 
 class SwipesimpleItemsTest < ActionDispatch::IntegrationTest
   setup do
@@ -54,6 +55,22 @@ class SwipesimpleItemsTest < ActionDispatch::IntegrationTest
     assert_redirected_to swipesimple_items_path
     assert_match(/Nothing was imported/, flash[:alert])
     assert_equal 0, SwipesimpleItemSnapshot.count
+  end
+
+  test 'an automatically pulled item list shows when it was pulled and each item tax' do
+    records = SwipesimpleWeb::ItemsWorkbook.parse(Class.new { include SwipesimpleWebStubs }.new.items_xlsx)
+    items = SwipesimpleWeb::Client::ItemsSnapshot.new(records: records, sha256: 'fixture-sha', exported_at: Time.current.iso8601)
+    assert SwipesimpleWeb::ReportStore.replace_items!(items, merchant_account: 'Example Wholesale')
+    refute SwipesimpleWeb::ReportStore.replace_items!(items, merchant_account: 'Example Wholesale')
+    get swipesimple_items_path
+    assert_response :success
+    assert_includes response.body, 'Pulled automatically at'
+    assert_select 'th[data-col=tax]', 'Tax'
+    assert_includes response.body, 'Taxable · PA Tax (6.0%)'
+    assert_includes response.body, 'Not taxed · No Tax'
+    assert_includes response.body, 'Upload an item list by hand (fallback)'
+    assert_includes response.body, 'Blue Dream Flower 3.5g'
+    assert_not_includes response.body, 'Old Lighter'
   end
 
   test 'SwipeSimple items sit in the Stock area' do
