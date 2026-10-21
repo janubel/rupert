@@ -171,6 +171,10 @@ Rails.application.routes.draw do
   resources :api_access_tokens, only: %i[index create] do
     member { post :revoke }
   end
+  # Model Context Protocol endpoint for external AI assistants (docs/mcp.md).
+  post '/mcp', to: 'mcp#create', as: :mcp
+  match '/mcp', to: 'mcp#method_not_allowed', via: %i[get put patch delete]
+  resources :agent_feedbacks, path: 'ai_feedback', only: %i[index update]
 
   mount ShopifyApp::Engine, at: '/api'
 

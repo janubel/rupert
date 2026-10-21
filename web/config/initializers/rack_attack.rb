@@ -40,6 +40,18 @@ class Rack::Attack
   throttle('api/ip', limit: 60, period: 1.minute) do |req|
     req.ip if req.path.start_with?('/api/v1/') && req.get_header('HTTP_AUTHORIZATION').blank?
   end
+  # MCP endpoint for AI assistants: its own per-token bucket (hashed secret),
+  # separate from the REST API so a chatty assistant cannot starve an
+  # integration, plus a tight per-IP cap for calls without a token.
+  throttle('mcp/token', limit: 120, period: 1.minute) do |req|
+    next unless req.path == '/mcp'
+
+    token = req.get_header('HTTP_AUTHORIZATION').to_s[/\ABearer (\S+)\z/i, 1]
+    token ? Digest::SHA256.hexdigest(token) : nil
+  end
+  throttle('mcp/ip', limit: 30, period: 1.minute) do |req|
+    req.ip if req.path == '/mcp' && req.get_header('HTTP_AUTHORIZATION').blank?
+  end
   throttle('employee-login/ip', limit: 10, period: 1.minute) do |req|
     req.ip if req.post? && req.path == '/api/v1/employee/session'
   end

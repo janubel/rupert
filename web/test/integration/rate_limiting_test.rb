@@ -56,4 +56,17 @@ class RateLimitingTest < ActionDispatch::IntegrationTest
     get '/api/v1/catalog', headers: { 'Authorization' => 'Bearer rupert_not-a-real-token-but-shaped-like-one-000000000' }
     assert_response :unauthorized, 'a presented token uses its own bucket and reaches authentication'
   end
+
+  test 'the MCP endpoint has its own per-token bucket' do
+    headers = { 'Authorization' => 'Bearer rupert_not-a-real-token-but-shaped-like-one-000000000', 'Content-Type' => 'application/json' }
+    body = { jsonrpc: '2.0', id: 1, method: 'ping' }.to_json
+    Rack::Attack.throttles['mcp/token'].limit.times do
+      post '/mcp', params: body, headers: headers
+      assert_response :unauthorized
+    end
+    post '/mcp', params: body, headers: headers
+    assert_response :too_many_requests
+    get '/api/v1/catalog', headers: headers
+    assert_response :unauthorized, 'the REST API bucket is separate'
+  end
 end
