@@ -4,12 +4,12 @@ import { Controller } from "@hotwired/stimulus"
 // can pre-fill the keyword suggestions (a person still presses Save), and
 // warns before leaving the page with choices that were not saved.
 export default class extends Controller {
-  static targets = ["choice", "count", "save", "fill", "bulk"]
+  static targets = ["choice", "count", "save", "fill", "bulk", "payer", "deposits"]
 
   connect() {
     this.submitting = false
     this.beforeUnload = (event) => {
-      if (this.submitting || this.chosen().length === 0) return
+      if (this.submitting || (this.chosen().length === 0 && this.namedPayers().length === 0)) return
       event.preventDefault()
       event.returnValue = ""
     }
@@ -52,6 +52,25 @@ export default class extends Controller {
     if (this.hasCountTarget) this.countTarget.textContent += ` · applied to ${applied}`
   }
 
+  // Sets every waiting deposit shown on the page to "Accept deposit". Lines
+  // already given a choice are left alone. Nothing is saved until Save.
+  acceptDeposits() {
+    let accepted = 0
+    this.choiceTargets.forEach((select) => {
+      const row = select.closest("tr")
+      if (row?.hidden || (select.value && select.value !== "leave")) return
+      if (![...select.options].some((option) => option.value === "deposit")) return
+      select.value = "deposit"
+      accepted += 1
+    })
+    this.sync()
+    if (this.hasDepositsTarget) this.depositsTarget.textContent = accepted === 0 ? "No more deposits to accept" : `Accepted ${accepted} · review, then save`
+  }
+
+  namedPayers() {
+    return this.payerTargets.filter((input) => input.value.trim() !== (input.dataset.original || "").trim())
+  }
+
   chosen() {
     return this.choiceTargets.filter((select) => select.value && select.value !== "leave")
   }
@@ -92,7 +111,10 @@ export default class extends Controller {
 
   sync() {
     const n = this.chosen().length
-    if (this.hasCountTarget) this.countTarget.textContent = n === 0 ? "No lines chosen yet" : `${n} of ${this.choiceTargets.length} line${this.choiceTargets.length === 1 ? "" : "s"} chosen`
-    if (this.hasSaveTarget) this.saveTarget.disabled = n === 0
+    const names = this.namedPayers().length
+    let text = n === 0 ? "No lines chosen yet" : `${n} of ${this.choiceTargets.length} line${this.choiceTargets.length === 1 ? "" : "s"} chosen`
+    if (names > 0) text += ` · ${names} name${names === 1 ? "" : "s"} to save`
+    if (this.hasCountTarget) this.countTarget.textContent = text
+    if (this.hasSaveTarget) this.saveTarget.disabled = n === 0 && names === 0
   }
 }

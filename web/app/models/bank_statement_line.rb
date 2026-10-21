@@ -9,15 +9,9 @@ class BankStatementLine < ApplicationRecord
 
   encrypts :description
   encrypts :review_note
+  encrypts :counterparty
 
   STATUSES = %w[pending recorded ignored matched].freeze
-  # Plain-keyword hints only. A suggestion is never applied without a person choosing it.
-  CATEGORY_HINTS = {
-    'rent' => %w[rent lease], 'utilities' => %w[electric power water gas internet comcast verizon at&t],
-    'insurance' => %w[insurance geico progressive], 'shipping' => %w[usps ups fedex dhl postage stamps.com pirate],
-    'software' => %w[shopify square google adobe intuit quickbooks github slack zoom], 'marketing' => %w[mailchimp klaviyo], 'advertising' => %w[facebook meta ads],
-    'taxes' => %w[irs tax treasury], 'labor' => %w[payroll gusto adp], 'supplies' => %w[amazon staples uline walmart target home depot lowes]
-  }.freeze
 
   belongs_to :decided_by, class_name: 'User', optional: true
   belongs_to :journal_entry, class_name: 'Finance::JournalEntry', optional: true
@@ -25,6 +19,7 @@ class BankStatementLine < ApplicationRecord
 
   validates :account_label, :posted_on, :description, :fingerprint, presence: true
   validates :amount_cents, numericality: { only_integer: true, other_than: 0 }
+  validates :counterparty, length: { maximum: 120 }
   validates :status, inclusion: { in: STATUSES }
   validate :journal_entry_not_already_matched
 
@@ -34,6 +29,7 @@ class BankStatementLine < ApplicationRecord
   scope :for_document, ->(id) { where(document_id: id).order(:line_no) }
 
   def money_out? = amount_cents.negative?
+  def money_in? = amount_cents.positive?
   def out_cents = -amount_cents
   def pending? = status == 'pending'
   def matched? = status == 'matched'
@@ -43,13 +39,14 @@ class BankStatementLine < ApplicationRecord
     { 'processor_deposit' => 'Processor payout', 'owner_transfer' => 'Owner / personal transfer',
       'bank_fees' => 'Bank & processing fees', 'tax_liability' => 'Tax remittance',
       'needs_review' => 'Needs your review', 'unidentified_deposit' => 'Unidentified receipt',
-      'non_expense' => 'Excluded from expenses', 'vendor_payment' => 'Vendor payment' }
+      'non_expense' => 'Excluded from expenses', 'vendor_payment' => 'Vendor payment', 'deposit_received' => 'Deposit received' }
       .fetch(review_category, review_category.to_s.humanize.presence || 'Uncategorized')
   end
 
-  def suggested_category
-    text = description.to_s.downcase
-    CATEGORY_HINTS.find { |_, words| words.any? { |w| text.include?(w) } }&.first || 'other'
+  # Keyword hints come from the workspace's editable expense categories. A
+  # suggestion is never applied without a person choosing it.
+  def suggested_category(catalog = nil)
+    Finance::ExpenseCategory.suggest(description, catalog) || 'other'
   end
 
   # Link this line to the ledger entry it reconciles to (F40). Records who and
@@ -82,11 +79,11 @@ class BankStatementLine < ApplicationRecord
     end
   end
 
-  def decide!(status:, user:, expense: nil, vendor_payment: nil, journal_entry: nil)
+  def decide!(status:, user:, expense: nil, vendor_payment: nil, journal_entry: nil, category: nil)
     protect_recorded_source!
     update!(status: status, decided_by: user, decided_by_name: user.display_name || user.email, decided_at: Time.current,
       expense_id: expense&.id, vendor_payment_id: vendor_payment&.id, journal_entry_id: journal_entry&.id, review_flag: false, reviewed_at: Time.current,
-      review_category: expense&.category || (vendor_payment ? 'vendor_payment' : review_category.presence || 'non_expense'))
+      review_category: category || expense&.category || (vendor_payment ? 'vendor_payment' : review_category.presence || 'non_expense'))
   end
 
   private

@@ -52,15 +52,22 @@ class BankStatementsController < AuthenticatedController
     end
     @vendors = Purchasing::Vendor.ordered.to_a
     @can_write = Current.user.can?('finance.write')
+    @expenses_by_id = Finance::Expense.where(id: @lines.filter_map(&:expense_id)).index_by(&:id)
+    catalog = Finance::ExpenseCategory.catalog
+    @expense_options = catalog.select(&:active).map { |c| [c.name, "expense:#{c.key}"] }
+    @category_labels = catalog.to_h { |c| [c.key, c.name] }
+    @suggestions = @lines.to_h { |line| [line.id, line.suggested_category(catalog)] }
   end
 
   def decide
     document = ReconciliationDocument.find(params[:id])
     decisions = params.fetch(:decisions, {}).permit!.to_h.reject { |_, v| v.blank? || v == 'leave' }
+    payers = params.fetch(:payers, {}).permit!.to_h.transform_values { |v| v.to_s.squish.first(120) }
     lines = BankStatementLine.for_document(document.id).pending.where(id: decisions.keys).index_by { |l| l.id.to_s }
     done = Hash.new(0)
     BankStatementLine.transaction do
       Tenant.where(id: Current.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
+      name_payers(document, payers, done)
       decisions.each do |id, choice|
         line = lines[id] or next
         apply(line, choice, document, done)
@@ -79,6 +86,20 @@ class BankStatementsController < AuthenticatedController
 
   private
 
+  # "Received from" names for deposits. Editable before or after a decision;
+  # only changed names are written.
+  def name_payers(document, payers, done)
+    return if payers.empty?
+
+    BankStatementLine.for_document(document.id).where(id: payers.keys).find_each do |line|
+      name = payers[line.id.to_s].presence
+      next if !line.money_in? || line.counterparty.to_s == name.to_s
+
+      line.update!(counterparty: name)
+      done['name(s) saved'] += 1
+    end
+  end
+
   def apply(line, choice, document, done)
     kind, value = choice.split(':', 2)
     mapping = BankStatementAccount.find_by(account_label: line.account_label)
@@ -90,8 +111,14 @@ class BankStatementsController < AuthenticatedController
     when 'ignore'
       line.decide!(status: 'ignored', user: Current.user)
       done['ignored'] += 1
+    when 'deposit'
+      raise BankStatementImport::Error, "Line #{line.line_no} is not a deposit." unless line.money_in?
+
+      # Accepted as money received: never an expense, no ledger entry created here.
+      line.decide!(status: 'ignored', user: Current.user, category: 'deposit_received')
+      done['deposit(s) accepted'] += 1
     when 'expense'
-      raise BankStatementImport::Error, 'Only withdrawals can be recorded as an expense, with a valid category.' unless line.money_out? && Finance::Expense::CATEGORIES.include?(value)
+      raise BankStatementImport::Error, 'Only withdrawals can be recorded as an expense, with a valid category.' unless line.money_out? && Finance::ExpenseCategory.active_keys.include?(value)
 
       expense = Finance::Expense.create!(payee: line.description.first(100), category: value, amount_cents: line.out_cents, incurred_on: line.posted_on,
         method: 'bank_transfer', reference: "bank-line-#{line.id}", notes: note)
