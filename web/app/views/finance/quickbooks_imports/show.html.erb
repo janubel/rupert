@@ -2,17 +2,13 @@
 <% summary = @summary %>
 <% closed = %w[discarded reversed].include?(@batch.status) %>
 <% open_batch = !closed %>
-<div class="mx-auto max-w-5xl space-y-6 operations-workspace">
+<div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
-  <header class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <p class="text-xs font-semibold uppercase tracking-widest text-mocha">QuickBooks import · batch #<%= @batch.id %></p>
-      <h1 class="page-title mt-2"><%= @batch.kind_label %></h1>
-      <p class="mt-1 text-sm text-mocha"><%= @batch.filename %> · uploaded <%= l(@batch.created_at.in_time_zone, format: :short) %><% if @batch.created_by_name.present? %> by <%= @batch.created_by_name %><% end %></p>
-    </div>
+  <%= page_header @batch.kind_label, eyebrow: "QuickBooks import · batch ##{@batch.id}",
+        subtitle: "#{@batch.filename} · uploaded #{l(@batch.created_at.in_time_zone, format: :short)}#{" by #{@batch.created_by_name}" if @batch.created_by_name.present?}" do %>
     <%= link_to 'All uploads', finance_quickbooks_imports_path, class: 'btn-ghost btn-sm' %>
-  </header>
+  <% end %>
 
   <div class="card card-pad text-sm" role="status">
     <p class="font-semibold">
