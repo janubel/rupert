@@ -53,12 +53,14 @@ export default class extends Controller {
     document.body.classList.add("help-panel-open")
     document.dispatchEvent(new CustomEvent("rupert:panel-opened", { detail: "ask" }))
     this.inputTarget.focus()
+    this.panelTarget.classList.toggle("ask-wide", this.wide)
     await this.load()
+    if (this.wide) this.refreshRail()
   }
 
   close() {
     if (!this.isOpen) return
-    if (this.historyOpen) this.setHistoryVisible(false)
+    if (this.historyOpen && !this.wide) this.setHistoryVisible(false)
     this.panelTarget.classList.add("hidden")
     this.backdropTarget.classList.add("hidden")
     this.triggerTargets.forEach((button) => button.setAttribute("aria-expanded", "false"))
@@ -72,6 +74,11 @@ export default class extends Controller {
   get stateUrl() { return this.panelTarget.dataset.askRupertStateUrlValue }
   get conversationsUrl() { return this.panelTarget.dataset.askRupertConversationsUrlValue }
   get page() { return this.panelTarget.dataset.askRupertPageValue }
+
+  // Wide screens show the saved chats in a rail beside the conversation.
+  get wide() {
+    return typeof window.matchMedia === "function" && window.matchMedia("(min-width: 1000px)").matches
+  }
 
   get isOpen() {
     return this.hasPanelTarget && !this.panelTarget.classList.contains("hidden")
@@ -167,6 +174,7 @@ export default class extends Controller {
         this.renderMessages(data.messages)
         this.setBusy(data.busy)
         this.startPolling()
+        if (this.wide) this.refreshRail()
       } else {
         const data = await response.json().catch(() => ({}))
         this.showNotice(data.error || "That did not send. Try again.")
@@ -221,6 +229,7 @@ export default class extends Controller {
   }
 
   async showHistory() {
+    if (this.wide) return this.refreshRail()
     this.stopPolling()
     this.setHistoryVisible(true)
     this.historyTarget.replaceChildren(this.note("Loading your chats…", "ask-history-empty"))
@@ -231,6 +240,17 @@ export default class extends Controller {
       this.renderHistory(data.conversations)
     } catch (error) {
       this.historyTarget.replaceChildren(this.note("Could not load your chats. Try again.", "ask-history-empty"))
+    }
+  }
+
+  async refreshRail() {
+    this.historyTarget.classList.remove("hidden")
+    try {
+      const response = await fetch(this.conversationsUrl, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      this.renderHistory((await response.json()).conversations)
+    } catch (error) {
+      this.historyTarget.replaceChildren(this.note("Could not load your chats.", "ask-history-empty"))
     }
   }
 
@@ -270,6 +290,7 @@ export default class extends Controller {
       when.className = "ask-history-when"
       when.textContent = new Date(conversation.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })
       open.append(title, when)
+      if (conversation.id === this.conversationId) open.setAttribute("aria-current", "true")
       open.addEventListener("click", () => this.openConversation(conversation.id))
       item.append(open)
       list.append(item)
@@ -282,9 +303,10 @@ export default class extends Controller {
       const response = await fetch(`${this.conversationsUrl}/${id}`, { headers: { Accept: "application/json" }, credentials: "same-origin" })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const data = await response.json()
-      this.setHistoryVisible(false)
+      if (!this.wide) this.setHistoryVisible(false)
       this.showConversation(data)
       if (data.busy) this.startPolling()
+      if (this.wide) this.refreshRail()
       this.inputTarget.focus()
     } catch (error) {
       this.showNotice("Could not open that chat.")
@@ -294,7 +316,7 @@ export default class extends Controller {
   // --- chat management ---
 
   async newChat() {
-    if (this.historyOpen) this.setHistoryVisible(false)
+    if (this.historyOpen && !this.wide) this.setHistoryVisible(false)
     if (this.busy) return
     const empty = !this.logTarget.querySelector(".ask-msg")
     if (!empty) {
@@ -303,6 +325,7 @@ export default class extends Controller {
       const data = await response.json()
       this.showConversation(data.conversation)
     }
+    if (this.wide) this.refreshRail()
     this.inputTarget.focus()
   }
 
@@ -313,6 +336,7 @@ export default class extends Controller {
     const response = await fetch(`${this.conversationsUrl}/${this.conversationId}`, { method: "DELETE", headers: { "X-CSRF-Token": this.csrf, Accept: "application/json" }, credentials: "same-origin" })
     if (!response.ok && response.status !== 404) return this.showNotice("Could not delete the chat.")
     this.showConversation(null)
+    if (this.wide) this.refreshRail()
     this.inputTarget.focus()
   }
 

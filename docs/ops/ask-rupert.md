@@ -1,12 +1,12 @@
 # Ask Rupert: the in-app help chat
 
-Added 2026-10-22. A chat-bubble button in the header (beside Help) opens **Ask Rupert**, a drawer where people ask how to do things, where things are, and questions about data they are allowed to see. When it cannot help it offers to hand the chat to the Rupert team as a report.
+Added 2026-10-22. A speech-bubble button beside Rupert's face in the header opens **Ask Rupert**, a side panel where people ask how to do things, where things are, and questions about data they are allowed to see. When it cannot help it offers to hand the chat to the Rupert team as a report.
 
 It is a help assistant, not an operator: it changes nothing in Rupert except a report that the person presses **Send** themselves.
 
 ## What people see
 
-- **Header button** (`Ask Rupert`) and a right-hand drawer. Full width on a phone. Light and dark follow the account's Appearance setting.
+- **Header button** (`Ask`, a speech bubble beside Rupert's face) and a right-hand panel. Full width on a phone; on screens 1000px or wider it expands into a history rail beside the conversation. Light and dark follow the account's Appearance setting.
 - A one-line disclosure at the top says where answers come from (cloud model, local model, or both) and what leaves the server.
 - Starter questions on an empty chat, chosen from what the person can actually do. **New chat** starts a fresh conversation; **Clear** deletes the current one. **History** (also *Ask Rupert chats* in the account menu) lists the person's saved chats to reopen.
 - Replies grow on screen while they are written (the page polls the conversation every second or so). Answers carry links into Rupert and the matching Learn Rupert lesson when one exists.

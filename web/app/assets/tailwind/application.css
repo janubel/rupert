@@ -739,7 +739,7 @@ body:has(.finance-navigation) .module-navigation-wrap { display:none; }
 /* Two-row desktop header: brand + utilities on top, labelled area tabs below. */
 @media(min-width:761px) {
   .app-header-grid { grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"brand . utils" "areas areas areas";row-gap:.1rem;padding:.3rem 1.5rem .35rem; }
-  .app-brand { grid-area:brand; }
+  .app-brand-group { grid-area:brand; }
   .header-utilities { grid-area:utils;justify-self:end; }
   .area-navigation { grid-area:areas;justify-content:flex-start;gap:.15rem; }
   .nav-area:not([aria-current=page]) > span { display:inline; }
@@ -1201,6 +1201,15 @@ a.card:focus-visible {
 .feedback-done { padding:1rem;border:1px solid var(--color-fog);border-radius:.75rem;background:var(--color-haze); }
 @media (max-width: 639px) { .feedback-panel { width:100vw;border-left:0; } .feedback-panel .help-panel-body { padding:1rem; } }
 
+/* The speech bubble beside Rupert's face opens Ask Rupert. */
+.app-brand-group { display:flex;align-items:center;gap:.5rem;min-width:0; }
+.ask-bubble-button { position:relative;display:inline-flex;align-items:center;gap:.35rem;min-height:36px;padding:.2rem .8rem;border:1px solid var(--color-edge);border-radius:1.1rem;background:var(--color-paper);color:var(--color-olive-deep);font-size:.85rem;font-weight:600;cursor:pointer; }
+.ask-bubble-button::before { content:"";position:absolute;left:-6px;top:50%;width:10px;height:10px;margin-top:-5px;border-left:1px solid var(--color-edge);border-bottom:1px solid var(--color-edge);background:var(--color-paper);transform:rotate(45deg); }
+.ask-bubble-button:hover { background:var(--color-haze); }
+.ask-bubble-button:hover::before { background:var(--color-haze); }
+.ask-bubble-button:focus-visible { outline:2px solid var(--color-olive);outline-offset:3px; }
+.ask-bubble-button .nav-symbol { width:18px;height:18px; }
+
 /* Ask Rupert: the help chat drawer. Shares the help panel's shell; colours are theme tokens only. */
 .ask-panel:not(.hidden) { display:flex;flex-direction:column;overflow:hidden;height:100dvh; }
 .ask-panel .help-panel-head { position:static;flex:none; }
@@ -1261,6 +1270,16 @@ a.card:focus-visible {
 .ask-report-done { margin:0;padding:.5rem .75rem;border:1px solid var(--color-success-edge);border-radius:.75rem;background:var(--color-success-bg);color:var(--color-success);font-size:.82rem; }
 .ask-report .ask-input { min-height:2.5rem;width:100%;border-radius:.75rem; }
 .ask-report .select { width:100%; }
+/* Wide screens: the panel expands into a history rail beside the conversation. */
+@media (min-width: 1000px) {
+  .ask-panel.ask-wide:not(.hidden) { width:min(46rem,100vw);display:grid;grid-template-columns:14rem minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto auto auto auto; }
+  .ask-wide .help-panel-head,.ask-wide .ask-disclosure { grid-column:1 / -1; }
+  .ask-wide .ask-history,.ask-wide .ask-history.hidden { display:block;grid-column:1;grid-row:3 / 8;border-right:1px solid var(--color-fog);background:var(--color-haze);padding:.75rem; }
+  .ask-wide .ask-log,.ask-wide .ask-starters,.ask-wide .ask-notice,.ask-wide .ask-form,.ask-wide .ask-footnote { grid-column:2; }
+  .ask-wide .ask-log.hidden,.ask-wide .ask-form.hidden { display:flex; }
+  .ask-wide [data-ask-rupert-target="historyButton"] { display:none; }
+  .ask-history-open[aria-current="true"] { border-color:var(--color-olive);box-shadow:inset 3px 0 0 var(--color-olive); }
+}
 @media (max-width: 640px) { .ask-panel { width:100vw; } .ask-log,.ask-form,.ask-disclosure,.ask-footnote,.ask-starters { padding-left:1rem;padding-right:1rem; } .ask-msg { max-width:96%; } }
 
 .tour-backdrop { position:fixed;inset:0;z-index:70;background:transparent; }

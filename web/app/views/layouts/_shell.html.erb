@@ -8,9 +8,14 @@
     <div class="app-header-grid">
       <%# The sign-in card carries its own large mark; skip the duplicate header brand there. %>
       <% unless controller_name == 'sessions' && action_name == 'new' %>
-        <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
-          <%= render "shared/rupert_face", size: 40 %><span class="app-brand-name">Rupert</span>
-        <% end %>
+        <div class="app-brand-group">
+          <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
+            <%= render "shared/rupert_face", size: 40 %><span class="app-brand-name">Rupert</span>
+          <% end %>
+          <% if ask_rupert_available? %>
+            <button type="button" class="ask-bubble-button" aria-label="Ask Rupert" aria-haspopup="dialog" aria-expanded="false" title="Ask Rupert — your help assistant, with your chat history" data-action="click->ask-rupert#toggle" data-ask-rupert-target="trigger"><%= navigation_icon('ask') %><span class="ask-bubble-label">Ask</span></button>
+          <% end %>
+        </div>
       <% end %>
       <% if Current.user %>
         <nav class="area-navigation" aria-label="Module areas" <%= tour_anchor('areas') %> style="--nav-area-count: <%= [nav_areas.size, 1].max %>">
@@ -28,9 +33,6 @@
           <%= render 'shared/header_sync_pill', sync: @last_sync %>
           <%= render 'shared/feedback_button' %>
           <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>
-          <% if ask_rupert_available? %>
-            <button type="button" class="nav-utility" aria-label="Ask Rupert" aria-haspopup="dialog" aria-expanded="false" title="Ask Rupert — your help assistant" data-action="click->ask-rupert#toggle" data-ask-rupert-target="trigger"><%= navigation_icon('ask') %><span class="nav-hint">Ask Rupert</span></button>
-          <% end %>
           <div data-controller="dropdown" class="relative">
             <% initials = Current.user.display_name.split(/\s+/).map { |word| word[0] }.join.upcase[0, 2] %>
             <button type="button" data-action="dropdown#toggle" data-dropdown-target="trigger" aria-label="Account menu for <%= Current.user.display_name %>" aria-haspopup="menu" aria-expanded="false" title="<%= Current.user.display_name %> · <%= navigation_role_name(Current.user) %>" class="nav-utility"><span class="grid h-8 w-8 place-items-center rounded-full bg-olive text-xs font-semibold text-cream"><%= initials %></span><span class="nav-hint">Account · <%= navigation_role_name(Current.user) %></span></button>
