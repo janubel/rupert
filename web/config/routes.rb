@@ -378,6 +378,7 @@ Rails.application.routes.draw do
     collection do
       get :register_summary
       get :sales
+      get :sales_tax
       get :financial
       get :inventory
       get :operations

@@ -129,4 +129,49 @@ class ReportsFlowTest < ActionDispatch::IntegrationTest
     get sales_reports_path
     assert_response :success
   end
+
+  test 'sales tax is a report tab with custom dates, source filter and CSV' do
+    get sales_tax_reports_path(from: 1.day.ago.to_date.iso8601, to: Date.current.iso8601)
+    assert_response :success
+    assert_select 'h1', /Sales tax report/
+    assert_select 'nav[aria-label=Reports] a[aria-current=page]', 'Sales tax'
+    assert_select 'td', /Main Shop/
+    assert_select '[data-controller=report-table] table'
+    assert_select 'input[type=checkbox][name="sources[]"][value=ctrax]'
+
+    get sales_tax_reports_path(sources: ['shopify'])
+    assert_response :success
+    assert_select 'td', { text: /Main Shop/, count: 0 }
+
+    get sales_tax_reports_path(from: Date.current.iso8601, to: 2.days.ago.to_date.iso8601)
+    assert_response :success, 'set_range swaps a backwards range'
+
+    get sales_tax_reports_path(rate: '99')
+    assert_redirected_to sales_tax_reports_path
+
+    get sales_tax_reports_path(format: :csv, rate: '6.35')
+    assert_response :success
+    assert_includes response.body, 'Sales tax report'
+    assert_includes response.body, '6.35%'
+  end
+
+  test 'every report tab shows the tab bar, date presets and a customizable table' do
+    [sales_reports_path, financial_reports_path, inventory_reports_path, operations_reports_path, reconciliation_reports_path].each do |path|
+      get path
+      assert_response :success
+      assert_select 'nav[aria-label=Reports] a', /Sales tax/
+      assert_select 'nav[aria-label="Quick date ranges"] a', /Last quarter/
+      assert_select '[data-controller=report-table] table', minimum: 1
+    end
+    get register_summary_reports_path
+    assert_response :success
+    assert_select 'nav[aria-label=Reports] a[aria-current=page]', 'Daily register'
+    assert_select '[data-controller=report-table] table', 4
+  end
+
+  test 'report tabs keep custom dates while switching' do
+    get sales_reports_path(from: '2026-07-01', to: '2026-09-30')
+    assert_response :success
+    assert_select "nav[aria-label=Reports] a[href*='from=2026-07-01'][href*='to=2026-09-30']", minimum: 5
+  end
 end

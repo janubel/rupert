@@ -210,8 +210,9 @@ class PageTours
       key: 'reports', title: 'Reading a report', paths: ['/reports'], permission: 'reports.read',
       intro: 'Pick the report, set the window, then export or cross-check.',
       steps: [
-        { anchor: 'tabs', title: 'Report families', body: 'Sales, financial, inventory, operations and reconciliation. Each keeps the same date window as you switch.' },
-        { anchor: 'window', title: 'Date window', body: 'Choose a preset or a from and to date, then Refresh. Every figure on the page follows this window.' },
+        { anchor: 'tabs', title: 'Report tabs', body: 'Sales, sales tax, financial, inventory, operations, reconciliation and the daily register. Each keeps the same date window as you switch.' },
+        { anchor: 'window', title: 'Date window', body: 'Choose a preset such as last month or last quarter, or any from and to date, then Refresh. Every figure on the page follows this window.' },
+        { anchor: 'columns', title: 'Your table, your columns', body: 'Pick which columns show, click a heading to sort, type to narrow rows, and download just what you see. Your layout is remembered in this browser.' },
         { anchor: 'check', title: 'Books check', body: 'Opens the health check for the same window: missing imports, unmatched payments and backups.' },
         { anchor: 'csv', title: 'Export CSV', body: 'Downloads the current report for the current window. Sources and currencies stay separate in the file.' }
       ]

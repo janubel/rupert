@@ -23,6 +23,7 @@ module NavigationIconsHelper
     'review' => ['M8 3h13v18H3V8Z', 'm7 12 3 3 6-6'],
     'link' => ['m9 15 6-6M8 17l-2 2a4 4 0 0 1-5-5l5-5a4 4 0 0 1 5 0', 'm16 7 2-2a4 4 0 0 1 5 5l-5 5a4 4 0 0 1-5 0'],
     'report' => ['M4 3h16v18H4Z', 'M8 16v-3M12 16V8M16 16v-5'],
+    'reports' => ['M4 3h16v18H4Z', 'M8 16v-3M12 16V8M16 16v-5'],
     'alert' => ['m12 3 10 18H2Z', 'M12 9v5M12 17h.01'],
     'settings' => ['M4 6h16M4 12h16M4 18h16', 'M8 3v6M16 9v6M10 15v6'],
     'document' => ['M5 3h10l4 4v14H5Z', 'M14 3v5h5M8 12h8M8 16h8'],
@@ -36,7 +37,7 @@ module NavigationIconsHelper
     'dashboard' => 'overview', 'point_of_sale' => 'sell', 'inventory_counts' => 'count',
     'inventory_exceptions' => 'review', 'bulk_consumptions' => 'review', 'reconcile' => 'link',
     'connections' => 'link', 'pos_connections' => 'link', 'alerts' => 'alert',
-    'timesheets' => 'clock', 'reports' => 'report', 'books_desk' => 'review', 'register_summary' => 'report', 'time_clock' => 'clock',
+    'timesheets' => 'clock', 'reports' => 'report', 'books_desk' => 'review', 'register_summary' => 'report', 'sales_tax' => 'report', 'finance_reports' => 'report', 'time_clock' => 'clock',
     'settings' => 'settings', 'platform' => 'platform', 'owner_checklists' => 'review',
     'api_access_tokens' => 'shield', 'permissions' => 'shield', 'roadmap' => 'document', 'customers' => 'customers'
   }.freeze
