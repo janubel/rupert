@@ -1,13 +1,9 @@
 <% content_for :title, "Schedule" %>
 <% can_write = Current.user.can?("hr.write") %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Schedule</h1>
-      <p class="mt-1 text-sm text-mocha">Planned shifts. Staff see their own on the Schedule tab of their workspace.</p>
-    </div>
+  <%= page_header 'Schedule', subtitle: 'Planned shifts. Staff see their own on the Schedule tab of their workspace.' do %>
     <% if can_write %><%= link_to "New shift", new_people_scheduled_shift_path(date: [@week, Date.current].max.iso8601), class: "btn-primary" %><% end %>
-  </section>
+  <% end %>
 
   <div class="flex items-center justify-between gap-2">
     <%= link_to "←", people_scheduled_shifts_path(week: (@week - 7).iso8601), class: "btn-ghost btn-sm", aria: { label: "Previous week" } %>

@@ -1,5 +1,5 @@
 <% content_for :title, 'My reports' %>
-<section><h1 class="page-title">My reports</h1><p class="mt-1 text-sm text-mocha">Your hours and pay, for the dates you choose.</p></section>
+<%= page_header 'My reports', subtitle: 'Your hours and pay, for the dates you choose.' %>
 <%= form_with url: personal_reports_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
   <%= render 'shared/time_range_picker', from: @from, to: @to %>
   <%= f.submit 'Show report', class: 'btn-primary' %><%= link_to 'Download my hours', personal_reports_path(format: :csv, from: @from, to: @to), class: 'btn-ghost' %>

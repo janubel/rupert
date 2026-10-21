@@ -186,9 +186,16 @@ read-only `scripts/quick_reports.rb`, `scripts/sales_report.rb`, and files repor
 (the allow-list for "ready for development" is enforced server-side, see [feedback-reports.md](feedback-reports.md)).
 Do not also run `bin/opencode_agent` or `bin/buzz_listener`: they speak as the same identity.
 
+**Two runners, one identity.** `OpencodeChatAgent` (`bin/opencode_agent`, unit `deploy/ser8/rupert-buzz-chat.service`) is the
+text-only runner that "Ask Rupert in Buzz" (link codes, direct messages) is built on; it cannot file reports or run the
+quick reports. `buzz-acp` (unit `rupert-buzz.service`) can file reports and run the quick reports but does not do
+Ask Rupert in Buzz. The two units list each other in `Conflicts=`, so starting one stops the other. This install uses
+`buzz-acp` because the intake flow (reports, "ready for development") needs it. To switch to Ask Rupert in Buzz:
+`systemctl disable --now rupert-buzz && systemctl enable --now rupert-buzz-chat` (after installing that unit).
+
 Pieces in this repo:
 
-- `deploy/ser8/rupert-buzz.service`: the unit (user `rupert`, `Restart=on-failure`, no listening port,
+- `deploy/ser8/rupert-buzz.service` (and the optional `rupert-buzz-chat.service`): the unit (user `rupert`, `Restart=on-failure`, no listening port,
   `ProtectSystem=strict` with only `storage`, `tmp`, `log` and its own `/var/lib/rupert-buzz` writable).
 - `web/bin/buzz_acp_agent`: reads the key, relay and `BUZZ_AUTH_TAG` from the tenant settings with one Rails call, writes
   the current acp prompt, then execs `buzz-acp` with `opencode acp` as the agent and `BUZZ_ACP_RESPOND_TO=anyone`

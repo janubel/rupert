@@ -8,6 +8,8 @@
 Description=Rupert @rupert Buzz agent (buzz-acp driving opencode)
 After=network-online.target rupert-web.service
 Wants=network-online.target
+# One identity, one agent: starting this unit stops the text-only runner (rupert-buzz-chat.service) and vice versa.
+Conflicts=rupert-buzz-chat.service
 ConditionPathExists=/usr/local/bin/buzz-acp
 ConditionPathExists=/usr/local/bin/opencode
 

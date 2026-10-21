@@ -1,10 +1,9 @@
 <% content_for :title, 'Inventory exceptions' %>
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :stock %>
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div><h1 class="page-title">Inventory exceptions</h1><p class="mt-1 max-w-3xl text-sm text-mocha">Review shortages, uncertain stock and catalog conflicts by exact source item and location. This queue reads Rupert's local records.</p></div>
-    <div class="flex flex-wrap gap-2"><%= link_to 'Inventory', inventory_index_path, class: 'btn-ghost' %><%= link_to 'Local holds', stock_reservations_path, class: 'btn-ghost' %><%= link_to 'Manual counts', inventory_counts_path, class: 'btn-ghost' %><%= link_to 'Bulk materials', bulk_materials_path, class: 'btn-ghost' %></div>
-  </section>
+  <%= page_header 'Inventory exceptions', subtitle: 'Review shortages, uncertain stock and catalog conflicts by exact source item and location. This queue reads Rupert\'s local records.' do %>
+    <%= link_to 'Inventory', inventory_index_path, class: 'btn-ghost' %><%= link_to 'Local holds', stock_reservations_path, class: 'btn-ghost' %><%= link_to 'Manual counts', inventory_counts_path, class: 'btn-ghost' %><%= link_to 'Bulk materials', bulk_materials_path, class: 'btn-ghost' %>
+  <% end %>
   <%= form_with url: inventory_exceptions_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
     <div><%= f.label :source, 'Platform stock', class: 'field-label' %><%= f.select :source, [['All sources', ''], ['Shopify', 'shopify'], ['Square', 'square']], { selected: @queue.source }, class: 'input' %></div>
     <div><%= f.label :location_id, 'Stock location', class: 'field-label' %><%= f.select :location_id, [['All locations', '']] + @locations.map { |location| ["#{location.source} · #{location.name}", location.id] }, { selected: @queue.location_id }, class: 'input' %><% if @locations_limited %><p class="mt-1 text-xs text-mocha">Location selector limited to the first 200 locations.</p><% end %></div>

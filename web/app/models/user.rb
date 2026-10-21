@@ -40,6 +40,8 @@ class User < ActiveRecord::Base
     'super_admin' => ['*'],
     'admin' => [
       'chat.use',
+      'buzz.read',
+      'buzz.post',
       'marketing.read',
       'marketing.write',
       'marketing.review',
@@ -74,6 +76,8 @@ class User < ActiveRecord::Base
       'purchasing.write',
       'finance.read',
       'finance.write',
+      'uploads.read',
+      'uploads.write',
       'hr.read',
       'hr.write',
       'timesheets.read',
@@ -231,6 +235,8 @@ class User < ActiveRecord::Base
       { area: 'Overview', permissions: ['dashboard.read'] },
       # Ask Rupert, the in-app help chat. Administrators by default; delegate it per role or person.
       { area: 'Rupert Chat', permissions: ['chat.use'] },
+      # The Team chat tab on the Buzz page: read the channel, and post as the Rupert agent with your name on it.
+      { area: 'Team chat (Buzz)', permissions: ['buzz.read', 'buzz.post'] },
       { area: 'Marketing', permissions: ['marketing.read', 'marketing.write', 'marketing.review', 'marketing.contacts', 'marketing.discounts'] },
       {
         area: 'Commerce',
@@ -245,7 +251,8 @@ class User < ActiveRecord::Base
       {
         area: 'System',
         permissions: ['alerts.read', 'alerts.write', 'sync.read', 'sync.write', 'settings.read', 'settings.write',
-                      'system.read', 'system.write', 'purchasing.read', 'purchasing.write', 'finance.read', 'finance.write']
+                      'system.read', 'system.write', 'purchasing.read', 'purchasing.write', 'finance.read', 'finance.write',
+                      'uploads.read', 'uploads.write']
       },
       {
         area: 'Team',

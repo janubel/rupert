@@ -17,6 +17,12 @@ systemctl --user daemon-reload && systemctl --user enable --now rupert-sync-watc
 
 Check by hand: `~/.local/bin/rupert-sync-watch.sh` (exit 0 = fresh). `MAX_AGE_MIN=0` forces a failure to test alerting.
 
+## Backups
+
+Five layers (5-minute rolling snapshot and 6-hourly sets inside the container, an encrypted copy on the host, a mirror on
+another machine and a weekly restore drill), each reporting to **System → Backups**. Scripts, units, install steps and the
+restore procedure are in [docs/ops/backups.md](../../docs/ops/backups.md).
+
 ## Auto-deploy (`rupert-autodeploy`)
 
 Runs **inside the `rupert` Incus container** as root. Every 5 minutes it fetches `origin/main` and deploys it to

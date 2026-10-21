@@ -52,6 +52,15 @@ class Rack::Attack
   throttle('mcp/ip', limit: 30, period: 1.minute) do |req|
     req.ip if req.path == '/mcp' && req.get_header('HTTP_AUTHORIZATION').blank?
   end
+  # Uploads: the inbox keeps encrypted originals, so sending files has its own,
+  # tighter buckets on top of the general API and per-IP ceilings.
+  throttle('uploads-api/token', limit: 30, period: 1.minute) do |req|
+    next unless req.post? && req.path == '/api/v1/uploads'
+
+    token = req.get_header('HTTP_AUTHORIZATION').to_s[/\ABearer (\S+)\z/i, 1]
+    token ? Digest::SHA256.hexdigest(token) : req.ip
+  end
+  throttle('uploads-web/ip', limit: 30, period: 1.minute) { |req| req.ip if req.post? && req.path == '/uploads' }
   throttle('employee-login/ip', limit: 10, period: 1.minute) do |req|
     req.ip if req.post? && req.path == '/api/v1/employee/session'
   end
