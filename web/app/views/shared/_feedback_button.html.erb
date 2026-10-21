@@ -1,0 +1,2 @@
+<%# The ladybug: opens the report panel. Without JavaScript it is a plain link to My reports. %>
+<%= link_to feedback_reports_path, class: 'nav-utility', aria: { label: 'Report a bug or send a request', expanded: 'false', haspopup: 'dialog', controls: 'feedback-panel' }, title: 'Report a bug or request', data: { action: 'click->feedback#toggle', feedback_target: 'trigger', feedback_ignore: '' } do %><%= navigation_icon('bug') %><span class="nav-hint">Report a bug</span><% end %>

@@ -11,8 +11,10 @@ did not. It uses the same bearer tokens, scopes and owner permissions as the
   no session). `GET /mcp` returns `405`.
 - Protocol versions: `2025-06-18` (preferred), `2025-03-26`, `2024-11-05`.
 - Nothing writes to Shopify, Square, C-Trax or SwipeSimple. The only tools that
-  change anything are `submit_feedback` (stores feedback) and `create_task`
-  (adds a task to Rupert's own Tasks board, only with the `tasks:write` scope).
+  change anything are `submit_feedback` (stores feedback and, when asked, opens a
+  review task) and `create_task` (adds a task to Rupert's own Tasks board, only
+  with the `tasks:write` scope). The operations and report tools below are
+  read-only.
 
 ## 1. Create a token
 
@@ -74,6 +76,11 @@ curl -s https://<host>/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_workspace_info","arguments":{}}}'
 ```
 
+> **Also used inside Rupert.** The in-app help chat, [Ask Rupert](ops/ask-rupert.md), runs
+> the read-only tools below in-process as the signed-in person (never with a stored token and
+> never with a write scope). Its scopes come from that person's current permissions, so it
+> shows no more than the same person would get from a token with those scopes.
+
 ## 3. Tools
 
 `tools/list` only returns the tools the token may use. Every tool is read-only
@@ -95,6 +102,21 @@ unless marked.
 | `create_task` | `tasks:write` | `projects.write` | **Writes:** adds a task to Rupert's own Tasks board, marked as added by an AI assistant. |
 | `list_alerts` | `alerts:read` | `alerts.read` | Low-stock alerts with counts per status. |
 | `ai_health` | `system:read` | `system.read` + instance operator | Health of the opencode integration behind the @rupert Buzz agent: key state, live free models, agent model status, tokens in/out today and over 7 days, rate-limit hits, warnings. Counts only — never the key or message content. Hidden from tokens whose owner is not a platform administrator. See [AI health monitor](ops/ai-health-monitor.md). |
+| `instance_status` | `system:read` | `system.read` | Is Rupert healthy: build, uptime, the four readiness checks (database, queue worker, last sync, disk) and workspace counts. |
+| `recent_errors` | `system:read` | `system.read` | Recent failed source syncs and the MCP tools that fail most (this store); with a platform administrator owner also process error lines and failed background jobs (class and error only). Text is scrubbed. |
+| `sync_health` | `system:read` | `system.read` | Per source and operation: latest attempt, failure category, last success; latest catalog run; queue worker heartbeat. |
+| `backup_freshness` | `system:read` | `system.read` | Latest verified Drive backup and its age, newest local snapshot files (names and ages only). Platform administrator or private workspace owner only. |
+| `deploy_status` | `system:read` | `system.read` | What the host auto-deployer last reported (`/var/lib/rupert-autodeploy/status.json`, `last-deploy.json`) next to the running build. Platform administrator or private workspace owner only; empty where the deployer is not installed. |
+| `list_feedback` | `feedback:read` | `settings.read` | Every report and piece of feedback in the store (ladybug, Buzz, assistants): status, severity, source, task, ready-for-development flag. Administrator owner only. |
+| `report_context` | `feedback:read` | `settings.read` | One report with its attachments: browser details, JavaScript errors, server log lines, SQL queries (literals removed), page snapshot, screenshot metadata. Administrator owner only. |
+
+The operations tools share the `system:read` scope with `ai_health`, and the
+report tools use `feedback:read`. Both follow the same rule as the others: the
+token's owner must hold the permission (`system.read`, `settings.read`) now, and `report_context` / `list_feedback`
+additionally require the owner to be a store administrator because attachments
+can contain page contents. Server-wide facts (process errors, failed jobs, backups,
+the deployer) are shown only when the owner is a platform administrator or the
+workspace is a private single-store node (`RUPERT_NODE_MODE=workspace`).
 
 Conventions every tool follows (also in the `rupert://guide/getting-started`
 resource):
@@ -127,16 +149,22 @@ task. Arguments:
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| `kind` | yes | `bug`, `struggle`, `task_report`, `suggestion`, `question`, `report_issue` |
+| `kind` | yes | `bug`, `struggle`, `task_report`, `suggestion`, `question`, `report_issue`, `request`, `direction` |
 | `summary` | yes | ≤200 characters |
 | `details` | no | ≤5000 characters |
 | `related_tool`, `related_reference` | no | Tool name; Rupert page, report or record |
 | `severity` | no | `low`, `normal` (default), `high` |
 | `agent_name`, `agent_model` | no | e.g. "Claude Code", model name |
 | `context` | no | Small JSON object, ≤4000 bytes |
+| `open_task` | no | `true` also opens a task in the **Rupert Feedback** project for the owner to review (bug, request, direction, suggestion and question kinds) |
+| `source`, `source_ref`, `source_sender` | no | Where it came from: `source` is `agent` (default) or `buzz`; `source_ref` is the chat message id (the same message is filed only once); `source_sender` is the sender's Nostr public key |
+| `ready_for_development` | no | Requests "ready for development". Honoured only when the token has `tasks:write` **and** `source_sender` is on the owner's allow-list (Settings → Environment, `FEEDBACK_READY_SENDERS`); otherwise the report is still created, for review, and the reply says so |
 
 Feedback is stored per store with the token and its owner, status `new`. Each
-token may send 200 items per 24 hours.
+token may send 200 items per 24 hours. Reports made with the ladybug in Rupert and
+by the `@rupert` chat agent land in the same list (`source` `app` / `buzz`); see
+[docs/ops/feedback-reports.md](ops/feedback-reports.md). Read them back with
+`list_feedback` and `report_context`.
 
 Rupert also records a struggle signal automatically: every failed or denied tool
 call increments a counter per tool and error type (denied, invalid arguments,
@@ -168,6 +196,9 @@ Exceeding a limit returns `429` with `Retry-After`.
   JSON parsing and returns `413` above the limit. Rack may already have buffered
   or limited the body; upstream proxy request limits are still needed to bound
   streaming and memory use.
+- Report text, attachments and chat messages are untrusted: the tool descriptions
+  say so, and nothing in them can mark work ready for development, deploy or
+  change data.
 - Tokens are tenant-scoped; the host name, cookies and request body cannot
   change the store. Only SHA256 digests are stored.
 - Browser requests with an `Origin` header from another site are refused with

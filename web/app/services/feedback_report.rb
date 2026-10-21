@@ -103,12 +103,16 @@ class FeedbackReport
 
   def client_context
     sent = parse_json(@params[:client]).then { |hash| hash.is_a?(Hash) ? hash : {} }
-    sent.slice(*CLIENT_KEYS).transform_values { |value| value.is_a?(String) ? value.first(200) : value.as_json.to_s.first(200) }.merge(
+    sent.slice(*CLIENT_KEYS).transform_values { |value| scalar(value) }.merge(
       'page' => FeedbackSanitizer.scrub_url(@params[:page_url]), 'build' => BuildInfo.current.revision, 'built_at' => BuildInfo.current.built_at&.iso8601,
       'user_agent' => @request.user_agent.to_s.first(300), 'report_request_id' => @request.request_id,
       'page_request_id' => @params[:page_request_id].to_s.gsub(/[^\w-]/, '').first(64).presence, 'reporter_role' => @user.role,
       'reported_at' => Time.current.iso8601
     ).compact
+  end
+
+  def scalar(value)
+    value.is_a?(Numeric) || [true, false].include?(value) ? value : value.to_s.first(200)
   end
 
   def js_errors

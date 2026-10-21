@@ -179,12 +179,23 @@ Rails.application.routes.draw do
   resources :feedback_reports, only: %i[index show create] do
     get :screenshot, on: :member
   end
+  # Ask Rupert: the in-app help chat (docs/ops/ask-rupert.md).
+  get '/ask_rupert', to: 'ask_rupert#show', as: :ask_rupert
+  get '/ask_rupert/usage', to: 'ask_rupert_usage#show', as: :ask_rupert_usage
+  patch '/ask_rupert/usage', to: 'ask_rupert_usage#update'
+  get '/ask_rupert/conversations', to: 'ask_rupert#conversations', as: :ask_rupert_conversations
+  post '/ask_rupert/conversations', to: 'ask_rupert#create_conversation', as: nil
+  get '/ask_rupert/conversations/:id', to: 'ask_rupert#conversation', as: :ask_rupert_conversation
+  delete '/ask_rupert/conversations/:id', to: 'ask_rupert#destroy'
+  post '/ask_rupert/conversations/:id/messages', to: 'ask_rupert#ask', as: :ask_rupert_messages
+  post '/ask_rupert/conversations/:id/report', to: 'ask_rupert#report', as: :ask_rupert_report
 
   mount ShopifyApp::Engine, at: '/api'
 
   get '/search', to: 'search#index', as: :search
   get '/dashboard', to: 'home#index'
   get '/roadmap', to: 'roadmap#index', as: :roadmap
+  get '/buzz', to: 'buzz#show', as: :buzz
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)
@@ -520,6 +531,7 @@ Rails.application.routes.draw do
     post :buzz_generate
     post :buzz_register
     post :buzz_test
+    post :buzz_status
   end
 
   resources :size_families, only: %i[index new create edit update destroy] do

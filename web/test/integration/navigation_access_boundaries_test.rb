@@ -164,7 +164,7 @@ class NavigationAccessBoundariesTest < ActionDispatch::IntegrationTest
     get permissions_path
     assert_response :success
     assert_select 'input[type=submit][value="Save permissions"]', count: 0
-    assert_select 'input[type=checkbox]:not([disabled])', count: 0
+    assert_select 'main input[type=checkbox]:not([disabled])', count: 0
   end
 
   test 'settings readers never receive secret values or mutation controls' do

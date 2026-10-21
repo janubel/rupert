@@ -244,6 +244,19 @@ class SettingsController < AuthenticatedController
     end
   end
 
+  # POST /settings/buzz_status — ask the relay whether it answers and knows the agent
+  def buzz_status
+    status = BuzzAgent.check_status
+    if !status[:configured]
+      redirect_to(settings_path(anchor: 'buzz'), alert: 'Buzz is not configured yet: set the relay and generate the agent keypair.')
+    elsif !status[:relay_reachable]
+      redirect_to(settings_path(anchor: 'buzz'), alert: 'The Buzz relay did not answer. Check the relay address and that it is running.')
+    else
+      registered = { true => 'the agent profile is registered', false => 'the agent profile is NOT registered yet (use Publish agent profile)', nil => 'the relay did not say whether the agent is registered' }[status[:registered]]
+      redirect_to(settings_path(anchor: 'buzz'), notice: "Buzz relay is reachable; #{registered}.")
+    end
+  end
+
   # POST /settings/buzz_test — publish a test message to Buzz
   def buzz_test
     ok, message = BuzzAgent.notify("Test message from the Rupert agent (#{Time.current.strftime('%b %e %H:%M')})")

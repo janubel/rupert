@@ -1,5 +1,5 @@
 <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-ink focus:fixed focus:left-4 focus:top-3">Skip to content</a>
-<div class="min-h-full" <% if Current.user %>data-controller="help-panel"<% end %>>
+<div class="min-h-full" <% if Current.user %>data-controller="help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %>" data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %>>
   <% if Current.user&.super_admin? && Current.tenant_id != Current.user.tenant_id %>
     <div role="status" class="flash flash-notice flex flex-wrap items-center justify-between gap-3"><span>Read-only customer support · <%= Current.tenant.name %></span><%= button_to 'Leave support session', leave_platform_support_path, method: :delete, class: 'btn-ghost' %></div>
   <% end %>
@@ -8,9 +8,14 @@
     <div class="app-header-grid">
       <%# The sign-in card carries its own large mark; skip the duplicate header brand there. %>
       <% unless controller_name == 'sessions' && action_name == 'new' %>
-        <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
-          <%= render "shared/rupert_face", size: 40 %><span class="app-brand-name">Rupert</span>
-        <% end %>
+        <div class="app-brand-group">
+          <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
+            <%= render "shared/rupert_face", size: 40 %><span class="app-brand-name">Rupert</span>
+          <% end %>
+          <% if ask_rupert_available? %>
+            <button type="button" class="ask-bubble-button" aria-label="Ask Rupert" aria-haspopup="dialog" aria-expanded="false" title="Ask Rupert — your help assistant, with your chat history" data-action="click->ask-rupert#toggle" data-ask-rupert-target="trigger"><%= navigation_icon('ask') %><span class="ask-bubble-label">Ask</span></button>
+          <% end %>
+        </div>
       <% end %>
       <% if Current.user %>
         <nav class="area-navigation" aria-label="Module areas" <%= tour_anchor('areas') %> style="--nav-area-count: <%= [nav_areas.size, 1].max %>">
@@ -25,7 +30,9 @@
           <% if Current.user.can?('dashboard.read') %>
             <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
           <% end %>
+          <%= render 'shared/header_buzz' if Current.user.can?('dashboard.read') %>
           <%= render 'shared/header_sync_pill', sync: @last_sync %>
+          <%= render 'shared/feedback_button' %>
           <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>
           <div data-controller="dropdown" class="relative">
             <% initials = Current.user.display_name.split(/\s+/).map { |word| word[0] }.join.upcase[0, 2] %>
@@ -35,6 +42,9 @@
               <div class="border-b border-fog px-4 py-3"><p class="truncate text-sm font-semibold text-ink"><%= Current.user.display_name %></p><p class="truncate text-xs text-mocha"><%= Current.user.email %></p><p class="mt-2 text-xs font-semibold text-olive"><%= navigation_role_name(Current.user) %></p><p class="text-xs text-mocha" data-signin-method><%= navigation_signin_method %></p></div>
               <div class="p-2">
                 <%= link_to 'My time & time off', employee_app_path, class: 'nav-menu-item', role: 'menuitem' %>
+                <% if ask_rupert_available? %>
+                  <button type="button" class="nav-menu-item w-full" role="menuitem" onclick="window.dispatchEvent(new CustomEvent('rupert:open-ask', { detail: 'history' }))"><%= navigation_icon('ask') %><span>Ask Rupert chats</span></button>
+                <% end %>
                 <% unless nav_area?('team') %>
                   <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>My time clock</span><% end %>
                 <% end %>
@@ -109,6 +119,8 @@
     <%= yield %>
   </main>
   <%= render 'shared/help_panel' if Current.user %>
+  <%= render 'shared/feedback_panel' if Current.user %>
+  <%= render 'shared/ask_rupert' if ask_rupert_available? %>
 </div>
 
 <% if Current.user&.can?('dashboard.read') %>

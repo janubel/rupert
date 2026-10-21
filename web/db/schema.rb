@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_010000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -457,6 +457,52 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["tenant_id", "created_at"], name: "idx_api_tokens_tenant_created"
     t.index ["token_digest"], name: "index_api_access_tokens_on_token_digest", unique: true
     t.index ["user_id"], name: "index_api_access_tokens_on_user_id"
+  end
+
+  create_table "ask_rupert_conversations", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.string "title"
+    t.datetime "last_message_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "user_id", "last_message_at"], name: "idx_ask_rupert_conversations_owner"
+  end
+
+  create_table "ask_rupert_messages", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "conversation_id", null: false
+    t.string "role", null: false
+    t.string "status", default: "done", null: false
+    t.text "content", default: "", null: false
+    t.text "links"
+    t.text "report_draft"
+    t.string "provider"
+    t.string "model"
+    t.string "page_path"
+    t.integer "tokens_in", default: 0, null: false
+    t.integer "tokens_out", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id", "id"], name: "idx_ask_rupert_messages_thread"
+    t.index ["conversation_id"], name: "index_ask_rupert_messages_on_conversation_id"
+  end
+
+  create_table "ask_rupert_usages", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.string "outcome", default: "pending", null: false
+    t.string "provider"
+    t.string "model"
+    t.integer "tokens_in", default: 0, null: false
+    t.integer "tokens_out", default: 0, null: false
+    t.integer "tool_calls", default: 0, null: false
+    t.integer "duration_ms"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "created_at"], name: "idx_ask_rupert_usages_tenant"
+    t.index ["tenant_id", "user_id", "created_at"], name: "idx_ask_rupert_usages_user"
   end
 
   create_table "authorize_net_batches", force: :cascade do |t|

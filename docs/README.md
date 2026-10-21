@@ -2,6 +2,8 @@
 
 Nightly maintenance: [releases, build totals and counting rules](ops/nightly-releases.md).
 
+In-app help chat (Ask Rupert): [what it can do, models, limits and safety](ops/ask-rupert.md).
+
 In-app onboarding, lessons and definitions: [how learning works and how to maintain it](ops/in-app-learning.md).
 
 NAB / IRIS deposits, transactions and Health Center summaries: [integration, access and ongoing operation](ops/iris-reporting.md).
@@ -24,7 +26,7 @@ Influencer operators: [Influencer CMS](ops/influencer-cms.md) covers prospects, 
 | `plans/` | Design and migration plans (drift migration, phase plan, staffing model) |
 | `audits/` | Dated inventory/SKU audits with their findings. Raw CSV/JSON output sits in `audits/data/` |
 | `research/` | Background research that informed product decisions |
-| `ops/` | Operator material (the Buzz agent prompt) |
+| `ops/` | Operator material ([Buzz team chat and the @rupert agent](ops/buzz.md), including the generated agent prompt) |
 
 Product pages: `roadmap.html`, `competitors.html`, and `sqlite-incus.html`. Edit the catalog at `web/config/product_roadmap.json`, the matrix at `docs/data/competitor-matrix.json`, or the runbook at `docs/ops/sqlite-incus.md`, then run `bin/build-product-site`. CI runs `--check` to detect drift. Matrix cells link to official source pages; "Not established" is an unknown, not an absence claim.
 
