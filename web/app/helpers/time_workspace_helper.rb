@@ -23,17 +23,29 @@ module TimeWorkspaceHelper
     links
   end
 
-  # Named reporting windows for the punch report. Pay weeks run Thursday–Wednesday.
+  # Named reporting windows for every time report, as TimeRangePicker::Preset
+  # (key, label, from, to). Pay weeks run Thursday–Wednesday.
+  def time_range_presets(today = Date.current)
+    TimeRangePicker.presets(today)
+  end
+
+  # The same windows as [label, from, to], plus "All history" (kept for older callers).
   def time_report_presets(today = Date.current)
-    pay_week = today.beginning_of_week(:thursday)
-    [
-      ['This pay week', pay_week, pay_week + 6],
-      ['Last pay week', pay_week - 7, pay_week - 1],
-      ['This month', today.beginning_of_month, today.end_of_month],
-      ['Last month', (today - 1.month).beginning_of_month, (today - 1.month).end_of_month],
-      ['Year to date', today.beginning_of_year, today],
-      ['All history', Date.new(2000, 1, 1), today]
-    ]
+    time_range_presets(today).map { |preset| [preset.label, preset.from, preset.to] } + [['All history', Date.new(2000, 1, 1), today]]
+  end
+
+  # Options for the range dropdown: every preset, then Custom (and All dates when optional).
+  def time_range_options(today = Date.current, optional: false)
+    options = time_range_presets(today).map { |preset| [preset.label, preset.key] }
+    options << ['All dates', TimeRangePicker::ALL] if optional
+    options << ['Custom', TimeRangePicker::CUSTOM]
+  end
+
+  # The current query with the picker's resolved dates as plain from/to, for
+  # links (CSV, views, filters) that must carry the chosen range.
+  def time_range_query(from, to)
+    request.query_parameters.to_h.symbolize_keys.except(:range, :range_shown, :from, :to, :commit)
+      .merge(from: from&.iso8601, to: to&.iso8601).compact
   end
 
   def time_source_label(source)
