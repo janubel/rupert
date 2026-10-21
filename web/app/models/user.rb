@@ -74,6 +74,8 @@ class User < ActiveRecord::Base
       'purchasing.write',
       'finance.read',
       'finance.write',
+      'uploads.read',
+      'uploads.write',
       'hr.read',
       'hr.write',
       'timesheets.read',
@@ -245,7 +247,8 @@ class User < ActiveRecord::Base
       {
         area: 'System',
         permissions: ['alerts.read', 'alerts.write', 'sync.read', 'sync.write', 'settings.read', 'settings.write',
-                      'system.read', 'system.write', 'purchasing.read', 'purchasing.write', 'finance.read', 'finance.write']
+                      'system.read', 'system.write', 'purchasing.read', 'purchasing.write', 'finance.read', 'finance.write',
+                      'uploads.read', 'uploads.write']
       },
       {
         area: 'Team',

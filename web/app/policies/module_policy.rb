@@ -39,6 +39,8 @@ class ModulePolicy < ApplicationPolicy
     purchasing_write
     finance_read
     finance_write
+    uploads_read
+    uploads_write
     hr_read
     hr_write
     timesheets_read

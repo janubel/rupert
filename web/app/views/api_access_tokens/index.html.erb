@@ -28,7 +28,7 @@
         <p class="text-xs text-taupe">Every scope is read-only except those marked “writes”, which change only Rupert's own records. No scope writes to Shopify, Square or C-Trax.</p>
         <% ApiAccessToken::SCOPES.each do |scope, permission| %>
           <% next if permission && !Current.user.can?(permission) %>
-          <label class="flex items-center gap-2 text-sm"><%= check_box_tag 'api_access_token[scopes][]', scope, @token.scopes.to_a.include?(scope), id: "api_scope_#{scope.tr(':', '_')}" %><span class="font-mono"><%= scope %></span><% if ApiAccessToken::WRITE_SCOPES.include?(scope) %><span class="pill-clay">writes Rupert tasks</span><% end %></label>
+          <label class="flex items-center gap-2 text-sm"><%= check_box_tag 'api_access_token[scopes][]', scope, @token.scopes.to_a.include?(scope), id: "api_scope_#{scope.tr(':', '_')}" %><span class="font-mono"><%= scope %></span><% if ApiAccessToken::WRITE_SCOPES.include?(scope) %><span class="pill-clay"><%= ApiAccessToken::WRITE_SCOPE_NOTES.fetch(scope, 'writes Rupert records') %></span><% end %></label>
         <% end %>
       </fieldset>
       <%= form.submit 'Create API token', class: 'btn-primary' %>
