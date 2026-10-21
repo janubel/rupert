@@ -39,6 +39,7 @@ class User < ActiveRecord::Base
   ROLE_PERMISSIONS = {
     'super_admin' => ['*'],
     'admin' => [
+      'chat.use',
       'marketing.read',
       'marketing.write',
       'marketing.review',
@@ -228,6 +229,8 @@ class User < ActiveRecord::Base
     [
       { area: 'Receipts', permissions: ['receipts.review'] },
       { area: 'Overview', permissions: ['dashboard.read'] },
+      # Ask Rupert, the in-app help chat. Administrators by default; delegate it per role or person.
+      { area: 'Rupert Chat', permissions: ['chat.use'] },
       { area: 'Marketing', permissions: ['marketing.read', 'marketing.write', 'marketing.review', 'marketing.contacts', 'marketing.discounts'] },
       {
         area: 'Commerce',

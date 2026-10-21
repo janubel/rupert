@@ -11,10 +11,11 @@ class FeedbackAttachment < ApplicationRecord
 
   KINDS = {
     'screenshot' => 'Screenshot', 'dom_snapshot' => 'Page snapshot', 'client_context' => 'Browser details',
-    'js_errors' => 'Recent JavaScript errors', 'server_log' => 'Server log lines', 'sql_queries' => 'SQL queries'
+    'js_errors' => 'Recent JavaScript errors', 'server_log' => 'Server log lines', 'sql_queries' => 'SQL queries',
+    'conversation' => 'Ask Rupert chat'
   }.freeze
   TEXT_LIMITS = {
-    'dom_snapshot' => 200_000, 'client_context' => 8_000, 'js_errors' => 20_000, 'server_log' => 60_000, 'sql_queries' => 60_000
+    'dom_snapshot' => 200_000, 'client_context' => 8_000, 'js_errors' => 20_000, 'server_log' => 60_000, 'sql_queries' => 60_000, 'conversation' => 20_000
   }.freeze
   SCREENSHOT_LIMIT = 1_500_000
   IMAGE_TYPES = { 'image/png' => "\x89PNG".b, 'image/jpeg' => "\xFF\xD8\xFF".b }.freeze

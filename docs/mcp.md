@@ -76,6 +76,11 @@ curl -s https://<host>/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_workspace_info","arguments":{}}}'
 ```
 
+> **Also used inside Rupert.** The in-app help chat, [Ask Rupert](ops/ask-rupert.md), runs
+> the read-only tools below in-process as the signed-in person (never with a stored token and
+> never with a write scope). Its scopes come from that person's current permissions, so it
+> shows no more than the same person would get from a token with those scopes.
+
 ## 3. Tools
 
 `tools/list` only returns the tools the token may use. Every tool is read-only
