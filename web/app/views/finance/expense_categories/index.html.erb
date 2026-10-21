@@ -1,0 +1,40 @@
+<% content_for :title, 'Expense categories' %>
+<% can_write = Current.user.can?('finance.write') %>
+<div class="space-y-6 operations-workspace">
+  <%= render 'shared/operations_navigation', workspace: :money %>
+  <%= render layout: 'finance/page_header', locals: { title: 'Expense categories', currency: nil,
+        explain: 'The categories you pick for expenses, receipts and bank transactions. Rename them, choose the ledger account each one posts to, add keywords so bank lines get suggested automatically, or add your own.' } do %>
+    <%= link_to 'Bank transactions', bank_statements_path, class: 'btn-ghost btn-sm' %>
+    <% if can_write %><%= link_to 'Add category', new_finance_expense_category_path, class: 'btn-primary' %><% end %>
+  <% end %>
+
+  <div class="card overflow-hidden">
+    <%= report_table 'expense-categories', label: 'Expense categories' do %>
+      <table class="operations-table w-full text-sm">
+        <thead class="border-b border-fog bg-haze/60">
+          <tr>
+            <th scope="col" class="th" data-col="name">Category</th>
+            <th scope="col" class="th" data-col="account">Posts to</th>
+            <th scope="col" class="th" data-col="keywords">Suggest for bank lines containing</th>
+            <th scope="col" class="th num" data-col="used">Expenses</th>
+            <th scope="col" class="th" data-col="status">Status</th>
+            <% if can_write %><th scope="col" class="th" data-col="actions" data-no-sort><span class="sr-only">Actions</span></th><% end %>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-fog">
+          <% @categories.each do |category| %>
+            <tr class="hover:bg-cream <%= 'text-taupe' unless category.active %>">
+              <td class="td font-medium text-ink"><%= category.name %><% if category.built_in %><span class="block text-xs text-mocha">Built in</span><% end %></td>
+              <td class="td"><%= category.ledger_account ? "#{category.ledger_account.code} · #{category.ledger_account.name}" : 'Default account' %></td>
+              <td class="td text-xs text-mocha"><%= category.keyword_list.join(', ').presence || '—' %></td>
+              <td class="td num"><%= @usage.fetch(category.key, 0) %></td>
+              <td class="td"><span class="<%= category.active ? 'pill-fern' : 'pill-taupe' %>"><%= category.active ? 'Active' : 'Inactive' %></span></td>
+              <% if can_write %><td class="td"><%= link_to 'Edit', edit_finance_expense_category_path(category), class: 'font-semibold text-olive-deep underline', 'aria-label': "Edit #{category.name}" %></td><% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+  <p class="text-xs text-mocha">Renaming a category relabels every expense that uses it. Changing the ledger account applies to expenses recorded or edited from now on; existing journal entries are not rewritten. Categories in use can be made inactive but are never deleted, so history keeps its labels.</p>
+</div>
