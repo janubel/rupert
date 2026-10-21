@@ -3,7 +3,7 @@
   (function () {
     try {
       var theme = localStorage.getItem("rupert-theme");
-      var colors = { light: "#f5f7fa", mist: "#e6ebf2", sepia: "#efe6d4", dark: "#121418" };
+      var colors = { light: "#f5f7fa", mist: "#e6ebf2", sepia: "#efe6d4", dark: "#111514" };
       if (theme && colors[theme]) {
         document.documentElement.setAttribute("data-theme", theme);
         var meta = document.querySelector('meta[name="theme-color"]');
