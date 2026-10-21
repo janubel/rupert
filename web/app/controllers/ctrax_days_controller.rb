@@ -19,6 +19,7 @@ class CtraxDaysController < AuthenticatedController
   def show
     @day = CtraxDay.find(params[:id])
     @reconciliation = Ctrax::Reconciliation.new(@day)
+    @items = Ctrax::DailyItems.new([@day])
     respond_to do |format|
       format.html
       format.csv do
@@ -31,6 +32,28 @@ class CtraxDaysController < AuthenticatedController
         send_data data, filename: "ctrax-#{@day.business_date}-#{@day.store_id}.csv", type: 'text/csv'
       end
     end
+  end
+
+  # Item-level sales for one store or every stored store on a business date.
+  # Read-only: aggregates stored source lines; nothing is created or synced.
+  def items
+    @date = Date.iso8601(params[:date].to_s)
+    scope = CtraxDay.includes(:location).where(business_date: @date).order(:location_id)
+    scope = scope.where(location_id: params[:location_id]) if params[:location_id].present?
+    @days = scope.to_a
+    raise ActiveRecord::RecordNotFound if params[:location_id].present? && @days.empty?
+
+    @items = Ctrax::DailyItems.new(@days)
+    respond_to do |format|
+      format.html
+      format.csv do
+        log_export('C-Trax items sold CSV', "#{@date} #{@days.map { |day| day.location.name }.join(', ')}: #{@items.items.size} items")
+        suffix = @days.one? ? @days.first.store_id : 'all-stores'
+        send_data @items.csv, filename: "ctrax-items-#{@date}-#{suffix}.csv", type: 'text/csv'
+      end
+    end
+  rescue Date::Error
+    redirect_to ctrax_days_path, alert: 'Choose a valid business date.'
   end
 
   def create
