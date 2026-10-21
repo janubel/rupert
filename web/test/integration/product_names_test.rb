@@ -12,6 +12,8 @@ class ProductNamesTest < ActionDispatch::IntegrationTest
       catalog_present: true, catalog_read_at: at)
     other = ShopifyProduct.create!(id: 'names-other', title: 'Glass Bowl - small', status: 'ACTIVE', catalog_present: true, catalog_read_at: at)
     ShopifyVariant.create!(id: 'names-bowl', product: other, title: 'Default Title', sku: 'BOWL', tracked: true, catalog_present: true, catalog_read_at: at)
+    knife = ShopifyProduct.create!(id: 'names-knife', title: 'Hot Knife Pro', status: 'ACTIVE', catalog_present: true, catalog_read_at: at)
+    ShopifyVariant.create!(id: 'names-knife-v', product: knife, title: 'Default Title', sku: 'KNIFEPRO', tracked: true, catalog_present: true, catalog_read_at: at)
     item = SquareItem.create!(id: 'sq-item', name: '15 Count')
     square = SquareVariation.create!(id: 'sq-var', item: item, name: '15 Count', sku: 'REST15')
     SkuLink.create!(shopifyVariantId: @variant.id, squareVariationId: square.id, sku: 'REST15', matchSource: 'sku')
@@ -48,6 +50,8 @@ class ProductNamesTest < ActionDispatch::IntegrationTest
     crosswalk = ProductNameCrosswalk.new
     assert_equal ['Mystery Item'], crosswalk.unmatched[:ctrax].map { |i| i[:name] }
     assert_equal ['Hot Knife'], crosswalk.unmatched[:swipesimple].map { |i| i[:name] }
+    assert_equal 'Hot Knife Pro', crosswalk.unmatched[:swipesimple].first[:suggestion]
+    assert_equal %w[Hot\ Knife Mystery\ Item], crosswalk.unmatched_list.map { |i| i[:name] }
     assert_equal ProductNameCrosswalk.normalize('Big Dipper (Hybrid- 31.45% THCA) - 1 Gram'), ProductNameCrosswalk.normalize('big dipper - 1g')
     assert_equal ProductNameCrosswalk.normalize('Tea & Honey - 1 ounce'), ProductNameCrosswalk.normalize('tea and honey 1oz')
   end
@@ -72,6 +76,10 @@ class ProductNamesTest < ActionDispatch::IntegrationTest
     assert_select 'h1', 'Product names'
     assert_select 'a', text: 'Print: Names to verify'
     assert_includes response.body, 'Rest Gummies - 15 Count'
+    assert_equal ['Website (Shopify)', 'SwipeSimple', 'Square', 'C-Trax'], css_select('thead th').map { |th| th.text.strip }
+    assert_select 'th[scope=rowgroup]', text: /Not on the website/
+    assert_select 'tr[data-unmatched-row]', 2
+    assert_select 'tr[data-unmatched-row] span.italic', text: '(Hot Knife Pro)'
     get product_names_path(filter: 'unmatched')
     assert_includes response.body, 'Mystery Item'
     get product_names_path(format: :csv)

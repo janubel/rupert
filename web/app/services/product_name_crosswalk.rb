@@ -77,6 +77,13 @@ class ProductNameCrosswalk
     @unmatched
   end
 
+  # Secondary items with no website match, one per entry, grouped under any
+  # suggested website name so items for the same product sit together.
+  def unmatched_list
+    SYSTEMS.keys.flat_map { |system| unmatched.fetch(system).map { |item| item.merge(system: system) } }
+      .sort_by { |item| [self.class.normalize(item[:suggestion] || "\u{10FFFF}#{item[:name]}"), SYSTEMS.keys.index(item[:system])] }
+  end
+
   # Matches the system is unsure about, for the verification sheet.
   def verify_rows
     rows.select { |row| row[:issues].any? }

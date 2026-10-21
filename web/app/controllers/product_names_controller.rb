@@ -12,7 +12,8 @@ class ProductNamesController < AuthenticatedController
     else
       @filter = %w[verify unmatched].include?(params[:filter]) ? params[:filter] : 'all'
       @query = params[:q].to_s.strip[0, 255]
-      @rows = filtered_rows
+      @rows = @filter == 'unmatched' ? [] : filtered_rows
+      @unmatched_items = @filter == 'verify' ? [] : filtered_unmatched
       @pagy = Pagy.new(count: @rows.size, page: params[:page], items: 50)
       @page_rows = @rows.slice(@pagy.offset, @pagy.items) || []
     end
@@ -36,11 +37,17 @@ class ProductNamesController < AuthenticatedController
   def filtered_rows
     rows = @crosswalk.rows
     rows = rows.select { |r| r[:issues].any? } if @filter == 'verify'
-    return [] if @filter == 'unmatched'
     return rows if @query.blank?
 
     rows.select do |r|
       [r[:name], r[:sku], *%i[square swipesimple ctrax].map { |s| r.dig(s, :name) }].compact.join(' ').downcase.include?(@query.downcase)
     end
+  end
+
+  def filtered_unmatched
+    items = @crosswalk.unmatched_list
+    return items if @query.blank?
+
+    items.select { |i| [i[:name], i[:sku], i[:suggestion]].compact.join(' ').downcase.include?(@query.downcase) }
   end
 end

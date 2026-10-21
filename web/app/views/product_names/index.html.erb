@@ -25,43 +25,40 @@
       <%= submit_tag 'Filter', class: 'btn-primary' %>
     <% end %>
   </section>
-  <% if @filter == 'unmatched' %>
-    <% ProductNameCrosswalk::SYSTEMS.each do |system, label| %>
-      <% items = @crosswalk.unmatched[system] %>
-      <section class="card overflow-hidden" aria-label="<%= label %> items without a website match">
-        <div class="operations-header card-pad"><h2 class="font-display text-xl"><%= label %></h2><p class="text-sm text-mocha"><%= items.size %> without a website match</p></div>
-        <div class="operations-table-region" role="region" tabindex="0" aria-label="<%= label %> unmatched table">
-          <table class="w-full text-sm">
-            <thead><tr><th scope="col" class="th">Item</th><th scope="col" class="th">SKU</th><th scope="col" class="th">Note</th><th scope="col" class="th">Suggested website name (review)</th></tr></thead>
-            <tbody class="divide-y divide-fog">
-              <% items.sort_by { |i| ProductNameCrosswalk.normalize(i[:name]) }.each do |item| %>
-                <tr><td class="td font-medium"><%= item[:name] %></td><td class="td"><%= item[:sku].presence || '—' %></td><td class="td text-xs text-taupe"><%= item[:note] %></td><td class="td text-xs"><%= item[:suggestion].presence || '—' %></td></tr>
+  <% systems = %i[swipesimple square ctrax] %>
+  <% last_page = @pagy.page >= @pagy.pages %>
+  <div class="operations-header retail-anchor"><h2 class="font-display text-xl">Name crosswalk</h2><p role="status" class="text-sm text-mocha"><%= @pagy.count %> website products · <%= @unmatched_items.size %> items with no website match</p></div>
+  <p class="text-xs text-mocha sm:hidden">Swipe the table sideways to see every system.</p>
+  <div class="card overflow-hidden"><div class="operations-table-region" role="region" tabindex="0" aria-label="Product names table">
+    <table class="w-full text-sm">
+      <thead><tr>
+        <th scope="col" class="th">Website (Shopify)</th>
+        <% systems.each do |system| %><th scope="col" class="th"><%= ProductNameCrosswalk::SYSTEMS.fetch(system) %></th><% end %>
+      </tr></thead>
+      <tbody class="divide-y divide-fog">
+        <% @page_rows.each do |row| %>
+          <tr>
+            <td class="td"><p class="font-medium"><%= link_to row[:name], shopify_variant_path(row[:variant_id]), class: 'hover:underline' %></p><p class="text-xs text-taupe"><%= row[:sku].presence || 'No SKU' %></p><% row[:issues].each do |issue| %><p class="text-xs text-clay"><%= issue %></p><% end %></td>
+            <% systems.each do |system| %>
+              <% match = row[system] %>
+              <td class="td"><% if match %><p><%= match[:name] %></p><p class="text-xs text-taupe"><%= match[:how] %> · <%= match[:comparison] %></p><% else %><span class="text-taupe">—</span><% end %></td>
+            <% end %>
+          </tr>
+        <% end %>
+        <% if last_page && @unmatched_items.any? %>
+          <tr><th scope="rowgroup" colspan="<%= systems.size + 1 %>" class="th bg-paper">Not on the website · no match found (<%= @unmatched_items.size %>). A suggested website name appears in parentheses; it is a guess to review, not a match.</th></tr>
+          <% @unmatched_items.each do |item| %>
+            <tr data-unmatched-row>
+              <td class="td"><% if item[:suggestion].present? %><span class="italic text-clay" title="Suggested website match, not confirmed">(<%= item[:suggestion] %>)</span><% else %><span class="text-taupe">—</span><% end %></td>
+              <% systems.each do |system| %>
+                <td class="td"><% if item[:system] == system %><p class="font-medium"><%= item[:name] %></p><p class="text-xs text-taupe"><%= [item[:sku].presence, item[:note]].compact.join(' · ') %></p><% end %></td>
               <% end %>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    <% end %>
-  <% else %>
-    <div class="operations-header retail-anchor"><h2 class="font-display text-xl">Name crosswalk</h2><p role="status" class="text-sm text-mocha"><%= @pagy.count %> matching rows · <%= @page_rows.size %> shown</p></div>
-    <p class="text-xs text-mocha sm:hidden">Swipe the table sideways to see every system.</p>
-    <div class="card overflow-hidden"><div class="operations-table-region" role="region" tabindex="0" aria-label="Product names table">
-      <table class="w-full text-sm">
-        <thead><tr><th scope="col" class="th">Website name (primary)</th><th scope="col" class="th">Square</th><th scope="col" class="th">SwipeSimple</th><th scope="col" class="th">C-Trax</th><th scope="col" class="th">Review</th></tr></thead>
-        <tbody class="divide-y divide-fog">
-          <% @page_rows.each do |row| %>
-            <tr>
-              <td class="td"><p class="font-medium"><%= link_to row[:name], shopify_variant_path(row[:variant_id]), class: 'hover:underline' %></p><p class="text-xs text-taupe"><%= row[:sku].presence || 'No SKU' %></p></td>
-              <% %i[square swipesimple ctrax].each do |system| %>
-                <% match = row[system] %>
-                <td class="td"><% if match %><p><%= match[:name] %></p><p class="text-xs text-taupe"><%= match[:how] %> · <%= match[:comparison] %></p><% else %><span class="text-taupe">—</span><% end %></td>
-              <% end %>
-              <td class="td text-xs <%= row[:issues].any? ? 'text-clay' : 'text-taupe' %>"><%= row[:issues].any? ? row[:issues].join(' · ') : 'No flags' %></td>
             </tr>
           <% end %>
-        </tbody>
-      </table>
-    </div></div>
-    <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
-  <% end %>
+        <% end %>
+      </tbody>
+    </table>
+  </div></div>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <% if !last_page && @unmatched_items.any? %><p class="text-xs text-mocha"><%= @unmatched_items.size %> items with no website match are listed below the last page.</p><% end %>
 </div>

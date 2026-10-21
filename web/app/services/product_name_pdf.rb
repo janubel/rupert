@@ -18,6 +18,7 @@ class ProductNamePdf
   FOG = 'D6D3D1'
   HAZE = 'EDEFF0'
   MOCHA = '6B7280'
+  SUGGESTION = 'B45309'
 
   def self.build(sheet, crosswalk, at: Time.current)
     new(sheet, crosswalk, at).build
@@ -56,9 +57,23 @@ class ProductNamePdf
 
   private
 
+  # Items with no website match go below the matched products, each in its own
+  # system's column; a suggested website name is toned and in parentheses.
+  def unmatched_rows
+    items = @crosswalk.unmatched_list
+    return [] if items.empty?
+
+    heading = { content: "Not on the website - no match found (#{items.size}). A suggestion in parentheses is a guess to review.",
+                colspan: 4, font_style: :bold, background_color: HAZE }
+    [[heading]] + items.map do |item|
+      suggestion = item[:suggestion].present? ? { content: "<i><color rgb='#{SUGGESTION}'>(#{ERB::Util.html_escape(item[:suggestion])})</color></i>", inline_format: true } : ''
+      [suggestion, *%i[swipesimple square ctrax].map { |system| item[:system] == system ? item[:name].to_s : '' }]
+    end
+  end
+
   def subtitle
     case @sheet
-    when 'crosswalk' then 'Website (Shopify) name is primary. Blank means no match in that system. Current catalog, A-Z.'
+    when 'crosswalk' then 'Website (Shopify) first, then SwipeSimple, Square and C-Trax. Products with no website match are listed below; a name in parentheses is a suggested website match.'
     when 'verify' then 'Matches the system is unsure about: fuzzy matches and SKUs shared by very different names. Tick when checked.'
     else 'Secondary-system items with no website match. Write the correct website name in the last column.'
     end
@@ -67,14 +82,14 @@ class ProductNamePdf
   def table
     case @sheet
     when 'crosswalk'
-      rows = @crosswalk.rows.sort_by { |r| r[:key] }
-      [%w[Website\ name\ (primary) SKU Square SwipeSimple C-Trax],
-       rows.map { |r| [r[:name], r[:sku], r.dig(:square, :name), r.dig(:swipesimple, :name), r.dig(:ctrax, :name)].map(&:to_s) },
-       [270, 60, 170, 130, 110]]
+      matched = @crosswalk.rows.sort_by { |r| r[:key] }.map do |r|
+        [r[:name], r.dig(:swipesimple, :name), r.dig(:square, :name), r.dig(:ctrax, :name)].map(&:to_s)
+      end
+      [['Website (Shopify)', 'SwipeSimple', 'Square', 'C-Trax'], matched + unmatched_rows, [220, 170, 170, 170]]
     when 'verify'
-      [['Done', 'Website name (primary)', 'SKU', 'Square', 'SwipeSimple', 'C-Trax', 'Why'],
-       @crosswalk.verify_rows.map { |r| ['', r[:name], r[:sku], r.dig(:square, :name), r.dig(:swipesimple, :name), r.dig(:ctrax, :name), r[:issues].join('; ')].map(&:to_s) },
-       [32, 170, 55, 115, 100, 100, 168]]
+      [['Done', 'Website name (primary)', 'SKU', 'SwipeSimple', 'Square', 'C-Trax', 'Why'],
+       @crosswalk.verify_rows.map { |r| ['', r[:name], r[:sku], r.dig(:swipesimple, :name), r.dig(:square, :name), r.dig(:ctrax, :name), r[:issues].join('; ')].map(&:to_s) },
+       [32, 170, 55, 100, 115, 100, 168]]
     else
       items = @crosswalk.unmatched.slice(:swipesimple, :ctrax).flat_map do |system, list|
         list.reject { |item| system == :ctrax && item[:note] == 'Not listed for sale' }.map { |item| [ProductNameCrosswalk::SYSTEMS.fetch(system), item] }
