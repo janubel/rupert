@@ -507,6 +507,18 @@ class PageGuides
         'If Open chat does nothing, install the Buzz app first (Get Buzz), then try again.'
       ]
     ),
+    'buzz_chat' => Guide.new(
+      key: 'buzz_chat', title: 'Team chat',
+      summary: "The team's Buzz channel inside Rupert: recent history, new messages as they arrive, and a box to post.",
+      sections: [
+        { heading: "What's here", body: 'Messages from the Buzz channel with the newest at the bottom. Load earlier messages goes back through the history. People show by their Buzz profile name; someone with no profile shows as a short key. The Rupert agent is marked AI agent.' },
+        { heading: 'Posting', body: 'What you post appears in Buzz as "Your name via Rupert", sent by the Rupert agent, because Rupert does not hold anyone\'s personal Buzz key. Messages posted here cannot mark work ready for development, and the agent does not reply to them.' }
+      ],
+      tips: [
+        'Rupert keeps a copy of recent messages for 30 days so the page is quick and still shows history if Buzz is briefly unreachable. Buzz itself keeps the full history.',
+        'Links in messages are shown as text and are never opened or previewed by Rupert. Never paste a private key (starting nsec1).'
+      ]
+    ),
     'employees' => Guide.new(
       key: 'employees', title: 'Staff',
       summary: 'Your team directory — who works where, linked to their login accounts.',
@@ -809,6 +821,7 @@ class PageGuides
     ['/activity', 'activity'],
     ['/syncs', 'sync'],
     ['/settings', 'settings'],
+    ['/buzz/chat', 'buzz_chat'],
     ['/buzz', 'buzz'],
     ['/employees', 'employees'],
     ['/users', 'users'],

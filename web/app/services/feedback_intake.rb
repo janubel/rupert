@@ -33,8 +33,13 @@ class FeedbackIntake
       nil
     end
 
+    # The agent's own key is never a sender who can mark work ready, even if it is
+    # listed: messages posted from Rupert's Team chat are signed by the agent
+    # (with the person's name in the text, which is only text), so allowing that
+    # key would let anyone with chat access skip the allow-list.
     def ready_senders
-      EnvStore.fetch('FEEDBACK_READY_SENDERS', '').to_s.split(/[\s,;]+/).filter_map { |entry| normalize_sender(entry) }.uniq
+      own = BuzzChat.agent_pubkey
+      EnvStore.fetch('FEEDBACK_READY_SENDERS', '').to_s.split(/[\s,;]+/).filter_map { |entry| normalize_sender(entry) }.uniq - [own].compact
     end
 
     def ready_sender?(sender)
