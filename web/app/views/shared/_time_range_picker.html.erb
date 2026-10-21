@@ -1,5 +1,5 @@
 <%# Shared date-range picker for every time report: a dropdown of named ranges
-    (pay weeks run Thursday–Wednesday) plus Start and Finish calendars. Submits
+    (pay weeks run Thursday–Wednesday) plus Start date and End date calendars. Submits
     range, from, to and range_shown; TimeRangePicker.resolve reads them, so it
     works without JavaScript. Locals: from, to (Date or nil); optional: true
     allows blank dates and adds "All dates"; hint: short help text under the
@@ -18,12 +18,12 @@
           data: { range_picker_target: 'select', action: 'range-picker#choose' } %>
   </div>
   <div class="min-w-0">
-    <%= label_tag :from, 'Start', class: 'field-label' %>
+    <%= label_tag :from, 'Start date', class: 'field-label' %>
     <%= date_field_tag :from, from&.iso8601, class: 'input', required: !optional, aria: { describedby: error_id },
           data: { range_picker_target: 'from', action: 'input->range-picker#edit change->range-picker#edit' }.merge(local_assigns.fetch(:from_data, {})) %>
   </div>
   <div class="min-w-0">
-    <%= label_tag :to, 'Finish', class: 'field-label' %>
+    <%= label_tag :to, 'End date', class: 'field-label' %>
     <%= date_field_tag :to, to&.iso8601, class: 'input', required: !optional, aria: { describedby: error_id },
           data: { range_picker_target: 'to', action: 'input->range-picker#edit change->range-picker#edit' }.merge(local_assigns.fetch(:to_data, {})) %>
   </div>
