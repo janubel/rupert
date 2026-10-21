@@ -1,0 +1,9 @@
+# User unit on the SER8 host (systemctl --user), next to rupert-offhost-backup.service. Decrypts the newest
+# encrypted backup into memory and checks it restores. A failed run shows as "failed" in Cockpit and on System → Backups.
+[Unit]
+Description=Rupert backup restore drill (decrypt newest set, integrity check, count tables)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rupert-backup-verify.sh
+Nice=10
