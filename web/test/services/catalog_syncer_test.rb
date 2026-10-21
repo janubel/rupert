@@ -27,7 +27,7 @@ class CatalogSyncerTest < ActiveSupport::TestCase
   test 'orders are selected by updated_at so later refunds and cancellations are re-read' do
     captured = []
     ShopifyClient.stubs(:graphql).with { |query, variables| captured.push([query, variables]) }
-                 .returns({ 'orders' => { 'nodes' => [], 'pageInfo' => { 'hasNextPage' => false } } })
+                 .returns({ 'orders' => { 'nodes' => [], 'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } } })
     CatalogSyncer.send(:paginate_orders, '2026-01-01')
     query, variables = captured.first
     assert_equal 'updated_at:>=2026-01-01', variables[:orderQuery]
@@ -36,9 +36,10 @@ class CatalogSyncerTest < ActiveSupport::TestCase
   end
 
   test 'paginate_orders walks all pages' do
-    page1 = { 'orders' => { 'nodes' => [{ 'id' => 'a' }, { 'id' => 'b' }],
+    empty_lines = { 'lineItems' => { 'nodes' => [], 'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } } }
+    page1 = { 'orders' => { 'nodes' => [{ 'id' => 'a' }.merge(empty_lines), { 'id' => 'b' }.merge(empty_lines)],
                             'pageInfo' => { 'hasNextPage' => true, 'endCursor' => 'c1' } } }
-    page2 = { 'orders' => { 'nodes' => [{ 'id' => 'c' }],
+    page2 = { 'orders' => { 'nodes' => [{ 'id' => 'c' }.merge(empty_lines)],
                             'pageInfo' => { 'hasNextPage' => false, 'endCursor' => 'c2' } } }
 
     ShopifyClient.stubs(:graphql)
@@ -49,6 +50,38 @@ class CatalogSyncerTest < ActiveSupport::TestCase
 
     assert_equal(%w[a b c], result['nodes'].map { |n| n['id'] })
     refute result['pageInfo']['hasNextPage']
+  end
+
+  test 'paginate_orders keeps an exact 100-line order on its initial page' do
+    order = source_order_with_line_items(count: 100, has_next_page: false)
+    captured = []
+    ShopifyClient.stubs(:graphql).with { |query, variables| captured << [query, variables] }
+                 .returns({ 'orders' => { 'nodes' => [order], 'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } } })
+
+    result = CatalogSyncer.send(:paginate_orders, '2026-01-01')
+
+    assert_equal 100, result['nodes'].first.dig('lineItems', 'nodes').length
+    assert_equal [CatalogSyncer::ORDERS_QUERY], captured.map(&:first)
+  end
+
+  test 'paginate_orders follows an order line-item cursor past 100' do
+    order = source_order_with_line_items(count: 100, has_next_page: true)
+    continuation = { 'order' => { 'id' => order['id'], 'updatedAt' => order['updatedAt'],
+                                  'lineItems' => { 'nodes' => [source_line(101)],
+                                                   'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } } } }
+    captured = []
+    ShopifyClient.stubs(:graphql).with { |query, variables| captured << [query, variables] }
+                 .returns({ 'orders' => { 'nodes' => [order], 'pageInfo' => { 'hasNextPage' => false, 'endCursor' => nil } } })
+                 .then.returns(continuation)
+
+    result = CatalogSyncer.send(:paginate_orders, '2026-01-01')
+    lines = result['nodes'].first.dig('lineItems', 'nodes')
+
+    assert_equal 101, lines.length
+    assert_equal 'gid://shopify/LineItem/101', lines.last['id']
+    assert_equal CatalogSyncer::ORDER_LINE_ITEMS_QUERY, captured.last.first
+    assert_equal({ orderId: order['id'], lineItemCursor: 'line-cursor-100' }, captured.last.last)
+    refute result['nodes'].first.dig('lineItems', 'pageInfo', 'hasNextPage')
   end
 
   test 'paginate_products walks all pages instead of truncating at 250' do
@@ -256,5 +289,23 @@ class CatalogSyncerTest < ActiveSupport::TestCase
     level = InventoryLevel.find_by!(source: 'shopify', shopifyVariantId: variant['id'])
     assert_equal 4, level.sourceQuantity
     assert_not level.oversold?
+  end
+
+  private
+
+  def source_order_with_line_items(count:, has_next_page:)
+    { 'id' => 'gid://shopify/Order/900', 'updatedAt' => '2026-10-14T14:00:00Z',
+      'lineItems' => {
+        'nodes' => (1..count).map { |index| source_line(index) },
+        'pageInfo' => { 'hasNextPage' => has_next_page, 'endCursor' => has_next_page ? 'line-cursor-100' : nil }
+      } }
+  end
+
+  def source_line(index)
+    { 'id' => "gid://shopify/LineItem/#{index}", 'title' => "Item #{index}", 'sku' => "SKU-#{index}",
+      'quantity' => 1, 'currentQuantity' => 1,
+      'variant' => { 'id' => "gid://shopify/ProductVariant/#{index}" },
+      'originalUnitPriceSet' => { 'shopMoney' => { 'amount' => '10.00', 'currencyCode' => 'USD' } },
+      'originalTotalSet' => { 'shopMoney' => { 'amount' => '10.00', 'currencyCode' => 'USD' } } }
   end
 end

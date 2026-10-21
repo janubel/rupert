@@ -27,6 +27,30 @@ class HttpRetryTest < ActiveSupport::TestCase
     assert_equal [2.0], @sleeps
   end
 
+  test 'Shopify retries a rate-limited order line-item continuation page' do
+    order_id = 'gid://shopify/Order/900'
+    updated_at = '2026-10-14T14:00:00Z'
+    first_page_lines = (1..100).map { |index| { id: "gid://shopify/LineItem/#{index}" } }
+    order_page = { data: { orders: { nodes: [{ id: order_id, updatedAt: updated_at,
+                                               lineItems: { nodes: first_page_lines,
+                                                            pageInfo: { hasNextPage: true, endCursor: 'line-cursor-100' } } }],
+                                      pageInfo: { hasNextPage: false, endCursor: nil } } } }
+    line_item_page = { data: { order: { id: order_id, updatedAt: updated_at,
+                                        lineItems: { nodes: [{ id: 'gid://shopify/LineItem/101' }],
+                                                     pageInfo: { hasNextPage: false, endCursor: nil } } } } }
+
+    stub_request(:post, GRAPHQL)
+      .to_return(status: 200, body: order_page.to_json)
+      .then.to_return(status: 429, headers: { 'Retry-After' => '2' }, body: '')
+      .then.to_return(status: 200, body: line_item_page.to_json)
+
+    result = CatalogSyncer.send(:paginate_orders, '2026-01-01')
+
+    assert_equal 101, result['nodes'].first.dig('lineItems', 'nodes').length
+    assert_equal [2.0], @sleeps
+    assert_requested :post, GRAPHQL, times: 3
+  end
+
   test 'Shopify THROTTLED waits for the cost bucket to refill and retries' do
     throttled = { errors: [{ message: 'Throttled', extensions: { code: 'THROTTLED' } }],
                   extensions: { cost: { requestedQueryCost: 500, throttleStatus: { currentlyAvailable: 100, restoreRate: 50 } } } }

@@ -185,6 +185,17 @@ class McpServerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test 'oversized request body is rejected when Content-Length is absent or understated' do
+    _, secret = issue
+    body = 'x' * (McpController::MAX_BODY_BYTES + 1)
+
+    [nil, '1'].each do |content_length|
+      status, response_body = synthetic_mcp_request(secret, body, content_length: content_length)
+      assert_equal 413, status
+      assert_equal(-32_600, JSON.parse(response_body).dig('error', 'code'))
+    end
+  end
+
   test 'tool errors are recorded as struggle signals without arguments' do
     _, secret = issue
     result = call_tool(secret, 'sales_summary', { from: 'last tuesday' })
@@ -315,6 +326,22 @@ class McpServerTest < ActionDispatch::IntegrationTest
 
   def headers_for(secret, extra = {})
     { 'Authorization' => "Bearer #{secret}", 'Content-Type' => 'application/json', 'Accept' => 'application/json, text/event-stream' }.merge(extra)
+  end
+
+  def synthetic_mcp_request(secret, body, content_length:)
+    env = Rack::MockRequest.env_for("http://www.example.com#{mcp_path}")
+    env['REQUEST_METHOD'] = 'POST'
+    env['CONTENT_TYPE'] = 'application/json'
+    env['HTTP_AUTHORIZATION'] = "Bearer #{secret}"
+    env['rack.input'] = StringIO.new(body)
+    content_length.nil? ? env.delete('CONTENT_LENGTH') : env['CONTENT_LENGTH'] = content_length
+
+    status, _headers, rack_body = Rails.application.call(env)
+    response = +''
+    rack_body.each { |chunk| response << chunk }
+    [status, response]
+  ensure
+    rack_body&.close
   end
 
   def rpc(secret, method, params = nil, headers: {})
