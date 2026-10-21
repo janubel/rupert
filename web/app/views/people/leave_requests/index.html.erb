@@ -1,14 +1,10 @@
 <% content_for :title, "Leave & PTO" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Leave & PTO</h1>
-      <p class="mt-1 text-sm text-mocha">Time-off requests, approvals, and annual balances.</p>
-    </div>
+  <%= page_header 'Leave & PTO', subtitle: 'Time-off requests, approvals, and annual balances.' do %>
     <% if Current.user.can?("leave.write") %>
       <%= link_to "New request", new_people_leave_request_path, class: "btn-primary" %>
     <% end %>
-  </section>
+  <% end %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">

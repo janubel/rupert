@@ -1,20 +1,13 @@
 <% content_for :title, "Projects" %>
 <% filters = [["Active work", nil], ["Planned", "planned"], ["Active", "active"], ["On hold", "on_hold"], ["Completed", "completed"], ["Archived", "archived"]] %>
 <div class="space-y-5">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <p class="eyebrow text-olive">Work</p>
-      <h1 class="page-title">Projects</h1>
-      <p class="mt-1 text-sm text-mocha">Plan work, track tasks, and hit goals.</p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "All tasks", projects_tasks_path, class: "btn-ghost btn-sm" %>
-      <% if Current.user.can?("projects.write") %>
-        <%= link_to "New project", new_projects_project_path, class: "btn-primary" %>
-      <% end %>
-    </div>
-  </section>
+  <%= page_header 'Projects', subtitle: 'Plan work, track tasks, and hit goals.', eyebrow: 'Work' do %>
+    <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm" %>
+    <%= link_to "All tasks", projects_tasks_path, class: "btn-ghost btn-sm" %>
+    <% if Current.user.can?("projects.write") %>
+      <%= link_to "New project", new_projects_project_path, class: "btn-primary" %>
+    <% end %>
+  <% end %>
 
   <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
     <div class="stat"><p class="stat-label">Active projects</p><p class="stat-value"><%= @status_counts["active"].to_i %></p></div>

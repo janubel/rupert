@@ -1,10 +1,7 @@
 <% content_for :title, 'API integrations' %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
-  <section>
-    <h1 class="page-title">API integrations</h1>
-    <p class="mt-2 text-sm text-mocha">Connect your tools to Rupert's versioned read API. Each token belongs to this store, has selected scopes, and can be revoked here. The same token can connect an AI assistant over MCP (see below).</p>
-  </section>
+  <%= page_header 'API integrations', subtitle: 'Connect your tools to Rupert\'s versioned read API. Each token belongs to this store, has selected scopes, and can be revoked here. The same token can connect an AI assistant over MCP (see below).' %>
 
   <% if @issued_secret %>
     <section class="card card-pad space-y-3" aria-label="New API token">
