@@ -247,19 +247,18 @@ class ProductNameCrosswalk
   end
 
   def swipesimple_items
-    @swipesimple_items ||= begin
-      if @swipesimple_file.file?
-        @swipesimple_read_at = @swipesimple_file.mtime
-        CSV.read(@swipesimple_file, col_sep: "\t", headers: true, quote_char: "\0", encoding: 'bom|utf-8').filter_map do |line|
-          name = line['name'].to_s.squish
-          next if name.empty?
+    @swipesimple_items ||= if @swipesimple_file.file?
+      @swipesimple_read_at = @swipesimple_file.mtime
+      CSV.read(@swipesimple_file, col_sep: "\t", headers: true, quote_char: "\0", encoding: 'bom|utf-8').filter_map do |line|
+        name = line['name'].to_s.squish
+        next if name.empty?
 
-          { id: line['sku'].to_s.strip, sku: line['sku'].to_s.strip, name: name, category: line['category'].to_s, stock: line['tracked'].to_s == 'tracked' ? line['count'].to_s : 'not tracked',
-            note: [line['tracked'].to_s == 'tracked' ? "Stock #{line['count']}" : 'Not tracked', line['price']].compact_blank.join(' · ') }
-        end
-      else
-        []
+        tracked = line['tracked'].to_s == 'tracked'
+        { id: line['sku'].to_s.strip, sku: line['sku'].to_s.strip, name: name, category: line['category'].to_s, stock: tracked ? line['count'].to_s : 'not tracked',
+          note: [tracked ? "Stock #{line['count']}" : 'Not tracked', line['price']].compact_blank.join(' · ') }
       end
+    else
+      []
     end
   end
 end
