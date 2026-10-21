@@ -8,6 +8,7 @@ require 'time'
 class AuthorizeNetPortalImporter
   Error = Class.new(ArgumentError)
   MAX_BYTES = 8 * 1024 * 1024
+  MAX_ROWS = 10_000
   REQUIRED = ['Transaction ID', 'Transaction Status', 'Settlement Amount', 'Settlement Currency',
     'Settlement Date/Time', 'Authorization Amount', 'Authorization Currency', 'Submit Date/Time',
     'Reference Transaction ID', 'Transaction Type'].freeze
@@ -22,7 +23,8 @@ class AuthorizeNetPortalImporter
     captured = Time.iso8601(exported_at).utc
     raise Error, 'Export time cannot be in the future.' if captured > 5.minutes.from_now
     csv = CSV.parse(text.delete_prefix("\uFEFF"), headers: true, field_size_limit: 4096)
-    unless csv.headers.is_a?(Array) && csv.headers.uniq.size == csv.headers.size && (REQUIRED - csv.headers).empty? && csv.size <= 10_000
+    raise Error, "Export has #{csv.size} rows; the limit is #{MAX_ROWS.to_fs(:delimited)}. Export a shorter date range." if csv.size > MAX_ROWS
+    unless csv.headers.is_a?(Array) && csv.headers.uniq.size == csv.headers.size && (REQUIRED - csv.headers).empty?
       raise Error, 'Use Authorize.net Expanded Fields/Comma Separated without changing the headers.'
     end
     rows = csv.map.with_index(2) do |row, position|

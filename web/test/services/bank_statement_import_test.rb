@@ -49,4 +49,51 @@ class BankStatementImportTest < ActiveSupport::TestCase
     raw = ActiveRecord::Base.connection.select_value('SELECT description FROM bank_statement_lines LIMIT 1')
     assert_not_includes raw, 'SECRET PAYEE'
   end
+
+  test 'a 5,000-row statement is inserted in batches, not one statement per row' do
+    rows = (1..5_000).map { |i| "#{(Date.new(2026, 1, 1) + (i % 300)).iso8601},PAYEE #{i},-#{format('%.2f', (i % 500) + 1.25)}" }
+    csv = "Date,Description,Amount\n#{rows.join("\n")}\n"
+    statements = []
+    subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
+      statements << payload[:sql] unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+    end
+    result = importer(csv).import!(filename: 'year.csv', actor: nil)
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+    puts "SQL statements for 5,000 rows: #{statements.size}"
+    assert_equal [5_000, 0], [result[:created], result[:duplicates]]
+    assert_equal 5_000, BankStatementLine.count
+    assert_operator statements.size, :<, 1_000
+    line = BankStatementLine.for_document(result[:document].id).find_by!(line_no: 2)
+    assert_equal 'PAYEE 1', line.description
+    assert_equal(-225, line.amount_cents)
+    assert_equal 'pending', line.status
+    assert_equal Current.tenant_id, line.tenant_id
+  end
+
+  test 'a file with lines inside a locked month is refused up front, naming the period' do
+    PeriodLock.record!(action: 'lock', kind: 'monthly', date: Date.new(2026, 3, 1), user: users(:regular_user))
+    csv = "Date,Description,Amount\n2026-02-27,OPEN MONTH,-4.00\n2026-03-02,LOCKED,-5.00\n2026-03-09,LOCKED TOO,-6.00\n"
+    error = assert_raises(BankStatementImport::Error) { importer(csv).import!(filename: 'q1.csv', actor: nil) }
+    assert_includes error.message, '2 line(s) are dated inside locked periods: March 2026'
+    assert_equal 0, BankStatementLine.count
+    assert_equal 0, ReconciliationDocument.where(kind: 'bank_statement').count
+  end
+
+  test 'oversized files say how to split them' do
+    long = "Date,Description,Amount\n2025-01-01,A,-1.00\n2026-01-02,B,-1.00\n"
+    error = assert_raises(BankStatementImport::Error) { importer(long).import!(filename: 'two-years.csv', actor: nil) }
+    assert_includes error.message, 'more than one year. Split it into files covering one year or less'
+    many = "Date,Description,Amount\n#{(1..5_001).map { |i| "2026-01-01,ROW #{i},-1.00" }.join("\n")}\n"
+    error = assert_raises(BankStatementImport::Error) { importer(many).rows }
+    assert_includes error.message, 'This file has 5001 rows; the limit is 5000. Split it into smaller files'
+  end
+
+  test 'encrypted columns written in batches read back decrypted' do
+    result = importer("Date,Description,Amount\n2026-10-14,\"CAFÉ, SÖHNE\",-4.00\n").import!(filename: 'a.csv', actor: nil)
+    line = BankStatementLine.for_document(result[:document].id).first
+    assert_equal 'CAFÉ, SÖHNE', line.description
+    assert_equal 'CAFÉ, SÖHNE', BankStatementLine.find(line.id).description
+    raw = ActiveRecord::Base.connection.select_value('SELECT description FROM bank_statement_lines LIMIT 1')
+    assert_not_includes raw, 'SÖHNE'
+  end
 end
