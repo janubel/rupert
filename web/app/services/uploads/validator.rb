@@ -5,14 +5,23 @@ module Uploads
   # is kept. A refusal is a plain-language reason shown to the person and logged
   # as an outcome. Nothing here opens, runs or follows anything in the file.
   module Validator
+    CODES = { 'csv' => 'not_text', 'text' => 'not_text', 'json' => 'bad_json', 'pdf' => 'bad_pdf', 'xlsx' => 'bad_xlsx' }.freeze
+
+    # The plain-language reason a file cannot be kept, or nil when it is sound.
     def self.check(bytes, format)
-      case format
+      problem(bytes, format)&.last
+    end
+
+    # [reason_code, message] or nil.
+    def self.problem(bytes, format)
+      message = case format
       when 'csv', 'text' then text_reason(bytes, format)
       when 'json' then json_reason(bytes)
       when 'pdf' then bytes.byteslice(0, 1024).to_s.b.include?('%PDF-'.b) ? nil : 'This does not look like a PDF (no PDF header).'
       when 'xlsx' then xlsx_reason(bytes)
       else "Unsupported file type. Send #{Limits::FORMATS.keys.to_sentence(last_word_connector: ', or ')}."
       end
+      message && [CODES.fetch(format, 'unsupported_type'), message]
     end
 
     def self.text_reason(bytes, format)

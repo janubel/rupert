@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -280,6 +280,55 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
     t.index ["tenant_id", "startedAt"], name: "idx_sync_runs_tenant_started_at"
     t.index ["tenant_id"], name: "index_SyncRun_on_running_per_tenant", unique: true, where: "status = 'running'"
     t.index ["tenant_id"], name: "index_SyncRun_on_tenant_id"
+  end
+
+  create_table "uploads", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "status", default: "received", null: false
+    t.string "origin", default: "web", null: false
+    t.string "filename", null: false
+    t.string "client_content_type"
+    t.string "file_format"
+    t.integer "byte_size", default: 0, null: false
+    t.string "sha256"
+    t.boolean "retained", default: false, null: false
+    t.text "content_base64"
+    t.integer "duplicate_of_id"
+    t.string "detected_type"
+    t.string "detected_label"
+    t.integer "confidence"
+    t.text "detected_reason"
+    t.string "source_guess"
+    t.text "candidates_json"
+    t.string "importer_key"
+    t.boolean "operator_chosen", default: false, null: false
+    t.text "params_json"
+    t.integer "row_count"
+    t.text "reason"
+    t.text "summary_json"
+    t.string "dry_run_digest"
+    t.datetime "dry_run_at"
+    t.string "dry_run_by_name"
+    t.string "recognizer_version"
+    t.datetime "recognized_at"
+    t.integer "uploaded_by_id"
+    t.string "uploaded_by_name"
+    t.string "via_token_label"
+    t.datetime "imported_at"
+    t.integer "imported_by_id"
+    t.string "imported_by_name"
+    t.string "result_path"
+    t.datetime "discarded_at"
+    t.string "discarded_by_name"
+    t.string "reason_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["duplicate_of_id"], name: "index_uploads_on_duplicate_of_id"
+    t.index ["tenant_id", "created_at"], name: "idx_uploads_recent"
+    t.index ["tenant_id", "reason_code"], name: "idx_uploads_reason_code"
+    t.index ["tenant_id", "sha256"], name: "idx_uploads_retained_replay", unique: true, where: "retained = 1"
+    t.index ["tenant_id", "status"], name: "idx_uploads_status"
+    t.index ["tenant_id"], name: "index_uploads_on_tenant_id"
   end
 
   create_table "WarehouseShare", id: :string, force: :cascade do |t|

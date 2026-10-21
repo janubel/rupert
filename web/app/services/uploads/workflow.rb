@@ -43,7 +43,7 @@ module Uploads
         document = Document.for(upload)
         upload.update!(importer_key: importer.key, detected_type: detected_type,
           detected_label: candidate ? candidate['label'] : importer.label, confidence: candidate && candidate['confidence'],
-          detected_reason: candidate ? candidate['reason'] : "Chosen by #{name_of(actor)}.", operator_chosen: true, status: 'recognized', reason: nil,
+          detected_reason: candidate ? candidate['reason'] : "Chosen by #{name_of(actor)}.", operator_chosen: true, status: 'recognized', reason: nil, reason_code: nil,
           params_json: clean_params(importer, params, document, upload).to_json, dry_run_digest: nil, dry_run_at: nil,
           summary_json: drop_results(upload).to_json)
         Audit.record('type_confirmed', upload, actor: actor, detail: "importer=#{importer.key}")
@@ -70,7 +70,7 @@ module Uploads
           failure = 'The importer failed unexpectedly. Nothing was changed.'
         end
         save_dry_run(upload, outcome, failure, actor)
-        Audit.record(failure ? 'dry_run_failed' : 'dry_run', upload, actor: actor)
+        Audit.record(failure ? 'dry_run_failed' : 'dry_run', upload, actor: actor, detail: "importer=#{importer.key}")
         upload
       end
 
@@ -88,7 +88,7 @@ module Uploads
             raise Error, 'This upload was already handled.' unless upload.open? && upload.dry_run_current?
 
             outcome = importer.new.import!(document, upload.params, upload, actor: actor)
-            upload.update!(status: 'imported', imported_at: Time.current, imported_by_id: actor.id, imported_by_name: name_of(actor),
+            upload.update!(status: 'imported', reason_code: nil, imported_at: Time.current, imported_by_id: actor.id, imported_by_name: name_of(actor),
               result_path: outcome.path, reason: nil, summary_json: upload.summary.merge('import' => outcome.summary.merge('at' => Time.current.iso8601, 'by' => name_of(actor))).to_json)
           end
         rescue Error
@@ -100,8 +100,8 @@ module Uploads
           failure = 'The import failed unexpectedly. Nothing was imported.'
         end
         if failure
-          upload.reload.update!(reason: failure, dry_run_digest: nil, status: 'needs_review')
-          Audit.record('import_failed', upload, actor: actor)
+          upload.reload.update!(reason: failure, reason_code: 'import_failed', dry_run_digest: nil, status: 'needs_review')
+          Audit.record('import_failed', upload, actor: actor, detail: "importer=#{importer.key}")
           raise Error, "Nothing was imported. #{failure}"
         end
         Audit.record('imported', upload, actor: actor, detail: "importer=#{importer.key}")
@@ -112,7 +112,7 @@ module Uploads
         raise Error, 'Imported files cannot be discarded; reverse the import where it was made.' if upload.status == 'imported'
         raise Error, 'Only a kept file can be discarded.' unless upload.open?
 
-        upload.update!(status: 'rejected', discarded_at: Time.current, discarded_by_name: name_of(actor),
+        upload.update!(status: 'rejected', reason_code: 'discarded', discarded_at: Time.current, discarded_by_name: name_of(actor),
           reason: "Discarded by #{name_of(actor)} on #{Time.current.strftime('%Y-%m-%d')}. The original is still kept.", dry_run_digest: nil)
         Audit.record('discarded', upload, actor: actor)
         upload
@@ -121,7 +121,7 @@ module Uploads
       def reopen!(upload, actor:)
         raise Error, 'Only a discarded file can be reopened.' unless upload.discarded? && upload.status == 'rejected'
 
-        upload.update!(status: 'received', discarded_at: nil, discarded_by_name: nil, reason: nil, operator_chosen: false, importer_key: nil)
+        upload.update!(status: 'received', discarded_at: nil, discarded_by_name: nil, reason: nil, reason_code: nil, operator_chosen: false, importer_key: nil)
         Recognizer.call(upload)
         Audit.record('reopened', upload, actor: actor)
         upload
@@ -181,10 +181,10 @@ module Uploads
       def save_dry_run(upload, outcome, failure, actor)
         results = drop_results(upload)
         if failure
-          upload.update!(status: 'needs_review', reason: failure, dry_run_digest: nil, dry_run_at: Time.current, dry_run_by_name: name_of(actor),
+          upload.update!(status: 'needs_review', reason: failure, reason_code: 'dry_run_failed', dry_run_digest: nil, dry_run_at: Time.current, dry_run_by_name: name_of(actor),
             summary_json: results.merge('dry_run_error' => failure).to_json)
         else
-          upload.update!(status: 'recognized', reason: nil, dry_run_digest: digest_for(upload), dry_run_at: Time.current, dry_run_by_name: name_of(actor),
+          upload.update!(status: 'recognized', reason: nil, reason_code: nil, dry_run_digest: digest_for(upload), dry_run_at: Time.current, dry_run_by_name: name_of(actor),
             summary_json: results.merge('dry_run' => outcome.summary).to_json)
         end
       end
