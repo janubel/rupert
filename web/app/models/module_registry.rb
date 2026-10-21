@@ -66,7 +66,8 @@ class ModuleRegistry
       reconcile_index_path
     }, permission: 'reconcile.read', position: 50),
     Entry.new(key: 'sizes', name: 'Sizes', path: -> { size_families_path }, permission: 'settings.read', position: 51),
-    Entry.new(key: 'reports', name: 'Reports', path: -> { reports_path }, permission: 'reports.read', position: 55),
+    Entry.new(key: 'reports', name: 'All reports', path: -> { reports_path }, permission: 'reports.read', position: 55),
+    Entry.new(key: 'sales_tax', name: 'Sales tax', path: -> { sales_tax_reports_path }, permission: 'reports.read', position: 55),
     Entry.new(key: 'bookkeeping', name: 'Bookkeeping overview', path: -> { bookkeeping_path }, permission: 'finance.read', position: 45),
     Entry.new(key: 'books_desk', name: 'Close & review', path: -> { books_desk_path }, permission: 'reports.read', position: 46),
     Entry.new(key: 'book_approvals', name: 'Book approvals', path: -> { book_approvals_path }, permission: 'reports.read', position: 57),
@@ -120,6 +121,7 @@ class ModuleRegistry
       people_positions_path
     }, permission: 'hr.read', position: 87),
     Entry.new(key: 'schedule', name: 'Schedule', path: -> { people_scheduled_shifts_path }, permission: 'hr.read', position: 88),
+    Entry.new(key: 'time_keeping', name: 'Time keeping', path: -> { people_time_keeping_path }, permission: 'timesheets.read', position: 87),
     Entry.new(key: 'timesheets', name: 'Timesheets', path: lambda {
       people_timesheets_path
     }, permission: 'timesheets.self', position: 88),
@@ -209,7 +211,7 @@ class ModuleRegistry
       { key: 'stock', name: 'Stock',
         modules: %w[inventory inventory_exceptions locations inventory_counts stock_requests stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile sizes] },
       { key: 'money', name: 'Bookkeeping',
-        modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close reports daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries finance_reports bank_reconciliation ledger_export],
+        modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries bank_reconciliation ledger_export],
         # Optional sub-sections for long menus. Order here is display order; every
         # module of the area must appear in exactly one group.
         groups: [
@@ -217,14 +219,16 @@ class ModuleRegistry
           { name: 'Daily close', modules: %w[financial_close daily_reconciliation register_summary reconciliation_overview reconciliation_follow_ups reconciliation_documents] },
           { name: 'Books & review', modules: %w[books_desk book_approvals period_locks bank_statements bank_reconciliation source_reports retention_drive] },
           { name: 'Ledger & accounts', modules: %w[ledger journal_entries chart_of_accounts finance_accounts expenses payments ledger_export] },
-          { name: 'Reports & planning', modules: %w[reports finance_reports cash_forecast] }
+          { name: 'Planning', modules: %w[cash_forecast] }
         ] },
+      # Every report in one place; each report page also carries the same tab bar.
+      { key: 'reports', name: 'Reports', modules: %w[reports sales_tax finance_reports] },
       { key: 'work', name: 'Work', modules: %w[projects tasks goals kpis] },
       # Personal staff self-service (own receipts, own hours). Receipts has no permission, so
       # this area is visible exactly where the separate Receipts area was before.
       { key: 'me', name: 'Me', modules: %w[receipts timesheets punch_history] },
       { key: 'team', name: 'Team',
-        modules: %w[accounts employees employee_reports departments positions schedule time_clock leave payroll permissions] },
+        modules: %w[accounts employees employee_reports departments positions time_keeping schedule time_clock leave payroll permissions] },
       { key: 'system', name: 'System',
         modules: %w[system platform connections pos_connections sync settings warehouse activity access_log api_access_tokens roadmap owner_checklists] }
     ].freeze

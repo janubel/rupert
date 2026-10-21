@@ -29,8 +29,8 @@
       <h2 class="font-display text-lg text-ink">Side-by-side counts · <%= @reconciliation.rows.length %> items</h2>
       <p class="text-xs text-taupe">† Shared Square total — one Square variation is linked to more than one Shopify variant, so its quantity can't be pinned to a single row.</p>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    <%= report_table 'reconciliation-counts', label: 'Side-by-side counts' do %>
+      <table class="operations-table w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <th scope="col" class="th">SKU</th>
@@ -50,7 +50,7 @@
               <td class="td text-mocha"><%= row.shopify_variant || "—" %></td>
               <td class="td text-mocha"><%= row.square_variation || "—" %></td>
               <td class="td text-right text-mocha"><%= row.shopify_qty || "—" %></td>
-              <td class="td text-right text-mocha">
+              <td class="td text-right text-mocha" data-sort-value="<%= row.square_qty %>">
                 <% if row.square_qty.nil? %>
                   —
                 <% elsif row.shared %>
@@ -75,12 +75,12 @@
           <% end %>
           <% if @reconciliation.rows.empty? %>
             <tr>
-              <td class="empty-row">No SKU links yet — run a sync first.</td>
+              <td class="empty-row" colspan="7">No SKU links yet — run a sync first.</td>
             </tr>
           <% end %>
         </tbody>
       </table>
-    </div>
+    <% end %>
   </div>
 
   <div class="card overflow-hidden">
@@ -88,8 +88,8 @@
       <h2 class="font-display text-lg text-ink">Maintenance decisions — audit trail</h2>
       <p class="text-xs text-taupe">Every automated write the 15-min pool sync made, for human review. Large moves or negatives are flagged.</p>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    <%= report_table 'reconciliation-decisions', label: 'Maintenance decisions' do %>
+      <table class="operations-table w-full text-sm">
         <thead class="border-b border-fog bg-haze/60">
           <tr>
             <th scope="col" class="th">Time</th>
@@ -104,11 +104,11 @@
         <tbody class="divide-y divide-fog">
           <% @reconciliation.decisions.each do |decision| %>
             <tr class="hover:bg-cream <%= decision[:needs_review] ? "bg-haze/40" : "" %>">
-              <td class="td text-mocha"><%= decision[:time].to_fs(:short) %></td>
+              <td class="td text-mocha" data-sort-value="<%= decision[:time].iso8601 %>"><%= decision[:time].to_fs(:short) %></td>
               <td class="td font-mono text-xs text-ink"><%= decision[:sku] %></td>
               <td class="td text-mocha"><%= decision[:platform] %></td>
               <td class="td text-right font-semibold <%= decision[:delta].negative? ? "text-clay" : "text-fern" %>"><%= decision[:delta] %></td>
-              <td class="td text-right text-mocha"><%= decision[:before] %> → <%= decision[:after] %></td>
+              <td class="td text-right text-mocha" data-sort-value="<%= decision[:after] %>"><%= decision[:before] %> → <%= decision[:after] %></td>
               <td class="td text-mocha"><%= decision[:reason] %></td>
               <td class="td text-right">
                 <% if decision[:needs_review] %>
@@ -121,11 +121,11 @@
           <% end %>
           <% if @reconciliation.decisions.empty? %>
             <tr>
-              <td class="empty-row">No maintenance writes yet today.</td>
+              <td class="empty-row" colspan="7">No maintenance writes yet today.</td>
             </tr>
           <% end %>
         </tbody>
       </table>
-    </div>
+    <% end %>
   </div>
 <% end %>
