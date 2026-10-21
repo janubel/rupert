@@ -1,18 +1,14 @@
 <% content_for :title, "Inventory counts" %>
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :stock %>
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Manual counts</h1>
-      <p class="mt-1 text-sm text-mocha">Physical count worksheets retained for review. C-Trax is the retail physical-count reference. Approval records the count in Rupert without changing platform inventory.</p>
-    </div>
+  <%= page_header 'Manual counts', subtitle: 'Physical count worksheets retained for review. C-Trax is the retail physical-count reference. Approval records the count in Rupert without changing platform inventory.' do %>
     <% if Current.user.can?('inventory.write') %>
       <div class="flex flex-wrap gap-2" <%= tour_anchor('start') %>>
         <%= link_to "Start scan count", new_inventory_count_path(prepared: 0, start_scanning: 1), class: "btn-primary" %>
         <%= link_to "New count sheet", new_inventory_count_path, class: "btn-ghost" %>
       </div>
     <% end %>
-  </section>
+  <% end %>
 
   <div class="flex flex-wrap items-center gap-2 text-sm" <%= tour_anchor('status') %>>
     <% { "" => "All", "draft" => "Draft", "pending" => "Pending", "approved" => "Approved", "rejected" => "Rejected" }.each do |status, label| %>

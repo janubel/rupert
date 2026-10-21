@@ -2,11 +2,8 @@
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
-  <section>
-    <h1 class="page-title">Record payment</h1>
-    <p class="mt-1 text-sm text-mocha">A payment to a vendor reduces their accounts-payable balance.</p>
-  </section>
-  <div class="card card-pad max-w-xl">
+  <%= page_header 'Record payment', subtitle: 'A payment to a vendor reduces their accounts-payable balance.' %>
+  <div class="card card-pad page-narrow">
     <%= render "shared/form_errors", model: @payment %>
     <%= form_with model: @payment, scope: :vendor_payment, url: finance_vendor_payments_path, class: "mt-6 space-y-4",
           data: { controller: "finance-form", finance_form_locks_value: finance_locks_json,

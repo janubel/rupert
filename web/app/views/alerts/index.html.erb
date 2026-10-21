@@ -1,9 +1,6 @@
 <% content_for :title, "Alerts" %>
 <div class="space-y-6" data-controller="bulk">
-  <section>
-    <h1 class="page-title">Alerts</h1>
-    <p class="mt-1 text-sm text-mocha">Low-stock flags raised from inventory levels.</p>
-  </section>
+  <%= page_header 'Alerts', subtitle: 'Low-stock flags raised from inventory levels.' %>
 
   <nav class="flex flex-wrap gap-1" aria-label="Alert status" <%= tour_anchor('tabs') %>>
     <% ["open", "resolved", "ignored", "all"].each do |tab| %>

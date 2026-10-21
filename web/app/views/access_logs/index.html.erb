@@ -1,11 +1,6 @@
 <% content_for :title, "Access log" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Access log</h1>
-      <p class="mt-1 text-sm text-mocha">Who signed in (or tried to), from which IP, when, and whether it worked. Written on every login, Google sign-in, and sign-out.</p>
-    </div>
-  </section>
+  <%= page_header 'Access log', subtitle: 'Who signed in (or tried to), from which IP, when, and whether it worked. Written on every login, Google sign-in, and sign-out.' %>
 
   <%= form_tag access_logs_path, method: :get, class: "flex flex-wrap items-end gap-2" do %>
     <div class="w-64">
