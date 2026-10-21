@@ -9,6 +9,7 @@ class SystemController < AuthenticatedController
     @system = Rails.cache.fetch("system/health/#{Current.tenant_id}", expires_in: 60) { SystemPresenter.new }
     @sqlite = SqliteMaintenance.report
     @ai_health = AiHealthSnapshot.build
+    @backups = BackupStatus.layers
     render('system/index')
   end
 
