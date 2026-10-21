@@ -101,6 +101,17 @@ class AutodeployTest(unittest.TestCase):
         self.assertLess(calls.index('sqlite3'), calls.index('db:migrate'))
         self.assertIn('systemctl restart rupert-web rupert-jobs', calls)
 
+    def test_deployed_files_stay_readable_by_the_app_user(self):
+        # Regression: umask 077 made Gemfile.lock and new gems root-only and the
+        # app (running as another user) could not boot.
+        new = self.commit('gem update', path='web/Gemfile.lock')
+        result, _ = self.run_deploy()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.head(self.tmp / 'app'), new)
+        mode = (self.tmp / 'app' / 'web' / 'Gemfile.lock').stat().st_mode
+        self.assertTrue(mode & 0o004, oct(mode))
+        self.assertEqual((self.tmp / 'backups').stat().st_mode & 0o777, 0o700)
+
     def test_pending_or_red_ci_is_not_deployed(self):
         self.commit('feature')
         for checks, word in [(check_runs(('CI (sqlite3)', 'success')), 'pending'),
