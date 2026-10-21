@@ -175,6 +175,10 @@ Rails.application.routes.draw do
   post '/mcp', to: 'mcp#create', as: :mcp
   match '/mcp', to: 'mcp#method_not_allowed', via: %i[get put patch delete]
   resources :agent_feedbacks, path: 'ai_feedback', only: %i[index update]
+  # The ladybug in the header: any signed-in staff member files a report and follows its status.
+  resources :feedback_reports, only: %i[index show create] do
+    get :screenshot, on: :member
+  end
 
   mount ShopifyApp::Engine, at: '/api'
 

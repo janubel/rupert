@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_060000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -372,9 +372,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_050000) do
     t.datetime "triaged_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source", default: "agent", null: false
+    t.string "source_ref"
+    t.string "source_sender"
+    t.bigint "task_id"
+    t.boolean "ready_for_development", default: false, null: false
+    t.datetime "ready_marked_at"
+    t.string "ready_marked_by"
     t.index ["api_access_token_id"], name: "index_agent_feedbacks_on_api_access_token_id"
+    t.index ["task_id"], name: "index_agent_feedbacks_on_task_id"
     t.index ["tenant_id", "created_at"], name: "index_agent_feedbacks_on_tenant_id_and_created_at"
+    t.index ["tenant_id", "source_ref"], name: "idx_agent_feedbacks_source_ref"
     t.index ["tenant_id", "status"], name: "index_agent_feedbacks_on_tenant_id_and_status"
+    t.index ["tenant_id", "user_id", "created_at"], name: "idx_agent_feedbacks_reporter"
   end
 
   create_table "agent_tool_issues", force: :cascade do |t|
@@ -1069,6 +1079,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_050000) do
     t.index ["discarded_at"], name: "index_expenses_on_discarded_at"
     t.index ["tenant_id", "category"], name: "index_expenses_on_tenant_id_and_category"
     t.index ["tenant_id", "incurred_on"], name: "index_expenses_on_tenant_id_and_incurred_on"
+  end
+
+  create_table "feedback_attachments", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "agent_feedback_id", null: false
+    t.string "kind", null: false
+    t.string "content_type", default: "text/plain", null: false
+    t.text "text_body"
+    t.binary "binary_body"
+    t.integer "byte_size", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["agent_feedback_id", "kind"], name: "idx_feedback_attachments_kind", unique: true
+    t.index ["agent_feedback_id"], name: "index_feedback_attachments_on_agent_feedback_id"
+    t.index ["tenant_id"], name: "index_feedback_attachments_on_tenant_id"
   end
 
   create_table "fulfillments", force: :cascade do |t|
@@ -2817,6 +2842,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_050000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
+  add_foreign_key "feedback_attachments", "agent_feedbacks"
   add_foreign_key "workspace_deployments", "tenants"
   add_foreign_key "workspace_deployments", "users", column: "owner_id"
   add_foreign_key "workspace_handoffs", "support_access_grants"

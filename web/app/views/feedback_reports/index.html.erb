@@ -1,0 +1,25 @@
+<% content_for :title, 'My reports' %>
+<% status_pill = { 'new' => 'pill-clay', 'triaged' => 'pill-olive', 'planned' => 'pill-olive', 'done' => 'pill-fern', 'wont_fix' => 'pill-taupe' } %>
+<div class="space-y-6">
+  <section>
+    <h1 class="page-title">My reports</h1>
+    <p class="mt-1 max-w-3xl text-sm text-mocha">Bugs, requests and questions you sent with the ladybug <span aria-hidden="true">🐞</span> in the header. You can see each one's status here. Screenshots and logs are visible to store administrators only.</p>
+  </section>
+  <div class="card overflow-hidden">
+    <% if @reports.empty? %>
+      <p class="empty-row p-4">You have not sent a report yet. Use the ladybug in the header from any page.</p>
+    <% else %>
+      <ul class="divide-y divide-fog">
+        <% @reports.each do |report| %>
+          <li class="flex flex-wrap items-start justify-between gap-3 p-4">
+            <div class="min-w-0">
+              <p class="font-medium text-ink"><%= link_to report.summary, feedback_report_path(report), class: 'underline' %></p>
+              <p class="text-xs text-taupe"><%= report.kind_label %> · #<%= report.id %> · <%= l(report.created_at, format: :short) %></p>
+            </div>
+            <span class="<%= status_pill.fetch(report.status, 'pill-taupe') %>"><%= report.status_label %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+</div>

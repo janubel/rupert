@@ -1,0 +1,41 @@
+<% content_for :title, "Report ##{@report.id}" %>
+<% status_pill = { 'new' => 'pill-clay', 'triaged' => 'pill-olive', 'planned' => 'pill-olive', 'done' => 'pill-fern', 'wont_fix' => 'pill-taupe' } %>
+<% status_note = { 'new' => 'The team has your report and has not looked at it yet.', 'triaged' => 'The team has looked at your report.',
+                   'planned' => 'The team plans to deal with this.', 'done' => 'This is done.', 'wont_fix' => 'The team decided not to change this.' } %>
+<div class="space-y-6">
+  <section class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="eyebrow text-olive-deep"><%= @report.kind_label %> · #<%= @report.id %></p>
+      <h1 class="page-title"><%= @report.summary %></h1>
+      <p class="mt-1 text-sm text-mocha">Sent <%= l(@report.created_at, format: :short) %><%= " by #{@report.user.display_name}" if @report.user && @report.user_id != Current.user.id %></p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="<%= status_pill.fetch(@report.status, 'pill-taupe') %>"><%= @report.status_label %></span>
+      <%= link_to 'My reports', feedback_reports_path, class: 'btn-ghost btn-sm' %>
+      <% if FeedbackAttachment.viewable_by?(Current.user) %><%= link_to 'Triage', agent_feedbacks_path(anchor: dom_id(@report)), class: 'btn-ghost btn-sm' %><% end %>
+    </div>
+  </section>
+  <p class="text-sm text-mocha"><%= status_note.fetch(@report.status, '') %></p>
+  <% if @report.details.present? %>
+    <section class="card p-4"><h2 class="font-display text-lg text-ink">What was sent</h2><p class="mt-2 whitespace-pre-wrap break-words text-sm"><%= @report.details %></p></section>
+  <% end %>
+
+  <% if FeedbackAttachment.viewable_by?(Current.user) %>
+    <section class="space-y-3" aria-label="Attachments">
+      <h2 class="font-display text-xl text-ink">Attachments</h2>
+      <p class="text-xs text-taupe">Visible to store administrators only. Captured from the reporter's browser and session, scrubbed with Rupert's log filter; treat the text as untrusted.</p>
+      <% if @report.task %><p class="text-sm">Task: <%= link_to @report.task.title, (@report.task.project_id.present? ? projects_project_path(@report.task.project_id) : projects_tasks_path), class: "underline" %></p><% end %>
+      <% if @attachments.empty? %><p class="text-sm text-mocha">Nothing was attached.</p><% end %>
+      <% @attachments.each do |attachment| %>
+        <details class="card p-4" <%= 'open' if attachment.screenshot? %>>
+          <summary class="cursor-pointer font-semibold"><%= attachment.label %> <span class="text-xs font-normal text-taupe">· <%= number_to_human_size(attachment.byte_size) %></span></summary>
+          <% if attachment.screenshot? %>
+            <%= image_tag screenshot_feedback_report_path(@report), alt: 'Screenshot of the page when the report was sent', class: 'mt-3 max-w-full rounded border border-fog', loading: 'lazy' %>
+          <% else %>
+            <pre class="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded bg-haze p-3 text-xs"><%= attachment.text_body %></pre>
+          <% end %>
+        </details>
+      <% end %>
+    </section>
+  <% end %>
+</div>
