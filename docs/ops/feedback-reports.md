@@ -143,7 +143,7 @@ must restart it so it reads the new prompt.
 - **Local development agent.** A goose or Claude Code session on a developer
   machine that polls `list_feedback` (`ready: true`), reads `report_context`, makes a
   branch and a pull request, and records the PR on the task. It needs its own token
-  (`feedback:read`, `ops:read`, `tasks:write`), a rule that it only acts on
+  (`feedback:read`, `system:read`, `tasks:write`), a rule that it only acts on
   allow-listed ready reports, and review of every PR before merge.
 - **Inbound text messages.** Needs a decision first: how texts reach a computer (a
   phone-forwarding bridge, an SMS gateway, an iMessage reader) and whether the agent
