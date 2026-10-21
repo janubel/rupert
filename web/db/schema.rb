@@ -282,53 +282,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
     t.index ["tenant_id"], name: "index_SyncRun_on_tenant_id"
   end
 
-  create_table "uploads", force: :cascade do |t|
-    t.string "tenant_id", null: false
-    t.string "status", default: "received", null: false
-    t.string "origin", default: "web", null: false
-    t.string "filename", null: false
-    t.string "client_content_type"
-    t.string "file_format"
-    t.integer "byte_size", default: 0, null: false
-    t.string "sha256"
-    t.boolean "retained", default: false, null: false
-    t.text "content_base64"
-    t.integer "duplicate_of_id"
-    t.string "detected_type"
-    t.string "detected_label"
-    t.integer "confidence"
-    t.text "detected_reason"
-    t.string "source_guess"
-    t.text "candidates_json"
-    t.string "importer_key"
-    t.boolean "operator_chosen", default: false, null: false
-    t.text "params_json"
-    t.integer "row_count"
-    t.text "reason"
-    t.text "summary_json"
-    t.string "dry_run_digest"
-    t.datetime "dry_run_at"
-    t.string "dry_run_by_name"
-    t.string "recognizer_version"
-    t.datetime "recognized_at"
-    t.integer "uploaded_by_id"
-    t.string "uploaded_by_name"
-    t.string "via_token_label"
-    t.datetime "imported_at"
-    t.integer "imported_by_id"
-    t.string "imported_by_name"
-    t.string "result_path"
-    t.datetime "discarded_at"
-    t.string "discarded_by_name"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["duplicate_of_id"], name: "index_uploads_on_duplicate_of_id"
-    t.index ["tenant_id", "created_at"], name: "idx_uploads_recent"
-    t.index ["tenant_id", "sha256"], name: "idx_uploads_retained_replay", unique: true, where: "retained = 1"
-    t.index ["tenant_id", "status"], name: "idx_uploads_status"
-    t.index ["tenant_id"], name: "index_uploads_on_tenant_id"
-  end
-
   create_table "WarehouseShare", id: :string, force: :cascade do |t|
     t.datetime "createdAt", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.datetime "expires_at"
@@ -2898,6 +2851,53 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_110000) do
     t.index ["assigned_reviewer_id"], name: "index_timesheets_on_assigned_reviewer_id"
     t.index ["tenant_id", "employee_id", "period_start"], name: "index_timesheets_on_tenant_id_and_employee_id_and_period_start", unique: true
     t.index ["tenant_id", "status"], name: "index_timesheets_on_tenant_id_and_status"
+  end
+
+  create_table "uploads", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "status", default: "received", null: false
+    t.string "origin", default: "web", null: false
+    t.string "filename", null: false
+    t.string "client_content_type"
+    t.string "file_format"
+    t.integer "byte_size", default: 0, null: false
+    t.string "sha256"
+    t.boolean "retained", default: false, null: false
+    t.text "content_base64"
+    t.integer "duplicate_of_id"
+    t.string "detected_type"
+    t.string "detected_label"
+    t.integer "confidence"
+    t.text "detected_reason"
+    t.string "source_guess"
+    t.text "candidates_json"
+    t.string "importer_key"
+    t.boolean "operator_chosen", default: false, null: false
+    t.text "params_json"
+    t.integer "row_count"
+    t.text "reason"
+    t.text "summary_json"
+    t.string "dry_run_digest"
+    t.datetime "dry_run_at"
+    t.string "dry_run_by_name"
+    t.string "recognizer_version"
+    t.datetime "recognized_at"
+    t.integer "uploaded_by_id"
+    t.string "uploaded_by_name"
+    t.string "via_token_label"
+    t.datetime "imported_at"
+    t.integer "imported_by_id"
+    t.string "imported_by_name"
+    t.string "result_path"
+    t.datetime "discarded_at"
+    t.string "discarded_by_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["duplicate_of_id"], name: "index_uploads_on_duplicate_of_id"
+    t.index ["tenant_id", "created_at"], name: "idx_uploads_recent"
+    t.index ["tenant_id", "sha256"], name: "idx_uploads_retained_replay", unique: true, where: "retained = 1"
+    t.index ["tenant_id", "status"], name: "idx_uploads_status"
+    t.index ["tenant_id"], name: "index_uploads_on_tenant_id"
   end
 
   create_table "user_permissions", force: :cascade do |t|

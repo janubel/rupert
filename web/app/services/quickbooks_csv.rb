@@ -185,10 +185,16 @@ class QuickbooksCsv
 
   def map_headers(cells)
     aliases = kind == 'journal' ? ALIASES : list_aliases
-    aliases.each_with_object({}) do |(key, names), found|
+    found = aliases.each_with_object({}) do |(key, names), heads|
       index = pick_column(cells, names)
-      found[key] = index if index
-    end.then { |h| h.empty? ? nil : h }
+      heads[key] = index if index
+    end
+    # QuickBooks leaves the account column's header cell blank on a trial balance.
+    if kind == 'trial_balance' && !found[:account_name] && found[:debit] && found[:credit]
+      blank = cells.each_index.find { |i| cells[i].empty? && i < [found[:debit], found[:credit]].min }
+      found[:account_name] = blank if blank
+    end
+    found.empty? ? nil : found
   end
 
   def pick_column(cells, names)
