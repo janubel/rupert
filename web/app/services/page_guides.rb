@@ -119,6 +119,15 @@ class PageGuides
       ],
       tips: ['A report with a single Amount column cannot be posted; export the Journal, or add separate Debit and Credit columns.', 'Overlapping exports are safe: transactions already imported are skipped.', 'The day before Rupert’s own first entry is suggested as the last date, so the same days are never recorded twice.']
     ),
+    'history' => Guide.new(
+      key: 'history', title: 'History',
+      summary: 'What history Rupert holds for each source, how far back and forward it goes, and where it disagrees with QuickBooks.',
+      sections: [
+        { heading: 'Reading a source', body: 'Each card shows the earliest and latest dates Rupert holds, how many records, when it last arrived, calendar months with nothing in them, and which other sources cover the same dates. The earliest record is the coverage that was available, not proof of when the business started.' },
+        { heading: 'Comparisons', body: 'QuickBooks totals are set beside Rupert’s ledger, trial balance and bank statement lines for the days both cover. Differences are listed for a person to look at; nothing is adjusted or matched for you.' }
+      ],
+      tips: ['A month with no records may be a quiet month or a missing import.', 'Counts are records Rupert stores, not sales totals.', 'Ask Rupert can answer “what history do we have for 2025?” from this page’s numbers.']
+    ),
     'business_snapshot' => Guide.new(
       key: 'business_snapshot', title: 'Business snapshot',
       summary: 'A printable picture of sales, stock, cash and vendors built from live records, each section stating its source and age.',
@@ -772,6 +781,7 @@ class PageGuides
     ['/finance/expenses', 'expenses'],
     ['/finance/vendor_payments', 'payments'],
     ['/finance/quickbooks_imports', 'quickbooks_import'],
+    ['/finance/history', 'history'],
     ['/finance/journal_entries', 'journal_entries'],
     ['/finance/reports', 'finance_reports'],
     ['/finance/bank_reconciliation', 'bank_reconciliation'],

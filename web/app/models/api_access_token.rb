@@ -15,6 +15,7 @@ class ApiAccessToken < ApplicationRecord
     'inventory:read' => 'inventory.read',
     'roadmap:read' => nil,
     'reports:read' => 'reports.read',
+    'finance:read' => 'finance.read',
     'timesheets:read' => 'timesheets.read',
     'tasks:read' => 'projects.read',
     'alerts:read' => 'alerts.read',

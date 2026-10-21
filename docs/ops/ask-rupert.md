@@ -24,7 +24,7 @@ It is a help assistant, not an operator: it changes nothing in Rupert except a r
 | `where_is` | always | Pages and menus for a topic, with links. |
 | `how_do_i` | always | Lessons (with steps) and definitions. |
 | `search` | `dashboard.read` | `SearchService`, which already checks each category's permission. Emails and phone numbers are removed before the model sees results. |
-| `run_report` | at least one report scope | Runs one of the read-only MCP tools (`sales_summary`, `sales_tax_report`, `inventory_search`, `stock_comparison`, `swipesimple_items`, `time_keeping_report`, `list_tasks`, `list_alerts`, `list_reports`) through `AskRupert::ScopedToken`, an in-memory stand-in for an API token built from the person's current permissions. It never carries a write scope and is not stored. |
+| `run_report` | at least one report scope | Runs one of the read-only MCP tools (`sales_summary`, `sales_tax_report`, `inventory_search`, `stock_comparison`, `swipesimple_items`, `time_keeping_report`, `list_tasks`, `list_alerts`, `list_reports`, `history_summary`) through `AskRupert::ScopedToken`, an in-memory stand-in for an API token built from the person's current permissions. It never carries a write scope and is not stored. |
 | `system_status` | always (sections vary) | Build for everyone; last sync with `sync.read`; update availability for update managers; last backup for platform administrators. |
 | `file_report` | always | Prepares a **draft** report only. |
 
