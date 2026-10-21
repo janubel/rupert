@@ -1,0 +1,14 @@
+<section id="cash-flow-spend" class="grid gap-4 lg:grid-cols-2">
+  <div class="card card-pad">
+    <h2 class="font-display text-xl text-ink">Where the money went</h2>
+    <p class="mt-1 text-xs text-taupe">Recorded expenses by category, plus vendor payments · <%= finance_money_text(report.spend_cents) %> in this range</p>
+    <div class="mt-4"><%= cash_flow_bar_list(report.spend_by_category, color: 'var(--chart-out)', empty: 'No expenses or vendor payments recorded in this range.') %></div>
+    <p class="mt-3 text-xs text-taupe"><%= link_to 'Expenses', finance_expenses_path, class: 'underline' %> · <%= link_to 'Vendor payments', finance_vendor_payments_path, class: 'underline' %></p>
+  </div>
+  <div class="card card-pad">
+    <h2 class="font-display text-xl text-ink">What left the bank, by type</h2>
+    <p class="mt-1 text-xs text-taupe">Withdrawals as reviewed on the bank statements · <%= finance_money_text(report.cash_out_cents) %> in this range</p>
+    <div class="mt-4"><%= cash_flow_bar_list(report.bank_out_by_type, color: 'var(--chart-muted)', empty: 'No withdrawals on the imported statements for this range.') %></div>
+    <p class="mt-3 text-xs text-taupe">"Not yet reviewed" shrinks as lines get decisions on <%= link_to 'Bank transactions', bank_statements_path, class: 'underline' %>.</p>
+  </div>
+</section>
