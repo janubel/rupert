@@ -51,6 +51,24 @@ Subclass `Uploads::Importers::Base` in `app/services/uploads/importers/`, declar
 - **Logs.** Log lines and the Activity trail carry the event, upload id, SHA-256, byte size, format, detected type, status and origin. Never file contents, cell values, import parameters or file names in the application log. (`[uploads] event=received id=7 sha256=... byte_size=89 file_format=csv detected_type=bank_statement status=recognized origin=api outcome=recognized`.) Failures go to `Rails.error` with the upload id only.
 - **Originals are append-only.** The retained bytes, hash and size cannot be changed through the model, and the checksum is verified on every read. There is no delete path; *Discard* only removes a file from the open list and can be reopened.
 
+## Insights: using the inbox's own numbers to improve it
+
+**System → Uploads → Insights** (`/uploads/insights`, needs `uploads.read`) charts how the inbox is working over the last 30, 90 or 365 days (days up to 90, then weeks). It is for deciding what to build or tighten next, so each view maps to a decision:
+
+| View | What it shows | What to do with it |
+| --- | --- | --- |
+| Headline numbers | Files received, files waiting for a person (and the oldest), share held for review, median time from received to imported | A growing waiting count or oldest age means files are arriving that nobody is deciding; a high held share means recognition is missing too much |
+| Uploads by outcome | Stacked columns per day (week for 365 days): imported, recognized, needs review, rejected, duplicate | Spot a rise in amber (needs review) after a new kind of file starts arriving |
+| How far files get | Kept, matched an importer without help, passed a dry run, imported | The biggest drop is the step to improve: sniffing (kept to matched), importer parsing (matched to dry run) or the approval habit (dry run to imported) |
+| Why files wait or are refused | Counts by `reason_code`: not recognized, recognized with no importer, importer not installed, not sure enough, two close matches, dry run failed, import failed, unsupported type, not text, too large, empty, discarded, sent again | **Recognized, no importer** is the ranked list of importers to build; **not recognized** are candidates for new sniffers; **dry run failed** points at parsers and messages; **sent again** shows people not seeing that their file arrived |
+| What Rupert thinks files are | Per detected type: files, average confidence, share held, share where a person chose the type by hand, imported | A high "chosen by hand" share means that sniffer is too loose or too shy; tune its signature |
+| Importer health | Dry runs passed and failed, imports and import failures per importer (from the activity trail, so only since importer keys were recorded) | A low pass rate means people send a layout the importer rejects: read its messages, widen the parser or sharpen the error |
+| Where files come from | Browser, API, drop folder | Zero from the API or drop folder means the no-UI route is unused or unknown |
+
+Each chart has a table behind it (the outcome chart under *View as a table*) and every column carries a text description, so nothing depends on colour. Chart colours are validated for contrast and colour-blind separation in light and dark. The page reads counts, times and `reason_code` values only: no file contents, cell values, parameters or file names, the same rule as the logs. `reason_code` is stored beside the human reason on every upload (`Uploads::Insights::REASONS` lists the codes); rows from before it existed show as "Before reasons were recorded".
+
+When something here should change the product, record the decision in the PR that makes the change and look at the same view a few weeks later.
+
 ## Sending a file without the web page
 
 ### API (recommended for scripts and other machines)

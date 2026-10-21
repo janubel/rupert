@@ -431,7 +431,10 @@ Rails.application.routes.draw do
     end
   end
   resources :uploads, only: %i[index show create] do
-    collection { post :recognize_all }
+    collection do
+      post :recognize_all
+      get :insights
+    end
     member do
       patch :choose
       post :dry_run

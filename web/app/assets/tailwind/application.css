@@ -1381,3 +1381,36 @@ body.tour-active { overflow-x:hidden; }
 .upload-lines { margin:0;padding:.75rem;font-size:.8rem;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--color-ink); }
 .upload-formula-mark { display:inline-block;padding:0 .3rem;border:1px solid var(--color-warn-edge);border-radius:.25rem;background:var(--color-warn-bg);color:var(--color-warn);font-size:.65rem;font-weight:700;text-transform:uppercase; }
 @media (prefers-reduced-motion: reduce) { .upload-dropzone { transition:none; } }
+
+/* Upload insights. Chart colours are validated against the surface in each mode
+   (dataviz skill: lightness band, chroma, CVD separation, contrast). Order:
+   imported, needs review, recognized, rejected; duplicates are a neutral. */
+:root { --chart-imported:#1b7046; --chart-needs_review:#b87d00; --chart-recognized:#5b48a8; --chart-rejected:#b3382a; --chart-duplicate:var(--color-edge); --chart-bar:var(--color-olive); }
+:root[data-theme="dark"] { --chart-imported:#2fa573; --chart-needs_review:#c08700; --chart-recognized:#8b78e0; --chart-rejected:#e0604e; }
+.upload-chart { display:block;width:100%;height:auto;max-height:18rem; }
+.upload-grid { stroke:var(--color-fog);stroke-width:1; }
+.upload-axis { fill:var(--color-taupe);font-size:10px; }
+.upload-seg { stroke:var(--color-paper);stroke-width:2;paint-order:stroke; }
+.upload-seg-imported { fill:var(--chart-imported);background:var(--chart-imported); }
+.upload-seg-needs_review { fill:var(--chart-needs_review);background:var(--chart-needs_review); }
+.upload-seg-recognized { fill:var(--chart-recognized);background:var(--chart-recognized); }
+.upload-seg-rejected { fill:var(--chart-rejected);background:var(--chart-rejected); }
+.upload-seg-duplicate { fill:var(--chart-duplicate);background:var(--chart-duplicate); }
+.upload-hit { fill:transparent; }
+.upload-col { outline:none; }
+.upload-col:hover .upload-hit,.upload-col:focus-visible .upload-hit { fill:color-mix(in srgb,var(--color-olive) 12%,transparent); }
+.upload-col:focus-visible .upload-hit { stroke:var(--color-olive);stroke-width:2; }
+.upload-legend { display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;margin:0;padding:0;list-style:none;font-size:.8rem;color:var(--color-mocha); }
+.upload-legend li { display:flex;align-items:center;gap:.4rem; }
+.upload-swatch { display:inline-block;width:.8rem;height:.8rem;border-radius:3px;stroke:none; }
+.upload-kpis { display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr)); }
+.upload-kpi-label { margin:0;font-size:.7rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-taupe); }
+.upload-kpi { margin:.25rem 0 0;font:2rem var(--font-display);color:var(--color-ink);line-height:1.1; }
+.upload-kpi-note { margin:.25rem 0 0;font-size:.75rem;color:var(--color-mocha); }
+.upload-bars { margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.9rem; }
+.upload-bar-head { display:flex;justify-content:space-between;gap:1rem;font-size:.875rem;color:var(--color-ink); }
+.upload-bar { height:.6rem;margin-top:.3rem;border-radius:999px;background:var(--color-haze); }
+.upload-bar span { display:block;height:100%;min-width:2px;border-radius:999px;background:var(--chart-bar); }
+.upload-bar-note { margin:.25rem 0 0;font-size:.75rem;color:var(--color-mocha); }
+@media (forced-colors: active) { .upload-seg { stroke:CanvasText;fill:Highlight; } .upload-bar span { background:Highlight; } }
+@media (max-width: 640px) { .upload-axis { font-size:16px; } }
