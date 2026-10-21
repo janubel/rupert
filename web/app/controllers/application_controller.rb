@@ -6,6 +6,7 @@ class ApplicationController < ActionController::Base
   before_action :enforce_workspace_hostname
   before_action :set_current_context
   before_action :require_login
+  before_action :identify_trace_session
   before_action :enforce_instance_support_access
   before_action :enforce_workspace_location
   before_action :enforce_customer_support_access
@@ -30,7 +31,7 @@ class ApplicationController < ActionController::Base
     allowed = case controller_path
     when 'learning'
       %w[index show complete preferences welcome onboard].include?(action_name)
-    when 'sessions', 'oauth', 'employee_app', 'employee_workspace', 'employee_preview', 'customer_displays'
+    when 'sessions', 'oauth', 'employee_app', 'employee_workspace', 'employee_preview', 'customer_displays', 'feedback_reports'
       true
     when 'employee_access'
       %w[edit update].include?(action_name)
@@ -185,6 +186,16 @@ class ApplicationController < ActionController::Base
     return redirect_to(setup_path) if Current.user.nil? && !Tenant.exists?
 
     redirect_to(login_path, alert: 'Please sign in') unless Current.user
+  end
+
+  # Names the browser session for RequestTrace so the ladybug report can include
+  # this session's recent server lines and queries. The key is random and
+  # carries no user data.
+  def identify_trace_session
+    return unless Current.user
+
+    session[:trace_key] ||= SecureRandom.hex(8)
+    request.env[RequestTrace::KEY] = session[:trace_key]
   end
 
   def load_last_sync
