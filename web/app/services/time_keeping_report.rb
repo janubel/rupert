@@ -32,11 +32,11 @@ class TimeKeepingReport
 
     # One plain-language status per person-day, most important first.
     def status
-      if shifts.any? && punches.none?(&:counted)
+      if open_punch? then implausible? ? 'Missed clock-out' : 'Still clocked in'
+      elsif shifts.any? && punches.none?(&:counted)
         ctrax_hours.positive? ? 'Scheduled · C-Trax only' : 'No punches'
       elsif shifts.empty? && punches.any?(&:counted) then 'Unscheduled'
       elsif implausible? then 'Check clock-out'
-      elsif open_punch? then 'Still clocked in'
       elsif variance.abs > VARIANCE_ALERT_HOURS then variance.positive? ? 'Over schedule' : 'Under schedule'
       elsif shifts.any? then 'On schedule'
       else 'C-Trax only'

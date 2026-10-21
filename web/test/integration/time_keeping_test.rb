@@ -130,4 +130,16 @@ class TimeKeepingTest < ActionDispatch::IntegrationTest
   test 'Time keeping sits in the Team area' do
     assert_equal 'team', ModuleRegistry.area_key_for('time_keeping')
   end
+
+  test 'an open clock-in is shown but never counted, and a long one reads as a missed clock-out' do
+    ClockShift.create!(user: @user, employee: @worker, employee_key: @worker.id.to_s, employee_name: @worker.name,
+      employment_type: 'part_time', request_token: 'time_keeping_open_123', started_at: Time.zone.parse('2026-10-09 10:00'))
+    day = report.days.find { |d| d.employee_id == @worker.id && d.date == Date.new(2026, 10, 9) }
+    assert_equal 0.0, day.worked_hours
+    assert_equal 'Missed clock-out', day.status
+    open_row = PunchHistory.new(from: Date.new(2026, 10, 9), to: Date.new(2026, 10, 9), all_employees: true).rows.find { |r| r.status == 'open' }
+    assert_not open_row.counted
+    assert_match(/not counted/, open_row.issue)
+    assert_equal 17.0, report.totals[:worked], 'totals exclude the open shift'
+  end
 end
