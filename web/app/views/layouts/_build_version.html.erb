@@ -2,4 +2,23 @@
 <div class="build-version" aria-label="Rupert build version" data-build-version="<%= build.revision %>">
   <span>Rupert</span><span title="<%= build.revision %>"><%= build.label %></span>
   <% if build.built_at %><time datetime="<%= build.built_at.iso8601 %>"><%= build.built_at.strftime('%Y-%m-%d %H:%M UTC') %></time><% end %>
+  <% if (totals = build.release_totals) %>
+    <% nightly = totals.fetch('nightly'); cumulative = totals.fetch('cumulative') %>
+    <details class="build-totals" data-build-totals>
+      <summary><span>v<%= totals.fetch('version') %></span> · Nightly: <%= number_with_delimiter(nightly.fetch('patch_commits')) %> patches · <%= number_with_delimiter(nightly.fetch('confirmed_bugs_fixed')) %> confirmed fixes · +<%= number_with_delimiter(nightly.fetch('lines_added')) %> / −<%= number_with_delimiter(nightly.fetch('lines_deleted')) %> lines</summary>
+      <div class="build-totals-panel">
+        <p class="font-semibold">This build's source history</p>
+        <dl>
+          <dt>Nightly</dt><dd><%= number_with_delimiter(nightly.fetch('patch_commits')) %> patch commits · <%= number_with_delimiter(nightly.fetch('confirmed_bugs_fixed')) %> confirmed bug fixes · +<%= number_with_delimiter(nightly.fetch('lines_added')) %> / −<%= number_with_delimiter(nightly.fetch('lines_deleted')) %> lines</dd>
+          <dt>All history</dt><dd><%= number_with_delimiter(cumulative.fetch('patch_commits')) %> patch commits · +<%= number_with_delimiter(cumulative.fetch('lines_added')) %> / −<%= number_with_delimiter(cumulative.fetch('lines_deleted')) %> lines</dd>
+          <dt>Source size</dt><dd><%= number_with_delimiter(totals.fetch('source_lines')) %> lines, including tests, blanks and comments</dd>
+          <dt>As of</dt><dd><time datetime="<%= totals.fetch('as_of') %>"><%= Time.iso8601(totals.fetch('as_of')).utc.strftime('%Y-%m-%d %H:%M UTC') %></time></dd>
+        </dl>
+        <p>Patch totals count source-changing commits, excluding merges. Fixes count reviewed, distinct bugs; the historical bug total is unavailable. Generated files, dependencies and docs are excluded from source totals.</p>
+        <p><%= link_to 'Release notes', 'https://github.com/techmore/rupert/releases', target: '_blank', rel: 'noopener', class: 'underline' %><% if totals['base_revision'] %> · <%= link_to 'Nightly changes', "https://github.com/techmore/rupert/compare/#{totals.fetch('base_revision')}...#{build.revision}", target: '_blank', rel: 'noopener', class: 'underline' %><% end %></p>
+      </div>
+    </details>
+  <% else %>
+    <span data-build-totals-unavailable>Change totals unavailable</span>
+  <% end %>
 </div>
