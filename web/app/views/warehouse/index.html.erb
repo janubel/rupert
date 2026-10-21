@@ -1,11 +1,6 @@
 <% content_for :title, "Warehouse" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Warehouse sales</h1>
-      <p class="mt-1 text-sm text-mocha">Secret links shared with vendors — each has its own pricing multiplier and bulk tiers. Links are never listed in navigation; the token in the URL is the access.</p>
-    </div>
-  </section>
+  <%= page_header 'Warehouse sales', subtitle: 'Secret links shared with vendors — each has its own pricing multiplier and bulk tiers. Links are never listed in navigation; the token in the URL is the access.' %>
 
   <% if @stock_holds %>
     <section class="card card-pad">

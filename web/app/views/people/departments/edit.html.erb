@@ -1,7 +1,5 @@
 <% content_for :title, "Edit department" %>
 <div class="space-y-6">
-  <section>
-    <h1 class="page-title">Edit department</h1>
-  </section>
+  <%= page_header 'Edit department' %>
   <%= render "form", department: @department %>
 </div>

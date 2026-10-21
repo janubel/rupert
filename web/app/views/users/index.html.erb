@@ -1,18 +1,12 @@
 <% can_manage_accounts = Current.user.can_manage_accounts? %>
 <% content_for :title, "Accounts" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Staff accounts</h1>
-      <p class="mt-1 text-sm text-mocha">Login accounts for Rupert and their access level. HR records live under Staff.</p>
-    </div>
-    <div class="flex gap-2">
-      <%= link_to "Permissions", permissions_path, class: "btn-ghost", data: { tour: 'permissions' } %>
-      <% if can_manage_accounts %>
-      <%= link_to "Add account", new_user_path, class: "btn-primary", data: { tour: 'add' } %>
-      <% end %>
-    </div>
-  </section>
+  <%= page_header 'Staff accounts', subtitle: 'Login accounts for Rupert and their access level. HR records live under Staff.' do %>
+    <%= link_to "Permissions", permissions_path, class: "btn-ghost", data: { tour: 'permissions' } %>
+    <% if can_manage_accounts %>
+    <%= link_to "Add account", new_user_path, class: "btn-primary", data: { tour: 'add' } %>
+    <% end %>
+  <% end %>
 
   <div class="card overflow-hidden" <%= tour_anchor('table') %>>
     <div class="overflow-x-auto">
