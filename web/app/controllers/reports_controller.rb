@@ -2,12 +2,13 @@
 
 require 'csv'
 
-# ERP reporting area. Four report families, all sourced from the canonical
+# ERP reporting area. Report families, all sourced from the canonical
 # Core::Order/OrderLine/Payment/Customer store (single source of truth):
 #   sales      — revenue trends, channels, locations, top products, AOV
 #   financial  — P&L (revenue/tax/refunds), tender breakdown
 #   inventory  — stock valuation, movements, low-stock pipeline
 #   operations — sync health, reconcile runs, POS cash variance
+#   sales_tax  — tax collected per source and store over any dates
 #
 # Every report supports ?days= and ?source= filters, and .csv export.
 class ReportsController < AuthenticatedController
@@ -35,7 +36,7 @@ class ReportsController < AuthenticatedController
     @days = window_days
     since = @days.days.ago
 
-    payload = DataCache.fetch("reports/sales/#{range_key}", ttl: 10.minutes) do
+    payload = DataCache.fetch("reports/sales/v2/#{range_key}", ttl: 10.minutes) do
       {
         revenue_daily: Core::Order.since(since).group_by_day(:occurred_at, range: since..@range_end)
                                   .sum(:gross_cents).transform_values { |c| (c / 100.0).round(2) },
@@ -49,13 +50,16 @@ class ReportsController < AuthenticatedController
         aov: Core::Order.since(since).where(status: %w[paid fulfilled]).average(:gross_cents).to_f / 100.0,
         total_orders: Core::Order.since(since).where(status: %w[paid fulfilled]).count,
         total_revenue: Core::Order.since(since).where(status: %w[paid fulfilled]).sum(:gross_cents) / 100.0,
+        orders_daily: Core::Order.since(since).group_by_day(:occurred_at, range: since..@range_end).count,
         top_products: Core::OrderLine.joins(:order)
                                      .where(orders: { occurred_at: since..@range_end })
-                                     .group(:name, :sku).sum(:line_cents)
-                                     .sort_by { |_, cents| -cents }.first(10)
-                                     .map do |(name, sku), cents|
+                                     .group(:name, :sku)
+                                     .pluck(:name, :sku, Arel.sql('SUM(order_lines.line_cents)'), Arel.sql('SUM(order_lines.quantity)'),
+                                       Arel.sql('COUNT(DISTINCT order_lines.order_id)'))
+                                     .sort_by { |row| -row[2].to_i }.first(50)
+                                     .map do |name, sku, cents, units, orders|
           {
-            name: name, sku: sku, revenue: (cents / 100.0).round(2)
+            name: name, sku: sku, revenue: (cents.to_i / 100.0).round(2), units: units.to_i, orders: orders.to_i
           }
         end
       }
@@ -69,6 +73,7 @@ class ReportsController < AuthenticatedController
     @total_orders = payload[:total_orders]
     @total_revenue = payload[:total_revenue]
     @top_products = payload[:top_products]
+    @orders_daily = payload[:orders_daily] || {}
 
     respond_to do |format|
       format.html
@@ -76,6 +81,28 @@ class ReportsController < AuthenticatedController
         log_export("#{action_name.humanize} report CSV", "#{@days || 1} days")
         send_data(sales_csv, filename: "sales-report-#{@days}d.csv") }
     end
+  end
+
+  # Sales tax collected per source and store over any dates (defaults to this
+  # month). Sources stay on separate lines; see SalesTaxReport.
+  def sales_tax
+    unless params[:from].present? || params[:to].present? || params[:days].present?
+      @range = Date.current.beginning_of_month.beginning_of_day
+      @to_date = Date.current
+      @range_end = @to_date.end_of_day
+    end
+    @to_date ||= Date.current
+    rate = params.key?(:rate) ? params[:rate] : TenantSettings.sales_tax_rate
+    @report = SalesTaxReport.new(from: @range.to_date, to: @to_date, sources: params[:sources], rate: rate)
+    respond_to do |format|
+      format.html
+      format.csv do
+        log_export('Sales tax report CSV', "#{@report.from} to #{@report.to}")
+        send_data(@report.csv, filename: "sales-tax-#{@report.from}-#{@report.to}.csv")
+      end
+    end
+  rescue SalesTaxReport::Error => e
+    redirect_to(sales_tax_reports_path, alert: e.message)
   end
 
   def financial
@@ -170,7 +197,8 @@ class ReportsController < AuthenticatedController
     @reconcile_runs = ReconcileRun.order(startedAt: :desc).limit(20)
     @reconcile_total = ReconcileRun.count
     @reconcile_success = ReconcileRun.where(status: 'applied').count
-    @pos_sessions = Sales::PosSession.order(opened_at: :desc).limit(20)
+    @sync_runs = SyncRun.where(startedAt: @range..@range_end).order(startedAt: :desc).limit(200)
+    @pos_sessions = Sales::PosSession.where(opened_at: @range..@range_end).order(opened_at: :desc).limit(200)
     @pos_variance_total = Sales::PosSession.where.not(variance_cents: nil).sum(:variance_cents) / 100.0
     @pos_open = Sales::PosSession.where(status: 'open').count
 

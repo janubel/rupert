@@ -1,6 +1,7 @@
 <% content_for :title, 'Daily register summary' %>
 <% money = ->(cents) { cents.nil? ? 'Unavailable' : number_with_precision(BigDecimal(cents.to_s) / 100, precision: 2) } %>
 <div class="space-y-6">
+  <%= render 'reports/tabs' %>
   <%= link_to 'Reconcile totals and retain source documents', daily_reconciliations_path(day: @summary.day.iso8601), class: 'btn-ghost' %>
   <section><h1 class="page-title">Daily register summary</h1><p class="mt-2 text-sm text-mocha">Recorded sales, tenders and refunds by platform, location and currency.</p></section>
   <%= form_with url: register_summary_reports_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
@@ -16,7 +17,7 @@
     <p>Coverage is limited to records imported into Rupert. C-Trax, terminal settlement, bank deposits, discounts, collected tips and merchant fees are unavailable here. Unknown tax or payment amounts stay unavailable instead of showing a false zero. Legacy imports may have substituted an import timestamp for an absent source date; missing stored timestamp counts cannot identify that substitution.</p>
     <p>Tenders less refunds includes recorded gift-card and store-credit activity. It is an accounting comparison, not settled cash or bank deposits.</p>
   </section>
-  <section class="card overflow-x-auto"><table class="w-full text-sm">
+  <section class="card overflow-hidden"><%= report_table 'register-activity', label: 'Selected-day recorded activity' do %><table class="operations-table w-full text-sm">
     <caption class="p-4 text-left font-semibold">Selected-day recorded activity</caption>
     <thead><tr><% [['Source / location', 'source'], ['Currency', nil], ['Eligible orders', 'eligible_orders'], ['Order total', 'gross'], ['Recorded tax', 'tax_collected'], ['Tenders less refunds', 'net_tender']].each do |label, term| %><th scope="col" class="th"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
     <tbody class="divide-y divide-fog">
@@ -27,7 +28,7 @@
       <% end %>
       <% if @summary.rows.empty? %><tr><td colspan="6" class="td py-8 text-center">No recorded activity for this day and filter.</td></tr><% end %>
     </tbody>
-  </table>
+  </table><% end %>
   <% if (first = @summary.rows.first) %>
     <div class="px-4 pb-4">
       <%= explain_calculation(title: "Tenders less refunds · #{first[:source]} · #{first[:location_id].presence || 'Unassigned'} · #{first[:currency].presence || 'Unknown currency'}", id: 'register-net-tender',
@@ -40,7 +41,7 @@
     </div>
   <% end %>
   </section>
-  <section class="card overflow-x-auto"><table class="w-full text-sm">
+  <section class="card overflow-hidden"><%= report_table 'register-tenders', label: 'Selected-day tender detail' do %><table class="operations-table w-full text-sm">
     <caption class="p-4 text-left font-semibold">Selected-day tender detail · Shopify amounts are inferred</caption>
     <thead><tr><% [['Source / location', 'source'], ['Currency', nil], ['Tender', 'tender'], ['Recorded tender', nil], ['Recorded refunds', 'refund'], ['Net tender', 'net_tender']].each do |label, term| %><th scope="col" class="th"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
     <tbody class="divide-y divide-fog">
@@ -53,31 +54,31 @@
       <% end %>
       <% if @summary.rows.all? { |row| row[:net_tenders].empty? } %><tr><td colspan="6" class="td py-8 text-center">No eligible recorded tenders or refunds for this day and filter.</td></tr><% end %>
     </tbody>
-  </table></section>
+  </table><% end %></section>
   <section class="card card-pad space-y-3">
     <h2 class="text-lg font-semibold">Payment reconciliation coverage</h2>
     <%= fold_explainer('Eligible orders are paid, fulfilled or refunded orders dated on the selected day. Missing means no imported completed payment; incomplete and overcovered compare the order total with all imported completed payments for that order, across all payment dates. This diagnoses current imported records, not the balance at that day\'s close. Unknown amounts cannot be compared. Refunds do not reduce the original payment coverage target.', class: 'text-sm text-mocha') %>
-    <div class="overflow-x-auto"><table class="w-full text-sm">
+    <div class="overflow-hidden rounded-xl border border-fog"><%= report_table 'register-coverage', label: 'Payment reconciliation coverage' do %><table class="operations-table w-full text-sm">
       <thead><tr><% [['Source / location', nil], ['Currency', nil], ['Missing payment', 'payment_coverage'], ['Incomplete payment', nil], ['Overcovered payment', nil], ['Unknown amounts', 'unavailable'], ['Missing tax', 'tax_collected'], ['Excluded unsettled payments', 'eligible_orders']].each do |label, term| %><th scope="col" class="th"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
       <tbody class="divide-y divide-fog"><% @summary.rows.each do |row| %>
         <tr><td class="td"><%= row[:source] %><br><span class="text-xs text-taupe"><%= row[:location_id].presence || 'Unassigned' %></span></td><td class="td"><%= row[:currency].presence || 'Unknown' %></td>
           <% [*DailyRegisterSummary::COVERAGE_KEYS, :missing_tax_orders, :excluded_payment_records].each do |key| %><td class="td"><%= row[key] %></td><% end %>
         </tr>
       <% end %></tbody>
-    </table></div>
+    </table><% end %></div>
     <p class="text-sm text-mocha">Missing stored timestamps across all dates matching the source/location filter: <strong><%= @summary.coverage[:missing_order_timestamps] %></strong> eligible orders, <strong><%= @summary.coverage[:missing_payment_timestamps] %></strong> eligible completed payments and <strong><%= @summary.coverage[:missing_refund_timestamps] %></strong> refunds. Undated records cannot be assigned to the selected day. Original source-date provenance is unavailable.</p>
   </section>
   <section class="card card-pad space-y-3">
     <h2 class="text-lg font-semibold">Source import freshness</h2>
     <p class="text-sm text-mocha">Import completion is source-wide and current as of report generation (<%= @summary.generated_at.iso8601 %>), independent of the selected report day or location. Event timestamps are the latest stored events matching the source/location filter, across all dates. Importing an old CSV today does not establish today's coverage. A successful sync can also have a limited lookback.</p>
-    <div class="overflow-x-auto"><table class="w-full text-sm">
+    <div class="overflow-hidden rounded-xl border border-fog"><%= report_table 'register-freshness', label: 'Source import freshness' do %><table class="operations-table w-full text-sm">
       <thead><tr><% ['Source', 'Successful import recorded', 'Latest eligible order event', 'Latest eligible payment event', 'Latest refund event'].each do |label| %><th scope="col" class="th"><%= label %></th><% end %></tr></thead>
       <tbody class="divide-y divide-fog"><% @summary.source_freshness.each do |platform, freshness| %>
         <tr><td class="td"><%= platform %></td><td class="td"><%= freshness[:finished_at]&.iso8601 || 'Unavailable: no source-confirmed successful completion found' %><% if freshness[:mode].present? %><br><span class="text-xs text-taupe"><%= freshness[:mode] %></span><% end %>
           <% if freshness[:history_limited] %><p class="text-xs text-mocha">Older full-sync history was not checked; latest source success remains unconfirmed.</p><% end %>
         </td><% %i[order_at payment_at refund_at].each do |key| %><td class="td"><%= freshness[key]&.iso8601 || 'Unavailable' %></td><% end %></tr>
       <% end %></tbody>
-    </table></div>
+    </table><% end %></div>
     <p class="text-sm text-mocha">Failed runs and skipped sources do not refresh success. Full-sync source evidence is inspected for the latest <%= DailyRegisterSummary::FULL_SYNC_HISTORY_LIMIT %> successful full runs. Compare with source register and processor reports before closing.</p>
   </section>
   <%= link_to 'All reports', reports_path, class: 'btn-ghost' %>

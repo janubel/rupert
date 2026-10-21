@@ -316,6 +316,7 @@ Rails.application.routes.draw do
       end
     end
     get 'team_schedule', to: 'team_schedule#index', as: :team_schedule
+    get 'time_keeping', to: 'time_keeping#index', as: :time_keeping
     resources :leave_requests, only: %i[index show new create destroy] do
       member do
         post :approve
@@ -378,6 +379,7 @@ Rails.application.routes.draw do
     collection do
       get :register_summary
       get :sales
+      get :sales_tax
       get :financial
       get :inventory
       get :operations

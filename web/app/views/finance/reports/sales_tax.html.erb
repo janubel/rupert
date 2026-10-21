@@ -1,5 +1,4 @@
 <% content_for :title, "Sales tax report" %>
-<% money = ->(cents) { cents.nil? ? 'Unavailable' : number_with_precision(BigDecimal(cents.to_s) / 100, precision: 2, delimiter: ',') } %>
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
@@ -18,24 +17,7 @@
     <%= link_to 'Year to date', finance_reports_sales_tax_path(from: today.beginning_of_year, to: today), class: 'btn-ghost btn-sm' %>
   </nav>
 
-  <p class="text-sm text-mocha">Each source and store is its own line and lines are not added together: a card sale can appear in a store and in its processor. Unavailable means the source did not report the amount.</p>
+  <p class="text-sm text-mocha">Each source and store is its own line and lines are not added together: a card sale can appear in a store and in its processor. Unavailable means the source did not report the amount. <%= link_to 'Open in Reports to filter sources or estimate SwipeSimple tax', sales_tax_reports_path(from: @from, to: @to), class: 'font-semibold underline' %>.</p>
 
-  <div class="card overflow-hidden operations-table-region" role="region" tabindex="0" aria-label="Sales tax by source">
-    <table class="operations-table finance-table w-full">
-      <caption class="sr-only">Sales tax by source and store from <%= @from %> through <%= @to %></caption>
-      <thead class="border-b border-fog bg-haze/60">
-        <tr><th scope="col" class="th">Source</th><th scope="col" class="th">Store</th><th scope="col" class="th">Currency</th><th scope="col" class="th num">Orders</th><th scope="col" class="th num">Sales before tax</th><th scope="col" class="th num">Tax collected</th><th scope="col" class="th num">Tax refunded</th><th scope="col" class="th num">Net tax</th></tr>
-      </thead>
-      <tbody>
-        <% @report.lines.each do |line| %>
-          <tr>
-            <td class="td"><%= line.source %></td><td class="td"><%= line.store %></td><td class="td"><%= line.currency %></td><td class="td num"><%= line.orders %></td>
-            <td class="td num"><%= money.call(line.sales_before_tax) %></td><td class="td num font-semibold"><%= money.call(line.tax_collected) %></td><td class="td num"><%= money.call(line.tax_refunded) %></td><td class="td num"><%= money.call(line.net_tax) %></td>
-          </tr>
-          <% if line.note %><tr><td class="td text-xs text-mocha" colspan="8"><%= line.source %> · <%= line.store %>: <%= line.note %></td></tr><% end %>
-        <% end %>
-        <% if @report.lines.empty? %><tr><td class="td" colspan="8">No sales are stored for these dates. This does not establish a zero-sales period.</td></tr><% end %>
-      </tbody>
-    </table>
-  </div>
+  <%= render 'reports/sales_tax_table', report: @report %>
 </div>
