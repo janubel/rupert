@@ -25,6 +25,7 @@ module People
       @month = (@from.beginning_of_month..@from.end_of_month)
       @calendar_days = @history.calendar_days
       @rows = @history.rows
+      @coverage = TimeSourceCoverage.for(Current.user)
     rescue Date::Error
       redirect_to people_punch_history_path, alert: 'Choose valid dates.'
     end

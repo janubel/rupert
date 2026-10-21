@@ -31,8 +31,7 @@ module People
       if request.format.csv?
         return send_data TimesheetCsv.generate(scope), filename: 'timesheets.csv', type: 'text/csv'
       end
-      @square_history = SquareTimecard.visible_to(Current.user)
-      @ctrax_history = CtraxLaborShift.visible_to(Current.user)
+      @coverage = TimeSourceCoverage.for(Current.user)
       @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)
       @summaries = TimesheetInsights.summaries(@timesheets.to_a)
       # The week schedule leads the page for anyone who can review time, with an employee key to switch people on and off.

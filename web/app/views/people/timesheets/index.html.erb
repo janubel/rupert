@@ -1,19 +1,22 @@
 <% content_for :title, "Timesheets" %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
-  <% if @reviewer && @calendar_view %>
-    <%= render 'people/timesheets/calendar', calendar: @calendar, week: (@week_start || Date.current.beginning_of_week) %>
-  <% end %>
+  <%= render 'shared/time_navigation' %>
 
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="page-title">Timesheets</h1>
       <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? (@reviewer ? 'Your timesheets and assigned demo reviews.' : 'Your hours by week, submitted for review.') : 'Hours by week per staff member, submitted for review.' %></p>
     </div>
-    <% if policy(People::Timesheet).create? %>
-      <%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %>
-    <% end %>
-    <%= link_to "My time home", employee_app_path, class: "btn-ghost btn-sm" %>
+    <div class="flex flex-wrap gap-2">
+      <% if @reviewer && Current.user.can?('timesheets.read') %>
+        <%= link_to 'Run punch report', people_punch_history_path, class: 'btn-ghost btn-sm' %>
+      <% end %>
+      <% if policy(People::Timesheet).create? %>
+        <%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %>
+      <% end %>
+      <% unless @reviewer %><%= link_to "My time home", employee_app_path, class: "btn-ghost btn-sm" %><% end %>
+    </div>
   </section>
 
   <% if @reviewer %>
@@ -23,107 +26,10 @@
         <%= link_to "#{label} (#{count})", people_timesheets_path(status: status, period: @period, q: @query, view: params[:view].presence), class: "nav-pill #{@status == status ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@status == status ? 'page' : nil) } %>
       <% end %>
     </nav>
-    <p class="text-sm text-mocha">Review each day's hours and notes, then approve or return for correction. Your own timesheets need another reviewer. Demo hours are always excluded from payroll.</p>
-
-    <section class="space-y-3" aria-label="Timesheet navigation" <%= tour_anchor('next') %>>
-      <h2 class="text-lg font-semibold">Where to go next</h2>
-      <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <%= link_to people_employees_path, class: 'card card-pad space-y-1 hover:bg-cream' do %>
-          <h3 class="font-semibold">Staff</h3>
-          <p class="text-sm text-mocha">Profiles, pay rates and leave balances.</p>
-        <% end %>
-        <%= link_to people_leave_requests_path, class: 'card card-pad space-y-1 hover:bg-cream' do %>
-          <h3 class="font-semibold">Vacation &amp; time off<%= " (#{@pending_leave_count})" if @pending_leave_count&.positive? %></h3>
-          <p class="text-sm text-mocha">Requests, approvals and denials.</p>
-        <% end %>
-        <%= link_to people_punch_history_path, class: 'card card-pad space-y-1 hover:bg-cream' do %>
-          <h3 class="font-semibold">Punch calendar</h3>
-          <p class="text-sm text-mocha">Every clock punch, drag to pick dates.</p>
-        <% end %>
-        <%= link_to people_pay_runs_path, class: 'card card-pad space-y-1 hover:bg-cream' do %>
-          <h3 class="font-semibold">Payroll</h3>
-          <p class="text-sm text-mocha">Pay runs and finalized payslips.</p>
-        <% end %>
-        <%= link_to people_square_timesheets_path, class: 'card card-pad space-y-1 hover:bg-cream' do %>
-          <h3 class="font-semibold">Square history</h3>
-          <p class="text-sm text-mocha">Imported timecards and breaks.</p>
-        <% end %>
-        <%= link_to people_ctrax_timesheets_path, class: 'card card-pad space-y-1 hover:bg-cream' do %>
-          <h3 class="font-semibold">C-Trax shifts</h3>
-          <p class="text-sm text-mocha">Register shifts, unapproved history.</p>
-        <% end %>
-      </div>
-    </section>
-
-    <section class="space-y-3" aria-label="Upcoming weeks" <%= tour_anchor('weeks') %>>
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 class="text-lg font-semibold">Upcoming weeks</h2>
-        <p class="text-sm text-mocha">Timesheets on file per week. Open a week to review what is in it.</p>
-      </div>
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <% @upcoming_weeks.each do |week| %>
-          <%= link_to people_timesheets_path(period: week[:monday].iso8601, status: 'all'), class: 'card card-pad space-y-2 hover:bg-cream' do %>
-            <div class="flex items-baseline justify-between gap-2">
-              <h3 class="font-semibold"><%= week[:label] %></h3>
-              <span class="text-sm text-mocha"><%= week[:monday].strftime('%b %-d') %> – <%= (week[:monday] + 6).strftime('%b %-d') %></span>
-            </div>
-            <p class="text-2xl font-semibold"><%= week[:total] %></p>
-            <p class="text-sm text-mocha">
-              <%= week[:submitted] %> awaiting review · <%= week[:approved] %> approved<% if week[:draft].positive? %> · <%= week[:draft] %> draft<% end %><% if week[:rejected].positive? %> · <%= week[:rejected] %> returned<% end %>
-            </p>
-          <% end %>
-        <% end %>
-      </div>
-    </section>
-
-    <section class="space-y-3" aria-label="Upcoming time off">
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 class="text-lg font-semibold">Upcoming time off</h2>
-        <%= link_to 'All requests', people_leave_requests_path, class: 'text-sm text-olive underline' %>
-      </div>
-      <% if @upcoming_leave.empty? %>
-        <p class="card card-pad text-sm text-mocha">No upcoming vacation or time off on file.</p>
-      <% else %>
-        <div class="card overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="border-b border-fog bg-haze/60">
-                <tr>
-                  <th scope="col" class="th">Staff member</th>
-                  <th scope="col" class="th">Type</th>
-                  <th scope="col" class="th">Dates</th>
-                  <th scope="col" class="th">Status</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-fog">
-                <% @upcoming_leave.each do |leave| %>
-                  <tr class="hover:bg-cream">
-                    <td class="td font-medium text-ink"><%= leave.employee&.name %></td>
-                    <td class="td"><%= leave.leave_type.titleize %></td>
-                    <td class="td"><%= leave.starts_on.strftime('%b %-d') %> – <%= leave.ends_on.strftime('%b %-d') %></td>
-                    <td class="td"><span class="<%= leave.approved? ? 'pill-fern' : leave.requested? ? 'pill-olive' : 'pill-taupe' %>"><%= leave.status %></span></td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      <% end %>
-    </section>
-  <% end %>
-
-  <section class="space-y-3" aria-label="Staff member time sources" <%= tour_anchor('sources') %>>
-    <h2 class="text-lg font-semibold"><%= Current.user.employee? ? 'Your time sources' : 'All staff member time sources' %></h2>
-    <p class="text-sm text-mocha">Rupert submissions, Square timecards and C-Trax shifts are separate records. Review each source; overlapping hours must not be added together. Source records do not approve hours or create a payroll payment.</p>
-    <div class="grid gap-3 sm:grid-cols-3">
-      <article class="card card-pad space-y-2"><h3 class="font-semibold">Rupert timesheets</h3><p class="text-sm text-mocha">Weekly entries and approval history.</p><%= link_to 'View all Rupert timesheets', people_timesheets_path(status: 'all'), class: 'text-sm text-olive underline' %></article>
-      <article class="card card-pad space-y-2"><h3 class="font-semibold">Square timecards</h3><p class="text-sm text-mocha"><%= @square_history.count %> retained records, including open and held history. Counted Square history also appears in personal reports and calendars.</p><%= link_to 'View Square history', people_square_timesheets_path, class: 'text-sm text-olive underline' %></article>
-      <article class="card card-pad space-y-2"><h3 class="font-semibold">C-Trax shifts</h3><p class="text-sm text-mocha"><%= @ctrax_history.count %> retained records. Source-reported hours and elapsed time remain unapproved history.</p><%= link_to 'View C-Trax history', people_ctrax_timesheets_path, class: 'text-sm text-olive underline' %></article>
-      <article class="card card-pad space-y-2"><h3 class="font-semibold">Punch history</h3><p class="text-sm text-mocha">Every Rupert clock punch and imported Square timecard in one calendar or list, with a CSV report.</p><%= link_to 'View punch history', people_punch_history_path, class: 'text-sm text-olive underline' %></article>
-      <article class="card card-pad space-y-2"><h3 class="font-semibold">Team schedule</h3><p class="text-sm text-mocha">Staff member × day grid of hours worked from all sources.</p><%= link_to 'View team schedule', people_team_schedule_path, class: 'text-sm text-olive underline' %></article>
-    </div>
-  </section>
-  <% if @awaiting.positive? %>
+    <% if @awaiting.positive? %>
+      <div class="rounded-xl border border-olive/30 bg-olive/10 px-4 py-2.5 text-sm text-olive"><%= @awaiting %> timesheet<%= @awaiting == 1 ? "" : "s" %> awaiting review. Review each day's hours and notes, then approve or return for correction. Your own timesheets need another reviewer. Demo hours are always excluded from payroll.</div>
+    <% end %>
+  <% elsif @awaiting.positive? %>
     <div class="rounded-xl border border-olive/30 bg-olive/10 px-4 py-2.5 text-sm text-olive"><%= @awaiting %> timesheet<%= @awaiting == 1 ? "" : "s" %> awaiting review.</div>
   <% end %>
 
@@ -301,4 +207,68 @@
   <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
   <% end %>
 
+  <% if @reviewer && @calendar_view %>
+    <% clocked_in_now = @calendar.clocked_in.map(&:employee_id).uniq.size %>
+    <details class="card overflow-hidden" <%= 'open' if clocked_in_now.positive? || params[:period].present? %>>
+      <summary class="card-pad cursor-pointer text-lg font-semibold">This week's shift calendar<% if clocked_in_now.positive? %> <span class="pill-fern ml-2 align-middle text-sm"><%= clocked_in_now %> clocked in now</span><% end %><span class="ml-2 text-sm font-normal text-mocha">Rupert, Square and C-Trax shifts by day; tick staff on and off.</span></summary>
+      <div class="card-pad pt-0">
+        <%= render 'people/timesheets/calendar', calendar: @calendar, week: (@week_start || Date.current.beginning_of_week) %>
+      </div>
+    </details>
+  <% end %>
+
+  <% if @reviewer %>
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section class="space-y-3" aria-label="Upcoming weeks" <%= tour_anchor('weeks') %>>
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 class="text-lg font-semibold">Weeks at a glance</h2>
+          <p class="text-xs text-mocha">Open a week to review what is in it.</p>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <% @upcoming_weeks.each do |week| %>
+            <%= link_to people_timesheets_path(period: week[:monday].iso8601, status: 'all'), class: 'card card-pad space-y-1 hover:bg-cream' do %>
+              <div class="flex items-baseline justify-between gap-2">
+                <h3 class="font-semibold"><%= week[:label] %></h3>
+                <span class="text-xs text-mocha"><%= week[:monday].strftime('%b %-d') %> – <%= (week[:monday] + 6).strftime('%b %-d') %></span>
+              </div>
+              <p class="text-xl font-semibold"><%= week[:total] %> <span class="text-sm font-normal text-mocha">timesheets</span></p>
+              <p class="text-xs text-mocha"><%= week[:submitted] %> awaiting · <%= week[:approved] %> approved<% if week[:draft].positive? %> · <%= week[:draft] %> draft<% end %><% if week[:rejected].positive? %> · <%= week[:rejected] %> returned<% end %></p>
+            <% end %>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="space-y-3" aria-label="Upcoming time off">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 class="text-lg font-semibold">Upcoming time off<%= " (#{@pending_leave_count} pending)" if @pending_leave_count&.positive? %></h2>
+          <%= link_to 'All requests', people_leave_requests_path, class: 'text-sm text-olive underline' %>
+        </div>
+        <% if @upcoming_leave.empty? %>
+          <p class="card card-pad text-sm text-mocha">No upcoming vacation or time off on file.</p>
+        <% else %>
+          <div class="card overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="border-b border-fog bg-haze/60">
+                <tr><th scope="col" class="th">Staff member</th><th scope="col" class="th">Type</th><th scope="col" class="th">Dates</th><th scope="col" class="th">Status</th></tr>
+              </thead>
+              <tbody class="divide-y divide-fog">
+                <% @upcoming_leave.each do |leave| %>
+                  <tr class="hover:bg-cream">
+                    <td class="td font-medium text-ink"><%= leave.employee&.name %></td>
+                    <td class="td"><%= leave.leave_type.titleize %></td>
+                    <td class="td"><%= leave.starts_on.strftime('%b %-d') %> – <%= leave.ends_on.strftime('%b %-d') %></td>
+                    <td class="td"><span class="<%= leave.approved? ? 'pill-fern' : leave.requested? ? 'pill-olive' : 'pill-taupe' %>"><%= leave.status %></span></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </section>
+    </div>
+  <% end %>
+
+  <div <%= tour_anchor('sources') %>>
+    <%= render 'shared/time_source_coverage', coverage: @coverage %>
+  </div>
 </div>

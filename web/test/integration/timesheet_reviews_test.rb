@@ -158,13 +158,15 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     assert_match(/Select at least one/, flash[:alert])
   end
 
-  test 'reviewers see the week schedule first with an employee key that toggles people' do
+  test 'reviewers see the review queue first, then the week schedule with an employee key that toggles people' do
     sign_in
     get people_timesheets_path
     assert_response :success
+    assert_select 'nav[aria-label="Time workspace"] a[aria-current="page"]', text: 'Timesheets'
     assert_select 'section[aria-label="Week calendar"]'
     assert_select 'aside#emp-key-title, aside[aria-labelledby="emp-key-title"]'
     body = response.body
-    assert_operator body.index('aria-label="Week calendar"'), :<, body.index('<h1 class="page-title">Timesheets')
+    assert_operator body.index('aria-label="Timesheet review"'), :<, body.index('aria-label="Week calendar"')
+    assert_operator body.index('<h1 class="page-title">Timesheets'), :<, body.index('aria-label="Week calendar"')
   end
 end
