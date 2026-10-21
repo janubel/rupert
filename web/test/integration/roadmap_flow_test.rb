@@ -16,6 +16,8 @@ class RoadmapFlowTest < ActionDispatch::IntegrationTest
     get roadmap_path
     assert_response :success
     assert_select 'h1', 'Features & roadmap'
+    assert_select 'title', 'Features & roadmap · Rupert'
+    assert_includes response.body, '<title>Features &amp; roadmap · Rupert</title>', 'title is escaped once, not twice'
     assert_select 'td', 'Planned'
     assert_select 'tr', text: /Chart of accounts and reporting/ do
       assert_select 'td', 'Available'
