@@ -31,6 +31,20 @@ class CanonicalInventoryIdentityTest < ActiveSupport::TestCase
     assert_equal 'gid://shopify/LineItem/11', order.order_lines.first.source_line_id
   end
 
+  test 'complete 100 and 101 line-item snapshots remain eligible for inventory deductions' do
+    node = source_order
+    node['lineItems']['nodes'] = (1..100).map { |index| source_line(id: index, variant: 1000 + index, quantity: 1) }
+    CanonicalOrderImporter.from_shopify!([node])
+    order = imported_order
+    assert order.source_lines_complete
+    assert_equal 100, order.order_lines.count
+
+    node['lineItems']['nodes'] << source_line(id: 101, variant: 1101, quantity: 1)
+    CanonicalOrderImporter.from_shopify!([node])
+    assert order.reload.source_lines_complete
+    assert_equal 101, order.order_lines.count
+  end
+
   test 'missing truncated malformed cancelled and edited source snapshots remain ineligible' do
     mutations = [
       ->(node) { node['lineItems'].delete('pageInfo') },
