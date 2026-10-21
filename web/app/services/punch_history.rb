@@ -123,8 +123,11 @@ class PunchHistory
         kind: 'clock_shift', employee_id: shift.employee_id, employee_name: shift.employee_name,
         source: 'rupert', started_at: shift.started_at, ended_at: shift.ended_at,
         hours: shift.hours.round(2), status: shift.ended_at ? 'closed' : 'open',
-        reference: "Clock shift ##{shift.id}", issue: nil,
-        rate_cents: pay_rate_for(shift.employee_id, shift.started_at), counted: true
+        reference: "Clock shift ##{shift.id}",
+        issue: shift.ended_at ? nil : 'Still clocked in; hours so far are shown but not counted until the shift is closed.',
+        # An open shift's hours grow every hour until someone clocks out, so it
+        # is never counted; a forgotten clock-out must not inflate totals.
+        rate_cents: pay_rate_for(shift.employee_id, shift.started_at), counted: shift.ended_at.present?
       )
     end
   end

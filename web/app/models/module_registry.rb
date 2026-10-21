@@ -63,6 +63,7 @@ class ModuleRegistry
     Entry.new(key: 'warehouse', name: 'Warehouse', path: lambda {
       warehouse_path
     }, permission: 'settings.read', position: 43),
+    Entry.new(key: 'stock_comparison', name: 'Store comparison (PDF)', path: -> { stock_comparison_path }, permission: 'inventory.read', position: 40),
     Entry.new(key: 'swipesimple_items', name: 'SwipeSimple items', path: -> { swipesimple_items_path }, permission: 'inventory.read', position: 50),
     Entry.new(key: 'reconcile', name: 'Catalog Links', path: lambda {
       reconcile_index_path
@@ -155,6 +156,9 @@ class ModuleRegistry
     Entry.new(key: 'expenses', name: 'Expenses', path: lambda {
       finance_expenses_path
     }, permission: 'finance.read', position: 49),
+    Entry.new(key: 'expense_categories', name: 'Expense categories', path: lambda {
+      finance_expense_categories_path
+    }, permission: 'finance.read', position: 49),
     Entry.new(key: 'payments', name: 'Vendor payments', path: lambda {
       finance_vendor_payments_path
     }, permission: 'finance.read', position: 50),
@@ -211,16 +215,16 @@ class ModuleRegistry
       { key: 'sell', name: 'Sell', modules: %w[sales ctrax_pos ctrax_days registers customers] },
       { key: 'marketing', name: 'Marketing', modules: %w[marketing influencers] },
       { key: 'stock', name: 'Stock',
-        modules: %w[inventory inventory_exceptions locations inventory_counts stock_requests stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile swipesimple_items sizes] },
+        modules: %w[inventory stock_comparison inventory_exceptions locations inventory_counts stock_requests stock_reservations bulk_materials bulk_recipes bulk_consumptions alerts purchase_orders vendors reconcile swipesimple_items sizes] },
       { key: 'money', name: 'Bookkeeping',
-        modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses payments journal_entries bank_reconciliation ledger_export],
+        modules: %w[bookkeeping books_desk book_approvals bank_statements business_snapshot books_check period_locks source_reports financial_close daily_reconciliation reconciliation_documents reconciliation_overview reconciliation_follow_ups retention_drive register_summary cash_forecast ledger finance_accounts chart_of_accounts expenses expense_categories payments journal_entries bank_reconciliation ledger_export],
         # Optional sub-sections for long menus. Order here is display order; every
         # module of the area must appear in exactly one group.
         groups: [
           { name: 'Overview', modules: %w[bookkeeping business_snapshot books_check] },
           { name: 'Daily close', modules: %w[financial_close daily_reconciliation register_summary reconciliation_overview reconciliation_follow_ups reconciliation_documents] },
           { name: 'Books & review', modules: %w[books_desk book_approvals period_locks bank_statements bank_reconciliation source_reports retention_drive] },
-          { name: 'Ledger & accounts', modules: %w[ledger journal_entries chart_of_accounts finance_accounts expenses payments ledger_export] },
+          { name: 'Ledger & accounts', modules: %w[ledger journal_entries chart_of_accounts finance_accounts expenses expense_categories payments ledger_export] },
           { name: 'Planning', modules: %w[cash_forecast] }
         ] },
       # Every report in one place; each report page also carries the same tab bar.

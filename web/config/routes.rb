@@ -258,6 +258,7 @@ Rails.application.routes.draw do
         post :restore
       end
     end
+    resources :expense_categories, only: %i[index new create edit update]
     resources :expenses, only: %i[index new create edit update destroy] do
       member { post :restore }
     end

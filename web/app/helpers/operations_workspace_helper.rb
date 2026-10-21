@@ -12,7 +12,7 @@ module OperationsWorkspaceHelper
        ['Registers', sales_pos_sessions_path, 'sales.read', 'sales/pos_sessions']]
     when :stock
       [['Inventory', workspace_inventory_index_path, 'inventory.read', 'inventory/workspace'],
-       ['Stock comparison', stock_comparison_path, 'inventory.read', 'inventory/comparison'],
+       ['Store comparison', stock_comparison_path, 'inventory.read', 'inventory/comparison'],
        ['Transfers', stock_requests_path(kind: 'transfer'), 'inventory.read', 'stock_requests/transfer'],
        ['Backorders', stock_requests_path(kind: 'backorder'), 'inventory.read', 'stock_requests/backorder'],
        ['Reservations', stock_reservations_path, 'inventory.read', 'stock_reservations'],
@@ -36,6 +36,7 @@ module OperationsWorkspaceHelper
        ['Accounts', finance_accounts_path, 'finance.read', 'finance/accounts', 'Records'],
        ['Receipts', receipts_path, 'finance.read', 'receipts', 'Records'],
        ['Chart of accounts', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts', 'Records'],
+       ['Expense categories', finance_expense_categories_path, 'finance.read', 'finance/expense_categories', 'Records'],
        ['General ledger', finance_journal_entries_path, 'finance.read', 'finance/journal_entries', 'Records'],
        ['Imported orders', ledger_index_path, 'ledger.read', 'ledger', 'Records'],
        ['Ledger export', finance_ledger_export_path, 'finance.read', 'finance/ledger_exports', 'Reports & control'],

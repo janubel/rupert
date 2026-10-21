@@ -8,24 +8,15 @@
         <p class="mt-1 text-sm text-mocha">Every punch from Rupert, Square and C-Trax for a date range, with hours per staff member and anything that needs a look. Read-only: nothing here creates, edits or approves payroll, and a shift recorded in two sources is never added together.</p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <%= link_to 'Download CSV', people_punch_history_path(request.query_parameters.merge(format: :csv)), class: 'btn-primary btn-sm' %>
+        <%= link_to 'Download CSV', people_punch_history_path(time_range_query(@from, @to).merge(format: :csv)), class: 'btn-primary btn-sm' %>
       </div>
     </div>
   </section>
 
   <%= form_with url: people_punch_history_path, method: :get, class: 'card card-pad space-y-3', data: { punch_calendar_target: 'form' } do |f| %>
     <%= hidden_field_tag :view, @view %>
-    <%= hidden_field_tag :from, @from.iso8601, data: { punch_calendar_target: 'from' } %>
-    <%= hidden_field_tag :to, @to.iso8601, data: { punch_calendar_target: 'to' } %>
-    <div class="flex flex-wrap gap-2" aria-label="Report range">
-      <% time_report_presets.each do |label, from, to| %>
-        <% active = @from == from && @to == to %>
-        <%= link_to label, people_punch_history_path(request.query_parameters.merge(from: from.iso8601, to: to.iso8601)), class: "nav-pill #{active ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}", aria: { current: active ? 'page' : nil } %>
-      <% end %>
-    </div>
     <div class="flex flex-wrap items-end gap-3">
-      <div><%= label_tag :range_from, 'From', class: 'field-label' %><%= date_field_tag :range_from, @from.iso8601, class: 'input', onchange: "this.form.querySelector('[name=from]').value=this.value" %></div>
-      <div><%= label_tag :range_to, 'To', class: 'field-label' %><%= date_field_tag :range_to, @to.iso8601, class: 'input', onchange: "this.form.querySelector('[name=to]').value=this.value" %></div>
+      <%= render 'shared/time_range_picker', from: @from, to: @to, from_data: { punch_calendar_target: 'from' }, to_data: { punch_calendar_target: 'to' } %>
       <div><%= label_tag :employee_id, 'Staff member', class: 'field-label' %><%= select_tag :employee_id, options_for_select([['All staff', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
       <div><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', ''], ['Rupert clock', 'rupert'], ['Square', 'square'], ['C-Trax', 'ctrax']], params[:source]), class: 'select' %></div>
       <div><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select([['All statuses', ''], ['Closed / counted', 'closed'], ['Open (still punched in)', 'open'], ['Conflict', 'conflict'], ['Unmatched', 'unmatched'], ['Unassigned', 'unassigned']], params[:status]), class: 'select' %></div>
@@ -74,7 +65,7 @@
                 <td class="td text-right text-mocha"><%= m['ctrax'].positive? ? number_with_precision(m['ctrax'], precision: 1) : '—' %></td>
                 <td class="td text-right font-semibold text-ink"><%= number_with_precision(m['counted'], precision: 1) %></td>
                 <td class="td text-right"><% if m['flagged'].positive? %><span class="pill-rose"><%= m['flagged'] %></span><% else %><span class="text-taupe">—</span><% end %></td>
-                <td class="td"><% if emp %><%= link_to 'Only this person', people_punch_history_path(request.query_parameters.merge(employee_id: emp.id)), class: 'text-olive underline text-xs' %><% end %></td>
+                <td class="td"><% if emp %><%= link_to 'Only this person', people_punch_history_path(time_range_query(@from, @to).merge(employee_id: emp.id)), class: 'text-olive underline text-xs' %><% end %></td>
               </tr>
             <% end %>
           </tbody>
@@ -84,8 +75,8 @@
   </section>
 
   <nav aria-label="Punch report view" class="flex flex-wrap gap-2">
-    <%= link_to 'List', people_punch_history_path(request.query_parameters.merge(view: 'list')), class: "nav-pill #{@view == 'list' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
-    <%= link_to 'Calendar', people_punch_history_path(request.query_parameters.merge(view: 'calendar')), class: "nav-pill #{@view == 'calendar' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
+    <%= link_to 'List', people_punch_history_path(time_range_query(@from, @to).merge(view: 'list')), class: "nav-pill #{@view == 'list' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
+    <%= link_to 'Calendar', people_punch_history_path(time_range_query(@from, @to).merge(view: 'calendar')), class: "nav-pill #{@view == 'calendar' ? 'nav-pill-active' : 'nav-pill-idle'}" %>
   </nav>
 
   <% if @view == 'calendar' %>
@@ -93,8 +84,8 @@
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-lg font-semibold"><%= @from.strftime('%B %Y') %></h2>
         <div class="flex gap-2">
-          <%= link_to '← Month', people_punch_history_path(request.query_parameters.merge(from: (@from - 1.month).beginning_of_month.iso8601, to: (@from - 1.month).end_of_month.iso8601)), class: 'btn-ghost btn-sm' %>
-          <%= link_to 'Month →', people_punch_history_path(request.query_parameters.merge(from: (@from + 1.month).beginning_of_month.iso8601, to: (@from + 1.month).end_of_month.iso8601)), class: 'btn-ghost btn-sm' %>
+          <%= link_to '← Month', people_punch_history_path(time_range_query(@from, @to).merge(from: (@from - 1.month).beginning_of_month.iso8601, to: (@from - 1.month).end_of_month.iso8601)), class: 'btn-ghost btn-sm' %>
+          <%= link_to 'Month →', people_punch_history_path(time_range_query(@from, @to).merge(from: (@from + 1.month).beginning_of_month.iso8601, to: (@from + 1.month).end_of_month.iso8601)), class: 'btn-ghost btn-sm' %>
         </div>
       </div>
       <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wide text-mocha">
