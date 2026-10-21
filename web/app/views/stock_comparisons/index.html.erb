@@ -1,12 +1,13 @@
-<% content_for :title, 'Shopify & C-Trax stock' %>
+<% content_for :title, 'Store comparison' %>
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :stock %>
   <section class="space-y-3">
-    <h1 class="page-title">Shopify &amp; C-Trax stock</h1>
+    <h1 class="page-title">Store comparison</h1><p class="text-sm font-semibold text-mocha">Shopify &amp; C-Trax stock</p>
     <p class="max-w-3xl text-sm text-mocha">Two views of shared stock. Compare one Shopify location with one C-Trax store; quantities are never added together. This page is read-only.</p>
     <div class="flex flex-wrap gap-2">
-      <%= link_to 'Review comparison results', '#stock-comparison-results', class: 'btn-primary' %>
+      <%= link_to 'Download store comparison PDF', stock_comparison_path(request.query_parameters.slice('q', 'filter', 'shopify_location_id', 'ctrax_location_id').merge(format: :pdf)), class: 'btn-primary', id: 'store-comparison-pdf', data: { turbo: false } %>
       <%= link_to 'Download comparison CSV', stock_comparison_path(request.query_parameters.slice('q', 'filter', 'shopify_location_id', 'ctrax_location_id').merge(format: :csv)), class: 'btn-ghost' %>
+      <%= link_to 'Review comparison results', '#stock-comparison-results', class: 'btn-ghost' %>
       <%= link_to 'Physical count worksheets', inventory_counts_path, class: 'btn-ghost' %>
       <%= link_to 'Source reads', syncs_path, class: 'btn-ghost' if Current.user.can?('sync.write') %>
     </div>

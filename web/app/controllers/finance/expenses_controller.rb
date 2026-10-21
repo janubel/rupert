@@ -10,7 +10,7 @@ module Finance
     def index
       authorize(:module, :finance_read?)
       @from, @through = register_window
-      @category = Finance::Expense::CATEGORIES.include?(params[:category]) ? params[:category] : 'all'
+      @category = Finance::ExpenseCategory.known_keys.include?(params[:category]) ? params[:category] : 'all'
       @q = params[:q].to_s.strip.first(100)
       @min_cents = register_cents(params[:min])
       @max_cents = register_cents(params[:max])
@@ -79,7 +79,7 @@ module Finance
       if save_with_posting { @expense.update(expense_params) && repost_expense(@expense) }
         ActivityLogger.log('expense_updated', subject: @expense, details: change_summary(@expense))
         [old_date, @expense.incurred_on].uniq.each { |date| note_approved_period(date, 'Expense') }
-        redirect_to(finance_expenses_path, notice: 'Expense updated.')
+        redirect_to(safe_return_to || finance_expenses_path, notice: 'Expense updated.')
       else
         @vendors = Purchasing::Vendor.ordered
         @accounts = Finance::Account.active.ordered
@@ -112,6 +112,12 @@ module Finance
 
     # Void the prior posting and re-post when a money-bearing field changed, so
     # the ledger always reflects the current expense.
+    # Only same-site paths, so a crafted link can't send people elsewhere.
+    def safe_return_to
+      path = params[:return_to].to_s
+      path if path.start_with?('/') && !path.start_with?('//') && !path.include?('\\')
+    end
+
     def repost_expense(expense)
       return true unless expense.kept?
 

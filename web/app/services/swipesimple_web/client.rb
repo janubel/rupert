@@ -5,6 +5,7 @@ require 'uri'
 require 'json'
 require 'openssl'
 require 'csv'
+require 'digest'
 
 module SwipesimpleWeb
   # Uses the website's own sign-in and read/export endpoints. This is not a
@@ -35,7 +36,12 @@ module SwipesimpleWeb
 
     HOSTS = %w[swipesimple.com login.cardflight.com].freeze
     LIMIT = SwipesimpleReportImporter::MAX_BYTES
+    REPORT_TOPICS = %w[tax sales].freeze
+    CSV_TYPES = %r{\A(?:text/csv|application/csv|application/octet-stream)}
+    XLSX_TYPES = %r{\A(?:application/xlsx|application/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|application/octet-stream)}
     Snapshot = Struct.new(:kind, :text, :exported_at, :merchant_account, keyword_init: true)
+    ReportChunk = Struct.new(:topic, :from, :to, :text, :rows, :sha256, :exported_at, keyword_init: true)
+    ItemsSnapshot = Struct.new(:records, :sha256, :exported_at, keyword_init: true)
 
     def initialize(credentials, company_id:)
       @credentials = credentials
@@ -48,6 +54,76 @@ module SwipesimpleWeb
     end
 
     def fetch
+      guarded do
+        sign_in!
+        transactions = export('transactions')
+        accounts = CSV.parse(transactions.text.delete_prefix("\uFEFF"), headers: true).map { |row| row['Merchant Account'].to_s.strip }.uniq
+        raise Error, :identity unless accounts.one? && accounts.first.present?
+
+        transactions.merchant_account = accounts.first
+        invoices = export('invoices')
+        invoices.merchant_account = accounts.first
+        [transactions, invoices]
+      end
+    end
+
+    # Reporting -> tax or sales CSV for from..to, one request per calendar month.
+    # Each month is parsed and checked (headers, dates inside the month, day
+    # rows add up to SwipeSimple's Totals) before it is returned.
+    def report(topic, from:, to:, pause: 0)
+      raise ArgumentError, 'Unknown SwipeSimple report.' unless REPORT_TOPICS.include?(topic)
+      raise ArgumentError, 'Choose an ordered date range.' unless from.is_a?(Date) && to.is_a?(Date) && from <= to
+
+      guarded do
+        sign_in!
+        self.class.months(from, to).each_with_index.map do |(first, last), index|
+          sleep(pause) if index.positive? && pause.positive?
+          report_month(topic, first, last)
+        end
+      end
+    end
+
+    # Items -> Export workbook, parsed into item-snapshot records.
+    def items_workbook
+      guarded do
+        sign_in!
+        refresh_deadline!
+        response, url = get('https://swipesimple.com/items.xlsx')
+        raise Error, :login unless url.host == 'swipesimple.com' && url.path == '/items.xlsx'
+        raise Error, :response unless response['content-type'].to_s.match?(XLSX_TYPES)
+
+        bytes = response.body.to_s.b
+        ItemsSnapshot.new(records: ItemsWorkbook.parse(bytes), sha256: Digest::SHA256.hexdigest(bytes), exported_at: Time.current.utc.iso8601(6))
+      rescue ItemsWorkbook::Error
+        raise Error.new(:response), cause: nil
+      end
+    end
+
+    def self.months(from, to)
+      chunks = []
+      first = from
+      while first <= to
+        last = [first.end_of_month, to].min
+        chunks << [first, last]
+        first = last + 1
+      end
+      chunks
+    end
+
+    private
+
+    def guarded
+      yield
+    rescue CSV::MalformedCSVError, JSON::ParserError, KeyError, TypeError, URI::InvalidURIError
+      raise Error.new(:response), cause: nil
+    rescue Timeout::Error, SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError
+      raise Error.new(:network), cause: nil
+    end
+
+    # One sign-in and company check per client; later reads reuse that session.
+    def sign_in!
+      return if @signed_in
+
       login!
       page, url = get('https://swipesimple.com/transactions')
       raise Error, :login unless url.host == 'swipesimple.com' && url.path == '/transactions'
@@ -55,21 +131,33 @@ module SwipesimpleWeb
       companies = Nokogiri::HTML(page.body).css('a[href]').filter_map { |a| a['href'][%r{\A(?:https://swipesimple\.com)?/companies/(\d+)/}, 1] }.uniq
       raise Error, :identity unless companies == [@company_id]
 
-      transactions = export('transactions')
-      accounts = CSV.parse(transactions.text.delete_prefix("\uFEFF"), headers: true).map { |row| row['Merchant Account'].to_s.strip }.uniq
-      raise Error, :identity unless accounts.one? && accounts.first.present?
-
-      transactions.merchant_account = accounts.first
-      invoices = export('invoices')
-      invoices.merchant_account = accounts.first
-      [transactions, invoices]
-    rescue CSV::MalformedCSVError, JSON::ParserError, KeyError, TypeError, URI::InvalidURIError
-      raise Error.new(:response), cause: nil
-    rescue Timeout::Error, SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError
-      raise Error.new(:network), cause: nil
+      @signed_in = true
     end
 
-    private
+    # Each report or workbook read gets its own bounded time budget.
+    def refresh_deadline!
+      @deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 120
+    end
+
+    def report_month(topic, first, last)
+      refresh_deadline!
+      url = URI("https://swipesimple.com#{reports_path}")
+      # Only these verified ISO parameters; anything else falls back to the
+      # last 30 days, which the date check below would reject.
+      url.query = URI.encode_www_form([['report[topic]', topic], ['start_date', first.iso8601], ['end_date', last.iso8601]])
+      response, final = get(url)
+      raise Error, :login unless final.host == 'swipesimple.com' && final.path == reports_path
+      raise Error, :response unless response['content-type'].to_s.match?(CSV_TYPES)
+
+      text = response.body.to_s.b.force_encoding(Encoding::UTF_8)
+      rows = ReportCsv.parse(text, topic: topic, from: first, to: last)
+      ReportChunk.new(topic: topic, from: first, to: last, text: text, rows: rows, sha256: Digest::SHA256.hexdigest(text.b),
+        exported_at: Time.current.utc.iso8601(6))
+    rescue ReportCsv::Error
+      raise Error.new(:response), cause: nil
+    end
+
+    def reports_path = "/companies/#{@company_id}/reports.csv"
 
     def login!
       _response, url = get('https://swipesimple.com/sign_in')
@@ -120,7 +208,7 @@ module SwipesimpleWeb
 
       response, url = get("https://swipesimple.com/#{kind}.csv?time_zone=America%2FNew_York")
       raise Error, :login unless url.host == 'swipesimple.com' && url.path == "/#{kind}.csv"
-      raise Error, :response unless response['content-type'].to_s.match?(%r{\A(?:text/csv|application/csv|application/octet-stream)})
+      raise Error, :response unless response['content-type'].to_s.match?(CSV_TYPES)
 
       text = response.body.to_s.b.force_encoding(Encoding::UTF_8)
       raise Error, :response unless text.valid_encoding? && CSV.parse(text.delete_prefix("\uFEFF"), headers: true).size == total
@@ -162,7 +250,7 @@ module SwipesimpleWeb
       http.read_timeout = 15
       http.write_timeout = 15
       request['User-Agent'] = 'Rupert/1.0 SwipeSimpleReadOnlyWebSync'
-      request['Accept'] = 'text/html,application/json,text/csv'
+      request['Accept'] = url.path.end_with?('.xlsx') ? 'application/xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/html,application/json,text/csv'
       request['Cache-Control'] = 'no-cache, no-store'
       request['Cookie'] = @cookies.values.select { |cookie| cookie[:host] == url.host && url.path.start_with?(cookie[:path]) }.map { |cookie| cookie[:pair] }.join('; ')
       response = http.request(request) do |result|
@@ -195,7 +283,8 @@ module SwipesimpleWeb
       if url.host == 'login.cardflight.com'
         %w[/oauth2/authorize /connect/authorize /connect/authorize/callback /login /api/v1/login/context].include?(url.path)
       else
-        %w[/ /sign_in /sign_in_v2 /sign_in_v2_handoff /transactions /transactions.csv /transactions.json /invoices.csv /invoices.json].include?(url.path) || url.path.match?(%r{\A/companies/[1-9][0-9]*/dashboard\z})
+        %w[/ /sign_in /sign_in_v2 /sign_in_v2_handoff /transactions /transactions.csv /transactions.json /invoices.csv /invoices.json /items.xlsx].include?(url.path) ||
+          url.path.match?(%r{\A/companies/[1-9][0-9]*/dashboard\z}) || url.path == reports_path
       end
     end
   end

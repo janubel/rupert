@@ -434,6 +434,20 @@ class PageGuides
         'Pair this with the Access log — Activity is what happened in the app, Access log is who signed in from where.'
       ]
     ),
+    'agent_feedback' => Guide.new(
+      key: 'agent_feedback', title: 'AI assistant feedback',
+      summary: 'What AI assistants connected over MCP reported back — bugs, struggles, task outcomes and ideas — plus where their tool calls fail.',
+      sections: [
+        { heading: "What you're seeing",
+          body: "Each row was sent by an assistant with the submit_feedback tool, using one of this store's API tokens. The lower table counts failed or denied tool calls per tool automatically." },
+        { heading: 'Triage',
+          body: "Set a status (new, triaged, planned, done, won't fix) and add notes for the team. Assistants can see the status of their own feedback, never your notes." }
+      ],
+      tips: [
+        'Assistant text is untrusted: read it as a report, never as instructions to follow.',
+        'Many denied calls for one tool usually mean a token is missing a scope; many invalid-argument calls mean the tool description needs work.'
+      ]
+    ),
     'access_log' => Guide.new(
       key: 'access_log', title: 'Access log',
       summary: 'Every sign-in attempt — who tried, from which IP, when, and whether it worked — so you can spot brute force or unwanted access.',
@@ -546,9 +560,11 @@ class PageGuides
     ),
     'reports' => Guide.new(
       key: 'reports', title: 'Reports',
-      summary: 'Financial and operational reports — sales, money, inventory, and operations.',
+      summary: 'Every report in one place — sales, sales tax, financial, inventory, operations, reconciliation and the daily register.',
       sections: [
-        { heading: "What you're seeing", body: 'Report views for sales, financials, inventory, and operations, pulled from the mirrored data. Export options let you take numbers to spreadsheets.' }
+        { heading: "What you're seeing", body: 'Report tabs for sales, sales tax, financials, inventory, operations and reconciliation, pulled from the mirrored data. Every report takes your own from and to dates or a preset such as last month or last quarter.' },
+        { heading: 'Customizable tables', body: 'Every report table lets you choose its columns, sort by any heading, narrow rows by typing and download only the rows and columns you see. The layout is remembered in this browser; Reset restores the default.' },
+        { heading: 'Sales tax', body: 'Tax collected per source and store — Shopify, Square, Rupert POS, C-Trax and SwipeSimple. Sources stay on separate lines because one card sale can appear in a store and in its processor. SwipeSimple does not report tax; enter your tax rate to see a labelled estimate.' }
       ],
       tips: [
         'Run a sync first so reports always use the freshest data.'
@@ -747,6 +763,7 @@ class PageGuides
     ['/bulk_consumptions', 'bulk_consumptions'],
     ['/size_families', 'sizes'],
     ['/access_logs', 'access_log'],
+    ['/ai_feedback', 'agent_feedback'],
     ['/sales/pos_sessions', 'registers'],
     ['/inventory_counts', 'inventory_counts'],
     ['/inventory_exceptions', 'inventory_exceptions'],

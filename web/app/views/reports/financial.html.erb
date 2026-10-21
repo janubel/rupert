@@ -52,34 +52,49 @@
     </div>
   </div>
 
-  <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">P&L summary</h2>
+  <div class="grid gap-4 lg:grid-cols-2">
+    <div class="card overflow-hidden">
+      <div class="border-b border-fog px-5 py-3">
+        <h2 class="font-display text-lg text-ink">P&L summary</h2>
+      </div>
+      <%= report_table 'financial-pl', label: 'P&L summary', sortable: false do %>
+        <table class="operations-table w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr><th scope="col" class="th" data-col="line">Line</th><th scope="col" class="th num" data-col="amount">Amount</th></tr>
+          </thead>
+          <tbody class="divide-y divide-fog">
+            <tr class="hover:bg-cream"><td class="td text-mocha">Gross revenue</td><td class="td num font-medium text-ink"><%= number_to_currency(@revenue_cents / 100.0) %></td></tr>
+            <tr class="hover:bg-cream"><td class="td text-mocha">Tax collected</td><td class="td num font-medium text-ink"><%= number_to_currency(@tax_cents / 100.0) %></td></tr>
+            <tr class="hover:bg-cream"><td class="td text-mocha">Refunds</td><td class="td num font-medium text-rose"><%= number_to_currency(@refund_cents / 100.0) %></td></tr>
+            <tr class="hover:bg-cream"><td class="td font-semibold text-ink">Net revenue</td><td class="td num font-semibold text-ink"><%= number_to_currency(@net_cents / 100.0) %></td></tr>
+          </tbody>
+        </table>
+      <% end %>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
-          <tr><th scope="col" class="th">Line</th><th scope="col" class="th text-right">Amount</th></tr>
-        </thead>
-        <tbody class="divide-y divide-fog">
-          <tr class="hover:bg-cream">
-            <td class="td text-mocha">Gross revenue</td>
-            <td class="td text-right font-medium text-ink"><%= number_to_currency(@revenue_cents / 100.0) %></td>
-          </tr>
-          <tr class="hover:bg-cream">
-            <td class="td text-mocha">Tax collected</td>
-            <td class="td text-right font-medium text-ink"><%= number_to_currency(@tax_cents / 100.0) %></td>
-          </tr>
-          <tr class="hover:bg-cream">
-            <td class="td text-mocha">Refunds</td>
-            <td class="td text-right font-medium text-rose"><%= number_to_currency(@refund_cents / 100.0) %></td>
-          </tr>
-          <tr class="hover:bg-cream">
-            <td class="td font-semibold text-ink">Net revenue</td>
-            <td class="td text-right font-semibold text-ink"><%= number_to_currency(@net_cents / 100.0) %></td>
-          </tr>
-        </tbody>
-      </table>
+
+    <div class="card overflow-hidden">
+      <div class="border-b border-fog px-5 py-3">
+        <h2 class="font-display text-lg text-ink">Payment tenders</h2>
+        <p class="text-xs text-mocha">Completed payments on orders in this window; <%= link_to 'sales tax by source', sales_tax_reports_path(report_window_params), class: 'underline' %> has its own tab.</p>
+      </div>
+      <% tender_total = @tenders.values.sum %>
+      <%= report_table 'financial-tenders', label: 'Payment tenders' do %>
+        <table class="operations-table w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr><th scope="col" class="th" data-col="method">Method</th><th scope="col" class="th num" data-col="amount">Amount</th><th scope="col" class="th num" data-col="share">Share</th></tr>
+          </thead>
+          <tbody class="divide-y divide-fog">
+            <% @tenders.sort_by { |_, amount| -amount }.each do |method, amount| %>
+              <tr class="hover:bg-cream">
+                <td class="td"><%= method.to_s.humanize.presence || 'Unknown' %></td>
+                <td class="td num" data-sort-value="<%= amount %>"><%= number_to_currency(amount) %></td>
+                <td class="td num"><%= tender_total.zero? ? '—' : number_to_percentage(amount * 100.0 / tender_total, precision: 1) %></td>
+              </tr>
+            <% end %>
+            <% if @tenders.empty? %><tr><td class="empty-row" colspan="3">No payment data in this window.</td></tr><% end %>
+          </tbody>
+        </table>
+      <% end %>
     </div>
   </div>
 <% end %>

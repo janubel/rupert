@@ -25,6 +25,7 @@ module People
       @month = (@from.beginning_of_month..@from.end_of_month)
       @calendar_days = @history.calendar_days
       @rows = @history.rows
+      @coverage = TimeSourceCoverage.for(Current.user)
     rescue Date::Error
       redirect_to people_punch_history_path, alert: 'Choose valid dates.'
     end
@@ -38,17 +39,12 @@ module People
     def set_scope
       @all_employees = Current.user.can_review_timesheets? || (Current.user.can_manage_accounts? && Current.user.can?('timesheets.read'))
       @worker_id = @all_employees ? nil : TimeClockService.worker_for(Current.user, include_on_leave: true)&.id
-      @from = parse_date(params[:from]) || Date.current.beginning_of_month
-      @to = parse_date(params[:to]) || Date.current
+      range = TimeRangePicker.resolve(params)
+      @from = range.from || Date.current.beginning_of_month
+      @to = range.to || Date.current
       redirect_to people_punch_history_path, alert: 'Choose an end date on or after the start date.' if @to < @from
     rescue Date::Error
       redirect_to people_punch_history_path, alert: 'Choose valid dates.'
-    end
-
-    def parse_date(value)
-      return nil if value.blank?
-
-      Date.iso8601(value)
     end
   end
 end

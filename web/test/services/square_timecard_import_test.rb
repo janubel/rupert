@@ -113,6 +113,26 @@ class SquareTimecardImportTest < ActiveSupport::TestCase
     assert_equal 8, sheet.entries.sum(:hours)
   end
 
+  def open_clock_in(worker, at, token)
+    user = User.create!(tenant: Current.tenant, email: "#{token}@example.invalid", password: 'password123', role: 'employee')
+    worker.update!(user: user)
+    ClockShift.create!(user: user, employee: worker, employee_key: worker.id.to_s, employee_name: worker.name,
+      employment_type: 'part_time', request_token: token, started_at: Time.zone.parse(at))
+  end
+
+  test 'a clock-in left open for days does not hold every later Square card, but a fresh one still does' do
+    open_clock_in(@worker, '2026-10-03 09:00', 'stale_open_token_123')
+    result = import([card])
+    assert_equal({ 'imported' => 1 }, result[:statuses], 'clock-in 2 days earlier was a missed clock-out')
+    assert_equal 28_800, SquareTimecardDay.sum(:payable_seconds)
+
+    other = People::Employee.create!(first_name: 'Fresh', last_name: 'Open')
+    EmployeeSourceIdentity.create!(employee: other, source: 'square', external_id: 'native-team-2')
+    open_clock_in(other, '2026-10-05 08:00', 'fresh_open_token_456')
+    result = import([card('fresh-overlap', team_member_id: 'native-team-2')])
+    assert_equal({ 'conflict' => 1 }, result[:statuses], 'a clock-in an hour earlier still overlaps')
+  end
+
   test 'new source IDs overlapping imported history are held and later local entry creation is guarded' do
     import([card])
     result = import([card, card('duplicate-native-interval')])

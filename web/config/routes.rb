@@ -171,6 +171,10 @@ Rails.application.routes.draw do
   resources :api_access_tokens, only: %i[index create] do
     member { post :revoke }
   end
+  # Model Context Protocol endpoint for external AI assistants (docs/mcp.md).
+  post '/mcp', to: 'mcp#create', as: :mcp
+  match '/mcp', to: 'mcp#method_not_allowed', via: %i[get put patch delete]
+  resources :agent_feedbacks, path: 'ai_feedback', only: %i[index update]
 
   mount ShopifyApp::Engine, at: '/api'
 
@@ -254,6 +258,7 @@ Rails.application.routes.draw do
         post :restore
       end
     end
+    resources :expense_categories, only: %i[index new create edit update]
     resources :expenses, only: %i[index new create edit update destroy] do
       member { post :restore }
     end
@@ -316,6 +321,7 @@ Rails.application.routes.draw do
       end
     end
     get 'team_schedule', to: 'team_schedule#index', as: :team_schedule
+    get 'time_keeping', to: 'time_keeping#index', as: :time_keeping
     resources :leave_requests, only: %i[index show new create destroy] do
       member do
         post :approve
@@ -378,6 +384,7 @@ Rails.application.routes.draw do
     collection do
       get :register_summary
       get :sales
+      get :sales_tax
       get :financial
       get :inventory
       get :operations
@@ -401,6 +408,7 @@ Rails.application.routes.draw do
       post :push_guard_unfreeze
     end
   end
+  resources :swipesimple_items, only: %i[index create]
   resources :swipesimple_reports, only: %i[index create] do
     collection { post :preview }
     member { get :document }
@@ -439,6 +447,13 @@ Rails.application.routes.draw do
   post '/customer_display/pay', to: 'customer_displays#pay', as: :customer_pay
   resources :ctrax_days, only: %i[index show create] do
     member { post :review }
+    collection { get :items }
+  end
+  resources :swipesimple_days, only: :index do
+    collection do
+      post :review
+      post :deposit_merchant
+    end
   end
   get '/ctrax_pos', to: 'ctrax_pos#index', as: :ctrax_pos
   post '/ctrax_pos/:location_id/quote', to: 'ctrax_pos#quote', as: :quote_ctrax_pos

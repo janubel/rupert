@@ -64,6 +64,11 @@
         <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="low_stock_threshold">Low-stock threshold</label>
         <input type="number" id="low_stock_threshold" name="low_stock_threshold" value="<%= TenantSettings.low_stock_threshold %>" min="0" class="input">
       </div>
+      <div>
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="sales_tax_rate">Sales tax rate % (for estimates)</label>
+        <input type="text" inputmode="decimal" id="sales_tax_rate" name="sales_tax_rate" value="<%= TenantSettings.sales_tax_rate %>" placeholder="e.g. 6.35" class="input" aria-describedby="sales_tax_rate_hint">
+        <p id="sales_tax_rate_hint" class="mt-1 text-xs text-mocha">Only used to estimate tax for sources that do not report it, such as SwipeSimple. Leave blank for no estimate.</p>
+      </div>
       <div class="sm:col-span-3">
         <%= submit_tag "Save business settings", class: "btn-primary" %>
       </div>

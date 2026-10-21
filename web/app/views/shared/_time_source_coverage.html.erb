@@ -1,0 +1,26 @@
+<%# Compact strip: what time history Rupert holds per source, how fresh it is and what is held back. %>
+<section class="space-y-2" aria-label="Time sources">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h2 class="text-lg font-semibold">Time sources</h2>
+    <p class="text-xs text-mocha">Separate records. Overlapping hours are never added together; held records count no hours.</p>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-3">
+    <% coverage.each do |source| %>
+      <article class="card card-pad space-y-1 min-w-0" data-time-source="<%= source.key %>">
+        <div class="flex items-baseline justify-between gap-2">
+          <h3 class="font-semibold"><%= source.label %></h3>
+          <span class="text-sm text-mocha"><%= number_with_delimiter(source.records) %> records</span>
+        </div>
+        <p class="text-sm"><span class="font-semibold"><%= number_with_precision(source.hours, precision: 1) %></span> counted hours<% if source.held.positive? %> · <span class="text-rose font-semibold"><%= source.held %></span> <%= source.held_label %><% end %></p>
+        <p class="text-xs text-mocha">
+          <% if source.first_at %><%= source.first_at.to_date.strftime('%b %-d, %Y') %> → <%= source.last_at.to_date.strftime('%b %-d, %Y') %><% else %>No records yet<% end %>
+          <% if source.last_read_at %> · read <%= time_ago_in_words(source.last_read_at) %> ago<% end %>
+        </p>
+        <% if source.path == :square %><%= link_to 'View Square history', people_square_timesheets_path, class: 'text-sm text-olive underline' %>
+        <% elsif source.path == :ctrax %><%= link_to 'View C-Trax history', people_ctrax_timesheets_path, class: 'text-sm text-olive underline' %>
+        <% else %><%= link_to 'View all Rupert timesheets', people_timesheets_path(status: 'all'), class: 'text-sm text-olive underline' %>
+        <% end %>
+      </article>
+    <% end %>
+  </div>
+</section>

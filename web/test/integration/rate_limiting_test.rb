@@ -4,6 +4,9 @@ require 'test_helper'
 
 class RateLimitingTest < ActionDispatch::IntegrationTest
   setup do
+    # Rack::Attack counts per fixed time window; a run that crossed a window
+    # boundary reset the counter and the expected 429 never came. Freeze time.
+    freeze_time
     Rack::Attack.enabled = true
     Rack::Attack.cache.store.clear
     @tenant = tenants(:default_tenant)
@@ -13,6 +16,7 @@ class RateLimitingTest < ActionDispatch::IntegrationTest
   teardown do
     Rack::Attack.cache.store.clear
     Rack::Attack.enabled = false
+    unfreeze_time
   end
 
   test 'secret-bearing settings endpoints are throttled per IP with a Retry-After header' do
@@ -51,5 +55,18 @@ class RateLimitingTest < ActionDispatch::IntegrationTest
 
     get '/api/v1/catalog', headers: { 'Authorization' => 'Bearer rupert_not-a-real-token-but-shaped-like-one-000000000' }
     assert_response :unauthorized, 'a presented token uses its own bucket and reaches authentication'
+  end
+
+  test 'the MCP endpoint has its own per-token bucket' do
+    headers = { 'Authorization' => 'Bearer rupert_not-a-real-token-but-shaped-like-one-000000000', 'Content-Type' => 'application/json' }
+    body = { jsonrpc: '2.0', id: 1, method: 'ping' }.to_json
+    Rack::Attack.throttles['mcp/token'].limit.times do
+      post '/mcp', params: body, headers: headers
+      assert_response :unauthorized
+    end
+    post '/mcp', params: body, headers: headers
+    assert_response :too_many_requests
+    get '/api/v1/catalog', headers: headers
+    assert_response :unauthorized, 'the REST API bucket is separate'
   end
 end

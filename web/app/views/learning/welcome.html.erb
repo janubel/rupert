@@ -1,7 +1,7 @@
 <% content_for :title, 'Welcome' %>
 <% first_name = Current.user.display_name.to_s.split(/\s+/).first %>
 <% areas = Current.user.employee? ? [] : nav_areas %>
-<% area_blurbs = { 'overview' => 'Today’s numbers and what needs attention.', 'sell' => 'Sales, the register, daily close and customers.', 'marketing' => 'Community threads, influencers and offers.', 'stock' => 'Inventory, counts, transfers, alerts and purchasing.', 'money' => 'Bookkeeping, reports, reconciliation and the ledger.', 'work' => 'Projects, tasks, goals and KPIs.', 'me' => 'Your own receipts and hours.', 'team' => 'Staff, schedules, timesheets, leave and payroll.', 'system' => 'Connections, sync, settings and access.' } %>
+<% area_blurbs = { 'overview' => 'Today’s numbers and what needs attention.', 'sell' => 'Sales, the register, daily close and customers.', 'marketing' => 'Community threads, influencers and offers.', 'stock' => 'Inventory, counts, transfers, alerts and purchasing.', 'money' => 'Bookkeeping, reconciliation and the ledger.', 'reports' => 'Sales, sales tax, financial and inventory reports with your own dates and columns.', 'work' => 'Projects, tasks, goals and KPIs.', 'me' => 'Your own receipts and hours.', 'team' => 'Staff, schedules, timesheets, leave and payroll.', 'system' => 'Connections, sync, settings and access.' } %>
 <div class="mx-auto max-w-3xl space-y-8">
   <header class="space-y-3">
     <p class="eyebrow text-olive-deep">Welcome<%= ", #{first_name}" if first_name.present? %></p>
