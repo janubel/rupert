@@ -74,7 +74,19 @@ Counts live in `ask_rupert_usages` (counters only: person, time, provider, model
 ## Operating notes
 
 - Turn it off for a workspace with the checkbox on the usage page, or take **Rupert Chat** away from a role. The header button and its endpoints disappear for whoever lacks it.
-- Sharing a chat with others and group chats are not built. Buzz already does group conversation; add it here if and when it is needed.
+- Sharing a chat with others and group chats are not built in Rupert. Buzz already does group conversation. A first, help-only version of Ask Rupert in Buzz exists (below); the design for the rest is in `buzz-ask-rupert-design.md`.
 - If answers stop, check **System → Ask Rupert usage** for failed replies, then the opencode CLI and its key on the host (the AI-health page, when present, shows the provider state).
 - Deleting a user does not delete usage counters; the retention job removes them after 35 days.
 - Routes: `GET /ask_rupert.json`, `POST /ask_rupert/conversations`, `GET /ask_rupert/conversations` (history), `GET|DELETE /ask_rupert/conversations/:id`, `POST …/messages`, `POST …/report`, `GET|PATCH /ask_rupert/usage`.
+
+## In Buzz (off by default)
+
+An administrator can let the `@rupert` agent in Buzz answer linked people with the same help, from **System → Ask Rupert usage → Let the @rupert agent in Buzz answer linked people**. Restart the agent after changing it. Nothing changes while it is off.
+
+- **Linking** (Buzz page → *Link your Buzz account*): the person makes a one-time code in Rupert (10 minutes, only its digest is stored), sends `link CODE` to `@rupert` in a **direct message**, then confirms the public key (shown as an `npub`) back in Rupert. Both steps are needed. A code posted in a channel is refused and burned. The key comes from the signed Nostr event, never from anything typed or any name. Links are checked on every message: a person who is deactivated, an employee-app account, or without Rupert Chat stops being answered at once. Linking, confirming, removing and refused attempts are in the Activity log (first 8 characters of the key only).
+- **What the agent does there:** in a direct message and when mentioned in any channel it has been added to, it answers a linked person from their own pages and Learn Rupert lessons (`AskRupert::HelpBrain`), through the same model settings, disclosure, redaction and per-person limits as the panel. **Only `where_is` and `how_do_i` exist in Buzz.** `search`, `run_report`, `system_status` and `file_report` are never offered there, and are refused if the model asks, because Rupert cannot know who else reads a channel or how long the Buzz relay keeps it. In a room, pages a person lacks are not mentioned. Replies show the page title and its full address (`RUPERT_PUBLIC_ORIGIN`, else `HOST`).
+- **Unlinked people** get one hint (at most once every 30 minutes per channel) and nothing else outside the team channel.
+- **The team channel** (`BUZZ_CHANNEL`) behaves as before for everyone, including the operations snapshot it already showed; only link codes are handled differently there.
+- **Storage:** nothing is saved in Rupert for these answers except the usage counters (they share the panel's limits). The Buzz relay keeps what people write, and Rupert cannot clear it.
+- **Channels:** with the switch on the agent also learns which channels and direct messages it is in from the relay's member lists, and keeps what was said per channel, so a direct message never reaches another channel's prompt. A conversation counts as private only when the member list says it is the agent and exactly that sender.
+- **Not verified:** no live relay was available; the subscription to member lists and add notices follows Buzz's `NOSTR.md` and is covered by tests with the relay stubbed.

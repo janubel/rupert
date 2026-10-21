@@ -69,6 +69,10 @@ bin/rails buzz:prompt > ../docs/ops/buzz-agent-prompt.txt
 
 Behaviour notes from the audit, now in the prompt: unaddressed replies are rare (the model answers `SKIP` otherwise; the runner also waits 45 seconds between unsolicited replies); the agent is told to name Rupert areas and pages instead of guessing URLs; it never has write access, so approvals, stock or SKU pushes and settings stay with people.
 
+## Ask Rupert in Buzz (off by default)
+
+People can link their Buzz account to their Rupert account (Buzz page, *Link your Buzz account*) and, once an administrator turns on **Let the @rupert agent in Buzz answer linked people** (System → Ask Rupert usage), `@rupert` answers them in direct messages and when mentioned in other channels with where-things-are and how-to help only. The team channel is unchanged. Details, limits and what is stored are in `ask-rupert.md` ("In Buzz") and `buzz-ask-rupert-design.md`. The agent needs a restart after the switch changes, and must be a member of any channel it should answer in.
+
 ## Turning it on
 
 1. Run a Buzz relay (<https://github.com/block/buzz>, Railway one-click or the Compose bundle) and create the team channel.
