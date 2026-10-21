@@ -38,7 +38,7 @@ class ShopifyClientTest < ActiveSupport::TestCase
 
   test 'shopify.app.toml application_url resolves to the documented production host' do
     toml = File.read(Rails.root.join('..', 'shopify.app.toml'))
-    assert_equal 'https://rupert.stoverparc.org', toml[/^application_url\s*=\s*"([^"]+)"/, 1]
+    assert_equal 'https://herbalhealers.rupertpos.com', toml[/^application_url\s*=\s*"([^"]+)"/, 1]
   end
 
   test 'token exchange caches per workspace, refreshes when forced and fails with a typed credential error' do

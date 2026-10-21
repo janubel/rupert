@@ -1,6 +1,6 @@
 # Reviewed sales imports and daily register reports
 
-Reviewed 2026-10-15. [Open Rupert Sync](https://rupert.stoverparc.org/syncs#swipesimple) or [open daily register reports](https://rupert.stoverparc.org/reports/register_summary). Sign in with the relevant store permissions.
+Reviewed 2026-10-15. [Open Rupert Sync](https://herbalhealers.rupertpos.com/syncs#swipesimple) or [open daily register reports](https://herbalhealers.rupertpos.com/reports/register_summary). Sign in with the relevant store permissions.
 
 For native vendor transaction/invoice exports, payment results, refunds and tip reporting, see [SwipeSimple read-only reporting and hourly SER8 intake](https://github.com/techmore/rupert/blob/main/docs/ops/swipesimple-reporting.md). The prepared item CSV below remains a separate workflow.
 

@@ -6,7 +6,7 @@ Centralized inventory operations: a Shopify + Square sync
 engine with a web dashboard (neutral blue palette, light and dark themes), backed by SQLite in production. Runs as a
 Ruby on Rails 8.1 app (based on the
 [Shopify Ruby app template](https://github.com/Shopify/shopify-app-template-ruby))
-and is currently hosted at [rupert.stoverparc.org](https://rupert.stoverparc.org/).
+and is currently hosted at [herbalhealers.rupertpos.com](https://herbalhealers.rupertpos.com/).
 
 ```
 Shopify ──┐                     ┌── Dashboard
@@ -162,7 +162,7 @@ manual source (`SwipesimpleImporter`) feeds CSV exports through the same seam.
 ## Production and deployment
 
 Production is hosted on SER8 in Incus and served at
-[rupert.stoverparc.org](https://rupert.stoverparc.org/). GitHub is the source
+[herbalhealers.rupertpos.com](https://herbalhealers.rupertpos.com/). GitHub is the source
 repository; pushing a commit or creating a GitHub release does not deploy it.
 
 The SER8 web/worker/backup units and the host-side watcher and off-host backup scripts are under `deploy/`. The pre-Incus droplet units and the original Node/React implementation (`legacy/`) were removed on 2026-10-20; they remain in git history (`git show 03db8bb:legacy/README.md`).

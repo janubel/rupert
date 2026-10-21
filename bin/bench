@@ -4,9 +4,9 @@
 # RUNS requests per page reusing one connection. Prints median ms + http status.
 set -euo pipefail
 
-PUB="https://herbalhealers.cybersecuritypilot.org"
+PUB="https://herbalhealers.rupertpos.com"
 LOC="http://localhost:3000"
-HOST="herbalhealers.cybersecuritypilot.org"
+HOST="herbalhealers.rupertpos.com"
 EMAIL="${BENCH_EMAIL:-bench@example.com}"
 PASS="${BENCH_PASS:-BenchPass123!}"
 RUNS="${BENCH_RUNS:-5}"

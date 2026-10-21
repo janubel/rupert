@@ -12,7 +12,7 @@ set -uo pipefail
 umask 022
 APP=${RUPERT_AUTODEPLOY_APP:-/opt/rupert}
 REPO=techmore/rupert
-HOST=rupert.stoverparc.org
+HOST=herbalhealers.rupertpos.com
 BACKUPS=${RUPERT_AUTODEPLOY_BACKUPS:-/var/backups/rupert-autodeploy}
 STATE=${RUPERT_AUTODEPLOY_STATE:-/var/lib/rupert-autodeploy}
 LOCK=${RUPERT_AUTODEPLOY_LOCK:-/run/rupert-autodeploy.lock}

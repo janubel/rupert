@@ -53,7 +53,7 @@ Never restore an older database over newer transactions as a test. A restore is 
 5. **Verify**: `sqlite3 production.restored.sqlite3 'PRAGMA integrity_check; PRAGMA foreign_key_check;'` must print `ok` and nothing else. Compare row counts of `orders`, `customers`, `ShopifyVariant`, `settings` with the operator log or the drill output.
 6. **Keys**: if `/etc/rupert.env` was lost too, restore it from the `env-<stamp>` file of the same set (off-host: `env-sqlite-<stamp>.enc`). The `RAILS_ENCRYPTION_*` values must be the originals; new keys cannot read old ciphertext.
 7. **Swap**: `mv production.restored.sqlite3 production.sqlite3 && rm -f production.sqlite3-wal production.sqlite3-shm && chown rupert:rupert production.sqlite3`.
-8. **Start** `systemctl start rupert-web rupert-jobs`, then check `curl -s https://rupert.stoverparc.org/up/ready` (expect `"status":"ready"` once the worker heartbeat and the next sync land, within 15 minutes), sign in, open Inventory and Sales for today.
+8. **Start** `systemctl start rupert-web rupert-jobs`, then check `curl -s https://herbalhealers.rupertpos.com/up/ready` (expect `"status":"ready"` once the worker heartbeat and the next sync land, within 15 minutes), sign in, open Inventory and Sales for today.
 9. **Re-sync**: run a full sync from the Sync page. The mirror is idempotent; the watermark re-reads the last 48 hours of orders plus whatever was lost.
 10. **Record** what was restored, from which stamp, the data gap (RPO actually incurred) and the elapsed time (RTO actually achieved).
 

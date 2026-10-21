@@ -4,7 +4,7 @@ Reviewed 2026-10-15. A company can request its own private Rupert workspace on t
 
 ## Request a workspace
 
-Open [Request a private company workspace](https://rupert.stoverparc.org/signup), also linked from the sign-in page. Enter a workspace name, a preferred workspace address label and the company's email domain. Continue with a Google account whose verified email matches that domain. Common consumer email domains are excluded from this company-workspace request flow; existing approved users can continue signing in normally.
+Open [Request a private company workspace](https://herbalhealers.rupertpos.com/signup), also linked from the sign-in page. Enter a workspace name, a preferred workspace address label and the company's email domain. Continue with a Google account whose verified email matches that domain. Common consumer email domains are excluded from this company-workspace request flow; existing approved users can continue signing in normally.
 
 The request is saved for platform review. Submitting it does not create an active workspace, sign the applicant into another store or reserve the requested address. Google confirms the email identity, not legal ownership of the domain. The platform administrator should confirm the applicant's authority to represent the company before approval. Password-only self-registration and non-Google identity providers are not included in this release.
 
@@ -14,7 +14,7 @@ The preferred workspace address is a label within Rupert. Saving it does not con
 
 ## Review new setups
 
-An active platform super-admin can open [Instance overview](https://rupert.stoverparc.org/platform), also available through the **Instance** header link and **System → Instance overview**. Ordinary store administrators and staff cannot open it, including accounts with delegated settings permissions.
+An active platform super-admin can open [Instance overview](https://herbalhealers.rupertpos.com/platform), also available through the **Instance** header link and **System → Instance overview**. Ordinary store administrators and staff cannot open it, including accounts with delegated settings permissions.
 
 The dashboard shows all-workspace and account totals, seven-day account creation, thirty-day workspace creation, active/inactive workspaces, pending/approved/rejected requests, allowed email-domain entries, saved provider setups and API-token counts. Pending requests have pages of up to 20 records; recent completed reviews and workspaces are limited to their latest 20 records. Totals cover the installation rather than only the visible page. Account counts represent Rupert user records, not unique human beings, paying subscribers or currently signed-in sessions. An active account flag does not override an inactive workspace.
 

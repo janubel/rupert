@@ -4,7 +4,7 @@ The one page for whoever keeps Rupert running day to day. Commands inside the SE
 
 ## Daily checks (five minutes, in the morning)
 
-1. `curl -s https://rupert.stoverparc.org/up/ready` → `{"status":"ready",...}`. Any `stale`, `missing`, `low` or `unavailable` is today's first job (table below).
+1. `curl -s https://herbalhealers.rupertpos.com/up/ready` → `{"status":"ready",...}`. Any `stale`, `missing`, `low` or `unavailable` is today's first job (table below).
 2. Dashboard → **Source sync status** cards: every connected source green with a read in the last 15–30 minutes.
 3. **System** page: failed jobs `0` (or explained), worker heartbeat recent, disk/DB size trend sane.
 4. **Sync** page: last scheduled run `success`; no run older than 45 minutes still `running`.

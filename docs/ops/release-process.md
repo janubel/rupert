@@ -38,8 +38,8 @@ If `reload` does not change the build header (old Puma pre-dates the unit's `Exe
 ## 3. Verify
 
 ```bash
-curl -sI https://rupert.stoverparc.org/up | grep -i x-rupert-build     # equals `git rev-parse v0.3.0`
-curl -s  https://rupert.stoverparc.org/up/ready                          # "ready" once the worker heartbeats and the next sync lands
+curl -sI https://herbalhealers.rupertpos.com/up | grep -i x-rupert-build     # equals `git rev-parse v0.3.0`
+curl -s  https://herbalhealers.rupertpos.com/up/ready                          # "ready" once the worker heartbeats and the next sync lands
 sudo systemctl status rupert-web rupert-jobs | grep -E "Active|NRestarts"
 ```
 

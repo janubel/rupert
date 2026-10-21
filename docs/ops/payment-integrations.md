@@ -78,7 +78,7 @@ See the [reviewed sales import and register report guide](https://techmore.githu
 
 ## Set up an account when ready
 
-[Open Rupert provider setup](https://rupert.stoverparc.org/pos_connections). Sign in with your authorized Rupert account.
+[Open Rupert provider setup](https://herbalhealers.rupertpos.com/pos_connections). Sign in with your authorized Rupert account.
 
 Open **System → POS & payments** or **Connections → POS & payments**. Review the provider, record the merchant/store or terminal reference and select the actual account environment. A trial/test label does not create a sandbox; obtain the correct test credentials from the vendor. For Valmar, confirm which gateway serves the account before choosing an adapter. For Authorize.net and NMI, the saved gateway choice reveals its specific credential fields. Recording a gateway or checking it does not configure the existing warehouse checkout or enable charges.
 
