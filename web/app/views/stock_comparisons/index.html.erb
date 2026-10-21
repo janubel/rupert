@@ -7,6 +7,7 @@
     <div class="flex flex-wrap gap-2">
       <%= link_to 'Review comparison results', '#stock-comparison-results', class: 'btn-primary' %>
       <%= link_to 'Download comparison CSV', stock_comparison_path(request.query_parameters.slice('q', 'filter', 'shopify_location_id', 'ctrax_location_id').merge(format: :csv)), class: 'btn-ghost' %>
+      <%= link_to 'Download comparison PDF', stock_comparison_path(request.query_parameters.slice('q', 'filter', 'shopify_location_id', 'ctrax_location_id').merge(format: :pdf)), class: 'btn-ghost', data: { turbo: false } %>
       <%= link_to 'Physical count worksheets', inventory_counts_path, class: 'btn-ghost' %>
       <%= link_to 'Source reads', syncs_path, class: 'btn-ghost' if Current.user.can?('sync.write') %>
     </div>
