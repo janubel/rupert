@@ -70,12 +70,22 @@ class StockComparisonPdfTest < ActionDispatch::IntegrationTest
     assert_equal 'application/pdf', response.media_type
   end
 
+  test 'the PDF reader retains a compressed stream ending in a carriage return byte' do
+    stream = (0..255).lazy.map do |padding|
+      Zlib::Deflate.deflate("[<3838303032>] TJ\n%#{'a' * padding}")
+    end.find { |bytes| bytes.getbyte(-1) == 13 }
+    assert stream, 'fixture must exercise the trailing carriage-return byte'
+    assert_includes pdf_text("stream\n".b + stream + "\nendstream".b), '88002'
+  end
+
   private
 
   # Inflate the content streams, then join each text operator's hex fragments
   # (kerning splits words) into readable lines.
   def pdf_text(body)
-    content = body.b.scan(/stream\r?\n(.*?)\r?\nendstream/m).flatten.map do |stream|
+    # Prawn writes LF before endstream. An optional CR here consumes a real
+    # trailing 0x0d byte in some compressed streams and invalidates their checksum.
+    content = body.b.scan(/stream\r?\n(.*?)\nendstream/m).flatten.map do |stream|
       Zlib::Inflate.inflate(stream)
     rescue Zlib::Error
       stream

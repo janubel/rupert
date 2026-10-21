@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix the stock-comparison PDF test reader dropping a valid compressed byte and intermittently reporting empty PDF text; add a deterministic regression fixture. Production PDF generation is unchanged.
+
 - Add reproducible nightly and cumulative patch/line totals to the build header, with a compact accessible disclosure, confirmed-fix evidence and release-note links. Totals are generated during asset builds, bound to the serving revision and unavailable when missing/stale; historical bug totals remain unknown.
 
 

@@ -1,6 +1,11 @@
 {
   "fixes": [
     {
+      "id": "pdf-test-compressed-trailing-byte",
+      "commit": "277609a74b6220ff2574457bb781c7b1a9265bac",
+      "summary": "Fix intermittent stock-comparison PDF test failures by retaining a valid trailing carriage-return byte in compressed streams. A deterministic binary regression reproduces the old reader corruption; production PDF output is unchanged."
+    },
+    {
       "id": "shopify-order-line-item-pagination",
       "commit": "ad654b642888b24de7edd3de387f03284d0234de",
       "summary": "Complete Shopify order line-item pagination rather than silently truncating oversized orders. Regression fixtures cover continuation and malformed/repeated pages."
