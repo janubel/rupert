@@ -14,6 +14,9 @@ module AskRupert
     REPORT_TOOLS = %w[sales_summary sales_tax_report inventory_search stock_comparison swipesimple_items
                       time_keeping_report list_tasks list_alerts list_reports list_uploads].freeze
     REPORT_KINDS = %w[bug request question].freeze
+    # What may be offered where other people can read the reply (a Buzz channel):
+    # navigation help only, never records, figures or settings.
+    SHARED_AUDIENCE_TOOLS = %w[where_is how_do_i].freeze
 
     Result = Struct.new(:ok, :text, :links, :draft, keyword_init: true)
     Definition = Struct.new(:name, :description, :properties, :required, :gate, :handler, keyword_init: true)
@@ -22,7 +25,13 @@ module AskRupert
 
     attr_reader :used
 
-    def initialize(user:, conversation: nil, message: nil)
+    # audience: :private (the signed-in person is the only reader, every tool they may use),
+    # :direct_help (only they read it, but the answer is navigation help only, as in a Buzz direct message)
+    # or :shared (others read the reply, navigation help that reveals nothing about this person's access).
+    def initialize(user:, conversation: nil, message: nil, audience: :private)
+      raise ArgumentError, "unknown audience #{audience.inspect}" unless %i[private direct_help shared].include?(audience)
+
+      @audience = audience
       @user = user
       @conversation = conversation
       @message = message
@@ -32,7 +41,7 @@ module AskRupert
     end
 
     def definitions
-      @definitions ||= all_definitions.select { |definition| definition.gate.call }
+      @definitions ||= all_definitions.select { |definition| audience_allows?(definition.name) && definition.gate.call }
     end
 
     def names = definitions.map(&:name)
@@ -81,6 +90,10 @@ module AskRupert
     end
 
     private
+
+    def audience_allows?(name)
+      @audience == :private || SHARED_AUDIENCE_TOOLS.include?(name)
+    end
 
     def all_definitions
       [
@@ -136,7 +149,8 @@ module AskRupert
         "- #{page[:title]}#{" (#{page[:area]})" if page[:area]}: #{page[:path]}#{" — lesson: #{page[:lesson][:title]} #{page[:lesson][:path]}" if page[:lesson]}"
       end
       lines += found[:elsewhere].map { |extra| "- #{extra[:title]}: #{extra[:where]}" }
-      lines += found[:not_available].map { |name| "- #{name}: exists in Rupert but is not part of this person’s access; they can ask an administrator." }
+      # Which pages are not someone's would show the shape of their access to everyone reading.
+      lines += found[:not_available].map { |name| "- #{name}: exists in Rupert but is not part of this person’s access; they can ask an administrator." } unless @audience == :shared
       lines = ['No matching page for this person. Try other words, or suggest the search (/) or Learn Rupert (/learning).'] if lines.empty?
       links = found[:pages].map { |page| { title: page[:title], path: page[:path], kind: 'page' } } +
               found[:pages].filter_map { |page| page[:lesson]&.then { |lesson| { title: lesson[:title], path: lesson[:path], kind: 'lesson' } } }

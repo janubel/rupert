@@ -1,7 +1,4 @@
 <div class="space-y-5">
-  <section>
-    <p class="eyebrow text-olive">Projects</p>
-    <h1 class="page-title">Edit project</h1>
-  </section>
+  <%= page_header 'Edit project', eyebrow: 'Projects' %>
   <%= render "form", project: @project, url: projects_project_path(@project), method: :patch, submit: "Save project", cancel_path: @project %>
 </div>

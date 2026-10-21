@@ -197,6 +197,9 @@ Rails.application.routes.draw do
   get '/dashboard', to: 'home#index'
   get '/roadmap', to: 'roadmap#index', as: :roadmap
   get '/buzz', to: 'buzz#show', as: :buzz
+  post '/buzz/link', to: 'buzz_links#create', as: :buzz_link
+  post '/buzz/link/:id/confirm', to: 'buzz_links#confirm', as: :confirm_buzz_link
+  delete '/buzz/link/:id', to: 'buzz_links#destroy', as: :remove_buzz_link
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)

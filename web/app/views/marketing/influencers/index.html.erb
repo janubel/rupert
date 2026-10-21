@@ -1,5 +1,7 @@
 <div class="space-y-6">
-  <div class="flex flex-wrap items-center gap-3"><h1 class="page-title">Influencers</h1><%= link_to 'Community marketing', marketing_path, class: 'btn-ghost' %><% if Current.user.can?('marketing.write') %><%= link_to 'Add influencer', new_marketing_influencer_path, class: 'btn-primary' %><% end %></div>
+  <%= page_header 'Influencers' do %>
+    <%= link_to 'Community marketing', marketing_path, class: 'btn-ghost' %><% if Current.user.can?('marketing.write') %><%= link_to 'Add influencer', new_marketing_influencer_path, class: 'btn-primary' %><% end %>
+  <% end %>
   <p class="text-sm text-mocha">Track prospects, collaborations, product gifts, temporary codes and campaign documents. Contact and shipment details have separate access permissions.</p>
   <%= form_with url: marketing_influencers_path, method: :get, class: 'card card-pad flex flex-wrap gap-3' do |f| %>
     <%= f.search_field :q, value: params[:q], placeholder: 'Name, handle or topic', 'aria-label': 'Search influencers', class: 'input' %>
