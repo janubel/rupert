@@ -546,9 +546,11 @@ class PageGuides
     ),
     'reports' => Guide.new(
       key: 'reports', title: 'Reports',
-      summary: 'Financial and operational reports — sales, money, inventory, and operations.',
+      summary: 'Every report in one place — sales, sales tax, financial, inventory, operations, reconciliation and the daily register.',
       sections: [
-        { heading: "What you're seeing", body: 'Report views for sales, financials, inventory, and operations, pulled from the mirrored data. Export options let you take numbers to spreadsheets.' }
+        { heading: "What you're seeing", body: 'Report tabs for sales, sales tax, financials, inventory, operations and reconciliation, pulled from the mirrored data. Every report takes your own from and to dates or a preset such as last month or last quarter.' },
+        { heading: 'Customizable tables', body: 'Every report table lets you choose its columns, sort by any heading, narrow rows by typing and download only the rows and columns you see. The layout is remembered in this browser; Reset restores the default.' },
+        { heading: 'Sales tax', body: 'Tax collected per source and store — Shopify, Square, Rupert POS, C-Trax and SwipeSimple. Sources stay on separate lines because one card sale can appear in a store and in its processor. SwipeSimple does not report tax; enter your tax rate to see a labelled estimate.' }
       ],
       tips: [
         'Run a sync first so reports always use the freshest data.'

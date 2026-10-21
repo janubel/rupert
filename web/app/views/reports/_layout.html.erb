@@ -1,28 +1,38 @@
 <% content_for :title, title %>
+<% extra = request.query_parameters.slice('sources', 'rate').to_h.symbolize_keys %>
+<% custom = @to_date && @range %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= title %></h1>
-      <p class="mt-1 text-sm text-mocha"><%= subtitle %></p>
-    </div>
-    <div class="flex max-w-full flex-wrap items-center gap-2">
-      <div class="flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-fog bg-paper p-1" <%= tour_anchor('tabs') %>>
-        <% { "sales" => "Sales", "financial" => "Financial", "inventory" => "Inventory", "operations" => "Operations", "reconciliation" => "Reconciliation" }.each do |key, label| %>
-          <%= link_to label, send("#{key}_reports_path", days: @days), class: "nav-pill #{params[:action] == key ? "nav-pill-active" : "nav-pill-idle"}", aria: { current: (params[:action] == key ? "page" : nil) } %>
-        <% end %>
+  <section class="space-y-3">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="page-title"><%= title %></h1>
+        <p class="mt-1 text-sm text-mocha"><%= subtitle %></p>
       </div>
-      <%= form_tag url_for(action: params[:action]), method: :get, class: "flex flex-wrap items-center gap-2", data: { tour: 'window' } do %>
-        <%= select_tag :days, options_for_select([["7 days", 7], ["30 days", 30], ["90 days", 90], ["1 year", 365]], @days), class: "select" %>
-        <span class="text-xs text-taupe">or</span>
-        <%= text_field_tag :from, @to_date ? (@range.to_date.iso8601) : "", type: "date", class: "select", title: "Start date" %>
-        <span class="text-xs text-taupe">→</span>
-        <%= text_field_tag :to, @to_date&.iso8601, type: "date", class: "select", title: "End date" %>
-        <%= submit_tag "Refresh", class: "btn-ghost btn-sm" %>
+      <div class="flex flex-wrap items-center gap-2">
+        <%= link_to "Books check", books_check_path(days: @days), class: "btn-ghost btn-sm", data: { tour: 'check' } %>
+        <%= link_to "Money reconciliation", money_reconciliations_path, class: "btn-ghost btn-sm" %>
+        <%= link_to "Daily controls & documents", daily_reconciliations_path, class: "btn-ghost btn-sm" %>
+        <%= link_to "CSV", url_for(extra.merge(action: params[:action], format: :csv, days: @days, from: custom ? @range.to_date.iso8601 : nil, to: @to_date&.iso8601)), class: "btn-ghost btn-sm", data: { turbo: false, tour: 'csv' } %>
+      </div>
+    </div>
+    <%= render 'reports/tabs' %>
+    <div class="card card-pad space-y-3" data-tour="window">
+      <%= form_tag url_for(action: params[:action]), method: :get, class: "flex flex-wrap items-end gap-2" do %>
+        <label class="text-xs text-taupe">Window
+          <%= select_tag :days, options_for_select([["7 days", 7], ["30 days", 30], ["90 days", 90], ["1 year", 365]], custom ? nil : @days), class: "select", include_blank: custom ? "Custom dates" : false %>
+        </label>
+        <span class="pb-2 text-xs text-taupe">or</span>
+        <label class="text-xs text-taupe">From <%= text_field_tag :from, custom ? @range.to_date.iso8601 : "", type: "date", class: "select" %></label>
+        <label class="text-xs text-taupe">To <%= text_field_tag :to, @to_date&.iso8601, type: "date", class: "select" %></label>
+        <%= yield :report_filters %>
+        <%= submit_tag "Refresh", class: "btn-primary btn-sm", name: nil %>
       <% end %>
-      <%= link_to "Books check", books_check_path(days: @days), class: "btn-ghost btn-sm", data: { tour: 'check' } %>
-      <%= link_to "Money reconciliation", money_reconciliations_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "Daily controls & documents", daily_reconciliations_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "CSV", url_for(action: params[:action], format: :csv, days: @days, from: @to_date ? @range.to_date.iso8601 : nil, to: @to_date&.iso8601), class: "btn-ghost btn-sm", data: { turbo: false, tour: 'csv' } %>
+      <nav class="flex flex-wrap gap-2 text-sm" aria-label="Quick date ranges">
+        <% report_date_presets.each do |label, from, to| %>
+          <% active = custom && @range.to_date == from && @to_date == to %>
+          <%= link_to label, url_for(extra.merge(action: params[:action], from: from.iso8601, to: to.iso8601)), class: "nav-pill #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (active ? 'true' : nil) } %>
+        <% end %>
+      </nav>
     </div>
   </section>
   <%= yield %>
