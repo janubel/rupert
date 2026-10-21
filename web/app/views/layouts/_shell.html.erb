@@ -90,9 +90,13 @@
   <% if (update = pending_update) %>
     <div role="status" class="mx-auto mt-4 max-w-6xl px-6" data-update-banner>
       <div class="flash flash-notice flex flex-wrap items-center justify-between gap-3">
-        <span><strong>Update available.</strong> <%= pluralize(update.behind_by, "newer change") %> on GitHub<%= " — latest: #{update.latest_message}" if update.latest_message %>.</span>
+        <span><strong>Update available.</strong> <%= pluralize(update.behind_by, "newer change") %> on GitHub<%= " — latest: #{update.latest_message}" if update.latest_message %>.<%= " #{update_install_hint}" if update_install_hint %></span>
         <span class="flex items-center gap-3">
-          <%= link_to 'See what changed', update.url, target: '_blank', rel: 'noopener', class: 'font-semibold underline' if update.url&.start_with?('https://github.com/') %>
+          <% if AutoUpdate.manager?(Current.user) %>
+            <%= link_to 'Review and install', system_updates_path, class: 'font-semibold underline' %>
+          <% else %>
+            <%= link_to 'See what changed', update.url, target: '_blank', rel: 'noopener', class: 'font-semibold underline' if update.url&.start_with?('https://github.com/') %>
+          <% end %>
           <%= button_to 'Dismiss', dismiss_update_notice_path, method: :post, class: 'font-semibold underline' %>
         </span>
       </div>

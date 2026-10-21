@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the Rupert deployer as soon as an admin asks for an update in the app
+
+[Path]
+# Written by Rupert (System → Updates). The deployer only reads its mtime.
+PathModified=/opt/rupert/web/storage/autodeploy/install-requested
+Unit=rupert-autodeploy.service
+
+[Install]
+WantedBy=paths.target

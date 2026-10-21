@@ -147,6 +147,22 @@ module ApplicationHelper
     UpdateChecker.pending
   end
 
+  # What the server's updater will do with the pending update, when it has one.
+  def update_install_hint
+    return @update_install_hint if defined?(@update_install_hint)
+
+    @update_install_hint = install_hint_for(AutoUpdate.status)
+  end
+
+  def install_hint_for(status)
+    return if status.nil? || AutoUpdate.stale?(status)
+    return 'Installing now.' if status.busy?
+    return 'The last install failed and was rolled back.' if status.failed?
+    return 'It installs when an operator clicks Install.' if AutoUpdate.manual?
+
+    'It installs automatically once its checks pass.'
+  end
+
   # Long explanatory copy shows its first sentence and keeps the rest one tap
   # away, so work screens stay scannable without hiding any caveat.
   def fold_explainer(text, **options)

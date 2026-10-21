@@ -417,6 +417,11 @@ Rails.application.routes.draw do
     member { get :document }
   end
   get '/system', to: 'system#index', as: :system
+  get '/system/updates', to: 'updates#show', as: :system_updates
+  post '/system/updates/check', to: 'updates#check', as: :check_system_updates
+  post '/system/updates/install', to: 'updates#install', as: :install_system_updates
+  delete '/system/updates/install', to: 'updates#cancel', as: :cancel_system_updates
+  patch '/system/updates/mode', to: 'updates#mode', as: :system_updates_mode
   get '/connections', to: 'connections#index', as: :connections
   get '/connections/:service/edit', to: 'connections#edit', as: :edit_connection
   patch '/connections/:service', to: 'connections#update', as: :connection
