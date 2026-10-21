@@ -1,0 +1,110 @@
+<%# opencode integration health. Counters and classifications only: no key, no message content. %>
+<% h = ai_health %>
+<% state_pill = { 'ok' => ['pill-fern', 'Healthy'], 'warning' => ['pill-clay', 'Needs attention'], 'error' => ['pill-rose', 'Not working'],
+                  'not_configured' => ['pill-taupe', 'Not configured'], 'unknown' => ['pill-taupe', 'No check yet'] }.fetch(h[:state]) %>
+<% key_label = { 'valid' => ['Valid', 'text-fern'], 'expired' => ['Expired', 'text-rose'], 'invalid' => ['Rejected', 'text-rose'],
+                 'missing' => ['Not set', 'text-mocha'], 'unchecked' => ['Unknown', 'text-mocha'] }.fetch(h[:key][:state]) %>
+<% model_label = { 'available' => ['Available', 'text-fern'], 'missing' => ['Not offered', 'text-rose'], 'unknown' => ['Unknown', 'text-mocha'] }.fetch(h[:model][:state]) %>
+<% check = h[:last_check] %>
+<% today = h[:tokens][:today] %>
+<% trend = h[:tokens][:trend] %>
+<% peak = [trend.map { |d| d[:tokens_in] + d[:tokens_out] + d[:tokens_reasoning] }.max.to_i, 1].max %>
+<section class="card card-pad" id="ai-health" aria-labelledby="ai-health-title">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h2 id="ai-health-title" class="font-display text-lg text-ink">AI health · opencode</h2>
+      <p class="mt-1 text-xs text-taupe">
+        <% if check[:checked_at] %>
+          Checked <%= time_ago_in_words(Time.zone.parse(check[:checked_at])) %> ago<%= " · #{check[:latency_ms]} ms" if check[:latency_ms] %>
+        <% else %>
+          No provider check has run yet.
+        <% end %>
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="<%= state_pill[0] %>"><%= state_pill[1] %></span>
+      <%= button_to 'Check now', check_system_ai_health_path, method: :post, class: 'btn-ghost btn-sm' %>
+    </div>
+  </div>
+
+  <% if h[:warnings].any? %>
+    <ul class="mt-4 space-y-2" aria-label="AI health warnings">
+      <% h[:warnings].each do |w| %>
+        <% classes = case w[:severity]
+                     when 'error' then 'border-danger-edge bg-danger-bg text-danger'
+                     when 'info' then 'border-fog bg-haze text-mocha'
+                     else 'border-warn-edge bg-warn-bg text-warn' end %>
+        <li class="rounded-xl border px-4 py-3 text-sm <%= classes %>" <%= 'role=alert' if w[:severity] == 'error' %>>
+          <span class="font-semibold"><%= { 'error' => 'Problem:', 'info' => 'Note:' }.fetch(w[:severity], 'Warning:') %></span>
+          <%= w[:message] %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <dl class="mt-4 grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
+    <div class="rounded-xl bg-haze px-4 py-3">
+      <dt class="text-xs font-medium text-mocha">API key</dt>
+      <dd class="font-display text-2xl <%= key_label[1] %>"><%= key_label[0] %></dd>
+      <% if h[:key][:code] %><dd class="mt-1 text-xs text-taupe break-words"><%= h[:key][:code] %></dd><% end %>
+    </div>
+    <div class="rounded-xl bg-haze px-4 py-3">
+      <dt class="text-xs font-medium text-mocha">Free models</dt>
+      <dd class="font-display text-2xl <%= h[:free_models][:count].positive? ? 'text-ink' : 'text-clay' %>"><%= h[:free_models][:count] %></dd>
+      <dd class="mt-1 text-xs text-taupe">listed live by opencode</dd>
+    </div>
+    <div class="rounded-xl bg-haze px-4 py-3">
+      <dt class="text-xs font-medium text-mocha">Agent model</dt>
+      <dd class="font-display text-2xl <%= model_label[1] %>"><%= model_label[0] %></dd>
+      <dd class="mt-1 text-xs text-taupe break-words"><%= h[:model][:id] %> · <%= h[:model][:provider] == 'go' ? 'OpenCode Go' : 'Zen' %></dd>
+    </div>
+    <div class="rounded-xl bg-haze px-4 py-3">
+      <dt class="text-xs font-medium text-mocha">Rate-limit hits</dt>
+      <% hits = h[:rate_limits][:runs_24h] + h[:rate_limits][:checks_24h] %>
+      <dd class="font-display text-2xl <%= hits.positive? ? 'text-clay' : 'text-ink' %>"><%= hits %></dd>
+      <dd class="mt-1 text-xs text-taupe">last 24 h · <%= h[:rate_limits][:runs_7d] %> agent runs in 7 d</dd>
+    </div>
+  </dl>
+
+  <div class="mt-4 grid gap-3 lg:grid-cols-2">
+    <div class="rounded-xl bg-haze px-4 py-3">
+      <p class="text-xs font-medium text-mocha">Tokens today</p>
+      <p class="font-display text-2xl text-ink">
+        <%= number_with_delimiter(today[:tokens_in]) %> <span class="text-sm text-mocha">in</span>
+        · <%= number_with_delimiter(today[:tokens_out]) %> <span class="text-sm text-mocha">out</span>
+      </p>
+      <p class="mt-1 text-xs text-taupe">
+        <%= pluralize(today[:runs], 'agent run') %> today
+        <% if today[:tokens_reasoning].positive? %> · <%= number_with_delimiter(today[:tokens_reasoning]) %> reasoning<% end %>
+        <% if today[:cache_read_tokens].positive? %> · <%= number_with_delimiter(today[:cache_read_tokens]) %> cached<% end %>
+        · last run <%= h[:agent][:last_run_at] ? "#{time_ago_in_words(Time.zone.parse(h[:agent][:last_run_at]))} ago (#{h[:agent][:last_outcome]})" : 'never recorded' %>
+      </p>
+    </div>
+    <div class="rounded-xl bg-haze px-4 py-3">
+      <p class="text-xs font-medium text-mocha">7-day trend <span class="text-taupe">· <%= number_with_delimiter(h[:tokens][:week_total]) %> tokens</span></p>
+      <div class="mt-2 flex h-16 items-end gap-1.5" role="img"
+           aria-label="Tokens per day, last 7 days: <%= trend.map { |d| "#{Date.parse(d[:date]).strftime('%a')} #{d[:tokens_in] + d[:tokens_out] + d[:tokens_reasoning]}" }.join(', ') %>">
+        <% trend.each do |d| %>
+          <% total = d[:tokens_in] + d[:tokens_out] + d[:tokens_reasoning] %>
+          <div class="flex h-full flex-1 flex-col items-center justify-end gap-1" title="<%= Date.parse(d[:date]).strftime('%b %-d') %>: <%= number_with_delimiter(total) %> tokens, <%= d[:runs] %> runs">
+            <div class="w-full rounded-t bg-olive" style="height: <%= total.zero? ? 2 : [(total * 100.0 / peak).round, 4].max %>%"></div>
+          </div>
+        <% end %>
+      </div>
+      <div class="mt-1 flex gap-1.5 text-[10px] text-taupe" aria-hidden="true">
+        <% trend.each do |d| %><span class="flex-1 text-center"><%= Date.parse(d[:date]).strftime('%a')[0, 2] %></span><% end %>
+      </div>
+    </div>
+  </div>
+
+  <% if h[:free_models][:ids].any? %>
+    <details class="mt-4 text-sm">
+      <summary class="cursor-pointer font-medium text-mocha">Free models right now</summary>
+      <ul class="mt-2 flex flex-wrap gap-2">
+        <% h[:free_models][:ids].each do |id| %><li class="pill-taupe font-mono"><%= id %></li><% end %>
+      </ul>
+    </details>
+  <% end %>
+
+  <p class="mt-4 text-xs text-taupe"><%= h[:usage_api][:note] %> Free models have IP-level limits; the key and message content are never shown or stored here.</p>
+</section>

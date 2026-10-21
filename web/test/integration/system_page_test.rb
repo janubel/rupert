@@ -29,6 +29,44 @@ class SystemPageTest < ActionDispatch::IntegrationTest
     assert_select 'h2', %r{Web server|Background jobs|Database}
   end
 
+  test 'AI health card shows the expired-key warning, tokens and rate limits without any secret' do
+    users(:regular_user).update!(role: 'super_admin')
+    AiHealthCheck.create!(status: 'error', key_state: 'expired', error_code: 'api_key_expired', model_state: 'available',
+      configured_model: 'deepseek-v4-flash', free_models: %w[beam-free glm-5.3-flash-free], free_model_count: 2, checked_at: 2.minutes.ago)
+    AiAgentRun.create!(outcome: 'ok', tokens_in: 1234, tokens_out: 56, occurred_at: 1.hour.ago)
+    AiAgentRun.create!(outcome: 'rate_limited', error_type: 'rate_limited', occurred_at: 30.minutes.ago)
+    get system_path
+    assert_response :success
+    assert_select '#ai-health h2', /AI health/
+    assert_select '#ai-health [role=alert]', /API key has expired/
+    assert_select '#ai-health', /1,234/
+    assert_select '#ai-health', /Not working/
+    assert_select '#ai-health li', 'beam-free'
+    assert_select '#ai-health form[action=?]', check_system_ai_health_path
+    assert_select '#ai-health [role=img][aria-label^=?]', 'Tokens per day'
+    assert_no_match(/Bearer|sk-/, response.body)
+  end
+
+  test 'AI health card before any check offers a check and explains there is none' do
+    users(:regular_user).update!(role: 'super_admin')
+    get system_path
+    assert_select '#ai-health', /No provider check has run yet/
+  end
+
+  test 'check now queues a provider check, throttled' do
+    users(:regular_user).update!(role: 'super_admin')
+    assert_enqueued_with(job: AiHealthCheckJob, args: ['manual']) { post check_system_ai_health_path }
+    assert_redirected_to system_path(anchor: 'ai-health')
+    AiHealthCheck.create!(status: 'ok', checked_at: 5.seconds.ago)
+    assert_no_enqueued_jobs(only: AiHealthCheckJob) { post check_system_ai_health_path }
+    assert_match(/just checked/, flash[:notice])
+  end
+
+  test 'a store admin cannot queue an AI health check' do
+    assert_no_enqueued_jobs(only: AiHealthCheckJob) { post check_system_ai_health_path }
+    assert_redirected_to root_path
+  end
+
   test 'store admin cannot view instance diagnostics despite the system permission' do
     assert users(:regular_user).can?('system.read')
     get system_path

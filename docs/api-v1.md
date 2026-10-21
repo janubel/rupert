@@ -31,8 +31,8 @@ hostnames and query parameters cannot change the token's tenant.
 | `inventory:read` | `GET /api/v1/inventory` | `inventory.read` |
 | `roadmap:read` | `GET /api/v1/roadmap` | Active owner |
 
-The scopes `reports:read`, `timesheets:read`, `tasks:read`, `alerts:read` and
-`tasks:write` currently gate only tools on the MCP server for AI assistants
+The scopes `reports:read`, `timesheets:read`, `tasks:read`, `alerts:read`,
+`system:read` and `tasks:write` currently gate only tools on the MCP server for AI assistants
 (`POST /mcp`). See [docs/mcp.md](mcp.md) for connecting Claude, ChatGPT and
 other assistants with the same tokens, the tool list and the feedback channel.
 
