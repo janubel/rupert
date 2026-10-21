@@ -79,6 +79,9 @@ module SwipesimpleWeb
       header = table.shift
       raise Error, 'The report headers changed.' unless header&.map { |cell| cell.to_s.strip } == headers
       raise Error, 'The report has too many rows.' if table.size > MAX_ROWS
+      # A period with no sales comes back as the header row alone (verified on
+      # the live tax export): no day rows and no Totals row.
+      return [] if table.empty?
 
       totals = table.pop
       raise Error, 'The report has no Totals row.' unless totals && totals.first.to_s.strip == 'Totals'
