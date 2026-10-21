@@ -107,4 +107,28 @@ class QuickbooksImportTest < ActiveSupport::TestCase
     assert_raises(QuickbooksImport::Error) { QuickbooksImport.stage!(bytes: "hello,world\n1,2\n", kind: 'journal', filename: 'x.csv', actor: nil) }
     assert_equal [0, 0], [ImportSourceDocument.count, ImportBatch.count]
   end
+
+  test 'an unreadable trailing line rejects its whole transaction instead of posting a balanced remainder' do
+    csv = "Date,Account,Debit,Credit\n01/02/2024,A,100.00,\n,B,,100.00\n,C,-50.00,\n,D,,-50.00\n01/03/2024,A,5.00,\n,B,,5.00\n"
+    batch = QuickbooksImport.stage!(bytes: csv, kind: 'journal', filename: 'x.csv', actor: nil).batch
+    assert_equal 2, batch.transaction_count
+    assert_equal %w[rejected staged], ImportTransaction.order(:txn_date).pluck(:status)
+    assert_equal 2, ImportLine.where(status: 'staged').count
+    assert_equal 4, ImportLine.where(status: 'rejected').count
+  end
+
+  test 'a zero-amount first line still starts its transaction so the lines under it are not merged into the one above' do
+    csv = "Date,Account,Debit,Credit\n01/02/2024,A,10.00,\n,B,,10.00\n01/03/2024,Z,0.00,\n,A,7.00,\n,B,,7.00\n"
+    batch = QuickbooksImport.stage!(bytes: csv, kind: 'journal', filename: 'x.csv', actor: nil).batch
+    assert_equal [2, 0], [batch.transaction_count, batch.rejected_count]
+    assert_equal [[Date.new(2024, 1, 2), 1000], [Date.new(2024, 1, 3), 700]], ImportTransaction.order(:txn_date).pluck(:txn_date, :debit_cents)
+  end
+
+  test 'continuation lines under a header whose date cannot be read are rejected, not attached to the previous transaction' do
+    csv = "Date,Account,Debit,Credit\n01/02/2024,A,10.00,\n,B,,10.00\nnot-a-date,A,3.00,\n,B,,3.00\n"
+    batch = QuickbooksImport.stage!(bytes: csv, kind: 'journal', filename: 'x.csv', actor: nil).batch
+    assert_equal [1, 2], [batch.accepted_count / 2, batch.rejected_count]
+    assert_equal [1000], ImportTransaction.where(status: 'staged').pluck(:debit_cents)
+    assert_equal 2, ImportLine.where(status: 'rejected').count
+  end
 end

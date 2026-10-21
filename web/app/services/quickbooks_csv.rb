@@ -21,7 +21,7 @@ class QuickbooksCsv
   YEARS = (1990..2099)
 
   Row = Struct.new(:row_no, :record_type, :date, :txn_type, :doc_number, :name, :memo, :account, :account_number, :account_type,
-    :debit_cents, :credit_cents, :class_name, :location, :txn_key, :raw, :reason, keyword_init: true) do
+    :debit_cents, :credit_cents, :class_name, :location, :txn_key, :raw, :reason, :skipped, keyword_init: true) do
     def rejected? = !reason.nil?
   end
   Result = Struct.new(:kind, :rows, :layout, :notes, :control, :skipped, keyword_init: true)
@@ -249,11 +249,10 @@ class QuickbooksCsv
   end
 
   def parse_transactions(table, header_at, heads)
-    rows = []
+    entries = []
     skipped = Hash.new(0)
     control = nil
-    previous = nil
-    continuation = false
+    header = nil
     table[(header_at + 1)..].each do |row_no, fields|
       next if fields.all? { |f| f.to_s.strip.empty? }
 
@@ -273,76 +272,81 @@ class QuickbooksCsv
       raw = heads.to_h { |key, i| [key.to_s, fields[i].to_s.strip.first(300)] }
       raw['extra'] = extra_columns(table[header_at][1], fields, heads)
       row = Row.new(row_no: row_no, record_type: 'transaction_line', raw: raw, account: account&.squish&.first(200))
-      begin
-        raise Error, 'An amount with no account.' if account.nil?
+      date_raw = cell(fields, heads, :date)
+      inherited = date_raw.nil?
+      raw['inherited_header'] = inherited ? '1' : nil
+      trans_no = cell(fields, heads, :trans_no)
+      row.txn_key = "t:#{trans_no}" if trans_no
 
-        if debit_raw.nil? && credit_raw.nil?
-          skipped['rows without an amount'] += 1
-          next
-        end
-        debit = debit_raw ? self.class.cents(debit_raw) : 0
-        credit = credit_raw ? self.class.cents(credit_raw) : 0
-        raise Error, 'A negative amount in a Debit or Credit column. Rupert does not reinterpret signs.' if debit.negative? || credit.negative?
-        raise Error, 'The line has both a debit and a credit.' if debit.positive? && credit.positive?
-
-        if debit.zero? && credit.zero?
-          skipped['zero-amount lines'] += 1
-          next
-        end
-        date_raw = cell(fields, heads, :date)
-        inherited = date_raw.nil?
-        continuation ||= inherited && !previous.nil?
-        if inherited
-          raise Error, 'A line with no date and no transaction above it.' unless previous
-
-          row.date = previous.date
-          row.txn_type = cell(fields, heads, :txn_type) || previous.txn_type
-          row.doc_number = cell(fields, heads, :doc_number) || previous.doc_number
-          row.name = cell(fields, heads, :name) || previous.name
+      # The header (date, type, number, name) of a transaction is tracked from every
+      # data row, even one that is rejected or has no amount, so the continuation
+      # lines under it can never be attached to the transaction above.
+      if inherited
+        if header.nil? then row.reason = 'A line with no date and no transaction above it.'
+        elsif header[:error] then row.reason = "The first line of this transaction could not be read: #{header[:error]}"
         else
-          row.date = self.class.date(date_raw)
-          row.txn_type = cell(fields, heads, :txn_type)
-          row.doc_number = cell(fields, heads, :doc_number)
-          row.name = cell(fields, heads, :name)
+          row.date = header[:date]
+          row.txn_type = cell(fields, heads, :txn_type) || header[:txn_type]
+          row.doc_number = cell(fields, heads, :doc_number) || header[:doc_number]
+          row.name = cell(fields, heads, :name) || header[:name]
         end
-        row.debit_cents = debit
-        row.credit_cents = credit
-        row.memo = cell(fields, heads, :memo)&.first(500)
-        row.class_name = cell(fields, heads, :class_name)&.first(100)
-        row.location = cell(fields, heads, :location)&.first(100)
-        trans_no = cell(fields, heads, :trans_no)
-        row.txn_key = if trans_no then "t:#{trans_no}"
-        elsif inherited then previous.txn_key
+      else
+        header = { txn_type: cell(fields, heads, :txn_type), doc_number: cell(fields, heads, :doc_number), name: cell(fields, heads, :name), date: nil, error: nil }
+        begin
+          header[:date] = self.class.date(date_raw)
+        rescue Error => e
+          header[:error] = row.reason = e.message
         end
-        row.txn_key ||= :new_group
-        row.raw['inherited_header'] = inherited ? '1' : nil
-      rescue Error => e
-        row.reason = e.message
+        row.date = header[:date]
+        row.txn_type, row.doc_number, row.name = header.values_at(:txn_type, :doc_number, :name)
       end
-      rows << row
-      previous = row unless row.rejected?
+      parse_amounts(row, fields, heads, account, debit_raw, credit_raw, skipped) unless row.reason
+      entries << row
     end
-    assign_groups(rows, continuation, heads)
-    [rows, skipped, control]
+    assign_groups(entries, heads)
+    [entries.reject(&:skipped), skipped, control]
   end
 
-  # Gives every accepted line a transaction key. `:new_group` marks the first
-  # line of a transaction in a layout where continuation lines leave the date blank.
-  def assign_groups(rows, continuation, heads)
-    accepted = rows.reject(&:rejected?)
-    if heads[:trans_no] && accepted.all? { |r| r.txn_key.to_s.start_with?('t:') }
+  def parse_amounts(row, fields, heads, account, debit_raw, credit_raw, skipped)
+    raise Error, 'An amount with no account.' if account.nil?
+
+    if debit_raw.nil? && credit_raw.nil?
+      skipped['rows without an amount'] += 1
+      return row.skipped = true
+    end
+    debit = debit_raw ? self.class.cents(debit_raw) : 0
+    credit = credit_raw ? self.class.cents(credit_raw) : 0
+    raise Error, 'A negative amount in a Debit or Credit column. Rupert does not reinterpret signs.' if debit.negative? || credit.negative?
+    raise Error, 'The line has both a debit and a credit.' if debit.positive? && credit.positive?
+
+    if debit.zero? && credit.zero?
+      skipped['zero-amount lines'] += 1
+      return row.skipped = true
+    end
+    row.debit_cents = debit
+    row.credit_cents = credit
+    row.memo = cell(fields, heads, :memo)&.first(500)
+    row.class_name = cell(fields, heads, :class_name)&.first(100)
+    row.location = cell(fields, heads, :location)&.first(100)
+  rescue Error => e
+    row.reason = e.message
+  end
+
+  # Gives every row, readable or not, the key of the transaction it belongs to,
+  # so a line that could not be read rejects its whole transaction instead of
+  # silently leaving a balanced remainder.
+  def assign_groups(entries, heads)
+    if heads[:trans_no] && entries.all? { |r| r.txn_key.to_s.start_with?('t:') }
       @notes << 'Lines were grouped into transactions by the Trans # column.'
       return
     end
 
+    continuation = entries.any? { |r| r.raw['inherited_header'] == '1' }
     sequence = 0
     last_signature = nil
-    accepted.each do |row|
-      signature = [row.date, row.txn_type, row.doc_number, row.name]
-      inherited = row.raw['inherited_header'] == '1'
-      start_new = if continuation then !inherited
-      else signature != last_signature
-      end
+    entries.each do |row|
+      signature = %w[date txn_type doc_number name].map { |key| row.raw[key].to_s }
+      start_new = continuation ? row.raw['inherited_header'] != '1' : signature != last_signature
       sequence += 1 if start_new || sequence.zero?
       row.txn_key = "g:#{sequence}"
       last_signature = signature

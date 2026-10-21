@@ -119,6 +119,26 @@ class QuickbooksImportsIntegrationTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, ",=HYPERLINK"
   end
 
+  test 'malformed mapping parameters are refused without a server error' do
+    upload
+    batch = ImportBatch.last
+    patch mappings_finance_quickbooks_import_path(batch), params: { mappings: 'foo' }
+    assert_redirected_to finance_quickbooks_import_path(batch, anchor: 'mapping')
+    patch mappings_finance_quickbooks_import_path(batch), params: { mappings: { ImportEntityMapping.first.id.to_s => 'oops' } }
+    assert_response :redirect
+  end
+
+  test 'a mapping used by posted lines stays final even when the name differs in case or spacing' do
+    upload
+    batch = ImportBatch.last
+    map_everything
+    post approve_finance_quickbooks_import_path(batch), params: { post_through: '2024-12-31' }
+    mapping = ImportEntityMapping.find_by!(source_key: 'checking')
+    patch mappings_finance_quickbooks_import_path(batch), params: { mappings: { mapping.id.to_s => { decision: 'skip' } } }
+    assert_match(/mapping is final/, flash[:alert])
+    assert_equal 'map', mapping.reload.decision
+  end
+
   test 'a locked period holds its transactions and the page says why' do
     upload
     batch = ImportBatch.last

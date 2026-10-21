@@ -60,7 +60,8 @@ module Finance
     def mappings
       raise QuickbooksPosting::Error, 'This batch is closed; its mappings can no longer be changed here.' unless @batch.staged? || @batch.approved?
 
-      changes = params.fetch(:mappings, {}).permit!.to_h
+      raw_changes = params[:mappings]
+      changes = raw_changes.respond_to?(:permit!) ? raw_changes.permit!.to_h : {}
       saved = 0
       ImportEntityMapping.transaction do
         ImportEntityMapping.where(id: changes.keys, entity_type: entity_type).find_each do |mapping|
@@ -181,7 +182,9 @@ module Finance
     end
 
     def mapping_final?(mapping)
-      mapping.entity_type == 'account' && ImportLine.where(status: 'posted', account_name: mapping.source_name).exists?
+      return false unless mapping.entity_type == 'account'
+
+      ImportLine.where(status: 'posted', record_type: 'transaction_line').distinct.pluck(:account_name).any? { |name| ImportEntityMapping.key_for(name) == mapping.source_key }
     end
 
     def target_for(mapping, id)
