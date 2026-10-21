@@ -177,7 +177,8 @@ class QuickbooksPosting
           reason = hold_reason(txn, post_through, allow_resembling, allow_approved, ranges, mappings)
           if reason
             held[reason.first] += 1
-            txn.update_columns(reason: reason.last, updated_at: Time.current)
+            # A look-alike flag survives other holds, so it is still asked about once they clear.
+            txn.update_columns(reason: reason.last, updated_at: Time.current) unless txn.reason.to_s.start_with?('Resembles')
             next
           end
           entry = post_transaction(txn, mappings, batch, actor)

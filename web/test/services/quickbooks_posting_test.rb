@@ -97,6 +97,10 @@ class QuickbooksPostingTest < ActiveSupport::TestCase
     @batch = QuickbooksImport.stage!(bytes: edited, kind: 'journal', filename: 'edited.csv', actor: @user).batch
     result = approve
     assert_equal 1, result.held['resembles an earlier import']
+    earlier = approve(through: Date.new(2024, 1, 1))
+    assert_equal 1, earlier.held['after the chosen date'], 'the look-alike is also after this date'
+    assert_match(/Resembles/, @batch.transactions.find_by(doc_number: '1001').reload.reason, 'another hold must not erase the look-alike flag')
+    assert_equal 0, approve.posted
     assert_equal 1, approve(allow_resembling: true).posted
   end
 

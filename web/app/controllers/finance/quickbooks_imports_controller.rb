@@ -65,7 +65,7 @@ module Finance
       ImportEntityMapping.transaction do
         ImportEntityMapping.where(id: changes.keys, entity_type: entity_type).find_each do |mapping|
           attrs = changes[mapping.id.to_s]
-          next unless attrs
+          next unless attrs.is_a?(Hash)
 
           saved += 1 if apply_mapping(mapping, attrs)
         end
@@ -108,7 +108,7 @@ module Finance
         out << ['File row', 'Reason', 'Date', 'Type', 'Number', 'Account', 'Debit', 'Credit']
         rows.find_each do |line|
           out << [line.row_no, safe(line.reason), line.txn_date, safe(line.txn_type), safe(line.doc_number), safe(line.account_name),
-                  format('%.2f', line.debit_cents / 100.0), format('%.2f', line.credit_cents / 100.0)]
+                  exact(line.debit_cents), exact(line.credit_cents)]
         end
       end
       send_data csv, filename: "quickbooks-batch-#{@batch.id}-rejected.csv", type: 'text/csv'
@@ -134,6 +134,12 @@ module Finance
     def safe(value)
       text = value.to_s
       text.match?(/\A[=+\-@\t\r\n]/) ? "'#{text}" : text
+    end
+
+    # Integer cents to a decimal string without floating point.
+    def exact(cents)
+      whole, fraction = cents.abs.divmod(100)
+      "#{'-' if cents.negative?}#{whole}.#{format('%02d', fraction)}"
     end
 
     def approved_overlap(scope)
