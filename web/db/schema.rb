@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_020100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -89,6 +89,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_010000) do
     t.boolean "review_flag", default: false, null: false
     t.datetime "reviewed_at"
     t.bigint "journal_entry_id"
+    t.text "counterparty"
     t.index ["tenant_id", "account_label", "journal_entry_id"], name: "idx_bank_lines_account_journal_unique", unique: true, where: "journal_entry_id IS NOT NULL"
     t.index ["tenant_id", "document_id", "status"], name: "idx_bank_lines_document"
     t.index ["tenant_id", "fingerprint"], name: "idx_bank_lines_fingerprint", unique: true
@@ -1001,6 +1002,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_010000) do
     t.index ["tenant_id", "source", "external_id"], name: "idx_employees_source_identity", unique: true
     t.index ["tenant_id", "status"], name: "index_employees_on_tenant_id_and_status"
     t.index ["tenant_id", "user_id"], name: "index_employees_on_tenant_id_and_user_id"
+  end
+
+  create_table "expense_categories", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "key", null: false
+    t.string "name", null: false
+    t.bigint "ledger_account_id"
+    t.text "keywords"
+    t.boolean "active", default: true, null: false
+    t.boolean "built_in", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "key"], name: "idx_expense_categories_key", unique: true
   end
 
   create_table "expenses", force: :cascade do |t|
