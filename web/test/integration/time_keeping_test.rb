@@ -79,6 +79,44 @@ class TimeKeepingTest < ActionDispatch::IntegrationTest
     assert_redirected_to people_time_keeping_path
   end
 
+  test 'range picker offers named ranges with Start and Finish calendars' do
+    travel_to Time.zone.parse('2026-10-20 12:00') do # Tuesday; pay week began Thursday Oct 15
+      post login_path, params: { email: @admin.email, password: 'password' }
+      get people_time_keeping_path, params: { from: '2026-10-01', to: '2026-10-31', view: 'daily' }
+      assert_response :success
+      assert_select '[data-controller="range-picker"]' do
+        assert_select 'label[for="range"]', 'Date range'
+        assert_select 'select#range[name="range"] option', 14
+        assert_select 'select#range option[selected][value="this_month"]', 'This month'
+        %w[today yesterday this_pay_week last_pay_week next_pay_week this_week last_week this_month last_month this_quarter
+           last_quarter year_to_date last_year custom].each { |key| assert_select "select#range option[value=#{key}]" }
+        assert_select 'label[for="from"]', 'Start date'
+        assert_select 'label[for="to"]', 'End date'
+        assert_select 'input[type=date][name=from][value="2026-10-01"][aria-describedby="time-range-error"]'
+        assert_select 'input[type=date][name=to][value="2026-10-31"][aria-describedby="time-range-error"]'
+        assert_select '#time-range-error[role=alert]'
+      end
+
+      get people_time_keeping_path, params: { range: 'last_pay_week', view: 'daily' }
+      assert_response :success
+      assert_select 'input[name=from][value="2026-10-08"]'
+      assert_select 'input[name=to][value="2026-10-14"]'
+      assert_select 'select#range option[selected][value="last_pay_week"]'
+      assert_select 'a[href=?]', people_time_keeping_path(from: '2026-10-08', to: '2026-10-14', format: :pdf)
+
+      get people_time_keeping_path, params: { range: 'next_pay_week' }
+      assert_select 'input[name=from][value="2026-10-22"]'
+      assert_select 'input[name=to][value="2026-10-28"]'
+
+      get people_time_keeping_path, params: { range: 'custom', from: '2026-10-05', to: '2026-10-07', range_shown: '2026-10-01..2026-10-31' }
+      assert_select 'input[name=from][value="2026-10-05"]'
+      assert_select 'select#range option[selected][value="custom"]'
+
+      get people_time_keeping_path(format: :csv), params: { range: 'last_pay_week', kind: 'daily' }
+      assert_includes response.headers['Content-Disposition'], '2026-10-08-to-2026-10-14'
+    end
+  end
+
   test 'staff see only their own schedule and time' do
     post login_path, params: { email: @user.email, password: 'password123' }
     get people_time_keeping_path, params: { from: '2026-10-01', to: '2026-10-31', view: 'daily', employee_id: @other.id }
@@ -91,5 +129,17 @@ class TimeKeepingTest < ActionDispatch::IntegrationTest
 
   test 'Time keeping sits in the Team area' do
     assert_equal 'team', ModuleRegistry.area_key_for('time_keeping')
+  end
+
+  test 'an open clock-in is shown but never counted, and a long one reads as a missed clock-out' do
+    ClockShift.create!(user: @user, employee: @worker, employee_key: @worker.id.to_s, employee_name: @worker.name,
+      employment_type: 'part_time', request_token: 'time_keeping_open_123', started_at: Time.zone.parse('2026-10-09 10:00'))
+    day = report.days.find { |d| d.employee_id == @worker.id && d.date == Date.new(2026, 10, 9) }
+    assert_equal 0.0, day.worked_hours
+    assert_equal 'Missed clock-out', day.status
+    open_row = PunchHistory.new(from: Date.new(2026, 10, 9), to: Date.new(2026, 10, 9), all_employees: true).rows.find { |r| r.status == 'open' }
+    assert_not open_row.counted
+    assert_match(/not counted/, open_row.issue)
+    assert_equal 17.0, report.totals[:worked], 'totals exclude the open shift'
   end
 end

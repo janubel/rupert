@@ -36,7 +36,7 @@ module NavigationIconsHelper
   MODULE_ICON_KEYS = {
     'dashboard' => 'overview', 'point_of_sale' => 'sell', 'inventory_counts' => 'count',
     'inventory_exceptions' => 'review', 'bulk_consumptions' => 'review', 'reconcile' => 'link',
-    'connections' => 'link', 'pos_connections' => 'link', 'alerts' => 'alert',
+    'connections' => 'link', 'swipesimple_items' => 'link', 'stock_comparison' => 'report', 'pos_connections' => 'link', 'alerts' => 'alert',
     'timesheets' => 'clock', 'time_keeping' => 'clock', 'reports' => 'report', 'books_desk' => 'review', 'register_summary' => 'report', 'sales_tax' => 'report', 'finance_reports' => 'report', 'time_clock' => 'clock',
     'settings' => 'settings', 'platform' => 'platform', 'owner_checklists' => 'review',
     'api_access_tokens' => 'shield', 'permissions' => 'shield', 'roadmap' => 'document', 'customers' => 'customers'

@@ -5,7 +5,8 @@
     <h1 class="page-title">Inventory</h1>
     <p class="max-w-3xl text-sm text-mocha">Review stock by item, source and location. Reserve transfers, track backorders, receive purchases, and count physical stock from one workspace.</p>
     <div class="flex flex-wrap gap-2">
-      <%= link_to 'Compare Shopify & C-Trax', stock_comparison_path, class: 'btn-primary' %>
+      <%= link_to 'Store comparison PDF', stock_comparison_path(format: :pdf), class: 'btn-primary', data: { turbo: false }, title: 'Shopify vs C-Trax store stock, side by side, ready to print' %>
+      <%= link_to 'Store comparison', stock_comparison_path, class: 'btn-ghost' %>
       <%= link_to 'Count stock', inventory_counts_path, class: 'btn-ghost' %>
       <%= link_to 'Receive purchases', purchasing_purchase_orders_path, class: 'btn-ghost' if Current.user.can?('purchasing.read') %>
       <%= link_to 'Material lots', bulk_materials_path, class: 'btn-ghost' %>

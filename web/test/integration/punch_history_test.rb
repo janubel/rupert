@@ -86,7 +86,7 @@ class PunchHistoryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'missed clock-out'
     assert_select 'nav[aria-label="Time workspace"] a', text: 'Punch report'
     assert_select 'nav[aria-label="Time workspace"] a', text: 'Timesheets'
-    assert_select 'a', text: 'This pay week'
+    assert_select 'select#range option', text: 'This pay week'
     assert_select '[data-time-source="ctrax"]'
 
     history = PunchHistory.new(from: Date.new(2026, 10, 1), to: Date.new(2026, 10, 31), all_employees: true)
@@ -106,6 +106,52 @@ class PunchHistoryTest < ActionDispatch::IntegrationTest
     get people_punch_history_path(format: :csv), params: { from: '2026-10-01', to: '2026-10-31' }
     assert_includes response.body, 'C-Trax'
     assert_includes response.body, 'missed clock-out'
+  end
+
+  test 'punch report uses the shared range picker without inline scripts' do
+    travel_to Time.zone.parse('2026-10-20 12:00') do # Tuesday; pay week began Thursday Oct 15
+      post login_path, params: { email: @admin.email, password: 'password' }
+      get people_punch_history_path, params: { range: 'this_pay_week', source: 'square', view: 'calendar' }
+      assert_response :success
+      assert_select 'select#range option[selected][value="this_pay_week"]', 'This pay week'
+      assert_select 'input[type=date][name=from][value="2026-10-15"][data-punch-calendar-target="from"]'
+      assert_select 'input[type=date][name=to][value="2026-10-21"][data-punch-calendar-target="to"]'
+      assert_select 'input[type=hidden][name=range_shown][value="2026-10-15..2026-10-21"]'
+      assert_select 'select#source option[selected][value="square"]'
+      assert_select '[onchange]', 0
+      assert_select 'a[href=?]', people_punch_history_path(source: 'square', view: 'calendar', from: '2026-10-15', to: '2026-10-21', format: :csv)
+
+      # Without JavaScript the dates typed into Start/Finish win over the dropdown left as shown.
+      get people_punch_history_path, params: { range: 'this_pay_week', range_shown: '2026-10-15..2026-10-21', from: '2026-10-01', to: '2026-10-31' }
+      assert_includes response.body, 'Own History'
+      assert_select 'select#range option[selected][value="this_month"]'
+    end
+  end
+
+  test 'square, c-trax and personal reports share the range picker' do
+    travel_to Time.zone.parse('2026-10-20 12:00') do
+      post login_path, params: { email: @admin.email, password: 'password' }
+      get people_square_timesheets_path
+      assert_response :success
+      assert_select 'select#range option[selected][value="all"]', 'All dates'
+      assert_select 'input[type=date][name=from]:not([required])'
+      get people_square_timesheets_path, params: { range: 'last_pay_week' }
+      assert_select 'input[name=from][value="2026-10-08"]'
+      assert_includes response.body, 'No Square timecards in this view.'
+      get people_square_timesheets_path, params: { range: 'custom', from: '2026-10-06', to: '2026-10-06' }
+      refute_includes response.body, 'No Square timecards in this view.'
+      get people_ctrax_timesheets_path, params: { range: 'this_month' }
+      assert_response :success
+      assert_select 'input[name=to][value="2026-10-31"]'
+      get people_ctrax_timesheets_path, params: { from: '2026-10-09', to: '2026-10-01' }
+      assert_redirected_to people_ctrax_timesheets_path
+
+      post login_path, params: { email: @user.email, password: 'password123' }
+      get employee_reports_path, params: { range: 'last_pay_week' }
+      assert_response :success
+      assert_select 'select#range option[selected][value="last_pay_week"]'
+      assert_select 'a[href=?]', employee_reports_path(format: :csv, from: '2026-10-08', to: '2026-10-14')
+    end
   end
 
   test 'reversed ranges are rejected and no record is created' do

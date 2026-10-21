@@ -16,7 +16,14 @@ class InventoryController < AuthenticatedController
     @comparison = StockComparison.new(shopify_location_id: params[:shopify_location_id],
       ctrax_location_id: params[:ctrax_location_id], query: params[:q], filter: params[:filter])
     if request.format.csv?
+      log_export('Stock comparison CSV', comparison_export_details)
       send_data @comparison.csv, filename: "shopify-ctrax-stock-#{Date.current.iso8601}.csv", type: 'text/csv'
+    elsif request.format.pdf?
+      # Printable copy of the same filtered rows; read-only like the page.
+      log_export('Stock comparison PDF', comparison_export_details)
+      send_data StockComparisonPdf.new(@comparison).render,
+        filename: "shopify-ctrax-stock-#{Time.current.strftime('%Y-%m-%d-%H%M')}.pdf",
+        type: 'application/pdf', disposition: 'attachment'
     else
       @pagy = Pagy.new(count: @comparison.rows.size, page: params[:page], items: 50)
       @rows = @comparison.rows.slice(@pagy.offset, @pagy.items) || []
@@ -105,6 +112,11 @@ class InventoryController < AuthenticatedController
 
   def authorize_read
     authorize(:module, :inventory_read?)
+  end
+
+  def comparison_export_details
+    [@comparison.shopify&.location&.name, @comparison.ctrax&.location&.name, "filter=#{@comparison.filter}",
+      ("q=#{@comparison.query}" if @comparison.query.present?), "#{@comparison.rows.size} rows"].compact.join(', ')
   end
 
   # sku => display name + product, resolved once per page so the ledger view
