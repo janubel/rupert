@@ -33,18 +33,18 @@ if [ "$(cat "$STATE/failed-sha" 2>/dev/null)" = "$NEW" ]; then
   log "${NEW:0:8} already failed to deploy, waiting for a newer commit (rm $STATE/failed-sha to retry)"; exit 0
 fi
 
-# Both CI matrix jobs must be green. Re-runs leave the earlier check runs in the
-# list, so only the most recent run of each job counts.
+# The `CI (sqlite3)` job must be green. Re-runs leave the earlier check runs in
+# the list, so only the most recent run counts.
 ci=$(curl -fsS --max-time 20 -H 'Accept: application/vnd.github+json' \
   "https://api.github.com/repos/$REPO/commits/$NEW/check-runs?per_page=100" | python3 -c '
-import json, re, sys
+import json, sys
 latest = {}
 for r in json.load(sys.stdin)["check_runs"]:
-    if re.fullmatch(r"CI \((sqlite3|postgresql)\)", r["name"]) and r["id"] > latest.get(r["name"], {"id": -1})["id"]:
+    if r["name"] == "CI (sqlite3)" and r["id"] > latest.get(r["name"], {"id": -1})["id"]:
         latest[r["name"]] = r
 done = [r["conclusion"] for r in latest.values()]
 if any(c in ("failure", "cancelled", "timed_out") for c in done): print("red")
-elif len(latest) == 2 and all(c == "success" for c in done): print("green")
+elif len(latest) == 1 and all(c == "success" for c in done): print("green")
 else: print("pending")') || ci=unknown
 if [ "$ci" != green ]; then log "CI for ${NEW:0:8} is $ci, not deploying yet"; exit 0; fi
 

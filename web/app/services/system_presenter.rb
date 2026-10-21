@@ -78,76 +78,10 @@ class SystemPresenter
     @puma_threads = pids.sum { |pid| threads_for(pid) }
   end
 
+  # SQLite has no buffer, lock or bloat statistics views, so show the file and
+  # pool data that is available and leave unsupported counters blank in the UI.
   def collect_db
     conn = ActiveRecord::Base.connection
-    return collect_sqlite_db(conn) if conn.adapter_name.downcase.include?('sqlite')
-
-    @db_connections = conn.select_value('SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()').to_i
-    @db_max_connections = conn.select_value('SHOW max_connections').to_i
-    stats = conn.select_one(<<~SQL) || {}
-      SELECT
-        round(blks_hit::numeric / NULLIF(blks_hit + blks_read, 0) * 100, 1) AS cache_hit_pct,
-        deadlocks
-      FROM pg_stat_database WHERE datname = current_database()
-    SQL
-    @db_cache_hit_pct = stats['cache_hit_pct'].to_f
-    @db_deadlocks = stats['deadlocks'].to_i
-    @db_size_mb = (conn.select_value('SELECT pg_database_size(current_database())').to_i / 1024.0 / 1024).round(1)
-
-    @slow_queries = query_stats(conn, <<~SQL)
-      SELECT pid, state, left(query, 120) AS query,
-             round(extract(epoch FROM now() - query_start)::numeric, 1) AS seconds
-      FROM pg_stat_activity
-      WHERE datname = current_database()
-        AND state = 'active'
-        AND query NOT ILIKE '%pg_stat_activity%'
-        AND extract(epoch FROM now() - query_start) > 1
-      ORDER BY query_start
-    SQL
-
-    @active_queries = query_stats(conn, <<~SQL)
-      SELECT pid, state, left(query, 100) AS query,
-             round(extract(epoch FROM now() - query_start)::numeric, 1) AS seconds
-      FROM pg_stat_activity
-      WHERE datname = current_database()
-        AND state = 'active'
-        AND query NOT ILIKE '%pg_stat_activity%'
-      ORDER BY query_start DESC LIMIT 15
-    SQL
-
-    @locked_queries = query_stats(conn, <<~SQL)
-      SELECT a.pid, left(a.query, 120) AS query,
-             round(extract(epoch FROM now() - a.query_start)::numeric, 1) AS seconds,
-             left(b.query, 80) AS blocked_by
-      FROM pg_stat_activity a
-      JOIN pg_stat_activity b ON b.pid = ANY(pg_blocking_pids(a.pid))
-      WHERE a.datname = current_database() AND a.state = 'active'
-    SQL
-
-    @bloat_tables = query_stats(conn, <<~SQL)
-      SELECT relname AS table,
-             n_live_tup, n_dead_tup,
-             CASE WHEN n_live_tup + n_dead_tup > 0
-               THEN round(n_dead_tup::numeric / (n_live_tup + n_dead_tup) * 100, 1)
-               ELSE 0 END AS dead_pct
-      FROM pg_stat_user_tables
-      WHERE n_dead_tup > 1000
-      ORDER BY n_dead_tup DESC LIMIT 10
-    SQL
-
-    @big_tables = query_stats(conn, <<~SQL)
-      SELECT relname AS table,
-             round(pg_total_relation_size(relid)::numeric / 1024 / 1024, 1) AS mb,
-             n_live_tup
-      FROM pg_stat_user_tables
-      ORDER BY pg_total_relation_size(relid) DESC LIMIT 10
-    SQL
-  end
-
-  # PostgreSQL exposes detailed buffer, lock, and table-bloat statistics.
-  # SQLite has no equivalent pg_stat views, so show the file and pool data
-  # that is available and leave unsupported counters blank in the UI.
-  def collect_sqlite_db(conn)
     pool = ActiveRecord::Base.connection_pool
     @db_connections = pool.stat[:connections].to_i
     @db_max_connections = pool.size
@@ -183,12 +117,6 @@ class SystemPresenter
     @sync_success_rate = sync_success_rate_value
     @cache_entries = cache_entries_count
     @cache_dir_mb = cache_dir_mb_value
-  end
-
-  def query_stats(conn, sql)
-    conn.select_all(sql).to_a
-  rescue StandardError
-    []
   end
 
   # --- small helpers ---

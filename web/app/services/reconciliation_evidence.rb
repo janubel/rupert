@@ -35,7 +35,7 @@ class ReconciliationEvidence
     sha = Digest::SHA256.hexdigest(bytes.b)
     fingerprint = Digest::SHA256.hexdigest([source, kind, first, last, sha, meta, supersedes_id.presence&.to_i].to_json)
     ReconciliationDocument.transaction do
-      # Serialize replay/correction checks across SQLite and PostgreSQL.
+      # Serialize replay/correction checks with SQLite's writer lock.
       locked = Tenant.unscoped.where(id: Current.tenant_id, status: 'active').update_all(updated_at: Arel.sql('updated_at'))
       raise Error, 'An active workspace is required.' unless locked == 1
       existing = ReconciliationDocument.find_by(fingerprint: fingerprint)

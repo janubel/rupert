@@ -274,7 +274,7 @@
       "area": "System",
       "name": "Global search",
       "status": "Available",
-      "scope": "SQLite FTS5 trigram or PostgreSQL search, tenant-scoped results.",
+      "scope": "SQLite FTS5 trigram search, tenant-scoped results.",
       "evidence": "web/app/services/search_sql.rb",
       "phase": "0"
     },

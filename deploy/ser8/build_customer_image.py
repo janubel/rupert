@@ -25,7 +25,7 @@ def main():
     run(['incus', 'init', os_image, name, '-c', 'limits.cpu=1', '-c', 'limits.memory=2GiB', '-c', 'security.privileged=false', '-c', 'security.nesting=false'])
     run(['incus', 'start', name])
     print('Clean build instance started:', name, flush=True)
-    run(['incus', 'exec', name, '--', 'bash', '-c', 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl git sqlite3 libpq5 libyaml-0-2 libgmp10 libcrypt1 libreadline8 libffi8 libzstd1 zlib1g'], timeout=600)
+    run(['incus', 'exec', name, '--', 'bash', '-c', 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl git sqlite3 libyaml-0-2 libgmp10 libcrypt1 libreadline8 libffi8 libzstd1 zlib1g'], timeout=600)
     # Copy only the public Ruby interpreter/gems. Never copy /opt/rupert, homes,
     # /etc/rupert.env, storage, uploads or any database from the live instance.
     with tempfile.TemporaryDirectory(prefix='rupert-public-runtime-') as directory:
@@ -52,7 +52,7 @@ install -Dm644 deploy/rupert-backup-ser8.timer /etc/systemd/system/rupert-backup
 chmod 755 bin/backup.sh
 cd web
 bundle check
-RAILS_ENV=production RUPERT_DB_ADAPTER=sqlite3 HOST=https://build.invalid SECRET_KEY_BASE=build-only RAILS_ENCRYPTION_PRIMARY_KEY=build-only-primary RAILS_ENCRYPTION_DETERMINISTIC_KEY=build-only-deterministic RAILS_ENCRYPTION_KEY_DERIVATION_SALT=build-only-salt bundle exec rails build:all
+RAILS_ENV=production HOST=https://build.invalid SECRET_KEY_BASE=build-only RAILS_ENCRYPTION_PRIMARY_KEY=build-only-primary RAILS_ENCRYPTION_DETERMINISTIC_KEY=build-only-deterministic RAILS_ENCRYPTION_KEY_DERIVATION_SALT=build-only-salt bundle exec rails build:all
 printf '{"revision":"REVISION"}\n' > config/build.json
 rm -rf tmp/* log/* storage/*
 install -d -o rupert -g rupert -m 700 tmp tmp/pids tmp/cache log storage /var/lib/rupert

@@ -69,8 +69,8 @@ class SwipesimpleReportImporter
       raise Error, 'An active workspace is required.' if Current.tenant_id.blank?
 
       SwipesimpleExport.transaction do
-        # Tenant writer lock works with both PostgreSQL and SQLite, and keeps
-        # overlap checks and insertion atomic across simultaneous local imports.
+        # Tenant writer lock keeps overlap checks and insertion atomic across
+        # simultaneous local imports.
         locked = Tenant.unscoped.where(id: Current.tenant_id, status: 'active').update_all(updated_at: Arel.sql('updated_at'))
         raise Error, 'An active workspace is required.' unless locked == 1
 

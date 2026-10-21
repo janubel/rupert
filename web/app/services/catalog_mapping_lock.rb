@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 # Serializes local catalog decisions with source auto-matching. The first
-# transaction statement acquires SQLite's writer lock or PostgreSQL's tenant
-# row lock before either caller reads mapping ownership.
+# transaction statement acquires SQLite's writer lock before either caller reads mapping ownership.
 class CatalogMappingLock
   def self.synchronize
     tenant_id = Current.tenant_id

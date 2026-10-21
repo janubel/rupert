@@ -11,14 +11,12 @@ Two kinds of configuration exist. **Boot-time variables** live in `/etc/rupert.e
 | `ADDITIONAL_HOSTS` | no | Comma-separated extra hostnames allowed by host authorization |
 | `SECRET_KEY_BASE` | yes | Session/cookie signing. `bin/rails secret` |
 | `RAILS_ENCRYPTION_PRIMARY_KEY`, `RAILS_ENCRYPTION_DETERMINISTIC_KEY`, `RAILS_ENCRYPTION_KEY_DERIVATION_SALT` | yes | Active Record encryption for every credential and document column. Generate once with `bin/rails db:encryption:init`; **never change without re-encrypting** |
-| `RUPERT_DB_ADAPTER` | yes on SER8 | `sqlite3` (production) or `postgresql` (code default, CI) |
 | `RUPERT_SQLITE_DATABASE_PRODUCTION` | no | Path of the SQLite file (default `storage/production.sqlite3`) |
 | `SQLITE_BUSY_TIMEOUT_MS` | no | Writer wait before `SQLITE_BUSY` (default 5000) |
-| `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | PostgreSQL only | Connection; `POSTGRES_PASSWORD` is mandatory in production on PostgreSQL |
 | `RAILS_MAX_THREADS` / `RAILS_MIN_THREADS` | no | Puma threads and AR pool (default 5) |
 | `WEB_CONCURRENCY` | no | Puma workers (unset: single process, right for SER8) |
 | `PORT` | no | Puma port (3000) |
-| `JOB_THREADS` | no | Solid Queue worker threads (default 1 on SQLite, 3 on PostgreSQL) |
+| `JOB_THREADS` | no | Solid Queue worker threads (default 1: SQLite has one writer) |
 | `JOB_CONCURRENCY` | no | Solid Queue worker processes (default 1) |
 | `RAILS_LOG_LEVEL` | no | `info` (default) or `debug` |
 | `RAILS_LOG_TO_STDOUT` | no | `1` to log to journald/stdout |

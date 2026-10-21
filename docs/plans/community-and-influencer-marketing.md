@@ -104,7 +104,7 @@ Deliver each row as a separate reviewed PR (split further where needed). This pl
 
 ## Verification, rollout, and documentation
 
-Implementation tests must cover cross-tenant record/link/association access, read/write/reviewer/private-contact permissions, stale/replayed approvals, duplicate discovery, malicious URLs and stored content rendering, job tenant cleanup, provider retries, expired/unverified offers, and attribution/refund replay. Exercise workflows on both supported SQLite and PostgreSQL CI adapters. Test external adapters with recorded fixtures and explicit merchant-approved sandbox writes; do not use live accounts for routine tests.
+Implementation tests must cover cross-tenant record/link/association access, read/write/reviewer/private-contact permissions, stale/replayed approvals, duplicate discovery, malicious URLs and stored content rendering, job tenant cleanup, provider retries, expired/unverified offers, and attribution/refund replay. Exercise workflows on the SQLite CI adapter. Test external adapters with recorded fixtures and explicit merchant-approved sandbox writes; do not use live accounts for routine tests.
 
 Add a per-workspace feature flag, bounded queues/pages/excerpts, and connector toggles. Pilot with manual publication and a small operator-reviewed campaign. Track reviewer usefulness, time per approved reply, community response, and resulting redemptions; compare gift costs and attributable sales for the influencer pilot. Disable discovery/activation independently if failures rise, retain history, and reconcile remote offers during rollback because disabling Rupert does not revoke merchant discounts.
 

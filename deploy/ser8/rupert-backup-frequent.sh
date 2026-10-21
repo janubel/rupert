@@ -15,11 +15,6 @@ set -a
 source "$ENV_SRC"
 set +a
 
-if [ "${RUPERT_DB_ADAPTER:-postgresql}" != "sqlite3" ]; then
-  echo "refusing to run: RUPERT_DB_ADAPTER is not sqlite3 (this script snapshots SQLite only)" >&2
-  exit 2
-fi
-
 OUT="${OUT:-/var/backups/rupert/frequent}"
 RETAIN_MIN="${RETAIN_MIN:-1440}"
 SQLITE_DB="${RUPERT_SQLITE_DATABASE_PRODUCTION:-${APP_DIR:-/opt/rupert}/web/storage/production.sqlite3}"
