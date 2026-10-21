@@ -2,21 +2,14 @@
 <% own_tasks = Current.user.employee? %>
 <% can_write = own_tasks || Current.user.can?("projects.write") %>
 <div class="space-y-5">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <p class="eyebrow text-olive">Work</p>
-      <h1 class="page-title"><%= own_tasks ? "My tasks" : "Tasks" %></h1>
-      <p class="mt-1 text-sm text-mocha"><%= own_tasks ? "Your assigned work. Update notes or move tasks between columns as you work." : "Everything in flight across projects. Drag cards between columns to update their status." %></p>
+  <%= page_header own_tasks ? "My tasks" : "Tasks", subtitle: own_tasks ? "Your assigned work. Update notes or move tasks between columns as you work." : "Everything in flight across projects. Drag cards between columns to update their status.", eyebrow: 'Work' do %>
+    <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm", data: { tour: 'guide' } %>
+    <div class="inline-flex rounded-full bg-haze p-1" role="group" aria-label="View" <%= tour_anchor('views') %>>
+      <%= link_to "Board", tasks_filter_path(view: nil), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "board"}" %>
+      <%= link_to "List", tasks_filter_path(view: "list"), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "list"}" %>
     </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm", data: { tour: 'guide' } %>
-      <div class="inline-flex rounded-full bg-haze p-1" role="group" aria-label="View" <%= tour_anchor('views') %>>
-        <%= link_to "Board", tasks_filter_path(view: nil), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "board"}" %>
-        <%= link_to "List", tasks_filter_path(view: "list"), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "list"}" %>
-      </div>
-      <%= link_to "Projects", projects_projects_path, class: "btn-ghost btn-sm" unless own_tasks %>
-    </div>
-  </section>
+    <%= link_to "Projects", projects_projects_path, class: "btn-ghost btn-sm" unless own_tasks %>
+  <% end %>
 
   <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" <%= tour_anchor('stats') %>>
     <%= link_to tasks_filter_path(status: nil, due: nil, mine: nil), class: "stat block hover:border-taupe" do %>

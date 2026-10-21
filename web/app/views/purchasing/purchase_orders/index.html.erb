@@ -1,14 +1,10 @@
 <% content_for :title, "Purchase orders" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Purchase orders</h1>
-      <p class="mt-1 text-sm text-mocha">What's been ordered from vendors and what's arrived.</p>
-    </div>
+  <%= page_header 'Purchase orders', subtitle: 'What\'s been ordered from vendors and what\'s arrived.' do %>
     <% if Current.user.can?("purchasing.write") %>
       <%= link_to "New purchase order", new_purchasing_purchase_order_path, class: "btn-primary" %>
     <% end %>
-  </section>
+  <% end %>
 
   <%= form_tag purchasing_purchase_orders_path, method: :get, class: "flex flex-wrap items-center gap-3" do %>
     <%= select_tag :status, options_for_select([["All statuses", "all"], ["Draft", "draft"], ["Ordered", "ordered"], ["Received", "received"], ["Cancelled", "cancelled"]], @status), class: "select" %>

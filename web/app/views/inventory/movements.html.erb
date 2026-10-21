@@ -8,15 +8,9 @@
 } %>
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :stock %>
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Movement history</h1>
-      <p class="mt-1 text-sm text-mocha">Every recorded quantity change — who or what changed it, why, and from → to. Mirrors are read-only snapshots from Square/Shopify.</p>
-    </div>
-    <div class="flex gap-2">
-      <%= link_to "Inventory", inventory_index_path, class: "btn-ghost" %>
-    </div>
-  </section>
+  <%= page_header 'Movement history', subtitle: 'Every recorded quantity change — who or what changed it, why, and from → to. Mirrors are read-only snapshots from Square/Shopify.' do %>
+    <%= link_to "Inventory", inventory_index_path, class: "btn-ghost" %>
+  <% end %>
 
   <%= form_tag movements_inventory_index_path, method: :get, class: "flex flex-wrap items-end gap-2" do %>
     <div class="w-56">
