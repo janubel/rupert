@@ -163,6 +163,10 @@ Exceeding a limit returns `429` with `Retry-After`.
 
 ## 6. Security notes
 
+- The MCP controller reads at most 256 KiB + 1 bytes from Rack input before
+  JSON parsing and returns `413` above the limit. Rack may already have buffered
+  or limited the body; upstream proxy request limits are still needed to bound
+  streaming and memory use.
 - Tokens are tenant-scoped; the host name, cookies and request body cannot
   change the store. Only SHA256 digests are stored.
 - Browser requests with an `Origin` header from another site are refused with
