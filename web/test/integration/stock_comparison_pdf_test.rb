@@ -61,7 +61,7 @@ class StockComparisonPdfTest < ActionDispatch::IntegrationTest
   test 'the stock comparison page links to the PDF with the current selections' do
     get stock_comparison_path(shopify_location_id: @online.id, ctrax_location_id: @retail.id, filter: 'attention', q: 'tea')
     assert_response :success
-    link = css_select('a').find { |a| a.text == 'Download comparison PDF' }
+    link = css_select('a').find { |a| a.text == 'Download store comparison PDF' }
     params = Rack::Utils.parse_query(URI.parse(link['href']).query)
     assert_equal({ 'q' => 'tea', 'filter' => 'attention', 'shopify_location_id' => @online.id.to_s, 'ctrax_location_id' => @retail.id.to_s },
       params.except('format'))
@@ -83,5 +83,17 @@ class StockComparisonPdfTest < ActionDispatch::IntegrationTest
     content.scan(/\[([^\]]*)\]\s*TJ|<(\h*)>\s*Tj/).map do |array, single|
       (single ? [single] : array.scan(/<(\h*)>/).flatten).map { |hex| [hex].pack('H*') }.join
     end.join("\n").force_encoding('Windows-1252').encode('UTF-8')
+  end
+
+  test 'the store comparison PDF is one click from Inventory, Reports and the Stock menu' do
+    pdf = stock_comparison_path(format: :pdf)
+    get inventory_index_path
+    assert_select "a[href='#{pdf}']", 'Store comparison PDF'
+    get inventory_reports_path
+    assert_select "a[href='#{pdf}']", 'Download store comparison PDF'
+    get stock_comparison_path
+    assert_select 'a#store-comparison-pdf.btn-primary', 'Download store comparison PDF'
+    assert_select "nav[aria-label='Module'] a[aria-current='page']", /Store comparison/
+    assert_equal 'stock', ModuleRegistry.area_key_for('stock_comparison')
   end
 end
