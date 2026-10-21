@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""Read Rupert's structured log (docs/ops/logging.md).
+
+Rupert writes one JSON object per line to journald (units rupert-web and rupert-jobs). This
+script filters those lines without jq or Rails:
+
+  rupert-logs request <request-id>   everything one request did (an 8+ character prefix works)
+  rupert-logs user <user-id>         what one signed-in user did
+  rupert-logs upload [N]             the last N uploads, each with its import result and request
+  rupert-logs errors                 warnings and errors, newest last
+  rupert-logs slow                   requests over the slow threshold
+  rupert-logs noise                  the summaries of probes and polls held back
+  rupert-logs tail                   every line, one readable line each
+
+Options: --since "2 hours ago" (journalctl syntax, default "24 hours ago"), --json (print the raw
+lines), --file PATH (read saved lines instead of journalctl; "-" is standard input).
+"""
+import argparse
+import json
+import subprocess
+import sys
+
+UNITS = ('rupert-web', 'rupert-jobs')
+HIDDEN_KEYS = {'ts', 'level', 'event', 'request_id'}
+
+
+def source_lines(args):
+    if args.file:
+        handle = sys.stdin if args.file == '-' else open(args.file, encoding='utf-8', errors='replace')
+        with handle:
+            yield from handle
+        return
+    command = ['journalctl', '--no-pager', '-o', 'cat', '--since', args.since]
+    for unit in UNITS:
+        command += ['-u', unit]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, text=True, errors='replace')
+    yield from process.stdout
+    process.wait()
+
+
+def parse(lines):
+    """Yield (raw, record) for lines that are Rupert JSON events; other lines are skipped."""
+    for raw in lines:
+        raw = raw.strip()
+        if raw.startswith('<') and raw[2:3] == '>':
+            raw = raw[3:]
+        if not raw.startswith('{'):
+            continue
+        try:
+            record = json.loads(raw)
+        except ValueError:
+            continue
+        if isinstance(record, dict) and 'event' in record:
+            yield raw, record
+
+
+def short(record):
+    parts = []
+    for key, value in record.items():
+        if key in HIDDEN_KEYS:
+            continue
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value, separators=(',', ':'))
+        parts.append(f'{key}={value}')
+    request = record.get('request_id')
+    head = f"{record.get('ts', '')} {str(record.get('level', '')).upper():5} {record.get('event', '')}"
+    if request:
+        head += f' [{request[:8]}]'
+    return f'{head} {" ".join(parts)}'.rstrip()
+
+
+def emit(args, raw, record):
+    print(raw if args.json else short(record))
+
+
+def command_request(args, records):
+    needle = args.id
+    if len(needle) < 8:
+        sys.exit('Give at least the first 8 characters of the request id.')
+    for raw, record in records:
+        if str(record.get('request_id', '')).startswith(needle):
+            emit(args, raw, record)
+
+
+def command_user(args, records):
+    for raw, record in records:
+        if str(record.get('user_id')) == str(args.id):
+            emit(args, raw, record)
+
+
+def command_upload(args, records):
+    records = list(records)
+    uploads = [item for item in records if item[1]['event'] == 'upload'][-args.count:]
+    for upload_raw, upload in uploads:
+        request_id = upload.get('request_id')
+        print(f'--- upload {upload.get("ts", "")} request {request_id}')
+        for raw, record in records:
+            if record.get('request_id') == request_id and record['event'] in ('upload', 'import', 'request', 'validation_failed'):
+                emit(args, raw, record)
+
+
+def command_errors(args, records):
+    for raw, record in records:
+        if record.get('level') in ('warn', 'error', 'fatal') and record['event'] != 'noise_summary':
+            emit(args, raw, record)
+
+
+def command_slow(args, records):
+    for raw, record in records:
+        if record['event'] == 'request' and record.get('slow'):
+            emit(args, raw, record)
+
+
+def command_noise(args, records):
+    for raw, record in records:
+        if record['event'] == 'noise_summary':
+            emit(args, raw, record)
+
+
+def command_tail(args, records):
+    for raw, record in records:
+        emit(args, raw, record)
+
+
+COMMANDS = {
+    'request': command_request, 'user': command_user, 'upload': command_upload, 'errors': command_errors,
+    'slow': command_slow, 'noise': command_noise, 'tail': command_tail,
+}
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(prog='rupert-logs', description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--since', default='24 hours ago')
+    parser.add_argument('--json', action='store_true')
+    parser.add_argument('--file')
+    sub = parser.add_subparsers(dest='command', required=True)
+    for name in ('request', 'user'):
+        sub.add_parser(name).add_argument('id')
+    sub.add_parser('upload').add_argument('count', nargs='?', type=int, default=1)
+    for name in ('errors', 'slow', 'noise', 'tail'):
+        sub.add_parser(name)
+    return parser
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    try:
+        COMMANDS[args.command](args, parse(source_lines(args)))
+    except BrokenPipeError:
+        pass
+
+
+if __name__ == '__main__':
+    main()

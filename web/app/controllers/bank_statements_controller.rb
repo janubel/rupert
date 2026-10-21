@@ -24,12 +24,14 @@ class BankStatementsController < AuthenticatedController
 
     importer = BankStatementImport.new(bytes: file.read, account_label: params[:account_label], withdrawals_positive: params[:withdrawals_positive] == '1')
     result = importer.import!(filename: file.original_filename, actor: Current.user)
+    OpsLog.import(kind: 'bank_statement', outcome: 'ok', rows: result[:created], duplicates: result[:duplicates], document_id: result[:document].id)
     ActivityLogger.log('bank_statement_uploaded', subject: result[:document],
       details: "#{params[:account_label].to_s.strip}: #{result[:created]} new line(s), #{result[:duplicates]} already seen, #{result[:from]}..#{result[:to]}")
     notice = "#{result[:created]} line(s) ready to review"
     notice += "; #{result[:duplicates]} already seen and skipped" if result[:duplicates].positive?
     redirect_to bank_statement_path(result[:document].id), notice: "#{notice}. The original file is retained unchanged."
   rescue BankStatementImport::Error, ReconciliationEvidence::Error => e
+    OpsLog.import(kind: 'bank_statement', outcome: 'rejected', error_class: e.class.name)
     @statements = []
     @documents = {}
     @can_write = true

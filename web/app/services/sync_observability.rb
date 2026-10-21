@@ -18,16 +18,26 @@ class SyncObservability
       queued.update!(status: 'running', started_at: Time.current)
       queued
     end
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     begin
       result = yield
     rescue StandardError => error
       store { attempt&.update!(status: 'failed', error_category: SyncFailure.category(error), finished_at: Time.current) }
+      log_run(source, operation, 'failed', started, tenant_id: attempt&.tenant_id, category: SyncFailure.category(error), error: error)
       raise
     else
       busy = result.is_a?(Hash) && result[:busy]
       store { attempt&.update!(status: busy ? 'skipped' : 'succeeded', finished_at: Time.current) }
+      log_run(source, operation, busy ? 'skipped' : 'succeeded', started, tenant_id: attempt&.tenant_id)
       result
     end
+  end
+
+  # One structured event per sync run (the SyncAttempt row stays the durable record).
+  def self.log_run(source, operation, outcome, started, tenant_id:, category: nil, error: nil)
+    OpsLog.event('sync', level: outcome == 'failed' ? :error : :info, source: source, operation: operation, outcome: outcome,
+      duration_ms: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round, tenant_id: tenant_id,
+      job_id: Current.metadata[:sync_job_id], category: category, **OpsLog.error_fields(error))
   end
 
   def self.queued(job)

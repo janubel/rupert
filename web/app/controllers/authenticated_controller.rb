@@ -21,7 +21,8 @@ class AuthenticatedController < ApplicationController
     Current.user
   end
 
-  def user_not_authorized
+  def user_not_authorized(error = nil)
+    @ops_denied = { via: 'pundit', policy: error.try(:policy)&.class&.name, query: error.try(:query)&.to_s }.compact
     flash[:alert] = "You don't have permission to do that."
     redirect_back(fallback_location: root_path)
   end

@@ -57,14 +57,17 @@ class PosConnectionsController < AuthenticatedController
       report = IrisReporting::DailyDepositsCsvImport.call(text: text, merchant: params[:merchant_number].to_s, period: params[:report_period],
         origin: @connection.credential_values['api_url'].presence || 'https://nabankco.iriscrm.com')
       ActivityLogger.log('iris_daily_deposits_imported', subject: report, details: 'Native Daily Deposits CSV snapshot')
+      OpsLog.import(kind: 'iris_daily_deposits', outcome: 'ok')
       return redirect_to pos_connection_path('iris_reporting'), notice: 'Imported native Daily Deposits report. No sales or inventory changed.'
     end
     count = IrisReporting::CsvImport.call(text: text, merchant: params[:merchant_number].to_s,
       kind: params[:report_kind].to_s, year: params[:report_year],
       origin: @connection.credential_values['api_url'].presence || 'https://nabankco.iriscrm.com')
     ActivityLogger.log('iris_summary_imported', subject: @connection.persisted? ? @connection : nil, details: "#{count} monthly summaries")
+    OpsLog.import(kind: 'iris_monthly_summary', outcome: 'ok', rows: count)
     redirect_to pos_connection_path('iris_reporting'), notice: "Imported #{count} monthly IRIS summaries. No sales or inventory changed."
   rescue IrisReporting::Client::Error => e
+    OpsLog.import(kind: 'iris_csv', outcome: 'rejected', error_class: e.class.name)
     redirect_to pos_connection_path('iris_reporting'), alert: "#{e.message} For Daily Deposits, use the original CSV and matching report month. For Health Center summaries, use the documented template or English matrix."
   end
 

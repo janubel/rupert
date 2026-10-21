@@ -136,6 +136,9 @@ module AskRupert
       usage = Usage.where(user_id: @user.id, outcome: 'pending').order(:id).last
       usage&.update!(outcome: outcome, provider: @provider&.name, model: @provider&.model, tokens_in: @tokens_in,
         tokens_out: @tokens_out, tool_calls: @tools.used, duration_ms: ms)
+      OpsLog.event('ask_rupert', level: outcome == 'ok' ? :info : :warn, outcome: outcome, provider: @provider&.name, model: @provider&.model,
+        tokens_in: @tokens_in, tokens_out: @tokens_out, tool_calls: @tools.used, duration_ms: ms, user_id: @user.id, tenant_id: @user.tenant_id,
+        persist: false)
       note_ai_health(outcome, ms)
     end
 
