@@ -1,8 +1,0 @@
-<%# Tabs shared by the Buzz card, the Team chat and the admin mirror. Each tab
-    only shows to people who may use it. %>
-<% can_read_chat = Current.user&.can?('buzz.read') %>
-<% can_admin = Current.user&.can?('settings.write') %>
-<% tabs = [] %>
-<% tabs += [['Agent & setup', buzz_path, current == :card], ['Team chat', buzz_chat_path, current == :chat]] if can_read_chat %>
-<% tabs << ['Admin mirror', admin_buzz_mirror_path, current == :mirror] if can_admin %>
-<%= page_tabs(tabs, label: 'Buzz sections') if tabs.any? %>

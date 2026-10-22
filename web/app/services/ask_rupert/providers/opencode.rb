@@ -4,7 +4,7 @@ require 'json'
 
 module AskRupert
   module Providers
-    # The same opencode CLI the @rupert Buzz agent uses (deepseek-v4-flash through
+    # The opencode CLI (deepseek-v4-flash through
     # the OpenCode API), run with the `chat` agent whose tools are all disabled
     # (see OpencodeCli for the flags): the model can only produce text. Rupert runs
     # the tools itself and feeds the results back.

@@ -1,5 +1,6 @@
 <% content_for :title, 'SwipeSimple source reports' %>
 <div class="space-y-6">
+  <%= render 'shared/payment_source_tabs', active: 'swipesimple' %>
   <%= page_header 'SwipeSimple source reports', subtitle: 'Native Transactions and Invoices CSV exports from SwipeSimple Web, kept as source observations.' %>
   <%= fold_explainer('C-Trax remains the retail inventory reference. Approved transaction amounts are recorded payments, including any tips already in Amount. Invoice totals are separate and are never added to sales. Declined, voided, errored and canceled transactions are excluded from money totals. Approval does not verify bank settlement. Exports omit receipt PDFs, invoice documents and linked-refund relationships. Original CSVs are retained encrypted, with SHA-256, source numbers and row positions. Missing tips remain unavailable. Reports use Rupert’s Eastern business day and the latest transaction observation and latest full invoice snapshot per account. Invoice numbers can repeat; invoice rows remain separate source observations. Delivery is checked every 30 minutes when an approved feed is configured. Import a fresh native export on demand below. The export timestamp shows source freshness; checking an empty inbox does not refresh vendor data.', class: 'text-sm text-mocha') %>
 

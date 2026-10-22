@@ -85,7 +85,7 @@ one thing, see the state of the business at a glance, and trust the numbers.
   and short detail pages. No other `max-w-*` on page wrappers.
 - **Page help** (`shared/workspace_help`): a quiet line under the page content, not above it.
 - **Status bar** (`.app-statusbar`): one thin strip at the bottom of every page: sync state,
-  Buzz unread badge with the latest message, build. Badges, not popups: a toast appears only
+  Team chat unread badge with the latest message, build. Badges, not popups: a toast appears only
   for something that needs attention now, and never stacks more than three.
 
 **Display size.** The management app is desktop first and sized large: one width per
@@ -165,7 +165,7 @@ Rules that apply to all templates:
 | `.empty-state`, `.empty-state-title`, `.empty-state-hint` | Nothing here yet |
 | `.explainer` | Folded explanation |
 | `.badge`, `.nav-badge` | Unread count on an icon or label; hidden at zero |
-| `.app-statusbar`, `.statusbar-item` | The bottom status bar (sync, Buzz, help, build) |
+| `.app-statusbar`, `.statusbar-item` | The bottom status bar (sync, Team chat, help, build) |
 | `.toast-stack`, `.toast` | Attention-only popups raised with the `rupert:toast` event; three at most |
 
 Add a component by adding it here, to the stylesheet and to the Style guide, in that order.
@@ -322,7 +322,7 @@ These extend the same backbone. Build them from the registry and the templates, 
 
 - **Sections drive more than navigation.** `ModuleRegistry` sections are the one list of
   what the business does. The same list should drive page guides (`PageGuides`), lessons
-  (`LearningCatalog`) and, if wanted, Buzz channels per section (`#bookkeeping`, `#team`, …).
+  (`LearningCatalog`) and, if wanted, Team chat rooms per section (`#bookkeeping`, `#team`, …).
   Keep it simple: one Rupert, one persona and one capable model; a channel only passes its
   section along as context. Split into separate personas only if one Rupert proves unable to
   cover a section well.

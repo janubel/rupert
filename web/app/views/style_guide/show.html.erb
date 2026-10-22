@@ -103,10 +103,10 @@
       <%= section_heading 'Badges, status bar and toasts', hint: 'Badges, not popups: a toast only when something needs attention now.', level: :h3 %>
       <div class="flex flex-wrap items-center gap-4">
         <span class="relative inline-flex"><span class="nav-utility" aria-hidden="true"><%= navigation_icon('chat') %></span><span class="badge nav-badge">3</span></span>
-        <span class="inline-flex items-center gap-2 text-sm text-mocha">Buzz <span class="badge">12</span></span>
+        <span class="inline-flex items-center gap-2 text-sm text-mocha">Team chat <span class="badge">12</span></span>
         <button type="button" class="btn-ghost btn-sm" onclick="window.dispatchEvent(new CustomEvent('rupert:toast', { detail: { title: 'Jordan mentioned you', body: '@Demo can you check the Tuesday deposit before close?', href: '#' } }))">Raise a sample toast</button>
       </div>
-      <p class="text-sm text-mocha">The status bar at the bottom of this page is the real one: sync state, Buzz unread count with the latest message, help and build.</p>
+      <p class="text-sm text-mocha">The status bar at the bottom of this page is the real one: sync state, Team chat unread count with the latest message, help and build.</p>
     </article>
 
     <article class="section-card">

@@ -13,7 +13,7 @@ class SyncJob < ApplicationJob
 
   retry_on ActiveRecord::PreparedStatementCacheExpired, wait: 5.seconds, attempts: 2
   retry_on TransientFailure, wait: :polynomially_longer, attempts: 4 do |job, error|
-    BuzzNotifyJob.perform_later("Sync failed after #{job.executions} attempts: #{error.message.to_s[0, 300]}")
+    TeamChat::NoticeJob.perform_later(job.arguments.first.to_h.with_indifferent_access[:tenant_id], "Sync failed after #{job.executions} attempts: #{error.message.to_s[0, 300]}")
     raise error # keep the failed execution visible in the queue (System page / readiness)
   end
 
@@ -34,7 +34,7 @@ class SyncJob < ApplicationJob
       SyncEngine.run!(mode: mode, actor: actor, tenant: tenant)
           end
 
-    BuzzNotifyJob.perform_later(sync_message(run))
+    TeamChat::NoticeJob.perform_later(tenant.id, sync_message(run))
     SalesAnnouncementJob.perform_later(tenant_id)
   rescue TransientFailure
     raise
@@ -43,7 +43,7 @@ class SyncJob < ApplicationJob
       raise TransientFailure, "#{e.class}: #{e.message.to_s[0, 300]}"
     end
 
-    BuzzNotifyJob.perform_later("Sync failed: #{e.message.to_s[0, 300]}")
+    TeamChat::NoticeJob.perform_later(tenant_id, "Sync failed: #{e.message.to_s[0, 300]}") if tenant_id
     raise
   ensure
     Current.tenant = nil

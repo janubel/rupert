@@ -107,21 +107,51 @@ class SquareClient
       counts = Hash.new(0)
       counts_by_location = {}
       catalog_ids.each_slice(100) do |ids|
-        payload = request('/inventory/counts/batch-retrieve', method: 'POST', body: {
-                            location_ids: location_ids, catalog_object_ids: ids, states: ['IN_STOCK']
-                          })
-        Array(payload['counts']).each do |count|
-          next if count['quantity'].nil?
-
-          quantity = count['quantity'].to_i
-          next if count['state'] && count['state'] != 'IN_STOCK'
-
-          counts[count['catalog_object_id']] += quantity
-          counts_by_location[count['location_id']] ||= Hash.new(0)
-          counts_by_location[count['location_id']][count['catalog_object_id']] += quantity
+        each_inventory_count_page(location_ids, ids) do |payload|
+          aggregate_inventory_counts(payload, counts, counts_by_location)
         end
       end
       { counts: counts, counts_by_location: counts_by_location }
+    end
+
+    def each_inventory_count_page(location_ids, catalog_ids)
+      cursor = nil
+      seen_cursors = {}
+      loop do
+        payload = inventory_counts_page(location_ids, catalog_ids, cursor)
+        yield payload
+        cursor = next_inventory_counts_cursor(payload, seen_cursors)
+        break if cursor.nil?
+      end
+    end
+
+    def inventory_counts_page(location_ids, catalog_ids, cursor)
+      body = { location_ids: location_ids, catalog_object_ids: catalog_ids, states: ['IN_STOCK'] }
+      body[:cursor] = cursor if cursor
+      request('/inventory/counts/batch-retrieve', method: 'POST', body: body)
+    end
+
+    def next_inventory_counts_cursor(payload, seen_cursors)
+      cursor = payload['cursor']
+      return if cursor.blank?
+
+      raise Error.new('Square returned a repeated inventory cursor.', reason: :response) if seen_cursors[cursor]
+
+      seen_cursors[cursor] = true
+      cursor
+    end
+
+    def aggregate_inventory_counts(payload, counts, counts_by_location)
+      Array(payload['counts']).each { |count| accumulate_inventory_count(count, counts, counts_by_location) }
+    end
+
+    def accumulate_inventory_count(count, counts, counts_by_location)
+      return if count['quantity'].nil? || (count['state'] && count['state'] != 'IN_STOCK')
+
+      quantity = count['quantity'].to_i
+      counts[count['catalog_object_id']] += quantity
+      counts_by_location[count['location_id']] ||= Hash.new(0)
+      counts_by_location[count['location_id']][count['catalog_object_id']] += quantity
     end
 
     # Orders changed since `since_iso`. Filtered on updated_at (Square requires

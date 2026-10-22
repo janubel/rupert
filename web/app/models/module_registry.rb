@@ -92,6 +92,7 @@ class ModuleRegistry
     Entry.new(key: 'learning', name: 'Learn Rupert', path: -> { learning_index_path }, permission: nil, position: 89),
     # Team
     Entry.new(key: 'employees', name: 'Staff', path: -> { people_employees_path }, permission: 'hr.read', position: 85),
+    Entry.new(key: 'team_chat', name: 'Team chat', path: -> { team_chat_path }, permission: 'settings.write', position: 85.5),
     Entry.new(key: 'accounts', name: 'Users', path: -> { users_path }, permission: 'users.read', position: 84),
     Entry.new(key: 'permissions', name: 'Permissions', path: -> { permissions_path }, permission: 'users.read', position: 92),
     Entry.new(key: 'departments', name: 'Departments', path: -> { people_departments_path }, permission: 'hr.read', position: 86),
@@ -116,7 +117,6 @@ class ModuleRegistry
     Entry.new(key: 'pos_connections', name: 'POS & payments', path: -> { pos_connections_path }, permission: 'settings.read', position: 94),
     Entry.new(key: 'sync', name: 'Sync', path: -> { syncs_path }, permission: 'sync.read', position: 90),
     Entry.new(key: 'uploads', name: 'Uploads', path: -> { uploads_path }, permission: 'uploads.read', position: 90.5),
-    Entry.new(key: 'buzz_mirror', name: 'Buzz mirror', path: -> { admin_buzz_mirror_path }, permission: 'settings.write', position: 96),
     Entry.new(key: 'settings', name: 'Settings', path: -> { settings_path }, permission: 'settings.read', position: 100),
     Entry.new(key: 'api_access_tokens', name: 'API access', path: -> { api_access_tokens_path }, permission: 'settings.write', position: 108),
     Entry.new(key: 'agent_feedback', name: 'AI assistant feedback', path: -> { agent_feedbacks_path }, permission: 'settings.read', position: 108),
@@ -204,21 +204,21 @@ class ModuleRegistry
       # this area is visible to everyone.
       { key: 'me', name: 'Me', modules: %w[receipts time_clock learning] },
       { key: 'team', name: 'Team',
-        modules: %w[employees accounts permissions departments positions
+        modules: %w[employees team_chat accounts permissions departments positions
                     time_keeping timesheets punch_history square_timesheets ctrax_timesheets schedule team_schedule leave
                     payroll employee_reports training],
         groups: [
-          { name: 'People', modules: %w[employees accounts permissions departments positions] },
+          { name: 'People', modules: %w[employees team_chat accounts permissions departments positions] },
           { name: 'Time', modules: %w[time_keeping timesheets punch_history square_timesheets ctrax_timesheets schedule team_schedule leave] },
           { name: 'Pay & reports', modules: %w[payroll employee_reports training] }
         ] },
       { key: 'system', name: 'System',
         modules: %w[system platform activity access_log
-                    connections pos_connections sync uploads buzz_mirror
+                    connections pos_connections sync uploads
                     settings api_access_tokens agent_feedback ask_rupert_usage owner_checklists roadmap style_guide],
         groups: [
           { name: 'Health', modules: %w[system platform activity access_log] },
-          { name: 'Connections', modules: %w[connections pos_connections sync uploads buzz_mirror] },
+          { name: 'Connections', modules: %w[connections pos_connections sync uploads] },
           { name: 'Settings', modules: %w[settings api_access_tokens agent_feedback ask_rupert_usage owner_checklists roadmap style_guide] }
         ] }
     ].freeze

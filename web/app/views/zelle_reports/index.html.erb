@@ -1,0 +1,71 @@
+<% content_for :title, 'Zelle source reports' %>
+<% money = ->(cents) { number_with_precision(cents / 100.0, precision: 2, delimiter: ',') } %>
+<div class="space-y-6">
+  <%= render 'shared/payment_source_tabs', active: 'zelle' %>
+  <%= page_header 'Zelle source reports', subtitle: %q{Import a Zelle activity CSV that you downloaded from your own bank.} %>
+  <%= fold_explainer(%q{Zelle has no public merchant API, and Rupert never signs in to a bank or stores bank credentials, so this is a manual file workflow. Zelle money lands in a bank account. Every row here is labelled Zelle · unverified until someone matches it to the bank statement. These totals are their own source: they are never added to SwipeSimple card or cash totals, orders or the ledger. Credits are money received; debits are money sent. Original CSVs are kept encrypted with their SHA-256. Counterparty names, memos and bank reference IDs are encrypted and kept out of logs. A missing day does not establish zero Zelle payments. See docs/ops/zelle-reporting.md for the column layout.}, class: 'text-sm text-mocha') %>
+
+  <% if Current.user.can?('sync.write') %>
+    <section id="import" class="card card-pad">
+      <h2 class="font-display text-xl">Review a bank CSV</h2>
+      <p class="text-sm mt-2">Columns: <code>Date</code>, <code>Amount</code>, <code>Direction</code> (credit or debit), <code>Reference ID</code>, and optionally <code>Counterparty</code> and <code>Memo</code>. Dates are YYYY-MM-DD or M/D/YYYY. Amounts are positive with two decimals. Remove other bank columns first. Maximum 8 MiB / 10,000 rows. Include only Zelle rows.</p>
+      <% if @preview %>
+        <div class="rounded-xl bg-haze p-4 mt-4" role="status">
+          <p>Validated <%= @preview[:rows] %> rows posted <%= @preview[:first_posted_on] %> to <%= @preview[:last_posted_on] %>.</p>
+          <p>Received (credits): <%= @preview[:credit_count] %> rows, <%= @preview[:currency] %> <%= money.call(@preview[:credit_cents]) %>. Sent (debits): <%= @preview[:debit_count] %> rows, <%= @preview[:currency] %> <%= money.call(@preview[:debit_cents]) %>.</p>
+          <p>Review these counts and amounts against your bank. Reattach the identical file and import within 15 minutes. Changes to the file or context require a new preview.</p>
+        </div>
+      <% end %>
+      <%= form_tag(@preview_token ? zelle_reports_path : preview_zelle_reports_path, multipart: true, data: { turbo: false }, class: 'space-y-3 mt-4') do %>
+        <%= hidden_field_tag :preview_token, @preview_token if @preview_token %>
+        <label class="block">Bank account label <%= text_field_tag 'zelle_export[account_label]', @context['account_label'], required: true, maxlength: 100, placeholder: 'Business checking (last 4 only)', class: 'input' %></label>
+        <label class="block">Confirmed currency <%= select_tag 'zelle_export[currency]', options_for_select(['USD'], @context['currency']), class: 'input' %></label>
+        <label class="block">File download time with offset <%= text_field_tag 'zelle_export[exported_at]', @context['exported_at'], placeholder: '2026-10-15T20:30:00-04:00', required: true, class: 'input' %></label>
+        <label class="block">Bank CSV file <%= file_field_tag :file, accept: '.csv,text/csv', required: true, class: 'input' %></label>
+        <%= submit_tag(@preview_token ? 'Import reviewed Zelle file' : 'Preview Zelle file', class: 'btn-primary btn-sm') %>
+        <% if @preview_token %><%= link_to 'Start a new preview', zelle_reports_path, class: 'btn-ghost btn-sm' %><% end %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section class="card card-pad">
+    <h2 class="font-display text-xl">Daily Zelle totals (unverified)</h2>
+    <%= form_tag zelle_reports_path, method: :get, class: 'flex gap-3 mt-3' do %>
+      <%= date_field_tag :day, @report.day, class: 'input', aria: { label: 'Bank posting day' } %>
+      <%= submit_tag 'Show day', class: 'btn-ghost btn-sm' %>
+    <% end %>
+    <div class="overflow-x-auto mt-4"><table class="w-full text-sm">
+      <caption class="sr-only">Zelle credits and debits by bank account for the selected posting day</caption>
+      <thead><tr><th>Account</th><th>Currency</th><th>Tender</th><th>Received</th><th>Received rows</th><th>Sent</th><th>Sent rows</th><th>Net</th></tr></thead>
+      <tbody><% @totals.each do |row| %><tr>
+        <td><%= row[:account] %></td><td><%= row[:currency] %></td><td>Zelle · <%= row[:verification] %></td>
+        <td><%= money.call(row[:credit_cents]) %></td><td><%= row[:credit_count] %></td>
+        <td><%= money.call(row[:debit_cents]) %></td><td><%= row[:debit_count] %></td><td><%= money.call(row[:net_cents]) %></td>
+      </tr><% end %></tbody>
+    </table></div>
+    <% if @totals.empty? %><p class="mt-3">No imported Zelle evidence for this day. This does not establish zero Zelle payments.</p><% end %>
+  </section>
+
+  <section class="card card-pad">
+    <h2 class="font-display text-xl">Entries on selected day (up to 200)</h2>
+    <div class="overflow-x-auto mt-4"><table class="w-full text-sm">
+      <thead><tr><th>Posted</th><th>Account</th><th>Direction</th><th>Counterparty</th><th>Memo</th><th>Bank reference</th><th>Amount</th><th>Tender</th><th>Export / row</th></tr></thead>
+      <tbody><% @entries.each do |entry| %><tr>
+        <td><%= entry.posted_on %></td><td><%= entry.zelle_export.account_label %></td>
+        <td><%= entry.direction == 'credit' ? 'Received (credit)' : 'Sent (debit)' %></td>
+        <td><%= entry.counterparty %></td><td><%= entry.memo %></td><td><%= entry.bank_reference %></td>
+        <td><%= entry.zelle_export.currency %> <%= money.call(entry.amount_cents) %></td>
+        <td>Zelle · <%= entry.verification %></td><td>#<%= entry.zelle_export_id %> / <%= entry.source_row %></td>
+      </tr><% end %></tbody>
+    </table></div>
+  </section>
+
+  <section class="card card-pad">
+    <h2 class="font-display text-xl">Recent source documents (20)</h2>
+    <p class="text-sm mt-2">Download requires sync-write permission because the original contains counterparty names and memos. Open downloaded CSVs as text; spreadsheet applications may execute formulas present in source fields.</p>
+    <% @exports.each do |receipt| %>
+      <p class="mt-3">#<%= receipt.id %> · <%= receipt.account_label %> · <%= receipt.row_count %> rows · posted <%= receipt.first_posted_on %> to <%= receipt.last_posted_on %> · exported <%= receipt.exported_at.iso8601 %> · imported <%= receipt.created_at.iso8601 %> · <code><%= receipt.sha256 %></code>
+      <% if Current.user.can?('sync.write') %><%= link_to 'Download original CSV', document_zelle_report_path(receipt), class: 'btn-ghost btn-sm' %><% end %></p>
+    <% end %>
+  </section>
+</div>

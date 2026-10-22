@@ -5,7 +5,7 @@ module Mcp
     class AiHealth < Tool
       tool 'ai_health',
         title: 'AI integration health',
-        description: "Health of Rupert's opencode integration (the @rupert Buzz agent): whether the API key is valid, the " \
+        description: "Health of Rupert's opencode integration (Ask Rupert and team chat): whether the API key is valid, the " \
                      'live list of free models, whether the agent\'s model is still offered, tokens in and out today and ' \
                      'over 7 days, rate-limit hits and warnings. Same data as the System page card. Counts and ' \
                      'classifications only — never the key or any message content. opencode has no balance or usage ' \

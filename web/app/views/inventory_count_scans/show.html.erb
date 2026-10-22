@@ -1,6 +1,6 @@
 <% content_for :title, 'Scan count' %>
 <div class="page-narrow space-y-6" data-controller="inventory-count-scanner">
-  <%= page_header 'Scan count', subtitle: "Counted #{l(@count.countedAt, format: :long)} · #{@count.location&.name || 'no location'}", menu: (@count.draft? ? [['Edit worksheet', edit_inventory_count_path(@count)]] : nil) do %>
+  <%= page_header 'Scan count', subtitle: "Counted #{l(@count.countedAt, format: :long)} · #{@count.location ? "#{@count.location.source.titleize} · #{@count.location.name}" : 'no location'}", menu: (@count.draft? ? [['Edit worksheet', edit_inventory_count_path(@count)]] : nil) do %>
     <%= link_to 'Open count', inventory_count_path(@count), class: 'btn-ghost' %>
   <% end %>
   <p class="text-sm text-mocha">Scan a label with an exact SKU, type a SKU, or use a barcode already stored in the catalog. Each entry saves to this worksheet. <span class="pill-taupe"><%= @count.status.humanize %></span></p>

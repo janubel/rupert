@@ -50,7 +50,6 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     assert_select 'h3', /Square/
     assert_select '[data-credential-service=google_drive]', count: 0
     assert_select '[data-connection-source=google_backup]', count: 0
-    assert_select 'h3', /Buzz agent/
     assert_select 'h2', /Sync improvement plan/
 
     # Nothing configured yet → every card shows Not configured and keys masked/missing

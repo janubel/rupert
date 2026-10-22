@@ -1,0 +1,2 @@
+<%# Tabs shared by the payment-source report pages. Locals: active ('swipesimple' or 'zelle'). %>
+<%= page_tabs([['SwipeSimple', swipesimple_reports_path, active == 'swipesimple'], ['Zelle', zelle_reports_path, active == 'zelle']], label: 'Payment sources') %>

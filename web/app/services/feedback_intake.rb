@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Files feedback that arrives from a teammate's chat message (Buzz) or an AI
-# assistant, with the rules the owner set:
+# Files feedback that arrives from an AI assistant (or, historically, a teammate's
+# Buzz chat message), with the rules the owner set:
 #   * the message text is untrusted data — stored capped, never followed;
 #   * only senders on the allow-list (Settings → Environment, FEEDBACK_READY_SENDERS,
 #     64-hex Nostr public keys or npubs) can mark work "ready for development";
@@ -33,13 +33,8 @@ class FeedbackIntake
       nil
     end
 
-    # The agent's own key is never a sender who can mark work ready, even if it is
-    # listed: messages posted from Rupert's Team chat are signed by the agent
-    # (with the person's name in the text, which is only text), so allowing that
-    # key would let anyone with chat access skip the allow-list.
     def ready_senders
-      own = BuzzChat.agent_pubkey
-      EnvStore.fetch('FEEDBACK_READY_SENDERS', '').to_s.split(/[\s,;]+/).filter_map { |entry| normalize_sender(entry) }.uniq - [own].compact
+      EnvStore.fetch('FEEDBACK_READY_SENDERS', '').to_s.split(/[\s,;]+/).filter_map { |entry| normalize_sender(entry) }.uniq
     end
 
     def ready_sender?(sender)

@@ -277,39 +277,11 @@
     </div>
   </section>
 
-  <section class="section-card scroll-mt-24" id="buzz">
-    <%= section_heading 'Buzz agent', hint: 'Rupert joins your Buzz workspace as an agent with its own Nostr keypair.' do %>
-      <span class="<%= BuzzAgent.configured? ? "pill-fern" : "pill-taupe" %>"><%= BuzzAgent.configured? ? "Configured" : "Not configured" %></span>
+  <section class="section-card scroll-mt-24" id="team-chat">
+    <%= section_heading 'Team chat', hint: 'Rooms, threads, files and the @rupert assistant live inside Rupert.' do %>
+      <%= link_to 'Open team chat', team_chat_path, class: 'btn-ghost btn-sm' %>
     <% end %>
-    <p class="text-xs text-taupe">It posts signed events to a channel when syncs finish and counts are submitted.</p>
-
-    <% last_check = BuzzAgent.last_status %>
-    <dl class="facts" aria-label="Buzz status">
-      <div><dt>Agent identity (npub)</dt><dd class="break-all font-mono text-xs"><%= BuzzAgent.agent_npub || "No keypair yet." %></dd></div>
-      <div><dt>Relay / channel</dt><dd class="break-all font-mono text-xs"><%= EnvStore.fetch("BUZZ_RELAY_URL", "—").presence || "No relay set" %><% if BuzzAgent.channel_id.present? %> · channel <%= BuzzAgent.channel_id[0, 12] %>…<% end %></dd></div>
-      <div><dt>Configured</dt><dd><%= buzz_status_pill(BuzzAgent.configured?, "Yes", "No") %></dd></div>
-      <div><dt>Relay reachable</dt><dd><%= buzz_status_pill(last_check&.dig(:relay_reachable), "Yes", "No") %></dd></div>
-      <div><dt>Agent registered</dt><dd><%= buzz_status_pill(last_check&.dig(:registered), "Yes", "Not yet") %></dd></div>
-    </dl>
-    <p class="text-xs text-taupe"><%= last_check ? "Last checked #{time_ago_in_words(last_check[:checked_at])} ago." : "Relay and registration are checked on demand with Check status." %> <%= link_to "Open the Buzz card", buzz_path, class: "underline" %> to see what your team sees.</p>
-
-    <% if can_write %>
-      <div class="flex flex-wrap items-center gap-3">
-        <%= button_to "Send test message", buzz_test_settings_path, method: :post, class: "btn-primary", disabled: !BuzzAgent.configured?, data: { turbo: false } %>
-        <%= button_to "Check status", buzz_status_settings_path, method: :post, class: "btn-ghost", disabled: !BuzzAgent.configured?, data: { turbo: false } %>
-        <%= button_to "Generate agent keypair", buzz_generate_settings_path, method: :post, class: "btn-ghost", data: { turbo: false } %>
-        <%= button_to "Publish agent profile", buzz_register_settings_path, method: :post, class: "btn-ghost", disabled: !BuzzAgent.configured?, data: { turbo: false } %>
-      </div>
-    <% end %>
-    <details class="explainer text-sm">
-      <summary class="explainer-summary">Keys to set on the Environment (.env) card</summary>
-      <ul class="mt-2 space-y-1 font-mono text-xs text-mocha">
-        <li>BUZZ_RELAY_URL · your relay, e.g. <code>wss://buzz.example.com</code></li>
-        <li>BUZZ_CHANNEL · the channel's id (a UUID in Buzz) to post into</li>
-        <li>Optional, for the Buzz card: BUZZ_CHAT_LINK_TEMPLATE (default <code>buzz://channel/{channel}</code>), BUZZ_CONNECT_LINK_TEMPLATE (default <code>buzz://add-community?relay={relay}&amp;name={name}</code>), BUZZ_DOWNLOAD_MACOS / _WINDOWS / _LINUX / _IOS / _ANDROID and BUZZ_WEB_URL (https links)</li>
-      </ul>
-      <p class="mt-2 text-xs text-taupe">To let Rupert into a channel: publish its profile, then add the npub as a member. Buzz only knows identities that have a profile on the relay.</p>
-    </details>
+    <p class="text-sm text-mocha">Rupert posts sync results, count submissions and sales into the team rooms; people can ask @rupert about the business there.</p>
   </section>
 </div>
 

@@ -179,7 +179,7 @@ class ConnectionCredentialsTest < ActionDispatch::IntegrationTest
 
   test 'credential form container is filtered from request logging' do
     filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
-    result = filter.filter('connection_credentials' => { 'values' => { 'BUZZ_CHANNEL' => 'private-input' }, 'edit_token' => 'private-form-token' })
+    result = filter.filter('connection_credentials' => { 'values' => { 'SQUARE_LOCATION_ID' => 'private-input' }, 'edit_token' => 'private-form-token' })
     assert_equal '[FILTERED]', result['connection_credentials']
   end
 
