@@ -6,7 +6,7 @@
 # arrives), and the list is cached briefly so the chat page does not pay for a
 # relay round trip on every poll.
 class BuzzChannels
-  Channel = Struct.new(:id, :name, :about, :members, keyword_init: true)
+  Channel = Struct.new(:id, :name, :about, :members, :pubkeys, keyword_init: true)
 
   CACHE_TTL = 5.minutes
 
@@ -49,11 +49,11 @@ class BuzzChannels
     def default
       id = BuzzAgent.channel_id
       list_cached&.find { |channel| channel.id == id } ||
-        Channel.new(id: id, name: 'rupert', about: 'Team chat', members: 0)
+        Channel.new(id: id, name: 'rupert', about: 'Team chat', members: 0, pubkeys: [])
     end
 
     def fallback
-      Channel.new(id: BuzzAgent.channel_id, name: 'rupert', about: 'Team chat', members: 0)
+      Channel.new(id: BuzzAgent.channel_id, name: 'rupert', about: 'Team chat', members: 0, pubkeys: [])
     end
 
     private
@@ -66,7 +66,7 @@ class BuzzChannels
       events = BuzzRelayClient.query([{ kinds: [39_000, 39_002], limit: 500 }])
       metas = events.select { |event| event['kind'] == 39_000 && !archived?(event) }
       memberships = events.select { |event| event['kind'] == 39_002 }
-      counts = member_counts(memberships)
+      people = member_lists(memberships)
       by_id = metas.index_by { |event| tag(event, 'd') }
 
       (by_id.keys + memberships.map { |event| tag(event, 'd') }).compact.uniq.filter_map do |id|
@@ -77,7 +77,8 @@ class BuzzChannels
           id: id,
           name: (meta && tag(meta, 'name')).presence || 'channel',
           about: (meta && tag(meta, 'about')).to_s,
-          members: counts[id].to_i
+          members: people[id].to_a.size,
+          pubkeys: people[id].to_a
         )
       end.sort_by { |channel| channel.name.downcase }
     end
@@ -86,13 +87,14 @@ class BuzzChannels
       Array(event['tags']).any? { |entry| entry.is_a?(Array) && entry[0] == 'archived' && entry[1] == 'true' }
     end
 
-    def member_counts(events)
-      events.each_with_object({}) do |event, counts|
+    def member_lists(events)
+      events.each_with_object({}) do |event, lists|
         id = tag(event, 'd')
         next if id.blank?
 
-        counts[id] = Array(event['tags']).count do |entry|
-          entry.is_a?(Array) && entry[0] == 'p' && entry[1].to_s.match?(/\A\h{64}\z/)
+        lists[id] ||= []
+        lists[id] |= Array(event['tags']).filter_map do |entry|
+          entry[1].to_s if entry.is_a?(Array) && entry[0] == 'p' && entry[1].to_s.match?(/\A\h{64}\z/)
         end
       end
     end

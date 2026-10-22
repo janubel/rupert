@@ -9,7 +9,7 @@ import { Controller } from "@hotwired/stimulus"
 // (**bold**, `code`, http(s) links, line breaks) is built from DOM nodes, and a
 // link is plain text plus an href. Nothing linked is fetched or previewed.
 export default class extends Controller {
-  static targets = ["log", "more", "status", "notice", "form", "input", "send", "count", "jump", "empty", "loading", "search"]
+  static targets = ["log", "more", "status", "notice", "form", "input", "send", "count", "jump", "empty", "loading", "search", "reply", "replyName"]
   static values = { url: String, channel: String, canPost: Boolean, postMax: { type: Number, default: 1500 }, interval: { type: Number, default: 4000 } }
 
   static GROUP_SECONDS = 5 * 60
@@ -23,6 +23,10 @@ export default class extends Controller {
     this.busy = false
     this.loadFailed = false
     this.fetchFailed = false
+    this.replyTo = null
+    this.pendingReply = false
+    this.pendingSince = 0
+    this.pendingMessageId = null
     this.load()
     this.timer = setInterval(() => this.poll(), this.intervalValue)
     this.onVisible = () => { if (!document.hidden) this.poll() }
@@ -74,6 +78,16 @@ export default class extends Controller {
       if (url.protocol !== "http:" && url.protocol !== "https:") return null
       if (url.username || url.password) return null
       return url.href
+    } catch (_error) {
+      return null
+    }
+  }
+
+  static imageUrl(value) {
+    const safe = this.safeUrl(value)
+    if (!safe) return null
+    try {
+      return /\.(png|jpe?g|gif|webp|avif)$/i.test(new URL(safe).pathname) ? safe : null
     } catch (_error) {
       return null
     }
@@ -139,6 +153,12 @@ export default class extends Controller {
 
   appendMessages(list, { stick }) {
     const fresh = list.filter((message) => !this.ids.has(message.id))
+    // A reply from Rupert (not a person posting through him) means the eyes and
+    // the typing row have done their job.
+    if (this.pendingReply && fresh.some((message) => message.agent && !message.via_rupert)) {
+      this.pendingReply = false
+      this.pendingMessageId = null
+    }
     if (!fresh.length) {
       this.renderEmpty()
       return
@@ -174,24 +194,51 @@ export default class extends Controller {
   renderAll() {
     const holder = this.logTarget.querySelector("[data-buzz-chat-list]")
     holder.replaceChildren()
-    let previous = null
+    const byId = new Map(this.messages.map((message) => [message.id, message]))
+    const replies = new Map()
     this.messages.forEach((message) => {
+      if (!message.reply_to || !byId.has(message.reply_to)) return
+      if (!replies.has(message.reply_to)) replies.set(message.reply_to, [])
+      replies.get(message.reply_to).push(message)
+    })
+    const topLevel = this.messages.filter((message) => !message.reply_to || !byId.has(message.reply_to))
+    let previous = null
+    topLevel.forEach((message) => {
       const day = new Date(message.at)
       if (!previous || !this.sameDay(new Date(previous.at), day)) holder.append(this.dayDivider(day))
       const grouped = previous && this.sameDay(new Date(previous.at), day) && this.sameAuthor(previous, message) &&
         (day - new Date(previous.at)) / 1000 < this.constructor.GROUP_SECONDS
-      holder.append(this.buildMessage(message, grouped))
+      const item = this.buildMessage(message, grouped)
+      const children = replies.get(message.id)
+      if (children && children.length) item.append(this.threadBlock(children))
+      holder.append(item)
       previous = message
     })
     this.renderEmpty()
+    if (this.pendingReply) holder.append(this.typingRow())
   }
 
-  buildMessage(message, grouped) {
+  threadBlock(replies) {
+    const details = document.createElement("details")
+    details.className = "buzz-thread"
+    details.open = replies.some((reply) => reply.agent && !reply.via_rupert)
+    const summary = document.createElement("summary")
+    summary.textContent = `${replies.length} ${replies.length === 1 ? "reply" : "replies"}`
+    details.append(summary)
+    const list = document.createElement("div")
+    list.className = "buzz-thread-list"
+    replies.forEach((reply) => list.append(this.buildMessage(reply, false, { inThread: true })))
+    details.append(list)
+    return details
+  }
+
+  buildMessage(message, grouped, { inThread = false } = {}) {
     const item = document.createElement("article")
     item.className = "buzz-msg"
     if (message.agent) item.classList.add("buzz-msg-agent")
     if (message.mine) item.classList.add("buzz-msg-mine")
     if (grouped) item.classList.add("buzz-msg-grouped")
+    if (inThread) item.classList.add("buzz-msg-thread")
     item.dataset.messageId = message.id
 
     const row = document.createElement("div")
@@ -217,18 +264,113 @@ export default class extends Controller {
       time.textContent = this.timeLabel(new Date(message.at))
       time.title = new Date(message.at).toLocaleString()
       head.append(time)
+      const reply = document.createElement("button")
+      reply.type = "button"
+      reply.className = "buzz-reply-button"
+      reply.textContent = "Reply"
+      reply.setAttribute("aria-label", `Reply in thread to ${message.author}`)
+      reply.addEventListener("click", () => this.startReply(message))
+      head.append(reply)
       main.append(head)
     }
     const body = document.createElement("div")
     body.className = "buzz-msg-body"
     message.text.split("\n").forEach((line, index) => {
+      const image = this.imageFor(line)
+      if (image) {
+        if (body.childNodes.length) body.append(document.createElement("br"))
+        body.append(this.imageNode(image.src, image.alt))
+        return
+      }
       if (index > 0) body.append(document.createElement("br"))
       this.constructor.parseLine(line).forEach((part) => body.append(this.partNode(part)))
     })
     main.append(body)
+    this.mediaNodes(message).forEach((node) => main.append(node))
+    if (this.pendingReply && this.pendingMessageId && message.id === this.pendingMessageId) {
+      const seen = document.createElement("span")
+      seen.className = "buzz-seen"
+      seen.textContent = "👀"
+      seen.title = "Rupert has seen this"
+      seen.setAttribute("aria-label", "Rupert has seen this")
+      main.append(seen)
+    }
     row.append(main)
     item.append(row)
     return item
+  }
+
+  imageFor(line) {
+    const markdown = line.match(/^\s*!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\s*$/)
+    if (markdown) {
+      const src = this.constructor.safeUrl(markdown[2])
+      return src ? { src, alt: markdown[1] || "Image" } : null
+    }
+    const bare = line.match(/^\s*(https?:\/\/\S+)\s*$/)
+    const src = bare ? this.constructor.imageUrl(bare[1]) : null
+    return src ? { src, alt: "Image" } : null
+  }
+
+  imageNode(src, alt) {
+    const link = document.createElement("a")
+    link.className = "buzz-image"
+    link.href = src
+    link.target = "_blank"
+    link.rel = "noopener noreferrer nofollow ugc"
+    const image = document.createElement("img")
+    image.src = src
+    image.alt = alt || "Image"
+    image.loading = "lazy"
+    image.referrerPolicy = "no-referrer"
+    link.append(image)
+    return link
+  }
+
+  mediaNodes(message) {
+    const nodes = []
+    const attachments = Array.isArray(message.attachments) ? message.attachments : []
+    attachments.forEach((attachment) => {
+      const href = this.constructor.safeUrl(attachment && attachment.url)
+      if (!href) return
+      const mime = String((attachment && attachment.mime) || "")
+      if (mime.startsWith("image/") || this.constructor.imageUrl(href)) {
+        nodes.push(this.imageNode(href, attachment.alt || "Attached image"))
+        return
+      }
+      const link = document.createElement("a")
+      link.className = "buzz-attachment-file"
+      link.href = href
+      link.target = "_blank"
+      link.rel = "noopener noreferrer nofollow ugc"
+      link.textContent = attachment.alt || this.fileName(href)
+      nodes.push(link)
+    })
+    return nodes
+  }
+
+  fileName(href) {
+    try {
+      const url = new URL(href)
+      return decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || url.hostname)
+    } catch (_error) {
+      return "Attachment"
+    }
+  }
+
+  typingRow() {
+    const row = document.createElement("div")
+    row.className = "buzz-typing"
+    row.setAttribute("role", "status")
+    const eyes = document.createElement("span")
+    eyes.className = "buzz-typing-eyes"
+    eyes.textContent = "👀"
+    const label = document.createElement("span")
+    label.textContent = "Rupert is typing"
+    const dots = document.createElement("span")
+    dots.className = "buzz-typing-dots"
+    dots.textContent = "…"
+    row.append(eyes, label, dots)
+    return row
   }
 
   avatar(name, key) {
@@ -300,6 +442,12 @@ export default class extends Controller {
   }
 
   renderStatus() {
+    if (this.pendingReply && Date.now() - this.pendingSince > 90000) {
+      this.pendingReply = false
+      this.pendingMessageId = null
+      this.setNotice("Rupert did not answer in time. Try again.")
+      this.renderAll()
+    }
     if (!this.hasStatusTarget) return
     const node = this.statusTarget
     let text = ""
@@ -346,6 +494,19 @@ export default class extends Controller {
 
   // --- posting ---
 
+  startReply(message) {
+    if (!this.hasInputTarget) return
+    this.replyTo = message.reply_to || message.id
+    if (this.hasReplyTarget) this.replyTarget.hidden = false
+    if (this.hasReplyNameTarget) this.replyNameTarget.textContent = message.author
+    this.inputTarget.focus()
+  }
+
+  cancelReply() {
+    this.replyTo = null
+    if (this.hasReplyTarget) this.replyTarget.hidden = true
+  }
+
   keydown(event) {
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault()
@@ -371,6 +532,7 @@ export default class extends Controller {
     if (this.sending || !this.canPostValue) return
     const text = this.inputTarget.value.trim()
     if (!text || text.length > this.postMaxValue) return
+    const mentionsRupert = /(^|\s)@rupert\b/i.test(text)
     this.sending = true
     this.sendTarget.disabled = true
     this.setNotice("")
@@ -379,7 +541,7 @@ export default class extends Controller {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": this.csrf },
         credentials: "same-origin",
-        body: JSON.stringify({ message: text, channel: this.channelValue })
+        body: JSON.stringify({ message: text, channel: this.channelValue, reply_to: this.replyTo })
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
@@ -387,8 +549,16 @@ export default class extends Controller {
         return
       }
       this.inputTarget.value = ""
+      this.cancelReply()
       this.input()
       this.sending = false
+      if (mentionsRupert) {
+        this.pendingReply = true
+        this.pendingSince = Date.now()
+        this.pendingMessageId = data.event_id || null
+        this.renderAll()
+        this.scrollToEnd()
+      }
       const last = this.messages[this.messages.length - 1]
       await this.fetchMessages({ after: last ? last.cursor : null })
       this.scrollToEnd()

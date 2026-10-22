@@ -68,6 +68,14 @@
         </div>
         <div class="buzz-channel-tools">
           <span class="buzz-status" data-buzz-chat-target="status" data-tone="ok" role="status" aria-live="polite">Connecting to Buzz…</span>
+          <% if Array(@members).any? %>
+            <span class="buzz-member-stack" aria-label="Channel members">
+              <% Array(@members).each do |member| %>
+                <span class="buzz-member-avatar" style="background:<%= member.color %>" title="<%= member.name %>" aria-label="<%= member.name %>"><%= member.initials %></span>
+              <% end %>
+              <% if @member_overflow.to_i.positive? %><span class="buzz-member-more" title="More members">+<%= @member_overflow %></span><% end %>
+            </span>
+          <% end %>
           <span class="buzz-members" title="Channel members"><%= pluralize(@channel.members, 'member') %></span>
         </div>
       </header>
@@ -86,12 +94,16 @@
         <% if @can_post %>
           <form class="buzz-compose" data-buzz-chat-target="form" data-action="submit->buzz-chat#send">
             <p class="buzz-error" data-buzz-chat-target="notice" role="alert" hidden></p>
+            <div class="buzz-reply" data-buzz-chat-target="reply" hidden>
+              <span>Replying in thread to <strong data-buzz-chat-target="replyName"></strong></span>
+              <button type="button" class="buzz-reply-cancel" data-action="buzz-chat#cancelReply">Cancel</button>
+            </div>
             <div class="buzz-composer">
               <label for="buzz-message" class="sr-only">Message #<%= @channel.name %></label>
               <textarea id="buzz-message" class="buzz-input" rows="1" maxlength="<%= BuzzChat::POST_MAX + 200 %>" placeholder="Message #<%= @channel.name %>"
                         data-buzz-chat-target="input" data-action="input->buzz-chat#input keydown->buzz-chat#keydown" autocomplete="off"></textarea>
               <div class="buzz-composer-bar">
-                <span class="buzz-composer-hint">Posting as <strong><%= Current.user.display_name.to_s.first(40) %> via Rupert</strong> &middot; mention <strong>@rupert</strong> for help</span>
+                <span class="buzz-composer-hint">Posting as <strong><%= Current.user.display_name.to_s.first(40) %> via Rupert</strong> &middot; mention <strong>@rupert</strong> for help &middot; paste an image link to show it inline</span>
                 <button type="submit" class="buzz-send" data-buzz-chat-target="send" aria-label="Send message" disabled>↑</button>
               </div>
             </div>

@@ -220,4 +220,37 @@ class BuzzChatTest < ActiveSupport::TestCase
     refute FeedbackIntake.ready_sender?(BuzzAgent.agent_npub)
     assert FeedbackIntake.ready_sender?(@alice[:public_key])
   end
+  test 'thread replies and media references survive the copy' do
+    parent = @relay.message(@alice, 'root message', at: @t0)
+    @relay.add(parent)
+    @relay.add(@relay.message(@alice, 'thread answer', at: @t0 + 5, extra_tags: [['e', parent['id'], '', 'reply']]))
+    @relay.add(@relay.message(@bob, 'photo', at: @t0 + 10,
+      extra_tags: [['imeta', 'url https://cdn.example/a.png', 'm image/png', 'alt A cat']]))
+
+    BuzzChat.sync!
+    root, reply, photo = BuzzChat.page[:messages]
+    assert_equal parent['id'], reply[:reply_to]
+    assert reply[:reply]
+    assert_equal 'https://cdn.example/a.png', photo[:attachments].first['url']
+    assert_equal 'image/png', photo[:attachments].first['mime']
+    assert_equal 'A cat', photo[:attachments].first['alt']
+  end
+
+  test 'a reply is posted with an e tag and stored under its parent' do
+    @relay.add(@relay.message(@alice, 'root message', at: @t0))
+    BuzzChat.sync!
+    parent = BuzzMessage.first
+
+    row = BuzzChat.post!(user: @user, text: 'thread answer', reply_to: parent.event_id)
+
+    assert_equal parent.event_id, row.reply_to
+    assert_includes @relay.published.last['tags'], ['e', parent.event_id, '', 'reply']
+    assert_match(/ via Rupert: thread answer\z/, @relay.published.last['content'])
+  end
+
+  test 'a reply to a message outside the channel is refused' do
+    error = assert_raises(BuzzChat::Invalid) { BuzzChat.post!(user: @user, text: 'nope', reply_to: 'a' * 64) }
+    assert_match(/thread is no longer available/, error.message)
+    assert_empty @relay.published
+  end
 end

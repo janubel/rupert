@@ -41,3 +41,11 @@ test('trailing punctuation is not part of a link but balanced brackets are', () 
   const wiki = Chat.parseLine('https://en.wikipedia.org/wiki/Rupert_(name)');
   assert.equal(wiki.find((part) => part.type === 'link').href, 'https://en.wikipedia.org/wiki/Rupert_(name)');
 });
+
+test('standalone image links are recognised, other links are not images', () => {
+  assert.equal(Chat.imageUrl('https://example.com/a.png'), 'https://example.com/a.png');
+  assert.equal(Chat.imageUrl('https://example.com/a.JPG?x=1'), 'https://example.com/a.JPG?x=1');
+  assert.equal(Chat.imageUrl('https://example.com/a.svg'), null);
+  assert.equal(Chat.imageUrl('javascript:alert(1)'), null);
+  assert.equal(Chat.imageUrl('data:image/png;base64,abc'), null);
+});
