@@ -51,7 +51,7 @@ module TeamChat
 
     # Rebuilds runs from #liquid-testing messages (questions, replies and grade notices carry the run key in meta).
     # Skips runs already saved. Returns the number of runs created.
-    def self.backfill!(room = Room.find_by(slug: Battery::ROOM_SLUG))
+    def self.backfill!(room = Room.find_by(slug: Battery::LEGACY_ROOM_SLUG))
       return 0 unless room
 
       messages = room.messages.where('meta LIKE ?', '%"battery"%').order(:id).to_a

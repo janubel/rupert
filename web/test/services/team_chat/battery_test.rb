@@ -34,13 +34,13 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
      TeamChat::Battery::Item.new(id: 'm3', cadence: 'monthly', question: 'Sales tax last month?', checks: [{ 'tool' => 'sales_tax_report', 'args' => { 'from' => 'last_month.from', 'to' => 'last_month.to' } }])]
   end
 
-  test 'asks each question to the bot on its own in #liquid-testing, times it, grades it and posts a pinned summary' do
+  test 'asks each question to the bot on its own in its test room, times it, grades it and posts a pinned summary' do
     requests = script_model({ tool: 'period_review', arguments: { period: 'yesterday' } }, { text: 'Yesterday: 2 orders, $100.' }, { text: 'No tax data.' })
     grader = FakeGrader.new([])
     battery = TeamChat::Battery.new(user: @user, agent: 'liquid', grader: grader, items: items, out: nil)
     results = battery.run
 
-    room = TeamChat::Room.find_by!(slug: 'liquid-testing')
+    room = TeamChat::Room.find_by!(slug: 'test-liquid')
     assert_equal ['done', 'done'], results.map(&:status)
     assert_equal [['period_review'], []], results.map(&:tools)
     replies = room.messages.where(author_kind: 'assistant').order(:id)
@@ -82,7 +82,7 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
   end
 
   test 'runs from before saving are rebuilt from #liquid-testing' do
-    room = TeamChat::Battery.room_for(@user)
+    room = TeamChat::Room.create!(name: 'liquid-testing', slug: 'liquid-testing', kind: 'channel', assistant_mode: 'off', created_by: @user)
     room.messages.create!(author_kind: 'system', body: '🧪 Test run old-1 (finance questions): 1 questions', meta: { 'battery' => 'old-1' })
     question = room.messages.create!(user: @user, body: '@qwen How much tax?', meta: { 'battery' => 'old-1', 'item' => 'f15', 'cadence' => 'tax' })
     reply = room.messages.create!(author_kind: 'assistant', status: 'done', body: 'Per source…',
@@ -106,6 +106,15 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     end
     reply = TeamChat::Message.where(author_kind: 'assistant').last
     assert_equal 'dismissed', reply.actions_list.first['status']
+  end
+
+  test 'every bot gets its own test room, created up front' do
+    slugs = TeamChat::Battery.ensure_rooms!(@user).map(&:slug)
+    assert_includes slugs, 'test-rupert'
+    assert_includes slugs, 'test-liquid'
+    assert_includes slugs, 'test-gemma-e2b'
+    assert_equal slugs.size, TeamChat::Room.where(slug: slugs).count
+    assert TeamChat::Room.find_by(slug: 'test-qwen').visible_to?(@user)
   end
 
   test 'trial models are only for the battery, and an unknown bot is refused' do

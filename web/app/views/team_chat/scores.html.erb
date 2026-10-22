@@ -54,7 +54,7 @@
 <section class="mt-6" id="test-runs">
   <div class="flex flex-wrap items-baseline gap-2">
     <h2 class="font-display text-lg text-ink">Test runs</h2>
-    <span class="text-sm text-mocha">A fixed set of questions asked to one bot in #liquid-testing, each answer graded 1–5 by DeepSeek against Rupert’s own data.</span>
+    <span class="text-sm text-mocha">A fixed set of questions asked to one bot in its own test room (#test-liquid, #test-qwen, ...), each answer graded 1–5 by DeepSeek against Rupert’s own data.</span>
   </div>
   <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
     <span class="text-mocha">Questions:</span>
@@ -62,9 +62,11 @@
     <% @run_sets.each do |set| %>
       <%= link_to set, team_chat_scores_path(days: @days, set: set, anchor: 'test-runs'), class: (@run_set == set ? 'pill-fern' : 'pill-taupe') %>
     <% end %>
-    <% if (room = TeamChat::Room.find_by(slug: TeamChat::Battery::ROOM_SLUG)) %>
-      <%= link_to 'Watch in #liquid-testing', team_chat_room_path(room), class: 'ml-auto underline text-mocha' %>
-    <% end %>
+    <span class="ml-auto flex flex-wrap gap-2 text-mocha">
+      <% TeamChat::Room.open.channels.where('slug LIKE ?', 'test-%').order(:slug).each do |room| %>
+        <%= link_to "##{room.slug}", team_chat_room_path(room), class: 'underline' %>
+      <% end %>
+    </span>
   </div>
   <% if @runs.empty? %>
     <p class="mt-2 text-sm text-mocha">No test runs yet. They start with <code>bin/rails team_chat:battery AGENT=liquid</code> on the server.</p>
