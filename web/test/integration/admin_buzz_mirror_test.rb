@@ -101,4 +101,12 @@ class AdminBuzzMirrorTest < ActionDispatch::IntegrationTest
     get admin_buzz_mirror_messages_path, params: { before: 'nonsense' }
     assert_response :unprocessable_entity
   end
+
+  test 'administrators can find the mirror in the System navigation' do
+    start_buzz_relay
+    sign_in_admin
+    get settings_path
+    assert_response :success
+    assert_select "a[href='#{admin_buzz_mirror_path}']", 1
+  end
 end
