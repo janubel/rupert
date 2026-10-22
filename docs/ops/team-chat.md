@@ -201,7 +201,7 @@ containers yet.
 | --- | --- | --- |
 | `@rupert` | DeepSeek V4.1 Flash (`RUPERT_CHAT_PROVIDER=opencode_go`, `RUPERT_CHAT_MODEL=deepseek-v4.1-flash`) | cloud, OpenCode Go plan |
 | `@liquid` | Liquid AI LFM2.5 8B-A1B | local `rupert-llm` gateway |
-| `@qwen` | Qwen3.6 35B-A3B (Unsloth UD-Q3_K_S) since 2026-10-22; was Qwen3.5 4B (now the `qwen-4b` test model) | local |
+| `@qwen` | Qwen3.6 35B-A3B (Unsloth MTP UD-IQ3_S, draft-mtp) since 2026-10-22; was Qwen3.5 4B (now the `qwen-4b` test model) | local |
 | `@gemma` | Google Gemma 4 E4B (`gemma-4-e4b`, `gemma-4-E4B_q4_0-it.gguf`) | local (added back 2026-10-23 at the owner's request) |
 
 - Every bot reply shows its time and model, for example "4s · deepseek-v4.1-flash · cloud".
@@ -312,3 +312,19 @@ The test battery put Qwen3.6-35B-A3B first among local models (finance 4.62, gen
 `docs/ops/local-ai-report-2026-10-22.md`), so it now answers as @qwen. It fills the 780M on its own (about 2 GB left), which
 the one-model-at-a-time gateway already handles. Qwen3.5-4B stays on the gateway as the `qwen-4b` test model. The bot key's
 grades and 💰 badge follow the model, so they carry over from the runs made under `qwen-35b`.
+
+### @qwen uses multi-token prediction (2026-10-22)
+
+`unsloth/Qwen3.6-35B-A3B-MTP-GGUF` (UD-IQ3_S, 15.3 GB) keeps Qwen's own multi-token-prediction head, and llama.cpp
+b11819 uses it with `--spec-type draft-mtp --spec-draft-n-max 3`: the model drafts the next three tokens and checks them
+in one pass. A/B on the finance battery (21 questions each, DeepSeek grading, same day):
+
+| Setup | Grade | Time per answer | Writing speed |
+| --- | --- | --- | --- |
+| UD-Q3_K_S, no speculation (before) | 4.3 | 14.5 s | 22.7 tok/s |
+| MTP file, no speculation | 4.3 | 13.4 s | 24.9 tok/s |
+| MTP file, `draft-mtp` n-max 3 (now) | 4.3 | 12.5 s | 37.9 tok/s |
+
+99% of drafted tokens were accepted in the probe. `--spec-draft-n-max 2` made llama-server exit, so it stays at 3.
+n-gram speculation was tried earlier and dropped: it only helps when an answer repeats text word for word. Rollback:
+`/etc/rupert-llm/models.json.pre-mtp`. The UD-Q3_K_S file stays on the gateway until it is deleted by hand.

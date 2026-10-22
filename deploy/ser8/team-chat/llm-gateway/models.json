@@ -92,7 +92,7 @@
     ]
   },
   "qwen3.6-35b-a3b": {
-    "file": "/var/lib/rupert-llm/models/Qwen3.6-35B-A3B-UD-Q3_K_S.gguf",
+    "file": "/var/lib/rupert-llm/models/Qwen3.6-35B-A3B-MTP-UD-IQ3_S.gguf",
     "ctx": 16384,
     "args": [
       "--chat-template-kwargs",
@@ -104,7 +104,11 @@
       "--batch-size",
       "2048",
       "--ubatch-size",
-      "1024"
+      "1024",
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "3"
     ]
   },
   "gemma-4-26b-a4b": {
