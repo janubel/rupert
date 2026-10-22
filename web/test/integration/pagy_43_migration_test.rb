@@ -14,19 +14,19 @@ class Pagy43MigrationTest < ActionDispatch::IntegrationTest
     get customers_path, params: filters
 
     assert_response :success
-    assert_select 'tbody a', count: 25
+    assert_select 'tbody td:first-child a', count: 25
     assert_select 'nav.pagy.series-nav'
     nav_links = css_select('nav.pagy.series-nav a').filter_map { |link| CGI.unescapeHTML(link['href']) if link['href'] }
     assert nav_links.any? { |href| href.include?('first_name_cont') }, 'pagination links should preserve active search filters'
 
     get customers_path, params: filters.merge(page: 6)
     assert_response :success
-    assert_select 'tbody a', count: 1
+    assert_select 'tbody td:first-child a', count: 1
     assert_select 'nav.pagy.series-nav [aria-current="page"]', text: '6'
 
     get customers_path, params: filters.merge(page: 999)
     assert_response :success
-    assert_select 'tbody a', count: 1
+    assert_select 'tbody td:first-child a', count: 1
     assert_select 'nav.pagy.series-nav [aria-current="page"]', text: '6'
   ensure
     Current.reset
@@ -40,7 +40,7 @@ class Pagy43MigrationTest < ActionDispatch::IntegrationTest
     get customers_path, params: { q: { first_name_cont: 'Pagy Malformed Page' }, page: 'not-a-page' }
 
     assert_response :success
-    assert_select 'tbody a', count: 1
+    assert_select 'tbody td:first-child a', count: 1
     assert_select 'nav.pagy.series-nav', false
   ensure
     Current.reset

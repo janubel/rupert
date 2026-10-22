@@ -38,7 +38,8 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'footer.app-statusbar', count: 1
     assert_select 'footer.app-statusbar a[href=?]', syncs_path
     assert_select 'footer.app-statusbar a[href=?] .badge[data-team-chat-badge-target="count"][hidden]', team_chat_path
-    assert_select 'header a[aria-label="Team chat"] .badge[data-team-chat-badge-target="count"]', count: 1
+    assert_select 'header a[aria-label="Team chat"][data-chat-dock-target="trigger"] .chat-dock-badge[data-chat-dock-target="badge"]', count: 1
+    assert_select '.app-shell[data-controller~="chat-dock"][data-chat-dock-unread-url-value=?]', team_chat_unread_path
     assert_select '.app-shell[data-controller~="team-chat-badge"][data-team-chat-badge-url-value=?]', team_chat_messages_path('general')
     assert_select '.toast-stack[data-controller="toasts"]', count: 1
     @admin.update!(role: 'cashier')
@@ -46,6 +47,7 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'footer.app-statusbar', count: 1
     assert_select 'footer.app-statusbar a[href=?]', team_chat_path, count: 0
     assert_select '.app-shell[data-controller~="team-chat-badge"]', count: 0
+    assert_select '.app-shell[data-controller~="chat-dock"]', count: 0
   end
 
   test 'cashier sees work areas and personal help without administrative utility or sync metadata' do
