@@ -9,7 +9,7 @@ class OperationsBriefJob < ApplicationJob
     Tenant.where(status: 'active').find_each do |tenant|
       Current.tenant = tenant
       begin
-        OperationsBrief.publish!(kind) if BuzzAgent.configured?
+        OperationsBrief.publish!(kind) if TeamChat::Notices.configured?
       ensure
         Current.tenant = nil
       end

@@ -12,7 +12,7 @@ class StockReservationsController < AuthenticatedController
 
   def index
     scope = StockReservation.includes(:stock_reservation_pool, :stock_request).recent
-    @pagy, @reservations = pagy(scope, items: 30)
+    @pagy, @reservations = pagy(:offset, scope, limit: 30)
   end
 
   def new

@@ -29,13 +29,21 @@ class InventoryCountScansTest < ActionDispatch::IntegrationTest
   end
 
   test 'scanner renders set-total default and a unique request token' do
+    @count.update!(locationId: @location.id)
     get scan_inventory_count_path(@count)
     assert_response :success
     assert_select 'h1', 'Scan count'
+    assert_select 'p', /Target: Shopify · Main/
     assert_select 'input[name=request_token][value]', count: 1
     assert_select 'form[data-busy=false][data-turbo=false]'
     assert_select 'select[name=mode] option:first-child[value=set]'
     assert_select 'p', /Prepared sheets start with system quantities/
+  end
+
+  test 'scanner identifies when no source and location were selected' do
+    get scan_inventory_count_path(@count)
+    assert_response :success
+    assert_select 'p', /Target: no source\/location selected/
   end
 
   test 'start scan count creates an empty worksheet and opens scanner' do

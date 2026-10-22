@@ -1,0 +1,52 @@
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
+const source = readFileSync(new URL('../../app/javascript/controllers/team_chat_controller.js', import.meta.url), 'utf8')
+  .replace('import { Controller } from "@hotwired/stimulus"', 'class Controller {}')
+  .replace('export default class', 'globalThis.TeamChat = class');
+const context = { URL };
+vm.createContext(context);
+vm.runInContext(source, context);
+const Chat = context.TeamChat;
+const plain = (value) => JSON.parse(JSON.stringify(value));
+const types = (parts) => plain(parts.map((part) => part.type));
+
+test('paragraphs and lists', () => {
+  const blocks = Chat.parseBlocks('Sales were up.\nCard was most of it.\n\n- Shopify: $120\n- Square: $80\n\n1. Open Sales\n2. Pick a day');
+  assert.deepEqual(plain(blocks.map((block) => block.type)), ['p', 'ul', 'ol']);
+  assert.equal(blocks[0].lines.length, 2);
+  assert.deepEqual(plain(blocks[1].items), ['Shopify: $120', 'Square: $80']);
+});
+
+test('inline marks, mentions and links', () => {
+  assert.deepEqual(types(Chat.parseInline('Ask **@rupert** or `sync`')), ['text', 'bold', 'text', 'code']);
+  assert.deepEqual(types(Chat.parseInline('hey @rupert, sales?')), ['text', 'mention', 'text']);
+  assert.deepEqual(types(Chat.parseInline('mail me@rupert.com')), ['text']);
+  const same = Chat.parseInline('Open [Timesheets](/people/timesheets).');
+  assert.equal(same[1].type, 'link');
+  assert.equal(same[1].href, '/people/timesheets');
+  assert.equal(same[1].external, undefined);
+  const outside = Chat.parseInline('See https://example.com/a.');
+  assert.equal(outside[1].href, 'https://example.com/a');
+  assert.equal(outside[1].external, true);
+  assert.equal(outside[2].text, '.');
+});
+
+test('a label never hides an outside address, and unsafe schemes stay text', () => {
+  for (const hostile of ['[x](https://evil.example)', '[x](//evil.example/a)', '[x](javascript:alert(1))', 'javascript:alert(1)']) {
+    for (const part of Chat.parseInline(hostile).filter((candidate) => candidate.type === 'link')) {
+      // Same-site links may carry a label; an outside link always shows its own address.
+      assert.ok(part.href.startsWith('/') ? !part.href.startsWith('//') : part.href === new URL(part.text).href, hostile);
+    }
+  }
+  assert.equal(Chat.safeUrl('https://user:pw@evil.example'), null);
+  assert.equal(Chat.safeUrl('javascript:alert(1)'), null);
+});
+
+test('local model @agents are highlighted as mentions when listed', () => {
+  assert.deepEqual(types(Chat.parseInline('hey @gemma and @rupert', [], ['rupert', 'gemma'])), ['text', 'mention', 'text', 'mention']);
+  assert.deepEqual(types(Chat.parseInline('hey @gemma', [])), ['text'], 'not a mention unless the agent exists');
+  assert.deepEqual(types(Chat.parseInline('mail me@gemma.com', [], ['rupert', 'gemma'])), ['text']);
+});

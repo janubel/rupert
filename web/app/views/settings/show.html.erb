@@ -267,47 +267,10 @@
     </div>
   </section>
 
-  <section class="card card-pad scroll-mt-24" id="buzz">
-    <div class="flex items-baseline justify-between">
-      <h2 class="font-display text-xl text-ink">Buzz agent</h2>
-      <span class="<%= BuzzAgent.configured? ? "pill-fern" : "pill-taupe" %>"><%= BuzzAgent.configured? ? "Configured" : "Not configured" %></span>
-    </div>
-    <p class="mt-2 text-xs text-taupe">Rupert joins your Buzz workspace as an agent: it holds its own Nostr keypair and posts signed events to a channel. Events fire on sync results and count submissions.</p>
-
-    <div class="mt-4 grid gap-4 sm:grid-cols-2">
-      <div class="rounded-xl bg-haze px-4 py-3">
-        <p class="text-xs font-medium text-mocha">Agent identity (npub)</p>
-        <p class="mt-1 break-all font-mono text-xs text-ink"><%= BuzzAgent.agent_npub || "No keypair yet." %></p>
-      </div>
-      <div class="rounded-xl bg-haze px-4 py-3">
-        <p class="text-xs font-medium text-mocha">Relay / channel</p>
-        <p class="mt-1 break-all font-mono text-xs text-ink"><%= EnvStore.fetch("BUZZ_RELAY_URL", "—").presence || "No relay set" %><% if BuzzAgent.channel_id.present? %> · channel <%= BuzzAgent.channel_id[0, 12] %>…<% end %></p>
-      </div>
-    </div>
-
-    <% last_check = BuzzAgent.last_status %>
-    <dl class="mt-4 grid gap-2 text-sm sm:grid-cols-3" aria-label="Buzz status">
-      <div class="rounded-xl bg-haze px-4 py-3"><dt class="text-xs font-medium text-mocha">Configured</dt><dd class="mt-1"><%= buzz_status_pill(BuzzAgent.configured?, "Yes", "No") %></dd></div>
-      <div class="rounded-xl bg-haze px-4 py-3"><dt class="text-xs font-medium text-mocha">Relay reachable</dt><dd class="mt-1"><%= buzz_status_pill(last_check&.dig(:relay_reachable), "Yes", "No") %></dd></div>
-      <div class="rounded-xl bg-haze px-4 py-3"><dt class="text-xs font-medium text-mocha">Agent registered</dt><dd class="mt-1"><%= buzz_status_pill(last_check&.dig(:registered), "Yes", "Not yet") %></dd></div>
-    </dl>
-    <p class="mt-2 text-xs text-taupe"><%= last_check ? "Last checked #{time_ago_in_words(last_check[:checked_at])} ago." : "Relay and registration are checked on demand with Check status." %> <%= link_to "Open the Buzz card", buzz_path, class: "underline" %> to see what your team sees.</p>
-
-    <% if Current.user.can?("settings.write") %>
-    <div class="mt-4 flex flex-wrap items-center gap-3">
-      <%= button_to "Check status", buzz_status_settings_path, method: :post, class: "btn-ghost", disabled: !BuzzAgent.configured?, data: { turbo: false } %>
-      <%= button_to "Generate agent keypair", buzz_generate_settings_path, method: :post, class: "btn-ghost", data: { turbo: false } %>
-      <%= button_to "Publish agent profile", buzz_register_settings_path, method: :post, class: "btn-ghost", disabled: !BuzzAgent.configured?, data: { turbo: false } %>
-      <%= button_to "Send test message", buzz_test_settings_path, method: :post, class: "btn-primary", disabled: !BuzzAgent.configured?, data: { turbo: false } %>
-    </div>
-
-    <% end %>
-    <p class="mt-4 text-xs text-taupe">Configure on the Environment (.env) card:</p>
-    <ul class="mt-2 space-y-1 font-mono text-xs text-mocha">
-      <li>BUZZ_RELAY_URL · your relay, e.g. <code>wss://buzz.example.com</code></li>
-      <li>BUZZ_CHANNEL · the channel's id (a UUID in Buzz) to post into</li>
-      <li>Optional, for the Buzz card: BUZZ_CHAT_LINK_TEMPLATE (default <code>buzz://channel/{channel}</code>), BUZZ_CONNECT_LINK_TEMPLATE (default <code>buzz://add-community?relay={relay}&amp;name={name}</code>), BUZZ_DOWNLOAD_MACOS / _WINDOWS / _LINUX / _IOS / _ANDROID and BUZZ_WEB_URL (https links)</li>    </ul>
-    <p class="mt-3 text-xs text-taupe">To let Rupert into a channel: publish its profile, then add the npub as a member — Buzz only knows identities that have a profile on the relay.</p>
+  <section class="card card-pad scroll-mt-24" id="team-chat">
+    <h2 class="font-display text-xl text-ink">Team chat</h2>
+    <p class="mt-2 text-sm text-mocha">Rooms, threads, files and the @rupert assistant live inside Rupert. Rupert posts sync results, count submissions, sales, fulfillment alerts and the daily brief into <strong>#announcements</strong>.</p>
+    <div class="mt-4"><%= link_to "Open team chat", team_chat_path, class: "btn-primary" %></div>
   </section>
 </div>
 

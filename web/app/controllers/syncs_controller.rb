@@ -65,6 +65,7 @@ class SyncsController < AuthenticatedController
       expected_fingerprint: confirmation.fetch('fingerprint'))
     notice = "Imported #{summary.orders} new order(s), #{summary.lines} line(s) from SwipeSimple."
     notice += " #{summary.unchanged_orders} unchanged order(s) left intact." if summary.unchanged_orders.positive?
+    notice += " #{summary.refunded_orders} order(s) with refunds left unchanged." if summary.refunded_orders.to_i.positive?
     notice += " #{summary.skipped_rows} blank row(s) skipped." if summary.skipped_rows.positive?
     redirect_to(syncs_path, notice: notice)
   rescue ArgumentError, CSV::MalformedCSVError, SyncEngine::AlreadyRunning => e

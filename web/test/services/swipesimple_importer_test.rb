@@ -45,7 +45,7 @@ class SwipesimpleImporterTest < ActiveSupport::TestCase
     preview = SwipesimpleImporter.preview(source)
     result = SwipesimpleImporter.import!(source, expected_fingerprint: preview.fingerprint)
 
-    assert_equal({ orders: 1, lines: 2, payments: 1, skipped_rows: 0, unchanged_orders: 0 }, result.to_h)
+    assert_equal({ orders: 1, lines: 2, payments: 1, skipped_rows: 0, unchanged_orders: 0, refunded_orders: 0 }, result.to_h)
     order = Core::Order.find_by!(source: 'swipesimple', source_order_id: 'transaction-1')
     assert_equal 'paid', order.status
     assert_equal 3469, order.gross_cents
@@ -90,16 +90,46 @@ class SwipesimpleImporterTest < ActiveSupport::TestCase
     refute Core::Order.exists?(source: 'swipesimple', source_order_id: 'new-transaction')
   end
 
-  test 'refund history prevents even an otherwise matching replay from changing the order' do
+  test 'refund history leaves that order unchanged and counted while the rest of the file imports' do
     source = csv_for
     SwipesimpleImporter.import!(source)
     order = Core::Order.find_by!(source: 'swipesimple')
     order.record_refund!(amount_cents: 100, reference: 'refund-1')
     before = snapshots
 
-    assert_raises(SwipesimpleImporter::Error) { SwipesimpleImporter.import!(source) }
+    result = SwipesimpleImporter.import!(source)
+    assert_equal [0, 0, 1], [result.orders, result.unchanged_orders, result.refunded_orders]
     assert_equal before, snapshots
     assert_equal 100, order.refunds.sum(:amount_cents)
+    with_new = csv_for([{}, { 'Order' => 'transaction-2', 'Item' => 'Oil', 'SKU' => 'OIL', 'Qty' => '1', 'Unit Price' => '9.99', 'Total' => '9.99' }])
+    result = SwipesimpleImporter.import!(with_new)
+    assert_equal [1, 0, 1], [result.orders, result.unchanged_orders, result.refunded_orders]
+    assert Core::Order.exists?(source: 'swipesimple', source_order_id: 'transaction-2')
+    assert_equal before[:orders].first, Core::Order.find(order.id).attributes
+  end
+
+  test 'a refunded order whose sale amounts differ still rejects the file' do
+    SwipesimpleImporter.import!(csv_for)
+    order = Core::Order.find_by!(source: 'swipesimple')
+    order.record_refund!(amount_cents: 100, reference: 'refund-1')
+    before = snapshots
+    error = assert_raises(SwipesimpleImporter::Error) { SwipesimpleImporter.import!(csv_for([{ 'Qty' => '3', 'Total' => '37.05' }])) }
+    assert_includes error.message, 'existing transaction differs'
+    assert_equal before, snapshots
+  end
+
+  test 'a sale older than the ledger retention window re-imports as unchanged without recreating the pruned ledger entry' do
+    old = csv_for([{ 'Date' => '2024-07-01T14:30:00-04:00' }])
+    SwipesimpleImporter.import!(old)
+    assert_equal 1, DataRetention.prune_all!['LedgerEntry']
+    assert_equal 0, LedgerEntry.where(source: 'swipesimple').count
+    before = snapshots
+    result = SwipesimpleImporter.import!(old)
+    assert_equal [0, 1, 0], [result.orders, result.unchanged_orders, result.refunded_orders]
+    assert_equal before, snapshots
+    assert_equal 0, LedgerEntry.where(source: 'swipesimple').count
+    error = assert_raises(SwipesimpleImporter::Error) { SwipesimpleImporter.import!(csv_for([{ 'Date' => '2024-07-01T14:30:00-04:00', 'Qty' => '3', 'Total' => '37.05' }])) }
+    assert_includes error.message, 'existing transaction differs'
   end
 
   test 'missing or altered payment and ledger records cause conflicts instead of being silently repaired' do

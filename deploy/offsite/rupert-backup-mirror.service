@@ -1,0 +1,10 @@
+# User unit on the MIRROR machine (not SER8). Pulls Rupert's encrypted backups over SSH and verifies them.
+[Unit]
+Description=Rupert encrypted backup mirror (pull from SER8, verify, prune)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rupert-backup-mirror.sh
+Nice=10
+IOSchedulingClass=idle

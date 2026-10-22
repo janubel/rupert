@@ -49,6 +49,62 @@ class SquareClientTest < ActiveSupport::TestCase
     assert_requested :post, 'https://connect.squareup.com/v2/inventory/counts/batch-retrieve', times: 2
   end
 
+  test 'inventory_counts follows every cursor while keeping location pools independent' do
+    endpoint = 'https://connect.squareup.com/v2/inventory/counts/batch-retrieve'
+    stub_request(:post, endpoint)
+      .with { |req| JSON.parse(req.body).exclude?('cursor') }
+      .to_return(status: 200, body: { counts: [
+        { catalog_object_id: 'V1', location_id: 'L1', state: 'IN_STOCK', quantity: '5' }
+      ], cursor: 'counts-page-2' }.to_json)
+    stub_request(:post, endpoint)
+      .with { |req| JSON.parse(req.body)['cursor'] == 'counts-page-2' }
+      .to_return(status: 200, body: { counts: [
+        { catalog_object_id: 'V1', location_id: 'L2', state: 'IN_STOCK', quantity: '2' }
+      ] }.to_json)
+
+    result = SquareClient.inventory_counts(%w[L1 L2], ['V1'])
+
+    assert_equal 7, result[:counts]['V1']
+    assert_equal 5, result[:counts_by_location]['L1']['V1']
+    assert_equal 2, result[:counts_by_location]['L2']['V1']
+    assert_requested :post, endpoint, times: 2
+  end
+
+  test 'inventory_counts fails instead of returning an incomplete snapshot when a page fails' do
+    endpoint = 'https://connect.squareup.com/v2/inventory/counts/batch-retrieve'
+    stub_request(:post, endpoint)
+      .with { |req| JSON.parse(req.body).exclude?('cursor') }
+      .to_return(status: 200, body: { counts: [
+        { catalog_object_id: 'V1', location_id: 'L1', state: 'IN_STOCK', quantity: '5' }
+      ], cursor: 'counts-page-2' }.to_json)
+    stub_request(:post, endpoint)
+      .with { |req| JSON.parse(req.body)['cursor'] == 'counts-page-2' }
+      .to_return(status: 503, body: '{}')
+
+    assert_raises(SquareClient::Error) { SquareClient.inventory_counts(%w[L1 L2], ['V1']) }
+    assert_requested :post, endpoint, times: 1 do |req|
+      JSON.parse(req.body).exclude?('cursor')
+    end
+    assert_requested :post, endpoint, times: HttpRetry::MAX_ATTEMPTS do |req|
+      JSON.parse(req.body)['cursor'] == 'counts-page-2'
+    end
+  end
+
+  test 'inventory_counts rejects a repeated cursor instead of looping on replayed pages' do
+    endpoint = 'https://connect.squareup.com/v2/inventory/counts/batch-retrieve'
+    stub_request(:post, endpoint)
+      .with { |req| JSON.parse(req.body).exclude?('cursor') }
+      .to_return(status: 200, body: { counts: [], cursor: 'same-cursor' }.to_json)
+    stub_request(:post, endpoint)
+      .with { |req| JSON.parse(req.body)['cursor'] == 'same-cursor' }
+      .to_return(status: 200, body: { counts: [], cursor: 'same-cursor' }.to_json)
+
+    error = assert_raises(SquareClient::Error) { SquareClient.inventory_counts(['L1'], ['V1']) }
+
+    assert_equal :response, error.reason
+    assert_requested :post, endpoint, times: 2
+  end
+
   test 'locations keeps only ACTIVE locations, environment picks the sandbox host, configured? needs a token' do
     stub_request(:get, 'https://connect.squareup.com/v2/locations')
       .to_return(status: 200, body: { locations: [{ id: 'L1', status: 'ACTIVE' }, { id: 'L2', status: 'INACTIVE' }] }.to_json)

@@ -75,7 +75,7 @@ module Finance
         mapped = nil unless mapped&.active?
         account = expense.account || mapped || account(EXPENSE_BY_CATEGORY.fetch(expense.category, FALLBACK_EXPENSE_CODE))
         cash = account(CASH_BY_METHOD.fetch(expense.method, FALLBACK_CASH_CODE))
-        JournalEntry.post!(
+        entry = JournalEntry.post!(
           kind: 'expense',
           posted_on: expense.incurred_on,
           memo: "Expense · #{expense.category_label}#{expense.payee.present? ? " · #{expense.payee}" : ''}",
@@ -85,6 +85,8 @@ module Finance
             { account_id: cash.id, credit_cents: expense.amount_cents, memo: cash.name }
           ]
         )
+        relink_bank_lines(entry, expense_id: expense.id)
+        entry
       end
 
       def vendor_payment(vendor_payment, created_by: nil)
@@ -93,7 +95,7 @@ module Finance
 
         payable = account(PAYABLE_CODE)
         cash = account(CASH_BY_METHOD.fetch(vendor_payment.method, '1100'))
-        JournalEntry.post!(
+        entry = JournalEntry.post!(
           kind: 'vendor_payment',
           posted_on: vendor_payment.paid_on,
           memo: "Vendor payment · #{vendor_payment.vendor&.name}",
@@ -103,6 +105,8 @@ module Finance
             { account_id: cash.id, credit_cents: vendor_payment.amount_cents, memo: cash.name }
           ]
         )
+        relink_bank_lines(entry, vendor_payment_id: vendor_payment.id)
+        entry
       end
 
       def sale(payment, created_by: nil)
@@ -240,6 +244,25 @@ module Finance
         entry.posted_on == (payment.paid_at || Time.current).to_date &&
           lines.sum { |l| l.debit_cents.to_i } == payment.amount_cents.to_i &&
           lines.any? { |l| l.account_id == account(RECEIPT_BY_METHOD.fetch(payment.method.to_s, FALLBACK_CASH_CODE)).id && l.debit_cents.to_i.positive? }
+      end
+
+      # Re-posting a source (after an edit voided its entry) leaves a bank
+      # statement line pointing at the voided entry. Move the link to the new
+      # entry only when it moves the same amount through the same account, so a
+      # changed amount is never silently reconciled.
+      def relink_bank_lines(entry, **source)
+        BankStatementLine.where(source).where.not(journal_entry_id: [nil, entry.id]).find_each do |line|
+          previous = JournalEntry.find_by(id: line.journal_entry_id)
+          next unless previous&.status == 'void'
+
+          accounts = signed_by_account(previous).select { |_, cents| cents == line.amount_cents }.keys
+          replacement = signed_by_account(entry).select { |_, cents| cents == line.amount_cents }.keys
+          line.update!(journal_entry_id: entry.id) if (accounts & replacement).any?
+        end
+      end
+
+      def signed_by_account(entry)
+        entry.journal_lines.group_by(&:account_id).transform_values { |legs| legs.sum { |leg| leg.debit_cents - leg.credit_cents } }
       end
 
       # A tenant created before the chart of accounts existed (or in a test) may

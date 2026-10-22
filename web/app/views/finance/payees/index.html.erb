@@ -3,15 +3,11 @@
 <div class="space-y-6 operations-workspace">
   <%= render 'shared/operations_navigation', workspace: :money %>
 
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">By payee</h1>
-      <p class="mt-1 text-sm text-mocha">Everything paid to one vendor or payee in the last <%= @range_days %> days, with the bank lines that mention them.</p>
-    </div>
+  <%= page_header 'By payee', subtitle: "Everything paid to one vendor or payee in the last #{@range_days} days, with the bank lines that mention them." do %>
     <% if @selected %>
       <%= link_to 'Export CSV', finance_payees_path(key: @key, days: @range_days, format: :csv), class: 'btn-ghost btn-sm', data: { turbo: false } %>
     <% end %>
-  </section>
+  <% end %>
 
   <%= form_tag finance_payees_path, method: :get, class: 'card card-pad operations-filters' do %>
     <%= search_field_tag :q, @q, placeholder: 'Find a vendor or payee', class: 'input', aria: { label: 'Find a payee' } %>

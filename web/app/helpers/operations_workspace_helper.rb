@@ -23,7 +23,8 @@ module OperationsWorkspaceHelper
        ['Movements', movements_inventory_index_path, 'inventory.read', 'inventory/movements'],
        ['Catalog links', reconcile_index_path, 'reconcile.read', 'reconcile']]
     when :money, :finance
-      [['Overview', bookkeeping_path(month: month), 'finance.read', 'bookkeeping', 'Bookkeeping'],
+      [['Cash flow', finance_cash_flow_path, 'finance.read', 'finance/cash_flow', 'Bookkeeping'],
+       ['Overview', bookkeeping_path(month: month), 'finance.read', 'bookkeeping', 'Bookkeeping'],
        ['Bank transactions', bank_statements_path, 'finance.read', 'bank_statements', 'Bookkeeping'],
        ['Expenses', finance_expenses_path(month: month), 'finance.read', 'finance/expenses', 'Bookkeeping'],
        ['Vendor payments', finance_vendor_payments_path(month: month), 'finance.read', 'finance/vendor_payments', 'Bookkeeping'],
@@ -37,10 +38,13 @@ module OperationsWorkspaceHelper
        ['Source documents', reconciliation_documents_path(from: date, to: date, close_day: date), 'reports.read', 'reconciliation_documents', 'Records'],
        ['Accounts', finance_accounts_path, 'finance.read', 'finance/accounts', 'Records'],
        ['Receipts', receipts_path, 'finance.read', 'receipts', 'Records'],
+       ['Uploads', uploads_path, 'uploads.read', 'uploads', 'Records'],
        ['Chart of accounts', finance_chart_of_accounts_path, 'finance.read', 'finance/chart_of_accounts', 'Records'],
        ['Expense categories', finance_expense_categories_path, 'finance.read', 'finance/expense_categories', 'Records'],
        ['General ledger', finance_journal_entries_path, 'finance.read', 'finance/journal_entries', 'Records'],
        ['Imported orders', ledger_index_path, 'ledger.read', 'ledger', 'Records'],
+       ['History', finance_history_path, 'finance.read', 'finance/history', 'Records'],
+       ['QuickBooks import', finance_quickbooks_imports_path, 'finance.read', 'finance/quickbooks_imports', 'Records'],
        ['Ledger export', finance_ledger_export_path, 'finance.read', 'finance/ledger_exports', 'Reports & control'],
        ['Financial statements', finance_reports_path, 'finance.read', 'finance/reports', 'Reports & control'],
        ['Source reports', money_reconciliations_path(date: date), 'reports.read', 'money_reconciliations', 'Reports & control'],
@@ -71,7 +75,7 @@ module OperationsWorkspaceHelper
     'Books desk' => 'd', 'Daily reconciliation' => 'r', 'Day close' => 'c', 'Book approvals' => 'a', 'Follow-ups' => 'f',
     'Bank statements' => 'b', 'Source documents' => 's', 'Accounts' => 'o', 'Receipts' => 'p', 'Expenses' => 'e',
     'Vendor payments' => 'v', 'By payee' => 'y', 'Chart of accounts' => 't', 'Ledger' => 'l', 'Source reports' => 'u',
-    'Cash forecast' => 'w', 'Business snapshot' => 'n', 'Books health' => 'h', 'Period locks' => 'k'
+    'Cash forecast' => 'w', 'Business snapshot' => 'n', 'Books health' => 'h', 'Period locks' => 'k', 'Cash flow' => 'm'
   }.freeze
 
   # The same links split into labelled groups (Routine / Records / Reports)

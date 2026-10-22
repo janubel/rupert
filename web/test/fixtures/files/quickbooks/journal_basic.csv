@@ -1,0 +1,14 @@
+,Journal,,,,,,,
+,Sample Company,,,,,,,
+,"January 1 - March 31, 2024",,,,,,,
+,,,,,,,,
+,Date,Transaction Type,Num,Name,Memo/Description,Account,Debit,Credit
+,01/05/2024,Invoice,1001,Customer One,Widgets,Accounts Receivable (A/R),"1,200.00",
+,,,,,Widgets,Sales,,"1,200.00"
+,01/09/2024,Deposit,,,Deposit,Checking,"1,200.00",
+,,,,Customer One,Payment,Accounts Receivable (A/R),,"1,200.00"
+,02/01/2024,Bill,B-77,Vendor One,Supplies,Office Supplies,45.50,
+,,,,Vendor One,Supplies,Accounts Payable (A/P),,45.50
+,"TOTAL",,,,,,"2,445.50","2,445.50"
+,,,,,,,,
+,"Accrual Basis Monday, October 21, 2026 09:00 AM GMT-04:00",,,,,,,

@@ -20,7 +20,8 @@ module AskRupert
     EDITABLE = (%w[enabled provider_mode] + BOUNDS.keys).freeze
 
     DEFAULTS = {
-      'enabled' => true, 'provider_mode' => 'cloud', 'rate_limit_count' => 20, 'rate_limit_window_minutes' => 10,
+      'enabled' => true,
+      'provider_mode' => 'cloud', 'rate_limit_count' => 20, 'rate_limit_window_minutes' => 10,
       'daily_cap' => 200, 'max_message_chars' => 1_000, 'context_messages' => 12, 'context_chars' => 8_000,
       # Chats are saved until someone clears them. Set a number of days to expire them instead.
       'retention_days' => 0

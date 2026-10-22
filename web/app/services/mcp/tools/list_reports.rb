@@ -17,8 +17,11 @@ module Mcp
           about: 'Two independent stock observations side by side; never summed or adjusted.' },
         { key: 'time_keeping', title: 'Time keeping', path: '/people/time_keeping', tool: 'time_keeping_report',
           about: 'Scheduled versus worked hours per staff member and day.' },
+        { key: 'history', title: 'History', path: '/finance/history', tool: 'history_summary',
+          about: 'What history Rupert holds per source: dates, record counts, last arrival, empty months and overlaps. Counts, never amounts.' },
         { key: 'operations', title: 'Operations', path: '/reports/operations', tool: nil, about: 'Sync health, reconcile runs, POS cash variance.' },
-        { key: 'alerts', title: 'Low-stock alerts', path: '/alerts', tool: 'list_alerts', about: 'Open, resolved and ignored stock alerts.' }
+        { key: 'alerts', title: 'Low-stock alerts', path: '/alerts', tool: 'list_alerts', about: 'Open, resolved and ignored stock alerts.' },
+        { key: 'uploads', title: 'Uploads', path: '/uploads', tool: 'list_uploads', about: 'Files sent to Rupert and what happened to each: received, recognized, needs review, imported, rejected.' }
       ].freeze
 
       tool 'list_reports',

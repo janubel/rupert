@@ -1,14 +1,10 @@
 <% content_for :title, "Goals" %>
 <div class="space-y-6">
-  <section class="flex items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Goals</h1>
-      <p class="mt-1 text-sm text-mocha">Targets with measurable progress.</p>
-    </div>
+  <%= page_header 'Goals', subtitle: 'Targets with measurable progress.' do %>
     <% if Current.user.can?("projects.write") %>
       <%= link_to "New goal", new_goals_goal_path, class: "btn-primary" %>
     <% end %>
-  </section>
+  <% end %>
 
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <% if @goals.empty? %>
@@ -36,5 +32,5 @@
     <% end %>
   </div>
 
-  <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
+  <div class="text-xs text-taupe"><%== @pagy.series_nav if @pagy.pages > 1 %></div>
 </div>

@@ -45,6 +45,10 @@ production:
     class: CtraxStockSyncJob
     queue: default
     schedule: every 30 minutes
+  uploads_drop:
+    class: UploadsDropScanJob
+    queue: default
+    schedule: every minute
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
@@ -116,6 +120,10 @@ production:
     class: DataRetentionJob
     queue: default
     schedule: "40 3 * * * America/New_York"
+  team_chat_drive_sweep:
+    class: TeamChat::AttachmentDriveSweepJob
+    queue: default
+    schedule: "20 4 * * * America/New_York"
   ask_rupert_retention:
     class: AskRupertRetentionJob
     queue: default

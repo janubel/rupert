@@ -91,7 +91,7 @@
       </table>
     <% end %>
   </div>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
 
   <section class="space-y-3">
     <h2 class="font-display text-xl text-ink">Where assistants get stuck</h2>

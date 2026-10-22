@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require 'csv'
 
 class SourceSyncsTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
@@ -137,6 +138,23 @@ class SourceSyncsTest < ActionDispatch::IntegrationTest
     get authorize_net_portal_exports_path
     assert_response :success
     assert_includes response.body, 'Expanded Fields/Comma Separated'
+  end
+
+  test 'a rejected portal export shows the importer reason, not a generic message' do
+    csv = CSV.generate do |out|
+      out << AuthorizeNetPortalImporter::REQUIRED
+      out << ['123456789', 'Settled Successfully', '123.45', 'USD', '15-Oct-2026 03:20:58 PM EDT',
+        '123.45', 'USD', '15-Oct-2026 02:20:58 PM EDT', '0', 'Authorization w/ Auto Capture']
+    end
+    file = Rack::Test::UploadedFile.new(StringIO.new(csv), 'text/csv', original_filename: 'export.csv')
+    post authorize_net_portal_exports_path, params: { file: file, gateway_id: 'not-a-number', kind: 'settled', exported_at: '2026-10-16T00:00:00Z' }
+    assert_redirected_to authorize_net_portal_exports_path
+    assert_equal 'Confirm the numeric Gateway ID displayed in the merchant portal.', flash[:alert]
+    post authorize_net_portal_exports_path, params: { file: file, gateway_id: '123456', kind: 'settled', exported_at: 'yesterday' }
+    assert_equal 'Export time must include an explicit time-zone offset.', flash[:alert]
+    post authorize_net_portal_exports_path, params: { gateway_id: '123456', kind: 'settled', exported_at: '2026-10-16T00:00:00Z' }
+    assert_equal 'Attach a native expanded CSV export no larger than 8 MiB.', flash[:alert]
+    assert_equal 0, AuthorizeNetPortalExport.unscoped.count
   end
 
   test 'readers cannot trigger any source sync or upload portal evidence' do

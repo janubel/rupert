@@ -12,7 +12,7 @@ module Sales
     def index
       authorize(:module, :sales_read?)
       @q = Sales::PosSession.ransack(params[:q])
-      @pagy, @sessions = pagy(@q.result.order(opened_at: :desc), items: 20)
+      @pagy, @sessions = pagy(:offset, @q.result.order(opened_at: :desc), limit: 20)
       @open_sessions = Sales::PosSession.where(status: 'open').order(opened_at: :asc)
     end
 

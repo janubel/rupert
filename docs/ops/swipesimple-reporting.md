@@ -1,5 +1,7 @@
 # SwipeSimple website reporting on demand and every 30 minutes
 
+Zelle payments are a separate manual source with their own tab: see [Zelle reporting by manual bank CSV](zelle-reporting.md). They are never included in the SwipeSimple totals below.
+
 Updated October 16, 2026 UTC. The owner authorized direct website pulls on SER8, on demand and every 30 minutes. No provider emails or payment/account-setting changes are part of this integration. Credentials, merchant identifiers, customer/operator fields, source files and session data are excluded from Git.
 
 The earlier native importer release is recorded in the [initial deployment receipt](https://github.com/techmore/rupert/blob/codex/ser8-swipesimple-release/docs/ops/deployment-swipesimple-2026-10-15.md). [Partner-feed and long-term gateway research](swipesimple-integration-research.md) remains background context; the website pull described here is now the implemented automatic path.

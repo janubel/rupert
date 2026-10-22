@@ -1,0 +1,86 @@
+# How Rupert's business data is stored and which tools answer which questions.
+# Used three ways: a question's keywords pick the matching cards for team chat bots (and local
+# bots get only those cards' tools), the `data_guide` MCP tool returns them, and MCP resource
+# rupert://guide/data lists them all. Keep cards short: they go into every matching prompt.
+# Order matters on ties: specific topics first, the broad ones (comparison, sales) last.
+topics:
+  - key: tax
+    title: Sales tax
+    keywords: [tax, sales tax, vat, taxes]
+    tools: [sales_tax_report]
+    card: >-
+      sales_tax_report gives tax collected per source for a date range. Sources overlap (one card sale can appear in
+      a store and in its card processor), so never add sources together: report each. Rupert does not record when a
+      sales tax return was filed.
+  - key: money_out
+    title: Refunds and expenses
+    keywords: [refund, refunds, refunded, return, returns, expense, expenses, spend, spent, cost, costs, paid out, bills]
+    tools: [period_review, sales_summary]
+    card: >-
+      Refunds are recorded per order (period_review has refund totals per currency; sales_summary counts refunded
+      orders per source). Expenses come from the finance ledger (period_review expenses_cents, for people allowed to
+      see finance). Profit or margin needs cost of goods, which Rupert does not have: say so instead of estimating.
+  - key: books
+    title: Books, close and compliance
+    keywords: [books, close, closed, closing, lock, locked, reconcile, reconciliation, bank, bank lines, statement, review, reviews, approval, approve books, compliance, audit, record keeping, retention, backup, backups, overdue]
+    tools: [compliance_check]
+    card: >-
+      compliance_check lists what is fix / watch / ok with the page that fixes each: daily money reviews and
+      approvals, bank lines waiting, month and quarter close checklists and locks, Drive retention, uploads.
+      A month is closed when its period lock exists; say what is still open.
+  - key: people
+    title: Staff hours and timesheets
+    keywords: [hours, worked, timesheet, timesheets, shift, shifts, clock, clocked, payroll, pay run, pay week, leave, time off, staff, employee, employees, labor, labour]
+    tools: [time_keeping_report, compliance_check]
+    card: >-
+      Hours worked come from time_keeping_report (scheduled, clocked and C-Trax hours for a date range; pay weeks run
+      Thursday to Wednesday). Timesheets awaiting approval, leave requests and pay runs waiting are in
+      compliance_check. Staff without review rights only see their own hours.
+  - key: queues
+    title: Orders waiting to be processed
+    keywords: [waiting, queue, queues, process, processing, ship, shipped, shipping, unshipped, fulfil, fulfill, fulfilled, unfulfilled, pending, purchase order, purchase orders, delivery, deliveries, hold, holds, stuck, unresolved, follow-up, follow-ups]
+    tools: [order_queues]
+    card: >-
+      order_queues lists every processing queue with counts, what is late and the oldest item: unshipped paid online
+      orders (late after 24 hours), unpaid orders, stock requests, purchase orders awaiting delivery, receipts to
+      review, warehouse holds, unresolved card payments, follow-ups.
+  - key: stock
+    title: Stock and inventory
+    keywords: [stock, inventory, low stock, out of stock, alert, alerts, sku, skus, count, counts, on hand, available, reorder]
+    tools: [list_alerts, inventory_search, stock_comparison, swipesimple_items]
+    card: >-
+      Stock levels per platform and location are separate observations: never add or "fix" them. list_alerts gives
+      open low-stock alerts (paginated: say how many there are in total), inventory_search finds an item,
+      stock_comparison compares platforms for one SKU.
+  - key: tasks
+    title: Tasks
+    keywords: [task, tasks, todo, to do, assign, assigned, due, overdue tasks, recount, remind]
+    tools: [list_tasks, create_task, update_task]
+    card: >-
+      Tasks are Rupert's own board. list_tasks finds them; create_task and update_task only propose a change that a
+      person approves.
+  - key: system
+    title: Sync and system health
+    keywords: [sync, synced, syncing, health, healthy, down, error, errors, broken, failing, deploy, update, version]
+    tools: [sync_health, list_alerts]
+    card: >-
+      sync_health shows each source's last sync and any failure. A failing source means its figures may be missing
+      or stale: mention it when giving numbers from that source.
+
+  - key: comparison
+    title: Comparing periods
+    keywords: [compare, compared, comparison, versus, vs, up or down, growth, grew, change, trend, week over week, month over month, year over year, the week before, the month before, the quarter before, the day before, year to date, ytd]
+    tools: [period_review]
+    card: >-
+      period_review takes a named period (yesterday, last_week, last_pay_week, last_month, this_quarter,
+      last_quarter, year_to_date...) and returns it next to the period before, with the change already worked out
+      (gross_change_percent). Quote that change; do not compute your own.
+  - key: sales
+    title: Sales and orders
+    keywords: [sales, sold, sell, revenue, gross, orders, order value, average order, aov, top products, best day, best seller, takings, shopify, square, rupert pos, today, yesterday]
+    tools: [sales_summary, period_review]
+    card: >-
+      Orders live in Rupert's order store (Shopify, Square, Rupert POS, manual). Paid and fulfilled orders count as
+      sales. Money is in cents with a ready *_dollars value beside it. Totals are per currency, never added across
+      currencies. C-Trax and SwipeSimple are separate snapshots, not orders: never add them to order totals.
+      Days are business days in the workspace time zone. No stored orders for a day does not prove zero sales.

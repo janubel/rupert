@@ -122,8 +122,10 @@ job. An operator must inspect the actual worker and recurring configuration.
 
 Recent receipts show a recovery/failure-change transition only when observed
 completed statuses/categories differ. Repeated unchanged failures do not create
-new recovery claims. This release sends no email, Buzz or other outbound alerts,
-and opening the page creates no alert/job records. Durable transition
+new recovery claims. This hub sends no email, chat or other outbound alerts,
+and opening the page creates no alert/job records. Sync runs post their own
+completion and failure notices to the #announcements team chat room
+([team-chat.md](team-chat.md)). Durable transition
 notifications and verified financial coverage remain future work.
 
 ## Storage, permissions and rollout

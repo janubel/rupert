@@ -3,13 +3,10 @@
 <div class="space-y-6">
   <%= render 'shared/time_navigation' %>
 
-  <section class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="page-title">Timesheets</h1>
-    <div class="flex flex-wrap gap-2">
-      <% if policy(People::Timesheet).create? %><%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %><% end %>
-      <% unless @reviewer %><%= link_to "My time home", employee_app_path, class: "btn-ghost btn-sm" %><% end %>
-    </div>
-  </section>
+  <%= page_header 'Timesheets' do %>
+    <% if policy(People::Timesheet).create? %><%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %><% end %>
+    <% unless @reviewer %><%= link_to "My time home", employee_app_path, class: "btn-ghost btn-sm" %><% end %>
+  <% end %>
 
   <% status_labels = { 'submitted' => 'Needs review', 'all' => 'All timesheets', 'approved' => 'Approved', 'rejected' => 'Returned for correction', 'draft' => 'Drafts' } %>
   <% status_count = ->(status) { status == 'submitted' ? @awaiting : status == 'all' ? (@status_counts || {}).values.sum : (@status_counts || {}).fetch(status, 0) } %>
@@ -119,7 +116,7 @@
       </table>
     </div>
   </div>
-  <%== pagy_nav(@pagy) if @pagy && @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy && @pagy.pages > 1 %>
   <% else %>
   <% if @reviewer %>
     <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Timesheet summary">
@@ -194,7 +191,7 @@
     </div>
   </div>
   <% end %>
-  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
   <% end %>
 
   <% if @reviewer && @calendar_view %>

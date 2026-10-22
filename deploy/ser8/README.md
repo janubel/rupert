@@ -17,6 +17,12 @@ systemctl --user daemon-reload && systemctl --user enable --now rupert-sync-watc
 
 Check by hand: `~/.local/bin/rupert-sync-watch.sh` (exit 0 = fresh). `MAX_AGE_MIN=0` forces a failure to test alerting.
 
+## Backups
+
+Five layers (5-minute rolling snapshot and 6-hourly sets inside the container, an encrypted copy on the host, a mirror on
+another machine and a weekly restore drill), each reporting to **System → Backups**. Scripts, units, install steps and the
+restore procedure are in [docs/ops/backups.md](../../docs/ops/backups.md).
+
 ## Auto-deploy (`rupert-autodeploy`)
 
 Runs **inside the `rupert` Incus container** as root. Every 5 minutes it fetches `origin/main` and deploys it to
@@ -68,3 +74,14 @@ Check by hand: `DRY_RUN=1 /usr/local/sbin/rupert-autodeploy.sh`. Logs: `journalc
 Stop it with `systemctl disable --now rupert-autodeploy.timer`.
 
 When updating an installed watcher, replace the copied `/usr/local/sbin/rupert-autodeploy.sh` with the current repository version before re-enabling the timer. Older copies may still require the retired PostgreSQL CI check and otherwise keep deployments blocked. The source script now gates on `CI (sqlite3)` only.
+
+## Team chat (Buzz retired)
+
+Team chat now runs inside Rupert at `/chat`, with no relay or agent container. See
+[docs/ops/team-chat.md](../../docs/ops/team-chat.md). `team-chat/setup-local-model.sh` sets up the optional local
+model container.
+
+The old Buzz relay (`buzz`) and the sandboxed `@rupert` agent (`rupert-agent`) Incus containers are no longer used.
+Their files (`agent/`, `buzz/`) and runbook were removed from `main` and are kept on the `archive/buzz` branch.
+After this change deploys, stop both containers (`incus stop buzz rupert-agent`) and, if it was installed, the host's
+Buzz backup timer (`systemctl --user disable --now buzz-backup.timer`). Do not delete the containers yet.

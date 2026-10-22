@@ -70,6 +70,30 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'editing a recorded expense moves its statement line to the replacement entry' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    ups = BankStatementLine.for_document(doc.id).first
+    post decide_bank_statement_path(doc.id), params: { decisions: { ups.id => 'expense:shipping' } }
+    expense = Finance::Expense.find(ups.reload.expense_id)
+    original = ups.journal_entry_id
+    patch finance_expense_path(expense), params: { expense: { category: 'supplies' } }
+    assert_equal 'void', Finance::JournalEntry.find(original).status
+    replacement = Finance::JournalEntry.for_source('Finance::Expense', expense.id).posted.first!
+    assert_equal replacement.id, ups.reload.journal_entry_id
+    assert_equal 'recorded', ups.status
+  end
+
+  test 'changing a recorded expense amount does not silently reconcile the statement line' do
+    upload
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    ups = BankStatementLine.for_document(doc.id).first
+    post decide_bank_statement_path(doc.id), params: { decisions: { ups.id => 'expense:shipping' } }
+    original = ups.reload.journal_entry_id
+    patch finance_expense_path(Finance::Expense.find(ups.expense_id)), params: { expense: { amount: '99.00' } }
+    assert_equal original, ups.reload.journal_entry_id
+  end
+
   test 'recorded bank sources retain their journal links and reserve their ledger movements' do
     upload
     doc = ReconciliationDocument.where(kind: 'bank_statement').last
@@ -218,5 +242,41 @@ class BankStatementsIntegrationTest < ActionDispatch::IntegrationTest
       upload(CSV_TEXT.sub('UPS', 'USPS'))
       post decide_bank_statement_path(doc.id), params: { decisions: { line.id => 'expense:shipping' } }
     end
+  end
+
+  test 'a busy database during upload shows a plain message instead of an error page' do
+    BankStatementImport.any_instance.stubs(:import!).raises(ActiveRecord::StatementInvalid.new('SQLite3::BusyException: database is locked'))
+    upload
+    assert_response :unprocessable_entity
+    assert_includes response.body, 'The database is busy with another import or sync. Try again in a minute.'
+    assert_equal 0, BankStatementLine.count
+  end
+
+  test 'long statements are reviewed 200 lines at a time and saving one page leaves the others alone' do
+    rows = (1..250).map { |i| "2026-10-#{format('%02d', (i % 28) + 1)},PAYEE #{i},-#{i}.00" }
+    upload("Date,Description,Amount\n#{rows.join("\n")}\n")
+    doc = ReconciliationDocument.where(kind: 'bank_statement').last
+    lines = BankStatementLine.for_document(doc.id).to_a
+    get bank_statement_path(doc.id)
+    assert_response :success
+    assert_includes response.body, 'Lines 1–200 of 250'
+    assert_select 'select[name^="decisions["]', count: 200
+    assert_select 'input[type=hidden][name=page][value="1"]'
+    assert_select 'a[rel=next][href=?]', bank_statement_path(doc.id, show: 'pending', page: 2)
+    get bank_statement_path(doc.id, page: 2)
+    assert_includes response.body, 'Lines 201–250 of 250'
+    assert_select 'select[name^="decisions["]', count: 50
+    assert_select 'a[rel=prev][href=?]', bank_statement_path(doc.id, show: 'pending', page: 1)
+    get bank_statement_path(doc.id, show: 'all', page: 99)
+    assert_includes response.body, 'Lines 201–250 of 250'
+
+    first_page = lines.first(200)
+    post decide_bank_statement_path(doc.id), params: { show: 'pending', page: 1, decisions: first_page.to_h { |l| [l.id, 'ignore'] } }
+    assert_redirected_to bank_statement_path(doc.id, show: 'pending', page: 1)
+    assert_equal ['ignored'], first_page.map { |l| l.reload.status }.uniq
+    assert_equal ['pending'], lines.drop(200).map { |l| l.reload.status }.uniq
+    follow_redirect!
+    assert_select 'select[name^="decisions["]', count: 50
+    assert_select 'input[type=hidden][name=page]', count: 0
   end
 end

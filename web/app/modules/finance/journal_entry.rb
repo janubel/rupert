@@ -11,7 +11,7 @@ module Finance
 
     self.table_name = 'journal_entries'
 
-    KINDS = %w[expense sale refund vendor_payment manual opening].freeze
+    KINDS = %w[expense sale refund vendor_payment manual opening imported].freeze
     STATUSES = %w[posted void].freeze
 
     has_many :journal_lines, foreign_key: :journal_entry_id, inverse_of: :journal_entry, dependent: :restrict_with_exception

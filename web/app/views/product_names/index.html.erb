@@ -59,6 +59,6 @@
       </tbody>
     </table>
   </div></div>
-  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
   <% if !last_page && @unmatched_items.any? %><p class="text-xs text-mocha"><%= @unmatched_items.size %> items with no website match are listed below the last page.</p><% end %>
 </div>

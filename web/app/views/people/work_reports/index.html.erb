@@ -1,5 +1,7 @@
 <% content_for :title, 'Staff problem reports' %>
-<section class="flex flex-wrap items-end justify-between gap-3"><div><h1 class="page-title">Staff problem reports</h1><p class="mt-1 text-sm text-mocha">Private time, pay and time-off questions. Responses appear in the staff member’s own workspace.</p></div><%= link_to 'Back to staff', people_employees_path, class: 'btn-ghost btn-sm' %></section>
+<%= page_header 'Staff problem reports', subtitle: 'Private time, pay and time-off questions. Responses appear in the staff member’s own workspace.' do %>
+  <%= link_to 'Back to staff', people_employees_path, class: 'btn-ghost btn-sm' %>
+<% end %>
 <%= form_with url: people_work_reports_path, method: :get, class: 'my-5 flex flex-wrap gap-2' do |f| %><%= f.label :status, 'Status', class: 'sr-only' %><%= f.select :status, [['All', 'all']] + EmployeeWorkReport::STATUSES.map { |status| [status.humanize, status] }, { selected: @status }, class: 'select' %><%= f.submit 'Filter', class: 'btn-ghost btn-sm' %><% end %>
 <div class="space-y-4">
   <% if @reports.empty? %><p class="card card-pad text-sm text-mocha">No staff problem reports.</p><% end %>
@@ -17,4 +19,4 @@
     </article>
   <% end %>
 </div>
-<%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+<%== @pagy.series_nav if @pagy.pages > 1 %>

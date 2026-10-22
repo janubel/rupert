@@ -50,9 +50,15 @@ class PosConnectionsController < AuthenticatedController
   def import_iris_csv
     raise ActiveRecord::RecordNotFound unless @provider[:key] == 'iris_reporting'
     file = params[:report_file]
-    raise IrisReporting::Client::Error, :response unless file.respond_to?(:read)
+    raise IrisReporting::Client::Error, :no_file unless file.respond_to?(:read)
 
-    text = file.read(IrisReporting::CsvImport::MAX_BYTES + 1).force_encoding(Encoding::UTF_8)
+    # An empty upload reads as nil; a file past the limit is refused here with
+    # its own message rather than failing inside the parser.
+    text = file.read(IrisReporting::CsvImport::MAX_BYTES + 1).to_s
+    raise IrisReporting::Client::Error, :empty_file if text.empty?
+    raise IrisReporting::Client::Error, :file_size if text.bytesize > IrisReporting::CsvImport::MAX_BYTES
+
+    text = text.force_encoding(Encoding::UTF_8)
     if params[:report_kind] == 'daily_deposits_csv'
       report = IrisReporting::DailyDepositsCsvImport.call(text: text, merchant: params[:merchant_number].to_s, period: params[:report_period],
         origin: @connection.credential_values['api_url'].presence || 'https://nabankco.iriscrm.com')
@@ -65,7 +71,8 @@ class PosConnectionsController < AuthenticatedController
     ActivityLogger.log('iris_summary_imported', subject: @connection.persisted? ? @connection : nil, details: "#{count} monthly summaries")
     redirect_to pos_connection_path('iris_reporting'), notice: "Imported #{count} monthly IRIS summaries. No sales or inventory changed."
   rescue IrisReporting::Client::Error => e
-    redirect_to pos_connection_path('iris_reporting'), alert: "#{e.message} For Daily Deposits, use the original CSV and matching report month. For Health Center summaries, use the documented template or English matrix."
+    hint = e.reason == :response ? ' For Daily Deposits, use the original CSV and matching report month. For Health Center summaries, use the documented template or English matrix.' : ''
+    redirect_to pos_connection_path('iris_reporting'), alert: "#{e.message}#{hint}"
   end
 
   def update

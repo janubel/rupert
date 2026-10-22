@@ -21,7 +21,7 @@ class CustomersController < AuthenticatedController
     @due_count = CustomerFollowUp.due.count
     @owners = crm_owners
     @sort = SORTS.key?(params[:sort]) ? params[:sort] : 'recent'
-    @pagy, @customers = pagy(@q.result.distinct.order(SORTS.fetch(@sort).first), items: 25)
+    @pagy, @customers = pagy(:offset, @q.result.distinct.order(SORTS.fetch(@sort).first), limit: 25)
     @status_counts = Core::Customer.group(:crm_status).count
     @total_customers = @status_counts.values.sum
     @filtered = filters_active?
@@ -49,9 +49,9 @@ class CustomersController < AuthenticatedController
     @last_order_at = @customer.orders.maximum(:occurred_at)
     @open_follow_up_count = @customer.follow_ups.open.count
     @overdue_follow_up_count = @customer.follow_ups.due.where(due_on: ...Date.current).count
-    @pagy, @orders = pagy(@customer.orders.order(occurred_at: :desc, id: :desc), items: 25)
-    @interactions_pagy, @interactions = pagy(@customer.interactions.includes(:author).order(created_at: :desc, id: :desc), items: 25, page_param: :activity_page)
-    @follow_ups_pagy, @follow_ups = pagy(@customer.follow_ups.includes(:owner).order(Arel.sql('CASE WHEN completed_at IS NULL THEN 0 ELSE 1 END'), :due_on, :id), items: 25, page_param: :follow_up_page)
+    @pagy, @orders = pagy(:offset, @customer.orders.order(occurred_at: :desc, id: :desc), limit: 25)
+    @interactions_pagy, @interactions = pagy(:offset, @customer.interactions.includes(:author).order(created_at: :desc, id: :desc), limit: 25, page_key: 'activity_page')
+    @follow_ups_pagy, @follow_ups = pagy(:offset, @customer.follow_ups.includes(:owner).order(Arel.sql('CASE WHEN completed_at IS NULL THEN 0 ELSE 1 END'), :due_on, :id), limit: 25, page_key: 'follow_up_page')
     @owners = crm_owners
   end
 

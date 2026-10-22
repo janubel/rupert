@@ -106,7 +106,7 @@ class PointOfSaleController < AuthenticatedController
 
   def load_catalog
     @query = params[:q].to_s.strip.first(200)
-    @pagy, @variants = pagy(catalog_scope(@query).order(:sku, :id), items: 24)
+    @pagy, @variants = pagy(:offset, catalog_scope(@query).order(:sku, :id), limit: 24)
     @ambiguous_skus = ShopifyVariant.where(sku: @variants.map(&:sku).reject(&:blank?))
       .group(:sku).having('COUNT(*) > 1').pluck(:sku)
     @cart_key = "rupert:pos-preview:#{Current.tenant_id}:#{Current.user.id}"

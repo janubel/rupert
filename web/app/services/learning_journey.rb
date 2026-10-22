@@ -17,7 +17,7 @@ class LearningJourney
     { key: 'checkout', label: 'Serve customers', lessons: %w[start checkout sales customers] },
     { key: 'stock', label: 'Look after stock', lessons: %w[start stock counts alerts] },
     { key: 'books', label: 'Understand sales and close the books', lessons: %w[start sales books reports] },
-    { key: 'manage', label: 'Run the team', lessons: %w[start timesheet_review receipts_review tasks] },
+    { key: 'manage', label: 'Run the team', lessons: %w[start timesheet_review receipts_review tasks team_chat] },
     { key: 'work', label: 'Organize projects and goals', lessons: %w[start tasks work] },
     { key: 'tasks', label: 'Find and update my tasks', lessons: %w[start tasks] },
     { key: 'staff', label: 'Manage my hours and receipts', lessons: %w[start staff tasks] },

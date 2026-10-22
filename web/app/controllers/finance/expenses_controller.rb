@@ -32,7 +32,7 @@ module Finance
         send_data expenses_csv(ordered), filename: "expenses-#{@month || "#{@from}-#{@through}"}.csv", type: 'text/csv'
         return
       end
-      @pagy, @expenses = pagy(ordered, items: 50)
+      @pagy, @expenses = pagy(:offset, ordered, limit: 50)
       @activity = register_activity('Finance::Expense', @expenses.map(&:id))
       @locks = register_locks
       @can_write = Current.user.can?('finance.write')

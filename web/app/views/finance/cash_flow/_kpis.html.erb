@@ -1,0 +1,10 @@
+<section id="cash-flow-kpis" class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5" aria-label="Headline figures">
+  <% report.kpis.each do |key, kpi| %>
+    <article class="stat cash-flow-stat" data-kpi="<%= key %>">
+      <div class="stat-label"><%= kpi[:label] %></div>
+      <p class="stat-value mt-1 <%= 'money-negative' if kpi[:cents].negative? %>" title="<%= finance_money_text(kpi[:cents]) %>"><%= cash_flow_compact(kpi[:cents]) %></p>
+      <p class="mt-1 cash-flow-delta"><%= cash_flow_delta(kpi[:cents], kpi[:previous_cents], good: kpi[:good], label: "the #{report.span_days} days before") %><% if kpi[:count] %> <span class="text-xs text-taupe">· <%= pluralize(kpi[:count], 'sale') %></span><% end %></p>
+      <div class="mt-2"><%= cash_flow_sparkline(kpi[:series], width: 160, height: 30) %></div>
+    </article>
+  <% end %>
+</section>

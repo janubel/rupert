@@ -26,6 +26,7 @@
   <%= render "syncs/push_guard" %>
 
   <%= render "syncs/swipesimple_import" if Current.user.can?("sync.write") %>
+  <%= render "syncs/zelle_import" if Current.user.can?("sync.write") %>
 
   <section class="grid gap-4 lg:grid-cols-2">
     <%= render "syncs/runs" %>

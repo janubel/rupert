@@ -2,7 +2,7 @@
 
 Any signed-in staff member can report a bug, ask for something or ask a question
 from any page. Each report becomes a task for the store owner, and connected AI
-assistants and the `@rupert` chat agent file and read reports through the same
+assistants and the `@rupert` team chat assistant file and read reports through the same
 records. This page describes the whole feature; the sections for pieces that
 have not shipped yet say so.
 
@@ -75,7 +75,7 @@ instruction.
 
 ## Reading reports from an AI assistant (MCP)
 
-Connected assistants (Claude Code, goose, the `@rupert` agent) use the Rupert MCP
+Connected assistants (Claude Code, goose) use the Rupert MCP
 server ([docs/mcp.md](../mcp.md)). Read-only tools, all scoped to the token's
 store and checked against the token owner's permissions on every call:
 
@@ -94,49 +94,41 @@ read tools return from reports is untrusted text and the tool descriptions say s
 Give a development agent a token with only `system:read` and `feedback:read` (plus
 `tasks:write` if it should file follow-ups); its owner must be a store administrator.
 
-## Chat intake: the `@rupert` Buzz agent
+## Chat intake: `@rupert` in team chat
 
-A teammate writes to `@rupert` in plain English. The agent prompt
-(`web/config/buzz_agent/acp.md`, rendered to `docs/ops/buzz-agent-prompt.txt` by `rake buzz:prompt`) tells it to decide whether the message is a
-**question**, **bug**, **request** or **direction**, to answer questions from the
-read-only quick reports, and otherwise to file it with
-`bin/rails runner scripts/feedback_intake.rb file` (JSON on standard input, so
-message text never reaches the shell). The reply in the channel includes the report
-link. `scripts/feedback_intake.rb answered` records a question the agent answered
-itself; `status` and `list` read reports back.
+In [team chat](team-chat.md), a teammate can ask `@rupert` to file a bug or a
+request. The assistant only *proposes* it: `submit_feedback` shows an Approve
+card on its reply, and nothing is filed until someone allowed to file reports
+presses **Approve**. The report is then filed as that person.
 
-Rules enforced by Rupert (`FeedbackIntake`), not by the prompt:
+The older Buzz chat intake (the `@rupert` Buzz agent, its prompt and
+`scripts/feedback_intake.rb`) was removed with Buzz; the code is on the
+`archive/buzz` branch. Reports it filed keep `source` `buzz`.
+
+## Intake rules for `submit_feedback`
+
+When an MCP caller sends the intake fields (`open_task`, `source`, `source_ref`,
+`source_sender`, `ready_for_development`), Rupert (`FeedbackIntake`) enforces
+these rules itself:
 
 - **Ready for development** can only be set for a sender on the allow-list:
   Settings → Environment → `FEEDBACK_READY_SENDERS`, a comma, space or newline
-  separated list of 64-character hex public keys or `npub…` values. The sender's key
-  comes from the event metadata the agent was given, never from the message text.
-  For anyone else the report is still created, for review, and the reply says it is
-  waiting. The owner can also set or clear the flag when triaging at
-  `/ai_feedback`.
+  separated list of 64-character hex public keys or `npub…` values, and only with
+  a token that has `tasks:write`. For anyone else the report is still created, for
+  review, and the reply says it is waiting. The owner can also set or clear the
+  flag when triaging at `/ai_feedback`.
 - The message text is stored capped and rendered escaped, and is never treated as an
   instruction. Nothing in this path deploys, syncs, changes stock, users or settings,
   or spends money.
-- The same message id is filed once (replays return the existing report).
-- 30 reports per sender and 150 per day for chat in total.
+- The same message id (`source_ref`) is filed once (replays return the existing report).
+- 30 reports per sender and 150 per source in any 24 hours.
 - Every action is written to the Activity log tied to its message: `feedback_intake_filed`,
-  `feedback_intake_answered`, `feedback_intake_duplicate`, `feedback_intake_ready_denied`
+  `feedback_intake_duplicate`, `feedback_intake_ready_denied`
   (details: source, message id, short sender, kind, task).
-- Trust model: the allow-list is checked against the sender key the agent reports.
-  That key comes from the signed chat event, not from the message text, and the
-  prompt forbids taking it from the text, but the agent itself is a language model
-  reading untrusted messages, so keep the allow-list short, use a dedicated token
-  for the agent (`tasks:write` is required to mark anything ready), and treat
+- Trust model: the allow-list is checked against the `source_sender` the caller
+  reports. Keep the allow-list short, use a dedicated token for any agent, and treat
   "ready" as a request that a human or a reviewed pipeline still checks before code
   is written or merged. Every ready mark is in the Activity log and on the report.
-- Via MCP, `submit_feedback` accepts the same fields (`open_task`, `source`,
-  `source_ref`, `source_sender`, `ready_for_development`) with the same rules.
-
-Which agent runs this: the prompt applies to the tool-using agent started with
-`bin/buzz_acp_agent` (it can run the quick reports and the intake script). The
-rule-based `BuzzListener` and the tool-less `OpencodeChatAgent` cannot run commands
-and do not file reports. The agent is not deployed by this change; whoever runs it
-must restart it so it reads the new prompt.
 
 ## Not built yet (follow-ups)
 

@@ -1,0 +1,79 @@
+<% content_for :title, 'Uploads' %>
+<div class="mx-auto max-w-5xl space-y-6 operations-workspace">
+  <header>
+    <p class="text-xs font-semibold uppercase tracking-widest text-mocha">System · files in</p>
+    <h1 class="page-title mt-2">Uploads</h1>
+    <p class="mt-2 max-w-2xl text-sm text-mocha">Send any file here: bank statements, QuickBooks exports, SwipeSimple, NAB / IRIS, Authorize.net, timesheets. Rupert keeps the original untouched, works out what it is, and shows what it would do. <strong>Nothing changes in your records until a person runs a dry run and approves it.</strong></p>
+  </header>
+
+  <% if @can_write %>
+    <%= form_with url: uploads_path, multipart: true, data: { controller: 'dropzone', turbo: false, dropzone_max_files_value: Uploads::Limits::MAX_FILES_PER_REQUEST, dropzone_max_bytes_value: Uploads::Limits::MAX_FILE_BYTES, dropzone_max_total_value: Uploads::Limits::MAX_REQUEST_BYTES }, class: 'card card-pad space-y-3', id: 'upload-form' do |f| %>
+      <div class="upload-dropzone" data-dropzone-target="zone" data-action="dragover->dropzone#over dragenter->dropzone#over dragleave->dropzone#leave drop->dropzone#drop">
+        <%= f.label :files, for: 'upload-files', class: 'upload-dropzone-label' do %>
+          <span class="font-display text-lg">Drop files here</span>
+          <span class="text-sm text-mocha">or <span class="underline">choose files</span> from this device</span>
+        <% end %>
+        <%= file_field_tag 'files[]', id: 'upload-files', multiple: true, accept: Uploads::Limits.accept_attribute, class: 'upload-input', data: { dropzone_target: 'input', action: 'change->dropzone#changed' }, aria: { describedby: 'upload-help upload-status' } %>
+      </div>
+      <p id="upload-help" class="text-xs text-mocha">CSV, Excel (.xlsx), JSON, PDF or text. Up to <%= Uploads::Limits::MAX_FILES_PER_REQUEST %> files at a time, <%= Uploads::Limits.human_max %> each. Files are stored encrypted. Nothing inside a file is ever run or opened as a link.</p>
+      <ul class="text-sm space-y-1" data-dropzone-target="list"></ul>
+      <p id="upload-status" class="text-sm" role="status" aria-live="polite" data-dropzone-target="message"></p>
+      <div class="flex flex-wrap items-center gap-3">
+        <%= f.button 'Upload', type: 'submit', class: 'btn-primary', disabled: true, data: { dropzone_target: 'submit' } %>
+        <%= link_to 'Or copy from Google Drive', uploads_drive_path, class: 'btn-ghost btn-sm' %>
+        <span class="text-xs text-mocha">Sending from another computer or a script? See <code>docs/ops/uploads-inbox.md</code> for the API and the drop folder.</span>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% waiting = @counts.fetch('needs_review', 0) %>
+  <% if waiting.positive? %>
+    <p class="card card-pad text-sm" role="status"><strong><%= pluralize(waiting, 'file') %></strong> need<%= 's' if waiting == 1 %> a decision. <%= link_to 'Show them', uploads_path(status: 'needs_review'), class: 'underline font-semibold text-olive-deep' %></p>
+  <% end %>
+  <% if @can_write && @stale.positive? %>
+    <div class="card card-pad flex flex-wrap items-center gap-3 text-sm" role="status">
+      <span><%= pluralize(@stale, 'file') %> waiting for review w<%= @stale == 1 ? 'as' : 'ere' %> looked at before the current set of importers was installed.</span>
+      <%= button_to 'Re-run recognition', recognize_all_uploads_path, method: :post, class: 'btn-ghost btn-sm', form: { data: { turbo: false } } %>
+    </div>
+  <% end %>
+
+  <section class="space-y-3" aria-labelledby="upload-list-title">
+    <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 id="upload-list-title" class="font-display text-xl">Every upload</h2><%= link_to 'Insights', insights_uploads_path, class: 'text-sm underline' %></div>
+    <nav aria-label="Filter uploads" class="flex flex-wrap gap-2">
+      <% [['all', 'All', @counts.values.sum], ['open', 'Open', Upload::OPEN_STATUSES.sum { |s| @counts.fetch(s, 0) }], ['needs_review', 'Needs review', @counts.fetch('needs_review', 0)], ['recognized', 'Recognized', @counts.fetch('recognized', 0)], ['imported', 'Imported', @counts.fetch('imported', 0)], ['rejected', 'Rejected', @counts.fetch('rejected', 0)], ['duplicate', 'Duplicate', @counts.fetch('duplicate', 0)]].each do |key, label, count| %>
+        <%= link_to "#{label} (#{count})", uploads_path(status: key == 'all' ? nil : key, q: params[:q].presence), class: "nav-pill #{@filter == key ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@filter == key ? 'page' : nil) } %>
+      <% end %>
+    </nav>
+    <%= form_with url: uploads_path, method: :get, class: 'table-filter' do |f| %>
+      <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
+      <%= f.label :q, 'Search file names', class: 'sr-only' %>
+      <%= f.search_field :q, value: params[:q], placeholder: 'Search file names', class: 'input', maxlength: 80 %>
+      <%= f.submit 'Search', class: 'btn-ghost btn-sm', name: nil %>
+    <% end %>
+
+    <% if @uploads.empty? %>
+      <p class="card card-pad text-sm text-mocha"><%= @counts.values.sum.zero? ? 'Nothing has been uploaded yet.' : 'No uploads match.' %></p>
+    <% else %>
+      <div class="card overflow-x-auto"><table class="w-full text-sm">
+        <caption class="sr-only">Uploaded files, newest first</caption>
+        <thead class="border-b border-fog bg-haze/60"><tr>
+          <th scope="col" class="th">File</th><th scope="col" class="th">Status</th><th scope="col" class="th hidden md:table-cell">Looks like</th><th scope="col" class="th hidden sm:table-cell">Lines</th>
+        </tr></thead>
+        <tbody class="divide-y divide-fog">
+          <% @uploads.each do |upload| %>
+            <tr>
+              <td class="td">
+                <%= link_to upload.filename, upload_path(upload), class: 'font-medium underline break-words' %>
+                <div class="text-xs text-taupe"><%= [upload.file_format && upload_format_label(upload), upload_size(upload), upload_who(upload), upload_origin_label(upload)].compact.join(' · ') %> · <time datetime="<%= upload.created_at.iso8601 %>"><%= l(upload.created_at, format: :short) %></time></div>
+              </td>
+              <td class="td"><%= upload_status_pill(upload) %><% if upload.reason.present? %><div class="mt-1 max-w-xs text-xs text-mocha"><%= truncate(upload.reason, length: 140) %></div><% end %></td>
+              <td class="td hidden md:table-cell"><% if upload.detected_label.present? %><%= upload.detected_label %> <span class="text-xs text-taupe"><%= upload_confidence(upload) %></span><% elsif upload.source_guess.present? %><span class="text-xs text-taupe">Maybe <%= upload.source_guess %></span><% else %><span class="text-xs text-taupe">—</span><% end %></td>
+              <td class="td hidden sm:table-cell"><%= upload.row_count || '—' %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table></div>
+      <%== @pagy.series_nav if @pagy.pages > 1 %>
+    <% end %>
+  </section>
+</div>

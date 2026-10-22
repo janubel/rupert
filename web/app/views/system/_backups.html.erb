@@ -1,0 +1,41 @@
+<%# Backups card: one row per layer, each with what it protects against, when it last ran, and what it said.
+    Data comes from storage/backups/<layer>.json, written by the backup scripts (docs/ops/backups.md). %>
+<% now = Time.current %>
+<% summary = BackupStatus.summary(backups, now: now) %>
+<% headline = { 'ok' => ['All backup layers are fresh', 'pill-fern'], 'failed' => ['A backup layer failed', 'pill-rose'],
+                'stale' => ['A backup layer is overdue', 'pill-clay'], 'missing' => ['A backup layer has never reported', 'pill-clay'] }.fetch(summary) %>
+<section class="card card-pad" id="backups" data-backups-summary="<%= summary %>">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h2 class="font-display text-lg text-ink">Backups</h2>
+    <span class="pill <%= headline[1] %>"><%= headline[0] %></span>
+  </div>
+  <p class="mt-1 text-sm text-mocha">Five layers, each for a different way of losing data. A layer that has not reported in its usual interval is marked overdue; one that has never reported is not installed on this server.</p>
+  <ul class="mt-4 divide-y divide-fog">
+    <% backups.each do |layer| %>
+      <% state = layer.state(now) %>
+      <% pill = { 'ok' => ['OK', 'pill-fern'], 'failed' => ['Failed', 'pill-rose'], 'stale' => ['Overdue', 'pill-clay'], 'missing' => ['Not reporting', 'pill-taupe'] }.fetch(state) %>
+      <li class="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:gap-4" data-backup-layer="<%= layer.key %>" data-backup-state="<%= state %>">
+        <div class="sm:w-56 shrink-0">
+          <p class="font-medium text-ink"><%= layer.label %></p>
+          <p class="text-xs text-taupe"><%= layer.every %></p>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm text-mocha"><%= layer.protects %></p>
+          <% if layer.reported? %>
+            <p class="mt-1 text-sm text-ink">
+              <% if layer.report.at %><%= time_ago_in_words(layer.report.at) %> ago<% else %>time unknown<% end %>
+              <% if layer.report.bytes.positive? %>· <%= number_to_human_size(layer.report.bytes) %><% end %>
+              <% if layer.report.kept.positive? %>· <%= layer.report.kept %> kept<% end %>
+              <% if layer.report.free_bytes.positive? %>· <%= number_to_human_size(layer.report.free_bytes) %> free there<% end %>
+            </p>
+            <p class="text-xs <%= state == 'failed' ? 'text-rose font-semibold' : 'text-taupe' %>"><%= layer.report.message %></p>
+          <% else %>
+            <p class="mt-1 text-sm text-taupe">Never reported on this server. Install it: see the backups guide.</p>
+          <% end %>
+        </div>
+        <span class="pill <%= pill[1] %> shrink-0 self-start"><%= pill[0] %></span>
+      </li>
+    <% end %>
+  </ul>
+  <p class="mt-3 text-xs text-taupe">Restore steps, install commands and what each file contains: <%= link_to 'docs/ops/backups.md', 'https://github.com/techmore/rupert/blob/main/docs/ops/backups.md', class: 'underline' %>.</p>
+</section>

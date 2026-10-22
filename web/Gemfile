@@ -15,7 +15,7 @@ gem "sprockets-rails"
 gem "sqlite3", "~> 2.1"
 
 # Use the Puma web server [https://github.com/puma/puma]
-gem "puma", "~> 7.2"
+gem "puma", "~> 8.0"
 
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
 gem "importmap-rails"
@@ -59,13 +59,12 @@ gem "solid_queue"
 gem "google-apis-drive_v3"
 gem "signet"
 
-# Buzz (Nostr) agent integration — Rupert publishes signed events to the relay
+# Nostr key decoding (npub) for the feedback ready-for-development allow-list
 gem "nostr"
-gem "websocket-client-simple"
 
 # --- ERP framework gems ---
 # Fast pagination
-gem "pagy", "~> 8.6"
+gem "pagy", "~> 43.0"
 # Search / sort / filter for index pages
 gem "ransack"
 # Time-series grouping (group_by_hour/day/week/month)
@@ -141,3 +140,6 @@ group :test do
 end
 
 gem "shopify_app", "~> 23.0"
+
+# In-app team chat: model client with native tool calling (Ollama, OpenAI-compatible endpoints).
+gem "ruby_llm", "~> 2.1"

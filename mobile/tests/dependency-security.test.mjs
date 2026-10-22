@@ -60,16 +60,14 @@ test('RSA verification accepts valid signatures and rejects hidden DigestAlgorit
   }
 });
 
-test('Xcode UUID generation works with the scoped fixed CommonJS UUID release', () => {
-  const xcodeRequire = createRequire(require.resolve('xcode'));
-  const uuid = xcodeRequire('uuid');
-  assert.match(uuid.v4(), /^[a-f0-9-]{36}$/);
-  for (const fn of [uuid.v3, uuid.v5]) assert.throws(() => fn('test', uuid.v5.DNS, Buffer.alloc(15)), RangeError);
-  const project = require('xcode').project('/unused/test.pbxproj');
+test('Xcode generates unique project identifiers without the retired UUID dependency', () => {
+  const xcode = require('xcode');
+  assert.equal(require('xcode/package.json').dependencies.uuid, undefined);
+  const project = xcode.project('/unused/test.pbxproj');
   project.hash = { project: { objects: {} } };
-  const first = project.generateUuid();
-  assert.match(first, /^[A-F0-9]{24}$/);
-  assert.notEqual(first, project.generateUuid());
+  const identifiers = Array.from({ length: 20 }, () => project.generateUuid());
+  identifiers.forEach(id => assert.match(id, /^[A-F0-9]{24}$/));
+  assert.equal(new Set(identifiers).size, identifiers.length);
 });
 
 

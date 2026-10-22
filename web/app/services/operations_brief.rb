@@ -14,7 +14,7 @@ class OperationsBrief
 
   def initialize(kind:, channel: nil)
     @kind = kind.to_s
-    @channel = channel.presence || announcements_channel
+    @room = channel.presence || announcements_channel
   end
 
   def publish!
@@ -22,7 +22,7 @@ class OperationsBrief
       content, period_key = build
       return false if already_published?(period_key)
 
-      published, error = BuzzAgent.notify(content, channel: @channel)
+      published, error = TeamChat::Notices.notify(content, room: @room)
       raise "Operations brief failed: #{error}" unless published
 
       mark_published(period_key)
@@ -135,7 +135,7 @@ class OperationsBrief
   end
 
   def announcements_channel
-    EnvStore.fetch('BUZZ_ANNOUNCEMENTS_CHANNEL', '').presence || BuzzAgent.channel_id
+    TeamChat::Notices::ROOM_SLUG
   end
 
   def publication_key

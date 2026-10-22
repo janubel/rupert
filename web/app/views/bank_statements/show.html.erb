@@ -45,6 +45,16 @@
       <% end %>
       <p class="text-sm"><%= link_to 'Edit expense categories', finance_expense_categories_path, class: 'font-semibold text-olive-deep underline' if Current.user.can?('finance.read') %></p>
       <%= hidden_field_tag :show, @filter %>
+      <%= hidden_field_tag :page, @pagy.page if @pagy.pages > 1 %>
+      <% if @pagy.pages > 1 %>
+        <nav class="flex flex-wrap items-center justify-between gap-3 text-sm" aria-label="Statement pages">
+          <p class="text-mocha">Lines <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %>. Save this page before moving to the next; choices on other pages are not kept.</p>
+          <div class="flex gap-2">
+            <% if @pagy.previous %><%= link_to 'Previous lines', bank_statement_path(@document.id, show: @filter, page: @pagy.previous), class: 'btn-ghost btn-sm', rel: 'prev' %><% end %>
+            <% if @pagy.next %><%= link_to 'Next lines', bank_statement_path(@document.id, show: @filter, page: @pagy.next), class: 'btn-ghost btn-sm', rel: 'next' %><% end %>
+          </div>
+        </nav>
+      <% end %>
       <div class="card overflow-x-auto"><table class="w-full text-sm">
         <thead class="border-b border-fog bg-haze/60"><tr>
           <th scope="col" class="th">Date</th><th scope="col" class="th">Description</th><th scope="col" class="th text-right">Out<%= define('expense') %></th><th scope="col" class="th text-right">In<%= define('deposit') %></th><th scope="col" class="th">What was it?<%= define('decision') %></th>
@@ -101,6 +111,7 @@
           <p class="text-sm font-semibold" data-bank-decisions-target="count" aria-live="polite"><%= pluralize(@lines.count(&:pending?), 'line') %> waiting</p>
           <%= f.submit 'Save my decisions', class: 'btn-primary', data: { bank_decisions_target: 'save' } %>
         </div>
+        <% if @pagy.pages > 1 %><p class="text-xs text-mocha">Page <%= @pagy.page %> of <%= @pagy.pages %>. Only the lines on this page are saved.</p><% end %>
         <p class="text-xs text-mocha">Only lines where you picked something are changed. Each one records your name and the time, appears in the Activity log, and is never deleted. If a line falls in a day you already approved, that approval will show as changed.</p>
       <% end %>
     <% end %>

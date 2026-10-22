@@ -14,7 +14,7 @@ class ReceiptsController < AuthenticatedController
     scope = @status == 'all' ? visible : visible.where(status: @status)
     # Keep encrypted file bodies out of list queries.
     scope = scope.select(PurchaseReceipt.column_names.excluding('content_base64'))
-    @pagy, @receipts = pagy(scope.includes(:submitted_by).order(created_at: :desc, id: :desc), items: 30)
+    @pagy, @receipts = pagy(:offset, scope.includes(:submitted_by).order(created_at: :desc, id: :desc), limit: 30)
   end
 
   def new

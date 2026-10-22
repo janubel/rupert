@@ -5,6 +5,11 @@
 class BankStatementsController < AuthenticatedController
   include ApprovedPeriodNotice
 
+  # Lines per review page. Each pending line submits a select and, for a
+  # deposit, a name field; Rack caps a form at 4,096 fields, so a 5,000-line
+  # statement cannot be saved from one page.
+  PAGE_SIZE = 200
+
   before_action -> { authorize(:module, :finance_read?) }
   before_action -> { authorize(:module, :finance_write?) }, only: %i[create decide]
   before_action { response.headers['Cache-Control'] = 'private, no-store' }
@@ -30,11 +35,11 @@ class BankStatementsController < AuthenticatedController
     notice += "; #{result[:duplicates]} already seen and skipped" if result[:duplicates].positive?
     redirect_to bank_statement_path(result[:document].id), notice: "#{notice}. The original file is retained unchanged."
   rescue BankStatementImport::Error, ReconciliationEvidence::Error => e
-    @statements = []
-    @documents = {}
-    @can_write = true
-    @form_error = e.message
-    render :index, status: :unprocessable_entity
+    upload_failed(e.message)
+  rescue ActiveRecord::StatementInvalid => e
+    raise unless database_busy?(e)
+
+    upload_failed('The database is busy with another import or sync. Try again in a minute.')
   end
 
   def show
@@ -45,11 +50,12 @@ class BankStatementsController < AuthenticatedController
     scope = BankStatementLine.for_document(@document.id)
     @counts = scope.reorder(nil).group(:status).count
     @flagged_count = scope.flagged.pending.count
-    @lines = case @filter
-    when 'all' then scope.to_a
-    when 'flagged' then scope.flagged.pending.to_a
-    else scope.pending.to_a
+    listed = case @filter
+    when 'all' then scope
+    when 'flagged' then scope.flagged.pending
+    else scope.pending
     end
+    @pagy, @lines = pagy(:offset, listed, page: [params[:page].to_i, 1].max, limit: PAGE_SIZE)
     @vendors = Purchasing::Vendor.ordered.to_a
     @can_write = Current.user.can?('finance.write')
     @expenses_by_id = Finance::Expense.where(id: @lines.filter_map(&:expense_id)).index_by(&:id)
@@ -77,7 +83,7 @@ class BankStatementsController < AuthenticatedController
     ActivityLogger.log('bank_statement_decided', subject: document, details: done.map { |k, v| "#{v} #{k}" }.join(', ').presence || 'no changes')
     notice = done.empty? ? 'Nothing was changed.' : "Recorded: #{done.map { |k, v| "#{v} #{k}" }.join(', ')}."
     notice += " #{stale} line(s) were already decided elsewhere and were left as they are." if stale.positive?
-    redirect_to bank_statement_path(document.id, show: params[:show]), notice: notice
+    redirect_to bank_statement_path(document.id, show: params[:show], page: params[:page].presence), notice: notice
   rescue BankStatementImport::Error => e
     redirect_to bank_statement_path(params[:id]), alert: "Nothing was saved: #{e.message}"
   rescue ActiveRecord::RecordInvalid => e
@@ -85,6 +91,20 @@ class BankStatementsController < AuthenticatedController
   end
 
   private
+
+  def upload_failed(message)
+    @statements = []
+    @documents = {}
+    @can_write = true
+    @form_error = message
+    render :index, status: :unprocessable_entity
+  end
+
+  # SQLite has one writer; a long sync or import elsewhere surfaces here as a
+  # busy/locked error after the busy timeout rather than as a broken file.
+  def database_busy?(error)
+    error.is_a?(ActiveRecord::StatementTimeout) || error.cause.is_a?(SQLite3::BusyException) || error.message.match?(/database is (busy|locked)/i)
+  end
 
   # "Received from" names for deposits. Editable before or after a decision;
   # only changed names are written.

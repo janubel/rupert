@@ -1,10 +1,7 @@
 <% content_for :title, 'API integrations' %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
-  <section>
-    <h1 class="page-title">API integrations</h1>
-    <p class="mt-2 text-sm text-mocha">Connect your tools to Rupert's versioned read API. Each token belongs to this store, has selected scopes, and can be revoked here. The same token can connect an AI assistant over MCP (see below).</p>
-  </section>
+  <%= page_header 'API integrations', subtitle: 'Connect your tools to Rupert\'s versioned read API. Each token belongs to this store, has selected scopes, and can be revoked here. The same token can connect an AI assistant over MCP (see below).' %>
 
   <% if @issued_secret %>
     <section class="card card-pad space-y-3" aria-label="New API token">
@@ -28,7 +25,7 @@
         <p class="text-xs text-taupe">Every scope is read-only except those marked “writes”, which change only Rupert's own records. No scope writes to Shopify, Square or C-Trax.</p>
         <% ApiAccessToken::SCOPES.each do |scope, permission| %>
           <% next if permission && !Current.user.can?(permission) %>
-          <label class="flex items-center gap-2 text-sm"><%= check_box_tag 'api_access_token[scopes][]', scope, @token.scopes.to_a.include?(scope), id: "api_scope_#{scope.tr(':', '_')}" %><span class="font-mono"><%= scope %></span><% if ApiAccessToken::WRITE_SCOPES.include?(scope) %><span class="pill-clay">writes Rupert tasks</span><% end %></label>
+          <label class="flex items-center gap-2 text-sm"><%= check_box_tag 'api_access_token[scopes][]', scope, @token.scopes.to_a.include?(scope), id: "api_scope_#{scope.tr(':', '_')}" %><span class="font-mono"><%= scope %></span><% if ApiAccessToken::WRITE_SCOPES.include?(scope) %><span class="pill-clay"><%= ApiAccessToken::WRITE_SCOPE_NOTES.fetch(scope, 'writes Rupert records') %></span><% end %></label>
         <% end %>
       </fieldset>
       <%= form.submit 'Create API token', class: 'btn-primary' %>
@@ -64,5 +61,5 @@ curl -H 'Authorization: Bearer YOUR_TOKEN' '<%= request.base_url %>/api/v1/roadm
     </table>
     <p class="px-4 py-3 text-xs text-taupe">Only token hashes are stored. Revocation takes effect on the next API request.</p>
   </section>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
 </div>

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Files feedback that arrives from a teammate's chat message (Buzz) or an AI
-# assistant, with the rules the owner set:
+# Files feedback that arrives from an AI assistant (or, historically, a teammate's
+# Buzz chat message), with the rules the owner set:
 #   * the message text is untrusted data — stored capped, never followed;
 #   * only senders on the allow-list (Settings → Environment, FEEDBACK_READY_SENDERS,
 #     64-hex Nostr public keys or npubs) can mark work "ready for development";

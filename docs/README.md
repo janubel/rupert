@@ -21,12 +21,13 @@ Influencer operators: [Influencer CMS](ops/influencer-cms.md) covers prospects, 
 | `BRANCHING.md` | Branch strategy: `main` = Rails production |
 | `ops/operator-runbook.md`, `ops/backup-restore-runbook.md`, `ops/environment-reference.md`, `ops/release-process.md`, `ops/go-live-checklist.md` | Running the shop: daily checks, stuck syncs, restore drill and procedure, every variable, how to release and roll back, go-live gates |
 | `audits/production-readiness.md` | 2026-10-20 production readiness audit: findings, fix status, what the owner must do |
+| `audits/maintenance/security/` | Dated maintenance security reviews, source findings, checks, and follow-up limits |
 | `ops/security-scanning.md` | Security CI (bundler-audit, Brakeman baseline) and the triage of accepted warnings |
 | `modules.md` | How to add an ERP module under `web/app/modules/` |
 | `plans/` | Design and migration plans (drift migration, phase plan, staffing model) |
 | `audits/` | Dated inventory/SKU audits with their findings. Raw CSV/JSON output sits in `audits/data/` |
 | `research/` | Background research that informed product decisions |
-| `ops/` | Operator material ([Buzz team chat and the @rupert agent](ops/buzz.md), including the generated agent prompt) |
+| `ops/` | Operator material (for example [team chat and the @rupert assistant](ops/team-chat.md)) |
 
 Product pages: `roadmap.html`, `competitors.html`, and `sqlite-incus.html`. Edit the catalog at `web/config/product_roadmap.json`, the matrix at `docs/data/competitor-matrix.json`, or the runbook at `docs/ops/sqlite-incus.md`, then run `bin/build-product-site`. CI runs `--check` to detect drift. Matrix cells link to official source pages; "Not established" is an unknown, not an absence claim.
 
@@ -38,6 +39,8 @@ The current operating decision and restore/scaling guidance are in `ops/sqlite-i
 
 - [Main / SER8 reconciliation and preserved PR work](ops/repository-reconciliation-2026-10-16.md).
 - [Historical record backfills and recovery checks](ops/historical-records.md).
+- [QuickBooks CSV import and the History view](ops/quickbooks-import.md).
+- [Uploads inbox: one front door for files, with dry run and approval](ops/uploads-inbox.md).
 - [Community and influencer implementation plan (historical)](plans/community-and-influencer-marketing.md).
 
 Preserved research: [Authorize.net API investigation](ops/authorize-net-api-investigation.md), [earlier gateway investigation](ops/authorize-net-integration-investigation.md), and [historical C-Trax investigation](ctrax-integration-research.md). Provider enablement remains separate from documentation reconciliation.

@@ -10,7 +10,7 @@ class AccessLogsController < AuthenticatedController
     scope = scope.where(status: params[:status]) if params[:status].present?
     scope = scope.where(source: params[:source]) if params[:source].present?
     scope = scope.for_email(params[:q]) if params[:q].present?
-    @pagy, @logs = pagy(scope, items: 50)
+    @pagy, @logs = pagy(:offset, scope, limit: 50)
   end
 
   private

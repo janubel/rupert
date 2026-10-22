@@ -24,7 +24,7 @@ class OwnerChecklistsController < AuthenticatedController
     :owner_review_class, :owner_event_actor
 
   def index
-    @pagy, @checklists = pagy(OwnerChecklist.order(updated_at: :desc, id: :desc), items: 12)
+    @pagy, @checklists = pagy(:offset, OwnerChecklist.order(updated_at: :desc, id: :desc), limit: 12)
   end
 
   def new

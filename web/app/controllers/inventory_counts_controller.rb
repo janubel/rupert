@@ -69,9 +69,8 @@ class InventoryCountsController < AuthenticatedController
       @count.snapshot_previous!
       @count.submit!
     end
-    BuzzNotifyJob.perform_later(
-      "Manual count submitted for approval · #{@count.items.count} items · total qty #{@count.total_quantity}",
-      tags: [%w[t inventory]]
+    TeamChat::NoticeJob.perform_later(
+      Current.tenant_id, "Manual count submitted for approval · #{@count.items.count} items · total qty #{@count.total_quantity}"
     )
     redirect_to(inventory_count_path(@count), notice: 'Count submitted for approval.')
   rescue AASM::InvalidTransition

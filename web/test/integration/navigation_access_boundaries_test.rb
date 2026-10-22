@@ -183,7 +183,6 @@ class NavigationAccessBoundariesTest < ActionDispatch::IntegrationTest
     assert_select 'form[data-settings-target=envForm]', count: 0
     assert_select 'a[href=?]', backup_settings_path, count: 0
     assert_select 'input[data-settings-target=restoreFile]', count: 0
-    assert_select 'form[action=?]', buzz_generate_settings_path, count: 0
     post oauth_credentials_settings_path, params: { client_secret: 'replacement' }
     assert_redirected_to root_path
     Current.tenant = @tenant
