@@ -22,8 +22,8 @@ module Mcp
 
       def call(args)
         list = if args['topic'].present? then [::DataGuide.find(args['topic'])].compact
-               elsif args['question'].present? then ::DataGuide.match(args['question'])
-               else ::DataGuide.topics
+        elsif args['question'].present? then ::DataGuide.match(args['question'])
+        else ::DataGuide.topics
                end
         list = ::DataGuide.topics if list.empty?
         result(::DataGuide.markdown(list),
