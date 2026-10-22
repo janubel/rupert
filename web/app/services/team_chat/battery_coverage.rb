@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module TeamChat
-    # A trailing ? in a need permits an explicit null for fields where null is
-    # a meaningful unknown/absent state; the key itself must still be present.
-    # Executes the ground-truth calls in a battery definition using the asking
+  # A trailing ? in a need permits an explicit null for fields where null is a
+  # meaningful unknown/absent state; the key itself must still be present.
+  # Executes the ground-truth calls in a battery definition using the asking
   # user's read permissions, then checks declared result paths without printing
   # any business values. This is a contract check, not an LLM run.
   class BatteryCoverage

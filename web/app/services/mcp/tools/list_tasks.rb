@@ -63,7 +63,10 @@ module Mcp
       def stock_topic(tasks)
         terms = %w[stock inventory count recount]
         clauses = terms.map { "LOWER(tasks.title) LIKE ? OR LOWER(COALESCE(tasks.description, '')) LIKE ? OR LOWER(COALESCE(tasks.labels, '')) LIKE ?" }
-        binds = terms.flat_map { |term| pattern = "%#{term}%"; [pattern, pattern, pattern] }
+        binds = terms.flat_map do |term|
+          pattern = "%#{term}%"
+          [pattern, pattern, pattern]
+        end
         tasks.where("(#{clauses.join(') OR (')})", *binds)
       end
 

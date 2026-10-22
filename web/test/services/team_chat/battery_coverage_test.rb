@@ -6,6 +6,7 @@ class TeamChatBatteryCoverageTest < ActiveSupport::TestCase
   FakeTool = Class.new do
     class << self
       attr_accessor :tool_name, :available, :data
+
       def read_only = true
       def available_to?(_token) = available
       def new(token:) = Instance.new(token, data)
@@ -19,6 +20,7 @@ class TeamChatBatteryCoverageTest < ActiveSupport::TestCase
 
   FakeRegistry = Class.new do
     def initialize(tool) = @tool = tool
+
     def find(name)
       @tool if name == @tool.tool_name
     end
