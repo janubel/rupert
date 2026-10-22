@@ -54,12 +54,13 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     assert_match(/"from":"#{Date.current.prev_month.beginning_of_month.iso8601}"/, grader.calls.last[:reference])
     grades = room.messages.where(author_kind: 'system').where('body LIKE ?', 'Grade %')
     assert_equal 2, grades.count
-    assert_match(/Grade 4\/5 for Liquid .*Right totals.*\n- No top product\n— graded by fake-grader/m, grades.first.body)
+    assert_match(/Grade 4\/5 for Liquid .*Right totals.*\n- No top product\n⚠ Number check: \$100 not found in Rupert's data\.\n— graded by fake-grader/m, grades.first.body)
 
     summary = room.messages.pinned.first
     assert_match(/answered 2\/2/, summary.body)
     assert_match(%r{Average grade 4.0/5}, summary.body)
     assert_match(/By cadence: daily 4.0 · monthly 4.0/, summary.body)
+    assert_match(/Number check: figures not found in Rupert's data in 1 of 2 answers/, summary.body)
     report = battery.report_markdown
     assert_match(/\| 1 \| daily \| How did we do yesterday\? \| [\d.]+ s \| period_review \| 4 \|/, report)
   end

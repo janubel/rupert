@@ -16,7 +16,7 @@ module TeamChat
     SCALES = { 'k' => 1_000, 'K' => 1_000, 'thousand' => 1_000, 'million' => 1_000_000, 'M' => 1_000_000 }.freeze
     MAX_FLAGS = 8
 
-    Figure = Struct.new(:text, :value, :kind, :decimals, keyword_init: true)
+    Figure = Struct.new(:text, :value, :kind, :decimals, :at, keyword_init: true)
 
     module_function
 
@@ -34,13 +34,13 @@ module TeamChat
         match = Regexp.last_match
         raw = match[:amount] || match[:amount2]
         value = raw.delete(',').to_f * SCALES.fetch(match[:scale].to_s, 1)
-        Figure.new(text: match[0].strip, value: value, kind: :money, decimals: raw[/\.(\d+)\z/, 1].to_s.length - Math.log10(SCALES.fetch(match[:scale].to_s, 1)).round)
+        Figure.new(text: match[0].strip, value: value, kind: :money, at: match.begin(0), decimals: raw[/\.(\d+)\z/, 1].to_s.length - Math.log10(SCALES.fetch(match[:scale].to_s, 1)).round)
       end
       percents = text.to_enum(:scan, PERCENT).map do
         match = Regexp.last_match
-        Figure.new(text: match[0].strip, value: match[:value].delete(',').to_f, kind: :percent, decimals: match[:value][/\.(\d+)\z/, 1].to_s.length)
+        Figure.new(text: match[0].strip, value: match[:value].delete(',').to_f, kind: :percent, at: match.begin(0), decimals: match[:value][/\.(\d+)\z/, 1].to_s.length)
       end
-      (money + percents).reject { |figure| figure.value.zero? }
+      (money + percents).reject { |figure| figure.value.zero? }.sort_by(&:at)
     end
 
     # Every number in the sources, plus each integer read as cents.
