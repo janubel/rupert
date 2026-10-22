@@ -30,6 +30,14 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     assert_empty post('@qwen hello').replies
   end
 
+  test 'bots answer to the names people actually type: @gemma4, @Gemma-4, @qwen3.5, @lfm' do
+    assert_equal ['gemma'], post('@gemma4 how are sales today').replies.map { |reply| reply.meta['agent'] }
+    assert_equal ['gemma'], post('@Gemma-4 hi').replies.map { |reply| reply.meta['agent'] }
+    assert_equal ['qwen'], post('@qwen3.5 hi').replies.map { |reply| reply.meta['agent'] }
+    assert_equal ['liquid'], post('hey @lfm, hi').replies.map { |reply| reply.meta['agent'] }
+    assert_empty post('@gemma-e2b and @gemmas and email@gemma.dev').replies
+  end
+
   test 'each mentioned local agent gets its own pending reply, alongside @rupert' do
     result = post('@rupert and @qwen and @liquid: how were sales yesterday?')
     assert_equal [nil, 'qwen', 'liquid'], result.replies.map { |reply| reply.meta['agent'] }
