@@ -26,6 +26,41 @@ module TeamChat
 
     def self.current = new(ENV)
 
+    # The model for a local @agent, served by the one-model-at-a-time gateway.
+    def self.for_local(agent) = LocalModel.new(agent)
+
+    # Same interface as ModelConfig, for LocalAgents: no API key, no fallback,
+    # long timeouts (a request may wait for another model to unload and this one to load).
+    class LocalModel
+      attr_reader :agent
+
+      def initialize(agent)
+        @agent = agent
+      end
+
+      def engine = 'local_gateway'
+      def model = agent.model
+      def api_base = LocalAgents.base_url
+      def native? = true
+      def local? = true
+      def auto? = false
+      def configured? = api_base.present?
+      def label = "#{agent.name} on this server"
+      def disclosure = "#{agent.name} runs on this server; nothing leaves it."
+
+      def chat(session:)
+        context = RubyLLM.context do |config|
+          config.request_timeout = 600
+          config.max_retries = 0
+          config.openai_api_base = api_base
+          config.openai_api_key = 'local'
+          config.openai_use_system_role = true
+        end
+        context.chat(model: model, provider: :openai, assume_model_exists: true, protocol: :chat_completions)
+               .with_headers('x-rupert-session' => session.to_s)
+      end
+    end
+
     def initialize(env, auth_file: nil)
       @env = env
       @auth_file = auth_file

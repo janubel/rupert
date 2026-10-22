@@ -48,6 +48,12 @@ module TeamChat
 
     def mentions_rupert? = body.to_s.match?(MENTION)
 
+    # The local @agent that wrote this reply (LocalAgents), or nil for @rupert.
+    def local_agent
+      handle = meta.to_h['agent'] if assistant?
+      handle && LocalAgents::ALL.find { |agent| agent.handle == handle }
+    end
+
     def mention_ids = Array(mentions).map(&:to_i)
 
     def stale?
@@ -57,6 +63,8 @@ module TeamChat
     def actions_list = Array(actions)
 
     def author_name
+      return local_agent.name if local_agent
+
       case author_kind
       when 'assistant', 'system' then 'Rupert'
       else user&.display_name.presence || 'Someone'
@@ -64,12 +72,14 @@ module TeamChat
     end
 
     def author_initials
+      return local_agent.initials if local_agent
       return 'R' unless person?
 
       author_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase.presence || '?'
     end
 
     def author_color
+      return local_agent.color if local_agent
       return '#1e40af' unless person?
 
       COLORS[user_id.to_i % COLORS.size]
@@ -88,7 +98,7 @@ module TeamChat
     def as_payload(viewer:, reply_counts: {}, people: {})
       {
         id: id, parent_id: parent_id, kind: author_kind, status: status, activity: (activity if pending?),
-        author: { name: author_name, initials: author_initials, color: author_color, user_id: user_id },
+        author: { name: author_name, initials: author_initials, color: author_color, user_id: user_id, agent: local_agent&.handle },
         body: deleted? ? '' : body.to_s, deleted: deleted?, created_at: created_at.iso8601, updated_at: updated_at.iso8601,
         reply_count: reply_counts[id].to_i, mine: person? && user_id == viewer.id,
         actions: deleted? ? [] : actions_list.map { |action| action.slice('id', 'tool', 'title', 'summary', 'status', 'decided_by', 'result') },

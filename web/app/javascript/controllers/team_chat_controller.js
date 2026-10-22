@@ -13,7 +13,7 @@ export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
     "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
-    people: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
+    people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
   static GROUP_SECONDS = 5 * 60
   static FAST = 1000
@@ -52,10 +52,12 @@ export default class extends Controller {
   }
 
   // names: people who can be mentioned, so "@Alex Rivera" is shown as one mention.
-  static parseInline(text, names = []) {
+  // handles: the assistants (@rupert and the local model @agents).
+  static parseInline(text, names = [], handles = ["rupert"]) {
     const parts = []
     const people = [...names].sort((a, b) => b.length - a.length).map((name) => this.escapeRegExp(name)).join("|")
-    const mention = people ? `@rupert\\b|@(?:${people})(?![\\w])` : "@rupert\\b"
+    const bots = `@(?:${handles.map((handle) => this.escapeRegExp(handle)).join("|")})\\b`
+    const mention = people ? `${bots}|@(?:${people})(?![\\w])` : bots
     const pattern = new RegExp("`([^`\\n]+)`|\\*\\*([^*\\n]+)\\*\\*|\\[([^\\]\\n]{1,120})\\]\\((\\/(?!\\/)[^)\\s]*)\\)|(https?:\\/\\/[^\\s<>\"'`]+)|((?<![\\w@])(?:" + mention + "))", "gi")
     let last = 0
     let match
@@ -508,7 +510,8 @@ export default class extends Controller {
 
   inlineNodes(line) {
     const names = this.peopleValue.map((person) => person.name).concat(this.meValue ? [this.meValue] : [])
-    return this.constructor.parseInline(line, names).map((part) => {
+    const handles = ["rupert", ...this.agentsValue.map((agent) => agent.name)]
+    return this.constructor.parseInline(line, names, handles).map((part) => {
       if (part.type === "text") return document.createTextNode(part.text)
       const node = document.createElement(part.type === "bold" ? "strong" : part.type === "code" ? "code" : part.type === "link" ? "a" : "span")
       node.textContent = part.text
@@ -634,7 +637,7 @@ export default class extends Controller {
     }
     const term = match[1].toLowerCase()
     const starts = (name) => name.toLowerCase().split(/\s+/).some((word) => word.startsWith(term)) || name.toLowerCase().startsWith(term)
-    const options = [this.constructor.RUPERT, ...this.peopleValue.map((person) => ({ ...person, label: person.name }))].filter((option) => starts(option.name)).slice(0, 8)
+    const options = [this.constructor.RUPERT, ...this.agentsValue, ...this.peopleValue.map((person) => ({ ...person, label: person.name }))].filter((option) => starts(option.name)).slice(0, 8)
     if (!options.length || (options.length === 1 && options[0].name.toLowerCase() === term)) {
       this.suggestTarget.hidden = true
       this.suggestions = []

@@ -30,6 +30,7 @@ class TeamChatController < AuthenticatedController
     @rooms = rail_rooms
     @members = @room.direct? ? [Current.user] : @room.members.where(active: true).order(:id).limit(12).to_a
     @model = TeamChat::ModelConfig.current
+    @local_agents = TeamChat::LocalAgents.all.map { |agent| { id: nil, name: agent.handle, label: agent.label } }
     @people = TeamChat::Post.mentionable.reject { |person| person.id == Current.user.id }.map { |person| { id: person.id, name: person.display_name } }
   end
 
@@ -66,7 +67,7 @@ class TeamChatController < AuthenticatedController
   def create_message
     result = TeamChat::Post.call(room: @room, user: Current.user, body: params[:body], parent_id: params[:parent_id],
       files: params[:files], mention_ids: params[:mention_ids])
-    render json: { messages: payload([result.message, result.reply].compact) }, status: :created
+    render json: { messages: payload([result.message, *result.replies].compact) }, status: :created
   rescue TeamChat::Post::Invalid => e
     render json: { error: e.message }, status: :unprocessable_entity
   rescue TeamChat::Post::Limited => e
