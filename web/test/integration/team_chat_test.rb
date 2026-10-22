@@ -216,4 +216,11 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     post team_chat_reactions_path('general', id), params: { emoji: '💩' }, as: :json
     assert_response :unprocessable_entity
   end
+
+  test 'old Buzz addresses lead to team chat' do
+    %w[/admin/buzz /buzz /buzz/chat].each do |path|
+      get path
+      assert_redirected_to '/chat', path
+    end
+  end
 end

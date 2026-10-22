@@ -198,6 +198,10 @@ Rails.application.routes.draw do
   get '/roadmap', to: 'roadmap#index', as: :roadmap
   # Team chat: rooms inside Rupert with the @rupert assistant (docs/ops/team-chat.md).
   get    '/chat',                                     to: 'team_chat#index',           as: :team_chat
+  # Buzz was retired for team chat; old bookmarks land in team chat.
+  get '/admin/buzz', to: redirect('/chat')
+  get '/buzz', to: redirect('/chat')
+  get '/buzz/chat', to: redirect('/chat')
   post   '/chat/rooms',                               to: 'team_chat#create_room',     as: :team_chat_rooms
   get    '/chat/:room',                               to: 'team_chat#show',            as: :team_chat_room
   patch  '/chat/:room',                               to: 'team_chat#update_room'
