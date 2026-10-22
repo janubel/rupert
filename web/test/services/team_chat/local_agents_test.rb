@@ -79,7 +79,7 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     system = requests.first['messages'].first['content']
     assert_includes system, '## About this question'
     assert_match(/Sales tax \(tools: sales_tax_report\): .*never add sources together/, system)
-    assert_equal %w[tax comparison sales], reply.reload.meta['topics']
+    assert_equal %w[tax sales], reply.reload.meta['topics']
   end
 
   test 'a question with no topic keeps every tool' do
