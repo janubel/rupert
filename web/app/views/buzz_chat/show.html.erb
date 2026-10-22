@@ -6,6 +6,7 @@
   <div class="buzz-app"
        data-controller="buzz-chat"
        data-buzz-chat-url-value="<%= @chat_messages_path || buzz_chat_messages_path %>"
+       data-buzz-chat-typing-url-value="<%= @chat_typing_path || buzz_chat_typing_path %>"
        data-buzz-chat-channel-value="<%= @channel.id %>"
        data-buzz-chat-can-post-value="<%= @can_post %>"
        data-buzz-chat-post-max-value="<%= BuzzChat::POST_MAX %>">

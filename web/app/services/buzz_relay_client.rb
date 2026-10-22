@@ -32,9 +32,22 @@ class BuzzRelayClient
     end
 
     # Publishes a signed event; returns [true, message] or [false, reason].
-    def publish(event, timeout: 10)
-      new.publish(event, timeout: timeout)
+    # `signer` answers the relay's sign-in: the Rupert agent by default, or a
+    # person's BuzzPersonKey when the event is signed by that person.
+    def publish(event, timeout: 10, signer: BuzzAgent)
+      new(signer: signer).publish(event, timeout: timeout)
     end
+
+    # Holds one subscription open and yields each event until `stop` returns
+    # true or the relay drops the connection (raises Error). For live, never
+    # stored events such as typing indicators.
+    def stream(filters, stop:, &)
+      new.stream(filters, stop: stop, &)
+    end
+  end
+
+  def initialize(signer: BuzzAgent)
+    @signer = signer
   end
 
   # Unlike BuzzAgent.publish this waits for the relay to accept the sign-in
@@ -64,6 +77,35 @@ class BuzzRelayClient
     [false, 'the relay is not reachable']
   rescue StandardError => e
     [false, "could not reach the relay (#{e.class.name.demodulize})"]
+  ensure
+    close(ws)
+  end
+
+  def stream(filters, stop:)
+    raise Error, 'Buzz is not configured' unless BuzzAgent.configured?
+
+    require 'websocket-client-simple'
+    relay = BuzzAgent.relay_url
+    frames = Queue.new
+    ws = open_socket(relay, frames)
+    wait_until_open(ws, frames)
+    authenticate(ws, frames, relay)
+    sub = "rupert-live-#{SecureRandom.hex(4)}"
+    ws.send(['REQ', sub, *Array(filters)].to_json)
+    until stop.call
+      frame = pop(frames, 1.0)
+      next if frame.nil?
+
+      case frame[0]
+      when 'EVENT' then yield frame[2] if frame[1] == sub && frame[2].is_a?(Hash)
+      when 'CLOSED' then raise Error, closed_reason(frame[2]) if frame[1] == sub
+      when 'ERROR', 'CLOSE' then raise Error, 'the relay closed the connection'
+      end
+    end
+  rescue Error
+    raise
+  rescue SystemCallError, SocketError, IOError
+    raise Error, 'the relay is not reachable'
   ensure
     close(ws)
   end
@@ -149,7 +191,7 @@ class BuzzRelayClient
     end
     return if challenge.nil?
 
-    auth = BuzzAgent.build_auth_event(challenge, relay: relay)
+    auth = @signer.build_auth_event(challenge, relay: relay)
     ws.send(['AUTH', auth.to_h].to_json)
     wait_for_ok(frames, auth.id)
   end

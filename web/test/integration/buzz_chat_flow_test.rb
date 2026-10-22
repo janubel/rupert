@@ -20,7 +20,14 @@ class BuzzChatFlowTest < ActionDispatch::IntegrationTest
   end
 
   def sign_in_admin
+    @admin_user_id = users(:regular_user).id
     post login_path, params: { email: users(:regular_user).email, password: 'password' }
+  end
+
+  def wait_for(what, seconds: 5)
+    deadline = Time.now + seconds
+    sleep 0.05 until yield || Time.now > deadline
+    assert yield, "#{what}: not met in time"
   end
 
   def sign_in_role(role, permissions: nil)
@@ -168,30 +175,75 @@ class BuzzChatFlowTest < ActionDispatch::IntegrationTest
     refute_match(/nsec|#{BuzzAgent.private_key_hex}/, response.body)
   end
 
-  test 'posting goes out as the agent with the sender named, and shows up in the chat' do
+  test 'posting goes out as the person\'s own Buzz identity, named, and shows up in the chat' do
     start_buzz_relay
     sign_in_admin
     post buzz_chat_messages_path, params: { message: 'hello from Rupert' }, as: :json
     assert_response :created
-    assert_equal BuzzAgent.public_key_hex, @relay.published.last['pubkey']
-    assert_match(/ via Rupert: hello from Rupert\z/, @relay.published.last['content'])
+
+    identity = BuzzPersonKey.find_by!(user_id: @admin_user_id)
+    message = @relay.published.find { |event| event['kind'] == 9 }
+    assert_equal identity.pubkey, message['pubkey']
+    assert_not_equal BuzzAgent.public_key_hex, message['pubkey']
+    assert_equal 'hello from Rupert', message['content']
+    assert_includes message['tags'], ['h', BuzzChatHelper::CHANNEL]
+    profile = @relay.published.find { |event| event['kind'].zero? }
+    assert_equal identity.pubkey, profile['pubkey'], 'the person\'s profile is published so Buzz apps show a name'
 
     get buzz_chat_messages_path
     posted = json['messages'].last
-    assert posted['mine'] && posted['via_rupert'] && posted['agent']
+    assert posted['mine']
+    assert_not posted['agent']
+    assert_not posted['via_rupert']
     assert_equal 'hello from Rupert', posted['text']
   end
 
-  test 'a mention of Rupert queues the shared answer path' do
+  test 'a mention of Rupert is tagged so the agent answers the person itself' do
     start_buzz_relay
     sign_in_admin
     post buzz_chat_messages_path, params: { message: 'hello @rupert' }, as: :json
     assert_response :created
+    message = @relay.published.find { |event| event['kind'] == 9 }
+    assert_includes message['tags'], ['p', BuzzAgent.public_key_hex]
+  end
 
-    job = enqueued_jobs.find { |entry| entry[:job] == BuzzMirrorReplyJob }
-    assert job, 'expected the mirror reply job'
-    assert_equal BuzzAgent.channel_id, job[:args][2]
-    assert_equal 'hello @rupert', job[:args][3]
+  test 'a person not yet on the closed relay gets their npub to pass on' do
+    start_buzz_relay(members: [])
+    sign_in_admin
+    post buzz_chat_messages_path, params: { message: 'hi' }, as: :json
+    assert_response :conflict
+    assert_match(/not on the team relay yet/, json['error'])
+    assert_match(/npub1/, json['error'])
+  end
+
+  test 'typing is sent as the person and other people typing come back with the messages' do
+    start_buzz_relay
+    sign_in_admin
+    post buzz_chat_typing_path, params: { channel: BuzzChatHelper::CHANNEL }, as: :json
+    assert_response :no_content
+    typing = @relay.published.find { |event| event['kind'] == BuzzChat::TYPING_KIND }
+    assert_equal BuzzPersonKey.find_by!(user_id: @admin_user_id).pubkey, typing['pubkey']
+    assert_includes typing['tags'], ['h', BuzzChatHelper::CHANNEL]
+
+    get buzz_chat_messages_path # starts the live subscription
+    wait_for('live subscription') { @relay.requests.any? { |filters| filters.any? { |f| Array(f['kinds']).include?(BuzzChat::TYPING_KIND) } } }
+    # Buzz clients re-send typing every few seconds; do the same until the live subscription has it.
+    wait_for('typing seen') do
+      @relay.add(@relay.message(@alice, '', kind: BuzzChat::TYPING_KIND))
+      @relay.add(@relay.message(agent_key, '', kind: BuzzChat::TYPING_KIND))
+      sleep 0.1
+      BuzzTyping.current(@tenant.id, BuzzChatHelper::CHANNEL).size == 2
+    end
+
+    get buzz_chat_messages_path
+    assert_equal [false, true], json['typing'].map { |entry| entry['agent'] }
+    assert_equal BuzzAgentPrompt::NAME, json['typing'].last['name']
+    assert_equal 2, json['typing'].size, 'the viewer does not see their own typing'
+
+    @relay.add(@relay.message(@alice, 'done typing'))
+    wait_for('message clears typing') { BuzzTyping.current(@tenant.id, BuzzChatHelper::CHANNEL).size == 1 }
+  ensure
+    BuzzTyping.reset!
   end
 
   test 'people who can read but not post cannot post' do

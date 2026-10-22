@@ -18,6 +18,7 @@ module BuzzChatHelper
   end
 
   def stop_buzz_relay
+    BuzzTyping.reset!
     @relay&.stop
     %w[BUZZ_RELAY_URL BUZZ_CHANNEL BUZZ_PRIVATE_KEY BUZZ_MEMBER_NAMES FEEDBACK_READY_SENDERS].each { |key| EnvStore.set(key, nil) }
     Current.reset

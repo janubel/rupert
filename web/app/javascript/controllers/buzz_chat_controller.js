@@ -10,7 +10,10 @@ import { Controller } from "@hotwired/stimulus"
 // link is plain text plus an href. Nothing linked is fetched or previewed.
 export default class extends Controller {
   static targets = ["log", "more", "status", "notice", "form", "input", "send", "count", "jump", "empty", "loading", "search", "reply", "replyName"]
-  static values = { url: String, channel: String, canPost: Boolean, postMax: { type: Number, default: 1500 }, interval: { type: Number, default: 4000 } }
+  static values = { url: String, typingUrl: String, channel: String, canPost: Boolean, postMax: { type: Number, default: 1500 }, interval: { type: Number, default: 3000 } }
+
+  // Buzz sends a typing indicator at most every 3 seconds while someone types.
+  static TYPING_SEND_MS = 3000
 
   static GROUP_SECONDS = 5 * 60
 
@@ -27,6 +30,8 @@ export default class extends Controller {
     this.pendingReply = false
     this.pendingSince = 0
     this.pendingMessageId = null
+    this.typing = []
+    this.typingSentAt = 0
     this.load()
     this.timer = setInterval(() => this.poll(), this.intervalValue)
     this.onVisible = () => { if (!document.hidden) this.poll() }
@@ -93,6 +98,21 @@ export default class extends Controller {
     }
   }
 
+  // What the typing row says: people typing in Buzz or Rupert, and the agent
+  // while it works on an answer (its own typing events, or the reply we are
+  // waiting for after an @rupert mention). Empty string means no row.
+  static typingLabel(entries, waitingForRupert = false) {
+    const list = Array.isArray(entries) ? entries : []
+    const people = [...new Set(list.filter((entry) => !entry.agent).map((entry) => String(entry.name || "Someone")))]
+    const agentWorking = waitingForRupert || list.some((entry) => entry.agent)
+    const parts = []
+    if (people.length === 1) parts.push(`${people[0]} is typing`)
+    else if (people.length === 2) parts.push(`${people[0]} and ${people[1]} are typing`)
+    else if (people.length > 2) parts.push(`${people[0]}, ${people[1]} and ${people.length - 2} more are typing`)
+    if (agentWorking) parts.push("Rupert is working on a reply")
+    return parts.join(" · ")
+  }
+
   // --- loading ---
 
   async load() {
@@ -121,6 +141,7 @@ export default class extends Controller {
       const data = await response.json()
       this.fetchFailed = false
       this.status = data.status
+      this.typing = Array.isArray(data.typing) ? data.typing : []
       if (before) {
         this.prependMessages(data.messages)
         this.hasMore = data.has_more
@@ -134,6 +155,7 @@ export default class extends Controller {
         this.appendMessages(data.messages, { stick: false })
       }
       this.renderMore()
+      this.renderTyping()
     } catch (_error) {
       this.fetchFailed = true
     } finally {
@@ -215,7 +237,21 @@ export default class extends Controller {
       previous = message
     })
     this.renderEmpty()
-    if (this.pendingReply) holder.append(this.typingRow())
+    this.renderTyping()
+  }
+
+  // Updates only the typing row at the end of the log, so a poll that brings
+  // no new messages does not rebuild the conversation.
+  renderTyping() {
+    const holder = this.logTarget.querySelector("[data-buzz-chat-list]")
+    if (!holder) return
+    holder.querySelectorAll(".buzz-typing").forEach((node) => node.remove())
+    const label = this.constructor.typingLabel(this.typing, this.pendingReply)
+    if (!label) return
+    const log = this.logTarget
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80
+    holder.append(this.typingRow(label))
+    if (atBottom) this.jumpTo(log.scrollHeight)
   }
 
   threadBlock(replies) {
@@ -357,15 +393,16 @@ export default class extends Controller {
     }
   }
 
-  typingRow() {
+  typingRow(text) {
     const row = document.createElement("div")
     row.className = "buzz-typing"
     row.setAttribute("role", "status")
+    row.setAttribute("aria-live", "polite")
     const eyes = document.createElement("span")
     eyes.className = "buzz-typing-eyes"
     eyes.textContent = "👀"
     const label = document.createElement("span")
-    label.textContent = "Rupert is typing"
+    label.textContent = text
     const dots = document.createElement("span")
     dots.className = "buzz-typing-dots"
     dots.textContent = "…"
@@ -525,6 +562,21 @@ export default class extends Controller {
       this.countTarget.dataset.over = length > this.postMaxValue ? "true" : "false"
     }
     this.sendTarget.disabled = this.sending || !field.value.trim() || length > this.postMaxValue
+    if (field.value.trim()) this.sendTyping()
+  }
+
+  // Tells the channel this person is typing (best effort, at most every 3 s).
+  sendTyping() {
+    if (!this.canPostValue || !this.hasTypingUrlValue || !this.typingUrlValue) return
+    const now = Date.now()
+    if (now - this.typingSentAt < this.constructor.TYPING_SEND_MS) return
+    this.typingSentAt = now
+    fetch(this.typingUrlValue, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": this.csrf },
+      credentials: "same-origin",
+      body: JSON.stringify({ channel: this.channelValue, reply_to: this.replyTo })
+    }).catch(() => {})
   }
 
   async send(event) {
@@ -549,6 +601,7 @@ export default class extends Controller {
         return
       }
       this.inputTarget.value = ""
+      this.typingSentAt = 0
       this.cancelReply()
       this.input()
       this.sending = false

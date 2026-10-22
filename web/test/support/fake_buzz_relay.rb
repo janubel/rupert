@@ -71,9 +71,11 @@ class FakeBuzzRelay
     @delay = seconds
   end
 
-  # Stores an event as if someone had published it, and delivers it to live subscribers.
+  # Stores an event as if someone had published it, and delivers it to live
+  # subscribers. Ephemeral kinds (20000-29999, e.g. typing) are delivered only,
+  # never stored, as the real relay does.
   def add(event)
-    store(event)
+    store(event) unless (20_000..29_999).cover?(event['kind'].to_i)
     fan_out(event)
     event
   end
@@ -256,6 +258,7 @@ class FakeBuzzRelay
       end
       return send_frame(['OK', event['id'], false, 'invalid: bad signature']) unless valid_signature?(event)
       return send_frame(['OK', event['id'], false, @relay.reject_events]) if @relay.reject_events
+      return send_frame(['OK', event['id'], false, 'restricted: not a relay member']) unless @relay.send(:member?, event['pubkey'])
 
       @relay.send(:record_published, event)
       @relay.add(event)

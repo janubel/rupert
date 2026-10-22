@@ -200,9 +200,11 @@ Rails.application.routes.draw do
   get '/buzz/chat', to: 'buzz_chat#show', as: :buzz_chat
   get '/buzz/chat/messages', to: 'buzz_chat#messages', as: :buzz_chat_messages
   post '/buzz/chat/messages', to: 'buzz_chat#create'
+  post '/buzz/chat/typing', to: 'buzz_chat#typing', as: :buzz_chat_typing
   get  '/admin/buzz',          to: 'admin/buzz_mirror#show',     as: :admin_buzz_mirror
   get  '/admin/buzz/messages', to: 'admin/buzz_mirror#messages', as: :admin_buzz_mirror_messages
   post '/admin/buzz/messages', to: 'admin/buzz_mirror#create'
+  post '/admin/buzz/typing',   to: 'admin/buzz_mirror#typing',   as: :admin_buzz_mirror_typing
   post '/buzz/link', to: 'buzz_links#create', as: :buzz_link
   post '/buzz/link/:id/confirm', to: 'buzz_links#confirm', as: :confirm_buzz_link
   delete '/buzz/link/:id', to: 'buzz_links#destroy', as: :remove_buzz_link

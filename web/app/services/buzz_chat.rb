@@ -12,21 +12,23 @@ require 'json'
 # checked (id, signature, channel), cleaned, capped and stored as text; the page
 # only ever shows it as text. Nothing linked from a message is fetched.
 #
-# Posting identity (v1): messages go out signed by the @rupert agent key with a
-# visible prefix, "Sam via Rupert: ...", and a `client` tag. Rupert holds no
-# per-person Nostr keys. Because of that the relay, the Buzz apps and the intake
-# allow-list see the AGENT as the sender, never the person, so a message posted
-# here can never mark work "ready for development" (FeedbackIntake refuses the
-# agent's own key as a sender). Neither the private key nor any nsec is ever
-# logged or shown.
+# Posting identity: each person posts as their own Buzz identity (BuzzPersonKey:
+# a key Rupert generates per person and keeps encrypted), so the relay, the Buzz
+# apps and the @rupert agent see that person, and the agent answers them itself.
+# Messages posted before identities existed went out signed by the agent key as
+# "Sam via Rupert: ..." and are still shown under the person's name. A person's
+# Rupert-held key is not on the "ready for development" allow-list unless the
+# owner adds it. Neither a private key nor any nsec is ever logged or shown.
 class BuzzChat
   class Error < StandardError; end
   class NotReady < Error; end
   class Invalid < Error; end
   class RateLimited < Error; end
   class PostFailed < Error; end
+  class NotMember < Error; end
 
   KINDS = [9, 40_002].freeze # stream message, stream message v2
+  TYPING_KIND = 20_002 # ephemeral typing indicator, never stored by the relay
   PAGE = 40
   SYNC_LIMIT = 100
   CATCH_UP_LIMIT = 500 # the relay's cap per filter
@@ -125,14 +127,15 @@ class BuzzChat
     def present(rows, viewer: nil)
       pubkeys = rows.map(&:pubkey).uniq
       names = BuzzProfile.where(pubkey: pubkeys).index_by(&:pubkey)
+      people = people_names(pubkeys)
       agent = agent_pubkey
-      rows.map { |row| present_one(row, names[row.pubkey], agent, viewer) }
+      rows.map { |row| present_one(row, names[row.pubkey], agent, viewer, people[row.pubkey]) }
     end
 
     # --- writing ---
 
-    # Posts as the Rupert agent. Raises NotReady, Invalid, RateLimited or
-    # PostFailed with a message that is safe to show.
+    # Posts as the person's own Buzz identity. Raises NotReady, Invalid,
+    # RateLimited, NotMember or PostFailed with a message that is safe to show.
     def post!(user:, text:, channel: nil, reply_to: nil)
       ch = channel.presence || self.channel
       raise NotReady, 'Team chat is not set up yet.' unless ready? && ch.present?
@@ -144,18 +147,37 @@ class BuzzChat
       end
 
       enforce_rate_limit!(user)
-      tags = [['client', CLIENT_TAG]]
-      tags << ['e', parent, '', 'reply'] if parent
-      event = BuzzAgent.build_event(content: "#{sender_name(user)}#{VIA}#{clean}", channel: ch, tags: tags)
-      ok, reason = BuzzRelayClient.publish(event)
+      identity = BuzzPersonKey.for(user)
+      publish_profile(identity, user)
+      event = identity.build_event(kind: 9, content: clean, tags: post_tags(ch, parent, clean))
+      ok, reason = BuzzRelayClient.publish(event, signer: identity)
       unless ok
         Rails.logger.warn("[BuzzChat] post failed for user #{user.id}: #{reason.to_s[0, 120]}")
+        raise NotMember, not_member_message(identity) if not_member?(reason)
+
         raise PostFailed, 'Rupert could not reach Buzz, so your message was not sent. Try again in a moment.'
       end
 
       row = store_posted(event, user, ch, parent)
       ActivityLogger.log('buzz_chat_post', details: "event=#{event.id[0, 12]} chars=#{clean.length}")
       row
+    end
+
+    # Tells the channel the person is typing (an ephemeral kind 20002 event the
+    # relay passes on but never stores, as the Buzz apps send it). Best effort:
+    # returns false instead of raising.
+    def typing!(user:, channel: nil, reply_to: nil)
+      ch = channel.presence || self.channel
+      return false unless ready? && ch.present?
+
+      identity = BuzzPersonKey.for(user)
+      tags = [['h', ch]]
+      tags << ['e', reply_to, '', 'reply'] if reply_to.to_s.match?(HEX64)
+      ok, = BuzzRelayClient.publish(identity.build_event(kind: TYPING_KIND, content: '', tags: tags), timeout: 4, signer: identity)
+      ok
+    rescue StandardError => e
+      Rails.logger.info("[BuzzChat] typing not sent: #{e.class}")
+      false
     end
 
     # Deletes copies past the retention window. Run per tenant.
@@ -171,6 +193,13 @@ class BuzzChat
       "#{npub[0, 12]}…#{npub[-4..]}"
     rescue StandardError
       "#{pubkey.to_s[0, 8]}…"
+    end
+
+    # The name to show for a public key (profile, Rupert person, agent or short npub).
+    def display_name(pubkey)
+      return BuzzAgentPrompt::NAME if pubkey == agent_pubkey
+
+      BuzzProfile.find_by(pubkey: pubkey)&.label.presence || people_names([pubkey])[pubkey] || short_npub(pubkey)
     end
 
     private
@@ -326,10 +355,16 @@ class BuzzChat
 
     # --- presenting ---
 
-    def present_one(row, profile, agent, viewer)
+    # Names of Rupert people who post with their own Buzz identity, for the
+    # moments before the relay has their profile.
+    def people_names(pubkeys)
+      BuzzPersonKey.where(pubkey: pubkeys).includes(:user).to_h { |identity| [identity.pubkey, sender_name(identity.user)] }
+    end
+
+    def present_one(row, profile, agent, viewer, person = nil)
       is_agent = agent.present? && row.pubkey == agent
       text = row.content
-      name = profile&.label
+      name = profile&.label || person
       via_person = nil
       if is_agent && row.client == CLIENT_TAG && (m = text.match(/\A(.{1,60}?)#{Regexp.escape(VIA)}(.*)\z/m))
         via_person = clean_name(m[1])
@@ -361,6 +396,31 @@ class BuzzChat
     end
 
     # --- posting helpers ---
+
+    # Channel, thread and, when the text says @rupert, a `p` tag for the agent:
+    # Buzz delivers a mention to an agent by that tag, not by the text.
+    def post_tags(channel, parent, text)
+      tags = [['h', channel], ['client', CLIENT_TAG]]
+      tags << ['e', parent, '', 'reply'] if parent
+      tags << ['p', agent_pubkey] if agent_pubkey && text.match?(/(^|\s)@rupert\b/i)
+      tags
+    end
+
+    def publish_profile(identity, user)
+      return if identity.profile_published_at.present?
+
+      ok, = BuzzRelayClient.publish(identity.profile_event(sender_name(user)), timeout: 6, signer: identity)
+      identity.update_columns(profile_published_at: Time.current) if ok
+    end
+
+    def not_member?(reason)
+      reason.to_s.match?(/restricted|not a member|membership|auth-required|sign-in/i)
+    end
+
+    def not_member_message(identity)
+      "Your Buzz identity is not on the team relay yet. Ask an operator to add #{identity.npub} " \
+        '(deploy/ser8/buzz/add-member.sh), then try again.'
+    end
 
     def clean_post(text)
       clean = text.to_s.scrub('').gsub(CONTROL, '').strip

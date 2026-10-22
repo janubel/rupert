@@ -140,19 +140,22 @@ class BuzzChatTest < ActiveSupport::TestCase
     assert_match(/did not answer/, BuzzChat.status[:error])
   end
 
-  test 'post publishes as the agent with the sender named and stores it for the page' do
+  test 'post publishes as the person\'s own key and stores it for the page' do
     row = BuzzChat.post!(user: @user, text: "hello\nthere")
     event = @relay.published.last
-    assert_equal BuzzAgent.public_key_hex, event['pubkey']
+    assert_equal BuzzPersonKey.for(@user).pubkey, event['pubkey']
+    assert_not_equal BuzzAgent.public_key_hex, event['pubkey']
     assert_equal 9, event['kind']
-    assert_equal "#{@user.display_name} via Rupert: hello\nthere", event['content']
+    assert_equal "hello\nthere", event['content']
     assert_includes event['tags'], ['h', CHANNEL]
     assert_includes event['tags'], ['client', BuzzChat::CLIENT_TAG]
     assert_equal @user.id, row.rupert_user_id
+    assert_equal 1, @relay.published.count { |published| published['kind'].zero? }, 'profile published once'
 
     message = BuzzChat.page(viewer: @user)[:messages].last
     assert message[:mine]
-    assert message[:via_rupert]
+    assert_not message[:via_rupert]
+    assert_not message[:agent]
     assert_equal "hello\nthere", message[:text]
     assert_equal @user.display_name, message[:author]
     assert_equal 0, BuzzChat.sync! # the relay's echo is a duplicate, not a second copy
@@ -245,7 +248,7 @@ class BuzzChatTest < ActiveSupport::TestCase
 
     assert_equal parent.event_id, row.reply_to
     assert_includes @relay.published.last['tags'], ['e', parent.event_id, '', 'reply']
-    assert_match(/ via Rupert: thread answer\z/, @relay.published.last['content'])
+    assert_equal 'thread answer', @relay.published.last['content']
   end
 
   test 'a reply to a message outside the channel is refused' do
