@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_235500) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_000500) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -892,6 +892,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_235500) do
     t.string "engine"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "reason"
     t.index ["message_id", "user_id"], name: "index_chat_ratings_on_message_id_and_user_id", unique: true
     t.index ["message_id"], name: "index_chat_ratings_on_message_id"
     t.index ["tenant_id", "model"], name: "index_chat_ratings_on_tenant_id_and_model"

@@ -168,9 +168,9 @@ module TeamChat
     def rating_summary(viewer)
       return nil unless assistant? && status == 'done'
 
-      mine = ratings.find { |rating| rating.user_id == viewer.id }&.value
+      own = ratings.find { |rating| rating.user_id == viewer.id }
       { up: ratings.count { |rating| rating.value == 1 }, down: ratings.count { |rating| rating.value == -1 },
-        mine: { 1 => 'up', -1 => 'down' }[mine] }
+        mine: { 1 => 'up', -1 => 'down' }[own&.value], my_reason: own&.reason }
     end
 
     def reaction_summary(viewer)

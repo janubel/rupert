@@ -213,6 +213,7 @@ Rails.application.routes.draw do
   delete '/chat/:room/messages/:id',                  to: 'team_chat#destroy_message', as: :team_chat_message
   post   '/chat/:room/messages/:id/reactions',        to: 'team_chat#react',           as: :team_chat_reactions
   post   '/chat/:room/messages/:id/rating',           to: 'team_chat#rate',            as: :team_chat_rating
+  post   '/chat/:room/messages/:id/rating/reason',    to: 'team_chat#rating_reason',   as: :team_chat_rating_reason
   post   '/chat/:room/messages/:id/pin',              to: 'team_chat#pin',             as: :team_chat_pin
   get    '/chat/:room/files/:id',                     to: 'team_chat#attachment',      as: :team_chat_attachment
   post   '/chat/:room/messages/:id/actions/:action_id', to: 'team_chat#decide',        as: :team_chat_action

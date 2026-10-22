@@ -11,7 +11,14 @@ module TeamChat
     belongs_to :message, class_name: 'TeamChat::Message', touch: true
     belongs_to :user
 
+    REASON_MAX = 500
+
     validates :value, inclusion: { in: VALUES.values }
+
+    # The optional "why" after a thumb. Blank clears it.
+    def note!(text)
+      update!(reason: text.to_s.scrub('').gsub(AskRupert::Redactor::CONTROL, '').squish.first(REASON_MAX).presence)
+    end
 
     # Sets this person's rating; the same choice again clears it. Returns the message.
     def self.rate!(message, user, choice)

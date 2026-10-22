@@ -757,7 +757,50 @@ export default class extends Controller {
       button.addEventListener("click", () => this.rate(message, value))
       row.append(button)
     })
+    if (message.rating.mine) row.append(this.reasonNode(message))
     return row
+  }
+
+  // After a thumb: an optional one-line "why", saved with the rating. Never blocks anything.
+  reasonNode(message) {
+    const saved = message.rating.my_reason
+    if (saved && this.reasonOpenFor !== message.id) {
+      const note = document.createElement("button")
+      note.type = "button"
+      note.className = "chat-rating-note"
+      note.title = "Edit why"
+      note.textContent = `“${saved}”`
+      note.addEventListener("click", () => { this.reasonOpenFor = message.id; this.render({ stick: false }); this.focusReason(message.id) })
+      return note
+    }
+    if (this.reasonOpenFor !== message.id) return document.createTextNode("")
+    const form = document.createElement("form")
+    form.className = "chat-rating-reason"
+    form.dataset.busy = "false"
+    const field = document.createElement("input")
+    field.type = "text"
+    field.maxLength = 500
+    field.value = saved || ""
+    field.placeholder = message.rating.mine === "up" ? "What made it good? (optional)" : "What was wrong? (optional)"
+    field.setAttribute("aria-label", "Why (optional)")
+    const close = () => { this.reasonOpenFor = null; this.render({ stick: false }) }
+    field.addEventListener("keydown", (event) => { if (event.key === "Escape") { event.preventDefault(); close() } })
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault()
+      const data = await this.fetchJson(`${this.urlValue}/${message.id}/rating/reason`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: field.value })
+      })
+      if (!data) return
+      this.reasonOpenFor = null
+      this.merge(data.messages)
+      this.render({ stick: false })
+    })
+    form.append(field)
+    return form
+  }
+
+  focusReason(id) {
+    requestAnimationFrame(() => this.element.querySelector(`[data-id="${id}"] .chat-rating-reason input`)?.focus())
   }
 
   async rate(message, value) {
@@ -765,8 +808,11 @@ export default class extends Controller {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value })
     })
     if (data) {
+      const after = data.messages.find((row) => row.id === message.id)
+      this.reasonOpenFor = after?.rating?.mine && !after.rating.my_reason ? message.id : null
       this.merge(data.messages)
       this.render({ stick: false })
+      if (this.reasonOpenFor) this.focusReason(message.id)
     }
   }
 
