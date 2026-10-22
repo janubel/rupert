@@ -507,7 +507,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
 
   test 'the local models are @mentionable and answer through the gateway' do
     ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
-    assert_equal %w[liquid qwen ternary], TeamChat::LocalAgents.all.map(&:handle)
+    assert_equal %w[liquid qwen gemma ternary], TeamChat::LocalAgents.all.map(&:handle)
     qwen = TeamChat::LocalAgents.find('qwen')
     assert_equal %w[local_gateway qwen3.5-4b], [TeamChat::ModelConfig.for_local(qwen).engine, TeamChat::ModelConfig.for_local(qwen).model]
     assert_match(/open model/, TeamChat::LocalAgents.persona(qwen))
@@ -569,11 +569,11 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
     sign_in(@admin)
     get team_chat_path
-    assert_enqueued_jobs 4, only: TeamChat::ReplyJob do
+    assert_enqueued_jobs 5, only: TeamChat::ReplyJob do
       post team_chat_messages_path('admins'), params: { body: '@all how were sales yesterday?' }, as: :json
     end
     question, *answers = json['messages']
-    assert_equal [nil, 'liquid', 'qwen', 'ternary'], answers.map { |reply| reply['author']['agent'] }
+    assert_equal [nil, 'liquid', 'qwen', 'gemma', 'ternary'], answers.map { |reply| reply['author']['agent'] }
     assert(answers.all? { |reply| reply['compare_of'] == question['id'] })
     assert_nil question['compare_of']
   ensure

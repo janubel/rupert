@@ -196,10 +196,11 @@ containers yet.
 | `@rupert` | DeepSeek V4.1 Flash (`RUPERT_CHAT_PROVIDER=opencode_go`, `RUPERT_CHAT_MODEL=deepseek-v4.1-flash`) | cloud, OpenCode Go plan |
 | `@liquid` | Liquid AI LFM2.5 8B-A1B | local `rupert-llm` gateway |
 | `@qwen` | Qwen3.5 4B | local |
+| `@gemma` | Google Gemma 4 E4B (`gemma-4-e4b`, `gemma-4-E4B_q4_0-it.gguf`) | local (added back 2026-10-23 at the owner's request) |
 | `@ternary` | PrismML Ternary Bonsai 2 9B | local |
 
 - Every bot reply shows its time and model, for example "4s · deepseek-v4.1-flash · cloud".
-- Replies from the old handles still show proper names: @lfm shows as Liquid and @bonsai as Ternary. @deepseek and @gemma are retired as handles.
+- Replies from the old handles still show proper names: @lfm shows as Liquid and @bonsai as Ternary. @deepseek is retired as a handle (it is @rupert now).
 
 ## Replies, Media and people (2026-10-22)
 
