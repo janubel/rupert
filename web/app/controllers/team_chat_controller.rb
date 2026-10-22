@@ -216,6 +216,7 @@ class TeamChatController < AuthenticatedController
     runs = TeamChat::BatteryRun.newest_first
     runs = runs.where(set_name: @run_set) if @run_set
     @runs = runs.limit(60).to_a
+    @leaderboard = TeamChat::Leaderboard.call
   end
 
   # PATCH /chat/:room/messages/:id { body } — edit your own message.

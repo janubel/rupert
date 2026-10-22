@@ -145,6 +145,7 @@
                 <div class="chat-bots-row">
                   <dt><strong>@<%= bot[:handle] %></strong> <span class="chat-bots-where is-<%= bot[:where] == 'cloud' ? 'cloud' : 'local' %>"><%= bot[:where] == 'cloud' ? 'cloud' : 'local' %></span></dt>
                   <dd><span class="chat-bots-model"><%= bot[:model] %></span> — <%= bot[:purpose] %>
+                    <% if bot[:leader] %><span class="chat-bots-best">🏆 #1 on the <%= link_to 'leaderboard', team_chat_scores_path(anchor: 'leaderboard'), class: 'underline' %></span><% end %>
                     <% if bot[:best_for_money] %><span class="chat-bots-best">💰 Best local bot for money questions</span><% end %>
                     <% if bot[:scores].present? %>
                       <span class="chat-bots-scores">Tested: <%= bot[:scores].sort.map { |set, score| "#{set == 'default' ? 'general' : set} #{format('%.1f', score)}/5" }.join(' · ') %></span>
