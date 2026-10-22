@@ -24,18 +24,21 @@ module TeamChat
     Definition = Struct.new(:name, :description, :schema, :kind, :activity, keyword_init: true)
 
     attr_reader :calls, :tools_used, :results
+    attr_accessor :call_id
 
     # only: tool names to offer (the question's data guide topics, for local bots); nil offers every tool.
-    def initialize(user:, room:, reply:, only: nil)
+    def initialize(user:, room:, reply:, only: nil, execution: nil)
       @only = only&.map(&:to_s)
       @user = user
       @room = room
       @reply = reply
       @token = Token.new(user)
       @lookups = AskRupert::Tools.new(user: user)
-      @calls = 0
-      @tools_used = []
-      @results = []
+      @execution = execution
+      saved = execution&.run&.tool_results || []
+      @calls = saved.size
+      @tools_used = saved.pluck('name')
+      @results = saved.pluck('result')
     end
 
     def definitions
@@ -65,6 +68,12 @@ module TeamChat
 
     # Runs one call and returns text for the model. Never raises.
     def call(name, arguments)
+      return call_once(name, arguments) unless @execution
+
+      @execution.tool!(call_id, name, arguments || {}, write: WRITE_TOOLS.include?(name)) { call_once(name, arguments) }
+    end
+
+    def call_once(name, arguments)
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       @calls += 1
       return 'Tool budget used up for this message. Answer now from what you already have, and say what you could not check.' if @calls > MAX_CALLS

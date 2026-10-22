@@ -126,8 +126,10 @@ module TeamChat
       meta = { 'asked_by' => @user.id, 'trigger_id' => message.id }
       meta['agent'] = agent.handle if agent
       meta['compare_of'] = message.id if compare
-      @room.messages.create!(author_kind: 'assistant', status: 'pending', activity: agent ? "Loading #{agent.name}" : 'Thinking',
+      reply = @room.messages.create!(author_kind: 'assistant', status: 'pending', activity: agent ? "Loading #{agent.name}" : 'Thinking',
         parent_id: message.parent_id, meta: meta)
+      Run.for_reply!(reply)
+      reply
     end
 
     def limited?

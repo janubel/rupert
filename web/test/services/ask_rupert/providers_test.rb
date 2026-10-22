@@ -64,6 +64,22 @@ class AskRupertProvidersTest < ActiveSupport::TestCase
     assert_equal :unavailable, error.kind
   end
 
+  test 'silent opencode output obeys deadlines and cancellation before a newline' do
+    reader, writer = IO.pipe
+    provider = AskRupert::Providers::Opencode.new
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    error = assert_raises(AskRupert::ProviderError) do
+      provider.send(:lines, reader, started: started, deadline: 1.second.ago, checkpoint: nil) { flunk 'unexpected output' }
+    end
+    assert_equal :timeout, error.kind
+    assert_raises(TeamChat::Run::Stopped) do
+      provider.send(:lines, reader, started: started, deadline: 1.minute.from_now, checkpoint: -> { raise TeamChat::Run::Stopped }) { flunk 'unexpected output' }
+    end
+  ensure
+    reader&.close
+    writer&.close
+  end
+
   test 'opencode reads the CLI json stream for text and tokens, with tools off' do
     Dir.mktmpdir do |dir|
       script = File.join(dir, 'opencode')
