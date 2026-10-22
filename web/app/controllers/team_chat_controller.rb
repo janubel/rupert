@@ -199,6 +199,11 @@ class TeamChatController < AuthenticatedController
     @slow = TeamChat::ModelScores.slow(since: @days.days.ago).select { |row| row.room&.visible_to?(Current.user) }
     @notes = TeamChat::Rating.where.not(reason: [nil, '']).where(created_at: @days.days.ago..).includes(:user).order(updated_at: :desc).limit(30)
     @current = TeamChat::ModelConfig.current
+    @run_sets = TeamChat::BatteryRun.distinct.order(:set_name).pluck(:set_name)
+    @run_set = @run_sets.include?(params[:set].to_s) ? params[:set].to_s : nil
+    runs = TeamChat::BatteryRun.newest_first
+    runs = runs.where(set_name: @run_set) if @run_set
+    @runs = runs.limit(60).to_a
   end
 
   # PATCH /chat/:room/messages/:id { body } — edit your own message.

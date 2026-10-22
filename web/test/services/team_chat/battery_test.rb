@@ -65,6 +65,39 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     assert_match(/\| 1 \| daily \| How did we do yesterday\? \| [\d.]+ s \| period_review \| 4 \|/, report)
   end
 
+  test 'each run is saved with its per-question results, and the same model, set and build counts as already done' do
+    script_model({ tool: 'period_review', arguments: { period: 'yesterday' } }, { text: 'Yesterday: 2 orders, $100.' }, { text: 'No tax data.' })
+    battery = TeamChat::Battery.new(user: @user, agent: 'liquid', grader: FakeGrader.new([]), items: items, out: nil)
+    battery.run
+
+    run = TeamChat::BatteryRun.find_by!(run_key: battery.run_id)
+    assert_equal ['done', 'default', 'liquid', 'lfm2.5-8b-a1b', 2, 2], [run.status, run.set_name, run.agent, run.model, run.questions, run.answered]
+    assert_in_delta 4.0, run.avg_grade.to_f
+    assert_equal({ 'daily' => 4.0, 'monthly' => 4.0 }, run.cadence_scores)
+    assert_equal 1, run.flagged
+    assert_equal %w[d1 m3], run.results_list.pluck('id')
+    assert_equal ['$100'], run.results_list.first['unverified']
+    assert_equal run, TeamChat::Battery.new(user: @user, agent: 'liquid', grader: FakeGrader.new([]), items: items, out: nil).already_done
+    assert_nil TeamChat::Battery.new(user: @user, agent: 'liquid', only: ['d1'], grader: FakeGrader.new([]), items: items, out: nil).already_done
+  end
+
+  test 'runs from before saving are rebuilt from #liquid-testing' do
+    room = TeamChat::Battery.room_for(@user)
+    room.messages.create!(author_kind: 'system', body: '🧪 Test run old-1 (finance questions): 1 questions', meta: { 'battery' => 'old-1' })
+    question = room.messages.create!(user: @user, body: '@qwen How much tax?', meta: { 'battery' => 'old-1', 'item' => 'f15', 'cadence' => 'tax' })
+    reply = room.messages.create!(author_kind: 'assistant', status: 'done', body: 'Per source…',
+      meta: { 'battery' => 'old-1', 'trigger_id' => question.id, 'agent' => 'qwen', 'model' => 'qwen3.5-4b', 'duration_ms' => 9000, 'tools' => ['sales_tax_report'] })
+    room.messages.create!(author_kind: 'system', body: "Grade 5/5 for Qwen (9.0 s, sales_tax_report): Exact per source.\n— graded", meta: { 'battery' => 'old-1', 'grade' => 5, 'graded_message' => reply.id })
+    room.messages.create!(author_kind: 'system', body: '📋 Test run old-1 done', meta: { 'battery' => 'old-1' })
+
+    assert_equal 1, TeamChat::BatteryRun.backfill!
+    assert_equal 0, TeamChat::BatteryRun.backfill!
+    run = TeamChat::BatteryRun.find_by!(run_key: 'old-1')
+    assert_equal ['done', 'finance', 'qwen', 5.0, 9.0], [run.status, run.set_name, run.agent, run.avg_grade.to_f, run.avg_seconds]
+    assert_equal 'Exact per source.', run.results_list.first['verdict']
+    assert_equal 'How much tax?', run.results_list.first['question']
+  end
+
   test 'a proposal made during a test run is dismissed, so nothing changes' do
     script_model({ tool: 'create_task', arguments: { title: 'Recount' } }, { text: 'Proposed.' })
     item = TeamChat::Battery::Item.new(id: 'x', cadence: 'general', question: 'Make a task', checks: [])

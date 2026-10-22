@@ -50,11 +50,26 @@ namespace :team_chat do
     set = ENV['BATTERY'].presence || 'default'
     battery = TeamChat::Battery.new(user: user, agent: ENV.fetch('AGENT', 'liquid'), only: ENV['ONLY'].to_s.split(','),
       items: TeamChat::Battery.items(TeamChat::Battery.config_for(set)), set: set)
+    if (done = battery.already_done) && ENV['FORCE'].blank?
+      puts "Already tested: #{done.label} on the #{done.set_name} questions with this Rupert build (#{done.revision}), " \
+           "#{done.started_at&.strftime('%Y-%m-%d %H:%M')}: average #{done.avg_grade}/5. See Model scores. Run with FORCE=1 to test again."
+      next
+    end
     battery.run
     report = battery.report_markdown
     path = ENV['REPORT'].presence || Rails.root.join('tmp', 'battery', "#{battery.run_id}-#{set}-#{battery.handle}.md").to_s
     FileUtils.mkdir_p(File.dirname(path))
     File.write(path, report)
     puts "\n#{report}\n\nReport saved to #{path}"
+  end
+end
+
+namespace :team_chat do
+  desc 'Save test-battery runs found in #liquid-testing (from before runs were saved) so Model scores shows them.'
+  task battery_backfill: :environment do
+    Tenant.where(status: 'active').find_each do |tenant|
+      Current.tenant = tenant
+      puts "#{tenant.name}: #{TeamChat::BatteryRun.backfill!} runs saved"
+    end
   end
 end
