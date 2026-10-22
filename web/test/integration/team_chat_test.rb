@@ -333,10 +333,11 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_messages_path('general'), as: :json
     assert_equal [reply.id, first.id], json['pins'].pluck('id')
 
-    post team_chat_pin_path('general', reply.id), as: :json
+    assert_no_difference -> { room.messages.where(author_kind: 'system').count }, 'unpinning posts no notice' do
+      post team_chat_pin_path('general', reply.id), as: :json
+    end
     assert_not json['messages'].first['pinned']
     assert_equal [first.id], json['pins'].pluck('id')
-    assert_equal 1, room.messages.where(author_kind: 'system').count, 'unpinning posts no notice'
   end
 
   test 'deleting a pinned message unpins it, and notices cannot be pinned' do
