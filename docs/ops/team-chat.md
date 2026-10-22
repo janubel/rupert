@@ -180,19 +180,18 @@ the host's `buzz-backup.timer` if it was installed
 (`systemctl --user disable --now buzz-backup.timer`). Do not delete the
 containers yet.
 
-## @agents and #admins (2026-10-22)
+## Bots and #admins (2026-10-22)
 
 - The main room is **#admins**: every admin, plus Rupert. An existing #general is renamed in place, and old `/chat/general` links still open it.
 - **Direct** lists every other admin. A click opens the direct message, or starts it the first time.
-- Pick a model by @mentioning it. @ suggestions work in the main box and in thread replies:
+- Bots are @mentioned. @ suggestions work in the main box and in thread replies, and the 🤖 Bots key in the room header explains each one:
 
 | Mention | Model | Where it runs |
 | --- | --- | --- |
-| `@rupert` | the instance default (`RUPERT_CHAT_PROVIDER` / `RUPERT_CHAT_MODEL`) | as configured |
-| `@deepseek` | DeepSeek V4.1 Flash | cloud, through OpenCode Go (on when its key is available) |
-| `@qwen` | Qwen3.5 4B | local `rupert-llm` gateway |
-| `@gemma` | Gemma 4 E4B | local |
-| `@lfm` | LFM2.5 8B-A1B | local |
-| `@bonsai` | Ternary Bonsai 2 9B | local |
+| `@rupert` | DeepSeek V4.1 Flash (`RUPERT_CHAT_PROVIDER=opencode_go`, `RUPERT_CHAT_MODEL=deepseek-v4.1-flash`) | cloud, OpenCode Go plan |
+| `@liquid` | Liquid AI LFM2.5 8B-A1B | local `rupert-llm` gateway |
+| `@qwen` | Qwen3.5 4B | local |
+| `@ternary` | PrismML Ternary Bonsai 2 9B | local |
 
-Gemma 4 E2B is also on the gateway (`gemma-4-e2b`), but it has no @handle. It gave wrong totals in the 2026-10-22 comparison.
+- Every bot reply shows its time and model, for example "4s · deepseek-v4.1-flash · cloud".
+- Replies from the old handles still show proper names: @lfm shows as Liquid and @bonsai as Ternary. @deepseek and @gemma are retired as handles.
