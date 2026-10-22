@@ -309,10 +309,10 @@ These extend the same backbone. Build them from the registry and the templates, 
 
 - **Sections drive more than navigation.** `ModuleRegistry` sections are the one list of
   what the business does. The same list should drive page guides (`PageGuides`), lessons
-  (`LearningCatalog`), and the Buzz team chat: one channel per section
-  (`#bookkeeping`, `#sell`, `#stock`, `#team`, …) with a persona file per section
-  (`config/buzz_agent/<section>.md`) so the bookkeeping channel answers like a bookkeeper
-  and the team channel like an HR lead, on top of the general Rupert persona.
+  (`LearningCatalog`) and, if wanted, Buzz channels per section (`#bookkeeping`, `#team`, …).
+  Keep it simple: one Rupert, one persona and one capable model; a channel only passes its
+  section along as context. Split into separate personas only if one Rupert proves unable to
+  cover a section well.
 - **Training as its own section.** Schedules (annual to-dos, recurring courses), assignments
   and completion tracking, where Rupert's own onboarding lessons are the first course: use
   Rupert to train on Rupert and monitor it in Rupert. Today's pieces (Learn Rupert, Training
