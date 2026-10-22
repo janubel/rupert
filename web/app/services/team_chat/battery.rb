@@ -17,7 +17,7 @@ module TeamChat
     ROOM_TOPIC = 'Test runs for @%<handle>s: a fixed set of questions, each answer timed and graded 1–5 by DeepSeek against Rupert’s own data. Scorecard: Model scores → Test runs.'
     CONFIG = Rails.root.join('config/team_chat/battery.yml')
 
-    Item = Struct.new(:id, :cadence, :question, :checks, :expect, :module, keyword_init: true)
+    Item = Struct.new(:id, :cadence, :question, :checks, :expect, :module, :needs, keyword_init: true)
     Result = Struct.new(:item, :seconds, :tools, :status, :answer, :grade, :tokens_in, :tokens_out, :unverified, :message_id, :load_seconds,
       :verify, keyword_init: true)
 
@@ -38,7 +38,7 @@ module TeamChat
     def self.items(path = CONFIG)
       YAML.safe_load_file(path).fetch('questions').map do |row|
         Item.new(id: row.fetch('id'), cadence: row.fetch('cadence'), question: row.fetch('question'), checks: Array(row['checks']),
-          expect: row['expect'].to_s.squish.presence, module: row['module'].presence)
+          expect: row['expect'].to_s.squish.presence, module: row['module'].presence, needs: Array(row['needs']).map(&:to_s))
       end
     end
 

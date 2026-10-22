@@ -10,7 +10,9 @@ module Mcp
         title: 'Sales summary',
         description: 'Orders and gross sales from Rupert\'s canonical order store (Shopify, Square, Rupert POS and manual ' \
                      'sales) for a date range, one line per source and currency, plus a per-currency total, refunded ' \
-                     'order counts, optional daily series and top products. C-Trax and SwipeSimple snapshots are NOT ' \
+                     'order counts, optional daily series and top products joined to separate stock observations per ' \
+                     'platform/location when inventory access is allowed, with open alert IDs when alert access is allowed. ' \
+                     'C-Trax and SwipeSimple snapshots are NOT ' \
                      'included (use sales_tax_report for those). Amounts are integer cents. Defaults to the last 30 days. Read-only.',
         scope: 'reports:read'
 
@@ -78,10 +80,16 @@ module Mcp
 
       def top_products(window, source, limit)
         orders = Core::Order.where(occurred_at: window, status: COUNTED, source: source || SOURCES).select(:id)
-        Core::OrderLine.where(order_id: orders).group(:name, :sku)
+        rows = Core::OrderLine.where(order_id: orders).group(:name, :sku)
           .pluck(:name, :sku, Arel.sql('SUM(line_cents)'), Arel.sql('SUM(quantity)'), Arel.sql('COUNT(DISTINCT order_id)'))
           .sort_by { |row| -row[2].to_i }.first(limit)
-          .map { |name, sku, line_cents, units, order_count| { name: name, sku: sku, revenue_cents: line_cents.to_i, units: units.to_i, orders: order_count } }
+        inventory_allowed = user.can?('inventory.read')
+        alerts_allowed = user.can?('alerts.read')
+        stock = inventory_allowed ? StockEnrichment.for_skus(rows.map { |row| row[1] }, include_alerts: alerts_allowed) : {}
+        rows.map do |name, sku, line_cents, units, order_count|
+          { name: name, sku: sku, revenue_cents: line_cents.to_i, units: units.to_i, orders: order_count,
+            stock: stock.fetch(sku, { available: inventory_allowed, observations: [], low: nil, alerts_available: alerts_allowed }) }
+        end
       end
     end
   end

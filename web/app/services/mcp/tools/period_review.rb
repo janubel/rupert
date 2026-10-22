@@ -18,7 +18,9 @@ module Mcp
                      'currency with the change, refunds, top products, tasks created and done, stock alerts opened and ' \
                      'resolved, inventory counts, purchase orders received, sync failures, and (when allowed) hours worked ' \
                      'and expenses. Pick a named period (yesterday, last_week, last_month, this_quarter, last_quarter...) ' \
-                     'or from/to dates. Amounts are integer cents. C-Trax/SwipeSimple are noted separately, never added. Read-only.',
+                     'or from/to dates. A money summary places gross sales per currency beside expenses when finance access ' \
+                     'allows; expenses do not carry a currency field here, and the difference is not profit. Amounts are ' \
+                     'integer cents. C-Trax/SwipeSimple are noted separately, never added. Read-only.',
         scope: 'reports:read'
 
       input_schema(
@@ -41,6 +43,11 @@ module Mcp
                  refunds: current[:refunds], top_products: current[:top_products], activity: current[:activity],
                  previous_activity: before[:activity], separately_recorded: current[:separate],
                  note: 'Sales are Shopify, Square, Rupert POS and manual orders (paid or fulfilled). Amounts per currency, never added across currencies.' }
+        data[:money_summary] = {
+          gross_sales_by_currency: current[:sales], expenses_cents: current[:activity][:expenses_cents],
+          expenses_visible: user.can?('finance.read'),
+          note: 'Expenses have no currency field in the ledger output. Do not compare across currencies or present the difference as profit.'
+        }
         result(summary(label, from, to, data), data)
       end
 

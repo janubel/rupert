@@ -4,6 +4,16 @@
 # rupert://guide/data lists them all. Keep cards short: they go into every matching prompt.
 # Order matters on ties: specific topics first, the broad ones (comparison, sales) last.
 topics:
+  - key: cross
+    title: Combined business questions
+    keywords: [and, same days, health check, business health, while, still low, waiting orders, unshipped paid orders, top-selling products, low on stock, sales with expenses, worked hours, overdue stock tasks, yesterday's sales, sync healthy enough, tea shelf count]
+    tools: [business_pulse, sales_summary, order_queues, period_review, compliance_check, time_keeping_report, list_tasks, sync_health, metric, inventory_search, list_alerts]
+    card: >-
+      For a quick check of today's sales, waiting queues, low-stock alerts, failing syncs and overdue tasks, use
+      business_pulse; each section includes its page. For a named period, period_review returns sales and (when allowed)
+      expenses together, while time_keeping_report includes sales for the same dates when permitted. sales_summary joins
+      top products to separate platform/location stock observations; order_queues includes product lines and the count
+      of waiting orders with an open low-stock alert. Do not add stock across platforms/locations or infer missing data.
   - key: tax
     title: Sales tax
     keywords: [tax, sales tax, vat, taxes]
@@ -76,7 +86,8 @@ topics:
       metric with compare previous or last_year gives one figure's change already worked out (change_percent, direction);
       period_review takes a named period (yesterday, last_week, last_pay_week, last_month, this_quarter,
       last_quarter, year_to_date...) and returns it next to the period before, with the change already worked out
-      (gross_change_percent). Quote that change; do not compute your own.
+      (gross_change_percent). For worked hours and sales on the same days, time_keeping_report returns both for its exact
+      date window. Quote sales per currency; do not compute your own comparison or a sales-per-hour ratio.
   - key: sales
     title: Sales and orders
     keywords: [sales, sold, sell, revenue, gross, orders, order value, average order, aov, top products, best day, best seller, takings, shopify, square, rupert pos, today, yesterday]

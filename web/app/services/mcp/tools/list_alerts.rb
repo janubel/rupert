@@ -27,7 +27,10 @@ module Mcp
         scope = scope.where('sku LIKE ?', "%#{StockAlert.sanitize_sql_like(args['query'].strip)}%") if args['query'].present?
         scope = status == 'open' ? scope.order(:quantity, :id) : scope.order(createdAt: :desc, id: :desc)
         alerts, meta = paginate(scope, args)
-        counts = StockAlert.group(:status).count
+        counts_by_status = StockAlert.group(:status).count
+        counts = STATUSES.reject { |candidate| candidate == 'all' }.index_with do |candidate|
+          counts_by_status.fetch(candidate, 0)
+        end
         rows = alerts.map do |alert|
           { id: alert.id, sku: alert.sku, product: alert.product_name, variant: alert.variant_name,
             platform: alert.shopifyVariantId ? 'shopify' : (alert.squareVariationId ? 'square' : nil),

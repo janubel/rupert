@@ -9,7 +9,8 @@ module Mcp
                      'view=daily gives one row per person-day with a plain status (On schedule, No punches, Unscheduled, ' \
                      'Over/Under schedule, Still clocked in, Check clock-out). Worked hours come from Rupert clock and ' \
                      'Square timecards; C-Trax register hours are shown separately and never added. If the token owner ' \
-                     'cannot review everyone\'s time, only their own hours are returned. Defaults to this month. Read-only.',
+                     'cannot review everyone\'s time, only their own hours are returned. When allowed, sales for the same ' \
+                     'dates are included per currency. Defaults to this month. Read-only.',
         scope: 'timesheets:read'
 
       input_schema(
@@ -39,6 +40,12 @@ module Mcp
           from: from.iso8601, to: to.iso8601, view: view, scope: all_employees ? 'all staff' : 'own hours only',
           totals: report.totals, rows: rows.map { |row| view == 'daily' ? day_row(row) : staff_row(row) }, meta: meta
         }
+        data[:sales_same_days] = if user.can?('reports.read')
+          sales = ::Metrics.call('gross_sales', from: from.iso8601, to: to.iso8601, compare: 'none')
+          { from: from.iso8601, to: to.iso8601, gross_sales_by_currency: sales[:values], available: true }
+        else
+          { from: from.iso8601, to: to.iso8601, available: false }
+        end
         totals = report.totals
         text = "#{from} to #{to} (#{data[:scope]}): #{totals[:people]} people, #{totals[:scheduled]} h scheduled, #{totals[:worked]} h worked, " \
                "#{totals[:ctrax]} h C-Trax observed (not added), #{totals[:attention]} person-days need attention."

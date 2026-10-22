@@ -1,6 +1,37 @@
 # frozen_string_literal: true
 
 namespace :team_chat do
+  desc 'Check battery MCP calls and declared result fields without printing business values. BATTERY=cross|finance|default|all.'
+  task battery_coverage: :environment do
+    abort 'Battery coverage must run against a non-production fixture database.' if Rails.env.production?
+
+    tenant = ENV['TENANT_ID'].present? ? Tenant.find(ENV['TENANT_ID']) : Tenant.where(status: 'active').first
+    abort 'No active tenant is available.' unless tenant
+
+    Current.tenant = tenant
+    user = ENV['USER_EMAIL'].present? ? User.find_by!(email: ENV['USER_EMAIL'], tenant_id: tenant.id) :
+      User.where(tenant_id: tenant.id, role: %w[admin super_admin], active: true).first
+    abort 'An active administrator is required.' unless user && %w[admin super_admin].include?(user.role)
+    Current.user = user
+
+    set = ENV['BATTERY'].presence || 'default'
+    sets = set == 'all' ? %w[default finance cross] : [set]
+    failed = false
+    sets.each do |name|
+      items = TeamChat::Battery.items(TeamChat::Battery.config_for(name))
+      report = TeamChat::BatteryCoverage.new(user: user, items: items).call
+      path = Rails.root.join('tmp', 'battery', "coverage-#{name}.md")
+      FileUtils.mkdir_p(path.dirname)
+      File.write(path, report.markdown)
+      puts "#{name}: #{report.questions.size} questions, #{report.errors} errors, #{report.missing} missing needs, " \
+           "#{report.too_many_calls} cross questions over two calls"
+      puts report.markdown
+      puts "Report saved to #{path}"
+      failed ||= !report.passed?
+    end
+    abort 'Battery coverage found tool errors or missing needs.' if failed
+  end
+
   default_questions = [
     'How were sales yesterday?',
     'Anything low on stock I should know about?',
