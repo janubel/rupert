@@ -15,6 +15,7 @@
             <div><dt class="text-xs text-taupe">Requested</dt><dd><% if ai[:requested_at] %><time datetime="<%= ai[:requested_at].iso8601(6) %>"><%= task_activity_timestamp(ai[:requested_at]) %></time><% else %>Not recorded<% end %></dd></div>
             <div><dt class="text-xs text-taupe">Executed</dt><dd><time datetime="<%= entry.created_at.iso8601(6) %>"><%= task_activity_timestamp(entry.created_at) %></time></dd></div>
             <div><dt class="text-xs text-taupe">Source chat</dt><dd><% if ai[:source_path] %><%= link_to "View source message", ai[:source_path], class: "font-semibold text-olive hover:underline" %><% else %><%= ai[:source_label] %><% end %></dd></div>
+            <% if ai[:approval_id] %><div><dt class="text-xs text-taupe">Approved request</dt><dd><%= link_to "View approved request", approved_request_projects_task_path(@task, approval_id: ai[:approval_id]), class: "font-semibold text-olive hover:underline" %></dd></div><% end %>
           </dl>
         </li>
       <% else %>

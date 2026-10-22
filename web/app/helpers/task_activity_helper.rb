@@ -35,7 +35,7 @@ module TaskActivityHelper
       harness = [source['harness'], source['harness_version']].select { |part| part.is_a?(String) && part.present? }.join(' · ')
       [entry.id, { label: label, result: approval&.receipt&.fetch('result', nil), requester: task_ai_text(source['requester_name']),
                    model: task_ai_text(source['model']), harness: task_ai_text(harness), requested_at: task_ai_time(source['requested_at']),
-                   source_path: path, source_label: source['trigger_id'].present? ? 'Private or unavailable chat' : 'Not recorded' }]
+                   approval_id: approval&.public_id, source_path: path, source_label: source['trigger_id'].present? ? 'Private or unavailable chat' : 'Not recorded' }]
     end
   end
 

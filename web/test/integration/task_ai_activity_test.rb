@@ -31,7 +31,7 @@ class TaskAiActivityTest < ActionDispatch::IntegrationTest
   end
 
   def create_ai_task
-    approval, trigger = approve('create_task', { 'title' => 'AI activity verification' }, 'PRIVATE ORIGINAL REQUEST: please create this task')
+    approval, trigger = approve('create_task', { 'title' => 'AI activity verification' }, 'PRIVATE ORIGINAL REQUEST: please create this task <script>alert(1)</script>')
     @task = Projects::Task.find(approval.events.find_by!(kind: 'executed').details.dig('result', 'id'))
     [approval, trigger]
   end
@@ -141,6 +141,89 @@ class TaskAiActivityTest < ActionDispatch::IntegrationTest
     assert_select '#history script, #history img, #history a[href^="javascript:"]', count: 0
     assert_select '#history dd', text: '<script>alert(1)</script>'
     assert_select '#history a', text: 'View source message'
+  end
+
+  test 'approved notice links task and retained request without exposing original text' do
+    approval, = create_ai_task
+    notice = @room.messages.where(author_kind: 'system').last.body
+    assert_includes notice, "[View task](#{projects_task_path(@task)})"
+    assert_includes notice, "[View approved request](#{approved_request_projects_task_path(@task, approval_id: approval.public_id)})"
+    refute_includes notice, 'PRIVATE ORIGINAL REQUEST'
+    sign_in
+    get projects_task_path(@task)
+    assert_select '#history a', text: 'View approved request'
+  end
+
+  test 'saved formal change survives room deletion and original stays restricted' do
+    approval, = create_ai_task
+    @room.destroy!
+    sign_in
+    get approved_request_projects_task_path(@task, approval_id: approval.public_id)
+    assert_response :success
+    assert_select 'h2', text: 'Approved change'
+    assert_select 'dd', text: 'AI activity verification'
+    assert_select 'p', text: /PRIVATE ORIGINAL REQUEST/
+    assert_nil approval.reload.message_id
+    outsider = User.create!(tenant: @tenant, name: 'Task reader', email: 'request-reader@example.com', role: @requester.role, password: 'password123')
+    sign_in(outsider)
+    get approved_request_projects_task_path(@task, approval_id: approval.public_id)
+    assert_response :success
+    assert_select 'dd', text: 'AI activity verification'
+    refute_includes response.body, 'PRIVATE ORIGINAL REQUEST'
+  end
+
+  test 'retained request requires task authorization and matching executed task' do
+    approval, = create_ai_task
+    other = Projects::Task.create!(title: 'Other task')
+    sign_in
+    get approved_request_projects_task_path(other, approval_id: approval.public_id)
+    assert_response :not_found
+    employee = User.create!(tenant: @tenant, name: 'Other employee', email: 'request-employee@example.com', role: 'employee', password: 'password123')
+    sign_in(employee)
+    get approved_request_projects_task_path(@task, approval_id: approval.public_id)
+    assert_response :not_found
+  end
+
+  test 'assigned employee can inspect approved change without private chat text' do
+    approval, = create_ai_task
+    @room.update!(kind: 'direct')
+    employee = User.create!(tenant: @tenant, name: 'Assigned reader', email: 'assigned-request@example.com', role: 'employee', password: 'password123')
+    @task.update!(assignee_id: employee.id)
+    sign_in(employee)
+    get approved_request_projects_task_path(@task, approval_id: approval.public_id)
+    assert_response :success
+    assert_select 'dd', text: 'AI activity verification'
+    refute_includes response.body, 'PRIVATE ORIGINAL REQUEST'
+    sign_in
+    Current.tenant = @tenant
+    other_tenant = Tenant.create!(id: 'retained-other', name: 'Other', subdomain: 'retained-other')
+    TeamChat::Approval.where(id: approval.id).update_all(tenant_id: other_tenant.id)
+    get approved_request_projects_task_path(@task, approval_id: approval.public_id)
+    assert_response :not_found
+  end
+
+  test 'original snapshot is escaped and visible only to current room viewers or participants' do
+    approval, trigger = create_ai_task
+    trigger.update!(body: 'Changed after proposal')
+    outsider = User.create!(tenant: @tenant, name: 'Task reader', email: 'public-reader@example.com', role: @requester.role, password: 'password123')
+    sign_in(outsider)
+    path = approved_request_projects_task_path(@task, approval_id: approval.public_id)
+    get path
+    assert_response :success
+    assert_includes response.body, 'PRIVATE ORIGINAL REQUEST'
+    assert_select 'main script', count: 0
+    assert_includes response.body, '&lt;script&gt;alert(1)&lt;/script&gt;'
+    assert_equal 'no-store', response.headers['Cache-Control']
+    refute_includes response.body, 'Changed after proposal'
+    @room.update!(kind: 'direct')
+    get path
+    assert_response :success
+    refute_includes response.body, 'PRIVATE ORIGINAL REQUEST'
+    @room.destroy!
+    sign_in(@requester, password: 'password')
+    get path
+    assert_response :success
+    assert_includes response.body, 'PRIVATE ORIGINAL REQUEST'
   end
 
   test 'ordinary human activity keeps its readable text and has no invented AI fields' do

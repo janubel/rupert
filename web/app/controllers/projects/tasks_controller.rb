@@ -4,7 +4,7 @@ require 'csv'
 
 module Projects
   class TasksController < AuthenticatedController
-    before_action :set_task, only: %i[show update destroy transition move]
+    before_action :set_task, only: %i[show update destroy transition move approved_request]
     rescue_from ActiveRecord::RecordInvalid, with: :invalid_task
 
     BOARD_LIMIT = 250
@@ -43,6 +43,18 @@ module Projects
       @waiting_on = @task.open_blockers.to_a
       @can_edit = policy(@task).update?
       @can_manage = Current.user.can?('projects.write')
+    end
+
+    # Retained approvals are bound to the executed task, independently of chat lifetime.
+    def approved_request
+      authorize(@task, :show?)
+      @approval = TeamChat::Approval.find_by!(public_id: params[:approval_id], state: 'done')
+      result = @approval.events.find_by(kind: 'executed')&.details&.dig('result', 'id')
+      unless %w[create_task update_task].include?(@approval.proposal['tool']) && result.to_s == @task.id.to_s
+        raise ActiveRecord::RecordNotFound
+      end
+      response.headers['Cache-Control'] = 'no-store'
+      @show_original = @approval.original_request_visible_to?(Current.user)
     end
 
     def export
