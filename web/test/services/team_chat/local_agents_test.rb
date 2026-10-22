@@ -58,7 +58,7 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
 
     assert_equal 'done', reply.status
     assert_equal 'Hi, I am Qwen.', reply.body
-    assert_equal 'qwen3.5-4b', requests.first['model']
+    assert_equal 'qwen3.6-35b-a3b', requests.first['model']
     assert_equal 'local_gateway', reply.meta['engine']
     assert_includes requests.first['messages'].first['content'], 'You are Qwen (@qwen)'
     users = requests.first['messages'].select { |message| message['role'] == 'user' }.map { |message| message['content'].to_s }

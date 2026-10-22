@@ -44,14 +44,15 @@ module TeamChat
         flagged: rows.count { |row| Array(row['unverified']).any? }, by_cadence: cadences)
     end
 
-    # Each bot's latest full-set grade per question set: { ['qwen', 'qwen3.5-4b'] => { 'finance' => 4.5, 'default' => 4.1 } }.
+    # Each model's latest full-set grade per question set, whichever bot handle ran it:
+    # { 'qwen3.6-35b-a3b' => { 'finance' => 4.6, 'default' => 4.3 } }.
     # A run that stopped part-way counts when it answered at least 80% of its questions.
     def self.latest_scores
       rows = where(status: %w[done stopped running]).where.not(avg_grade: nil).where.not('set_name LIKE ?', '%(part)%').newest_first.to_a
       rows.each_with_object({}) do |run, scores|
         next if run.status != 'done' && (run.display_status == 'running' || run.answered < run.questions * 0.8)
 
-        key = [run.agent.presence || 'rupert', run.model.to_s]
+        key = run.model.to_s
         scores[key] ||= {}
         scores[key][run.set_name] ||= run.avg_grade.to_f.round(1)
       end
