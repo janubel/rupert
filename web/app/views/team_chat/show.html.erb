@@ -296,7 +296,8 @@
               <% end %>
             </select>
           </label>
-          <% roles_here = User.where(tenant_id: Current.tenant_id, active: true).distinct.pluck(:role).compact.sort_by { |role| User.roles.keys.index(role).to_i } %>
+          <%# Only roles whose people can open team chat (today: administrators). %>
+          <% roles_here = TeamChat::Post.mentionable.map(&:role).uniq.compact.sort_by { |role| User.roles.keys.index(role).to_i } %>
           <% roles_here.each do |role| %>
             <label class="field chat-presence-role">
               <span class="field-label"><%= role.humanize.pluralize %></span>
