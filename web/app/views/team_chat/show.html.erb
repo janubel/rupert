@@ -35,7 +35,7 @@
       <input type="search" placeholder="Find a room" data-team-chat-target="filter" data-action="input->team-chat#filterRooms" autocomplete="off">
     </label>
 
-    <nav class="chat-rail-section" aria-label="Rooms">
+    <nav class="chat-rail-section" aria-label="Rooms" <%= tour_anchor('chat-rooms') %>>
       <div class="chat-rail-head">
         <p class="chat-rail-label">Direct</p>
         <button type="button" class="chat-rail-add" data-action="team-chat#openNewDm" aria-label="New direct message" title="New direct message">+</button>
@@ -101,7 +101,28 @@
         <p data-team-chat-target="topic"><%= @room.dm? ? 'Direct message: only the two of you read it. Mention @rupert to bring him in.' : (@room.topic.presence || 'No topic yet.') %></p>
       </div>
       <div class="chat-head-tools">
-        <details class="chat-bots">
+        <details class="chat-bots chat-help" <%= tour_anchor('chat-help') %>>
+          <summary class="chat-bots-button" aria-label="How team chat works">?</summary>
+          <div class="chat-bots-panel" role="note">
+            <p class="chat-bots-intro"><strong>Team chat in 20 seconds</strong></p>
+            <ul class="chat-help-list">
+              <li><strong>Rooms</strong> on the left; <strong>Direct</strong> to message one person.</li>
+              <li>Type <strong>@</strong> to mention someone or a bot. <strong>@rupert</strong> answers fast from the cloud; <strong>@liquid</strong>, <strong>@qwen</strong>, <strong>@ternary</strong> run privately here; <strong>@all</strong> asks every bot side by side.</li>
+              <li>Hover a message to <strong>reply in a thread</strong>, react, pin, copy its link or edit yours. Paste or drop photos.</li>
+              <li>Rate bot replies 👍/👎 and say why. Changes a bot proposes wait for <strong>Approve</strong>.</li>
+            </ul>
+            <div class="chat-help-actions">
+              <button type="button" class="btn-primary btn-sm" onclick="this.closest('.chat-help').querySelector('dialog').showModal()">▶ Watch the demo</button>
+              <button type="button" class="btn-ghost btn-sm" onclick="this.closest('details').open = false; window.dispatchEvent(new Event('rupert:start-tour'))">Take the tour</button>
+              <%= link_to 'Lesson', learning_path('team_chat'), class: 'btn-ghost btn-sm' %>
+            </div>
+          </div>
+          <dialog class="chat-dialog chat-video-dialog" aria-label="Team chat demo">
+            <video controls preload="none" playsinline src="/videos/team-chat-demo.mp4"></video>
+            <div class="chat-dialog-actions"><button type="button" class="btn-ghost btn-sm" onclick="const d = this.closest('dialog'); d.querySelector('video').pause(); d.close()">Close</button></div>
+          </dialog>
+        </details>
+        <details class="chat-bots" <%= tour_anchor('chat-bots') %>>
           <summary class="chat-bots-button" aria-label="Bot key: which bots can answer here">🤖 <span>Bots</span></summary>
           <div class="chat-bots-panel" role="note">
             <p class="chat-bots-intro">Mention a bot with @ to ask it, or <strong>@all</strong> to ask every bot and compare their answers side by side. Each uses Rupert’s tools with your permissions, and changes wait for your Approve.</p>
@@ -149,7 +170,7 @@
     <div class="chat-pins" data-team-chat-target="pins" hidden></div>
     <section class="chat-body" aria-label="Messages">
       <div class="chat-log-wrap">
-        <div class="chat-log" data-team-chat-target="log" data-action="scroll->team-chat#onScroll" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"
+        <div class="chat-log" <%= tour_anchor('chat-messages') %> data-team-chat-target="log" data-action="scroll->team-chat#onScroll" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"
              aria-label="Messages in <%= @room.direct? ? 'your room with Rupert' : room_label %>">
           <button type="button" class="btn-ghost btn-sm chat-more" data-team-chat-target="more" data-action="team-chat#loadEarlier" hidden>Load earlier messages</button>
           <p class="chat-hint" data-team-chat-target="loading">Loading messages…</p>
@@ -171,7 +192,7 @@
         <button type="button" class="chat-jump" data-team-chat-target="jump" data-action="team-chat#scrollToEnd" hidden>New messages ↓</button>
       </div>
 
-      <form class="chat-compose" data-busy="false" data-team-chat-target="form" data-action="submit->team-chat#send dragover->team-chat#dragOver dragleave->team-chat#dragLeave drop->team-chat#drop">
+      <form class="chat-compose" <%= tour_anchor('chat-composer') %> data-busy="false" data-team-chat-target="form" data-action="submit->team-chat#send dragover->team-chat#dragOver dragleave->team-chat#dragLeave drop->team-chat#drop">
         <p class="chat-typing" data-team-chat-target="typing" aria-live="polite" hidden></p>
       <p class="chat-error" data-team-chat-target="notice" role="alert" hidden></p>
         <div class="chat-composer">

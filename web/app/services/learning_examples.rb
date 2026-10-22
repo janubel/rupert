@@ -93,6 +93,12 @@ class LearningExamples
       rows: [['Typed total', '$48.20'], ['Total on the image', '$43.20'], ['Difference', '$5.00'], ['Decision', 'Reject with a note asking for the correct amount']],
       takeaway: 'Approve only when the typed details match the original. Approval records a bookkeeping decision; it does not pay anyone.'
     },
+    'team_chat' => {
+      title: 'Ask every bot, keep the best answer',
+      context: 'A fictional manager writes "@all how were sales yesterday?" in #admins.',
+      rows: [['@rupert (cloud)', '4 s — 2 orders, $214.83, all Shopify'], ['@qwen (local)', '41 s — same total, shorter'], ['@liquid (local)', '55 s — missed the refund'], ['Your rating', '👍 @rupert, 👎 @liquid: “ignored the refund”']],
+      takeaway: 'Comparing side by side and noting why turns everyday questions into a record of which model to trust.'
+    },
     'tasks' => {
       title: 'Make a blocker actionable',
       context: 'A fictional task asks you to prepare a shelf display. Its product list has not been provided.',
