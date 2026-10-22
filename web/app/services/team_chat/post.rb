@@ -46,6 +46,7 @@ module TeamChat
       membership.mark_read!(message.id)
       membership.update_columns(typing_at: nil) if membership.typing_at
       replies.each { |reply| ReplyJob.perform_later(reply.id) }
+      message.attachments.each { |attachment| AttachmentDriveJob.perform_later(attachment.id) } if attachments.any? && DriveStore.available?
       Result.new(message: message, reply: replies.first, replies: replies)
     rescue ActiveRecord::RecordInvalid => e
       raise Invalid, e.record.errors.full_messages.to_sentence
