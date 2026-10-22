@@ -11,7 +11,7 @@ class FulfillmentMonitorJob < ApplicationJob
     Tenant.where(status: 'active').find_each do |tenant|
       Current.tenant = tenant
       begin
-        FulfillmentMonitor.check! if BuzzAgent.configured?
+        FulfillmentMonitor.check! if TeamChat::Notices.configured?
       ensure
         Current.tenant = nil
       end

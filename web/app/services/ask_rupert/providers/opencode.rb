@@ -4,10 +4,10 @@ require 'json'
 
 module AskRupert
   module Providers
-    # The same opencode CLI the @rupert Buzz agent uses (deepseek-v4-flash through
-    # the OpenCode API), run with the `chat` agent whose tools are all disabled and
-    # `--pure` so no plugins load: the model can only produce text. Rupert runs the
-    # tools itself and feeds the results back.
+    # The opencode CLI (deepseek-v4-flash through
+    # the OpenCode API), run with the `chat` agent whose tools are all disabled
+    # (see OpencodeCli for the flags): the model can only produce text. Rupert runs
+    # the tools itself and feeds the results back.
     #
     # Needs the opencode binary and its `chat` agent on the web/worker host
     # (ASK_RUPERT_OPENCODE_BIN, ASK_RUPERT_OPENCODE_AGENT override the defaults).
@@ -43,7 +43,7 @@ module AskRupert
         raw_errors = +''
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         pid = nil
-        IO.popen([binary, 'run', '--format', 'json', '--pure', '--agent', agent, '--dir', '/tmp/opencode', prompt], err: %i[child out]) do |io|
+        IO.popen(OpencodeCli.env, OpencodeCli.run_command(binary: binary, agent: agent, prompt: prompt), **OpencodeCli.popen_options) do |io|
           pid = io.pid
           io.each_line do |line|
             raise ProviderError.new('opencode timed out', kind: :timeout) if Process.clock_gettime(Process::CLOCK_MONOTONIC) - started > TIMEOUT

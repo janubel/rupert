@@ -38,7 +38,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
     @today_count = ReconciliationFollowUp.active.where(due_on: Date.current).count
     @unassigned_count = ReconciliationFollowUp.active.where(owner_id: nil).count
     @missing_file_count = ReconciliationFollowUp.active.where(category: 'missing_report', document_id: nil).count
-    @pagy, @follow_ups = pagy(scope.includes(:owner).order(Arel.sql("CASE WHEN status = 'closed' THEN 1 ELSE 0 END"), :due_on, :id), items: 25)
+    @pagy, @follow_ups = pagy(:offset, scope.includes(:owner).order(Arel.sql("CASE WHEN status = 'closed' THEN 1 ELSE 0 END"), :due_on, :id), limit: 25)
   rescue ReconciliationEvidence::Error
     redirect_to reconciliation_follow_ups_path, alert: 'Choose a valid business day.'
   end
@@ -167,7 +167,7 @@ class ReconciliationFollowUpsController < AuthenticatedController
     load_return_queue
     form_options
     @next_overdue = next_overdue if @follow_up.overdue?
-    @events_pagy, @events = pagy(@follow_up.events.order(id: :desc), items: 15, page_param: :history_page)
+    @events_pagy, @events = pagy(:offset, @follow_up.events.order(id: :desc), limit: 15, page_key: 'history_page')
     @matching_documents = @follow_up.matching_documents
     # Keep a specifically reviewed original selectable even outside the recent list.
     [params[:evidence], @follow_up.document_id].compact.each do |id|

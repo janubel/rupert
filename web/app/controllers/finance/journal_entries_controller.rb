@@ -28,7 +28,7 @@ module Finance
         debits: entry_ids.any? ? JournalLine.where(journal_entry_id: entry_ids).sum(:debit_cents) : 0,
         credits: entry_ids.any? ? JournalLine.where(journal_entry_id: entry_ids).sum(:credit_cents) : 0
       }
-      @pagy, @entries = pagy(filtered.includes(:journal_lines).order(posted_on: :desc, id: :desc), items: 50)
+      @pagy, @entries = pagy(:offset, filtered.includes(:journal_lines).order(posted_on: :desc, id: :desc), limit: 50)
       response.headers['Cache-Control'] = 'private, no-store'
     end
 
@@ -138,6 +138,9 @@ module Finance
       case entry.source_type
       when 'Finance::Expense' then ['Expense register', finance_expenses_path(include_deleted: 1)]
       when 'Finance::VendorPayment' then ['Vendor payments register', finance_vendor_payments_path(include_deleted: 1)]
+      when 'ImportTransaction'
+        batch_id = ImportTransaction.find_by(id: entry.source_id)&.batch_id
+        batch_id ? ["QuickBooks import batch ##{batch_id}", finance_quickbooks_import_path(batch_id)] : nil
       when 'Core::Payment'
         order = Core::Payment.find_by(id: entry.source_id)&.order
         order ? ["Order #{order.order_number}", order_path(order)] : nil

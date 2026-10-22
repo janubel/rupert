@@ -12,9 +12,9 @@ module AskRupert
   class Tools
     MAX_RESULT_CHARS = 5_000
     REPORT_TOOLS = %w[sales_summary sales_tax_report inventory_search stock_comparison swipesimple_items
-                      time_keeping_report list_tasks list_alerts list_reports list_uploads].freeze
+                      time_keeping_report list_tasks list_alerts list_reports list_uploads history_summary].freeze
     REPORT_KINDS = %w[bug request question].freeze
-    # What may be offered where other people can read the reply (a Buzz channel):
+    # What may be offered where other people can read the reply (a shared chat room):
     # navigation help only, never records, figures or settings.
     SHARED_AUDIENCE_TOOLS = %w[where_is how_do_i].freeze
 
@@ -26,7 +26,7 @@ module AskRupert
     attr_reader :used
 
     # audience: :private (the signed-in person is the only reader, every tool they may use),
-    # :direct_help (only they read it, but the answer is navigation help only, as in a Buzz direct message)
+    # :direct_help (only they read it, but the answer is navigation help only, as in a direct message)
     # or :shared (others read the reply, navigation help that reveals nothing about this person's access).
     def initialize(user:, conversation: nil, message: nil, audience: :private)
       raise ArgumentError, "unknown audience #{audience.inspect}" unless %i[private direct_help shared].include?(audience)

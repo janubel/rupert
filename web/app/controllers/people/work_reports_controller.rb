@@ -9,7 +9,7 @@ module People
       @status = EmployeeWorkReport::STATUSES.include?(params[:status]) ? params[:status] : 'all'
       scope = EmployeeWorkReport.includes(:employee, :reviewer).order(created_at: :desc)
       scope = scope.where(status: @status) unless @status == 'all'
-      @pagy, @reports = pagy(scope, items: 25)
+      @pagy, @reports = pagy(:offset, scope, limit: 25)
     end
 
     def update

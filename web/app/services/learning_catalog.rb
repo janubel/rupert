@@ -279,7 +279,18 @@ class LearningCatalog
       question: 'What makes a KPI useful?', choices: ['A number with a clear unit, period and target', 'The largest possible number', 'A title alone'], answer: 0,
       explanation: 'The unit, period and target give the measurement meaning.',
       mistakes: ['Creating tasks with no assignee.', 'Reporting a KPI without its period.'],
-      destination: '/projects/projects', action: 'Open projects' }
+      destination: '/projects/projects', action: 'Open projects' },
+    { key: 'team_chat', title: 'Use team chat and Rupert’s bots', minutes: 3, permission: 'team_chat', paths: ['/chat'], terms: [],
+      video: '/videos/team-chat-demo.mp4',
+      summary: 'Talk to the team in rooms and direct messages, and ask Rupert’s bots about the business.',
+      steps: ['Open Team chat from the chat button in the header (a small window on any page) or System → Team chat for the full view. #admins holds every admin and Rupert; Direct lists each person.',
+              'Type @ to mention someone. @rupert asks the main assistant (DeepSeek, cloud, fast); @liquid, @qwen and @gemma are private local models (slower); @all asks every bot and shows their answers side by side.',
+              'Hover a message to reply in a thread, react, pin it as the room banner, copy a link to it or edit your own. Paste or drop photos and files into the message box.',
+              'Rate bot replies with 👍 or 👎 and add a few words on why. Model scores shows which bot helps most. When a bot proposes a change, nothing happens until someone presses Approve.'],
+      question: 'You want to compare how every bot answers the same question. What do you write?', choices: ['@rupert', '@all', '@everyone'], answer: 1,
+      explanation: '@all asks @rupert and every local bot, and shows their answers side by side so you can rate each one.',
+      mistakes: ['Expecting a bot to change something without an Approve.', 'Pasting passwords or card numbers into chat.'],
+      destination: '/chat', action: 'Open team chat' }
   ].freeze
 
   class << self
@@ -298,6 +309,7 @@ class LearningCatalog
       when 'assigned_tasks' then user.employee? || user.can?('projects.read')
       when 'timesheet_review' then user.can_review_timesheets?
       when 'receipts_review' then user.can_review_receipts?
+      when 'team_chat' then TeamChat.allowed?(user)
       else user.can?(lesson[:permission])
       end
     end

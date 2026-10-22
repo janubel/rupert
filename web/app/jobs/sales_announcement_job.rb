@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Runs the static sales announcer after a sync. Safe by construction: the
-# announcer no-ops when Buzz isn't configured or there's nothing new.
+# announcer no-ops when team chat is not in use or there is nothing new.
 class SalesAnnouncementJob < ApplicationJob
   queue_as :default
 

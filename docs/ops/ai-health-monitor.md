@@ -1,11 +1,12 @@
 # AI health monitor (opencode)
 
 Shows on **System → AI health · opencode** and over MCP as `ai_health`
-(see [mcp.md](../mcp.md)). It watches the opencode integration behind the
-@rupert Buzz agent (`web/app/services/opencode_chat_agent.rb`, run by
-`web/bin/opencode_agent`). It spends **no tokens**, stores **no key and no
-message content**, and is instance-wide (one key and one agent per server), so
-its tables have no tenant column and only a platform administrator sees it.
+(see [mcp.md](../mcp.md)). It watches the opencode integration behind Ask
+Rupert and team chat ([team-chat.md](team-chat.md)). It was built for the
+@rupert Buzz agent, which has since been removed from `main` (kept on the
+`archive/buzz` branch). It spends **no tokens**, stores **no key and no
+message content**, and is instance-wide (one key per server), so its tables
+have no tenant column and only a platform administrator sees it.
 
 ## What it checks
 
@@ -36,14 +37,15 @@ opencode documents **no balance or usage API** for Zen or Go — usage is only i
 the web console (<https://opencode.ai/docs/zen/>, <https://opencode.ai/docs/go/>;
 checked 2026-10-21). The card says so instead of inventing a balance.
 
-Tokens come from the agent itself: `opencode run --format json` prints a
-`step_finish` event per model step with `tokens.input/output/reasoning/cache`
-and `cost`. `OpencodeChatAgent#generate_reply` passes that output to
-`OpencodeUsage`, which stores one `ai_agent_runs` row per run: token counts,
-outcome (`ok`, `empty`, `error`, `rate_limited`, `timeout`), error type and
-duration. Failures to record only log a warning and never affect the reply.
-Rows are pruned after 180 days. Reading opencode's local `opencode.db` is not
-needed and is not implemented.
+Tokens come from Rupert's own runs, one `ai_agent_runs` row each: token
+counts, outcome (`ok`, `empty`, `error`, `rate_limited`, `timeout`), error type
+and duration. Ask Rupert's cloud replies record a row (`agent` `ask_rupert`).
+`OpencodeUsage` reads `opencode run --format json` output (a `step_finish`
+event per model step with `tokens.input/output/reasoning/cache` and `cost`); it
+was fed by the retired Buzz agent, so older rows come from there. Team chat
+replies are not counted here yet. Failures to record only log a warning and
+never affect the reply. Rows are pruned after 180 days. Reading opencode's
+local `opencode.db` is not needed and is not implemented.
 
 ## Configuration (environment, instance-wide)
 
@@ -58,7 +60,10 @@ needed and is not implemented.
 The Rails app must be able to read the key: set `OPENCODE_API_KEY` for the Rupert
 service (or mount the auth file) wherever the jobs and the agent run.
 
-## Findings when this was built (2026-10-21) — act on these
+## Findings when this was built (2026-10-21)
+
+These are kept as a dated record. The Buzz agent they mention has since been
+removed.
 
 - The `opencode-go` key in `~/.local/share/opencode/auth.json` on SER8 is
   **expired** (`401 api_key_expired` on both `/models` and chat). Create a new
@@ -66,7 +71,7 @@ service (or mount the auth file) wherever the jobs and the agent run.
   "Expired" once the monitor can read a key.
 - opencode on SER8 is v2.0.32, and `opencode run` there **rejects `--pure` and
   `--dir`** (`Unrecognized flag`). `OpencodeChatAgent` still passes both, so the
-  agent would produce no reply; the monitor now records such runs as
+  agent would produce no reply (fixed 2026-10-21: `OpencodeCli` builds flags 2.0.32 accepts); the monitor now records such runs as
   `error / no_output` and warns "N of the agent's last runs failed". No agent
   process or `chat` agent config was found on SER8 either — this was left
   unchanged (out of scope for the monitor) and needs its own fix.

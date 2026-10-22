@@ -64,6 +64,8 @@ class SystemPageTest < ActionDispatch::IntegrationTest
   end
 
   test 'AI health card shows the expired-key warning, tokens and rate limits without any secret' do
+    # Midday in the store's zone, so "an hour ago" is still today whenever CI runs.
+    travel_to Time.zone.now.change(hour: 12)
     users(:regular_user).update!(role: 'super_admin')
     AiHealthCheck.create!(status: 'error', key_state: 'expired', error_code: 'api_key_expired', model_state: 'available',
       configured_model: 'deepseek-v4-flash', free_models: %w[beam-free glm-5.3-flash-free], free_model_count: 2, checked_at: 2.minutes.ago)

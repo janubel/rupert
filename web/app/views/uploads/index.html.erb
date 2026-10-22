@@ -20,6 +20,7 @@
       <p id="upload-status" class="text-sm" role="status" aria-live="polite" data-dropzone-target="message"></p>
       <div class="flex flex-wrap items-center gap-3">
         <%= f.button 'Upload', type: 'submit', class: 'btn-primary', disabled: true, data: { dropzone_target: 'submit' } %>
+        <%= link_to 'Or copy from Google Drive', uploads_drive_path, class: 'btn-ghost btn-sm' %>
         <span class="text-xs text-mocha">Sending from another computer or a script? See <code>docs/ops/uploads-inbox.md</code> for the API and the drop folder.</span>
       </div>
     <% end %>
@@ -37,7 +38,7 @@
   <% end %>
 
   <section class="space-y-3" aria-labelledby="upload-list-title">
-    <h2 id="upload-list-title" class="font-display text-xl">Every upload</h2>
+    <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 id="upload-list-title" class="font-display text-xl">Every upload</h2><%= link_to 'Insights', insights_uploads_path, class: 'text-sm underline' %></div>
     <nav aria-label="Filter uploads" class="flex flex-wrap gap-2">
       <% [['all', 'All', @counts.values.sum], ['open', 'Open', Upload::OPEN_STATUSES.sum { |s| @counts.fetch(s, 0) }], ['needs_review', 'Needs review', @counts.fetch('needs_review', 0)], ['recognized', 'Recognized', @counts.fetch('recognized', 0)], ['imported', 'Imported', @counts.fetch('imported', 0)], ['rejected', 'Rejected', @counts.fetch('rejected', 0)], ['duplicate', 'Duplicate', @counts.fetch('duplicate', 0)]].each do |key, label, count| %>
         <%= link_to "#{label} (#{count})", uploads_path(status: key == 'all' ? nil : key, q: params[:q].presence), class: "nav-pill #{@filter == key ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@filter == key ? 'page' : nil) } %>
@@ -72,7 +73,7 @@
           <% end %>
         </tbody>
       </table></div>
-      <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+      <%== @pagy.series_nav if @pagy.pages > 1 %>
     <% end %>
   </section>
 </div>

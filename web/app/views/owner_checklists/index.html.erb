@@ -8,5 +8,5 @@
     <% end %>
     <% if @checklists.empty? %><div class="card card-pad text-sm text-mocha">No owner checklists yet. Create a domain checklist to collect service references and review the current feature catalog.</div><% end %>
   </section>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
 </div>

@@ -109,6 +109,25 @@ class PageGuides
       ],
       tips: ['Undecided withdrawals are missing from money out until you decide them.', 'Deciding a line inside an approved day marks that approval as changed.', 'Match statement lines to ledger entries on the Bank reconciliation page.']
     ),
+    'quickbooks_import' => Guide.new(
+      key: 'quickbooks_import', title: 'QuickBooks import',
+      summary: 'Bring QuickBooks history into Rupert safely: upload a CSV, review it, match accounts, then approve. Reversible as a whole.',
+      sections: [
+        { heading: 'Read, then decide', body: 'Uploading keeps the original file unchanged and shows what Rupert read: dates, totals by account, transactions that do not balance, duplicates and rejected rows. Your books do not change until you approve.' },
+        { heading: 'Match accounts yourself', body: 'Each QuickBooks account needs your decision: map it to a Rupert account, create one, or skip it. Rupert only suggests similar names. Only the Journal posts; charts, vendor and customer lists set up the matching and a trial balance is kept for checking.' },
+        { heading: 'Approve and reverse', body: 'Choose the last date to post. Locked periods, skipped accounts and look-alike transactions stay staged with the reason shown. Reversing a batch voids everything it posted, unless a period was locked since.' }
+      ],
+      tips: ['A report with a single Amount column cannot be posted; export the Journal, or add separate Debit and Credit columns.', 'Overlapping exports are safe: transactions already imported are skipped.', 'The day before Rupert’s own first entry is suggested as the last date, so the same days are never recorded twice.']
+    ),
+    'history' => Guide.new(
+      key: 'history', title: 'History',
+      summary: 'What history Rupert holds for each source, how far back and forward it goes, and where it disagrees with QuickBooks.',
+      sections: [
+        { heading: 'Reading a source', body: 'Each card shows the earliest and latest dates Rupert holds, how many records, when it last arrived, calendar months with nothing in them, and which other sources cover the same dates. The earliest record is the coverage that was available, not proof of when the business started.' },
+        { heading: 'Comparisons', body: 'QuickBooks totals are set beside Rupert’s ledger, trial balance and bank statement lines for the days both cover. Differences are listed for a person to look at; nothing is adjusted or matched for you.' }
+      ],
+      tips: ['A month with no records may be a quiet month or a missing import.', 'Counts are records Rupert stores, not sales totals.', 'Ask Rupert can answer “what history do we have for 2025?” from this page’s numbers.']
+    ),
     'business_snapshot' => Guide.new(
       key: 'business_snapshot', title: 'Business snapshot',
       summary: 'A printable picture of sales, stock, cash and vendors built from live records, each section stating its source and age.',
@@ -474,39 +493,28 @@ class PageGuides
         'A failed sync shows the error here — most are transient; the next scheduled run recovers.'
       ]
     ),
+    'team_chat' => Guide.new(
+      key: 'team_chat', title: 'Team chat',
+      summary: 'Rooms and direct messages for the admin team, with Rupert’s bots answering from Rupert’s own data.',
+      sections: [
+        { heading: 'Rooms and people', body: '#admins holds every admin and Rupert. Direct lists each person; your own room with Rupert answers every message. Make more rooms with + next to Rooms.' },
+        { heading: 'Bots', body: '@rupert is DeepSeek in the cloud (fast). @liquid, @qwen and @gemma run privately on this server (slower). @all asks every bot and shows their answers side by side. Every bot reply shows its model and time; rate it with a thumb and say why.' },
+        { heading: 'Messages', body: 'Hover a message to reply in a thread, react, pin it as the room banner, copy a link to it or edit your own. Paste or drop photos and files.' }
+      ],
+      tips: ['Bots change nothing on their own: a proposed change waits for someone to press Approve.',
+             'Never paste passwords or card numbers into chat.',
+             'The ? button in the room header replays the tour and plays the demo video.']
+    ),
     'settings' => Guide.new(
       key: 'settings', title: 'Settings',
-      summary: "Your store's configuration — business details, Google sign-in, size families, warehouse links and the Buzz agent. Platform administrators also manage instance backups.",
+      summary: "Your store's configuration — business details, Google sign-in, size families, warehouse links and a link to team chat. Platform administrators also manage instance backups.",
       sections: [
-        { heading: "What's here", body: 'Business name and invoice prefix; Google OAuth (allowed domains + client credentials); size families (root gram products); the wholesale Warehouse link; and the Buzz agent identity. Google Drive backup controls are restricted to the platform super administrator.' }
+        { heading: "What's here", body: 'Business name and invoice prefix; Google OAuth (allowed domains + client credentials); size families (root gram products); the wholesale Warehouse link; and a link to team chat. Google Drive backup controls are restricted to the platform super administrator.' }
       ],
       tips: [
         'Only the platform super administrator configures Google Drive backups. Every 6 hours, Rupert can copy the entire shared instance database to that approved destination; store credentials cannot authorize this.',
         'Add every staff email domain to Google sign-in; new people on an allowed domain get a staff account automatically.',
         'Environment secrets (Square/Shopify tokens) live in the .env card and are encrypted at rest.'
-      ]
-    ),
-    'buzz' => Guide.new(
-      key: 'buzz', title: 'Buzz team chat',
-      summary: "Buzz is the team's chat, and Rupert's agent @rupert lives in it. This card opens the chat and helps you connect your own phone or computer.",
-      sections: [
-        { heading: "What's here", body: "The agent's profile, an Open chat button, the relay address and channel to copy or scan with a phone, and download links for the Buzz app on each platform." }
-      ],
-      tips: [
-        'You use your own Buzz identity in your own app. Never paste a private key (starting nsec1) into Rupert or the chat.',
-        'If Open chat does nothing, install the Buzz app first (Get Buzz), then try again.'
-      ]
-    ),
-    'buzz_chat' => Guide.new(
-      key: 'buzz_chat', title: 'Team chat',
-      summary: "The team's Buzz channel inside Rupert: recent history, new messages as they arrive, and a box to post.",
-      sections: [
-        { heading: "What's here", body: 'Messages from the Buzz channel with the newest at the bottom. Load earlier messages goes back through the history. People show by their Buzz profile name; someone with no profile shows as a short key. The Rupert agent is marked AI agent.' },
-        { heading: 'Posting', body: 'What you post appears in Buzz as "Your name via Rupert", sent by the Rupert agent, because Rupert does not hold anyone\'s personal Buzz key. Messages posted here cannot mark work ready for development, and the agent does not reply to them.' }
-      ],
-      tips: [
-        'Rupert keeps a copy of recent messages for 30 days so the page is quick and still shows history if Buzz is briefly unreachable. Buzz itself keeps the full history.',
-        'Links in messages are shown as text and are never opened or previewed by Rupert. Never paste a private key (starting nsec1).'
       ]
     ),
     'employees' => Guide.new(
@@ -753,6 +761,7 @@ class PageGuides
   # appears automatically on the right page regardless of module-registry keys.
   PATH_MAP = [
     # Most specific prefixes first: the list is matched in order with start_with?.
+    ['/chat', 'team_chat'],
     ['/books_check', 'books_check'],
     ['/books/locks', 'period_locks'],
     ['/books', 'books_desk'],
@@ -773,6 +782,8 @@ class PageGuides
     ['/finance/chart_of_accounts', 'chart_of_accounts'],
     ['/finance/expenses', 'expenses'],
     ['/finance/vendor_payments', 'payments'],
+    ['/finance/quickbooks_imports', 'quickbooks_import'],
+    ['/finance/history', 'history'],
     ['/finance/journal_entries', 'journal_entries'],
     ['/finance/reports', 'finance_reports'],
     ['/finance/bank_reconciliation', 'bank_reconciliation'],
@@ -810,8 +821,6 @@ class PageGuides
     ['/activity', 'activity'],
     ['/syncs', 'sync'],
     ['/settings', 'settings'],
-    ['/buzz/chat', 'buzz_chat'],
-    ['/buzz', 'buzz'],
     ['/employees', 'employees'],
     ['/users', 'users'],
     ['/permissions', 'permissions'],

@@ -10,7 +10,7 @@ class TimeClockController < AuthenticatedController
   def index
     @worker = TimeClockService.worker_for(Current.user)
     @open_shift = ClockShift.open.find_by(user_id: Current.user.id)
-    @pagy, @shifts = pagy(ClockShift.where(user_id: Current.user.id).recent.includes(:corrections), items: 30)
+    @pagy, @shifts = pagy(:offset, ClockShift.where(user_id: Current.user.id).recent.includes(:corrections), limit: 30)
     if Current.user.can?('payroll.write')
       @pending_corrections = ClockCorrection.where(status: 'pending').includes(:clock_shift).order(:created_at).limit(100)
     end

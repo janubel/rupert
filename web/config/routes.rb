@@ -196,13 +196,36 @@ Rails.application.routes.draw do
   get '/search', to: 'search#index', as: :search
   get '/dashboard', to: 'home#index'
   get '/roadmap', to: 'roadmap#index', as: :roadmap
-  get '/buzz', to: 'buzz#show', as: :buzz
-  get '/buzz/chat', to: 'buzz_chat#show', as: :buzz_chat
-  get '/buzz/chat/messages', to: 'buzz_chat#messages', as: :buzz_chat_messages
-  post '/buzz/chat/messages', to: 'buzz_chat#create'
-  post '/buzz/link', to: 'buzz_links#create', as: :buzz_link
-  post '/buzz/link/:id/confirm', to: 'buzz_links#confirm', as: :confirm_buzz_link
-  delete '/buzz/link/:id', to: 'buzz_links#destroy', as: :remove_buzz_link
+  # Team chat: rooms inside Rupert with the @rupert assistant (docs/ops/team-chat.md).
+  get    '/chat',                                     to: 'team_chat#index',           as: :team_chat
+  post   '/chat/rooms',                               to: 'team_chat#create_room',     as: :team_chat_rooms
+  post   '/chat/dms',                                 to: 'team_chat#create_dm',       as: :team_chat_dms
+  get    '/chat/dock',                                to: 'team_chat#dock',            as: :team_chat_dock
+  get    '/chat/unread',                              to: 'team_chat#unread',          as: :team_chat_unread
+  get    '/chat/models',                              to: 'team_chat#scores',          as: :team_chat_scores
+  patch  '/chat/presence',                            to: 'team_chat#presence',        as: :team_chat_presence
+  patch  '/chat/presence/policy',                     to: 'team_chat#presence_policy', as: :team_chat_presence_policy
+  get    '/chat/:room/dock',                          to: 'team_chat#dock_room',       as: :team_chat_dock_room
+  get    '/chat/:room',                               to: 'team_chat#show',            as: :team_chat_room
+  patch  '/chat/:room',                               to: 'team_chat#update_room'
+  get    '/chat/:room/messages',                      to: 'team_chat#messages',        as: :team_chat_messages
+  post   '/chat/:room/messages',                      to: 'team_chat#create_message'
+  patch  '/chat/:room/messages/:id',                  to: 'team_chat#update_message'
+  post   '/chat/:room/typing',                        to: 'team_chat#typing',          as: :team_chat_typing
+  delete '/chat/:room/messages/:id',                  to: 'team_chat#destroy_message', as: :team_chat_message
+  post   '/chat/:room/messages/:id/reactions',        to: 'team_chat#react',           as: :team_chat_reactions
+  post   '/chat/:room/messages/:id/rating',           to: 'team_chat#rate',            as: :team_chat_rating
+  post   '/chat/:room/messages/:id/rating/reason',    to: 'team_chat#rating_reason',   as: :team_chat_rating_reason
+  post   '/chat/:room/messages/:id/pin',              to: 'team_chat#pin',             as: :team_chat_pin
+  get    '/chat/:room/files/:id',                     to: 'team_chat#attachment',      as: :team_chat_attachment
+  get    '/chat/:room/media',                         to: 'team_chat#media',           as: :team_chat_media
+  post   '/chat/:room/messages/:id/actions/:action_id', to: 'team_chat#decide',        as: :team_chat_action
+
+  # Buzz was retired for team chat; old bookmarks land in team chat.
+  get '/admin/buzz', to: redirect('/chat')
+  get '/buzz', to: redirect('/chat')
+  get '/buzz/chat', to: redirect('/chat')
+
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)
@@ -305,6 +328,16 @@ Rails.application.routes.draw do
     post 'bank_reconciliation/unmatch', to: 'bank_reconciliations#unmatch', as: :bank_reconciliation_unmatch
     post 'bank_reconciliation/ignore', to: 'bank_reconciliations#ignore', as: :bank_reconciliation_ignore
     post 'bank_reconciliation/account', to: 'bank_reconciliations#map_account', as: :bank_reconciliation_account
+    get 'history', to: 'history#show', as: :history
+    resources :quickbooks_imports, only: %i[index show create] do
+      member do
+        patch :mappings
+        post :approve
+        post :discard
+        post :reverse
+        get :rejected
+      end
+    end
     get 'ledger_export', to: 'ledger_exports#new', as: :ledger_export
     post 'ledger_export', to: 'ledger_exports#create'
   end
@@ -434,8 +467,17 @@ Rails.application.routes.draw do
       post :push_guard_unfreeze
     end
   end
+  resource :uploads_drive, path: 'uploads/drive', controller: 'uploads_drive', only: :show do
+    post :connect
+    post :folder
+    post :import
+    post :disconnect
+  end
   resources :uploads, only: %i[index show create] do
-    collection { post :recognize_all }
+    collection do
+      post :recognize_all
+      get :insights
+    end
     member do
       patch :choose
       post :dry_run
@@ -448,6 +490,10 @@ Rails.application.routes.draw do
   end
   resources :swipesimple_items, only: %i[index create]
   resources :swipesimple_reports, only: %i[index create] do
+    collection { post :preview }
+    member { get :document }
+  end
+  resources :zelle_reports, only: %i[index create] do
     collection { post :preview }
     member { get :document }
   end
@@ -548,10 +594,6 @@ Rails.application.routes.draw do
     get :drive_oauth_callback
     post :drive_backup, defaults: { format: :json }
     post :drive_disconnect
-    post :buzz_generate
-    post :buzz_register
-    post :buzz_test
-    post :buzz_status
   end
 
   resources :size_families, only: %i[index new create edit update destroy] do

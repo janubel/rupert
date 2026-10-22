@@ -94,6 +94,7 @@ unless marked.
 | `list_reports` | `reports:read` | `reports.read` | Rupert's reports, their pages and the tool that answers each. |
 | `sales_summary` | `reports:read` | `reports.read` | Orders and gross sales per source and currency, optional daily series and top products. |
 | `sales_tax_report` | `reports:read` | `reports.read` | Tax per source and store (Shopify, Square, Rupert POS, C-Trax, SwipeSimple); labelled estimates. |
+| `history_summary` | `finance:read` | `finance.read` | What history Rupert holds per source (QuickBooks, Shopify, Square, C-Trax, SwipeSimple, NAB/IRIS, Authorize.net, bank statements, ledger): earliest and latest dates, record counts, last arrival, empty months and overlapping spans, optionally for one year. Dates and counts only, never amounts or rows. |
 | `inventory_search` | `inventory:read` | `inventory.read` | Mirrored Shopify/Square stock per item and location. |
 | `stock_comparison` | `inventory:read` | `inventory.read` | Shopify vs C-Trax stock side by side, with issues. |
 | `swipesimple_items` | `inventory:read` | `inventory.read` | SwipeSimple item list matched to Shopify, Square and C-Trax. |
@@ -102,13 +103,13 @@ unless marked.
 | `create_task` | `tasks:write` | `projects.write` | **Writes:** adds a task to Rupert's own Tasks board, marked as added by an AI assistant. |
 | `list_alerts` | `alerts:read` | `alerts.read` | Low-stock alerts with counts per status. |
 | `list_uploads` | `uploads:read` | `uploads.read` | "Did my file arrive and what happened to it?": each upload's status (received, recognized, needs_review, imported, rejected, duplicate), who sent it and when, size, SHA-256, detected type and confidence, and the reason for any hold or refusal. Find by id, file-name fragment or SHA-256 prefix. Never returns file contents; cannot upload or approve. See [Uploads inbox](ops/uploads-inbox.md). |
-| `ai_health` | `system:read` | `system.read` + instance operator | Health of the opencode integration behind the @rupert Buzz agent: key state, live free models, agent model status, tokens in/out today and over 7 days, rate-limit hits, warnings. Counts only — never the key or message content. Hidden from tokens whose owner is not a platform administrator. See [AI health monitor](ops/ai-health-monitor.md). |
+| `ai_health` | `system:read` | `system.read` + instance operator | Health of the opencode integration behind Ask Rupert and team chat: key state, live free models, agent model status, tokens in/out today and over 7 days, rate-limit hits, warnings. Counts only — never the key or message content. Hidden from tokens whose owner is not a platform administrator. See [AI health monitor](ops/ai-health-monitor.md). |
 | `instance_status` | `system:read` | `system.read` | Is Rupert healthy: build, uptime, the four readiness checks (database, queue worker, last sync, disk) and workspace counts. |
 | `recent_errors` | `system:read` | `system.read` | Recent failed source syncs and the MCP tools that fail most (this store); with a platform administrator owner also process error lines, failed background jobs (class and error only) and `logged_problems` (server errors, slow requests, denials, rejected forms, sign-in failures from the structured log, as redacted one-line summaries; see [ops/logging.md](ops/logging.md)). Text is scrubbed. |
 | `sync_health` | `system:read` | `system.read` | Per source and operation: latest attempt, failure category, last success; latest catalog run; queue worker heartbeat. |
 | `backup_freshness` | `system:read` | `system.read` | Latest verified Drive backup and its age, newest local snapshot files (names and ages only). Platform administrator or private workspace owner only. |
 | `deploy_status` | `system:read` | `system.read` | What the host auto-deployer last reported (`/var/lib/rupert-autodeploy/status.json`, `last-deploy.json`) next to the running build. Platform administrator or private workspace owner only; empty where the deployer is not installed. |
-| `list_feedback` | `feedback:read` | `settings.read` | Every report and piece of feedback in the store (ladybug, Buzz, assistants): status, severity, source, task, ready-for-development flag. Administrator owner only. |
+| `list_feedback` | `feedback:read` | `settings.read` | Every report and piece of feedback in the store (ladybug, assistants, older Buzz chat reports): status, severity, source, task, ready-for-development flag. Administrator owner only. |
 | `report_context` | `feedback:read` | `settings.read` | One report with its attachments: browser details, JavaScript errors, server log lines, SQL queries (literals removed), page snapshot, screenshot metadata. Administrator owner only. |
 
 The operations tools share the `system:read` scope with `ai_health`, and the
@@ -158,12 +159,13 @@ task. Arguments:
 | `agent_name`, `agent_model` | no | e.g. "Claude Code", model name |
 | `context` | no | Small JSON object, ≤4000 bytes |
 | `open_task` | no | `true` also opens a task in the **Rupert Feedback** project for the owner to review (bug, request, direction, suggestion and question kinds) |
-| `source`, `source_ref`, `source_sender` | no | Where it came from: `source` is `agent` (default) or `buzz`; `source_ref` is the chat message id (the same message is filed only once); `source_sender` is the sender's Nostr public key |
+| `source`, `source_ref`, `source_sender` | no | Where it came from: `source` is `agent` (default); `buzz` is still accepted for compatibility with older callers. `source_ref` is the caller's message id (the same message is filed only once); `source_sender` is the sender's public key, checked against the ready-for-development allow-list |
 | `ready_for_development` | no | Requests "ready for development". Honoured only when the token has `tasks:write` **and** `source_sender` is on the owner's allow-list (Settings → Environment, `FEEDBACK_READY_SENDERS`); otherwise the report is still created, for review, and the reply says so |
 
 Feedback is stored per store with the token and its owner, status `new`. Each
-token may send 200 items per 24 hours. Reports made with the ladybug in Rupert and
-by the `@rupert` chat agent land in the same list (`source` `app` / `buzz`); see
+token may send 200 items per 24 hours. Reports made with the ladybug in Rupert (`source` `app`) and
+approved from the `@rupert` team chat assistant land in the same list. Older
+reports from the retired Buzz chat show `source` `buzz`. See
 [docs/ops/feedback-reports.md](ops/feedback-reports.md). Read them back with
 `list_feedback` and `report_context`.
 

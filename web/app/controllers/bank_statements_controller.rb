@@ -58,8 +58,7 @@ class BankStatementsController < AuthenticatedController
     when 'flagged' then scope.flagged.pending
     else scope.pending
     end
-    @pagy = Pagy.new(count: listed.count, page: [params[:page].to_i, 1].max, items: PAGE_SIZE, overflow: :last_page)
-    @lines = listed.offset(@pagy.offset).limit(@pagy.items).to_a
+    @pagy, @lines = pagy(:offset, listed, page: [params[:page].to_i, 1].max, limit: PAGE_SIZE)
     @vendors = Purchasing::Vendor.ordered.to_a
     @can_write = Current.user.can?('finance.write')
     @expenses_by_id = Finance::Expense.where(id: @lines.filter_map(&:expense_id)).index_by(&:id)

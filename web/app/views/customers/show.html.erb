@@ -72,7 +72,7 @@
             </li>
           <% end %>
         </ul>
-        <%== pagy_nav(@follow_ups_pagy) if @follow_ups_pagy.pages > 1 %>
+        <%== @follow_ups_pagy.series_nav if @follow_ups_pagy.pages > 1 %>
         <% if can_write %>
           <%= form_with url: customer_follow_ups_path(@customer), scope: :follow_up, id: "schedule-follow-up", class: "mt-4 space-y-3 border-t border-fog pt-4" do |f| %>
             <h3 class="text-sm font-semibold text-ink">Schedule a follow-up</h3>
@@ -109,7 +109,7 @@
             </li>
           <% end %>
         </ol>
-        <%== pagy_nav(@interactions_pagy) if @interactions_pagy.pages > 1 %>
+        <%== @interactions_pagy.series_nav if @interactions_pagy.pages > 1 %>
       </section>
 
       <section class="card card-pad" aria-labelledby="orders-heading">
@@ -129,7 +129,7 @@
             </li>
           <% end %>
         </ul>
-        <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+        <%== @pagy.series_nav if @pagy.pages > 1 %>
       </section>
     </div>
   </div>

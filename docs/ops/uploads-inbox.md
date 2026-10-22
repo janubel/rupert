@@ -51,6 +51,24 @@ Subclass `Uploads::Importers::Base` in `app/services/uploads/importers/`, declar
 - **Logs.** Log lines and the Activity trail carry the event, upload id, SHA-256, byte size, format, detected type, status and origin. Never file contents, cell values, import parameters or file names in the application log. (`[uploads] event=received id=7 sha256=... byte_size=89 file_format=csv detected_type=bank_statement status=recognized origin=api outcome=recognized`.) Failures go to `Rails.error` with the upload id only.
 - **Originals are append-only.** The retained bytes, hash and size cannot be changed through the model, and the checksum is verified on every read. There is no delete path; *Discard* only removes a file from the open list and can be reopened.
 
+## Insights: using the inbox's own numbers to improve it
+
+**System → Uploads → Insights** (`/uploads/insights`, needs `uploads.read`) charts how the inbox is working over the last 30, 90 or 365 days (days up to 90, then weeks). It is for deciding what to build or tighten next, so each view maps to a decision:
+
+| View | What it shows | What to do with it |
+| --- | --- | --- |
+| Headline numbers | Files received, files waiting for a person (and the oldest), share held for review, median time from received to imported | A growing waiting count or oldest age means files are arriving that nobody is deciding; a high held share means recognition is missing too much |
+| Uploads by outcome | Stacked columns per day (week for 365 days): imported, recognized, needs review, rejected, duplicate | Spot a rise in amber (needs review) after a new kind of file starts arriving |
+| How far files get | Kept, matched an importer without help, passed a dry run, imported | The biggest drop is the step to improve: sniffing (kept to matched), importer parsing (matched to dry run) or the approval habit (dry run to imported) |
+| Why files wait or are refused | Counts by `reason_code`: not recognized, recognized with no importer, importer not installed, not sure enough, two close matches, dry run failed, import failed, unsupported type, not text, too large, empty, discarded, sent again | **Recognized, no importer** is the ranked list of importers to build; **not recognized** are candidates for new sniffers; **dry run failed** points at parsers and messages; **sent again** shows people not seeing that their file arrived |
+| What Rupert thinks files are | Per detected type: files, average confidence, share held, share where a person chose the type by hand, imported | A high "chosen by hand" share means that sniffer is too loose or too shy; tune its signature |
+| Importer health | Dry runs passed and failed, imports and import failures per importer (from the activity trail, so only since importer keys were recorded) | A low pass rate means people send a layout the importer rejects: read its messages, widen the parser or sharpen the error |
+| Where files come from | Browser, API, drop folder | Zero from the API or drop folder means the no-UI route is unused or unknown |
+
+Each chart has a table behind it (the outcome chart under *View as a table*) and every column carries a text description, so nothing depends on colour. Chart colours are validated for contrast and colour-blind separation in light and dark. The page reads counts, times and `reason_code` values only: no file contents, cell values, parameters or file names, the same rule as the logs. `reason_code` is stored beside the human reason on every upload (`Uploads::Insights::REASONS` lists the codes); rows from before it existed show as "Before reasons were recorded".
+
+When something here should change the product, record the decision in the PR that makes the change and look at the same view a few weeks later.
+
 ## Sending a file without the web page
 
 ### API (recommended for scripts and other machines)
@@ -70,6 +88,16 @@ curl -H "Authorization: Bearer $RUPERT_API_TOKEN" https://YOUR-RUPERT-HOST/api/v
 ```
 
 A token can send files and read their status. **It can never approve an import**; that is only done by a signed-in person in the app. Revoking the token or removing its owner's permission stops it immediately. If Rupert sits behind a proxy, allow request bodies of at least 26 MiB on `/api/v1/uploads` and `/uploads`.
+
+### Google Drive (alongside upload)
+
+**System → Uploads → Or copy from Google Drive** (`/uploads/drive`) is a second way in. A workspace administrator (`settings.write`) connects a Google account once; a person with `uploads.write` then picks files from one folder and copies them into the inbox. Each file takes the same path as a browser upload (kept unchanged and encrypted, recognized, dry run, approval), with origin *Google Drive*.
+
+- **Read-only, one folder.** Consent asks for `drive.readonly`. Google has no narrower scope for reading files you made elsewhere (`drive.file` only covers files an app created or the person opened with Google's picker), so Rupert enforces the limit itself: it lists and reads only the folder chosen on that page, never writes, shares, moves or deletes, and checks every file again with Google before accepting it (still in the folder, not in the trash, supported type, under 10 MiB, checksum matches). Revoke access any time at myaccount.google.com/permissions or with **Disconnect**, which removes the stored token and folder; files already copied stay.
+- **Its own token.** Separate from the whole-instance backup token and from [Drive document retention](drive-document-retention.md), stored encrypted per workspace, bound to the person, workspace and a ten-minute state at consent.
+- **Google documents are not converted.** Docs and Sheets are listed but cannot be copied; download them as CSV or Excel into the folder first.
+- **Limits.** Up to 10 files per copy, 200 files listed, the usual 10 MiB per file and daily inbox limits.
+- **Setup.** Uses the platform's existing Drive OAuth client (`GOOGLE_DRIVE_CLIENT_ID` / `GOOGLE_DRIVE_CLIENT_SECRET`) and its registered `/auth/google/callback`. `drive.readonly` is a restricted Google scope: while the OAuth app is in Testing, only listed test users can consent and tokens expire after seven days (see the retention note). Production use needs Google's verification for restricted scopes. **Not yet verified against real Google**: the tests use a stand-in Drive service, and consent was last blocked by the Testing state (see [Google backup verification](google-backup-verification.md)).
 
 ### Drop folder (off by default)
 

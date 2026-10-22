@@ -30,7 +30,7 @@ module Projects
         tasks = @scope.by_priority.limit(BOARD_LIMIT).to_a
         @columns = Projects::Task::BOARD_STATUSES.index_with { |s| tasks.select { |t| t.status == s } }
       else
-        @pagy, @tasks = pagy(@scope.by_priority, items: 30)
+        @pagy, @tasks = pagy(:offset, @scope.by_priority, limit: 30)
       end
       @assignees = assignee_lookup(tasks || @tasks)
     end
