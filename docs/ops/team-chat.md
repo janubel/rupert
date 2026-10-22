@@ -275,3 +275,27 @@ in 2–4 s.
 
 The test battery shares the gateway with people: while it runs, a person's @bot question waits behind the battery's
 current question (one model at a time). Run it when nobody is chatting, or expect short waits.
+
+### Tuning on the 780M (2026-10-22)
+
+`llama-bench` sweep inside `rupert-llm` (prompt 4096 tokens, tokens/s; generation speed did not change with any setting):
+
+| Model | default | flash attention + best ubatch | ubatch |
+| --- | --- | --- | --- |
+| LFM2.5 8B-A1B | 921 | 1,212 | 2048 |
+| LFM2.5 24B-A2B (QAD Q4_0) | 584 | 893 | 2048 |
+| Gemma 4 E4B | 639 | 691 | 1024 |
+| Qwen3.5 4B | 465 | 481 | 512 |
+
+q8_0 KV cache gave no speed (memory only), so it is not used. Every model now runs with `--flash-attn on --batch-size 2048`
+and its best `--ubatch-size` (models.json). GPU memory is not charged to the container's 14 GiB limit (a 13 GB model left
+the container at ~230 MB); the real limits are the 780M's 17.3 GB (4 GB BIOS carve-out + 13.3 GB GTT) and host RAM.
+Backups: `/etc/rupert-llm/models.json.pre-tune-20261022`.
+
+The gateway logs one line per request: `prompt_new` (tokens read), `prompt_cached` (reused from the previous request),
+`prompt_tps`, `gen`, `gen_tps` (`journalctl -u rupert-llm-gateway`). Within one answer the second step reuses the first
+(~9,000 cached tokens, under a second); a new question currently re-reads the whole prompt (~8 s for 9,000 tokens),
+because per-question parts come early in the prompt.
+
+Test models on the gateway (battery only, `AGENT=lfm-24b` / `qwen-35b`): LFM2.5-24B-A2B QAD-Q4_0 (13.6 GB) and
+Qwen3.6-35B-A3B Unsloth UD-Q3_K_S (15.4 GB).
