@@ -38,7 +38,11 @@ class BuzzChatController < AuthenticatedController
   # POST /buzz/chat/messages { message: "...", channel: "..." }
   def create
     channel = selected_channel
-    BuzzChat.post!(user: Current.user, text: params[:message], channel: channel.id)
+    text = params[:message].to_s
+    row = BuzzChat.post!(user: Current.user, text: text, channel: channel.id)
+    if text.match?(BuzzMirrorReplyJob::MENTION)
+      BuzzMirrorReplyJob.perform_later(Current.tenant_id, Current.user.id, channel.id, text, row&.event_id)
+    end
     render json: { ok: true }, status: :created
   rescue BuzzChat::RateLimited
     render json: { error: 'You are posting quickly. Wait a moment and try again.' }, status: :too_many_requests

@@ -88,7 +88,7 @@
               <textarea id="buzz-message" class="buzz-input" rows="1" maxlength="<%= BuzzChat::POST_MAX + 200 %>" placeholder="Message #<%= @channel.name %>"
                         data-buzz-chat-target="input" data-action="input->buzz-chat#input keydown->buzz-chat#keydown" autocomplete="off"></textarea>
               <div class="buzz-composer-bar">
-                <span class="buzz-composer-hint">Posting as <strong><%= Current.user.display_name.to_s.first(40) %> via Rupert</strong></span>
+                <span class="buzz-composer-hint">Posting as <strong><%= Current.user.display_name.to_s.first(40) %> via Rupert</strong> &middot; mention <strong>@rupert</strong> for help</span>
                 <button type="submit" class="buzz-send" data-buzz-chat-target="send" aria-label="Send message" disabled>↑</button>
               </div>
             </div>

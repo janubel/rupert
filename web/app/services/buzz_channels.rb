@@ -2,8 +2,9 @@
 
 # Channels in the Buzz workspace that the Rupert agent can see. Buzz stores
 # NIP-29 group metadata as kind 39000 events and membership as kind 39002.
-# The list is cached briefly so the chat page does not pay for a relay round
-# trip on every poll.
+# Memberships are the source of truth (a channel can exist before its metadata
+# arrives), and the list is cached briefly so the chat page does not pay for a
+# relay round trip on every poll.
 class BuzzChannels
   Channel = Struct.new(:id, :name, :about, :members, keyword_init: true)
 
@@ -17,7 +18,8 @@ class BuzzChannels
       return cached if cached
 
       channels = fetch
-      Rails.cache.write(cache_key, channels, expires_in: CACHE_TTL)
+      # A relay hiccup must not hide every channel for five minutes.
+      Rails.cache.write(cache_key, channels, expires_in: CACHE_TTL) if channels.any?
       channels
     rescue StandardError => e
       Rails.logger.warn("[BuzzChannels] #{e.class}: #{e.message.to_s[0, 160]}")
@@ -26,16 +28,28 @@ class BuzzChannels
 
     # Explicit channel selection may arrive before this process has a cached
     # channel list (for example a bookmarked ?channel= URL), so fall back to one
-    # relay read. The default channel never does that: polling stays cheap.
+    # relay read. If the cache was warm but stale (a channel was just added),
+    # refresh once so a newly visible channel can be opened without a restart.
     def find(id)
       return nil if id.blank?
 
-      (list_cached || list).find { |channel| channel.id == id.to_s }
+      requested = id.to_s
+      cached = list_cached
+      found = (cached || list).find { |channel| channel.id == requested }
+      return found if found || cached.nil?
+
+      refresh!.find { |channel| channel.id == requested }
+    end
+
+    def refresh!
+      Rails.cache.delete(cache_key)
+      list
     end
 
     def default
       id = BuzzAgent.channel_id
-      list_cached&.find { |channel| channel.id == id } || Channel.new(id: id, name: 'rupert', about: 'Team chat', members: 0)
+      list_cached&.find { |channel| channel.id == id } ||
+        Channel.new(id: id, name: 'rupert', about: 'Team chat', members: 0)
     end
 
     def fallback
@@ -49,25 +63,31 @@ class BuzzChannels
     def cache_key = "buzz_channels/#{Current.tenant_id}"
 
     def fetch
-      events = BuzzRelayClient.query([{ kinds: [39_000, 39_002], limit: 300 }])
-      metas = events.select { |event| event['kind'] == 39_000 }
-      counts = member_counts(events)
+      events = BuzzRelayClient.query([{ kinds: [39_000, 39_002], limit: 500 }])
+      metas = events.select { |event| event['kind'] == 39_000 && !archived?(event) }
+      memberships = events.select { |event| event['kind'] == 39_002 }
+      counts = member_counts(memberships)
+      by_id = metas.index_by { |event| tag(event, 'd') }
 
-      metas.filter_map do |event|
-        id = tag(event, 'd')
-        next if id.blank?
+      (by_id.keys + memberships.map { |event| tag(event, 'd') }).compact.uniq.filter_map do |id|
+        meta = by_id[id]
+        next if meta && archived?(meta)
 
         Channel.new(
           id: id,
-          name: tag(event, 'name').presence || 'channel',
-          about: tag(event, 'about').to_s,
+          name: (meta && tag(meta, 'name')).presence || 'channel',
+          about: (meta && tag(meta, 'about')).to_s,
           members: counts[id].to_i
         )
-      end.uniq(&:id).sort_by { |channel| channel.name.downcase }
+      end.sort_by { |channel| channel.name.downcase }
+    end
+
+    def archived?(event)
+      Array(event['tags']).any? { |entry| entry.is_a?(Array) && entry[0] == 'archived' && entry[1] == 'true' }
     end
 
     def member_counts(events)
-      events.select { |event| event['kind'] == 39_002 }.each_with_object({}) do |event, counts|
+      events.each_with_object({}) do |event, counts|
         id = tag(event, 'd')
         next if id.blank?
 
