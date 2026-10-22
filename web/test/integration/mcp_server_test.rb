@@ -128,6 +128,7 @@ class McpServerTest < ActionDispatch::IntegrationTest
       arguments = case tool.tool_name
       when 'submit_feedback' then { kind: 'task_report', summary: 'Smoke test done' }
       when 'create_task' then { title: 'Check the tea shelf', priority: 'low', due_on: '2026-11-01' }
+      when 'metric' then { name: 'gross_sales', period: 'last_month' }
       when 'update_task' then { task_id: Projects::Task.find_by!(title: 'Check the tea shelf').id, assignee: 'me', status: 'in_progress', note: 'Started' }
       when 'report_context' then { report_id: AgentFeedback.create!(kind: 'bug', summary: 'Smoke report').id }
       else {}
