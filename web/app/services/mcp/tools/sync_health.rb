@@ -38,7 +38,7 @@ module Mcp
           generated_at: iso(Time.current), yesterday_sync_healthy: yesterday_sync_healthy(rows),
           yesterday_complete: yesterday_complete(rows),
           completeness_note: 'A successful sync records an acquisition time, not a fully-synced-through date. ' \
-                             'Rupert cannot attest that yesterday is complete until that coverage boundary is recorded.'
+                             'Rupert cannot prove every sale from yesterday is present until that coverage boundary is recorded.'
         }
         failing = rows.count { |row| row[:failing] }
         result("#{rows.size} source operation#{'s' unless rows.size == 1} tracked, #{failing} currently failing. Queue worker: #{data[:queue_worker][:state]}.", data)

@@ -8,124 +8,124 @@ questions:
     module: sell
     question: How did we do yesterday compared with the day before?
     checks: [{ tool: period_review, args: { period: yesterday } }]
-    needs: [period_review:sales[].gross_cents, period_review:sales[].currency, period_review:change[].gross_change_percent]
+    needs: ["period_review:sales[].gross_cents", "period_review:sales[].currency", "period_review:change[].gross_change_percent"]
   - id: d2
     cadence: daily
     module: sell
     question: What is waiting to be processed right now?
     checks: [order_queues]
-    needs: [order_queues:queues[].name, order_queues:queues[].count]
+    needs: ["order_queues:queues[].name", "order_queues:queues[].count"]
   - id: d3
     cadence: daily
     module: sell
     question: Are there paid online orders that have not shipped yet? Which one is the oldest?
     checks: [order_queues]
-    needs: [order_queues:queues[].count, order_queues:oldest_unshipped, order_queues:oldest_unshipped[].order]
+    needs: ["order_queues:queues[].count", "order_queues:oldest_unshipped", "order_queues:oldest_unshipped[].order"]
   - id: d4
     cadence: daily
     module: system
     question: Is sync healthy right now?
     checks: [sync_health]
-    needs: [sync_health:channels[].latest_status, sync_health:channels[].last_success_at, sync_health:queue_worker.state]
+    needs: ["sync_health:channels[].latest_status", "sync_health:channels[].last_success_at", "sync_health:queue_worker.state"]
   - id: d5
     cadence: daily
     module: stock
     question: Any open stock alerts I should look at today?
     checks: [list_alerts]
-    needs: [list_alerts:counts.open, list_alerts:rows[].sku?, list_alerts:rows[].quantity]
+    needs: ["list_alerts:counts.open", "list_alerts:rows[].sku?", "list_alerts:rows[].quantity"]
   - id: w1
     cadence: weekly
     module: sell
     question: How was last week compared with the week before?
     checks: [{ tool: period_review, args: { period: last_week } }]
-    needs: [period_review:sales[].gross_cents, period_review:change[].gross_change_percent]
+    needs: ["period_review:sales[].gross_cents", "period_review:change[].gross_change_percent"]
   - id: w2
     cadence: weekly
     module: work
     question: Which tasks are overdue?
     checks: [{ tool: list_tasks, args: { overdue: true } }]
-    needs: [list_tasks:rows[].title, list_tasks:rows[].due_on, list_tasks:path]
+    needs: ["list_tasks:rows[].title", "list_tasks:rows[].due_on", "list_tasks:path"]
   - id: w3
     cadence: weekly
     module: team
     question: How many hours did the team work last pay week?
     expect: Quotes the worked hours from time_keeping_report for last pay week.
     checks: [{ tool: time_keeping_report, args: { from: last_pay_week.from, to: last_pay_week.to } }, { tool: period_review, args: { period: last_pay_week } }]
-    needs: [time_keeping_report:totals.worked]
+    needs: ["time_keeping_report:totals.worked"]
   - id: w4
     cadence: weekly
     module: sell
     question: What were our top products last week?
     checks: [{ tool: period_review, args: { period: last_week } }]
-    needs: [period_review:top_products[].name, period_review:top_products[].revenue_cents]
+    needs: ["period_review:top_products[].name", "period_review:top_products[].revenue_cents"]
   - id: m1
     cadence: monthly
     module: sell
     question: How did last month go compared with the month before?
     checks: [{ tool: period_review, args: { period: last_month } }]
-    needs: [period_review:sales[].gross_cents, period_review:change[].gross_change_percent]
+    needs: ["period_review:sales[].gross_cents", "period_review:change[].gross_change_percent"]
   - id: m2
     cadence: monthly
     module: bookkeeping
     question: Is last month closed in the books? What is left to do?
     expect: Says whether last month is locked (closed) and lists what is still open.
     checks: [compliance_check]
-    needs: [compliance_check:items[].title, compliance_check:items[].status]
+    needs: ["compliance_check:items[].title", "compliance_check:items[].status"]
   - id: m3
     cadence: monthly
     module: bookkeeping
     question: How much sales tax did we collect last month?
     expect: Reports tax per source (sources overlap and must not be added together), in dollars.
     checks: [{ tool: sales_tax_report, args: { from: last_month.from, to: last_month.to } }]
-    needs: [sales_tax_report:lines[].source, sales_tax_report:lines[].tax_collected, sales_tax_report:lines[].currency]
+    needs: ["sales_tax_report:lines[].source", "sales_tax_report:lines[].tax_collected", "sales_tax_report:lines[].currency"]
   - id: m4
     cadence: monthly
     module: bookkeeping
     question: How much have we spent on expenses so far this month?
     checks: [{ tool: period_review, args: { period: this_month } }]
-    needs: [period_review:activity.expenses_cents, period_review:money_summary.expenses_visible]
+    needs: ["period_review:activity.expenses_cents", "period_review:money_summary.expenses_visible"]
   - id: q1
     cadence: quarterly
     module: sell
     question: How is this quarter going compared with last quarter?
     checks: [{ tool: period_review, args: { period: this_quarter } }]
-    needs: [period_review:sales[].gross_cents, period_review:change[].gross_change_percent]
+    needs: ["period_review:sales[].gross_cents", "period_review:change[].gross_change_percent"]
   - id: q2
     cadence: quarterly
     module: bookkeeping
     question: How did last quarter go, and is it locked in the books?
     checks: [{ tool: period_review, args: { period: last_quarter } }, compliance_check]
-    needs: [period_review:sales[].gross_cents, period_review:change[].gross_change_percent, compliance_check:items[].title, compliance_check:items[].status]
+    needs: ["period_review:sales[].gross_cents", "period_review:change[].gross_change_percent", "compliance_check:items[].title", "compliance_check:items[].status"]
   - id: c1
     cadence: compliance
     module: bookkeeping
     question: What is overdue for compliance or record keeping?
     checks: [compliance_check]
-    needs: [compliance_check:items[].title, compliance_check:items[].status]
+    needs: ["compliance_check:items[].title", "compliance_check:items[].status"]
   - id: c2
     cadence: compliance
     module: team
     question: Are there timesheets waiting for approval?
     checks: [compliance_check]
-    needs: [compliance_check:items[].title, compliance_check:items[].status]
+    needs: ["compliance_check:items[].title", "compliance_check:items[].status"]
   - id: c3
     cadence: compliance
     module: system
     question: Is our document retention to Google Drive working?
     checks: [compliance_check]
-    needs: [compliance_check:items[].title, compliance_check:items[].status]
+    needs: ["compliance_check:items[].title", "compliance_check:items[].status"]
   - id: o1
     cadence: orders
     module: stock
     question: Are any purchase orders late or still waiting for delivery?
     checks: [order_queues]
-    needs: [order_queues:queues[].name, order_queues:queues[].count]
+    needs: ["order_queues:queues[].name", "order_queues:queues[].count"]
   - id: o2
     cadence: orders
     module: sell
     question: Are there any card payments stuck or not resolved?
     checks: [order_queues]
-    needs: [order_queues:queues[].name, order_queues:queues[].count]
+    needs: ["order_queues:queues[].name", "order_queues:queues[].count"]
   - id: g1
     cadence: general
     module: team
