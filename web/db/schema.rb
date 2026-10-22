@@ -789,13 +789,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.integer "kind", null: false
     t.string "channel", null: false
     t.text "content", default: "", null: false
-    t.text "attachments"
     t.string "reply_to", limit: 64
     t.string "client", limit: 40
     t.bigint "rupert_user_id"
     t.bigint "posted_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "attachments"
     t.index ["tenant_id", "channel", "posted_at", "event_id"], name: "idx_buzz_messages_timeline"
     t.index ["tenant_id", "event_id"], name: "idx_buzz_messages_event", unique: true
   end
@@ -3506,6 +3506,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
   add_foreign_key "workspace_signup_events", "workspace_signups"
   add_foreign_key "workspace_signups", "tenants"
   add_foreign_key "workspace_signups", "users", column: "reviewer_id", on_delete: :nullify
+  add_foreign_key "zelle_entries", "zelle_exports"
+  add_foreign_key "zelle_exports", "users", column: "imported_by_id", on_delete: :nullify
 
   # Virtual tables defined in this database.
   # Note that virtual tables may not work with other database engines. Be careful if changing database.
