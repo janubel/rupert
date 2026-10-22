@@ -61,8 +61,8 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     assert_equal 'qwen3.5-4b', requests.first['model']
     assert_equal 'local_gateway', reply.meta['engine']
     assert_includes requests.first['messages'].first['content'], 'You are Qwen (@qwen)'
-    roles = requests.first['messages'].map { |message| [message['role'], message['content'].to_s.first(12)] }
-    assert_includes roles, ['user', 'Rupert: Earl'], "@rupert's reply is quoted as another voice"
+    users = requests.first['messages'].select { |message| message['role'] == 'user' }.map { |message| message['content'].to_s }
+    assert(users.any? { |content| content.include?("\nRupert: Earlier answer from Rupert.") }, "@rupert's reply is quoted as another voice")
   end
 
   test 'a local bot gets only the tools for what the question is about, and the matching data guide card' do
