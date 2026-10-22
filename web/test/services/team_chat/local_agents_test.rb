@@ -61,8 +61,8 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     assert_equal 'qwen3.5-4b', requests.first['model']
     assert_equal 'local_gateway', reply.meta['engine']
     assert_includes requests.first['messages'].first['content'], 'You are Qwen (@qwen)'
-    roles = requests.first['messages'].map { |message| [message['role'], message['content'].to_s.first(12)] }
-    assert_includes roles, ['user', 'Rupert: Earl'], "@rupert's reply is quoted as another voice"
+    users = requests.first['messages'].select { |message| message['role'] == 'user' }.map { |message| message['content'].to_s }
+    assert(users.any? { |content| content.include?("\nRupert: Earlier answer from Rupert.") }, "@rupert's reply is quoted as another voice")
   end
 
   test 'a local bot gets only the tools for what the question is about, and the matching data guide card' do
@@ -76,11 +76,12 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     assert_not_includes tools, 'list_alerts'
     assert_not_includes tools, 'create_task'
     assert_operator tools.size, :<, 12
-    system = requests.first['messages'].first['content']
-    assert_includes system, '## About this question'
-    assert_match(/Sales tax \(tools: sales_tax_report\): .*never add sources together/, system)
+    question = requests.first['messages'].last['content']
+    assert_includes question, 'About this question'
+    assert_match(/Sales tax \(tools: sales_tax_report\): .*never add sources together/, question)
+    assert_not_includes requests.first['messages'].first['content'], 'Sales tax (tools', 'per-question notes stay out of the cached instructions'
     last_month = Date.current.prev_month
-    assert_includes system, "last month = #{last_month.beginning_of_month.iso8601} to #{last_month.end_of_month.iso8601}"
+    assert_includes question, "last month = #{last_month.beginning_of_month.iso8601} to #{last_month.end_of_month.iso8601}"
     assert_equal %w[tax sales], reply.reload.meta['topics']
   end
 
@@ -89,8 +90,30 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     reply = post('@qwen hello there').replies.first
     TeamChat::Agent.new(reply).run
     assert_includes requests.first['tools'].map { |tool| tool.dig('function', 'name') }, 'list_alerts'
-    assert_not_includes requests.first['messages'].first['content'], '## About this question'
+    assert_not_includes requests.first['messages'].last['content'], 'About this question'
     assert_nil reply.reload.meta['topics']
+  end
+
+  test 'the instructions stay the same from question to question so the model server can reuse them' do
+    requests = script_model({ text: 'One.' }, { text: 'Two.' })
+    TeamChat::Agent.new(post('@qwen how were sales yesterday?').replies.first).run
+    other = TeamChat::Room.create!(name: 'inventory', slug: 'inventory', kind: 'channel', created_by: @user)
+    reply = TeamChat::Post.call(room: other, user: @user, body: '@qwen any low stock?').replies.first
+    TeamChat::Agent.new(reply).run
+
+    assert_equal requests.first['messages'].first['content'], requests.last['messages'].first['content']
+    assert_match(/\AContext for this reply \(from Rupert\):\nYou are in the #inventory room/, requests.last['messages'].last['content'])
+    assert_match(/Today is \w+day #{Date.current.iso8601}/, requests.last['messages'].last['content'])
+  end
+
+  test 'with RUPERT_LOCAL_TOOLS=all a local bot keeps every tool and is told which to use' do
+    ENV['RUPERT_LOCAL_TOOLS'] = 'all'
+    requests = script_model({ text: 'Tax.' })
+    TeamChat::Agent.new(post('@qwen how much sales tax did we collect last month?').replies.first).run
+    assert_includes requests.first['tools'].map { |tool| tool.dig('function', 'name') }, 'list_alerts'
+    assert_match(/Use these tools for this question: sales_tax_report, .*sales_summary/, requests.first['messages'].last['content'])
+  ensure
+    ENV.delete('RUPERT_LOCAL_TOOLS')
   end
 
   test 'a gateway that is down fails the reply plainly without falling back to the cloud model' do
