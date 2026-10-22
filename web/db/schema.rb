@@ -88,10 +88,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_233000) do
     t.index ["shopifyVariantId"], name: "index_InventoryMovement_on_shopifyVariantId"
     t.index ["source"], name: "index_InventoryMovement_on_source"
     t.index ["syncRunId"], name: "index_InventoryMovement_on_syncRunId"
+    t.index ["tenant_id", "createdAt"], name: "idx_inventory_movements_tenant_created_at"
     t.index ["tenant_id", "sku"], name: "idx_inventory_movements_tenant_sku"
     t.index ["tenant_id", "source", "createdAt"], name: "idx_inventory_movements_tenant_source_created_at"
     t.index ["tenant_id", "squareVariationId"], name: "idx_inventory_movements_tenant_square_variation"
-    t.index ["tenant_id"], name: "index_InventoryMovement_on_tenant_id"
   end
 
   create_table "InventoryPolicy", primary_key: "sku", id: :string, force: :cascade do |t|

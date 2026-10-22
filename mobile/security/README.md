@@ -1,10 +1,10 @@
 # Expo-compatible security backports
 
-Expo 58.0.12 / React Native 0.88.0 stay on the SDK-supported dependency matrix. Never run `npm audit fix --force`: its proposed SDK downgrades are incompatible with this app. Signing, account connection, cloud builds and store submission remain deferred.
+Expo 58.0.17 / React Native 0.88.0 stay on the SDK-supported dependency matrix. Never run `npm audit fix --force`: its proposed SDK downgrades are incompatible with this app. Signing, account connection, cloud builds and store submission remain deferred.
 
 | Underlying advisory | Remediation |
 | --- | --- |
-| [UUID buffer bounds, GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) | Override only `xcode`'s UUID dependency to fixed 11.1.1. Its CommonJS `v4()` API remains supported. Tests cover Xcode project UUID generation and v3/v5 short-buffer rejection. |
+| [UUID buffer bounds, GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) | Expo's compatible dependency tree now uses `xcode` 4.0.0, which removes UUID in favor of Node's `crypto.randomUUID()`. The obsolete override is removed; tests verify dependency removal and unique 24-character project identifiers. See [upstream release notes](https://github.com/apache/cordova-node-xcode/blob/4.0.0/RELEASENOTES.md). |
 | [braces recursion, GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) | Upstream 3.0.3 has no published fix. Locally bound parser nesting and all three recursive AST walkers (compile, expand, stringify) to 256 levels. Iterative validation rejects cycles while ignoring normal `parent`/`prev` links. Tests reject deep balanced/unbalanced strings, deep ASTs and cycles, and preserve normal brace/glob results. |
 | [node-forge DigestInfo validation, GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv) | Upstream 1.4.0 has no published fix. Reject extra DigestAlgorithm children and nonempty NULL parameters in RSA PKCS#1 v1.5 verification. Ephemeral-key regression tests reject signed malformed ASN.1, accept valid signatures with optional NULL and reject a wrong digest. |
 
