@@ -17,9 +17,9 @@ module TeamChat
     CONFIG = Rails.root.join('config/team_chat/battery.yml')
 
     Item = Struct.new(:id, :cadence, :question, :checks, :expect, keyword_init: true)
-    Result = Struct.new(:item, :seconds, :tools, :status, :answer, :grade, :tokens_in, :tokens_out, :unverified, keyword_init: true)
+    Result = Struct.new(:item, :seconds, :tools, :status, :answer, :grade, :tokens_in, :tokens_out, :unverified, :message_id, keyword_init: true)
 
-    attr_reader :run_id, :room, :results
+    attr_reader :run_id, :room, :results, :record
 
     # The question set: the default battery, or config/team_chat/battery_<name>.yml (e.g. finance).
     def self.config_for(name)
@@ -51,6 +51,7 @@ module TeamChat
 
       wanted = Array(only).map(&:to_s).compact_blank
       @items = wanted.any? ? items.select { |item| wanted.include?(item.id) } : items
+      @partial = wanted.any?
       @grader = grader
       @out = out
       @run_id = "#{Time.current.strftime('%Y%m%d-%H%M')}-#{SecureRandom.hex(2)}"
@@ -72,11 +73,27 @@ module TeamChat
       started = Time.current
       post_notice("🧪 Test run #{@run_id}#{" (#{@set} questions)" unless @set == 'default'}: #{@items.size} questions to @#{handle} (#{model_name}), asked as #{@user.display_name}. " \
                   "Each answer is timed and graded 1–5 by #{@grader.label} against Rupert’s own data.")
-      @items.each_with_index { |item, index| @results << run_item(item, index) }
+      @record = BatteryRun.create!(run_key: @run_id, set_name: record_set_name, agent: @agent&.handle, model: model_name,
+        engine: (@agent ? 'local_gateway' : ModelConfig.current.engine), revision: self.class.revision, status: 'running',
+        questions: @items.size, results: [], room: @room, started_at: started)
+      @items.each_with_index do |item, index|
+        @results << run_item(item, index)
+        @record.update!(results: @record.results_list + [result_row(@results.last)])
+        @record.tally!
+      end
+      @record.update!(status: 'done', finished_at: Time.current)
       summary = post_notice(summary_text(Time.current - started))
       summary.toggle_pin!(@user) unless summary.pinned?
       @results
     end
+
+    def self.revision = BuildInfo.current.short_revision
+
+    # The saved name of this run's question set; a run of only some questions is marked so it never counts as the full set.
+    def record_set_name = @partial ? "#{@set} (part)" : @set
+
+    # The same bot, model and question set already finished on this Rupert build, if any.
+    def already_done = BatteryRun.already_done(agent: @agent&.handle, model: model_name, set_name: record_set_name, revision: self.class.revision)
 
     def model_name = (@agent ? ModelConfig.for_local(@agent) : ModelConfig.current).model
 
@@ -109,7 +126,13 @@ module TeamChat
       post_grade(reply, grade, seconds) if grade
       log "    #{reply.status} in #{format_seconds(seconds)} · tools #{Array(meta['tools']).join(', ').presence || 'none'} · grade #{grade&.dig(:score) || '—'}"
       Result.new(item: item, seconds: seconds, tools: Array(meta['tools']), status: reply.status, answer: reply.body.to_s,
-        grade: grade, tokens_in: meta['tokens_in'], tokens_out: meta['tokens_out'], unverified: Array(meta['unverified']))
+        grade: grade, tokens_in: meta['tokens_in'], tokens_out: meta['tokens_out'], unverified: Array(meta['unverified']), message_id: reply.id)
+    end
+
+    def result_row(result)
+      { 'id' => result.item.id, 'cadence' => result.item.cadence, 'question' => result.item.question, 'status' => result.status,
+        'seconds' => result.seconds.round(1), 'tools' => result.tools, 'grade' => result.grade&.dig(:score),
+        'verdict' => result.grade&.dig(:verdict).to_s.first(300), 'unverified' => result.unverified.to_a, 'message_id' => result.message_id }
     end
 
     def grade_for(item, reply)

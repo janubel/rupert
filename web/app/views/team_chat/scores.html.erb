@@ -1,4 +1,4 @@
-<%= page_header 'Model scores', subtitle: "Which models people like in team chat, from 👍 and 👎 on replies over the last #{pluralize(@days, 'day')}." do %>
+<%= page_header 'Model scores', subtitle: "Which models people like in team chat (👍 and 👎 over the last #{pluralize(@days, 'day')}), and how each did in the test runs." do %>
   <%= link_to 'Back to team chat', team_chat_path, class: 'btn-ghost' %>
 <% end %>
 
@@ -50,6 +50,84 @@
   </div>
 </div>
 <p class="mt-3 text-xs text-taupe">Each person has one vote per reply; pressing the same thumb again takes it back. "Liked" is 👍 out of all votes. Rows with few votes are not yet a fair comparison.</p>
+
+<section class="mt-6" id="test-runs">
+  <div class="flex flex-wrap items-baseline gap-2">
+    <h2 class="font-display text-lg text-ink">Test runs</h2>
+    <span class="text-sm text-mocha">A fixed set of questions asked to one bot in #liquid-testing, each answer graded 1–5 by DeepSeek against Rupert’s own data.</span>
+  </div>
+  <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+    <span class="text-mocha">Questions:</span>
+    <%= link_to 'All', team_chat_scores_path(days: @days, anchor: 'test-runs'), class: (@run_set ? 'pill-taupe' : 'pill-fern') %>
+    <% @run_sets.each do |set| %>
+      <%= link_to set, team_chat_scores_path(days: @days, set: set, anchor: 'test-runs'), class: (@run_set == set ? 'pill-fern' : 'pill-taupe') %>
+    <% end %>
+    <% if (room = TeamChat::Room.find_by(slug: TeamChat::Battery::ROOM_SLUG)) %>
+      <%= link_to 'Watch in #liquid-testing', team_chat_room_path(room), class: 'ml-auto underline text-mocha' %>
+    <% end %>
+  </div>
+  <% if @runs.empty? %>
+    <p class="mt-2 text-sm text-mocha">No test runs yet. They start with <code>bin/rails team_chat:battery AGENT=liquid</code> on the server.</p>
+  <% else %>
+    <div class="card mt-2 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr>
+              <th scope="col" class="th">When</th>
+              <th scope="col" class="th">Bot · model</th>
+              <th scope="col" class="th">Questions</th>
+              <th scope="col" class="th text-right">Grade</th>
+              <th scope="col" class="th">By topic</th>
+              <th scope="col" class="th text-right">Avg time</th>
+              <th scope="col" class="th text-right">Slowest</th>
+              <th scope="col" class="th text-right" title="Answers with a $ or % figure not found in Rupert's data">Flagged</th>
+              <th scope="col" class="th">Build</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-fog">
+            <% @runs.each do |run| %>
+              <% grade = run.avg_grade&.to_f %>
+              <tr class="hover:bg-cream align-top">
+                <td class="td whitespace-nowrap"><%= run.started_at&.strftime('%b %-d %H:%M') %><% unless run.display_status == 'done' %> <span class="pill-taupe"><%= run.display_status %></span><% end %></td>
+                <td class="td font-medium text-ink"><%= run.label %></td>
+                <td class="td"><%= run.set_name %> · <%= run.answered %>/<%= run.questions %></td>
+                <td class="td text-right font-semibold <%= grade.nil? ? '' : (grade >= 4.3 ? 'text-fern' : (grade < 3.5 ? 'text-rose' : '')) %>"><%= grade ? format('%.1f', grade) : '—' %></td>
+                <td class="td text-xs text-mocha"><%= run.cadence_scores.map { |topic, score| "#{topic} #{score || '—'}" }.join(' · ') %></td>
+                <td class="td text-right"><%= run.avg_seconds ? "#{run.avg_seconds.round(1)} s" : '—' %></td>
+                <td class="td text-right <%= 'text-rose' if run.max_seconds.to_f > TeamChat::ModelScores::SLOW_SECONDS %>"><%= run.max_seconds ? "#{run.max_seconds.round} s" : '—' %></td>
+                <td class="td text-right"><%= run.flagged %></td>
+                <td class="td text-xs text-taupe"><%= run.revision.presence || '—' %></td>
+              </tr>
+              <tr>
+                <td colspan="9" class="px-4 pb-2">
+                  <details>
+                    <summary class="cursor-pointer text-xs text-mocha">Questions and grades</summary>
+                    <table class="mt-1 w-full text-xs">
+                      <tbody class="divide-y divide-fog">
+                        <% run.results_list.each do |row| %>
+                          <tr class="align-top">
+                            <td class="py-1 pr-2 text-taupe"><%= row['cadence'] %></td>
+                            <td class="py-1 pr-2 text-ink"><%= row['message_id'] && run.room ? link_to(row['question'], team_chat_room_path(run.room, message: row['message_id']), class: 'hover:underline') : row['question'] %></td>
+                            <td class="py-1 pr-2 font-semibold <%= row['grade'].to_i <= 2 ? 'text-rose' : (row['grade'].to_i >= 5 ? 'text-fern' : '') %>"><%= row['grade'] || '—' %></td>
+                            <td class="py-1 pr-2 whitespace-nowrap"><%= row['seconds'] ? "#{row['seconds']} s" : '—' %></td>
+                            <td class="py-1 pr-2 text-taupe"><%= Array(row['tools']).join(', ').presence || '—' %></td>
+                            <td class="py-1 text-mocha"><%= row['verdict'] %><% if Array(row['unverified']).any? %> <span class="text-rose">⚠ <%= Array(row['unverified']).join(', ') %></span><% end %></td>
+                          </tr>
+                        <% end %>
+                      </tbody>
+                    </table>
+                  </details>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="mt-2 text-xs text-taupe">A model already tested on the same questions and Rupert build is skipped; run with FORCE=1 to test again.</p>
+  <% end %>
+</section>
 
 <section class="mt-6">
   <h2 class="font-display text-lg text-ink">Answers over 2 minutes</h2>

@@ -145,6 +145,7 @@
               <% end %>
             </dl>
             <p class="chat-bots-foot">Local models load on first use and unload after 10 idle minutes, so the first answer after a break is slower. Each reply shows how long it took; <%= link_to 'Model scores', team_chat_scores_path, class: 'underline' %> compares them.</p>
+            <p class="chat-bots-foot"><%= link_to '📊 Scorecard: every test run', team_chat_scores_path(anchor: 'test-runs'), class: 'underline' %></p>
           </div>
         </details>
         <% if @room.channel? %>

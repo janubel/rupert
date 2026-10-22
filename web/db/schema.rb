@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_020000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -842,6 +842,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_010000) do
     t.index ["message_id"], name: "index_chat_attachments_on_message_id"
     t.index ["room_id"], name: "index_chat_attachments_on_room_id"
     t.index ["tenant_id", "drive_status"], name: "index_chat_attachments_on_tenant_id_and_drive_status"
+  end
+
+  create_table "chat_battery_runs", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "run_key", null: false
+    t.string "set_name", default: "default", null: false
+    t.string "agent"
+    t.string "model"
+    t.string "engine"
+    t.string "revision"
+    t.string "status", default: "running", null: false
+    t.integer "questions", default: 0, null: false
+    t.integer "answered", default: 0, null: false
+    t.decimal "avg_grade", precision: 3, scale: 2
+    t.float "avg_seconds"
+    t.float "max_seconds"
+    t.integer "flagged", default: 0, null: false
+    t.text "by_cadence"
+    t.text "results"
+    t.integer "room_id"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["run_key"], name: "index_chat_battery_runs_on_run_key", unique: true
+    t.index ["tenant_id", "started_at"], name: "index_chat_battery_runs_on_tenant_id_and_started_at"
   end
 
   create_table "chat_memberships", force: :cascade do |t|
