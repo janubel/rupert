@@ -13,7 +13,7 @@ class TeamChatController < AuthenticatedController
 
   before_action :require_access
   before_action -> { response.headers['Cache-Control'] = 'no-store' }, except: %i[index show]
-  before_action :load_room, except: %i[index create_room dock unread scores]
+  before_action :load_room, except: %i[index create_room create_dm dock unread scores]
 
   # GET /chat — the last room you were in, else #general.
   def index
@@ -81,7 +81,7 @@ class TeamChatController < AuthenticatedController
     rows |= thread_rows(scope) if params[:thread].present?
     mark_read(rows) if params[:visible] == '1'
     render json: {
-      now: Time.current.iso8601(6), messages: payload(rows), has_more: has_more, pins: pins,
+      now: Time.current.iso8601(6), messages: payload(rows), has_more: has_more, pins: pins, typing: typing_names,
       rooms: rail_rooms.map { |room| { slug: room.slug, unread: room.unread, mentions: room.mentions } }
     }
   end
@@ -103,7 +103,11 @@ class TeamChatController < AuthenticatedController
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Content-Security-Policy'] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
     response.headers['Cache-Control'] = 'private, max-age=86400'
-    send_data file.data, type: file.content_type, filename: file.filename, disposition: file.image? || file.content_type == 'application/pdf' ? 'inline' : 'attachment'
+    bytes = file.data || TeamChat::DriveStore.new.fetch(file)
+    send_data bytes, type: file.content_type, filename: file.filename, disposition: file.image? || file.content_type == 'application/pdf' ? 'inline' : 'attachment'
+  rescue TeamChat::DriveStore::Error, Google::Apis::Error, Signet::AuthorizationError => e
+    Rails.logger.warn("[TeamChat::Drive] fetch failed: #{e.class}")
+    render plain: 'This file is kept in Google Drive and could not be fetched right now. Try again in a moment.', status: :bad_gateway
   end
 
   # POST /chat/:room/messages/:id/reactions { emoji } — adds or removes yours.
@@ -142,6 +146,31 @@ class TeamChatController < AuthenticatedController
     @current = TeamChat::ModelConfig.current
   end
 
+  # PATCH /chat/:room/messages/:id { body } — edit your own message.
+  def update_message
+    message = @room.messages.visible.find(params[:id])
+    return head :forbidden unless message.person? && message.user_id == Current.user.id
+
+    message.edit_body!(params[:body])
+    render json: { messages: payload([message.reload]) }
+  rescue ActiveRecord::RecordInvalid
+    render json: { error: 'A message needs some text.' }, status: :unprocessable_entity
+  end
+
+  # POST /chat/:room/typing — "you are typing" heartbeat, shown to the others for a few seconds.
+  def typing
+    @room.membership_for(Current.user).typing!
+    head :no_content
+  end
+
+  # POST /chat/dms { user_id } — open (or start) a direct message with someone.
+  def create_dm
+    other = User.find_by(id: params[:user_id], tenant_id: Current.tenant_id, active: true)
+    return redirect_to(team_chat_path, alert: 'That person cannot use team chat.') unless other && TeamChat.allowed?(other) && other.id != Current.user.id
+
+    redirect_to team_chat_room_path(TeamChat::Room.dm_between(Current.user, other))
+  end
+
   # DELETE /chat/:room/messages/:id — your own messages only.
   def destroy_message
     message = @room.messages.find(params[:id])
@@ -172,7 +201,7 @@ class TeamChatController < AuthenticatedController
 
   # PATCH /chat/:room { topic, assistant_mode, archived }
   def update_room
-    return head :forbidden if @room.direct? && params[:archived].present?
+    return head :forbidden unless @room.channel?
 
     attributes = room_params.slice(:assistant_mode)
     attributes[:topic] = params[:topic].to_s.strip.presence if params.key?(:topic)
@@ -202,6 +231,11 @@ class TeamChatController < AuthenticatedController
 
   def room_params
     params.permit(:name, :topic, :assistant_mode).to_h.symbolize_keys.compact_blank
+  end
+
+  def typing_names
+    @room.memberships.where(typing_at: TeamChat::Membership::TYPING_FOR.ago..).where.not(user_id: Current.user.id)
+         .includes(:user).filter_map { |row| row.user&.display_name }
   end
 
   def pins

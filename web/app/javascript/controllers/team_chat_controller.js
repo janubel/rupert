@@ -11,7 +11,7 @@ import { Controller } from "@hotwired/stimulus"
 // `code`, @mentions, http(s) links and same-site [label](/path) links.
 export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
-    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins"]
+    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins", "typing", "newDm"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
     compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
@@ -34,6 +34,8 @@ export default class extends Controller {
     this.pendingFiles = []
     this.mentionIds = new Set()
     this.pins = []
+    this.lastTypingPing = 0
+    this.editingId = null
     this.pinsOpen = false
     this.load()
     this.schedule()
@@ -140,8 +142,15 @@ export default class extends Controller {
     this.renderRooms(data.rooms)
     this.setPins(data.pins)
     this.render({ stick: true })
-    const thread = Number(new URLSearchParams(window.location.search).get("thread"))
-    if (thread && !this.compactValue) this.openThread(thread)
+    const params = new URLSearchParams(window.location.search)
+    const thread = Number(params.get("thread"))
+    const target = Number(params.get("message"))
+    if (thread && !this.compactValue) {
+      await this.openThread(thread)
+      if (target) this.flash(this.threadLogTarget.querySelector(`[data-id="${target}"]`))
+    } else if (target && !this.compactValue) {
+      this.jumpToMessage(target)
+    }
   }
 
   async poll() {
@@ -154,6 +163,7 @@ export default class extends Controller {
     const fresh = this.merge(data.messages)
     this.renderRooms(data.rooms)
     this.setPins(data.pins)
+    this.renderTyping(data.typing)
     if (fresh.changed) this.render({ stick: false, newItems: fresh.added })
   }
 
@@ -211,7 +221,7 @@ export default class extends Controller {
         added += message.parent_id ? 0 : 1
         changed = true
       } else if (old.updated_at !== message.updated_at || old.reply_count !== message.reply_count || old.body !== message.body || old.activity !== message.activity ||
-          JSON.stringify(old.reactions) !== JSON.stringify(message.reactions) || JSON.stringify(old.rating) !== JSON.stringify(message.rating) || old.pinned !== message.pinned) {
+          JSON.stringify(old.reactions) !== JSON.stringify(message.reactions) || JSON.stringify(old.rating) !== JSON.stringify(message.rating) || old.pinned !== message.pinned || old.edited !== message.edited) {
         changed = true
       }
       this.byId.set(message.id, { ...old, ...message })
@@ -317,6 +327,12 @@ export default class extends Controller {
       time.title = new Date(message.created_at).toLocaleString()
       time.textContent = new Date(message.created_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
       head.append(time)
+      if (message.edited) {
+        const edited = document.createElement("span")
+        edited.className = "chat-msg-edited"
+        edited.textContent = "(edited)"
+        head.append(edited)
+      }
       main.append(head)
     }
 
@@ -327,6 +343,8 @@ export default class extends Controller {
       gone.className = "chat-msg-deleted"
       gone.textContent = "This message was deleted."
       body.append(gone)
+    } else if (this.editingId === message.id) {
+      body.append(this.editorNode(message))
     } else {
       if (message.body) body.append(...this.formatted(message.body))
       if (message.status === "pending") body.append(this.activityNode(message))
@@ -354,6 +372,8 @@ export default class extends Controller {
       tools.append(this.toolButton("React", (event) => this.openPalette(message, event.currentTarget)))
       if (message.kind !== "system") tools.append(this.toolButton(message.pinned ? "Unpin" : "Pin", () => this.togglePin(message.id)))
       if (!thread && message.kind !== "system") tools.append(this.toolButton("Reply in thread", () => this.openThread(message.id)))
+      tools.append(this.toolButton("Copy link", () => this.copyLink(message)))
+      if (message.mine) tools.append(this.toolButton("Edit", () => this.startEdit(message)))
       if (message.mine) tools.append(this.toolButton("Delete", () => this.deleteMessage(message)))
       if (tools.childElementCount) row.append(tools)
     }
@@ -395,7 +415,20 @@ export default class extends Controller {
         size.textContent = this.constructor.fileSize(file.size)
         link.append(icon, name, size)
       }
-      holder.append(link)
+      if (file.drive_url) {
+        const wrap = document.createElement("span")
+        wrap.className = "chat-attachment"
+        const drive = document.createElement("a")
+        drive.className = "chat-attachment-drive"
+        drive.href = file.drive_url
+        drive.target = "_blank"
+        drive.rel = "noopener noreferrer"
+        drive.textContent = "Open in Google Drive"
+        wrap.append(link, drive)
+        holder.append(wrap)
+      } else {
+        holder.append(link)
+      }
     })
     return holder
   }
@@ -419,6 +452,118 @@ export default class extends Controller {
       row.append(pill)
     })
     return row
+  }
+
+  // --- typing, editing and links ---
+
+  // Tells the room you are typing, at most every three seconds.
+  pingTyping() {
+    const now = Date.now()
+    if (now - this.lastTypingPing < 3000) return
+    this.lastTypingPing = now
+    fetch(`${this.roomUrlValue}/typing`, { method: "POST", headers: this.csrf(), credentials: "same-origin" }).catch(() => {})
+  }
+
+  renderTyping(names) {
+    if (!this.hasTypingTarget || !Array.isArray(names)) return
+    const text = names.length === 0 ? "" : names.length === 1 ? `${names[0]} is typing…` : names.length === 2 ? `${names[0]} and ${names[1]} are typing…` : "Several people are typing…"
+    this.typingTarget.hidden = text === ""
+    this.typingTarget.textContent = text
+  }
+
+  startEdit(message) {
+    this.editingId = message.id
+    this.render({ stick: false })
+    const field = this.element.querySelector(`[data-id="${message.id}"] .chat-edit-input`)
+    if (field) {
+      field.focus()
+      field.setSelectionRange(field.value.length, field.value.length)
+    }
+  }
+
+  editorNode(message) {
+    const form = document.createElement("form")
+    form.className = "chat-edit"
+    form.dataset.busy = "false"
+    const field = document.createElement("textarea")
+    field.className = "chat-input chat-edit-input"
+    field.value = message.body || ""
+    field.rows = Math.min(8, Math.max(1, field.value.split("\n").length))
+    field.setAttribute("aria-label", "Edit message")
+    const bar = document.createElement("div")
+    bar.className = "chat-edit-bar"
+    const hint = document.createElement("span")
+    hint.textContent = "Enter saves · Esc cancels"
+    const cancel = document.createElement("button")
+    cancel.type = "button"
+    cancel.className = "btn-ghost btn-sm"
+    cancel.textContent = "Cancel"
+    const save = document.createElement("button")
+    save.type = "submit"
+    save.className = "btn-primary btn-sm"
+    save.textContent = "Save"
+    bar.append(hint, cancel, save)
+    form.append(field, bar)
+    const stop = () => { this.editingId = null; this.render({ stick: false }) }
+    cancel.addEventListener("click", stop)
+    field.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { event.preventDefault(); stop() }
+      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) { event.preventDefault(); form.requestSubmit() }
+    })
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault()
+      const text = field.value.trim()
+      if (text === (message.body || "").trim()) return stop()
+      save.disabled = true
+      const data = await this.fetchJson(`${this.urlValue}/${message.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: text })
+      })
+      if (!data) { save.disabled = false; return }
+      this.editingId = null
+      this.merge(data.messages)
+      this.render({ stick: false })
+    })
+    return form
+  }
+
+  // A link straight to this message (its thread for a reply), to paste anywhere.
+  async copyLink(message) {
+    const url = new URL(this.roomUrlValue, window.location.origin)
+    if (message.parent_id) url.searchParams.set("thread", message.parent_id)
+    url.searchParams.set("message", message.id)
+    try {
+      await navigator.clipboard.writeText(url.href)
+      this.toast("Link copied.")
+      this.showNotice(null)
+    } catch (_error) {
+      window.prompt("Copy this link", url.href)
+    }
+  }
+
+  async jumpToMessage(id) {
+    for (let tries = 0; tries < 10; tries += 1) {
+      const node = this.logTarget.querySelector(`[data-id="${id}"]`)
+      if (node) return this.flash(node)
+      if (!this.hasMore) break
+      await this.loadEarlier()
+    }
+    this.showNotice("That message is no longer in this room.")
+  }
+
+  flash(node) {
+    if (!node) return
+    node.scrollIntoView({ block: "center", behavior: "smooth" })
+    node.classList.remove("is-flash")
+    void node.offsetWidth
+    node.classList.add("is-flash")
+  }
+
+  openNewDm() {
+    this.newDmTarget.showModal()
+  }
+
+  closeNewDm() {
+    this.newDmTarget.close()
   }
 
   // --- pins: the newest is a banner above the messages, the rest a click away ---
@@ -504,20 +649,12 @@ export default class extends Controller {
 
   // Shows the pinned message: its thread when it is a reply, else the message in the log.
   async jumpToPin(pin) {
-    if (pin.parent_id) return this.openThread(pin.parent_id)
-    for (let tries = 0; tries < 10; tries += 1) {
-      const node = this.logTarget.querySelector(`[data-id="${pin.id}"]`)
-      if (node) {
-        node.scrollIntoView({ block: "center", behavior: "smooth" })
-        node.classList.remove("is-flash")
-        void node.offsetWidth
-        node.classList.add("is-flash")
-        return
-      }
-      if (!this.hasMore) break
-      await this.loadEarlier()
+    if (pin.parent_id) {
+      await this.openThread(pin.parent_id)
+      if (this.hasThreadLogTarget) this.flash(this.threadLogTarget.querySelector(`[data-id="${pin.id}"]`))
+      return
     }
-    this.showNotice("That pinned message is no longer in this room.")
+    return this.jumpToMessage(pin.id)
   }
 
   // 👍 / 👎 on an assistant reply, so Model scores can show which models people like.
@@ -663,7 +800,7 @@ export default class extends Controller {
       if (part.type === "mention") node.className = "chat-mention"
       if (part.type === "link") {
         node.href = part.href
-        if (part.external) {
+        if (part.external && new URL(part.href).origin !== window.location.origin) {
           node.target = "_blank"
           node.rel = "noopener noreferrer nofollow"
         }
@@ -732,9 +869,11 @@ export default class extends Controller {
     this.autosize(this.inputTarget)
     this.sendTarget.disabled = this.inputTarget.value.trim() === "" && this.pendingFiles.length === 0
     this.updateSuggest()
+    this.pingTyping()
   }
 
   threadInputChanged() {
+    this.pingTyping()
     this.autosize(this.threadInputTarget)
     this.threadSendTarget.disabled = this.threadInputTarget.value.trim() === ""
   }

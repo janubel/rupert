@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
 module TeamChat
-  # A channel everyone allowed to use team chat can open, or a direct room
-  # between one person and Rupert that only that person can open.
+  # A channel everyone allowed to use team chat can open; a direct room between
+  # one person and Rupert that only that person can open; or a direct message
+  # (dm) between two people that only those two can open.
   class Room < ApplicationRecord
     include TenantScoped
 
-    KINDS = %w[channel direct].freeze
+    KINDS = %w[channel direct dm].freeze
     ASSISTANT_MODES = { 'mentions' => 'When mentioned (@rupert)', 'all' => 'To every message', 'off' => 'Off' }.freeze
     NAME_MAX = 60
     TOPIC_MAX = 240
@@ -27,16 +28,34 @@ module TeamChat
     scope :open, -> { where(archived_at: nil) }
     scope :channels, -> { where(kind: 'channel') }
 
-    # Channels plus this person's own direct room.
+    # Channels, this person's own room with Rupert and their direct messages.
     scope :visible_to, lambda { |user|
       open.where(kind: 'channel').or(open.where(kind: 'direct', created_by_id: user.id))
+          .or(open.where(kind: 'dm', id: Membership.where(user_id: user.id).select(:room_id)))
     }
 
+    # #general holds every person who can use team chat, plus Rupert.
     def self.ensure_defaults!(user)
       general = channels.find_by(slug: 'general') ||
-                create!(name: 'general', slug: 'general', topic: 'Anything for the team. Mention @rupert to ask about the business.', created_by: user)
+                create!(name: 'general', slug: 'general', topic: 'Everyone on the team, with Rupert. Mention @rupert to ask about the business.', created_by: user)
+      everyone = Post.mentionable
+      general.add_members(everyone) if general.memberships.count < everyone.size
+      general.membership_for(user)
       direct_for(user)
       general
+    end
+
+    # The direct-message room between two people (created on first use).
+    def self.dm_between(user, other)
+      raise ArgumentError, 'pick someone else' if user.id == other.id
+
+      low, high = [user.id, other.id].minmax
+      room = find_by(kind: 'dm', slug: "dm-#{low}-#{high}") ||
+             create!(kind: 'dm', slug: "dm-#{low}-#{high}", name: 'Direct message', assistant_mode: 'mentions', created_by: user)
+      room.add_members([user, other])
+      room
+    rescue ActiveRecord::RecordNotUnique
+      find_by!(kind: 'dm', slug: "dm-#{low}-#{high}")
     end
 
     # The person's private room with Rupert, where he answers every message.
@@ -47,13 +66,27 @@ module TeamChat
     end
 
     def direct? = kind == 'direct'
+    def dm? = kind == 'dm'
     def channel? = kind == 'channel'
     def archived? = archived_at.present?
 
     def visible_to?(user)
       return false if archived?
 
+      return memberships.exists?(user_id: user.id) if dm?
+
       channel? || created_by_id == user.id
+    end
+
+    def add_members(users)
+      users.each { |person| membership_for(person) }
+    end
+
+    # The other person in a direct message.
+    def dm_partner(viewer)
+      return nil unless dm?
+
+      members.where.not(id: viewer.id).first
     end
 
     def membership_for(user)
@@ -62,7 +95,12 @@ module TeamChat
       memberships.find_by!(user_id: user.id)
     end
 
-    def display_name = direct? ? 'Rupert' : name
+    def display_name(viewer = nil)
+      return 'Rupert' if direct?
+      return dm_partner(viewer)&.display_name || 'Direct message' if dm? && viewer
+
+      name
+    end
 
     def to_param = slug
 

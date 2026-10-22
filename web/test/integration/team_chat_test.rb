@@ -368,4 +368,115 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_dock_room_path('general')
     assert_select 'turbo-frame#chat_dock .chat-pins[data-team-chat-target=pins]'
   end
+
+  def other_admin
+    @other_admin ||= User.create!(tenant: @tenant, email: 'jo-admin@example.com', role: 'admin', password: 'password123', name: 'Jo Park')
+  end
+
+  test '#general holds every team chat user, and Rupert is listed with them' do
+    other_admin
+    sign_in(@admin)
+    get team_chat_path
+    follow_redirect!
+    general = TeamChat::Room.find_by(slug: 'general')
+    assert_includes general.members, other_admin
+    assert_includes general.members, @admin
+    assert_not_includes general.members, manager
+    assert_select '.chat-member-avatar.is-bot[title=Rupert]'
+  end
+
+  test 'direct messages between two people are private to them' do
+    sign_in(@admin)
+    get team_chat_path
+    post team_chat_dms_path, params: { user_id: other_admin.id }
+    room = TeamChat::Room.find_by(kind: 'dm')
+    assert_redirected_to team_chat_room_path(room)
+    assert_equal [@admin.id, other_admin.id].sort, room.members.pluck(:id).sort
+    post team_chat_dms_path, params: { user_id: other_admin.id }
+    assert_equal 1, TeamChat::Room.where(kind: 'dm').count, 'the same pair reuses its room'
+
+    follow_redirect!
+    assert_select '.chat-head-title h2', /Jo Park/
+    assert_select "a.chat-rail-room[href='#{team_chat_room_path(room)}']", /Jo Park/
+
+    third = User.create!(tenant: @tenant, email: 'third-admin@example.com', role: 'admin', password: 'password123', name: 'Tia Third')
+    post team_chat_messages_path(room), params: { body: '@Tia Third look', mention_ids: [third.id] }
+    assert_response :created
+    assert_not room.reload.members.include?(third), 'mentions never pull people into a DM'
+
+    delete logout_path
+    sign_in(third, password: 'password123')
+    get team_chat_room_path(room)
+    assert_response :not_found
+    post team_chat_dms_path, params: { user_id: manager.id }
+    assert_redirected_to team_chat_path
+  end
+
+  test 'typing shows to others for a few seconds and stops when the message is sent' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'general')
+    room.membership_for(other_admin).update!(typing_at: Time.current)
+    post team_chat_typing_path('general')
+    assert_response :no_content
+    get team_chat_messages_path('general'), as: :json
+    assert_equal ['Jo Park'], json['typing']
+    post team_chat_messages_path('general'), params: { body: 'sent' }, as: :json
+    assert_nil room.membership_for(@admin).reload.typing_at
+    travel 10.seconds
+    get team_chat_messages_path('general'), as: :json
+    assert_empty json['typing']
+  end
+
+  test 'you can edit your own messages only; edits are marked and drop stale mentions' do
+    other_admin
+    sign_in(@admin)
+    get team_chat_path
+    post team_chat_messages_path('general'), params: { body: '@Jo Park count shelf 3', mention_ids: [other_admin.id] }, as: :json
+    id = json['messages'].first['id']
+    patch team_chat_message_path('general', id), params: { body: 'Count shelf 4 please' }, as: :json
+    assert_response :success
+    edited = json['messages'].first
+    assert_equal 'Count shelf 4 please', edited['body']
+    assert edited['edited']
+    assert_empty edited['mentions']
+    patch team_chat_message_path('general', id), params: { body: '  ' }, as: :json
+    assert_response :unprocessable_entity
+
+    theirs = TeamChat::Room.find_by(slug: 'general').messages.create!(user: other_admin, body: 'mine')
+    patch team_chat_message_path('general', theirs.id), params: { body: 'hacked' }, as: :json
+    assert_response :forbidden
+  end
+
+  test 'room views carry the typing line, the DM picker and the full-width layout' do
+    other_admin
+    sign_in(@admin)
+    get team_chat_room_path(TeamChat::Room.ensure_defaults!(@admin))
+    assert_select '.chat-typing[data-team-chat-target=typing]'
+    assert_select "dialog[data-team-chat-target=newDm] form[action='#{team_chat_dms_path}']", 1
+    assert_select 'main#main.max-w-none'
+    get team_chat_dock_room_path('general')
+    assert_select 'turbo-frame#chat_dock .chat-typing'
+  end
+
+  test 'a file whose local copy was dropped is served from Google Drive, or a clear error' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'general')
+    message = room.messages.new(user: @admin, body: 'file')
+    file = message.attachments.build(room: room, filename: 'a.png', content_type: 'image/png', byte_size: PNG.bytesize, data: nil,
+      drive_status: 'stored', drive_file_id: 'drive-1', drive_md5: Digest::MD5.hexdigest(PNG))
+    message.save!
+    store = mock('drive store')
+    store.expects(:fetch).returns(PNG)
+    TeamChat::DriveStore.stubs(:new).returns(store)
+    get team_chat_attachment_path('general', file.id)
+    assert_response :success
+    assert_equal PNG, response.body
+
+    TeamChat::DriveStore.stubs(:new).raises(TeamChat::DriveStore::Error, 'not connected')
+    get team_chat_attachment_path('general', file.id)
+    assert_response :bad_gateway
+    assert_match(/Google Drive/, response.body)
+  end
 end

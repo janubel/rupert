@@ -22,7 +22,7 @@ module TeamChat
     has_many :replies, class_name: 'TeamChat::Message', foreign_key: :parent_id, inverse_of: :parent, dependent: :nullify
     has_many :attachments, class_name: 'TeamChat::Attachment', dependent: :delete_all
     # The same rows without their bytes, for listing.
-    has_many :attachment_infos, -> { select(:id, :message_id, :room_id, :filename, :content_type, :byte_size).order(:id) },
+    has_many :attachment_infos, -> { select(:id, :message_id, :room_id, :filename, :content_type, :byte_size, :drive_status, :drive_file_id).order(:id) },
       class_name: 'TeamChat::Attachment', inverse_of: false
     has_many :reactions, class_name: 'TeamChat::Reaction', dependent: :delete_all
     has_many :ratings, class_name: 'TeamChat::Rating', dependent: :delete_all
@@ -93,6 +93,8 @@ module TeamChat
     end
 
     def soft_delete!
+      drive_ids = attachments.where(drive_status: 'stored').pluck(:drive_file_id)
+      DriveTrashJob.perform_later(tenant_id, drive_ids) if drive_ids.any?
       transaction do
         attachments.delete_all
         reactions.delete_all
@@ -112,8 +114,17 @@ module TeamChat
         attachments: deleted? ? [] : attachment_infos.map { |attachment| attachment.as_payload(room) },
         mentions: mention_ids.filter_map { |id| { id: id, name: people[id] } if people[id] }, mentions_me: mention_ids.include?(viewer.id),
         reactions: reaction_summary(viewer), rating: rating_summary(viewer),
-        pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?)
+        pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?), edited: edited_at.present?
       }
+    end
+
+    # Changes the text of one's own message; mentions no longer in the text are dropped.
+    def edit_body!(text)
+      text = text.to_s.scrub('').gsub(AskRupert::Redactor::CONTROL, '').strip
+      raise ActiveRecord::RecordInvalid, self if text.blank? && attachment_infos.empty?
+
+      kept = mention_ids.select { |id| (name = User.find_by(id: id)&.display_name) && text.include?("@#{name}") }
+      update!(body: text.first(BODY_MAX), edited_at: Time.current, mentions: kept.presence)
     end
 
     # Pins or unpins this message as `user`. Pinning posts a short notice in the room.

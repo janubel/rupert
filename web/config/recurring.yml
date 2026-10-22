@@ -120,6 +120,10 @@ production:
     class: DataRetentionJob
     queue: default
     schedule: "40 3 * * * America/New_York"
+  team_chat_drive_sweep:
+    class: TeamChat::AttachmentDriveSweepJob
+    queue: default
+    schedule: "20 4 * * * America/New_York"
   ask_rupert_retention:
     class: AskRupertRetentionJob
     queue: default

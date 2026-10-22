@@ -16,7 +16,7 @@
     <div class="chat-dock-head">
       <%= link_to team_chat_dock_path, class: 'chat-dock-icon', title: 'All rooms', aria: { label: 'Back to all rooms' } do %>‹<% end %>
       <h2 class="chat-dock-title">
-        <% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true">R</span>Rupert<% else %><span class="chat-hash">#</span><%= @room.name %><% end %>
+        <% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true">R</span>Rupert<% elsif @room.dm? %><%= @room.display_name(Current.user) %><% else %><span class="chat-hash">#</span><%= @room.name %><% end %>
       </h2>
       <div class="chat-dock-tools">
         <%= link_to team_chat_room_path(@room), class: 'chat-dock-icon', title: 'Open in full team chat', aria: { label: 'Open in full team chat' }, data: { turbo_frame: '_top' } do %>⤢<% end %>
@@ -49,6 +49,7 @@
     </div>
 
     <form class="chat-compose" data-busy="false" data-team-chat-target="form" data-action="submit->team-chat#send dragover->team-chat#dragOver dragleave->team-chat#dragLeave drop->team-chat#drop">
+      <p class="chat-typing" data-team-chat-target="typing" aria-live="polite" hidden></p>
       <p class="chat-error" data-team-chat-target="notice" role="alert" hidden></p>
       <div class="chat-composer">
         <label for="chat-dock-input" class="sr-only">Message</label>
@@ -56,7 +57,7 @@
         <div class="chat-files" data-team-chat-target="files" hidden></div>
         <textarea id="chat-dock-input" class="chat-input" rows="1" maxlength="<%= TeamChat::Message::BODY_MAX %>" data-team-chat-target="input"
                   data-action="input->team-chat#input keydown->team-chat#keydown paste->team-chat#paste" autocomplete="off"
-                  placeholder="<%= @room.direct? ? 'Ask Rupert…' : "Message ##{@room.name}" %>"></textarea>
+                  placeholder="<%= @room.direct? ? 'Ask Rupert…' : "Message #{@room.dm? ? @room.display_name(Current.user) : "##{@room.name}"}" %>"></textarea>
         <div class="chat-composer-bar">
           <span class="chat-composer-hint"><%= @room.direct? ? 'Rupert answers every message here.' : '@ to mention · Enter sends' %></span>
           <span class="chat-composer-actions">

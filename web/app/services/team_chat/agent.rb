@@ -91,6 +91,8 @@ module TeamChat
       members = @room.members.where(active: true).limit(30).map(&:display_name)
       where = if @room.direct?
         "your direct room with #{@asker.display_name}; only they read it"
+      elsif @room.dm?
+        "a direct message between #{members.to_sentence}; only they read it"
       else
         "the ##{@room.name} room#{" (topic: #{@room.topic.to_s.first(200)})" if @room.topic.present?}. " \
           "People in it: #{members.to_sentence.presence || 'unknown'}. Everyone in it can read your reply"
