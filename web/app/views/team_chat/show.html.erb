@@ -60,7 +60,7 @@
       <span class="chat-avatar" aria-hidden="true"><%= my_initials %></span>
       <div class="chat-rail-user-text">
         <strong><%= me.display_name %></strong>
-        <span title="<%= @model.disclosure %>">Rupert: <%= @model.label %></span>
+        <span title="<%= @model.disclosure %>">Rupert: <%= @model.label %> · <%= link_to 'Model scores', team_chat_scores_path, class: 'underline' %></span>
       </div>
     </div>
   </aside>

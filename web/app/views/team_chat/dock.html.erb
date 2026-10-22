@@ -1,0 +1,24 @@
+<turbo-frame id="chat_dock">
+  <div class="chat-dock-head">
+    <h2 class="chat-dock-title">Team chat</h2>
+    <div class="chat-dock-tools">
+      <%= link_to team_chat_path, class: 'chat-dock-icon', title: 'Open full team chat', aria: { label: 'Open full team chat' }, data: { turbo_frame: '_top' } do %>⤢<% end %>
+      <button type="button" class="chat-dock-icon" data-action="chat-dock#close" title="Close" aria-label="Close team chat">✕</button>
+    </div>
+  </div>
+  <nav class="chat-dock-rooms" aria-label="Rooms">
+    <% @rooms.sort_by { |room| [room.direct? ? 0 : 1, -(room.last_message_at || room.created_at).to_i] }.each do |room| %>
+      <% unread = room.unread %>
+      <% mentions = room.mentions %>
+      <%= link_to team_chat_dock_room_path(room), class: "chat-dock-room #{'has-unread' if unread.positive? || mentions.positive?}", data: { chat_dock_room: room.slug } do %>
+        <% if room.direct? %>
+          <span class="chat-rail-bot" aria-hidden="true">R</span><span class="chat-dock-room-name">Rupert <small>direct</small></span>
+        <% else %>
+          <span class="chat-hash" aria-hidden="true">#</span><span class="chat-dock-room-name"><%= room.name %></span>
+        <% end %>
+        <% if mentions.positive? %><span class="chat-unread is-mention">@<%= mentions %></span><% elsif unread.positive? %><span class="chat-unread"><%= unread > 99 ? '99+' : unread %></span><% end %>
+      <% end %>
+    <% end %>
+  </nav>
+  <p class="chat-dock-foot">Mention <strong>@rupert</strong><%= ", #{TeamChat::LocalAgents.all.map { |agent| "@#{agent.handle}" }.join(', ')}" if TeamChat::LocalAgents.enabled? %> in any room to ask about the business. <%= link_to 'Model scores', team_chat_scores_path, data: { turbo_frame: '_top' }, class: 'underline' %></p>
+</turbo-frame>

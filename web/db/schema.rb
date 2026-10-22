@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_230000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -869,6 +869,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.index ["room_id", "parent_id", "id"], name: "index_chat_messages_on_room_id_and_parent_id_and_id"
     t.index ["room_id", "status"], name: "index_chat_messages_on_room_id_and_status"
     t.index ["room_id"], name: "index_chat_messages_on_room_id"
+  end
+
+  create_table "chat_ratings", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "message_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "value", null: false
+    t.string "agent", default: "rupert", null: false
+    t.string "model"
+    t.string "engine"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "user_id"], name: "index_chat_ratings_on_message_id_and_user_id", unique: true
+    t.index ["message_id"], name: "index_chat_ratings_on_message_id"
+    t.index ["tenant_id", "model"], name: "index_chat_ratings_on_tenant_id_and_model"
   end
 
   create_table "chat_reactions", force: :cascade do |t|
@@ -3334,6 +3349,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
   add_foreign_key "chat_attachments", "chat_rooms", column: "room_id"
   add_foreign_key "chat_memberships", "chat_rooms", column: "room_id"
   add_foreign_key "chat_messages", "chat_rooms", column: "room_id"
+  add_foreign_key "chat_ratings", "chat_messages", column: "message_id"
   add_foreign_key "chat_reactions", "chat_messages", column: "message_id"
   add_foreign_key "clock_corrections", "clock_shifts"
   add_foreign_key "clock_corrections", "tenants"

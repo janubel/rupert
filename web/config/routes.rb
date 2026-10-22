@@ -199,12 +199,17 @@ Rails.application.routes.draw do
   # Team chat: rooms inside Rupert with the @rupert assistant (docs/ops/team-chat.md).
   get    '/chat',                                     to: 'team_chat#index',           as: :team_chat
   post   '/chat/rooms',                               to: 'team_chat#create_room',     as: :team_chat_rooms
+  get    '/chat/dock',                                to: 'team_chat#dock',            as: :team_chat_dock
+  get    '/chat/unread',                              to: 'team_chat#unread',          as: :team_chat_unread
+  get    '/chat/models',                              to: 'team_chat#scores',          as: :team_chat_scores
+  get    '/chat/:room/dock',                          to: 'team_chat#dock_room',       as: :team_chat_dock_room
   get    '/chat/:room',                               to: 'team_chat#show',            as: :team_chat_room
   patch  '/chat/:room',                               to: 'team_chat#update_room'
   get    '/chat/:room/messages',                      to: 'team_chat#messages',        as: :team_chat_messages
   post   '/chat/:room/messages',                      to: 'team_chat#create_message'
   delete '/chat/:room/messages/:id',                  to: 'team_chat#destroy_message', as: :team_chat_message
   post   '/chat/:room/messages/:id/reactions',        to: 'team_chat#react',           as: :team_chat_reactions
+  post   '/chat/:room/messages/:id/rating',           to: 'team_chat#rate',            as: :team_chat_rating
   get    '/chat/:room/files/:id',                     to: 'team_chat#attachment',      as: :team_chat_attachment
   post   '/chat/:room/messages/:id/actions/:action_id', to: 'team_chat#decide',        as: :team_chat_action
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
