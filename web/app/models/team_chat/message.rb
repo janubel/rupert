@@ -22,7 +22,7 @@ module TeamChat
     has_many :replies, class_name: 'TeamChat::Message', foreign_key: :parent_id, inverse_of: :parent, dependent: :nullify
     has_many :attachments, class_name: 'TeamChat::Attachment', dependent: :delete_all
     # The same rows without their bytes, for listing.
-    has_many :attachment_infos, -> { select(:id, :message_id, :room_id, :filename, :content_type, :byte_size).order(:id) },
+    has_many :attachment_infos, -> { select(:id, :message_id, :room_id, :filename, :content_type, :byte_size, :drive_status, :drive_file_id).order(:id) },
       class_name: 'TeamChat::Attachment', inverse_of: false
     has_many :reactions, class_name: 'TeamChat::Reaction', dependent: :delete_all
     has_many :ratings, class_name: 'TeamChat::Rating', dependent: :delete_all
@@ -93,6 +93,8 @@ module TeamChat
     end
 
     def soft_delete!
+      drive_ids = attachments.where(drive_status: 'stored').pluck(:drive_file_id)
+      DriveTrashJob.perform_later(tenant_id, drive_ids) if drive_ids.any?
       transaction do
         attachments.delete_all
         reactions.delete_all

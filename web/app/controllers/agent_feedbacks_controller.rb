@@ -25,7 +25,7 @@ class AgentFeedbacksController < AuthenticatedController
     @issues = AgentToolIssue.order(last_seen_at: :desc).limit(100).to_a
     @issue_totals = AgentToolIssue.group(:tool_name).sum(:occurrences).sort_by { |_tool, count| -count }
     respond_to do |format|
-      format.html { @pagy, @feedbacks = pagy(scope.newest_first, items: 50) }
+      format.html { @pagy, @feedbacks = pagy(:offset, scope.newest_first, limit: 50) }
       format.csv do
         log_export('AI assistant feedback CSV', @filters.compact_blank.map { |key, value| "#{key}=#{value}" }.join(' ').presence)
         send_data(csv(scope.newest_first.limit(CSV_LIMIT)), filename: "ai-feedback-#{Date.current.iso8601}.csv", type: 'text/csv')

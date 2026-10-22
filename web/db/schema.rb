@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_234500) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_235500) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -831,11 +831,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_234500) do
     t.string "filename", null: false
     t.string "content_type", null: false
     t.integer "byte_size", default: 0, null: false
-    t.binary "data", null: false
+    t.binary "data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "drive_file_id"
+    t.string "drive_status"
+    t.string "drive_md5"
+    t.datetime "drive_stored_at"
+    t.string "drive_error"
     t.index ["message_id"], name: "index_chat_attachments_on_message_id"
     t.index ["room_id"], name: "index_chat_attachments_on_room_id"
+    t.index ["tenant_id", "drive_status"], name: "index_chat_attachments_on_tenant_id_and_drive_status"
   end
 
   create_table "chat_memberships", force: :cascade do |t|
@@ -914,6 +920,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_234500) do
     t.datetime "archived_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "drive_folder_id"
     t.index ["tenant_id", "kind", "created_by_id"], name: "index_chat_rooms_on_tenant_id_and_kind_and_created_by_id"
     t.index ["tenant_id", "slug"], name: "index_chat_rooms_on_tenant_id_and_slug", unique: true
   end

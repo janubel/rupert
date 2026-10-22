@@ -166,7 +166,13 @@
             </span>
           </div>
         </div>
-        <p class="chat-disclosure"><%= @model.disclosure %></p>
+        <p class="chat-disclosure"><%= @model.disclosure %>
+          <% if TeamChat::DriveStore.available? %>
+            Files are saved to your Google Drive (<%= TeamChat::DriveStore.connection.account_email %>), in “Rupert Team Chat”.
+          <% elsif RetentionDrive.configured? && Current.user.can?('settings.write') %>
+            Files are kept in Rupert. <%= link_to 'Connect Google Drive', retention_drive_path, class: 'underline' %> to keep them in your own Drive.
+          <% end %>
+        </p>
       </form>
     </section>
   </main>

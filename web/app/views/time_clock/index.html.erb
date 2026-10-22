@@ -35,7 +35,7 @@
       </article>
     <% end %>
     <% if @shifts.empty? %><div class="card empty-state"><p class="empty-state-title">No shifts yet</p><p class="empty-state-hint">Your shifts appear here after you clock in.</p></div><% end %>
-    <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+    <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
   </section>
 
   <% if @pending_corrections %><section class="space-y-3"><h2 class="font-display text-xl">Pending correction review</h2><p class="text-xs text-taupe">Up to 100 pending requests shown. Approval records the reviewer and original values. A request becomes stale if the shift changes before approval.</p>

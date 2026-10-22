@@ -47,7 +47,7 @@ module People
         @ctrax_next_slot = Time.current.beginning_of_hour + 2.minutes
         @ctrax_next_slot += 15.minutes while @ctrax_next_slot <= Time.current
       end
-      @pagy, @shifts = pagy(scope.order(started_at: :desc, id: :desc).includes(:employee), items: 30)
+      @pagy, @shifts = pagy(:offset, scope.order(started_at: :desc, id: :desc).includes(:employee), limit: 30)
     rescue Date::Error
       redirect_to people_ctrax_timesheets_path, alert: 'Choose valid dates.'
     end

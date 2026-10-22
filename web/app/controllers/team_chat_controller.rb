@@ -103,7 +103,11 @@ class TeamChatController < AuthenticatedController
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Content-Security-Policy'] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
     response.headers['Cache-Control'] = 'private, max-age=86400'
-    send_data file.data, type: file.content_type, filename: file.filename, disposition: file.image? || file.content_type == 'application/pdf' ? 'inline' : 'attachment'
+    bytes = file.data || TeamChat::DriveStore.new.fetch(file)
+    send_data bytes, type: file.content_type, filename: file.filename, disposition: file.image? || file.content_type == 'application/pdf' ? 'inline' : 'attachment'
+  rescue TeamChat::DriveStore::Error, Google::Apis::Error, Signet::AuthorizationError => e
+    Rails.logger.warn("[TeamChat::Drive] fetch failed: #{e.class}")
+    render plain: 'This file is kept in Google Drive and could not be fetched right now. Try again in a moment.', status: :bad_gateway
   end
 
   # POST /chat/:room/messages/:id/reactions { emoji } — adds or removes yours.

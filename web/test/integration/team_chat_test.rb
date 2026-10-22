@@ -458,4 +458,25 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_dock_room_path('general')
     assert_select 'turbo-frame#chat_dock .chat-typing'
   end
+
+  test 'a file whose local copy was dropped is served from Google Drive, or a clear error' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'general')
+    message = room.messages.new(user: @admin, body: 'file')
+    file = message.attachments.build(room: room, filename: 'a.png', content_type: 'image/png', byte_size: PNG.bytesize, data: nil,
+      drive_status: 'stored', drive_file_id: 'drive-1', drive_md5: Digest::MD5.hexdigest(PNG))
+    message.save!
+    store = mock('drive store')
+    store.expects(:fetch).returns(PNG)
+    TeamChat::DriveStore.stubs(:new).returns(store)
+    get team_chat_attachment_path('general', file.id)
+    assert_response :success
+    assert_equal PNG, response.body
+
+    TeamChat::DriveStore.stubs(:new).raises(TeamChat::DriveStore::Error, 'not connected')
+    get team_chat_attachment_path('general', file.id)
+    assert_response :bad_gateway
+    assert_match(/Google Drive/, response.body)
+  end
 end

@@ -415,7 +415,20 @@ export default class extends Controller {
         size.textContent = this.constructor.fileSize(file.size)
         link.append(icon, name, size)
       }
-      holder.append(link)
+      if (file.drive_url) {
+        const wrap = document.createElement("span")
+        wrap.className = "chat-attachment"
+        const drive = document.createElement("a")
+        drive.className = "chat-attachment-drive"
+        drive.href = file.drive_url
+        drive.target = "_blank"
+        drive.rel = "noopener noreferrer"
+        drive.textContent = "Open in Google Drive"
+        wrap.append(link, drive)
+        holder.append(wrap)
+      } else {
+        holder.append(link)
+      }
     })
     return holder
   }

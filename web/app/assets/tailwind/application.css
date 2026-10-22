@@ -1711,3 +1711,6 @@ body.tour-active { overflow-x:hidden; }
 .chat-app { height:calc(100dvh - 8.75rem); }
 /* Tailwind's reset removes the browser's centring of modal dialogs. */
 .chat-dialog { margin:auto; }
+/* Team chat: files kept in Google Drive. */
+.chat-attachment { display:inline-flex;flex-direction:column;align-items:flex-start;gap:.15rem; }
+.chat-attachment-drive { font-size:.68rem;font-weight:650;color:var(--color-olive-deep);text-decoration:underline;text-underline-offset:2px; }

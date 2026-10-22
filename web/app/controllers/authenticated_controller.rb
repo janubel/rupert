@@ -5,9 +5,18 @@
 # module registry.
 class AuthenticatedController < ApplicationController
   include Pundit::Authorization
-  include Pagy::Backend
+  include Pagy::Method
 
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
+
+  # Pagy 43 removed the legacy :last_page overflow option. Preserve the app's
+  # existing behavior by retrying an out-of-range request at that paginator's
+  # last page, without redirecting or discarding active filters.
+  def pagy(paginator, collection, **options)
+    super
+  rescue Pagy::RangeError => error
+    super(paginator, collection, **options.merge(page: error.pagy.last))
+  end
 
   private
 

@@ -7,6 +7,6 @@
   <section class="card overflow-x-auto"><table class="w-full text-sm"><thead><tr><% [['Exact variant', 'native_id'], ['Material', nil], ['Grams per unit', 'recipe'], ['Version / effective time', nil], ['Recorded by', nil]].each do |label, term| %><th class="th" scope="col"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
     <tbody class="divide-y divide-fog"><% @recipes.each do |recipe| %><tr><td class="td"><%= recipe.catalog_title %><br><span class="font-mono text-xs"><%= recipe.source_variant_id %></span><br><%= recipe.catalog_sku.presence || 'No SKU' %></td><td class="td"><%= link_to recipe.bulk_material.name, bulk_material_path(recipe.bulk_material) %></td><td class="td"><%= number_with_precision(recipe.grams, precision: 3, strip_insignificant_zeros: true) %></td><td class="td">v<%= recipe.version %><br><%= recipe.effective_from.iso8601 %></td><td class="td"><%= recipe.created_by %></td></tr><% end %>
     <% if @recipes.empty? %><tr><td colspan="5" class="td py-8">No recipes yet. Create a material and its lot receipts, then map an exact variant.</td></tr><% end %></tbody></table></section>
-  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
   <div class="flex gap-3"><%= link_to 'Bulk materials', bulk_materials_path, class: 'btn-ghost' %><%= link_to 'Review sale material use', bulk_consumptions_path, class: 'btn-ghost' %></div>
 </div>

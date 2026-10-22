@@ -24,7 +24,7 @@ module People
       @employees = @employees.where(user_id: nil) if params[:login] == 'missing'
       @employees = @employees.where.not(user_id: nil) if params[:login] == 'linked'
       @missing_logins = People::Employee.active.where(user_id: nil).count
-      @pagy, @employees = pagy(@employees.includes(:department, :position, :user, :source_identities).order(:id), items: 50)
+      @pagy, @employees = pagy(:offset, @employees.includes(:department, :position, :user, :source_identities).order(:id), limit: 50)
       @by_department = People::Employee.active.group(:department_id).count
       @pending_leave = People::LeaveRequest.pending.count if Current.user.can?('leave.read')
       @awaiting_timesheets = People::Timesheet.awaiting_review.count if Current.user.can?('timesheets.read')
