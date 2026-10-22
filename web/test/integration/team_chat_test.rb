@@ -597,4 +597,59 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_scores_path
     assert_select 'li', /Wrong total, ignored refunds/
   end
+
+  test 'replying quotes a message, and replying to a bot asks that bot again' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'admins')
+    asked = room.messages.create!(user: @admin, body: 'How were sales?')
+    answer = room.messages.create!(author_kind: 'assistant', status: 'done', body: 'Two orders, $214.83.',
+      meta: { 'asked_by' => @admin.id, 'trigger_id' => asked.id })
+
+    post team_chat_messages_path('admins'), params: { body: 'Nice, thanks', quote_id: asked.id }, as: :json
+    assert_response :created
+    assert_equal 1, json['messages'].size, 'quoting a person does not wake a bot'
+    quote = json['messages'].first['quote']
+    assert_equal asked.id, quote['id']
+    assert_equal @admin.display_name, quote['author']
+    assert_equal 'How were sales?', quote['excerpt']
+    assert_equal @admin.email, json['messages'].first['author']['email']
+
+    assert_enqueued_jobs 1, only: TeamChat::ReplyJob do
+      post team_chat_messages_path('admins'), params: { body: 'And refunds?', quote_id: answer.id }, as: :json
+    end
+    reply = TeamChat::Message.find(json['messages'].last['id'])
+    assert_equal ['assistant', nil], [reply.author_kind, reply.meta['agent']]
+
+    get team_chat_messages_path('admins'), as: :json
+    row = json['messages'].find { |message| message['body'] == 'And refunds?' }
+    assert_equal answer.id, row['quote']['id']
+
+    other = TeamChat::Room.create!(name: 'elsewhere', slug: 'elsewhere', kind: 'channel', created_by: @admin)
+    foreign = other.messages.create!(user: @admin, body: 'not here')
+    post team_chat_messages_path('admins'), params: { body: 'x', quote_id: foreign.id }, as: :json
+    assert_response :unprocessable_entity
+  end
+
+  test 'Media lists the room photos and files and searches them' do
+    sign_in(@admin)
+    get team_chat_path
+    post team_chat_messages_path('admins'), params: { body: 'shelf photo', files: [upload(PNG, 'shelf.png', 'image/png')] }
+    post team_chat_messages_path('admins'), params: { body: 'weekly counts', files: [upload("a,b\n1,2\n", 'counts.csv', 'text/csv')] }
+
+    get team_chat_media_path('admins'), as: :json
+    assert_response :success
+    assert_equal %w[counts.csv shelf.png], json['items'].pluck('name')
+    assert_equal @admin.email, json['items'].first['email']
+
+    get team_chat_media_path('admins', kind: 'images'), as: :json
+    assert_equal %w[shelf.png], json['items'].pluck('name')
+    get team_chat_media_path('admins', q: 'WEEKLY'), as: :json
+    assert_equal %w[counts.csv], json['items'].pluck('name')
+    get team_chat_media_path('admins', q: 'nothing like this'), as: :json
+    assert_empty json['items']
+
+    get team_chat_room_path('admins')
+    assert_select '.chat-tab[data-tab="media"]'
+  end
 end

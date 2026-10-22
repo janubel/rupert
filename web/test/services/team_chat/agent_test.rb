@@ -73,6 +73,39 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     assert_raises(TeamChat::Actions::Denied) { TeamChat::Actions.decide!(reply, action['id'], user: @user, approve: true) }
   end
 
+  test 'assigning a task from chat proposes update_task for the right person and mentions them when approved' do
+    jan = User.create!(tenant: @tenant, email: 'jan.tester@example.com', name: 'Jan Tester', role: @user.role, password: 'password123')
+    task = Projects::Task.create!(title: 'Count the tea shelf', priority: 'medium')
+    script_model({ tool: 'update_task', arguments: { task_id: task.id, assignee: 'Jan', due_on: '2026-10-30', priority: 'high' } },
+      { text: 'Proposed: give it to Jan for Friday.' })
+    reply = ask('@rupert assign the tea shelf count to Jan, due Friday, high priority')
+    TeamChat::Agent.new(reply, config: team_chat_config).run
+
+    action = reply.reload.actions_list.first
+    assert_equal 'proposed', action['status']
+    assert_equal "Task ##{task.id} “Count the tea shelf”: assign to Jan Tester, priority high, due 2026-10-30", action['summary']
+    assert_equal 'jan.tester@example.com', action.dig('arguments', 'assignee')
+    assert_nil task.reload.assignee_id
+
+    TeamChat::Actions.decide!(reply, action['id'], user: @user, approve: true)
+    task.reload
+    assert_equal [jan.id.to_s, 'high', Date.new(2026, 10, 30)], [task.assignee_id, task.priority, task.due_on]
+    notice = @room.messages.where(author_kind: 'system').last
+    assert_match(/approved: Updated task ##{task.id}/, notice.body)
+    assert_equal [jan.id], notice.mention_ids
+  end
+
+  test 'a name that matches two people is sent back to the model to ask which one' do
+    2.times { |index| User.create!(tenant: @tenant, email: "sam#{index}@example.com", name: 'Sam Twin', role: @user.role, password: 'password123') }
+    requests = script_model({ tool: 'create_task', arguments: { title: 'Restock', assignee: 'Sam Twin' } }, { text: 'Which Sam?' })
+    reply = ask('@rupert make a restock task for Sam Twin')
+    TeamChat::Agent.new(reply, config: team_chat_config).run
+
+    assert_empty reply.reload.actions_list
+    tool_message = requests.last['messages'].find { |message| message['role'] == 'tool' }
+    assert_match(/matches 2 people: Sam Twin \(sam0@…\), Sam Twin \(sam1@…\)/, tool_message['content'])
+  end
+
   test 'a dismissed proposal runs nothing' do
     script_model({ tool: 'create_task', arguments: { title: 'Nope' } }, { text: 'Proposed.' })
     reply = ask('@rupert task please')

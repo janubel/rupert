@@ -216,6 +216,7 @@ Rails.application.routes.draw do
   post   '/chat/:room/messages/:id/rating/reason',    to: 'team_chat#rating_reason',   as: :team_chat_rating_reason
   post   '/chat/:room/messages/:id/pin',              to: 'team_chat#pin',             as: :team_chat_pin
   get    '/chat/:room/files/:id',                     to: 'team_chat#attachment',      as: :team_chat_attachment
+  get    '/chat/:room/media',                         to: 'team_chat#media',           as: :team_chat_media
   post   '/chat/:room/messages/:id/actions/:action_id', to: 'team_chat#decide',        as: :team_chat_action
 
   # Buzz was retired for team chat; old bookmarks land in team chat.

@@ -63,6 +63,9 @@ module TeamChat
 
     def mention_ids = Array(mentions).map(&:to_i)
 
+    # The message this one replies to in the room ("Replying to …"), when it quotes one.
+    def quote_id = (meta.to_h['quote_id'].presence&.to_i if person?)
+
     def stale?
       pending? && created_at < STALE_AFTER.ago
     end
@@ -103,11 +106,11 @@ module TeamChat
     end
 
     # What the browser may see. Actions are server-built, never raw model output.
-    # people: { user_id => name } for the mentions.
-    def as_payload(viewer:, reply_counts: {}, people: {})
+    # people: { user_id => name } for the mentions; quotes: { id => Message } for quoted messages.
+    def as_payload(viewer:, reply_counts: {}, people: {}, quotes: {})
       {
         id: id, parent_id: parent_id, kind: author_kind, status: status, activity: (activity if pending?),
-        author: { name: author_name, initials: author_initials, color: author_color, user_id: user_id, agent: local_agent&.handle },
+        author: { name: author_name, initials: author_initials, color: author_color, user_id: user_id, agent: local_agent&.handle, email: (user&.email if person?) },
         body: deleted? ? '' : body.to_s, deleted: deleted?, created_at: created_at.iso8601, updated_at: updated_at.iso8601,
         reply_count: reply_counts[id].to_i, mine: person? && user_id == viewer.id,
         actions: deleted? ? [] : actions_list.map { |action| action.slice('id', 'tool', 'title', 'summary', 'status', 'decided_by', 'result') },
@@ -115,7 +118,8 @@ module TeamChat
         mentions: mention_ids.filter_map { |id| { id: id, name: people[id] } if people[id] }, mentions_me: mention_ids.include?(viewer.id),
         reactions: reaction_summary(viewer), rating: rating_summary(viewer),
         pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?), edited: edited_at.present?,
-        answer: answer_timing, compare_of: (meta.to_h['compare_of'] if assistant?)
+        answer: answer_timing, compare_of: (meta.to_h['compare_of'] if assistant?),
+        quote: (quotes[quote_id]&.quote_payload if quote_id && !deleted?)
       }
     end
 
@@ -155,9 +159,14 @@ module TeamChat
 
     # A one-line preview for pin banners and notices.
     def excerpt(length = 140)
-      text = body.to_s.gsub(/\s+/, ' ').strip
+      text = body.to_s.gsub(/\[([^\]]+)\]\([^)\s]+\)/, '\\1').gsub(/\*\*|`/, '').gsub(/\s+/, ' ').strip
       text = "📎 #{attachment_infos.map(&:filename).first(2).join(', ')}" if text.blank? && attachment_infos.any?
       text.length > length ? "#{text.first(length - 1)}…" : text
+    end
+
+    # The short "Replying to" preview shown above a reply.
+    def quote_payload
+      { id: id, parent_id: parent_id, author: author_name, excerpt: deleted? ? 'This message was deleted.' : excerpt(120), deleted: deleted? }
     end
 
     def pin_payload

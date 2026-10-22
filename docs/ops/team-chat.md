@@ -32,10 +32,15 @@ rows survives deploys.
   tasks, alerts, uploads, history, system health). They run in-process **as the
   person who asked**, with that person's permissions. Contact details are removed
   before the model sees results.
-- **Propose changes:** `create_task` and `submit_feedback` save an action card on
-  the reply. Nothing happens until someone allowed to make that change presses
+- **Propose changes:** `create_task`, `update_task` and `submit_feedback` save an
+  action card on the reply; nothing changes until someone allowed to make it presses
   **Approve**. It then runs as that person, and Rupert posts a notice saying what
-  happened. Dismiss runs nothing.
+  happened. People ask in plain words ("assign the tea shelf count to Jan, due
+  Friday", "move it to done"): the bot finds the task with `list_tasks`, and
+  `Mcp::Assignee` turns a name, email, "me" or "nobody" into one active person
+  before the card is shown (a name shared by two people goes back to the bot to ask
+  which one; the card pins that person by email). When the change gives the task
+  to someone who uses team chat, the notice mentions them.
 - **Context:** the last 30 room messages, or the whole thread when asked in a
   thread. Messages are passed as "Name: text" and treated as untrusted data.
 
@@ -195,3 +200,15 @@ containers yet.
 
 - Every bot reply shows its time and model, for example "4s · deepseek-v4.1-flash · cloud".
 - Replies from the old handles still show proper names: @lfm shows as Liquid and @bonsai as Ternary. @deepseek and @gemma are retired as handles.
+
+## Replies, Media and people (2026-10-22)
+
+- **↩ Reply** quotes a message (in the room or in a thread). The quoted id lives in
+  `meta['quote_id']` on the person's message; the payload carries a short `quote`
+  preview. Replying to a bot's answer without naming a bot asks that bot again, and
+  the bot sees "(replying to …)" in its context. **💬 Thread** opens the side thread.
+- **Media** tab (`GET /chat/:room/media.json?q=&kind=images|files&before=`): the
+  room's photos and files, newest first, searchable by file name, message text and
+  poster name or email; "Show in chat" jumps to the message (or its thread).
+- Hovering a person shows their email (two accounts can share a name); @
+  suggestions and the direct-message list show it too.

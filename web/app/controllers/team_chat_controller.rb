@@ -9,6 +9,7 @@
 # so polling local rows is the simplest thing that survives deploys.
 class TeamChatController < AuthenticatedController
   PAGE = 50
+  MEDIA_PAGE = 60
   CHANGED_MAX = 200
 
   before_action :require_access
@@ -89,7 +90,7 @@ class TeamChatController < AuthenticatedController
   # POST /chat/:room/messages { body, parent_id }
   def create_message
     result = TeamChat::Post.call(room: @room, user: Current.user, body: params[:body], parent_id: params[:parent_id],
-      files: params[:files], mention_ids: params[:mention_ids])
+      files: params[:files], mention_ids: params[:mention_ids], quote_id: params[:quote_id])
     render json: { messages: payload([result.message, *result.replies].compact) }, status: :created
   rescue TeamChat::Post::Invalid => e
     render json: { error: e.message }, status: :unprocessable_entity
@@ -108,6 +109,29 @@ class TeamChatController < AuthenticatedController
   rescue TeamChat::DriveStore::Error, Google::Apis::Error, Signet::AuthorizationError => e
     Rails.logger.warn("[TeamChat::Drive] fetch failed: #{e.class}")
     render plain: 'This file is kept in Google Drive and could not be fetched right now. Try again in a moment.', status: :bad_gateway
+  end
+
+  # GET /chat/:room/media.json?q=&kind=all|images|files&before=<id>
+  # The room's photos and files, newest first, searchable by file name, message text or poster.
+  def media
+    columns = (TeamChat::Attachment.column_names - ['data']).map { |name| "chat_attachments.#{name}" }
+    scope = TeamChat::Attachment.select(columns).where(room_id: @room.id)
+                                .joins(:message).where(chat_messages: { deleted_at: nil })
+    scope = scope.where(content_type: TeamChat::Attachment::IMAGE_TYPES) if params[:kind] == 'images'
+    scope = scope.where.not(content_type: TeamChat::Attachment::IMAGE_TYPES) if params[:kind] == 'files'
+    scope = scope.where(id: ...params[:before].to_i) if params[:before].present?
+    if (query = params[:q].to_s.strip.first(80)).present?
+      like = "%#{TeamChat::Attachment.sanitize_sql_like(query.downcase)}%"
+      scope = scope.joins('LEFT JOIN users ON users.id = chat_messages.user_id')
+                   .where('LOWER(chat_attachments.filename) LIKE :q OR LOWER(chat_messages.body) LIKE :q OR LOWER(users.name) LIKE :q OR LOWER(users.email) LIKE :q', q: like)
+    end
+    rows = scope.preload(message: :user).order(id: :desc).limit(MEDIA_PAGE + 1).to_a
+    items = rows.first(MEDIA_PAGE).map do |file|
+      message = file.message
+      file.as_payload(@room).merge(message_id: message.id, parent_id: message.parent_id, created_at: file.created_at.iso8601,
+        author: message.author_name, email: (message.user&.email if message.person?), excerpt: message.body.to_s.squish.first(120))
+    end
+    render json: { items: items, has_more: rows.size > MEDIA_PAGE }
   end
 
   # POST /chat/:room/messages/:id/reactions { emoji } — adds or removes yours.
@@ -257,7 +281,7 @@ class TeamChatController < AuthenticatedController
   end
 
   def mentionable_people
-    TeamChat::Post.mentionable.reject { |person| person.id == Current.user.id }.map { |person| { id: person.id, name: person.display_name } }
+    TeamChat::Post.mentionable.reject { |person| person.id == Current.user.id }.map { |person| { id: person.id, name: person.display_name, email: person.email } }
   end
 
   def rail_rooms
@@ -284,7 +308,9 @@ class TeamChatController < AuthenticatedController
     counts = @room.messages.visible.where(parent_id: roots).group(:parent_id).count
     ids = rows.flat_map(&:mention_ids).uniq
     people = ids.any? ? User.where(id: ids, tenant_id: Current.tenant_id).to_h { |user| [user.id, user.display_name] } : {}
-    rows.sort_by(&:id).map { |row| row.as_payload(viewer: Current.user, reply_counts: counts, people: people) }
+    quote_ids = rows.filter_map(&:quote_id).uniq
+    quotes = quote_ids.any? ? @room.messages.includes(:user, :attachment_infos).where(id: quote_ids).index_by(&:id) : {}
+    rows.sort_by(&:id).map { |row| row.as_payload(viewer: Current.user, reply_counts: counts, people: people, quotes: quotes) }
   end
 
   def mark_read(rows)
