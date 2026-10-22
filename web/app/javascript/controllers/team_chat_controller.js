@@ -638,7 +638,7 @@ export default class extends Controller {
     who.textContent = `Replying to ${message.author.name}`
     const text = document.createElement("span")
     text.className = "chat-quote-bar-text"
-    const plain = (message.body || "").replace(/\s+/g, " ").trim() || (message.attachments?.length ? `📎 ${message.attachments[0].name}` : "")
+    const plain = (message.body || "").replace(/\[([^\]]+)\]\([^)\s]+\)/g, "$1").replace(/\*\*|`/g, "").replace(/\s+/g, " ").trim() || (message.attachments?.length ? `📎 ${message.attachments[0].name}` : "")
     text.textContent = plain.length > 90 ? `${plain.slice(0, 89)}…` : plain
     label.append(who, text)
     const hint = document.createElement("span")

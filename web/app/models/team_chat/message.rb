@@ -159,7 +159,7 @@ module TeamChat
 
     # A one-line preview for pin banners and notices.
     def excerpt(length = 140)
-      text = body.to_s.gsub(/\s+/, ' ').strip
+      text = body.to_s.gsub(/\[([^\]]+)\]\([^)\s]+\)/, '\\1').gsub(/\*\*|`/, '').gsub(/\s+/, ' ').strip
       text = "📎 #{attachment_infos.map(&:filename).first(2).join(', ')}" if text.blank? && attachment_infos.any?
       text.length > length ? "#{text.first(length - 1)}…" : text
     end
