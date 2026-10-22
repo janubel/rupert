@@ -35,7 +35,7 @@ module TeamChat
     }
 
     MAIN_SLUG = 'admins'
-    MAIN_TOPIC = 'All admins, with Rupert. Mention @rupert, or a local model (@liquid, @qwen, @gemma, @ternary), to ask about the business.'
+    MAIN_TOPIC = 'All admins, with Rupert. Mention @rupert, or a local model (@liquid, @qwen, @gemma), to ask about the business.'
 
     # #admins holds every person who can use team chat, plus Rupert. (It was #general;
     # an existing #general is renamed in place, so its history and links carry over.)

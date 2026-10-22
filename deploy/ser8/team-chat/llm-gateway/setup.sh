@@ -18,7 +18,6 @@ fetch() { # repo file sha
   echo "$3  $dest.part" | sha256sum -c --quiet
   mv "$dest.part" "$dest"; chown llm:llm "$dest"; echo "got $2"
 }
-fetch prism-ml/Ternary-Bonsai-2-9B-gguf Ternary-Bonsai-2-9B-PQ2_0.gguf 7a89ab48f5038c704480f60781f9b8d4035351f5f6beb7d11fad80001fde23f9
 fetch LiquidAI/LFM2.5-8B-A1B-GGUF LFM2.5-8B-A1B-Q4_K_M.gguf 4923ec14f06b968b74d663e5949867d2d9c3bf13a20b8be1a9f9af39989b2bb0
 fetch google/gemma-4-E4B-it-qat-q4_0-gguf gemma-4-E4B_q4_0-it.gguf 676c35070db6dbe52f93e9c864ee0fba4eddea94b9c875d9cb10daff453fbaee
 ls -la /var/lib/rupert-llm/models
