@@ -302,3 +302,24 @@ Work top down. Answer each question in order; the answers decide the markup.
 - **A new template**: §4 first, then an example in the style guide, then the first page.
 - Tests that pin the structure live in `web/test/integration/compact_navigation_test.rb`,
   `module_nav_test.rb`, `page_header_pages_test.rb` and `web/test/models/module_registry_groups_test.rb`.
+
+## 13. Future directions (agreed with the owner, not yet built)
+
+These extend the same backbone. Build them from the registry and the templates, not beside them.
+
+- **Sections drive more than navigation.** `ModuleRegistry` sections are the one list of
+  what the business does. The same list should drive page guides (`PageGuides`), lessons
+  (`LearningCatalog`), and the Buzz team chat: one channel per section
+  (`#bookkeeping`, `#sell`, `#stock`, `#team`, …) with a persona file per section
+  (`config/buzz_agent/<section>.md`) so the bookkeeping channel answers like a bookkeeper
+  and the team channel like an HR lead, on top of the general Rupert persona.
+- **Training as its own section.** Schedules (annual to-dos, recurring courses), assignments
+  and completion tracking, where Rupert's own onboarding lessons are the first course: use
+  Rupert to train on Rupert and monitor it in Rupert. Today's pieces (Learn Rupert, Training
+  progress) are the seed.
+- **Source consolidation.** Replace source-named modules (C-Trax daily close, SwipeSimple
+  daily close, SwipeSimple items, Square history, C-Trax history, QuickBooks import) with one
+  business page each and the source as a tab or filter (§0, business first).
+- **Reports and money as the showcase.** Cash flow, statements, forecasts and projections are
+  where the owner looks every day; they get the most design effort, the richest charts and the
+  clearest explanations of any screens in the app.
