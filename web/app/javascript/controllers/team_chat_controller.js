@@ -434,6 +434,7 @@ export default class extends Controller {
     }
     main.append(body)
 
+    if (!message.deleted && message.unverified?.length) main.append(this.unverifiedNode(message.unverified))
     if (!message.deleted && message.attachments?.length) main.append(this.attachmentsNode(message.attachments))
     ;(message.actions || []).forEach((action) => main.append(this.actionNode(message, action)))
     if (message.reactions?.length) main.append(this.reactionsNode(message))
@@ -579,6 +580,21 @@ export default class extends Controller {
       return this.flash(this.threadLogTarget.querySelector(`[data-id="${item.message_id}"]`))
     }
     this.jumpToMessage(item.message_id)
+  }
+
+  // A bot answer quoted figures that are not in the data its tools returned.
+  unverifiedNode(figures) {
+    const note = document.createElement("p")
+    note.className = "chat-unverified"
+    note.setAttribute("role", "note")
+    note.title = "Rupert compares every $ amount and % in a bot answer with the data its tools returned. These were not found there: the bot may have calculated or made them up."
+    const icon = document.createElement("span")
+    icon.setAttribute("aria-hidden", "true")
+    icon.textContent = "⚠"
+    const text = document.createElement("span")
+    text.textContent = `Not found in Rupert's data: ${figures.join(", ")}. Check before relying on ${figures.length === 1 ? "it" : "them"}.`
+    note.append(icon, text)
+    return note
   }
 
   // "Name · email" on hover, so two people with the same name can be told apart.

@@ -23,7 +23,7 @@ module TeamChat
 
     Definition = Struct.new(:name, :description, :schema, :kind, :activity, keyword_init: true)
 
-    attr_reader :calls, :tools_used
+    attr_reader :calls, :tools_used, :results
 
     def initialize(user:, room:, reply:)
       @user = user
@@ -33,6 +33,7 @@ module TeamChat
       @lookups = AskRupert::Tools.new(user: user)
       @calls = 0
       @tools_used = []
+      @results = []
     end
 
     def definitions
@@ -120,7 +121,25 @@ module TeamChat
     def run_mcp(name, args)
       tool = Mcp::Registry.find(name)
       outcome = tool.new(token: @token).call(args)
-      AskRupert::Redactor.personal("#{outcome.text}\n#{JSON.generate(outcome.data)}")
+      AskRupert::Redactor.personal("#{outcome.text}\n#{JSON.generate(with_dollars(outcome.data))}")
+    end
+
+    # Adds a ready-made "$214.83" beside every *_cents amount, so models quote dollars instead of converting cents.
+    def with_dollars(value)
+      case value
+      when Hash
+        value.each_with_object({}) do |(key, inner), out|
+          out[key] = with_dollars(inner)
+          name = key.to_s
+          out["#{name.delete_suffix('_cents')}_dollars"] = dollars(inner) if name.end_with?('_cents') && inner.is_a?(Numeric)
+        end
+      when Array then value.map { |inner| with_dollars(inner) }
+      else value
+      end
+    end
+
+    def dollars(cents)
+      "#{'-' if cents.negative?}$#{ActiveSupport::NumberHelper.number_to_delimited(format('%.2f', cents.abs / 100.0))}"
     end
 
     def propose(name, args)
@@ -153,7 +172,9 @@ module TeamChat
       ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
       ActivityLogger.log('team_chat_tool', actor: @user,
         details: "tool=#{name.to_s.gsub(/[^\w]/, '?').first(30)}; outcome=#{outcome}; duration_ms=#{ms}; room=#{@room.id}")
-      text.to_s.first(MAX_RESULT_CHARS)
+      text = text.to_s.first(MAX_RESULT_CHARS)
+      @results << text
+      text
     end
   end
 end

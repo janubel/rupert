@@ -119,6 +119,7 @@ module TeamChat
         reactions: reaction_summary(viewer), rating: rating_summary(viewer),
         pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?), edited: edited_at.present?,
         answer: answer_timing, compare_of: (meta.to_h['compare_of'] if assistant?),
+        unverified: (Array(meta.to_h['unverified']) if assistant? && meta.to_h['unverified'].present?),
         quote: (quotes[quote_id]&.quote_payload if quote_id && !deleted?)
       }
     end

@@ -34,7 +34,7 @@ questions:
   - id: w3
     cadence: weekly
     question: How many hours did the team work last pay week?
-    checks: [{ tool: period_review, args: { period: last_pay_week } }]
+    checks: [{ tool: time_keeping_report, args: { from: last_pay_week.from, to: last_pay_week.to } }, { tool: period_review, args: { period: last_pay_week } }]
   - id: w4
     cadence: weekly
     question: What were our top products last week?
