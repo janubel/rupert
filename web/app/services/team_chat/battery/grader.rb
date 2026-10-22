@@ -33,7 +33,9 @@ module TeamChat
 
       def label = @config.model.to_s
 
-      def grade(question:, answer:, reference:, tools_used:)
+      # expect: the test author's note on what a good answer does (e.g. "says Rupert has no cost data"), when the
+      # reference data alone would mislead.
+      def grade(question:, answer:, reference:, tools_used:, expect: nil)
         raise Error, 'grader model is not configured' unless @config.native? && @config.configured?
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -47,7 +49,7 @@ module TeamChat
           #{answer.first(4_000)}
 
           TOOLS IT CALLED: #{tools_used.join(', ').presence || 'none'}
-
+          #{"\nWHAT A GOOD ANSWER DOES (from the test author; follow it over your own view):\n#{expect}\n" if expect.present?}
           REFERENCE DATA:
           #{reference.presence || '(no reference data)'}
         TEXT

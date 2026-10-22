@@ -257,10 +257,12 @@ module TeamChat
     end
 
     def about_this_question
-      return '' if @topics.blank?
+      dates = DateHints.call(@trigger&.body)
+      return '' if @topics.blank? && dates.empty?
 
-      "## About this question (how this data is stored)\n" +
-        @topics.map { |topic| "- #{topic.title} (tools: #{topic.tools.join(', ')}): #{topic.card}" }.join("\n") + "\n"
+      lines = Array(@topics).map { |topic| "- #{topic.title} (tools: #{topic.tools.join(', ')}): #{topic.card}" }
+      lines << "- Dates in this question, already worked out (use these exact dates): #{dates.join('; ')}." if dates.any?
+      "## About this question\n#{lines.join("\n")}\n"
     end
 
     # What the bot was given: its tool results and the conversation it saw.
