@@ -6,6 +6,8 @@ module TeamChat
     self.table_name = 'chat_runs'
     include TenantScoped
 
+    attr_readonly :request_context
+
     LEASE = 30.seconds
     MAX_ATTEMPTS = 3
     ACTIVE = %w[queued running].freeze
@@ -19,6 +21,12 @@ module TeamChat
     def self.for_reply!(reply)
       unscoped.create_or_find_by!(message_id: reply.id) do |run|
         run.tenant_id = reply.tenant_id
+        trigger = Message.unscoped.find_by(id: reply.meta.to_h['trigger_id'], room_id: reply.room_id, tenant_id: reply.tenant_id)
+        if trigger&.person?
+          run.request_context = { 'requester_id' => trigger.user_id, 'requester_name' => trigger.user&.display_name,
+                                  'trigger_id' => trigger.id, 'last_chat' => trigger.body, 'requested_at' => trigger.created_at.iso8601(6),
+                                  'parent_id' => trigger.parent_id }
+        end
         run.deadline_at = reply.created_at + (reply.local_agent ? 5.minutes : 2.minutes)
       end
     end
@@ -35,9 +43,9 @@ module TeamChat
       claimed == 1 ? token : nil
     end
 
-    def cancel!
+    def cancel!(user: nil)
       with_lock do
-        terminalize!('cancelled', 'Stopped.', dismiss: true) if ACTIVE.include?(state)
+        terminalize!('cancelled', 'Stopped.', dismiss: true, actor: user) if ACTIVE.include?(state)
       end
     end
 
@@ -47,14 +55,10 @@ module TeamChat
       end
     end
 
-    def terminalize!(status, body, dismiss: false)
+    def terminalize!(status, body, dismiss: false, actor: nil)
       message.with_lock do
         attrs = { status: 'failed', activity: nil, body: body }
-        if dismiss
-          attrs[:actions] = message.actions_list.map do |action|
-            action['status'] == 'proposed' ? action.merge('status' => 'dismissed', 'result' => body) : action
-          end
-        end
+        Actions.dismiss_pending!(message, reason: body, user: actor) if dismiss
         message.update!(attrs)
       end
       update!(state: status, owner_token: nil, lease_until: nil)

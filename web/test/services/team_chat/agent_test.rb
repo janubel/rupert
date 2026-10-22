@@ -93,7 +93,9 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     assert_equal 'done', reply.reload.actions_list.first['status']
     notice = @room.messages.where(author_kind: 'system').last
     assert_match(/approved: Created task #\d+/, notice.body)
-    assert_raises(TeamChat::Actions::Denied) { TeamChat::Actions.decide!(reply, action['id'], user: @user, approve: true) }
+    assert_no_difference -> { Projects::Task.count } do
+      assert_equal 'done', TeamChat::Actions.decide!(reply, action['id'], user: @user, approve: true)['status']
+    end
   end
 
   test 'assigning a task from chat proposes update_task for the right person and mentions them when approved' do

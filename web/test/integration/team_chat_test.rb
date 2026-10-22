@@ -162,6 +162,37 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'approval retries return the saved receipt and create one task and notice' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by!(slug: 'admins')
+    message = room.messages.create!(author_kind: 'assistant', status: 'done')
+    card = TeamChat::Actions.propose!(message, tool: 'create_task', arguments: { 'title' => 'HTTP approval once' }, proposed_for: @admin)
+    route = team_chat_action_path(room.slug, message.id, card['id'])
+    assert_difference -> { Projects::Task.count }, 1 do
+      assert_difference -> { room.messages.where(author_kind: 'system').count }, 1 do
+        2.times do
+          post route, params: { decision: 'approve' }, as: :json
+          assert_response :success
+          assert_equal 'done', json['messages'].first['actions'].first['status']
+        end
+      end
+    end
+    post route, params: { decision: 'dismiss' }, as: :json
+    assert_response :forbidden
+  end
+
+  test 'an invalid approval decision cannot dismiss a pending action' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by!(slug: 'admins')
+    message = room.messages.create!(author_kind: 'assistant', status: 'done')
+    card = TeamChat::Actions.propose!(message, tool: 'create_task', arguments: { 'title' => 'Keep pending' }, proposed_for: @admin)
+    post team_chat_action_path(room.slug, message.id, card['id']), params: { decision: 'typo' }, as: :json
+    assert_response :bad_request
+    assert_equal 'proposed', message.reload.actions_list.first['status']
+  end
+
   test 'only the asker can stop an assistant reply and stopping is idempotent' do
     sign_in(@admin)
     get team_chat_path

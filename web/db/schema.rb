@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_140000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -824,6 +824,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_130000) do
     t.index ["tenant_id", "pubkey"], name: "idx_buzz_profiles_pubkey", unique: true
   end
 
+  create_table "chat_approval_events", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "approval_id", null: false
+    t.string "kind", null: false
+    t.string "actor_id"
+    t.string "actor_name"
+    t.json "details", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["approval_id"], name: "index_chat_approval_events_on_approval_id"
+  end
+
+  create_table "chat_approvals", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "message_id"
+    t.bigint "source_message_id", null: false
+    t.string "public_id", null: false
+    t.string "state", default: "proposed", null: false
+    t.string "decision"
+    t.string "decided_by_id"
+    t.string "decided_by_name"
+    t.datetime "decided_at"
+    t.json "proposal", default: {}, null: false
+    t.json "provenance", default: {}, null: false
+    t.json "receipt", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_chat_approvals_on_message_id"
+    t.index ["tenant_id", "source_message_id", "public_id"], name: "index_chat_approvals_identity", unique: true
+  end
+
   create_table "chat_attachments", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.integer "room_id", null: false
@@ -973,6 +1003,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_130000) do
     t.index ["state", "deadline_at"], name: "index_chat_runs_on_state_and_deadline_at"
     t.index ["state", "lease_until"], name: "index_chat_runs_on_state_and_lease_until"
     t.index ["tenant_id"], name: "index_chat_runs_on_tenant_id"
+    t.json "request_context"
   end
 
   create_table "clock_corrections", force: :cascade do |t|
@@ -3532,6 +3563,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_130000) do
   add_foreign_key "bulk_movements", "bulk_lots"
   add_foreign_key "bulk_recipes", "bulk_materials"
   add_foreign_key "buzz_person_keys", "users", on_delete: :cascade
+  add_foreign_key "chat_approval_events", "chat_approvals", column: "approval_id"
+  add_foreign_key "chat_approvals", "chat_messages", column: "message_id", on_delete: :nullify
   add_foreign_key "chat_attachments", "chat_messages", column: "message_id"
   add_foreign_key "chat_attachments", "chat_rooms", column: "room_id"
   add_foreign_key "chat_memberships", "chat_rooms", column: "room_id"
