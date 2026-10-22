@@ -75,17 +75,13 @@ Stop it with `systemctl disable --now rupert-autodeploy.timer`.
 
 When updating an installed watcher, replace the copied `/usr/local/sbin/rupert-autodeploy.sh` with the current repository version before re-enabling the timer. Older copies may still require the retired PostgreSQL CI check and otherwise keep deployments blocked. The source script now gates on `CI (sqlite3)` only.
 
-## Buzz relay and the @rupert agent
+## Team chat (Buzz retired)
 
-The self-hosted Buzz relay is an Incus container (`buzz`) on SER8, and the `@rupert` agent runs in its own sandboxed
-container (`rupert-agent`); neither is installed from this directory. This directory holds what runs around them:
+Team chat now runs inside Rupert at `/chat`, with no relay or agent container. See
+[docs/ops/team-chat.md](../../docs/ops/team-chat.md). `team-chat/setup-local-model.sh` sets up the optional local
+model container.
 
-- `agent/`: everything for the sandboxed agent container: `rupert_mcp_bridge.py` (its only tools), `opencode.json`,
-  `rupert-agent.service`, `rupert-agent-run`, `agent.env.example`, `egress_proxy.py` + `egress-proxy.service` (the
-  allow-list proxy that runs in the `buzz` container), `sandbox-test/` (mock-model check that the agent has no shell,
-  file or web tools) and `test_bridge.py`.
-- `buzz/backup-buzz.sh`, `buzz-backup.service`, `buzz-backup.timer`: encrypted off-container backup of the relay's
-  Postgres, media and secrets (host user timer, same key as `rupert-offhost-backup.sh`).
-
-Full runbook, threat model, install steps, revocation, rollback and what is unverified:
-[docs/ops/buzz-relay-ser8.md](../../docs/ops/buzz-relay-ser8.md).
+The old Buzz relay (`buzz`) and the sandboxed `@rupert` agent (`rupert-agent`) Incus containers are no longer used.
+Their files (`agent/`, `buzz/`) and runbook were removed from `main` and are kept on the `archive/buzz` branch.
+After this change deploys, stop both containers (`incus stop buzz rupert-agent`) and, if it was installed, the host's
+Buzz backup timer (`systemctl --user disable --now buzz-backup.timer`). Do not delete the containers yet.

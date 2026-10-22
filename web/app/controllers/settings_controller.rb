@@ -225,48 +225,6 @@ class SettingsController < AuthenticatedController
     redirect_to(settings_path, notice: "Fulfillment workflow #{params[:enabled] == '1' ? 'enabled' : 'disabled'}.")
   end
 
-  # POST /settings/buzz_generate — create (or replace) the Rupert agent keypair
-  def buzz_generate
-    BuzzAgent.generate_keypair!
-    redirect_to(settings_path, notice: "Buzz agent keypair generated — #{BuzzAgent.agent_npub}")
-  rescue StandardError => e
-    redirect_to(settings_path, alert: "Could not generate keypair: #{e.message}")
-  end
-
-  # POST /settings/buzz_register — publish the agent's kind 0 profile so Buzz
-  # recognizes the identity and it can be added as a channel member.
-  def buzz_register
-    ok, message = BuzzAgent.register!
-    if ok
-      redirect_to settings_path, notice: "Agent profile published to Buzz — #{BuzzAgent.agent_npub}"
-    else
-      redirect_to settings_path, alert: "Could not publish profile: #{message}"
-    end
-  end
-
-  # POST /settings/buzz_status — ask the relay whether it answers and knows the agent
-  def buzz_status
-    status = BuzzAgent.check_status
-    if !status[:configured]
-      redirect_to(settings_path(anchor: 'buzz'), alert: 'Buzz is not configured yet: set the relay and generate the agent keypair.')
-    elsif !status[:relay_reachable]
-      redirect_to(settings_path(anchor: 'buzz'), alert: 'The Buzz relay did not answer. Check the relay address and that it is running.')
-    else
-      registered = { true => 'the agent profile is registered', false => 'the agent profile is NOT registered yet (use Publish agent profile)', nil => 'the relay did not say whether the agent is registered' }[status[:registered]]
-      redirect_to(settings_path(anchor: 'buzz'), notice: "Buzz relay is reachable; #{registered}.")
-    end
-  end
-
-  # POST /settings/buzz_test — publish a test message to Buzz
-  def buzz_test
-    ok, message = BuzzAgent.notify("Test message from the Rupert agent (#{Time.current.strftime('%b %e %H:%M')})")
-    if ok
-      redirect_to(settings_path, notice: "Buzz test sent: #{message}")
-    else
-      redirect_to(settings_path, alert: "Buzz test failed: #{message}")
-    end
-  end
-
   private
 
   def preview_entry(key)

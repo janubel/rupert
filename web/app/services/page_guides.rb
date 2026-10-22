@@ -495,37 +495,14 @@ class PageGuides
     ),
     'settings' => Guide.new(
       key: 'settings', title: 'Settings',
-      summary: "Your store's configuration — business details, Google sign-in, size families, warehouse links and the Buzz agent. Platform administrators also manage instance backups.",
+      summary: "Your store's configuration — business details, Google sign-in, size families, warehouse links and a link to team chat. Platform administrators also manage instance backups.",
       sections: [
-        { heading: "What's here", body: 'Business name and invoice prefix; Google OAuth (allowed domains + client credentials); size families (root gram products); the wholesale Warehouse link; and the Buzz agent identity. Google Drive backup controls are restricted to the platform super administrator.' }
+        { heading: "What's here", body: 'Business name and invoice prefix; Google OAuth (allowed domains + client credentials); size families (root gram products); the wholesale Warehouse link; and a link to team chat. Google Drive backup controls are restricted to the platform super administrator.' }
       ],
       tips: [
         'Only the platform super administrator configures Google Drive backups. Every 6 hours, Rupert can copy the entire shared instance database to that approved destination; store credentials cannot authorize this.',
         'Add every staff email domain to Google sign-in; new people on an allowed domain get a staff account automatically.',
         'Environment secrets (Square/Shopify tokens) live in the .env card and are encrypted at rest.'
-      ]
-    ),
-    'buzz' => Guide.new(
-      key: 'buzz', title: 'Buzz team chat',
-      summary: "Buzz is the team's chat, and Rupert's agent @rupert lives in it. This card opens the chat and helps you connect your own phone or computer.",
-      sections: [
-        { heading: "What's here", body: "The agent's profile, an Open chat button, the relay address and channel to copy or scan with a phone, and download links for the Buzz app on each platform." }
-      ],
-      tips: [
-        'You use your own Buzz identity in your own app. Never paste a private key (starting nsec1) into Rupert or the chat.',
-        'If Open chat does nothing, install the Buzz app first (Get Buzz), then try again.'
-      ]
-    ),
-    'buzz_chat' => Guide.new(
-      key: 'buzz_chat', title: 'Team chat',
-      summary: "The team's Buzz channel inside Rupert: recent history, new messages as they arrive, and a box to post.",
-      sections: [
-        { heading: "What's here", body: 'Messages from the Buzz channel with the newest at the bottom. Load earlier messages goes back through the history. People show by their Buzz profile name; someone with no profile shows as a short key. The Rupert agent is marked AI agent.' },
-        { heading: 'Posting', body: 'What you post appears in Buzz as "Your name via Rupert", sent by the Rupert agent, because Rupert does not hold anyone\'s personal Buzz key. Messages posted here cannot mark work ready for development, and the agent does not reply to them.' }
-      ],
-      tips: [
-        'Rupert keeps a copy of recent messages for 30 days so the page is quick and still shows history if Buzz is briefly unreachable. Buzz itself keeps the full history.',
-        'Links in messages are shown as text and are never opened or previewed by Rupert. Never paste a private key (starting nsec1).'
       ]
     ),
     'employees' => Guide.new(
@@ -831,8 +808,6 @@ class PageGuides
     ['/activity', 'activity'],
     ['/syncs', 'sync'],
     ['/settings', 'settings'],
-    ['/buzz/chat', 'buzz_chat'],
-    ['/buzz', 'buzz'],
     ['/employees', 'employees'],
     ['/users', 'users'],
     ['/permissions', 'permissions'],

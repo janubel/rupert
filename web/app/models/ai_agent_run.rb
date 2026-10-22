@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Token usage and outcome of one opencode run by the @rupert Buzz agent, read
+# Token usage and outcome of one opencode run by Rupert's assistant, read
 # from the CLI's own JSON output (OpencodeUsage). Counters only: no prompt, no
 # reply, no channel content.
 class AiAgentRun < ApplicationRecord

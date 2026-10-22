@@ -200,7 +200,7 @@ class MoneyReconciliationReportTest < ActiveSupport::TestCase
   end
 
   test 'scheduled jobs save the previous complete periods without notifications or source writes' do
-    BuzzAgent.expects(:notify).never
+    TeamChat::Notices.expects(:notify).never
     %w[daily weekly monthly].each { |kind| MoneyReconciliationJob.perform_now(kind) }
     Current.tenant = tenants(:default_tenant)
     assert_equal 3, MoneyReconciliation.count

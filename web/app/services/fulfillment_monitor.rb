@@ -16,7 +16,7 @@ class FulfillmentMonitor
   end
 
   def initialize(channel: nil)
-    @channel = channel.presence || announcements_channel
+    @room = channel.presence || announcements_channel
   end
 
   def check!
@@ -25,7 +25,7 @@ class FulfillmentMonitor
     return 0 if signature == previous_signature
 
     if orders.any?
-      published, error = BuzzAgent.notify(format_message(orders), channel: @channel)
+      published, error = TeamChat::Notices.notify(format_message(orders), room: @room)
       raise "Fulfillment alert failed: #{error}" unless published
     end
 
@@ -51,7 +51,7 @@ class FulfillmentMonitor
   end
 
   def announcements_channel
-    EnvStore.fetch('BUZZ_ANNOUNCEMENTS_CHANNEL', '').presence || BuzzAgent.channel_id
+    TeamChat::Notices::ROOM_SLUG
   end
 
   def signature_for(orders)

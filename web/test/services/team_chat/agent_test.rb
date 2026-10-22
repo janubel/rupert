@@ -39,6 +39,8 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     assert_includes reply.body, '[Timesheets](/people/timesheets)'
     assert_equal ['where_is'], reply.meta['tools']
     assert_equal 'ok', reply.meta['outcome']
+    run = AiAgentRun.where(agent: 'team_chat').last
+    assert_equal ['test-model', 'ok'], [run.model, run.outcome]
     assert_equal 2, requests.size
     first = requests.first
     assert first['stream']

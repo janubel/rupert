@@ -31,8 +31,8 @@ class SalesAnnouncerTest < ActiveSupport::TestCase
   end
 
   def announce!
-    BuzzAgent.stubs(:configured?).returns(true)
-    BuzzAgent.stubs(:notify).returns([true, 'OK'])
+    TeamChat::Notices.stubs(:configured?).returns(true)
+    TeamChat::Notices.stubs(:notify).returns([true, 'OK'])
     SalesAnnouncer.announce!
   end
 
@@ -50,7 +50,7 @@ class SalesAnnouncerTest < ActiveSupport::TestCase
     new = make_entry(1.hour.ago, gross: 2500)
 
     capture = nil
-    BuzzAgent.stubs(:notify).with do |content, *_|
+    TeamChat::Notices.stubs(:notify).with do |content, *_|
       capture = content
       true
     end.returns([true, 'OK'])
@@ -70,7 +70,7 @@ class SalesAnnouncerTest < ActiveSupport::TestCase
     make_entry(1.hour.ago, gross: 600, summary: 'Honey Sticks')
 
     capture = nil
-    BuzzAgent.stubs(:notify).with do |content, *_|
+    TeamChat::Notices.stubs(:notify).with do |content, *_|
       capture = content
       true
     end.returns([true, 'OK'])
@@ -88,12 +88,12 @@ class SalesAnnouncerTest < ActiveSupport::TestCase
     announce!
     make_entry(1.hour.ago, gross: 2500, status: 'CANCELED')
 
-    BuzzAgent.expects(:notify).never
+    TeamChat::Notices.expects(:notify).never
     assert_equal 0, announce!
   end
 
-  test 'no-ops when Buzz is not configured' do
-    BuzzAgent.stubs(:configured?).returns(false)
+  test 'no-ops when team chat is not in use' do
+    TeamChat::Notices.stubs(:configured?).returns(false)
     assert_equal 0, SalesAnnouncer.announce!
   end
 
@@ -103,8 +103,8 @@ class SalesAnnouncerTest < ActiveSupport::TestCase
     make_entry(1.hour.ago, gross: 2500)
     original = Setting.find_by(key: SalesAnnouncer::WATERMARK_KEY).value
 
-    BuzzAgent.stubs(:configured?).returns(true)
-    BuzzAgent.stubs(:notify).returns([false, 'relay unavailable'])
+    TeamChat::Notices.stubs(:configured?).returns(true)
+    TeamChat::Notices.stubs(:notify).returns([false, 'relay unavailable'])
 
     error = assert_raises(RuntimeError) { SalesAnnouncer.announce! }
     assert_includes error.message, 'relay unavailable'
@@ -118,8 +118,8 @@ class SalesAnnouncerTest < ActiveSupport::TestCase
     first = make_entry(occurred_at, gross: 2500)
     second = make_entry(occurred_at, gross: 600)
 
-    BuzzAgent.stubs(:configured?).returns(true)
-    BuzzAgent.stubs(:notify).returns([true, 'OK'])
+    TeamChat::Notices.stubs(:configured?).returns(true)
+    TeamChat::Notices.stubs(:notify).returns([true, 'OK'])
 
     assert_equal 2, SalesAnnouncer.announce!
     watermark = JSON.parse(Setting.find_by(key: SalesAnnouncer::WATERMARK_KEY).value)

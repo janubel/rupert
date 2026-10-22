@@ -26,7 +26,7 @@ Influencer operators: [Influencer CMS](ops/influencer-cms.md) covers prospects, 
 | `plans/` | Design and migration plans (drift migration, phase plan, staffing model) |
 | `audits/` | Dated inventory/SKU audits with their findings. Raw CSV/JSON output sits in `audits/data/` |
 | `research/` | Background research that informed product decisions |
-| `ops/` | Operator material ([Buzz team chat and the @rupert agent](ops/buzz.md), including the generated agent prompt) |
+| `ops/` | Operator material (for example [team chat and the @rupert assistant](ops/team-chat.md)) |
 
 Product pages: `roadmap.html`, `competitors.html`, and `sqlite-incus.html`. Edit the catalog at `web/config/product_roadmap.json`, the matrix at `docs/data/competitor-matrix.json`, or the runbook at `docs/ops/sqlite-incus.md`, then run `bin/build-product-site`. CI runs `--check` to detect drift. Matrix cells link to official source pages; "Not established" is an unknown, not an absence claim.
 

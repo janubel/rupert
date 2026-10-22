@@ -21,7 +21,7 @@ The one page for whoever keeps Rupert running day to day. Commands inside the SE
 ## Stuck or failing sync
 
 - A run stuck in `running` for more than 45 minutes is failed automatically by the next scheduler tick (`SyncEngine::STALE_RUN_AFTER`); you do not need to clear it.
-- Transient failures (network, timeout, Shopify/Square rate limit or 5xx) retry on their own up to 4 times with backoff. One Buzz message is sent when retries are exhausted; the failed execution stays visible on the System page.
+- Transient failures (network, timeout, Shopify/Square rate limit or 5xx) retry on their own up to 4 times with backoff. One notice is posted to the #announcements team chat room when retries are exhausted; the failed execution stays visible on the System page.
 - Credential failures do **not** retry. The Sync page and the Connections page name the category (`credentials`, `entitlement`, `configuration`). Fix the saved credential in Settings/Connections, then **Run full sync**.
 - Manual sync: Sync page → *Run full sync* (or per source), or `bundle exec bin/rails ops:sync` / `ops:sync_source[shopify]`.
 - Backfill after an outage longer than 48 hours: `bundle exec bin/rails "ops:backfill[7]"` (days). The import is idempotent; nothing is double-counted.
@@ -71,7 +71,7 @@ The version is pinned once in `web/config/shopify_api_version.rb` (the sync clie
 
 - `/up/ready` is the external uptime signal (database, worker, sync freshness, disk). Point an uptime monitor at it.
 - Host watcher `rupert-sync-watch.timer` (outside the container) fails when the newest successful sync is older than 45 minutes, the worker unit is not active, free disk is under 1 GB, or `READY_URL` answers non-200; failures show in `systemctl --user --failed` and Cockpit.
-- Buzz (Nostr) messages on sync completion/failure when configured in Settings.
+- Notices in the #announcements team chat room on sync completion and failure, once team chat has been opened in the workspace ([team-chat.md](team-chat.md)).
 - Sentry when `SENTRY_DSN` is set: every unhandled exception from web and jobs, tagged with the build SHA.
 - Rate limiting (`rack-attack`) logs `[rack-attack] throttled ...` lines; a burst of them from one IP is an attack or a broken integration.
 
