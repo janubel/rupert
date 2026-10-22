@@ -20,6 +20,7 @@ module UploadsHelper
     case upload.origin
     when 'api' then upload.via_token_label.present? ? "API (#{upload.via_token_label})" : 'API'
     when 'drop' then 'Drop folder'
+    when 'drive' then 'Google Drive'
     else 'Browser'
     end
   end

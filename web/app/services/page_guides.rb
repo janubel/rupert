@@ -109,6 +109,25 @@ class PageGuides
       ],
       tips: ['Undecided withdrawals are missing from money out until you decide them.', 'Deciding a line inside an approved day marks that approval as changed.', 'Match statement lines to ledger entries on the Bank reconciliation page.']
     ),
+    'quickbooks_import' => Guide.new(
+      key: 'quickbooks_import', title: 'QuickBooks import',
+      summary: 'Bring QuickBooks history into Rupert safely: upload a CSV, review it, match accounts, then approve. Reversible as a whole.',
+      sections: [
+        { heading: 'Read, then decide', body: 'Uploading keeps the original file unchanged and shows what Rupert read: dates, totals by account, transactions that do not balance, duplicates and rejected rows. Your books do not change until you approve.' },
+        { heading: 'Match accounts yourself', body: 'Each QuickBooks account needs your decision: map it to a Rupert account, create one, or skip it. Rupert only suggests similar names. Only the Journal posts; charts, vendor and customer lists set up the matching and a trial balance is kept for checking.' },
+        { heading: 'Approve and reverse', body: 'Choose the last date to post. Locked periods, skipped accounts and look-alike transactions stay staged with the reason shown. Reversing a batch voids everything it posted, unless a period was locked since.' }
+      ],
+      tips: ['A report with a single Amount column cannot be posted; export the Journal, or add separate Debit and Credit columns.', 'Overlapping exports are safe: transactions already imported are skipped.', 'The day before Rupert’s own first entry is suggested as the last date, so the same days are never recorded twice.']
+    ),
+    'history' => Guide.new(
+      key: 'history', title: 'History',
+      summary: 'What history Rupert holds for each source, how far back and forward it goes, and where it disagrees with QuickBooks.',
+      sections: [
+        { heading: 'Reading a source', body: 'Each card shows the earliest and latest dates Rupert holds, how many records, when it last arrived, calendar months with nothing in them, and which other sources cover the same dates. The earliest record is the coverage that was available, not proof of when the business started.' },
+        { heading: 'Comparisons', body: 'QuickBooks totals are set beside Rupert’s ledger, trial balance and bank statement lines for the days both cover. Differences are listed for a person to look at; nothing is adjusted or matched for you.' }
+      ],
+      tips: ['A month with no records may be a quiet month or a missing import.', 'Counts are records Rupert stores, not sales totals.', 'Ask Rupert can answer “what history do we have for 2025?” from this page’s numbers.']
+    ),
     'business_snapshot' => Guide.new(
       key: 'business_snapshot', title: 'Business snapshot',
       summary: 'A printable picture of sales, stock, cash and vendors built from live records, each section stating its source and age.',
@@ -773,6 +792,8 @@ class PageGuides
     ['/finance/chart_of_accounts', 'chart_of_accounts'],
     ['/finance/expenses', 'expenses'],
     ['/finance/vendor_payments', 'payments'],
+    ['/finance/quickbooks_imports', 'quickbooks_import'],
+    ['/finance/history', 'history'],
     ['/finance/journal_entries', 'journal_entries'],
     ['/finance/reports', 'finance_reports'],
     ['/finance/bank_reconciliation', 'bank_reconciliation'],

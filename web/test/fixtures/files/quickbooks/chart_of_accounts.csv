@@ -1,0 +1,6 @@
+Account,Type,Detail Type,Number,Description,Balance
+Checking,Bank,Checking,1000,Operating,"1,000.00"
+Accounts Receivable (A/R),Accounts receivable (A/R),Accounts Receivable (A/R),1100,,0.00
+Sales,Income,Sales of Product Income,4000,,0.00
+Office Supplies,Expenses,Office/General Administrative Expenses,6100,,0.00
+Mystery,Weird Type,,,

@@ -89,6 +89,16 @@ curl -H "Authorization: Bearer $RUPERT_API_TOKEN" https://YOUR-RUPERT-HOST/api/v
 
 A token can send files and read their status. **It can never approve an import**; that is only done by a signed-in person in the app. Revoking the token or removing its owner's permission stops it immediately. If Rupert sits behind a proxy, allow request bodies of at least 26 MiB on `/api/v1/uploads` and `/uploads`.
 
+### Google Drive (alongside upload)
+
+**System → Uploads → Or copy from Google Drive** (`/uploads/drive`) is a second way in. A workspace administrator (`settings.write`) connects a Google account once; a person with `uploads.write` then picks files from one folder and copies them into the inbox. Each file takes the same path as a browser upload (kept unchanged and encrypted, recognized, dry run, approval), with origin *Google Drive*.
+
+- **Read-only, one folder.** Consent asks for `drive.readonly`. Google has no narrower scope for reading files you made elsewhere (`drive.file` only covers files an app created or the person opened with Google's picker), so Rupert enforces the limit itself: it lists and reads only the folder chosen on that page, never writes, shares, moves or deletes, and checks every file again with Google before accepting it (still in the folder, not in the trash, supported type, under 10 MiB, checksum matches). Revoke access any time at myaccount.google.com/permissions or with **Disconnect**, which removes the stored token and folder; files already copied stay.
+- **Its own token.** Separate from the whole-instance backup token and from [Drive document retention](drive-document-retention.md), stored encrypted per workspace, bound to the person, workspace and a ten-minute state at consent.
+- **Google documents are not converted.** Docs and Sheets are listed but cannot be copied; download them as CSV or Excel into the folder first.
+- **Limits.** Up to 10 files per copy, 200 files listed, the usual 10 MiB per file and daily inbox limits.
+- **Setup.** Uses the platform's existing Drive OAuth client (`GOOGLE_DRIVE_CLIENT_ID` / `GOOGLE_DRIVE_CLIENT_SECRET`) and its registered `/auth/google/callback`. `drive.readonly` is a restricted Google scope: while the OAuth app is in Testing, only listed test users can consent and tokens expire after seven days (see the retention note). Production use needs Google's verification for restricted scopes. **Not yet verified against real Google**: the tests use a stand-in Drive service, and consent was last blocked by the Testing state (see [Google backup verification](google-backup-verification.md)).
+
 ### Drop folder (off by default)
 
 For people who can only copy files onto the server (scp, rsync, a mounted share). Enable it deliberately:

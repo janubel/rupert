@@ -1,0 +1,5 @@
+Trans #,Type,Date,Num,Name,Memo,Account,Debit,Credit
+101,Check,2024-03-01,501,Vendor One,Rent,Rent Expense,800.00,
+101,Check,2024-03-01,501,Vendor One,Rent,Checking,,800.00
+102,General Journal Entry,2024-03-31,,,Accrual,Utilities,60.00,
+102,General Journal Entry,2024-03-31,,,Accrual,Accounts Payable (A/P),,59.00
