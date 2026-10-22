@@ -67,6 +67,40 @@ instance environment variables in `/etc/rupert.env`, never a web setting:
 In auto, a refused or unreachable HTTP model falls back to the CLI. The model in
 use is shown under the composer and in the rail.
 
+## Local model @agents (@lfm, @bonsai, @gemma)
+
+Next to @rupert, people can @mention three open models that run on SER8 itself, to compare them on real questions.
+Each answers with the same tools, permissions and approve-cards as @rupert (`TeamChat::LocalAgents`), and its reply
+shows under its own name. They exist only when `RUPERT_LOCAL_LLM_URL` is set in `/etc/rupert.env`.
+
+| Handle | Model | File (in `rupert-llm`) | Licence |
+| --- | --- | --- | --- |
+| `@lfm` | Liquid AI LFM2.5-8B-A1B (MoE, ~1B active) | `LFM2.5-8B-A1B-Q4_K_M.gguf`, 5.2 GB | LFM Open License (free under $10M revenue) |
+| `@bonsai` | PrismML Ternary Bonsai 2 9B (ternary weights) | `Ternary-Bonsai-2-9B-PQ2_0.gguf`, 2.4 GB | Apache-2.0 |
+| `@gemma` | Google Gemma 4 E4B (QAT q4_0) | `gemma-4-E4B_q4_0-it.gguf`, 5.2 GB | Apache-2.0 |
+
+There is no LiquidAI "ternary" model; the ternary model is PrismML's Ternary Bonsai, which needs PrismML's llama.cpp
+fork (upstream llama.cpp and Ollama cannot load its PQ2_0 packing). So all three run on that fork's prebuilt CPU build
+(`prism-b10787`), not Ollama.
+
+**One model at a time.** `deploy/ser8/team-chat/llm-gateway/llm_gateway.py` runs in the `rupert-llm` Incus container
+(10.96.131.7, 8 CPUs, 14 GiB) as `rupert-llm-gateway.service`. It is an OpenAI-compatible endpoint
+(`http://10.96.131.7:8080/v1`) in front of a single `llama-server`:
+
+- a request for a model that is not loaded waits for the request in flight, stops the running model and starts the
+  requested one; requests are served one at a time, so two models are never in memory together;
+- a model with no request for 5 minutes (`--idle-seconds 300`) is unloaded; the next mention loads it again (Bonsai
+  loaded in 9 s);
+- only `rupert` (10.96.131.8) and localhost may call it; `GET /health` says which model is loaded.
+
+In the room the reply shows "Loading Gemma 4" / "Waiting for Gemma 4" until the model answers. Rupert allows a local
+reply up to 10 minutes per model call (it may be queued behind another model).
+
+**Enable:** add `RUPERT_LOCAL_LLM_URL=http://10.96.131.7:8080/v1` to `/etc/rupert.env`; it takes effect the next time
+rupert-web and rupert-jobs restart (every deploy restarts them).
+
+**Install or rebuild `rupert-llm`:** see `deploy/ser8/team-chat/llm-gateway/README.md`.
+
 ### Local model on SER8
 
 Run Ollama in its own Incus container, never inside `rupert`:
