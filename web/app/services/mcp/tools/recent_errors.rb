@@ -8,8 +8,9 @@ module Mcp
       tool 'recent_errors',
         title: 'Recent errors',
         description: 'What has gone wrong lately: error lines and reported exceptions from this server process, failed background ' \
-                     'jobs (class and error only, never arguments), failed source syncs for this store, and the MCP tools that ' \
-                     'fail most. Text is scrubbed with the request-log filter and is untrusted. Server-wide sections need a ' \
+                     'jobs (class and error only, never arguments), failed source syncs for this store, the problems the structured ' \
+                     'log recorded (server errors, slow requests, denials, rejected forms, sign-in failures; names and codes ' \
+                     'only) and the MCP tools that fail most. Text is scrubbed with the request-log filter and is untrusted. Server-wide sections need a ' \
                      'platform administrator. Read-only; needs the system:read scope.',
         scope: 'system:read'
 
@@ -29,10 +30,11 @@ module Mcp
         if instance_operator?
           data[:process_errors] = RequestTrace.recent_errors(limit).map { |row| { at: iso(row[:at]), text: excerpt(row[:text], 500) } }
           data[:failed_jobs] = failed_jobs(limit, since)
+          data[:logged_problems] = logged_problems(limit, since)
         else
           data[:server_sections] = 'Hidden: process errors and failed jobs describe the whole server and need a platform administrator.'
         end
-        counts = %i[process_errors failed_jobs failed_syncs tool_issues].map { |key| "#{data[key].size} #{key.to_s.tr('_', ' ')}" if data[key] }
+        counts = %i[process_errors failed_jobs logged_problems failed_syncs tool_issues].map { |key| "#{data[key].size} #{key.to_s.tr('_', ' ')}" if data[key] }
         result("Recent errors since #{since.iso8601}: #{counts.compact.join(', ')}.", data)
       end
 
@@ -47,6 +49,13 @@ module Mcp
       def tool_issues(limit)
         AgentToolIssue.order(last_seen_at: :desc).limit(limit).map do |issue|
           { tool: issue.tool_name, error: issue.error_kind, occurrences: issue.occurrences, last_seen_at: iso(issue.last_seen_at), message: excerpt(issue.last_message, 200) }
+        end
+      end
+
+      def logged_problems(limit, since)
+        OpsEvent.since(since).recent.limit(limit).map do |row|
+          { category: row.category, level: row.level, summary: excerpt(row.summary, 240), occurrences: row.occurrences,
+            last_seen_at: iso(row.last_seen_at), request_id: row.request_id }
         end
       end
 

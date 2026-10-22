@@ -125,6 +125,8 @@ module AskRupert
       ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
       ActivityLogger.log('ask_rupert_tool', actor: @user,
         details: "tool=#{name.to_s.gsub(/[^\w]/, '?').first(30)}; outcome=#{outcome}; duration_ms=#{ms}; conversation=#{@conversation&.id}")
+      OpsLog.event('ask_rupert_tool', level: %w[ok unknown invalid].include?(outcome) ? :info : :warn, tool: name.to_s.gsub(/[^\w]/, '?').first(30),
+        outcome: outcome, duration_ms: ms, user_id: @user&.id, tenant_id: @user&.tenant_id, conversation_id: @conversation&.id, persist: false)
       result.text = result.text.to_s.first(MAX_RESULT_CHARS)
       result
     end

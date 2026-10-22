@@ -1935,6 +1935,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_030000) do
     t.index ["tenant_id", "domain"], name: "index_oauth_allowed_domains_on_tenant_id_and_domain", unique: true
   end
 
+  create_table "ops_events", force: :cascade do |t|
+    t.string "kind", null: false
+    t.string "category", default: "other", null: false
+    t.string "level", default: "warn", null: false
+    t.string "summary", default: "", null: false
+    t.string "fingerprint", null: false
+    t.integer "occurrences", default: 1, null: false
+    t.string "tenant_id"
+    t.bigint "user_id"
+    t.string "request_id"
+    t.text "data"
+    t.datetime "first_seen_at", null: false
+    t.datetime "last_seen_at", null: false
+    t.index ["category", "last_seen_at"], name: "index_ops_events_on_category_and_last_seen_at"
+    t.index ["fingerprint", "last_seen_at"], name: "index_ops_events_on_fingerprint_and_last_seen_at"
+    t.index ["last_seen_at"], name: "index_ops_events_on_last_seen_at"
+    t.index ["tenant_id", "last_seen_at"], name: "index_ops_events_on_tenant_id_and_last_seen_at"
+  end
+
   create_table "order_lines", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "line_cents", default: 0

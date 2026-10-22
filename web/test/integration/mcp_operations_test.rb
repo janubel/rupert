@@ -67,6 +67,10 @@ class McpOperationsTest < ActionDispatch::IntegrationTest
     assert_not_includes line, 'hunter2'
     assert_not_includes line, 'abc123'
     assert_equal [], data['failed_jobs']
+    assert_equal [], data['logged_problems']
+    OpsLog.event('permission_denied', level: :warn, controller: 'settings', action: 'update', via: 'pundit', user_id: 3)
+    data = call(secret, 'recent_errors')['structuredContent']
+    assert_equal %w[permission_denied], data['logged_problems'].map { |row| row['category'] }
   end
 
   test 'sync_health lists channels for this store only' do

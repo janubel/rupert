@@ -14,6 +14,23 @@ class UploadsIntakeTest < ActiveSupport::TestCase
 
   teardown { Current.reset }
 
+  test 'the inbox audit is a structured upload event with hash, size and outcome, never contents or file names' do
+    io = StringIO.new
+    tap_logger = Logger.new(io, level: Logger::INFO)
+    tap_logger.formatter = Logger::Formatter.new.tap { |formatter| formatter.extend(OpsLog::Formatter) }
+    Rails.logger.broadcast_to(tap_logger)
+    OpsLog.with_format('json') { intake(BANK_CSV, 'Smith-payroll.csv') }
+    event = io.string.lines.map { |line| JSON.parse(line) }.find { |line| line['event'] == 'upload' }
+    assert event, io.string
+    assert_equal 64, event['sha256'].size
+    assert_equal BANK_CSV.bytesize.to_s, event['byte_size']
+    assert_equal 'web', event['origin']
+    assert event['outcome'].present?
+    ['Smith', 'payroll', BANK_CSV.lines[1].strip].each { |text| assert_not_includes io.string, text }
+  ensure
+    Rails.logger.stop_broadcasting_to(tap_logger)
+  end
+
   def intake(content, name = 'statement.csv', **options)
     Uploads::Intake.call(StringIO.new(content), filename: name, origin: 'web', actor: @admin, **options)
   end
@@ -102,7 +119,7 @@ class UploadsIntakeTest < ActiveSupport::TestCase
     intake("Date,Description,Amount\n2026-10-14,SECRETPAYEE,-1.00\n", 'secret-name.csv')
     Rails.logger = previous
     logged = io.string
-    assert_match(/\[uploads\] .*event=received/, logged)
+    assert_match(/upload action=received/, logged)
     assert_match(/sha256=\h{64}/, logged)
     assert_no_match(/SECRETPAYEE|secret-name/, logged)
     assert_no_match(/SECRETPAYEE/, ActivityLog.where(tenant_id: @tenant.id).pluck(:details).join)

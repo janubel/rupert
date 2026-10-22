@@ -10,6 +10,10 @@ require 'active_support/core_ext/integer/time'
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
+  # The test log lives under tmp/, never in log/. A test run started by hand from a deployed
+  # checkout once left a 51 MB log/test.log in the production directory (docs/ops/logging.md).
+  config.paths['log'] = Rails.root.join('tmp/log/test.log')
+
   # While tests run files are not watched, reloading is not necessary.
   config.enable_reloading = false
 

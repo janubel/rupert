@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Production-grade logging.** Rupert now writes one JSON line per request (method, path without query, route, controller#action, status, duration, database and view time, request id, user, tenant, role, client address, response size) and structured events for sign-ins and failures, permission denials, rejected forms (model, fields and error kinds, never values), uploads (size, SHA-256, type guess) and imports (row counts), sync runs, jobs, retries and failures, Ask Rupert and MCP tool calls, rate limiting, boot and `db:migrate`. Health probes, the provisioner's idle poll, signed-out page polls and quick jobs are held back and summarised every five minutes; errors on those paths still log. Slow requests (`RUPERT_SLOW_REQUEST_MS`, default 2000) and unhandled exceptions are warnings and errors. **System → Recent errors and activity** (platform administrators) shows 24-hour counts and the latest distinct problems, with no raw log lines; `recent_errors` gains `logged_problems`. Tests prove tokens, passwords, card and bank numbers, CSV rows, email bodies and chat text never appear in the log. New: `deploy/ser8/journald-rupert.conf` (persistent, 400 MB, 30 days), `deploy/ser8/rupert-logs` (look up a request, user or upload), a provisioner idle back-off, tests now log to `tmp/log/test.log` instead of `log/test.log`, job arguments are no longer logged, and `ops_events` is a new table. `RUPERT_LOG_FORMAT=rails` restores the old log. See `docs/ops/logging.md`.
+
 ### Fixed
 
 - Enforce upload inbox quotas under SQLite's writer lock, including rejected files, and require each retained original to fit the remaining storage allowance. Identical-file duplicates consume no additional retained bytes.
