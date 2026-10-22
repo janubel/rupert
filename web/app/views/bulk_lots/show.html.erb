@@ -21,5 +21,5 @@
     <thead class="border-b border-fog bg-haze/60"><tr><% ['Recorded', 'Movement', 'Entered weight', 'Change (mg)', 'Reference', 'By'].each do |label| %><th class="th" scope="col"><%= label %></th><% end %></tr></thead>
     <tbody class="divide-y divide-fog"><% @movements.each do |movement| %><tr><td class="td"><%= l(movement.created_at, format: :short) %></td><td class="td"><%= movement.kind.humanize %></td><td class="td"><%= movement.input_quantity %> <%= movement.input_unit %></td><td class="td font-mono"><%= movement.delta_mg.positive? ? '+' : '' %><%= number_with_delimiter(movement.delta_mg) %></td><td class="td"><%= movement.reference %></td><td class="td text-xs"><%= movement.created_by %></td></tr><% end %></tbody>
   </table></div>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
 </div>

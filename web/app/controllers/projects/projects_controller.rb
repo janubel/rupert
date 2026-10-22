@@ -17,7 +17,7 @@ module Projects
               when 'due' then scope.order(Arel.sql('CASE WHEN projects.due_on IS NULL THEN 1 ELSE 0 END'), :due_on)
               else scope.order(updated_at: :desc)
               end
-      @pagy, @projects = pagy(scope, items: 18)
+      @pagy, @projects = pagy(:offset, scope, limit: 18)
       @status_counts = Projects::Project.group(:status).count
       @overdue_tasks = Projects::Task.overdue.count
       @due_this_week = Projects::Task.due_within(7).count

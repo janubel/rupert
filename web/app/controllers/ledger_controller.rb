@@ -10,6 +10,6 @@ class LedgerController < AuthenticatedController
     scope = LedgerEntry.where(occurredAt: @from.beginning_of_day..Time.current).by_source(@source)
     @sources = LedgerEntry.distinct.order(:source).pluck(:source)
     @currency_totals = scope.group(:currency).sum(:grossCents)
-    @pagy, @entries = pagy(scope.order(occurredAt: :desc, id: :asc), items: 50)
+    @pagy, @entries = pagy(:offset, scope.order(occurredAt: :desc, id: :asc), limit: 50)
   end
 end

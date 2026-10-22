@@ -12,7 +12,7 @@ class BulkConsumptionsController < BulkInventoryController
 
     scope = Core::OrderLine.joins(:order).where(orders: { tenant_id: Current.tenant_id, source: 'shopify',
       occurred_at: @from.in_time_zone.beginning_of_day...(@to + 1).in_time_zone.beginning_of_day })
-    @pagy, @lines = pagy(scope.includes(:order).order('orders.occurred_at DESC, order_lines.id DESC'), items: 25)
+    @pagy, @lines = pagy(:offset, scope.includes(:order).order('orders.occurred_at DESC, order_lines.id DESC'), limit: 25)
     @receipts = BulkConsumption.where(source_order_id: @lines.map { |line| line.order.source_order_id },
       source_line_id: @lines.map(&:source_line_id).compact).index_by { |receipt| [receipt.source_order_id, receipt.source_line_id] }
     @mapped_variants = BulkRecipe.where(source_variant_id: @lines.map(&:source_variant_id).compact).distinct.pluck(:source_variant_id)

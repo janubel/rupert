@@ -39,7 +39,7 @@ module People
         return send_data TimesheetCsv.generate(scope), filename: 'timesheets.csv', type: 'text/csv'
       end
       @coverage = TimeSourceCoverage.for(Current.user)
-      @pagy, @timesheets = pagy(scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), items: 30)
+      @pagy, @timesheets = pagy(:offset, scope.order(period_start: :desc, id: :desc).includes(:employee, :assigned_reviewer), limit: 30)
       @summaries = TimesheetInsights.summaries(@timesheets.to_a)
       # The week schedule leads the page for anyone who can review time, with an employee key to switch people on and off.
       @calendar_view = @reviewer && Current.user.can?('timesheets.read')
@@ -78,8 +78,7 @@ module People
         @unified = build_unified_records(visible)
         @page = [params[:page].to_i, 1].max
         @per_page = 40
-        @pagy = Pagy.new(count: @unified.size, page: @page, items: @per_page)
-        @unified_records = @unified.slice((@page - 1) * @per_page, @per_page) || []
+        @pagy, @unified_records = pagy(:offset, @unified, page: @page, limit: @per_page)
       end
     rescue Date::Error
       redirect_to people_timesheets_path, alert: 'Choose a valid period date.'

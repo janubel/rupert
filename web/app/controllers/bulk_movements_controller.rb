@@ -11,7 +11,7 @@ class BulkMovementsController < BulkInventoryController
     if @movement.persisted? && @movement.errors.empty?
       redirect_to(bulk_material_bulk_lot_path(@material, @lot), notice: 'Bulk material movement recorded.')
     else
-      @pagy, @movements = pagy(@lot.bulk_movements.order(created_at: :desc, id: :desc), limit: 30)
+      @pagy, @movements = pagy(:offset, @lot.bulk_movements.order(created_at: :desc, id: :desc), limit: 30)
       render('bulk_lots/show', status: :unprocessable_entity)
     end
   end
