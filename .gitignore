@@ -46,3 +46,9 @@ coverage/
 # Python host tooling bytecode
 __pycache__/
 *.pyc
+
+# opencode state: config, auth.json (real credentials) and its database must never be committed
+.config/
+.local/
+**/opencode.db*
+**/auth.json

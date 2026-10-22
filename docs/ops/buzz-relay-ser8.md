@@ -253,6 +253,35 @@ MinIO/git volumes and relay secrets in `~/backups/buzz/` (same key as `rupert-of
 loaded the dump into a scratch database (93 tables, 83 events, equal to live) and dropped it. The weekly `incus-backup.timer`
 also exports `buzz` and `rupert-agent` (crash-consistent). The agent container has nothing to back up beyond its env files.
 
+## Ask Rupert and the text-only runner inside the `rupert` container
+
+These still run `opencode` inside `rupert` (the sandboxed agent above is separate). `OpencodeCli.env` keeps everything
+opencode writes out of the git checkout: config, **credentials** and state live in `OPENCODE_STATE_DIR`
+(default `/var/lib/rupert-opencode`, created once by an operator), and the all-tools-denied `chat` agent comes from
+`deploy/ser8/ask-rupert/opencode.json` in the checkout (model `opencode-go/deepseek-v4.1-flash`, the id verified live on
+2026-10-22). Without the state directory it falls back to `/tmp/opencode/state` and has no credential. `.config/`, `.local/`,
+`opencode.db*` and `auth.json` are in `.gitignore`.
+
+**Realigning production after the hot-patch of 2026-10-22 (the owner runs this; nothing here was run by Claude).**
+Production `/opt/rupert` has two local commits (`fbb88007`, `3858342f`) plus untracked `.config/` and
+`.local/share/opencode/` created inside the checkout when opencode ran with `HOME=/opt/rupert`; `auth.json` in there is a real
+credential and `rupert-autodeploy` refuses to deploy a dirty, diverged checkout. Once this PR is on `main`:
+
+```bash
+# 1. move the opencode state out of the checkout, keeping the credential private
+incus exec rupert -- bash -c 'install -d -m 0700 -o rupert -g rupert /var/lib/rupert-opencode/data /var/lib/rupert-opencode/config
+  [ -d /opt/rupert/.local/share/opencode ] && cp -a /opt/rupert/.local/share/opencode /var/lib/rupert-opencode/data/ ;
+  [ -d /opt/rupert/.config/opencode ] && cp -a /opt/rupert/.config/opencode /var/lib/rupert-opencode/config/ ;
+  chown -R rupert:rupert /var/lib/rupert-opencode && chmod -R go-rwx /var/lib/rupert-opencode'
+# 2. discard the hot-patch commits and untracked state; take main (the PR keeps the useful parts)
+incus exec rupert -- bash -c 'git -C /opt/rupert fetch origin && git -C /opt/rupert reset --hard origin/main && git -C /opt/rupert clean -fd .config .local'
+# 3. the autodeployer then deploys on its own; check System -> Updates
+```
+
+Ask Rupert in the `rupert` container also needs `/usr/local/bin/opencode` (v2.0.32; it was removed when the agent moved
+out) and a credential in `/var/lib/rupert-opencode/data/opencode/` (v2 keeps it in `opencode.db` after
+`XDG_DATA_HOME=/var/lib/rupert-opencode/data opencode auth login`). That is a separate, optional step.
+
 ## Operations notes and incidents
 
 - **Never snapshot, freeze or restart the production `rupert` container.** On the `dir` pool a snapshot copies the 49 GB
