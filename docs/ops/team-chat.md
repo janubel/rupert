@@ -91,7 +91,16 @@ fork (upstream llama.cpp and Ollama cannot load its PQ2_0 packing). So all three
   requested one; requests are served one at a time, so two models are never in memory together;
 - a model with no request for 5 minutes (`--idle-seconds 300`) is unloaded; the next mention loads it again (Bonsai
   loaded in 9 s);
-- only `rupert` (10.96.131.8) and localhost may call it; `GET /health` says which model is loaded.
+- only `rupert` (10.96.131.8) and localhost may call it (the gateway checks, and the Incus ACL `rupert-llm-isolated`
+  drops all other inbound traffic and ALL outbound traffic: the container needs no internet once the models are in);
+  `GET /health` says which model is loaded.
+- Measured on SER8's CPU (8 threads, 2026-10-22): LFM2.5 17–21 tokens/s, Gemma 4 ~11, Ternary Bonsai ~11–13; a model
+  loads in about 9 s. All three made native tool calls. Thinking is off for Bonsai and Gemma (`--chat-template-kwargs`)
+  so they answer straight away; LFM2.5 thinks first (its template always opens `<think>`). In a quick check LFM2.5 used
+  the wrong year for "yesterday" and Gemma/Bonsai sometimes answer from memory instead of calling `where_is`: these are
+  for trying out, @rupert stays the dependable assistant.
+- The container needs the same `raw.apparmor` signal rule as `rupert` (copied from it); without it systemd and the
+  gateway cannot stop processes ("Permission denied") and models could not be swapped or unloaded.
 
 In the room the reply shows "Loading Gemma 4" / "Waiting for Gemma 4" until the model answers. Rupert allows a local
 reply up to 10 minutes per model call (it may be queued behind another model).
