@@ -16,6 +16,7 @@ export default class extends Controller {
     compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
   static GROUP_SECONDS = 5 * 60
+  static MIN_HEIGHT = 320
   static FAST = 1000
   static SLOW = 3000
   static RUPERT = { id: null, name: "rupert", label: "Rupert — the assistant" }
@@ -37,6 +38,7 @@ export default class extends Controller {
     this.lastTypingPing = 0
     this.editingId = null
     this.pinsOpen = false
+    this.startFitting()
     this.load()
     this.schedule()
     this.onVisible = () => { if (!document.hidden) this.poll() }
@@ -46,7 +48,46 @@ export default class extends Controller {
   disconnect() {
     clearTimeout(this.timer)
     document.removeEventListener("visibilitychange", this.onVisible)
+    this.stopFitting()
     if (!this.compactValue) document.title = this.titleValue
+  }
+
+  // --- layout: the full page fills the window, so the message box stays at the bottom ---
+
+  startFitting() {
+    if (this.compactValue) return
+    this.onResize = () => {
+      cancelAnimationFrame(this.fitFrame)
+      this.fitFrame = requestAnimationFrame(() => this.fitToWindow())
+    }
+    window.addEventListener("resize", this.onResize)
+    window.visualViewport?.addEventListener("resize", this.onResize)
+    // The header can wrap to two lines or gain a banner; re-fit when anything above the chat changes size.
+    if (window.ResizeObserver) {
+      this.fitObserver = new ResizeObserver(this.onResize)
+      const header = document.querySelector("header.app-header")
+      if (header) this.fitObserver.observe(header)
+      this.fitObserver.observe(document.body)
+    }
+    this.fitToWindow()
+  }
+
+  stopFitting() {
+    if (!this.onResize) return
+    window.removeEventListener("resize", this.onResize)
+    window.visualViewport?.removeEventListener("resize", this.onResize)
+    this.fitObserver?.disconnect()
+    cancelAnimationFrame(this.fitFrame)
+  }
+
+  // Height = the visible window below the chat's top edge, minus the page's bottom padding.
+  fitToWindow() {
+    const viewport = window.visualViewport?.height || window.innerHeight
+    const top = this.element.getBoundingClientRect().top + window.scrollY
+    const main = this.element.closest("main")
+    const gap = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0
+    const height = Math.max(this.constructor.MIN_HEIGHT, Math.floor(viewport - top - gap))
+    if (this.element.style.height !== `${height}px`) this.element.style.height = `${height}px`
   }
 
   // --- text formatting (pure; also used by the tests) ---

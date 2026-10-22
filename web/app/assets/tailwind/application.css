@@ -1472,7 +1472,7 @@ body.tour-active { overflow-x:hidden; }
 
 /* Team chat (/chat): rooms inside Rupert with @rupert. Theme tokens only, so
    light and dark follow the app. Layout: room rail | conversation | thread. */
-.chat-app { display:grid;grid-template-columns:15.5rem minmax(0,1fr);height:calc(100dvh - 9rem);min-height:32rem;border:1px solid var(--color-edge);border-radius:1rem;overflow:hidden;background:var(--color-paper); }
+.chat-app { display:grid;grid-template-columns:15.5rem minmax(0,1fr);height:calc(100dvh - 9rem);min-height:20rem;border:1px solid var(--color-edge);border-radius:1rem;overflow:hidden;background:var(--color-paper); }
 .chat-app:has(.chat-thread:not([hidden])) { grid-template-columns:15.5rem minmax(0,1fr) minmax(18rem,24rem); }
 .chat-rail { display:flex;flex-direction:column;gap:.6rem;min-height:0;padding:.9rem .65rem .7rem;background:var(--color-cream);border-right:1px solid var(--color-fog); }
 .chat-workspace { display:flex;align-items:center;gap:.6rem;padding:.1rem .35rem .3rem; }
@@ -1718,3 +1718,7 @@ body.tour-active { overflow-x:hidden; }
 .chat-rail-form { margin:0; }
 .chat-rail-form[hidden] { display:none; }
 .chat-rail-room-button { width:100%;border:0;background:none;font:inherit;text-align:left;cursor:pointer; }
+/* Team chat: the window-fitted page keeps the message box at the bottom; only the log scrolls. */
+.chat-main > .chat-head,.chat-main > .chat-pins,.chat-body > .chat-compose,.chat-thread > .chat-compose,.chat-thread > .chat-thread-head { flex:none; }
+.chat-app > .chat-rail,.chat-app > .chat-main,.chat-app > .chat-thread { min-height:0; }
+.chat-thread > .chat-thread-log { flex:1;height:auto;min-height:0; }
