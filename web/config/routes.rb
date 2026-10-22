@@ -166,6 +166,8 @@ Rails.application.routes.draw do
       get :catalog, to: 'catalog#index'
       get :inventory, to: 'inventory#index'
       get :roadmap, to: 'roadmap#index'
+      get :metrics, to: 'metrics#index'
+      get 'metrics/:name', to: 'metrics#show', as: :metric
       resources :uploads, only: %i[index show create]
     end
   end
