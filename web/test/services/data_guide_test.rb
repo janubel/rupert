@@ -19,6 +19,6 @@ class DataGuideTest < ActiveSupport::TestCase
     names = Mcp::Registry.tools.map(&:tool_name)
     DataGuide.topics.each { |topic| assert_empty topic.tools - names, "#{topic.key} names a missing tool" }
     assert_equal DataGuide.topics.size, DataGuide.markdown.scan(/^### /).size
-    assert_equal %w[sales_summary period_review sales_tax_report], DataGuide.tools_for([DataGuide.find('sales'), DataGuide.find('tax')])
+    assert_equal %w[metric sales_summary period_review sales_tax_report], DataGuide.tools_for([DataGuide.find('sales'), DataGuide.find('tax')])
   end
 end
