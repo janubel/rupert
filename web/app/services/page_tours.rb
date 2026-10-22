@@ -228,7 +228,7 @@ class PageTours
         { anchor: 'chat-composer', title: 'Write, mention, attach',
           body: 'Type @ to mention a person or a bot: @rupert for the main assistant, or @all to ask every bot and compare their answers side by side. Paste or drop photos and files. Enter sends.' },
         { anchor: 'chat-bots', title: 'Which bot is which',
-          body: '@rupert is DeepSeek in the cloud (fast). @liquid, @qwen and @ternary run privately on this server (slower). Every bot reply shows its model and how long it took.' },
+          body: '@rupert is DeepSeek in the cloud (fast). @liquid, @qwen, @gemma and @ternary run privately on this server (slower). Every bot reply shows its model and how long it took.' },
         { anchor: 'chat-messages', title: 'Work with a message',
           body: 'Hover a message to reply in a thread, react, pin it as the room banner, copy a link to it, or edit your own. Rate bot replies with a thumb and say why, so Model scores shows which bot helps most.' },
         { anchor: 'chat-help', title: 'Help any time',

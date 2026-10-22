@@ -498,7 +498,7 @@ class PageGuides
       summary: 'Rooms and direct messages for the admin team, with Rupert’s bots answering from Rupert’s own data.',
       sections: [
         { heading: 'Rooms and people', body: '#admins holds every admin and Rupert. Direct lists each person; your own room with Rupert answers every message. Make more rooms with + next to Rooms.' },
-        { heading: 'Bots', body: '@rupert is DeepSeek in the cloud (fast). @liquid, @qwen and @ternary run privately on this server (slower). @all asks every bot and shows their answers side by side. Every bot reply shows its model and time; rate it with a thumb and say why.' },
+        { heading: 'Bots', body: '@rupert is DeepSeek in the cloud (fast). @liquid, @qwen, @gemma and @ternary run privately on this server (slower). @all asks every bot and shows their answers side by side. Every bot reply shows its model and time; rate it with a thumb and say why.' },
         { heading: 'Messages', body: 'Hover a message to reply in a thread, react, pin it as the room banner, copy a link to it or edit your own. Paste or drop photos and files.' }
       ],
       tips: ['Bots change nothing on their own: a proposed change waits for someone to press Approve.',
