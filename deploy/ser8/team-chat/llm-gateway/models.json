@@ -127,12 +127,12 @@
       "1024"
     ]
   },
-  "qwen3.5-2b": {
-    "file": "/var/lib/rupert-llm/models/Qwen3.5-2B-UD-Q4_K_XL.gguf",
+  "flint-40b-a2.5b": {
+    "file": "/var/lib/rupert-llm/models/flint-UD-IQ3_XXS.gguf",
     "ctx": 16384,
     "args": [
-      "--chat-template-kwargs",
-      "{\"enable_thinking\":false}",
+      "--reasoning-budget",
+      "0",
       "--n-gpu-layers",
       "99",
       "--flash-attn",
@@ -140,7 +140,23 @@
       "--batch-size",
       "2048",
       "--ubatch-size",
-      "512"
+      "1024"
+    ]
+  },
+  "flint-40b-a2.5b-think": {
+    "file": "/var/lib/rupert-llm/models/flint-UD-IQ3_XXS.gguf",
+    "ctx": 16384,
+    "args": [
+      "--reasoning-budget",
+      "512",
+      "--n-gpu-layers",
+      "99",
+      "--flash-attn",
+      "on",
+      "--batch-size",
+      "2048",
+      "--ubatch-size",
+      "1024"
     ]
   }
 }
