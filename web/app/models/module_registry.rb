@@ -64,6 +64,8 @@ class ModuleRegistry
     Entry.new(key: 'bank_statements', name: 'Bank transactions', path: -> { bank_statements_path }, permission: 'finance.read', position: 60),
     Entry.new(key: 'bank_reconciliation', name: 'Bank reconciliation', path: -> { finance_bank_reconciliation_path }, permission: 'finance.read', position: 53),
     Entry.new(key: 'source_reports', name: 'Source reports', path: -> { money_reconciliations_path }, permission: 'reports.read', position: 64),
+    Entry.new(key: 'swipesimple_reports', name: 'SwipeSimple reports', path: -> { swipesimple_reports_path }, permission: 'reports.read', position: 64.1),
+    Entry.new(key: 'zelle_reports', name: 'Zelle reports', path: -> { zelle_reports_path }, permission: 'reports.read', position: 64.2),
     Entry.new(key: 'retention_drive', name: 'Drive copies', path: -> { retention_drive_path }, permission: 'reports.read', position: 57.1),
     Entry.new(key: 'ledger', name: 'Imported orders', path: -> { ledger_index_path }, permission: 'ledger.read', position: 60),
     Entry.new(key: 'journal_entries', name: 'General ledger', path: -> { finance_journal_entries_path }, permission: 'finance.read', position: 51),
@@ -186,14 +188,14 @@ class ModuleRegistry
       { key: 'money', name: 'Bookkeeping',
         modules: %w[bookkeeping cash_flow business_snapshot books_check
                     financial_close daily_reconciliation register_summary reconciliation_overview reconciliation_follow_ups reconciliation_documents
-                    books_desk book_approvals period_locks bank_statements bank_reconciliation source_reports retention_drive
+                    books_desk book_approvals period_locks bank_statements bank_reconciliation source_reports swipesimple_reports zelle_reports retention_drive
                     ledger journal_entries chart_of_accounts finance_accounts expenses expense_categories payments payees finance_history quickbooks_imports ledger_export
                     cash_forecast],
         # Display order is group order; every module of the area appears in exactly one group.
         groups: [
           { name: 'Overview', modules: %w[bookkeeping cash_flow business_snapshot books_check] },
           { name: 'Daily close', modules: %w[financial_close daily_reconciliation register_summary reconciliation_overview reconciliation_follow_ups reconciliation_documents] },
-          { name: 'Books & review', modules: %w[books_desk book_approvals period_locks bank_statements bank_reconciliation source_reports retention_drive] },
+          { name: 'Books & review', modules: %w[books_desk book_approvals period_locks bank_statements bank_reconciliation source_reports swipesimple_reports zelle_reports retention_drive] },
           { name: 'Ledger & accounts', modules: %w[ledger journal_entries chart_of_accounts finance_accounts expenses expense_categories payments payees finance_history quickbooks_imports ledger_export] },
           { name: 'Planning', modules: %w[cash_forecast] }
         ] },
