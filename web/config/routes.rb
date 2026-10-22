@@ -207,18 +207,6 @@ Rails.application.routes.draw do
   post   '/chat/:room/messages/:id/reactions',        to: 'team_chat#react',           as: :team_chat_reactions
   get    '/chat/:room/files/:id',                     to: 'team_chat#attachment',      as: :team_chat_attachment
   post   '/chat/:room/messages/:id/actions/:action_id', to: 'team_chat#decide',        as: :team_chat_action
-  get '/buzz', to: 'buzz#show', as: :buzz
-  get '/buzz/chat', to: 'buzz_chat#show', as: :buzz_chat
-  get '/buzz/chat/messages', to: 'buzz_chat#messages', as: :buzz_chat_messages
-  post '/buzz/chat/messages', to: 'buzz_chat#create'
-  post '/buzz/chat/typing', to: 'buzz_chat#typing', as: :buzz_chat_typing
-  get  '/admin/buzz',          to: 'admin/buzz_mirror#show',     as: :admin_buzz_mirror
-  get  '/admin/buzz/messages', to: 'admin/buzz_mirror#messages', as: :admin_buzz_mirror_messages
-  post '/admin/buzz/messages', to: 'admin/buzz_mirror#create'
-  post '/admin/buzz/typing',   to: 'admin/buzz_mirror#typing',   as: :admin_buzz_mirror_typing
-  post '/buzz/link', to: 'buzz_links#create', as: :buzz_link
-  post '/buzz/link/:id/confirm', to: 'buzz_links#confirm', as: :confirm_buzz_link
-  delete '/buzz/link/:id', to: 'buzz_links#destroy', as: :remove_buzz_link
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)
@@ -583,10 +571,6 @@ Rails.application.routes.draw do
     get :drive_oauth_callback
     post :drive_backup, defaults: { format: :json }
     post :drive_disconnect
-    post :buzz_generate
-    post :buzz_register
-    post :buzz_test
-    post :buzz_status
   end
 
   resources :size_families, only: %i[index new create edit update destroy] do

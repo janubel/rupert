@@ -27,7 +27,7 @@ class OperationsBriefTest < ActiveSupport::TestCase
       line_cents: 4200
     )
     content = nil
-    BuzzAgent.stubs(:notify).with do |message, *_|
+    TeamChat::Notices.stubs(:notify).with do |message, *_|
       content = message
       true
     end.returns([true, 'OK'])
@@ -41,7 +41,7 @@ class OperationsBriefTest < ActiveSupport::TestCase
 
   test 'failed publication is retried rather than marked complete' do
     create_paid_order(gross_cents: 4200)
-    BuzzAgent.stubs(:notify).returns([false, 'relay unavailable'])
+    TeamChat::Notices.stubs(:notify).returns([false, 'relay unavailable'])
 
     assert_raises(RuntimeError) { OperationsBrief.publish!('morning') }
     assert_nil Setting.find_by(key: 'operations_brief_morning_last_period')

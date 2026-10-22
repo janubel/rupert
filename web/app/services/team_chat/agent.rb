@@ -226,12 +226,25 @@ module TeamChat
       body = AskRupert::ReplyFormat.tidy(text)
       body = FAILURES[:error] if body.blank? && @reply.reload.actions_list.empty?
       @reply.reload.update!(body: body.to_s, status: 'done', activity: nil, meta: meta_with(started, 'ok'))
+      note_ai_health('ok')
     end
 
     def fail!(kind, started)
       @reply.update!(body: FAILURES.fetch(kind, FAILURES[:error]), status: 'failed', activity: nil, meta: meta_with(started, kind.to_s))
+      note_ai_health('error')
     rescue StandardError => e
       Rails.logger.error "[TeamChat] could not record failure: #{e.class}"
+    end
+
+    # Cloud replies count toward System → AI health's token totals, as Ask Rupert's do.
+    def note_ai_health(outcome)
+      return if @engine == 'ollama' || !defined?(AiAgentRun)
+
+      meta = @reply.meta.to_h
+      AiAgentRun.create!(agent: 'team_chat', model: meta['model'].to_s, outcome: outcome, tokens_in: @tokens_in, tokens_out: @tokens_out,
+        duration_ms: meta['duration_ms'], occurred_at: Time.current)
+    rescue StandardError => e
+      Rails.logger.warn "[TeamChat] could not note ai health: #{e.class}"
     end
 
     def meta_with(started, outcome)

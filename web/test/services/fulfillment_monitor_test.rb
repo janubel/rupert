@@ -19,7 +19,7 @@ class FulfillmentMonitorTest < ActiveSupport::TestCase
     order = create_order(occurred_at: 25.hours.ago)
     order.mark_paid!
     content = nil
-    BuzzAgent.stubs(:notify).with do |message, *_|
+    TeamChat::Notices.stubs(:notify).with do |message, *_|
       content = message
       true
     end.returns([true, 'OK'])
@@ -48,14 +48,14 @@ class FulfillmentMonitorTest < ActiveSupport::TestCase
     shipped.mark_paid!
     shipped.update!(fulfillment_status: 'shipped')
 
-    BuzzAgent.expects(:notify).never
+    TeamChat::Notices.expects(:notify).never
     assert_equal 0, FulfillmentMonitor.check!
   end
 
   test 'does not save the signature when publishing fails' do
     order = create_order(occurred_at: 25.hours.ago)
     order.mark_paid!
-    BuzzAgent.stubs(:notify).returns([false, 'relay unavailable'])
+    TeamChat::Notices.stubs(:notify).returns([false, 'relay unavailable'])
 
     assert_raises(RuntimeError) { FulfillmentMonitor.check! }
     assert_nil Setting.find_by(key: FulfillmentMonitor::SIGNATURE_KEY)

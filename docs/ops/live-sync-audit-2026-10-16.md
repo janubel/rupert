@@ -18,7 +18,7 @@ The Herbal Healers workspace on SER8 was inspected at 00:13–00:21 America/New_
 | Google Drive document retention | Disconnected and disabled; no refresh token. This is a separate connection from instance backup. | Owner previously deferred Google's Testing/test-user consent requirement. Keep it disabled. Follow the [recorded consent prerequisite](drive-retention-deployment-2026-10-16.md) when resumed, then verify upload/download receipts. |
 | Valmar / PAX / KORONA / Cova | No configured reporting connection. Valmar/PAX are preparation objectives; KORONA/Cova remain unconfigured evaluation paths. | Establish the intended provider, supported read contract and authorized account access first. Setup cards are not working feeds. |
 
-Google sign-in and Buzz showed configured required-field presence. They are auxiliary services, not proof of a financial source feed; this audit did not send a Buzz message or exercise a Google sign-in.
+Google sign-in and Buzz showed configured required-field presence. They are auxiliary services, not proof of a financial source feed; this audit did not send a Buzz message or exercise a Google sign-in. (Note, 2026-10-22: Buzz has since been removed; see [team-chat.md](team-chat.md).)
 
 ## What appeared broken
 

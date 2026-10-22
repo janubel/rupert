@@ -12,7 +12,7 @@ class AgentFeedback < ApplicationRecord
     'suggestion' => 'Suggestion', 'question' => 'Question', 'report_issue' => 'Report issue',
     'request' => 'Request', 'direction' => 'Direction'
   }.freeze
-  # agent = an AI assistant over MCP, app = the ladybug in Rupert, buzz = a teammate's chat message.
+  # agent = an AI assistant over MCP, app = the ladybug in Rupert, buzz = a teammate's Buzz chat message (Buzz is retired; kept for older reports).
   SOURCES = %w[agent app buzz].freeze
   SEVERITIES = %w[low normal high].freeze
   STATUSES = {
