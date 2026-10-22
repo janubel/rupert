@@ -283,11 +283,11 @@ class TeamChatTest < ActionDispatch::IntegrationTest
       meta: { 'asked_by' => @admin.id, 'trigger_id' => person.id, 'agent' => 'gemma', 'engine' => 'local_gateway', 'model' => 'gemma-4-e4b', 'duration_ms' => 80_000 })
 
     post team_chat_rating_path('admins', qwen.id), params: { value: 'up' }, as: :json
-    assert_equal({ 'up' => 1, 'down' => 0, 'mine' => 'up' }, json['messages'].first['rating'])
+    assert_equal({ 'up' => 1, 'down' => 0, 'mine' => 'up', 'my_reason' => nil }, json['messages'].first['rating'])
     post team_chat_rating_path('admins', qwen.id), params: { value: 'down' }, as: :json
-    assert_equal({ 'up' => 0, 'down' => 1, 'mine' => 'down' }, json['messages'].first['rating'])
+    assert_equal({ 'up' => 0, 'down' => 1, 'mine' => 'down', 'my_reason' => nil }, json['messages'].first['rating'])
     post team_chat_rating_path('admins', qwen.id), params: { value: 'down' }, as: :json
-    assert_equal({ 'up' => 0, 'down' => 0, 'mine' => nil }, json['messages'].first['rating'])
+    assert_equal({ 'up' => 0, 'down' => 0, 'mine' => nil, 'my_reason' => nil }, json['messages'].first['rating'])
     assert_equal 0, TeamChat::Rating.count
 
     post team_chat_rating_path('admins', qwen.id), params: { value: 'up' }, as: :json
@@ -578,5 +578,23 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_nil question['compare_of']
   ensure
     ENV.delete('RUPERT_LOCAL_LLM_URL')
+  end
+
+  test 'after a thumb, an optional reason is saved with the rating and shown on Model scores' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'admins')
+    asked = room.messages.create!(user: @admin, body: 'q')
+    reply = room.messages.create!(author_kind: 'assistant', status: 'done', body: 'a',
+      meta: { 'asked_by' => @admin.id, 'trigger_id' => asked.id, 'agent' => 'qwen', 'model' => 'qwen3.5-4b', 'engine' => 'local_gateway', 'duration_ms' => 1000 })
+    post team_chat_rating_reason_path('admins', reply.id), params: { reason: 'too early' }, as: :json
+    assert_response :unprocessable_entity
+    post team_chat_rating_path('admins', reply.id), params: { value: 'down' }, as: :json
+    post team_chat_rating_reason_path('admins', reply.id), params: { reason: '  Wrong total,   ignored refunds ' }, as: :json
+    assert_response :success
+    assert_equal 'Wrong total, ignored refunds', json['messages'].first['rating']['my_reason']
+    assert_equal 'Wrong total, ignored refunds', TeamChat::Rating.last.reason
+    get team_chat_scores_path
+    assert_select 'li', /Wrong total, ignored refunds/
   end
 end

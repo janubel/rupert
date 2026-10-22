@@ -129,6 +129,16 @@ class TeamChatController < AuthenticatedController
     render json: { messages: payload([message.reload]) }
   end
 
+  # POST /chat/:room/messages/:id/rating/reason { reason } — the optional "why" on your 👍/👎.
+  def rating_reason
+    message = @room.messages.visible.find(params[:id])
+    rating = message.ratings.find_by(user_id: Current.user.id)
+    return render json: { error: 'Rate the reply first.' }, status: :unprocessable_entity unless rating
+
+    rating.note!(params[:reason])
+    render json: { messages: payload([message.reload]) }
+  end
+
   # POST /chat/:room/messages/:id/pin — pins (or unpins) a message as the room's banner.
   def pin
     message = @room.messages.visible.where.not(status: 'pending').find(params[:id])
@@ -143,6 +153,7 @@ class TeamChatController < AuthenticatedController
   def scores
     @days = params[:days].present? ? params[:days].to_i.clamp(1, 365) : 30
     @rows = TeamChat::ModelScores.call(since: @days.days.ago)
+    @notes = TeamChat::Rating.where.not(reason: [nil, '']).where(created_at: @days.days.ago..).includes(:user).order(updated_at: :desc).limit(30)
     @current = TeamChat::ModelConfig.current
   end
 
