@@ -208,6 +208,7 @@ Rails.application.routes.draw do
   get    '/chat/:room/dock',                          to: 'team_chat#dock_room',       as: :team_chat_dock_room
   get    '/chat/:room',                               to: 'team_chat#show',            as: :team_chat_room
   patch  '/chat/:room',                               to: 'team_chat#update_room'
+  patch  '/chat/:room/visibility',                    to: 'team_chat#visibility',      as: :team_chat_visibility
   get    '/chat/:room/messages',                      to: 'team_chat#messages',        as: :team_chat_messages
   post   '/chat/:room/messages',                      to: 'team_chat#create_message'
   patch  '/chat/:room/messages/:id',                  to: 'team_chat#update_message'
