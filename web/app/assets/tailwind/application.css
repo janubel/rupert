@@ -1708,4 +1708,6 @@ body.tour-active { overflow-x:hidden; }
 .chat-edit { margin-top:.2rem;padding:.4rem .5rem;border:1px solid var(--color-olive);border-radius:.6rem;background:var(--color-paper); }
 .chat-edit-bar { display:flex;align-items:center;justify-content:flex-end;gap:.4rem;margin-top:.3rem;font-size:.68rem;color:var(--color-taupe); }
 .chat-edit-bar span { margin-right:auto; }
-.chat-app { height:calc(100dvh - 7.5rem); }
+.chat-app { height:calc(100dvh - 8.75rem); }
+/* Tailwind's reset removes the browser's centring of modal dialogs. */
+.chat-dialog { margin:auto; }
