@@ -29,7 +29,7 @@ module TeamChat
         purpose: 'Best of the local models at using Rupert’s tools. Private, slower.'),
       Agent.new(handle: 'gemma', name: 'Gemma', model: 'gemma-4-e4b', color: '#9333ea',
         about: 'Google Gemma 4 E4B, local',
-        purpose: 'Google’s open model, running on this server. Private.'),
+        purpose: 'Google’s open model: good with Rupert’s tools, about 1½–2 minutes an answer. Private.'),
       Agent.new(handle: 'ternary', name: 'Ternary', model: 'ternary-bonsai-2-9b', color: '#65a30d', aliases: %w[bonsai],
         about: 'PrismML Ternary Bonsai 2 9B, local',
         purpose: 'Experimental 1.58-bit local model. Private.')
