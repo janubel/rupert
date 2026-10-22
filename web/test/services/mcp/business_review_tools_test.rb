@@ -66,6 +66,8 @@ class BusinessReviewToolsTest < ActiveSupport::TestCase
     assert(items.all? { |item| %w[ok watch fix unknown].include?(item[:status]) })
     assert(items.select { |item| item[:status] != 'ok' }.all? { |item| item[:path].present? || item[:status] == 'unknown' })
     assert_includes items.map { |item| item[:area] }, 'Books'
+    assert_empty items.select { |item| item[:title].end_with?('could not be checked') }, 'every area loads, including the close checklists'
+    assert(items.any? { |item| item[:area].end_with?(' close') && item[:path].present? }, 'close checklist items link to their page')
     tax = items.find { |item| item[:area] == 'Sales tax' }
     assert_equal ['unknown', '/reports/sales_tax'], [tax[:status], tax[:path]]
     assert_match(/\d+ to fix, \d+ to watch, \d+ ok\./, outcome.text)

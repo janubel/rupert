@@ -42,7 +42,15 @@ module Mcp
       private
 
       def paths = Rails.application.routes.url_helpers
-      def helpers = ApplicationController.helpers
+
+      # View helpers (BooksDeskHelper builds the checklist links) need the route
+      # helpers too; ApplicationController.helpers alone does not have them.
+      def helpers
+        @helpers ||= Class.new do
+          include Rails.application.routes.url_helpers
+          include ApplicationController._helpers
+        end.new
+      end
 
       def books_items(days)
         safely('Books') do
