@@ -163,7 +163,11 @@ manual source (`SwipesimpleImporter`) feeds CSV exports through the same seam.
 
 Production is hosted on SER8 in Incus and served at
 [herbalhealers.rupertpos.com](https://herbalhealers.rupertpos.com/). GitHub is the source
-repository; pushing a commit or creating a GitHub release does not deploy it.
+repository. The SER8 updater polls `main`; eligible commits can install
+automatically or wait for an operator request, depending on the instance's
+configured mode. Check the installed mode and build SHA before describing a
+change as live. See the [development and deployment workflow](docs/development-and-deployment-workflow.md)
+and [SER8 updater runbook](deploy/ser8/README.md#auto-deploy-rupert-autodeploy).
 
 The SER8 web/worker/backup units and the host-side watcher and off-host backup scripts are under `deploy/`. The pre-Incus droplet units and the original Node/React implementation (`legacy/`) were removed on 2026-10-20; they remain in git history (`git show 03db8bb:legacy/README.md`).
 

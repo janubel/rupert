@@ -74,19 +74,26 @@ if [ "$requested" = 0 ] && [ "$(cat "$STATE/failed-sha" 2>/dev/null)" = "$NEW" ]
   report failed "${NEW:0:8} already failed to deploy, waiting for a newer commit (rm $STATE/failed-sha or request an install to retry)"; exit 0
 fi
 
-# The `CI (sqlite3)` job must be green. Re-runs leave the earlier check runs in
-# the list, so only the most recent run counts.
+# Integrated main commits must pass all three source checks before deployment.
+# CLA is a PR-only check. Re-runs leave earlier check runs in the list, so only
+# the latest check run by ID for each required name counts. Missing, skipped or
+# pending checks never pass the gate.
+mobile_check_required=0
+if ! git diff --quiet "$CUR" "$NEW" -- mobile bin/check-mobile-sdk.mjs .github/workflows/employee-mobile.yml; then
+  mobile_check_required=1
+fi
 ci=$(curl -fsS --max-time 20 -H 'Accept: application/vnd.github+json' \
   "https://api.github.com/repos/$REPO/commits/$NEW/check-runs?per_page=100" | python3 -c '
 import json, sys
+required = ["CI (sqlite3)", "Product site consistency", "Dependency and static scan"]
+if sys.argv[1] == "1": required.append("validate")
 latest = {}
 for r in json.load(sys.stdin)["check_runs"]:
-    if r["name"] == "CI (sqlite3)" and r["id"] > latest.get(r["name"], {"id": -1})["id"]:
+    if r["name"] in required and r["id"] > latest.get(r["name"], {"id": -1})["id"]:
         latest[r["name"]] = r
-done = [r["conclusion"] for r in latest.values()]
-if any(c in ("failure", "cancelled", "timed_out") for c in done): print("red")
-elif len(latest) == 1 and all(c == "success" for c in done): print("green")
-else: print("pending")') || ci=unknown
+if any(r.get("status") == "completed" and r.get("conclusion") != "success" for r in latest.values()): print("red")
+elif all(name in latest and latest[name].get("status") == "completed" and latest[name].get("conclusion") == "success" for name in required): print("green")
+else: print("pending")' "$mobile_check_required") || ci=unknown
 case "$ci" in
   green) ;;
   red) report ci_failed "CI for ${NEW:0:8} is red, not deploying"; exit 0 ;;

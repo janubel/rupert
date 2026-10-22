@@ -1,3 +1,4 @@
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -16,18 +17,20 @@ echo "curl $*" >> "$CALLS"
 case "$*" in *check-runs*) cat "$CHECKS" ;; *) printf %s "$HEALTH" ;; esac
 ''',
     'systemctl': '#!/bin/sh\necho "systemctl $*" >> "$CALLS"\n',
-    'sqlite3': '#!/bin/sh\necho "sqlite3 $*" >> "$CALLS"\nset -- $2\ntouch "$2"\n',
-    'bundle': '#!/bin/sh\necho "bundle $*" >> "$CALLS"\ncase "$*" in *db:migrate*) exit "${MIGRATE_EXIT:-0}" ;; esac\n',
+    'sqlite3': '#!/bin/sh\necho "sqlite3 $*" >> "$CALLS"\n[ "${BACKUP_EXIT:-0}" = 0 ] || exit "$BACKUP_EXIT"\nset -- $2\ntouch "$2"\n',
+    'bundle': '#!/bin/sh\necho "bundle $*" >> "$CALLS"\ncase "$*" in *db:migrate*) exit "${MIGRATE_EXIT:-0}" ;; *assets:precompile*) exit "${ASSETS_EXIT:-0}" ;; esac\n[ "$1" = install ] && exit "${INSTALL_EXIT:-0}"\n',
     'chown': '#!/bin/sh\necho "chown $*" >> "$CALLS"\n',
     'sleep': '#!/bin/sh\n',
 }
 
 
 def check_runs(*runs):
-    return {'check_runs': [{'id': i, 'name': n, 'conclusion': c} for i, (n, c) in enumerate(runs)]}
+    return {'check_runs': [{'id': i, 'name': n, 'status': 'completed' if c else 'in_progress', 'conclusion': c}
+                           for i, (n, c) in enumerate(runs)]}
 
 
-GREEN = check_runs(('CI (sqlite3)', 'success'))
+REQUIRED = ('CI (sqlite3)', 'Product site consistency', 'Dependency and static scan')
+GREEN = check_runs(*[(name, 'success') for name in REQUIRED])
 
 
 class AutodeployTest(unittest.TestCase):
@@ -103,7 +106,7 @@ class AutodeployTest(unittest.TestCase):
         self.assertIn('up to date', result.stdout)
         self.assertNotIn('systemctl', calls)
 
-    def test_green_ci_deploys_after_backup(self):
+    def test_all_exact_sha_checks_green_deploys_after_backup(self):
         new = self.commit('feature')
         result, calls = self.run_deploy()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -126,7 +129,11 @@ class AutodeployTest(unittest.TestCase):
     def test_pending_or_red_ci_is_not_deployed(self):
         self.commit('feature')
         for checks, word in [(check_runs(('Product site consistency', 'success')), 'pending'),
-                             (check_runs(('CI (sqlite3)', 'failure')), 'red')]:
+                             (check_runs(('CI (sqlite3)', 'failure')), 'red'),
+                             (check_runs(('CI (sqlite3)', 'success'), ('Product site consistency', 'success'),
+                                         ('Dependency and static scan', 'skipped')), 'red'),
+                             (check_runs(('CI (sqlite3)', 'success'), ('Product site consistency', 'success')),
+                              'pending')]:
             self.set_checks(checks)
             result, calls = self.run_deploy()
             self.assertIn(f'is {word}, not deploying', result.stdout)
@@ -134,13 +141,25 @@ class AutodeployTest(unittest.TestCase):
 
     def test_rerun_that_passed_supersedes_earlier_failure(self):
         self.commit('feature')
-        self.set_checks(check_runs(('CI (sqlite3)', 'failure'), ('CI (sqlite3)', 'success')))
+        self.set_checks(check_runs(('CI (sqlite3)', 'failure'), ('CI (sqlite3)', 'success'),
+                                   ('Product site consistency', 'success'), ('Dependency and static scan', 'success')))
+        result, _ = self.run_deploy()
+        self.assertIn('healthy', result.stdout)
+
+    def test_mobile_changes_require_the_exact_sha_mobile_check(self):
+        self.commit('mobile change', path='mobile/src/task.js')
+        result, _ = self.run_deploy()
+        self.assertIn('is pending, not deploying', result.stdout)
+        self.assertEqual(self.head(self.tmp / 'app'), self.old)
+
+        self.set_checks(check_runs(*[(name, 'success') for name in REQUIRED], ('validate', 'success')))
         result, _ = self.run_deploy()
         self.assertIn('healthy', result.stdout)
 
     def test_retired_postgresql_check_is_ignored(self):
         self.commit('feature')
-        self.set_checks(check_runs(('CI (postgresql)', 'failure'), ('CI (sqlite3)', 'success')))
+        self.set_checks(check_runs(('CI (postgresql)', 'failure'), ('CI (sqlite3)', 'success'),
+                                   ('Product site consistency', 'success'), ('Dependency and static scan', 'success')))
         result, _ = self.run_deploy()
         self.assertIn('healthy', result.stdout)
 
@@ -149,6 +168,54 @@ class AutodeployTest(unittest.TestCase):
         (self.tmp / 'app' / 'stray.txt').write_text('x')
         result, _ = self.run_deploy()
         self.assertIn('dirty', result.stdout)
+        self.assertEqual(self.head(self.tmp / 'app'), self.old)
+
+    def test_diverged_checkout_is_not_reset_or_deployed(self):
+        app = self.tmp / 'app'
+        (app / 'local.txt').write_text('local commit')
+        self.git('add', 'local.txt', cwd=app)
+        self.git('commit', '-q', '-m', 'local only', cwd=app)
+        local = self.head(app)
+        self.commit('remote only')
+
+        result, calls = self.run_deploy()
+
+        self.assertIn('not a fast-forward', result.stdout)
+        self.assertEqual(self.head(app), local)
+        self.assertNotIn('systemctl restart', calls)
+
+    def test_existing_deploy_lock_prevents_overlapping_install(self):
+        self.commit('feature')
+        with self.open_lock():
+            result, calls = self.run_deploy()
+
+        self.assertIn('another deploy is running', result.stdout)
+        self.assertEqual(self.head(self.tmp / 'app'), self.old)
+        self.assertNotIn('sqlite3', calls)
+
+    def open_lock(self):
+        handle = open(self.tmp / 'lock', 'w')
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        self.addCleanup(handle.close)
+        return handle
+
+    def test_backup_failure_stops_before_checkout_or_build(self):
+        self.commit('feature')
+
+        result, calls = self.run_deploy(BACKUP_EXIT='1')
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('backup failed, aborting', result.stdout)
+        self.assertEqual(self.head(self.tmp / 'app'), self.old)
+        self.assertNotIn('db:migrate', calls)
+
+    def test_asset_build_failure_rolls_back_code(self):
+        self.commit('feature')
+
+        result, _ = self.run_deploy(ASSETS_EXIT='1')
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('no new migrations', result.stdout)
         self.assertEqual(self.head(self.tmp / 'app'), self.old)
 
     def test_shallow_checkout_is_completed_before_deploying(self):

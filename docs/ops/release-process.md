@@ -1,6 +1,19 @@
 # Release process
 
-GitHub does not deploy Rupert. A release is a tag plus a human promotion on SER8. `main` is always deployable; every PR must pass CI (SQLite), Security (bundler-audit, Brakeman baseline) and the product-site/doc-link checks.
+Rupert has two distinct paths: SER8's updater can install eligible commits from
+`main` according to the instance's automatic or click-only mode, while a stable
+release is an explicitly tagged product milestone. A tag does not itself
+promote production, and a `main` install is not stable-release or operator
+acceptance. See the [development and deployment workflow](../development-and-deployment-workflow.md)
+and the [SER8 updater runbook](../../deploy/ser8/README.md#auto-deploy-rupert-autodeploy).
+
+Each PR must pass the current required checks: `CI (sqlite3)`, `Product site
+consistency`, `Dependency and static scan`, and `cla`. Verify the exact
+integrated SHA and applicable mobile checks before a release. The updater waits
+for the newest exact-SHA `CI (sqlite3)`, `Product site consistency`, and
+`Dependency and static scan` checks. Missing or pending results wait; any
+completed non-success result blocks. `cla` remains a pull-request check, not an
+integrated-main check.
 
 ## 1. Cut the release (on a laptop)
 
