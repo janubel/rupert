@@ -11,6 +11,9 @@ module Metrics
   COUNTED = %w[paid fulfilled].freeze
   SOURCES = %w[shopify square rupert_pos manual pos].freeze
   COMPARES = %w[previous last_year none].freeze
+  PRESETS = %w[today yesterday this_week last_week this_pay_week last_pay_week this_month last_month
+               this_quarter last_quarter year_to_date last_year].freeze
+  MAX_DAYS = 400
 
   Definition = Data.define(:key, :title, :unit, :description)
 

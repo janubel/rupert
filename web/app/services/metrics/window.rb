@@ -3,10 +3,6 @@
 module Metrics
   # A reporting period (named preset or from/to dates) and the periods it is compared with.
   # Shared by the metrics layer and period_review, so "last month vs the month before" means the same everywhere.
-  PRESETS = %w[today yesterday this_week last_week this_pay_week last_pay_week this_month last_month
-               this_quarter last_quarter year_to_date last_year].freeze
-  MAX_DAYS = 400
-
   Window = Data.define(:from, :to, :label, :key) do
     def self.resolve(period: nil, from: nil, to: nil, today: Date.current)
       if from.present? || to.present?
