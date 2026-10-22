@@ -9,7 +9,8 @@ module Mcp
         description: 'Returns one business figure computed by Rupert, ready to quote: gross_sales, orders, average_order_value, ' \
                      'best_day, sales_by_source (with shares), top_products (with shares) or refund_rate, per currency, for a ' \
                      'named period or from/to dates, compared with the period before (default) or the same dates last year, ' \
-                     'with the change amount, change percent and direction already computed. Quote `formatted`, `text` and ' \
+                     'with the change amount, change percent and direction already computed. `sales_by_source` also carries ' \
+                     'the latest sync status when the user may read system health. Quote `formatted`, `text` and ' \
                      'the change exactly; never calculate. list_metrics lists them. Read-only.',
         scope: 'reports:read'
 
@@ -30,9 +31,25 @@ module Mcp
       def call(args)
         data = ::Metrics.call(args['name'], period: args['period'], from: args['from'], to: args['to'],
           compare: args['compare'], source: args['source'])
+        data[:values] = with_sync_status(data[:values]) if args['name'] == 'sales_by_source'
         result(data[:text], data)
       rescue ArgumentError => e
         raise ToolError.new(e.message, kind: 'invalid_arguments')
+      end
+
+      private
+
+      def with_sync_status(values)
+        sync_tool = Registry.find('sync_health')
+        health = sync_tool.new(token: token).call({}).data if sync_tool&.available_to?(token)
+        by_source = Array(health&.dig(:channels)).select { |row| row[:feeds].include?('sales') }.index_by { |row| row[:source] }
+        Array(values).map do |currency|
+          currency.merge(sources: Array(currency[:sources]).map do |source|
+            channel = by_source[source[:source]]
+            source.merge(sync: channel ? { status: channel[:latest_status] || 'unknown', failing: channel[:failing], last_ok_at: channel[:last_success_at] } :
+              { status: (health ? 'unknown' : 'not_available'), failing: nil, last_ok_at: nil })
+          end)
+        end
       end
     end
 

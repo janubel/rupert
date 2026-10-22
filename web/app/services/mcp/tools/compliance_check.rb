@@ -14,7 +14,8 @@ module Mcp
                      'the Rupert page that fixes it: Books check items (sales records, payments, refunds, daily reviews and ' \
                      'approvals, period locks, offsite backup, bank lines, ledger balance), the last finished month and quarter ' \
                      'close checklists, timesheets awaiting approval, leave requests, draft pay runs, the Uploads inbox and ' \
-                     'Google Drive document retention. Sales tax filings are not recorded in Rupert. Read-only.',
+                     'Google Drive document retention. Each item is tagged with the sales, payments, deposits, bank, ' \
+                     'payroll and records topics it touches. Sales tax filings are not recorded in Rupert. Read-only.',
         scope: 'finance:read'
 
       input_schema(
@@ -32,6 +33,7 @@ module Mcp
                    detail: 'Rupert does not record when a sales tax return was filed. The sales tax report shows tax collected per period.' }
         shown = args['include_ok'] ? items : items.reject { |item| item[:status] == 'ok' }
         counts = items.group_by { |item| item[:status] }.transform_values(&:size)
+        shown.each { |item| item[:topics] = topics_for(item) }
         data = { checked_at: Time.current.iso8601, counts: counts, items: shown, books_check_path: paths.books_check_path }
         fixes = items.select { |item| item[:status] == 'fix' }
         text = "#{counts['fix'].to_i} to fix, #{counts['watch'].to_i} to watch, #{counts['ok'].to_i} ok." +
@@ -115,6 +117,18 @@ module Mcp
         else 'watch'
                  end
         { area: area, title: title, status: status, count: count, path: path }
+      end
+
+      def topics_for(item)
+        text = "#{item[:area]} #{item[:title]}".downcase
+        topics = []
+        topics << 'sales' if text.match?(/\bsales?\b|revenue|refund|income/)
+        topics << 'payments' if text.match?(/payment|card|tender|processor|payout/)
+        topics << 'deposits' if text.match?(/deposit|settlement/)
+        topics << 'bank' if text.match?(/bank|statement|reconcil/)
+        topics << 'payroll' if text.match?(/payroll|pay run|timesheet|leave request|wages/)
+        topics << 'records' if text.match?(/books|close|record|upload|retention|backup|document|receipt|ledger/)
+        topics
       end
 
       # One area failing to load is reported as unknown instead of failing the whole check.

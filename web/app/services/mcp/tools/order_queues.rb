@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'set'
+
 module Mcp
   module Tools
     # "What is waiting to be processed?" Every work queue around orders, stock
@@ -10,7 +12,8 @@ module Mcp
       tool 'order_queues',
         title: 'Order and processing queues',
         description: 'What is waiting to be processed right now, with counts, how old the oldest is and the page to work it: ' \
-                     'paid online orders not yet shipped (and the oldest ones), orders placed but never paid, stock transfer ' \
+                     'paid online orders not yet shipped (and the oldest ones with their lines), how many contain a line ' \
+                     'with an open low-stock alert when the person may read alerts, orders placed but never paid, stock transfer ' \
                      'and backorder requests (open and overdue), purchase orders awaiting delivery (and late), expense ' \
                      'receipts waiting for review, warehouse stock holds, unresolved card payments at the register and the ' \
                      'warehouse, customer follow-ups due, and reconciliation follow-ups. Read-only.',
@@ -27,7 +30,8 @@ module Mcp
 
       def call(args)
         hours = (args['ship_after_hours'] || FulfillmentMonitor::DEFAULT_OVERDUE_HOURS).to_i
-        queues = [unshipped(hours, (args['oldest'] || 10).to_i), unpaid, stock_requests, purchase_orders, receipts, holds,
+        unshipped_queue = unshipped(hours, (args['oldest'] || 10).to_i)
+        queues = [unshipped_queue, unpaid, stock_requests, purchase_orders, receipts, holds,
                   payments, customer_follow_ups, reconciliation_follow_ups].compact
         waiting = queues.select { |queue| queue[:count].to_i.positive? }
         text = if waiting.empty?
@@ -35,7 +39,14 @@ module Mcp
         else
           waiting.map { |queue| "#{queue[:name]}: #{queue[:count]}#{" (#{queue[:late]} late)" if queue[:late].to_i.positive?}" }.join('; ') + '.'
         end
-        result(text, { checked_at: Time.current.iso8601, queues: queues })
+        low_stock_orders = unshipped_queue[:waiting_on_low_stock]
+        if low_stock_orders&.positive?
+          text += " #{low_stock_orders} waiting paid order#{'s' unless low_stock_orders == 1} " \
+                  'contain a line with an open low-stock alert.'
+        end
+        result(text, { checked_at: Time.current.iso8601, queues: queues, waiting_on_low_stock: low_stock_orders,
+                       low_stock_available: user.can?('alerts.read'),
+                       oldest_unshipped: unshipped_queue[:oldest_orders] })
       end
 
       private
@@ -47,12 +58,25 @@ module Mcp
       def unshipped(hours, oldest)
         scope = Core::Order.where(channel: 'online', status: 'paid').where.not(fulfillment_status: %w[shipped arrived completed]).where.missing(:fulfillments)
         late = scope.where('occurred_at < ?', hours.hours.ago)
-        rows = late.order(:occurred_at, :id).limit(oldest).map do |order|
+        alerts_available = user.can?('alerts.read')
+        alert_skus = alerts_available ? StockAlert.open.where.not(sku: [nil, '']).pluck(:sku).map { |sku| sku.downcase }.to_set : Set.new
+        low_stock_order_ids = if alerts_available && alert_skus.any?
+          Core::OrderLine.joins(:order).merge(scope).where('LOWER(order_lines.sku) IN (?)', alert_skus.to_a).distinct.pluck(:order_id)
+        else
+          []
+        end
+        rows = scope.order(:occurred_at, :id).limit(oldest).map do |order|
           { order: order.display_number, source: order.source, age_hours: age_hours(order.occurred_at),
-            gross_cents: order.gross_cents, path: paths.order_path(order) }
+            gross_cents: order.gross_cents, late: order.occurred_at < hours.hours.ago,
+            lines: order.order_lines.limit(100).map do |line|
+              row = { name: line.name, sku: line.sku, quantity: line.quantity }
+              row[:low_stock] = line.sku.present? ? alert_skus.include?(line.sku.downcase) : nil if alerts_available
+              row
+            end, path: paths.order_path(order) }
         end
         { name: 'Paid online orders not shipped', count: scope.count, late: late.count, late_after_hours: hours,
-          oldest_age_hours: age_hours(scope.minimum(:occurred_at)), oldest_orders: rows, path: paths.sales_path(status: 'paid') }
+          oldest_age_hours: age_hours(scope.minimum(:occurred_at)), oldest_orders: rows,
+          waiting_on_low_stock: (low_stock_order_ids.size if alerts_available), path: paths.sales_path(status: 'paid') }
       end
 
       def unpaid
