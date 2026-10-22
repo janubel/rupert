@@ -21,7 +21,7 @@
 
   <section>
     <h2>Release and deployment</h2>
-    <p>GitHub Actions runs CI and creates a GitHub release from a version tag. There is no automated production deploy configured in this repository. A release does not update the live instance.</p>
+    <p>GitHub Actions runs CI; the Release workflow publishes a release from a version tag. SER8 has a separate host-side auto-deployer that polls <code>main</code> and installs only clean fast-forward commits with green <code>CI (sqlite3)</code>, after taking a pre-deploy SQLite backup. A GitHub release itself does not deploy the live instance. See <a href="https://github.com/techmore/rupert/blob/main/deploy/ser8/README.md">the SER8 deployment notes</a> for the gates and manual mode.</p>
     <p>Use the SER8-specific web, worker and backup units plus the host freshness watcher under <code>deploy/</code>. The pre-Incus droplet units were removed from the current tree on October 20, 2026; consult Git history only for historical context. Confirm active services before promotion.</p>
   </section>
 
