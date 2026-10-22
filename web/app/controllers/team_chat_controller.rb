@@ -205,7 +205,7 @@ class TeamChatController < AuthenticatedController
 
     attributes = room_params.slice(:assistant_mode)
     attributes[:topic] = params[:topic].to_s.strip.presence if params.key?(:topic)
-    attributes[:archived_at] = Time.current if ActiveModel::Type::Boolean.new.cast(params[:archived]) && @room.slug != 'general'
+    attributes[:archived_at] = Time.current if ActiveModel::Type::Boolean.new.cast(params[:archived]) && @room.slug != TeamChat::Room::MAIN_SLUG
     @room.update!(attributes)
     ActivityLogger.log('team_chat_room_updated', details: "room=#{@room.slug}; fields=#{attributes.keys.join(',')}")
     respond_to do |format|
@@ -225,7 +225,10 @@ class TeamChatController < AuthenticatedController
   end
 
   def load_room
-    @room = TeamChat::Room.find_by(slug: params[:room].to_s)
+    slug = params[:room].to_s
+    @room = TeamChat::Room.find_by(slug: slug)
+    # Old links (and saved dock state) to #general now open #admins.
+    @room ||= TeamChat::Room.find_by(slug: TeamChat::Room::MAIN_SLUG) if slug == 'general'
     head :not_found unless @room&.visible_to?(Current.user)
   end
 

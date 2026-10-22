@@ -28,7 +28,11 @@ module TeamChat
     def self.current = new(ENV)
 
     # The model for a local @agent, served by the one-model-at-a-time gateway.
-    def self.for_local(agent) = LocalModel.new(agent)
+    def self.for_local(agent)
+      return new(ENV.to_h.merge('RUPERT_CHAT_PROVIDER' => 'opencode_go', 'RUPERT_CHAT_MODEL' => agent.model)) if agent.cloud?
+
+      LocalModel.new(agent)
+    end
 
     # Same interface as ModelConfig, for LocalAgents: no API key, no fallback,
     # long timeouts (a request may wait for another model to unload and this one to load).

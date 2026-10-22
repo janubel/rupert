@@ -34,10 +34,15 @@ module TeamChat
           .or(open.where(kind: 'dm', id: Membership.where(user_id: user.id).select(:room_id)))
     }
 
-    # #general holds every person who can use team chat, plus Rupert.
+    MAIN_SLUG = 'admins'
+    MAIN_TOPIC = 'All admins, with Rupert. Mention @rupert — or a model like @deepseek or @qwen — to ask about the business.'
+
+    # #admins holds every person who can use team chat, plus Rupert. (It was #general;
+    # an existing #general is renamed in place, so its history and links carry over.)
     def self.ensure_defaults!(user)
-      general = channels.find_by(slug: 'general') ||
-                create!(name: 'general', slug: 'general', topic: 'Everyone on the team, with Rupert. Mention @rupert to ask about the business.', created_by: user)
+      general = channels.find_by(slug: MAIN_SLUG) ||
+                channels.find_by(slug: 'general')&.tap { |room| room.update!(name: MAIN_SLUG, slug: MAIN_SLUG, topic: MAIN_TOPIC) } ||
+                create!(name: MAIN_SLUG, slug: MAIN_SLUG, topic: MAIN_TOPIC, created_by: user)
       everyone = Post.mentionable
       general.add_members(everyone) if general.memberships.count < everyone.size
       general.membership_for(user)

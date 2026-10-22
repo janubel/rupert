@@ -1,23 +1,30 @@
 # frozen_string_literal: true
 
 module TeamChat
-  # Open models running on this server (the `rupert-llm` container) that people can
-  # @mention in team chat next to @rupert: @lfm, @bonsai and @gemma. Each answers
-  # with the same tools, permissions and approve-cards as @rupert, through one
-  # OpenAI-compatible gateway that keeps only ONE model in memory at a time, swaps
-  # models on demand and unloads after five idle minutes
-  # (deploy/ser8/team-chat/llm-gateway).
+  # Models people can @mention in team chat next to @rupert, each answering with the
+  # same tools, permissions and approve-cards as @rupert:
   #
-  # Enabled when RUPERT_LOCAL_LLM_URL (the gateway's /v1 base) is set in the
-  # instance environment; never from a web setting.
+  # - local (@qwen, @gemma, @lfm, @bonsai): open models on this server (the
+  #   `rupert-llm` container) through one OpenAI-compatible gateway that keeps only
+  #   ONE model in memory at a time, swaps on demand and unloads after ten idle
+  #   minutes (deploy/ser8/team-chat/llm-gateway). On when RUPERT_LOCAL_LLM_URL is set.
+  # - cloud (@deepseek): through OpenCode Go, on when its key is available (see
+  #   ModelConfig). What is asked is sent to that service.
+  #
+  # Which are on comes from the instance environment, never from a web setting.
   module LocalAgents
-    Agent = Struct.new(:handle, :name, :model, :about, :color, keyword_init: true) do
+    Agent = Struct.new(:handle, :name, :model, :about, :color, :cloud, keyword_init: true) do
       def mention = /(?<![\w@])@#{handle}\b/i
+      def cloud? = cloud == true
       def initials = name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase
       def label = "#{name} — #{about}"
     end
 
     ALL = [
+      Agent.new(handle: 'deepseek', name: 'DeepSeek', model: ModelConfig::DEFAULT_GO_MODEL, color: '#1d4ed8', cloud: true,
+        about: 'DeepSeek V4.1 Flash via OpenCode, cloud'),
+      Agent.new(handle: 'qwen', name: 'Qwen 3.5', model: 'qwen3.5-4b', color: '#c2410c',
+        about: 'Alibaba Qwen3.5 4B, local'),
       Agent.new(handle: 'lfm', name: 'LFM2.5', model: 'lfm2.5-8b-a1b', color: '#0f766e',
         about: 'Liquid AI LFM2.5-8B-A1B, local'),
       Agent.new(handle: 'bonsai', name: 'Ternary Bonsai', model: 'ternary-bonsai-2-9b', color: '#65a30d',
@@ -30,7 +37,16 @@ module TeamChat
 
     def self.enabled? = base_url.present?
 
-    def self.all = enabled? ? ALL : []
+    def self.cloud_enabled?
+      ModelConfig.new(ENV.to_h.merge('RUPERT_CHAT_PROVIDER' => 'opencode_go', 'RUPERT_CHAT_MODEL' => nil)).configured?
+    rescue StandardError
+      false
+    end
+
+    def self.all
+      cloud = cloud_enabled?
+      ALL.select { |agent| agent.cloud? ? cloud : enabled? }
+    end
 
     def self.find(handle) = all.find { |agent| agent.handle == handle.to_s }
 
@@ -41,11 +57,16 @@ module TeamChat
     end
 
     def self.persona(agent)
+      what = if agent.cloud?
+               "a cloud model (#{agent.about.sub(/, cloud\z/, '')}) that Rupert, the retail operations app this business runs on, reaches for team chat"
+             else
+               "an open model (#{agent.about.sub(/, local\z/, '')}) running on this business's own server inside Rupert, the retail operations app it runs on"
+             end
       <<~TEXT.strip
         # #{agent.name}
 
         ## Who you are
-        You are #{agent.name} (@#{agent.handle}), an open model (#{agent.about.sub(/, local\z/, '')}) running on this business's own server inside Rupert, the retail operations app it runs on. People mention you as @#{agent.handle} in team chat to try you next to @rupert, the main assistant. You are a member of the room like everyone else.
+        You are #{agent.name} (@#{agent.handle}), #{what}. People mention you as @#{agent.handle} in team chat to try you next to @rupert, the main assistant. You are a member of the room like everyone else.
 
         You know the business only through Rupert's tools. Every number you give comes from a tool you ran in this conversation.
 
