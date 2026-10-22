@@ -399,6 +399,11 @@
   .rail-foot { display:none; }
 }
 @media(pointer:coarse) { .nav-utility { width:44px;height:44px; } }
+/* Phones keep search, help and account in the bar; the rest waits in the account menu or on wider screens. */
+@media(max-width:640px) {
+  .app-topbar { gap:.35rem;padding:0 .5rem; }
+  #header-sync-pill,.header-utilities a[aria-label="Buzz team chat"],.header-utilities a[aria-label="Instance overview"],.header-utilities [data-feedback-target="trigger"] { display:none; }
+}
 
 /* ---------------------------------------------------------------------------
    Page components (docs/ui-standards.md §5).
