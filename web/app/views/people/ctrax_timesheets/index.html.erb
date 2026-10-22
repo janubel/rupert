@@ -1,43 +1,57 @@
-<% content_for :title, 'C-Trax shifts' %>
-<%= render 'shared/time_navigation' %>
-<section class="space-y-3">
-  <h1 class="page-title">C-Trax shifts</h1>
-  <p class="text-sm text-mocha">Read-only source history, including inactive staff, open shifts and records awaiting a match or review. C-Trax reported hours and elapsed clock time can differ; neither establishes overtime, Rupert approval or payment.</p>
-  <p class="text-sm text-mocha">Latest source punches appear below; each shift retains its original observation and a dated change history. These records stay separate from Square history and Rupert timesheets. Do not add overlapping source hours together. C-Trax shifts do not enter Rupert payroll or personal hour totals.</p>
-  <div class="flex flex-wrap gap-3">
-    <%= link_to 'Run punch report', people_punch_history_path(source: 'ctrax'), class: 'btn-ghost btn-sm' %>
-    <%= link_to 'Download this history', people_ctrax_timesheets_path(time_range_query(@from, @to).merge(format: :csv)), class: 'btn-ghost btn-sm' %>
+<% content_for :title, 'C-Trax history' %>
+<div class="space-y-6">
+  <%= page_header 'C-Trax history', subtitle: 'Read-only C-Trax register shifts, including inactive staff, open shifts and records awaiting a match or review.',
+        menu: [['Open punch report', people_punch_history_path(source: 'ctrax')], ['Download CSV', people_ctrax_timesheets_path(time_range_query(@from, @to).merge(format: :csv)), { data: { turbo: false } }]] %>
+  <%= fold_explainer('C-Trax reported hours and elapsed clock time can differ; neither establishes overtime, Rupert approval or payment. Each shift retains its original observation and a dated change history. These records stay separate from Square history and Rupert timesheets; overlapping source hours are never added together, and C-Trax shifts do not enter Rupert payroll or personal hour totals.', class: 'text-sm text-mocha') %>
+  <%= render 'automatic_refresh' %>
+
+  <section class="grid grid-cols-3 gap-3" aria-label="C-Trax totals">
+    <div class="stat"><p class="stat-label">Source records</p><p class="stat-value mt-1"><%= @count %></p></div>
+    <div class="stat"><p class="stat-label">In progress</p><p class="stat-value mt-1"><%= @open %></p></div>
+    <div class="stat"><p class="stat-label">Awaiting review or match</p><p class="stat-value mt-1"><%= @held %></p></div>
+  </section>
+
+  <%= form_with url: people_ctrax_timesheets_path, method: :get, class: 'toolbar' do |f| %>
+    <%= render 'shared/time_range_picker', from: @from, to: @to, optional: true, hint: 'Start and end dates match each shift’s original clock-in date.' %>
+    <div class="toolbar-field"><%= f.label :status, 'Source status', class: 'field-label' %><%= f.select :status, [['All', ''], *CtraxLaborShift::STATUSES.map { |value| [value.humanize, value] }], { selected: params[:status] }, class: 'select' %></div>
+    <% if @all_employees %>
+      <div class="toolbar-field"><%= f.label :employee_id, 'Staff member', class: 'field-label' %><%= f.select :employee_id, [['All staff, including inactive', ''], ['Staff member not matched', 'unmatched'], *@employees.map { |employee| ["#{employee.name}#{employee.active? ? '' : ' (inactive)'}", employee.id] }], { selected: params[:employee_id] }, class: 'select' %></div>
+    <% end %>
+    <div class="toolbar-actions">
+      <%= f.submit 'Apply', class: 'btn-primary', name: nil %>
+      <%= link_to 'Clear', people_ctrax_timesheets_path, class: 'btn-ghost' %>
+    </div>
+  <% end %>
+
+  <div class="card">
+    <div class="table-region" role="region" tabindex="0" aria-label="C-Trax shifts">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col" class="th">Clock-in</th>
+            <th scope="col" class="th">Staff member</th>
+            <th scope="col" class="th">Latest clock-out</th>
+            <th scope="col" class="th">Hours</th>
+            <th scope="col" class="th">Status</th>
+            <th scope="col" class="th">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @shifts.empty? %><tr><td colspan="6" class="empty-row">No C-Trax shifts in this view. Widen the dates or clear the filters.</td></tr><% end %>
+          <% @shifts.each do |shift| %>
+            <% latest = ctrax_source_values(shift.latest_record) %>
+            <tr>
+              <td class="td whitespace-nowrap"><%= link_to(latest[:started_at] ? l(latest[:started_at].in_time_zone, format: '%b %-d, %Y · %-I:%M %p %Z') : 'Shift awaiting review', people_ctrax_timesheet_path(shift), class: 'font-medium text-olive hover:underline') %></td>
+              <td class="td"><%= shift.employee&.name || 'Staff member not matched' %><p class="text-xs text-taupe">Store <%= shift.store_id || 'not available' %></p></td>
+              <td class="td whitespace-nowrap text-mocha"><%= latest[:ended_at] ? l(latest[:ended_at].in_time_zone, format: '%b %-d, %Y · %-I:%M %p %Z') : 'Not available' %></td>
+              <td class="td text-mocha">Latest source-reported: <%= latest[:reported_hours].nil? ? 'Not available' : "#{number_with_precision(latest[:reported_hours], precision: 2)}h" %><br>Latest elapsed: <%= latest[:elapsed_hours].nil? ? 'Not available' : "#{number_with_precision(latest[:elapsed_hours], precision: 2)}h" %><%= ' · In progress' if latest[:in_progress] %></td>
+              <td class="td"><span class="<%= time_status_pill(shift.status) %>"><%= shift.status.humanize %></span></td>
+              <td class="td text-mocha"><% if latest[:reported_hours] && latest[:elapsed_hours] && (latest[:reported_hours] - latest[:elapsed_hours]).abs > 0.01 %><p class="text-xs">Reported and elapsed hours differ; inspect the source record before relying on these hours.</p><% end %><% if shift.issue.present? %><p class="text-xs"><%= shift.issue %></p><% end %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
   </div>
-</section>
-<%= render 'automatic_refresh' %>
-<section class="grid grid-cols-3 gap-3">
-  <div class="card card-pad"><p class="text-sm text-mocha">Source records</p><p class="text-2xl font-semibold"><%= @count %></p></div>
-  <div class="card card-pad"><p class="text-sm text-mocha">In progress</p><p class="text-2xl font-semibold"><%= @open %></p></div>
-  <div class="card card-pad"><p class="text-sm text-mocha">Awaiting review or match</p><p class="text-2xl font-semibold"><%= @held %></p></div>
-</section>
-<%= form_with url: people_ctrax_timesheets_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %>
-  <%= render 'shared/time_range_picker', from: @from, to: @to, optional: true, hint: 'Start and Finish match each shift’s original clock-in date.' %>
-  <div><%= f.label :status, 'Source status', class: 'field-label' %><%= f.select :status, [['All', ''], *CtraxLaborShift::STATUSES.map { |value| [value.humanize, value] }], { selected: params[:status] }, class: 'select' %></div>
-  <% if @all_employees %>
-    <div><%= f.label :employee_id, 'Staff member', class: 'field-label' %><%= f.select :employee_id, [['All staff, including inactive', ''], ['Staff member not matched', 'unmatched'], *@employees.map { |employee| ["#{employee.name}#{employee.active? ? '' : ' (inactive)'}", employee.id] }], { selected: params[:employee_id] }, class: 'select' %></div>
-  <% end %>
-  <%= f.submit 'Filter', class: 'btn-primary' %>
-<% end %>
-<section class="space-y-3">
-  <% if @shifts.empty? %><p class="card card-pad text-sm text-mocha">No C-Trax shifts in this view.</p><% end %>
-  <% @shifts.each do |shift| %>
-    <% latest = ctrax_source_values(shift.latest_record) %>
-    <article class="card card-pad space-y-2">
-      <div class="flex flex-wrap justify-between gap-2">
-        <h2 class="font-semibold"><%= link_to(latest[:started_at] ? l(latest[:started_at].in_time_zone, format: '%b %-d, %Y · %-I:%M %p %Z') : 'Shift awaiting review', people_ctrax_timesheet_path(shift), class: 'text-olive underline') %></h2>
-        <span class="pill-olive"><%= shift.status.humanize %></span>
-      </div>
-      <p class="text-sm"><%= shift.employee&.name || 'Staff member not matched' %> · Store <%= shift.store_id || 'not available' %></p>
-      <p class="text-sm text-mocha">Latest clock-out: <%= latest[:ended_at] ? l(latest[:ended_at].in_time_zone, format: '%b %-d, %Y · %-I:%M %p %Z') : 'Not available' %></p>
-      <p class="text-sm text-mocha">Latest source-reported: <%= latest[:reported_hours].nil? ? 'Not available' : "#{number_with_precision(latest[:reported_hours], precision: 2)}h" %> · Latest elapsed: <%= latest[:elapsed_hours].nil? ? 'Not available' : "#{number_with_precision(latest[:elapsed_hours], precision: 2)}h" %><%= ' · In progress' if latest[:in_progress] %></p>
-      <% if latest[:reported_hours] && latest[:elapsed_hours] && (latest[:reported_hours] - latest[:elapsed_hours]).abs > 0.01 %><p class="text-sm text-mocha">Reported and elapsed hours differ; inspect the source record before relying on these hours.</p><% end %>
-      <% if shift.issue.present? %><p class="text-sm text-mocha"><%= shift.issue %></p><% end %>
-    </article>
-  <% end %>
-</section>
-<%== @pagy.series_nav if @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
+</div>

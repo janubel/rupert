@@ -1,6 +1,2 @@
-<%# Tab strip shared by the payment-source report pages. Locals: active ('swipesimple' or 'zelle'). %>
-<nav aria-label="Payment sources" class="retail-navigation">
-  <% [['SwipeSimple', swipesimple_reports_path, 'swipesimple'], ['Zelle', zelle_reports_path, 'zelle']].each do |label, path, key| %>
-    <%= link_to label, path, class: "nav-pill workspace-nav-link #{active == key ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: active == key ? 'page' : nil } %>
-  <% end %>
-</nav>
+<%# Tabs shared by the payment-source report pages. Locals: active ('swipesimple' or 'zelle'). %>
+<%= page_tabs([['SwipeSimple', swipesimple_reports_path, active == 'swipesimple'], ['Zelle', zelle_reports_path, active == 'zelle']], label: 'Payment sources') %>

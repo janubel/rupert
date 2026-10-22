@@ -1,30 +1,35 @@
-<% content_for :title, "New tenant" %>
-<div class="mx-auto max-w-md">
-  <h1 class="page-title mb-5">New tenant</h1>
+<%# Add tenant: a Form page (docs/ui-standards.md §4). %>
+<% content_for :title, "Add tenant" %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add tenant', subtitle: 'A new workspace with its own subdomain on this instance.' %>
 
   <%= form_with url: tenants_path, method: :post, class: "card card-pad space-y-4" do |f| %>
     <% if @tenant&.errors&.any? %>
-      <div class="flash flash-alert">
-        <%= @tenant.errors.full_messages.join(", ") %>
-      </div>
+      <div class="flash flash-alert" role="alert"><%= @tenant.errors.full_messages.join(", ") %></div>
     <% end %>
 
-    <div>
-      <%= f.label :name, "Business name", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_field :name, required: true, class: "input" %>
-    </div>
-    <div>
-      <%= f.label :subdomain, "Subdomain", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <div class="flex items-center gap-2">
-        <%= f.text_field :subdomain, required: true, pattern: '[a-z0-9][a-z0-9\-]*[a-z0-9]', placeholder: "my-business", class: "input" %>
-        <span class="whitespace-nowrap text-sm text-taupe">.<%= request.domain %></span>
+    <fieldset class="space-y-3">
+      <legend class="card-title">Workspace</legend>
+      <div>
+        <%= f.label :name, "Business name", class: "field-label" %>
+        <%= f.text_field :name, required: true, class: "input" %>
       </div>
-    </div>
-    <div>
-      <%= f.label :shopify_shop_domain, "Shopify store (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_field :shopify_shop_domain, placeholder: "my-store.myshopify.com", class: "input" %>
-    </div>
+      <div>
+        <%= f.label :subdomain, "Subdomain", class: "field-label" %>
+        <div class="flex items-center gap-2">
+          <%= f.text_field :subdomain, required: true, pattern: '[a-z0-9][a-z0-9\-]*[a-z0-9]', placeholder: "my-business", class: "input" %>
+          <span class="whitespace-nowrap text-sm text-taupe">.<%= request.domain %></span>
+        </div>
+      </div>
+      <div>
+        <%= f.label :shopify_shop_domain, "Shopify store (optional)", class: "field-label" %>
+        <%= f.text_field :shopify_shop_domain, placeholder: "my-store.myshopify.com", class: "input" %>
+      </div>
+    </fieldset>
 
-    <%= f.submit "Create tenant", class: "btn-primary w-full justify-center" %>
+    <div class="form-actions">
+      <%= f.submit "Save", class: "btn-primary" %>
+      <%= link_to "Cancel", tenants_path, class: "btn-ghost" %>
+    </div>
   <% end %>
 </div>

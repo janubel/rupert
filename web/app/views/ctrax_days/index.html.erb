@@ -1,33 +1,55 @@
 <% content_for :title, 'C-Trax daily close' %>
 <% today = Time.current.in_time_zone('America/New_York').to_date %>
+<% can_pull = @connection&.credentials_saved? && retail_business_access?('sales.write') && Current.user.can?('sync.write') %>
 <div class="space-y-6">
-  <%= render 'shared/retail_navigation' %>
-  <header><p class="eyebrow text-olive-deep">Review · native C-Trax records</p><h1 class="page-title mt-2">C-Trax daily close</h1><p class="mt-2 max-w-3xl text-sm text-mocha">Review recorded sales, tender details, and register cash for one business date. A local review does not close a C-Trax register or confirm bank settlement.</p><p class="mt-2 text-sm"><%= link_to 'SwipeSimple daily close for this date', swipesimple_days_path(date: @date), class: 'font-semibold text-olive-deep underline' %></p></header>
-  <section class="card card-pad space-y-4" aria-label="Choose business date">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-      <%= form_tag ctrax_days_path, method: :get, class: 'flex flex-wrap items-end gap-3' do %><div><%= label_tag :date, 'Business date', class: 'field-label' %><%= date_field_tag :date, @date, class: 'input' %></div><%= submit_tag 'View day', class: 'btn-primary' %><% end %>
-      <nav aria-label="Business dates" class="flex flex-wrap gap-2"><%= link_to 'Previous day', ctrax_days_path(date: @date - 1), class: 'btn-ghost btn-sm' %><%= link_to 'Today', ctrax_days_path(date: today), class: 'btn-ghost btn-sm', aria: { current: @date == today ? 'date' : nil } %><%= link_to 'Next day', ctrax_days_path(date: @date + 1), class: 'btn-ghost btn-sm' %></nav>
-    </div>
-    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-fog pt-3"><p class="text-sm text-mocha">Viewing <strong class="text-ink"><%= @date.strftime('%A, %b %-d, %Y') %></strong> · Each store uses its own source timezone.</p>
-      <% if @connection&.credentials_saved? && retail_business_access?('sales.write') && Current.user.can?('sync.write') %><%= button_to "Pull #{@date.strftime('%b %-d')} from C-Trax", ctrax_days_path(date: @date), method: :post, class: 'btn-ghost', data: { turbo: false } %><% end %>
-    </div>
-    <% if @connection&.last_report_message.present? %><p role="status" class="text-sm text-mocha">Connection’s last reported pull: <%= @connection.last_report_message %></p><% end %>
+  <%= page_header 'C-Trax daily close', subtitle: 'Recorded sales, tender details and register cash for one business date; a local review does not close a C-Trax register or confirm a bank settlement.',
+      menu: [['SwipeSimple daily close for this date', swipesimple_days_path(date: @date)]] do %>
+    <% if can_pull %><%= button_to 'Sync now', ctrax_days_path(date: @date), method: :post, class: 'btn-primary', data: { turbo: false }, title: "Pull #{@date.strftime('%b %-d')} from C-Trax" %><% end %>
+  <% end %>
+
+  <section class="card card-pad space-y-3" aria-label="Choose business date">
+    <%= form_tag ctrax_days_path, method: :get, class: 'toolbar' do %>
+      <div class="toolbar-field"><%= label_tag :date, 'Business date', class: 'field-label' %><%= date_field_tag :date, @date, class: 'input' %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><%= link_to 'Clear', ctrax_days_path, class: 'btn-ghost' %></div>
+    <% end %>
+    <nav aria-label="Business dates" class="flex flex-wrap gap-2">
+      <%= link_to 'Previous day', ctrax_days_path(date: @date - 1), class: 'btn-ghost btn-sm' %>
+      <%= link_to 'Today', ctrax_days_path(date: today), class: 'btn-ghost btn-sm', aria: { current: @date == today ? 'date' : nil } %>
+      <%= link_to 'Next day', ctrax_days_path(date: @date + 1), class: 'btn-ghost btn-sm' %>
+    </nav>
+    <p class="text-sm text-mocha">Viewing <strong class="text-ink"><%= @date.strftime('%A, %b %-d, %Y') %></strong> · each store uses its own source timezone.</p>
+    <% if @connection&.last_report_message.present? %><p role="status" class="text-xs text-mocha">Connection’s last reported pull: <%= @connection.last_report_message %></p><% end %>
   </section>
+
   <% if @days.empty? %>
-    <section class="card card-pad space-y-3"><h2 class="font-display text-xl">No stored sales for this date</h2><p class="text-sm text-mocha">Pull this business date to read source orders, register sessions, and report controls. Missing imports do not mean zero sales.</p><% if retail_business_access?('settings.read') %><%= link_to 'C-Trax connection', pos_connection_path('ctrax'), class: 'btn-ghost' %><% else %><p class="text-sm text-mocha">Ask a manager with sync access to pull this business date.</p><% end %></section>
+    <section class="card">
+      <%= empty_state 'No stored sales for this date', hint: 'Sync this business date to read source orders, register sessions and report controls. Missing imports do not mean zero sales.' do %>
+        <% if retail_business_access?('settings.read') %><%= link_to 'Open C-Trax connection', pos_connection_path('ctrax'), class: 'btn-ghost' %><% else %><p class="text-sm text-mocha">Ask a manager with sync access to pull this business date.</p><% end %>
+      <% end %>
+    </section>
+  <% else %>
+    <section class="section-card" aria-label="Items sold on this date">
+      <%= section_heading 'Items sold', hint: "Item totals, a tie-out to order totals and sold items missing from Rupert’s catalog#{' for every store' if @days.many?}." do %>
+        <%= link_to 'Open items sold', items_ctrax_days_path(date: @date), class: 'btn-ghost btn-sm' %>
+        <%= link_to 'Download CSV', items_ctrax_days_path(date: @date, format: :csv), class: 'btn-ghost btn-sm' %>
+      <% end %>
+    </section>
   <% end %>
-  <% if @days.any? %>
-    <section class="card card-pad flex flex-wrap items-center justify-between gap-3" aria-label="Items sold on this date"><div><h2 class="font-display text-xl">Items sold</h2><p class="mt-1 text-sm text-mocha">Item totals, a tie-out to order totals and sold items missing from Rupert’s catalog<%= ' for every store' if @days.many? %>.</p></div><div class="flex flex-wrap gap-2"><%= link_to 'View items sold', items_ctrax_days_path(date: @date), class: 'btn-primary' %><%= link_to 'Download CSV', items_ctrax_days_path(date: @date, format: :csv), class: 'btn-ghost' %></div></section>
-  <% end %>
+
   <div class="grid gap-4 lg:grid-cols-2">
     <% @days.each do |day| %>
       <% reconciliation = Ctrax::Reconciliation.new(day) %>
-      <article class="card card-pad space-y-4" aria-label="<%= day.location.name %> daily close">
-        <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="font-display text-xl"><%= day.location.name %></h2><p class="mt-1 text-xs text-mocha"><%= day.timezone %> · <%= day.currency %></p></div><span class="<%= reconciliation.matched? ? 'pill-fern' : 'pill-clay' %>"><%= reconciliation.matched? ? 'Controls match' : 'Needs review' %></span></div>
-        <div class="grid grid-cols-2 gap-3"><div class="stat"><p class="stat-label">Recorded sales</p><p class="stat-value mt-2"><%= ctrax_money(reconciliation.sum(reconciliation.orders, 'total'), currency: day.currency) %></p><p class="mt-1 text-xs text-mocha"><%= pluralize(reconciliation.orders.size, 'completed order') %></p></div><div class="stat"><p class="stat-label">Recorded tips</p><p class="stat-value mt-2"><%= ctrax_money(reconciliation.sum(reconciliation.orders, 'tip'), currency: day.currency) %></p><p class="mt-1 text-xs text-mocha">Separate from order totals</p></div></div>
+      <article class="section-card" aria-label="<%= day.location.name %> daily close">
+        <%= section_heading day.location.name, hint: "#{day.timezone} · #{day.currency}" do %>
+          <span class="<%= reconciliation.matched? ? 'pill-fern' : 'pill-clay' %>"><%= reconciliation.matched? ? 'Controls match' : 'Needs review' %></span>
+        <% end %>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="stat"><p class="stat-label">Recorded sales</p><p class="stat-value mt-2"><%= ctrax_money(reconciliation.sum(reconciliation.orders, 'total'), currency: day.currency) %></p><p class="mt-1 text-xs text-mocha"><%= pluralize(reconciliation.orders.size, 'completed order') %></p></div>
+          <div class="stat"><p class="stat-label">Recorded tips</p><p class="stat-value mt-2"><%= ctrax_money(reconciliation.sum(reconciliation.orders, 'tip'), currency: day.currency) %></p><p class="mt-1 text-xs text-mocha">Separate from order totals</p></div>
+        </div>
         <p class="text-sm text-mocha"><%= pluralize(day.sessions.size, 'source register session') %> · <%= day.reviewed? ? 'Current version reviewed' : 'Local review needed' %></p>
         <p class="text-xs text-mocha">Last pulled: <time datetime="<%= day.captured_at.iso8601 %>"><%= retail_source_time(day.captured_at) %></time></p>
-        <%= link_to 'Review sales and cash', ctrax_day_path(day), class: 'btn-primary' %>
+        <%= link_to 'Review sales and cash', ctrax_day_path(day), class: 'btn-ghost' %>
       </article>
     <% end %>
   </div>

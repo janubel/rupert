@@ -1,20 +1,19 @@
-<div class="card card-pad">
-  <h2 class="font-display text-xl text-ink">Needs attention</h2>
-  <ul class="mt-4 divide-y divide-fog">
-    <% attention_items(presenter).each do |item| %>
-      <li class="flex items-center justify-between gap-4 py-3">
-        <div class="min-w-0">
-          <p class="truncate text-sm font-medium text-ink"><%= item[:label] %></p>
-          <p class="text-xs text-taupe"><%= item[:note] %></p>
-        </div>
-        <span class="<%= item[:pill] %> shrink-0"><%= item[:value] %></span>
-      </li>
-    <% end %>
-    <% if attention_items(presenter).empty? %>
-      <li class="flex items-center gap-3 py-4 text-sm text-taupe">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-fern" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-        <span>All quiet — nothing needs attention.</span>
-      </li>
-    <% end %>
-  </ul>
+<div class="section-card">
+  <%= section_heading 'Needs attention' %>
+  <% items = attention_items(presenter) %>
+  <% if items.empty? %>
+    <%= empty_state 'All quiet', hint: 'Nothing needs attention right now.' %>
+  <% else %>
+    <ul class="divide-y divide-fog">
+      <% items.each do |item| %>
+        <li class="flex items-center justify-between gap-4 py-3">
+          <div class="min-w-0">
+            <p class="truncate text-sm font-medium text-ink"><%= item[:label] %></p>
+            <p class="text-xs text-taupe"><%= item[:note] %></p>
+          </div>
+          <span class="<%= item[:pill] %> shrink-0"><%= item[:value] %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
 </div>

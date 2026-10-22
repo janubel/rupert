@@ -2,39 +2,41 @@
 <% multi = items.days.many? %>
 <% money = ->(value, currency) { ctrax_money(value, currency: currency) } %>
 <% status_pill = { catalog: 'pill-fern', review: 'pill-taupe', missing: 'pill-clay' } %>
-<section id="close-tie-out" class="retail-anchor card card-pad space-y-4" aria-label="Items sold tie-out">
-  <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-display text-xl">Items tie-out</h2><span class="<%= items.matched? ? 'pill-fern' : 'pill-clay' %>"><%= items.matched? ? 'Items reconcile to sales' : 'Difference or unknown' %></span></div>
-  <p class="text-sm text-mocha">Completed, non-deleted receipts only. Each C-Trax line is one unit. The expected total assumes order total = items − order discounts + tax + shipping + shipping tax; any remaining difference is shown, not hidden. Tips and surcharges are outside order totals.</p>
+<section id="close-tie-out" class="retail-anchor section-card" aria-label="Items sold tie-out">
+  <%= section_heading 'Items tie-out' do %>
+    <span class="<%= items.matched? ? 'pill-fern' : 'pill-clay' %>"><%= items.matched? ? 'Items reconcile to sales' : 'Difference or unknown' %></span>
+  <% end %>
+  <%= fold_explainer('Completed, non-deleted receipts only. Each C-Trax line is one unit. The expected total assumes order total = items − order discounts + tax + shipping + shipping tax; any remaining difference is shown, not hidden. Tips and surcharges are outside order totals.', class: 'text-sm text-mocha') %>
   <% unless items.single_currency? %><p class="text-sm text-clay">Stores use different currencies, so no combined tie-out is shown.</p><% end %>
   <div class="grid gap-4 <%= 'lg:grid-cols-2' if items.tie_outs.many? %>">
     <% items.tie_outs.each do |tie| %>
-      <article class="rounded-xl border border-fog p-3 space-y-3" aria-label="<%= tie[:label] %> items tie-out">
-        <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-semibold"><%= tie[:label] %></h3><span class="<%= tie[:matched] ? 'pill-fern' : 'pill-clay' %>"><%= tie[:matched] ? 'Matches' : 'Review' %></span></div>
-        <p class="text-xs text-mocha"><%= pluralize(tie[:receipts], 'receipt') %> · <%= pluralize(tie[:units], 'unit') %><% if tie[:excluded].positive? %> · <%= pluralize(tie[:excluded], 'pending or deleted receipt') %> excluded<% end %></p>
-        <div class="retail-table-region" role="region" tabindex="0" aria-label="<%= tie[:label] %> tie-out checks">
-          <table class="w-full text-sm"><caption class="sr-only">Item lines compared with order totals for <%= tie[:label] %>, <%= tie[:currency] %></caption>
-            <thead class="border-b border-fog bg-haze"><tr><th scope="col" class="th">Check</th><th scope="col" class="th text-right">Items</th><th scope="col" class="th text-right">Orders</th><th scope="col" class="th text-right">Difference</th></tr></thead>
-            <tbody class="divide-y divide-fog"><% tie[:rows].each do |row| %><tr><th scope="row" class="td text-left font-medium"><%= row[:label] %></th><% %i[items orders delta].each do |key| %><td class="td retail-money text-right <%= key == :delta && row[key] != 0 ? 'text-clay font-semibold' : 'text-mocha' %>"><%= money.call(row[key], tie[:currency]) %></td><% end %></tr><% end %></tbody>
+      <article class="rounded-card border border-fog p-3 space-y-3" aria-label="<%= tie[:label] %> items tie-out">
+        <%= section_heading tie[:label], hint: "#{pluralize(tie[:receipts], 'receipt')} · #{pluralize(tie[:units], 'unit')}#{" · #{pluralize(tie[:excluded], 'pending or deleted receipt')} excluded" if tie[:excluded].positive?}", level: :h3 do %>
+          <span class="<%= tie[:matched] ? 'pill-fern' : 'pill-clay' %>"><%= tie[:matched] ? 'Matches' : 'Review' %></span>
+        <% end %>
+        <div class="table-region" role="region" tabindex="0" aria-label="<%= tie[:label] %> tie-out checks">
+          <table class="table"><caption class="sr-only">Item lines compared with order totals for <%= tie[:label] %>, <%= tie[:currency] %></caption>
+            <thead><tr><th scope="col" class="th">Check</th><th scope="col" class="th num">Items</th><th scope="col" class="th num">Orders</th><th scope="col" class="th num">Difference</th></tr></thead>
+            <tbody><% tie[:rows].each do |row| %><tr><th scope="row" class="td text-left font-medium"><%= row[:label] %></th><% %i[items orders delta].each do |key| %><td class="td num <%= key == :delta && row[key] != 0 ? 'font-semibold text-clay' : 'text-mocha' %>"><%= money.call(row[key], tie[:currency]) %></td><% end %></tr><% end %></tbody>
           </table>
         </div>
-        <dl class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3"><% (tie[:components] + tie[:outside]).each do |label, value| %><div class="rounded-lg bg-haze p-2"><dt class="text-mocha"><%= label %></dt><dd class="retail-money mt-1 font-semibold"><%= money.call(value, tie[:currency]) %></dd></div><% end %></dl>
+        <dl class="facts"><% (tie[:components] + tie[:outside]).each do |label, value| %><div><dt><%= label %></dt><dd class="num text-left font-semibold"><%= money.call(value, tie[:currency]) %></dd></div><% end %></dl>
       </article>
     <% end %>
   </div>
 </section>
 
-<section id="close-items" class="retail-anchor card card-pad space-y-4" aria-label="Items sold">
-  <div class="flex flex-wrap items-center justify-between gap-2">
-    <h2 class="font-display text-xl">Items sold</h2>
-    <%= link_to 'Download items CSV', items_ctrax_days_path(date: date, location_id: location_id, format: :csv), class: 'btn-ghost btn-sm' %>
-  </div>
-  <p class="text-sm text-mocha">Grouped by C-Trax product and variant. SKU, barcode and category come from the current C-Trax stock read, not from the receipt. Order discounts are not itemized by C-Trax, so an item’s discount and net stay Unknown when any of its receipts had a discount; refunded units stay Unknown when a receipt had a refund.</p>
+<section id="close-items" class="retail-anchor section-card" aria-label="Items sold">
+  <%= section_heading 'Items sold' do %>
+    <%= link_to 'Download CSV', items_ctrax_days_path(date: date, location_id: location_id, format: :csv), class: 'btn-ghost btn-sm' %>
+  <% end %>
+  <%= fold_explainer('Grouped by C-Trax product and variant. SKU, barcode and category come from the current C-Trax stock read, not from the receipt. Order discounts are not itemized by C-Trax, so an item’s discount and net stay Unknown when any of its receipts had a discount; refunded units stay Unknown when a receipt had a refund.', class: 'text-sm text-mocha') %>
   <% if items.items.empty? %>
     <p class="text-sm text-mocha">No completed receipt lines are stored for this date.</p>
   <% else %>
     <%= report_table 'ctrax-items-sold', label: 'C-Trax items sold', filename: "ctrax-items-#{date}" do %>
-      <table class="operations-table w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60"><tr>
+      <table class="table operations-table">
+        <thead><tr>
           <th scope="col" class="th" data-col="item">Item</th>
           <% if multi %><th scope="col" class="th" data-col="stores">Stores</th><% end %>
           <th scope="col" class="th" data-col="variant-id" data-default-hidden>C-Trax variant ID</th>
@@ -50,7 +52,7 @@
           <th scope="col" class="th num" data-col="net">Net</th>
           <th scope="col" class="th" data-col="catalog">Rupert catalog</th>
         </tr></thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% items.items.each do |row| %>
             <tr>
               <td class="td font-medium text-ink"><%= row[:label] %></td>
@@ -61,11 +63,11 @@
               <td class="td text-mocha"><%= row[:category] || 'Unknown' %></td>
               <td class="td num"><%= row[:quantity] %></td>
               <td class="td num"><%= row[:receipts] %></td>
-              <td class="td num retail-money" data-sort-value="<%= report_sort_cents(row[:gross]) %>"><%= money.call(row[:gross], row[:currency]) %></td>
-              <td class="td num retail-money" data-sort-value="<%= report_sort_cents(row[:tax]) %>"><%= money.call(row[:tax], row[:currency]) %></td>
-              <td class="td num retail-money" data-sort-value="<%= report_sort_cents(row[:discount]) %>"><%= money.call(row[:discount], row[:currency]) %><% if row[:discounted_receipts].to_i.positive? %><span class="block text-xs text-mocha"><%= pluralize(row[:discounted_receipts], 'discounted receipt') %></span><% end %></td>
+              <td class="td num" data-sort-value="<%= report_sort_cents(row[:gross]) %>"><%= money.call(row[:gross], row[:currency]) %></td>
+              <td class="td num" data-sort-value="<%= report_sort_cents(row[:tax]) %>"><%= money.call(row[:tax], row[:currency]) %></td>
+              <td class="td num" data-sort-value="<%= report_sort_cents(row[:discount]) %>"><%= money.call(row[:discount], row[:currency]) %><% if row[:discounted_receipts].to_i.positive? %><span class="block text-xs text-mocha"><%= pluralize(row[:discounted_receipts], 'discounted receipt') %></span><% end %></td>
               <td class="td num" data-sort-value="<%= row[:refunded_quantity] %>"><%= row[:refunded_quantity].nil? ? 'Unknown' : row[:refunded_quantity] %><% if row[:refund_receipts].to_i.positive? %><span class="block text-xs text-mocha"><%= pluralize(row[:refund_receipts], 'receipt') %> with refunds</span><% end %></td>
-              <td class="td num retail-money" data-sort-value="<%= report_sort_cents(row[:net]) %>"><%= money.call(row[:net], row[:currency]) %></td>
+              <td class="td num" data-sort-value="<%= report_sort_cents(row[:net]) %>"><%= money.call(row[:net], row[:currency]) %></td>
               <td class="td"><span class="<%= status_pill.fetch(row[:status]) %>"><%= Ctrax::DailyItems::STATUS_LABELS.fetch(row[:status]) %></span><% if row[:catalog_label] %><span class="block text-xs text-mocha"><%= row[:catalog_label] %></span><% end %></td>
             </tr>
           <% end %>
@@ -74,11 +76,11 @@
     <% end %>
     <% if items.categories.any? { |row| row[:category] } %>
       <div class="space-y-2" aria-label="Category totals" role="group">
-        <h3 class="font-semibold">Category totals</h3>
-        <div class="retail-table-region" role="region" tabindex="0" aria-label="C-Trax category totals">
-          <table class="w-full text-sm"><caption class="sr-only">Units and gross line amounts by current C-Trax category</caption>
-            <thead class="border-b border-fog bg-haze"><tr><th scope="col" class="th">Category</th><th scope="col" class="th text-right">Items</th><th scope="col" class="th text-right">Units</th><th scope="col" class="th text-right">Receipts</th><th scope="col" class="th text-right">Gross</th></tr></thead>
-            <tbody class="divide-y divide-fog"><% items.categories.each do |row| %><tr><th scope="row" class="td text-left font-medium"><%= row[:category] || 'Unknown category' %></th><td class="td text-right"><%= row[:items] %></td><td class="td text-right"><%= row[:quantity] %></td><td class="td text-right"><%= row[:receipts] %></td><td class="td retail-money text-right"><%= money.call(row[:gross], items.days.first.currency) %></td></tr><% end %></tbody>
+        <%= section_heading 'Category totals', level: :h3 %>
+        <div class="table-region" role="region" tabindex="0" aria-label="C-Trax category totals">
+          <table class="table"><caption class="sr-only">Units and gross line amounts by current C-Trax category</caption>
+            <thead><tr><th scope="col" class="th">Category</th><th scope="col" class="th num">Items</th><th scope="col" class="th num">Units</th><th scope="col" class="th num">Receipts</th><th scope="col" class="th num">Gross</th></tr></thead>
+            <tbody><% items.categories.each do |row| %><tr><th scope="row" class="td text-left font-medium"><%= row[:category] || 'Unknown category' %></th><td class="td num"><%= row[:items] %></td><td class="td num"><%= row[:quantity] %></td><td class="td num"><%= row[:receipts] %></td><td class="td num"><%= money.call(row[:gross], items.days.first.currency) %></td></tr><% end %></tbody>
           </table>
         </div>
       </div>
@@ -86,9 +88,11 @@
   <% end %>
 </section>
 
-<section id="close-not-in-catalog" class="retail-anchor card card-pad space-y-4" aria-label="Not in Rupert catalog">
-  <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-display text-xl">Not in Rupert’s catalog</h2><span class="<%= items.not_in_catalog.empty? ? 'pill-fern' : 'pill-clay' %>"><%= pluralize(items.not_in_catalog.size, 'item') %></span></div>
-  <p class="text-sm text-mocha">Sold C-Trax items without exact evidence (website ID, SKU or barcode) linking them to a current Rupert/Shopify catalog item. A name/package candidate needs review before it is treated as the same product. Nothing is created or changed here.</p>
+<section id="close-not-in-catalog" class="retail-anchor section-card" aria-label="Not in Rupert catalog">
+  <%= section_heading 'Not in Rupert’s catalog' do %>
+    <span class="<%= items.not_in_catalog.empty? ? 'pill-fern' : 'pill-clay' %>"><%= pluralize(items.not_in_catalog.size, 'item') %></span>
+  <% end %>
+  <%= fold_explainer('Sold C-Trax items without exact evidence (website ID, SKU or barcode) linking them to a current Rupert/Shopify catalog item. A name/package candidate needs review before it is treated as the same product. Nothing is created or changed here.', class: 'text-sm text-mocha') %>
   <% if items.not_in_catalog.empty? %>
     <p class="text-sm text-mocha">Every sold item has exact catalog evidence.</p>
   <% else %>
@@ -102,8 +106,8 @@
       <% end %>
     </ul>
     <div class="flex flex-wrap gap-2">
-      <% if retail_business_access?('inventory.read') %><% items.days.each do |day| %><%= link_to(multi ? "Stock comparison · #{day.location.name}" : 'Open stock comparison', stock_comparison_path(ctrax_location_id: day.location_id, filter: 'unmatched'), class: 'btn-ghost btn-sm') %><% end %><% end %>
-      <% if retail_business_access?('reconcile.read') %><%= link_to 'Catalog links', reconcile_index_path, class: 'btn-ghost btn-sm' %><% end %>
+      <% if retail_business_access?('inventory.read') %><% items.days.each do |day| %><%= link_to(multi ? "Open store comparison · #{day.location.name}" : 'Open store comparison', stock_comparison_path(ctrax_location_id: day.location_id, filter: 'unmatched'), class: 'btn-ghost btn-sm') %><% end %><% end %>
+      <% if retail_business_access?('reconcile.read') %><%= link_to 'Open catalog links', reconcile_index_path, class: 'btn-ghost btn-sm' %><% end %>
     </div>
   <% end %>
 </section>

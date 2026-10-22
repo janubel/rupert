@@ -1,60 +1,64 @@
-<% content_for :title, 'Master credentials & sync' %>
+<%# Credentials & sync: an Overview page (docs/ui-standards.md §4) for every source and credential store. %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<% can_write = Current.user.can?('settings.write') %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div><h1 class="page-title">Master credentials &amp; sync</h1><p class="mt-2 text-sm text-mocha">Set up connections, find what stopped working, and choose the next repair step.</p></div>
-    <div class="flex flex-wrap gap-2" <%= tour_anchor('actions') %>>
-      <%= link_to 'Credential setup', '#credentials', class: 'btn-primary btn-sm' %>
-      <%= link_to 'Improvement plan', '#improvements', class: 'btn-ghost btn-sm' %>
-      <% if Current.user.can?('sync.read') %><%= link_to 'Sync history', syncs_path, class: 'btn-ghost btn-sm' %><% end %>
-      <% if Current.user.can?('system.read') %><%= link_to 'Worker status', system_path, class: 'btn-ghost btn-sm' %><% end %>
-    </div>
-  </section>
-  <section class="card card-pad text-sm text-mocha" <%= tour_anchor('flow') %>>
+  <div <%= tour_anchor('actions') %>>
+    <%= page_header 'Credentials & sync', subtitle: 'Set up connections, find what stopped working and choose the next repair step.', menu: [['Improvement plan', '#improvements']] do %>
+      <%= link_to 'Credential setup', '#credentials', class: 'btn-primary' %>
+    <% end %>
+  </div>
+  <div class="text-sm text-mocha" <%= tour_anchor('flow') %>>
     <p><strong class="text-ink">Save credentials → check access → read once → review freshness.</strong> Choose automatic schedules on each provider's setup page after a successful read.</p>
-    <p class="mt-2">Saved credentials and a successful check do not prove that new data is arriving. Credential completeness and source freshness are shown separately.</p>
-    <p class="mt-2">Saved secrets stay hidden. Only people with settings-write permission can replace them; platform backup credentials remain with the platform operator. Opening this page starts no checks or syncs.</p>
-  </section>
-  <section aria-label="Sync health" class="space-y-3" <%= tour_anchor('health') %>>
-    <h2 class="font-display text-xl">Sync health &amp; repair</h2>
+    <details class="explainer">
+      <summary class="explainer-summary">What this page does and does not prove</summary>
+      <p class="mt-1">Saved credentials and a successful check do not prove that new data is arriving. Credential completeness and source freshness are shown separately.</p>
+      <p class="mt-1">Saved secrets stay hidden. Only people with settings-write permission can replace them; platform backup credentials remain with the platform operator. Opening this page starts no checks or syncs.</p>
+    </details>
+  </div>
+
+  <section aria-label="Sync health" class="space-y-4" <%= tour_anchor('health') %>>
+    <%= section_heading 'Sync health & repair' %>
     <% if @status_notice %><p role="alert" class="flash flash-alert"><%= @status_notice %></p><% end %>
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       <% @sync_sources.each do |source| %>
         <% active = SourceSyncStatus::ACTIVE_BADGES.include?(source[:badge]) && source[:diagnostics].none? { |health| health[:alert] } %>
-        <article class="card card-pad <%= active ? 'source-sync-active' : 'source-sync-inactive' %> space-y-3" data-connection-source="<%= source[:key] %>">
-          <div class="flex items-start justify-between gap-3"><h3 class="font-display text-lg"><%= source[:label] %></h3><span class="<%= active ? 'pill-fern' : 'pill-rose' %>"><%= source[:badge] %></span></div>
+        <article class="section-card <%= active ? 'source-sync-active' : 'source-sync-inactive' %>" data-connection-source="<%= source[:key] %>">
+          <%= section_heading source[:label], hint: source[:schedule], level: :h3 do %>
+            <span class="<%= active ? 'pill-fern' : 'pill-rose' %>"><%= source[:badge] %></span>
+          <% end %>
           <p class="text-sm text-mocha"><%= source[:next_step] %></p>
-          <p class="text-xs text-taupe"><%= source[:schedule] %></p>
           <p class="text-xs text-mocha">Last source evidence: <% if source[:last_at] %><time datetime="<%= source[:last_at].iso8601 %>"><%= l(source[:last_at].in_time_zone, format: :short) %></time><% else %>None recorded<% end %></p>
           <div class="flex flex-wrap gap-2">
-            <%= link_to 'Review setup', connection_source_setup_path(source), class: 'btn-ghost btn-sm' %>
             <% if connection_source_can_sync?(source) %>
               <% action = source[:key] == 'shopify' ? source_syncs_path(source: 'shopify') : source_sync_path(source[:key]) %>
-              <%= button_to source[:mode] == 'portal' ? 'Import portal export' : 'Read source now', action, method: :post, class: 'btn-primary btn-sm', form: { data: { turbo: false } } %>
+              <%= button_to source[:mode] == 'portal' ? 'Import portal export' : 'Sync now', action, method: :post, class: 'btn-primary btn-sm', form: { data: { turbo: false } } %>
             <% end %>
+            <%= link_to 'Open setup', connection_source_setup_path(source), class: 'btn-ghost btn-sm' %>
           </div>
           <%= render 'diagnostics', diagnostics: source[:diagnostics] %>
         </article>
       <% end %>
     </div>
   </section>
-  <section id="credentials" class="space-y-3" <%= tour_anchor('credentials') %>>
-    <h2 class="font-display text-xl">Credential setup</h2>
-    <p class="text-sm text-mocha">Each connection keeps its existing credential store. “Configured” means required fields are present, not that vendor access has been checked. Blank secret fields keep their saved values.</p>
+
+  <section id="credentials" class="space-y-4" <%= tour_anchor('credentials') %>>
+    <%= section_heading 'Credential setup', hint: '“Configured” means the required fields are present, not that vendor access has been checked.' %>
     <div class="grid gap-4 lg:grid-cols-2">
       <% @services.each do |service| %>
-        <section class="card card-pad space-y-3" data-credential-service="<%= service[:key] %>">
-          <div class="flex flex-wrap items-start justify-between gap-2"><h3 class="font-display text-lg"><%= service[:name] %></h3><span class="pill-taupe"><%= service[:state] %></span></div>
+        <section class="section-card" data-credential-service="<%= service[:key] %>">
+          <%= section_heading service[:name], level: :h3 do %>
+            <span class="pill-taupe"><%= service[:state] %></span>
+          <% end %>
           <p class="text-sm text-mocha"><%= service[:description] %></p>
           <% if service[:checked_at] %><p class="text-xs text-taupe">Last access check: <time datetime="<%= service[:checked_at].iso8601 %>"><%= l(service[:checked_at].in_time_zone, format: :short) %></time></p><% end %>
           <div class="flex flex-wrap gap-2">
-            <%= link_to Current.user.can?('settings.write') ? 'Manage setup' : 'View setup', connection_service_setup_path(service), class: 'btn-ghost btn-sm' %>
-            <% if service[:checkable] && Current.user.can?('settings.write') %><%= button_to 'Check read access', check_access_pos_connection_path(service[:key]), method: :post, class: 'btn-primary btn-sm', form: { data: { turbo: false } } %><% end %>
-            <% if service[:key] == 'square' && service[:state] == 'Configured' && Current.user.can?('sync.write') %><%= button_to 'Read Square now', source_syncs_path(source: 'square'), method: :post, class: 'btn-primary btn-sm', form: { data: { turbo: false } } %><% end %>
+            <% if service[:checkable] && can_write %><%= button_to 'Check read access', check_access_pos_connection_path(service[:key]), method: :post, class: 'btn-primary btn-sm', form: { data: { turbo: false } } %><% end %>
+            <% if service[:key] == 'square' && service[:state] == 'Configured' && Current.user.can?('sync.write') %><%= button_to 'Sync Square now', source_syncs_path(source: 'square'), method: :post, class: "#{service[:checkable] && can_write ? 'btn-ghost' : 'btn-primary'} btn-sm", form: { data: { turbo: false } } %><% end %>
+            <%= link_to 'Open setup', connection_service_setup_path(service), class: 'btn-ghost btn-sm' %>
           </div>
-          <details class="text-sm text-mocha">
-            <summary class="cursor-pointer font-semibold text-ink">Required access &amp; troubleshooting</summary>
-            <ul class="mt-3 space-y-2"><% service[:fields].each do |field| %><li><span class="font-medium"><%= field[:label] %></span>: <%= field[:unreadable] ? 'Unreadable — restore encryption keys' : field[:set] ? 'Saved' : field[:optional] ? 'Optional · not set' : 'Missing · not set' %><% if field[:set] %> · <%= field[:source] %><% end %></li><% end %></ul>
+          <details class="explainer text-sm text-mocha">
+            <summary class="explainer-summary">Required access and troubleshooting</summary>
+            <ul class="mt-3 space-y-2"><% service[:fields].each do |field| %><li><span class="font-medium"><%= field[:label] %></span>: <%= field[:unreadable] ? 'Unreadable: restore encryption keys' : field[:set] ? 'Saved' : field[:optional] ? 'Optional · not set' : 'Missing · not set' %><% if field[:set] %> · <%= field[:source] %><% end %></li><% end %></ul>
             <p class="mt-3"><%= service[:find_hint] %></p>
             <% if service[:find_url] %><p class="mt-2"><%= link_to 'Open provider setup', service[:find_url], target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></p><% end %>
             <% if service[:renewal_note] %><p class="mt-3"><strong>Renewal:</strong> <%= service[:renewal_note] %></p><% end %>
@@ -64,14 +68,15 @@
       <% end %>
     </div>
   </section>
-  <section id="improvements" class="card card-pad space-y-4" <%= tour_anchor('improvements') %>>
-    <h2 class="font-display text-xl">Sync improvement plan</h2>
+
+  <section id="improvements" class="section-card" <%= tour_anchor('improvements') %>>
+    <%= section_heading 'Sync improvement plan' %>
     <ol class="space-y-4 text-sm text-mocha">
-      <li><strong class="text-ink">1. One setup desk — available in this change.</strong> Named credential forms, saved-field indicators, explicit access checks, source reads and repair guidance. Existing permissions and schedules stay in place.</li>
-      <li><strong class="text-ink">2. Explain stopped reads — available in this change.</strong> Structured attempt receipts, safe failure categories and repair actions, separate acquisition/source timestamps, queue receipts, worker heartbeat and in-page stale/failure alerts. Older unknown causes stay unknown. Verified financial coverage and outbound notifications remain separate work.</li>
-      <li><strong class="text-ink">3. Make maintenance predictable — planned.</strong> Record a responsible person, review dates and vault references; coordinate shared-key rotation, verify recovery and add provider-approved automatic feeds. Require a successful read and reconciliation before activating a new schedule.</li>
+      <li><strong class="text-ink">1. One setup desk: available.</strong> Named credential forms, saved-field indicators, explicit access checks, source reads and repair guidance. Existing permissions and schedules stay in place.</li>
+      <li><strong class="text-ink">2. Explain stopped reads: available.</strong> Structured attempt receipts, safe failure categories and repair actions, separate acquisition/source timestamps, queue receipts, worker heartbeat and in-page stale/failure alerts. Older unknown causes stay unknown. Verified financial coverage and outbound notifications remain separate work.</li>
+      <li><strong class="text-ink">3. Make maintenance predictable: planned.</strong> Record a responsible person, review dates and vault references; coordinate shared-key rotation, verify recovery and add provider-approved automatic feeds. Require a successful read and reconciliation before activating a new schedule.</li>
     </ol>
-    <p class="text-sm text-mocha">If a check succeeds but data stays stale, review the last job in Sync history and ask the platform operator to inspect Worker status. A reporting login does not grant payment-write access or make manual portal data automatic.</p>
+    <p class="text-sm text-mocha">If a check succeeds but data stays stale, review the last job in <%= link_to 'Sync', syncs_path, class: 'underline' %> and ask the platform operator to inspect <%= link_to 'System health', system_path, class: 'underline' %>. A reporting login does not grant payment-write access or make manual portal data automatic.</p>
     <p class="text-xs text-taupe">Platform operators manage hosting, encryption and database credentials separately. Restore existing encryption keys from the protected backup if stored credentials become unreadable.</p>
   </section>
 </div>

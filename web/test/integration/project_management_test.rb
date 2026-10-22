@@ -458,7 +458,7 @@ class ProjectManagementTest < ActionDispatch::IntegrationTest
     patch projects_project_path(@project), params: { project: { member_ids: ['', @worker.id, stranger.id, gone.id, 'x'] } }
     assert_equal [@worker.id], fresh(@project).members.pluck(:id)
     get projects_project_path(@project)
-    assert_includes response.body, 'Team:'
+    assert_select 'dl.facts dt', text: 'Team'
     patch projects_project_path(@project), params: { project: { member_ids: [''] } }
     assert_empty fresh(@project).members
   end

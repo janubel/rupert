@@ -28,7 +28,7 @@ class InventoryExceptionsTest < ActionDispatch::IntegrationTest
     assert_equal 1, queue.total_pages
     get inventory_exceptions_path
     assert_response :success
-    assert_select 'h1', 'Inventory exceptions'
+    assert_select 'h1', 'Stock review'
     assert_includes response.body, 'different quantities between channels are normal'
     assert_includes response.body, 'does not confirm physical stock'
     assert_equal 20, shopify_level.reload.quantity

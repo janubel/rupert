@@ -2,19 +2,19 @@
 <% accents = { "todo" => "bg-taupe/60", "in_progress" => "bg-olive", "blocked" => "bg-rose", "done" => "bg-fern" } %>
 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-controller="task-board" data-task-board-writable-value="<%= can_write %>" <%= tour_anchor('board') %>>
   <% columns.each do |status, tasks| %>
-    <section class="flex min-h-[8rem] flex-col rounded-2xl border border-fog bg-haze/50 p-3 transition-colors"
+    <section class="flex min-h-32 flex-col rounded-card border border-fog bg-haze/50 p-3 transition-colors"
              data-task-board-target="column" data-status="<%= status %>"
              data-action="dragover->task-board#over dragleave->task-board#leave drop->task-board#drop">
       <header class="mb-3 flex items-center gap-2 px-1">
-        <span class="h-2.5 w-2.5 rounded-full <%= accents[status] %>"></span>
+        <span class="h-2.5 w-2.5 rounded-pill <%= accents[status] %>"></span>
         <h3 class="eyebrow text-mocha"><%= status_label(status) %></h3>
-        <span class="ml-auto rounded-full bg-paper px-2 py-0.5 text-[11px] font-semibold text-taupe" data-task-board-target="count"><%= tasks.size %></span>
+        <span class="ml-auto rounded-pill bg-paper px-2 py-0.5 text-xs font-semibold text-taupe" data-task-board-target="count"><%= tasks.size %></span>
       </header>
       <div class="flex flex-1 flex-col gap-2" data-task-board-target="list">
         <% tasks.each do |task| %>
           <%= render "projects/shared/task_card", task: task, assignees: assignees, show_project: show_project, can_write: can_write %>
         <% end %>
-        <p class="rounded-xl border border-dashed border-fog px-3 py-5 text-center text-xs text-taupe <%= "hidden" if tasks.any? %>" data-task-board-target="empty">
+        <p class="rounded-control border border-dashed border-fog px-3 py-5 text-center text-xs text-taupe <%= "hidden" if tasks.any? %>" data-task-board-target="empty">
           <%= can_write ? "Drop a task here" : "Nothing here" %>
         </p>
       </div>

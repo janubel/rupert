@@ -1,54 +1,61 @@
-<% content_for :title, "Sign in" %>
-<%# Everyone signs in with Google. Email + password is for initial setup and the
+<%# Sign in: a narrow Form page (docs/ui-standards.md §4) with a deliberate centred hero (the face and the name).
+    Everyone signs in with Google. Email + password is for initial setup and the
     odd account without Google, so it is folded away unless Google is not set up,
     a password sign-in just failed, or ?password=1 asks for it. "Create a free
     account" (a new business signing up) only shows on the main Rupert site,
     not on a workspace's own address. %>
+<% content_for :title, "Sign in" %>
 <% google = GoogleOauthService.configured? %>
 <% password_open = !google || request.post? || params[:password].present? %>
 <% signup = !WorkspaceNode.isolated? && Current.tenant.blank? %>
-<div class="mx-auto max-w-sm pt-10">
-  <div class="card card-pad">
-    <div class="mb-6 text-center">
+<div class="page-narrow mx-auto pt-6">
+  <div class="card card-pad space-y-5">
+    <header class="text-center">
       <%= render "shared/rupert_face", size: 96, css_class: "mx-auto mb-3" %>
       <h1 class="page-title">Rupert</h1>
-      <p class="mt-1 text-sm text-mocha">Sign in to continue</p>
+      <p class="page-subtitle">Sign in to continue.</p>
       <% if WorkspaceNode.isolated? %>
-        <p class="mt-3 rounded-xl bg-haze px-3 py-2 text-left text-xs leading-relaxed text-mocha">Use the account provided by your workspace administrator, or open your workspace through your Rupert account.</p>
+        <p class="mt-3 rounded-card bg-haze px-3 py-2 text-left text-sm text-mocha">Use the account provided by your workspace administrator, or open your workspace through your Rupert account.</p>
       <% elsif google %>
-        <p class="mt-3 text-xs leading-relaxed text-mocha">Use your company Google account. New staff with a company address get an account the first time they sign in.</p>
+        <p class="mt-3 text-sm text-mocha">Use your company Google account. New staff with a company address get an account the first time they sign in.</p>
+      <% end %>
+    </header>
+
+    <div class="space-y-3">
+      <% if WorkspaceNode.isolated? %><%= link_to 'Open with my Rupert account', WorkspaceNode.control_origin + '/login', class: 'btn-primary w-full justify-center', data: { turbo: false } %><% end %>
+      <% if google %>
+        <%= link_to google_auth_path, class: "btn-primary w-full justify-center", data: { turbo: false } do %>
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" class="shrink-0">
+            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z"/>
+            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"/>
+            <path fill="currentColor" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84Z"/>
+            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52Z"/>
+          </svg>
+          Continue with Google
+        <% end %>
       <% end %>
     </div>
 
-    <% if WorkspaceNode.isolated? %><%= link_to 'Open with my Rupert account', WorkspaceNode.control_origin + '/login', class: 'btn-primary w-full justify-center', data: {turbo: false} %><% end %>
-    <% if google %>
-      <%= link_to google_auth_path, class: "btn-primary w-full justify-center", data: { turbo: false } do %>
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" class="shrink-0">
-          <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z"/>
-          <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"/>
-          <path fill="currentColor" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84Z"/>
-          <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52Z"/>
-        </svg>
-        Continue with Google
-      <% end %>
-    <% end %>
-
-    <details class="login-password mt-4" <%= 'open' if password_open %>>
+    <details class="login-password" <%= 'open' if password_open %>>
       <summary class="login-password-toggle"><%= google ? 'Sign in with email and password' : 'Email and password' %></summary>
-    <%= form_with url: login_path, method: :post, class: "mt-3 space-y-4" do |f| %>
-      <div>
-        <%= f.label :email, "Email", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.email_field :email, autocomplete: "email", required: true, autofocus: password_open, value: params[:email], class: "input" %>
-      </div>
-      <div>
-        <%= f.label :password, "Password", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.password_field :password, autocomplete: "current-password", required: true, class: "input" %>
-      </div>
-      <%= f.submit "Sign in", class: (google ? "btn-ghost w-full justify-center" : "btn-primary w-full justify-center") %>
-    <% end %>
+      <%= form_with url: login_path, method: :post, class: "mt-3 space-y-4" do |f| %>
+        <fieldset class="space-y-3">
+          <legend class="sr-only">Email and password</legend>
+          <div>
+            <%= f.label :email, "Email", class: "field-label" %>
+            <%= f.email_field :email, autocomplete: "email", required: true, autofocus: password_open, value: params[:email], class: "input" %>
+          </div>
+          <div>
+            <%= f.label :password, "Password", class: "field-label" %>
+            <%= f.password_field :password, autocomplete: "current-password", required: true, class: "input" %>
+          </div>
+        </fieldset>
+        <%= f.submit "Sign in", class: (google ? "btn-ghost w-full justify-center" : "btn-primary w-full justify-center"), data: { turbo_submits_with: "Signing in…" } %>
+      <% end %>
     </details>
+
     <% if signup %>
-      <p class="mt-5 border-t border-fog pt-4 text-center text-sm text-mocha">New to Rupert? <%= link_to "Create a free account", start_path, class: "font-semibold text-olive hover:underline" %></p>
+      <p class="border-t border-fog pt-4 text-center text-sm text-mocha">New to Rupert? <%= link_to "Create a free account", start_path, class: "font-semibold text-olive hover:underline" %></p>
     <% end %>
   </div>
 </div>

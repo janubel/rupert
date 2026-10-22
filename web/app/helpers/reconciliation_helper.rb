@@ -26,9 +26,9 @@ module ReconciliationHelper
 
   def reconciliation_tone(status)
     case status
-    when 'reviewed', 'Matched recorded total' then 'border-emerald-200 bg-emerald-50 text-emerald-900'
-    when 'Variance', 'needs_attention', 'Conflicting controls' then 'border-amber-300 bg-amber-50 text-amber-950'
-    else 'border-fog bg-haze text-mocha'
+    when 'reviewed', 'Matched recorded total' then 'pill-fern'
+    when 'Variance', 'needs_attention', 'Conflicting controls' then 'pill-clay'
+    else 'pill-taupe'
     end
   end
 

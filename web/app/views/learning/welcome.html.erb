@@ -2,15 +2,12 @@
 <% first_name = Current.user.display_name.to_s.split(/\s+/).first %>
 <% areas = Current.user.employee? ? [] : nav_areas %>
 <% area_blurbs = { 'overview' => 'Today’s numbers and what needs attention.', 'sell' => 'Sales, the register, daily close and customers.', 'marketing' => 'Community threads, influencers and offers.', 'stock' => 'Inventory, counts, transfers, alerts and purchasing.', 'money' => 'Bookkeeping, reconciliation and the ledger.', 'reports' => 'Sales, sales tax, financial and inventory reports with your own dates and columns.', 'work' => 'Projects, tasks, goals and KPIs.', 'me' => 'Your own receipts and hours.', 'team' => 'Staff, schedules, timesheets, leave and payroll.', 'system' => 'Connections, sync, settings and access.' } %>
-<div class="mx-auto max-w-3xl space-y-8">
-  <header class="space-y-3">
-    <p class="eyebrow text-olive-deep">Welcome<%= ", #{first_name}" if first_name.present? %></p>
-    <h1 class="page-title">Rupert, in the time it takes to make a coffee</h1>
-    <p class="max-w-2xl text-mocha">Rupert mirrors your sales, stock and money from the systems you already use, then explains every number beside the work. Pick what you do, take a one-minute tour, and you’re set. Everything here is optional and can be revisited from Learn Rupert.</p>
-  </header>
+<div class="page-medium space-y-6">
+  <%= page_header 'Rupert, in the time it takes to make a coffee', eyebrow: "Welcome#{", #{first_name}" if first_name.present?}", subtitle: 'Pick what you do, take a one-minute tour, and you’re set.' %>
+  <%= fold_explainer('Rupert mirrors your sales, stock and money from the systems you already use, then explains every number beside the work. Everything here is optional and can be revisited from Learn Rupert.', class: 'text-sm text-mocha') %>
 
-  <section class="card card-pad space-y-4" aria-labelledby="welcome-path-title">
-    <div><p class="eyebrow text-olive-deep">Step 1 · 10 seconds</p><h2 id="welcome-path-title" class="mt-2 font-display text-2xl">What will you mostly do here?</h2><p class="mt-1 text-sm text-mocha">This only changes which lessons Rupert suggests. Your permissions stay exactly as your administrator set them.</p></div>
+  <section class="section-card" aria-labelledby="welcome-path-title">
+    <div><p class="eyebrow text-olive">Step 1 · 10 seconds</p><h2 id="welcome-path-title" class="section-title mt-1">What will you mostly do here?</h2><p class="card-hint">This only changes which lessons Rupert suggests. Your permissions stay exactly as your administrator set them.</p></div>
     <%= form_with url: onboard_path, method: :post, class: 'welcome-paths', data: { busy: false } do %>
       <%= hidden_field_tag :next, 'tour' %>
       <% @journey.paths.each do |path| %>
@@ -25,18 +22,18 @@
   </section>
 
   <% if areas.any? %>
-  <section class="card card-pad space-y-4" aria-labelledby="welcome-areas-title">
-    <div><p class="eyebrow text-olive-deep">Step 2 · 30 seconds</p><h2 id="welcome-areas-title" class="mt-2 font-display text-2xl">Where things live</h2><p class="mt-1 text-sm text-mocha">The header shows only the areas your account can use. Inside an area, the tools menu lists its pages.</p></div>
+  <section class="section-card" aria-labelledby="welcome-areas-title">
+    <div><p class="eyebrow text-olive">Step 2 · 30 seconds</p><h2 id="welcome-areas-title" class="section-title mt-1">Where things live</h2><p class="card-hint">The rail shows only the sections your account can use. Inside a section, its pages are listed in groups.</p></div>
     <ul class="grid gap-3 sm:grid-cols-2">
       <% areas.each do |area| %>
-        <li class="flex gap-3 rounded-xl border border-fog p-3"><span class="mt-0.5 text-olive-deep"><%= navigation_icon(area[:key]) %></span><span><span class="block font-semibold"><%= area[:name] %></span><span class="block text-sm text-mocha"><%= area_blurbs.fetch(area[:key], '') %></span><span class="block text-xs text-taupe"><%= area[:modules].first(4).map(&:name).join(' · ') %><%= ' · …' if area[:modules].size > 4 %></span></span></li>
+        <li class="flex gap-3 rounded-control border border-fog p-3"><span class="mt-0.5 text-olive-deep"><%= navigation_icon(area[:key]) %></span><span><span class="block font-semibold"><%= area[:name] %></span><span class="block text-sm text-mocha"><%= area_blurbs.fetch(area[:key], '') %></span><span class="block text-xs text-taupe"><%= area[:modules].first(4).map(&:name).join(' · ') %><%= ' · …' if area[:modules].size > 4 %></span></span></li>
       <% end %>
     </ul>
   </section>
   <% end %>
 
-  <section class="card card-pad space-y-4" aria-labelledby="welcome-first-week-title">
-    <div><p class="eyebrow text-olive-deep">Step 3 · This week</p><h2 id="welcome-first-week-title" class="mt-2 font-display text-2xl">Your first week</h2><p class="mt-1 text-sm text-mocha">A short checklist stays on your home page until it is done or you hide it.</p></div>
+  <section class="section-card" aria-labelledby="welcome-first-week-title">
+    <div><p class="eyebrow text-olive">Step 3 · This week</p><h2 id="welcome-first-week-title" class="section-title mt-1">Your first week</h2><p class="card-hint">A short checklist stays on your home page until it is done or you hide it.</p></div>
     <ol class="checklist-items">
       <% @checklist.items.each do |item| %>
         <li class="checklist-item <%= 'checklist-item-done' if item.done? %>"><span class="checklist-mark" aria-hidden="true"><%= item.done? ? '✓' : '' %></span><span class="checklist-text"><span class="<%= item.done? ? 'line-through text-mocha' : 'font-medium' %>"><%= item.title %></span><span class="block text-xs text-mocha"><%= item.hint %></span></span><span class="checklist-item-actions"><% unless item.done? %><%= link_to 'Open', item.path, class: 'text-xs font-semibold text-olive-deep underline' %><% end %></span></li>
@@ -44,8 +41,8 @@
     </ol>
   </section>
 
-  <section class="card card-pad space-y-3" aria-labelledby="welcome-help-title">
-    <h2 id="welcome-help-title" class="font-display text-2xl">Three things to remember</h2>
+  <section class="section-card" aria-labelledby="welcome-help-title">
+    <h2 id="welcome-help-title" class="section-title">Three things to remember</h2>
     <ul class="space-y-2 text-sm text-mocha">
       <li><strong class="text-ink">Press <kbd class="rounded border border-edge bg-haze px-1.5 text-xs">?</kbd></strong> on any page for how it works, a tour, definitions and lessons.</li>
       <li><strong class="text-ink">Look for the <span class="term-mark" aria-hidden="true">?</span> mark</strong> next to a label. It explains that word in plain language, right there.</li>

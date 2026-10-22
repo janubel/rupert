@@ -1,64 +1,65 @@
-<% content_for :title, "Access log" %>
+<%# Access log: a List page (docs/ui-standards.md §4). %>
 <div class="space-y-6">
-  <%= page_header 'Access log', subtitle: 'Who signed in (or tried to), from which IP, when, and whether it worked. Written on every login, Google sign-in, and sign-out.' %>
+  <%= page_header 'Access log', subtitle: 'Who signed in or tried to, from which IP, when, and whether it worked.' %>
+  <p class="text-xs text-taupe">Written on every login, Google sign-in and sign-out.</p>
 
-  <%= form_tag access_logs_path, method: :get, class: "flex flex-wrap items-end gap-2" do %>
-    <div class="w-64">
-      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="q">Email</label>
+  <%= form_tag access_logs_path, method: :get, class: "toolbar" do %>
+    <div class="toolbar-field">
+      <label class="field-label" for="q">Email</label>
       <input type="search" id="q" name="q" value="<%= params[:q] %>" placeholder="someone@example.com" class="input">
     </div>
-    <div>
-      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="status">Status</label>
-      <%= select_tag :status, options_for_select([["All statuses", ""], ["Success", "success"], ["Failure", "failure"]], params[:status]), class: "select" %>
+    <div class="toolbar-field">
+      <label class="field-label" for="status">Status</label>
+      <%= select_tag :status, options_for_select([["All statuses", ""], ["Success", "success"], ["Failure", "failure"]], params[:status]), class: "input" %>
     </div>
-    <div>
-      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="source">Method</label>
-      <%= select_tag :source, options_for_select([["All methods", ""], ["Password", "password"], ["Google", "google"], ["Sign out", "logout"]], params[:source]), class: "select" %>
+    <div class="toolbar-field">
+      <label class="field-label" for="source">Method</label>
+      <%= select_tag :source, options_for_select([["All methods", ""], ["Password", "password"], ["Google", "google"], ["Sign out", "logout"]], params[:source]), class: "input" %>
     </div>
-    <%= submit_tag "Filter", class: "btn-primary" %>
-    <%= link_to "Clear", access_logs_path, class: "btn-ghost" %>
+    <div class="toolbar-actions">
+      <%= submit_tag "Apply", class: "btn-primary", name: nil %>
+      <%= link_to "Clear", access_logs_path, class: "btn-ghost" %>
+    </div>
   <% end %>
 
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+  <div class="table-region" role="region" tabindex="0" aria-label="Access events">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col" class="th">When</th>
+          <th scope="col" class="th">Person</th>
+          <th scope="col" class="th">Domain</th>
+          <th scope="col" class="th">Method</th>
+          <th scope="col" class="th">Status</th>
+          <th scope="col" class="th">IP address</th>
+          <th scope="col" class="th">Detail</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if @logs.empty? %>
           <tr>
-            <th scope="col" class="th">When</th>
-            <th scope="col" class="th">Person</th>
-            <th scope="col" class="th">Domain</th>
-            <th scope="col" class="th">Method</th>
-            <th scope="col" class="th">Status</th>
-            <th scope="col" class="th">IP address</th>
-            <th scope="col" class="th">Detail</th>
+            <td class="td empty-row" colspan="7">No access events yet. They start recording on the next sign-in.</td>
           </tr>
-        </thead>
-        <tbody class="divide-y divide-fog">
-          <% if @logs.empty? %>
-            <tr>
-              <td class="empty-row" colspan="7">No access events yet — they start recording on the next login.</td>
-            </tr>
-          <% end %>
-          <% @logs.each do |log| %>
-            <tr class="hover:bg-cream">
-              <td class="td whitespace-nowrap font-medium text-ink"><%= l(log.created_at, format: :datetime) %></td>
-              <td class="td">
-                <p class="font-medium text-ink"><%= log.user ? log.user.display_name : (log.email.presence || "—") %></p>
-                <% if log.email && log.email != log.user&.email %><p class="text-xs text-taupe"><%= log.email %></p><% end %>
-              </td>
-              <td class="td font-mono text-xs text-mocha"><%= log.domain.presence || "—" %></td>
-              <td class="td"><span class="pill-<%= log.source == "logout" ? "taupe" : "olive" %>"><%= log.source || "—" %></span></td>
-              <td class="td">
-                <% pill = log.status == "success" ? "pill-fern" : log.status == "failure" ? "pill-clay" : "pill-taupe" %>
-                <span class="<%= pill %>"><%= log.status || "—" %></span>
-              </td>
-              <td class="td font-mono text-xs text-mocha"><%= log.ip || "—" %></td>
-              <td class="td text-xs text-taupe"><%= log.detail.presence || "—" %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+        <% @logs.each do |log| %>
+          <tr>
+            <td class="td whitespace-nowrap font-medium text-ink"><%= l(log.created_at, format: :datetime) %></td>
+            <td class="td">
+              <p class="font-medium text-ink"><%= log.user ? log.user.display_name : (log.email.presence || "—") %></p>
+              <% if log.email && log.email != log.user&.email %><p class="text-xs text-taupe"><%= log.email %></p><% end %>
+            </td>
+            <td class="td font-mono text-xs text-mocha"><%= log.domain.presence || "—" %></td>
+            <td class="td"><span class="pill-<%= log.source == "logout" ? "taupe" : "olive" %>"><%= log.source || "—" %></span></td>
+            <td class="td">
+              <% pill = log.status == "success" ? "pill-fern" : log.status == "failure" ? "pill-clay" : "pill-taupe" %>
+              <span class="<%= pill %>"><%= log.status || "—" %></span>
+            </td>
+            <td class="td font-mono text-xs text-mocha"><%= log.ip || "—" %></td>
+            <td class="td text-xs text-taupe"><%= log.detail.presence || "—" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
   </div>
 
   <% if @pagy.pages > 1 %>

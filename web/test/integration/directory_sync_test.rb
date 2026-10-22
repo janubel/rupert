@@ -24,7 +24,7 @@ class DirectorySyncIntegrationTest < ActionDispatch::IntegrationTest
     end
     get customers_path
     assert_response :success
-    assert_select 'button', 'Sync customers now'
+    assert_select 'details.menu button', 'Sync now'
     get people_employees_path
     assert_response :success
     assert_select 'button', 'Sync staff now'

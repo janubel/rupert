@@ -465,7 +465,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_room_path(TeamChat::Room.ensure_defaults!(@admin))
     assert_select '.chat-typing[data-team-chat-target=typing]'
     assert_select "dialog[data-team-chat-target=newDm] form[action='#{team_chat_dms_path}']", 1
-    assert_select 'main#main.max-w-none'
+    assert_select 'main#main.app-main-wide'
     get team_chat_dock_room_path('admins')
     assert_select 'turbo-frame#chat_dock .chat-typing'
   end

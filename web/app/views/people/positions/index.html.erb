@@ -1,35 +1,36 @@
 <% content_for :title, "Positions" %>
+<% can_write = Current.user.can?("hr.write") %>
 <div class="space-y-6">
-  <%= page_header 'Positions', subtitle: 'Job titles and pay grades across the org.' do %>
-    <% if Current.user.can?("hr.write") %>
-      <%= link_to "New position", new_people_position_path, class: "btn-primary" %>
+  <%= page_header 'Positions', subtitle: 'Job titles and pay grades across the team.' do %>
+    <% if can_write %>
+      <%= link_to "Add position", new_people_position_path, class: "btn-primary" %>
     <% end %>
   <% end %>
 
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+  <div class="card">
+    <div class="table-region" role="region" tabindex="0" aria-label="Positions">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Position</th>
             <th scope="col" class="th">Department</th>
             <th scope="col" class="th">Pay grade</th>
-            <th scope="col" class="th text-right">Filled</th>
-            <% if Current.user.can?("hr.write") %><th scope="col" class="th"></th><% end %>
+            <th scope="col" class="th num">Filled</th>
+            <% if can_write %><th scope="col" class="th"><span class="sr-only">Actions</span></th><% end %>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @positions.empty? %>
-            <tr><td colspan="<%= Current.user.can?("hr.write") ? 5 : 4 %>" class="empty-row">No positions yet — add the first one.</td></tr>
+            <tr><td colspan="<%= can_write ? 5 : 4 %>" class="empty-row">No positions yet. Add your first position.</td></tr>
           <% end %>
           <% @positions.each do |position| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td font-medium text-ink"><%= position.name %></td>
               <td class="td text-mocha"><%= position.department&.name || "—" %></td>
               <td class="td text-mocha"><%= position.pay_grade.presence || "—" %></td>
-              <td class="td text-right text-mocha"><%= @filled.fetch(position.id, 0) %></td>
-              <% if Current.user.can?("hr.write") %>
-                <td class="td text-right"><%= link_to "Edit", edit_people_position_path(position), class: "text-xs font-semibold text-olive hover:underline" %></td>
+              <td class="td num"><%= @filled.fetch(position.id, 0) %></td>
+              <% if can_write %>
+                <td class="td text-right"><%= link_to "Edit", edit_people_position_path(position), class: "btn-ghost btn-sm" %></td>
               <% end %>
             </tr>
           <% end %>

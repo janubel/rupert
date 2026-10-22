@@ -1,14 +1,68 @@
+<% content_for :title, 'Influencers' %>
+<% can_write = Current.user.can?('marketing.write') %>
+<% filtered = params[:q].present? || params[:stage].present? || params[:due] == '1' %>
 <div class="space-y-6">
-  <%= page_header 'Influencers' do %>
-    <%= link_to 'Community marketing', marketing_path, class: 'btn-ghost' %><% if Current.user.can?('marketing.write') %><%= link_to 'Add influencer', new_marketing_influencer_path, class: 'btn-primary' %><% end %>
+  <%= page_header 'Influencers', subtitle: 'Prospects, collaborations, product gifts, temporary codes and campaign documents.' do %>
+    <% if can_write %><%= link_to 'Add influencer', new_marketing_influencer_path, class: 'btn-primary' %><% end %>
   <% end %>
-  <p class="text-sm text-mocha">Track prospects, collaborations, product gifts, temporary codes and campaign documents. Contact and shipment details have separate access permissions.</p>
-  <%= form_with url: marketing_influencers_path, method: :get, class: 'card card-pad flex flex-wrap gap-3' do |f| %>
-    <%= f.search_field :q, value: params[:q], placeholder: 'Name, handle or topic', 'aria-label': 'Search influencers', class: 'input' %>
-    <%= f.select :stage, Marketing::Influencer::STAGES.map { |s| [s.humanize, s] }, { include_blank: 'All stages', selected: params[:stage] }, class: 'select', 'aria-label': 'Relationship stage' %>
-    <label class="text-sm"><%= check_box_tag :due, '1', params[:due] == '1' %> Follow-up due</label><%= f.submit 'Filter', class: 'btn-ghost' %>
+  <p class="text-sm text-mocha">Contact and shipment details have separate access permissions.</p>
+
+  <section class="card card-pad" aria-label="Find influencers">
+    <%= form_with url: marketing_influencers_path, method: :get, class: 'toolbar' do |f| %>
+      <div class="toolbar-field"><%= f.label :q, 'Search', class: 'field-label' %><%= f.search_field :q, value: params[:q], placeholder: 'Name, handle or topic', class: 'search' %></div>
+      <div class="toolbar-field"><%= f.label :stage, 'Stage', class: 'field-label' %><%= f.select :stage, Marketing::Influencer::STAGES.map { |s| [s.humanize, s] }, { include_blank: 'All stages', selected: params[:stage] }, class: 'select w-full' %></div>
+      <div class="toolbar-field"><label class="field-label" for="due">Follow-up</label><label class="flex items-center gap-2 text-sm"><%= check_box_tag :due, '1', params[:due] == '1', class: 'checkbox' %> Due only</label></div>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', marketing_influencers_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </section>
+
+  <% if @influencers.empty? %>
+    <section class="card">
+      <% if filtered %>
+        <%= empty_state 'No influencers match these filters', hint: 'Try a different search, or clear the filters to see everyone.' do %>
+          <%= link_to 'Clear filters', marketing_influencers_path, class: 'btn-ghost' %>
+        <% end %>
+      <% else %>
+        <%= empty_state 'No influencers yet', hint: 'Add a prospect to start planning a product collaboration.' do %>
+          <% if can_write %><%= link_to 'Add influencer', new_marketing_influencer_path, class: 'btn-primary' %><% end %>
+        <% end %>
+      <% end %>
+    </section>
+  <% else %>
+    <section class="card overflow-hidden" aria-label="Influencers">
+      <div class="table-region" role="region" tabindex="0" aria-label="Influencers">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col" class="th">Name</th>
+              <th scope="col" class="th">Platform</th>
+              <th scope="col" class="th">Stage</th>
+              <th scope="col" class="th">Owner</th>
+              <th scope="col" class="th">Topics</th>
+              <th scope="col" class="th">Next follow-up</th>
+              <th scope="col" class="th"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @influencers.first(30).each do |influencer| %>
+              <tr>
+                <td class="td font-medium text-ink"><%= link_to influencer.name, marketing_influencer_path(influencer), class: 'text-olive-deep hover:underline' %></td>
+                <td class="td text-mocha"><%= influencer.platform %> <%= influencer.handle %></td>
+                <td class="td"><span class="pill-taupe"><%= influencer.stage.humanize %></span></td>
+                <td class="td text-mocha"><%= influencer.owner&.display_name || 'Unassigned' %></td>
+                <td class="td text-mocha"><%= influencer.topics %></td>
+                <td class="td whitespace-nowrap text-mocha"><%= influencer.next_follow_up_at&.to_fs(:short) || 'Not scheduled' %></td>
+                <td class="td text-right"><%= link_to 'Open', marketing_influencer_path(influencer), class: 'btn-ghost btn-sm' %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </section>
   <% end %>
-  <% @influencers.first(30).each do |influencer| %><article class="card card-pad space-y-2"><h2 class="text-lg font-semibold"><%= link_to influencer.name, marketing_influencer_path(influencer), class: 'underline' %></h2><p class="text-sm"><%= influencer.platform %> <%= influencer.handle %> · <%= influencer.stage.humanize %> · Owner: <%= influencer.owner&.display_name || 'Unassigned' %></p><p class="text-sm"><%= influencer.topics %></p><p class="text-xs text-mocha">Next follow-up: <%= influencer.next_follow_up_at&.to_fs(:short) || 'Not scheduled' %></p></article><% end %>
-  <% if @influencers.empty? %><p>No matching influencers. Add a prospect to start planning a product collaboration.</p><% end %>
-  <nav class="flex gap-3" aria-label="Influencer pages"><% if @page > 1 %><%= link_to 'Previous', marketing_influencers_path(request.query_parameters.merge(page: @page - 1)), class: 'btn-ghost' %><% end %><% if @influencers.length > 30 %><%= link_to 'Next', marketing_influencers_path(request.query_parameters.merge(page: @page + 1)), class: 'btn-ghost' %><% end %></nav>
+
+  <nav class="flex gap-3" aria-label="Influencer pages">
+    <% if @page > 1 %><%= link_to 'Previous', marketing_influencers_path(request.query_parameters.merge(page: @page - 1)), class: 'btn-ghost btn-sm' %><% end %>
+    <% if @influencers.length > 30 %><%= link_to 'Next', marketing_influencers_path(request.query_parameters.merge(page: @page + 1)), class: 'btn-ghost btn-sm' %><% end %>
+  </nav>
 </div>

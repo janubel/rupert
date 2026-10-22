@@ -37,7 +37,7 @@ class OwnerNotesPagesTest < ActionDispatch::IntegrationTest
   test 'sales tax report takes custom dates and exports CSV' do
     get finance_reports_sales_tax_path(from: '2026-10-01', to: '2026-10-14')
     assert_response :success
-    assert_select 'h1', /Sales tax report/
+    assert_select 'h1', /Sales tax/
     assert_select '[data-controller=report-table] table'
     get finance_reports_sales_tax_path(from: '2026-10-14', to: '2026-10-01')
     assert_redirected_to finance_reports_sales_tax_path

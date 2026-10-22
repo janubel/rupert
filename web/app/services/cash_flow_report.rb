@@ -246,6 +246,25 @@ class CashFlowReport
 
   def latest_forecast = @latest_forecast ||= CashForecastScenario.retained(limit: 1).first
 
+  # The retained cash forecast's weeks that start after this range ends, as a dashed
+  # continuation of the running net: the scenario's own receipts less payments per
+  # week, added to the last actual running net. Nothing is predicted here; these are
+  # the owner's entered assumptions, shown so the chart can look past today.
+  def forecast_series
+    @forecast_series ||= begin
+      doc = latest_forecast
+      data = doc ? JSON.parse(doc.original_bytes) : {}
+      future = Array(data['rows']).select { |row| Date.iso8601(row['from'].to_s) > to }
+      running = bank_series[:cumulative].last || 0
+      labels = future.map { |row| "Wk of #{Date.iso8601(row['from']).strftime('%b %-d')}" }
+      net = future.map { |row| row['receipts_cents'].to_i - row['payments_cents'].to_i }
+      { labels: labels, net: net, cumulative: net.map { |n| running += n }, document_id: doc&.id,
+        as_of: (Date.iso8601(data['as_of'].to_s) if data['as_of']) }
+    rescue JSON::ParserError, Date::Error, TypeError
+      { labels: [], net: [], cumulative: [], document_id: doc&.id, as_of: nil }
+    end
+  end
+
   # --- Live feed: the newest money events across every source ------------------------
 
   def recent_events(limit: EVENT_LIMIT)
@@ -279,6 +298,7 @@ class CashFlowReport
       kpis: kpis.transform_values { |k| k.except(:good).merge(good: k[:good].to_s) },
       bank: bank_series.merge(line_count: bank_line_count, through: bank_data_through&.iso8601, pending: pending_count, flagged: flagged_count),
       channels: channel_series,
+      forecast: forecast_series.merge(as_of: forecast_series[:as_of]&.iso8601),
       spend: spend_by_category.map { |label, cents| { label: label, cents: cents } },
       bank_out: bank_out_by_type.map { |label, cents| { label: label, cents: cents } },
       deposits: { sales_cents: sales_cents, refunds_cents: refunds_cents, processor_deposits_cents: processor_deposits_cents },

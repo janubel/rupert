@@ -1,68 +1,68 @@
-<% content_for :title, "Registers" %>
+<% content_for :title, 'Registers' %>
 <div class="space-y-6">
-  <%= render "shared/retail_navigation" %>
-  <%= page_header 'Rupert registers', subtitle: 'Checkout shifts and local cash counts. Native C-Trax sessions and bank deposits are reviewed separately.' do %>
-    <% if Current.user.can?("sales.write") %>
-      <%= link_to "Open register", new_sales_pos_session_path, class: "btn-primary" %>
+  <%= page_header 'Registers', subtitle: 'Checkout shifts and local cash counts; native C-Trax sessions and bank deposits are reviewed separately.' do %>
+    <% if Current.user.can?('sales.write') %>
+      <%= link_to 'Open register', new_sales_pos_session_path, class: 'btn-primary' %>
     <% end %>
   <% end %>
 
   <% if @open_sessions.any? %>
-    <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <% @open_sessions.each do |s| %>
-        <%= link_to s, class: "card card-pad block hover:border-taupe" do %>
-          <div class="flex items-center justify-between">
-            <h3 class="font-display text-lg text-ink"><%= s.name %></h3>
-            <span class="pill-fern"><span class="dot bg-fern"></span> open</span>
-          </div>
-          <p class="mt-2 text-sm text-mocha">Opened <%= l(s.opened_at, format: :short) %></p>
-          <p class="mt-1 text-sm text-mocha">Recorded tenders: <span class="font-semibold text-ink"><%= number_to_currency(s.total_sales_cents / 100.0) %></span></p>
+    <section class="space-y-3" aria-label="Open registers">
+      <%= section_heading 'Open now' %>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <% @open_sessions.each do |s| %>
+          <%= link_to s, class: 'card card-pad block hover:border-taupe' do %>
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="card-title"><%= s.name %></h3>
+              <span class="pill-fern">Open</span>
+            </div>
+            <p class="mt-2 text-sm text-mocha">Opened <%= l(s.opened_at, format: :short) %></p>
+            <p class="mt-1 text-sm text-mocha">Recorded tenders: <span class="num font-semibold text-ink"><%= number_to_currency(s.total_sales_cents / 100.0) %></span></p>
+          <% end %>
         <% end %>
-      <% end %>
+      </div>
     </section>
   <% end %>
 
-  <div class="card overflow-hidden">
-    <div class="retail-table-region" role="region" tabindex="0" aria-label="Rupert register history">
-      <table class="w-full text-sm"><caption class="sr-only">Rupert register history; amounts in USD</caption>
-        <thead class="border-b border-fog bg-haze/60">
+  <section class="card overflow-hidden" aria-label="Register history">
+    <div class="table-region" role="region" tabindex="0" aria-label="Register history">
+      <table class="table"><caption class="sr-only">Register history; amounts in USD</caption>
+        <thead>
           <tr>
             <th scope="col" class="th">Register</th>
             <th scope="col" class="th">Opened</th>
             <th scope="col" class="th">Closed</th>
-            <th scope="col" class="th text-right">Cash tenders</th>
-            <th scope="col" class="th text-right">Recorded tenders</th>
-            <th scope="col" class="th text-right">Counted</th>
-            <th scope="col" class="th text-right">Variance</th>
+            <th scope="col" class="th num">Cash tenders</th>
+            <th scope="col" class="th num">Recorded tenders</th>
+            <th scope="col" class="th num">Counted</th>
+            <th scope="col" class="th num">Variance</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @sessions.empty? %>
-            <tr>
-              <td class="empty-row" colspan="8">No registers yet — open one to start the day.</td>
-            </tr>
+            <tr><td class="empty-row" colspan="8">No registers yet. Open one to start the day.</td></tr>
           <% end %>
           <% @sessions.each do |s| %>
-            <tr class="hover:bg-cream">
-              <td class="td font-medium text-ink"><%= link_to s.name, s, class: "hover:text-olive hover:underline" %></td>
+            <tr>
+              <td class="td font-medium text-ink"><%= link_to s.name, s, class: 'text-olive-deep hover:underline' %></td>
               <td class="td whitespace-nowrap text-mocha"><%= l(s.opened_at, format: :short) %></td>
-              <td class="td whitespace-nowrap text-mocha"><%= s.closed_at ? l(s.closed_at, format: :short) : "—" %></td>
-              <td class="td text-right text-mocha"><%= number_to_currency(s.cash_sales_cents / 100.0) %></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(s.total_sales_cents / 100.0) %></td>
-              <td class="td text-right text-mocha"><%= s.counted_cash_cents ? number_to_currency(s.counted_cash_cents / 100.0) : "—" %></td>
-              <td class="td text-right">
+              <td class="td whitespace-nowrap text-mocha"><%= s.closed_at ? l(s.closed_at, format: :short) : '—' %></td>
+              <td class="td num text-mocha"><%= number_to_currency(s.cash_sales_cents / 100.0) %></td>
+              <td class="td num font-medium text-ink"><%= number_to_currency(s.total_sales_cents / 100.0) %></td>
+              <td class="td num text-mocha"><%= s.counted_cash_cents ? number_to_currency(s.counted_cash_cents / 100.0) : '—' %></td>
+              <td class="td num">
                 <% if s.variance_cents %>
-                  <span class="<%= s.variance_cents.zero? ? "pill-fern" : "pill-clay" %>"><%= number_to_currency(s.variance_cents / 100.0) %></span>
+                  <span class="<%= s.variance_cents.zero? ? 'pill-fern' : 'pill-clay' %>"><%= number_to_currency(s.variance_cents / 100.0) %></span>
                 <% else %>
                   <span class="text-taupe">—</span>
                 <% end %>
               </td>
-              <td class="td"><span class="<%= s.open? ? "pill-fern" : "pill-taupe" %>"><%= s.status %></span></td>
+              <td class="td"><span class="<%= s.open? ? 'pill-fern' : 'pill-taupe' %>"><%= s.status.to_s.humanize %></span></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 </div>

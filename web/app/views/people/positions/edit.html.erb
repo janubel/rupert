@@ -1,5 +1,5 @@
 <% content_for :title, "Edit position" %>
-<div class="space-y-6">
-  <%= page_header 'Edit position' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Edit position', subtitle: @position.name %>
   <%= render "form", position: @position %>
 </div>

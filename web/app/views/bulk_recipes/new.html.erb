@@ -1,14 +1,21 @@
-<% content_for :title, 'Record bulk recipe' %>
+<% content_for :title, 'Add recipe version' %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
-<div class="space-y-6">
-  <%= page_header 'Record bulk recipe version', subtitle: 'Choose the exact product variant and verified grams used for one sold unit. New versions must take effect after the previous version.' %>
-  <% if @recipe.errors.any? %><div class="card card-pad text-rose" role="alert"><% @recipe.errors.full_messages.each do |error| %><p><%= error %></p><% end %></div><% end %>
-  <%= form_with url: new_bulk_recipe_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %><div><%= f.label :q, 'Find variant by product, title or SKU' %><%= f.text_field :q, value: @query, class: 'input' %></div><%= f.submit 'Find variants', class: 'btn-ghost' %><% end %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add recipe version', subtitle: 'The exact product variant and verified grams used for one sold unit.' %>
+  <%= fold_explainer('New versions must take effect after the previous version. Earlier sales are eligible only if a recipe version was explicitly effective at their imported sale time. Recording a recipe does not deduct stock.', class: 'text-sm text-mocha') %>
+  <% if @recipe.errors.any? %><div class="flash flash-alert" role="alert"><% @recipe.errors.full_messages.each do |error| %><p><%= error %></p><% end %></div><% end %>
+  <%= form_with url: new_bulk_recipe_path, method: :get, class: 'toolbar' do |f| %>
+    <div class="toolbar-field"><%= f.label :q, 'Find variant', class: 'field-label' %><%= f.search_field :q, value: @query, class: 'input', placeholder: 'Product, title or SKU' %></div>
+    <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary', name: nil %></div>
+  <% end %>
   <%= form_with url: bulk_recipes_path, scope: :bulk_recipe, class: 'card card-pad space-y-4' do |f| %>
-    <div><%= f.label :source_variant_id, 'Exact Shopify variant', class: 'field-label' %><%= f.select :source_variant_id, @variants.map { |variant| ["#{variant.product&.title} — #{variant.title} | #{variant.sku.presence || 'No SKU'} | #{variant.id}", variant.id] }, { selected: @recipe.source_variant_id, include_blank: 'Choose an exact variant' }, required: true, class: 'input' %><% if @variants_limited %><p class="text-xs text-taupe mt-2">First 50 matching variants shown. Narrow the search to find another exact item.</p><% end %></div>
-    <div><%= f.label :material_id, 'Raw material', class: 'field-label' %><%= f.select :material_id, @materials.map { |material| [material.name, material.id] }, { selected: @recipe.bulk_material_id, include_blank: 'Choose material' }, required: true, class: 'input' %><% if @materials_limited %><p class="text-xs text-taupe">First 200 materials shown; review the material catalog before configuring another.</p><% end %></div>
-    <div><%= f.label :grams_per_unit, 'Grams per sold unit (up to 3 decimal places)', class: 'field-label' %><%= f.text_field :grams_per_unit, value: @recipe.grams_per_unit, inputmode: 'decimal', required: true, class: 'input', placeholder: '3.5' %></div>
-    <div><%= f.label :effective_from, 'Effective time with UTC offset', class: 'field-label' %><%= f.text_field :effective_from, value: @submitted_effective_from || @recipe.effective_from&.iso8601 || Time.current.iso8601, required: true, class: 'input', placeholder: '2026-10-15T10:00:00-04:00' %><p class="text-xs text-taupe mt-2">Earlier sales are eligible only if a recipe version was explicitly effective at their imported sale time. Recording a recipe does not deduct stock.</p></div>
-    <%= f.submit 'Record immutable recipe version', class: 'btn-primary' %><%= link_to 'Cancel', bulk_recipes_path, class: 'btn-ghost' %>
+    <fieldset class="space-y-4">
+      <legend class="card-title">Recipe</legend>
+      <div><%= f.label :source_variant_id, 'Exact Shopify variant', class: 'field-label' %><%= f.select :source_variant_id, @variants.map { |variant| ["#{variant.product&.title} — #{variant.title} | #{variant.sku.presence || 'No SKU'} | #{variant.id}", variant.id] }, { selected: @recipe.source_variant_id, include_blank: 'Choose an exact variant' }, required: true, class: 'input' %><% if @variants_limited %><p class="mt-1 text-xs text-taupe">First 50 matching variants shown. Narrow the search to find another exact item.</p><% end %></div>
+      <div><%= f.label :material_id, 'Raw material', class: 'field-label' %><%= f.select :material_id, @materials.map { |material| [material.name, material.id] }, { selected: @recipe.bulk_material_id, include_blank: 'Choose material' }, required: true, class: 'input' %><% if @materials_limited %><p class="mt-1 text-xs text-taupe">First 200 materials shown; review the material catalog before configuring another.</p><% end %></div>
+      <div><%= f.label :grams_per_unit, 'Grams per sold unit (up to 3 decimal places)', class: 'field-label' %><%= f.text_field :grams_per_unit, value: @recipe.grams_per_unit, inputmode: 'decimal', required: true, class: 'input', placeholder: '3.5' %></div>
+      <div><%= f.label :effective_from, 'Effective time with UTC offset', class: 'field-label' %><%= f.text_field :effective_from, value: @submitted_effective_from || @recipe.effective_from&.iso8601 || Time.current.iso8601, required: true, class: 'input', placeholder: '2026-10-15T10:00:00-04:00' %></div>
+    </fieldset>
+    <div class="form-actions"><%= f.submit 'Save', class: 'btn-primary', name: nil %><%= link_to 'Cancel', bulk_recipes_path, class: 'btn-ghost' %></div>
   <% end %>
 </div>

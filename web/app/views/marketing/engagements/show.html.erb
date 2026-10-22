@@ -1,16 +1,101 @@
-<div class="space-y-6 max-w-5xl">
-  <%= link_to @engagement.influencer.name, marketing_influencer_path(@engagement.influencer), class: 'btn-ghost' %><h1 class="page-title"><%= @engagement.title %></h1>
-  <section class="card card-pad space-y-3"><p><%= @engagement.campaign.name %> · <%= @engagement.status.humanize %> · Due <%= @engagement.due_at&.to_fs(:short) || 'not set' %></p><p class="whitespace-pre-wrap"><%= @engagement.deliverables %></p><%= link_to 'Storefront destination', @engagement.destination_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %>
-    <% if Current.user.can?('marketing.write') %><%= link_to 'Edit collaboration', edit_marketing_engagement_path(@engagement), class: 'btn-ghost' %><% if @engagement.shareable? %><%= button_to 'Copy referral link', copy_marketing_engagement_path(@engagement), class: 'btn-primary' %><% else %><p class="text-sm">Activate the collaboration and check the influencer contact status before sharing a referral link.</p><% end %><% end %>
+<% content_for :title, @engagement.title %>
+<% can_write = Current.user.can?('marketing.write') %>
+<% can_review = Current.user.can?('marketing.review') %>
+<% menu = [] %>
+<% menu << ['Edit', edit_marketing_engagement_path(@engagement)] if can_write %>
+<% menu << ['Storefront destination', @engagement.destination_url, { target: '_blank', rel: 'noopener noreferrer' }] %>
+<% menu << ['Open influencer', marketing_influencer_path(@engagement.influencer)] %>
+<div class="space-y-6">
+  <%= page_header @engagement.title, subtitle: "#{@engagement.influencer.name} · #{@engagement.campaign.name}", eyebrow: 'Marketing · Collaboration', menu: menu do %>
+    <span class="pill-taupe"><%= @engagement.status.humanize %></span>
+    <% if can_write && @engagement.shareable? %><%= button_to 'Copy referral link', copy_marketing_engagement_path(@engagement), class: 'btn-primary', form_class: 'contents' %><% end %>
+  <% end %>
+
+  <section class="section-card" aria-label="Collaboration details">
+    <dl class="facts">
+      <div><dt>Influencer</dt><dd><%= link_to @engagement.influencer.name, marketing_influencer_path(@engagement.influencer), class: 'underline' %></dd></div>
+      <div><dt>Campaign</dt><dd><%= @engagement.campaign.name %></dd></div>
+      <div><dt>Status</dt><dd><%= @engagement.status.humanize %></dd></div>
+      <div><dt>Due</dt><dd><%= @engagement.due_at&.to_fs(:short) || 'Not set' %></dd></div>
+      <div><dt>Destination</dt><dd><%= link_to 'Storefront destination', @engagement.destination_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></dd></div>
+    </dl>
+    <% if @engagement.deliverables.present? %><div><h3 class="card-title">Deliverables</h3><p class="whitespace-pre-wrap text-sm"><%= @engagement.deliverables %></p></div><% end %>
+    <% if can_write && !@engagement.shareable? %><p class="text-sm text-mocha">Activate the collaboration and check the influencer contact status before sharing a referral link.</p><% end %>
   </section>
-  <section class="card card-pad space-y-3"><div class="flex flex-wrap gap-3"><h2 class="text-lg font-semibold">Product gifts</h2><% if Current.user.can?('marketing.write') %><%= link_to 'Propose product gift', new_marketing_engagement_product_gift_path(@engagement), class: 'btn-primary' %><% end %></div><% @gifts.first(30).each do |gift| %><p><%= link_to "Gift ##{gift.id}", marketing_product_gift_path(gift), class: 'underline' %> · <%= gift.status.humanize %> · <%= gift.created_at.to_fs(:short) %></p><% end %><% if @gifts.empty? %><p>No gifts proposed.</p><% end %><% if @gifts.length > 30 %><p>Latest 30 gifts shown.</p><% end %></section>
-  <section class="card card-pad space-y-4"><div class="flex flex-wrap gap-3"><h2 class="text-lg font-semibold">Temporary discount codes</h2><% if Current.user.can?('marketing.write') %><%= link_to 'Record existing code', new_marketing_engagement_offer_path(@engagement), class: 'btn-ghost' %><% if Current.user.can?('marketing.discounts') %><%= link_to 'Create Shopify code', new_marketing_engagement_shopify_discount_path(@engagement), class: 'btn-primary' %><% end %><% end %></div>
-    <% @offers.first(30).each do |offer| %><article class="border-b border-sand pb-4 space-y-2"><h3 class="font-semibold"><%= offer.code %> · <%= offer.shareable? ? 'Ready to share' : 'Not ready to share' %></h3><p class="whitespace-pre-wrap"><%= offer.terms %></p><p class="text-sm">Valid <%= offer.starts_at.to_fs(:short) %> – <%= offer.ends_at.to_fs(:short) %>. Merchant evidence confirmed: <%= offer.verified_at&.to_fs(:short) || 'never' %>.</p><% if offer.evidence_url.present? %><%= link_to 'Merchant evidence', offer.evidence_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% end %>
-      <% if offer.shopify_discount %><p><%= link_to "Shopify: #{offer.shopify_discount.status.humanize}", marketing_engagement_shopify_discount_path(@engagement, offer.shopify_discount), class: 'underline' %></p><% end %>
-      <% if Current.user.can?('marketing.write') %><% unless offer.shopify_discount %><%= link_to 'Edit code record', edit_marketing_engagement_offer_path(@engagement, offer), class: 'btn-ghost' %><% end %><% if offer.shareable? %><%= button_to 'Copy code and referral link', copy_marketing_engagement_offer_path(@engagement, offer), class: 'btn-primary' %><% end %><% end %>
-      <% if Current.user.can?('marketing.review') && !offer.shopify_discount %><%= form_with url: verify_marketing_engagement_offer_path(@engagement, offer), class: 'space-y-2' do |f| %><%= hidden_field_tag :lock_version, offer.lock_version %><label class="block text-sm"><%= check_box_tag :confirmed, '1', false, required: true %> I checked this merchant code, its full terms, limits and active dates.</label><%= f.submit 'Confirm merchant evidence for 24 hours', class: 'btn-ghost' %><% end %><% end %>
-    </article><% end %><% if @offers.empty? %><p>No code recorded. Create a Shopify code here or record an existing merchant code.</p><% end %><% if @offers.length > 30 %><p>Latest 30 offers shown.</p><% end %>
+
+  <section class="section-card" aria-label="Product gifts">
+    <%= section_heading 'Product gifts' do %>
+      <% if can_write %><%= link_to 'Add product gift', new_marketing_engagement_product_gift_path(@engagement), class: 'btn-ghost btn-sm' %><% end %>
+    <% end %>
+    <% if @gifts.empty? %>
+      <p class="text-sm text-mocha">No gifts proposed.<%= ' Add a product gift to propose products and a budget.' if can_write %></p>
+    <% else %>
+      <ul class="divide-y divide-fog text-sm">
+        <% @gifts.first(30).each do |gift| %>
+          <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span><%= link_to "Gift ##{gift.id}", marketing_product_gift_path(gift), class: 'font-medium text-olive-deep hover:underline' %> <span class="text-xs text-taupe">· <%= gift.created_at.to_fs(:short) %></span></span>
+            <span class="pill-taupe"><%= gift.status.humanize %></span>
+          </li>
+        <% end %>
+      </ul>
+      <% if @gifts.length > 30 %><p class="text-xs text-taupe">Latest 30 gifts shown.</p><% end %>
+    <% end %>
   </section>
-  <section class="card card-pad space-y-3"><div class="flex flex-wrap gap-3"><h2 class="text-lg font-semibold">Documents and briefs</h2><% if Current.user.can?('marketing.write') %><%= link_to 'New document', new_marketing_engagement_document_path(@engagement), class: 'btn-primary' %><% end %></div><% @documents.first(30).each do |document| %><p><%= link_to document.title, marketing_document_path(document), class: 'underline' %> · <%= document.kind.humanize %> · <%= document.status.humanize %> · <%= document.visibility.humanize %></p><% end %><% if @documents.empty? %><p>No documents visible with your access.</p><% end %><% if @documents.length > 30 %><p>Latest 30 visible documents shown.</p><% end %></section>
+
+  <section class="section-card" aria-label="Temporary discount codes">
+    <%= section_heading 'Temporary discount codes' do %>
+      <% if can_write %>
+        <%= link_to 'Add existing code', new_marketing_engagement_offer_path(@engagement), class: 'btn-ghost btn-sm' %>
+        <% if Current.user.can?('marketing.discounts') %><%= link_to 'Add Shopify code', new_marketing_engagement_shopify_discount_path(@engagement), class: 'btn-ghost btn-sm' %><% end %>
+      <% end %>
+    <% end %>
+    <% if @offers.empty? %><p class="text-sm text-mocha">No code recorded.<%= ' Add a Shopify code here or record an existing merchant code.' if can_write %></p><% end %>
+    <% @offers.first(30).each do |offer| %>
+      <article class="space-y-2 border-t border-fog pt-4">
+        <%= section_heading offer.code, hint: "Valid #{offer.starts_at.to_fs(:short)} – #{offer.ends_at.to_fs(:short)} · merchant evidence confirmed #{offer.verified_at&.to_fs(:short) || 'never'}", level: :h3 do %>
+          <span class="<%= offer.shareable? ? 'pill-fern' : 'pill-clay' %>"><%= offer.shareable? ? 'Ready to share' : 'Not ready to share' %></span>
+        <% end %>
+        <p class="whitespace-pre-wrap text-sm"><%= offer.terms %></p>
+        <p class="text-sm">
+          <% if offer.evidence_url.present? %><%= link_to 'Merchant evidence', offer.evidence_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% end %>
+          <% if offer.shopify_discount %><%= link_to "Shopify: #{offer.shopify_discount.status.humanize}", marketing_engagement_shopify_discount_path(@engagement, offer.shopify_discount), class: 'underline' %><% end %>
+        </p>
+        <div class="flex flex-wrap items-start gap-2">
+          <% if can_write %>
+            <% unless offer.shopify_discount %><%= link_to 'Edit', edit_marketing_engagement_offer_path(@engagement, offer), class: 'btn-ghost btn-sm' %><% end %>
+            <% if offer.shareable? %><%= button_to 'Copy code and referral link', copy_marketing_engagement_offer_path(@engagement, offer), class: 'btn-ghost btn-sm' %><% end %>
+          <% end %>
+          <% if can_review && !offer.shopify_discount %>
+            <%= form_with url: verify_marketing_engagement_offer_path(@engagement, offer), class: 'space-y-2' do |f| %>
+              <%= hidden_field_tag :lock_version, offer.lock_version %>
+              <label class="block text-sm"><%= check_box_tag :confirmed, '1', false, required: true %> I checked this merchant code, its full terms, limits and active dates.</label>
+              <%= f.submit 'Confirm merchant evidence for 24 hours', class: 'btn-ghost btn-sm' %>
+            <% end %>
+          <% end %>
+        </div>
+      </article>
+    <% end %>
+    <% if @offers.length > 30 %><p class="text-xs text-taupe">Latest 30 offers shown.</p><% end %>
+  </section>
+
+  <section class="section-card" aria-label="Documents and briefs">
+    <%= section_heading 'Documents and briefs' do %>
+      <% if can_write %><%= link_to 'Add document', new_marketing_engagement_document_path(@engagement), class: 'btn-ghost btn-sm' %><% end %>
+    <% end %>
+    <% if @documents.empty? %>
+      <p class="text-sm text-mocha">No documents visible with your access.</p>
+    <% else %>
+      <ul class="divide-y divide-fog text-sm">
+        <% @documents.first(30).each do |document| %>
+          <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span><%= link_to document.title, marketing_document_path(document), class: 'font-medium text-olive-deep hover:underline' %> <span class="text-xs text-taupe">· <%= document.kind.humanize %> · <%= document.visibility.humanize %></span></span>
+            <span class="pill-taupe"><%= document.status.humanize %></span>
+          </li>
+        <% end %>
+      </ul>
+      <% if @documents.length > 30 %><p class="text-xs text-taupe">Latest 30 visible documents shown.</p><% end %>
+    <% end %>
+  </section>
+
   <%= render 'marketing/cms/history', record: @engagement %>
 </div>

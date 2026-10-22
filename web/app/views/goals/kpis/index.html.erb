@@ -2,29 +2,32 @@
 <div class="space-y-6">
   <%= page_header 'KPIs', subtitle: 'Key performance indicators with historical readings.' do %>
     <% if Current.user.can?("projects.write") %>
-      <%= link_to "New KPI", new_goals_kpi_path, class: "btn-primary" %>
+      <%= link_to "Add KPI", new_goals_kpi_path, class: "btn-primary" %>
     <% end %>
   <% end %>
 
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <% if @kpis.empty? %>
-      <div class="card card-pad col-span-full text-sm text-taupe">No KPIs yet — define one and start recording readings.</div>
+  <% if @kpis.empty? %>
+    <%= empty_state 'No KPIs yet', hint: 'Define one and start recording readings.' do %>
+      <% if Current.user.can?("projects.write") %><%= link_to "Add KPI", new_goals_kpi_path, class: "btn-primary" %><% end %>
     <% end %>
+  <% else %>
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <% @kpis.each do |kpi| %>
       <%= link_to kpi, class: "card card-pad block hover:border-taupe" do %>
         <div class="flex items-center justify-between gap-2">
-          <h3 class="truncate font-display text-lg text-ink"><%= kpi.name %></h3>
-          <span class="<%= kpi.on_track? ? "pill-fern" : "pill-clay" %>"><%= kpi.on_track? ? "on track" : "off track" %></span>
+          <h3 class="card-title truncate"><%= kpi.name %></h3>
+          <span class="<%= kpi.on_track? ? "pill-fern" : "pill-clay" %>"><%= kpi.on_track? ? "On track" : "Off track" %></span>
         </div>
-        <p class="mt-2 font-display text-3xl text-ink"><%= number_with_precision(kpi.latest_value, precision: 2) %></p>
+        <p class="mt-2 font-display text-3xl text-ink"><%= number_with_precision(kpi.latest_value, precision: 2, delimiter: ',') %></p>
         <p class="text-xs text-taupe">
-          target <%= number_with_precision(kpi.target_value, precision: 2) %>
+          target <%= number_with_precision(kpi.target_value, precision: 2, delimiter: ',') %>
           <% if kpi.unit %> · <%= kpi.unit %><% end %>
-          · <%= kpi.readings.count %> readings
+          · <%= pluralize(kpi.readings.count, 'reading') %>
         </p>
       <% end %>
     <% end %>
   </div>
+  <% end %>
 
-  <div class="text-xs text-taupe"><%== @pagy.series_nav if @pagy.pages > 1 %></div>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
 </div>

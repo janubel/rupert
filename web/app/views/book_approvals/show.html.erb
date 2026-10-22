@@ -1,149 +1,140 @@
-<% content_for :title, 'Book approvals' %>
 <% period = @period; state = period.state; latest = period.latest_approval; issues = period.issues
    money = ->(cents) { cents.nil? ? 'Unavailable' : finance_money_text(cents) }
    stamp = ->(time) { I18n.l(time.in_time_zone, format: :long) }
-   tones = { pending: 'border-fog bg-paper', approved: 'border-olive bg-haze', approved_with_exceptions: 'border-amber-300 bg-amber-50',
-             needs_attention: 'border-rose-300 bg-rose-50', changed: 'border-amber-300 bg-amber-50' }
+   tones = { pending: 'border-fog bg-paper', approved: 'border-success-edge bg-success-bg', approved_with_exceptions: 'border-warn-edge bg-warn-bg',
+             needs_attention: 'border-danger-edge bg-danger-bg', changed: 'border-warn-edge bg-warn-bg' }
+   pills = { pending: ['pill-taupe', 'Not approved yet'], approved: ['pill-fern', 'Approved'], approved_with_exceptions: ['pill-clay', 'Approved with exceptions'],
+             needs_attention: ['pill-rose', 'Needs attention'], changed: ['pill-clay', 'Changed since approval'] }
    issue_labels = { missing_controls: 'Missing register reports', conflicts: 'Conflicting controls', variances: 'Source differences',
                     unavailable: 'Unavailable comparisons', coverage: 'Payment / record coverage flags',
                     unconfirmed_imports: 'Unconfirmed source imports', open_follow_ups: 'Open follow-ups' } %>
-<div class="mx-auto max-w-6xl space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money, day: period.to %>
+<div class="space-y-6">
+  <%= page_header 'Book approvals', subtitle: 'Look over the numbers, then sign them off.', menu: [['Open expenses', finance_expenses_path], ['Open vendor payments', finance_vendor_payments_path]] %>
+  <%= fold_explainer('Your name and the exact time are recorded in a tamper-evident ledger tied to this version of the books. If anything changes afterwards, the approval shows as changed and needs a fresh look.', class: 'text-sm text-mocha') %>
 
-  <header class="flex flex-wrap items-start justify-between gap-4">
-    <div>
-      <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Finance · human approval</p>
-      <h1 class="page-title mt-2">Book approvals</h1>
-      <p class="mt-2 max-w-2xl text-sm text-mocha">Look over the numbers, then sign them off. Your name and the exact time are recorded in a tamper-evident ledger tied to this version of the books. If anything changes afterwards, the approval shows as changed and needs a fresh look.</p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <% %w[daily weekly].each do |k| %>
-        <%= link_to k.capitalize, book_approvals_path(kind: k), class: "nav-pill #{period.kind == k ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (period.kind == k ? 'page' : nil) } %>
-      <% end %>
-    </div>
-  </header>
+  <%= page_tabs(%w[daily weekly].map { |k| [k.capitalize, book_approvals_path(kind: k), period.kind == k] }, label: 'Approval period') %>
 
-  <section aria-label="Recent days" class="card card-pad">
-    <p class="text-xs font-semibold uppercase tracking-wide text-mocha">Last 14 days</p>
-    <ol class="mt-2 flex flex-wrap gap-2">
+  <%= form_with url: book_approvals_path, method: :get, class: 'toolbar' do |f| %>
+    <%= f.hidden_field :kind, value: period.kind %>
+    <div class="toolbar-field"><%= f.label :date, 'Date', class: 'field-label' %><%= f.date_field :date, value: period.from, class: 'input' %></div>
+    <div class="toolbar-actions">
+      <%= f.submit 'Apply', class: 'btn-primary' %>
+      <%= link_to 'Earlier', book_approvals_path(kind: period.kind, date: period.previous.from.iso8601), class: 'btn-ghost' %>
+      <% unless period.next_period.to >= Date.current %><%= link_to 'Later', book_approvals_path(kind: period.kind, date: period.next_period.from.iso8601), class: 'btn-ghost' %><% end %>
+      <%= link_to 'Latest', book_approvals_path(kind: period.kind), class: 'btn-ghost' %>
+    </div>
+  <% end %>
+
+  <section aria-label="Recent days" class="section-card">
+    <%= section_heading 'Last 14 days', hint: 'Open a day to review or approve it.', level: :h3 %>
+    <ol class="flex flex-wrap gap-2">
       <% @strip.sort.reverse.each do |day, st| %>
-        <% dot = { pending: 'bg-fog text-mocha', approved: 'bg-olive text-white', approved_with_exceptions: 'bg-amber-300 text-ink', needs_attention: 'bg-rose-300 text-ink' }.fetch(st, 'bg-fog text-mocha') %>
-        <li><%= link_to book_approvals_path(kind: 'daily', date: day.iso8601), class: "block rounded-lg px-2 py-1 text-center text-xs #{dot} #{'ring-2 ring-ink' if period.kind == 'daily' && period.from == day}", title: "#{day.strftime('%A %b %-d')}: #{BookApproval::STATUS_LABELS.fetch(st.to_s, 'Not approved yet')}" do %><span class="block font-semibold"><%= day.strftime('%a') %></span><span><%= day.strftime('%-d') %></span><span class="sr-only"> <%= BookApproval::STATUS_LABELS.fetch(st.to_s, 'Not approved yet') %></span><% end %></li>
+        <% dot = { pending: 'bg-haze text-mocha', approved: 'bg-fern text-paper', approved_with_exceptions: 'bg-butter text-on-butter', needs_attention: 'bg-rose text-paper' }.fetch(st, 'bg-haze text-mocha') %>
+        <li><%= link_to book_approvals_path(kind: 'daily', date: day.iso8601), class: "block rounded-control px-2 py-1 text-center text-xs #{dot} #{'ring-2 ring-ink' if period.kind == 'daily' && period.from == day}", title: "#{day.strftime('%A %b %-d')}: #{BookApproval::STATUS_LABELS.fetch(st.to_s, 'Not approved yet')}" do %><span class="block font-semibold"><%= day.strftime('%a') %></span><span><%= day.strftime('%-d') %></span><span class="sr-only"> <%= BookApproval::STATUS_LABELS.fetch(st.to_s, 'Not approved yet') %></span><% end %></li>
       <% end %>
     </ol>
-    <p class="mt-2 text-xs text-mocha">Green approved · yellow approved with exceptions · red needs attention · grey not approved yet.</p>
+    <p class="text-xs text-mocha">Green approved · yellow approved with exceptions · red needs attention · grey not approved yet.</p>
   </section>
 
-  <section class="flex flex-wrap items-center justify-between gap-3">
-    <h2 class="font-display text-2xl"><%= period.label %></h2>
-    <div class="flex flex-wrap items-center gap-2">
-      <%= link_to '← Earlier', book_approvals_path(kind: period.kind, date: period.previous.from.iso8601), class: 'btn-ghost btn-sm' %>
-      <% unless period.next_period.to >= Date.current %><%= link_to 'Later →', book_approvals_path(kind: period.kind, date: period.next_period.from.iso8601), class: 'btn-ghost btn-sm' %><% end %>
-      <%= link_to 'Latest', book_approvals_path(kind: period.kind), class: 'btn-ghost btn-sm' %>
-      <%= form_with url: book_approvals_path, method: :get, class: 'flex items-center gap-2' do |f| %>
-        <%= f.hidden_field :kind, value: period.kind %>
-        <%= f.date_field :date, value: period.from, class: 'select', 'aria-label': 'Jump to date' %>
-        <%= f.submit 'Go', class: 'btn-ghost btn-sm' %>
-      <% end %>
+  <% if @form_error %><p role="alert" class="flash flash-alert"><%= @form_error %></p><% end %>
+
+  <section class="rounded-card border p-5 <%= tones.fetch(state) %>" role="status" aria-label="Approval status">
+    <div class="card-head">
+      <div>
+        <p class="eyebrow text-taupe"><%= period.label %></p>
+        <% if %i[approved approved_with_exceptions needs_attention].include?(state) %>
+          <p class="section-title mt-1"><%= latest.status_label %></p>
+          <p class="mt-1 text-sm">By <strong><%= latest.approved_by_name %></strong> on <%= stamp.call(latest.approved_at) %>. This still matches the books on file.</p>
+        <% elsif state == :changed %>
+          <p class="section-title mt-1">Changed since approval</p>
+          <p class="mt-1 text-sm"><%= latest.approved_by_name %> recorded “<%= latest.status_label %>” on <%= stamp.call(latest.approved_at) %>, but sales, payments, controls, originals or money-out records for this period are different now. Look again and approve the current numbers.</p>
+        <% elsif !period.complete? %>
+          <p class="section-title mt-1">Not finished yet</p>
+          <p class="mt-1 text-sm">This period is not over, so it cannot be approved. Come back tomorrow.</p>
+        <% elsif period.issue_total.zero? %>
+          <p class="section-title mt-1">Ready for your approval</p>
+          <p class="mt-1 text-sm">No open checks. Look over the numbers below, then approve.</p>
+        <% else %>
+          <p class="section-title mt-1"><%= pluralize(period.issue_total, 'thing') %> to look at</p>
+          <p class="mt-1 text-sm">Work through them below, or approve with exceptions and explain.</p>
+        <% end %>
+      </div>
+      <span class="<%= pills.fetch(state).first %>"><%= pills.fetch(state).last %></span>
     </div>
-  </section>
-
-  <% if @form_error %><p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><%= @form_error %></p><% end %>
-
-  <section class="rounded-2xl border p-5 <%= tones.fetch(state) %>" role="status">
-    <% if %i[approved approved_with_exceptions needs_attention].include?(state) %>
-      <p class="font-display text-2xl"><%= latest.status_label %></p>
-      <p class="mt-1 text-sm">By <strong><%= latest.approved_by_name %></strong> on <%= stamp.call(latest.approved_at) %>. This still matches the books on file.</p>
-    <% elsif state == :changed %>
-      <p class="font-display text-2xl">Changed since approval</p>
-      <p class="mt-1 text-sm"><%= latest.approved_by_name %> recorded “<%= latest.status_label %>” on <%= stamp.call(latest.approved_at) %>, but sales, payments, controls, originals or money-out records for this period are different now. Look again and approve the current numbers.</p>
-    <% else %>
-      <% if !period.complete? %>
-        <p class="font-display text-2xl">Not finished yet</p>
-        <p class="mt-1 text-sm">This period is not over, so it cannot be approved. Come back tomorrow.</p>
-      <% elsif period.issue_total.zero? %>
-        <p class="font-display text-2xl">Ready for your approval</p>
-        <p class="mt-1 text-sm">No open checks. Look over the numbers below, then approve.</p>
-      <% else %>
-        <p class="font-display text-2xl"><%= pluralize(period.issue_total, 'thing') %> to look at</p>
-        <p class="mt-1 text-sm">Work through them below, or approve with exceptions and explain.</p>
-      <% end %>
-    <% end %>
   </section>
 
   <section aria-label="Sales" class="space-y-3">
-    <h2 class="font-display text-xl">Money in</h2>
+    <%= section_heading 'Money in', hint: 'Each source and currency is shown on its own line and never added together.' %>
     <% if period.pools.empty? %>
-      <p class="card card-pad text-sm text-mocha">No sales recorded for this period. That is not proof of a zero day; check that sources imported.</p>
+      <%= empty_state 'No sales recorded for this period', hint: 'That is not proof of a zero day; check that sources imported.' %>
     <% else %>
-      <div class="card overflow-x-auto"><table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60"><tr>
-          <% { 'Source' => 'source', 'Orders' => 'eligible_orders', 'Sales' => 'sales_total', 'Tax' => 'tax_collected', 'Cash' => 'tender', 'Card' => 'tender', 'Refunds' => 'refund' }.each do |h, term| %><th scope="col" class="th <%= 'text-right' unless h == 'Source' %>"><%= h %><%= define(term) %></th><% end %>
+      <div class="table-region" role="region" tabindex="0" aria-label="Money in by source"><table class="table">
+        <thead><tr>
+          <% { 'Source' => 'source', 'Orders' => 'eligible_orders', 'Sales' => 'sales_total', 'Tax' => 'tax_collected', 'Cash' => 'tender', 'Card' => 'tender', 'Refunds' => 'refund' }.each do |h, term| %><th scope="col" class="th <%= 'num' unless h == 'Source' %>"><%= h %><%= define(term) %></th><% end %>
         </tr></thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% period.pools.each do |p| %>
             <tr>
               <td class="td font-medium"><%= p[:source].to_s.humanize %><%= " · #{p[:location_id]}" if p[:location_id] %> <span class="text-xs text-taupe"><%= p[:currency] %></span></td>
-              <td class="td text-right"><%= p[:orders] %></td>
-              <td class="td text-right"><%= money.call(p[:order_total_cents]) %></td>
-              <td class="td text-right"><%= money.call(p[:tax_cents]) %></td>
-              <td class="td text-right"><%= money.call(p[:cash_cents]) %></td>
-              <td class="td text-right"><%= money.call(p[:card_cents]) %></td>
-              <td class="td text-right"><%= money.call(p[:refund_cents]) %></td>
+              <td class="td num"><%= p[:orders] %></td>
+              <td class="td num"><%= money.call(p[:order_total_cents]) %></td>
+              <td class="td num"><%= money.call(p[:tax_cents]) %></td>
+              <td class="td num"><%= money.call(p[:cash_cents]) %></td>
+              <td class="td num"><%= money.call(p[:card_cents]) %></td>
+              <td class="td num"><%= money.call(p[:refund_cents]) %></td>
             </tr>
           <% end %>
         </tbody>
       </table></div>
-      <p class="text-xs text-mocha">Each source and currency is shown on its own line and never added together. Unavailable means the source did not provide the amount; it is not zero.</p>
+      <p class="text-xs text-mocha">Unavailable means the source did not provide the amount; it is not zero.</p>
     <% end %>
   </section>
 
   <section aria-label="Money out" class="space-y-3">
-    <h2 class="font-display text-xl">Money out</h2>
+    <%= section_heading 'Money out' %>
     <% out = period.money_out %>
     <div class="grid grid-cols-2 gap-3">
       <div class="stat"><div class="stat-label">Expenses (<%= out[:expense_count] %>)<%= define('expense') %></div><p class="stat-value mt-1"><%= money.call(out[:expenses_cents]) %></p></div>
       <div class="stat"><div class="stat-label">Vendor payments (<%= out[:vendor_payment_count] %>)<%= define('vendor_payment') %></div><p class="stat-value mt-1"><%= money.call(out[:vendor_payments_cents]) %></p></div>
     </div>
-    <p class="text-xs"><%= link_to 'Open expenses', finance_expenses_path, class: 'underline' %> · <%= link_to 'Open vendor payments', finance_vendor_payments_path, class: 'underline' %></p>
   </section>
 
   <section aria-label="Checks" class="space-y-3">
-    <h2 class="font-display text-xl">What to look at</h2>
+    <%= section_heading 'What to look at' %>
     <% if issues.values.sum.zero? %>
       <p class="card card-pad text-sm">Nothing flagged. Registers have controls, payments cover orders, imports are confirmed and no follow-ups are open.</p>
     <% else %>
       <ul class="card divide-y divide-fog">
         <% issues.each do |key, count| next if count.zero? %>
-          <li class="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"><span><%= issue_labels.fetch(key, key.to_s.humanize) %></span><span class="font-semibold"><%= count %></span></li>
+          <li class="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"><span><%= issue_labels.fetch(key, key.to_s.humanize) %></span><span class="num font-semibold"><%= count %></span></li>
         <% end %>
       </ul>
       <p class="text-sm">Work these on the day’s close page:
         <% period.per_day.select { |d| d[:issues].positive? }.each do |d| %>
-          <%= link_to "#{d[:day].strftime('%a %b %-d')} (#{d[:issues]})", financial_close_path(day: d[:day].iso8601), class: 'mr-2 font-semibold underline' %>
+          <%= link_to "#{d[:day].strftime('%a %b %-d')} (#{d[:issues]})", financial_close_path(day: d[:day].iso8601), class: 'mr-2 font-semibold text-olive-deep hover:underline' %>
         <% end %>
       </p>
     <% end %>
     <% if period.kind == 'weekly' %>
-      <div class="card overflow-x-auto"><table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60"><tr><th scope="col" class="th">Day</th><th scope="col" class="th text-right">Orders</th><th scope="col" class="th text-right">Checks</th><th scope="col" class="th">Day review</th></tr></thead>
-        <tbody class="divide-y divide-fog"><% period.per_day.each do |d| %>
-          <tr><td class="td"><%= link_to d[:day].strftime('%a %b %-d'), book_approvals_path(kind: 'daily', date: d[:day].iso8601), class: 'underline' %></td><td class="td text-right"><%= d[:orders] %></td><td class="td text-right"><%= d[:issues] %></td><td class="td"><%= d[:review] ? "#{d[:review][:status].humanize}#{' (changed)' unless d[:review][:current]}" : 'None' %></td></tr>
+      <div class="table-region" role="region" tabindex="0" aria-label="Days in this week"><table class="table">
+        <thead><tr><th scope="col" class="th">Day</th><th scope="col" class="th num">Orders</th><th scope="col" class="th num">Checks</th><th scope="col" class="th">Day review</th></tr></thead>
+        <tbody><% period.per_day.each do |d| %>
+          <tr><td class="td"><%= link_to d[:day].strftime('%a %b %-d'), book_approvals_path(kind: 'daily', date: d[:day].iso8601), class: 'font-semibold text-olive-deep hover:underline' %></td><td class="td num"><%= d[:orders] %></td><td class="td num"><%= d[:issues] %></td><td class="td"><%= d[:review] ? "#{d[:review][:status].humanize}#{' (changed)' unless d[:review][:current]}" : 'None' %></td></tr>
         <% end %></tbody>
       </table></div>
     <% end %>
   </section>
 
   <% if @can_write && period.complete? %>
-    <section class="card card-pad space-y-4" id="approve" aria-label="Approve">
-      <h2 class="font-display text-xl">Your decision</h2>
+    <section class="section-card" id="approve" aria-label="Approve">
+      <%= section_heading 'Your decision', hint: 'Saved with your name, the date and time, and your network address.' %>
       <%= form_with url: book_approvals_path, scope: :approval, class: 'space-y-4', data: { controller: 'approval-form' } do |f| %>
         <%= f.hidden_field :kind, value: period.kind %>
         <%= f.hidden_field :date, value: period.from.iso8601 %>
         <%= f.hidden_field :digest, value: period.digest %>
         <% selected = @values&.dig('status') || (period.issue_total.zero? ? 'approved' : 'approved_with_exceptions') %>
         <fieldset class="space-y-2">
-          <legend class="sr-only">Decision</legend>
+          <legend class="card-title">Decision</legend>
           <% [['approved', 'Looks right: approve', period.issue_total.positive?], ['approved_with_exceptions', 'Approve with exceptions (explain below)', false], ['needs_attention', 'Not right yet: needs attention (explain below)', false]].each do |value, label, disabled| %>
             <label class="flex items-start gap-3 text-sm"><%= f.radio_button :status, value, checked: selected == value, disabled: disabled, class: 'mt-1', data: { approval_form_target: 'status', action: 'change->approval-form#sync' } %><span><%= label %><%= ' — unavailable while checks are open' if disabled %></span></label>
           <% end %>
@@ -153,36 +144,35 @@
           <%= f.text_area :notes, value: @values&.dig('notes'), rows: 3, maxlength: 4000, class: 'input', placeholder: 'What you checked, what is outstanding, who owns it.', data: { approval_form_target: 'notes' } %>
         </div>
         <label class="flex items-start gap-3 text-sm"><%= f.check_box :confirmed, { checked: @values&.dig('confirmed') == '1', class: 'mt-1', data: { approval_form_target: 'confirm', action: 'change->approval-form#sync' } }, '1', '0' %><span>I looked at these numbers (version <code><%= period.digest.first(10) %></code>) as <strong><%= Current.user.display_name || Current.user.email %></strong>.</span></label>
-        <%= f.submit 'Record my decision', class: 'btn-primary disabled:opacity-50 disabled:cursor-not-allowed', data: { approval_form_target: 'submit' } %>
-        <p class="text-xs text-mocha">Saved with your name, the date and time, and your network address. It cannot be edited or deleted; a later decision is added after it. This records a human review of Rupert’s records, not a bank reconciliation or tax filing.</p>
+        <div class="form-actions"><%= f.submit 'Save decision', class: 'btn-primary', data: { approval_form_target: 'submit' } %></div>
+        <p class="text-xs text-mocha">It cannot be edited or deleted; a later decision is added after it. This records a human review of Rupert’s records, not a bank reconciliation or tax filing.</p>
       <% end %>
     </section>
   <% elsif !@can_write %>
-    <section class="card card-pad text-sm text-mocha">You can read approvals. A person with report-write access records the decision.</section>
+    <p class="card card-pad text-sm text-mocha">You can read approvals. A person with report-write access records the decision.</p>
   <% end %>
 
   <section aria-label="Approval history" class="space-y-3">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <h2 class="font-display text-xl">Approval ledger</h2>
+    <%= section_heading 'Approval ledger', hint: 'Each entry carries a fingerprint that includes the one before it, so editing, removing or reordering any entry is detectable.' do %>
       <% if @chain[:ok] %>
-        <span class="pill-taupe">Ledger intact · <%= pluralize(@chain[:count], 'entry') %></span>
+        <span class="pill-fern">Ledger intact · <%= pluralize(@chain[:count], 'entry') %></span>
       <% else %>
-        <span role="alert" class="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-semibold">Ledger problem at entry <%= @chain[:broken_id] || '?' %>: <%= @chain[:reason] %></span>
+        <span role="alert" class="pill-rose">Ledger problem at entry <%= @chain[:broken_id] || '?' %>: <%= @chain[:reason] %></span>
       <% end %>
-    </div>
+    <% end %>
     <% if @history.empty? %>
-      <p class="card card-pad text-sm text-mocha">Nothing approved yet. The first decision starts the ledger.</p>
+      <%= empty_state 'Nothing approved yet', hint: 'The first decision starts the ledger.' %>
     <% else %>
-      <div class="card overflow-x-auto"><table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60"><tr>
+      <div class="table-region" role="region" tabindex="0" aria-label="Approval ledger entries"><table class="table">
+        <thead><tr>
           <% %w[When Who Period Decision Fingerprint From].each do |h| %><th scope="col" class="th"><%= h %><%= define('fingerprint') if h == 'Fingerprint' %></th><% end %>
         </tr></thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% @history.each do |a| %>
             <tr>
               <td class="td whitespace-nowrap"><%= stamp.call(a.approved_at) %></td>
               <td class="td"><%= a.approved_by_name %></td>
-              <td class="td"><%= link_to "#{a.period_kind.capitalize} #{a.period_from.strftime('%b %-d')}#{" to #{a.period_to.strftime('%b %-d')}" if a.period_to != a.period_from}", book_approvals_path(kind: a.period_kind, date: a.period_from.iso8601), class: 'underline' %></td>
+              <td class="td"><%= link_to "#{a.period_kind.capitalize} #{a.period_from.strftime('%b %-d')}#{" to #{a.period_to.strftime('%b %-d')}" if a.period_to != a.period_from}", book_approvals_path(kind: a.period_kind, date: a.period_from.iso8601), class: 'font-semibold text-olive-deep hover:underline' %></td>
               <td class="td"><%= a.status_label %><% if a.notes.present? %><span class="block max-w-xs truncate text-xs text-taupe" title="<%= a.notes %>"><%= a.notes %></span><% end %></td>
               <td class="td font-mono text-xs"><%= a.entry_hash.first(12) %></td>
               <td class="td text-xs text-taupe"><%= a.ip %></td>
@@ -191,6 +181,5 @@
         </tbody>
       </table></div>
     <% end %>
-    <p class="text-xs text-mocha">Each entry carries a fingerprint that includes the one before it. Editing, removing or reordering any entry breaks the chain and is shown here.</p>
   </section>
 </div>

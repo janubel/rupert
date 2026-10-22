@@ -1,52 +1,44 @@
+<%# Dashboard: the Overview template (docs/ui-standards.md §4). The greeting is the h1; widgets follow in the saved order. %>
 <% content_for :title, "Dashboard" %>
 <% presenter = DashboardPresenter.new(user: Current.user) %>
 <% widgets = @widgets || DashboardWidget.entries({}, user: Current.user) %>
 <div class="space-y-8" data-controller="dashboard-customizer <%= "live-sync" if Current.user.can?("sync.read") %>" data-live-sync-interval-value="30000" data-action="click->dashboard-customizer#onClick change->dashboard-customizer#onChange">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <p class="eyebrow mb-2 text-olive"><%= l(Time.current, format: :long) %></p>
-      <h1 class="font-display text-4xl text-ink md:text-5xl"><%= time_based_greeting %>.</h1>
-      <p class="mt-3 max-w-xl text-mocha">Sales, daily close, and stock — one view of your business.</p>
-    </div>
-    <div class="flex flex-col items-end gap-2">
-      <div class="flex items-center gap-2">
-        <button type="button" aria-expanded="false" aria-controls="dashboard-layout-editor" data-dashboard-customizer-target="toggle" data-action="click->dashboard-customizer#toggleEditor" class="btn-ghost btn-sm" <%= tour_anchor('customize') %>>Customize</button>
-        <% if Current.user.can?("sync.write") %>
-        <%= form_tag syncs_path, method: :post do %>
+  <div>
+    <%= page_header "#{time_based_greeting}.", subtitle: 'Sales, daily close and stock in one view of your business.', eyebrow: l(Time.current, format: :long) do %>
+      <button type="button" aria-expanded="false" aria-controls="dashboard-layout-editor" data-dashboard-customizer-target="toggle" data-action="click->dashboard-customizer#toggleEditor" class="btn-ghost" <%= tour_anchor('customize') %>>Customize</button>
+      <% if Current.user.can?("sync.write") %>
+        <%= form_tag syncs_path, method: :post, class: 'inline' do %>
           <%= submit_tag "Sync now", class: "btn-primary", data: { turbo_submits_with: "Syncing…" } %>
         <% end %>
-        <% end %>
-      </div>
-      <% if Current.user.can?("sync.read") %><%= render "shared/last_sync", sync: presenter.last_sync %><% end %>
-    </div>
-  </section>
+      <% end %>
+    <% end %>
+    <% if Current.user.can?("sync.read") %><div class="mt-2"><%= render "shared/last_sync", sync: presenter.last_sync %></div><% end %>
+  </div>
 
   <%= render 'shared/learning_welcome' %>
   <% if Current.user.can?("sync.read") %>
     <%= render "syncs/banner" %>
   <% end %>
 
-  <section id="dashboard-layout-editor" data-dashboard-customizer-target="panel" class="card card-pad hidden">
-    <div class="flex items-baseline justify-between">
-      <h2 class="font-display text-xl text-ink">Customize dashboard</h2>
+  <section id="dashboard-layout-editor" data-dashboard-customizer-target="panel" class="section-card hidden">
+    <%= section_heading 'Customize dashboard', hint: 'Show or hide widgets and set their order. Your layout is saved to your profile.' do %>
       <button type="button" data-dashboard-customizer-target="done" data-action="click->dashboard-customizer#closeEditor" class="btn-ghost btn-sm">Done</button>
-    </div>
-    <p class="mt-1 text-xs text-taupe">Show or hide widgets and set their order. Your layout is saved to your profile.</p>
-    <ul data-dashboard-customizer-target="list" class="mt-4 space-y-2">
+    <% end %>
+    <ul data-dashboard-customizer-target="list" class="space-y-2">
       <% widgets.each do |widget, visible| %>
-        <li data-editor-key="<%= widget.key %>" class="flex items-center gap-3 rounded-xl bg-haze px-4 py-2.5">
-          <span class="flex flex-col text-[10px] leading-tight text-taupe">
+        <li data-editor-key="<%= widget.key %>" class="flex items-center gap-3 rounded-control bg-haze px-4 py-2.5">
+          <span class="flex flex-col text-xs leading-tight text-taupe">
             <button type="button" data-move="<%= widget.key %>" data-dir="up" class="hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive" title="Move <%= widget.label %> up" aria-label="Move <%= widget.label %> up"><%= content_tag :span, "▲" %></button>
             <button type="button" data-move="<%= widget.key %>" data-dir="down" class="hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive" title="Move <%= widget.label %> down" aria-label="Move <%= widget.label %> down">▼</button>
           </span>
           <label class="flex flex-1 items-center gap-2.5 text-sm text-ink">
-            <input type="checkbox" data-visible="<%= widget.key %>" <%= visible ? "checked" : "" %> class="accent-olive">
+            <input type="checkbox" data-visible="<%= widget.key %>" <%= visible ? "checked" : "" %> class="checkbox accent-olive">
             <%= widget.label %>
           </label>
         </li>
       <% end %>
     </ul>
-    <div class="mt-4 flex items-center gap-3">
+    <div class="form-actions">
       <button type="button" data-dashboard-customizer-target="save" data-action="click->dashboard-customizer#save" class="btn-primary">Save layout</button>
       <button type="button" data-dashboard-customizer-target="reset" data-action="click->dashboard-customizer#reset" class="btn-ghost">Reset to default</button>
       <span role="status" aria-live="polite" data-dashboard-customizer-target="status" class="text-xs text-mocha"></span>
@@ -54,12 +46,12 @@
   </section>
 
   <%= render "home/daily_actions" %>
-    <div id="dashboard-widgets" class="space-y-8">
-      <% widgets.each do |widget, visible| %>
-        <section id="dashboard-widget-<%= widget.key %>" data-widget-key="<%= widget.key %>" <%= visible ? "" : "hidden" %> <%= tour_anchor(widget.key) if %w[stats attention].include?(widget.key) %>>
-          <%= render widget.partial, presenter: presenter %>
-        </section>
-      <% end %>
-    </div>
+  <div id="dashboard-widgets" class="space-y-8">
+    <% widgets.each do |widget, visible| %>
+      <section id="dashboard-widget-<%= widget.key %>" data-widget-key="<%= widget.key %>" <%= visible ? "" : "hidden" %> <%= tour_anchor(widget.key) if %w[stats attention].include?(widget.key) %>>
+        <%= render widget.partial, presenter: presenter %>
+      </section>
+    <% end %>
+  </div>
   <% if Current.user.can?("sync.read") %><%= render "home/source_sync_status" %><% end %>
 </div>

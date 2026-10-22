@@ -1,24 +1,113 @@
-<div class="space-y-6 max-w-5xl">
-  <%= link_to @gift.engagement.title, marketing_engagement_path(@gift.engagement), class: 'btn-ghost' %><h1 class="page-title">Product gift #<%= @gift.id %></h1>
-  <section class="card card-pad space-y-3"><p><%= @gift.engagement.influencer.name %> · <%= @gift.status.humanize %></p><p class="whitespace-pre-wrap"><%= @gift.note %></p><p>Estimated products: <%= @gift.estimated_product_cents.nil? ? 'Unknown' : "#{number_with_precision(@gift.estimated_product_cents / 100.0, precision: 2)} #{@gift.currency}" %> · Estimated shipping: <%= @gift.shipping_cost_cents.nil? ? 'Unknown' : "#{number_with_precision(@gift.shipping_cost_cents / 100.0, precision: 2)} #{@gift.currency}" %></p><p class="text-sm text-mocha">Gift and shipment status are operator records. Stock, orders and financial entries are not changed by this workflow.</p><% if Current.user.can?('marketing.write') && %w[proposed approved ready_to_ship].include?(@gift.status) %><%= link_to 'Edit gift / delivery details', edit_marketing_product_gift_path(@gift), class: 'btn-ghost' %><% end %></section>
-  <section class="card card-pad space-y-4"><h2 class="text-lg font-semibold">Gift products</h2>
-    <% @gift.items.order(:id).each do |item| %><article class="border-b border-sand pb-3 space-y-2"><p class="font-semibold"><%= item.product_name %> · <%= item.sku.presence || 'No SKU' %></p><p class="text-sm">Shopify variant: <%= item.source_variant_id %> · Quantity <%= item.quantity %> · Estimated unit cost <%= item.unit_cost_cents.nil? ? 'Unknown' : "#{item.unit_cost_cents} cents #{@gift.currency}" %></p>
-      <% if Current.user.can?('marketing.write') && @gift.status == 'proposed' %><%= form_with url: item_marketing_product_gift_path(@gift), class: 'flex flex-wrap gap-2' do |f| %><%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :item_action, 'update_item' %><%= hidden_field_tag :item_id, item.id %><%= number_field_tag 'gift_item[quantity]', item.quantity, min: 1, max: 10000, class: 'input', 'aria-label': 'Gift item quantity' %><%= number_field_tag 'gift_item[unit_cost_cents]', item.unit_cost_cents, min: 0, class: 'input', 'aria-label': 'Estimated unit cost in cents' %><%= f.submit 'Update product', class: 'btn-ghost' %><% end %><%= button_to 'Remove product', item_marketing_product_gift_path(@gift), params: { lock_version: @gift.lock_version, item_action: 'remove_item', item_id: item.id }, class: 'btn-ghost' %><% end %>
-    </article><% end %>
-    <% if @variants %><%= form_with url: marketing_product_gift_path(@gift), method: :get, class: 'flex flex-wrap gap-2' do |f| %><%= f.search_field :q, value: params[:q], placeholder: 'Search variant SKU or title', class: 'input', 'aria-label': 'Search gift products' %><%= f.submit 'Find products', class: 'btn-ghost' %><% end %>
-      <%= form_with url: item_marketing_product_gift_path(@gift), class: 'space-y-3' do |f| %><%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :item_action, 'add_item' %><%= select_tag 'gift_item[source_variant_id]', options_for_select(@variants.first(50).map { |v| [[v.product&.title, v.title, v.sku].compact.join(' · '), v.id] }), include_blank: 'Choose a product variant', class: 'select w-full', 'aria-label': 'Product variant', required: true %><div class="flex flex-wrap gap-2"><%= number_field_tag 'gift_item[quantity]', 1, min: 1, max: 10000, class: 'input', 'aria-label': 'Quantity', required: true %><%= number_field_tag 'gift_item[unit_cost_cents]', nil, min: 0, class: 'input', placeholder: 'Unit cost cents (optional)', 'aria-label': 'Estimated unit cost cents' %><%= f.submit 'Add product', class: 'btn-primary' %></div><% end %><% if @variants.length > 50 %><p class="text-xs">First 50 matches shown. Refine the SKU/title search to find other products.</p><% end %>
+<% content_for :title, "Product gift ##{@gift.id}" %>
+<% can_write = Current.user.can?('marketing.write') %>
+<% can_contacts = Current.user.can?('marketing.contacts') %>
+<% can_review = Current.user.can?('marketing.review') %>
+<% editable = can_write && %w[proposed approved ready_to_ship].include?(@gift.status) %>
+<% money = ->(cents) { cents.nil? ? 'Unknown' : "#{number_with_precision(cents / 100.0, precision: 2)} #{@gift.currency}" } %>
+<% menu = [] %>
+<% menu << ['Edit', edit_marketing_product_gift_path(@gift)] if editable %>
+<% menu << ['Open collaboration', marketing_engagement_path(@gift.engagement)] %>
+<% menu << ['Tracking evidence', @gift.tracking_url, { target: '_blank', rel: 'noopener noreferrer' }] if can_contacts && @gift.tracking_url.present? %>
+<div class="space-y-6">
+  <%= page_header "Product gift ##{@gift.id}", subtitle: "#{@gift.engagement.influencer.name} · #{@gift.engagement.title}", eyebrow: 'Marketing · Product gift', menu: menu do %>
+    <span class="pill-taupe"><%= @gift.status.humanize %></span>
+    <% if can_review && @gift.status == 'proposed' %><%= button_to 'Approve products and budget', transition_marketing_product_gift_path(@gift), params: { lock_version: @gift.lock_version, gift_action: 'approve' }, class: 'btn-primary', form_class: 'contents' %><% end %>
+  <% end %>
+  <%= fold_explainer('Gift and shipment status are operator records. Stock, orders and financial entries are not changed by this workflow.', class: 'text-sm text-mocha') %>
+
+  <section class="section-card" aria-label="Gift details">
+    <dl class="facts">
+      <div><dt>Influencer</dt><dd><%= @gift.engagement.influencer.name %></dd></div>
+      <div><dt>Collaboration</dt><dd><%= link_to @gift.engagement.title, marketing_engagement_path(@gift.engagement), class: 'underline' %></dd></div>
+      <div><dt>Status</dt><dd><%= @gift.status.humanize %></dd></div>
+      <div><dt>Estimated products</dt><dd class="num text-left"><%= money.call(@gift.estimated_product_cents) %></dd></div>
+      <div><dt>Estimated shipping</dt><dd class="num text-left"><%= money.call(@gift.shipping_cost_cents) %></dd></div>
+    </dl>
+    <% if @gift.note.present? %><div><h3 class="card-title">Note</h3><p class="whitespace-pre-wrap text-sm"><%= @gift.note %></p></div><% end %>
+  </section>
+
+  <section class="section-card" aria-label="Gift products">
+    <%= section_heading 'Gift products' %>
+    <% if @gift.items.empty? %><p class="text-sm text-mocha">No products on this gift yet.<%= ' Add a product below.' if @variants %></p><% end %>
+    <% @gift.items.order(:id).each do |item| %>
+      <article class="space-y-2 border-t border-fog pt-3">
+        <p class="font-semibold"><%= item.product_name %> <span class="font-mono text-xs font-normal text-mocha">· <%= item.sku.presence || 'No SKU' %></span></p>
+        <p class="text-sm text-mocha">Shopify variant <%= item.source_variant_id %> · quantity <%= item.quantity %> · estimated unit cost <%= item.unit_cost_cents.nil? ? 'Unknown' : "#{item.unit_cost_cents} cents #{@gift.currency}" %></p>
+        <% if can_write && @gift.status == 'proposed' %>
+          <div class="flex flex-wrap items-end gap-2">
+            <%= form_with url: item_marketing_product_gift_path(@gift), class: 'toolbar' do |f| %>
+              <%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :item_action, 'update_item' %><%= hidden_field_tag :item_id, item.id %>
+              <div class="toolbar-field"><label class="field-label" for="gift_item_quantity_<%= item.id %>">Quantity</label><%= number_field_tag 'gift_item[quantity]', item.quantity, id: "gift_item_quantity_#{item.id}", min: 1, max: 10000, class: 'input' %></div>
+              <div class="toolbar-field"><label class="field-label" for="gift_item_unit_cost_<%= item.id %>">Unit cost (cents)</label><%= number_field_tag 'gift_item[unit_cost_cents]', item.unit_cost_cents, id: "gift_item_unit_cost_#{item.id}", min: 0, class: 'input' %></div>
+              <div class="toolbar-actions"><%= f.submit 'Save', class: 'btn-ghost btn-sm' %></div>
+            <% end %>
+            <%= button_to 'Remove', item_marketing_product_gift_path(@gift), params: { lock_version: @gift.lock_version, item_action: 'remove_item', item_id: item.id }, class: 'btn-ghost btn-sm' %>
+          </div>
+        <% end %>
+      </article>
+    <% end %>
+    <% if @variants %>
+      <div class="space-y-3 border-t border-fog pt-4">
+        <%= section_heading 'Add a product', level: :h3 %>
+        <%= form_with url: marketing_product_gift_path(@gift), method: :get, class: 'toolbar' do |f| %>
+          <div class="toolbar-field"><%= f.label :q, 'Search', class: 'field-label' %><%= f.search_field :q, value: params[:q], placeholder: 'Variant SKU or title', class: 'search' %></div>
+          <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-ghost' %><%= link_to 'Clear', marketing_product_gift_path(@gift), class: 'btn-ghost' %></div>
+        <% end %>
+        <%= form_with url: item_marketing_product_gift_path(@gift), class: 'space-y-3' do |f| %>
+          <%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :item_action, 'add_item' %>
+          <div><label class="field-label" for="gift_item_source_variant_id">Product variant</label><%= select_tag 'gift_item[source_variant_id]', options_for_select(@variants.first(50).map { |v| [[v.product&.title, v.title, v.sku].compact.join(' · '), v.id] }), id: 'gift_item_source_variant_id', include_blank: 'Choose a product variant', class: 'select w-full', required: true %></div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div><label class="field-label" for="gift_item_new_quantity">Quantity</label><%= number_field_tag 'gift_item[quantity]', 1, id: 'gift_item_new_quantity', min: 1, max: 10000, class: 'input', required: true %></div>
+            <div><label class="field-label" for="gift_item_new_unit_cost">Unit cost (cents, optional)</label><%= number_field_tag 'gift_item[unit_cost_cents]', nil, id: 'gift_item_new_unit_cost', min: 0, class: 'input' %></div>
+          </div>
+          <%= f.submit 'Add product', class: 'btn-primary' %>
+        <% end %>
+        <% if @variants.length > 50 %><p class="text-xs text-taupe">First 50 matches shown. Refine the SKU or title search to find other products.</p><% end %>
+      </div>
     <% end %>
   </section>
-  <% if Current.user.can?('marketing.contacts') %><section class="card card-pad space-y-3"><h2 class="font-semibold">Restricted recipient and tracking</h2><pre class="whitespace-pre-wrap"><%= @gift.shipping_details %></pre><p>Recipient confirmed: <%= @gift.recipient_confirmed_at&.to_fs(:short) || 'not yet' %></p><p><%= @gift.carrier %> <%= @gift.tracking_number %></p><% if @gift.tracking_url.present? %><%= link_to 'Tracking evidence', @gift.tracking_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% end %></section><% end %>
-  <section class="card card-pad space-y-3"><h2 class="text-lg font-semibold">Gift workflow</h2>
-    <% if Current.user.can?('marketing.review') && @gift.status == 'proposed' %><%= button_to 'Approve products and budget', transition_marketing_product_gift_path(@gift), params: { lock_version: @gift.lock_version, gift_action: 'approve' }, class: 'btn-primary' %><% end %>
-    <% if Current.user.can?('marketing.write') && Current.user.can?('marketing.contacts') %>
-      <% if %w[proposed approved ready_to_ship].include?(@gift.status) %><%= form_with url: transition_marketing_product_gift_path(@gift), class: 'space-y-2' do |f| %><%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :gift_action, 'confirm_recipient' %><label><%= check_box_tag :confirmed, '1', false, required: true %> The recipient confirmed these shipping details.</label><%= f.submit 'Record recipient confirmation', class: 'btn-ghost' %><% end %><% end %>
+
+  <% if can_contacts %>
+    <section class="section-card" aria-label="Restricted recipient and tracking">
+      <%= section_heading 'Restricted recipient and tracking' %>
+      <dl class="facts">
+        <div><dt>Shipping details</dt><dd class="whitespace-pre-wrap"><%= @gift.shipping_details.presence || '—' %></dd></div>
+        <div><dt>Recipient confirmed</dt><dd><%= @gift.recipient_confirmed_at&.to_fs(:short) || 'Not yet' %></dd></div>
+        <div><dt>Carrier and tracking</dt><dd><%= [@gift.carrier, @gift.tracking_number].select(&:present?).join(' ').presence || '—' %></dd></div>
+        <% if @gift.tracking_url.present? %><div><dt>Tracking</dt><dd><%= link_to 'Tracking evidence', @gift.tracking_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></dd></div><% end %>
+      </dl>
+    </section>
+  <% end %>
+
+  <section class="section-card" aria-label="Gift workflow">
+    <%= section_heading 'Gift workflow', hint: "Shipped #{@gift.shipped_at&.to_fs(:short) || 'not recorded'} · delivered #{@gift.delivered_at&.to_fs(:short) || 'not recorded'} · returned #{@gift.returned_at&.to_fs(:short) || 'not recorded'}." %>
+    <% if can_review && @gift.status == 'proposed' %><p class="text-sm text-mocha">Approve the products and budget from the header to lock them and move the gift forward.</p><% end %>
+    <% if can_write && can_contacts %>
+      <% if %w[proposed approved ready_to_ship].include?(@gift.status) %>
+        <%= form_with url: transition_marketing_product_gift_path(@gift), class: 'space-y-2' do |f| %>
+          <%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :gift_action, 'confirm_recipient' %>
+          <label class="block text-sm"><%= check_box_tag :confirmed, '1', false, required: true %> The recipient confirmed these shipping details.</label>
+          <%= f.submit 'Record recipient confirmation', class: 'btn-ghost' %>
+        <% end %>
+      <% end %>
       <% if @gift.status == 'approved' %><%= button_to 'Mark ready to ship', transition_marketing_product_gift_path(@gift), params: { lock_version: @gift.lock_version, gift_action: 'ready' }, class: 'btn-primary' %><% end %>
-      <% if %w[ready_to_ship shipped].include?(@gift.status) %><%= form_with url: transition_marketing_product_gift_path(@gift), class: 'space-y-2' do |f| %><%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :gift_action, @gift.status == 'ready_to_ship' ? 'ship' : 'deliver' %><label><%= check_box_tag :confirmed, '1', false, required: true %> I checked the actual <%= @gift.status == 'ready_to_ship' ? 'shipment / tracking' : 'delivery' %> evidence.</label><%= f.submit @gift.status == 'ready_to_ship' ? 'Record shipped' : 'Record delivered', class: 'btn-primary' %><% end %><% end %>
+      <% if %w[ready_to_ship shipped].include?(@gift.status) %>
+        <%= form_with url: transition_marketing_product_gift_path(@gift), class: 'space-y-2' do |f| %>
+          <%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :gift_action, @gift.status == 'ready_to_ship' ? 'ship' : 'deliver' %>
+          <label class="block text-sm"><%= check_box_tag :confirmed, '1', false, required: true %> I checked the actual <%= @gift.status == 'ready_to_ship' ? 'shipment / tracking' : 'delivery' %> evidence.</label>
+          <%= f.submit @gift.status == 'ready_to_ship' ? 'Record shipped' : 'Record delivered', class: 'btn-primary' %>
+        <% end %>
+      <% end %>
     <% end %>
-    <% if Current.user.can?('marketing.write') && !%w[cancelled returned].include?(@gift.status) && (!%w[shipped delivered].include?(@gift.status) || Current.user.can?('marketing.contacts')) %><%= form_with url: transition_marketing_product_gift_path(@gift), class: 'space-y-2' do |f| %><%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :gift_action, %w[shipped delivered].include?(@gift.status) ? 'return' : 'cancel' %><%= text_field_tag :reason, nil, placeholder: 'Cancellation / return reason', class: 'input w-full', required: true, 'aria-label': 'Cancellation or return reason' %><%= f.submit %w[shipped delivered].include?(@gift.status) ? 'Record return' : 'Cancel gift', class: 'btn-ghost' %><% end %><% end %>
-    <p class="text-xs">Shipped: <%= @gift.shipped_at&.to_fs(:short) || 'not recorded' %> · Delivered: <%= @gift.delivered_at&.to_fs(:short) || 'not recorded' %> · Returned: <%= @gift.returned_at&.to_fs(:short) || 'not recorded' %></p>
+    <% if can_write && !%w[cancelled returned].include?(@gift.status) && (!%w[shipped delivered].include?(@gift.status) || can_contacts) %>
+      <% returning = %w[shipped delivered].include?(@gift.status) %>
+      <%= form_with url: transition_marketing_product_gift_path(@gift), class: 'toolbar border-t border-fog pt-4' do |f| %>
+        <%= hidden_field_tag :lock_version, @gift.lock_version %><%= hidden_field_tag :gift_action, returning ? 'return' : 'cancel' %>
+        <div class="toolbar-field"><label class="field-label" for="gift_reason"><%= returning ? 'Return reason' : 'Cancellation reason' %></label><%= text_field_tag :reason, nil, id: 'gift_reason', class: 'input w-full', required: true %></div>
+        <div class="toolbar-actions"><%= f.submit returning ? 'Record return' : 'Cancel gift', class: 'btn-ghost' %></div>
+      <% end %>
+    <% end %>
   </section>
+
   <%= render 'marketing/cms/history', record: @gift %>
 </div>

@@ -45,7 +45,7 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
   test 'connections page lists every service with status' do
     get_page connections_path
     assert_response :success
-    assert_select 'h1', 'Master credentials & sync'
+    assert_select 'h1', 'Credentials & sync'
     assert_select 'h3', /Shopify/
     assert_select 'h3', /Square/
     assert_select '[data-credential-service=google_drive]', count: 0
@@ -66,7 +66,7 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     get_page connections_path
     assert_response :success
 
-    links = css_select('a').select { |a| a.text.match?(/\A(Manage|View|Review) setup\z/) }.map { |a| a['href'] }.uniq
+    links = css_select('a').select { |a| a.text.match?(/\A(Manage|View|Review|Open) setup\z/) }.map { |a| a['href'] }.uniq
     assert_operator links.size, :>=, 6, 'expected a setup link per service'
 
     links.each do |href|
@@ -118,7 +118,7 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     get_page connections_path
     assert_response :success
 
-    card = css_select('section.card').find { |node| node.text.include?('Square') }
+    card = css_select('[data-credential-service]').find { |node| node.text.include?('Square') }
     assert card
     assert_includes card.text, 'Configured'
     refute_includes response.body, 'EAAAsecretvalue123'
@@ -134,7 +134,7 @@ class ConnectionsFlowTest < ActionDispatch::IntegrationTest
     get_page connections_path
     assert_response :success
 
-    card = css_select('section.card').find { |node| node.text.include?('Shopify') }
+    card = css_select('[data-credential-service]').find { |node| node.text.include?('Shopify') }
     assert card
     assert_includes card.text, 'Partially set up'
     assert_includes card.text, 'not set' # client secret missing

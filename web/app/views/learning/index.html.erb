@@ -1,31 +1,20 @@
 <% content_for :title, 'Learn Rupert' %>
-<div class="mx-auto max-w-4xl space-y-8">
-  <header>
-    <p class="eyebrow text-olive-deep">Your Rupert guide</p>
-    <h1 class="page-title mt-2">Get comfortable. Get things done.</h1>
-    <p class="mt-3 max-w-2xl text-mocha">Learn one task at a time, try an example, then open the tool you need. Your progress stays with your account.</p>
-    <nav class="mt-4 flex flex-wrap gap-3 text-sm font-semibold text-olive-deep" aria-label="Learning sections">
-      <%= link_to 'Your next step', learning_index_path(anchor: 'your-path'), class: 'underline' %>
-      <%= link_to 'First week', '#first-week', class: 'underline' %>
-      <%= link_to 'All lessons', '#lessons', class: 'underline' %>
-      <%= link_to 'Guided tours', '#tours', class: 'underline' %>
-      <%= link_to 'Words & numbers', '#definitions-title', class: 'underline' %>
-      <% if !Current.user.employee? && (Current.user.can?('users.read') || Current.user.can?('hr.read')) %><%= link_to 'Team progress', learning_team_path, class: 'underline' %><% end %>
-    </nav>
-  </header>
+<% team_menu = (!Current.user.employee? && (Current.user.can?('users.read') || Current.user.can?('hr.read'))) ? [['Team progress', learning_team_path]] : nil %>
+<div class="page-medium space-y-6">
+  <%= page_header 'Learn Rupert', subtitle: 'Learn one task at a time, try an example, then open the tool you need.', menu: team_menu %>
   <% if @query.blank? %>
-  <section id="your-path" class="card card-pad space-y-5 scroll-mt-6" aria-labelledby="path-title" <%= tour_anchor('path') %>>
-    <div class="flex flex-wrap items-start justify-between gap-4">
+  <section id="your-path" class="section-card scroll-mt-6" aria-labelledby="path-title" <%= tour_anchor('path') %>>
+    <div class="card-head">
       <div>
-        <p class="eyebrow text-olive-deep">Your learning path</p>
-        <h2 id="path-title" class="mt-2 font-display text-2xl"><%= @journey.focus[:label] %></h2>
-        <p class="mt-2 text-sm text-mocha"><%= @journey.path_description(@journey.focus).presence || 'Suggested for your work.' %> Choose another path anytime.</p>
+        <p class="eyebrow text-olive">Your learning path</p>
+        <h2 id="path-title" class="section-title"><%= @journey.focus[:label] %></h2>
+        <p class="card-hint"><%= @journey.path_description(@journey.focus).presence || 'Suggested for your work.' %> Choose another path anytime.</p>
       </div>
-      <details class="learning-path-picker">
-        <summary class="cursor-pointer text-sm font-semibold text-olive-deep underline">Change my path</summary>
+      <details class="learning-path-picker card-head-actions">
+        <summary class="btn-ghost btn-sm">Change my path</summary>
         <%= form_with url: learning_preferences_path, method: :patch, class: 'mt-3 space-y-3' do |form| %>
           <%= form.label :focus, 'What would you like to do?', class: 'field-label' %>
-          <%= form.select :focus, @journey.paths.map { |path| [path[:label], path[:key]] }, { selected: @journey.focus[:key] }, class: 'input' %>
+          <%= form.select :focus, @journey.paths.map { |path| [path[:label], path[:key]] }, { selected: @journey.focus[:key] }, class: 'select w-full' %>
           <%= form.submit 'Use this path', class: 'btn-ghost btn-sm' %>
         <% end %>
       </details>
@@ -36,17 +25,17 @@
       <% path_lessons.each_with_index do |lesson, index| %>
         <li class="flex flex-wrap items-center justify-between gap-3 py-3">
           <span class="text-sm"><span class="mr-2 text-olive-deep"><%= @completed.include?(lesson[:key]) ? '✓' : "#{index + 1}." %></span><%= lesson[:title] %><span class="ml-2 text-xs text-mocha"><%= @completed.include?(lesson[:key]) ? 'Complete' : "#{lesson[:minutes]} min" %></span></span>
-          <%= link_to @completed.include?(lesson[:key]) ? 'Review' : @journey.next_lesson == lesson ? 'Start next step' : 'Open lesson', learning_path(lesson[:key]), class: @journey.next_lesson == lesson ? 'btn-primary btn-sm' : 'text-sm text-olive-deep underline' %>
+          <%= link_to @completed.include?(lesson[:key]) ? 'Review' : @journey.next_lesson == lesson ? 'Start next step' : 'Open', learning_path(lesson[:key]), class: @journey.next_lesson == lesson ? 'btn-primary btn-sm' : 'btn-ghost btn-sm' %>
         </li>
       <% end %>
     </ol>
     <% unless @journey.next_lesson %><p class="text-sm font-semibold text-olive-deep">You’ve finished this path. Use the tools below or choose another path when you’re ready.</p><% end %>
     <% if @journey.completed_paths.any? %><div class="flex flex-wrap items-center gap-2 text-sm"><span class="text-mocha">Modules complete:</span><% @journey.completed_paths.each do |path| %><span class="module-badge">✓ <%= path[:label] %></span><% end %></div><% end %>
   </section>
-  <section id="first-week" class="card card-pad space-y-4 scroll-mt-6" aria-labelledby="first-week-title">
-    <div class="flex flex-wrap items-start justify-between gap-4">
-      <div><p class="eyebrow text-olive-deep">Your first week</p><h2 id="first-week-title" class="mt-2 font-display text-2xl"><%= @checklist.complete? ? 'All done' : "#{@checklist.done_count} of #{@checklist.total} done" %></h2><p class="mt-2 text-sm text-mocha">Short steps that make Rupert feel familiar. Some tick themselves when the work is done; mark the rest when you have tried them.</p></div>
-      <div class="flex flex-wrap gap-2">
+  <section id="first-week" class="section-card scroll-mt-6" aria-labelledby="first-week-title">
+    <div class="card-head">
+      <div><p class="eyebrow text-olive">Your first week</p><h2 id="first-week-title" class="section-title"><%= @checklist.complete? ? 'All done' : "#{@checklist.done_count} of #{@checklist.total} done" %></h2><p class="card-hint">Short steps that make Rupert feel familiar. Some tick themselves when the work is done; mark the rest when you have tried them.</p></div>
+      <div class="card-head-actions">
         <%= link_to 'Restart the welcome', welcome_path, class: 'btn-ghost btn-sm' %>
         <% if @journey.checklist_hidden? || @journey.config['learning_welcome_hidden'] %><%= button_to 'Show on my home page', learning_preferences_path, method: :patch, params: { checklist_hidden: '0' }, class: 'btn-ghost btn-sm', form: { class: 'inline' } %><% end %>
       </div>
@@ -63,27 +52,27 @@
     </ol>
   </section>
   <% end %>
-  <%= form_with url: learning_index_path, method: :get, class: 'space-y-2', role: 'search', data: { busy: false, tour: 'search' } do |form| %>
-    <%= form.label :q, 'Find a lesson or definition', class: 'field-label' %>
-    <div class="flex flex-wrap gap-2"><%= form.search_field :q, value: @query, class: 'input min-w-0 flex-1', placeholder: 'Try total, stock, hours or sync', maxlength: 100 %><%= form.submit 'Find', class: 'btn-ghost', data: { turbo_submits_with: 'Searching…' } %><% if @query.present? %><%= link_to 'Clear', learning_index_path(anchor: 'lessons'), class: 'btn-ghost' %><% end %></div>
+  <%= form_with url: learning_index_path, method: :get, class: 'toolbar', role: 'search', data: { busy: false, tour: 'search' } do |form| %>
+    <div class="toolbar-field"><%= form.label :q, 'Find a lesson or definition', class: 'field-label' %><%= form.search_field :q, value: @query, class: 'input', placeholder: 'Try total, stock, hours or sync', maxlength: 100 %></div>
+    <div class="toolbar-actions"><%= form.submit 'Apply', class: 'btn-primary', data: { turbo_submits_with: 'Searching…' } %><% if @query.present? %><%= link_to 'Clear', learning_index_path(anchor: 'lessons'), class: 'btn-ghost' %><% end %></div>
   <% end %>
   <section id="lessons" class="space-y-4 scroll-mt-6" aria-labelledby="lessons-title" <%= tour_anchor('lessons') %>>
-    <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 id="lessons-title" class="font-display text-2xl"><%= @query.present? ? 'Matching lessons' : 'Explore all lessons' %></h2><p class="text-sm text-mocha"><%= @completed.size %> of <%= @lessons.size %> complete</p></div>
-    <% if @matching_lessons.empty? %><p class="text-sm text-mocha">No lessons match “<%= @query %>”. Check the definitions below or try a shorter phrase.</p><% end %>
+    <div class="card-head"><div><h2 id="lessons-title" class="section-title"><%= @query.present? ? 'Matching lessons' : 'All lessons' %></h2></div><p class="text-sm text-mocha"><%= @completed.size %> of <%= @lessons.size %> complete</p></div>
+    <% if @matching_lessons.empty? %><%= empty_state "No lessons match “#{@query}”", hint: 'Check the definitions below or try a shorter phrase.' %><% end %>
     <div class="grid gap-4 sm:grid-cols-2">
       <% @matching_lessons.each do |lesson| %>
-        <article class="card card-pad flex flex-col items-start gap-3">
+        <article class="section-card flex flex-col items-start">
           <p class="text-xs text-olive-deep"><%= @completed.include?(lesson[:key]) ? 'Completed · Review anytime' : "#{lesson[:minutes]} minute lesson · Example + #{LearningCatalog.questions(lesson).size > 1 ? "#{LearningCatalog.questions(lesson).size} checks" : 'practice'}" %></p>
-          <h3 class="font-display text-xl"><%= lesson[:title] %></h3>
+          <h3 class="card-title"><%= lesson[:title] %></h3>
           <p class="text-sm text-mocha"><%= lesson[:summary] %></p>
-          <%= link_to @completed.include?(lesson[:key]) ? 'Review lesson' : 'Start lesson', learning_path(lesson[:key]), class: 'btn-ghost mt-auto' %>
+          <%= link_to @completed.include?(lesson[:key]) ? 'Review lesson' : 'Start lesson', learning_path(lesson[:key]), class: 'btn-ghost btn-sm mt-auto' %>
         </article>
       <% end %>
     </div>
   </section>
   <% if @query.blank? && @tours.any? %>
   <section id="tours" class="space-y-4 scroll-mt-6" aria-labelledby="tours-title">
-    <div><h2 id="tours-title" class="font-display text-2xl">Guided tours</h2><p class="mt-1 text-sm text-mocha">A minute on the real page, pointing at the real controls. Tours never start by themselves; open one when you want it.</p></div>
+    <div class="card-head"><div><h2 id="tours-title" class="section-title">Guided tours</h2><p class="card-hint">A minute on the real page, pointing at the real controls. Tours never start by themselves; open one when you want it.</p></div></div>
     <ul class="grid gap-3 sm:grid-cols-2">
       <% @tours.each do |tour| %>
         <li class="card card-pad flex flex-wrap items-center justify-between gap-3"><div><p class="font-semibold"><%= tour.title %></p><p class="text-xs text-mocha"><%= tour.steps.size %> stops · about <%= tour.minutes %> min<%= ' · Taken' if @journey.tour_done?(tour.key) %></p></div><%= link_to @journey.tour_done?(tour.key) ? 'Take again' : 'Take the tour', "#{tour.path}?tour=1", class: 'btn-ghost btn-sm' %></li>
@@ -92,9 +81,8 @@
   </section>
   <% end %>
   <section class="space-y-4" aria-labelledby="definitions-title" <%= tour_anchor('definitions') %>>
-    <h2 id="definitions-title" class="scroll-mt-6 font-display text-2xl">Words and numbers, explained</h2>
-    <p class="text-sm text-mocha">Plain-language definitions, with the same wording beside the work. Look for the <span class="term-mark" aria-hidden="true">?</span> mark next to a label.</p>
-    <% if @terms.empty? %><p class="text-mocha">No matching definition. Try a shorter word or clear your search.</p><% else %>
+    <div class="card-head"><div><h2 id="definitions-title" class="section-title scroll-mt-6">Words and numbers, explained</h2><p class="card-hint">Plain-language definitions, with the same wording beside the work. Look for the <span class="term-mark" aria-hidden="true">?</span> mark next to a label.</p></div></div>
+    <% if @terms.empty? %><%= empty_state 'No matching definition', hint: 'Try a shorter word or clear your search.' %><% else %>
       <dl class="card card-pad divide-y divide-fog">
         <% @terms.each do |key, (label, definition)| %>
           <div id="term-<%= key %>" class="py-3 scroll-mt-6"><dt class="font-semibold"><%= label %></dt><dd class="mt-1 text-sm text-mocha"><%= definition %></dd></div>

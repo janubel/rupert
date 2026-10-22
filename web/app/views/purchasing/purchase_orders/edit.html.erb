@@ -1,9 +1,7 @@
 <% content_for :title, "Edit #{@purchase_order.order_number}" %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title">Edit <%= @purchase_order.order_number %></h1>
-  </section>
-  <div class="card card-pad max-w-2xl">
-    <%= render "form", purchase_order: @purchase_order %>
+<div class="page-narrow space-y-6">
+  <%= page_header "Edit #{@purchase_order.order_number}", subtitle: 'Vendor, order number, expected date and notes for this draft.' %>
+  <div class="card card-pad">
+    <%= render 'form', purchase_order: @purchase_order %>
   </div>
 </div>

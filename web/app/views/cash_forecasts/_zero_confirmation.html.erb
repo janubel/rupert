@@ -1,8 +1,8 @@
 <% blanks = @forecast.blank_entries; key = @forecast.zero_confirmation_key %>
-<section id="cash-zero-confirmation" class="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3 scroll-mt-48" aria-labelledby="cash-zero-heading">
-  <h2 id="cash-zero-heading" class="font-semibold"><%= pluralize(blanks.size, 'blank weekly entry') %> will be saved as 0</h2>
+<section id="cash-zero-confirmation" class="space-y-3 rounded-card border border-warn-edge bg-warn-bg p-4 scroll-mt-48" aria-labelledby="cash-zero-heading">
+  <h2 id="cash-zero-heading" class="card-title"><%= pluralize(blanks.size, 'blank weekly entry') %> will be saved as 0</h2>
   <p class="text-sm">You left these blank. The results count them as 0; a CSV or retained version includes them only after you confirm. Retained versions record this list.</p>
-  <ul class="list-disc space-y-1 pl-5 text-sm"><% blanks.each do |entry| %><li><%= link_to "Week #{entry[:week]} · #{cash_forecast_week_dates(@forecast.as_of, entry[:week] - 1)} · #{CashForecastScenario::FIELDS[entry[:field]]}", "#forecast_weeks_#{entry[:week] - 1}_#{entry[:field]}", class: 'text-olive underline', data: { turbo: false } %></li><% end %></ul>
-  <% if @confirmation_error %><p id="cash-zero-error" class="text-sm font-semibold text-amber-950"><%= @confirmation_error %></p><% end %>
+  <ul class="list-disc space-y-1 pl-5 text-sm"><% blanks.each do |entry| %><li><%= link_to "Week #{entry[:week]} · #{cash_forecast_week_dates(@forecast.as_of, entry[:week] - 1)} · #{CashForecastScenario::FIELDS[entry[:field]]}", "#forecast_weeks_#{entry[:week] - 1}_#{entry[:field]}", class: 'font-semibold text-olive-deep underline', data: { turbo: false } %></li><% end %></ul>
+  <% if @confirmation_error %><p id="cash-zero-error" class="text-sm font-semibold"><%= @confirmation_error %></p><% end %>
   <label class="flex items-start gap-2 text-sm font-semibold"><%= check_box_tag 'forecast[zero_confirmation]', key, @values['zero_confirmation'] == key, id: 'forecast_zero_confirmation', class: 'mt-1', data: { review_only: true }, 'aria-invalid': @confirmation_error.present? || nil, 'aria-describedby': @confirmation_error ? 'cash-zero-error' : nil %><span>Save these <%= pluralize(blanks.size, 'entry') %> as 0: no receipts or payments are planned for them</span></label>
 </section>

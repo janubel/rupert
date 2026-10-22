@@ -1,26 +1,43 @@
-<div class="max-w-3xl space-y-5">
-  <%= link_to @engagement.title, marketing_engagement_path(@engagement), class: 'btn-ghost' %>
-  <h1 class="page-title"><%= @record.offer.code %></h1>
-  <section class="card card-pad space-y-3">
-    <p><%= @engagement.influencer.name %> · <%= @engagement.campaign.name %></p>
-    <p class="font-semibold">Shopify store: <%= @record.shop_domain %> · Currency: <%= @record.currency %></p>
-    <p class="whitespace-pre-wrap"><%= @record.offer.terms %></p>
-    <p>Starts <%= @record.offer.starts_at.to_fs(:long) %> · Expires <%= @record.offer.ends_at.to_fs(:long) %> (<%= Time.zone.name %>)</p>
-    <p>Destination: <%= @record.offer.destination_url %></p>
-    <p>Status: <%= @record.status.humanize %><% if @record.remote_status %> · Shopify: <%= @record.remote_status.humanize %><% end %></p>
-    <p>Last checked: <%= @record.checked_at&.to_fs(:long) || 'not checked' %></p>
-    <% if @record.last_error.present? %><p role="alert"><%= @record.last_error %></p><% end %>
-    <% if @record.admin_url %><%= link_to 'Open code in Shopify', @record.admin_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% end %>
-    <% if @record.offer.shareable? && Current.user.can?('marketing.write') %><%= button_to 'Copy code and referral link', copy_marketing_engagement_offer_path(@engagement, @record.offer), class: 'btn-primary' %><% end %>
+<% content_for :title, @record.offer.code %>
+<% can_write = Current.user.can?('marketing.write') %>
+<% can_activate = %w[draft failed].include?(@record.status) && Current.user.can?('marketing.discounts') && can_write && Current.user.can?('marketing.review') %>
+<% menu = [['Open collaboration', marketing_engagement_path(@engagement)]] %>
+<% menu << ['Open code in Shopify', @record.admin_url, { target: '_blank', rel: 'noopener noreferrer' }] if @record.admin_url %>
+<% menu << ['Check Shopify result', refresh_marketing_engagement_shopify_discount_path(@engagement, @record), { method: :post }] if @record.status != 'draft' && can_write %>
+<div class="page-medium space-y-6">
+  <%= page_header @record.offer.code, subtitle: "#{@engagement.influencer.name} · #{@engagement.campaign.name}", eyebrow: 'Marketing · Shopify code', menu: menu do %>
+    <span class="<%= { 'created' => 'pill-fern', 'failed' => 'pill-rose', 'draft' => 'pill-taupe' }.fetch(@record.status, 'pill-olive') %>"><%= @record.status.humanize %></span>
+    <% if @record.offer.shareable? && can_write %><%= button_to 'Copy code and referral link', copy_marketing_engagement_offer_path(@engagement, @record.offer), class: 'btn-primary', form_class: 'contents' %><% end %>
+  <% end %>
+  <% if @record.last_error.present? %><div role="alert" class="flash flash-alert"><%= @record.last_error %></div><% end %>
+
+  <section class="section-card" aria-label="Code details">
+    <dl class="facts">
+      <div><dt>Shopify store</dt><dd><%= @record.shop_domain %></dd></div>
+      <div><dt>Currency</dt><dd><%= @record.currency %></dd></div>
+      <div><dt>Starts</dt><dd><%= @record.offer.starts_at.to_fs(:long) %></dd></div>
+      <div><dt>Expires</dt><dd><%= @record.offer.ends_at.to_fs(:long) %> (<%= Time.zone.name %>)</dd></div>
+      <div><dt>Status</dt><dd><%= @record.status.humanize %><% if @record.remote_status %> · Shopify: <%= @record.remote_status.humanize %><% end %></dd></div>
+      <div><dt>Last checked</dt><dd><%= @record.checked_at&.to_fs(:long) || 'Not checked' %></dd></div>
+      <div><dt>Destination</dt><dd class="break-all"><%= @record.offer.destination_url %></dd></div>
+    </dl>
+    <div><h3 class="card-title">Terms</h3><p class="whitespace-pre-wrap text-sm"><%= @record.offer.terms %></p></div>
+    <% if @record.admin_url %><p class="text-sm"><%= link_to 'Open code in Shopify', @record.admin_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></p><% end %>
   </section>
-  <% if %w[draft failed].include?(@record.status) && Current.user.can?('marketing.discounts') && Current.user.can?('marketing.write') && Current.user.can?('marketing.review') %>
-    <%= form_with url: activate_marketing_engagement_shopify_discount_path(@engagement, @record), class: 'card card-pad space-y-4' do |f| %>
-      <%= hidden_field_tag :lock_version, @record.lock_version %>
-      <label class="block"><%= check_box_tag :confirmed, '1', false, required: true %> I approve creating <strong><%= @record.offer.code %></strong> in <strong><%= @record.shop_domain %></strong> with the exact terms and dates shown above.</label>
-      <%= f.submit 'Create this code in Shopify', class: 'btn-primary' %>
-    <% end %>
-  <% elsif @record.status == 'draft' %><p>A Marketing discount manager with review access must approve this draft before creation.</p><% end %>
-  <% if @record.status != 'draft' && Current.user.can?('marketing.write') %><%= button_to 'Check Shopify result', refresh_marketing_engagement_shopify_discount_path(@engagement, @record), class: 'btn-ghost' %><% end %>
-  <p class="text-sm">Shopify enforces expiry and usage limits. Referral links apply this code and retain campaign/influencer tags. Copying checks the current Shopify terms. Changing a collaboration or contact status stops sharing in Rupert; it does not revoke a code already created in Shopify. Manage urgent deactivation in Shopify.</p>
+
+  <% if can_activate %>
+    <section class="section-card" aria-label="Create in Shopify">
+      <%= section_heading 'Create this code in Shopify', hint: 'Shopify enforces expiry and usage limits once the code exists.' %>
+      <%= form_with url: activate_marketing_engagement_shopify_discount_path(@engagement, @record), class: 'space-y-4' do |f| %>
+        <%= hidden_field_tag :lock_version, @record.lock_version %>
+        <label class="block text-sm"><%= check_box_tag :confirmed, '1', false, required: true %> I approve creating <strong><%= @record.offer.code %></strong> in <strong><%= @record.shop_domain %></strong> with the exact terms and dates shown above.</label>
+        <div class="form-actions"><%= f.submit 'Create this code in Shopify', class: 'btn-primary' %></div>
+      <% end %>
+    </section>
+  <% elsif @record.status == 'draft' %>
+    <p class="text-sm text-mocha">A Marketing discount manager with review access must approve this draft before creation.</p>
+  <% end %>
+
+  <%= fold_explainer('Referral links apply this code and retain campaign/influencer tags. Copying checks the current Shopify terms. Changing a collaboration or contact status stops sharing in Rupert; it does not revoke a code already created in Shopify. Manage urgent deactivation in Shopify.', class: 'text-sm text-mocha') %>
   <%= render 'marketing/cms/history', record: @record %>
 </div>

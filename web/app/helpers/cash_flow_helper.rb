@@ -14,6 +14,14 @@ module CashFlowHelper
     "#{cents.negative? ? FinanceHelper::MINUS : ''}#{currency == 'USD' ? '$' : "#{currency} "}#{text}"
   end
 
+  # Period tabs: the named ranges plus Custom, which keeps whatever dates are showing.
+  def cash_flow_period_tabs(report)
+    tabs = CashFlowReport::PRESETS.map do |key, label|
+      [label, finance_cash_flow_path(range: key, account: report.account), report.range_key == key]
+    end
+    tabs << ['Custom', finance_cash_flow_path(from: report.from.iso8601, to: report.to.iso8601, account: report.account), report.range_key == 'custom']
+  end
+
   # Change against the window just before this one, coloured by whether up is
   # good for this measure. Zero or missing previous: plain "no comparison".
   def cash_flow_delta(current, previous, good:, label: 'previous period')
@@ -29,25 +37,33 @@ module CashFlowHelper
     end
   end
 
-  # Twelve-ish point sparkline: muted line, current bucket marked in the accent.
-  # Decorative (aria-hidden); the figures beside it and the table carry the values.
-  def cash_flow_sparkline(series, width: 120, height: 32)
+  # Sparkline for a stat tile: a muted 1.5px line with a faint wash of the same
+  # hue, the current bucket marked in the accent. Decorative (aria-hidden); the
+  # figures beside it and the "Show as table" twins carry the exact values.
+  def cash_flow_sparkline(series, width: 120, height: 32, color: 'var(--chart-muted)')
     values = Array(series).last(24)
     return ''.html_safe if values.size < 2
 
     min, max = values.minmax
+    min = [min, 0].min
+    max = [max, 0].max
     span = (max - min).zero? ? 1.0 : (max - min).to_f
     step = width.to_f / (values.size - 1)
-    points = values.each_with_index.map { |v, i| [(i * step).round(1), (height - 3 - ((v - min) / span) * (height - 6)).round(1)] }
+    y_for = ->(v) { (height - 3 - ((v - min) / span) * (height - 6)).round(1) }
+    points = values.each_with_index.map { |v, i| [(i * step).round(1), y_for.call(v)] }
     path = points.map.with_index { |(x, y), i| "#{i.zero? ? 'M' : 'L'}#{x} #{y}" }.join(' ')
+    baseline = y_for.call(0)
+    area = "#{path} L#{points.last[0]} #{baseline} L0 #{baseline} Z"
     last_x, last_y = points.last
     content_tag(:svg, viewBox: "0 0 #{width} #{height}", width: width, height: height, class: 'cash-flow-sparkline', aria: { hidden: true }, focusable: 'false') do
-      safe_join([tag.path(d: path, fill: 'none', stroke: 'var(--chart-muted)', 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'),
+      safe_join([tag.path(d: area, fill: color, 'fill-opacity': 0.1, stroke: 'none'),
+                 tag.path(d: path, fill: 'none', stroke: color, 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'),
                  tag.circle(cx: last_x, cy: last_y, r: 3, fill: 'var(--color-olive)', stroke: 'var(--color-paper)', 'stroke-width': 2)])
     end
   end
 
   # Horizontal bar list: label, bar, exact amount. One hue; the longest bar is full width.
+  # The bar width is the only inline value on the page: it is data, not style.
   def cash_flow_bar_list(rows, color: 'var(--chart-out)', empty: 'Nothing recorded in this range.')
     return tag.p(empty, class: 'text-sm text-taupe') if rows.blank?
 
@@ -64,8 +80,23 @@ module CashFlowHelper
     end
   end
 
+  # "3 months" / "41 days" / "Growing" / "Unknown" for the runway tile.
+  def cash_flow_runway_text(report)
+    if report.runway_days
+      report.runway_days >= 60 ? "#{(report.runway_days / 30.4).round} months" : "#{report.runway_days} days"
+    elsif report.average_daily_net_cents.negative?
+      'Unknown'
+    else
+      'Growing'
+    end
+  end
+
   def cash_flow_event_icon(kind)
     { 'sale' => '◆', 'bank_in' => '▲', 'bank_out' => '▼', 'expense' => '●', 'vendor_payment' => '●' }.fetch(kind, '·')
+  end
+
+  def cash_flow_event_kind_label(kind)
+    { 'sale' => 'Sale', 'bank_in' => 'Into the bank', 'bank_out' => 'Out of the bank', 'expense' => 'Expense', 'vendor_payment' => 'Vendor payment' }.fetch(kind, 'Event')
   end
 
   def cash_flow_event_path(event)

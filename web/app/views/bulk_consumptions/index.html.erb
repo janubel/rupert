@@ -1,22 +1,43 @@
-<% content_for :title, 'Sale material use' %>
+<% content_for :title, 'Material use' %>
 <div class="space-y-6">
-  <%= page_header 'Sale material use', subtitle: 'Review exact imported Shopify sale lines and record their raw-material use against a selected lot.' %>
-  <section class="card card-pad text-sm text-mocha space-y-2"><p>Only complete, uncancelled, paid Shopify snapshots with exact source IDs and matching original/current positive whole-unit quantities can be applied. Missing, legacy, reduced-quantity, truncated and refunded snapshots stay blocked. This does not prove an order was never edited; verify the physical sale. A shared SKU never identifies a sale or recipe.</p><p>Each source sale line can deduct once. Reviews use the local imported snapshot; verify its source time and quantities. Refunds never automatically return material to a lot. This records local bulk use and leaves independent platform stock unchanged.</p></section>
-  <%= form_with url: bulk_consumptions_path, method: :get, class: 'card card-pad flex flex-wrap items-end gap-3' do |f| %><div><%= f.label :from, 'From' %><%= f.date_field :from, value: @from, class: 'input' %></div><div><%= f.label :to, 'Through' %><%= f.date_field :to, value: @to, class: 'input' %></div><%= f.submit 'Review 1–31 days', class: 'btn-primary' %><% end %>
-  <p class="text-sm"><%= link_to 'Export receipts recorded in selected dates (CSV)', export_bulk_consumptions_path(from: @from.iso8601, to: @to.iso8601), class: 'btn-ghost' %></p>
-  <section class="card overflow-x-auto"><table class="w-full text-sm"><thead><tr><% [['Imported sale', 'journal'], ['Exact item', 'native_id'], ['Quantity', nil], ['Readiness / action', 'material_use']].each do |label, term| %><th class="th" scope="col"><%= label %><%= define(term) if term %></th><% end %></tr></thead><tbody class="divide-y divide-fog">
-    <% @lines.each do |line| %><% order = line.order; receipt = @receipts[[order.source_order_id, line.source_line_id]] %>
-      <tr><td class="td"><%= order.display_number %><br><span class="text-xs text-taupe"><%= order.occurred_at.iso8601 %></span></td><td class="td"><%= line.name %><br><span class="font-mono text-xs"><%= line.source_variant_id.presence || 'Exact variant identity unavailable' %></span><br><%= line.sku %></td><td class="td"><%= line.quantity %></td><td class="td">
-        <% if receipt %>Applied receipt #<%= receipt.id %> · <%= bulk_mass_label(receipt.consumed_mg) %><% if @receipt_audit.fetch(receipt.id)[:status] == 'review' %><p class="text-rose mt-2" role="alert"><%= @receipt_audit.fetch(receipt.id)[:message] %></p><% end %>
-        <% elsif !order.source_lines_complete || order.source_financial_status != 'PAID' || !%w[paid fulfilled].include?(order.status) || line.source_line_id.blank? %>Blocked: source identity, completeness, payment state or quantity requires review.
-        <% elsif !@mapped_variants.include?(line.source_variant_id) %>Unmapped material recipe.<% if Current.user.can?('inventory.write') %> <%= link_to 'Define exact variant recipe', new_bulk_recipe_path(source_variant_id: line.source_variant_id), class: 'underline' %><% end %>
-        <% elsif Current.user.can?('inventory.write') %><%= link_to 'Review recipe and lot', new_bulk_consumption_path(order_id: order.id, source_line_id: line.source_line_id), class: 'btn-ghost btn-sm' %>
-        <% else %>Recipe exists; inventory writer review required.<% end %>
-      </td></tr>
-    <% end %>
-    <% if @lines.empty? %><tr><td colspan="4" class="td py-8">No imported Shopify item lines in this range. Source snapshots refresh through normal read-only imports.</td></tr><% end %>
-  </tbody></table></section>
-  <%== @pagy.series_nav if @pagy.pages > 1 %>
-  <section class="card overflow-x-auto"><table class="w-full text-sm"><caption class="p-4 text-left font-semibold">Latest 25 immutable material-use receipts · all dates</caption><thead><tr><% [['Receipt / sale', 'material_use'], ['Source line / variant', 'native_id'], ['Lot / recipe', 'lot'], ['Used', 'lot_balance'], ['Recorded', nil], ['Current source review', nil]].each do |label, term| %><th class="th" scope="col"><%= label %><%= define(term) if term %></th><% end %></tr></thead><tbody class="divide-y divide-fog"><% @recent.each do |receipt| %><tr><td class="td">#<%= receipt.id %> · <%= receipt.order_number %></td><td class="td font-mono text-xs"><%= receipt.source_line_id %><br><%= receipt.source_variant_id %></td><td class="td"><%= link_to receipt.bulk_lot.code, bulk_material_bulk_lot_path(receipt.bulk_lot.bulk_material, receipt.bulk_lot) %><br>Recipe v<%= receipt.bulk_recipe.version %></td><td class="td"><%= bulk_mass_label(receipt.consumed_mg) %></td><td class="td"><%= receipt.created_at.iso8601 %><br><%= receipt.created_by %></td><td class="td"><p class="<%= @receipt_audit.fetch(receipt.id)[:status] == 'review' ? 'text-rose' : 'text-mocha' %>"><%= @receipt_audit.fetch(receipt.id)[:message] %></p></td></tr><% end %><% if @recent.empty? %><tr><td colspan="6" class="td py-8">No sale deductions recorded.</td></tr><% end %></tbody></table></section>
-  <div class="flex gap-3"><%= link_to 'Bulk materials', bulk_materials_path, class: 'btn-ghost' %><%= link_to 'Bulk recipes', bulk_recipes_path, class: 'btn-ghost' %><%= link_to 'Inventory review', inventory_exceptions_path, class: 'btn-ghost' %></div>
+  <%= page_header 'Material use', subtitle: 'Imported Shopify sale lines and the raw-material use recorded against a lot for each.', menu: [['Download CSV', export_bulk_consumptions_path(from: @from.iso8601, to: @to.iso8601)]] %>
+  <%= fold_explainer('Only complete, uncancelled, paid Shopify snapshots with exact source IDs and matching original/current positive whole-unit quantities can be applied. Missing, legacy, reduced-quantity, truncated and refunded snapshots stay blocked. This does not prove an order was never edited; verify the physical sale. A shared SKU never identifies a sale or recipe. Each source sale line can deduct once. Reviews use the local imported snapshot; verify its source time and quantities. Refunds never automatically return material to a lot. This records local bulk use and leaves independent platform stock unchanged.', class: 'text-sm text-mocha') %>
+
+  <%= form_with url: bulk_consumptions_path, method: :get, class: 'toolbar' do |f| %>
+    <div class="toolbar-field"><%= f.label :from, 'From', class: 'field-label' %><%= f.date_field :from, value: @from, class: 'input' %></div>
+    <div class="toolbar-field"><%= f.label :to, 'Through', class: 'field-label' %><%= f.date_field :to, value: @to, class: 'input' %></div>
+    <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', bulk_consumptions_path, class: 'btn-ghost' %></div>
+  <% end %>
+  <p class="text-xs text-taupe">Windows run 1–31 days. The CSV in More covers receipts recorded in the selected dates.</p>
+
+  <div class="card overflow-hidden">
+    <div class="table-region" role="region" tabindex="0" aria-label="Imported sale lines">
+      <table class="table">
+        <thead><tr><% [['Imported sale', 'journal', false], ['Exact item', 'native_id', false], ['Quantity', nil, true], ['Readiness / action', 'material_use', false]].each do |label, term, numeric| %><th class="th<%= ' num' if numeric %>" scope="col"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
+        <tbody>
+          <% @lines.each do |line| %><% order = line.order; receipt = @receipts[[order.source_order_id, line.source_line_id]] %>
+            <tr><td class="td"><span class="font-medium text-ink"><%= order.display_number %></span><p class="text-xs text-taupe"><%= order.occurred_at.iso8601 %></p></td><td class="td"><%= line.name %><p class="font-mono text-xs text-taupe"><%= line.source_variant_id.presence || 'Exact variant identity unavailable' %></p><p class="text-xs text-taupe"><%= line.sku %></p></td><td class="td num"><%= line.quantity %></td><td class="td">
+              <% if receipt %><p class="font-medium text-fern">Applied receipt #<%= receipt.id %> · <%= bulk_mass_label(receipt.consumed_mg) %></p><% if @receipt_audit.fetch(receipt.id)[:status] == 'review' %><p class="mt-2 text-rose" role="alert"><%= @receipt_audit.fetch(receipt.id)[:message] %></p><% end %>
+              <% elsif !order.source_lines_complete || order.source_financial_status != 'PAID' || !%w[paid fulfilled].include?(order.status) || line.source_line_id.blank? %><span class="pill-clay">Blocked</span><p class="mt-1 text-xs text-mocha">Blocked: source identity, completeness, payment state or quantity requires review.</p>
+              <% elsif !@mapped_variants.include?(line.source_variant_id) %><span class="pill-taupe">No recipe</span><% if Current.user.can?('inventory.write') %> <%= link_to 'Add recipe', new_bulk_recipe_path(source_variant_id: line.source_variant_id), class: 'text-olive-deep underline' %><% end %>
+              <% elsif Current.user.can?('inventory.write') %><%= link_to 'Review', new_bulk_consumption_path(order_id: order.id, source_line_id: line.source_line_id), class: 'btn-ghost btn-sm' %>
+              <% else %>Recipe exists; inventory writer review required.<% end %>
+            </td></tr>
+          <% end %>
+          <% if @lines.empty? %><tr><td colspan="4" class="empty-row">No imported Shopify item lines in this range. Source snapshots refresh through normal read-only imports; widen the dates to see more.</td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
+
+  <section class="card overflow-hidden">
+    <div class="card-pad pb-3"><%= section_heading 'Latest material-use receipts', hint: 'The 25 most recent immutable receipts, all dates.' %></div>
+    <div class="table-region" role="region" tabindex="0" aria-label="Material-use receipts">
+      <table class="table">
+        <thead><tr><% [['Receipt / sale', 'material_use'], ['Source line / variant', 'native_id'], ['Lot / recipe', 'lot'], ['Used', 'lot_balance'], ['Recorded', nil], ['Current source review', nil]].each do |label, term| %><th class="th" scope="col"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
+        <tbody><% @recent.each do |receipt| %><tr><td class="td">#<%= receipt.id %> · <%= receipt.order_number %></td><td class="td font-mono text-xs"><%= receipt.source_line_id %><br><%= receipt.source_variant_id %></td><td class="td"><%= link_to receipt.bulk_lot.code, bulk_material_bulk_lot_path(receipt.bulk_lot.bulk_material, receipt.bulk_lot), class: 'hover:underline' %><br>Recipe v<%= receipt.bulk_recipe.version %></td><td class="td"><%= bulk_mass_label(receipt.consumed_mg) %></td><td class="td"><%= receipt.created_at.iso8601 %><br><%= receipt.created_by %></td><td class="td"><p class="<%= @receipt_audit.fetch(receipt.id)[:status] == 'review' ? 'text-rose' : 'text-mocha' %>"><%= @receipt_audit.fetch(receipt.id)[:message] %></p></td></tr><% end %><% if @recent.empty? %><tr><td colspan="6" class="empty-row">No sale deductions recorded yet.</td></tr><% end %></tbody>
+      </table>
+    </div>
+  </section>
 </div>

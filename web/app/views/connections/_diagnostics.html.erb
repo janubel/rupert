@@ -1,6 +1,6 @@
 <% diagnostics.each do |health| %>
-  <section class="space-y-3 border-t border-taupe/20 pt-3" data-sync-operation="<%= health[:operation] %>">
-    <div class="flex flex-wrap items-center justify-between gap-2"><h4 class="text-sm font-semibold"><%= health[:label] %></h4><span class="<%= health[:alert] ? 'pill-rose' : 'pill-taupe' %>"><%= health[:state] %></span></div>
+  <section class="space-y-3 border-t border-fog pt-3" data-sync-operation="<%= health[:operation] %>">
+    <div class="flex flex-wrap items-center justify-between gap-2"><h4 class="text-sm font-semibold text-ink"><%= health[:label] %></h4><span class="<%= health[:alert] ? 'pill-rose' : 'pill-taupe' %>"><%= health[:state] %></span></div>
     <div <%= 'role=alert' if health[:alert] %> class="text-sm text-mocha"><strong><%= health[:reason] %>.</strong> <%= health[:action] %></div>
     <% if (access = health[:access]) %>
       <div class="text-xs text-mocha" data-sync-access="<%= access[:ready] ? 'present' : 'missing' %>">
@@ -9,17 +9,17 @@
         <p><%= access[:state] == health[:state] ? 'Setup is separate from schedule opt-in and previous read results.' : access[:action] %></p>
       </div>
     <% end %>
-    <dl class="grid gap-2 text-xs text-mocha">
-      <% { 'Last attempt' => health[:last_attempt_at], 'Last successful acquisition' => health[:last_success_at], 'Legacy success evidence · connector timestamp' => health[:legacy_at], 'Stored source / export timestamp' => health[:source_at], 'Source event coverage watermark' => health[:source_event_at] }.each do |label, time| %>
-        <div><dt class="font-semibold"><%= label %></dt><dd><% if time %><time datetime="<%= time.iso8601 %>"><%= l(time.in_time_zone, format: :short) %></time><% else %>Not recorded<% end %></dd></div>
-      <% end %>
-      <div><dt class="font-semibold">Queue</dt><dd><%= health.dig(:queue, :state) %><% if health.dig(:queue, :retry_at) %> · scheduled execution <time datetime="<%= health.dig(:queue, :retry_at).iso8601 %>"><%= l(health.dig(:queue, :retry_at).in_time_zone, format: :short) %></time><% end %></dd></div>
-      <div><dt class="font-semibold">Worker evidence</dt><dd><%= health.dig(:worker, :state) %><% if health.dig(:worker, :last_at) %> · <time datetime="<%= health.dig(:worker, :last_at).iso8601 %>"><%= l(health.dig(:worker, :last_at).in_time_zone, format: :short) %></time><% end %></dd></div>
-    </dl>
-    <% if health[:reference] %><p class="text-xs text-taupe">Support reference: <%= health[:reference] %><% if health[:category] %> · <%= health[:category].humanize %><% end %></p><% end %>
-    <% if health[:transition] %><p class="text-xs text-mocha"><%= health.dig(:transition, :label) %> · <%= l(health.dig(:transition, :at).in_time_zone, format: :short) %></p><% end %>
-    <details class="text-xs text-mocha">
-      <summary class="cursor-pointer font-semibold">Coverage &amp; recent attempts</summary>
+    <details class="explainer text-xs text-mocha">
+      <summary class="explainer-summary">Timestamps, queue and recent attempts</summary>
+      <dl class="facts mt-2">
+        <% { 'Last attempt' => health[:last_attempt_at], 'Last successful acquisition' => health[:last_success_at], 'Legacy success evidence · connector timestamp' => health[:legacy_at], 'Stored source / export timestamp' => health[:source_at], 'Source event coverage watermark' => health[:source_event_at] }.each do |label, time| %>
+          <div><dt><%= label %></dt><dd><% if time %><time datetime="<%= time.iso8601 %>"><%= l(time.in_time_zone, format: :short) %></time><% else %>Not recorded<% end %></dd></div>
+        <% end %>
+        <div><dt>Queue</dt><dd><%= health.dig(:queue, :state) %><% if health.dig(:queue, :retry_at) %> · scheduled execution <time datetime="<%= health.dig(:queue, :retry_at).iso8601 %>"><%= l(health.dig(:queue, :retry_at).in_time_zone, format: :short) %></time><% end %></dd></div>
+        <div><dt>Worker evidence</dt><dd><%= health.dig(:worker, :state) %><% if health.dig(:worker, :last_at) %> · <time datetime="<%= health.dig(:worker, :last_at).iso8601 %>"><%= l(health.dig(:worker, :last_at).in_time_zone, format: :short) %></time><% end %></dd></div>
+      </dl>
+      <% if health[:reference] %><p class="mt-2 text-taupe">Support reference: <%= health[:reference] %><% if health[:category] %> · <%= health[:category].humanize %><% end %></p><% end %>
+      <% if health[:transition] %><p class="mt-2"><%= health.dig(:transition, :label) %> · <%= l(health.dig(:transition, :at).in_time_zone, format: :short) %></p><% end %>
       <p class="mt-2"><%= health[:coverage] %></p>
       <p class="mt-2">Acquisition time is separate from source activity. Queue receipts can expire; no recorded retry does not mean the recurring schedule is disabled. Worker heartbeat alone does not prove that this source's scheduler is registered.</p>
       <% if health[:history].empty? %><p class="mt-2">No instrumented attempts yet. Older free-text failures are not used to guess a cause.</p><% else %>

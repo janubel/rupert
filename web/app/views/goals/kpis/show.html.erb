@@ -1,26 +1,24 @@
-<% content_for :title, "KPI" %>
+<% content_for :title, @kpi.name %>
+<% can_write = Current.user.can?("projects.write") %>
 <div class="space-y-6">
-  <section class="flex items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= @kpi.name %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <span class="<%= @kpi.on_track? ? "pill-fern" : "pill-clay" %>"><%= @kpi.on_track? ? "on track" : "off track" %></span>
-        <% if @kpi.unit %><span class="ml-2 text-taupe"><%= @kpi.unit %></span><% end %>
-      </p>
-    </div>
-    <% if Current.user.can?("projects.write") %>
-      <%= link_to "Edit", edit_goals_kpi_path(@kpi), class: "btn-ghost btn-sm" %>
-    <% end %>
-  </section>
+  <%= page_header @kpi.name, subtitle: "Readings over time against a target of #{number_with_precision(@kpi.target_value, precision: 2, delimiter: ',')}#{" #{@kpi.unit}" if @kpi.unit}." do %>
+    <% if can_write %><%= link_to "Edit", edit_goals_kpi_path(@kpi), class: "btn-ghost" %><% end %>
+  <% end %>
 
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+  <dl class="facts">
+    <div><dt>Status</dt><dd><span class="<%= @kpi.on_track? ? "pill-fern" : "pill-clay" %>"><%= @kpi.on_track? ? "On track" : "Off track" %></span></dd></div>
+    <% if @kpi.unit %><div><dt>Unit</dt><dd><%= @kpi.unit %></dd></div><% end %>
+    <div><dt>Direction</dt><dd><%= @kpi.direction == 'down' ? 'Lower is better' : 'Higher is better' %></dd></div>
+  </dl>
+
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-label="KPI figures">
     <div class="stat">
       <p class="stat-label">Latest</p>
-      <p class="stat-value mt-1"><%= number_with_precision(@kpi.latest_value, precision: 2) %></p>
+      <p class="stat-value mt-1"><%= number_with_precision(@kpi.latest_value, precision: 2, delimiter: ',') %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Target</p>
-      <p class="stat-value mt-1"><%= number_with_precision(@kpi.target_value, precision: 2) %></p>
+      <p class="stat-value mt-1"><%= number_with_precision(@kpi.target_value, precision: 2, delimiter: ',') %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Readings</p>
@@ -28,42 +26,42 @@
     </div>
   </section>
 
-  <div class="card card-pad">
-    <h2 class="font-display text-lg text-ink">Trend · last 30 days</h2>
-    <div class="mt-4">
-      <%= line_chart @kpi.series, height: "220px", legend: false, colors: chart_color(:olive_deep) %>
-    </div>
-  </div>
+  <section class="section-card">
+    <%= section_heading 'Trend', hint: 'Last 30 days.' %>
+    <%= line_chart @kpi.series, height: "220px", legend: false, colors: chart_color(:olive_deep) %>
+  </section>
 
-  <div class="card card-pad">
-    <h2 class="font-display text-lg text-ink">Record a reading</h2>
-    <% if Current.user.can?("projects.write") %>
-      <%= form_tag reading_goals_kpi_path(@kpi), method: :post, class: "mt-3 flex flex-wrap items-end gap-3" do %>
-        <div>
-          <%= label_tag :value, "Value", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-          <%= number_field_tag :value, @kpi.latest_value, step: "0.01", class: "input w-40" %>
+  <section class="section-card">
+    <%= section_heading 'Readings' %>
+    <% if can_write %>
+      <%= form_tag reading_goals_kpi_path(@kpi), method: :post, class: "toolbar" do %>
+        <div class="toolbar-field">
+          <%= label_tag :value, "Value", class: "field-label" %>
+          <%= number_field_tag :value, @kpi.latest_value, step: "0.01", class: "input" %>
         </div>
-        <div>
-          <%= label_tag :measured_at, "When", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-          <%= datetime_field_tag :measured_at, Time.current, class: "select" %>
+        <div class="toolbar-field">
+          <%= label_tag :measured_at, "When", class: "field-label" %>
+          <%= datetime_field_tag :measured_at, Time.current, class: "input" %>
         </div>
-        <%= submit_tag "Record", class: "btn-primary btn-sm" %>
+        <div class="toolbar-actions"><%= submit_tag "Add reading", class: "btn-primary" %></div>
       <% end %>
     <% end %>
-    <div class="mt-4 overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
-          <tr><th scope="col" class="th">Time</th><th scope="col" class="th text-right">Value</th></tr>
+    <div class="table-region" role="region" tabindex="0" aria-label="KPI readings">
+      <table class="table">
+        <thead>
+          <tr><th scope="col" class="th">Time</th><th scope="col" class="th num">Value</th></tr>
         </thead>
-        <tbody class="divide-y divide-fog">
-          <% @kpi.readings.order(measured_at: :desc).limit(30).each do |r| %>
-            <tr class="hover:bg-cream">
+        <tbody>
+          <% readings = @kpi.readings.order(measured_at: :desc).limit(30) %>
+          <% if readings.empty? %><tr><td colspan="2" class="empty-row">No readings yet. Add the first reading above.</td></tr><% end %>
+          <% readings.each do |r| %>
+            <tr>
               <td class="td whitespace-nowrap text-mocha"><%= l(r.measured_at, format: :short) %></td>
-              <td class="td text-right font-medium text-ink"><%= number_with_precision(r.value, precision: 2) %></td>
+              <td class="td num font-medium text-ink"><%= number_with_precision(r.value, precision: 2, delimiter: ',') %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 </div>

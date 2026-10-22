@@ -1,62 +1,57 @@
 <% content_for :title, "Timesheets" %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
-  <%= render 'shared/time_navigation' %>
-
-  <%= page_header 'Timesheets' do %>
-    <% if policy(People::Timesheet).create? %><%= link_to "New timesheet", new_people_timesheet_path, class: "btn-primary" %><% end %>
-    <% unless @reviewer %><%= link_to "My time home", employee_app_path, class: "btn-ghost btn-sm" %><% end %>
+  <%= page_header 'Timesheets', subtitle: (@reviewer ? 'Weekly hours submitted by staff, waiting for review or already decided.' : 'Your hours by week, submitted for review.'),
+        menu: [['Download CSV', people_timesheets_path(format: :csv, status: @status, from: @from&.iso8601, to: @to&.iso8601, q: @query), { data: { turbo: false } }]] do %>
+    <% if policy(People::Timesheet).create? %><%= link_to "Add timesheet", new_people_timesheet_path, class: "btn-primary" %><% end %>
   <% end %>
 
   <% status_labels = { 'submitted' => 'Needs review', 'all' => 'All timesheets', 'approved' => 'Approved', 'rejected' => 'Returned for correction', 'draft' => 'Drafts' } %>
   <% status_count = ->(status) { status == 'submitted' ? @awaiting : status == 'all' ? (@status_counts || {}).values.sum : (@status_counts || {}).fetch(status, 0) } %>
-  <%= form_with url: people_timesheets_path, method: :get, class: 'card card-pad space-y-3', html: { 'aria-label': 'Timesheet filters' }, data: { turbo: false } do %>
+  <%= form_with url: people_timesheets_path, method: :get, class: 'toolbar', html: { 'aria-label': 'Timesheet filters' }, data: { turbo: false } do %>
     <%= hidden_field_tag :view, @view %>
-    <div class="flex flex-wrap items-end gap-3">
-      <% weeks = (0..52).map { |n| Date.current.beginning_of_week - (n - 2).weeks } %>
-      <% from_choices = ([@from] + weeks).compact.uniq.sort.reverse %>
-      <% to_choices = ([@to] + weeks.map { |w| w + 6 }).compact.uniq.sort.reverse %>
-      <div class="min-w-0">
-        <%= label_tag :from, 'From', class: 'field-label' %>
-        <%= select_tag :from, options_for_select([['All dates', '']] + from_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @from&.iso8601), class: 'select' %>
-      </div>
-      <div class="min-w-0">
-        <%= label_tag :to, 'To', class: 'field-label' %>
-        <%= select_tag :to, options_for_select([['All dates', '']] + to_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @to&.iso8601), class: 'select' %>
-      </div>
-      <div class="min-w-0" <%= tour_anchor('tabs') %>>
-        <%= label_tag :status, 'Status', class: 'field-label' %>
-        <%= select_tag :status, options_for_select(status_labels.map { |key, label| ["#{label} (#{status_count.call(key)})", key] }, @status), class: 'select',
-              aria: { label: @reviewer ? 'Timesheet review' : 'Status' } %>
-      </div>
-      <div class="min-w-0">
-        <%= label_tag :q, 'Staff member', class: 'field-label' %>
-        <%= search_field_tag :q, @query, class: 'input', placeholder: 'Search by name' %>
-      </div>
-      <%= submit_tag 'Show', class: 'btn-primary', name: nil %>
-      <%= link_to 'Clear', people_timesheets_path(view: @view), class: 'btn-ghost btn-sm' %>
-      <%= link_to 'Export CSV', people_timesheets_path(format: :csv, status: @status, from: @from&.iso8601, to: @to&.iso8601, q: @query), class: 'btn-ghost btn-sm', data: { turbo: false } %>
+    <% weeks = (0..52).map { |n| Date.current.beginning_of_week - (n - 2).weeks } %>
+    <% from_choices = ([@from] + weeks).compact.uniq.sort.reverse %>
+    <% to_choices = ([@to] + weeks.map { |w| w + 6 }).compact.uniq.sort.reverse %>
+    <div class="toolbar-field">
+      <%= label_tag :from, 'From', class: 'field-label' %>
+      <%= select_tag :from, options_for_select([['All dates', '']] + from_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @from&.iso8601), class: 'select' %>
     </div>
-    <nav aria-label="Timesheet view" class="flex flex-wrap items-center gap-2 border-t border-fog pt-3 text-sm" <%= tour_anchor('views') %>>
-      <span class="text-mocha">Show as</span>
-      <% [['list', 'Rupert timesheets'], ['unified', 'All sources'], ['calendar', 'Calendar']].each do |key, label| %>
-        <%= link_to label, people_timesheets_path(request.query_parameters.merge(view: key, month: (key == 'calendar' ? (@month || @from || Date.current).strftime('%Y-%m') : nil)).compact), class: "nav-pill #{@view == key ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}", aria: { current: (@view == key ? 'page' : nil) } %>
-      <% end %>
-      <% if @reviewer && @awaiting.positive? && @status != 'submitted' %>
-        <%= link_to "#{@awaiting} waiting for review →", people_timesheets_path(status: 'submitted', view: 'list'), class: 'ml-auto font-semibold text-olive-deep underline' %>
-      <% end %>
-    </nav>
+    <div class="toolbar-field">
+      <%= label_tag :to, 'To', class: 'field-label' %>
+      <%= select_tag :to, options_for_select([['All dates', '']] + to_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @to&.iso8601), class: 'select' %>
+    </div>
+    <div class="toolbar-field" <%= tour_anchor('tabs') %>>
+      <%= label_tag :status, 'Status', class: 'field-label' %>
+      <%= select_tag :status, options_for_select(status_labels.map { |key, label| ["#{label} (#{status_count.call(key)})", key] }, @status), class: 'select',
+            aria: { label: @reviewer ? 'Timesheet review' : 'Status' } %>
+    </div>
+    <div class="toolbar-field">
+      <%= label_tag :q, 'Staff member', class: 'field-label' %>
+      <%= search_field_tag :q, @query, class: 'input', placeholder: 'Search by name' %>
+    </div>
+    <div class="toolbar-actions">
+      <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
+      <%= link_to 'Clear', people_timesheets_path(view: @view), class: 'btn-ghost' %>
+    </div>
   <% end %>
 
+  <div class="flex flex-wrap items-center justify-between gap-3" <%= tour_anchor('views') %>>
+    <%= page_tabs([['list', 'Rupert timesheets'], ['unified', 'All sources'], ['calendar', 'Calendar']].map { |key, label| [label, people_timesheets_path(request.query_parameters.merge(view: key, month: (key == 'calendar' ? (@month || @from || Date.current).strftime('%Y-%m') : nil)).compact), @view == key] }, label: 'Timesheet view') %>
+    <% if @reviewer && @awaiting.positive? && @status != 'submitted' %>
+      <%= link_to "#{@awaiting} waiting for review", people_timesheets_path(status: 'submitted', view: 'list'), class: 'text-sm font-semibold text-olive-deep underline' %>
+    <% end %>
+  </div>
+
   <% if @view == 'calendar' %>
-  <section class="card card-pad space-y-3">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <h2 class="text-lg font-semibold"><%= @month.strftime('%B %Y') %></h2>
-      <div class="flex gap-2">
-        <%= link_to 'Previous', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: @prev_month.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %>
-        <%= link_to 'Next', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: @next_month.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %>
-        <%= link_to 'Today', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: Date.current.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %>
-      </div>
+  <section class="section-card">
+    <div class="card-head">
+      <div><h2 class="section-title"><%= @month.strftime('%B %Y') %></h2></div>
+      <nav class="card-head-actions" aria-label="Month">
+        <%= link_to 'Previous month', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: @prev_month.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %>
+        <%= link_to 'This month', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: Date.current.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %>
+        <%= link_to 'Next month', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: @next_month.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %>
+      </nav>
     </div>
     <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wide text-mocha">
       <% Date::DAYNAMES.rotate.each do |day| %><div class="py-1"><%= day %></div><% end %>
@@ -65,19 +60,19 @@
       <% @calendar_days_range.each do |day| %>
         <% in_month = day.month == @month.month %>
         <% bucket = in_month ? @calendar_days[day.iso8601] : nil %>
-        <div class="min-h-24 rounded-xl border p-2 text-left <%= in_month ? (bucket && (bucket[:timesheets].any? || bucket[:punches].positive?) ? 'border-fog bg-haze/40' : 'border-fog bg-cream') : 'border-transparent bg-haze/30' %> <%= day == Date.current ? 'ring-2 ring-olive' : '' %>" role="button" tabindex="0" aria-label="<%= day.strftime('%B %-d, %Y') %>">
+        <div class="min-h-24 rounded-card border p-2 text-left <%= in_month ? (bucket && (bucket[:timesheets].any? || bucket[:punches].positive?) ? 'border-fog bg-haze/40' : 'border-fog bg-cream') : 'border-transparent bg-haze/30' %> <%= day == Date.current ? 'ring-2 ring-olive' : '' %>" role="button" tabindex="0" aria-label="<%= day.strftime('%B %-d, %Y') %>">
           <p class="text-xs font-semibold <%= in_month ? (day == Date.current ? 'text-olive' : 'text-ink') : 'text-taupe/60' %>"><%= day.day %></p>
           <% if in_month && bucket && bucket[:timesheets].any? %>
             <div class="mt-1 space-y-0.5">
               <% bucket[:timesheets].each do |ts| %>
-                <div class="truncate rounded px-1 py-0.5 text-[10px] font-semibold leading-tight <%= ts.approved? ? 'bg-fern/15 text-fern' : ts.submitted? ? 'bg-olive/15 text-olive-deep' : ts.rejected? ? 'bg-rose/15 text-rose' : 'bg-taupe/15 text-taupe' %>" title="<%= ts.employee&.name %> · <%= ts.period_label %> · #{number_with_precision(ts.total_hours, precision: 1)}h">
+                <div class="truncate rounded px-1 py-0.5 text-xs font-semibold leading-tight <%= ts.approved? ? 'bg-fern/15 text-fern' : ts.submitted? ? 'bg-olive/15 text-olive-deep' : ts.rejected? ? 'bg-rose/15 text-rose' : 'bg-taupe/15 text-taupe' %>" title="<%= ts.employee&.name %> · <%= ts.period_label %> · <%= number_with_precision(ts.total_hours, precision: 1) %>h">
                   <%= ts.employee&.name %> · <%= ts.status %>
                 </div>
               <% end %>
             </div>
           <% end %>
           <% if in_month && bucket && bucket[:punches].positive? %>
-            <p class="mt-1 text-[10px] text-mocha"><%= bucket[:punches] %> punch<%= bucket[:punches] == 1 ? '' : 'es' %> · <%= number_with_precision(bucket[:hours], precision: 1) %>h</p>
+            <p class="mt-1 text-xs text-mocha"><%= bucket[:punches] %> punch<%= bucket[:punches] == 1 ? '' : 'es' %> · <%= number_with_precision(bucket[:hours], precision: 1) %>h</p>
           <% end %>
         </div>
       <% end %>
@@ -85,31 +80,31 @@
     <p class="text-xs text-taupe">Timesheets (weekly periods) and punches (daily) from Rupert, Square and C-Trax. Overlapping hours are never added together.</p>
   </section>
   <% elsif @view == 'unified' %>
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+  <div class="card">
+    <div class="table-region" role="region" tabindex="0" aria-label="Time records from every source">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Source</th>
             <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Date</th>
-            <th scope="col" class="th text-right">Hours</th>
+            <th scope="col" class="th num">Hours</th>
             <th scope="col" class="th">Status</th>
-            <th scope="col" class="th">Detail</th>
+            <th scope="col" class="th"><span class="sr-only">Detail</span></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @unified_records.blank? %>
-            <tr><td colspan="6" class="empty-row">No time records in this view.</td></tr>
+            <tr><td colspan="6" class="empty-row">No time records in this view. Widen the dates or clear the filters.</td></tr>
           <% end %>
           <% @unified_records.each do |record| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td"><span class="<%= record[:source_class] %>"><%= record[:source] %></span></td>
               <td class="td font-medium text-ink"><%= record[:employee] %></td>
               <td class="td text-mocha"><%= record[:date]&.strftime('%b %-d, %Y') || '—' %><% if record[:end_date] && record[:end_date] != record[:date] %> – <%= record[:end_date].strftime('%b %-d') %><% end %></td>
-              <td class="td text-right text-mocha"><%= record[:hours].nil? ? '—' : number_with_precision(record[:hours], precision: 2) %></td>
+              <td class="td num"><%= record[:hours].nil? ? '—' : number_with_precision(record[:hours], precision: 2) %></td>
               <td class="td"><span class="pill-taupe"><%= record[:status] %></span></td>
-              <td class="td"><%= link_to (record[:detail].presence || 'View'), record[:path], class: 'text-olive hover:underline' %></td>
+              <td class="td text-right"><%= link_to (record[:detail].presence || 'Open'), record[:path], class: 'btn-ghost btn-sm' %></td>
             </tr>
           <% end %>
         </tbody>
@@ -125,62 +120,60 @@
       <div class="stat"><p class="stat-label">Returned / drafts</p><p class="stat-value mt-1"><%= @status_counts.fetch('rejected', 0) %> / <%= @status_counts.fetch('draft', 0) %></p></div>
       <div class="stat"><p class="stat-label">Hours in this view</p><p class="stat-value mt-1"><%= number_with_precision(@view_hours, precision: 1) %></p></div>
     </section>
-
   <% end %>
-
 
   <% approvable = @timesheets.select { |t| t.submitted? && policy(t).approve? } %>
   <%= form_with url: bulk_approve_people_timesheets_path, method: :post, id: 'bulk-approve', data: { turbo_confirm: 'Approve the selected timesheets?' } do |f| %>
     <%= hidden_field_tag :return_status, @status %><%= hidden_field_tag :return_period, @period %><%= hidden_field_tag :return_from, @from&.iso8601 %><%= hidden_field_tag :return_to, @to&.iso8601 %><%= hidden_field_tag :return_view, 'list' %><%= hidden_field_tag :return_q, @query %>
     <% if approvable.any? %>
-      <div class="mb-2 flex flex-wrap items-center gap-2">
-        <label class="flex items-center gap-1 text-sm"><input type="checkbox" onclick="document.querySelectorAll('#bulk-approve .bulk-box').forEach(function(b){b.checked=this.checked}.bind(this))"> Select all <%= approvable.size %></label>
+      <div class="mb-3 flex flex-wrap items-center gap-2">
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" onclick="document.querySelectorAll('#bulk-approve .bulk-box').forEach(function(b){b.checked=this.checked}.bind(this))"> Select all <%= approvable.size %></label>
         <%= text_field_tag :review_note, nil, maxlength: 4000, placeholder: 'Optional comment for all', 'aria-label': 'Optional comment for all selected', class: 'input w-auto' %>
         <%= f.submit 'Approve selected', class: 'btn-primary btn-sm' %>
       </div>
     <% end %>
-  <div class="card overflow-hidden" <%= tour_anchor('table') %>>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+  <div class="card" <%= tour_anchor('table') %>>
+    <div class="table-region" role="region" tabindex="0" aria-label="Timesheets">
+      <table class="table">
+        <thead>
           <tr>
             <% if approvable.any? %><th scope="col" class="th"><span class="sr-only">Select</span></th><% end %>
             <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Period</th>
-            <th scope="col" class="th text-right">Regular</th>
-            <th scope="col" class="th text-right">Overtime</th>
-            <th scope="col" class="th text-right">Other</th>
-            <th scope="col" class="th text-right">Total</th>
-            <th scope="col" class="th text-right">Comp.</th>
+            <th scope="col" class="th num">Regular</th>
+            <th scope="col" class="th num">Overtime</th>
+            <th scope="col" class="th num">Other</th>
+            <th scope="col" class="th num">Total</th>
+            <th scope="col" class="th num">Comp.</th>
             <th scope="col" class="th">Check</th>
             <th scope="col" class="th">Status</th>
-            <th scope="col" class="th">Review</th>
+            <th scope="col" class="th"><span class="sr-only">Review</span></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @timesheets.empty? %>
-            <tr><td colspan="11" class="empty-row"><%= @status == 'submitted' ? 'Nothing awaiting review. Try All timesheets or another week.' : 'No timesheets found.' %></td></tr>
+            <tr><td colspan="11" class="empty-row"><%= @status == 'submitted' ? 'Nothing awaiting review. Try All timesheets or another week.' : 'No timesheets match. Clear the filters or add a timesheet.' %></td></tr>
           <% end %>
           <% @timesheets.each do |timesheet| %>
             <% sum = @summaries[timesheet.id] %>
-            <tr class="hover:bg-cream">
+            <tr>
               <% if approvable.any? %>
-                <td class="td"><% if approvable.include?(timesheet) %><input type="checkbox" class="bulk-box" name="timesheet_ids[]" value="<%= timesheet.id %>" aria-label="Select <%= timesheet.employee&.name %>"><% end %></td>
+                <td class="td"><% if approvable.include?(timesheet) %><input type="checkbox" class="checkbox bulk-box" name="timesheet_ids[]" value="<%= timesheet.id %>" aria-label="Select <%= timesheet.employee&.name %>"><% end %></td>
               <% end %>
-              <td class="td font-medium text-ink"><%= timesheet.employee&.name %><% if timesheet.demo? %><span class="ml-2 pill-taupe">DEMO</span><% end %></td>
+              <td class="td font-medium text-ink"><%= timesheet.employee&.name %><% if timesheet.demo? %> <span class="pill-taupe">Demo</span><% end %></td>
               <td class="td"><%= link_to timesheet.period_label, people_timesheet_path(timesheet), class: "text-olive hover:underline" %></td>
-              <td class="td text-right text-mocha"><%= number_with_precision(sum.regular, precision: 1) %></td>
-              <td class="td text-right text-mocha"><%= number_with_precision(sum.overtime, precision: 1) %></td>
-              <td class="td text-right text-mocha"><%= number_with_precision(sum.other, precision: 1) %></td>
-              <td class="td text-right font-medium text-ink"><%= number_with_precision(sum.total, precision: 1) %></td>
-              <td class="td text-right text-mocha" title="1% commission + $10/card bonus"><%= number_to_currency(timesheet.compensation_total_cents / 100.0) %></td>
+              <td class="td num"><%= number_with_precision(sum.regular, precision: 1) %></td>
+              <td class="td num"><%= number_with_precision(sum.overtime, precision: 1) %></td>
+              <td class="td num"><%= number_with_precision(sum.other, precision: 1) %></td>
+              <td class="td num font-medium text-ink"><%= number_with_precision(sum.total, precision: 1) %></td>
+              <td class="td num" title="1% commission + $10/card bonus"><%= number_to_currency(timesheet.compensation_total_cents / 100.0) %></td>
               <td class="td"><% sum.flags.each do |flag| %><span class="<%= flag.start_with?('Overtime') ? 'pill-olive' : 'pill-clay' %> mr-1 mb-1 inline-block"><%= flag %></span><% end %></td>
               <td class="td">
-                <span class="<%= timesheet.approved? ? "pill-fern" : timesheet.submitted? ? "pill-olive" : timesheet.rejected? ? "pill-rose" : "pill-taupe" %>"><%= timesheet.status %></span>
+                <span class="<%= timesheet.approved? ? "pill-fern" : timesheet.submitted? ? "pill-olive" : timesheet.rejected? ? "pill-rose" : "pill-taupe" %>"><%= timesheet.status.humanize %></span>
                 <% if timesheet.submitted? && timesheet.submitted_at %><p class="text-xs text-mocha">waiting <%= time_ago_in_words(timesheet.submitted_at) %></p><% end %>
               </td>
-              <td class="td">
-                <%= link_to (timesheet.submitted? && policy(timesheet).approve? ? 'Review timesheet' : 'View timesheet'), people_timesheet_path(timesheet), class: 'text-olive underline' %>
+              <td class="td text-right">
+                <%= link_to (timesheet.submitted? && policy(timesheet).approve? ? 'Review timesheet' : 'Open'), people_timesheet_path(timesheet), class: 'btn-ghost btn-sm' %>
                 <% if timesheet.assigned_reviewer %><p class="text-xs text-mocha">Assigned to <%= timesheet.assigned_reviewer.display_name %></p><% end %>
                 <% if @reviewer && timesheet.submitted? && !policy(timesheet).approve? %><p class="text-xs text-mocha">Another reviewer required</p><% end %>
               </td>
@@ -196,8 +189,8 @@
 
   <% if @reviewer && @calendar_view %>
     <% clocked_in_now = @calendar.clocked_in.map(&:employee_id).uniq.size %>
-    <details class="card overflow-hidden" <%= 'open' if clocked_in_now.positive? || params[:period].present? %>>
-      <summary class="card-pad cursor-pointer text-lg font-semibold">This week's shift calendar<% if clocked_in_now.positive? %> <span class="pill-fern ml-2 align-middle text-sm"><%= clocked_in_now %> clocked in now</span><% end %><span class="ml-2 text-sm font-normal text-mocha">Rupert, Square and C-Trax shifts by day; tick staff on and off.</span></summary>
+    <details class="card" <%= 'open' if clocked_in_now.positive? || params[:period].present? %>>
+      <summary class="card-pad cursor-pointer"><span class="section-title">This week's shift calendar</span><% if clocked_in_now.positive? %> <span class="pill-fern ml-2 align-middle"><%= clocked_in_now %> clocked in now</span><% end %><span class="block text-sm text-mocha">Rupert, Square and C-Trax shifts by day; tick staff on and off.</span></summary>
       <div class="card-pad pt-0">
         <%= render 'people/timesheets/calendar', calendar: @calendar, week: (@week_start || Date.current.beginning_of_week) %>
       </div>
@@ -207,18 +200,15 @@
   <% if @reviewer %>
     <div class="grid gap-6 lg:grid-cols-2">
       <section class="space-y-3" aria-label="Upcoming weeks" <%= tour_anchor('weeks') %>>
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 class="text-lg font-semibold">Weeks at a glance</h2>
-          <p class="text-xs text-mocha">Open a week to review what is in it.</p>
-        </div>
+        <%= section_heading 'Weeks at a glance', hint: 'Open a week to review what is in it.' %>
         <div class="grid gap-3 sm:grid-cols-2">
           <% @upcoming_weeks.each do |week| %>
             <%= link_to people_timesheets_path(period: week[:monday].iso8601, status: 'all'), class: 'card card-pad space-y-1 hover:bg-cream' do %>
               <div class="flex items-baseline justify-between gap-2">
-                <h3 class="font-semibold"><%= week[:label] %></h3>
+                <h3 class="card-title"><%= week[:label] %></h3>
                 <span class="text-xs text-mocha"><%= week[:monday].strftime('%b %-d') %> – <%= (week[:monday] + 6).strftime('%b %-d') %></span>
               </div>
-              <p class="text-xl font-semibold"><%= week[:total] %> <span class="text-sm font-normal text-mocha">timesheets</span></p>
+              <p class="stat-value-sm"><%= week[:total] %> <span class="text-sm font-normal text-mocha">timesheets</span></p>
               <p class="text-xs text-mocha"><%= week[:submitted] %> awaiting · <%= week[:approved] %> approved<% if week[:draft].positive? %> · <%= week[:draft] %> draft<% end %><% if week[:rejected].positive? %> · <%= week[:rejected] %> returned<% end %></p>
             <% end %>
           <% end %>
@@ -226,29 +216,30 @@
       </section>
 
       <section class="space-y-3" aria-label="Upcoming time off">
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 class="text-lg font-semibold">Upcoming time off<%= " (#{@pending_leave_count} pending)" if @pending_leave_count&.positive? %></h2>
-          <%= link_to 'All requests', people_leave_requests_path, class: 'text-sm text-olive underline' %>
-        </div>
+        <%= section_heading "Upcoming time off#{" (#{@pending_leave_count} pending)" if @pending_leave_count&.positive?}" do %>
+          <%= link_to 'All requests', people_leave_requests_path, class: 'btn-ghost btn-sm' %>
+        <% end %>
         <% if @upcoming_leave.empty? %>
-          <p class="card card-pad text-sm text-mocha">No upcoming vacation or time off on file.</p>
+          <%= empty_state 'No upcoming time off', hint: 'Approved and pending requests for the weeks ahead appear here.' %>
         <% else %>
-          <div class="card overflow-hidden">
-            <table class="w-full text-sm">
-              <thead class="border-b border-fog bg-haze/60">
-                <tr><th scope="col" class="th">Staff member</th><th scope="col" class="th">Type</th><th scope="col" class="th">Dates</th><th scope="col" class="th">Status</th></tr>
-              </thead>
-              <tbody class="divide-y divide-fog">
-                <% @upcoming_leave.each do |leave| %>
-                  <tr class="hover:bg-cream">
-                    <td class="td font-medium text-ink"><%= leave.employee&.name %></td>
-                    <td class="td"><%= leave.leave_type.titleize %></td>
-                    <td class="td"><%= leave.starts_on.strftime('%b %-d') %> – <%= leave.ends_on.strftime('%b %-d') %></td>
-                    <td class="td"><span class="<%= leave.approved? ? 'pill-fern' : leave.requested? ? 'pill-olive' : 'pill-taupe' %>"><%= leave.status %></span></td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
+          <div class="card">
+            <div class="table-region" role="region" tabindex="0" aria-label="Upcoming time off">
+              <table class="table">
+                <thead>
+                  <tr><th scope="col" class="th">Staff member</th><th scope="col" class="th">Type</th><th scope="col" class="th">Dates</th><th scope="col" class="th">Status</th></tr>
+                </thead>
+                <tbody>
+                  <% @upcoming_leave.each do |leave| %>
+                    <tr>
+                      <td class="td font-medium text-ink"><%= leave.employee&.name %></td>
+                      <td class="td"><%= leave.leave_type.humanize %></td>
+                      <td class="td"><%= leave.starts_on.strftime('%b %-d') %> – <%= leave.ends_on.strftime('%b %-d') %></td>
+                      <td class="td"><span class="<%= leave.approved? ? 'pill-fern' : leave.requested? ? 'pill-olive' : 'pill-taupe' %>"><%= leave.status.humanize %></span></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
           </div>
         <% end %>
       </section>

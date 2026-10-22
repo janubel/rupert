@@ -2,15 +2,15 @@
 <article id="day-<%= day.iso8601 %>" class="card desk-day <%= 'desk-day-complete' if row.complete? %>" aria-labelledby="day-<%= day.iso8601 %>-title">
   <header class="desk-day-header">
     <div class="min-w-0">
-      <h3 id="day-<%= day.iso8601 %>-title" class="font-semibold"><%= day.strftime('%A, %b %-d') %></h3>
+      <h3 id="day-<%= day.iso8601 %>-title" class="card-title"><%= day.strftime('%A, %b %-d') %></h3>
       <p class="text-xs text-mocha"><%= pluralize(row.orders, 'order') %> · <%= books_desk_totals(row.totals) %></p>
     </div>
     <% if row.complete? %>
-      <span class="pill-fern">Finished</span>
+      <span class="pill-fern">Done</span>
     <% elsif !row.actionable? %>
       <span class="pill-taupe">Up to date · signs off with the week</span>
     <% else %>
-      <span class="text-xs font-semibold text-mocha"><%= row.done_count %> of <%= row.stages.size %> steps</span>
+      <span class="pill-olive"><%= row.done_count %> of <%= row.stages.size %> steps</span>
     <% end %>
   </header>
   <ol class="desk-steps" aria-label="Cleanup steps for <%= day.strftime('%b %-d') %>">

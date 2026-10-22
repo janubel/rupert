@@ -17,6 +17,10 @@ module NavigationIconsHelper
     'tools' => ['M4 6h16M4 12h16M4 18h16', 'M8 3v6M16 9v6M10 15v6'],
     'clock' => ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M12 7v5l3 2'],
     'chevron' => ['m6 9 6 6 6-6'],
+    'menu' => ['M4 7h16M4 12h16M4 17h16'],
+    'collapse' => ['m14 7-5 5 5 5', 'M5 5v14'],
+    'marketing' => ['M3 10v4h3l6 4V6L6 10H3Z', 'M16 9a3.5 3.5 0 0 1 0 6', 'M18.5 6a7 7 0 0 1 0 12'],
+    'learn' => ['M3 6c3-1 6-1 9 1 3-2 6-2 9-1v13c-3-1-6-1-9 1-3-2-6-2-9-1Z', 'M12 7v13'],
     'check' => ['m4 12 5 5L20 6'],
     'logout' => ['M9 3H3v18h6M13 7l5 5-5 5M7 12h14'],
     'count' => ['M5 3v18M9 3v18M13 3v18M17 3v18M21 3v18'],
@@ -36,7 +40,6 @@ module NavigationIconsHelper
     'bug' => ['M12 8c-3 0-5 2.2-5 5.5s2 6.5 5 6.5 5-3.2 5-6.5-2-5.5-5-5.5Z', 'M12 8v12', 'M9 6.5a3 3 0 0 1 6 0', 'M9.5 4 8 2.5M14.5 4 16 2.5',
               'M7 12l-3-1M7 15.5l-3 1M17 12l3-1M17 15.5l3 1', 'M9.5 13h.01M14.5 13h.01M9.5 16.5h.01M14.5 16.5h.01'],
     'ask' => ['M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12Z', 'M8.5 11h.01M12 11h.01M15.5 11h.01'],
-    'learn' => ['M3 6c3-1 6-1 9 1 3-2 6-2 9-1v13c-3-1-6-1-9 1-3-2-6-2-9-1Z', 'M12 7v13']
   }.freeze
 
   MODULE_ICON_KEYS = {
@@ -45,7 +48,8 @@ module NavigationIconsHelper
     'connections' => 'link', 'swipesimple_items' => 'link', 'stock_comparison' => 'report', 'pos_connections' => 'link', 'alerts' => 'alert',
     'timesheets' => 'clock', 'time_keeping' => 'clock', 'reports' => 'report', 'books_desk' => 'review', 'register_summary' => 'report', 'sales_tax' => 'report', 'finance_reports' => 'report', 'time_clock' => 'clock',
     'settings' => 'settings', 'platform' => 'platform', 'owner_checklists' => 'review',
-    'api_access_tokens' => 'shield', 'permissions' => 'shield', 'roadmap' => 'document', 'customers' => 'customers'
+    'api_access_tokens' => 'shield', 'permissions' => 'shield', 'roadmap' => 'document', 'customers' => 'customers',
+    'learning' => 'learn', 'training' => 'learn', 'style_guide' => 'document'
   }.freeze
 
   def navigation_icon(key, css_class: 'nav-symbol')

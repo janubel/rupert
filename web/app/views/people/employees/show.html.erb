@@ -1,55 +1,48 @@
 <% content_for :title, @employee.name %>
+<% can_write = Current.user.can?("hr.write") %>
+<% menu = [] %>
+<% menu << ['Square hours', people_square_timesheets_path(employee_id: @employee.id)] if Current.user.can_manage_accounts? && @employee.square_timecards.exists? %>
+<% if can_write %>
+  <% menu << ['Place on leave', transition_people_employee_path(@employee, event: "place_on_leave"), { method: :post, data: { turbo_confirm: "Put #{@employee.name} on leave?" } }] if @employee.may_place_on_leave? %>
+  <% menu << ['Return to work', transition_people_employee_path(@employee, event: "return_to_work"), { method: :post }] if @employee.may_return_to_work? %>
+  <% menu << ['Terminate', transition_people_employee_path(@employee, event: "terminate"), { method: :post, data: { turbo_confirm: "Terminate #{@employee.name}?" } }] if @employee.may_terminate? %>
+  <% menu << ['Rehire', transition_people_employee_path(@employee, event: "rehire"), { method: :post }] if @employee.may_rehire? %>
+<% end %>
+<% status_pill = @employee.active? ? "pill-fern" : @employee.on_leave? ? "pill-olive" : "pill-rose" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= @employee.name %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <%= @employee.position&.name || "No position" %>
-        <% if @employee.department %><span class="text-taupe">·</span> <%= @employee.department.name %><% end %>
-        <span class="text-taupe">·</span>
-        <span class="<%= @employee.active? ? "pill-fern" : @employee.on_leave? ? "pill-olive" : "pill-rose" %>">
-          <span class="dot <%= @employee.active? ? "bg-fern" : @employee.on_leave? ? "bg-olive" : "bg-rose" %>"></span>
-          <%= @employee.status.tr("_", " ") %>
-        </span>
-      </p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <% if Current.user.can_manage_accounts? && @employee.square_timecards.exists? %><%= link_to 'Square hours', people_square_timesheets_path(employee_id: @employee.id), class: 'btn-ghost btn-sm' %><% end %>
-      <%= link_to "Back to staff", people_employees_path, class: "btn-ghost btn-sm" %>
-      <% if Current.user.can?("hr.write") %>
-        <% if @employee.may_place_on_leave? %>
-          <%= button_to "Place on leave", transition_people_employee_path(@employee, event: "place_on_leave"), method: :post, class: "btn-ghost btn-sm", data: { confirm: "Put #{@employee.name} on leave?" } %>
-        <% end %>
-        <% if @employee.may_return_to_work? %>
-          <%= button_to "Return to work", transition_people_employee_path(@employee, event: "return_to_work"), method: :post, class: "btn-ghost btn-sm" %>
-        <% end %>
-        <% if @employee.may_terminate? %>
-          <%= button_to "Terminate", transition_people_employee_path(@employee, event: "terminate"), method: :post, class: "btn-ghost btn-sm", data: { confirm: "Terminate #{@employee.name}?" } %>
-        <% end %>
-        <% if @employee.may_rehire? %>
-          <%= button_to "Rehire", transition_people_employee_path(@employee, event: "rehire"), method: :post, class: "btn-ghost btn-sm" %>
-        <% end %>
-        <%= link_to "Edit", edit_people_employee_path(@employee), class: "btn-ghost btn-sm" %>
-      <% end %>
-    </div>
-  </section>
+  <%= page_header @employee.name, subtitle: [@employee.position&.name || "No position", @employee.department&.name].compact.join(' · '), menu: menu do %>
+    <% if can_write %><%= link_to "Edit", edit_people_employee_path(@employee), class: "btn-primary" %><% end %>
+  <% end %>
+
+  <dl class="facts">
+    <div><dt>Status</dt><dd><span class="<%= status_pill %>"><%= @employee.status.tr("_", " ").capitalize %></span></dd></div>
+    <div><dt>Hired</dt><dd><%= @employee.hire_date ? l(@employee.hire_date, format: :long) : "—" %></dd></div>
+    <div><dt>Employment</dt><dd><%= @employee.employment_type.tr("_", " ").capitalize %></dd></div>
+    <% if Current.user.can?("payroll.read") %>
+      <div><dt>Pay</dt><dd><%= @employee.current_pay_rate&.label || "—" %></dd></div>
+    <% end %>
+    <% if Current.user.can?("leave.read") %>
+      <% vacation_balance = @employee.leave_balances.find_by(leave_type: 'vacation', year: Date.current.year) %>
+      <div><dt>PTO remaining</dt><dd><%= vacation_balance ? "#{number_with_precision(vacation_balance.remaining_hours, precision: 1)}h" : 'Not set' %></dd></div>
+    <% end %>
+  </dl>
 
   <% if @pay_week %>
     <% pay = @pay_week %>
     <% money = ->(cents) { cents.nil? ? 'Unavailable' : number_to_currency(cents / 100.0) } %>
-    <section id="pay-week" class="card card-pad space-y-4" aria-labelledby="pay-week-title">
-      <div class="flex flex-wrap items-center justify-between gap-2">
+    <section id="pay-week" class="section-card" aria-labelledby="pay-week-title">
+      <div class="card-head">
         <div>
-          <h2 id="pay-week-title" class="font-display text-lg">Pay for the week</h2>
-          <p class="text-sm text-mocha"><%= pay.start_date.strftime('%a %b %-d') %> – <%= pay.end_date.strftime('%a %b %-d, %Y') %> · Thursday to Wednesday</p>
+          <h2 id="pay-week-title" class="section-title">Pay for the week</h2>
+          <p class="card-hint"><%= pay.start_date.strftime('%a %b %-d') %> – <%= pay.end_date.strftime('%a %b %-d, %Y') %> · Thursday to Wednesday</p>
         </div>
-        <nav aria-label="Pay week" class="flex flex-wrap items-center gap-2">
-          <%= link_to '← Previous week', people_employee_path(@employee, week: (pay.start_date - 7).iso8601, anchor: 'pay-week'), class: 'btn-ghost btn-sm' %>
+        <nav aria-label="Pay week" class="card-head-actions">
+          <%= link_to 'Previous week', people_employee_path(@employee, week: (pay.start_date - 7).iso8601, anchor: 'pay-week'), class: 'btn-ghost btn-sm' %>
           <%= link_to 'This week', people_employee_path(@employee, anchor: 'pay-week'), class: 'btn-ghost btn-sm' %>
-          <%= link_to 'Next week →', people_employee_path(@employee, week: (pay.start_date + 7).iso8601, anchor: 'pay-week'), class: 'btn-ghost btn-sm' %>
+          <%= link_to 'Next week', people_employee_path(@employee, week: (pay.start_date + 7).iso8601, anchor: 'pay-week'), class: 'btn-ghost btn-sm' %>
           <%= form_with url: people_employee_path(@employee), method: :get, class: 'flex items-center gap-2' do %>
             <%= date_field_tag :week, pay.start_date, class: 'input w-auto', 'aria-label': 'Any date in the week to show' %>
-            <%= submit_tag 'Go', class: 'btn-ghost btn-sm' %>
+            <%= submit_tag 'Apply', class: 'btn-ghost btn-sm', name: nil %>
           <% end %>
         </nav>
       </div>
@@ -60,7 +53,7 @@
             ['Commission (1%)', money.call(pay.commission_cents)],
             ['Tips', money.call(pay.tip_cents)],
             ['Total for the week', money.call(pay.total_cents)]].each do |label, value| %>
-          <div class="stat"><dt class="stat-label"><%= label %></dt><dd class="stat-value mt-1 text-xl"><%= value %></dd></div>
+          <div class="stat"><dt class="stat-label"><%= label %></dt><dd class="stat-value-sm mt-1"><%= value %></dd></div>
         <% end %>
       </dl>
       <p class="text-xs text-mocha">Commission is 1% of before-tax sales (<%= money.call(pay.sales_cents) %>) rung up while clocked in. Tips are split evenly between everyone clocked in. Hours come from Rupert clock punches. An estimate only: it does not post to payroll.</p>
@@ -69,198 +62,167 @@
   <% end %>
 
   <% if @employee.source_identities.any? %>
-    <section class="card card-pad space-y-2">
-      <h2 class="font-display text-lg">Linked app profiles</h2>
-      <% @employee.source_identities.order(:source, :id).each do |identity| %>
-        <p class="text-sm"><strong><%= directory_label(identity.source) %></strong> · <%= [identity.first_name, identity.last_name].compact.join(' ') %> · <%= identity.email %> · <%= identity.source_active.nil? ? 'Status not supplied' : identity.source_active ? 'Active source account' : 'Inactive source account' %></p>
-      <% end %>
+    <section class="section-card">
+      <%= section_heading 'Linked app profiles' %>
+      <ul class="space-y-1 text-sm">
+        <% @employee.source_identities.order(:source, :id).each do |identity| %>
+          <li><strong><%= directory_label(identity.source) %></strong> · <%= [identity.first_name, identity.last_name].compact.join(' ') %> · <%= identity.email %> · <%= identity.source_active.nil? ? 'Status not supplied' : identity.source_active ? 'Active source account' : 'Inactive source account' %></li>
+        <% end %>
+      </ul>
       <p class="text-xs text-taupe">Source contact details refresh independently of this staff member’s name, login, and HR details.</p>
     </section>
   <% end %>
 
-    <section id="access" class="card card-pad space-y-3">
-      <h2 class="font-display text-lg">Staff web &amp; app access</h2>
-      <p class="text-sm"><%= @employee.user ? "Linked to #{@employee.user.email}" : 'No login linked.' %></p>
-      <%= render 'access_badges', employee: @employee %>
-      <p class="text-xs text-mocha">Badges show current tab access. Own records stay limited to this staff member; POS checkout does not grant company sales history or reconciliation.</p>
-      <% if (account = @employee.user) && Current.user.can_manage_accounts? && (Current.user.super_admin? || !account.super_admin?) %>
-        <%= form_with model: account, url: user_path(account), class: 'flex flex-wrap items-end gap-3' do |f| %>
-          <%= hidden_field_tag :return_employee_id, @employee.id %>
-          <div><%= f.label :role, 'Permission level', class: 'field-label' %><%= f.select :role, (Current.user.super_admin? ? User.roles.keys : User.roles.keys.excluding('super_admin')).map { |role| [role.humanize, role] }, {}, class: 'select' %></div>
-          <div><%= f.label :active, 'Login status', class: 'field-label' %><%= f.select :active, [['Enabled', true], ['Disabled', false]], {}, class: 'select' %></div>
-          <%= f.submit 'Save access level', class: 'btn-primary btn-sm' %>
-        <% end %>
-        <p class="text-xs text-mocha">Staff access includes POS and personal time records. Other roles may expose company data. Individual overrides can replace a role’s defaults.</p>
-        <%= link_to 'Edit individual permissions', edit_user_path(account), class: 'text-sm text-olive underline' %>
+  <section id="access" class="section-card">
+    <%= section_heading 'Staff web & app access', hint: (@employee.user ? "Linked to #{@employee.user.email}" : 'No login linked.') %>
+    <%= render 'access_badges', employee: @employee %>
+    <p class="text-xs text-mocha">Badges show current tab access. Own records stay limited to this staff member; POS checkout does not grant company sales history or reconciliation.</p>
+    <% if (account = @employee.user) && Current.user.can_manage_accounts? && (Current.user.super_admin? || !account.super_admin?) %>
+      <%= form_with model: account, url: user_path(account), class: 'flex flex-wrap items-end gap-3' do |f| %>
+        <%= hidden_field_tag :return_employee_id, @employee.id %>
+        <div><%= f.label :role, 'Permission level', class: 'field-label' %><%= f.select :role, (Current.user.super_admin? ? User.roles.keys : User.roles.keys.excluding('super_admin')).map { |role| [role.humanize, role] }, {}, class: 'select' %></div>
+        <div><%= f.label :active, 'Login status', class: 'field-label' %><%= f.select :active, [['Enabled', true], ['Disabled', false]], {}, class: 'select' %></div>
+        <%= f.submit 'Save access level', class: 'btn-primary btn-sm' %>
       <% end %>
-      <% if Current.user.can_manage_accounts? && Current.user.can?('hr.write') && @employee.active? %>
-        <%= button_to 'Create private setup / reset link', employee_access_path(employee_id: @employee.id), method: :post, class: 'btn-ghost btn-sm' if @employee.email.present? && (!@employee.user || @employee.user.employee?) %>
-      <% end %>
-    </section>
-
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <div class="stat">
-      <p class="stat-label">Hired</p>
-      <p class="stat-value-sm mt-1"><%= @employee.hire_date ? l(@employee.hire_date, format: :long) : "—" %></p>
-    </div>
-    <% if Current.user.can?("payroll.read") %>
-    <div class="stat">
-      <p class="stat-label">Pay</p>
-      <p class="stat-value-sm mt-1"><%= @employee.current_pay_rate&.label || "—" %></p>
-    </div>
+      <p class="text-xs text-mocha">Staff access includes POS and personal time records. Other roles may expose company data. Individual overrides can replace a role’s defaults.</p>
+      <%= link_to 'Edit individual permissions', edit_user_path(account), class: 'text-sm text-olive underline' %>
     <% end %>
-    <div class="stat">
-      <p class="stat-label">Employment</p>
-      <p class="stat-value-sm mt-1 capitalize"><%= @employee.employment_type.tr("_", " ") %></p>
-    </div>
-    <% if Current.user.can?("leave.read") %>
-    <div class="stat">
-      <p class="stat-label">PTO remaining</p>
-      <p class="stat-value-sm mt-1"><% vacation_balance = @employee.leave_balances.find_by(leave_type: 'vacation', year: Date.current.year) %><%= vacation_balance ? "#{number_with_precision(vacation_balance.remaining_hours, precision: 1)}h" : 'Not set' %></p>
-    </div>
+    <% if Current.user.can_manage_accounts? && Current.user.can?('hr.write') && @employee.active? %>
+      <%= button_to 'Generate setup / reset link', employee_access_path(employee_id: @employee.id), method: :post, class: 'btn-ghost btn-sm' if @employee.email.present? && (!@employee.user || @employee.user.employee?) %>
     <% end %>
   </section>
 
   <div class="grid gap-6 lg:grid-cols-2">
-    <section class="card card-pad">
-      <h2 class="font-display text-lg text-ink">Details</h2>
-      <dl class="mt-3 space-y-2 text-sm">
-        <div class="flex justify-between gap-4"><dt class="text-mocha">Legal name</dt><dd class="font-medium text-ink"><%= @employee.legal_name.presence || "—" %></dd></div>
-        <div class="flex justify-between gap-4"><dt class="text-mocha">Email</dt><dd class="font-medium text-ink"><%= @employee.email.presence || "—" %></dd></div>
-        <div class="flex justify-between gap-4"><dt class="text-mocha">Phone</dt><dd class="font-medium text-ink"><%= @employee.phone.presence || "—" %></dd></div>
-        <div class="flex justify-between gap-4"><dt class="text-mocha">Staff member #</dt><dd class="font-medium text-ink"><%= @employee.employee_number.presence || "—" %></dd></div>
-        <div class="flex justify-between gap-4"><dt class="text-mocha">Login account</dt><dd class="font-medium text-ink"><%= @employee.user&.email.presence || "—" %></dd></div>
+    <section class="section-card">
+      <%= section_heading 'Details' %>
+      <dl class="facts">
+        <div><dt>Legal name</dt><dd><%= @employee.legal_name.presence || "—" %></dd></div>
+        <div><dt>Email</dt><dd><%= @employee.email.presence || "—" %></dd></div>
+        <div><dt>Phone</dt><dd><%= @employee.phone.presence || "—" %></dd></div>
+        <div><dt>Staff member #</dt><dd><%= @employee.employee_number.presence || "—" %></dd></div>
+        <div><dt>Login account</dt><dd><%= @employee.user&.email.presence || "—" %></dd></div>
+        <% if @employee.address.present? %><div><dt>Address</dt><dd class="whitespace-pre-wrap"><%= @employee.address %></dd></div><% end %>
+        <% if @employee.emergency_contact_name.present? %><div><dt>Emergency contact</dt><dd><%= @employee.emergency_contact_name %> · <%= @employee.emergency_contact_phone.presence || "—" %></dd></div><% end %>
       </dl>
-      <% if @employee.address.present? %>
-        <h3 class="mt-4 text-sm font-semibold text-ink">Address</h3>
-        <p class="mt-1 whitespace-pre-wrap text-sm text-mocha"><%= @employee.address %></p>
-      <% end %>
-      <% if @employee.emergency_contact_name.present? %>
-        <h3 class="mt-4 text-sm font-semibold text-ink">Emergency contact</h3>
-        <p class="mt-1 text-sm text-mocha"><%= @employee.emergency_contact_name %> · <%= @employee.emergency_contact_phone.presence || "—" %></p>
-      <% end %>
       <% if @employee.notes.present? %>
-        <h3 class="mt-4 text-sm font-semibold text-ink">Notes</h3>
-        <p class="mt-1 whitespace-pre-wrap text-sm text-mocha"><%= @employee.notes %></p>
+        <div>
+          <h3 class="card-title">Notes</h3>
+          <p class="mt-1 whitespace-pre-wrap text-sm text-mocha"><%= @employee.notes %></p>
+        </div>
       <% end %>
     </section>
 
-    <section class="card card-pad">
+    <section class="section-card">
       <% if Current.user.can?("leave.read") %>
-      <h2 class="font-display text-lg text-ink">Leave balances · <%= Date.current.year %></h2>
-      <% if @leave_balances.empty? %>
-        <p class="mt-2 text-sm text-taupe">No balances yet — balances appear once leave is requested or set up.</p>
-      <% end %>
-      <div class="mt-3 space-y-2">
-        <% @leave_balances.each do |balance| %>
-          <div class="flex items-center justify-between gap-3 text-sm">
-            <span class="font-medium text-ink capitalize"><%= balance.leave_type %></span>
-            <span class="text-mocha"><%= number_with_precision(balance.remaining_hours, precision: 1) %>h of <%= number_with_precision(balance.accrued_hours, precision: 1) %>h</span>
-          </div>
+        <%= section_heading "Leave balances · #{Date.current.year}" %>
+        <% if @leave_balances.empty? %>
+          <p class="text-sm text-taupe">No balances yet. Balances appear once leave is requested or an allowance is set.</p>
         <% end %>
-      </div>
-
-      <% if Current.user.can?('leave.write') %>
-        <details class="mt-4"><summary class="text-sm text-olive cursor-pointer">Set leave allowance</summary>
-          <%= form_with url: set_leave_allowance_people_employee_path(@employee), scope: :leave_allowance, class: 'mt-3 space-y-3' do |f| %>
-            <div><%= f.label :leave_type, 'Leave type', class: 'field-label' %><%= f.select :leave_type, People::LeaveRequest::LEAVE_TYPES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
-            <div><%= f.label :year, 'Year', class: 'field-label' %><%= f.number_field :year, value: Date.current.year, min: 1900, max: 2100, required: true, class: 'input' %></div>
-            <div><%= f.label :accrued_hours, 'Allowance accrued (hours)', class: 'field-label' %><%= f.number_field :accrued_hours, min: 0, max: 9999.99, step: 0.01, required: true, class: 'input' %></div>
-            <p class="text-xs text-mocha">Used hours are preserved. Enter the staff member's actual approved allowance.</p><%= f.submit 'Save allowance', class: 'btn-primary btn-sm' %>
+        <div class="space-y-2">
+          <% @leave_balances.each do |balance| %>
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="font-medium text-ink"><%= balance.leave_type.humanize %></span>
+              <span class="text-mocha num"><%= number_with_precision(balance.remaining_hours, precision: 1) %>h of <%= number_with_precision(balance.accrued_hours, precision: 1) %>h</span>
+            </div>
           <% end %>
-        </details>
-      <% end %>
+        </div>
+        <% if Current.user.can?('leave.write') %>
+          <details class="explainer"><summary class="explainer-summary">Set leave allowance</summary>
+            <%= form_with url: set_leave_allowance_people_employee_path(@employee), scope: :leave_allowance, class: 'mt-3 space-y-3' do |f| %>
+              <div><%= f.label :leave_type, 'Leave type', class: 'field-label' %><%= f.select :leave_type, People::LeaveRequest::LEAVE_TYPES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
+              <div><%= f.label :year, 'Year', class: 'field-label' %><%= f.number_field :year, value: Date.current.year, min: 1900, max: 2100, required: true, class: 'input' %></div>
+              <div><%= f.label :accrued_hours, 'Allowance accrued (hours)', class: 'field-label' %><%= f.number_field :accrued_hours, min: 0, max: 9999.99, step: 0.01, required: true, class: 'input' %></div>
+              <p class="text-xs text-mocha">Used hours are preserved. Enter the staff member's actual approved allowance.</p><%= f.submit 'Save allowance', class: 'btn-primary btn-sm' %>
+            <% end %>
+          </details>
+        <% end %>
       <% end %>
       <% if Current.user.can?("payroll.read") %>
-      <h2 class="mt-6 font-display text-lg text-ink">Pay rates</h2>
-      <% if @pay_rates.empty? %>
-        <p class="mt-2 text-sm text-taupe">No pay rates on file.</p>
-      <% end %>
-      <ul class="mt-3 space-y-1 text-sm text-mocha">
-        <% @pay_rates.each do |rate| %>
-          <li class="flex items-center justify-between gap-3">
-            <span><%= rate.label %></span>
-            <span class="text-xs text-taupe"><%= l(rate.effective_on, format: :short) %><%= rate.ended_on ? " – #{l(rate.ended_on, format: :short)}" : " – present" %></span>
-          </li>
+        <%= section_heading 'Pay rates' %>
+        <% if @pay_rates.empty? %>
+          <p class="text-sm text-taupe">No pay rates on file.</p>
         <% end %>
-      </ul>
-      <% if Current.user.can?('payroll.write') %>
-        <details class="mt-4"><summary class="text-sm text-olive cursor-pointer">Set pay rate</summary>
-          <%= form_with url: add_pay_rate_people_employee_path(@employee), scope: :pay_rate, class: 'mt-3 space-y-3' do |f| %>
-            <div><%= f.label :pay_type, 'Pay type', class: 'field-label' %><%= f.select :pay_type, People::PayRate::PAY_TYPES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
-            <div><%= f.label :amount, 'Amount (USD)', class: 'field-label' %><%= f.number_field :amount, min: 0.01, max: 20000000, step: 0.01, required: true, class: 'input' %><p class="text-xs text-mocha">Hourly rate for hourly pay; annual salary for salary pay.</p></div>
-            <div><%= f.label :pay_frequency, 'Pay cycle', class: 'field-label' %><%= f.select :pay_frequency, People::PayRate::PAY_FREQUENCIES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
-            <div><%= f.label :effective_on, 'Effective from', class: 'field-label' %><%= f.date_field :effective_on, value: Date.current, required: true, class: 'input' %></div>
-            <div><%= f.label :ended_on, 'Last effective day (optional)', class: 'field-label' %><%= f.date_field :ended_on, class: 'input' %></div>
-            <p class="text-xs text-mocha">Earlier rates and payroll snapshots are retained. A new rate on the same date takes precedence for estimates.</p><%= f.submit 'Save pay rate', class: 'btn-primary btn-sm' %>
+        <ul class="space-y-1 text-sm text-mocha">
+          <% @pay_rates.each do |rate| %>
+            <li class="flex items-center justify-between gap-3">
+              <span><%= rate.label %></span>
+              <span class="text-xs text-taupe"><%= l(rate.effective_on, format: :short) %><%= rate.ended_on ? " – #{l(rate.ended_on, format: :short)}" : " – present" %></span>
+            </li>
           <% end %>
-        </details>
-      <% end %>
+        </ul>
+        <% if Current.user.can?('payroll.write') %>
+          <details class="explainer"><summary class="explainer-summary">Set pay rate</summary>
+            <%= form_with url: add_pay_rate_people_employee_path(@employee), scope: :pay_rate, class: 'mt-3 space-y-3' do |f| %>
+              <div><%= f.label :pay_type, 'Pay type', class: 'field-label' %><%= f.select :pay_type, People::PayRate::PAY_TYPES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
+              <div><%= f.label :amount, 'Amount (USD)', class: 'field-label' %><%= f.number_field :amount, min: 0.01, max: 20000000, step: 0.01, required: true, class: 'input' %><p class="text-xs text-mocha">Hourly rate for hourly pay; annual salary for salary pay.</p></div>
+              <div><%= f.label :pay_frequency, 'Pay cycle', class: 'field-label' %><%= f.select :pay_frequency, People::PayRate::PAY_FREQUENCIES.map { |type| [type.humanize, type] }, {}, class: 'select' %></div>
+              <div><%= f.label :effective_on, 'Effective from', class: 'field-label' %><%= f.date_field :effective_on, value: Date.current, required: true, class: 'input' %></div>
+              <div><%= f.label :ended_on, 'Last effective day (optional)', class: 'field-label' %><%= f.date_field :ended_on, class: 'input' %></div>
+              <p class="text-xs text-mocha">Earlier rates and payroll snapshots are retained. A new rate on the same date takes precedence for estimates.</p><%= f.submit 'Save pay rate', class: 'btn-primary btn-sm' %>
+            <% end %>
+          </details>
+        <% end %>
       <% end %>
     </section>
   </div>
 
   <% if Current.user.can?("timesheets.read") %>
-  <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">Recent timesheets</h2>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+  <section class="section-card">
+    <%= section_heading 'Recent timesheets' %>
+    <div class="table-region" role="region" tabindex="0" aria-label="Recent timesheets">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Period</th>
-            <th scope="col" class="th text-right">Hours</th>
+            <th scope="col" class="th num">Hours</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @timesheets.empty? %>
-            <tr><td colspan="3" class="td py-6 text-center text-taupe">No timesheets yet.</td></tr>
+            <tr><td colspan="3" class="empty-row">No timesheets yet.</td></tr>
           <% end %>
           <% @timesheets.each do |timesheet| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td"><%= link_to timesheet.period_label, people_timesheet_path(timesheet), class: "font-medium text-olive hover:underline" %></td>
-              <td class="td text-right text-mocha"><%= number_with_precision(timesheet.total_hours, precision: 1) %></td>
-              <td class="td"><span class="pill-taupe capitalize"><%= timesheet.status %></span></td>
+              <td class="td num"><%= number_with_precision(timesheet.total_hours, precision: 1) %></td>
+              <td class="td"><span class="<%= timesheet.approved? ? 'pill-fern' : timesheet.submitted? ? 'pill-olive' : timesheet.rejected? ? 'pill-rose' : 'pill-taupe' %>"><%= timesheet.status.humanize %></span></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
-  </div>
-
+  </section>
   <% end %>
+
   <% if Current.user.can?("payroll.read") %>
-  <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">Recent pay</h2>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+  <section class="section-card">
+    <%= section_heading 'Recent pay' %>
+    <div class="table-region" role="region" tabindex="0" aria-label="Recent pay">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Pay run</th>
-            <th scope="col" class="th text-right">Hours</th>
-            <th scope="col" class="th text-right">Gross</th>
-            <th scope="col" class="th text-right">Net</th>
+            <th scope="col" class="th num">Hours</th>
+            <th scope="col" class="th num">Gross</th>
+            <th scope="col" class="th num">Net</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @payslips.empty? %>
-            <tr><td colspan="4" class="td py-6 text-center text-taupe">No payslips yet.</td></tr>
+            <tr><td colspan="4" class="empty-row">No payslips yet.</td></tr>
           <% end %>
           <% @payslips.each do |slip| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td"><%= link_to slip.pay_run.name, people_pay_run_path(slip.pay_run), class: "font-medium text-olive hover:underline" %></td>
-              <td class="td text-right text-mocha"><%= number_with_precision(slip.hours, precision: 1) %></td>
-              <td class="td text-right text-mocha"><%= number_to_currency(slip.gross_cents / 100.0) %></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(slip.net_cents / 100.0) %></td>
+              <td class="td num"><%= number_with_precision(slip.hours, precision: 1) %></td>
+              <td class="td num"><%= number_to_currency(slip.gross_cents / 100.0) %></td>
+              <td class="td num font-medium text-ink"><%= number_to_currency(slip.net_cents / 100.0) %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
   <% end %>
 </div>

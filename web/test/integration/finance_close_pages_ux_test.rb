@@ -15,23 +15,23 @@ class FinanceClosePagesUxTest < ActionDispatch::IntegrationTest
     day = Date.new(2026, 10, 10).iso8601
     { 'Daily reconciliation' => daily_reconciliations_path(day: day),
       'Day close' => financial_close_path(day: day),
-      'Report requests & follow-ups' => reconciliation_follow_ups_path,
+      'Follow-ups' => reconciliation_follow_ups_path,
       'Source documents' => reconciliation_documents_path,
       'Cash forecast' => cash_forecast_path(day: day),
       'Source reports' => money_reconciliations_path(date: day),
       'Period locks' => period_locks_path,
-      'Receipts' => receipts_path }.each do |title, path|
+      'My receipts' => receipts_path }.each do |title, path|
       get path
       assert_response :success, path
-      assert_select '.finance-header h1', title
-      assert_select '.finance-header p.text-base', minimum: 1
-      assert_select '.finance-header a.btn-primary', minimum: 0, maximum: 1
+      assert_select 'header.page-header h1', title
+      assert_select 'h1', count: 1
+      assert_select 'header.page-header .btn-primary', minimum: 0, maximum: 1
     end
   end
 
   test 'the selected follow-up category is a state, not a second primary button' do
     get reconciliation_follow_ups_path(category: 'missing_report')
-    assert_select 'nav[aria-label="Follow-up purpose"] a.nav-pill-active[aria-current=page]', 'Missing reports'
+    assert_select 'nav[aria-label="Follow-up purpose"] a.tab-active[aria-current=page]', 'Missing reports'
     assert_select 'nav[aria-label="Follow-up purpose"] a.btn-primary', 0
   end
 end

@@ -1,11 +1,11 @@
 <div data-row class="flex items-center gap-2">
   <% if item.inventory_thumbnail %>
-    <%= image_tag item.inventory_thumbnail, alt: item.sku, loading: "lazy", class: "h-8 w-8 shrink-0 rounded-md border border-fog bg-haze object-cover" %>
+    <%= image_tag item.inventory_thumbnail, alt: item.sku, loading: 'lazy', class: 'h-10 w-10 shrink-0 rounded-control border border-fog bg-haze object-cover' %>
   <% end %>
-  <input type="text" name="items[][sku]" value="<%= item.sku %>" list="known-skus" placeholder="SKU" class="input flex-1 font-mono" autocomplete="off">
-  <input type="number" name="items[][quantity]" value="<%= item.quantity_before_type_cast %>" min="0" step="1" placeholder="Qty" class="input w-24">
+  <input type="text" name="items[][sku]" value="<%= item.sku %>" list="known-skus" placeholder="SKU" aria-label="SKU" class="input flex-1 font-mono" autocomplete="off">
+  <input type="number" name="items[][quantity]" value="<%= item.quantity_before_type_cast %>" min="0" step="1" placeholder="Qty" aria-label="Counted quantity" class="input w-24">
   <% if item.shopify_source_identity_token %>
-    <%= hidden_field_tag "items[][source_identity]", item.shopify_source_identity_token %>
+    <%= hidden_field_tag 'items[][source_identity]', item.shopify_source_identity_token %>
   <% end %>
-  <button type="button" data-remove-row class="text-xs font-medium text-taupe hover:text-rose">Remove</button>
+  <button type="button" data-remove-row class="btn-ghost btn-sm">Remove</button>
 </div>

@@ -62,10 +62,10 @@ class ProductDetailFlowTest < ActionDispatch::IntegrationTest
     get_page shopify_variant_path(@variant)
     assert_response :success
     assert_select 'h1', /50g/
-    assert_select 'span', /TEA-50/
+    assert_select 'p.page-subtitle', /TEA-50/
     assert_select 'h2', /Square link/
     assert_select 'h2', /Levels/
-    assert_select 'span.pill-taupe', /unlinked/
+    assert_select 'span.pill-taupe', /Not linked/
   end
 
   test 'manually link a variant to a Square variation' do
@@ -84,7 +84,7 @@ class ProductDetailFlowTest < ActionDispatch::IntegrationTest
     link = SkuLink.find_by!(shopifyVariantId: @variant.id)
     assert_equal @square_variation.id, link.squareVariationId
     assert_equal 'manual', link.matchSource
-    assert_select 'span.pill-fern', /linked/
+    assert_select 'span.pill-fern', /Linked to Square/
     assert_select 'p', /Tea 50g/
   end
 
@@ -102,7 +102,7 @@ class ProductDetailFlowTest < ActionDispatch::IntegrationTest
     refute tombstone.auto
     SquareSyncer.send(:sync_links!, [{ variationId: @square_variation.id, sku: @variant.sku }])
     assert_nil tombstone.reload.squareVariationId
-    assert_select 'span.pill-taupe', /unlinked/
+    assert_select 'span.pill-taupe', /Not linked/
   end
 
   test 'manual link takes precedence over another variants inferred Square claim' do

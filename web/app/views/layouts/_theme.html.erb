@@ -4,6 +4,7 @@
     try {
       var theme = localStorage.getItem("rupert-theme");
       var colors = { light: "#f5f7fa", mist: "#e6ebf2", sepia: "#efe6d4", dark: "#111514" };
+      if (localStorage.getItem("rupert-rail") === "collapsed") document.documentElement.setAttribute("data-rail", "collapsed");
       if (theme && colors[theme]) {
         document.documentElement.setAttribute("data-theme", theme);
         var meta = document.querySelector('meta[name="theme-color"]');

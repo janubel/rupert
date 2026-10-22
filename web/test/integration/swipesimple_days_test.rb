@@ -157,7 +157,7 @@ class SwipesimpleDaysTest < ActionDispatch::IntegrationTest
     refute_includes ModuleRegistry.nav_for(reader).map(&:key), 'swipesimple_days'
 
     get swipesimple_days_path
-    assert_select 'nav[aria-label="Retail workspace"] a[aria-current="page"]', 'SwipeSimple daily close'
+    assert_select 'nav[aria-label="Module"] a[aria-current="page"]', 'SwipeSimple daily close'
     get ctrax_days_path(date: '2026-10-14')
     assert_select 'a[href=?]', swipesimple_days_path(date: '2026-10-14')
     import(ROWS)

@@ -51,7 +51,7 @@ class TeamFlowTest < ActionDispatch::IntegrationTest
   test 'employee accounts index lists the team' do
     get_page users_path
     assert_response :success
-    assert_select 'h1', /Staff accounts/
+    assert_select 'h1', /Users/
     assert_select 'td', /Boss/
   end
 

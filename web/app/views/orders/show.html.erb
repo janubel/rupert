@@ -1,112 +1,93 @@
 <% content_for :title, "Order #{@order.display_number}" %>
-<div class="space-y-6 print:hidden">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Order <%= @order.display_number %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <%= l(@order.occurred_at, format: :long) %> · <span class="capitalize"><%= @order.source %></span>
-        <span class="ml-2"><span class="<%= @order.status == "fulfilled" ? "pill-fern" : @order.status == "paid" ? "pill-olive" : "pill-taupe" %>"><%= @order.status %></span></span>
-        <% if @order.fulfillment_status && @order.fulfillment_status != "pending" %>
-          <span class="ml-2"><span class="pill-clay"><%= @order.fulfillment_status %></span></span>
-        <% end %>
-      </p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <% if @doc == "invoice" %>
-        <button type="button" data-controller="print" data-action="click->print#print" class="btn-primary">Print invoice</button>
-        <%= link_to "Packing slip", order_path(@order, doc: "packing_slip"), class: "btn-ghost btn-sm" %>
-      <% else %>
-        <button type="button" data-controller="print" data-action="click->print#print" class="btn-primary">Print packing slip</button>
-        <%= link_to "Invoice", order_path(@order), class: "btn-ghost btn-sm" %>
-      <% end %>
-      <%= link_to "Back to sales", sales_path, class: "btn-ghost btn-sm" %>
-    </div>
-  </section>
+<% invoice = @doc == 'invoice' %>
+<div class="print:hidden">
+  <%= page_header "Order #{@order.display_number}", subtitle: "#{l(@order.occurred_at, format: :long)} · #{@order.source.to_s.humanize}#{@order.channel.present? ? " · #{@order.channel}" : ''}.",
+      menu: [[invoice ? 'Open packing slip' : 'Open invoice', order_path(@order, doc: invoice ? 'packing_slip' : nil)]] do %>
+    <span class="<%= @order.status == 'fulfilled' ? 'pill-fern' : @order.status == 'paid' ? 'pill-olive' : 'pill-taupe' %>"><%= @order.status.to_s.humanize %></span>
+    <% if @order.fulfillment_status && @order.fulfillment_status != 'pending' %>
+      <span class="pill-clay"><%= @order.fulfillment_status.to_s.humanize %></span>
+    <% end %>
+    <button type="button" data-controller="print" data-action="click->print#print" class="btn-primary">Print <%= invoice ? 'invoice' : 'packing slip' %></button>
+  <% end %>
 </div>
 
 <%= render 'warehouse_stock_holds' %>
 
 <% if FeatureFlag.enabled?(:fulfillment_workflow) %>
-  <div class="print:hidden">
-    <section class="card card-pad mt-6">
-      <h2 class="font-display text-xl text-ink">Fulfillment status</h2>
-      <p class="mt-1 text-sm text-mocha">Current: <span class="font-semibold capitalize text-ink"><%= @order.fulfillment_status %></span></p>
-      <div class="mt-3 flex flex-wrap items-center gap-2">
-        <% Core::Order::FULFILLMENT_STATUSES.each do |status| %>
-          <% active = @order.fulfillment_status == status %>
-          <%= button_to status.humanize, update_fulfillment_status_order_path(@order), method: :post, params: { status: status }, class: active ? "btn-primary btn-sm" : "btn-ghost btn-sm", disabled: active %>
-        <% end %>
-      </div>
-    </section>
-  </div>
+  <section class="section-card mt-6 print:hidden">
+    <%= section_heading 'Fulfillment status', hint: "Current: #{@order.fulfillment_status.to_s.humanize}" %>
+    <div class="flex flex-wrap items-center gap-2">
+      <% Core::Order::FULFILLMENT_STATUSES.each do |status| %>
+        <% active = @order.fulfillment_status == status %>
+        <%= button_to status.humanize, update_fulfillment_status_order_path(@order), method: :post, params: { status: status }, class: active ? 'btn-primary btn-sm' : 'btn-ghost btn-sm', disabled: active %>
+      <% end %>
+    </div>
+  </section>
 <% end %>
 
 <div class="print:hidden">
-  <section class="card card-pad mt-6">
-    <h2 class="font-display text-xl text-ink">Refunds</h2>
-      <p class="mt-1 text-sm text-mocha">
-        Paid <%= number_to_currency(@order.total_paid_cents / 100.0) %> ·
-        refunded <span class="<%= @order.refunded? ? "font-semibold text-clay" : "text-taupe" %>"><%= number_to_currency(@order.total_refunded_cents / 100.0) %></span> ·
-        refundable <%= number_to_currency(@order.refundable_cents / 100.0) %>
-      </p>
+  <section class="section-card mt-6">
+    <%= section_heading 'Refunds' %>
+    <p class="text-sm text-mocha">
+      Paid <%= number_to_currency(@order.total_paid_cents / 100.0) %> ·
+      refunded <span class="<%= @order.refunded? ? 'font-semibold text-clay' : 'text-taupe' %>"><%= number_to_currency(@order.total_refunded_cents / 100.0) %></span> ·
+      refundable <%= number_to_currency(@order.refundable_cents / 100.0) %>
+    </p>
 
-      <% if @order.refunds.any? %>
-        <ul class="mt-3 space-y-2">
-          <% @refunds.each do |r| %>
-            <li class="flex flex-wrap items-center gap-3 rounded-xl bg-haze px-4 py-2.5">
-              <span class="pill-clay">refund</span>
-              <span class="text-sm font-semibold text-ink"><%= number_to_currency(r.amount_cents / 100.0) %></span>
-              <span class="text-sm capitalize text-mocha"><%= r.method.tr("_", " ") %></span>
-              <% if r.reason.present? %><span class="text-sm text-taupe"><%= r.reason %></span><% end %>
-              <span class="text-xs text-taupe"><%= l(r.refunded_at, format: :short) %></span>
-            </li>
-          <% end %>
-        </ul>
-      <% end %>
+    <% if @order.refunds.any? %>
+      <ul class="space-y-2">
+        <% @refunds.each do |r| %>
+          <li class="flex flex-wrap items-center gap-3 rounded-control bg-haze px-4 py-2.5">
+            <span class="pill-clay">Refund</span>
+            <span class="num text-sm font-semibold text-ink"><%= number_to_currency(r.amount_cents / 100.0) %></span>
+            <span class="text-sm capitalize text-mocha"><%= r.method.tr('_', ' ') %></span>
+            <% if r.reason.present? %><span class="text-sm text-taupe"><%= r.reason %></span><% end %>
+            <span class="text-xs text-taupe"><%= l(r.refunded_at, format: :short) %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
 
-      <% if @order.refundable_cents.positive? && Current.user.can?("sales.write") %>
-        <details class="mt-4">
-          <summary class="cursor-pointer text-sm font-semibold text-olive hover:underline">Process a refund…</summary>
-          <%= form_tag refund_order_path(@order), method: :post, class: "mt-3 flex flex-wrap items-end gap-3" do %>
-            <div>
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="refund_amount">Amount</label>
-              <div class="flex items-center gap-1">
-                <span class="text-sm text-mocha">$</span>
-                <input type="number" id="refund_amount" name="amount" step="0.01" min="0.01" max="<%= number_with_precision(@order.refundable_cents / 100.0, precision: 2) %>" value="<%= number_with_precision(@order.refundable_cents / 100.0, precision: 2) %>" class="input w-32">
-              </div>
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="refund_method">Method</label>
-              <select id="refund_method" name="method" class="select">
-                <% Core::Refund::METHODS.each do |m| %>
-                  <option value="<%= m %>"><%= m.tr("_", " ").capitalize %></option>
-                <% end %>
-              </select>
-            </div>
-            <div class="flex-1">
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="refund_reason">Reason</label>
-              <input type="text" id="refund_reason" name="reason" class="input" placeholder="e.g. Customer return, damaged, exchange…">
-            </div>
-            <%= submit_tag "Refund", class: "btn-primary" %>
-          <% end %>
-        </details>
-      <% elsif @order.fully_refunded? %>
-        <p class="mt-3 text-xs text-fern">Fully refunded.</p>
-      <% end %>
-    </section>
+    <% if @order.refundable_cents.positive? && Current.user.can?('sales.write') %>
+      <details class="explainer">
+        <summary class="explainer-summary">Process a refund</summary>
+        <%= form_tag refund_order_path(@order), method: :post, class: 'toolbar mt-3' do %>
+          <div class="toolbar-field">
+            <label class="field-label" for="refund_amount">Amount (USD)</label>
+            <input type="number" id="refund_amount" name="amount" step="0.01" min="0.01" max="<%= number_with_precision(@order.refundable_cents / 100.0, precision: 2) %>" value="<%= number_with_precision(@order.refundable_cents / 100.0, precision: 2) %>" class="input">
+          </div>
+          <div class="toolbar-field">
+            <label class="field-label" for="refund_method">Method</label>
+            <select id="refund_method" name="method" class="select w-full">
+              <% Core::Refund::METHODS.each do |m| %>
+                <option value="<%= m %>"><%= m.tr('_', ' ').capitalize %></option>
+              <% end %>
+            </select>
+          </div>
+          <div class="toolbar-field">
+            <label class="field-label" for="refund_reason">Reason</label>
+            <input type="text" id="refund_reason" name="reason" class="input" placeholder="Customer return, damaged, exchange…">
+          </div>
+          <div class="toolbar-actions"><%= submit_tag 'Refund', class: 'btn-primary' %></div>
+        <% end %>
+      </details>
+    <% elsif @order.fully_refunded? %>
+      <p class="text-xs text-fern">Fully refunded.</p>
+    <% end %>
+  </section>
 
   <% if @order.fulfillments.any? %>
-    <section class="card card-pad mt-6">
-      <h2 class="font-display text-xl text-ink">Shipments &amp; tracking</h2>
-      <div class="mt-3 space-y-3">
+    <section class="section-card mt-6">
+      <%= section_heading 'Shipments and tracking' %>
+      <div class="space-y-3">
         <% @fulfillments.each do |f| %>
-          <div class="flex flex-wrap items-center gap-3 rounded-xl bg-haze px-4 py-3">
-            <span class="<%= f.tracking? ? "pill-fern" : "pill-taupe" %>"><%= f.status_label %></span>
-            <span class="text-sm font-medium text-ink"><%= f.tracking_company.presence || "—" %></span>
+          <div class="flex flex-wrap items-center gap-3 rounded-control bg-haze px-4 py-3">
+            <span class="<%= f.tracking? ? 'pill-fern' : 'pill-taupe' %>"><%= f.status_label %></span>
+            <span class="text-sm font-medium text-ink"><%= f.tracking_company.presence || '—' %></span>
             <% if f.tracking? %>
               <a href="<%= f.tracking_url %>" target="_blank" rel="noopener" class="font-mono text-sm text-olive hover:underline"><%= f.tracking_number %></a>
             <% else %>
-              <span class="text-sm text-taupe">no tracking number</span>
+              <span class="text-sm text-taupe">No tracking number</span>
             <% end %>
             <% if f.fulfilled_at %><span class="text-xs text-taupe"><%= l(f.fulfilled_at, format: :short) %></span><% end %>
           </div>
@@ -115,14 +96,13 @@
     </section>
   <% end %>
 
-  <% if Current.user.can?("sales.write") %>
-    <section class="card card-pad mt-6">
-      <h2 class="font-display text-xl text-ink">Add shipment</h2>
-      <p class="mt-1 text-sm text-mocha">Record a shipped package and its carrier tracking number.</p>
-      <%= form_tag add_tracking_order_path(@order), method: :post, class: "mt-4 flex flex-wrap items-end gap-3" do %>
-        <div>
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="tracking_company">Carrier</label>
-          <select id="tracking_company" name="tracking_company" class="select">
+  <% if Current.user.can?('sales.write') %>
+    <section class="section-card mt-6">
+      <%= section_heading 'Add shipment', hint: 'Record a shipped package and its carrier tracking number.' %>
+      <%= form_tag add_tracking_order_path(@order), method: :post, class: 'toolbar' do %>
+        <div class="toolbar-field">
+          <label class="field-label" for="tracking_company">Carrier</label>
+          <select id="tracking_company" name="tracking_company" class="select w-full">
             <option value="">—</option>
             <option>UPS</option>
             <option>FedEx</option>
@@ -131,11 +111,11 @@
             <option>Other</option>
           </select>
         </div>
-        <div class="flex-1">
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="tracking_number">Tracking number</label>
+        <div class="toolbar-field">
+          <label class="field-label" for="tracking_number">Tracking number</label>
           <input type="text" id="tracking_number" name="tracking_number" class="input" placeholder="1Z999AA10123456784">
         </div>
-        <%= submit_tag "Add tracking", class: "btn-primary" %>
+        <div class="toolbar-actions"><%= submit_tag 'Add tracking', class: 'btn-primary' %></div>
       <% end %>
     </section>
   <% end %>
@@ -145,15 +125,15 @@
   <div class="card-pad border-b border-fog">
     <div class="flex flex-wrap items-start justify-between gap-6">
       <div>
-        <p class="eyebrow text-olive"><%= @doc == "invoice" ? "Invoice" : "Packing slip" %></p>
-        <h2 class="mt-1 font-display text-3xl text-ink"><%= @doc == "invoice" ? "#{TenantSettings.invoice_prefix}-#{@order.display_number}" : "Order #{@order.display_number}" %></h2>
+        <p class="eyebrow text-olive"><%= invoice ? 'Invoice' : 'Packing slip' %></p>
+        <h2 class="mt-1 font-display text-3xl text-ink"><%= invoice ? "#{TenantSettings.invoice_prefix}-#{@order.display_number}" : "Order #{@order.display_number}" %></h2>
         <p class="mt-1 text-sm text-mocha"><%= l(@order.occurred_at, format: :long) %></p>
       </div>
       <div class="text-right">
         <p class="font-display text-lg text-ink"><%= TenantSettings.business_name %></p>
         <p class="text-xs text-taupe"><%= @order.channel %> · <span class="capitalize"><%= @order.source %></span></p>
-        <% if @doc == "packing_slip" && @order.fulfillments.with_tracking.any? %>
-          <p class="mt-1 text-xs text-mocha">Tracking: <%= @order.fulfillments.with_tracking.map(&:tracking_number).join(", ") %></p>
+        <% if !invoice && @order.fulfillments.with_tracking.any? %>
+          <p class="mt-1 text-xs text-mocha">Tracking: <%= @order.fulfillments.with_tracking.map(&:tracking_number).join(', ') %></p>
         <% end %>
       </div>
     </div>
@@ -175,7 +155,7 @@
       <% if (addr = @order.shipping_address) %>
         <p class="mt-2 text-sm font-medium text-ink"><%= addr[:name] %></p>
         <p class="text-sm text-mocha"><%= addr[:line1] %><% if addr[:line2].present? %>, <%= addr[:line2] %><% end %></p>
-        <p class="text-sm text-mocha"><%= [addr[:city], addr[:province], addr[:zip]].select(&:present?).join(", ") %></p>
+        <p class="text-sm text-mocha"><%= [addr[:city], addr[:province], addr[:zip]].select(&:present?).join(', ') %></p>
         <p class="text-sm text-mocha"><%= addr[:country] %></p>
       <% else %>
         <p class="mt-2 text-sm text-taupe">No shipping address on file</p>
@@ -183,31 +163,31 @@
     </div>
   </div>
 
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead class="border-b border-fog bg-haze/60">
+  <div class="table-region" role="region" tabindex="0" aria-label="Order lines">
+    <table class="table">
+      <thead>
         <tr>
           <th scope="col" class="th">Item</th>
           <th scope="col" class="th">SKU</th>
-          <th scope="col" class="th text-right">Qty</th>
-          <% if @doc == "invoice" %>
-            <th scope="col" class="th text-right">Unit</th>
-            <th scope="col" class="th text-right">Amount</th>
+          <th scope="col" class="th num">Qty</th>
+          <% if invoice %>
+            <th scope="col" class="th num">Unit</th>
+            <th scope="col" class="th num">Amount</th>
           <% end %>
         </tr>
       </thead>
-      <tbody class="divide-y divide-fog">
+      <tbody>
         <% if @order.order_lines.empty? %>
-          <tr><td colspan="<%= @doc == "invoice" ? 5 : 3 %>" class="empty-row">No line items recorded.</td></tr>
+          <tr><td colspan="<%= invoice ? 5 : 3 %>" class="empty-row">No line items recorded.</td></tr>
         <% end %>
         <% @order.order_lines.each do |line| %>
           <tr>
             <td class="td font-medium text-ink"><%= line.name %></td>
-            <td class="td font-mono text-xs text-mocha"><%= line.sku.presence || "—" %></td>
-            <td class="td text-right text-mocha"><%= line.quantity %></td>
-            <% if @doc == "invoice" %>
-              <td class="td text-right text-mocha"><%= number_to_currency(line.unit_cents / 100.0) %></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(line.line_cents / 100.0) %></td>
+            <td class="td font-mono text-xs text-mocha"><%= line.sku.presence || '—' %></td>
+            <td class="td num text-mocha"><%= line.quantity %></td>
+            <% if invoice %>
+              <td class="td num text-mocha"><%= number_to_currency(line.unit_cents / 100.0) %></td>
+              <td class="td num font-medium text-ink"><%= number_to_currency(line.line_cents / 100.0) %></td>
             <% end %>
           </tr>
         <% end %>
@@ -215,34 +195,19 @@
     </table>
   </div>
 
-  <% if @doc == "invoice" %>
+  <% if invoice %>
     <div class="border-t border-fog px-5 py-4">
       <dl class="ml-auto max-w-xs space-y-1 text-sm">
-        <div class="flex justify-between">
-          <dt class="text-mocha">Subtotal</dt>
-          <dd class="font-medium text-ink"><%= number_to_currency(@order.sub_total_cents / 100.0) %></dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-mocha">Tax</dt>
-          <dd class="font-medium text-ink"><%= number_to_currency(@order.tax_cents / 100.0) %></dd>
-        </div>
-        <div class="flex justify-between border-t border-fog pt-1">
-          <dt class="font-semibold text-ink">Total</dt>
-          <dd class="font-semibold text-ink"><%= number_to_currency(@order.gross_cents / 100.0) %></dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-mocha">Paid</dt>
-          <dd class="font-medium text-fern"><%= number_to_currency(@order.total_paid_cents / 100.0) %></dd>
-        </div>
+        <div class="flex justify-between"><dt class="text-mocha">Subtotal</dt><dd class="num font-medium text-ink"><%= number_to_currency(@order.sub_total_cents / 100.0) %></dd></div>
+        <div class="flex justify-between"><dt class="text-mocha">Tax</dt><dd class="num font-medium text-ink"><%= number_to_currency(@order.tax_cents / 100.0) %></dd></div>
+        <div class="flex justify-between border-t border-fog pt-1"><dt class="font-semibold text-ink">Total</dt><dd class="num font-semibold text-ink"><%= number_to_currency(@order.gross_cents / 100.0) %></dd></div>
+        <div class="flex justify-between"><dt class="text-mocha">Paid</dt><dd class="num font-medium text-fern"><%= number_to_currency(@order.total_paid_cents / 100.0) %></dd></div>
         <% if @order.balance_due_cents.positive? %>
-          <div class="flex justify-between">
-            <dt class="text-mocha">Balance due</dt>
-            <dd class="font-semibold text-clay"><%= number_to_currency(@order.balance_due_cents / 100.0) %></dd>
-          </div>
+          <div class="flex justify-between"><dt class="text-mocha">Balance due</dt><dd class="num font-semibold text-clay"><%= number_to_currency(@order.balance_due_cents / 100.0) %></dd></div>
         <% end %>
       </dl>
     </div>
   <% else %>
-    <div class="border-t border-fog px-5 py-3 text-xs text-taupe">Packing slip — quantities only.</div>
+    <div class="border-t border-fog px-5 py-3 text-xs text-taupe">Packing slip · quantities only.</div>
   <% end %>
 </section>

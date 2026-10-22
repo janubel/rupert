@@ -1,95 +1,93 @@
-<% content_for :title, "Bank reconciliation" %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
+<% content_for :title, 'Bank reconciliation' %>
+<% can_write = Current.user.can?('finance.write') %>
+<% s = @reconciliation.summary %>
+<div class="space-y-6">
+  <%= render layout: 'finance/page_header', locals: { title: 'Bank reconciliation', range: report_range_label(@from.to_date, @to.to_date), print: true,
+        menu: [['Bank transactions', bank_statements_path], ['General ledger', finance_journal_entries_path]],
+        explain: "Match each line on the #{@account_label} bank statement to a ledger entry. Suggestions need the same signed amount inside your date window, and nothing is applied until you confirm it; a zero difference does not prove complete records or a reconciled bank balance, so review unmatched items and settlement timing." } do %><% end %>
 
-  <%= render layout: 'finance/page_header', locals: { title: 'Bank reconciliation', range: "#{@from} through #{@to}", print: true,
-        explain: "Match each line on the #{@account_label} bank statement to a ledger entry. Suggestions are never applied until you confirm them." } do %>
-    <%= link_to "General ledger", finance_journal_entries_path, class: "btn-ghost btn-sm" %>
-    <%= link_to "Bank statements", bank_statements_path, class: "btn-ghost btn-sm" %>
+  <%= form_tag finance_bank_reconciliation_path, method: :get, class: 'toolbar', role: 'search', aria: { label: 'Choose the statement and dates' } do %>
+    <div class="toolbar-field"><%= label_tag :account_label, 'Statement', class: 'field-label' %><%= select_tag :account_label, options_for_select(@account_labels, @account_label), class: 'select' %></div>
+    <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from, class: 'input' %></div>
+    <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @to, class: 'input' %></div>
+    <div class="toolbar-field"><%= label_tag :window_days, 'Match window', class: 'field-label' %><%= select_tag :window_days, options_for_select([['Same day', 0], ['±3 days', 3], ['±5 days', 5], ['±10 days', 10]], @reconciliation.window_days), class: 'select' %></div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_bank_reconciliation_path, class: 'btn-ghost' %></div>
   <% end %>
 
-  <%= form_tag finance_bank_reconciliation_path, method: :get, class: "card card-pad operations-filters" do %>
-    <%= select_tag :account_label, options_for_select(@account_labels, @account_label), class: "select", aria: { label: "Account" } %>
-    <%= date_field_tag :from, @from, class: "select" %>
-    <%= date_field_tag :to, @to, class: "select" %>
-    <%= select_tag :window_days, options_for_select([["±0 days",0],["±3 days",3],["±5 days",5],["±10 days",10]], @reconciliation.window_days), class: "select", aria: { label: "Match window" } %>
-    <%= submit_tag "Show lines", class: "btn-ghost btn-sm" %>
-  <% end %>
-
-  <section class="card card-pad">
-    <h2 class="font-display text-xl">Statement ledger account</h2>
-    <p class="text-sm text-mocha">Choose the single asset account represented by this statement label. Existing labels are not mapped automatically. One label represents one ledger account.</p>
-    <% unless @reconciliation.mapping %><p role="status">Choose a ledger account before matching. Ledger totals and the difference are unavailable until then.</p><% end %>
-    <% if Current.user.can?('finance.write') %>
-    <%= form_tag finance_bank_reconciliation_account_path, method: :post, class: "operations-filters" do %>
-      <%= hidden_field_tag :account_label, @account_label %>
-      <%= hidden_field_tag :from, @from %><%= hidden_field_tag :to, @to %>
-      <%= select_tag :ledger_account_id, options_from_collection_for_select(@reconciliation.bank_accounts, :id, :label, @reconciliation.mapping&.ledger_account_id), include_blank: 'Choose a ledger account', required: true, class: 'select', aria: { label: 'Statement ledger account' } %>
-      <%= submit_tag 'Save account mapping', class: 'btn-primary btn-sm' %>
+  <section class="section-card" aria-labelledby="statement-account-title">
+    <div class="card-head"><div><h2 id="statement-account-title" class="section-title">Statement ledger account</h2><p class="card-hint">The one asset account this statement label stands for. Labels are never mapped automatically; one label is one ledger account.</p></div></div>
+    <% unless @reconciliation.mapping %><p role="status" class="text-sm text-ink">Choose a ledger account before matching. Ledger totals and the difference are unavailable until then.</p><% end %>
+    <% if can_write %>
+      <%= form_tag finance_bank_reconciliation_account_path, method: :post, class: 'toolbar' do %>
+        <%= hidden_field_tag :account_label, @account_label %>
+        <%= hidden_field_tag :from, @from %><%= hidden_field_tag :to, @to %>
+        <div class="toolbar-field"><%= label_tag :ledger_account_id, 'Ledger account', class: 'field-label' %><%= select_tag :ledger_account_id, options_from_collection_for_select(@reconciliation.bank_accounts, :id, :label, @reconciliation.mapping&.ledger_account_id), include_blank: 'Choose a ledger account', required: true, class: 'select' %></div>
+        <div class="toolbar-actions"><%= submit_tag 'Save', class: 'btn-primary', name: nil %></div>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-mocha">A finance editor can set the statement ledger account.</p>
     <% end %>
-    <% else %><p class="text-sm text-mocha">A finance editor can set the statement ledger account.</p><% end %>
   </section>
 
-  <% s = @reconciliation.summary %>
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Reconciliation summary">
     <div class="stat">
-      <div class="stat-label">Lines<%= define('matched_line') %></div>
+      <div class="stat-label">Statement lines<%= define('matched_line') %></div>
       <p class="stat-value mt-1"><%= s[:lines] %></p>
-      <p class="mt-1 text-sm text-mocha"><%= s[:matched] %> with a matching ledger movement · <%= s[:unmatched_lines] %> without one. Review and confirm suggestions below.</p>
+      <p class="mt-1 text-xs text-taupe"><%= s[:matched] %> with a matching ledger movement · <%= s[:unmatched_lines] %> without one</p>
     </div>
     <div class="stat">
       <div class="stat-label">Statement net · USD<%= define('statement_net') %></div>
       <p class="stat-value mt-1"><%= finance_money(s[:statement_net_cents]) %></p>
-      <p class="mt-1 text-sm text-mocha">in <%= finance_money(s[:statement_in_cents]) %> · out <%= finance_money(s[:statement_out_cents]) %></p>
+      <p class="mt-1 text-xs text-taupe">in <%= finance_money(s[:statement_in_cents]) %> · out <%= finance_money(s[:statement_out_cents]) %></p>
     </div>
     <div class="stat">
       <div class="stat-label">Ledger net · USD<%= define('ledger_net') %></div>
-      <p class="stat-value mt-1"><%= s[:gl_net_cents].nil? ? "Unavailable" : finance_money(s[:gl_net_cents]) %></p>
-      <p class="mt-1 text-sm text-mocha"><%= @reconciliation.mapping&.ledger_account&.label || "No account mapped" %></p>
+      <p class="stat-value mt-1"><%= s[:gl_net_cents].nil? ? 'Unavailable' : finance_money(s[:gl_net_cents]) %></p>
+      <p class="mt-1 text-xs text-taupe"><%= @reconciliation.mapping&.ledger_account&.label || 'No account mapped' %></p>
     </div>
     <div class="stat">
       <div class="stat-label">Difference · USD<%= define('bank_difference') %></div>
-      <p class="stat-value mt-1"><%= s[:difference_cents].nil? ? "Unavailable" : finance_money(s[:difference_cents]) %></p>
-      <p class="mt-1 text-sm font-semibold"><%= s[:difference_cents].nil? ? "Choose the statement ledger account." : s[:difference_cents].zero? ? "Selected-period net movements agree; review unmatched lines." : "Selected-period net difference: #{finance_money_text(s[:difference_cents].abs)}." %></p>
+      <p class="stat-value mt-1"><%= s[:difference_cents].nil? ? 'Unavailable' : finance_money(s[:difference_cents]) %></p>
+      <p class="mt-1 text-xs font-semibold text-mocha"><%= s[:difference_cents].nil? ? 'Choose the statement ledger account.' : s[:difference_cents].zero? ? 'Net movements agree; review unmatched lines.' : "Net difference of #{finance_money_text(s[:difference_cents].abs)}." %></p>
       <% money_or_na = ->(cents) { cents.nil? ? 'Unavailable' : finance_money(cents) } %>
       <%= explain_calculation(title: 'Statement minus ledger', id: 'bank-difference',
-              formula: 'Statement net (in + out) − ledger net (movements in the selected ledger account) for the selected period.',
-              rows: [['Statement in', finance_money(s[:statement_in_cents])], ['Statement out', finance_money(s[:statement_out_cents])], ['Statement net', finance_money(s[:statement_net_cents])],
-                     ['Ledger in', money_or_na.(s[:gl_in_cents])], ['Ledger out', money_or_na.(s[:gl_out_cents])], ['Ledger net', money_or_na.(s[:gl_net_cents])],
-                     ['Difference', money_or_na.(s[:difference_cents])]],
-              note: "#{s[:unmatched_lines]} statement #{'line'.pluralize(s[:unmatched_lines])} and #{s[:unmatched_gl]} ledger #{'movement'.pluralize(s[:unmatched_gl])} are still unmatched. Ignored lines are excluded. Confirming a match records the link only; nothing here changes an amount.",
-              term: 'bank_difference', lesson: 'books') %>
+            formula: 'Statement net (in + out) − ledger net (movements in the selected ledger account) for the selected period.',
+            rows: [['Statement in', finance_money(s[:statement_in_cents])], ['Statement out', finance_money(s[:statement_out_cents])], ['Statement net', finance_money(s[:statement_net_cents])],
+                   ['Ledger in', money_or_na.(s[:gl_in_cents])], ['Ledger out', money_or_na.(s[:gl_out_cents])], ['Ledger net', money_or_na.(s[:gl_net_cents])],
+                   ['Difference', money_or_na.(s[:difference_cents])]],
+            note: "#{s[:unmatched_lines]} statement #{'line'.pluralize(s[:unmatched_lines])} and #{s[:unmatched_gl]} ledger #{'movement'.pluralize(s[:unmatched_gl])} are still unmatched. Ignored lines are excluded. Confirming a match records the link only; nothing here changes an amount.",
+            term: 'bank_difference', lesson: 'books') %>
     </div>
   </section>
 
   <% dups = @reconciliation.duplicate_groups %>
   <% if dups.any? %>
-    <div class="card card-pad">
-      <h2 class="font-display text-xl">Possible duplicates (<%= dups.size %>)</h2>
-      <p class="mt-1 text-sm text-mocha">Statement lines with the same amount close together. Review and ignore any that are true duplicates; ignored lines drop out of reconciliation.</p>
-      <div class="mt-3 space-y-3">
+    <section class="section-card" aria-labelledby="duplicates-title">
+      <div class="card-head"><div><h2 id="duplicates-title" class="section-title">Possible duplicates</h2><p class="card-hint">Statement lines with the same amount close together. Ignore the true duplicates; ignored lines drop out of reconciliation.</p></div><div class="card-head-actions"><span class="pill-clay"><%= pluralize(dups.size, 'group') %> to review</span></div></div>
+      <ul class="space-y-3">
         <% dups.each do |group| %>
-          <div class="rounded border border-fog p-3">
+          <li class="rounded-card border border-fog p-3">
             <% group.each do |line| %>
-              <div class="flex items-center justify-between gap-3 py-1">
-                <span><%= line.posted_on %> · <%= line.description.to_s.truncate(44) %> · <%= finance_money(line.amount_cents) %></span>
-                <% if line.recorded_source? %><span class="text-sm text-mocha">Review recorded source</span><% else %>
-                <%= button_to "Ignore this line", finance_bank_reconciliation_ignore_path, method: :post, params: { line_id: line.id, from: @from, to: @to }, class: "btn-ghost btn-sm",
-                      form: { data: { turbo_confirm: "Ignore this statement line?\n\n#{line.posted_on}, #{finance_money_text(line.amount_cents)}, #{line.description.to_s.truncate(40)}\n\nIt drops out of reconciliation and duplicate checks. The bank statement itself is not changed." } } %>
+              <div class="flex flex-wrap items-center justify-between gap-3 py-1 text-sm">
+                <span><%= l(line.posted_on, format: :short) %> · <%= line.description.to_s.truncate(44) %> · <%= finance_money(line.amount_cents) %></span>
+                <% if line.recorded_source? %><span class="text-xs text-mocha">Review recorded source</span><% else %>
+                  <%= button_to 'Ignore this line', finance_bank_reconciliation_ignore_path, method: :post, params: { line_id: line.id, from: @from, to: @to }, class: 'btn-ghost btn-sm',
+                        form: { data: { turbo_confirm: "Ignore this statement line?\n\n#{line.posted_on}, #{finance_money_text(line.amount_cents)}, #{line.description.to_s.truncate(40)}\n\nIt drops out of reconciliation and duplicate checks. The bank statement itself is not changed." } } %>
                 <% end %>
               </div>
             <% end %>
-          </div>
+          </li>
         <% end %>
-      </div>
-    </div>
+      </ul>
+    </section>
   <% end %>
 
-  <div class="card overflow-hidden">
-    <h2 class="px-4 pt-4 font-display text-xl">Statement lines</h2>
-    <div class="operations-table-region" role="region" tabindex="0" aria-label="Statement lines">
-      <table class="operations-table finance-table w-full">
-        <thead class="border-b border-fog bg-haze/60">
+  <section class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading 'Statement lines', hint: 'Each line beside its suggested ledger entry. Confirm a suggestion to record the link; clear it to undo.' %></div>
+    <div class="table-region" role="region" tabindex="0" aria-label="Statement lines">
+      <table class="table finance-table">
+        <caption class="sr-only">Statement lines for <%= @account_label %> with suggested ledger matches, amounts in USD</caption>
+        <thead>
           <tr>
             <th scope="col" class="th">Date</th>
             <th scope="col" class="th">Description</th>
@@ -99,31 +97,31 @@
           </tr>
         </thead>
         <tbody>
-          <% if @reconciliation.lines.empty? %><tr><td colspan="5" class="empty-row">No statement lines for this account and these dates. Upload a statement on <%= link_to "Bank statements", bank_statements_path, class: "link" %>, or widen the dates.</td></tr><% end %>
+          <% if @reconciliation.lines.empty? %><tr><td colspan="5" class="empty-row">No statement lines for this account and these dates. Upload a statement on <%= link_to 'Bank transactions', bank_statements_path, class: 'link' %>, or widen the dates.</td></tr><% end %>
           <% @reconciliation.lines.each do |line| %>
             <% suggestion = @reconciliation.suggestions[line.id] %>
             <tr>
-              <td class="td whitespace-nowrap"><%= line.posted_on %></td>
+              <td class="td whitespace-nowrap"><%= l(line.posted_on, format: :short) %></td>
               <td class="td"><%= line.description.to_s.truncate(48) %></td>
               <td class="td num"><%= finance_money(line.amount_cents) %></td>
               <td class="td">
                 <% if suggestion %>
-                  <%= link_to (suggestion.entry.memo.presence || "Entry ##{suggestion.entry.id}"), finance_journal_entry_path(suggestion.entry), class: "link" %>
-                  <span class="text-sm text-mocha">· <%= suggestion.entry.posted_on %><%= " (±#{suggestion.days_apart}d)" if suggestion.days_apart.to_i.positive? %></span>
+                  <%= link_to (suggestion.entry.memo.presence || "Entry ##{suggestion.entry.id}"), finance_journal_entry_path(suggestion.entry), class: 'link' %>
+                  <span class="text-xs text-mocha">· <%= l(suggestion.entry.posted_on, format: :short) %><%= " (±#{suggestion.days_apart}d)" if suggestion.days_apart.to_i.positive? %></span>
                 <% else %>
                   <span class="text-mocha">No suggested match</span>
                 <% end %>
               </td>
-              <td class="td">
+              <td class="td whitespace-nowrap">
                 <% if line.recorded_source? %>
-                  <span class="text-sm text-mocha">Linked to recorded source</span>
+                  <span class="pill-olive">Linked to recorded source</span>
                 <% elsif line.journal_entry_id.present? %>
-                  <%= button_to "Clear match", finance_bank_reconciliation_unmatch_path, method: :post,
-                        params: { line_id: line.id, from: @from, to: @to }, class: "btn-ghost btn-sm",
+                  <%= button_to 'Clear match', finance_bank_reconciliation_unmatch_path, method: :post,
+                        params: { line_id: line.id, from: @from, to: @to }, class: 'btn-ghost btn-sm',
                         form: { data: { turbo_confirm: "Clear this match?\n\nStatement line: #{line.posted_on}, #{finance_money_text(line.amount_cents)}, #{line.description.to_s.truncate(40)}\n\nThe line goes back to unmatched. The ledger entry is not changed." } } %>
                 <% elsif suggestion %>
-                  <%= button_to "Confirm match", finance_bank_reconciliation_match_path, method: :post,
-                        params: { line_id: line.id, journal_entry_id: suggestion.entry.id, from: @from, to: @to }, class: "btn-primary btn-sm",
+                  <%= button_to 'Confirm match', finance_bank_reconciliation_match_path, method: :post,
+                        params: { line_id: line.id, journal_entry_id: suggestion.entry.id, from: @from, to: @to }, class: 'btn-ghost btn-sm',
                         form: { data: { turbo_confirm: "Match these two records?\n\nStatement line: #{line.posted_on}, #{finance_money_text(line.amount_cents)}, #{line.description.to_s.truncate(40)}\nLedger entry ##{suggestion.entry.id}: #{suggestion.entry.posted_on}, #{finance_money_text(suggestion.entry.debit_cents)}, #{suggestion.entry.memo.to_s.truncate(40)}\n\nThis records that the bank line belongs to that entry. No amounts change. You can clear the match later." } } %>
                 <% else %>
                   <span class="text-mocha">Nothing to confirm</span>
@@ -134,31 +132,28 @@
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 
   <% if @reconciliation.unmatched_gl.any? %>
-    <div class="card overflow-hidden">
-      <h2 class="px-4 pt-4 font-display text-xl">Ledger movements with no statement line (<%= @reconciliation.unmatched_gl.size %>)</h2>
-      <div class="operations-table-region" role="region" tabindex="0" aria-label="Unmatched ledger movements">
-        <table class="operations-table finance-table w-full">
-          <thead class="border-b border-fog bg-haze/60">
+    <section class="card">
+      <div class="card-pad border-b border-fog"><%= section_heading 'Ledger movements with no statement line', hint: "#{pluralize(@reconciliation.unmatched_gl.size, 'posted movement')} in the selected ledger account that no statement line claims." %></div>
+      <div class="table-region" role="region" tabindex="0" aria-label="Unmatched ledger movements">
+        <table class="table finance-table">
+          <caption class="sr-only">Ledger movements with no statement line, amounts in USD</caption>
+          <thead>
             <tr><th scope="col" class="th">Date</th><th scope="col" class="th">Entry</th><th scope="col" class="th num">Amount</th></tr>
           </thead>
           <tbody>
             <% @reconciliation.unmatched_gl.each do |m| %>
               <tr>
-                <td class="td"><%= m[:date] %></td>
-                <td class="td"><%= link_to (m[:entry].memo.presence || "Entry ##{m[:entry].id}"), finance_journal_entry_path(m[:entry]), class: "link" %></td>
+                <td class="td whitespace-nowrap"><%= m[:date].respond_to?(:strftime) ? l(m[:date], format: :short) : m[:date] %></td>
+                <td class="td"><%= link_to (m[:entry].memo.presence || "Entry ##{m[:entry].id}"), finance_journal_entry_path(m[:entry]), class: 'link' %></td>
                 <td class="td num"><%= finance_money(m[:signed_cents]) %></td>
               </tr>
             <% end %>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   <% end %>
-
-  <p class="text-sm text-mocha">
-    Compares non-ignored statement lines with posted movements in the selected ledger account for the same dates. Matching suggestions require the same signed amount and use your date window. A zero net difference does not establish complete records or a reconciled bank balance; review unmatched items and settlement timing.
-  </p>
 </div>

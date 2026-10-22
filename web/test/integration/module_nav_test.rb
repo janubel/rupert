@@ -39,7 +39,7 @@ class ModuleNavTest < ActionDispatch::IntegrationTest
     get inventory_index_path
     assert_response :success
     assert_select "nav[aria-label='Module'] a", text: 'Locations'
-    assert_select "nav[aria-label='Module'] a", text: 'Alerts'
+    assert_select "nav[aria-label='Module'] a", text: 'Stock alerts'
     assert_select "nav[aria-label='Module'] a.nav-pill-active-sm", text: 'Inventory'
   end
 
@@ -64,7 +64,7 @@ class ModuleNavTest < ActionDispatch::IntegrationTest
     get ledger_index_path
     assert_response :success
     assert_select "nav[aria-label='Module areas'] a", text: 'Bookkeeping'
-    assert_select "nav[aria-label='Module'] a", text: 'Ledger'
+    assert_select "nav[aria-label='Module'] a", text: 'Imported orders'
     assert_select "nav[aria-label='Module'] a", text: 'Reports', count: 0
     assert_select "nav[aria-label='Module areas'] a", text: 'Reports'
     assert_select "nav[aria-label='Module'] a", text: 'Projects', count: 0
@@ -76,7 +76,7 @@ class ModuleNavTest < ActionDispatch::IntegrationTest
     get users_path
     assert_response :success
     team = assert_select("nav[aria-label='Module areas'] a", text: 'Team')
-    assert_equal(users_path, team.first['href'])
+    assert_equal(people_employees_path, team.first['href'])
     assert_select "nav[aria-label='Module'] a", text: 'Users'
     assert_select "nav[aria-label='Module'] a.nav-pill-active-sm", text: 'Users'
     assert_select "nav[aria-label='Module'] a", text: 'Users', count: 1

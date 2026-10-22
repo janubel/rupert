@@ -1,25 +1,31 @@
-<section class="card card-pad" id="swipesimple">
-  <p><%= link_to 'Import native SwipeSimple transactions and invoices / daily totals', swipesimple_reports_path, class: 'btn-ghost btn-sm' %></p>
-  <h2 class="font-display text-xl text-ink">Review SwipeSimple sales CSV</h2>
-  <p class="mt-2 text-sm text-mocha">Prepare a line-item CSV in Rupert’s supported format, then review it before importing. Native SwipeSimple exports may need conversion; a transaction report alone does not establish item quantities or prices.</p>
-  <p class="mt-2 text-xs text-taupe">Required: Order, Date, Item, Qty, Unit Price, Payment, Status and Currency. Use an ISO timestamp with seconds and its UTC offset, such as <code>2026-07-01T14:30:00-04:00</code>. Each order needs one known tender and an explicit paid/completed/approved status. Declines, voids, refunds, authorizations, split tenders and changed existing orders require separate reconciliation.</p>
-  <p class="mt-2 text-xs text-taupe">Only item sales are supported. Tax, tips, discounts, fees and location allocation are unavailable. Customer names are ignored. Importing never contacts a payment provider or changes platform inventory.</p>
-  <%= link_to 'Download sample CSV', 'https://techmore.github.io/rupert/data/swipesimple-sales-template.csv', class: 'btn-ghost btn-sm mt-3' %>
+<section class="section-card" id="swipesimple">
+  <%= section_heading 'Review SwipeSimple sales CSV', hint: 'Prepare a line-item CSV in Rupert’s supported format, then review it before importing.' do %>
+    <%= link_to 'Native SwipeSimple import', swipesimple_reports_path, class: 'btn-ghost btn-sm' %>
+    <%= link_to 'Download sample CSV', 'https://techmore.github.io/rupert/data/swipesimple-sales-template.csv', class: 'btn-ghost btn-sm' %>
+  <% end %>
+  <details class="explainer text-xs text-taupe">
+    <summary class="explainer-summary">Format and limits</summary>
+    <p class="mt-1">Native SwipeSimple exports may need conversion; a transaction report alone does not establish item quantities or prices.</p>
+    <p class="mt-1">Required: Order, Date, Item, Qty, Unit Price, Payment, Status and Currency. Use an ISO timestamp with seconds and its UTC offset, such as <code>2026-07-01T14:30:00-04:00</code>. Each order needs one known tender and an explicit paid/completed/approved status. Declines, voids, refunds, authorizations, split tenders and changed existing orders require separate reconciliation.</p>
+    <p class="mt-1">Only item sales are supported. Tax, tips, discounts, fees and location allocation are unavailable. Customer names are ignored. Importing never contacts a payment provider or changes platform inventory.</p>
+  </details>
 
   <%= form_tag(@swipesimple_preview_token.present? ? import_swipesimple_syncs_path : preview_swipesimple_syncs_path,
-    method: :post, multipart: true, class: 'mt-4 space-y-3', data: {
+    method: :post, multipart: true, class: 'space-y-3', data: {
       turbo: false, busy: false, controller: 'swipesimple-import', action: 'submit->swipesimple-import#submit',
       swipesimple_import_preview_url_value: preview_swipesimple_syncs_path,
       swipesimple_import_import_url_value: import_swipesimple_syncs_path
     }) do %>
     <%= hidden_field_tag :preview_token, @swipesimple_preview_token, data: { swipesimple_import_target: 'token' } %>
-    <label class="block text-sm text-mocha">CSV file (maximum 2 MiB, 5,000 rows)
-      <input type="file" name="file" accept=".csv,text/csv,text/plain" class="input mt-1" data-action="change->swipesimple-import#reset" data-swipesimple-import-target="file">
-    </label>
-    <label class="block text-sm text-mocha">Or paste CSV
-      <textarea name="text" rows="5" placeholder="Order,Date,Item,SKU,Qty,Unit Price,Total,Payment,Status,Currency&#10;SAMPLE-1,2026-07-01T14:30:00-04:00,Sample item,SAMPLE,2,14.00,28.00,Card,Completed,USD" class="input mt-1 font-mono text-xs" data-action="input->swipesimple-import#reset" data-swipesimple-import-target="text"></textarea>
-    </label>
-    <div class="rounded-xl bg-haze p-4 text-sm space-y-2" role="status" aria-live="polite" data-swipesimple-import-target="status">
+    <div>
+      <label class="field-label" for="swipesimple-file">CSV file (maximum 2 MiB, 5,000 rows)</label>
+      <input type="file" id="swipesimple-file" name="file" accept=".csv,text/csv,text/plain" class="input" data-action="change->swipesimple-import#reset" data-swipesimple-import-target="file">
+    </div>
+    <div>
+      <label class="field-label" for="swipesimple-text">Or paste CSV</label>
+      <textarea id="swipesimple-text" name="text" rows="5" placeholder="Order,Date,Item,SKU,Qty,Unit Price,Total,Payment,Status,Currency&#10;SAMPLE-1,2026-07-01T14:30:00-04:00,Sample item,SAMPLE,2,14.00,28.00,Card,Completed,USD" class="input font-mono text-xs" data-action="input->swipesimple-import#reset" data-swipesimple-import-target="text"></textarea>
+    </div>
+    <div class="rounded-control bg-haze p-4 text-sm space-y-2" role="status" aria-live="polite" data-swipesimple-import-target="status">
       <% if @swipesimple_preview %>
         <% preview = @swipesimple_preview.with_indifferent_access %>
         <p><strong>Validated preview:</strong> <%= preview[:orders] %> orders, <%= preview[:lines] %> item lines, <%= preview[:payments] %> tenders. Item sales: <%= preview[:currency] %> <%= number_with_precision(preview[:gross_cents].to_d / 100, precision: 2) %>.</p>
@@ -29,6 +35,8 @@
         Previewing validates the whole file without saving sales. Only the reviewed file can be imported.
       <% end %>
     </div>
-    <%= submit_tag(@swipesimple_preview_token.present? ? 'Import reviewed sales' : 'Preview sales', class: 'btn-primary btn-sm', data: { swipesimple_import_target: 'button' }) %>
+    <div class="form-actions">
+      <%= submit_tag(@swipesimple_preview_token.present? ? 'Import reviewed sales' : 'Preview sales', class: 'btn-primary', data: { swipesimple_import_target: 'button' }) %>
+    </div>
   <% end %>
 </section>

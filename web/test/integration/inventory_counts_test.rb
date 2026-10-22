@@ -31,7 +31,7 @@ class InventoryCountsTest < ActionDispatch::IntegrationTest
   test 'index lists counts' do
     get inventory_counts_path
     assert_response :success
-    assert_select 'h1', /Manual counts/
+    assert_select 'h1', /Physical counts/
   end
 
   test 'creating a count builds its items' do

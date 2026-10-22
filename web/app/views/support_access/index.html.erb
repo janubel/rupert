@@ -1,10 +1,44 @@
-<% content_for :title, 'Customer support permissions' %>
-<div class="mx-auto max-w-4xl space-y-6"><section class="card card-pad space-y-4"><h1 class="page-title">Your workspace. Your permission.</h1><p>Give one support administrator read access to selected business screens for one hour. Access expires automatically and can be revoked sooner. Support cannot edit records or open provider credentials through this grant.</p>
-<p class="text-sm">Current protection: encrypted saved credentials and application access controls. Customer-held encryption keys are not implemented; infrastructure operators can still access server-held data. A support grant does not transfer encryption keys.</p>
-<%= form_with url: support_access_path, data: {turbo: false}, class: 'space-y-3' do |f| %>
-<%= f.label :support_user_id, 'Support administrator' %><%= f.select :support_user_id, @operators.map { |user| [user.email, user.id] }, {prompt: 'Choose an administrator'}, required: true, class: 'input' %>
-<%= f.label :reason, 'What do you need help with?' %><%= f.text_field :reason, required: true, maxlength: 300, class: 'input' %>
-<%= f.submit 'Grant read access for one hour', class: 'btn-primary' %><% end %></section>
-<section class="card card-pad space-y-3"><h2 class="font-display text-xl">Access grants</h2><% @grants.each do |grant| %><article class="border-b py-3"><strong><%= grant.support_user.email %></strong><p><%= grant.reason %></p><p>Expires <%= grant.expires_at.utc.iso8601 %> · <%= grant.revoked_at ? 'Revoked' : grant.expires_at > Time.current ? 'Active' : 'Expired' %></p><% unless grant.revoked_at %><%= button_to 'Revoke access', revoke_support_access_path(grant), method: :delete, class: 'btn-ghost' %><% end %></article><% end %><% if @grants.empty? %><p>No support permissions granted.</p><% end %></section>
-<section class="card card-pad space-y-3"><h2 class="font-display text-xl">Recent access history</h2><% @events.each do |event| %><p class="text-sm"><%= event.created_at.utc.iso8601 %> · <%= event.actor.email %> · <%= event.action %> · <%= event.resource %></p><% end %></section>
-<%= link_to 'Back to billing', billing_path, class: 'btn-ghost' %></div>
+<%# Support access: a Settings page (docs/ui-standards.md §4). Grant form, then grants, then history. %>
+<% content_for :title, 'Support access' %>
+<div class="page-medium space-y-6">
+  <%= page_header 'Support access', subtitle: 'Give one support administrator read access to selected business screens for one hour.', eyebrow: 'Your workspace',
+                  menu: [['Subscription', billing_path], ['Open workspace', root_path]] %>
+  <%= fold_explainer('Access expires automatically and can be revoked sooner. Support cannot edit records or open provider credentials through this grant. Current protection: encrypted saved credentials and application access controls. Customer-held encryption keys are not implemented; infrastructure operators can still access server-held data. A support grant does not transfer encryption keys.', class: 'text-sm text-mocha') %>
+
+  <section class="section-card">
+    <%= section_heading 'Grant access' %>
+    <%= form_with url: support_access_path, data: { turbo: false }, class: 'space-y-4' do |f| %>
+      <fieldset class="space-y-3">
+        <div><%= f.label :support_user_id, 'Support administrator', class: 'field-label' %><%= f.select :support_user_id, @operators.map { |user| [user.email, user.id] }, { prompt: 'Choose an administrator' }, required: true, class: 'input' %></div>
+        <div><%= f.label :reason, 'What do you need help with?', class: 'field-label' %><%= f.text_field :reason, required: true, maxlength: 300, class: 'input' %></div>
+      </fieldset>
+      <div class="form-actions"><%= f.submit 'Grant read access for one hour', class: 'btn-primary' %></div>
+    <% end %>
+  </section>
+
+  <section class="section-card">
+    <%= section_heading 'Access grants' %>
+    <% if @grants.empty? %>
+      <%= empty_state 'No support permissions granted', hint: 'Grant read access above when you want help with something.' %>
+    <% else %>
+      <div class="table-region" role="region" tabindex="0" aria-label="Access grants">
+        <table class="table">
+          <thead><tr><th scope="col" class="th">Administrator</th><th scope="col" class="th">Reason</th><th scope="col" class="th">Expires</th><th scope="col" class="th">Status</th><th scope="col" class="th"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            <% @grants.each do |grant| %>
+              <% state = grant.revoked_at ? 'Revoked' : grant.expires_at > Time.current ? 'Active' : 'Expired' %>
+              <tr><td class="td font-semibold"><%= grant.support_user.email %></td><td class="td"><%= grant.reason %></td><td class="td"><%= grant.expires_at.utc.iso8601 %></td><td class="td"><span class="<%= state == 'Active' ? 'pill-fern' : 'pill-taupe' %>"><%= state %></span></td><td class="td text-right"><% unless grant.revoked_at %><%= button_to 'Revoke', revoke_support_access_path(grant), method: :delete, class: 'btn-ghost btn-sm' %><% end %></td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="section-card">
+    <%= section_heading 'Recent access history' %>
+    <% if @events.empty? %><p class="text-sm text-taupe">No access events recorded yet.</p><% else %>
+      <ul class="space-y-1 text-sm"><% @events.each do |event| %><li><%= event.created_at.utc.iso8601 %> · <%= event.actor.email %> · <%= event.action %> · <%= event.resource %></li><% end %></ul>
+    <% end %>
+  </section>
+</div>

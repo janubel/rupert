@@ -1,4 +1,4 @@
-<%= render "reports/layout", title: "Operations report", subtitle: "Sync health, reconciliation, and POS cash reconciliation." do %>
+<%= render "reports/layout", title: "Operations report", subtitle: "Sync health, reconcile runs and POS cash variance for the period." do %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
       <div class="stat-label">Sync success rate<%= define('sync') %></div>
@@ -27,14 +27,11 @@
     </div>
   </section>
 
-  <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">Sync runs</h2>
-      <p class="text-xs text-mocha">Runs started in this window, newest first (up to 200).</p>
-    </div>
+  <div class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading 'Sync runs', hint: 'Runs started in this window, newest first (up to 200).' %></div>
     <%= report_table 'operations-sync-runs', label: 'Sync runs' do %>
-      <table class="operations-table w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th" data-col="started">Started</th>
             <th scope="col" class="th" data-col="source">Source</th>
@@ -45,10 +42,10 @@
             <th scope="col" class="th" data-col="error">Error</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% @sync_runs.each do |run| %>
             <% seconds = run.finishedAt && run.startedAt ? (run.finishedAt - run.startedAt).round : nil %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td whitespace-nowrap text-mocha" data-sort-value="<%= run.startedAt&.iso8601 %>"><%= run.startedAt ? l(run.startedAt, format: :short) : '—' %></td>
               <td class="td"><%= run.source.presence || '—' %></td>
               <td class="td text-mocha"><%= run.mode %></td>
@@ -64,14 +61,11 @@
     <% end %>
   </div>
 
-  <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">POS sessions</h2>
-      <p class="text-xs text-mocha">Register sessions opened in this window (up to 200).</p>
-    </div>
+  <div class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading 'POS sessions', hint: 'Register sessions opened in this window (up to 200).' %></div>
     <%= report_table 'operations-pos-sessions', label: 'POS sessions' do %>
-      <table class="operations-table w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th" data-col="register">Register</th>
             <th scope="col" class="th" data-col="opened">Opened</th>
@@ -85,10 +79,10 @@
             <th scope="col" class="th num" data-col="variance">Variance</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% cash = ->(cents) { cents.nil? ? '—' : number_to_currency(cents / 100.0) } %>
           <% @pos_sessions.each do |session| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td font-medium text-ink"><%= session.name %></td>
               <td class="td whitespace-nowrap text-mocha" data-sort-value="<%= session.opened_at&.iso8601 %>"><%= l(session.opened_at, format: :short) %></td>
               <td class="td whitespace-nowrap text-mocha" data-sort-value="<%= session.closed_at&.iso8601 %>"><%= session.closed_at ? l(session.closed_at, format: :short) : '—' %></td>
@@ -104,13 +98,11 @@
     <% end %>
   </div>
 
-  <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">Reconcile runs</h2>
-    </div>
+  <div class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading 'Reconcile runs' %></div>
     <%= report_table 'operations-reconcile-runs', label: 'Reconcile runs' do %>
-      <table class="operations-table w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th" data-col="started">Started</th>
             <th scope="col" class="th" data-col="mode">Mode</th>
@@ -120,9 +112,9 @@
             <th scope="col" class="th num" data-col="failed">Failed</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% @reconcile_runs.each do |run| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td whitespace-nowrap text-mocha" data-sort-value="<%= run.startedAt&.iso8601 %>"><%= l(run.startedAt, format: :short) %></td>
               <td class="td text-mocha"><%= run.mode %></td>
               <td class="td"><span class="<%= run.status == "applied" ? "pill-fern" : run.status == "failed" ? "pill-rose" : "pill-taupe" %>"><%= run.status %></span></td>

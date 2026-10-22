@@ -4,20 +4,21 @@
               ['tax', 'Tax collected'], ['refunded', 'Tax refunded'], ['net', 'Net tax'], ['estimated', 'Estimated tax'], ['note', 'Note']] %>
 <% default_hidden = %w[gross refunded] + (report.estimating? ? [] : %w[estimated]) %>
 <% numeric = %w[orders gross before_tax tax refunded net estimated] %>
-<div class="card overflow-hidden">
+<div class="card">
+  <div class="card-pad border-b border-fog"><%= section_heading 'Tax by source and store', hint: "#{report.from.strftime('%b %-d, %Y')} – #{report.to.strftime('%b %-d, %Y')} · amounts as reported by each source" %></div>
   <%= report_table 'sales-tax', label: 'Sales tax by source and store', filename: "sales-tax-#{report.from}-#{report.to}" do %>
-    <table class="operations-table finance-table w-full text-sm">
+    <table class="table finance-table">
       <caption class="sr-only">Sales tax by source and store from <%= report.from %> through <%= report.to %></caption>
-      <thead class="border-b border-fog bg-haze/60">
+      <thead>
         <tr>
           <% columns.each do |key, label| %>
             <th scope="col" class="th<%= ' num' if numeric.include?(key) %>" data-col="<%= key %>" <%= 'data-default-hidden' if default_hidden.include?(key) %>><%= label %><%= " (#{report.rate.to_s('F')}%)" if key == 'estimated' && report.estimating? %></th>
           <% end %>
         </tr>
       </thead>
-      <tbody class="divide-y divide-fog">
+      <tbody>
         <% report.lines.each do |line| %>
-          <tr class="hover:bg-cream">
+          <tr>
             <td class="td font-medium text-ink"><%= line.source %></td>
             <td class="td"><%= line.store %></td>
             <td class="td"><%= line.currency %></td>
@@ -34,7 +35,7 @@
           </tr>
         <% end %>
         <% if report.lines.empty? %>
-          <tr><td class="td" colspan="<%= columns.size %>">No sales are stored for these dates and sources. This does not establish a zero-sales period.</td></tr>
+          <tr><td class="empty-row" colspan="<%= columns.size %>">No sales are stored for these dates and sources. This does not establish a zero-sales period; widen the dates or sync a source.</td></tr>
         <% end %>
       </tbody>
     </table>

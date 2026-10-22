@@ -1,8 +1,0 @@
-<% links = retail_workspace_links %>
-<% if links.any? %>
-  <nav aria-label="Retail workspace" class="retail-navigation">
-    <% links.each do |label, path, active| %>
-      <%= link_to label, path, class: "nav-pill workspace-nav-link #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: active ? 'page' : nil } %>
-    <% end %>
-  </nav>
-<% end %>

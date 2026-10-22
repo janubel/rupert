@@ -1,39 +1,35 @@
 <aside id="cash-flow-position" class="card card-pad cash-flow-position">
-  <h2 class="font-display text-xl text-ink">Where cash stands</h2>
+  <%= section_heading 'Where cash stands' %>
   <% balance = report.statement_balance %>
-  <div class="mt-3">
+  <div>
     <p class="stat-label">Last verified bank balance<%= define('statement_balance') %></p>
     <% if balance %>
       <p class="stat-value mt-1" title="<%= finance_money_text(balance[:cents], currency: balance[:currency]) %>"><%= cash_flow_compact(balance[:cents], currency: balance[:currency]) %></p>
-      <p class="text-xs text-taupe">As of <%= balance[:date].strftime('%b %-d, %Y') %>, from the retained statement. A live bank balance is not connected.</p>
+      <p class="mt-1 text-xs text-taupe">As of <%= balance[:date].strftime('%b %-d, %Y') %>, from the retained statement. A live bank balance is not connected.</p>
     <% else %>
       <p class="stat-value-sm mt-1">Unavailable</p>
-      <p class="text-xs text-taupe">Upload a bank statement with a closing balance to see it here. Unavailable is not zero.</p>
+      <p class="mt-1 text-xs text-taupe">Upload a bank statement with a closing balance to see it here. Unavailable is not zero.</p>
     <% end %>
   </div>
-  <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
-    <div class="rounded-xl bg-haze px-4 py-3">
-      <dt class="text-xs font-medium text-mocha">Average per day</dt>
-      <dd class="font-display text-xl <%= report.average_daily_net_cents.negative? ? 'money-negative' : 'text-ink' %>"><%= finance_money_text(report.average_daily_net_cents) %></dd>
+  <dl class="grid grid-cols-2 gap-3 text-sm">
+    <div class="rounded-card bg-haze px-4 py-3">
+      <dt class="stat-label">Average per day</dt>
+      <dd class="mt-1 font-display text-xl <%= report.average_daily_net_cents.negative? ? 'money-negative' : 'text-ink' %>"><%= finance_money_text(report.average_daily_net_cents) %></dd>
       <dd class="text-xs text-taupe">net, over <%= report.span_days %> days</dd>
     </div>
-    <div class="rounded-xl bg-haze px-4 py-3">
-      <dt class="text-xs font-medium text-mocha">At this pace</dt>
-      <% if report.runway_days %>
-        <dd class="font-display text-xl text-ink"><%= report.runway_days >= 60 ? "#{(report.runway_days / 30.4).round} months" : "#{report.runway_days} days" %></dd>
-        <dd class="text-xs text-taupe">until the verified balance reaches zero</dd>
-      <% elsif report.average_daily_net_cents.negative? %>
-        <dd class="font-display text-xl text-ink">Unknown</dd>
-        <dd class="text-xs text-taupe">cash is leaving; no verified balance to count down from</dd>
-      <% else %>
-        <dd class="font-display text-xl text-ink">Growing</dd>
-        <dd class="text-xs text-taupe">more came in than went out</dd>
-      <% end %>
+    <div class="rounded-card bg-haze px-4 py-3">
+      <dt class="stat-label">At this pace</dt>
+      <dd class="mt-1 font-display text-xl text-ink"><%= cash_flow_runway_text(report) %></dd>
+      <dd class="text-xs text-taupe">
+        <% if report.runway_days %>until the verified balance reaches zero
+        <% elsif report.average_daily_net_cents.negative? %>cash is leaving; no verified balance to count down from
+        <% else %>more came in than went out<% end %>
+      </dd>
     </div>
   </dl>
   <% forecast = report.latest_forecast %>
-  <p class="mt-4 text-sm text-mocha">
-    <% if forecast %>Last cash forecast scenario: <%= link_to "##{forecast.id}, #{forecast.created_at.strftime('%b %-d')}", cash_forecast_path(prefill: forecast.id), class: 'underline' %>.<% else %>No cash forecast scenario retained yet.<% end %>
-    <%= link_to 'Plan the next 8 weeks', cash_forecast_path, class: 'underline' %>.
+  <p class="text-sm text-mocha">
+    <% if forecast %>Last cash forecast scenario: <%= link_to "##{forecast.id}, #{forecast.created_at.strftime('%b %-d')}", cash_forecast_path(prefill: forecast.id), class: 'link' %>.<% else %>No cash forecast scenario retained yet.<% end %>
+    <%= link_to 'Plan the next 8 weeks', cash_forecast_path, class: 'link' %>.
   </p>
 </aside>

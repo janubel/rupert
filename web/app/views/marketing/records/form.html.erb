@@ -1,27 +1,44 @@
-<div class="max-w-3xl space-y-5">
-  <%= link_to 'Back to Marketing', marketing_path, class: 'btn-ghost' %>
-  <h1 class="page-title"><%= @record.persisted? ? 'Edit' : 'New' %> <%= @record.class.model_name.element.humanize.downcase %></h1>
-  <p class="text-sm text-mocha">Save source links and operator-entered context. Rupert does not fetch these URLs or publish replies. Enter times in Eastern Time. Changes invalidate previous review evidence.</p>
-  <%= form_with model: @record, scope: :record, url: @record.persisted? ? public_send("marketing_#{@record.class.model_name.element}_path", @record) : marketing_record_path(@record), class: 'card card-pad space-y-4' do |f| %>
-    <%= f.hidden_field :lock_version if @record.persisted? %>
-    <% marketing_record_fields(@record).each do |field| %>
-      <div><%= f.label field, class: 'field-label' %>
-        <% if (choices = marketing_choices(field)) %>
-          <%= f.select field, choices, { include_blank: 'Choose…' }, class: 'select w-full' %>
-        <% elsif %i[topics include_terms exclude_terms promotion_rules excerpt triage_note terms].include?(field) %>
-          <%= f.text_area field, rows: 4, maxlength: 5000, class: 'input w-full' %>
-        <% elsif %i[starts_at ends_at snoozed_until].include?(field) %>
-          <%= f.datetime_local_field field, class: 'input w-full' %>
-        <% elsif field.to_s.end_with?('url') %>
-          <%= f.url_field field, maxlength: 2000, class: 'input w-full', placeholder: 'https://…' %>
-        <% else %>
-          <%= f.text_field field, maxlength: 300, class: 'input w-full' %>
+<% kind = { 'community' => 'group', 'offer' => 'group code' }.fetch(@record.class.model_name.element, @record.class.model_name.element.humanize.downcase) %>
+<% title = "#{@record.persisted? ? 'Edit' : 'Add'} #{kind}" %>
+<% content_for :title, title %>
+<% hints = { Marketing::Offer => 'Record an existing merchant code. Terms must state discount, eligible products, minimum spend, usage limits and stacking. Destination must use the campaign storefront host. Evidence URL should link to the merchant’s code settings or verification document. A reviewer confirms it after saving; confirmation lasts 24 hours.',
+             Marketing::Community => 'Separate topic terms with commas or newlines. Save the group’s promotion rules, then confirm them from the workspace. Rules confirmation lasts 30 days.',
+             Marketing::Thread => 'Paste a short excerpt, choose Relevant after reviewing it, and confirm current context from the workspace. Tracking parameters and fragments are removed from the saved URL to catch duplicates. Snoozed threads need a future date and a note.' } %>
+<% hint = hints.find { |klass, _| @record.is_a?(klass) }&.last %>
+<div class="page-narrow space-y-6">
+  <%= page_header title, subtitle: 'Source links and operator-entered context; Rupert does not fetch these URLs or publish replies.', eyebrow: 'Marketing' %>
+  <%= fold_explainer("Enter times in Eastern Time. Changes invalidate previous review evidence.#{" #{hint}" if hint}", class: 'text-sm text-mocha') %>
+  <div class="card card-pad">
+    <%= form_with model: @record, scope: :record, url: @record.persisted? ? public_send("marketing_#{@record.class.model_name.element}_path", @record) : marketing_record_path(@record), class: 'space-y-6' do |f| %>
+      <%= f.hidden_field :lock_version if @record.persisted? %>
+      <% if @record.errors.any? %>
+        <div role="alert" class="flash flash-alert">
+          <p class="font-semibold">Please fix the following:</p>
+          <ul class="mt-1 list-disc pl-5"><% @record.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+        </div>
+      <% end %>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Details</legend>
+        <% marketing_record_fields(@record).each do |field| %>
+          <div><%= f.label field, class: 'field-label' %>
+            <% if (choices = marketing_choices(field)) %>
+              <%= f.select field, choices, { include_blank: 'Choose…' }, class: 'select w-full' %>
+            <% elsif %i[topics include_terms exclude_terms promotion_rules excerpt triage_note terms].include?(field) %>
+              <%= f.text_area field, rows: 4, maxlength: 5000, class: 'input w-full' %>
+            <% elsif %i[starts_at ends_at snoozed_until].include?(field) %>
+              <%= f.datetime_local_field field, class: 'input w-full' %>
+            <% elsif field.to_s.end_with?('url') %>
+              <%= f.url_field field, maxlength: 2000, class: 'input w-full', placeholder: 'https://…' %>
+            <% else %>
+              <%= f.text_field field, maxlength: 300, class: 'input w-full' %>
+            <% end %>
+          </div>
         <% end %>
+      </fieldset>
+      <div class="form-actions">
+        <%= f.submit 'Save', class: 'btn-primary' %>
+        <%= link_to 'Cancel', marketing_path, class: 'btn-ghost' %>
       </div>
     <% end %>
-    <% if @record.is_a?(Marketing::Offer) %><p class="text-sm text-mocha">Record an existing merchant code. Terms must state discount, eligible products, minimum spend, usage limits and stacking. Destination must use the campaign storefront host. Evidence URL should link to the merchant's code settings or verification document. A reviewer confirms it after saving; confirmation lasts 24 hours.</p><% end %>
-    <% if @record.is_a?(Marketing::Community) %><p class="text-sm text-mocha">Separate topic terms with commas or newlines. Save the group's promotion rules, then confirm them from the workspace. Rules confirmation lasts 30 days.</p><% end %>
-    <% if @record.is_a?(Marketing::Thread) %><p class="text-sm text-mocha">Paste a short excerpt, choose Relevant after reviewing it, and confirm current context from the workspace. Tracking parameters and fragments are removed from the saved URL to catch duplicates. Snoozed threads need a future date and a note.</p><% end %>
-    <%= f.submit 'Save', class: 'btn-primary' %>
-  <% end %>
+  </div>
 </div>

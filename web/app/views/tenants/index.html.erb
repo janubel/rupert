@@ -1,32 +1,35 @@
+<%# Tenants: a List page (docs/ui-standards.md §4) for platform administrators. %>
 <% content_for :title, "Tenants" %>
-<%= page_header 'Tenants', subtitle: 'Workspaces on this instance' do %>
-  <%= link_to "New tenant", new_tenant_path, class: "btn-primary" %>
-<% end %>
+<div class="space-y-6">
+  <%= page_header 'Tenants', subtitle: 'Every workspace on this instance.' do %>
+    <%= link_to "Add tenant", new_tenant_path, class: "btn-primary" %>
+  <% end %>
 
-<div class="card overflow-hidden">
-  <table class="w-full">
-    <thead class="border-b border-fog bg-haze/50">
-      <tr>
-        <th scope="col" class="th">Name</th>
-        <th scope="col" class="th">Subdomain</th>
-        <th scope="col" class="th">Status</th>
-        <th scope="col" class="th">Plan</th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-fog">
-      <% if @tenants.empty? %>
-        <tr>
-          <td colspan="4" class="td py-10 text-center text-taupe">No tenants yet — create the first workspace to get started.</td>
-        </tr>
-      <% end %>
-      <% @tenants.each do |tenant| %>
-        <tr>
-          <td class="td font-medium text-ink"><%= tenant.name %></td>
-          <td class="td text-sm text-mocha"><%= link_to "#{tenant.subdomain}.#{request.domain}", root_url(subdomain: tenant.subdomain, only_path: false), class: "text-olive hover:underline" %></td>
-          <td class="td"><span class="<%= tenant.status == "active" ? "pill-fern" : "pill-taupe" %>"><span class="dot <%= tenant.status == "active" ? "bg-fern" : "bg-taupe" %>"></span><%= tenant.status %></span></td>
-          <td class="td text-sm text-mocha"><%= tenant.plan %></td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
+  <div class="card">
+    <div class="table-region" role="region" tabindex="0" aria-label="Tenants">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col" class="th">Name</th>
+            <th scope="col" class="th">Subdomain</th>
+            <th scope="col" class="th">Status</th>
+            <th scope="col" class="th">Plan</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @tenants.empty? %>
+            <tr><td colspan="4" class="empty-row">No tenants yet. Add the first workspace to get started.</td></tr>
+          <% end %>
+          <% @tenants.each do |tenant| %>
+            <tr>
+              <td class="td font-medium text-ink"><%= tenant.name %></td>
+              <td class="td text-sm text-mocha"><%= link_to "#{tenant.subdomain}.#{request.domain}", root_url(subdomain: tenant.subdomain, only_path: false), class: "text-olive hover:underline" %></td>
+              <td class="td"><span class="<%= tenant.status == "active" ? "pill-fern" : "pill-taupe" %>"><%= tenant.status.humanize %></span></td>
+              <td class="td text-sm text-mocha"><%= tenant.plan %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>

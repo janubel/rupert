@@ -1,4 +1,4 @@
-<%= render "reports/layout", title: "Financial report", subtitle: "P&L summary and tender breakdown over the last #{@days} days." do %>
+<%= render "reports/layout", title: "Financial report", subtitle: "Profit and loss summary and tender breakdown for the period." do %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-5">
     <div class="stat">
       <div class="stat-label">Gross revenue<%= define('gross') %></div>
@@ -29,7 +29,7 @@
   </section>
 
   <% if @unrecorded_refund_orders.to_i.positive? %>
-    <p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+    <p role="alert" class="flash flash-alert">
       <%= pluralize(@unrecorded_refund_orders, 'order') %> (<%= number_to_currency(@unrecorded_refund_cents / 100.0) %>) marked refunded <%= @unrecorded_refund_orders == 1 ? 'has' : 'have' %> no refund amount recorded, so Refunds above is understated.
       <%= link_to 'See which orders in Books check', books_check_path(days: @days), class: 'font-semibold underline' %>
     </p>
@@ -37,55 +37,50 @@
 
   <div class="grid gap-4 lg:grid-cols-2">
     <div class="card card-pad">
-      <h2 class="font-display text-lg text-ink">Net revenue · daily</h2>
-      <div class="mt-3"><%= area_chart @daily_net, height: "220px", colors: chart_color(:olive_deep), legend: false %></div>
+      <%= section_heading 'Net revenue · daily' %>
+      <div class="mt-3 report-chart"><%= area_chart @daily_net, height: "220px", legend: false %></div>
     </div>
     <div class="card card-pad">
-      <h2 class="font-display text-lg text-ink">Payment tenders</h2>
-      <div class="mt-3">
+      <%= section_heading 'Payment tenders' %>
+      <div class="mt-3 report-chart">
         <% if @tenders.empty? %>
-          <p class="rounded-xl bg-haze px-4 py-3 text-sm text-taupe">No payment data in this window.</p>
+          <p class="empty-state-hint">No payment data in this window.</p>
         <% else %>
-          <%= pie_chart @tenders, height: "220px", colors: chart_color(:fern, :olive_deep, :clay, :butter) %>
+          <%= bar_chart @tenders, height: "220px", legend: false %>
         <% end %>
       </div>
     </div>
   </div>
 
   <div class="grid gap-4 lg:grid-cols-2">
-    <div class="card overflow-hidden">
-      <div class="border-b border-fog px-5 py-3">
-        <h2 class="font-display text-lg text-ink">P&L summary</h2>
-      </div>
+    <div class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading 'P&L summary' %></div>
       <%= report_table 'financial-pl', label: 'P&L summary', sortable: false do %>
-        <table class="operations-table w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
+        <table class="table">
+          <thead>
             <tr><th scope="col" class="th" data-col="line">Line</th><th scope="col" class="th num" data-col="amount">Amount</th></tr>
           </thead>
-          <tbody class="divide-y divide-fog">
-            <tr class="hover:bg-cream"><td class="td text-mocha">Gross revenue</td><td class="td num font-medium text-ink"><%= number_to_currency(@revenue_cents / 100.0) %></td></tr>
-            <tr class="hover:bg-cream"><td class="td text-mocha">Tax collected</td><td class="td num font-medium text-ink"><%= number_to_currency(@tax_cents / 100.0) %></td></tr>
-            <tr class="hover:bg-cream"><td class="td text-mocha">Refunds</td><td class="td num font-medium text-rose"><%= number_to_currency(@refund_cents / 100.0) %></td></tr>
-            <tr class="hover:bg-cream"><td class="td font-semibold text-ink">Net revenue</td><td class="td num font-semibold text-ink"><%= number_to_currency(@net_cents / 100.0) %></td></tr>
+          <tbody>
+            <tr><td class="td text-mocha">Gross revenue</td><td class="td num font-medium text-ink"><%= number_to_currency(@revenue_cents / 100.0) %></td></tr>
+            <tr><td class="td text-mocha">Tax collected</td><td class="td num font-medium text-ink"><%= number_to_currency(@tax_cents / 100.0) %></td></tr>
+            <tr><td class="td text-mocha">Refunds</td><td class="td num font-medium text-rose"><%= number_to_currency(@refund_cents / 100.0) %></td></tr>
+            <tr><td class="td font-semibold text-ink">Net revenue</td><td class="td num font-semibold text-ink"><%= number_to_currency(@net_cents / 100.0) %></td></tr>
           </tbody>
         </table>
       <% end %>
     </div>
 
-    <div class="card overflow-hidden">
-      <div class="border-b border-fog px-5 py-3">
-        <h2 class="font-display text-lg text-ink">Payment tenders</h2>
-        <p class="text-xs text-mocha">Completed payments on orders in this window; <%= link_to 'sales tax by source', sales_tax_reports_path(report_window_params), class: 'underline' %> has its own tab.</p>
-      </div>
+    <div class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading 'Payment tenders' %><p class="card-hint">Completed payments on orders in this window; <%= link_to 'sales tax by source', sales_tax_reports_path(report_window_params), class: 'underline' %> has its own tab.</p></div>
       <% tender_total = @tenders.values.sum %>
       <%= report_table 'financial-tenders', label: 'Payment tenders' do %>
-        <table class="operations-table w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
+        <table class="table">
+          <thead>
             <tr><th scope="col" class="th" data-col="method">Method</th><th scope="col" class="th num" data-col="amount">Amount</th><th scope="col" class="th num" data-col="share">Share</th></tr>
           </thead>
-          <tbody class="divide-y divide-fog">
+          <tbody>
             <% @tenders.sort_by { |_, amount| -amount }.each do |method, amount| %>
-              <tr class="hover:bg-cream">
+              <tr>
                 <td class="td"><%= method.to_s.humanize.presence || 'Unknown' %></td>
                 <td class="td num" data-sort-value="<%= amount %>"><%= number_to_currency(amount) %></td>
                 <td class="td num"><%= tender_total.zero? ? '—' : number_to_percentage(amount * 100.0 / tender_total, precision: 1) %></td>

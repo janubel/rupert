@@ -1,44 +1,36 @@
+<%# One upload: a Detail page (docs/ui-standards.md §4). %>
 <% content_for :title, "Upload: #{@upload.filename}" %>
-<div class="mx-auto max-w-5xl space-y-6 operations-workspace">
-  <header class="space-y-2">
-    <p><%= link_to '← All uploads', uploads_path, class: 'text-sm underline' %></p>
-    <div class="flex flex-wrap items-center gap-3">
-      <h1 class="page-title break-words"><%= @upload.filename %></h1>
-      <%= upload_status_pill(@upload) %>
-    </div>
-    <p class="text-sm text-mocha"><%= UploadsHelper::STATUS_HELP[@upload.status] %></p>
-  </header>
+<div class="space-y-6 operations-workspace">
+  <%= page_header @upload.filename, subtitle: UploadsHelper::STATUS_HELP[@upload.status],
+                  menu: [(['Download the original', original_upload_path(@upload), { download: '' }] if @upload.retained),
+                         (['Look again', recognize_upload_path(@upload), { method: :post, form: { data: { turbo: false } } }] if @can_write && @upload.open? && @upload.retained)].compact do %>
+    <%= upload_status_pill(@upload) %>
+  <% end %>
 
   <% if @upload.reason.present? %>
     <p role="<%= @upload.status == 'rejected' ? 'alert' : 'status' %>" class="upload-callout text-sm"><strong><%= @upload.status == 'rejected' ? 'Why it was not kept or used: ' : 'Note: ' %></strong><%= @upload.reason %></p>
   <% end %>
 
-  <section class="card card-pad" aria-labelledby="facts-title">
-    <h2 id="facts-title" class="font-display text-xl">The file</h2>
-    <dl class="upload-facts mt-3 text-sm">
+  <section class="section-card" aria-label="The file">
+    <%= section_heading 'The file' %>
+    <dl class="facts">
       <div><dt>Received</dt><dd><time datetime="<%= @upload.created_at.iso8601 %>"><%= l(@upload.created_at, format: :long) %></time> by <%= upload_who(@upload) %> (<%= upload_origin_label(@upload) %>)</dd></div>
       <div><dt>Format</dt><dd><%= upload_format_label(@upload) %><%= " · read as #{@document.encoding}" if @document&.encoding %></dd></div>
       <div><dt>Size</dt><dd><%= upload_size(@upload) %><%= " (#{number_with_delimiter(@upload.byte_size)} bytes)" if @upload.byte_size >= 1024 %></dd></div>
       <% if @upload.row_count %><div><dt>Lines</dt><dd><%= number_with_delimiter(@upload.row_count) %> non-blank lines (headings and titles included)</dd></div><% end %>
       <% if @upload.sha256 %><div><dt>SHA-256</dt><dd><code class="break-all text-xs"><%= @upload.sha256 %></code></dd></div><% end %>
       <% if @upload.source_guess.present? %><div><dt>Source (guess)</dt><dd><%= @upload.source_guess %></dd></div><% end %>
-      <% if @duplicate_of %><div><dt>Same file as</dt><dd><%= link_to "Upload ##{@duplicate_of.id} (#{@duplicate_of.filename})", upload_path(@duplicate_of), class: 'underline' %> — <%= @duplicate_of.status_label.downcase %></dd></div><% end %>
+      <% if @duplicate_of %><div><dt>Same file as</dt><dd><%= link_to "Upload ##{@duplicate_of.id} (#{@duplicate_of.filename})", upload_path(@duplicate_of), class: 'underline' %> · <%= @duplicate_of.status_label.downcase %></dd></div><% end %>
       <% if @upload.status == 'imported' %><div><dt>Imported</dt><dd><%= l(@upload.imported_at, format: :long) %> by <%= @upload.imported_by_name %></dd></div><% end %>
     </dl>
-    <div class="mt-4 flex flex-wrap gap-2">
-      <% if @upload.retained %><%= link_to 'Download the original', original_upload_path(@upload), class: 'btn-ghost btn-sm', download: '' %><% end %>
-      <% if @can_write && @upload.open? && @upload.retained %>
-        <%= button_to 'Look again', recognize_upload_path(@upload), method: :post, class: 'btn-ghost btn-sm', form: { data: { turbo: false } } %>
-      <% end %>
-    </div>
-    <% if @upload.retained %><p class="mt-2 text-xs text-mocha">The download is the exact bytes received, never altered. If you open a CSV in a spreadsheet, treat any cell starting with = + - or @ as text.</p><% end %>
+    <% if @upload.retained %><p class="text-xs text-mocha">The download is the exact bytes received, never altered. If you open a CSV in a spreadsheet, treat any cell starting with = + - or @ as text.</p><% end %>
   </section>
 
   <% if @upload.retained && @upload.status != 'duplicate' %>
-    <section class="card card-pad space-y-3" aria-labelledby="type-title">
-      <h2 id="type-title" class="font-display text-xl">What Rupert thinks this is</h2>
+    <section class="section-card" aria-label="What Rupert thinks this is">
+      <%= section_heading 'What Rupert thinks this is' %>
       <% if @upload.detected_label.present? %>
-        <p class="text-sm"><strong><%= @upload.detected_label %></strong><% if @upload.confidence %> — <span><%= @upload.confidence %>% sure</span> <meter class="upload-meter align-middle" min="0" max="100" value="<%= @upload.confidence %>" aria-label="Confidence"><%= @upload.confidence %>%</meter><% end %></p>
+        <p class="text-sm"><strong><%= @upload.detected_label %></strong><% if @upload.confidence %> · <span><%= @upload.confidence %>% sure</span> <meter class="upload-meter align-middle" min="0" max="100" value="<%= @upload.confidence %>" aria-label="Confidence"><%= @upload.confidence %>%</meter><% end %></p>
         <p class="text-sm text-mocha"><%= @upload.detected_reason %></p>
       <% else %>
         <p class="text-sm text-mocha">Rupert could not tell what this is.</p>
@@ -48,7 +40,7 @@
         <p class="text-xs text-taupe">Other possibilities: <%= others.map { |c| "#{c['label']} (#{c['confidence']}%)" }.join('; ') %></p>
       <% end %>
       <% if @upload.importer %>
-        <p class="text-sm">Proposed importer: <strong><%= @upload.importer.label %></strong><%= " — #{@upload.operator_chosen ? 'chosen by a person' : 'matched automatically'}" %>.</p>
+        <p class="text-sm">Proposed importer: <strong><%= @upload.importer.label %></strong><%= " · #{@upload.operator_chosen ? 'chosen by a person' : 'matched automatically'}" %>.</p>
       <% end %>
 
       <% if @can_write && @upload.open? %>
@@ -57,22 +49,22 @@
             <legend class="field-label"><%= @upload.importer ? 'Use a different importer' : 'Say what this file is' %></legend>
             <% routable = @upload.candidates.select { |c| c['importer'] && Uploads::Registry.find(c['importer'])&.available? } %>
             <% routable.each do |candidate| %>
-              <label class="flex items-start gap-3 text-sm"><%= radio_button_tag 'importer_choice', "#{candidate['importer']}|#{candidate['type']}", @upload.importer_key == candidate['importer'] && @upload.detected_type == candidate['type'], class: 'mt-1' %><span><%= candidate['label'] %> <span class="text-xs text-taupe">(<%= candidate['confidence'] %>% — <%= Uploads::Registry.find(candidate['importer']).label %>)</span></span></label>
+              <label class="flex items-start gap-3 text-sm"><%= radio_button_tag 'importer_choice', "#{candidate['importer']}|#{candidate['type']}", @upload.importer_key == candidate['importer'] && @upload.detected_type == candidate['type'], class: 'mt-1' %><span><%= candidate['label'] %> <span class="text-xs text-taupe">(<%= candidate['confidence'] %>% · <%= Uploads::Registry.find(candidate['importer']).label %>)</span></span></label>
             <% end %>
             <% (@choices.reject { |c| routable.any? { |r| r['importer'] == c.key } }).each do |importer| %>
               <label class="flex items-start gap-3 text-sm"><%= radio_button_tag 'importer_choice', "#{importer.key}|", false, class: 'mt-1', disabled: !importer.available? %><span><%= importer.label %><% unless importer.available? %> <span class="text-xs text-taupe">(not installed yet)</span><% else %> <span class="text-xs text-taupe">(not what Rupert saw; the dry run will check it strictly)</span><% end %></span></label>
             <% end %>
             <% if routable.empty? && @choices.empty? %><p class="text-sm text-mocha">No importer reads <%= upload_format_label(@upload) %> files yet. The file stays here as a record.</p><% end %>
           </fieldset>
-          <% if @choices.any? || routable.any? %><%= f.submit 'Confirm this type', class: 'btn-ghost' %><% end %>
+          <% if @choices.any? || routable.any? %><div class="form-actions"><%= f.submit 'Confirm this type', class: 'btn-ghost' %></div><% end %>
         <% end %>
       <% end %>
     </section>
 
     <% if @importer && @importer.available? %>
-      <section class="card card-pad space-y-3" aria-labelledby="run-title">
-        <h2 id="run-title" class="font-display text-xl">Dry run and approval</h2>
-        <p class="text-sm text-mocha">A dry run reads the whole file and reports exactly what an import would do, then throws the result away. It changes nothing. Approving runs the import for this exact file and these settings.
+      <section class="section-card" aria-label="Dry run and approval">
+        <%= section_heading 'Dry run and approval', hint: 'A dry run reads the whole file and reports exactly what an import would do, then throws the result away.' %>
+        <p class="text-sm text-mocha">It changes nothing. Approving runs the import for this exact file and these settings.
           <% if @importer.destination_label %>Destination: <strong><%= @importer.destination_label %></strong>.<% end %></p>
 
         <% if @can_write && @upload.open? %>
@@ -82,7 +74,7 @@
               <% value = @upload.params[field[:name]] %>
               <div>
                 <% if field[:type] == :boolean %>
-                  <label class="flex items-start gap-3 text-sm"><%= check_box_tag "fields[#{field[:name]}]", '1', value == '1', id: id, class: 'mt-1' %><span><%= field[:label] %><% if field[:hint] %><span class="block text-xs text-taupe"><%= field[:hint] %></span><% end %></span></label>
+                  <label class="flex items-start gap-3 text-sm"><%= check_box_tag "fields[#{field[:name]}]", '1', value == '1', id: id, class: 'mt-1 checkbox' %><span><%= field[:label] %><% if field[:hint] %><span class="block text-xs text-taupe"><%= field[:hint] %></span><% end %></span></label>
                 <% elsif field[:type] == :select %>
                   <%= label_tag id, field[:label], class: 'field-label' %>
                   <%= select_tag "fields[#{field[:name]}]", options_for_select(field[:options], value), id: id, class: 'select', required: field[:required], 'aria-describedby': ("#{id}_hint" if field[:hint]) %>
@@ -95,7 +87,7 @@
               </div>
             <% end %>
             <% if @can_import %>
-              <%= f.submit(@upload.dry_run_current? ? 'Run the dry run again' : 'Run a dry run', class: 'btn-primary') %>
+              <div class="form-actions"><%= f.submit(@upload.dry_run_current? ? 'Run the dry run again' : 'Run a dry run', class: @upload.dry_run_current? ? 'btn-ghost' : 'btn-primary') %></div>
             <% else %>
               <p class="text-sm text-mocha">You can see this file, but running it needs the <code><%= @importer.permission %></code> permission. Ask an administrator.</p>
             <% end %>
@@ -107,11 +99,11 @@
           <p role="alert" class="upload-callout text-sm"><strong>The dry run stopped:</strong> <%= error %> Nothing was changed.</p>
         <% end %>
         <% if dry %>
-          <div class="rounded-xl border border-fog p-4 space-y-2" role="status">
+          <div class="rounded-card border border-fog p-4 space-y-2" role="status">
             <p class="text-sm font-semibold"><%= @upload.dry_run_current? ? 'Dry run result (current)' : 'Dry run result (out of date: the file type or settings changed)' %></p>
             <p class="text-sm"><%= dry['headline'] %></p>
-            <% if dry['counts'].present? %><dl class="upload-facts text-sm"><% dry['counts'].each do |label, number| %><div><dt><%= label %></dt><dd><%= number %></dd></div><% end %></dl><% end %>
-            <% Array(dry['warnings']).each do |warning| %><p class="text-xs text-mocha">⚠ <%= warning %></p><% end %>
+            <% if dry['counts'].present? %><dl class="facts text-sm"><% dry['counts'].each do |label, number| %><div><dt><%= label %></dt><dd><%= number %></dd></div><% end %></dl><% end %>
+            <% Array(dry['warnings']).each do |warning| %><p class="text-xs text-mocha">Warning: <%= warning %></p><% end %>
             <p class="text-xs text-taupe">Run <%= l(@upload.dry_run_at, format: :short) %> by <%= @upload.dry_run_by_name %>.</p>
           </div>
         <% end %>
@@ -124,20 +116,20 @@
 
         <% if @upload.status == 'imported' %>
           <% result = @upload.summary['import'] || {} %>
-          <div class="rounded-xl border border-fog p-4 space-y-2" role="status">
+          <div class="rounded-card border border-fog p-4 space-y-2" role="status">
             <p class="text-sm font-semibold">Imported</p>
             <p class="text-sm"><%= result['headline'] %></p>
-            <% if result['counts'].present? %><dl class="upload-facts text-sm"><% result['counts'].each do |label, number| %><div><dt><%= label %></dt><dd><%= number %></dd></div><% end %></dl><% end %>
-            <% if @upload.result_path.present? && @upload.result_path.start_with?('/') && !@upload.result_path.start_with?('//') %><p class="text-sm"><%= link_to 'See the imported records', @upload.result_path, class: 'underline font-semibold text-olive-deep' %></p><% end %>
+            <% if result['counts'].present? %><dl class="facts text-sm"><% result['counts'].each do |label, number| %><div><dt><%= label %></dt><dd><%= number %></dd></div><% end %></dl><% end %>
+            <% if @upload.result_path.present? && @upload.result_path.start_with?('/') && !@upload.result_path.start_with?('//') %><p class="text-sm"><%= link_to 'Open imported records', @upload.result_path, class: 'underline font-semibold text-olive-deep' %></p><% end %>
           </div>
         <% end %>
       </section>
     <% elsif @upload.importer_key && !@importer %>
-      <p class="card card-pad text-sm text-mocha">The importer chosen for this file (<%= @upload.importer_key %>) is no longer installed.</p>
+      <p class="section-card text-sm text-mocha">The importer chosen for this file (<%= @upload.importer_key %>) is no longer installed.</p>
     <% end %>
 
-    <section class="card card-pad space-y-3" aria-labelledby="preview-title">
-      <h2 id="preview-title" class="font-display text-xl">Preview</h2>
+    <section class="section-card" aria-label="Preview">
+      <%= section_heading 'Preview' %>
       <% Array(@preview&.notes).each do |note| %><p class="text-xs text-mocha"><%= note %></p><% end %>
       <% if @preview&.kind == :table %>
         <% if @preview.rows.empty? %>
@@ -169,21 +161,23 @@
   <% end %>
 
   <% if @copies.present? %>
-    <section class="card card-pad space-y-2" aria-labelledby="copies-title">
-      <h2 id="copies-title" class="font-display text-xl">Sent again</h2>
-      <ul class="text-sm space-y-1"><% @copies.each do |copy| %><li><%= link_to "Upload ##{copy.id}", upload_path(copy), class: 'underline' %> — <%= copy.filename %> by <%= upload_who(copy) %> on <%= l(copy.created_at, format: :short) %></li><% end %></ul>
+    <section class="section-card" aria-label="Sent again">
+      <%= section_heading 'Sent again' %>
+      <ul class="text-sm space-y-1"><% @copies.each do |copy| %><li><%= link_to "Upload ##{copy.id}", upload_path(copy), class: 'underline' %> · <%= copy.filename %> by <%= upload_who(copy) %> on <%= l(copy.created_at, format: :short) %></li><% end %></ul>
     </section>
   <% end %>
 
   <% if @can_write && (@upload.open? || @upload.discarded?) %>
-    <section class="card card-pad flex flex-wrap items-center gap-3" aria-label="Discard or reopen">
-      <% if @upload.discarded? %>
-        <%= button_to 'Reopen', reopen_upload_path(@upload), method: :post, class: 'btn-ghost', form: { data: { turbo: false } } %>
-        <span class="text-sm text-mocha">Discarded by <%= @upload.discarded_by_name %>.</span>
-      <% else %>
-        <%= button_to 'Discard', discard_upload_path(@upload), method: :post, class: 'btn-danger', form: { data: { turbo: false, turbo_confirm: 'Discard this upload? The original stays on record and can be reopened.' } } %>
-        <span class="text-sm text-mocha">Discarding does not delete the file. It only takes it out of the open list.</span>
-      <% end %>
+    <section class="section-card" aria-label="Discard or reopen">
+      <div class="flex flex-wrap items-center gap-3">
+        <% if @upload.discarded? %>
+          <%= button_to 'Reopen', reopen_upload_path(@upload), method: :post, class: 'btn-ghost', form: { data: { turbo: false } } %>
+          <span class="text-sm text-mocha">Discarded by <%= @upload.discarded_by_name %>.</span>
+        <% else %>
+          <%= button_to 'Discard', discard_upload_path(@upload), method: :post, class: 'btn-danger', form: { data: { turbo: false, turbo_confirm: 'Discard this upload? The original stays on record and can be reopened.' } } %>
+          <span class="text-sm text-mocha">Discarding does not delete the file. It only takes it out of the open list.</span>
+        <% end %>
+      </div>
     </section>
   <% end %>
 </div>

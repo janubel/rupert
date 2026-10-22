@@ -1,47 +1,40 @@
 <% content_for :title, "Order #{@order.order_number}" %>
-<section class="space-y-8">
-  <header class="border-b border-fog pb-6">
-    <p class="eyebrow text-olive">Warehouse sale</p>
-    <h1 class="mt-2 font-display text-4xl text-ink md:text-5xl">Order confirmed</h1>
-    <p class="mt-3 max-w-xl text-mocha">
-      Order <span class="font-semibold text-ink"><%= @order.order_number %></span> was placed and
-      paid. A record of this sale now appears in the store dashboard.
-    </p>
-  </header>
+<div class="space-y-8">
+  <%= page_header 'Order confirmed', subtitle: "Order #{@order.order_number} was placed and paid. A record of this sale now appears in the store dashboard.", eyebrow: 'Warehouse sale' do %>
+    <%= link_to 'Open the catalog', warehouse_sale_path(@share.token), class: 'btn-primary' %>
+  <% end %>
 
   <div class="grid gap-4 lg:grid-cols-2">
-    <div class="card card-pad space-y-3">
-      <h2 class="font-display text-xl text-ink">Items</h2>
-      <% @order_lines.each do |line| %>
-        <div class="flex items-center justify-between gap-3 text-sm">
-          <span class="min-w-0 truncate text-mocha"><%= line.quantity %> × <%= line.name %></span>
-          <span class="shrink-0 font-medium text-ink"><%= number_to_currency(line.line_cents / 100.0) %></span>
-        </div>
-      <% end %>
+    <section class="section-card" aria-label="Items">
+      <%= section_heading 'Items' %>
+      <ul class="divide-y divide-fog text-sm">
+        <% @order_lines.each do |line| %>
+          <li class="flex items-center justify-between gap-3 py-2">
+            <span class="min-w-0 truncate text-mocha"><%= line.quantity %> × <%= line.name %></span>
+            <span class="num shrink-0 font-medium text-ink"><%= number_to_currency(line.line_cents / 100.0) %></span>
+          </li>
+        <% end %>
+      </ul>
       <div class="flex items-center justify-between border-t border-fog pt-3">
         <span class="text-sm text-mocha">Total paid</span>
-        <span class="text-lg font-semibold text-ink"><%= number_to_currency(@order.gross_cents / 100.0) %></span>
+        <span class="num text-lg font-semibold text-ink"><%= number_to_currency(@order.gross_cents / 100.0) %></span>
       </div>
       <% if @payment&.reference.present? %>
         <p class="text-xs text-taupe">Payment reference: <%= @payment.reference %></p>
       <% end %>
-    </div>
+    </section>
 
     <% if @order.shipping_address1.present? %>
-      <div class="card card-pad">
-        <h2 class="font-display text-xl text-ink">Shipping to</h2>
-        <address class="mt-3 not-italic text-sm text-mocha">
+      <section class="section-card" aria-label="Shipping address">
+        <%= section_heading 'Shipping to' %>
+        <address class="not-italic text-sm text-mocha">
           <%= @order.shipping_name %><br>
           <%= @order.shipping_address1 %><% if @order.shipping_address2.present? %><br><%= @order.shipping_address2 %><% end %><br>
-          <%= [@order.shipping_city, @order.shipping_province].compact.join(", ") %> <%= @order.shipping_zip %><br>
+          <%= [@order.shipping_city, @order.shipping_province].compact.join(', ') %> <%= @order.shipping_zip %><br>
           <%= @order.shipping_country %>
           <% if @order.shipping_phone.present? %><br><%= @order.shipping_phone %><% end %>
         </address>
-      </div>
+      </section>
     <% end %>
   </div>
-
-  <div>
-    <%= link_to "Back to the catalog", warehouse_sale_path(@share.token), class: "btn-ghost" %>
-  </div>
-</section>
+</div>

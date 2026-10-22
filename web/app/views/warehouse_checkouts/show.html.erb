@@ -1,131 +1,134 @@
 <% content_for :title, "Checkout · #{@share.name}" %>
-<section class="space-y-8">
-  <header class="border-b border-fog pb-6">
-    <p class="eyebrow text-olive">Warehouse sale</p>
-    <h1 class="mt-2 font-display text-4xl text-ink md:text-5xl">Checkout</h1>
-    <p class="mt-3 max-w-xl text-mocha"><%= @share.name %> · your card details are tokenized in your browser and never touch our server.</p>
-    <% if AuthorizeNetClient.sandbox? %>
-      <p class="mt-3 inline-block rounded-full bg-haze px-3 py-1 text-xs font-semibold text-taupe">Test mode — no real charges (use the Authorize.net test cards)</p>
-    <% end %>
-  </header>
+<div class="space-y-8">
+  <%= page_header 'Checkout', subtitle: "#{@share.name} · your card details are tokenized in your browser and never touch our server.", eyebrow: 'Warehouse sale' do %>
+    <% if AuthorizeNetClient.sandbox? %><span class="pill-taupe">Test mode · no real charges (use the Authorize.net test cards)</span><% end %>
+  <% end %>
 
   <% if @payment_attempt %>
-    <div class="card card-pad space-y-3">
+    <section class="section-card" aria-label="Payment status">
       <% if @payment_attempt.status == 'approved' %>
-        <p>Your payment was approved. Finish saving your order without submitting another card payment.</p>
+        <%= section_heading 'Payment approved', hint: 'Finish saving your order without submitting another card payment.' do %>
+          <span class="pill-fern">Approved</span>
+        <% end %>
         <%= button_to 'Finish approved order', warehouse_checkout_submit_path(@share.token), method: :post, class: 'btn-primary', data: { turbo: false } %>
       <% else %>
-        <p>Payment status needs review. Do not submit another payment. Contact the store with reference <%= @payment_attempt.invoice_number %>.</p>
+        <%= section_heading 'Payment status needs review', hint: "Do not submit another payment. Contact the store with reference #{@payment_attempt.invoice_number}." do %>
+          <span class="pill-clay">Needs review</span>
+        <% end %>
       <% end %>
-    </div>
+    </section>
   <% else %>
-  <%= form_tag warehouse_checkout_submit_path(@share.token), method: :post,
-        data: { turbo: false, controller: "accept-payment#{' apple-pay' if @apple_pay}#{' google-pay' if @google_pay}",
-                accept_payment_login_id_value: @login_id,
-                accept_payment_client_key_value: @client_key,
-                accept_payment_sandbox_value: AuthorizeNetClient.sandbox?,
-                apple_pay_session_url_value: warehouse_apple_pay_session_path(@share.token),
-                apple_pay_total_value: format("%.2f", @cart.total_cents / 100.0),
-                apple_pay_label_value: @share.name,
-                google_pay_login_id_value: @login_id,
-                google_pay_total_value: format("%.2f", @cart.total_cents / 100.0),
-                google_pay_environment_value: (AuthorizeNetClient.sandbox? ? "TEST" : "PRODUCTION"),
-                google_pay_merchant_id_value: EnvStore.fetch("GOOGLE_PAY_MERCHANT_ID", ""),
-                google_pay_merchant_name_value: EnvStore.fetch("GOOGLE_PAY_MERCHANT_NAME", "").presence || @share.name,
-                action: "submit->accept-payment#submit" } do %>
-    <%= hidden_field_tag :checkout_quote, @checkout_quote %>
-    <div class="grid gap-4 lg:grid-cols-5">
-      <div class="space-y-4 lg:col-span-3">
-        <div class="card card-pad">
-          <h2 class="font-display text-xl text-ink">Shipping details</h2>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2">
-            <div class="sm:col-span-2">
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="shipping_name">Name</label>
-              <input type="text" id="shipping_name" name="shipping_name" required autocomplete="name" class="input w-full">
-            </div>
-            <div class="sm:col-span-2">
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="shipping_address1">Address</label>
-              <input type="text" id="shipping_address1" name="shipping_address1" required autocomplete="address-line1" class="input w-full">
-            </div>
-            <div class="sm:col-span-2">
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="shipping_address2">Address line 2</label>
-              <input type="text" id="shipping_address2" name="shipping_address2" autocomplete="address-line2" class="input w-full">
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="shipping_city">City</label>
-              <input type="text" id="shipping_city" name="shipping_city" required autocomplete="address-level2" class="input w-full">
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="shipping_province">State / Province</label>
-              <input type="text" id="shipping_province" name="shipping_province" autocomplete="address-level1" class="input w-full">
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="shipping_zip">ZIP / Postal code</label>
-              <input type="text" id="shipping_zip" name="shipping_zip" required autocomplete="postal-code" class="input w-full">
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="shipping_country">Country</label>
-              <select id="shipping_country" name="shipping_country" autocomplete="country" class="select w-full">
-                <%= options_for_select({ "United States" => "US", "Canada" => "CA", "United Kingdom" => "GB", "Australia" => "AU", "New Zealand" => "NZ", "Germany" => "DE", "France" => "FR", "Netherlands" => "NL", "Ireland" => "IE", "Mexico" => "MX" }, "US") %>
-              </select>
-            </div>
-            <div class="sm:col-span-2">
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="shipping_phone">Phone</label>
-              <input type="tel" id="shipping_phone" name="shipping_phone" autocomplete="tel" class="input w-full">
-            </div>
-          </div>
-        </div>
-
-        <div class="card card-pad">
-          <h2 class="font-display text-xl text-ink">Payment</h2>
-          <% if @google_pay %>
-            <div hidden data-google-pay-target="wrapper" class="mt-4"><div data-google-pay-target="button"></div></div>
-          <% end %>
-          <% if @apple_pay %>
-            <div hidden data-apple-pay-target="wrapper" class="mt-4">
-              <button type="button" data-apple-pay-target="button" data-action="apple-pay#pay" aria-label="Pay with Apple Pay" style="-webkit-appearance:-apple-pay-button;-apple-pay-button-type:buy;-apple-pay-button-style:black;height:44px;width:100%;border-radius:12px;"></button>
-              <p class="mt-2 text-center text-xs text-taupe">or pay with a card</p>
-            </div>
-          <% end %>
-          <div class="mt-4 space-y-3">
-            <div>
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha">Card number</label>
-              <div id="accept-card-number" data-accept-payment-target="cardNumber" class="h-11 rounded-xl border border-fog bg-haze px-3 py-2"></div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha">Expiration</label>
-                <div id="accept-expiration" data-accept-payment-target="expiration" class="h-11 rounded-xl border border-fog bg-haze px-3 py-2"></div>
+    <%= form_tag warehouse_checkout_submit_path(@share.token), method: :post,
+          data: { turbo: false, controller: "accept-payment#{' apple-pay' if @apple_pay}#{' google-pay' if @google_pay}",
+                  accept_payment_login_id_value: @login_id,
+                  accept_payment_client_key_value: @client_key,
+                  accept_payment_sandbox_value: AuthorizeNetClient.sandbox?,
+                  apple_pay_session_url_value: warehouse_apple_pay_session_path(@share.token),
+                  apple_pay_total_value: format('%.2f', @cart.total_cents / 100.0),
+                  apple_pay_label_value: @share.name,
+                  google_pay_login_id_value: @login_id,
+                  google_pay_total_value: format('%.2f', @cart.total_cents / 100.0),
+                  google_pay_environment_value: (AuthorizeNetClient.sandbox? ? 'TEST' : 'PRODUCTION'),
+                  google_pay_merchant_id_value: EnvStore.fetch('GOOGLE_PAY_MERCHANT_ID', ''),
+                  google_pay_merchant_name_value: EnvStore.fetch('GOOGLE_PAY_MERCHANT_NAME', '').presence || @share.name,
+                  action: 'submit->accept-payment#submit' } do %>
+      <%= hidden_field_tag :checkout_quote, @checkout_quote %>
+      <div class="grid gap-4 lg:grid-cols-5">
+        <div class="space-y-4 lg:col-span-3">
+          <fieldset class="section-card">
+            <legend class="sr-only">Shipping details</legend>
+            <%= section_heading 'Shipping details' %>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div class="sm:col-span-2">
+                <label class="field-label" for="shipping_name">Name</label>
+                <input type="text" id="shipping_name" name="shipping_name" required autocomplete="name" class="input w-full">
+              </div>
+              <div class="sm:col-span-2">
+                <label class="field-label" for="shipping_address1">Address</label>
+                <input type="text" id="shipping_address1" name="shipping_address1" required autocomplete="address-line1" class="input w-full">
+              </div>
+              <div class="sm:col-span-2">
+                <label class="field-label" for="shipping_address2">Address line 2</label>
+                <input type="text" id="shipping_address2" name="shipping_address2" autocomplete="address-line2" class="input w-full">
               </div>
               <div>
-                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha">Security code</label>
-                <div id="accept-card-code" data-accept-payment-target="cardCode" class="h-11 rounded-xl border border-fog bg-haze px-3 py-2"></div>
+                <label class="field-label" for="shipping_city">City</label>
+                <input type="text" id="shipping_city" name="shipping_city" required autocomplete="address-level2" class="input w-full">
+              </div>
+              <div>
+                <label class="field-label" for="shipping_province">State / province</label>
+                <input type="text" id="shipping_province" name="shipping_province" autocomplete="address-level1" class="input w-full">
+              </div>
+              <div>
+                <label class="field-label" for="shipping_zip">ZIP / postal code</label>
+                <input type="text" id="shipping_zip" name="shipping_zip" required autocomplete="postal-code" class="input w-full">
+              </div>
+              <div>
+                <label class="field-label" for="shipping_country">Country</label>
+                <select id="shipping_country" name="shipping_country" autocomplete="country" class="select w-full">
+                  <%= options_for_select({ 'United States' => 'US', 'Canada' => 'CA', 'United Kingdom' => 'GB', 'Australia' => 'AU', 'New Zealand' => 'NZ', 'Germany' => 'DE', 'France' => 'FR', 'Netherlands' => 'NL', 'Ireland' => 'IE', 'Mexico' => 'MX' }, 'US') %>
+                </select>
+              </div>
+              <div class="sm:col-span-2">
+                <label class="field-label" for="shipping_phone">Phone</label>
+                <input type="tel" id="shipping_phone" name="shipping_phone" autocomplete="tel" class="input w-full">
               </div>
             </div>
-          </div>
-          <%= hidden_field_tag "payment_nonce", nil, data: { accept_payment_target: "nonce" } %>
-          <%= hidden_field_tag "data_descriptor", nil, data: { accept_payment_target: "descriptor" } %>
-          <p class="mt-3 text-sm text-rose" data-accept-payment-target="error"></p>
-        </div>
-      </div>
+          </fieldset>
 
-      <div class="lg:col-span-2">
-        <div class="card card-pad space-y-3">
-          <h2 class="font-display text-xl text-ink">Order summary</h2>
-          <% @cart.items.each do |item| %>
-            <div class="flex items-center justify-between gap-3 text-sm">
-              <span class="min-w-0 truncate text-mocha"><%= item.quantity %> × <%= item.title %></span>
-              <span class="shrink-0 font-medium text-ink"><%= number_to_currency(item.line_price) %></span>
+          <fieldset class="section-card">
+            <legend class="sr-only">Payment</legend>
+            <%= section_heading 'Payment' %>
+            <% if @google_pay %>
+              <div hidden data-google-pay-target="wrapper"><div data-google-pay-target="button"></div></div>
+            <% end %>
+            <% if @apple_pay %>
+              <div hidden data-apple-pay-target="wrapper">
+                <button type="button" data-apple-pay-target="button" data-action="apple-pay#pay" aria-label="Pay with Apple Pay" class="apple-pay-button"></button>
+                <p class="mt-2 text-center text-xs text-taupe">or pay with a card</p>
+              </div>
+            <% end %>
+            <div class="space-y-3">
+              <div>
+                <label class="field-label" for="accept-card-number">Card number</label>
+                <div id="accept-card-number" data-accept-payment-target="cardNumber" class="input h-11"></div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="field-label" for="accept-expiration">Expiration</label>
+                  <div id="accept-expiration" data-accept-payment-target="expiration" class="input h-11"></div>
+                </div>
+                <div>
+                  <label class="field-label" for="accept-card-code">Security code</label>
+                  <div id="accept-card-code" data-accept-payment-target="cardCode" class="input h-11"></div>
+                </div>
+              </div>
             </div>
-          <% end %>
-          <div class="flex items-center justify-between border-t border-fog pt-3">
-            <span class="text-sm text-mocha">Total</span>
-            <span class="text-lg font-semibold text-ink"><%= number_to_currency(@cart.total_cents / 100.0) %></span>
-          </div>
-          <%= submit_tag "Pay #{number_to_currency(@cart.total_cents / 100.0)}", data: { accept_payment_target: "submit" }, class: "btn-primary w-full" %>
+            <%= hidden_field_tag 'payment_nonce', nil, data: { accept_payment_target: 'nonce' } %>
+            <%= hidden_field_tag 'data_descriptor', nil, data: { accept_payment_target: 'descriptor' } %>
+            <p class="text-sm text-rose" data-accept-payment-target="error"></p>
+          </fieldset>
+        </div>
+
+        <div class="lg:col-span-2">
+          <section class="section-card" aria-label="Order summary">
+            <%= section_heading 'Order summary' %>
+            <ul class="divide-y divide-fog text-sm">
+              <% @cart.items.each do |item| %>
+                <li class="flex items-center justify-between gap-3 py-2">
+                  <span class="min-w-0 truncate text-mocha"><%= item.quantity %> × <%= item.title %></span>
+                  <span class="num shrink-0 font-medium text-ink"><%= number_to_currency(item.line_price) %></span>
+                </li>
+              <% end %>
+            </ul>
+            <div class="flex items-center justify-between border-t border-fog pt-3">
+              <span class="text-sm text-mocha">Total</span>
+              <span class="num text-lg font-semibold text-ink"><%= number_to_currency(@cart.total_cents / 100.0) %></span>
+            </div>
+            <%= submit_tag "Pay #{number_to_currency(@cart.total_cents / 100.0)}", data: { accept_payment_target: 'submit' }, class: 'btn-primary btn-lg w-full' %>
+          </section>
         </div>
       </div>
-    </div>
+    <% end %>
   <% end %>
-  <% end %>
-</section>
+</div>

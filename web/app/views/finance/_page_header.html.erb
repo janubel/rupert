@@ -1,17 +1,10 @@
-<%# One header for every Money page: title, what it covers (dates and currency), one plain sentence of explanation, then actions.
-    Usage: render layout: 'finance/page_header', locals: { title:, range:, explain:, currency: 'USD', print: false } do ... actions ... end %>
+<%# Thin wrapper around page_header for Money pages: the dates and currency line is the subtitle, the one-sentence
+    explanation sits under the header (folded past its lead sentence), Print is a ghost button beside the actions.
+    Usage: render layout: 'finance/page_header', locals: { title:, range:, explain:, currency: 'USD', print: false, menu: [...] } do ... actions ... end %>
 <% currency = local_assigns.fetch(:currency, 'USD') %>
-<section class="finance-header">
-  <div class="min-w-0">
-    <h1 class="page-title"><%= title %></h1>
-    <p class="finance-meta">
-      <% if local_assigns[:range].present? %><span>Dates: <%= range %></span><% end %>
-      <% if currency.present? %><span>Currency: <%= currency %></span><% end %>
-    </p>
-    <% if local_assigns[:explain].present? %><p class="mt-1 text-base text-mocha"><%= explain %></p><% end %>
-  </div>
-  <div class="flex flex-wrap gap-2 no-print">
-    <%= yield %>
-    <% if local_assigns[:print] %><button type="button" class="btn-ghost btn-sm" data-controller="print" data-action="click->print#print">Print</button><% end %>
-  </div>
-</section>
+<% meta = [local_assigns[:range].presence, currency.presence].compact.join(' · ') %>
+<%= page_header(title, subtitle: meta.presence, menu: local_assigns[:menu]) do %>
+  <%= yield %>
+  <% if local_assigns[:print] %><button type="button" class="btn-ghost no-print" data-controller="print" data-action="click->print#print">Print</button><% end %>
+<% end %>
+<% if local_assigns[:explain].present? %><%= fold_explainer(local_assigns[:explain], class: 'text-sm text-mocha') %><% end %>

@@ -12,6 +12,14 @@ This app is scaffolded from a Shopify app template. See the README for framework
 
 Use the [Shopify AI Toolkit](https://shopify.dev/docs/apps/build/ai-toolkit) for all Shopify API and platform work. If missing, install it in the agent host per that page (or `npx skills add Shopify/shopify-ai-toolkit --list` for skill-compatible hosts) — do not add tooling to this repo.
 
+## Interface work
+
+Before changing or adding any view, helper, stylesheet or navigation entry under `web/`, read
+`docs/ui-standards.md` (the interface guidelines): one shell, navigation from `ModuleRegistry`
+only, six page templates, the component set, the verbiage table and the page checklist. The
+living catalogue is `/system/style_guide`. New screens pick a template and fill its slots; they
+do not invent layout, labels or colours.
+
 ## Hard rules (do not violate)
 
 - **The push guard is REMOVED (owner directive, 2026-08-18).** `PlatformPushGuard.authorize!` is a no-op: no outbound write is blocked by approval windows or the maintenance freeze. Freeze/approve/status remain only as read-only operator info. The replacement safeguard is the rule below.

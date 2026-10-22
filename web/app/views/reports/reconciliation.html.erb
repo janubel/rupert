@@ -1,4 +1,4 @@
-<%= render "reports/layout", title: "Inventory reconciliation", subtitle: "Side-by-side Shopify vs Square counts from the sync mirrors — refreshed every 15 minutes." do %>
+<%= render "reports/layout", title: "Inventory reconciliation", subtitle: "Side-by-side Shopify and Square stock counts from the sync mirrors, refreshed every 15 minutes." do %>
   <section class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     <div class="stat">
       <div class="stat-label">Linked SKUs<%= define('sku') %></div>
@@ -14,43 +14,37 @@
     </div>
   </section>
 
-  <div class="card p-4 text-sm text-mocha">
-    Last successful sync:
+  <p class="text-sm text-mocha">Last successful sync:
     <span class="font-medium text-ink">Shopify <%= @reconciliation.last_syncs[:shopify]&.to_fs(:short) || "—" %></span>
     ·
     <span class="font-medium text-ink">Square <%= @reconciliation.last_syncs[:square]&.to_fs(:short) || "—" %></span>
-    <span class="mt-2 block rounded-xl bg-haze px-3 py-2 text-xs text-taupe">
-      Snapshots reflect the latest 15-minute sync.
-    </span>
-  </div>
+    · snapshots reflect the latest 15-minute sync.
+  </p>
 
-  <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">Side-by-side counts · <%= @reconciliation.rows.length %> items</h2>
-      <p class="text-xs text-taupe">† Shared Square total — one Square variation is linked to more than one Shopify variant, so its quantity can't be pinned to a single row.</p>
-    </div>
+  <div class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading "Side-by-side counts · #{pluralize(@reconciliation.rows.length, 'item')}", hint: '† Shared Square total: one Square variation is linked to more than one Shopify variant, so its quantity cannot be pinned to a single row.' %></div>
     <%= report_table 'reconciliation-counts', label: 'Side-by-side counts' do %>
-      <table class="operations-table w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">SKU</th>
             <th scope="col" class="th">Product</th>
             <th scope="col" class="th">Shopify variant</th>
             <th scope="col" class="th">Square variation</th>
-            <th scope="col" class="th text-right">Shopify</th>
-            <th scope="col" class="th text-right">Square</th>
+            <th scope="col" class="th num">Shopify</th>
+            <th scope="col" class="th num">Square</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% @reconciliation.rows.each do |row| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td font-mono text-xs text-mocha"><%= row.sku %></td>
               <td class="td font-medium text-ink"><%= row.product %></td>
               <td class="td text-mocha"><%= row.shopify_variant || "—" %></td>
               <td class="td text-mocha"><%= row.square_variation || "—" %></td>
-              <td class="td text-right text-mocha"><%= row.shopify_qty || "—" %></td>
-              <td class="td text-right text-mocha" data-sort-value="<%= row.square_qty %>">
+              <td class="td num text-mocha"><%= row.shopify_qty || "—" %></td>
+              <td class="td num text-mocha" data-sort-value="<%= row.square_qty %>">
                 <% if row.square_qty.nil? %>
                   —
                 <% elsif row.shared %>
@@ -83,34 +77,31 @@
     <% end %>
   </div>
 
-  <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">Maintenance decisions — audit trail</h2>
-      <p class="text-xs text-taupe">Every automated write the 15-min pool sync made, for human review. Large moves or negatives are flagged.</p>
-    </div>
+  <div class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading 'Maintenance decisions — audit trail', hint: 'Every automated write the 15-min pool sync made, for human review. Large moves or negatives are flagged.' %></div>
     <%= report_table 'reconciliation-decisions', label: 'Maintenance decisions' do %>
-      <table class="operations-table w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Time</th>
             <th scope="col" class="th">SKU</th>
             <th scope="col" class="th">Platform</th>
-            <th scope="col" class="th text-right">Δ</th>
-            <th scope="col" class="th text-right">Before → After</th>
+            <th scope="col" class="th num">Δ</th>
+            <th scope="col" class="th num">Before → After</th>
             <th scope="col" class="th">Reason</th>
-            <th scope="col" class="th text-right">Review</th>
+            <th scope="col" class="th num">Review</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% @reconciliation.decisions.each do |decision| %>
-            <tr class="hover:bg-cream <%= decision[:needs_review] ? "bg-haze/40" : "" %>">
+            <tr class="<%= decision[:needs_review] ? "bg-haze/40" : "" %>">
               <td class="td text-mocha" data-sort-value="<%= decision[:time].iso8601 %>"><%= decision[:time].to_fs(:short) %></td>
               <td class="td font-mono text-xs text-ink"><%= decision[:sku] %></td>
               <td class="td text-mocha"><%= decision[:platform] %></td>
-              <td class="td text-right font-semibold <%= decision[:delta].negative? ? "text-clay" : "text-fern" %>"><%= decision[:delta] %></td>
-              <td class="td text-right text-mocha" data-sort-value="<%= decision[:after] %>"><%= decision[:before] %> → <%= decision[:after] %></td>
+              <td class="td num font-semibold <%= decision[:delta].negative? ? "text-clay" : "text-fern" %>"><%= decision[:delta] %></td>
+              <td class="td num text-mocha" data-sort-value="<%= decision[:after] %>"><%= decision[:before] %> → <%= decision[:after] %></td>
               <td class="td text-mocha"><%= decision[:reason] %></td>
-              <td class="td text-right">
+              <td class="td num">
                 <% if decision[:needs_review] %>
                   <span class="pill-rose">review</span>
                 <% else %>

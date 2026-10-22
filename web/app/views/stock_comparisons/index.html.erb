@@ -1,82 +1,99 @@
 <% content_for :title, 'Store comparison' %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :stock %>
-  <section class="space-y-3">
-    <h1 class="page-title">Store comparison</h1><p class="text-sm font-semibold text-mocha">Shopify &amp; C-Trax stock</p>
-    <p class="max-w-3xl text-sm text-mocha">Two views of shared stock. Compare one Shopify location with one C-Trax store; quantities are never added together. This page is read-only.</p>
-    <div class="flex flex-wrap gap-2">
-      <%= link_to 'Download store comparison PDF', stock_comparison_path(request.query_parameters.slice('q', 'filter', 'shopify_location_id', 'ctrax_location_id').merge(format: :pdf)), class: 'btn-primary', id: 'store-comparison-pdf', data: { turbo: false } %>
-      <%= link_to 'Download comparison CSV', stock_comparison_path(request.query_parameters.slice('q', 'filter', 'shopify_location_id', 'ctrax_location_id').merge(format: :csv)), class: 'btn-ghost' %>
-      <%= link_to 'Review comparison results', '#stock-comparison-results', class: 'btn-ghost' %>
-      <%= link_to 'Physical count worksheets', inventory_counts_path, class: 'btn-ghost' %>
-      <%= link_to 'Source reads', syncs_path, class: 'btn-ghost' if Current.user.can?('sync.write') %>
+<% export_params = request.query_parameters.slice('q', 'filter', 'shopify_location_id', 'ctrax_location_id') %>
+<% menu = [['Download CSV', stock_comparison_path(export_params.merge(format: :csv))]] %>
+<% menu << ['Open source reads', syncs_path] if Current.user.can?('sync.write') %>
+<div class="space-y-6">
+  <%= page_header 'Store comparison', subtitle: 'One Shopify location beside one C-Trax store; quantities are never added together and nothing is written back.', menu: menu do %>
+    <%= link_to 'Download PDF', stock_comparison_path(export_params.merge(format: :pdf)), class: 'btn-primary', id: 'store-comparison-pdf', data: { turbo: false } %>
+  <% end %>
+
+  <%= form_tag stock_comparison_path, method: :get, class: 'toolbar' do %>
+    <div class="toolbar-field">
+      <%= label_tag :shopify_location_id, 'Shopify location', class: 'field-label' %>
+      <%= select_tag :shopify_location_id, options_for_select(@comparison.shopify_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.shopify&.location_id), include_blank: 'Choose location', class: 'input' %>
     </div>
-  </section>
-  <section class="card card-pad space-y-3">
-    <%= form_tag stock_comparison_path, method: :get, class: 'operations-filters' do %>
-      <label class="field-label">Shopify location
-        <%= select_tag :shopify_location_id, options_for_select(@comparison.shopify_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.shopify&.location_id), include_blank: 'Choose location', class: 'input mt-1' %>
-      </label>
-      <label class="field-label">C-Trax store
-        <%= select_tag :ctrax_location_id, options_for_select(@comparison.ctrax_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.ctrax&.location_id), include_blank: 'Choose store', class: 'input mt-1' %>
-      </label>
-      <label class="field-label">Show
-        <%= select_tag :filter, options_for_select([['All items', 'all'], ['Needs attention', 'attention'], ['No current pair', 'unmatched'], ['Product/package candidates', 'candidates'], ['Saved investigation findings', 'findings'], ['Historical Shopify candidates', 'historical']], @comparison.filter), class: 'input mt-1' %>
-      </label>
-      <label class="field-label">Search <%= text_field_tag :q, @comparison.query, class: 'input mt-1', placeholder: 'Item, SKU or native ID' %></label>
-      <%= submit_tag 'Compare', class: 'btn-primary' %>
+    <div class="toolbar-field">
+      <%= label_tag :ctrax_location_id, 'C-Trax store', class: 'field-label' %>
+      <%= select_tag :ctrax_location_id, options_for_select(@comparison.ctrax_snapshots.map { |s| [s.location.name, s.location_id] }, @comparison.ctrax&.location_id), include_blank: 'Choose store', class: 'input' %>
+    </div>
+    <div class="toolbar-field">
+      <%= label_tag :filter, 'Show', class: 'field-label' %>
+      <%= select_tag :filter, options_for_select([['All items', 'all'], ['Needs attention', 'attention'], ['No current pair', 'unmatched'], ['Product/package candidates', 'candidates'], ['Saved investigation findings', 'findings'], ['Historical Shopify candidates', 'historical']], @comparison.filter), class: 'input' %>
+    </div>
+    <div class="toolbar-field">
+      <%= label_tag :q, 'Search', class: 'field-label' %>
+      <%= search_field_tag :q, @comparison.query, class: 'input', placeholder: 'Item, SKU or native ID' %>
+    </div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', stock_comparison_path, class: 'btn-ghost' %></div>
+  <% end %>
+
+  <section class="grid gap-3 sm:grid-cols-2" aria-label="Stock source freshness">
+    <% [['Shopify', @comparison.shopify], ['C-Trax · physical reference', @comparison.ctrax]].each do |label, snapshot| %>
+      <div class="stat">
+        <div class="flex flex-wrap items-center justify-between gap-2"><p class="stat-label"><%= label %></p><span class="<%= !snapshot || @comparison.stale?(snapshot) ? 'pill-clay' : 'pill-fern' %>"><%= !snapshot ? 'Missing read' : @comparison.stale?(snapshot) ? 'Stale read' : 'Read current' %></span></div>
+        <p class="mt-2 text-xs text-mocha">Last stock pull: <%= retail_source_time(snapshot&.captured_at) %></p>
+      </div>
     <% end %>
-    <div class="grid gap-3 sm:grid-cols-2" aria-label="Stock source freshness">
-      <% [['Shopify', @comparison.shopify], ['C-Trax · physical reference', @comparison.ctrax]].each do |label, snapshot| %><div class="rounded-xl border border-fog bg-haze p-3 min-w-0"><div class="operations-header"><h2 class="font-semibold"><%= label %></h2><span class="<%= !snapshot || @comparison.stale?(snapshot) ? 'pill-clay' : 'pill-fern' %>"><%= !snapshot ? 'Missing read' : @comparison.stale?(snapshot) ? 'Stale read' : 'Read current' %></span></div><p class="mt-2 text-xs text-mocha">Last stock pull: <%= retail_source_time(snapshot&.captured_at) %></p></div><% end %>
-    </div>
-    <p class="text-xs text-taupe">Catalog read: <%= @comparison.catalog_read_at&.iso8601 || 'Awaiting a complete Shopify read' %> · <%= @comparison.historical_catalog_count %> historical variants absent from that read are excluded. Only current active tracked Shopify variants appear.</p>
-    <% unless @comparison.shopify && @comparison.ctrax %><p role="status" class="text-sm text-clay">Choose both sources after their stock reads complete. Missing stock stays unknown.</p><% end %>
   </section>
+  <p class="text-xs text-taupe">Catalog read: <%= @comparison.catalog_read_at&.iso8601 || 'Awaiting a complete Shopify read' %> · <%= @comparison.historical_catalog_count %> historical variants absent from that read are excluded. Only current active tracked Shopify variants appear.</p>
+  <% unless @comparison.shopify && @comparison.ctrax %><p role="status" class="flash flash-alert">Choose both sources after their stock reads complete. Missing stock stays unknown.</p><% end %>
+
   <% summary = @comparison.summary %>
   <% if @comparison.findings.reviewed_at || @comparison.findings.status %>
-    <section class="card card-pad space-y-2" aria-label="Saved stock investigation">
-      <h2 class="font-semibold">Saved stock investigation</h2>
-      <p class="text-sm text-mocha"><%= @comparison.findings.reviewed_at ? "Source evidence checked #{@comparison.findings.reviewed_at.iso8601}." : '' %> <%= @comparison.findings.status %>.</p>
+    <section class="section-card" aria-label="Saved stock investigation">
+      <%= section_heading 'Saved stock investigation', hint: "#{@comparison.findings.reviewed_at ? "Source evidence checked #{@comparison.findings.reviewed_at.iso8601}. " : ''}#{@comparison.findings.status}." do %>
+        <%= link_to 'Show findings', stock_comparison_path(request.query_parameters.slice('q', 'shopify_location_id', 'ctrax_location_id').merge(filter: 'findings')), class: 'btn-ghost btn-sm' %>
+      <% end %>
       <p class="text-sm text-mocha"><%= summary[:findings] %> rows have dated findings; <%= summary[:investigated_candidates] %> additional candidate links are supported by that investigation. These links show the two observations together and always withhold a quantity difference. Package, formula and source-copy uncertainties remain flagged beside each item.</p>
-      <%= link_to 'Show investigation findings', stock_comparison_path(request.query_parameters.slice('q', 'shopify_location_id', 'ctrax_location_id').merge(filter: 'findings')), class: 'btn-ghost' %>
     </section>
   <% end %>
+
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Stock comparison overview">
     <% [['Comparison rows', summary[:rows]], ['Identity pairs / candidates', summary[:paired]], ['Unknown stock rows', summary[:unknown]], ['Negative stock rows', summary[:negative]]].each do |label, value| %>
-      <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value"><%= value %></p></div>
+      <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value mt-1"><%= value %></p></div>
     <% end %>
   </section>
-  <details class="card card-pad"><summary class="disclosure-trigger font-semibold">How to read stock and matching evidence</summary><div class="space-y-3">  <p class="max-w-4xl text-sm text-mocha"><%= summary[:name_candidates] %> name/package candidates need equivalence review; <%= summary[:historical] %> C-Trax rows have historical Shopify candidates. Historical items remain excluded from current Shopify stock.</p>
-  <%= fold_explainer('Shopify on-hand includes committed units; available is shown separately. Signed source values are preserved. SKU/barcode and name/package candidates are not approved mappings. Name/package candidates show both observations without a quantity difference. Unknown, fractional, untracked or over-one-hour-old observations also have no numerical difference. Missing packages, duplicate identifiers and conflicting source links stay unresolved.', class: 'max-w-4xl text-sm text-mocha') %>
-</div></details>
-  <div id="stock-comparison-results" tabindex="-1" class="operations-header retail-anchor"><h2 class="font-display text-xl">Stock comparison results</h2><p role="status" class="text-sm text-mocha"><%= @pagy.count %> matching rows · <%= @rows.size %> shown</p></div>
+
+  <div class="text-sm text-mocha">
+    <p><%= summary[:name_candidates] %> name/package candidates need equivalence review; <%= summary[:historical] %> C-Trax rows have historical Shopify candidates.</p>
+    <details class="explainer">
+      <summary class="explainer-summary">How to read stock and matching evidence</summary>
+      <p class="mt-1">Historical items remain excluded from current Shopify stock. Shopify on-hand includes committed units; available is shown separately. Signed source values are preserved. SKU/barcode and name/package candidates are not approved mappings. Name/package candidates show both observations without a quantity difference. Unknown, fractional, untracked or over-one-hour-old observations also have no numerical difference. Missing packages, duplicate identifiers and conflicting source links stay unresolved.</p>
+    </details>
+  </div>
+
+  <div id="stock-comparison-results" tabindex="-1" class="retail-anchor">
+    <%= section_heading 'Comparison results', hint: "#{@pagy.count} matching rows · #{@rows.size} shown" %>
+  </div>
   <p class="text-xs text-mocha sm:hidden">Swipe the table sideways to see each source quantity and the review flags.</p>
-  <div class="card overflow-hidden"><div class="operations-table-region" role="region" tabindex="0" aria-label="Stock Comparisons table">
-    <table class="operations-stock-table w-full text-sm">
-      <thead><tr><th scope="col" class="th">Item / identity</th><th class="th text-right">Shopify on hand</th><th class="th text-right">Available</th><th class="th text-right">Committed</th><th class="th text-right">C-Trax stock</th><th class="th text-right">C-Trax − on hand</th><th scope="col" class="th">Review</th></tr></thead>
-      <tbody class="divide-y divide-fog">
-        <% @rows.each do |row| %>
-          <tr>
-            <td class="td"><p class="font-medium"><% if row[:shopify_id] %><%= link_to row[:label], shopify_variant_path(row[:shopify_id]), class: 'hover:underline' %><% else %><%= row[:label] %><% end %></p><p class="text-xs text-taupe"><%= row[:sku].presence || 'No SKU' %> · <%= row[:identity] %></p><% if row[:paired] %><p class="text-xs text-mocha">C-Trax: <%= row[:ctrax_label] %></p><% end %><p class="text-xs text-taupe">Shopify: <%= row[:shopify_id] || 'No match' %><br>C-Trax: <%= row[:ctrax_id] || 'No match' %><% if row[:shopify_barcode].present? || row[:ctrax_barcode].present? %><br>Barcodes: Shopify <%= row[:shopify_barcode].presence || 'Missing' %> · C-Trax <%= row[:ctrax_barcode].presence || 'Missing' %><% end %></p></td>
-            <% [:on_hand, :available, :committed, :ctrax_quantity, :difference].each do |key| %>
-              <td class="td text-right"><%= row[key].nil? ? 'Unknown / unavailable' : (row[key].is_a?(BigDecimal) ? row[key].to_s('F').delete_suffix('.0') : row[key]) %></td>
-            <% end %>
-            <td class="td"><%= row[:issues].any? ? pluralize(row[:issues].size, 'review flag') : (row[:difference]&.nonzero? ? 'Counts differ; verify baseline' : 'No stock exception in these reads') %><%= ' · Not listed for sale' if row[:ctrax_id] && !row[:listed] %><% if row[:evidence].any? || row[:historical].any? %><details class="mt-2"><summary class="cursor-pointer">Matching evidence</summary><p class="text-xs text-taupe"><%= row[:evidence].join(' · ') %></p><% row[:historical].each do |old| %><p class="text-xs"><%= link_to old[:label], shopify_variant_path(old[:id]), class: 'hover:underline' %> · <%= old[:status] || 'Unknown status' %> · <%= old[:present] == false || old[:product_present] == false ? 'Absent from complete catalog read' : (old[:present].nil? || old[:product_present].nil? ? 'Catalog presence not verified' : 'Present') %></p><% end %></details><% end %></td>
-          </tr>
-          <% if row[:issues].any? || row[:finding_notes].any? %>
-            <tr data-investigation-row>
-              <td colspan="7" class="td bg-paper">
-                <div class="max-w-2xl space-y-2 whitespace-normal break-words">
-                  <% if row[:issues].any? %><p class="text-xs text-clay"><%= row[:issues].join(' · ') %></p><% end %>
-                  <% if row[:finding_notes].any? %><details class="mt-2"><summary class="cursor-pointer">Investigation findings (<%= row[:finding_notes].size %>)</summary><% row[:finding_notes].each do |note| %><p class="mt-2 text-xs <%= note[:severity] == 'warning' ? 'text-clay' : 'text-mocha' %>"><%= note[:text] %></p><p class="text-xs text-taupe">Observed <%= note[:reviewed_at]&.iso8601 %><%= ' · Needs a fresh source review; kept as history' unless note[:current] %></p><% end %></details><% end %>
-                </div>
-              </td>
+  <div class="card overflow-hidden">
+    <div class="table-region" role="region" tabindex="0" aria-label="Stock comparison">
+      <table class="table">
+        <thead><tr><th scope="col" class="th">Item / identity</th><th scope="col" class="th num">Shopify on hand</th><th scope="col" class="th num">Available</th><th scope="col" class="th num">Committed</th><th scope="col" class="th num">C-Trax stock</th><th scope="col" class="th num">C-Trax − on hand</th><th scope="col" class="th">Review</th></tr></thead>
+        <tbody>
+          <% @rows.each do |row| %>
+            <tr>
+              <td class="td"><p class="font-medium text-ink"><% if row[:shopify_id] %><%= link_to row[:label], shopify_variant_path(row[:shopify_id]), class: 'hover:underline' %><% else %><%= row[:label] %><% end %></p><p class="text-xs text-taupe"><%= row[:sku].presence || 'No SKU' %> · <%= row[:identity] %></p><% if row[:paired] %><p class="text-xs text-mocha">C-Trax: <%= row[:ctrax_label] %></p><% end %><p class="text-xs text-taupe">Shopify: <%= row[:shopify_id] || 'No match' %><br>C-Trax: <%= row[:ctrax_id] || 'No match' %><% if row[:shopify_barcode].present? || row[:ctrax_barcode].present? %><br>Barcodes: Shopify <%= row[:shopify_barcode].presence || 'Missing' %> · C-Trax <%= row[:ctrax_barcode].presence || 'Missing' %><% end %></p></td>
+              <% [:on_hand, :available, :committed, :ctrax_quantity, :difference].each do |key| %>
+                <td class="td num"><%= row[key].nil? ? 'Unknown / unavailable' : (row[key].is_a?(BigDecimal) ? row[key].to_s('F').delete_suffix('.0') : row[key]) %></td>
+              <% end %>
+              <td class="td"><%= row[:issues].any? ? pluralize(row[:issues].size, 'review flag') : (row[:difference]&.nonzero? ? 'Counts differ; verify baseline' : 'No stock exception in these reads') %><%= ' · Not listed for sale' if row[:ctrax_id] && !row[:listed] %><% if row[:evidence].any? || row[:historical].any? %><details class="mt-2"><summary class="cursor-pointer">Matching evidence</summary><p class="text-xs text-taupe"><%= row[:evidence].join(' · ') %></p><% row[:historical].each do |old| %><p class="text-xs"><%= link_to old[:label], shopify_variant_path(old[:id]), class: 'hover:underline' %> · <%= old[:status] || 'Unknown status' %> · <%= old[:present] == false || old[:product_present] == false ? 'Absent from complete catalog read' : (old[:present].nil? || old[:product_present].nil? ? 'Catalog presence not verified' : 'Present') %></p><% end %></details><% end %></td>
             </tr>
+            <% if row[:issues].any? || row[:finding_notes].any? %>
+              <tr data-investigation-row>
+                <td colspan="7" class="td bg-paper">
+                  <div class="max-w-2xl space-y-2 whitespace-normal break-words">
+                    <% if row[:issues].any? %><p class="text-xs text-clay"><%= row[:issues].join(' · ') %></p><% end %>
+                    <% if row[:finding_notes].any? %><details class="mt-2"><summary class="cursor-pointer">Investigation findings (<%= row[:finding_notes].size %>)</summary><% row[:finding_notes].each do |note| %><p class="mt-2 text-xs <%= note[:severity] == 'warning' ? 'text-clay' : 'text-mocha' %>"><%= note[:text] %></p><p class="text-xs text-taupe">Observed <%= note[:reviewed_at]&.iso8601 %><%= ' · Needs a fresh source review; kept as history' unless note[:current] %></p><% end %></details><% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
           <% end %>
-        <% end %>
-        <% if @rows.empty? %><tr><td colspan="7" class="empty-row">No current records match these filters. Complete source reads from Source reads.</td></tr><% end %>
-      </tbody>
-    </table>
-  </div></div>
+          <% if @rows.empty? %><tr><td colspan="7" class="empty-row">No current records match these filters. Complete source reads from Source reads, or clear the filters.</td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
   <% if @pagy.pages > 1 %><div class="text-sm"><%== @pagy.series_nav %></div><% end %>
 </div>

@@ -1,45 +1,46 @@
 <% content_for :title, title %>
 <% extra = request.query_parameters.slice('sources', 'rate').to_h.symbolize_keys %>
 <% custom = @to_date && @range %>
+<% win_from, win_to = report_window_dates %>
+<% prev_from, prev_to = report_shift(win_from, win_to, -1) %>
+<% next_from, next_to = report_shift(win_from, win_to, 1) %>
+<% csv_path = url_for(extra.merge(action: params[:action], format: :csv, days: @days, from: custom ? @range.to_date.iso8601 : nil, to: @to_date&.iso8601)) %>
 <div class="space-y-6">
-  <section class="space-y-3">
-    <%= page_header title, subtitle: subtitle do %>
-      <%= link_to "Books check", books_check_path(days: @days), class: "btn-ghost btn-sm", data: { tour: 'check' } %>
-      <%= link_to "Money reconciliation", money_reconciliations_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "Daily controls & documents", daily_reconciliations_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "CSV", url_for(extra.merge(action: params[:action], format: :csv, days: @days, from: custom ? @range.to_date.iso8601 : nil, to: @to_date&.iso8601)), class: "btn-ghost btn-sm", data: { turbo: false, tour: 'csv' } %>
-    <% end %>
-    <%= render 'reports/tabs' %>
-    <% win_from, win_to = report_window_dates %>
-    <% prev_from, prev_to = report_shift(win_from, win_to, -1) %>
-    <% next_from, next_to = report_shift(win_from, win_to, 1) %>
-    <nav class="flex flex-wrap items-center gap-3" aria-label="Report period">
-      <%= link_to url_for(extra.merge(action: params[:action], from: prev_from.iso8601, to: prev_to.iso8601)), class: 'btn-ghost', rel: 'prev', title: report_range_label(prev_from, prev_to) do %>← Previous<% end %>
-      <strong class="text-lg text-ink" aria-live="polite"><%= report_range_label(win_from, win_to) %></strong>
-      <% if next_from <= Date.current %>
-        <%= link_to url_for(extra.merge(action: params[:action], from: next_from.iso8601, to: next_to.iso8601)), class: 'btn-ghost', rel: 'next', title: report_range_label(next_from, next_to) do %>Next →<% end %>
-      <% else %>
-        <span class="btn-ghost cursor-not-allowed opacity-50" aria-disabled="true">Next →</span>
-      <% end %>
-    </nav>
-    <div class="card card-pad space-y-3" data-tour="window">
-      <%= form_tag url_for(action: params[:action]), method: :get, class: "flex flex-wrap items-end gap-2" do %>
-        <label class="text-xs text-taupe">Window
-          <%= select_tag :days, options_for_select([["7 days", 7], ["30 days", 30], ["90 days", 90], ["1 year", 365]], custom ? nil : @days), class: "select", include_blank: custom ? "Custom dates" : false %>
-        </label>
-        <span class="pb-2 text-xs text-taupe">or</span>
-        <label class="text-xs text-taupe">From <%= text_field_tag :from, custom ? @range.to_date.iso8601 : "", type: "date", class: "select" %></label>
-        <label class="text-xs text-taupe">To <%= text_field_tag :to, @to_date&.iso8601, type: "date", class: "select" %></label>
-        <%= yield :report_filters %>
-        <%= submit_tag "Refresh", class: "btn-primary btn-sm", name: nil %>
-      <% end %>
-      <nav class="flex flex-wrap gap-2 text-sm" aria-label="Quick date ranges">
+  <%= page_header title, subtitle: subtitle,
+        menu: [['Download CSV', csv_path, { data: { turbo: false, tour: 'csv' } }], ['Books check', books_check_path(days: @days), { data: { tour: 'check' } }],
+               ['Money reconciliation', money_reconciliations_path], ['Daily controls and documents', daily_reconciliations_path]] %>
+  <%= render 'reports/tabs' %>
+  <%= render 'reports/chart_theme' %>
+
+  <%# One period row for everything below: quick ranges as tabs, then the window or custom dates. %>
+  <div class="card card-pad space-y-3" data-tour="window">
+    <div class="flex flex-wrap items-center gap-3">
+      <nav class="tabs" aria-label="Quick date ranges">
         <% report_date_presets.each do |label, from, to| %>
           <% active = custom && @range.to_date == from && @to_date == to %>
-          <%= link_to label, url_for(extra.merge(action: params[:action], from: from.iso8601, to: to.iso8601)), class: "nav-pill #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (active ? 'true' : nil) } %>
+          <%= link_to label, url_for(extra.merge(action: params[:action], from: from.iso8601, to: to.iso8601)), class: "tab #{'tab-active' if active}".strip, aria: { current: (active ? 'page' : nil) } %>
+        <% end %>
+      </nav>
+      <nav class="flex items-center gap-2" aria-label="Report period">
+        <%= link_to url_for(extra.merge(action: params[:action], from: prev_from.iso8601, to: prev_to.iso8601)), class: 'btn-ghost btn-sm', rel: 'prev', title: report_range_label(prev_from, prev_to), aria: { label: "Previous period, #{report_range_label(prev_from, prev_to)}" } do %>←<% end %>
+        <strong class="text-sm text-ink" aria-live="polite"><%= report_range_label(win_from, win_to) %></strong>
+        <% if next_from <= Date.current %>
+          <%= link_to url_for(extra.merge(action: params[:action], from: next_from.iso8601, to: next_to.iso8601)), class: 'btn-ghost btn-sm', rel: 'next', title: report_range_label(next_from, next_to), aria: { label: "Next period, #{report_range_label(next_from, next_to)}" } do %>→<% end %>
+        <% else %>
+          <span class="btn-ghost btn-sm cursor-not-allowed opacity-50" aria-disabled="true" title="No later period yet">→</span>
         <% end %>
       </nav>
     </div>
-  </section>
+    <%= form_tag url_for(action: params[:action]), method: :get, class: 'toolbar' do %>
+      <div class="toolbar-field">
+        <%= label_tag :days, 'Window', class: 'field-label' %>
+        <%= select_tag :days, options_for_select([['7 days', 7], ['30 days', 30], ['90 days', 90], ['1 year', 365]], custom ? nil : @days), class: 'select', include_blank: custom ? 'Custom dates' : false %>
+      </div>
+      <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= text_field_tag :from, custom ? @range.to_date.iso8601 : '', type: 'date', class: 'input' %></div>
+      <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= text_field_tag :to, @to_date&.iso8601, type: 'date', class: 'input' %></div>
+      <%= yield :report_filters %>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', url_for(action: params[:action]), class: 'btn-ghost' %></div>
+    <% end %>
+  </div>
   <%= yield %>
 </div>

@@ -1,31 +1,23 @@
 <% content_for :title, "Projects and tasks getting started" %>
 <% employee = Current.user.employee? %>
 <% can_manage = Current.user.can?("projects.write") %>
-<div class="mx-auto max-w-3xl space-y-5">
-  <section class="space-y-3">
-    <p class="eyebrow text-olive">Projects & tasks</p>
-    <h1 class="page-title">Getting started</h1>
-    <p class="text-mocha">A quick guide for <%= Current.tenant.name %> to plan work, assign tasks and keep progress up to date.</p>
-    <nav class="flex flex-wrap gap-2" aria-label="Guide shortcuts">
-      <%= link_to(employee ? "Open My tasks" : "Open tasks", projects_tasks_path, class: "btn-primary btn-sm") %>
-      <%= link_to "Open Projects", projects_projects_path, class: "btn-ghost btn-sm" unless employee %>
-      <% if can_manage %><%= link_to "For managers", "#managers", class: "btn-ghost btn-sm" %><% end %>
-      <%= link_to "For employees", "#employees", class: "btn-ghost btn-sm" %>
-    </nav>
-  </section>
+<div class="page-medium space-y-6">
+  <%= page_header 'Getting started', subtitle: "A quick guide for #{Current.tenant.name} to plan work, assign tasks and keep progress up to date." do %>
+    <%= link_to(employee ? "Open My tasks" : "Open tasks", projects_tasks_path, class: "btn-primary") %>
+  <% end %>
 
   <% if can_manage %>
-    <section id="managers" class="card card-pad space-y-4">
-      <h2 class="font-display text-2xl text-ink">For managers: create a project and assign work</h2>
+    <section id="managers" class="section-card">
+      <%= section_heading 'For managers: create a project and assign work' %>
       <ol class="list-decimal space-y-3 pl-5 text-sm leading-relaxed text-mocha">
-        <li>Open <%= link_to "Projects", projects_projects_path, class: "font-semibold text-olive underline" %> and select <%= link_to "New project", new_projects_project_path, class: "font-semibold text-olive underline" %>.</li>
-        <li>Enter a <strong>Name</strong>, describe <strong>What does done look like?</strong>, and choose an <strong>Owner</strong> and optional <strong>Due date</strong>. Click <strong>Create project</strong>.</li>
+        <li>Open <%= link_to "Projects", projects_projects_path, class: "font-semibold text-olive-deep underline" %> and select <%= link_to "Add project", new_projects_project_path, class: "font-semibold text-olive-deep underline" %>.</li>
+        <li>Enter a <strong>Name</strong>, describe <strong>What does done look like?</strong>, and choose an <strong>Owner</strong> and optional <strong>Due date</strong>. Click <strong>Save</strong>.</li>
         <li>On the project page, enter a task title. Choose its <strong>Priority</strong>, optional <strong>Due date</strong> and <strong>Assignee</strong>, then click <strong>Add task</strong>.</li>
         <li>To add notes or change an assignment, open <strong>Edit</strong> on the task card, make your changes and click <strong>Save</strong>. Click a task's title to open its page: checklist, discussion, time, files, labels, repeats and what it waits on.</li>
         <li>Track completion on the project board, the <strong>Timeline</strong> or the task <strong>Calendar</strong>. Click <strong>Start</strong> when the project is ready to begin.</li>
         <li>When the work is done, click <strong>Complete</strong>. If tasks are still open you choose whether to mark them done or leave them open. A completed or archived project can be <strong>reopened</strong>.</li>
       </ol>
-      <p class="rounded-xl bg-haze p-3 text-sm text-mocha">The project owner and task assignee are separate choices. <strong>Each employee task needs an Assignee.</strong> Unassigned tasks do not appear in employees’ lists. If someone is missing from the selector, ask an administrator to check their active account in this workspace.</p>
+      <p class="rounded-card bg-haze p-3 text-sm text-mocha">The project owner and task assignee are separate choices. <strong>Each employee task needs an Assignee.</strong> Unassigned tasks do not appear in employees’ lists. If someone is missing from the selector, ask an administrator to check their active account in this workspace.</p>
       <ul class="list-disc space-y-2 pl-5 text-sm leading-relaxed text-mocha">
         <li><strong>Templates:</strong> use <strong>Save template</strong> on a project, then pick it under <strong>New project</strong>. Tasks, checklists and date offsets are copied.</li>
         <li><strong>Goals and team:</strong> choose the goal a project supports, and add team members who should hear about comments and blocked work. Team membership does not change anyone's access.</li>
@@ -35,8 +27,8 @@
     </section>
   <% end %>
 
-  <section id="employees" class="card card-pad space-y-4">
-    <h2 class="font-display text-2xl text-ink">For employees: find and update your work</h2>
+  <section id="employees" class="section-card">
+    <%= section_heading 'For employees: find and update your work' %>
     <ol class="list-decimal space-y-3 pl-5 text-sm leading-relaxed text-mocha">
       <li>Sign in with your own account and select <strong>My tasks</strong> in the navigation.</li>
       <li>Use <strong>Board</strong> or <strong>List</strong> to see your assigned tasks. Search and filters help narrow the list.</li>
@@ -45,18 +37,18 @@
       <li>Click a task's title to open it. There you can tick off its checklist, write a comment, log your time, attach a file, and say why it is blocked.</li>
       <li>The <strong>bell</strong> in the top bar tells you when a task is assigned to you, when someone comments, and each morning what is due.</li>
     </ol>
-    <dl class="grid gap-3 rounded-xl bg-haze p-3 text-sm sm:grid-cols-2">
-      <div><dt class="font-semibold text-ink">In progress</dt><dd class="text-mocha">You’ve started the work.</dd></div>
-      <div><dt class="font-semibold text-ink">Blocked</dt><dd class="text-mocha">You need help to continue. Add a note explaining what you need.</dd></div>
-      <div><dt class="font-semibold text-ink">Done</dt><dd class="text-mocha">The work is complete.</dd></div>
-      <div><dt class="font-semibold text-ink">To do</dt><dd class="text-mocha">Reopen or return the task to the queue.</dd></div>
+    <dl class="facts rounded-card bg-haze p-3">
+      <div><dt>In progress</dt><dd>You’ve started the work.</dd></div>
+      <div><dt>Blocked</dt><dd>You need help to continue. Add a note explaining what you need.</dd></div>
+      <div><dt>Done</dt><dd>The work is complete.</dd></div>
+      <div><dt>To do</dt><dd>Reopen or return the task to the queue.</dd></div>
     </dl>
     <p class="text-sm text-mocha">Employees can manage only their own assigned tasks in their workspace. Managers handle reassignment, priority, due dates, creation and deletion.</p>
     <% if !employee && !can_manage %><p class="text-sm text-mocha">Your account has read-only project access. You can view work, but a manager must make changes.</p><% end %>
   </section>
 
-  <section class="card card-pad space-y-2">
-    <h2 class="font-display text-xl text-ink">Can’t find a task?</h2>
-    <p class="text-sm leading-relaxed text-mocha">Clear your filters, refresh the page and ask your manager to confirm the task is assigned to your account. Tasks reassigned to someone else leave your list when it refreshes.</p>
+  <section class="section-card">
+    <%= section_heading 'Can’t find a task?', level: :h3 %>
+    <p class="text-sm leading-relaxed text-mocha">Clear your filters, reload the page and ask your manager to confirm the task is assigned to your account. Tasks reassigned to someone else leave your list when it refreshes.</p>
   </section>
 </div>

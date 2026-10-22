@@ -1,22 +1,32 @@
-<% content_for :title, 'Staff problem reports' %>
-<%= page_header 'Staff problem reports', subtitle: 'Private time, pay and time-off questions. Responses appear in the staff member’s own workspace.' do %>
-  <%= link_to 'Back to staff', people_employees_path, class: 'btn-ghost btn-sm' %>
-<% end %>
-<%= form_with url: people_work_reports_path, method: :get, class: 'my-5 flex flex-wrap gap-2' do |f| %><%= f.label :status, 'Status', class: 'sr-only' %><%= f.select :status, [['All', 'all']] + EmployeeWorkReport::STATUSES.map { |status| [status.humanize, status] }, { selected: @status }, class: 'select' %><%= f.submit 'Filter', class: 'btn-ghost btn-sm' %><% end %>
-<div class="space-y-4">
-  <% if @reports.empty? %><p class="card card-pad text-sm text-mocha">No staff problem reports.</p><% end %>
-  <% @reports.each do |report| %>
-    <article class="card card-pad space-y-3"><div class="flex flex-wrap justify-between gap-2"><h2 class="font-semibold"><%= report.employee.name %> · <%= EmployeeWorkReport::KINDS.fetch(report.kind) %></h2><span class="pill-olive"><%= report.status.humanize %></span></div><p class="text-xs text-mocha">Reported <%= l(report.created_at, format: :short) %> · #<%= report.id %></p><p class="whitespace-pre-wrap text-sm"><%= report.details %></p>
-      <% if report.response.present? %><p class="rounded-xl bg-haze p-3 text-sm whitespace-pre-wrap"><strong>Latest response:</strong> <%= report.response %></p><% end %>
-      <% if Current.user.can?('hr.write') %>
-        <%= form_with url: people_work_report_path(report), method: :patch, scope: :work_report, class: 'space-y-3' do |f| %>
-          <%= f.hidden_field :lock_version, value: report.lock_version %>
-          <div><%= f.label :status, 'Status', for: "report-status-#{report.id}", class: 'field-label' %><%= f.select :status, EmployeeWorkReport::STATUSES.map { |status| [status.humanize, status] }, { selected: report.status }, id: "report-status-#{report.id}", class: 'select' %></div>
-          <div><%= f.label :response, 'Response to staff member', for: "report-response-#{report.id}", class: 'field-label' %><%= f.text_area :response, value: report.response, id: "report-response-#{report.id}", required: true, maxlength: 2000, rows: 3, class: 'input w-full' %></div>
-          <%= f.submit 'Save response', class: 'btn-primary btn-sm' %>
-        <% end %>
-      <% end %>
-    </article>
+<% content_for :title, 'Staff reports' %>
+<div class="space-y-6">
+  <%= page_header 'Staff reports', subtitle: 'Private time, pay and time-off questions from staff; responses appear in their own workspace.' %>
+  <%= form_with url: people_work_reports_path, method: :get, class: 'toolbar' do |f| %>
+    <div class="toolbar-field"><%= f.label :status, 'Status', class: 'field-label' %><%= f.select :status, [['All', 'all']] + EmployeeWorkReport::STATUSES.map { |status| [status.humanize, status] }, { selected: @status }, class: 'select' %></div>
+    <div class="toolbar-actions">
+      <%= f.submit 'Apply', class: 'btn-primary', name: nil %>
+      <%= link_to 'Clear', people_work_reports_path, class: 'btn-ghost' %>
+    </div>
   <% end %>
+  <div class="space-y-4">
+    <% if @reports.empty? %><%= empty_state 'No staff reports', hint: 'Questions staff send from their workspace appear here.' %><% end %>
+    <% @reports.each do |report| %>
+      <article class="section-card">
+        <%= section_heading "#{report.employee.name} · #{EmployeeWorkReport::KINDS.fetch(report.kind)}", hint: "Reported #{l(report.created_at, format: :short)} · ##{report.id}", level: :h3 do %>
+          <span class="<%= report.status == 'resolved' ? 'pill-fern' : 'pill-olive' %>"><%= report.status.humanize %></span>
+        <% end %>
+        <p class="whitespace-pre-wrap text-sm"><%= report.details %></p>
+        <% if report.response.present? %><p class="rounded-card bg-haze p-3 text-sm whitespace-pre-wrap"><strong>Latest response:</strong> <%= report.response %></p><% end %>
+        <% if Current.user.can?('hr.write') %>
+          <%= form_with url: people_work_report_path(report), method: :patch, scope: :work_report, class: 'space-y-3' do |f| %>
+            <%= f.hidden_field :lock_version, value: report.lock_version %>
+            <div><%= f.label :status, 'Status', for: "report-status-#{report.id}", class: 'field-label' %><%= f.select :status, EmployeeWorkReport::STATUSES.map { |status| [status.humanize, status] }, { selected: report.status }, id: "report-status-#{report.id}", class: 'select' %></div>
+            <div><%= f.label :response, 'Response to staff member', for: "report-response-#{report.id}", class: 'field-label' %><%= f.text_area :response, value: report.response, id: "report-response-#{report.id}", required: true, maxlength: 2000, rows: 3, class: 'input w-full' %></div>
+            <%= f.submit 'Save response', class: 'btn-primary btn-sm' %>
+          <% end %>
+        <% end %>
+      </article>
+    <% end %>
+  </div>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
 </div>
-<%== @pagy.series_nav if @pagy.pages > 1 %>

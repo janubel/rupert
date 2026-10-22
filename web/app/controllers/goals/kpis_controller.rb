@@ -2,7 +2,7 @@
 
 module Goals
   class KpisController < AuthenticatedController
-    before_action :set_kpi, only: %i[show update destroy]
+    before_action :set_kpi, only: %i[show edit update destroy]
 
     def index
       authorize(:module, :projects_read?)

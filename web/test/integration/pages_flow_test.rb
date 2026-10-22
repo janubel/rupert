@@ -54,7 +54,7 @@ class PagesFlowTest < ActionDispatch::IntegrationTest
   test 'catalog links renders as a read-only identity audit' do
     get_page reconcile_index_path
     assert_response :success
-    assert_select 'h1', 'Catalog Links'
+    assert_select 'h1', 'Catalog links'
     assert_select 'main form[method=post]', count: 0 # search is read-only; no apply or approval forms
     assert_select 'main form[method=get]'
   end
@@ -68,7 +68,7 @@ class PagesFlowTest < ActionDispatch::IntegrationTest
   test 'alerts renders' do
     get_page alerts_path
     assert_response :success
-    assert_select 'h1', 'Alerts'
+    assert_select 'h1', 'Stock alerts'
   end
 
   test 'syncs renders' do

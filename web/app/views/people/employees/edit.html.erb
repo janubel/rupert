@@ -1,8 +1,5 @@
 <% content_for :title, "Edit staff member" %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title"><%= @employee.name %></h1>
-    <p class="mt-1 text-sm text-mocha">Update the HR record.</p>
-  </section>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Edit staff member', subtitle: @employee.name %>
   <%= render "form", employee: @employee %>
 </div>

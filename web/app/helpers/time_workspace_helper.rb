@@ -4,25 +4,6 @@
 # Square and C-Trax history, team schedule, payroll) so an administrator can
 # move between review, reporting and source history without hunting.
 module TimeWorkspaceHelper
-  def time_workspace_links
-    user = Current.user
-    return [] unless user&.active?
-
-    reviewer = user.can_review_timesheets? || (user.can_manage_accounts? && user.can?('timesheets.read'))
-    links = []
-    links << ['Time keeping', people_time_keeping_path, controller_path == 'people/time_keeping'] if user.can?('timesheets.read')
-    links << ['Timesheets', people_timesheets_path, controller_path == 'people/timesheets']
-    if user.can?('timesheets.read')
-      links << ['Punch report', people_punch_history_path, controller_path == 'people/punch_history']
-      links << ['Square history', people_square_timesheets_path, controller_path == 'people/square_timesheets']
-      links << ['C-Trax history', people_ctrax_timesheets_path, controller_path == 'people/ctrax_timesheets']
-    end
-    links << ['Team schedule', people_team_schedule_path, controller_path == 'people/team_schedule'] if reviewer
-    links << ['Payroll', people_pay_runs_path, controller_path == 'people/pay_runs'] if user.can?('payroll.read')
-    links << ['Staff', people_employees_path, controller_path == 'people/employees'] if user.can?('hr.read')
-    links
-  end
-
   # Named reporting windows for every time report, as TimeRangePicker::Preset
   # (key, label, from, to). Pay weeks run Thursday–Wednesday.
   def time_range_presets(today = Date.current)

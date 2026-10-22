@@ -1,45 +1,41 @@
-<%= form_with model: @account, scope: :account, url: (@account.persisted? ? finance_chart_of_account_path(@account) : finance_chart_of_accounts_path), class: "mt-6 space-y-4" do |f| %>
+<%= form_with model: @account, scope: :account, url: (@account.persisted? ? finance_chart_of_account_path(@account) : finance_chart_of_accounts_path), class: 'space-y-4' do |f| %>
   <% if @account.errors.any? %>
-    <div role="alert" class="flash flash-alert">
-      <%= @account.errors.full_messages.to_sentence %>
-    </div>
+    <div role="alert" class="flash flash-alert"><%= @account.errors.full_messages.to_sentence %></div>
   <% end %>
-
-  <div class="grid gap-4 sm:grid-cols-2">
-    <div>
-      <%= f.label :code, "Code", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_field :code, class: "input", placeholder: "e.g. 1100", autocomplete: "off" %>
-      <p class="mt-1 text-sm text-mocha">A unique number. Accounts are listed in code order. Posting rules refer to codes, so avoid changing a code that already has entries.</p>
+  <fieldset class="space-y-4">
+    <legend class="card-title">Account</legend>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <%= f.label :code, 'Code', class: 'field-label' %>
+        <%= f.text_field :code, class: 'input', placeholder: 'e.g. 1100', autocomplete: 'off' %>
+        <p class="mt-1 text-xs text-mocha">A unique number. Accounts are listed in code order. Posting rules refer to codes, so avoid changing a code that already has entries.</p>
+      </div>
+      <div>
+        <%= f.label :name, 'Name', class: 'field-label' %>
+        <%= f.text_field :name, class: 'input', placeholder: 'e.g. Checking account', autocomplete: 'off' %>
+      </div>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <%= f.label :account_type, 'Type', class: 'field-label' %>
+        <%= f.select :account_type, Finance::Account::TYPES.map { |t| [Finance::Account::TYPE_LABELS.fetch(t), t] }, {}, class: 'select w-full' %>
+      </div>
+      <div>
+        <%= f.label :normal_balance, 'Increases with (normal balance)', class: 'field-label' %>
+        <%= f.select :normal_balance, [['Debit', 'debit'], ['Credit', 'credit']], {}, class: 'select w-full' %>
+        <p class="mt-1 text-xs text-mocha">Normally debit for assets and expenses, credit for liabilities, equity and revenue. Choosing the other side makes reports show this account backwards.</p>
+      </div>
     </div>
     <div>
-      <%= f.label :name, "Name", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_field :name, class: "input", placeholder: "e.g. Checking account", autocomplete: "off" %>
+      <%= f.label :description, 'Description (optional)', class: 'field-label' %>
+      <%= f.text_area :description, rows: 2, class: 'input', placeholder: 'What this account tracks' %>
     </div>
-  </div>
-
-  <div class="grid gap-4 sm:grid-cols-2">
-    <div>
-      <%= f.label :account_type, "Type", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.select :account_type, Finance::Account::TYPES.map { |t| [Finance::Account::TYPE_LABELS.fetch(t), t] }, {}, class: "select w-full" %>
-    </div>
-    <div>
-      <%= f.label :normal_balance, "Increases with (normal balance)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.select :normal_balance, [["Debit", "debit"], ["Credit", "credit"]], {}, class: "select w-full" %>
-      <p class="mt-1 text-sm text-mocha">Normally debit for assets and expenses, credit for liabilities, equity and revenue. Choosing the other side makes reports show this account backwards.</p>
-    </div>
-  </div>
-
-  <div>
-    <%= f.label :description, "Description (optional)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-    <%= f.text_area :description, rows: 2, class: "input !rounded-2xl", placeholder: "What this account tracks" %>
-  </div>
-
-  <label class="flex items-center gap-1.5 text-sm text-mocha">
-    <%= f.check_box :active, class: "accent-olive" %> Active
-  </label>
-
-  <div class="flex items-center gap-3 pt-2">
-    <%= f.submit @account.persisted? ? "Save changes" : "Add account", class: "btn-primary" %>
-    <%= link_to "Cancel", finance_chart_of_accounts_path, class: "btn-ghost" %>
+    <label class="flex items-center gap-1.5 text-sm text-mocha">
+      <%= f.check_box :active, class: 'checkbox' %> Active
+    </label>
+  </fieldset>
+  <div class="form-actions">
+    <%= f.submit 'Save', class: 'btn-primary' %>
+    <%= link_to 'Cancel', finance_chart_of_accounts_path, class: 'btn-ghost' %>
   </div>
 <% end %>

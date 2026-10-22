@@ -74,7 +74,7 @@ class ProductNamesTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal 'no-store', response.headers['Cache-Control']
     assert_select 'h1', 'Product names'
-    assert_select 'a', text: 'Print: Names to verify'
+    assert_select 'a', text: 'Names to verify PDF'
     assert_includes response.body, 'Rest Gummies - 15 Count'
     assert_equal ['Website (Shopify)', 'SwipeSimple', 'Square', 'C-Trax'], css_select('thead th').map { |th| th.text.strip }
     assert_select 'th[scope=rowgroup]', text: /Not on the website/

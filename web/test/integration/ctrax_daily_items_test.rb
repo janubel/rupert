@@ -67,7 +67,7 @@ class CtraxDailyItemsPageTest < ActionDispatch::IntegrationTest
     assert_redirected_to ctrax_days_path
     get items_ctrax_days_path(date: @date + 1)
     assert_response :success
-    assert_select 'h2', 'No stored sales for this date'
+    assert_select '.empty-state-title', 'No stored sales for this date'
     get items_ctrax_days_path(date: @date, location_id: 'missing')
     assert_response :not_found
     @user.update_permission_overrides!(%w[sales.read])

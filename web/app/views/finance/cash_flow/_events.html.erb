@@ -1,16 +1,13 @@
 <section id="cash-flow-events" class="card card-pad">
-  <div class="flex flex-wrap items-baseline justify-between gap-2">
-    <h2 class="font-display text-xl text-ink">Latest money events</h2>
-    <p class="text-xs text-taupe">Newest first, across sales, bank lines, expenses and vendor payments · refreshes every 30 seconds</p>
-  </div>
+  <%= section_heading 'Latest money events', hint: 'Newest first, across sales, bank lines, expenses and vendor payments · refreshes every 30 seconds' %>
   <% events = report.recent_events %>
   <% if events.empty? %>
-    <p class="mt-3 text-sm text-taupe">Nothing recorded yet. Sales appear after a sync; bank lines after a statement import.</p>
+    <%= empty_state 'Nothing recorded yet', hint: 'Sales appear after a sync; bank lines after a statement import.' %>
   <% else %>
-    <ol class="mt-3 divide-y divide-fog">
+    <ol class="divide-y divide-fog">
       <% events.each do |event| %>
         <li class="flex items-center gap-3 py-2 text-sm" data-event-kind="<%= event[:kind] %>">
-          <span class="cash-flow-event-icon cash-flow-event-<%= event[:kind] %>" aria-hidden="true"><%= cash_flow_event_icon(event[:kind]) %></span>
+          <span class="cash-flow-event-icon cash-flow-event-<%= event[:kind] %>" role="img" aria-label="<%= cash_flow_event_kind_label(event[:kind]) %>"><%= cash_flow_event_icon(event[:kind]) %></span>
           <div class="min-w-0 flex-1">
             <p class="truncate text-ink"><% if (path = cash_flow_event_path(event)) %><%= link_to event[:label], path, class: 'hover:underline' %><% else %><%= event[:label] %><% end %></p>
             <p class="truncate text-xs text-taupe"><%= event[:detail] %> · <%= time_ago_in_words(event[:at]) %> ago</p>

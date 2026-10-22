@@ -1,6 +1,6 @@
 <%= turbo_frame_tag 'books-desk-checks' do %>
   <% summary = check.summary; open = check.checks.reject(&:ok?).sort_by { |c| c.status == :fix ? 0 : 1 } %>
-  <div class="card card-pad space-y-3">
+  <div class="section-card">
     <p class="text-sm" role="status">
       <% if open.empty? %>
         <strong>All <%= summary[:total] %> checks pass</strong> for the last <%= check.window_days %> days: imports, payments, refunds, originals, the approval ledger and backups.
@@ -17,12 +17,12 @@
               <p class="font-semibold"><%= c.title %> <span class="<%= c.status == :fix ? 'pill-rose' : 'pill-clay' %>"><%= c.status == :fix ? 'Fix' : 'Watch' %> · <%= c.count %></span></p>
               <p class="text-xs text-mocha"><%= c.detail %></p>
               <% if c.action %><p class="mt-1 text-xs"><%= c.action %></p><% end %>
-              <% if c.path %><%= link_to 'Open', c.path, class: 'mt-1 inline-block text-sm font-semibold text-olive-deep underline', data: { turbo_frame: '_top' } %><% end %>
+              <% if c.path %><%= link_to 'Open', c.path, class: 'mt-1 inline-block text-sm font-semibold text-olive-deep hover:underline', data: { turbo_frame: '_top' } %><% end %>
             </div>
           </li>
         <% end %>
       </ul>
     <% end %>
-    <p class="text-xs text-mocha">Read-only audit. <%= link_to 'Open the full books check', books_check_path, class: 'underline', data: { turbo_frame: '_top' } %> for examples and a CSV.</p>
+    <p class="text-xs text-mocha">Read-only audit. <%= link_to 'Open books health', books_check_path, class: 'font-semibold text-olive-deep hover:underline', data: { turbo_frame: '_top' } %> for examples and a CSV.</p>
   </div>
 <% end %>

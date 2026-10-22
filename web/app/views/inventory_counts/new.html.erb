@@ -1,95 +1,79 @@
 <% count = @count %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :stock %>
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Manual count sheet</h1>
-      <p class="mt-1 text-sm text-mocha">
-        <% if @prepared %>
-          Unambiguous stored stock rows at one platform location are pre-filled. Fill in the <em>Counted</em> column with what's physically on hand, then submit for approval.
-        <% else %>
-          Record what's physically on hand per item. Approved counts are kept as audit worksheets and do not change platform inventory. Choose a C-Trax store for the retail stock reference.
-        <% end %>
-      </p>
-    </div>
-    <div class="flex items-center gap-2">
-      <% if @prepared %>
-        <%= link_to "Start blank sheet", new_inventory_count_path(prepared: 0, location_id: count.locationId), class: "btn-ghost btn-sm" %>
-      <% else %>
-        <%= link_to "Prepared sheet", new_inventory_count_path(location_id: count.locationId), class: "btn-ghost btn-sm" %>
-      <% end %>
-    </div>
-  </section>
+<% toggle = @prepared ? ['Start blank sheet', new_inventory_count_path(prepared: 0, location_id: count.locationId)] : ['Use prepared sheet', new_inventory_count_path(location_id: count.locationId)] %>
+<div class="page-medium space-y-6">
+  <%= page_header 'Add count', subtitle: (@prepared ? 'Stored stock at one platform location is pre-filled; enter what is physically on hand.' : 'Enter what is physically on hand per item, then submit the sheet for approval.'), menu: [toggle] %>
+  <%= fold_explainer(@prepared ? 'Only unambiguous stored rows at the selected location appear. Shopify sheets use native on-hand stock from a current, tracked catalog read less than one hour old; available stock and legacy aggregates are excluded. Missing stock is not zero. C-Trax and Square retain their separate source bases. Replace pre-filled values with the physically counted totals.' : 'Approved counts are kept as audit worksheets and do not change platform inventory. Choose a C-Trax store for the retail stock reference.', class: 'text-sm text-mocha') %>
 
   <% if @prepared %>
-    <%= form_tag new_inventory_count_path, method: :get, class: "card card-pad flex flex-wrap items-end gap-3" do %>
-      <%= hidden_field_tag :prepared, "1" %>
+    <%= form_tag new_inventory_count_path, method: :get, class: 'toolbar' do %>
+      <%= hidden_field_tag :prepared, '1' %>
       <%= hidden_field_tag :start_scanning, params[:start_scanning] %>
-      <div class="min-w-0 flex-1">
-        <%= label_tag :location_id, "Platform location for this sheet", class: "mb-1 block text-sm font-medium text-ink" %>
-        <%= select_tag :location_id, options_for_select(@locations.map { |loc| ["#{loc.source.titleize} · #{loc.name}", loc.id] }, count.locationId), include_blank: "Choose a location", class: "input" %>
+      <div class="toolbar-field">
+        <%= label_tag :location_id, 'Platform location for this sheet', class: 'field-label' %>
+        <%= select_tag :location_id, options_for_select(@locations.map { |loc| ["#{loc.source.titleize} · #{loc.name}", loc.id] }, count.locationId), include_blank: 'Choose a location', class: 'input' %>
       </div>
-      <%= submit_tag "Load location sheet", class: "btn-ghost" %>
+      <div class="toolbar-actions"><%= submit_tag 'Load sheet', class: 'btn-ghost', name: nil %></div>
     <% end %>
-    <%= fold_explainer('Only unambiguous stored rows at the selected location appear. Shopify sheets use native on-hand stock from a current, tracked catalog read less than one hour old; available stock and legacy aggregates are excluded. Missing stock is not zero. C-Trax and Square retain their separate source bases. Replace pre-filled values with the physically counted totals.', class: 'rounded-xl bg-haze px-4 py-3 text-sm text-mocha') %>
   <% end %>
 
-  <%= form_tag inventory_counts_path, method: :post, class: "space-y-6", data: { controller: "count-sheet", action: "keydown->count-sheet#advanceOnEnter" } do %>
+  <%= form_tag inventory_counts_path, method: :post, class: 'space-y-6', data: { controller: 'count-sheet', action: 'keydown->count-sheet#advanceOnEnter' } do %>
     <%= hidden_field_tag :start_scanning, params[:start_scanning] %>
     <%= render 'errors', count: count %>
     <div class="card card-pad space-y-4">
-      <div class="grid gap-4 sm:grid-cols-3">
-        <div>
-          <label class="field-label">Date &amp; time counted</label>
-          <%= datetime_field_tag "inventory_count[countedAt]", count.countedAt&.strftime("%Y-%m-%dT%H:%M"), class: "input" %>
-        </div>
-        <div>
-          <label class="field-label">Location <span class="text-taupe">(optional)</span></label>
-          <% if @prepared %>
-            <%= hidden_field_tag "inventory_count[locationId]", count.locationId %>
-            <p class="text-sm text-ink"><%= count.location ? "#{count.location.source.titleize} · #{count.location.name}" : "Choose a location above and load its sheet." %></p>
-          <% else %>
-          <select name="inventory_count[locationId]" class="input">
-            <option value="">— no specific location —</option>
-            <% @locations.each do |loc| %>
-              <option value="<%= loc.id %>" <%= "selected" if count.locationId == loc.id %>><%= loc.source.titleize %> · <%= loc.name %></option>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Count sheet</legend>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label class="field-label" for="inventory_count_countedAt">Date and time counted</label>
+            <%= datetime_field_tag 'inventory_count[countedAt]', count.countedAt&.strftime('%Y-%m-%dT%H:%M'), class: 'input', id: 'inventory_count_countedAt' %>
+          </div>
+          <div>
+            <label class="field-label" for="inventory_count_locationId">Location <span class="font-normal text-taupe">(optional)</span></label>
+            <% if @prepared %>
+              <%= hidden_field_tag 'inventory_count[locationId]', count.locationId, id: 'inventory_count_locationId' %>
+              <p class="text-sm text-ink"><%= count.location ? "#{count.location.source.titleize} · #{count.location.name}" : 'Choose a location above and load its sheet.' %></p>
+            <% else %>
+              <select name="inventory_count[locationId]" id="inventory_count_locationId" class="input">
+                <option value="">No specific location</option>
+                <% @locations.each do |loc| %>
+                  <option value="<%= loc.id %>" <%= 'selected' if count.locationId == loc.id %>><%= loc.source.titleize %> · <%= loc.name %></option>
+                <% end %>
+              </select>
             <% end %>
-          </select>
-          <% end %>
+          </div>
+          <div>
+            <label class="field-label" for="inventory_count_note">Note <span class="font-normal text-taupe">(optional)</span></label>
+            <input type="text" id="inventory_count_note" name="inventory_count[note]" value="<%= count.note %>" placeholder="e.g. end-of-week stocktake" class="input">
+          </div>
         </div>
-        <div>
-          <label class="field-label">Note <span class="text-taupe">(optional)</span></label>
-          <input type="text" name="inventory_count[note]" value="<%= count.note %>" placeholder="e.g. end-of-week stocktake" class="input">
-        </div>
-      </div>
+      </fieldset>
     </div>
 
     <% if @prepared %>
       <div class="card overflow-hidden">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-fog px-5 py-3">
-          <h2 class="font-display text-xl text-ink">Inventory sheet</h2>
-          <span class="text-xs text-taupe"><%= @count.items.size %> SKUs</span>
+        <div class="card-pad pb-3">
+          <%= section_heading 'Inventory sheet', hint: "#{@count.items.size} SKUs", level: :h3 %>
         </div>
-        <div class="operations-table-region" role="region" tabindex="0" aria-label="Inventory Counts table">
-          <table class="w-full text-sm" id="count-table">
-            <thead class="border-b border-fog bg-haze/60">
+        <div class="table-region" role="region" tabindex="0" aria-label="Count sheet">
+          <table class="table" id="count-table">
+            <thead>
               <tr>
                 <th scope="col" class="th">SKU</th>
                 <th scope="col" class="th">Product</th>
                 <th scope="col" class="th">Variant</th>
-                <th scope="col" class="th text-right">System</th>
-                <th scope="col" class="th text-right w-28">Counted <span class="font-normal normal-case text-taupe">(override)</span></th>
+                <th scope="col" class="th num">System</th>
+                <th scope="col" class="th num w-32">Counted</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-fog">
+            <tbody>
               <% @count.items.each_with_index do |item, index| %>
                 <tr data-row>
                   <td class="td font-mono text-xs text-mocha"><%= item.sku %></td>
-                  <td class="td text-ink"><%= item.comparison['product_name'] || item.shopify_variant&.product&.title || item.square_variation&.item&.name || "—" %></td>
-                  <td class="td text-mocha"><%= item.comparison['source_sku'] || item.shopify_variant&.title || item.square_variation&.name || "—" %></td>
-                  <td class="td text-right text-mocha"><%= item.previousQuantity %></td>
+                  <td class="td text-ink"><%= item.comparison['product_name'] || item.shopify_variant&.product&.title || item.square_variation&.item&.name || '—' %></td>
+                  <td class="td text-mocha"><%= item.comparison['source_sku'] || item.shopify_variant&.title || item.square_variation&.name || '—' %></td>
+                  <td class="td num text-mocha"><%= item.previousQuantity %></td>
                   <td class="td">
-                    <input type="number" name="items[<%= index %>][quantity]" min="0" value="<%= item.quantity %>"
+                    <input type="number" name="items[<%= index %>][quantity]" min="0" value="<%= item.quantity %>" aria-label="Counted <%= item.sku %>"
                       class="input w-24 text-right" autocomplete="off" data-count-input>
                     <input type="hidden" name="items[<%= index %>][sku]" value="<%= item.sku %>">
                     <% if item.shopify_source_identity_token %>
@@ -98,31 +82,32 @@
                   </td>
                 </tr>
               <% end %>
+              <% if @count.items.empty? %>
+                <tr><td colspan="5" class="empty-row">No rows loaded. Choose a location above and load its sheet.</td></tr>
+              <% end %>
             </tbody>
           </table>
         </div>
         <p class="border-t border-fog px-5 py-3 text-xs text-taupe">
-          Tip: press <kbd class="rounded bg-haze px-1">Enter</kbd> to jump to the next row's count. Confirm every physical count. Submission snapshots the stored mirror again; approval records the worksheet without changing platform stock.
+          Press <kbd class="rounded bg-haze px-1">Enter</kbd> to jump to the next row's count. Submission snapshots the stored mirror again; approval records the worksheet without changing platform stock.
         </p>
       </div>
     <% else %>
       <div class="card card-pad">
-        <div class="flex items-baseline justify-between">
-          <h2 class="font-display text-xl text-ink">Counted items</h2>
+        <%= section_heading 'Counted items', hint: 'Type a SKU (known SKUs autocomplete) and the counted quantity.', level: :h3 do %>
           <button type="button" data-action="click->count-sheet#addRow" class="btn-ghost btn-sm">Add row</button>
-        </div>
+        <% end %>
         <div data-count-sheet-target="rows" data-action="click->count-sheet#removeRow" class="mt-3 space-y-2">
           <% count.items.each do |item| %>
-            <%= render "item_row", item: item %>
+            <%= render 'item_row', item: item %>
           <% end %>
         </div>
-        <p class="mt-3 text-xs text-taupe">Type a SKU (autocomplete offers known SKUs) and the counted quantity.</p>
       </div>
     <% end %>
 
-    <div class="flex items-center gap-3">
-      <%= submit_tag params[:start_scanning] == '1' ? "Start scanning" : "Save draft", class: "btn-primary" %>
-      <%= link_to "Cancel", inventory_counts_path, class: "btn-ghost" %>
+    <div class="form-actions">
+      <%= submit_tag params[:start_scanning] == '1' ? 'Start scanning' : 'Save draft', class: 'btn-primary', name: nil %>
+      <%= link_to 'Cancel', inventory_counts_path, class: 'btn-ghost' %>
     </div>
   <% end %>
 
@@ -135,9 +120,9 @@
 
     <template data-count-sheet-target="template">
       <div data-row class="flex items-center gap-2">
-        <input type="text" name="items[][sku]" list="known-skus" placeholder="SKU" class="input flex-1 font-mono" autocomplete="off">
-        <input type="number" name="items[][quantity]" min="0" placeholder="Qty" class="input w-24">
-        <button type="button" data-remove-row class="text-xs font-medium text-taupe hover:text-rose">Remove</button>
+        <input type="text" name="items[][sku]" list="known-skus" placeholder="SKU" aria-label="SKU" class="input flex-1 font-mono" autocomplete="off">
+        <input type="number" name="items[][quantity]" min="0" placeholder="Qty" aria-label="Counted quantity" class="input w-24">
+        <button type="button" data-remove-row class="btn-ghost btn-sm">Remove</button>
       </div>
     </template>
   <% end %>
