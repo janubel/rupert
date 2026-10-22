@@ -222,5 +222,96 @@ class TeamChatTest < ActionDispatch::IntegrationTest
       get path
       assert_redirected_to '/chat', path
     end
+  test 'every page has a header chat button and a dock that lists rooms and opens one compactly' do
+    sign_in(@admin)
+    get root_path
+    assert_select "a.chat-dock-trigger[href='#{team_chat_path}'][data-action~='click->chat-dock#toggle']"
+    assert_select '#chat-dock-panel[data-turbo-permanent][hidden] turbo-frame#chat_dock'
+
+    get team_chat_dock_path
+    assert_response :success
+    assert_select 'turbo-frame#chat_dock'
+    assert_select "turbo-frame#chat_dock a.chat-dock-room[href='#{team_chat_dock_room_path('general')}']"
+    assert_select "turbo-frame#chat_dock a[href='#{team_chat_path}'][data-turbo-frame='_top']"
+    assert_no_match(/<html/, response.body)
+
+    get team_chat_dock_room_path('general')
+    assert_response :success
+    assert_select "turbo-frame#chat_dock [data-controller='team-chat'][data-team-chat-compact-value='true']"
+    assert_select "turbo-frame#chat_dock a[href='#{team_chat_room_path('general')}'][data-turbo-frame='_top']"
+    assert_select 'turbo-frame#chat_dock textarea.chat-input'
+  end
+
+  test 'the full chat page has the button but no dock' do
+    sign_in(@admin)
+    get team_chat_room_path(TeamChat::Room.ensure_defaults!(@admin))
+    assert_select 'a.chat-dock-trigger'
+    assert_select '#chat-dock-panel', count: 0
+  end
+
+  test 'the header badge counts unread messages and mentions across rooms' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'general')
+    room.messages.create!(user: manager, body: 'one')
+    room.messages.create!(user: manager, body: "@#{@admin.display_name} two", mentions: [@admin.id])
+    get team_chat_unread_path, as: :json
+    assert_equal({ 'unread' => 2, 'mentions' => 1 }, response.parsed_body)
+  end
+
+  test 'people without team chat get no button, dock or dock endpoints' do
+    sign_in(manager, password: 'password123')
+    get root_path
+    assert_select 'a.chat-dock-trigger', count: 0
+    assert_select '#chat-dock-panel', count: 0
+    get team_chat_dock_path
+    assert_response :forbidden
+    get team_chat_unread_path, as: :json
+    assert_response :forbidden
+  end
+
+  test 'assistant replies can be rated up or down once per person, and Model scores compares models' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'general')
+    person = room.messages.create!(user: @admin, body: 'question')
+    qwen = room.messages.create!(author_kind: 'assistant', status: 'done', body: 'Answer A',
+      meta: { 'asked_by' => @admin.id, 'trigger_id' => person.id, 'engine' => 'local_gateway', 'model' => 'qwen3.5-4b', 'duration_ms' => 40_000, 'tools' => ['sales_summary'] })
+    gemma = room.messages.create!(author_kind: 'assistant', status: 'done', body: 'Answer B',
+      meta: { 'asked_by' => @admin.id, 'trigger_id' => person.id, 'agent' => 'gemma', 'engine' => 'local_gateway', 'model' => 'gemma-4-e4b', 'duration_ms' => 80_000 })
+
+    post team_chat_rating_path('general', qwen.id), params: { value: 'up' }, as: :json
+    assert_equal({ 'up' => 1, 'down' => 0, 'mine' => 'up' }, json['messages'].first['rating'])
+    post team_chat_rating_path('general', qwen.id), params: { value: 'down' }, as: :json
+    assert_equal({ 'up' => 0, 'down' => 1, 'mine' => 'down' }, json['messages'].first['rating'])
+    post team_chat_rating_path('general', qwen.id), params: { value: 'down' }, as: :json
+    assert_equal({ 'up' => 0, 'down' => 0, 'mine' => nil }, json['messages'].first['rating'])
+    assert_equal 0, TeamChat::Rating.count
+
+    post team_chat_rating_path('general', qwen.id), params: { value: 'up' }, as: :json
+    post team_chat_rating_path('general', gemma.id), params: { value: 'down' }, as: :json
+    rating = TeamChat::Rating.find_by(message_id: gemma.id)
+    assert_equal %w[gemma gemma-4-e4b local_gateway], [rating.agent, rating.model, rating.engine]
+
+    post team_chat_rating_path('general', person.id), params: { value: 'up' }, as: :json
+    assert_response :unprocessable_entity
+    post team_chat_rating_path('general', qwen.id), params: { value: 'meh' }, as: :json
+    assert_response :unprocessable_entity
+
+    get team_chat_messages_path('general'), as: :json
+    assert_nil json['messages'].find { |row| row['id'] == person.id }['rating']
+
+    get team_chat_scores_path
+    assert_response :success
+    rows = css_select('tbody tr').map { |row| row.css('td').map { |cell| cell.text.squish } }
+    assert_equal ['@rupert · qwen3.5-4b local gateway', '100%', '1', '0', '1', '0', '40.0 s', '40.0 s', '1.0'], rows.first
+    assert_equal '@gemma · gemma-4-e4b local gateway', rows.second.first
+    assert_equal '0%', rows.second.second
+  end
+
+  test 'Model scores is for team chat users only' do
+    sign_in(manager, password: 'password123')
+    get team_chat_scores_path
+    assert_response :forbidden
   end
 end

@@ -13,7 +13,7 @@ class TeamChatController < AuthenticatedController
 
   before_action :require_access
   before_action -> { response.headers['Cache-Control'] = 'no-store' }, except: %i[index show]
-  before_action :load_room, except: %i[index create_room]
+  before_action :load_room, except: %i[index create_room dock unread scores]
 
   # GET /chat — the last room you were in, else #general.
   def index
@@ -31,7 +31,30 @@ class TeamChatController < AuthenticatedController
     @members = @room.direct? ? [Current.user] : @room.members.where(active: true).order(:id).limit(12).to_a
     @model = TeamChat::ModelConfig.current
     @local_agents = TeamChat::LocalAgents.all.map { |agent| { id: nil, name: agent.handle, label: agent.label } }
-    @people = TeamChat::Post.mentionable.reject { |person| person.id == Current.user.id }.map { |person| { id: person.id, name: person.display_name } }
+    @people = mentionable_people
+  end
+
+  # GET /chat/dock — the room list in the chat dock (a Turbo Frame on every page).
+  def dock
+    TeamChat::Room.ensure_defaults!(Current.user)
+    @rooms = rail_rooms
+    render layout: false
+  end
+
+  # GET /chat/:room/dock — one room, compact, inside the dock's frame.
+  def dock_room
+    @membership = @room.membership_for(Current.user)
+    @membership.touch
+    @model = TeamChat::ModelConfig.current
+    @people = mentionable_people
+    @local_agents = TeamChat::LocalAgents.all.map { |agent| { id: nil, name: agent.handle, label: agent.label } }
+    render layout: false
+  end
+
+  # GET /chat/unread.json — totals for the header badge.
+  def unread
+    rooms = rail_rooms
+    render json: { unread: rooms.sum(&:unread), mentions: rooms.sum(&:mentions) }
   end
 
   # GET /chat/:room/messages(.json)
@@ -40,7 +63,7 @@ class TeamChatController < AuthenticatedController
   #   since=<time>  messages created or changed since the last poll
   #   thread=<id>   also the whole thread under that message
   def messages
-    scope = @room.messages.includes(:user, :attachment_infos, reactions: :user)
+    scope = @room.messages.includes(:user, :attachment_infos, :ratings, reactions: :user)
     rows =
       if params[:since].present?
         since = Time.zone.parse(params[:since].to_s) rescue nil
@@ -90,6 +113,23 @@ class TeamChatController < AuthenticatedController
 
     TeamChat::Reaction.toggle!(message, Current.user, params[:emoji])
     render json: { messages: payload([message.reload]) }
+  end
+
+  # POST /chat/:room/messages/:id/rating { value: up|down } — thumbs on an assistant reply; the same choice again clears it.
+  def rate
+    message = @room.messages.visible.find(params[:id])
+    return render json: { error: 'Only finished assistant replies can be rated.' }, status: :unprocessable_entity unless message.assistant? && message.status == 'done'
+    return render json: { error: 'Choose up or down.' }, status: :unprocessable_entity unless TeamChat::Rating::VALUES.key?(params[:value].to_s)
+
+    TeamChat::Rating.rate!(message, Current.user, params[:value])
+    render json: { messages: payload([message.reload]) }
+  end
+
+  # GET /chat/models — which models people like, and how fast and reliable each is.
+  def scores
+    @days = params[:days].present? ? params[:days].to_i.clamp(1, 365) : 30
+    @rows = TeamChat::ModelScores.call(since: @days.days.ago)
+    @current = TeamChat::ModelConfig.current
   end
 
   # DELETE /chat/:room/messages/:id — your own messages only.
@@ -152,6 +192,10 @@ class TeamChatController < AuthenticatedController
 
   def room_params
     params.permit(:name, :topic, :assistant_mode).to_h.symbolize_keys.compact_blank
+  end
+
+  def mentionable_people
+    TeamChat::Post.mentionable.reject { |person| person.id == Current.user.id }.map { |person| { id: person.id, name: person.display_name } }
   end
 
   def rail_rooms

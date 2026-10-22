@@ -1,0 +1,50 @@
+<%= page_header 'Model scores', subtitle: "Which models people like in team chat, from 👍 and 👎 on replies over the last #{pluralize(@days, 'day')}." do %>
+  <%= link_to 'Back to team chat', team_chat_path, class: 'btn-ghost' %>
+<% end %>
+
+<div class="mb-4 flex flex-wrap items-center gap-2 text-sm">
+  <span class="text-mocha">Period:</span>
+  <% [7, 30, 90].each do |days| %>
+    <%= link_to "#{days} days", team_chat_scores_path(days: days), class: (@days == days ? 'pill-fern' : 'pill-taupe'), aria: { current: (@days == days ? 'page' : nil) } %>
+  <% end %>
+  <span class="ml-auto text-xs text-taupe">@rupert currently answers with <strong><%= @current.label %></strong>.</span>
+</div>
+
+<div class="card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="border-b border-fog bg-haze/60">
+        <tr>
+          <th scope="col" class="th">Agent · model</th>
+          <th scope="col" class="th text-right">Liked</th>
+          <th scope="col" class="th text-right">👍</th>
+          <th scope="col" class="th text-right">👎</th>
+          <th scope="col" class="th text-right">Replies</th>
+          <th scope="col" class="th text-right">Failed</th>
+          <th scope="col" class="th text-right">Typical wait</th>
+          <th scope="col" class="th text-right">Slowest</th>
+          <th scope="col" class="th text-right">Tools / reply</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-fog">
+        <% if @rows.empty? %>
+          <tr><td colspan="9" class="empty-row">No assistant replies in this period yet. Ask @rupert or a local @agent something in team chat.</td></tr>
+        <% end %>
+        <% @rows.each do |row| %>
+          <tr class="hover:bg-cream">
+            <td class="td font-medium text-ink"><%= row.label %><% if row.engine.present? %> <span class="text-xs text-taupe"><%= row.engine.tr('_', ' ') %></span><% end %></td>
+            <td class="td text-right font-semibold"><%= row.liked_percent ? "#{row.liked_percent}%" : '—' %></td>
+            <td class="td text-right"><%= row.up %></td>
+            <td class="td text-right"><%= row.down %></td>
+            <td class="td text-right"><%= row.replies %></td>
+            <td class="td text-right <%= 'text-rose' if row.failed.positive? %>"><%= row.failed %></td>
+            <td class="td text-right"><%= row.median_seconds ? "#{row.median_seconds} s" : '—' %></td>
+            <td class="td text-right"><%= row.slowest_seconds ? "#{row.slowest_seconds} s" : '—' %></td>
+            <td class="td text-right"><%= row.tools_per_reply %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<p class="mt-3 text-xs text-taupe">Each person has one vote per reply; pressing the same thumb again takes it back. "Liked" is 👍 out of all votes. Rows with few votes are not yet a fair comparison.</p>

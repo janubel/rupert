@@ -225,7 +225,7 @@ module TeamChat
     end
 
     def finish(text, started)
-      body = AskRupert::ReplyFormat.tidy(text)
+      body = Links.real_paths_only(AskRupert::ReplyFormat.tidy(text))
       body = FAILURES[:error] if body.blank? && @reply.reload.actions_list.empty?
       @reply.reload.update!(body: body.to_s, status: 'done', activity: nil, meta: meta_with(started, 'ok'))
       note_ai_health('ok')
@@ -240,7 +240,7 @@ module TeamChat
 
     # Cloud replies count toward System → AI health's token totals, as Ask Rupert's do.
     def note_ai_health(outcome)
-      return if @engine == 'ollama' || !defined?(AiAgentRun)
+      return if %w[ollama local_gateway].include?(@engine) || !defined?(AiAgentRun)
 
       meta = @reply.meta.to_h
       AiAgentRun.create!(agent: 'team_chat', model: meta['model'].to_s, outcome: outcome, tokens_in: @tokens_in, tokens_out: @tokens_out,

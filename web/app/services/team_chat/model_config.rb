@@ -7,7 +7,8 @@ module TeamChat
   # never from a setting an administrator types, so nobody can point the server
   # at an arbitrary address from the web.
   #
-  #   RUPERT_CHAT_PROVIDER  opencode_go | ollama | openai | opencode_cli (default: auto)
+  #   RUPERT_CHAT_PROVIDER  opencode_go | local_gateway | ollama | openai | opencode_cli (default: auto)
+  #                         local_gateway = the rupert-llm gateway at RUPERT_LOCAL_LLM_URL (the local @agents' server)
   #   RUPERT_CHAT_MODEL     model id (opencode_go default deepseek-v4.1-flash)
   #   RUPERT_CHAT_API_BASE  base URL for openai (any OpenAI-compatible server) or to override the others
   #   RUPERT_CHAT_API_KEY   key for opencode_go / openai; opencode_go falls back to the key
@@ -19,7 +20,7 @@ module TeamChat
   class ModelConfig
     OPENCODE_GO_BASE = 'https://opencode.ai/inference/go/openai/v1'
     DEFAULT_GO_MODEL = 'deepseek-v4.1-flash'
-    ENGINES = %w[opencode_go ollama openai opencode_cli].freeze
+    ENGINES = %w[opencode_go local_gateway ollama openai opencode_cli].freeze
     AUTH_PROVIDERS = %w[opencode-go opencode].freeze
 
     attr_reader :engine, :model, :api_base
@@ -70,7 +71,7 @@ module TeamChat
 
     # Uses RubyLLM with native tool calling (everything except the opencode CLI).
     def native? = engine != 'opencode_cli'
-    def local? = engine == 'ollama'
+    def local? = %w[ollama local_gateway].include?(engine)
     def auto? = @env['RUPERT_CHAT_PROVIDER'].blank?
 
     def configured?
@@ -83,6 +84,7 @@ module TeamChat
       case engine
       when 'opencode_go' then "#{model} through OpenCode Go"
       when 'ollama' then "#{model} on this server (Ollama)"
+      when 'local_gateway' then "#{model} on this server"
       when 'openai' then "#{model} at #{URI(api_base).host rescue 'a custom endpoint'}"
       else "#{AskRupert::Providers::Opencode.new.model} through the opencode CLI"
       end
@@ -98,9 +100,14 @@ module TeamChat
       raise ArgumentError, 'opencode_cli does not use RubyLLM' unless native?
 
       context = RubyLLM.context do |config|
-        config.request_timeout = 120
-        config.max_retries = 1
-        if local?
+        # A local CPU model may first wait for another model to unload and this one to load.
+        config.request_timeout = local? ? 600 : 120
+        config.max_retries = local? ? 0 : 1
+        if engine == 'local_gateway'
+          config.openai_api_base = api_base
+          config.openai_api_key = 'local'
+          config.openai_use_system_role = true
+        elsif local?
           config.ollama_api_base = api_base
         else
           config.openai_api_base = api_base
@@ -109,7 +116,7 @@ module TeamChat
           config.openai_use_system_role = true
         end
       end
-      chat = context.chat(model: model, provider: local? ? :ollama : :openai, assume_model_exists: true, protocol: :chat_completions)
+      chat = context.chat(model: model, provider: engine == 'ollama' ? :ollama : :openai, assume_model_exists: true, protocol: :chat_completions)
       engine == 'opencode_go' ? chat.with_headers('x-opencode-session' => session.to_s) : chat
     end
 
@@ -129,6 +136,8 @@ module TeamChat
       when 'opencode_go'
         [@env['RUPERT_CHAT_MODEL'].presence || DEFAULT_GO_MODEL, @env['RUPERT_CHAT_API_BASE'].presence || OPENCODE_GO_BASE,
          @env['RUPERT_CHAT_API_KEY'].presence || opencode_key]
+      when 'local_gateway'
+        [@env['RUPERT_CHAT_MODEL'].presence, @env['RUPERT_LOCAL_LLM_URL'].to_s.strip.chomp('/').presence, nil]
       when 'ollama'
         base = @env['RUPERT_CHAT_API_BASE'].presence || (@env['OLLAMA_URL'].present? ? "#{@env['OLLAMA_URL'].chomp('/')}/v1" : nil)
         [@env['RUPERT_CHAT_MODEL'].presence || local_model, base, nil]
