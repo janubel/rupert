@@ -1,15 +1,20 @@
+<%# Workspace request receipt: a short Detail page (docs/ui-standards.md §4). %>
 <% content_for :title, 'Workspace request' %>
-<div class="mx-auto max-w-xl pt-10">
-  <div class="card card-pad space-y-4">
-    <h1 class="page-title">Workspace request <%= @signup.status %></h1>
-    <% if @signup.status == 'approved' %>
-      <p class="text-sm text-mocha">Your workspace has been approved. Sign in with the same Google account to continue.</p>
-    <% elsif @signup.status == 'rejected' %>
-      <p class="text-sm text-mocha">The platform owner did not approve this request. Submitting it again will not reopen it.</p>
-    <% else %>
-      <p class="text-sm text-mocha">Your verified company email request is waiting for platform owner review. No workspace or account has been created yet.</p>
+<% status_pill = { 'approved' => 'pill-fern', 'rejected' => 'pill-rose' }.fetch(@signup.status, 'pill-clay') %>
+<div class="page-narrow space-y-6 pt-6">
+  <%= page_header "Workspace request #{@signup.status}", eyebrow: 'Rupert',
+                  subtitle: @signup.status == 'approved' ? 'Your workspace has been approved; sign in with the same Google account to continue.' : @signup.status == 'rejected' ? 'The platform owner did not approve this request.' : 'Your verified company email request is waiting for platform owner review.' do %>
+    <%= link_to 'Sign in', login_path, class: 'btn-primary' %>
+  <% end %>
+  <section class="section-card">
+    <dl class="facts">
+      <div><dt>Status</dt><dd><span class="<%= status_pill %>"><%= @signup.status.humanize %></span></dd></div>
+    </dl>
+    <% if @signup.status == 'rejected' %>
+      <p class="text-sm text-mocha">Submitting the request again will not reopen it.</p>
+    <% elsif @signup.status != 'approved' %>
+      <p class="text-sm text-mocha">No workspace or account has been created yet.</p>
     <% end %>
-    <p class="text-xs text-mocha">You have not been signed in by submitting this request. No email notification is sent automatically.</p>
-    <%= link_to 'Return to sign in', login_path, class: 'btn-primary' %>
-  </div>
+    <p class="text-xs text-taupe">You have not been signed in by submitting this request. No email notification is sent automatically.</p>
+  </section>
 </div>

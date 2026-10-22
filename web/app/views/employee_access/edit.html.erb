@@ -1,11 +1,15 @@
 <% content_for :title, 'Set your staff member password' %>
-<section class="card card-pad mx-auto max-w-lg space-y-4">
-  <h1 class="page-title">Welcome to Rupert</h1>
-  <p>Set your password for <%= @grant.user.email %> at <%= @grant.tenant.name %>. This account works on the web, iPhone and Android.</p>
-  <%= form_with url: employee_setup_path, method: :patch, class: 'space-y-4' do |f| %>
-    <%= f.hidden_field :token, value: params[:token] %>
-    <div><%= f.label :password, 'New password (at least 8 characters)' %><%= f.password_field :password, required: true, minlength: 8, maxlength: 72, autocomplete: 'new-password', class: 'input w-full' %></div>
-    <div><%= f.label :password_confirmation, 'Confirm password' %><%= f.password_field :password_confirmation, required: true, autocomplete: 'new-password', class: 'input w-full' %></div>
-    <%= f.submit 'Set password and sign in', class: 'btn-primary' %>
-  <% end %>
-</section>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Welcome to Rupert', subtitle: "Set your password for #{@grant.user.email} at #{@grant.tenant.name}. This account works on the web, iPhone and Android." %>
+  <div class="card card-pad">
+    <%= form_with url: employee_setup_path, method: :patch, class: 'space-y-6' do |f| %>
+      <%= f.hidden_field :token, value: params[:token] %>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Password</legend>
+        <div><%= f.label :password, 'New password (at least 8 characters)', class: 'field-label' %><%= f.password_field :password, required: true, minlength: 8, maxlength: 72, autocomplete: 'new-password', class: 'input w-full' %></div>
+        <div><%= f.label :password_confirmation, 'Confirm password', class: 'field-label' %><%= f.password_field :password_confirmation, required: true, autocomplete: 'new-password', class: 'input w-full' %></div>
+      </fieldset>
+      <div class="form-actions"><%= f.submit 'Set password and sign in', class: 'btn-primary' %></div>
+    <% end %>
+  </div>
+</div>

@@ -1,13 +1,12 @@
 <% content_for :title, "Payroll" %>
 <div class="space-y-6">
-  <%= render 'shared/time_navigation' %>
   <%= page_header 'Payroll', subtitle: 'Pay runs built from approved timesheets, finalized and paid.' do %>
     <% if Current.user.can?("payroll.write") %>
-      <%= link_to "New pay run", new_people_pay_run_path, class: "btn-primary" %>
+      <%= link_to "Add pay run", new_people_pay_run_path, class: "btn-primary" %>
     <% end %>
   <% end %>
 
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Payroll totals">
     <div class="stat">
       <p class="stat-label">Gross · <%= @year %></p>
       <p class="stat-value mt-1"><%= number_to_currency(@annual_gross / 100.0) %></p>
@@ -26,41 +25,48 @@
     </div>
   </section>
 
-  <%= form_tag people_pay_runs_path, method: :get, class: "flex flex-wrap gap-2" do %>
-    <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
-      <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
-      <% People::PayRun.aasm.states.map(&:name).each do |status| %>
-        <option value="<%= status %>" <%= @status == status.to_s ? "selected" : "" %>><%= status.to_s.titleize %></option>
-      <% end %>
-    </select>
+  <%= form_tag people_pay_runs_path, method: :get, class: "toolbar" do %>
+    <div class="toolbar-field">
+      <label class="field-label" for="pay-run-status">Status</label>
+      <select id="pay-run-status" name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select">
+        <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
+        <% People::PayRun.aasm.states.map(&:name).each do |status| %>
+          <option value="<%= status %>" <%= @status == status.to_s ? "selected" : "" %>><%= status.to_s.humanize %></option>
+        <% end %>
+      </select>
+    </div>
+    <div class="toolbar-actions">
+      <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
+      <%= link_to 'Clear', people_pay_runs_path, class: 'btn-ghost' %>
+    </div>
   <% end %>
 
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+  <div class="card">
+    <div class="table-region" role="region" tabindex="0" aria-label="Pay runs">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Pay run</th>
             <th scope="col" class="th">Period</th>
-            <th scope="col" class="th text-right">Payslips</th>
-            <th scope="col" class="th text-right">Gross</th>
-            <th scope="col" class="th text-right">Net</th>
+            <th scope="col" class="th num">Payslips</th>
+            <th scope="col" class="th num">Gross</th>
+            <th scope="col" class="th num">Net</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @pay_runs.empty? %>
-            <tr><td colspan="6" class="empty-row">No pay runs yet.</td></tr>
+            <tr><td colspan="6" class="empty-row">No pay runs yet.<%= ' Add the first pay run.' if Current.user.can?("payroll.write") %></td></tr>
           <% end %>
           <% @pay_runs.each do |pay_run| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td font-medium text-ink"><%= link_to pay_run.name, people_pay_run_path(pay_run), class: "hover:text-olive hover:underline" %></td>
               <td class="td text-mocha"><%= pay_run.period_label %></td>
-              <td class="td text-right text-mocha"><%= pay_run.payslips.count %></td>
-              <td class="td text-right text-mocha"><%= number_to_currency(pay_run.total_gross_cents / 100.0) %></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(pay_run.total_net_cents / 100.0) %></td>
+              <td class="td num"><%= pay_run.payslips.count %></td>
+              <td class="td num"><%= number_to_currency(pay_run.total_gross_cents / 100.0) %></td>
+              <td class="td num font-medium text-ink"><%= number_to_currency(pay_run.total_net_cents / 100.0) %></td>
               <td class="td">
-                <span class="<%= pay_run.paid? ? "pill-fern" : pay_run.finalized? ? "pill-olive" : "pill-taupe" %>"><%= pay_run.status %></span>
+                <span class="<%= pay_run.paid? ? "pill-fern" : pay_run.finalized? ? "pill-olive" : "pill-taupe" %>"><%= pay_run.status.humanize %></span>
               </td>
             </tr>
           <% end %>

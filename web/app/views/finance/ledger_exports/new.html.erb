@@ -1,32 +1,32 @@
-<% content_for :title, "Export ledger" %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
+<% content_for :title, 'Download ledger' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Download ledger', subtitle: 'Posted journal entries for your accountant or accounting software.', menu: [['Financial statements', finance_reports_path], ['General ledger', finance_journal_entries_path]] %>
 
-  <%= page_header 'Export ledger', subtitle: 'Download posted journal entries for your accountant or accounting software.' do %>
-    <%= link_to "All reports", finance_reports_path, class: "btn-ghost btn-sm" %>
-  <% end %>
-
-  <%= form_with url: finance_ledger_export_path, method: :post, class: "card card-pad space-y-4" do |f| %>
-    <div class="grid gap-4 sm:grid-cols-3">
-      <div>
-        <%= label_tag :from, "From", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-        <%= date_field_tag :from, @from, class: "select w-full" %>
+  <%= form_with url: finance_ledger_export_path, method: :post, class: 'card card-pad space-y-4' do |f| %>
+    <fieldset class="space-y-4">
+      <legend class="card-title">Dates and format</legend>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <%= label_tag :from, 'From', class: 'field-label' %>
+          <%= date_field_tag :from, @from, class: 'input' %>
+        </div>
+        <div>
+          <%= label_tag :to, 'To', class: 'field-label' %>
+          <%= date_field_tag :to, @to, class: 'input' %>
+        </div>
       </div>
       <div>
-        <%= label_tag :to, "To", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-        <%= date_field_tag :to, @to, class: "select w-full" %>
+        <%= label_tag :format, 'Format', class: 'field-label' %>
+        <%= select_tag :format, options_from_collection_for_select(Finance::LedgerExport::FORMATS, :key, :label, @format), class: 'select w-full' %>
       </div>
-      <div>
-        <%= label_tag :format, "Format", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-        <%= select_tag :format, options_from_collection_for_select(Finance::LedgerExport::FORMATS, :key, :label, @format), class: "select w-full" %>
-      </div>
-    </div>
-    <div class="flex items-center gap-3">
-      <%= submit_tag "Download", class: "btn-primary" %>
+    </fieldset>
+    <div class="form-actions">
+      <%= submit_tag 'Download', class: 'btn-primary', name: nil %>
+      <%= link_to 'Cancel', finance_journal_entries_path, class: 'btn-ghost' %>
     </div>
   <% end %>
 
   <div class="text-sm text-mocha">
-    Exports only posted entries in the chosen range; voided entries are excluded.<%= define('void_entry') %> QuickBooks IIF imports as a general journal; the CSV lists debits and credits per line for Xero, Wave, Sage and similar.<%= define('debit_credit') %>
+    Only posted entries in the chosen range are included; voided entries are left out.<%= define('void_entry') %> QuickBooks IIF imports as a general journal; the CSV lists debits and credits per line for Xero, Wave, Sage and similar.<%= define('debit_credit') %>
   </div>
 </div>

@@ -11,6 +11,11 @@ module ApplicationHelper
     @ask_rupert_available = !!(user&.active? && !user.employee? && user.can?('chat.use') && Current.tenant_id == user.tenant_id && AskRupert::Config.current.enabled?)
   end
 
+  # The Team chat unread badge polls the chat; same people who may open it.
+  def team_chat_badge_available?
+    Current.user.present? && TeamChat.allowed?(Current.user)
+  end
+
   # --- Module-area navigation helpers (see ModuleRegistry) ---
 
   def nav_areas

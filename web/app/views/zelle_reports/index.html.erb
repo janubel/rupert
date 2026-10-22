@@ -2,12 +2,8 @@
 <% money = ->(cents) { number_with_precision(cents / 100.0, precision: 2, delimiter: ',') } %>
 <div class="space-y-6">
   <%= render 'shared/payment_source_tabs', active: 'zelle' %>
-  <section class="card card-pad">
-    <h1 class="page-title">Zelle source reports</h1>
-    <p class="mt-2">Import a Zelle activity CSV that you downloaded from your own bank. Zelle has no public merchant API, and Rupert never signs in to a bank or stores bank credentials, so this is a manual file workflow.</p>
-    <p class="mt-2 text-sm">Zelle money lands in a bank account. Every row here is labelled <strong>Zelle · unverified</strong> until someone matches it to the bank statement. These totals are their own source: they are never added to SwipeSimple card or cash totals, orders or the ledger. Credits are money received; debits are money sent.</p>
-    <p class="mt-2 text-sm">Original CSVs are kept encrypted with their SHA-256. Counterparty names, memos and bank reference IDs are encrypted and kept out of logs. A missing day does not establish zero Zelle payments. See <code>docs/ops/zelle-reporting.md</code> for the column layout.</p>
-  </section>
+  <%= page_header 'Zelle source reports', subtitle: %q{Import a Zelle activity CSV that you downloaded from your own bank.} %>
+  <%= fold_explainer(%q{Zelle has no public merchant API, and Rupert never signs in to a bank or stores bank credentials, so this is a manual file workflow. Zelle money lands in a bank account. Every row here is labelled Zelle · unverified until someone matches it to the bank statement. These totals are their own source: they are never added to SwipeSimple card or cash totals, orders or the ledger. Credits are money received; debits are money sent. Original CSVs are kept encrypted with their SHA-256. Counterparty names, memos and bank reference IDs are encrypted and kept out of logs. A missing day does not establish zero Zelle payments. See docs/ops/zelle-reporting.md for the column layout.}, class: 'text-sm text-mocha') %>
 
   <% if Current.user.can?('sync.write') %>
     <section id="import" class="card card-pad">

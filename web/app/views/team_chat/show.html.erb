@@ -75,13 +75,17 @@
         <p class="chat-rail-label">Rooms</p>
         <button type="button" class="chat-rail-add" data-action="team-chat#openNewRoom" aria-label="New room" title="New room">+</button>
       </div>
-      <% channels.each do |room| %>
-        <%= link_to team_chat_room_path(room), class: "chat-rail-room #{'is-active' if room == @room}", aria: { current: (room == @room ? 'page' : nil) },
-              data: { team_chat_target: 'roomLink', slug: room.slug, name: room.name } do %>
-          <span class="chat-hash" aria-hidden="true">#</span>
-          <span class="chat-rail-room-name"><%= room.name %></span>
-          <span class="chat-unread" data-unread hidden></span>
-        <% end %>
+      <% hidden_channels, shown_channels = channels.partition(&:hidden?) %>
+      <% shown_channels.each do |room| %>
+        <%= render 'team_chat/rail_channel', room: room %>
+      <% end %>
+      <% if hidden_channels.any? %>
+        <details class="chat-rail-hidden" <%= 'open' if hidden_channels.include?(@room) %>>
+          <summary class="chat-rail-label">Hidden rooms (<%= hidden_channels.size %>)</summary>
+          <% hidden_channels.each do |room| %>
+            <%= render 'team_chat/rail_channel', room: room %>
+          <% end %>
+        </details>
       <% end %>
     </nav>
 
@@ -140,7 +144,12 @@
               <% TeamChat::LocalAgents.key.each do |bot| %>
                 <div class="chat-bots-row">
                   <dt><strong>@<%= bot[:handle] %></strong> <span class="chat-bots-where is-<%= bot[:where] == 'cloud' ? 'cloud' : 'local' %>"><%= bot[:where] == 'cloud' ? 'cloud' : 'local' %></span></dt>
-                  <dd><span class="chat-bots-model"><%= bot[:model] %></span> — <%= bot[:purpose] %></dd>
+                  <dd><span class="chat-bots-model"><%= bot[:model] %></span> — <%= bot[:purpose] %>
+                    <% if bot[:best_for_money] %><span class="chat-bots-best">💰 Best local bot for money questions</span><% end %>
+                    <% if bot[:scores].present? %>
+                      <span class="chat-bots-scores">Tested: <%= bot[:scores].sort.map { |set, score| "#{set == 'default' ? 'general' : set} #{format('%.1f', score)}/5" }.join(' · ') %></span>
+                    <% end %>
+                  </dd>
                 </div>
               <% end %>
             </dl>
@@ -168,6 +177,9 @@
             <summary class="btn-ghost btn-sm" aria-label="Room options">⋯</summary>
             <div class="chat-menu-panel">
               <button type="button" class="chat-menu-item" data-action="team-chat#editTopic">Edit topic</button>
+              <%= button_to (@membership.hidden? ? 'Show in my list' : 'Hide from my list'), team_chat_visibility_path(@room), method: :patch,
+                    params: { hidden: !@membership.hidden? }, class: 'chat-menu-item', form: { data: { turbo: false } },
+                    title: 'Only changes your own room list. Hidden rooms stay one click away under Hidden rooms.' %>
               <% unless @room.slug == TeamChat::Room::MAIN_SLUG %>
                 <%= button_to 'Archive room', team_chat_room_path(@room), method: :patch, params: { archived: true }, class: 'chat-menu-item is-danger',
                       form: { data: { turbo_confirm: "Archive ##{@room.name}? Its messages are kept but it leaves the list." } } %>

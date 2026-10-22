@@ -1,13 +1,7 @@
-<% content_for :title, "Catalog Links" %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :stock %>
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Catalog Links</h1>
-      <%= fold_explainer('Review which sellable items are linked across Shopify and Square. Financial reconciliation lives in Money → Financial close. This is an identity audit only — Shopify and Square are separate locations with independent inventories, so different quantities are normal and never auto-corrected.', class: 'mt-1 max-w-2xl text-sm text-mocha') %>
-    </div>
-    <% if retail_business_access?('inventory.read') %><%= link_to 'Compare Shopify & C-Trax stock', inventory_index_path, class: 'btn-ghost' %><% end %>
-  </section>
+<% content_for :title, 'Catalog links' %>
+<div class="space-y-6">
+  <%= page_header 'Catalog links', subtitle: 'Which sellable items are linked across Shopify and Square, by SKU.', menu: (retail_business_access?('inventory.read') ? [['Open store comparison', stock_comparison_path]] : nil) %>
+  <%= fold_explainer('This is an identity audit only. Shopify and Square are separate locations with independent inventories, so different quantities are normal and never auto-corrected. Financial reconciliation lives in Bookkeeping → Daily close.', class: 'text-sm text-mocha') %>
 
   <section class="grid grid-cols-2 gap-4 md:grid-cols-4">
     <div class="stat">
@@ -20,7 +14,7 @@
     </div>
     <div class="stat">
       <p class="stat-label">SKU mismatches</p>
-      <p class="stat-value mt-1 <%= @summary[:mismatched].positive? ? "text-clay" : "" %>"><%= @summary[:mismatched] %></p>
+      <p class="stat-value mt-1 <%= @summary[:mismatched].positive? ? 'text-clay' : '' %>"><%= @summary[:mismatched] %></p>
     </div>
     <div class="stat">
       <p class="stat-label">One-sided</p>
@@ -29,41 +23,39 @@
     </div>
   </section>
 
-  <section class="card card-pad space-y-3" aria-label="Catalog link filters">
-    <h2 class="font-display text-xl">Find an identity link</h2>
-    <%= form_tag reconcile_index_path, method: :get, class: 'operations-filters' do %><div class="min-w-0"><%= label_tag :q, 'Product or either source SKU', class: 'field-label' %><%= search_field_tag :q, @query, maxlength: 150, placeholder: 'Product name or SKU', class: 'input' %></div><div><%= label_tag :status, 'Link status', class: 'field-label' %><%= select_tag :status, options_for_select([['All linked items', 'all'], ['SKU mismatches', 'mismatched'], ['Matched SKUs', 'matched']], @status), class: 'input' %></div><%= submit_tag 'Find links', class: 'btn-primary' %><%= link_to 'Clear filters', reconcile_index_path, class: 'btn-ghost' %><% end %>
-    <p role="status" class="text-sm text-mocha"><%= @pagy.count %> matching links · mismatches first. Summary cards above describe all catalog links.</p>
-  </section>
+  <%= form_tag reconcile_index_path, method: :get, class: 'toolbar', aria: { label: 'Catalog link filters' } do %>
+    <div class="toolbar-field"><%= label_tag :q, 'Product or SKU', class: 'field-label' %><%= search_field_tag :q, @query, maxlength: 150, placeholder: 'Product name or either source SKU', class: 'input' %></div>
+    <div class="toolbar-field"><%= label_tag :status, 'Link status', class: 'field-label' %><%= select_tag :status, options_for_select([['All linked items', 'all'], ['SKU mismatches', 'mismatched'], ['Matched SKUs', 'matched']], @status), class: 'input' %></div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', reconcile_index_path, class: 'btn-ghost' %></div>
+  <% end %>
+
   <section>
-    <div class="flex flex-wrap items-end justify-between gap-2">
-      <h2 class="font-display text-2xl text-ink">Linked items</h2>
-      <p class="text-xs text-taupe">Mismatches first. Quantities shown per platform are independent on purpose.</p>
-    </div>
+    <%= section_heading 'Linked items', hint: "#{@pagy.count} matching links, mismatches first. Quantities per platform are independent on purpose." %>
     <div class="card mt-3 overflow-hidden">
-      <div class="operations-table-region" role="region" tabindex="0" aria-label="Reconcile table">
-        <table class="operations-table w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
+      <div class="table-region" role="region" tabindex="0" aria-label="Catalog links">
+        <table class="table">
+          <thead>
             <tr>
               <th scope="col" class="th">SKU</th>
               <th scope="col" class="th">Shopify</th>
               <th scope="col" class="th">Square</th>
-              <th scope="col" class="th text-right">Shopify qty</th>
-              <th scope="col" class="th text-right">Square qty</th>
-              <th scope="col" class="th text-right">Status</th>
+              <th scope="col" class="th num">Shopify qty</th>
+              <th scope="col" class="th num">Square qty</th>
+              <th scope="col" class="th">Status</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-fog">
+          <tbody>
             <% if @rows.empty? %>
               <tr>
                 <td colspan="6" class="empty-row">No links match this search and status. Clear the filters or review source imports.</td>
               </tr>
             <% end %>
             <% @rows.each do |row| %>
-              <tr class="hover:bg-cream">
+              <tr>
                 <td class="td font-mono text-xs text-mocha">
                   <%= row.sku %>
-                  <% if row.status == "mismatched" %>
-                    <span class="ml-1 text-[10px] text-clay">↔ <%= row.square_sku.presence || "no Square SKU" %></span>
+                  <% if row.status == 'mismatched' %>
+                    <span class="block text-xs text-clay">↔ <%= row.square_sku.presence || 'no Square SKU' %></span>
                   <% end %>
                 </td>
                 <td class="td">
@@ -71,13 +63,13 @@
                   <p class="text-xs text-taupe"><%= row.product_title %></p>
                 </td>
                 <td class="td text-mocha"><%= row.square_name %></td>
-                <td class="td text-right text-mocha"><%= row.shopify_qty.nil? ? "Unknown" : row.shopify_qty %></td>
-                <td class="td text-right text-mocha"><%= row.square_qty.nil? ? "Unknown" : row.square_qty %></td>
-                <td class="td text-right">
-                  <% if row.status == "matched" %>
-                    <span class="pill-fern">matched</span>
+                <td class="td num text-mocha"><%= row.shopify_qty.nil? ? 'Unknown' : row.shopify_qty %></td>
+                <td class="td num text-mocha"><%= row.square_qty.nil? ? 'Unknown' : row.square_qty %></td>
+                <td class="td">
+                  <% if row.status == 'matched' %>
+                    <span class="pill-fern">Matched</span>
                   <% else %>
-                    <span class="pill-clay">mismatched</span>
+                    <span class="pill-clay">Mismatched</span>
                   <% end %>
                 </td>
               </tr>
@@ -93,70 +85,58 @@
       </div>
     <% end %>
   </section>
-  <details class="card card-pad"><summary class="disclosure-trigger font-semibold">Size families · reference</summary><p class="mb-4 text-sm text-mocha">This audit reads identity links. Review size changes in the dedicated Sizes workspace.</p>  <% if @size_groups.any? %>
-    <section>
-      <div class="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 class="font-display text-2xl text-ink">Size families</h2>
-          <p class="mt-1 text-sm text-mocha">Each root product with the sizes derived from its gram bank. Sizes are managed on the <span class="font-semibold">Sizes</span> page, not here.</p>
-        </div>
-        <% if retail_business_access?('inventory.read') %><%= link_to 'Review size families', size_families_path, class: 'btn-ghost btn-sm' %><% end %>
-      </div>
 
+  <% if @size_groups.any? %>
+    <details class="section-card">
+      <summary class="disclosure-trigger font-semibold text-ink">Size families · reference</summary>
+      <p class="text-sm text-mocha">Each root product with the sizes derived from its gram bank. This audit only reads identity links; manage sizes on the Sizes page.<% if retail_business_access?('inventory.read') %> <%= link_to 'Open sizes', size_families_path, class: 'font-semibold text-olive-deep underline' %><% end %></p>
       <% @size_groups.each do |group| %>
-        <div class="card mt-4">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-fog bg-haze/40 px-5 py-3">
-            <div class="flex items-center gap-3">
-              <div>
-                <h3 class="font-display text-lg text-ink"><%= group[:family].name %></h3>
-                <p class="text-xs text-taupe"><%= group[:family].auto? ? "auto-apply" : "approval-only" %> · root grams <span class="font-semibold text-ink"><%= group[:root] ? number_with_precision(group[:root], precision: 1) : "—" %></span></p>
-              </div>
-              <span class="<%= group[:family].auto? ? "pill-fern" : "pill-taupe" %>"><%= group[:family].auto? ? "AUTO" : "APPROVAL" %></span>
-            </div>
-            <% if group[:pending_count].positive? %>
-              <span class="pill-rose"><%= group[:pending_count] %> pending</span>
+        <div class="card overflow-hidden">
+          <div class="card-pad pb-3">
+            <%= section_heading group[:family].name, hint: "#{group[:family].auto? ? 'Auto-apply' : 'Approval-only'} · root grams #{group[:root] ? number_with_precision(group[:root], precision: 1) : '—'}", level: :h3 do %>
+              <span class="<%= group[:family].auto? ? 'pill-fern' : 'pill-taupe' %>"><%= group[:family].auto? ? 'Auto' : 'Approval' %></span>
+              <% if group[:pending_count].positive? %><span class="pill-rose"><%= group[:pending_count] %> pending</span><% end %>
             <% end %>
           </div>
-
-          <div class="operations-table-region" role="region" tabindex="0" aria-label="Reconcile table">
-            <table class="operations-table w-full text-sm">
-              <thead class="border-b border-fog bg-haze/60">
+          <div class="table-region" role="region" tabindex="0" aria-label="Sizes in <%= group[:family].name %>">
+            <table class="table">
+              <thead>
                 <tr>
                   <th scope="col" class="th">Derives from</th>
                   <th scope="col" class="th">SKU</th>
-                  <th scope="col" class="th text-right">Size</th>
-                  <th scope="col" class="th text-right">Current</th>
-                  <th scope="col" class="th text-right">Target</th>
-                  <th scope="col" class="th text-right">Status</th>
+                  <th scope="col" class="th num">Size</th>
+                  <th scope="col" class="th num">Current</th>
+                  <th scope="col" class="th num">Target</th>
+                  <th scope="col" class="th">Status</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-fog">
+              <tbody>
                 <% if group[:root_item] %>
                   <tr class="bg-haze/40">
                     <td class="td font-semibold text-ink">Root</td>
                     <td class="td font-mono text-xs text-ink"><%= group[:root_item][:sku] %></td>
-                    <td class="td text-right text-mocha">1g</td>
-                    <td class="td text-right font-semibold text-ink"><%= group[:root_item][:current].nil? ? "Unknown" : group[:root_item][:current] %></td>
-                    <td class="td text-right text-taupe">—</td>
-                    <td class="td text-right"><span class="pill-olive">root</span></td>
+                    <td class="td num text-mocha">1g</td>
+                    <td class="td num font-semibold text-ink"><%= group[:root_item][:current].nil? ? 'Unknown' : group[:root_item][:current] %></td>
+                    <td class="td num text-taupe">—</td>
+                    <td class="td"><span class="pill-olive">Root</span></td>
                   </tr>
                 <% end %>
                 <% group[:members].each do |m| %>
                   <tr>
                     <td class="td text-taupe"><%= group[:family].name %></td>
                     <td class="td font-mono text-xs text-ink"><%= m[:member].sku %></td>
-                    <td class="td text-right font-medium text-ink"><%= m[:member].grams %>g</td>
-                    <td class="td text-right text-mocha"><%= m[:current].nil? ? "Unknown" : m[:current] %></td>
-                    <td class="td text-right font-semibold text-olive"><%= m[:target].nil? ? "—" : m[:target] %></td>
-                    <td class="td text-right">
+                    <td class="td num font-medium text-ink"><%= m[:member].grams %>g</td>
+                    <td class="td num text-mocha"><%= m[:current].nil? ? 'Unknown' : m[:current] %></td>
+                    <td class="td num font-semibold text-olive"><%= m[:target].nil? ? '—' : m[:target] %></td>
+                    <td class="td">
                       <% if m[:pending] %>
-                        <span class="pill-rose">pending → <%= m[:pending].target_quantity %></span>
+                        <span class="pill-rose">Pending → <%= m[:pending].target_quantity %></span>
                       <% elsif m[:target] && m[:target] == m[:current] %>
-                        <span class="pill-fern">in sync</span>
+                        <span class="pill-fern">In sync</span>
                       <% elsif m[:target].nil? %>
-                        <span class="pill-taupe">no root</span>
+                        <span class="pill-taupe">No root</span>
                       <% else %>
-                        <span class="pill-taupe">derives on sync</span>
+                        <span class="pill-taupe">Derives on sync</span>
                       <% end %>
                     </td>
                   </tr>
@@ -166,8 +146,6 @@
           </div>
         </div>
       <% end %>
-    </section>
+    </details>
   <% end %>
-
-</details>
 </div>

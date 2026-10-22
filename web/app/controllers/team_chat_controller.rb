@@ -52,10 +52,22 @@ class TeamChatController < AuthenticatedController
     render layout: false
   end
 
-  # GET /chat/unread.json — totals for the header badge.
+  # GET /chat/unread.json — totals for the header badge. Rooms you hid only count when they mention you.
   def unread
     rooms = rail_rooms
-    render json: { unread: rooms.sum(&:unread), mentions: rooms.sum(&:mentions) }
+    render json: { unread: rooms.reject(&:hidden?).sum(&:unread), mentions: rooms.sum(&:mentions) }
+  end
+
+  # PATCH /chat/:room/visibility { hidden } — hide a room from your own list, or show it again.
+  def visibility
+    return head :forbidden if @room.direct?
+
+    hidden = ActiveModel::Type::Boolean.new.cast(params[:hidden])
+    @room.membership_for(Current.user).update!(hidden_at: hidden ? Time.current : nil)
+    respond_to do |format|
+      format.json { render json: { hidden: hidden } }
+      format.html { redirect_to team_chat_room_path(@room), notice: hidden ? "##{@room.name} is hidden from your list. Find it under Hidden rooms." : "##{@room.name} is back in your list." }
+    end
   end
 
   # GET /chat/:room/messages(.json)
@@ -323,9 +335,12 @@ class TeamChatController < AuthenticatedController
   def rail_rooms
     @rail_rooms ||= begin
       rooms = TeamChat::Room.visible_to(Current.user).order(:kind, :name).to_a
-      reads = TeamChat::Membership.where(user_id: Current.user.id, room_id: rooms.map(&:id)).pluck(:room_id, :last_read_message_id).to_h
+      memberships = TeamChat::Membership.where(user_id: Current.user.id, room_id: rooms.map(&:id)).pluck(:room_id, :last_read_message_id, :hidden_at)
+      reads = memberships.to_h { |room_id, last_read, _| [room_id, last_read] }
+      hidden = memberships.filter_map { |room_id, _, hidden_at| room_id if hidden_at }.to_set
       me = Current.user.id
       rooms.each do |room|
+        room.define_singleton_method(:hidden?) { hidden.include?(room.id) }
         unread = room.messages.visible.where('id > ?', reads[room.id].to_i).where('user_id IS NULL OR user_id != ?', me).where.not(status: 'pending')
         room.define_singleton_method(:unread) { unread.top_level.count }
         # Mentions count in threads too; the JSON column holds a plain id list.

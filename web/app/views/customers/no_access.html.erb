@@ -1,10 +1,10 @@
-<% content_for :title, "Customer CRM" %>
-<div class="space-y-6">
-  <%= page_header 'Customer CRM', subtitle: 'Contacts, relationship history, and follow-ups.' %>
-  <section class="card card-pad page-narrow" role="alert">
-    <h2 class="font-display text-lg text-ink">Your access level doesn't include customers</h2>
-    <p class="mt-2 text-sm text-mocha">You're signed in as <strong><%= navigation_role_name(Current.user) %></strong>. Viewing customer records needs the <em>customers.read</em> permission, which store administrators, managers, cashiers and readers have by default.</p>
-    <p class="mt-2 text-sm text-mocha">If you need it, ask a store administrator to update your access under Team → Permissions.</p>
-    <%= link_to "Back to start", navigation_start_path, class: "btn-ghost mt-4" %>
+<% content_for :title, 'Customers' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Customers', subtitle: 'Contacts, relationship history and follow-ups.' %>
+  <section class="section-card" role="alert">
+    <%= section_heading "Your access level doesn't include customers" %>
+    <p class="text-sm text-mocha">You're signed in as <strong><%= navigation_role_name(Current.user) %></strong>. Viewing customer records needs the <em>customers.read</em> permission, which store administrators, managers, cashiers and readers have by default.</p>
+    <p class="text-sm text-mocha">If you need it, ask a store administrator to update your access under Team → Permissions.</p>
+    <%= link_to 'Open your start page', navigation_start_path, class: 'btn-ghost' %>
   </section>
 </div>

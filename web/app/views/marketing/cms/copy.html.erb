@@ -1,1 +1,16 @@
-<div class="max-w-3xl space-y-4" data-controller="copy"><h1 class="page-title">Referral link / offer copy</h1><p>Checked when this page opened. Use the current offer terms and expiry when sharing. These links identify the campaign; they do not measure clicks or calculate commissions.</p><label for="influencer-copy" class="block">Copy text</label><textarea id="influencer-copy" readonly rows="8" class="input w-full" data-copy-target="source"><%= @copy %></textarea><button type="button" class="btn-primary" data-action="copy#copy">Copy to clipboard</button><span hidden data-copy-target="status" aria-live="polite">Copied</span><%= link_to 'Back', @back_url, class: 'btn-ghost' %></div>
+<% content_for :title, 'Referral link and offer copy' %>
+<div class="page-narrow space-y-6" data-controller="copy">
+  <%= page_header 'Referral link and offer copy', subtitle: 'Use the current offer terms and expiry when sharing.', eyebrow: 'Marketing · Influencers' %>
+  <%= fold_explainer('Checked when this page opened. These links identify the campaign; they do not measure clicks or calculate commissions.', class: 'text-sm text-mocha') %>
+  <div class="card card-pad space-y-4">
+    <div>
+      <label for="influencer-copy" class="field-label">Copy text</label>
+      <textarea id="influencer-copy" readonly rows="8" class="input w-full" data-copy-target="source"><%= @copy %></textarea>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn-primary" data-action="copy#copy">Copy to clipboard</button>
+      <span hidden data-copy-target="status" aria-live="polite" class="text-xs text-fern">Copied</span>
+      <%= link_to 'Open collaboration', @back_url, class: 'btn-ghost' %>
+    </div>
+  </div>
+</div>

@@ -1,276 +1,287 @@
-<% content_for :title, "Settings" %>
-<div class="space-y-8">
-  <section>
-    <h1 class="page-title">Settings</h1>
-    <p class="mt-2"><%= link_to 'Master credentials & sync', connections_path, class: 'btn-primary btn-sm' %></p>
-    <p class="mt-1 text-sm text-mocha">Environment variables and database backup/restore. Environment keys apply to the sync engine immediately; boot-time keys (Shopify API key/secret, database) come from the droplet env.</p>
-  </section>
+<%# Settings: the Settings template (docs/ui-standards.md §4). One section card per topic. %>
+<% can_write = Current.user.can?("settings.write") %>
+<div class="page-medium space-y-6">
+  <%= page_header 'Settings', subtitle: 'Environment keys, backups, business details, sign-in and integrations.' %>
+  <%= fold_explainer('Environment keys apply to the sync engine immediately. Boot-time keys (Shopify API key and secret, database) come from the server environment and cannot be changed here. Credentials for each source live under Credentials & sync.', class: 'text-sm text-mocha') %>
 
-  <section class="grid gap-4 lg:grid-cols-2">
-    <div id="env" class="card card-pad" data-controller="settings">
-      <div class="flex items-baseline justify-between">
-        <h2 class="font-display text-xl text-ink">Environment (.env)</h2>
-        <% if Current.user.super_admin? %>
-          <%= link_to "Export .env", env_export_confirm_settings_path, class: "btn-ghost btn-sm", data: { turbo: false } %>
-        <% end %>
-      </div>
-      <p class="mt-2 text-xs text-taupe">Import a .env file (or paste its contents) to update managed keys. Values are stored encrypted in the database and override the droplet env.</p>
-
-      <div data-settings-target="envList" class="mt-4 space-y-2"></div>
-
-      <% if Current.user.can?("settings.write") %>
-      <form data-settings-target="envForm" data-action="submit->settings#submitEnv" class="mt-5 space-y-3">
-        <textarea name="text" rows="8" placeholder="KEY=VALUE&#10;# comments are ignored&#10;SQUARE_ACCESS_TOKEN=..." class="input !rounded-2xl font-mono text-xs"></textarea>
-        <label class="flex items-center gap-2 text-xs text-mocha">
-          or upload a file
-          <input type="file" name="file" accept=".env,text/plain" class="text-xs">
-        </label>
-        <button type="submit" class="btn-primary">Import into settings</button>
-        <span data-settings-target="envResult" class="text-xs"></span>
-      </form>
-      <% end %>
-    </div>
-
-    <div class="card card-pad">
-      <h2 class="font-display text-xl text-ink">Database backup</h2>
-      <p class="mt-2 text-xs text-taupe">Download a consistent database snapshot.</p>
-
+  <section id="env" class="section-card" data-controller="settings">
+    <%= section_heading 'Environment (.env)', hint: 'Import a .env file or paste its contents to update managed keys.' do %>
       <% if Current.user.super_admin? %>
-      <div class="mt-5 flex flex-wrap gap-2">
-        <%= link_to "Download backup", backup_settings_path, class: "btn-primary", data: { turbo: false } %>
-        <p class="text-xs text-taupe">Database restores require offline maintenance with web and jobs stopped and a verified recovery backup. Contact the instance operator.</p>
-      </div>
-      <p data-settings-target="restoreResult" class="mt-3 text-xs"></p>
-      <% else %>
-        <p class="mt-5 text-sm text-taupe">Instance backups and restoration are managed by the platform administrator.</p>
+        <%= link_to "Download .env", env_export_confirm_settings_path, class: "btn-ghost btn-sm", data: { turbo: false } %>
       <% end %>
-    </div>
-  </section>
-
-  <section class="card card-pad">
-    <h2 class="font-display text-xl text-ink">Business settings</h2>
-    <p class="mt-2 text-xs text-taupe">Shown on printed invoices and used by stock alerts.</p>
-    <% if Current.user.can?("settings.write") %>
-    <%= form_tag tenant_settings_path, method: :post, class: "mt-4 grid gap-4 sm:grid-cols-3" do %>
-      <div>
-        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="business_name">Business name</label>
-        <input type="text" id="business_name" name="business_name" value="<%= TenantSettings.business_name %>" class="input">
-      </div>
-      <div>
-        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="invoice_prefix">Invoice prefix</label>
-        <input type="text" id="invoice_prefix" name="invoice_prefix" value="<%= TenantSettings.invoice_prefix %>" class="input">
-      </div>
-      <div>
-        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="low_stock_threshold">Low-stock threshold</label>
-        <input type="number" id="low_stock_threshold" name="low_stock_threshold" value="<%= TenantSettings.low_stock_threshold %>" min="0" class="input">
-      </div>
-      <div>
-        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="sales_tax_rate">Sales tax rate % (for estimates)</label>
-        <input type="text" inputmode="decimal" id="sales_tax_rate" name="sales_tax_rate" value="<%= TenantSettings.sales_tax_rate %>" placeholder="e.g. 6.35" class="input" aria-describedby="sales_tax_rate_hint">
-        <p id="sales_tax_rate_hint" class="mt-1 text-xs text-mocha">Only used to estimate tax for sources that do not report it, such as SwipeSimple. Leave blank for no estimate.</p>
-      </div>
-      <div class="sm:col-span-3">
-        <%= submit_tag "Save business settings", class: "btn-primary" %>
-      </div>
     <% end %>
+    <p class="text-xs text-taupe">Values are stored encrypted in the database and override the server environment.</p>
+
+    <div data-settings-target="envList" class="space-y-2"></div>
+
+    <% if can_write %>
+      <form data-settings-target="envForm" data-action="submit->settings#submitEnv" class="space-y-3">
+        <div>
+          <label class="field-label" for="env_text">Keys and values</label>
+          <textarea id="env_text" name="text" rows="8" placeholder="KEY=VALUE&#10;# comments are ignored&#10;SQUARE_ACCESS_TOKEN=..." class="input font-mono text-xs"></textarea>
+        </div>
+        <div>
+          <label class="field-label" for="env_file">Or upload a file</label>
+          <input id="env_file" type="file" name="file" accept=".env,text/plain" class="text-xs">
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Import</button>
+          <span data-settings-target="envResult" class="text-xs"></span>
+        </div>
+      </form>
     <% end %>
   </section>
 
-  <section class="card card-pad">
-    <h2 class="font-display text-xl text-ink">Office features</h2>
-    <p class="mt-2 text-xs text-taupe">Optional workflows for the shipping desk. Off by default.</p>
+  <section class="section-card">
+    <%= section_heading 'Database backup', hint: 'Download a consistent database snapshot.' %>
+    <% if Current.user.super_admin? %>
+      <div class="flex flex-wrap items-center gap-3">
+        <%= link_to "Download backup", backup_settings_path, class: "btn-primary", data: { turbo: false } %>
+      </div>
+      <p class="text-xs text-taupe">Database restores need offline maintenance with web and jobs stopped and a verified recovery backup. Contact the instance operator.</p>
+      <p data-settings-target="restoreResult" class="text-xs"></p>
+    <% else %>
+      <p class="text-sm text-taupe">Instance backups and restores are managed by the platform administrator.</p>
+    <% end %>
+  </section>
 
-    <div class="mt-4 flex items-center justify-between rounded-xl bg-haze px-4 py-3">
+  <section class="section-card">
+    <%= section_heading 'Business settings', hint: 'Shown on printed invoices and used by stock alerts.' %>
+    <% if can_write %>
+      <%= form_tag tenant_settings_path, method: :post, class: "space-y-4" do %>
+        <fieldset class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="field-label" for="business_name">Business name</label>
+            <input type="text" id="business_name" name="business_name" value="<%= TenantSettings.business_name %>" class="input">
+          </div>
+          <div>
+            <label class="field-label" for="invoice_prefix">Invoice prefix</label>
+            <input type="text" id="invoice_prefix" name="invoice_prefix" value="<%= TenantSettings.invoice_prefix %>" class="input">
+          </div>
+          <div>
+            <label class="field-label" for="low_stock_threshold">Low-stock threshold</label>
+            <input type="number" id="low_stock_threshold" name="low_stock_threshold" value="<%= TenantSettings.low_stock_threshold %>" min="0" class="input">
+          </div>
+          <div>
+            <label class="field-label" for="sales_tax_rate">Sales tax rate % (for estimates)</label>
+            <input type="text" inputmode="decimal" id="sales_tax_rate" name="sales_tax_rate" value="<%= TenantSettings.sales_tax_rate %>" placeholder="e.g. 6.35" class="input" aria-describedby="sales_tax_rate_hint">
+            <p id="sales_tax_rate_hint" class="mt-1 text-xs text-mocha">Only used to estimate tax for sources that do not report it, such as SwipeSimple. Leave blank for no estimate.</p>
+          </div>
+        </fieldset>
+        <div class="form-actions">
+          <%= submit_tag "Save", class: "btn-primary" %>
+        </div>
+      <% end %>
+    <% else %>
+      <dl class="facts">
+        <div><dt>Business name</dt><dd><%= TenantSettings.business_name.presence || '—' %></dd></div>
+        <div><dt>Invoice prefix</dt><dd><%= TenantSettings.invoice_prefix.presence || '—' %></dd></div>
+        <div><dt>Low-stock threshold</dt><dd><%= TenantSettings.low_stock_threshold %></dd></div>
+        <div><dt>Sales tax rate</dt><dd><%= TenantSettings.sales_tax_rate.presence || 'No estimate' %></dd></div>
+      </dl>
+    <% end %>
+  </section>
+
+  <section class="section-card">
+    <%= section_heading 'Office features', hint: 'Optional workflows for the shipping desk, off by default.' %>
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <p class="text-sm font-medium text-ink">Order fulfillment status</p>
-        <p class="text-xs text-taupe">Mark orders in transition, shipped, arrived, or completed from the order page.</p>
+        <p class="text-xs text-taupe">Mark orders in transition, shipped, arrived or completed from the order page.</p>
       </div>
-    <% if Current.user.can?("settings.write") %>
-      <%= form_tag fulfillment_workflow_settings_path, method: :post do %>
-        <%= hidden_field_tag :enabled, FeatureFlag.enabled?(:fulfillment_workflow) ? "0" : "1" %>
-        <%= submit_tag FeatureFlag.enabled?(:fulfillment_workflow) ? "Enabled" : "Disabled", class: FeatureFlag.enabled?(:fulfillment_workflow) ? "btn-primary btn-sm" : "btn-ghost btn-sm" %>
+      <% fulfillment_on = FeatureFlag.enabled?(:fulfillment_workflow) %>
+      <% if can_write %>
+        <%= form_tag fulfillment_workflow_settings_path, method: :post, class: 'flex items-center gap-2' do %>
+          <%= hidden_field_tag :enabled, fulfillment_on ? "0" : "1" %>
+          <span class="<%= fulfillment_on ? 'pill-fern' : 'pill-taupe' %>"><%= fulfillment_on ? "On" : "Off" %></span>
+          <%= submit_tag fulfillment_on ? "Turn off" : "Turn on", class: "btn-ghost btn-sm" %>
+        <% end %>
+      <% else %>
+        <span class="<%= fulfillment_on ? 'pill-fern' : 'pill-taupe' %>"><%= fulfillment_on ? "On" : "Off" %></span>
       <% end %>
-    <% end %>
     </div>
   </section>
 
   <% if Current.user.super_admin? %>
-  <section id="drive" class="card card-pad">
-    <div class="flex items-baseline justify-between">
-      <h2 class="font-display text-xl text-ink">Google Drive backup</h2>
-      <span id="drive-conn" class="badge"></span>
-    </div>
-    <p class="mt-2 text-xs text-taupe">Platform operators can snapshot the entire instance database to their approved Google Drive every 6 hours and keep the last <span id="drive-retention">7</span> backups. Each attempt is logged below.</p>
+  <section id="drive" class="section-card">
+    <%= section_heading 'Google Drive backup', hint: 'A snapshot of the whole instance database to an approved Google Drive every 6 hours.' do %>
+      <span id="drive-conn" class="pill-taupe">Checking…</span>
+    <% end %>
+    <p class="text-xs text-taupe">The last <span id="drive-retention">7</span> backups are kept; each attempt is logged below.</p>
 
-    <div id="drive-setup" class="mt-5 hidden">
-      <p class="text-xs font-medium text-ink">Easy setup — about 5 minutes, one time:</p>
-      <ol class="mt-3 space-y-3 text-xs text-mocha">
-        <li class="flex flex-wrap items-start gap-2">
-          <span class="font-semibold text-olive">1.</span>
-          <span>
-            Open Google Cloud in a new tab:
-            <a href="https://console.cloud.google.com/" target="_blank" rel="noopener" class="font-semibold text-olive hover:underline">console.cloud.google.com ↗</a>
-            <br>Sign in, then create a project (or pick an existing one) using the project dropdown at the top.
-          </span>
-        </li>
-        <li class="flex flex-wrap items-start gap-2">
-          <span class="font-semibold text-olive">2.</span>
-          <span>
-            Enable the Google Drive API:
-            <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener" class="font-semibold text-olive hover:underline">Enable Drive API ↗</a>
-            <br>Click the blue <b>Enable</b> button.
-          </span>
-        </li>
-        <li class="flex flex-wrap items-start gap-2">
-          <span class="font-semibold text-olive">3.</span>
-          <span>
-            Set up the OAuth consent screen:
-            <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener" class="font-semibold text-olive hover:underline">Consent screen ↗</a>
-            <br>Choose <b>External</b> → Create. Add your business name + email, save. (You can skip the scopes and test users steps.)
-          </span>
-        </li>
-        <li class="flex flex-wrap items-start gap-2">
-          <span class="font-semibold text-olive">4.</span>
-          <span>
-            Create the OAuth client:
-            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" class="font-semibold text-olive hover:underline">Credentials ↗</a>
-            <br>Click <b>Create Credentials</b> → <b>OAuth client ID</b> → application type <b>Web application</b>.
-          </span>
-        </li>
-        <li class="flex flex-wrap items-start gap-2">
-          <span class="font-semibold text-olive">5.</span>
-          <span>
-            Add this exact <b>Authorized redirect URI</b> (click to copy):
-            <br>
-            <code data-controller="copy" data-copy-text="<%= google_callback_url %>" data-action="click->copy#copy" class="mt-1 block w-full cursor-pointer select-all break-all rounded-lg bg-haze px-3 py-1.5 font-mono text-xs text-ink"><%= google_callback_url %></code>
-            <br>Click <b>Create</b>. Google shows you a <b>Client ID</b> and <b>Client Secret</b> — copy both.
-          </span>
-        </li>
-        <li class="flex flex-wrap items-start gap-2">
-          <span class="font-semibold text-olive">6.</span>
-          <span>
-            Paste them into the <b>Environment (.env)</b> card above and hit <b>Import</b>:
-            <br>
-            <code class="mt-1 inline-block rounded-lg bg-haze px-3 py-1.5 font-mono text-xs">GOOGLE_DRIVE_CLIENT_ID=your-client-id</code>
-            <br>
-            <code class="mt-1 inline-block rounded-lg bg-haze px-3 py-1.5 font-mono text-xs">GOOGLE_DRIVE_CLIENT_SECRET=your-client-secret</code>
-            <br>Optional: <code class="rounded bg-haze px-1.5 py-0.5 font-mono">GOOGLE_DRIVE_RETENTION=7</code> to change how many backups to keep.
-          </span>
-        </li>
-        <li class="flex flex-wrap items-start gap-2">
-          <span class="font-semibold text-olive">7.</span>
-          <span>Come back here and click <b>Connect Google Drive</b> below. Done!</span>
-        </li>
-      </ol>
+    <div id="drive-setup" class="hidden">
+      <details class="explainer text-sm">
+        <summary class="explainer-summary">Easy setup: about 5 minutes, one time</summary>
+        <ol class="mt-3 space-y-3 text-xs text-mocha">
+          <li class="flex flex-wrap items-start gap-2">
+            <span class="font-semibold text-olive">1.</span>
+            <span>
+              Open Google Cloud in a new tab:
+              <a href="https://console.cloud.google.com/" target="_blank" rel="noopener" class="font-semibold text-olive hover:underline">console.cloud.google.com ↗</a>
+              <br>Sign in, then create a project (or pick an existing one) using the project dropdown at the top.
+            </span>
+          </li>
+          <li class="flex flex-wrap items-start gap-2">
+            <span class="font-semibold text-olive">2.</span>
+            <span>
+              Enable the Google Drive API:
+              <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener" class="font-semibold text-olive hover:underline">Enable Drive API ↗</a>
+              <br>Click the blue <b>Enable</b> button.
+            </span>
+          </li>
+          <li class="flex flex-wrap items-start gap-2">
+            <span class="font-semibold text-olive">3.</span>
+            <span>
+              Set up the OAuth consent screen:
+              <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener" class="font-semibold text-olive hover:underline">Consent screen ↗</a>
+              <br>Choose <b>External</b> → Create. Add your business name and email, save. (You can skip the scopes and test users steps.)
+            </span>
+          </li>
+          <li class="flex flex-wrap items-start gap-2">
+            <span class="font-semibold text-olive">4.</span>
+            <span>
+              Create the OAuth client:
+              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" class="font-semibold text-olive hover:underline">Credentials ↗</a>
+              <br>Click <b>Create Credentials</b> → <b>OAuth client ID</b> → application type <b>Web application</b>.
+            </span>
+          </li>
+          <li class="flex flex-wrap items-start gap-2">
+            <span class="font-semibold text-olive">5.</span>
+            <span>
+              Add this exact <b>Authorized redirect URI</b> (click to copy):
+              <br>
+              <code data-controller="copy" data-copy-text="<%= google_callback_url %>" data-action="click->copy#copy" class="mt-1 block w-full cursor-pointer select-all break-all rounded-control bg-haze px-3 py-1.5 font-mono text-xs text-ink"><%= google_callback_url %></code>
+              <br>Click <b>Create</b>. Google shows you a <b>Client ID</b> and <b>Client Secret</b>; copy both.
+            </span>
+          </li>
+          <li class="flex flex-wrap items-start gap-2">
+            <span class="font-semibold text-olive">6.</span>
+            <span>
+              Paste them into the <b>Environment (.env)</b> card above and click <b>Import</b>:
+              <br>
+              <code class="mt-1 inline-block rounded-control bg-haze px-3 py-1.5 font-mono text-xs">GOOGLE_DRIVE_CLIENT_ID=your-client-id</code>
+              <br>
+              <code class="mt-1 inline-block rounded-control bg-haze px-3 py-1.5 font-mono text-xs">GOOGLE_DRIVE_CLIENT_SECRET=your-client-secret</code>
+              <br>Optional: <code class="rounded bg-haze px-1.5 py-0.5 font-mono">GOOGLE_DRIVE_RETENTION=7</code> to change how many backups to keep.
+            </span>
+          </li>
+          <li class="flex flex-wrap items-start gap-2">
+            <span class="font-semibold text-olive">7.</span>
+            <span>Come back here and click <b>Connect Google Drive</b> below. Done.</span>
+          </li>
+        </ol>
+      </details>
     </div>
 
-    <div id="drive-connected" class="mt-5 hidden">
+    <div id="drive-connected" class="hidden">
       <div class="flex flex-wrap items-center gap-3">
-        <% if Current.user.super_admin? && Current.user.can?("settings.write") %>
-        <%= button_to "Back up now", drive_backup_settings_path, method: :post, class: "btn-primary", data: { turbo: false }, id: "drive-backup-btn" %>
+        <% if Current.user.super_admin? && can_write %>
+          <%= button_to "Back up now", drive_backup_settings_path, method: :post, class: "btn-primary", data: { turbo: false }, id: "drive-backup-btn" %>
         <% end %>
         <a id="drive-latest-link" href="#" target="_blank" rel="noopener" class="btn-ghost hidden">Open latest backup ↗</a>
-      <% if Current.user.can?("settings.write") %>
-        <%= button_to "Disconnect", drive_disconnect_settings_path, method: :post, class: "btn-ghost btn-sm", data: { turbo: false } %>
-      <% end %>
+        <% if can_write %>
+          <%= button_to "Disconnect", drive_disconnect_settings_path, method: :post, class: "btn-ghost btn-sm", data: { turbo: false } %>
+        <% end %>
       </div>
       <p id="drive-backup-result" class="mt-3 text-xs"></p>
     </div>
 
-    <div id="drive-connect-btn" class="mt-5 hidden">
-      <% if Current.user.can?("settings.write") %>
-      <%= link_to "Connect Google Drive", drive_auth_settings_path, class: "btn-primary", data: { turbo: false } %>
+    <div id="drive-connect-btn" class="hidden">
+      <% if can_write %>
+        <%= link_to "Connect Google Drive", drive_auth_settings_path, class: "btn-primary", data: { turbo: false } %>
       <% end %>
     </div>
 
-    <div class="mt-6">
-      <h3 class="text-sm font-display text-ink">Recent backups</h3>
-      <div id="drive-logs" class="mt-2 space-y-1.5"></div>
+    <div>
+      <%= section_heading 'Recent backups', level: :h3 %>
+      <div id="drive-logs" class="space-y-1.5"></div>
     </div>
   </section>
-
   <% end %>
-  <section class="card card-pad">
-    <div class="flex items-baseline justify-between">
-    <h2 id="google-sign-in" class="font-display text-xl text-ink">Google sign-in</h2>
+
+  <section class="section-card" id="google-sign-in">
+    <%= section_heading 'Google sign-in', hint: 'Let your team sign in with their Google account.' do %>
       <span class="<%= GoogleOauthService.configured? ? "pill-fern" : "pill-taupe" %>"><%= GoogleOauthService.configured? ? "Configured" : "Not configured" %></span>
-    </div>
-    <p class="mt-2 text-xs text-taupe">Let your team sign in with their Google account. Only email domains you allow below can get in — everyone else is rejected at the door. New people on an allowed domain get a staff account automatically.</p>
+    <% end %>
+    <p class="text-xs text-taupe">Only email domains you allow below can get in; everyone else is rejected at the door. New people on an allowed domain get a staff account automatically.</p>
 
-    <div class="mt-4 grid gap-4 sm:grid-cols-2">
-      <div class="rounded-xl bg-haze px-4 py-3">
-        <p class="text-xs font-medium text-mocha">OAuth redirect URI (register this in Google Cloud)</p>
-        <code data-controller="copy" data-copy-text="<%= google_callback_url %>" data-action="click->copy#copy" class="mt-1 block w-full cursor-pointer select-all break-all rounded-lg bg-cream px-3 py-1.5 font-mono text-xs text-ink"><%= google_callback_url %></code>
-      </div>
-      <div class="rounded-xl bg-haze px-4 py-3">
-        <p class="text-xs font-medium text-mocha">Allowlist</p>
-        <p class="mt-1 text-sm text-ink"><%= OauthAllowedDomain.count.zero? ? "No domains allowed yet" : pluralize(OauthAllowedDomain.count, "allowed domain") %> · <%= OauthAllowedDomain.allowed?(Current.user.email) ? "you're on it" : "you're not on it" %></p>
-      </div>
-    </div>
-
-    <% if Current.user.can?("settings.write") %>
-    <%= form_tag oauth_credentials_settings_path, method: :post, class: "mt-4 grid gap-4 sm:grid-cols-2" do %>
+    <dl class="facts">
       <div>
-        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="client_id">Client ID</label>
-        <input type="text" id="client_id" name="client_id" value="<%= EnvStore.fetch("GOOGLE_OAUTH_CLIENT_ID", "") %>" class="input">
+        <dt>OAuth redirect URI (register this in Google Cloud)</dt>
+        <dd><code data-controller="copy" data-copy-text="<%= google_callback_url %>" data-action="click->copy#copy" class="block w-full cursor-pointer select-all break-all rounded-control bg-haze px-3 py-1.5 font-mono text-xs text-ink"><%= google_callback_url %></code></dd>
       </div>
       <div>
-        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="client_secret">Client secret</label>
-        <input type="password" id="client_secret" name="client_secret" value="" autocomplete="new-password" placeholder="Leave blank to keep the saved secret" class="input">
+        <dt>Allowlist</dt>
+        <dd><%= OauthAllowedDomain.count.zero? ? "No domains allowed yet" : pluralize(OauthAllowedDomain.count, "allowed domain") %> · <%= OauthAllowedDomain.allowed?(Current.user.email) ? "you're on it" : "you're not on it" %></dd>
       </div>
-      <label class="sm:col-span-2 text-xs text-mocha"><%= check_box_tag :clear_client_secret, "1" %> Remove the saved client secret</label>
-      <div class="sm:col-span-2">
-        <%= submit_tag "Save Google credentials", class: "btn-primary" %>
-      </div>
-    <% end %>
-    <% end %>
+    </dl>
 
-    <div class="mt-6">
-      <h3 class="text-sm font-display text-ink">Allowed email domains</h3>
-      <p class="mt-1 text-xs text-taupe">Add a domain like <code class="font-mono">herbalhealers.com</code>. Anyone with a Google account at that domain can sign in.</p>
-
-      <div class="mt-3 flex flex-wrap gap-2">
-        <% OauthAllowedDomain.order(:domain).each do |allowed| %>
-          <span class="inline-flex items-center gap-2 rounded-full bg-haze px-3 py-1.5 text-xs text-ink">
-            <span class="font-mono">@<%= allowed.domain %></span>
-      <% if Current.user.can?("settings.write") %>
-            <%= button_to "×", oauth_domains_settings_path, method: :delete, params: { domain: allowed.domain }, class: "text-taupe hover:text-rose", title: "Remove #{allowed.domain}", aria: { label: "Remove #{allowed.domain}" } %>
+    <% if can_write %>
+      <%= form_tag oauth_credentials_settings_path, method: :post, class: "space-y-4" do %>
+        <fieldset class="grid gap-4 sm:grid-cols-2">
+          <legend class="card-title">Google credentials</legend>
+          <div>
+            <label class="field-label" for="client_id">Client ID</label>
+            <input type="text" id="client_id" name="client_id" value="<%= EnvStore.fetch("GOOGLE_OAUTH_CLIENT_ID", "") %>" class="input">
+          </div>
+          <div>
+            <label class="field-label" for="client_secret">Client secret</label>
+            <input type="password" id="client_secret" name="client_secret" value="" autocomplete="new-password" placeholder="Leave blank to keep the saved secret" class="input">
+          </div>
+          <label class="sm:col-span-2 flex items-center gap-2 text-xs text-mocha"><%= check_box_tag :clear_client_secret, "1", false, class: 'checkbox' %> Remove the saved client secret</label>
+        </fieldset>
+        <div class="form-actions">
+          <%= submit_tag "Save", class: "btn-primary" %>
+        </div>
       <% end %>
+    <% end %>
+
+    <div>
+      <%= section_heading 'Allowed email domains', hint: 'Anyone with a Google account at an allowed domain can sign in.', level: :h3 %>
+      <div class="flex flex-wrap gap-2">
+        <% OauthAllowedDomain.order(:domain).each do |allowed| %>
+          <span class="pill-taupe inline-flex items-center gap-2">
+            <span class="font-mono">@<%= allowed.domain %></span>
+            <% if can_write %>
+              <%= button_to "×", oauth_domains_settings_path, method: :delete, params: { domain: allowed.domain }, class: "text-taupe hover:text-rose", title: "Remove #{allowed.domain}", aria: { label: "Remove #{allowed.domain}" } %>
+            <% end %>
           </span>
         <% end %>
         <% if OauthAllowedDomain.none? %>
-          <span class="rounded-full bg-haze px-3 py-1.5 text-xs text-taupe">No domains allowed yet.</span>
+          <span class="text-xs text-taupe">No domains allowed yet. Add one below.</span>
         <% end %>
       </div>
 
-    <% if Current.user.can?("settings.write") %>
-      <%= form_tag oauth_domains_settings_path, method: :post, class: "mt-3 flex items-end gap-2" do %>
-        <div class="flex-1">
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="new_domain">New domain</label>
-          <input type="text" id="new_domain" name="domain" placeholder="example.com" class="input">
-        </div>
-        <%= submit_tag "Allow domain", class: "btn-primary btn-sm" %>
+      <% if can_write %>
+        <%= form_tag oauth_domains_settings_path, method: :post, class: "toolbar mt-3" do %>
+          <div class="toolbar-field">
+            <label class="field-label" for="new_domain">Domain</label>
+            <input type="text" id="new_domain" name="domain" placeholder="example.com" class="input">
+          </div>
+          <div class="toolbar-actions">
+            <%= submit_tag "Add domain", class: "btn-primary" %>
+          </div>
+        <% end %>
       <% end %>
-    <% end %>
     </div>
   </section>
 
-  <section class="card card-pad">
-    <div class="flex items-baseline justify-between">
-      <h2 class="font-display text-xl text-ink">Size families</h2>
+  <section class="section-card">
+    <%= section_heading 'Size families', hint: 'Group a base-gram product’s sizes under one root gram bank.' do %>
       <span class="<%= SizeFamily.any? ? "pill-fern" : "pill-taupe" %>"><%= pluralize(SizeFamily.count, "family") %></span>
-    </div>
-    <p class="mt-2 text-xs text-taupe">Group a base-gram product's sizes (e.g. 3.5g, 7g, 14g, 28g) under a root gram bank. Every 15-minute sync derives each size's quantity from the root and (with your approval) writes it to Square instead of trusting realtime counts.</p>
-    <div class="mt-4 flex flex-wrap items-center gap-2">
-      <%= link_to "Manage size families", size_families_path, class: "btn-primary" %>
+    <% end %>
+    <p class="text-xs text-taupe">Every 15-minute sync derives each size’s quantity (3.5g, 7g, 14g, 28g) from the root and, with your approval, writes it to Square instead of trusting realtime counts.</p>
+    <div class="flex flex-wrap items-center gap-2">
+      <%= link_to "Open size families", size_families_path, class: "btn-primary" %>
       <%= link_to "Pending changes", size_families_path, class: "btn-ghost" %>
     </div>
   </section>
 
-  <section class="card card-pad scroll-mt-24" id="team-chat">
-    <h2 class="font-display text-xl text-ink">Team chat</h2>
-    <p class="mt-2 text-sm text-mocha">Rooms, threads, files and the @rupert assistant live inside Rupert. Rupert posts sync results, count submissions, sales, fulfillment alerts and the daily brief into <strong>#announcements</strong>.</p>
-    <div class="mt-4"><%= link_to "Open team chat", team_chat_path, class: "btn-primary" %></div>
+  <section class="section-card scroll-mt-24" id="team-chat">
+    <%= section_heading 'Team chat', hint: 'Rooms, threads, files and the @rupert assistant live inside Rupert.' do %>
+      <%= link_to 'Open team chat', team_chat_path, class: 'btn-ghost btn-sm' %>
+    <% end %>
+    <p class="text-sm text-mocha">Rupert posts sync results, count submissions and sales into the team rooms; people can ask @rupert about the business there.</p>
   </section>
 </div>
 
@@ -289,7 +300,7 @@
 
     function driveBadge(status) {
       connEl.textContent = status.connected ? "Connected" : (status.configured ? "Not connected" : "Not configured");
-      connEl.className = "badge " + (status.connected ? "bg-fern" : "bg-taupe");
+      connEl.className = status.connected ? "pill-fern" : "pill-taupe";
     }
 
     function driveRender(s) {
@@ -317,16 +328,17 @@
         .then(function (rows) {
           logsEl.innerHTML = "";
           if (!rows.length) {
-            logsEl.innerHTML = '<p class="text-xs text-taupe">No backups yet.</p>';
+            logsEl.innerHTML = '<p class="text-xs text-taupe">No backups yet. Connect Google Drive and click Back up now.</p>';
             return;
           }
           rows.forEach(function (row) {
             var el = document.createElement("div");
-            el.className = "flex items-center justify-between gap-3 rounded-xl bg-haze px-4 py-2 text-xs";
-            var label = row.status === "success" ? "bg-fern" : (row.status === "failed" ? "bg-rose" : "bg-butter");
-            el.innerHTML = '<div class="flex items-center gap-2"><span class="dot ' + label + '"></span>' +
+            el.className = "flex items-center justify-between gap-3 rounded-control bg-haze px-4 py-2 text-xs";
+            var pill = row.status === "success" ? "pill-fern" : (row.status === "failed" ? "pill-rose" : "pill-clay");
+            var word = row.status === "success" ? "Done" : (row.status === "failed" ? "Failed" : "Running");
+            el.innerHTML = '<div class="flex items-center gap-2"><span class="' + pill + '">' + word + '</span>' +
               '<span class="font-mono text-ink">' + (row.fileName || "—") + '</span>' +
-              (row.driveUrl ? '<a href="' + row.driveUrl + '" target="_blank" rel="noopener" class="text-olive hover:underline">open ↗</a>' : "") + '</div>' +
+              (row.driveUrl ? '<a href="' + row.driveUrl + '" target="_blank" rel="noopener" class="text-olive hover:underline">Open ↗</a>' : "") + '</div>' +
               '<div class="text-right text-taupe"><span>' + row.finishedLabel + '</span>' +
               (row.error ? '<p class="text-rose">' + row.error + '</p>' : "") + '</div>';
             logsEl.appendChild(el);
@@ -364,5 +376,4 @@
     driveRefresh();
   })();
 </script>
-
 <% end %>

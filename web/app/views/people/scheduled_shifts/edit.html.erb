@@ -1,5 +1,5 @@
 <% content_for :title, "Edit shift" %>
-<div class="space-y-6">
-  <%= page_header 'Edit shift' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Edit shift', subtitle: @shift.employee&.full_name %>
   <%= render "form", shift: @shift %>
 </div>

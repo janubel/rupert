@@ -1,55 +1,47 @@
-<% content_for :title, 'Upload insights' %>
+<%# Upload insights: a Report page (docs/ui-standards.md §4). Counts and times only; no file contents or names. %>
 <% buckets = upload_chart_buckets(@insights.daily, @insights.days) %>
 <% kept = @insights.funnel.first[:count] %>
-<div class="mx-auto max-w-5xl space-y-6 operations-workspace">
-  <header class="space-y-2">
-    <p><%= link_to '← Uploads', uploads_path, class: 'text-sm underline' %></p>
-    <p class="text-xs font-semibold uppercase tracking-widest text-mocha">System · files in</p>
-    <h1 class="page-title">Upload insights</h1>
-    <p class="max-w-2xl text-sm text-mocha">How the inbox is doing, so we know what to build or tighten next: which files wait and why, which importers read cleanly, how long a file takes to reach an import. Counts and times only; no file contents, values or names appear here.</p>
-    <nav aria-label="Time range" class="flex flex-wrap gap-2 pt-1">
-      <% Uploads::Insights::RANGES.each do |days| %>
-        <%= link_to "Last #{days} days", insights_uploads_path(days: days), class: "nav-pill #{@insights.days == days ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@insights.days == days ? 'page' : nil) } %>
-      <% end %>
-    </nav>
-  </header>
+<div class="space-y-6 operations-workspace">
+  <%= page_header 'Upload insights', subtitle: 'How the inbox is doing: which files wait and why, which importers read cleanly, how long a file takes to reach an import.' %>
+  <%= page_tabs(Uploads::Insights::RANGES.map { |days| ["Last #{days} days", insights_uploads_path(days: days), @insights.days == days] }, label: 'Time range') %>
+  <p class="text-xs text-taupe">Counts and times only; no file contents, values or names appear here.</p>
 
   <% if @insights.total.zero? %>
-    <p class="card card-pad text-sm text-mocha" role="status">Nothing was uploaded in the last <%= @insights.days %> days, so there is nothing to chart yet. Send a file from <%= link_to 'Uploads', uploads_path, class: 'underline' %> and this page fills in.</p>
+    <div role="status"><%= empty_state "Nothing uploaded in the last #{@insights.days} days", hint: 'There is nothing to chart yet. Send a file from Uploads and this page fills in.' do %><%= link_to 'Open Uploads', uploads_path, class: 'btn-primary' %><% end %></div>
   <% else %>
-    <section aria-label="Headline numbers" class="upload-kpis">
-      <div class="card card-pad"><p class="upload-kpi-label">Files received</p><p class="upload-kpi"><%= number_with_delimiter(@insights.total) %></p><p class="upload-kpi-note"><%= number_with_delimiter(kept) %> kept, the rest refused or repeats</p></div>
-      <div class="card card-pad"><p class="upload-kpi-label">Waiting for a person</p><p class="upload-kpi"><%= @insights.waiting_count %></p><p class="upload-kpi-note"><%= @insights.oldest_waiting_days ? "oldest #{pluralize(@insights.oldest_waiting_days, 'day')} old" : 'nothing waiting' %></p></div>
-      <div class="card card-pad"><p class="upload-kpi-label">Held for review</p><p class="upload-kpi"><%= upload_percent(@insights.status_totals['needs_review'], kept) %></p><p class="upload-kpi-note">of kept files needed a decision</p></div>
-      <div class="card card-pad"><p class="upload-kpi-label">Median time to import</p><p class="upload-kpi"><%= @insights.time_to_import_hours ? (@insights.time_to_import_hours < 48 ? "#{@insights.time_to_import_hours} h" : "#{(@insights.time_to_import_hours / 24).round(1)} d") : '–' %></p><p class="upload-kpi-note">from received to imported</p></div>
+    <section aria-label="Headline numbers" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div class="stat"><p class="stat-label">Files received</p><p class="stat-value mt-1"><%= number_with_delimiter(@insights.total) %></p><p class="mt-1 text-xs text-taupe"><%= number_with_delimiter(kept) %> kept, the rest refused or repeats</p></div>
+      <div class="stat"><p class="stat-label">Waiting for a person</p><p class="stat-value mt-1"><%= @insights.waiting_count %></p><p class="mt-1 text-xs text-taupe"><%= @insights.oldest_waiting_days ? "oldest #{pluralize(@insights.oldest_waiting_days, 'day')} old" : 'nothing waiting' %></p></div>
+      <div class="stat"><p class="stat-label">Held for review</p><p class="stat-value mt-1"><%= upload_percent(@insights.status_totals['needs_review'], kept) %></p><p class="mt-1 text-xs text-taupe">of kept files needed a decision</p></div>
+      <div class="stat"><p class="stat-label">Median time to import</p><p class="stat-value mt-1"><%= @insights.time_to_import_hours ? (@insights.time_to_import_hours < 48 ? "#{@insights.time_to_import_hours} h" : "#{(@insights.time_to_import_hours / 24).round(1)} d") : '–' %></p><p class="mt-1 text-xs text-taupe">from received to imported</p></div>
     </section>
 
-    <section class="card card-pad space-y-3" aria-labelledby="volume-title">
-      <h2 id="volume-title" class="font-display text-xl">Uploads by outcome</h2>
-      <p class="text-sm text-mocha">Each column is a <%= @insights.days > 90 ? 'week' : 'day' %>. Imported is on the baseline. A growing amber (needs review) share means files arrive that Rupert cannot place yet.</p>
+    <section class="section-card" aria-label="Uploads by outcome">
+      <%= section_heading 'Uploads by outcome', hint: "Each column is a #{@insights.days > 90 ? 'week' : 'day'}; imported sits on the baseline." %>
+      <p class="text-sm text-mocha">A growing amber (needs review) share means files arrive that Rupert cannot place yet.</p>
       <ul class="upload-legend" aria-label="Legend">
         <% Uploads::Insights::SERIES.each do |status| %>
           <li><span class="upload-swatch upload-seg-<%= status %>" aria-hidden="true"></span><%= UploadsHelper::CHART_LABELS[status] %> <strong><%= @insights.status_totals[status] %></strong></li>
         <% end %>
       </ul>
       <%= upload_volume_chart(buckets) %>
-      <details>
-        <summary class="text-sm underline cursor-pointer">View as a table</summary>
-        <div class="card overflow-x-auto mt-2"><table class="w-full text-sm">
+      <details class="explainer">
+        <summary class="explainer-summary">View as a table</summary>
+        <div class="table-region mt-2" role="region" tabindex="0" aria-label="Uploads by outcome per period"><table class="table">
           <caption class="sr-only">Uploads by outcome per <%= @insights.days > 90 ? 'week' : 'day' %></caption>
-          <thead class="border-b border-fog bg-haze/60"><tr><th scope="col" class="th"><%= @insights.days > 90 ? 'Week' : 'Day' %></th><% Uploads::Insights::SERIES.each do |status| %><th scope="col" class="th"><%= UploadsHelper::CHART_LABELS[status] %></th><% end %><th scope="col" class="th">Total</th></tr></thead>
-          <tbody class="divide-y divide-fog">
+          <thead><tr><th scope="col" class="th"><%= @insights.days > 90 ? 'Week' : 'Day' %></th><% Uploads::Insights::SERIES.each do |status| %><th scope="col" class="th num"><%= UploadsHelper::CHART_LABELS[status] %></th><% end %><th scope="col" class="th num">Total</th></tr></thead>
+          <tbody>
             <% buckets.reverse.each do |bucket| %>
-              <tr><th scope="row" class="td font-normal"><%= bucket[:label] %></th><% Uploads::Insights::SERIES.each do |status| %><td class="td"><%= bucket[:counts][status] %></td><% end %><td class="td"><%= bucket[:total] %></td></tr>
+              <tr><th scope="row" class="td font-normal"><%= bucket[:label] %></th><% Uploads::Insights::SERIES.each do |status| %><td class="td num"><%= bucket[:counts][status] %></td><% end %><td class="td num"><%= bucket[:total] %></td></tr>
             <% end %>
           </tbody>
         </table></div>
       </details>
     </section>
 
-    <section class="card card-pad space-y-3" aria-labelledby="funnel-title">
-      <h2 id="funnel-title" class="font-display text-xl">How far files get</h2>
-      <p class="text-sm text-mocha">Share of kept files at each step. A big drop between steps shows where people have to step in: a sniffer that is not sure, or an importer that cannot read the file.</p>
+    <section class="section-card" id="funnel-title" aria-label="How far files get">
+      <%= section_heading 'How far files get', hint: 'Share of kept files at each step.' %>
+      <p class="text-sm text-mocha">A big drop between steps shows where people have to step in: a sniffer that is not sure, or an importer that cannot read the file.</p>
       <ol class="upload-bars">
         <% @insights.funnel.each do |step| %>
           <li>
@@ -61,8 +53,8 @@
       </ol>
     </section>
 
-    <section class="card card-pad space-y-3" aria-labelledby="reasons-title">
-      <h2 id="reasons-title" class="font-display text-xl">Why files wait or are refused</h2>
+    <section class="section-card" id="reasons-title" aria-label="Why files wait or are refused">
+      <%= section_heading 'Why files wait or are refused' %>
       <% if @insights.reasons.empty? %>
         <p class="text-sm text-mocha">No file was held, refused or repeated in this period.</p>
       <% else %>
@@ -80,31 +72,31 @@
       <% end %>
     </section>
 
-    <section class="card card-pad space-y-3" aria-labelledby="types-title">
-      <h2 id="types-title" class="font-display text-xl">What Rupert thinks files are</h2>
-      <div class="overflow-x-auto"><table class="w-full text-sm">
+    <section class="section-card" aria-label="What Rupert thinks files are">
+      <%= section_heading 'What Rupert thinks files are' %>
+      <div class="table-region" role="region" tabindex="0" aria-label="Detected file types"><table class="table">
         <caption class="sr-only">Detected file types with how often each needed a person</caption>
-        <thead class="border-b border-fog bg-haze/60"><tr><th scope="col" class="th">Looks like</th><th scope="col" class="th">Files</th><th scope="col" class="th">Avg. sure</th><th scope="col" class="th">Held</th><th scope="col" class="th">Type chosen by hand</th><th scope="col" class="th">Imported</th></tr></thead>
-        <tbody class="divide-y divide-fog">
+        <thead><tr><th scope="col" class="th">Looks like</th><th scope="col" class="th num">Files</th><th scope="col" class="th num">Avg. sure</th><th scope="col" class="th num">Held</th><th scope="col" class="th num">Type chosen by hand</th><th scope="col" class="th num">Imported</th></tr></thead>
+        <tbody>
           <% @insights.types.each do |type| %>
-            <tr><th scope="row" class="td font-normal"><%= type[:label] %></th><td class="td"><%= type[:count] %></td><td class="td"><%= type[:average_confidence] ? "#{type[:average_confidence]}%" : '–' %></td><td class="td"><%= upload_percent(type[:held], type[:count]) %></td><td class="td"><%= upload_percent(type[:helped], type[:count]) %></td><td class="td"><%= type[:imported] %></td></tr>
+            <tr><th scope="row" class="td font-normal"><%= type[:label] %></th><td class="td num"><%= type[:count] %></td><td class="td num"><%= type[:average_confidence] ? "#{type[:average_confidence]}%" : '–' %></td><td class="td num"><%= upload_percent(type[:held], type[:count]) %></td><td class="td num"><%= upload_percent(type[:helped], type[:count]) %></td><td class="td num"><%= type[:imported] %></td></tr>
           <% end %>
         </tbody>
       </table></div>
       <p class="text-xs text-taupe">“Type chosen by hand” is how often someone had to override or confirm Rupert’s guess: a high share means the sniffer for that type is too loose or too shy.</p>
     </section>
 
-    <section class="card card-pad space-y-3" aria-labelledby="importers-title">
-      <h2 id="importers-title" class="font-display text-xl">Importer health</h2>
+    <section class="section-card" aria-label="Importer health">
+      <%= section_heading 'Importer health' %>
       <% if @insights.importers.empty? %>
         <p class="text-sm text-mocha">No dry runs or imports in this period yet.</p>
       <% else %>
-        <div class="overflow-x-auto"><table class="w-full text-sm">
+        <div class="table-region" role="region" tabindex="0" aria-label="Dry runs and imports per importer"><table class="table">
           <caption class="sr-only">Dry runs and imports per importer</caption>
-          <thead class="border-b border-fog bg-haze/60"><tr><th scope="col" class="th">Importer</th><th scope="col" class="th">Dry runs passed</th><th scope="col" class="th">Dry runs failed</th><th scope="col" class="th">Pass rate</th><th scope="col" class="th">Imported</th><th scope="col" class="th">Import failures</th></tr></thead>
-          <tbody class="divide-y divide-fog">
+          <thead><tr><th scope="col" class="th">Importer</th><th scope="col" class="th num">Dry runs passed</th><th scope="col" class="th num">Dry runs failed</th><th scope="col" class="th num">Pass rate</th><th scope="col" class="th num">Imported</th><th scope="col" class="th num">Import failures</th></tr></thead>
+          <tbody>
             <% @insights.importers.each do |importer| %>
-              <tr><th scope="row" class="td font-normal"><%= importer[:label] %></th><td class="td"><%= importer[:passed] %></td><td class="td"><%= importer[:failed] %></td><td class="td"><%= upload_percent(importer[:passed], importer[:passed] + importer[:failed]) %></td><td class="td"><%= importer[:imported] %></td><td class="td"><%= importer[:import_failed] %></td></tr>
+              <tr><th scope="row" class="td font-normal"><%= importer[:label] %></th><td class="td num"><%= importer[:passed] %></td><td class="td num"><%= importer[:failed] %></td><td class="td num"><%= upload_percent(importer[:passed], importer[:passed] + importer[:failed]) %></td><td class="td num"><%= importer[:imported] %></td><td class="td num"><%= importer[:import_failed] %></td></tr>
             <% end %>
           </tbody>
         </table></div>
@@ -112,8 +104,8 @@
       <% end %>
     </section>
 
-    <section class="card card-pad space-y-2" aria-labelledby="origins-title">
-      <h2 id="origins-title" class="font-display text-xl">Where files come from</h2>
+    <section class="section-card" aria-label="Where files come from">
+      <%= section_heading 'Where files come from' %>
       <ul class="text-sm space-y-1">
         <% { 'web' => 'Browser', 'api' => 'API', 'drop' => 'Drop folder' }.each do |key, label| %>
           <li><%= label %>: <strong><%= @insights.origins.fetch(key, 0) %></strong></li>

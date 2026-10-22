@@ -1,32 +1,35 @@
-<% content_for :title, "Schedule" %>
+<% content_for :title, "Shifts" %>
 <% can_write = Current.user.can?("hr.write") %>
 <div class="space-y-6">
-  <%= page_header 'Schedule', subtitle: 'Planned shifts. Staff see their own on the Schedule tab of their workspace.' do %>
-    <% if can_write %><%= link_to "New shift", new_people_scheduled_shift_path(date: [@week, Date.current].max.iso8601), class: "btn-primary" %><% end %>
+  <%= page_header 'Shifts', subtitle: 'Planned shifts for the week. Staff see their own on the Schedule tab of their workspace.' do %>
+    <% if can_write %><%= link_to "Add shift", new_people_scheduled_shift_path(date: [@week, Date.current].max.iso8601), class: "btn-primary" %><% end %>
   <% end %>
 
-  <div class="flex items-center justify-between gap-2">
-    <%= link_to "←", people_scheduled_shifts_path(week: (@week - 7).iso8601), class: "btn-ghost btn-sm", aria: { label: "Previous week" } %>
-    <h2 class="text-lg font-semibold"><%= @week.strftime("%b %-d") %> – <%= (@week + 6).strftime("%b %-d, %Y") %></h2>
-    <%= link_to "→", people_scheduled_shifts_path(week: (@week + 7).iso8601), class: "btn-ghost btn-sm", aria: { label: "Next week" } %>
+  <div class="card-head">
+    <div><h2 class="section-title"><%= @week.strftime("%b %-d") %> – <%= (@week + 6).strftime("%b %-d, %Y") %></h2></div>
+    <nav class="card-head-actions" aria-label="Week">
+      <%= link_to "Previous week", people_scheduled_shifts_path(week: (@week - 7).iso8601), class: "btn-ghost btn-sm" %>
+      <%= link_to "This week", people_scheduled_shifts_path, class: "btn-ghost btn-sm" %>
+      <%= link_to "Next week", people_scheduled_shifts_path(week: (@week + 7).iso8601), class: "btn-ghost btn-sm" %>
+    </nav>
   </div>
 
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+  <div class="card">
+    <div class="table-region" role="region" tabindex="0" aria-label="Planned shifts">
+      <table class="table">
+        <thead>
           <tr>
-            <th scope="col" class="th">Person</th>
+            <th scope="col" class="th">Staff member</th>
             <% (@week..(@week + 6)).each do |day| %><th scope="col" class="th"><%= day.strftime("%a %-d") %></th><% end %>
-            <th scope="col" class="th text-right">Hours</th>
+            <th scope="col" class="th num">Hours</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @by_employee.empty? %>
-            <tr><td colspan="9" class="empty-row">No shifts planned this week.</td></tr>
+            <tr><td colspan="9" class="empty-row">No shifts planned this week.<%= ' Add the first shift.' if can_write %></td></tr>
           <% end %>
           <% @by_employee.each do |employee, shifts| %>
-            <tr class="align-top hover:bg-cream">
+            <tr class="align-top">
               <td class="td font-medium text-ink"><%= employee.full_name %></td>
               <% (@week..(@week + 6)).each do |day| %>
                 <td class="td text-mocha">
@@ -35,7 +38,7 @@
                   <% end %>
                 </td>
               <% end %>
-              <td class="td text-right text-mocha"><%= number_with_precision(shifts.sum(&:hours), precision: 2, strip_insignificant_zeros: true) %></td>
+              <td class="td num"><%= number_with_precision(shifts.sum(&:hours), precision: 2, strip_insignificant_zeros: true) %></td>
             </tr>
           <% end %>
         </tbody>

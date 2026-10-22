@@ -1,43 +1,46 @@
-<% content_for :title, "Purchase orders" %>
+<% content_for :title, 'Purchase orders' %>
 <div class="space-y-6">
-  <%= page_header 'Purchase orders', subtitle: 'What\'s been ordered from vendors and what\'s arrived.' do %>
-    <% if Current.user.can?("purchasing.write") %>
-      <%= link_to "New purchase order", new_purchasing_purchase_order_path, class: "btn-primary" %>
+  <%= page_header 'Purchase orders', subtitle: 'What has been ordered from vendors and what has arrived.' do %>
+    <% if Current.user.can?('purchasing.write') %>
+      <%= link_to 'Add purchase order', new_purchasing_purchase_order_path, class: 'btn-primary' %>
     <% end %>
   <% end %>
 
-  <%= form_tag purchasing_purchase_orders_path, method: :get, class: "flex flex-wrap items-center gap-3" do %>
-    <%= select_tag :status, options_for_select([["All statuses", "all"], ["Draft", "draft"], ["Ordered", "ordered"], ["Received", "received"], ["Cancelled", "cancelled"]], @status), class: "select" %>
-    <%= submit_tag "Filter", class: "btn-ghost btn-sm" %>
+  <%= form_tag purchasing_purchase_orders_path, method: :get, class: 'toolbar' do %>
+    <div class="toolbar-field">
+      <%= label_tag :status, 'Status', class: 'field-label' %>
+      <%= select_tag :status, options_for_select([['All statuses', 'all'], ['Draft', 'draft'], ['Ordered', 'ordered'], ['Received', 'received'], ['Cancelled', 'cancelled']], @status), class: 'input' %>
+    </div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', purchasing_purchase_orders_path, class: 'btn-ghost' %></div>
   <% end %>
 
   <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="table-region" role="region" tabindex="0" aria-label="Purchase orders">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Order</th>
             <th scope="col" class="th">Vendor</th>
             <th scope="col" class="th">Created</th>
             <th scope="col" class="th">Expected</th>
             <th scope="col" class="th">Status</th>
-            <th scope="col" class="th text-right">Total<%= define('po_total') %></th>
-            <th scope="col" class="th text-right">Received<%= define('received_quantity') %></th>
+            <th scope="col" class="th num">Total<%= define('po_total') %></th>
+            <th scope="col" class="th num">Received<%= define('received_quantity') %></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @purchase_orders.empty? %>
-            <tr><td colspan="7" class="empty-row">No purchase orders yet.</td></tr>
+            <tr><td colspan="7" class="empty-row">No purchase orders yet.<% if Current.user.can?('purchasing.write') %> <%= link_to 'Add the first purchase order', new_purchasing_purchase_order_path, class: 'font-semibold text-olive-deep underline' %><% end %></td></tr>
           <% end %>
           <% @purchase_orders.each do |po| %>
-            <tr class="hover:bg-cream">
-              <td class="td font-medium text-ink"><%= link_to po.order_number, po, class: "hover:text-olive hover:underline" %></td>
+            <tr>
+              <td class="td font-medium text-ink"><%= link_to po.order_number, po, class: 'hover:text-olive hover:underline' %></td>
               <td class="td text-mocha"><%= po.vendor.name %></td>
               <td class="td text-mocha"><%= l(po.created_at.to_date, format: :short) %></td>
-              <td class="td text-mocha"><%= po.expected_date ? l(po.expected_date, format: :short) : "—" %></td>
-              <td class="td"><span class="<%= po.status == "received" ? "pill-fern" : po.status == "ordered" ? "pill-olive" : po.status == "cancelled" ? "pill-rose" : "pill-taupe" %>"><%= po.status %></span></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(po.total_cents / 100.0) %></td>
-              <td class="td text-right text-mocha"><%= number_to_currency(po.received_cents / 100.0) %></td>
+              <td class="td text-mocha"><%= po.expected_date ? l(po.expected_date, format: :short) : '—' %></td>
+              <td class="td"><span class="<%= po.status == 'received' ? 'pill-fern' : po.status == 'ordered' ? 'pill-olive' : po.status == 'cancelled' ? 'pill-rose' : 'pill-taupe' %>"><%= po.status.humanize %></span></td>
+              <td class="td num font-medium text-ink"><%= number_to_currency(po.total_cents / 100.0) %></td>
+              <td class="td num text-mocha"><%= number_to_currency(po.received_cents / 100.0) %></td>
             </tr>
           <% end %>
         </tbody>

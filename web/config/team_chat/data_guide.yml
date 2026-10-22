@@ -15,8 +15,9 @@ topics:
   - key: money_out
     title: Refunds and expenses
     keywords: [refund, refunds, refunded, return, returns, expense, expenses, spend, spent, cost, costs, paid out, bills]
-    tools: [period_review, sales_summary]
+    tools: [metric, period_review, sales_summary]
     card: >-
+      metric refund_rate gives refunds as a percent of gross sales, with the amount and count.
       Refunds are recorded per order (period_review has refund totals per currency; sales_summary counts refunded
       orders per source). Expenses come from the finance ledger (period_review expenses_cents, for people allowed to
       see finance). Profit or margin needs cost of goods, which Rupert does not have: say so instead of estimating.
@@ -70,16 +71,19 @@ topics:
   - key: comparison
     title: Comparing periods
     keywords: [compare, compared, comparison, versus, vs, up or down, growth, grew, change, trend, week over week, month over month, year over year, the week before, the month before, the quarter before, the day before, year to date, ytd]
-    tools: [period_review]
+    tools: [metric, period_review]
     card: >-
+      metric with compare previous or last_year gives one figure's change already worked out (change_percent, direction);
       period_review takes a named period (yesterday, last_week, last_pay_week, last_month, this_quarter,
       last_quarter, year_to_date...) and returns it next to the period before, with the change already worked out
       (gross_change_percent). Quote that change; do not compute your own.
   - key: sales
     title: Sales and orders
     keywords: [sales, sold, sell, revenue, gross, orders, order value, average order, aov, top products, best day, best seller, takings, shopify, square, rupert pos, today, yesterday]
-    tools: [sales_summary, period_review]
+    tools: [metric, sales_summary, period_review]
     card: >-
+      For a single figure use metric (gross_sales, orders, average_order_value, best_day, sales_by_source, top_products,
+      refund_rate): Rupert computes it per currency with the comparison already worked out; quote it.
       Orders live in Rupert's order store (Shopify, Square, Rupert POS, manual). Paid and fulfilled orders count as
       sales. Money is in cents with a ready *_dollars value beside it. Totals are per currency, never added across
       currencies. C-Trax and SwipeSimple are separate snapshots, not orders: never add them to order totals.

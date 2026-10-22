@@ -1,8 +1,11 @@
 <% content_for :title, 'Staff access' %>
-<section class="card card-pad space-y-4">
-  <h1 class="page-title">Set up <%= @employee.name %>'s login</h1>
-  <p>Share this private link directly with the staff member. It expires in 24 hours and works once. Creating another link replaces this one. It also allows a staff member password reset.</p>
-  <label for="setup-link">Private setup link</label><input id="setup-link" class="input w-full" readonly value="<%= @setup_url %>" onclick="this.select()">
-  <p>The staff member signs in with <strong><%= @employee.user.email %></strong>. After setup, use <%= link_to 'Staff app', employee_app_path, class: 'text-olive underline' %> on a phone or computer.</p>
-  <%= link_to 'Back to staff member', people_employee_path(@employee), class: 'btn-ghost' %>
-</section>
+<div class="page-narrow space-y-6">
+  <%= page_header "Set up #{@employee.name}'s login", subtitle: 'Share this private link directly with the staff member.' do %>
+    <%= link_to 'Back to staff member', people_employee_path(@employee), class: 'btn-ghost' %>
+  <% end %>
+  <section class="card card-pad space-y-4">
+    <div><label for="setup-link" class="field-label">Private setup link</label><input id="setup-link" class="input w-full" readonly value="<%= @setup_url %>" onclick="this.select()"></div>
+    <p class="text-sm text-mocha">It expires in 24 hours and works once. Creating another link replaces this one. It also allows a staff member password reset.</p>
+    <p class="text-sm">The staff member signs in with <strong><%= @employee.user.email %></strong>. After setup, they use the <%= link_to 'Staff app', employee_app_path, class: 'text-olive-deep underline' %> on a phone or computer.</p>
+  </section>
+</div>

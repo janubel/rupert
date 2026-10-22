@@ -1,14 +1,11 @@
-<% content_for :title, "Balance sheet" %>
-<%= render 'finance/reports/coverage_notice' %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
-
-  <%= render layout: 'finance/page_header', locals: { title: 'Balance sheet', range: "as of #{@to}", print: true,
-        explain: 'What the business owns (assets), owes (liabilities) and is worth to the owner (equity) on one date. Assets must equal liabilities plus equity.' } do %>
-    <%= link_to "All reports", finance_reports_path, class: "btn-ghost btn-sm" %>
-  <% end %>
-
-  <%= render 'window', path: finance_reports_balance_sheet_path, csv_path: finance_reports_balance_sheet_path(format: :csv) %>
+<% content_for :title, 'Balance sheet' %>
+<div class="space-y-6">
+  <%= render layout: 'finance/page_header', locals: { title: 'Balance sheet', range: "As of #{@to.strftime('%b %-d, %Y')}", print: true,
+        menu: [['Download CSV', finance_reports_balance_sheet_path(format: :csv, to: @to), { data: { turbo: false } }], ['All statements', finance_reports_path]],
+        explain: 'What the business owns (assets), owes (liabilities) and is worth to the owner (equity) on one date. Assets must equal liabilities plus equity.' } do %><% end %>
+  <%= render 'finance/reports/coverage_notice' %>
+  <%= render 'finance/reports/tabs' %>
+  <%= render 'window', path: finance_reports_balance_sheet_path, as_of: true %>
 
   <section class="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Report totals">
     <div class="stat">
@@ -22,7 +19,7 @@
     <div class="stat">
       <div class="stat-label">Total equity<%= define('equity') %></div>
       <p class="stat-value mt-1"><%= finance_money(@sheet[:total_equity]) %></p>
-      <%= explain_calculation(title: "Does the balance sheet balance? · as of #{@to}", id: 'balance-sheet-check',
+      <%= explain_calculation(title: "Does the balance sheet balance? · as of #{@to.strftime('%b %-d, %Y')}", id: 'balance-sheet-check',
             formula: 'Assets must equal liabilities + equity. Equity includes current period earnings so both sides can agree.',
             rows: [['Total liabilities', finance_money(@sheet[:total_liabilities])], ['Equity accounts', finance_money(@sheet[:total_equity] - @sheet[:current_period_earnings])],
                    ['Current period earnings', finance_money(@sheet[:current_period_earnings])], ['Liabilities + equity', finance_money(@sheet[:total_liabilities] + @sheet[:total_equity])],
@@ -32,34 +29,28 @@
     </div>
   </section>
 
-  <div class="card overflow-hidden">
-    <table class="operations-table finance-table w-full">
-      <caption class="sr-only">Balance sheet, amounts in USD</caption>
-      <thead class="border-b border-fog bg-haze/60">
-        <tr><th scope="col" class="th">Account</th><th scope="col" class="th num">Balance</th></tr>
-      </thead>
-      <tbody>
-        <tr class="group-row"><th scope="colgroup" class="td" colspan="2">Assets</th></tr>
-        <% @sheet[:assets].each do |row| %>
-          <tr><td class="td"><%= link_to finance_account_label(row.account), finance_chart_of_account_path(row.account, from: @from, to: @to), class: "link" %></td><td class="td num"><%= finance_money(row.balance) %></td></tr>
-        <% end %>
-        <tr class="subtotal-row"><th scope="row" class="td">Total assets</th><td class="td num"><%= finance_money(@sheet[:total_assets]) %></td></tr>
-
-        <tr class="group-row"><th scope="colgroup" class="td" colspan="2">Liabilities</th></tr>
-        <% @sheet[:liabilities].each do |row| %>
-          <tr><td class="td"><%= link_to finance_account_label(row.account), finance_chart_of_account_path(row.account, from: @from, to: @to), class: "link" %></td><td class="td num"><%= finance_money(row.balance) %></td></tr>
-        <% end %>
-        <tr class="subtotal-row"><th scope="row" class="td">Total liabilities</th><td class="td num"><%= finance_money(@sheet[:total_liabilities]) %></td></tr>
-
-        <tr class="group-row"><th scope="colgroup" class="td" colspan="2">Equity</th></tr>
-        <% @sheet[:equity].each do |row| %>
-          <tr><td class="td"><%= link_to finance_account_label(row.account), finance_chart_of_account_path(row.account, from: @from, to: @to), class: "link" %></td><td class="td num"><%= finance_money(row.balance) %></td></tr>
-        <% end %>
-        <tr><td class="td">Current period earnings<%= define('current_period_earnings') %></td><td class="td num"><%= finance_money(@sheet[:current_period_earnings]) %></td></tr>
-        <tr class="subtotal-row"><th scope="row" class="td">Total equity</th><td class="td num"><%= finance_money(@sheet[:total_equity]) %></td></tr>
-      </tbody>
-    </table>
+  <div class="card">
+    <div class="table-region" role="region" tabindex="0" aria-label="Balance sheet">
+      <table class="table finance-table">
+        <caption class="sr-only">Balance sheet, amounts in USD</caption>
+        <thead>
+          <tr><th scope="col" class="th">Account</th><th scope="col" class="th num">Balance</th></tr>
+        </thead>
+        <tbody>
+          <% { 'Assets' => [:assets, :total_assets, 'Total assets'], 'Liabilities' => [:liabilities, :total_liabilities, 'Total liabilities'], 'Equity' => [:equity, :total_equity, 'Total equity'] }.each do |group, (rows_key, total_key, total_label)| %>
+            <tr class="group-row"><th scope="colgroup" class="td" colspan="2"><%= group %></th></tr>
+            <% @sheet[rows_key].each do |row| %>
+              <tr><td class="td"><%= link_to finance_account_label(row.account), finance_chart_of_account_path(row.account, from: @from, to: @to), class: 'link' %></td><td class="td num"><%= finance_money(row.balance) %></td></tr>
+            <% end %>
+            <% if rows_key == :equity %>
+              <tr><td class="td">Current period earnings<%= define('current_period_earnings') %></td><td class="td num"><%= finance_money(@sheet[:current_period_earnings]) %></td></tr>
+            <% end %>
+            <tr class="subtotal-row"><th scope="row" class="td"><%= total_label %></th><td class="td num"><%= finance_money(@sheet[total_key]) %></td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <%= finance_balance_status(@sheet[:total_assets] - (@sheet[:total_liabilities] + @sheet[:total_equity]), balanced_text: "Balanced: assets equal liabilities plus equity") %>
+  <%= finance_balance_status(@sheet[:total_assets] - (@sheet[:total_liabilities] + @sheet[:total_equity]), balanced_text: 'Balanced: assets equal liabilities plus equity') %>
 </div>

@@ -44,6 +44,19 @@ module TeamChat
         flagged: rows.count { |row| Array(row['unverified']).any? }, by_cadence: cadences)
     end
 
+    # Each bot's latest full-set grade per question set: { ['qwen', 'qwen3.5-4b'] => { 'finance' => 4.5, 'default' => 4.1 } }.
+    # A run that stopped part-way counts when it answered at least 80% of its questions.
+    def self.latest_scores
+      rows = where(status: %w[done stopped running]).where.not(avg_grade: nil).where.not('set_name LIKE ?', '%(part)%').newest_first.to_a
+      rows.each_with_object({}) do |run, scores|
+        next if run.status != 'done' && (run.display_status == 'running' || run.answered < run.questions * 0.8)
+
+        key = [run.agent.presence || 'rupert', run.model.to_s]
+        scores[key] ||= {}
+        scores[key][run.set_name] ||= run.avg_grade.to_f.round(1)
+      end
+    end
+
     # The finished run for the same bot, model, question set and Rupert build, if any.
     def self.already_done(agent:, model:, set_name:, revision:)
       finished.where(agent: agent.presence, model: model, set_name: set_name, revision: revision).newest_first.first
@@ -51,7 +64,7 @@ module TeamChat
 
     # Rebuilds runs from #liquid-testing messages (questions, replies and grade notices carry the run key in meta).
     # Skips runs already saved. Returns the number of runs created.
-    def self.backfill!(room = Room.find_by(slug: Battery::ROOM_SLUG))
+    def self.backfill!(room = Room.find_by(slug: Battery::LEGACY_ROOM_SLUG))
       return 0 unless room
 
       messages = room.messages.where('meta LIKE ?', '%"battery"%').order(:id).to_a

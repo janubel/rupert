@@ -19,17 +19,35 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'button.nav-utility[aria-label="Search"][title] svg'
     assert_select 'button[aria-haspopup="menu"][aria-label^="Account menu for "]'
     assert_select 'header img', count: 1
-    assert_select 'header a.app-brand[aria-label="Rupert start page"] img[alt=""][width="40"][height="40"]', count: 1
+    assert_select 'header a.app-brand[aria-label="Rupert start page"] img[alt=""][width="32"][height="32"]', count: 1
     assert_select 'header .account-menu', text: /Store administrator/
   end
 
-  test 'stock tools use one disclosure with labelled links and current page' do
+  test 'the rail lists the current section pages in groups with the current page marked' do
     get inventory_index_path
-    assert_select 'nav[aria-label="Module"] details[data-controller="navigation-menu"]', count: 1
-    assert_select 'nav[aria-label="Module"] summary[aria-label="Stock tools; current page Inventory"]'
-    assert_select 'nav[aria-label="Module"] .module-menu-panel a[aria-current="page"]', text: 'Inventory'
-    assert_select 'nav[aria-label="Module"] .module-menu-panel a', text: 'Locations'
-    assert_select 'nav[aria-label="Module"] > a', count: 0
+    assert_select 'aside#app-rail nav[aria-label="Module"]', count: 1
+    assert_select 'nav[aria-label="Module"] .rail-group', text: 'Counts & requests'
+    assert_select 'nav[aria-label="Module"] a[aria-current="page"]', text: 'Inventory'
+    assert_select 'nav[aria-label="Module"] a', text: 'Locations'
+    assert_select 'aside#app-rail button[data-rail-target="collapse"]', count: 1
+    assert_select 'header button[data-rail-target="menu"][aria-controls="app-rail"]', count: 1
+  end
+
+  test 'every page carries the status bar with sync, the Team chat badge and the build' do
+    get inventory_index_path
+    assert_select 'footer.app-statusbar', count: 1
+    assert_select 'footer.app-statusbar a[href=?]', syncs_path
+    assert_select 'footer.app-statusbar a[href=?] .badge[data-team-chat-badge-target="count"][hidden]', team_chat_path
+    assert_select 'header a[aria-label="Team chat"][data-chat-dock-target="trigger"] .chat-dock-badge[data-chat-dock-target="badge"]', count: 1
+    assert_select '.app-shell[data-controller~="chat-dock"][data-chat-dock-unread-url-value=?]', team_chat_unread_path
+    assert_select '.app-shell[data-controller~="team-chat-badge"][data-team-chat-badge-url-value=?]', team_chat_messages_path('general')
+    assert_select '.toast-stack[data-controller="toasts"]', count: 1
+    @admin.update!(role: 'cashier')
+    get inventory_index_path
+    assert_select 'footer.app-statusbar', count: 1
+    assert_select 'footer.app-statusbar a[href=?]', team_chat_path, count: 0
+    assert_select '.app-shell[data-controller~="team-chat-badge"]', count: 0
+    assert_select '.app-shell[data-controller~="chat-dock"]', count: 0
   end
 
   test 'cashier sees work areas and personal help without administrative utility or sync metadata' do
@@ -43,7 +61,8 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'a.nav-utility[aria-label="Instance overview"]', count: 0
     assert_select '#header-sync-pill a', count: 0
     refute_includes response.body, 'swipesimple · csv'
-    assert_select '.account-menu a[href=?]', time_clock_path
+    assert_select 'nav[aria-label="Module areas"] a[aria-label="Me"]'
+    assert_select '.account-menu a[href=?]', time_clock_path, count: 0
     assert_select '.account-menu a[href=?]', roadmap_path
     assert_select '.account-menu', text: /Cashier/
   end

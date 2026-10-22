@@ -20,7 +20,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
      reconciliation_follow_ups_path, overview_reconciliation_follow_ups_path, cash_forecast_path, ledger_index_path].each do |path|
       get path
       assert_response :success, path
-      assert_select 'nav.operations-navigation', minimum: 1
+      assert_select 'nav[aria-label="Module"]', minimum: 1
     end
     get new_finance_expense_path
     assert_select 'input[name="expense[amount]"][required][inputmode=decimal]'
@@ -29,7 +29,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     get new_finance_chart_of_account_path
     assert_select 'input[name="account[code]"]'
     get financial_close_path, params: { day: '2026-10-10' }
-    assert_select 'nav[aria-label="Bookkeeping workspace"] a[href=?]', daily_reconciliations_path(day: '2026-10-10')
+    assert_select 'nav[aria-label="Module"] a[href=?]', daily_reconciliations_path
     assert_select 'nav[aria-label="Reconciliation workflow"]'
     assert_select '[aria-label="Close status overview"]'
   end
@@ -123,12 +123,12 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     @user.update_permission_overrides!(%w[reports.read inventory.read reconcile.read])
     get financial_close_path
     assert_response :success
-    assert_select 'nav[aria-label="Bookkeeping workspace"] a[href=?]', finance_accounts_path, count: 0
+    assert_select 'nav[aria-label="Module"] a[href=?]', finance_accounts_path, count: 0
     assert_select '#retain-close', count: 0
     get stock_comparison_path
     assert_response :success
     assert_select 'nav[aria-label="Module areas"] a[aria-label=Stock][aria-current=page]'
-    assert_select 'nav[aria-label="Stock workspace"]'
+    assert_select 'nav[aria-label="Module"] a[href=?]', inventory_counts_path
     assert_select 'a[href=?]', new_inventory_count_path, count: 0
     get reconcile_index_path
     assert_response :success
@@ -141,7 +141,7 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     @user.update!(role: 'inventory_employee')
     get inventory_counts_path
     assert_response :success
-    assert_select 'nav[aria-label="Stock workspace"]'
+    assert_select 'nav[aria-label="Module areas"] a[aria-label=Stock][aria-current=page]'
     assert_select 'a[href=?]', new_inventory_count_path
     assert_select 'a[href=?]', finance_accounts_path, count: 0
     get finance_accounts_path

@@ -49,8 +49,8 @@ module Mcp
 
       def row(task)
         { id: task.id, title: task.title, description: task.description.to_s.first(500).presence, status: task.status, priority: task.priority,
-          due_on: task.due_on&.iso8601, project: task.project&.name, project_id: task.project_id, assignee: task.assignee&.display_name,
-          updated_at: iso(task.updated_at) }
+          start_on: task.start_on&.iso8601, due_on: task.due_on&.iso8601, project: task.project&.name, project_id: task.project_id&.to_s,
+          assignee: task.assignee&.display_name, labels: task.labels, blocked_reason: task.blocked_reason, updated_at: iso(task.updated_at) }
       end
     end
   end

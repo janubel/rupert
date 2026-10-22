@@ -1,0 +1,19 @@
+<%# Chartkick charts take their colours from the theme's chart tokens (application.css --chart-1..4, --chart-muted)
+    read off :root at render time, so they follow light, dark and the other appearances. Runs before the charts'
+    own scripts, which wait for the same chartkick:load event. %>
+<script>
+  (function () {
+    function token(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() }
+    function apply() {
+      if (!window.Chartkick) return
+      var colors = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-muted"].map(token).filter(Boolean)
+      if (colors.length) window.Chartkick.options = Object.assign({}, window.Chartkick.options, { colors: colors })
+      if (window.Chart && window.Chart.defaults) {
+        var ink = token("--color-mocha"); var grid = token("--color-fog")
+        if (ink) window.Chart.defaults.color = ink
+        if (grid) window.Chart.defaults.borderColor = grid
+      }
+    }
+    if (window.Chartkick) apply(); else window.addEventListener("chartkick:load", apply, true)
+  })()
+</script>

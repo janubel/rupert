@@ -1,20 +1,15 @@
 <% content_for :title, 'SwipeSimple source reports' %>
 <div class="space-y-6">
   <%= render 'shared/payment_source_tabs', active: 'swipesimple' %>
-  <section class="card card-pad">
-    <h1 class="page-title">SwipeSimple source reports</h1>
-    <p class="mt-2">Import native Transactions and Invoices CSV exports from SwipeSimple Web. These are source observations; C-Trax remains the retail inventory reference.</p>
-    <p class="mt-2 text-sm">Approved transaction amounts are recorded payments, including any tips already in Amount. Invoice totals are separate and are never added to sales. Declined, voided, errored and canceled transactions are excluded from money totals. Approval does not verify bank settlement.</p>
-    <p class="mt-2 text-sm">Exports omit receipt PDFs, invoice documents and linked-refund relationships. Original CSVs are retained encrypted, with SHA-256, source numbers and row positions. Missing tips remain unavailable. Reports use Rupert’s Eastern business day and the latest transaction observation and latest full invoice snapshot per account. Invoice numbers can repeat; invoice rows remain separate source observations.</p>
-    <p class="mt-2 text-sm">Delivery is checked every 30 minutes when an approved feed is configured. Import a fresh native export on demand below. The export timestamp shows source freshness; checking an empty inbox does not refresh vendor data.</p>
-  </section>
+  <%= page_header 'SwipeSimple source reports', subtitle: 'Native Transactions and Invoices CSV exports from SwipeSimple Web, kept as source observations.' %>
+  <%= fold_explainer('C-Trax remains the retail inventory reference. Approved transaction amounts are recorded payments, including any tips already in Amount. Invoice totals are separate and are never added to sales. Declined, voided, errored and canceled transactions are excluded from money totals. Approval does not verify bank settlement. Exports omit receipt PDFs, invoice documents and linked-refund relationships. Original CSVs are retained encrypted, with SHA-256, source numbers and row positions. Missing tips remain unavailable. Reports use Rupert’s Eastern business day and the latest transaction observation and latest full invoice snapshot per account. Invoice numbers can repeat; invoice rows remain separate source observations. Delivery is checked every 30 minutes when an approved feed is configured. Import a fresh native export on demand below. The export timestamp shows source freshness; checking an empty inbox does not refresh vendor data.', class: 'text-sm text-mocha') %>
 
   <% if Current.user.can?('sync.write') %>
-    <section id="import" class="card card-pad">
-      <h2 class="font-display text-xl">Review a native export</h2>
-      <p class="text-sm mt-2">Export one merchant account at a time. Confirm its currency, time zone and the time this file was exported. Do not use the download/import time of a historical file as its export time. Invoice imports must include every invoice, without date, search or status filters. Keep the vendor headers intact. Maximum 8 MiB / 10,000 rows.</p>
+    <section id="import" class="section-card">
+      <%= section_heading 'Review a native export', hint: 'Export one merchant account at a time and confirm its currency, time zone and export time.' %>
+      <%= fold_explainer('Do not use the download/import time of a historical file as its export time. Invoice imports must include every invoice, without date, search or status filters. Keep the vendor headers intact. Maximum 8 MiB / 10,000 rows.', class: 'text-sm text-mocha') %>
       <% if @preview %>
-        <div class="rounded-xl bg-haze p-4 mt-4" role="status">
+        <div class="flash flash-notice" role="status">
           <p>Validated <%= @preview[:rows] %> <%= @preview[:kind] %> rows. Status counts: <%= @preview[:statuses].map { |status, count| "#{status}: #{count}" }.join(', ') %>.</p>
           <% if @preview[:kind] == 'transactions' %>
             <p>Approved sales: <%= @preview[:currency] %> <%= number_with_precision(@preview[:approved_sale_cents] / 100.0, precision: 2) %>. Approved refunds: <%= @preview[:currency] %> <%= number_with_precision(@preview[:approved_refund_cents] / 100.0, precision: 2) %>. Rows without tip evidence: <%= @preview[:missing_tip_rows] %>.</p>
@@ -22,59 +17,77 @@
           <p>Review these counts and amounts against SwipeSimple. Reattach the identical file and import within 15 minutes. Changes to the file or context require a new preview.</p>
         </div>
       <% end %>
-      <%= form_tag(@preview_token ? swipesimple_reports_path : preview_swipesimple_reports_path, multipart: true, data: { turbo: false }, class: 'space-y-3 mt-4') do %>
+      <%= form_tag(@preview_token ? swipesimple_reports_path : preview_swipesimple_reports_path, multipart: true, data: { turbo: false }, class: 'space-y-4') do %>
         <%= hidden_field_tag :preview_token, @preview_token if @preview_token %>
-        <label class="block">Export type <%= select_tag 'swipesimple_export[kind]', options_for_select([['Transactions', 'transactions'], ['Invoices', 'invoices']], @context['kind']), class: 'input' %></label>
-        <label class="block">Invoice export scope <%= select_tag 'swipesimple_export[invoice_scope]', options_for_select([['Not an invoice export', ''], ['I confirm all invoices, no filters', 'full']], @context['invoice_scope']), class: 'input' %></label>
-        <label class="block">Exact merchant account <%= text_field_tag 'swipesimple_export[merchant_account]', @context['merchant_account'], required: true, maxlength: 200, class: 'input' %></label>
-        <label class="block">Confirmed currency <%= select_tag 'swipesimple_export[currency]', options_for_select(['USD'], @context['currency']), class: 'input' %></label>
-        <label class="block">Source IANA time zone <%= text_field_tag 'swipesimple_export[source_timezone]', @context['source_timezone'], required: true, class: 'input' %></label>
-        <label class="block">File export time with offset <%= text_field_tag 'swipesimple_export[exported_at]', @context['exported_at'], placeholder: '2026-10-15T20:30:00-04:00', required: true, class: 'input' %></label>
-        <label class="block">Native CSV file <%= file_field_tag :file, accept: '.csv,text/csv', required: true, class: 'input' %></label>
-        <%= submit_tag(@preview_token ? 'Import reviewed source snapshot' : 'Preview source snapshot', class: 'btn-primary btn-sm') %>
-        <% if @preview_token %><%= link_to 'Start a new preview', swipesimple_reports_path, class: 'btn-ghost btn-sm' %><% end %>
+        <fieldset class="grid gap-3 sm:grid-cols-2">
+          <div><%= label_tag 'swipesimple_export_kind', 'Export type', class: 'field-label' %><%= select_tag 'swipesimple_export[kind]', options_for_select([['Transactions', 'transactions'], ['Invoices', 'invoices']], @context['kind']), class: 'select w-full' %></div>
+          <div><%= label_tag 'swipesimple_export_invoice_scope', 'Invoice export scope', class: 'field-label' %><%= select_tag 'swipesimple_export[invoice_scope]', options_for_select([['Not an invoice export', ''], ['I confirm all invoices, no filters', 'full']], @context['invoice_scope']), class: 'select w-full' %></div>
+          <div><%= label_tag 'swipesimple_export_merchant_account', 'Exact merchant account', class: 'field-label' %><%= text_field_tag 'swipesimple_export[merchant_account]', @context['merchant_account'], required: true, maxlength: 200, class: 'input' %></div>
+          <div><%= label_tag 'swipesimple_export_currency', 'Confirmed currency', class: 'field-label' %><%= select_tag 'swipesimple_export[currency]', options_for_select(['USD'], @context['currency']), class: 'select w-full' %></div>
+          <div><%= label_tag 'swipesimple_export_source_timezone', 'Source IANA time zone', class: 'field-label' %><%= text_field_tag 'swipesimple_export[source_timezone]', @context['source_timezone'], required: true, class: 'input' %></div>
+          <div><%= label_tag 'swipesimple_export_exported_at', 'File export time with offset', class: 'field-label' %><%= text_field_tag 'swipesimple_export[exported_at]', @context['exported_at'], placeholder: '2026-10-15T20:30:00-04:00', required: true, class: 'input' %></div>
+          <div class="sm:col-span-2"><%= label_tag :file, 'Native CSV file', class: 'field-label' %><%= file_field_tag :file, accept: '.csv,text/csv', required: true, class: 'input' %></div>
+        </fieldset>
+        <div class="form-actions">
+          <%= submit_tag(@preview_token ? 'Import reviewed snapshot' : 'Preview snapshot', class: 'btn-primary') %>
+          <% if @preview_token %><%= link_to 'Start a new preview', swipesimple_reports_path, class: 'btn-ghost' %><% end %>
+        </div>
       <% end %>
     </section>
   <% end %>
 
-  <section class="card card-pad">
-    <h2 class="font-display text-xl">Daily cash / card / tip totals</h2>
-    <%= form_tag swipesimple_reports_path, method: :get, class: 'flex gap-3 mt-3' do %>
-      <%= date_field_tag :day, @report.day, class: 'input', aria: { label: 'Business day' } %>
-      <%= submit_tag 'Show day', class: 'btn-ghost btn-sm' %>
+  <section class="section-card">
+    <%= section_heading 'Daily cash / card / tip totals' %>
+    <%= form_tag swipesimple_reports_path, method: :get, class: 'toolbar' do %>
+      <div class="toolbar-field"><%= label_tag :day, 'Business day', class: 'field-label' %><%= date_field_tag :day, @report.day, class: 'input' %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><%= link_to 'Clear', swipesimple_reports_path, class: 'btn-ghost' %></div>
     <% end %>
-    <div class="overflow-x-auto mt-4"><table class="w-full text-sm">
-      <thead><tr><th>Account</th><th>Currency</th><th>Tender</th><th>Sales</th><th>Refunds</th><th>Net</th><th>Sale tips (included)</th><th>Refund tips (included)</th><th>Missing tips</th><th>Excluded results</th></tr></thead>
-      <tbody><% @totals.each do |row| %><tr>
-        <td><%= row[:account] %></td><td><%= row[:currency] %></td><td><%= row[:tender] %></td>
-        <% %i[sale_cents refund_cents net_cents sale_tip_cents refund_tip_cents].each do |key| %><td><%= row[key].nil? ? 'Unavailable' : number_with_precision(row[key] / 100.0, precision: 2) %></td><% end %>
-        <td><%= row[:missing_tip_rows] %></td><td><%= row[:excluded_rows] %></td>
-      </tr><% end %></tbody>
-    </table></div>
-    <% if @totals.empty? %><p class="mt-3">No imported transaction evidence for this day. This does not establish zero sales.</p><% end %>
+    <div class="table-region" role="region" tabindex="0" aria-label="SwipeSimple daily totals">
+      <table class="table">
+        <thead><tr><th scope="col" class="th">Account</th><th scope="col" class="th">Currency</th><th scope="col" class="th">Tender</th><th scope="col" class="th num">Sales</th><th scope="col" class="th num">Refunds</th><th scope="col" class="th num">Net</th><th scope="col" class="th num">Sale tips (included)</th><th scope="col" class="th num">Refund tips (included)</th><th scope="col" class="th num">Missing tips</th><th scope="col" class="th num">Excluded results</th></tr></thead>
+        <tbody>
+          <% @totals.each do |row| %><tr>
+            <td class="td"><%= row[:account] %></td><td class="td"><%= row[:currency] %></td><td class="td"><%= row[:tender] %></td>
+            <% %i[sale_cents refund_cents net_cents sale_tip_cents refund_tip_cents].each do |key| %><td class="td num"><%= row[key].nil? ? 'Unavailable' : number_with_precision(row[key] / 100.0, precision: 2) %></td><% end %>
+            <td class="td num"><%= row[:missing_tip_rows] %></td><td class="td num"><%= row[:excluded_rows] %></td>
+          </tr><% end %>
+          <% if @totals.empty? %><tr><td colspan="10" class="empty-row">No imported transaction evidence for this day. This does not establish zero sales.</td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
   </section>
 
-  <% [['Transactions on selected day (up to 200)', @transactions], ['Latest invoice observations (up to 200, all dates)', @invoices]].each do |title, rows| %>
-    <section class="card card-pad">
-      <h2 class="font-display text-xl"><%= title %></h2>
-      <div class="overflow-x-auto mt-4"><table class="w-full text-sm">
-        <thead><tr><th>Source number</th><th>Account</th><th>Event / created</th><th>Type</th><th>Source status</th><th>Tender</th><th>Amount</th><th>Reference / invoice</th><th>Due</th><th>Export / row</th><th>Snapshot as of</th></tr></thead>
-        <tbody><% rows.each do |row| %><tr>
-          <td><%= row.source_number %></td><td><%= row.swipesimple_export.merchant_account %></td><td><%= row.occurred_at.in_time_zone.iso8601 %></td>
-          <td><%= row.transaction_type || 'Invoice' %></td><td><%= row.status %></td><td><%= row.tender || 'Unverified' %></td>
-          <td><%= row.swipesimple_export.currency %> <%= number_with_precision(row.amount_cents / 100.0, precision: 2) %></td>
-          <td><%= row.reference_number %></td><td><%= row.due_on %></td><td>#<%= row.swipesimple_export_id %> / <%= row.source_row %></td><td><%= row.swipesimple_export.exported_at.iso8601 %></td>
-        </tr><% end %></tbody>
-      </table></div>
+  <% [['Transactions on selected day', @transactions, 'Up to 200 rows.'], ['Latest invoice observations', @invoices, 'Up to 200 rows, all dates.']].each do |title, rows, hint| %>
+    <section class="section-card">
+      <%= section_heading title, hint: hint %>
+      <div class="table-region" role="region" tabindex="0" aria-label="<%= title %>">
+        <table class="table">
+          <thead><tr><th scope="col" class="th">Source number</th><th scope="col" class="th">Account</th><th scope="col" class="th">Event / created</th><th scope="col" class="th">Type</th><th scope="col" class="th">Source status</th><th scope="col" class="th">Tender</th><th scope="col" class="th num">Amount</th><th scope="col" class="th">Reference / invoice</th><th scope="col" class="th">Due</th><th scope="col" class="th">Export / row</th><th scope="col" class="th">Snapshot as of</th></tr></thead>
+          <tbody>
+            <% rows.each do |row| %><tr>
+              <td class="td font-mono text-xs"><%= row.source_number %></td><td class="td"><%= row.swipesimple_export.merchant_account %></td><td class="td"><%= row.occurred_at.in_time_zone.iso8601 %></td>
+              <td class="td"><%= row.transaction_type || 'Invoice' %></td><td class="td"><%= row.status %></td><td class="td"><%= row.tender || 'Unverified' %></td>
+              <td class="td num"><%= row.swipesimple_export.currency %> <%= number_with_precision(row.amount_cents / 100.0, precision: 2) %></td>
+              <td class="td"><%= row.reference_number %></td><td class="td"><%= row.due_on %></td><td class="td text-xs">#<%= row.swipesimple_export_id %> / <%= row.source_row %></td><td class="td text-xs"><%= row.swipesimple_export.exported_at.iso8601 %></td>
+            </tr><% end %>
+            <% if rows.empty? %><tr><td colspan="11" class="empty-row">Nothing stored yet. Import a native export above.</td></tr><% end %>
+          </tbody>
+        </table>
+      </div>
     </section>
   <% end %>
 
-  <section class="card card-pad">
-    <h2 class="font-display text-xl">Recent source documents (20)</h2>
-    <p class="text-sm mt-2">Download requires sync-write permission because the original contains private customer and operator fields. Open downloaded CSVs as text; spreadsheet applications may execute formulas present in source fields.</p>
-    <% @exports.each do |receipt| %>
-      <p class="mt-3">#<%= receipt.id %> · <%= receipt.kind %> · <%= receipt.merchant_account %> · exported <%= receipt.exported_at.iso8601 %> · imported <%= receipt.created_at.iso8601 %> · <code><%= receipt.sha256 %></code>
-      <% if Current.user.can?('sync.write') %><%= link_to 'Download original CSV', document_swipesimple_report_path(receipt), class: 'btn-ghost btn-sm' %><% end %></p>
-    <% end %>
+  <section class="section-card">
+    <%= section_heading 'Recent source documents', hint: 'Latest 20. Download requires sync-write permission because the original contains private customer and operator fields.' %>
+    <p class="text-xs text-mocha">Open downloaded CSVs as text; spreadsheet applications may execute formulas present in source fields.</p>
+    <% if @exports.empty? %><p class="text-sm text-mocha">No source documents yet.</p><% end %>
+    <ul class="divide-y divide-fog text-sm">
+      <% @exports.each do |receipt| %>
+        <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+          <span class="min-w-0 break-all">#<%= receipt.id %> · <%= receipt.kind %> · <%= receipt.merchant_account %> · exported <%= receipt.exported_at.iso8601 %> · imported <%= receipt.created_at.iso8601 %> · <code class="text-xs"><%= receipt.sha256 %></code></span>
+          <% if Current.user.can?('sync.write') %><%= link_to 'Download CSV', document_swipesimple_report_path(receipt), class: 'btn-ghost btn-sm' %><% end %>
+        </li>
+      <% end %>
+    </ul>
   </section>
 </div>

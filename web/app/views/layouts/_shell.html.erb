@@ -1,128 +1,139 @@
+<%# The management shell (docs/ui-standards.md §2): one top bar, one navigation rail built
+    from ModuleRegistry, one main column. Nothing page-specific lives in the chrome. %>
 <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-ink focus:fixed focus:left-4 focus:top-3">Skip to content</a>
 <% team_chat_on = Current.user && TeamChat.allowed?(Current.user) %>
 <% chat_dock_here = team_chat_on && controller_name != 'team_chat' %>
-<div class="min-h-full" <% if Current.user %>data-controller="help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %><%= ' chat-dock' if team_chat_on %>"<% if team_chat_on %> data-chat-dock-unread-url-value="<%= team_chat_unread_path %>" data-chat-dock-dock-url-value="<%= team_chat_dock_path %>"<% end %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %>>
+<div class="app-shell" data-controller="rail<% if Current.user %> help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %><%= ' chat-dock team-chat-badge' if team_chat_on %><% end %>"<% if Current.user %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %><% if team_chat_on %> data-chat-dock-unread-url-value="<%= team_chat_unread_path %>" data-chat-dock-dock-url-value="<%= team_chat_dock_path %>" data-team-chat-badge-url-value="<%= team_chat_messages_path('general') %>" data-team-chat-badge-chat-path-value="<%= team_chat_path %>"<% end %>>
   <% if Current.user&.super_admin? && Current.tenant_id != Current.user.tenant_id %>
-    <div role="status" class="flash flash-notice flex flex-wrap items-center justify-between gap-3"><span>Read-only customer support · <%= Current.tenant.name %></span><%= button_to 'Leave support session', leave_platform_support_path, method: :delete, class: 'btn-ghost' %></div>
+    <div role="status" class="flash flash-notice support-banner"><span>Read-only customer support · <%= Current.tenant.name %></span><%= button_to 'Leave support session', leave_platform_support_path, method: :delete, class: 'btn-ghost btn-sm' %></div>
   <% end %>
-  <header class="app-header">
-    <%= render "layouts/build_version" %>
-    <div class="app-header-grid">
-      <%# The sign-in card carries its own large mark; skip the duplicate header brand there. %>
-      <% unless controller_name == 'sessions' && action_name == 'new' %>
-        <div class="app-brand-group">
-          <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
-            <%= render "shared/rupert_face", size: 40 %><span class="app-brand-name">Rupert</span>
-          <% end %>
-          <% if ask_rupert_available? %>
-            <button type="button" class="ask-bubble-button" aria-label="Ask Rupert" aria-haspopup="dialog" aria-expanded="false" title="Ask Rupert — your help assistant, with your chat history" data-action="click->ask-rupert#toggle" data-ask-rupert-target="trigger"><%= navigation_icon('ask') %><span class="ask-bubble-label">Ask</span></button>
-          <% end %>
-        </div>
+  <header class="app-topbar">
+    <% if Current.user && nav_areas.any? %>
+      <button type="button" class="topbar-menu nav-utility" data-action="rail#toggleDrawer" data-rail-target="menu" aria-label="Menu" aria-controls="app-rail" aria-expanded="false"><%= navigation_icon('menu') %></button>
+    <% end %>
+    <%# The sign-in card carries its own large mark; skip the duplicate brand there. %>
+    <% unless controller_name == 'sessions' && action_name == 'new' %>
+      <%= link_to navigation_start_path, class: 'app-brand', aria: { label: 'Rupert start page' }, title: 'Rupert' do %>
+        <%= render "shared/rupert_face", size: 32 %><span class="app-brand-name">Rupert</span>
       <% end %>
-      <% if Current.user %>
-        <nav class="area-navigation" aria-label="Module areas" <%= tour_anchor('areas') %> style="--nav-area-count: <%= [nav_areas.size, 1].max %>">
-          <% nav_areas.each do |area| %>
-            <%= link_to safe_module_path(area[:modules].first), class: "nav-area #{area[:key] == active_area_key ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { label: area[:name], current: (area[:key] == active_area_key ? 'page' : nil) }, title: area[:name] do %><%= navigation_icon(area[:key]) %><span><%= area[:name] %></span><% end %>
-          <% end %>
-        </nav>
-        <div class="header-utilities">
-          <% if Current.user.super_admin? %>
-            <%= link_to platform_path, class: 'nav-utility', aria: { label: 'Instance overview' }, title: 'Instance overview' do %><%= navigation_icon('platform') %><span class="nav-hint">Instance overview</span><% end %>
-          <% end %>
-          <% if Current.user.can?('dashboard.read') %>
-            <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
-          <% end %>
-          <% if team_chat_on %>
-            <%= link_to team_chat_path, class: 'nav-utility chat-dock-trigger', aria: { label: 'Team chat', haspopup: (chat_dock_here ? 'dialog' : nil), expanded: 'false' }, title: 'Team chat',
-                  data: { action: 'click->chat-dock#toggle', chat_dock_target: 'trigger' } do %><%= navigation_icon('chat') %><span class="chat-dock-badge" data-chat-dock-target="badge" hidden></span><span class="nav-hint">Team chat</span><% end %>
-          <% end %>
-          <%= render 'shared/header_sync_pill', sync: @last_sync %>
-          <%= render 'shared/feedback_button' %>
-          <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>
-          <div data-controller="dropdown" class="relative">
-            <% initials = Current.user.display_name.split(/\s+/).map { |word| word[0] }.join.upcase[0, 2] %>
-            <button type="button" data-action="dropdown#toggle" data-dropdown-target="trigger" aria-label="Account menu for <%= Current.user.display_name %>" aria-haspopup="menu" aria-expanded="false" title="<%= Current.user.display_name %> · <%= navigation_role_name(Current.user) %>" class="nav-utility"><span class="grid h-8 w-8 place-items-center rounded-full bg-olive text-xs font-semibold text-cream"><%= initials %></span><span class="nav-hint">Account · <%= navigation_role_name(Current.user) %></span></button>
-            <span class="hidden rounded-full bg-haze px-2 py-0.5 text-xs font-semibold text-olive sm:inline" data-access-level title="<%= navigation_signin_method %>"><%= navigation_role_name(Current.user) %></span>
-            <div data-dropdown-target="menu" role="menu" class="account-menu hidden">
-              <div class="border-b border-fog px-4 py-3"><p class="truncate text-sm font-semibold text-ink"><%= Current.user.display_name %></p><p class="truncate text-xs text-mocha"><%= Current.user.email %></p><p class="mt-2 text-xs font-semibold text-olive"><%= navigation_role_name(Current.user) %></p><p class="text-xs text-mocha" data-signin-method><%= navigation_signin_method %></p></div>
-              <div class="p-2">
-                <%= link_to 'My time & time off', employee_app_path, class: 'nav-menu-item', role: 'menuitem' %>
-                <% if ask_rupert_available? %>
-                  <button type="button" class="nav-menu-item w-full" role="menuitem" onclick="window.dispatchEvent(new CustomEvent('rupert:open-ask', { detail: 'history' }))"><%= navigation_icon('ask') %><span>Ask Rupert chats</span></button>
+    <% end %>
+    <% unless Current.user %><%= render 'layouts/build_version' %><% end %>
+    <% if Current.user %>
+      <% if Current.user.can?('dashboard.read') %>
+        <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="topbar-search" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="topbar-search-label">Search</span><kbd>/</kbd></button>
+      <% end %>
+      <div class="header-utilities">
+        <% if ask_rupert_available? %>
+          <button type="button" class="nav-utility" aria-label="Ask Rupert" aria-haspopup="dialog" aria-expanded="false" title="Ask Rupert — your help assistant" data-action="click->ask-rupert#toggle" data-ask-rupert-target="trigger"><%= navigation_icon('ask') %><span class="nav-hint">Ask Rupert</span></button>
+        <% end %>
+        <% if Current.user.super_admin? %>
+          <%= link_to platform_path, class: 'nav-utility', aria: { label: 'Instance overview' }, title: 'Instance overview' do %><%= navigation_icon('platform') %><span class="nav-hint">Instance overview</span><% end %>
+        <% end %>
+        <% if Current.user.can?('dashboard.read') %>
+          <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility topbar-search-icon" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
+        <% end %>
+        <%= render 'shared/header_notifications' %>
+        <% if team_chat_on %>
+          <%= link_to team_chat_path, class: "nav-utility chat-dock-trigger#{' nav-pill-active' if controller_name == 'team_chat'}", aria: { label: 'Team chat', current: (controller_name == 'team_chat' ? 'page' : nil), haspopup: (chat_dock_here ? 'dialog' : nil), expanded: 'false' }, title: 'Team chat',
+                data: { action: 'click->chat-dock#toggle', chat_dock_target: 'trigger' } do %><%= navigation_icon('chat') %><span class="chat-dock-badge" data-chat-dock-target="badge" hidden></span><span class="nav-hint">Team chat</span><% end %>
+        <% end %>
+        <%= render 'shared/header_sync_pill', sync: @last_sync %>
+        <%= render 'shared/feedback_button' %>
+        <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>
+        <div data-controller="dropdown" class="relative">
+          <% initials = Current.user.display_name.split(/\s+/).map { |word| word[0] }.join.upcase[0, 2] %>
+          <button type="button" data-action="dropdown#toggle" data-dropdown-target="trigger" aria-label="Account menu for <%= Current.user.display_name %>" aria-haspopup="menu" aria-expanded="false" title="<%= Current.user.display_name %> · <%= navigation_role_name(Current.user) %>" class="nav-utility"><span class="avatar"><%= initials %></span><span class="nav-hint">Account · <%= navigation_role_name(Current.user) %></span></button>
+          <span class="hidden" data-access-level title="<%= navigation_signin_method %>"><%= navigation_role_name(Current.user) %></span>
+          <div data-dropdown-target="menu" role="menu" class="account-menu hidden">
+            <div class="border-b border-fog px-4 py-3"><p class="truncate text-sm font-semibold text-ink"><%= Current.user.display_name %></p><p class="truncate text-xs text-mocha"><%= Current.user.email %></p><p class="mt-2 text-xs font-semibold text-olive"><%= navigation_role_name(Current.user) %></p><p class="text-xs text-mocha" data-signin-method><%= navigation_signin_method %></p></div>
+            <div class="p-2">
+              <%= link_to 'My time & time off', employee_app_path, class: 'nav-menu-item', role: 'menuitem' %>
+              <% if ask_rupert_available? %>
+                <button type="button" class="nav-menu-item w-full" role="menuitem" onclick="window.dispatchEvent(new CustomEvent('rupert:open-ask', { detail: 'history' }))"><%= navigation_icon('ask') %><span>Ask Rupert chats</span></button>
+              <% end %>
+              <% unless nav_area?('me') %>
+                <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>Time clock</span><% end %>
+              <% end %>
+              <div data-controller="theme" role="group" aria-label="Appearance" class="appearance-picker">
+                <p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-[0.12em] text-taupe">Appearance</p>
+                <% { 'herbal' => 'Herbal · company colors', 'light' => 'Light · white', 'mist' => 'Mist · softer light', 'sepia' => 'Sepia · warm paper', 'dark' => 'Dark' }.each do |value, label| %>
+                  <button type="button" class="nav-menu-item w-full appearance-option" role="menuitemradio" aria-checked="false" data-theme-value="<%= value %>" data-theme-target="option" data-action="theme#select"><span class="appearance-swatch appearance-swatch-<%= value %>" aria-hidden="true"></span><span><%= label %></span></button>
                 <% end %>
-                <% unless nav_area?('team') %>
-                  <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>My time clock</span><% end %>
-                <% end %>
-                <div data-controller="theme" role="group" aria-label="Appearance" class="appearance-picker">
-                  <p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-[0.12em] text-taupe">Appearance</p>
-                  <% { 'herbal' => 'Herbal · company colors', 'light' => 'Light · white', 'mist' => 'Mist · softer light', 'sepia' => 'Sepia · warm paper', 'dark' => 'Dark' }.each do |value, label| %>
-                    <button type="button" class="nav-menu-item w-full appearance-option" role="menuitemradio" aria-checked="false" data-theme-value="<%= value %>" data-theme-target="option" data-action="theme#select"><span class="appearance-swatch appearance-swatch-<%= value %>" aria-hidden="true"></span><span><%= label %></span></button>
-                  <% end %>
-                </div>
-                <% unless nav_area?('system') %>
-                  <%= link_to roadmap_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('document') %><span>Features &amp; roadmap</span><% end %>
-                <% end %>
-                <% if Current.user.admin? && Current.user.tenant_id == Current.tenant_id %>
-                  <%= link_to 'Subscription & billing', billing_path, class: 'nav-menu-item', role: 'menuitem' %>
-                  <%= link_to 'Support permissions', support_access_path, class: 'nav-menu-item', role: 'menuitem' %>
-                <% end %>
-                <%= button_to logout_path, method: :delete, class: 'nav-menu-item w-full text-rose', role: 'menuitem' do %><%= navigation_icon('logout') %><span>Sign out</span><% end %>
               </div>
+              <% unless nav_area?('system') %>
+                <%= link_to roadmap_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('document') %><span>Features &amp; roadmap</span><% end %>
+              <% end %>
+              <% if Current.user.admin? && Current.user.tenant_id == Current.tenant_id %>
+                <%= link_to 'Subscription & billing', billing_path, class: 'nav-menu-item', role: 'menuitem' %>
+                <%= link_to 'Support permissions', support_access_path, class: 'nav-menu-item', role: 'menuitem' %>
+              <% end %>
+              <%= button_to logout_path, method: :delete, class: 'nav-menu-item w-full text-rose', role: 'menuitem' do %><%= navigation_icon('logout') %><span>Sign out</span><% end %>
             </div>
+            <%= render "layouts/build_version" %>
           </div>
         </div>
-      <% end %>
-    </div>
-    <% if Current.user && active_area_modules.length > 1 %>
-      <div class="module-navigation-wrap">
-        <nav class="module-navigation" aria-label="Module">
-          <details class="module-menu" data-controller="navigation-menu" <%= tour_anchor('tools') %>>
-            <% current_entry = active_module_entry || active_area_modules.first %>
-            <% area_name = nav_areas.find { |area| area[:key] == active_area_key }&.dig(:name) %>
-            <summary class="module-menu-trigger" aria-label="<%= area_name %> tools; current page <%= current_entry.name %>"><%= navigation_icon(module_icon_key(current_entry)) %><span><%= current_entry.name %></span><%= navigation_icon('chevron') %><span class="tools-caption"><%= area_name %> tools</span></summary>
-            <div class="module-menu-panel"><p class="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-taupe"><%= area_name %> tools</p>
-              <% active_area_groups.each do |group| %>
-                <% if group[:name] %><p class="module-menu-group"><%= group[:name] %></p><% end %>
-                <% group[:modules].each do |entry| %>
-                  <%= link_to safe_module_path(entry), class: "nav-menu-item #{entry.key == current_entry.key ? 'nav-pill-active-sm' : ''}", aria: { current: (entry.key == current_entry.key ? 'page' : nil) } do %><%= navigation_icon(module_icon_key(entry)) %><span><%= entry.name %></span><% if entry.key == current_entry.key %><%= navigation_icon('check', css_class: 'nav-symbol ml-auto') %><% end %><% end %>
-                <% end %>
-              <% end %>
-            </div>
-          </details>
-        </nav>
       </div>
     <% end %>
   </header>
 
-  <% if (down_location = card_processing_down_location) %>
-    <div role="alert" class="mx-auto mt-4 max-w-6xl px-4 sm:px-6" data-card-processing-banner>
-      <div class="flash flash-alert flex flex-wrap items-center justify-between gap-3">
-        <span><strong>Card processing is down.</strong> Customers cannot pay by card until the payment gateway is connected and verified.</span>
-        <%= link_to 'Click here to resolve', pos_setting_path(down_location.id), class: 'font-semibold underline' %>
-      </div>
-    </div>
-  <% end %>
-  <% if (update = pending_update) %>
-    <div role="status" class="mx-auto mt-4 max-w-6xl px-6" data-update-banner>
-      <div class="flash flash-notice flex flex-wrap items-center justify-between gap-3">
-        <span><strong>Update available.</strong> <%= pluralize(update.behind_by, "newer change") %> on GitHub<%= " — latest: #{update.latest_message}" if update.latest_message %>.<%= " #{update_install_hint}" if update_install_hint %></span>
-        <span class="flex items-center gap-3">
-          <% if AutoUpdate.manager?(Current.user) %>
-            <%= link_to 'Review and install', system_updates_path, class: 'font-semibold underline' %>
-          <% else %>
-            <%= link_to 'See what changed', update.url, target: '_blank', rel: 'noopener', class: 'font-semibold underline' if update.url&.start_with?('https://github.com/') %>
+  <div class="app-body">
+    <% if Current.user && nav_areas.any? %>
+      <% area_name = nav_areas.find { |area| area[:key] == active_area_key }&.dig(:name) %>
+      <aside id="app-rail" class="app-rail" aria-label="Navigation">
+        <nav class="rail-areas" aria-label="Module areas" <%= tour_anchor('areas') %>>
+          <% nav_areas.each do |area| %>
+            <% active = area[:key] == active_area_key %>
+            <%= link_to safe_module_path(area[:modules].first), class: "rail-area #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { label: area[:name], current: (active ? 'page' : nil) }, title: area[:name] do %><%= navigation_icon(area[:key]) %><span class="rail-label"><%= area[:name] %></span><% end %>
+            <% if active && active_area_modules.length > 1 %>
+              <nav class="rail-modules" aria-label="Module" <%= tour_anchor('tools') %>>
+                <% current_entry = active_module_entry || active_area_modules.first %>
+                <% active_area_groups.each do |group| %>
+                  <% if group[:name] %><p class="rail-group"><%= group[:name] %></p><% end %>
+                  <% group[:modules].each do |entry| %>
+                    <%= link_to entry.name, safe_module_path(entry), class: "rail-link #{entry.key == current_entry.key ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}", aria: { current: (entry.key == current_entry.key ? 'page' : nil) } %>
+                  <% end %>
+                <% end %>
+              </nav>
+            <% end %>
           <% end %>
-          <%= button_to 'Dismiss', dismiss_update_notice_path, method: :post, class: 'font-semibold underline' %>
-        </span>
-      </div>
-    </div>
+        </nav>
+        <div class="rail-foot">
+          <button type="button" class="rail-collapse" data-action="rail#toggleCollapse" data-rail-target="collapse" aria-expanded="true" aria-label="Collapse navigation" title="Collapse navigation"><%= navigation_icon('collapse') %><span class="rail-label">Collapse</span></button>
+        </div>
+      </aside>
+      <div class="rail-backdrop" data-action="click->rail#closeDrawer"></div>
+    <% end %>
+
+    <main id="main" tabindex="-1" class="app-main<%= ' app-main-wide' if content_for?(:wide_page) %> focus:outline-none">
+      <% if (down_location = card_processing_down_location) %>
+        <div role="alert" class="flash flash-alert mb-4 flex flex-wrap items-center justify-between gap-3" data-card-processing-banner>
+          <span><strong>Card processing is down.</strong> Customers cannot pay by card until the payment gateway is connected and verified.</span>
+          <%= link_to 'Open POS settings', pos_setting_path(down_location.id), class: 'font-semibold underline' %>
+        </div>
+      <% end %>
+      <% if (update = pending_update) %>
+        <div role="status" class="flash flash-notice mb-4 flex flex-wrap items-center justify-between gap-3" data-update-banner>
+          <span><strong>Update available.</strong> <%= pluralize(update.behind_by, "newer change") %> on GitHub<%= " — latest: #{update.latest_message}" if update.latest_message %>.<%= " #{update_install_hint}" if update_install_hint %></span>
+          <span class="flex items-center gap-3">
+            <% if AutoUpdate.manager?(Current.user) %>
+              <%= link_to 'Review and install', system_updates_path, class: 'font-semibold underline' %>
+            <% else %>
+              <%= link_to 'See what changed', update.url, target: '_blank', rel: 'noopener', class: 'font-semibold underline' if update.url&.start_with?('https://github.com/') %>
+            <% end %>
+            <%= button_to 'Dismiss', dismiss_update_notice_path, method: :post, class: 'font-semibold underline' %>
+          </span>
+        </div>
+      <% end %>
+      <% if notice %><div aria-live="polite" role="status" class="flash flash-notice mb-4"><%= notice %></div><% end %>
+      <% if alert %><div aria-live="assertive" role="alert" class="flash flash-alert mb-4"><%= alert %></div><% end %>
+      <%= yield %>
+      <%= render 'shared/workspace_help' if Current.user %>
+    </main>
+  </div>
+  <% if Current.user %>
+    <%= render 'shared/status_bar', sync: @last_sync %>
+    <div class="toast-stack" data-controller="toasts" aria-live="polite"></div>
   <% end %>
-  <main id="main" tabindex="-1" class="mx-auto <%= content_for?(:wide_page) ? 'max-w-none px-3 py-3 sm:px-4 sm:py-4' : 'max-w-6xl px-4 py-6 sm:px-6 sm:py-8' %> focus:outline-none">
-    <%= render 'shared/workspace_help' if Current.user %>
-    <% if notice %><div aria-live="polite" role="status" class="flash flash-notice mb-4"><%= notice %></div><% end %>
-    <% if alert %><div aria-live="assertive" role="alert" class="flash flash-alert mb-4"><%= alert %></div><% end %>
-    <%= yield %>
-  </main>
   <%= render 'shared/help_panel' if Current.user %>
   <%= render 'shared/feedback_panel' if Current.user %>
   <%= render 'shared/ask_rupert' if ask_rupert_available? %>
@@ -136,9 +147,9 @@
 <% if Current.user&.can?('dashboard.read') %>
   <div data-controller="search" data-action="rupert:open-search@window->search#open" class="fixed inset-0 z-50 hidden items-start justify-center px-4 pt-[12vh]">
     <div class="fixed inset-0 bg-black/50" data-action="click->search#close"></div>
-    <div class="relative w-full max-w-xl overflow-hidden rounded-2xl border border-fog bg-paper shadow-2xl" role="dialog" aria-modal="true" aria-label="Search">
+    <div class="relative w-full max-w-xl overflow-hidden rounded-card border border-fog bg-paper shadow-2xl" role="dialog" aria-modal="true" aria-label="Search">
       <div class="flex items-center gap-2 border-b border-fog px-4 py-3">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-taupe" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <%= navigation_icon('search', css_class: 'nav-symbol text-taupe') %>
         <input type="search" data-search-target="input" data-action="input->search#search keydown->search#keydown" placeholder="Search orders, customers, SKUs, staff…" class="w-full bg-transparent text-sm text-ink outline-none placeholder:text-taupe focus-visible:outline-none" autocomplete="off" aria-label="Search">
         <button type="button" data-action="search#close" class="min-h-7 rounded-full bg-haze px-2.5 py-1 text-xs text-mocha hover:text-ink" aria-label="Close search">esc</button>
       </div>

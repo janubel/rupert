@@ -1,43 +1,53 @@
 <%# One draggable task. locals: task, assignees, show_project (default true), can_write %>
 <% show_project = local_assigns.fetch(:show_project, true) %>
-<article class="group rounded-xl border border-fog bg-paper p-3 shadow-[0_1px_2px_rgba(26,57,61,0.06)] transition hover:border-taupe hover:shadow-md <%= "cursor-grab" if can_write %>"
+<article class="group card p-3 transition hover:border-taupe hover:shadow-md <%= "cursor-grab" if can_write %>"
          data-task-board-target="card" data-task-id="<%= task.id %>" data-status="<%= task.status %>"
          data-move-url="<%= move_projects_task_path(task) %>" <%= "draggable=true".html_safe if can_write %>>
   <div class="flex items-start gap-2">
     <%= priority_dot(task.priority) %>
-    <p class="min-w-0 flex-1 text-sm leading-snug <%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= task.title %></p>
+    <p class="min-w-0 flex-1 text-sm leading-snug <%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= link_to task.title, projects_task_path(task), draggable: "false", class: "hover:underline" %></p>
   </div>
-  <% if task.description.present? %>
+  <% if task.blocked? && task.blocked_reason.present? %>
+    <p class="mt-1 line-clamp-2 pl-4 text-xs text-rose">Blocked: <%= task.blocked_reason %></p>
+  <% elsif task.description.present? %>
     <p class="mt-1 line-clamp-2 pl-4 text-xs text-mocha"><%= task.description %></p>
+  <% end %>
+  <% checked, total = task.checklist_progress %>
+  <% if task.labels.any? || total.positive? || task.recurrence.present? %>
+    <div class="mt-1.5 flex flex-wrap items-center gap-1.5 pl-4 text-[11px] text-taupe">
+      <% task.labels.first(3).each do |label| %><span class="rounded-full bg-haze px-2 py-0.5 font-medium text-mocha"><%= label %></span><% end %>
+      <% if total.positive? %><span title="Checklist"><%= checked %>/<%= total %> ✓</span><% end %>
+      <% if task.recurrence.present? %><span title="<%= recurrence_label(task) %>">↻</span><% end %>
+    </div>
   <% end %>
   <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 pl-4 text-xs">
     <% if show_project && task.project %>
       <% if Current.user.employee? %>
-        <span class="max-w-[10rem] truncate font-semibold text-olive"><%= task.project.name %></span>
+        <span class="max-w-40 truncate font-semibold text-olive-deep"><%= task.project.name %></span>
       <% else %>
-        <%= link_to task.project.name, task.project, class: "max-w-[10rem] truncate font-semibold text-olive hover:underline" %>
+        <%= link_to task.project.name, task.project, class: "max-w-40 truncate font-semibold text-olive-deep hover:underline" %>
       <% end %>
     <% end %>
     <% if task.due_on %>
       <span class="<%= due_class(task) %>"><%= task.due_label %></span>
     <% end %>
     <% if (name = assignees[task.assignee_id.to_s]) %>
-      <span class="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full bg-olive/15 text-[10px] font-bold text-olive-deep" title="<%= name %>"><%= initials(name) %></span>
+      <span class="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-pill bg-olive/15 text-xs font-bold text-olive-deep" title="<%= name %>"><%= initials(name) %></span>
     <% end %>
   </div>
   <% if can_write %>
     <div class="mt-2 flex items-center gap-2 pl-4">
       <label class="sr-only" for="move-<%= task.id %>">Move task</label>
-      <select id="move-<%= task.id %>" class="select !py-0.5 !text-[11px]" data-action="change->task-board#select" aria-label="Move &ldquo;<%= task.title %>&rdquo; to">
+      <select id="move-<%= task.id %>" class="select !py-0.5 text-xs" data-action="change->task-board#select" aria-label="Move &ldquo;<%= task.title %>&rdquo; to">
         <% Projects::Task::BOARD_STATUSES.each do |status| %>
           <option value="<%= status %>" <%= "selected" if status == task.status %>><%= status_label(status) %></option>
         <% end %>
       </select>
       <details class="ml-auto">
-        <summary class="cursor-pointer list-none rounded-full px-2 py-0.5 text-[11px] font-semibold text-taupe hover:bg-haze hover:text-ink">Edit</summary>
-        <%= form_with model: task, scope: :task, url: projects_task_path(task), method: :patch, class: "mt-2 space-y-2 rounded-xl border border-fog bg-haze/60 p-3" do |f| %>
+        <summary class="btn-ghost btn-sm cursor-pointer list-none">Edit</summary>
+        <%= form_with model: task, scope: :task, url: projects_task_path(task), method: :patch, class: "mt-2 space-y-2 rounded-control border border-fog bg-haze/60 p-3" do |f| %>
           <%= f.text_field :title, class: "input", "aria-label": "Title" %>
-          <%= f.text_area :description, rows: 2, class: "input !rounded-2xl", placeholder: "Notes", "aria-label": "Notes" %>
+          <%= f.text_area :description, rows: 2, class: "input", placeholder: "Notes", "aria-label": "Notes" %>
           <% unless Current.user.employee? %>
             <div class="flex flex-wrap gap-2">
               <%= f.select :priority, Projects::Task::PRIORITIES, {}, class: "select" %>
@@ -50,7 +60,7 @@
           </div>
         <% end %>
         <% unless Current.user.employee? %>
-          <%= button_to "Delete", projects_task_path(task), method: :delete, form: { data: { turbo_confirm: "Delete this task?" } }, class: "btn-ghost btn-sm !text-rose" %>
+          <%= button_to "Delete", projects_task_path(task), method: :delete, form: { data: { turbo_confirm: "Delete this task?" } }, class: "btn-ghost btn-sm text-rose" %>
         <% end %>
       </details>
     </div>

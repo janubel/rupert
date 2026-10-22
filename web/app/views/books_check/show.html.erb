@@ -1,48 +1,43 @@
-<% content_for :title, 'Books health' %>
-<% check = @check; summary = check.summary %>
-<div class="mx-auto max-w-5xl space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money, day: Date.current %>
-  <header class="flex flex-wrap items-start justify-between gap-4">
-    <div>
-      <p class="text-sm font-semibold uppercase tracking-widest text-mocha">Finance · audit</p>
-      <h1 class="page-title mt-2">Books health</h1>
-      <p class="mt-2 text-sm text-mocha">Read-only checks on the last <%= check.window_days %> days of sales, payments, refunds and retained evidence. Nothing here changes data.</p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <%= form_with url: books_check_path, method: :get, class: 'flex items-center gap-2' do |f| %>
-        <%= f.select :days, options_for_select([['7 days', 7], ['30 days', 30], ['90 days', 90], ['1 year', 365]], check.window_days), {}, class: 'select', 'aria-label': 'Window' %>
-        <%= f.submit 'Check', class: 'btn-ghost btn-sm' %>
-      <% end %>
-      <%= link_to 'CSV', books_check_path(days: check.window_days, format: :csv), class: 'btn-ghost btn-sm', data: { turbo: false } %>
-    </div>
-  </header>
+<% check = @check; summary = check.summary
+   verdict = { fix: ['Needs fixing', 'border-danger-edge bg-danger-bg', 'pill-rose'], watch: ['Worth a look', 'border-warn-edge bg-warn-bg', 'pill-clay'], ok: ['All clear', 'border-fog bg-paper', 'pill-fern'] }.fetch(check.verdict) %>
+<div class="space-y-6">
+  <%= page_header 'Books health', subtitle: "Read-only checks on the last #{check.window_days} days of sales, payments, refunds and retained evidence.", menu: [['Download CSV', books_check_path(days: check.window_days, format: :csv), { data: { turbo: false } }]] %>
 
-  <% verdict = { fix: ['Needs fixing', 'border-rose-300 bg-rose-50'], watch: ['Worth a look', 'border-amber-300 bg-amber-50'], ok: ['All clear', 'border-fog bg-paper'] }.fetch(check.verdict) %>
-  <section class="rounded-2xl border p-5 <%= verdict[1] %>" role="status">
-    <p class="font-display text-2xl"><%= verdict[0] %></p>
-    <div class="mt-1 text-sm text-mocha"><%= summary[:fix] %> to fix · <%= summary[:watch] %> to watch · <%= summary[:ok] %> passing of <%= summary[:total] %> checks.<%= define('books_check') %> Checked <%= check.generated_at.in_time_zone.strftime('%b %-d, %-I:%M %p %Z') %>.</div>
+  <%= form_with url: books_check_path, method: :get, class: 'toolbar' do |f| %>
+    <div class="toolbar-field"><%= f.label :days, 'Window', class: 'field-label' %><%= f.select :days, options_for_select([['7 days', 7], ['30 days', 30], ['90 days', 90], ['1 year', 365]], check.window_days), {}, class: 'select' %></div>
+    <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', books_check_path, class: 'btn-ghost' %></div>
+  <% end %>
+
+  <section class="rounded-card border p-5 <%= verdict[1] %>" role="status" aria-label="Verdict">
+    <div class="card-head">
+      <div>
+        <p class="section-title"><%= verdict[0] %></p>
+        <div class="mt-1 text-sm text-mocha"><%= summary[:fix] %> to fix · <%= summary[:watch] %> to watch · <%= summary[:ok] %> passing of <%= summary[:total] %> checks.<%= define('books_check') %> Checked <%= check.generated_at.in_time_zone.strftime('%b %-d, %-I:%M %p %Z') %>.</div>
+      </div>
+      <span class="<%= verdict[2] %>"><%= verdict[0] %></span>
+    </div>
   </section>
 
   <% %i[fix watch ok].each do |status| %>
     <% group = check.checks.select { |c| c.status == status } %>
     <% next if group.empty? %>
     <section class="space-y-3" aria-label="<%= status.to_s.humanize %> checks">
-      <h2 class="font-display text-xl"><%= { fix: 'Fix first', watch: 'Worth a look', ok: 'Passing' }.fetch(status) %></h2>
+      <%= section_heading({ fix: 'Fix first', watch: 'Worth a look', ok: 'Passing' }.fetch(status)) %>
       <% group.each do |c| %>
         <details class="card card-pad" <%= 'open' if status == :fix %>>
-          <summary class="flex flex-wrap items-center justify-between gap-2 cursor-pointer">
+          <summary class="disclosure-trigger flex flex-wrap items-center justify-between gap-2">
             <span class="font-semibold"><%= c.title %></span>
-            <span class="text-sm text-mocha">
+            <span class="<%= { fix: 'pill-rose', watch: 'pill-clay', ok: 'pill-fern' }.fetch(status) %>">
               <% if c.ok? %>Pass<% else %><%= pluralize(c.count, 'item') %><% if c.cents %> · <%= finance_money(c.cents) %><% end %><% end %>
             </span>
           </summary>
           <p class="mt-2 text-sm"><%= c.detail %></p>
           <% if c.action %>
-            <p class="mt-2 text-sm font-semibold text-olive-deep"><%= c.path ? link_to(c.action, c.path, class: 'underline') : c.action %></p>
+            <p class="mt-2 text-sm font-semibold text-olive-deep"><%= c.path ? link_to(c.action, c.path, class: 'hover:underline') : c.action %></p>
           <% end %>
           <% if c.rows.present? %>
-            <div class="mt-3 overflow-x-auto"><table class="w-full text-left text-sm">
-              <tbody><% c.rows.each do |row| %><tr class="border-t border-fog"><% Array(row).each do |v| %><td class="py-1 pr-3"><%= v.is_a?(Time) || v.is_a?(ActiveSupport::TimeWithZone) ? v.in_time_zone.strftime('%b %-d %Y %-I:%M %p') : v %></td><% end %></tr><% end %></tbody>
+            <div class="table-region mt-3" role="region" tabindex="0" aria-label="<%= c.title %> examples"><table class="table">
+              <tbody><% c.rows.each do |row| %><tr><% Array(row).each do |v| %><td class="td"><%= v.is_a?(Time) || v.is_a?(ActiveSupport::TimeWithZone) ? v.in_time_zone.strftime('%b %-d %Y %-I:%M %p') : v %></td><% end %></tr><% end %></tbody>
             </table></div>
           <% end %>
         </details>
@@ -50,5 +45,5 @@
     </section>
   <% end %>
 
-  <p class="text-sm text-mocha">These checks look for records that do not agree with each other. They do not certify a bank reconciliation: bank funding, fees and timing still need source evidence and human review.</p>
+  <%= fold_explainer('These checks look for records that do not agree with each other. They do not certify a bank reconciliation: bank funding, fees and timing still need source evidence and human review.', class: 'text-sm text-mocha') %>
 </div>

@@ -1,0 +1,6 @@
+<%# The sibling statements, keeping the chosen dates as you switch. %>
+<% window = { from: @from, to: @to }.compact %>
+<%= page_tabs([['Trial balance', finance_reports_trial_balance_path(window), action_name == 'trial_balance'],
+               ['Income statement', finance_reports_income_statement_path(window), action_name == 'income_statement'],
+               ['Balance sheet', finance_reports_balance_sheet_path(window.slice(:to)), action_name == 'balance_sheet'],
+               ['Sales tax', finance_reports_sales_tax_path(window), action_name == 'sales_tax']], label: 'Financial statements') %>

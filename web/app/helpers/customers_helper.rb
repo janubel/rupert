@@ -39,13 +39,6 @@ module CustomersHelper
     request.query_parameters.except('page', 'utf8', 'commit')
   end
 
-  def customer_sort_link(label, sort_key)
-    active = @sort == sort_key
-    link_to(label, customers_path(customer_filter_params.merge('sort' => sort_key)),
-      class: "rounded-full px-3 py-1 text-xs font-semibold #{active ? 'bg-olive text-cream' : 'bg-haze text-mocha hover:text-ink'}",
-      aria: { current: (active ? 'true' : nil) })
-  end
-
   # One removable chip per active filter, so people can see why a list is short.
   def customer_filter_chips
     params_hash = customer_filter_params

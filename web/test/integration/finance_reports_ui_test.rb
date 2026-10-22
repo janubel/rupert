@@ -25,8 +25,7 @@ class FinanceReportsUiTest < ActionDispatch::IntegrationTest
     post_entry(123_456_789)
     get finance_reports_trial_balance_path
     assert_response :success
-    assert_select '.finance-meta', /Dates: .* through .*/
-    assert_select '.finance-meta', /Currency: USD/
+    assert_select '.page-header .page-subtitle', /\A\w{3} \d{1,2}.* – .*\d{4} · USD\z/
     assert_select 'th[scope=col]', text: 'Debit'
     assert_select 'tfoot .money', text: '$1,234,567.89', count: 2
     assert_select 'td a[href*=?]', finance_chart_of_account_path(@cash)
@@ -105,10 +104,10 @@ class FinanceReportsUiTest < ActionDispatch::IntegrationTest
 
   test 'the Money navigation reaches the general ledger, reports and bank reconciliation' do
     get finance_journal_entries_path
-    assert_select 'nav[aria-label="Bookkeeping workspace"] a[href=?]', finance_journal_entries_path
-    assert_select 'nav[aria-label="Bookkeeping workspace"] a[href=?]', finance_reports_path
-    assert_select 'nav[aria-label="Bookkeeping workspace"] a[href=?]', finance_bank_reconciliation_path
-    assert_select 'a[aria-current=page]', 'General ledger'
+    assert_select 'nav[aria-label="Module"] a[href=?]', finance_journal_entries_path
+    assert_select '.page-header a[href=?]', finance_reports_path
+    assert_select 'nav[aria-label="Module"] a[href=?]', finance_bank_reconciliation_path
+    assert_select 'nav[aria-label="Module"] a[aria-current=page]', 'General ledger'
     get ledger_index_path
     assert_select 'h1', 'Imported orders'
     assert_select 'a[href=?]', finance_journal_entries_path, text: 'General ledger'

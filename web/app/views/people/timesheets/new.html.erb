@@ -1,8 +1,5 @@
-<% content_for :title, "New timesheet" %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title">New timesheet</h1>
-    <p class="mt-1 text-sm text-mocha"><%= Current.user.employee? ? 'Choose the week, then add your daily hours.' : 'Pick a staff member and the pay week, then add daily hours.' %></p>
-  </section>
+<% content_for :title, "Add timesheet" %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add timesheet', subtitle: (Current.user.employee? ? 'Choose the week, then add your daily hours.' : 'Pick a staff member and the pay week, then add daily hours.') %>
   <%= render "form", timesheet: @timesheet %>
 </div>

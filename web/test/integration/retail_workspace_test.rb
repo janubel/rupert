@@ -22,7 +22,7 @@ class RetailWorkspaceTest < ActionDispatch::IntegrationTest
   test 'POS exposes a reachable cart unique quantity fields and preserves source stock' do
     get ctrax_pos_path
     assert_response :success
-    assert_select 'nav[aria-label="Retail workspace"] a[href=?]', ctrax_days_path
+    assert_select 'nav[aria-label="Module"] a[href=?]', ctrax_days_path
     assert_select 'a.retail-cart-link[href="#retail-cart"]'
     assert_select '#retail-cart[tabindex="-1"]'
     assert_select 'input[type=number][id=ctrax_quantity_3]'
@@ -34,8 +34,8 @@ class RetailWorkspaceTest < ActionDispatch::IntegrationTest
     assert_equal ids.uniq, ids
     assert_equal 'no-store', response.headers['Cache-Control']
     get ctrax_pos_path, params: { q: 'not-in-the-fixture' }
-    assert_select 'h3', 'No products match these filters'
-    assert_select 'a', 'Clear filters'
+    assert_select '.empty-state-title', 'No products match these filters'
+    assert_select 'a', 'Clear'
   end
 
   test 'stale stock is explained before an add action and admin setup stays role filtered' do

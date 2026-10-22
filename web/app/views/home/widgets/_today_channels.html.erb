@@ -1,15 +1,12 @@
-<div class="card card-pad">
-  <div class="flex flex-wrap items-baseline justify-between gap-2">
-    <h2 class="font-display text-xl text-ink">Today · per channel</h2>
-    <span class="text-xs text-taupe">Recorded sales · USD · <%= Time.zone.now.strftime('%Z') %></span>
-  </div>
-  <p class="mt-2 text-sm text-mocha">Paid orders and completed C-Trax sales. Payment reports, invoices, and bank deposits are not added. C-Trax tips stay separate; source refunds need separate review.</p>
-  <dl class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+<div class="section-card">
+  <%= section_heading 'Today · per channel', hint: "Recorded sales · USD · #{Time.zone.now.strftime('%Z')}" %>
+  <%= fold_explainer('Paid orders and completed C-Trax sales. Payment reports, invoices, and bank deposits are not added. C-Trax tips stay separate; source refunds need separate review.', class: 'text-sm text-mocha') %>
+  <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     <% presenter.today_groups.each do |source, gross, count| %>
       <% freshness = presenter.sales_freshness.fetch(source, {}) %>
-      <div class="rounded-xl border border-fog bg-haze p-4" data-sales-source="<%= source %>">
-        <dt class="text-sm font-semibold text-ink"><%= DashboardSales::LABELS.fetch(source, source.humanize) %></dt>
-        <dd class="mt-2 font-display text-3xl tabular-nums text-olive-deep"><%= number_to_currency(gross.to_i / 100.0) %></dd>
+      <div class="stat" data-sales-source="<%= source %>">
+        <dt class="stat-label"><%= DashboardSales::LABELS.fetch(source, source.humanize) %></dt>
+        <dd class="stat-value mt-1 text-olive-deep"><%= number_to_currency(gross.to_i / 100.0) %></dd>
         <dd class="mt-1 text-sm text-mocha"><%= pluralize(count, 'recorded order') %></dd>
         <% if freshness.any? %>
           <dd class="mt-3 text-xs text-mocha">Last pulled: <% if freshness[:pulled_at] %><time datetime="<%= freshness[:pulled_at].iso8601 %>"><%= freshness[:pulled_at].in_time_zone.strftime('%b %-d, %-I:%M %p %Z') %></time><% else %>No successful pull recorded<% end %></dd>
@@ -17,11 +14,11 @@
           <% if freshness[:business_date] %><dd class="mt-1 text-xs text-mocha">Latest business date: <%= freshness[:business_date].strftime('%b %-d, %Y') %></dd><% end %>
         <% end %>
         <% if count.zero? %><dd class="mt-2 text-xs text-mocha">No sales imported for today. Check source coverage before treating this as no activity.</dd><% end %>
-        <% if source == 'ctrax' %><dd class="mt-3"><%= link_to 'Review daily close', ctrax_days_path, class: 'text-sm font-semibold text-olive-deep underline' %></dd><% end %>
+        <% if source == 'ctrax' %><dd class="mt-3"><%= link_to 'Review daily close', ctrax_days_path, class: 'btn-ghost btn-sm' %></dd><% end %>
       </div>
     <% end %>
   </dl>
   <% if presenter.sales_warnings.any? %>
-    <div class="mt-4 rounded-xl border border-clay/30 bg-clay/10 p-3 text-sm text-ink" role="status"><p class="font-semibold">Sales coverage needs review</p><ul class="mt-1 list-disc space-y-1 pl-5"><% presenter.sales_warnings.each do |warning| %><li><%= warning %></li><% end %></ul></div>
+    <div class="flash flash-alert text-sm" role="status"><p class="font-semibold">Sales coverage needs review</p><ul class="mt-1 list-disc space-y-1 pl-5"><% presenter.sales_warnings.each do |warning| %><li><%= warning %></li><% end %></ul></div>
   <% end %>
 </div>

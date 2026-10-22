@@ -1,10 +1,19 @@
 <% content_for :title, 'Imported orders' %>
-<div class="operations-workspace space-y-6">
-  <%= render 'shared/operations_navigation', workspace: :money %>
-  <header><p class="eyebrow text-olive-deep">Finance · copy of imported sales</p><h1 class="page-title mt-2">Imported orders</h1><p class="mt-2 text-sm text-mocha">Orders imported from each sales source, by currency. They can describe sales already counted elsewhere, so they are not extra revenue or confirmed bank funding. This is not the double-entry books: for those, open the <%= link_to 'General ledger', finance_journal_entries_path, class: 'link' %>.</p></header>
-  <%= form_tag ledger_index_path, method: :get, class: 'card card-pad operations-filters' do %><div><%= label_tag :window, 'Date range', class: 'field-label' %><%= select_tag :window, options_for_select([7,30,90,365].map { |days| ["#{days} days", days] } | [["#{@window_days} days", @window_days]], @window_days), class: 'input' %></div><div><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', 'all']] + @sources.map { |source| [operations_source_name(source), source] }, @source), class: 'input' %></div><%= submit_tag 'Update list', class: 'btn-primary' %><% end %>
+<div class="space-y-6">
+  <%= page_header 'Imported orders', subtitle: 'Orders imported from each sales source, by currency.', menu: [['General ledger', finance_journal_entries_path]] %>
+  <%= fold_explainer('These orders can describe sales already counted elsewhere, so they are not extra revenue or confirmed bank funding. This is not the double-entry books; for those, open the general ledger from the More menu.', class: 'text-sm text-mocha') %>
+
+  <%= form_tag ledger_index_path, method: :get, class: 'toolbar' do %>
+    <div class="toolbar-field"><%= label_tag :window, 'Date range', class: 'field-label' %><%= select_tag :window, options_for_select([7, 30, 90, 365].map { |days| ["#{days} days", days] } | [["#{@window_days} days", @window_days]], @window_days), class: 'select' %></div>
+    <div class="toolbar-field"><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', 'all']] + @sources.map { |source| [operations_source_name(source), source] }, @source), class: 'select' %></div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><%= link_to 'Clear', ledger_index_path, class: 'btn-ghost' %></div>
+  <% end %>
   <p class="text-sm text-mocha"><%= @from %> through today · <%= @pagy.count %> recorded entries. Currencies remain separate.</p>
-  <section class="grid grid-cols-2 gap-3 lg:grid-cols-3" aria-label="Ledger totals by currency"><% @currency_totals.each do |currency, cents| %><div class="stat"><div class="stat-label"><%= currency.presence || 'Unknown currency' %> · recorded gross<%= define('gross') %></div><p class="stat-value retail-money mt-2"><%= operations_money(cents, currency: currency) %></p></div><% end %></section>
+
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-3" aria-label="Ledger totals by currency">
+    <% @currency_totals.each do |currency, cents| %><div class="stat"><div class="stat-label"><%= currency.presence || 'Unknown currency' %> · recorded gross<%= define('gross') %></div><p class="stat-value mt-1"><%= operations_money(cents, currency: currency) %></p></div><% end %>
+    <% if @currency_totals.empty? %><div class="stat"><p class="stat-label">Recorded gross</p><p class="stat-value-sm mt-1">No orders</p></div><% end %>
+  </section>
   <% if @currency_totals.any? %>
     <%= explain_calculation(title: 'Recorded gross by currency', id: 'ledger-currency-totals',
           formula: 'Each imported order’s recorded gross in the date range, added within one currency. Currencies are never combined.',
@@ -13,9 +22,19 @@
           note: 'Gross is the amount the source reported for the order, before refunds, fees or deposits. These orders can also appear in sales reports, so this is not extra revenue.',
           term: 'gross', lesson: 'books') %>
   <% end %>
+
   <div data-controller="table-filter" class="space-y-2">
-  <div class="table-filter"><input type="search" class="input" placeholder="Narrow these rows: order, source, status…" aria-label="Filter ledger entries on this page" data-table-filter-target="input" data-action="input->table-filter#filter keydown.esc->table-filter#clear"><span class="table-filter-count" data-table-filter-target="count" aria-live="polite"></span></div>
-  <div class="card operations-table-region" role="region" tabindex="0" aria-label="Source ledger entries"><table class="operations-table w-full text-sm"><thead><tr><% ['Date', 'Source', 'Order', 'Recorded gross', 'Status', 'Items', 'Source summary'].each do |label| %><th scope="col" class="th<%= ' text-right' if label == 'Recorded gross' %>"><%= label %><%= define('gross') if label == 'Recorded gross' %><%= define('source') if label == 'Source' %></th><% end %></tr></thead><tbody class="divide-y divide-fog"><% @entries.each do |entry| %><tr data-table-filter-target="row"><td class="td whitespace-nowrap"><%= retail_source_time(entry.occurredAt) %></td><td class="td"><%= operations_source_name(entry.source) %></td><td class="td"><%= entry.orderName.presence || entry.sourceOrderId %></td><td class="td retail-money whitespace-nowrap text-right"><%= operations_money(entry.grossCents, currency: entry.currency) %></td><td class="td"><span class="pill-taupe"><%= entry.status %></span></td><td class="td"><%= entry.lineItems %></td><td class="td"><%= entry.summary.presence || 'Not recorded' %></td></tr><% end %><% if @entries.empty? %><tr><td colspan="7" class="empty-row">No source ledger records match this period and source.</td></tr><% end %><tr data-table-filter-target="empty" hidden><td colspan="7" class="empty-row">No rows on this page match. <button type="button" class="font-semibold text-olive-deep underline" data-action="table-filter#clear">Clear filter</button></td></tr></tbody></table></div>
+    <div class="table-filter"><input type="search" class="input" placeholder="Narrow these rows: order, source, status…" aria-label="Filter ledger entries on this page" data-table-filter-target="input" data-action="input->table-filter#filter keydown.esc->table-filter#clear"><span class="table-filter-count" data-table-filter-target="count" aria-live="polite"></span></div>
+    <div class="table-region" role="region" tabindex="0" aria-label="Source ledger entries"><table class="table">
+      <thead><tr><% ['Date', 'Source', 'Order', 'Recorded gross', 'Status', 'Items', 'Source summary'].each do |label| %><th scope="col" class="th<%= ' num' if label == 'Recorded gross' %>"><%= label %><%= define('gross') if label == 'Recorded gross' %><%= define('source') if label == 'Source' %></th><% end %></tr></thead>
+      <tbody>
+        <% @entries.each do |entry| %>
+          <tr data-table-filter-target="row"><td class="td whitespace-nowrap"><%= retail_source_time(entry.occurredAt) %></td><td class="td"><%= operations_source_name(entry.source) %></td><td class="td"><%= entry.orderName.presence || entry.sourceOrderId %></td><td class="td num whitespace-nowrap"><%= operations_money(entry.grossCents, currency: entry.currency) %></td><td class="td"><span class="pill-taupe"><%= entry.status %></span></td><td class="td num"><%= entry.lineItems %></td><td class="td"><%= entry.summary.presence || 'Not recorded' %></td></tr>
+        <% end %>
+        <% if @entries.empty? %><tr><td colspan="7" class="empty-row">No imported orders for this period and source. Choose a longer date range or another source.</td></tr><% end %>
+        <tr data-table-filter-target="empty" hidden><td colspan="7" class="empty-row">No rows on this page match. <button type="button" class="font-semibold text-olive-deep underline" data-action="table-filter#clear">Clear filter</button></td></tr>
+      </tbody>
+    </table></div>
   </div>
   <%== @pagy.series_nav if @pagy.pages > 1 %>
 </div>

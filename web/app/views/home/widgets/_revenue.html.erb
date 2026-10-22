@@ -1,24 +1,20 @@
-<div class="card card-pad">
-  <div class="flex items-baseline justify-between">
-    <h2 class="font-display text-xl text-ink">Revenue · last 30 days</h2>
-    <span class="text-xs text-taupe">daily gross</span>
-  </div>
+<div class="section-card">
+  <%= section_heading 'Revenue · last 30 days', hint: 'Daily gross' %>
   <%# A flat zero line with 0 / 0.5 / 1 axes says nothing; show the chart only once there are sales. %>
   <% if presenter.ledger_groups.any? %>
-    <div class="mt-4">
+    <div>
       <%= area_chart presenter.revenue_series, height: "220px", legend: false, colors: chart_color(:olive_deep), library: { scales: { x: { ticks: { maxTicksLimit: 8 } } } } %>
     </div>
+    <dl class="facts">
+      <% presenter.ledger_groups.each do |source, gross, count| %>
+        <div>
+          <dt class="capitalize"><%= DashboardSales::LABELS.fetch(source, source.humanize) %></dt>
+          <dd class="stat-value-sm"><%= number_to_currency(gross.to_i / 100.0) %></dd>
+          <dd class="text-xs text-taupe"><%= count %> orders</dd>
+        </div>
+      <% end %>
+    </dl>
+  <% else %>
+    <%= empty_state 'No recorded sales in the last 30 days', hint: 'Sales appear here after the next source pull.' %>
   <% end %>
-  <dl class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    <% presenter.ledger_groups.each do |source, gross, count| %>
-      <div class="rounded-xl bg-haze px-4 py-3">
-        <dt class="text-xs font-medium capitalize text-mocha"><%= DashboardSales::LABELS.fetch(source, source.humanize) %></dt>
-        <dd class="font-display text-2xl text-ink"><%= number_to_currency(gross.to_i / 100.0) %></dd>
-        <dd class="text-xs text-taupe"><%= count %> orders</dd>
-      </div>
-    <% end %>
-    <% if presenter.ledger_groups.empty? %>
-      <p class="rounded-xl bg-haze px-4 py-3 text-sm text-taupe">No recorded sales in the last 30 days.</p>
-    <% end %>
-  </dl>
 </div>

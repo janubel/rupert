@@ -1,24 +1,57 @@
 <% content_for :title, 'Square timecard' %>
-<section class="space-y-3"><h1 class="page-title">Square timecard</h1><p class="text-sm text-mocha">Read-only imported history · <%= @card.import_status.humanize %></p><%= link_to 'Back to Square history', people_square_timesheets_path, class: 'text-sm text-olive underline' %></section>
-<section class="card card-pad space-y-3" aria-label="Latest Square punches">
-  <h2 class="text-lg font-semibold">Latest source punches</h2>
-  <p class="text-sm text-mocha">Latest observed Square punches, including open or changed records. These do not replace original counted hours or establish Rupert approval, overtime or payment.</p>
-  <dl class="grid gap-3 text-sm sm:grid-cols-2">
-    <div><dt class="text-mocha">Clock-in</dt><dd><%= square_punch_label(@latest[:started_at], @latest[:timezone]) %></dd></div>
-    <div><dt class="text-mocha">Clock-out</dt><dd><%= square_punch_label(@latest[:ended_at], @latest[:timezone]) %></dd></div>
-    <div><dt class="text-mocha">Source timezone</dt><dd><%= @latest[:timezone] || 'Not available' %></dd></div>
-    <div><dt class="text-mocha">Latest source status</dt><dd><%= @latest[:status] || 'Not available' %></dd></div>
+<div class="space-y-6">
+  <%= page_header 'Square timecard', subtitle: "Read-only imported history · #{@card.employee&.name || 'Staff member not matched'}",
+        menu: [['Download CSV', people_square_timesheet_path(@card, format: :csv), { data: { turbo: false } }]] %>
+  <dl class="facts">
+    <div><dt>Import status</dt><dd><span class="<%= time_status_pill(@card.import_status) %>"><%= @card.import_status.humanize %></span></dd></div>
+    <div><dt>Square timecard ID</dt><dd class="break-all"><%= @card.external_id %></dd></div>
+    <div><dt>Counted</dt><dd><%= @card.imported_at ? 'Counted once in personal hours history' : 'Not counted in personal hours or payroll' %></dd></div>
   </dl>
-  <%= link_to 'Download punches CSV', people_square_timesheet_path(@card, format: :csv), class: 'text-sm text-olive underline' %>
-  <h3 class="font-semibold">Latest break punches</h3>
-  <% if @latest[:breaks].empty? %><p class="text-sm text-mocha">No break punches returned by the latest source record.</p><% end %>
-  <% @latest[:breaks].each do |pause| %>
-    <article class="border-t border-fog pt-3 space-y-1" data-source-break>
-      <h4 class="font-semibold"><%= pause[:name].presence || 'Source break' %></h4>
-      <p class="text-sm">Start: <%= square_punch_label(pause[:started_at], @latest[:timezone]) %> · End: <%= square_punch_label(pause[:ended_at], @latest[:timezone]) %></p>
-      <p class="text-sm text-mocha">Paid break: <%= pause[:is_paid].nil? ? 'Not reported' : pause[:is_paid] ? 'Yes' : 'No' %></p>
-    </article>
-  <% end %>
-</section>
-<section class="card card-pad space-y-3"><h2 class="text-lg font-semibold">Original counted history · <%= @card.employee&.name || 'Staff member not matched' %></h2><dl class="grid gap-3 text-sm sm:grid-cols-2"><div><dt class="text-mocha">Square timecard ID</dt><dd class="break-all"><%= @card.external_id %></dd></div><div><dt class="text-mocha">Timezone</dt><dd><%= @card.timezone || 'Not available' %></dd></div><div><dt class="text-mocha">Clock-in</dt><dd><%= @card.started_at ? l(@card.started_at.in_time_zone(@card.timezone), format: :long) : 'Not available' %></dd></div><div><dt class="text-mocha">Clock-out</dt><dd><%= @card.ended_at ? l(@card.ended_at.in_time_zone(@card.timezone), format: :long) : 'Not available' %></dd></div><div><dt class="text-mocha">Recorded hours</dt><dd><%= number_with_precision(@card.hours, precision: 2) %>h</dd></div><div><dt class="text-mocha">Unpaid break time</dt><dd><%= number_with_precision(BigDecimal(@card.unpaid_break_seconds.to_s) / 60, precision: 2) %> minutes</dd></div></dl><% if @card.issue.present? %><p class="rounded-xl bg-haze p-3 text-sm"><%= @card.issue %></p><% end %><p class="text-sm text-mocha"><%= @card.imported_at ? 'Counted once in personal hours history. Square history is excluded from new Rupert payroll generation.' : 'Not counted in personal hours or payroll.' %></p></section>
-<section class="card card-pad space-y-3"><h2 class="text-lg font-semibold">Hours by day</h2><% @card.days.order(:worked_on).each do |day| %><p class="flex flex-wrap justify-between gap-2 text-sm"><span><%= l(day.worked_on, format: :long) %></span><span><%= number_with_precision(day.hours, precision: 2) %>h</span></p><% end %><% if @card.days.empty? %><p class="text-sm text-mocha">No positive imported work time. Zero-duration Square records contribute zero hours.</p><% end %></section>
+
+  <section class="section-card" aria-label="Latest Square punches">
+    <%= section_heading 'Latest source punches', hint: 'Latest observed Square punches, including open or changed records. These do not replace original counted hours or establish Rupert approval, overtime or payment.' %>
+    <dl class="facts">
+      <div><dt>Clock-in</dt><dd><%= square_punch_label(@latest[:started_at], @latest[:timezone]) %></dd></div>
+      <div><dt>Clock-out</dt><dd><%= square_punch_label(@latest[:ended_at], @latest[:timezone]) %></dd></div>
+      <div><dt>Source timezone</dt><dd><%= @latest[:timezone] || 'Not available' %></dd></div>
+      <div><dt>Latest source status</dt><dd><%= @latest[:status] || 'Not available' %></dd></div>
+    </dl>
+    <h3 class="card-title">Latest break punches</h3>
+    <% if @latest[:breaks].empty? %><p class="text-sm text-mocha">No break punches returned by the latest source record.</p><% end %>
+    <% @latest[:breaks].each do |pause| %>
+      <article class="space-y-1 border-t border-fog pt-3" data-source-break>
+        <h4 class="font-semibold"><%= pause[:name].presence || 'Source break' %></h4>
+        <p class="text-sm">Start: <%= square_punch_label(pause[:started_at], @latest[:timezone]) %> · End: <%= square_punch_label(pause[:ended_at], @latest[:timezone]) %></p>
+        <p class="text-sm text-mocha">Paid break: <%= pause[:is_paid].nil? ? 'Not reported' : pause[:is_paid] ? 'Yes' : 'No' %></p>
+      </article>
+    <% end %>
+  </section>
+
+  <section class="section-card">
+    <%= section_heading 'Original counted history' %>
+    <dl class="facts">
+      <div><dt>Timezone</dt><dd><%= @card.timezone || 'Not available' %></dd></div>
+      <div><dt>Clock-in</dt><dd><%= @card.started_at ? l(@card.started_at.in_time_zone(@card.timezone), format: :long) : 'Not available' %></dd></div>
+      <div><dt>Clock-out</dt><dd><%= @card.ended_at ? l(@card.ended_at.in_time_zone(@card.timezone), format: :long) : 'Not available' %></dd></div>
+      <div><dt>Recorded hours</dt><dd><%= number_with_precision(@card.hours, precision: 2) %>h</dd></div>
+      <div><dt>Unpaid break time</dt><dd><%= number_with_precision(BigDecimal(@card.unpaid_break_seconds.to_s) / 60, precision: 2) %> minutes</dd></div>
+    </dl>
+    <% if @card.issue.present? %><p class="flash flash-alert" role="status"><%= @card.issue %></p><% end %>
+    <p class="text-sm text-mocha"><%= @card.imported_at ? 'Counted once in personal hours history. Square history is excluded from new Rupert payroll generation.' : 'Not counted in personal hours or payroll.' %></p>
+  </section>
+
+  <section class="section-card">
+    <%= section_heading 'Hours by day' %>
+    <div class="table-region" role="region" tabindex="0" aria-label="Hours by day">
+      <table class="table">
+        <thead><tr><th scope="col" class="th">Day</th><th scope="col" class="th num">Hours</th></tr></thead>
+        <tbody>
+          <% @card.days.order(:worked_on).each do |day| %>
+            <tr><td class="td"><%= l(day.worked_on, format: :long) %></td><td class="td num"><%= number_with_precision(day.hours, precision: 2) %>h</td></tr>
+          <% end %>
+          <% if @card.days.empty? %><tr><td colspan="2" class="empty-row">No positive imported work time. Zero-duration Square records contribute zero hours.</td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

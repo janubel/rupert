@@ -1,9 +1,7 @@
-<% content_for :title, "Edit expense" %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
-
-  <%= page_header 'Edit expense' %>
-  <div class="card card-pad page-narrow">
-    <%= render "form", expense: @expense %>
+<% content_for :title, 'Edit expense' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Edit expense', subtitle: "#{@expense.payee.presence || @expense.vendor&.name || @expense.category_label} · #{finance_money_text(@expense.amount_cents)} · #{l(@expense.incurred_on, format: :short)}" %>
+  <div class="card card-pad">
+    <%= render 'form', expense: @expense %>
   </div>
 </div>

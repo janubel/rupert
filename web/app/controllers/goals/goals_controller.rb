@@ -2,7 +2,7 @@
 
 module Goals
   class GoalsController < AuthenticatedController
-    before_action :set_goal, only: %i[show update destroy transition]
+    before_action :set_goal, only: %i[show edit update destroy transition]
 
     def index
       authorize(:module, :projects_read?)

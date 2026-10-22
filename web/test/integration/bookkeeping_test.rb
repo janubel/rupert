@@ -21,7 +21,7 @@ class BookkeepingIntegrationTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Currency unverified'
     assert_includes response.body, 'What was purchased?'
     assert_includes response.body, 'No expenses recorded for this month'
-    assert_select 'nav[aria-label="Bookkeeping workspace"] a[aria-current=page]', text: 'Overview'
+    assert_select 'nav[aria-label="Module"] a[aria-current=page]', text: 'Bookkeeping'
     assert_select "a[href=?]", bank_statement_path(@result[:document].id, anchor: "bank-line-#{@lines.last.id}")
   end
 

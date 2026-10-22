@@ -1,10 +1,13 @@
-<section id="cash-flow-kpis" class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5" aria-label="Headline figures">
-  <% report.kpis.each do |key, kpi| %>
-    <article class="stat cash-flow-stat" data-kpi="<%= key %>">
+<%# Net flow leads and spans the row; the four figures it is made of follow. Sparklines wear the series hue of the measure (in/out) or the muted hue. %>
+<% hues = { cash_in: 'var(--chart-in)', cash_out: 'var(--chart-out)' } %>
+<section id="cash-flow-kpis" class="grid grid-cols-2 gap-4 lg:col-span-2" aria-label="Headline figures">
+  <% %i[net cash_in cash_out sales spend].each do |key| %>
+    <% kpi = report.kpis.fetch(key) %>
+    <article class="stat cash-flow-stat <%= 'col-span-2' if key == :net %>" data-kpi="<%= key %>">
       <div class="stat-label"><%= kpi[:label] %></div>
       <p class="stat-value mt-1 <%= 'money-negative' if kpi[:cents].negative? %>" title="<%= finance_money_text(kpi[:cents]) %>"><%= cash_flow_compact(kpi[:cents]) %></p>
       <p class="mt-1 cash-flow-delta"><%= cash_flow_delta(kpi[:cents], kpi[:previous_cents], good: kpi[:good], label: "the #{report.span_days} days before") %><% if kpi[:count] %> <span class="text-xs text-taupe">· <%= pluralize(kpi[:count], 'sale') %></span><% end %></p>
-      <div class="mt-2"><%= cash_flow_sparkline(kpi[:series], width: 160, height: 30) %></div>
+      <div class="mt-2"><%= cash_flow_sparkline(kpi[:series], width: key == :net ? 360 : 160, height: key == :net ? 44 : 30, color: hues.fetch(key, 'var(--chart-muted)')) %></div>
     </article>
   <% end %>
 </section>

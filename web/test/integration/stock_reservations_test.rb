@@ -18,7 +18,7 @@ class StockReservationsTest < ActionDispatch::IntegrationTest
   test 'operator creates views and releases a reservation without mirror writes' do
     get new_stock_reservation_path
     assert_response :success
-    assert_select 'h1', 'Reserve stock'
+    assert_select 'h1', 'Add reservation'
     assert_select "option[value='#{@level.id}']", /available-to-promise: 8/
     assert_select "input[name='stock_reservation[request_token]']"
     token = css_select("input[name='stock_reservation[request_token]']").first['value']

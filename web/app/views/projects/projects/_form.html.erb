@@ -1,29 +1,53 @@
-<%# locals: project, url, method, submit, cancel_path %>
-<div class="card card-pad max-w-2xl">
-  <%= form_with model: project, scope: :project, url: url, method: method, class: "space-y-4" do |f| %>
+<%# locals: project, url, method, cancel_path, templates (optional) %>
+<div class="card card-pad">
+  <%= form_with model: project, scope: :project, url: url, method: method, class: "space-y-6" do |f| %>
     <% if project.errors.any? %>
       <div class="flash flash-alert" role="alert"><%= project.errors.full_messages.to_sentence %></div>
     <% end %>
-    <div>
-      <%= f.label :name, "Name", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.text_field :name, class: "input", required: true, autofocus: true, placeholder: "e.g. Spring window display" %>
-    </div>
-    <div>
-      <%= f.label :description, "What does done look like?", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-      <%= f.text_area :description, rows: 4, class: "input !rounded-2xl" %>
-    </div>
-    <div class="grid gap-4 sm:grid-cols-2">
+    <% templates = local_assigns[:templates] %>
+    <% if templates&.any? %>
       <div>
-        <%= f.label :due_on, "Due date", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-        <%= f.date_field :due_on, class: "input" %>
+        <%= label_tag :template_id, "Start from a template", class: "field-label" %>
+        <%= select_tag :template_id, options_for_select(templates.map { |t| ["#{t.name} (#{pluralize(t.task_count, "task")})", t.id] }, params[:template_id]), include_blank: "Blank project", class: "select w-full" %>
+        <p class="mt-1 text-xs text-taupe">Its tasks and checklists are copied, with dates counted from the start date below.</p>
+      </div>
+    <% end %>
+    <fieldset class="space-y-4">
+      <legend class="card-title">Project</legend>
+      <div>
+        <%= f.label :name, "Name", class: "field-label" %>
+        <%= f.text_field :name, class: "input", required: true, autofocus: true, placeholder: "e.g. Spring window display" %>
       </div>
       <div>
-        <%= f.label :owner_id, "Owner", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-        <%= f.select :owner_id, project_person_options(project.persisted? || project.errors.any? ? project.owner_id : Current.user.id), { include_blank: "Unassigned" }, class: "select" %>
+        <%= f.label :description, "What does done look like?", class: "field-label" %>
+        <%= f.text_area :description, rows: 4, class: "input" %>
       </div>
-    </div>
-    <div class="flex items-center gap-3">
-      <%= f.submit submit, class: "btn-primary" %>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <%= f.label :start_on, "Start date", class: "field-label" %>
+          <%= f.date_field :start_on, class: "input" %>
+        </div>
+        <div>
+          <%= f.label :due_on, "Due date", class: "field-label" %>
+          <%= f.date_field :due_on, class: "input" %>
+        </div>
+        <div>
+          <%= f.label :owner_id, "Owner", class: "field-label" %>
+          <%= f.select :owner_id, project_person_options(project.persisted? || project.errors.any? ? project.owner_id : Current.user.id), { include_blank: "Unassigned" }, class: "select w-full" %>
+        </div>
+        <div>
+          <%= f.label :goal_id, "Supports goal", class: "field-label" %>
+          <%= f.select :goal_id, options_from_collection_for_select(Goals::Goal.where.not(status: %w[achieved abandoned]).order(:name), :id, :name, project.goal_id), { include_blank: "No goal" }, class: "select w-full" %>
+        </div>
+      </div>
+      <div>
+        <%= f.label :member_ids, "Team (besides the owner)", class: "field-label" %>
+        <%= f.select :member_ids, project_person_options(project.member_ids), {}, { multiple: true, class: "select w-full", size: 5 } %>
+        <p class="mt-1 text-xs text-taupe">Team members hear about comments and blocked work. Hold Ctrl or ⌘ to pick several. Membership does not change anyone's access.</p>
+      </div>
+    </fieldset>
+    <div class="form-actions">
+      <%= f.submit "Save", class: "btn-primary" %>
       <%= link_to "Cancel", cancel_path, class: "btn-ghost" %>
     </div>
   <% end %>

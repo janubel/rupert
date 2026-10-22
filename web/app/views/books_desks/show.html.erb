@@ -1,54 +1,43 @@
-<% content_for :title, 'Close & review · Bookkeeping' %>
 <% desk = @desk; progress = desk.progress; next_day = desk.next_day; next_task = desk.next_task
    this_week = desk.this_week_days; focus_days = desk.focus_days; tasks = desk.focus_tasks
-   week_state = desk.week_period(desk.focus_week).state %>
-<div class="mx-auto max-w-6xl space-y-8 operations-workspace books-desk">
-  <%= render 'shared/operations_navigation', workspace: :money, day: Date.yesterday %>
+   week_state = desk.week_period(desk.focus_week).state
+   menu = []
+   if @can_write_finance
+     menu << ['Add expense', new_finance_expense_path]
+     menu << ['Add vendor payment', new_finance_vendor_payment_path]
+   end
+   menu << ['Add follow-up', new_reconciliation_follow_up_path] if @can_write_reports %>
+<div class="space-y-8 books-desk">
+  <%= page_header 'Close & review', subtitle: 'Each finished day moves through six steps, and each finished week has a short list of chores.', menu: menu do %>
+    <% if @can_write_finance %><span class="inline-flex" <%= tour_anchor('record') %>><%= link_to 'Import bank statement', bank_statements_path, class: 'btn-primary' %></span><% end %>
+  <% end %>
 
-  <header class="operations-header">
-    <div>
-      <p class="eyebrow text-mocha">Bookkeeping · daily and weekly cleanup</p>
-      <h1 class="page-title mt-2">Close & review</h1>
-      <p class="mt-2 max-w-2xl text-sm text-mocha">Each finished day moves through six steps, and each finished week has a short list of chores. Rupert shows what is done and opens the right page for whatever is next. Nothing here changes a record by itself.</p>
-    </div>
-    <% if @can_write_finance || @can_write_reports %>
-      <nav class="flex flex-wrap gap-2" aria-label="Record something now" <%= tour_anchor('record') %>>
-        <% if @can_write_finance %>
-          <%= link_to 'Upload bank statement', bank_statements_path, class: 'btn-ghost btn-sm' %>
-          <%= link_to 'Add expense', new_finance_expense_path, class: 'btn-ghost btn-sm' %>
-          <%= link_to 'Record vendor payment', new_finance_vendor_payment_path, class: 'btn-ghost btn-sm' %>
-        <% end %>
-        <% if @can_write_reports %><%= link_to 'Track a follow-up', new_reconciliation_follow_up_path, class: 'btn-ghost btn-sm' %><% end %>
-      </nav>
-    <% end %>
-  </header>
-
-  <section class="desk-next card card-pad" aria-labelledby="desk-next-title" <%= tour_anchor('next') %>>
+  <section class="desk-next section-card" aria-labelledby="desk-next-title" <%= tour_anchor('next') %>>
     <div class="desk-next-body">
       <% if next_day %>
         <% stage = next_day.next_stage %>
-        <p class="eyebrow text-olive-deep">Do this next</p>
-        <h2 id="desk-next-title" class="mt-1 font-display text-2xl"><%= books_desk_stage_action(stage) %></h2>
+        <p class="eyebrow text-olive">Do this next</p>
+        <h2 id="desk-next-title" class="section-title mt-1"><%= books_desk_stage_action(stage) %></h2>
         <p class="mt-1 text-sm"><strong><%= next_day.day.strftime('%A, %b %-d') %></strong> · <%= stage.label %>: <%= stage.detail %></p>
         <p class="mt-1 text-xs text-mocha">Oldest unfinished day first, so a backlog is worked in order.</p>
         <div class="mt-4 flex flex-wrap gap-2">
           <%= link_to books_desk_stage_action(stage), books_desk_stage_path(next_day.day, stage), class: 'btn-primary' %>
-          <%= link_to 'See the whole day', "#day-#{next_day.day.iso8601}", class: 'btn-ghost' %>
+          <%= link_to 'Open the whole day', "#day-#{next_day.day.iso8601}", class: 'btn-ghost' %>
         </div>
       <% elsif next_task %>
-        <p class="eyebrow text-olive-deep">Days are done · weekly chore next</p>
-        <h2 id="desk-next-title" class="mt-1 font-display text-2xl"><%= next_task.title %></h2>
+        <p class="eyebrow text-olive">Days are done · weekly chore next</p>
+        <h2 id="desk-next-title" class="section-title mt-1"><%= next_task.title %></h2>
         <p class="mt-1 text-sm"><%= next_task.detail %></p>
         <div class="mt-4 flex flex-wrap gap-2"><%= link_to books_desk_task_action(next_task), books_desk_task_path(next_task), class: 'btn-primary' %></div>
       <% elsif (period_step = desk.next_period_step) %>
         <% close, task = period_step %>
-        <p class="eyebrow text-olive-deep">Days and week are done · <%= close.kind_label.downcase %> end next</p>
-        <h2 id="desk-next-title" class="mt-1 font-display text-2xl"><%= close.label %>: <%= task.title.sub(/\A./, &:downcase) %></h2>
+        <p class="eyebrow text-olive">Days and week are done · <%= close.kind_label.downcase %> end next</p>
+        <h2 id="desk-next-title" class="section-title mt-1"><%= close.label %>: <%= task.title.sub(/\A./, &:downcase) %></h2>
         <p class="mt-1 text-sm"><%= task.detail %></p>
         <div class="mt-4 flex flex-wrap gap-2"><%= link_to(task.key == :lock ? "Lock #{close.label}" : books_desk_task_action(task), books_desk_task_path(task), class: 'btn-primary') %></div>
       <% else %>
         <p class="eyebrow text-fern">All caught up</p>
-        <h2 id="desk-next-title" class="mt-1 font-display text-2xl">The books are clean</h2>
+        <h2 id="desk-next-title" class="section-title mt-1">The books are clean</h2>
         <p class="mt-1 text-sm">Daily reviews and closes are up to date, the selected week’s chores are complete, and the latest month, quarter and year are locked. Current-week approvals wait until the week ends.</p>
       <% end %>
     </div>
@@ -64,7 +53,7 @@
 
   <details class="desk-findings card" id="desk-findings" <%= tour_anchor('findings') %>>
     <summary class="desk-findings-summary disclosure-trigger">
-      <span class="font-display text-xl">What needs reconciliation</span>
+      <span class="section-title">What needs reconciliation</span>
       <span class="flex flex-wrap gap-2">
         <span class="<%= @findings.square_missing.count.zero? ? 'pill-fern' : 'pill-rose' %>">Square · <%= @findings.square_missing.count %> without payment</span>
         <span class="<%= @findings.unpaid_invoices.empty? ? 'pill-fern' : 'pill-rose' %>">SwipeSimple · <%= pluralize(@findings.unpaid_invoices.size, 'unpaid invoice') %></span>
@@ -75,32 +64,26 @@
 
   <% if this_week.any? %>
     <section class="space-y-3" aria-labelledby="desk-this-week" <%= tour_anchor('this_week') %>>
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="desk-this-week" class="font-display text-2xl">This week so far</h2>
-        <p class="text-xs text-mocha">Today is still open and appears tomorrow.</p>
-      </div>
+      <div class="card-head"><div><h2 id="desk-this-week" class="section-title">This week so far</h2><p class="card-hint">Today is still open and appears tomorrow.</p></div></div>
       <div class="space-y-3"><%= render partial: 'books_desks/day', collection: this_week, as: :row %></div>
     </section>
   <% end %>
 
   <section class="space-y-4" aria-labelledby="desk-focus-week" <%= tour_anchor('week') %>>
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="card-head">
       <div>
-        <h2 id="desk-focus-week" class="font-display text-2xl"><%= desk.focus_week == desk.current_week - 7 ? 'Last week' : 'Earlier week' %> · <%= desk.focus_label %></h2>
-        <p class="mt-1 text-sm text-mocha">Week approval: <strong><%= { pending: 'not approved yet', changed: 'changed since approval', approved: 'approved', approved_with_exceptions: 'approved with exceptions', needs_attention: 'needs attention' }.fetch(week_state, week_state.to_s.humanize) %></strong></p>
+        <h2 id="desk-focus-week" class="section-title"><%= desk.focus_week == desk.current_week - 7 ? 'Last week' : 'Earlier week' %> · <%= desk.focus_label %></h2>
+        <p class="card-hint">Week approval: <strong><%= { pending: 'not approved yet', changed: 'changed since approval', approved: 'approved', approved_with_exceptions: 'approved with exceptions', needs_attention: 'needs attention' }.fetch(week_state, week_state.to_s.humanize) %></strong></p>
       </div>
-      <nav class="flex flex-wrap gap-2" aria-label="Choose a week">
-        <%= link_to '← Earlier week', books_desk_path(week: desk.previous_week.iso8601, anchor: 'desk-focus-week'), class: 'btn-ghost btn-sm' %>
-        <% if desk.next_week %><%= link_to 'Later week →', books_desk_path(week: desk.next_week.iso8601, anchor: 'desk-focus-week'), class: 'btn-ghost btn-sm' %><%= link_to 'Last week', books_desk_path, class: 'btn-ghost btn-sm' %><% end %>
+      <nav class="card-head-actions" aria-label="Choose a week">
+        <%= link_to 'Earlier week', books_desk_path(week: desk.previous_week.iso8601, anchor: 'desk-focus-week'), class: 'btn-ghost btn-sm' %>
+        <% if desk.next_week %><%= link_to 'Later week', books_desk_path(week: desk.next_week.iso8601, anchor: 'desk-focus-week'), class: 'btn-ghost btn-sm' %><%= link_to 'Last week', books_desk_path, class: 'btn-ghost btn-sm' %><% end %>
       </nav>
     </div>
 
     <div class="desk-week-grid">
-      <section class="card card-pad space-y-3 desk-chores" aria-labelledby="desk-chores-title">
-        <div>
-          <h3 id="desk-chores-title" class="font-display text-xl">Weekly chores</h3>
-          <p class="text-xs text-mocha"><%= tasks.count { |t| t.done? && !t.optional } %> of <%= tasks.count { |t| !t.optional } %> done</p>
-        </div>
+      <section class="section-card desk-chores" aria-labelledby="desk-chores-title">
+        <%= section_heading 'Weekly chores', hint: "#{tasks.count { |t| t.done? && !t.optional }} of #{tasks.count { |t| !t.optional }} done", level: :h3 %>
         <ol class="space-y-2">
           <% tasks.each do |task| %>
             <li class="desk-task" data-state="<%= task.state %>">
@@ -108,7 +91,7 @@
               <div class="min-w-0 flex-1">
                 <p class="font-semibold"><%= task.title %><span class="sr-only"> · <%= books_desk_state_label(task.state) %></span><% if task.optional %> <span class="pill-taupe">Optional</span><% end %></p>
                 <p class="text-xs text-mocha"><%= task.detail %></p>
-                <% unless task.done? %><%= link_to books_desk_task_action(task), books_desk_task_path(task), class: 'mt-1 inline-block text-sm font-semibold text-olive-deep underline' %><% end %>
+                <% unless task.done? %><%= link_to books_desk_task_action(task), books_desk_task_path(task), class: 'mt-1 inline-block text-sm font-semibold text-olive-deep hover:underline' %><% end %>
               </div>
             </li>
           <% end %>
@@ -119,32 +102,31 @@
   </section>
 
   <section class="space-y-3" aria-labelledby="desk-period-end" <%= tour_anchor('periods') %>>
-    <div class="flex flex-wrap items-baseline justify-between gap-2">
-      <h2 id="desk-period-end" class="font-display text-2xl">Month, quarter and year end</h2>
-      <%= link_to 'All locked periods', period_locks_path, class: 'text-sm font-semibold text-olive-deep underline' %>
+    <div class="card-head">
+      <div><h2 id="desk-period-end" class="section-title">Month, quarter and year end</h2><p class="card-hint">Finish each period, then lock it so history cannot be edited by accident. Locks keep a dated archive of the period’s totals.</p></div>
+      <div class="card-head-actions"><%= link_to 'Open period locks', period_locks_path, class: 'btn-ghost btn-sm' %></div>
     </div>
-    <p class="text-sm text-mocha">Finish each period, then lock it so history cannot be edited by accident. Locks keep a dated archive of the period’s totals.</p>
     <div class="grid gap-3 lg:grid-cols-3">
       <% desk.period_closes.each do |close| %>
-        <% next_task = close.tasks.find { |t| !t.done? && !t.optional } %>
-        <article class="card card-pad space-y-3 min-w-0" aria-labelledby="close-<%= close.kind %>">
-          <div class="flex flex-wrap items-start justify-between gap-2">
+        <% close_task = close.tasks.find { |t| !t.done? && !t.optional } %>
+        <article class="section-card min-w-0" aria-labelledby="close-<%= close.kind %>">
+          <div class="card-head">
             <div>
-              <p class="eyebrow text-mocha"><%= close.kind_label %> end</p>
-              <h3 id="close-<%= close.kind %>" class="font-display text-xl"><%= close.label %></h3>
+              <p class="eyebrow text-taupe"><%= close.kind_label %> end</p>
+              <h3 id="close-<%= close.kind %>" class="card-title"><%= close.label %></h3>
             </div>
             <% if close.locked? && close.lock_current? %><span class="pill-fern">Locked</span>
             <% elsif close.locked? %><span class="pill-rose">Changed after lock</span>
-            <% else %><span class="pill-taupe"><%= close.done_count %> of <%= close.total_count %></span><% end %>
+            <% else %><span class="pill-taupe"><%= close.done_count %> of <%= close.total_count %> done</span><% end %>
           </div>
           <ol class="space-y-1.5">
             <% close.tasks.each do |task| %>
               <li class="desk-task text-sm" data-state="<%= task.state %>"><span class="desk-glyph" aria-hidden="true"><%= books_desk_glyph(task.state) %></span><span class="min-w-0"><%= task.title %><span class="sr-only"> · <%= books_desk_state_label(task.state) %></span><% if task.optional %> <span class="text-xs text-mocha">(optional)</span><% end %></span></li>
             <% end %>
           </ol>
-          <% if next_task %>
-            <p class="text-xs text-mocha"><%= next_task.detail %></p>
-            <%= link_to(next_task.key == :lock ? "Lock #{close.label}" : books_desk_task_action(next_task), books_desk_task_path(next_task), class: next_task.key == :lock ? 'btn-primary btn-sm' : 'btn-ghost btn-sm') %>
+          <% if close_task %>
+            <p class="text-xs text-mocha"><%= close_task.detail %></p>
+            <%= link_to(close_task.key == :lock ? "Lock #{close.label}" : books_desk_task_action(close_task), books_desk_task_path(close_task), class: close_task.key == :lock ? 'btn-primary btn-sm' : 'btn-ghost btn-sm') %>
           <% end %>
         </article>
       <% end %>
@@ -152,27 +134,27 @@
   </section>
 
   <section class="space-y-3" aria-labelledby="desk-housekeeping">
-    <div class="flex flex-wrap items-baseline justify-between gap-2">
-      <h2 id="desk-housekeeping" class="font-display text-2xl">Housekeeping</h2>
-      <%= link_to 'Full books check', books_check_path, class: 'text-sm font-semibold text-olive-deep underline' %>
+    <div class="card-head">
+      <div><h2 id="desk-housekeeping" class="section-title">Housekeeping</h2><p class="card-hint">Imports, payments, originals and backups for the last 30 days.</p></div>
+      <div class="card-head-actions"><%= link_to 'Open books health', books_check_path, class: 'btn-ghost btn-sm' %></div>
     </div>
     <%= turbo_frame_tag 'books-desk-checks', src: checks_books_desk_path, loading: :lazy do %>
-      <p class="card card-pad text-sm text-mocha" role="status">Checking imports, payments, originals and backups for the last 30 days…</p>
+      <p class="card card-pad text-sm text-mocha" role="status">Loading…</p>
     <% end %>
   </section>
 
-  <details class="card card-pad">
-    <summary class="disclosure-trigger font-semibold">How the routine works</summary>
-    <div class="mt-3 grid gap-6 md:grid-cols-2 text-sm">
+  <details class="explainer card card-pad">
+    <summary class="explainer-summary font-semibold">How the routine works</summary>
+    <div class="mt-3 grid gap-6 text-sm md:grid-cols-2">
       <div>
-        <h3 class="font-semibold">Every day (about 5 minutes)</h3>
+        <h3 class="card-title">Every day (about 5 minutes)</h3>
         <ol class="mt-2 list-decimal space-y-1 pl-5">
           <% BooksDesk::STAGES.each do |_key, (label, hint)| %><li><strong><%= label %>.</strong> <%= hint %></li><% end %>
         </ol>
-        <p class="mt-2 text-xs text-mocha">A day can be approved on its own or as part of its week. Closing or approving “with exceptions” counts as done, with your note on record.</p>
+        <p class="mt-2 text-xs text-mocha">Rupert shows what is done and opens the right page for whatever is next; nothing here changes a record by itself. A day can be approved on its own or as part of its week. Closing or approving “with exceptions” counts as done, with your note on record.</p>
       </div>
       <div>
-        <h3 class="font-semibold">Once a week (Monday works well)</h3>
+        <h3 class="card-title">Once a week (Monday works well)</h3>
         <ol class="mt-2 list-decimal space-y-1 pl-5">
           <li>Download the bank statement CSV and upload it.</li>
           <li>Say what each withdrawal was: an expense, a vendor payment or nothing to record.</li>
@@ -183,7 +165,7 @@
         <p class="mt-2 text-xs text-mocha">Sources, currencies and locations are never added together. Unavailable amounts are not zero.</p>
       </div>
       <div class="md:col-span-2">
-        <h3 class="font-semibold">Month, quarter and year end</h3>
+        <h3 class="card-title">Month, quarter and year end</h3>
         <ol class="mt-2 list-decimal space-y-1 pl-5">
           <li><strong>Month:</strong> every day approved, statements reach month end, bank lines decided, follow-ups closed, monthly money report saved, then lock the month.</li>
           <li><strong>Quarter:</strong> all three months locked and the quarterly report saved, then lock the quarter.</li>

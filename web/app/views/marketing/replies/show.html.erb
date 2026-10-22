@@ -1,25 +1,110 @@
-<div class="max-w-4xl space-y-5">
-  <%= link_to 'Back to Marketing', marketing_path, class: 'btn-ghost' %><h1 class="page-title">Review reply</h1>
-  <section class="card card-pad space-y-3"><h2 class="font-semibold"><%= @reply.thread.title %> · <%= @reply.status.humanize %></h2><%= link_to 'Read original discussion', @reply.thread.url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><p class="whitespace-pre-wrap"><%= @reply.thread.excerpt %></p><p>Group: <%= @reply.thread.community.name %></p><p class="whitespace-pre-wrap"><%= @reply.thread.community.promotion_rules %></p><%= link_to 'Read group rules', @reply.thread.community.rules_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></section>
-  <% if Current.user.can?('marketing.write') && !%w[published removed].include?(@reply.status) %>
+<% content_for :title, 'Review reply' %>
+<% can_write = Current.user.can?('marketing.write') %>
+<% can_review = Current.user.can?('marketing.review') %>
+<% thread = @reply.thread %>
+<% menu = [['Read original discussion', thread.url, { target: '_blank', rel: 'noopener noreferrer' }], ['Read group rules', thread.community.rules_url, { target: '_blank', rel: 'noopener noreferrer' }]] %>
+<% menu << ['Edit offer record', edit_marketing_offer_path(@reply.offer)] if @reply.offer && can_write %>
+<div class="page-medium space-y-6">
+  <%= page_header 'Review reply', subtitle: "#{thread.title} · #{thread.community.name}", eyebrow: 'Marketing · Reply', menu: menu do %>
+    <span class="pill-taupe"><%= @reply.status.humanize %></span>
+    <% if @reply.persisted? && can_write && %w[draft rejected].include?(@reply.status) %>
+      <%= button_to 'Submit for review', transition_marketing_reply_path(@reply), params: { transition: 'submit', lock_version: @reply.lock_version }, class: 'btn-primary', form_class: 'contents' %>
+    <% elsif @reply.persisted? && can_review && @reply.status == 'pending_review' %>
+      <%= button_to 'Approve this revision', transition_marketing_reply_path(@reply), params: { transition: 'approve', lock_version: @reply.lock_version }, class: 'btn-primary', form_class: 'contents' %>
+    <% elsif @reply.persisted? && can_write && @reply.status == 'approved' %>
+      <%= button_to 'Open approved copy', transition_marketing_reply_path(@reply), params: { transition: 'copy', lock_version: @reply.lock_version }, class: 'btn-primary', form_class: 'contents' %>
+    <% end %>
+  <% end %>
+
+  <section class="section-card" aria-label="Discussion context">
+    <%= section_heading thread.title, hint: "Group: #{thread.community.name}" do %>
+      <%= link_to 'Read original discussion', thread.url, target: '_blank', rel: 'noopener noreferrer', class: 'btn-ghost btn-sm' %>
+    <% end %>
+    <p class="whitespace-pre-wrap text-sm"><%= thread.excerpt %></p>
+    <details class="explainer">
+      <summary class="explainer-summary">Group promotion rules</summary>
+      <p class="mt-2 whitespace-pre-wrap text-sm"><%= thread.community.promotion_rules %></p>
+      <p class="mt-2 text-sm"><%= link_to 'Read group rules', thread.community.rules_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></p>
+    </details>
+  </section>
+
+  <% if can_write && !%w[published removed].include?(@reply.status) %>
     <%= form_with model: @reply, scope: :reply, url: @reply.persisted? ? marketing_reply_path(@reply) : marketing_replies_path, class: 'card card-pad space-y-4' do |f| %>
       <%= f.hidden_field :thread_id %><%= f.hidden_field :lock_version if @reply.persisted? %>
-      <div><%= f.label :body, 'Useful reply to this discussion', class: 'block' %><%= f.text_area :body, rows: 6, maxlength: 5000, class: 'input w-full', required: true %></div>
-      <div><%= f.label :affiliation, 'Your brand affiliation disclosure', class: 'block' %><%= f.text_field :affiliation, maxlength: 300, class: 'input w-full', required: true, placeholder: 'I work with …' %></div>
-      <div><%= f.label :offer_id, 'Group offer', class: 'block' %><%= f.select :offer_id, Marketing::Offer.where(community_id: @reply.thread.community_id).order(created_at: :desc).limit(200).map { |o| ["#{o.code} · #{o.shareable? ? 'ready' : 'needs verification / not active'}", o.id] }, { include_blank: 'Choose…' }, class: 'select w-full', required: true %></div>
-      <p class="text-sm">The reviewed copy includes your reply, affiliation, code, terms, expiry and campaign link. Saving creates a new draft and invalidates prior approval.</p><%= f.submit 'Save draft', class: 'btn-primary' %>
+      <%= section_heading 'Draft reply', hint: 'The reviewed copy includes your reply, affiliation, code, terms, expiry and campaign link. Saving creates a new draft and invalidates prior approval.', level: :h3 %>
+      <div><%= f.label :body, 'Useful reply to this discussion', class: 'field-label' %><%= f.text_area :body, rows: 6, maxlength: 5000, class: 'input w-full', required: true %></div>
+      <div><%= f.label :affiliation, 'Your brand affiliation disclosure', class: 'field-label' %><%= f.text_field :affiliation, maxlength: 300, class: 'input w-full', required: true, placeholder: 'I work with …' %></div>
+      <div><%= f.label :offer_id, 'Group offer', class: 'field-label' %><%= f.select :offer_id, Marketing::Offer.where(community_id: thread.community_id).order(created_at: :desc).limit(200).map { |o| ["#{o.code} · #{o.shareable? ? 'ready' : 'needs verification / not active'}", o.id] }, { include_blank: 'Choose…' }, class: 'select w-full', required: true %></div>
+      <div class="form-actions">
+        <%= f.submit 'Save draft', class: 'btn-primary' %>
+        <%= link_to 'Cancel', @reply.persisted? ? marketing_reply_path(@reply) : marketing_path, class: 'btn-ghost' %>
+      </div>
     <% end %>
-  <% else %><section class="card card-pad"><p class="whitespace-pre-wrap"><%= @reply.body %></p><p><%= @reply.affiliation %></p></section><% end %>
-  <% if @reply.persisted? %>
-    <% if @reply.snapshot_json.present? %><section class="card card-pad space-y-3"><h2 class="font-semibold">Submitted revision</h2><pre class="whitespace-pre-wrap break-words text-sm"><%= JSON.parse(@reply.snapshot_json).fetch('text') %></pre><p class="text-xs">Approval and copy actions recheck the group rules, thread context and offer against this revision.</p></section><% end %>
-    <% if @reply.offer %><section class="card card-pad space-y-2"><h2 class="font-semibold">Current offer: <%= @reply.offer.code %></h2><p class="whitespace-pre-wrap"><%= @reply.offer.terms %></p><p>Expires <%= @reply.offer.ends_at.to_fs(:short) %> · <%= @reply.offer.shareable? ? 'Ready to share' : 'Verification / active dates need review' %></p><%= link_to 'Open offer destination', @reply.offer.destination_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% if Current.user.can?('marketing.write') %> · <%= link_to 'Edit offer record', edit_marketing_offer_path(@reply.offer), class: 'underline' %><% end %></section><% end %>
-    <section class="card card-pad space-y-3"><h2 class="font-semibold">Workflow</h2>
-      <% if Current.user.can?('marketing.write') && %w[draft rejected].include?(@reply.status) %><%= button_to 'Submit for review', transition_marketing_reply_path(@reply), params: { transition: 'submit', lock_version: @reply.lock_version }, class: 'btn-primary' %><% end %>
-      <% if Current.user.can?('marketing.review') && @reply.status == 'pending_review' %><%= button_to 'Approve this revision', transition_marketing_reply_path(@reply), params: { transition: 'approve', lock_version: @reply.lock_version }, class: 'btn-primary' %><%= form_with url: transition_marketing_reply_path(@reply), class: 'space-y-2' do |f| %><%= hidden_field_tag :lock_version, @reply.lock_version %><%= text_area_tag :note, nil, placeholder: 'Review note', 'aria-label': 'Review note', class: 'input w-full', maxlength: 3000, required: true %><%= select_tag :transition, options_for_select([['Request changes', 'changes'], ['Reject', 'reject']]), class: 'select' %><%= f.submit 'Record review decision', class: 'btn-ghost' %><% end %><% end %>
-      <% if Current.user.can?('marketing.write') && @reply.status == 'approved' %><%= button_to 'Open approved copy', transition_marketing_reply_path(@reply), params: { transition: 'copy', lock_version: @reply.lock_version }, class: 'btn-primary' %><%= form_with url: transition_marketing_reply_path(@reply), class: 'space-y-3' do |f| %><%= hidden_field_tag :lock_version, @reply.lock_version %><%= hidden_field_tag :transition, 'publish' %><%= label_tag :published_url, 'Published reply URL' %><%= url_field_tag :published_url, nil, class: 'input w-full', required: true %><label class="block"><%= check_box_tag :exact_text, '1', false, required: true %> I published the exact approved text. Changed wording requires a new review.</label><%= f.submit 'Record manual publication', class: 'btn-ghost' %><% end %><% end %>
-      <% if @reply.published_url.present? %><p><%= link_to 'Published reply', @reply.published_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %> · <%= @reply.published_at.to_fs(:short) %></p><% end %>
-      <% if Current.user.can?('marketing.write') && @reply.status == 'published' %><%= form_with url: transition_marketing_reply_path(@reply), class: 'space-y-2' do |f| %><%= hidden_field_tag :lock_version, @reply.lock_version %><%= hidden_field_tag :transition, 'remove' %><%= text_field_tag :note, nil, placeholder: 'Removal reason', 'aria-label': 'Removal reason', class: 'input', required: true %><%= f.submit 'Record removal', class: 'btn-ghost' %><% end %><% end %>
+  <% else %>
+    <section class="section-card" aria-label="Reply text">
+      <%= section_heading 'Reply' %>
+      <p class="whitespace-pre-wrap text-sm"><%= @reply.body %></p>
+      <p class="text-sm text-mocha"><%= @reply.affiliation %></p>
     </section>
-    <section class="card card-pad space-y-3"><h2 class="font-semibold">Revision and review history</h2><p class="text-sm">Latest 50 events. Publication records are operator attestations.</p><% @reply.review_events.order(id: :desc).limit(50).each do |event| %><details><summary><%= event.action.humanize %> · actor <%= event.actor_id %> · <%= event.created_at.to_fs(:short) %></summary><pre class="whitespace-pre-wrap break-words text-xs"><%= JSON.pretty_generate(JSON.parse(event.payload_json)) %></pre></details><% end %></section>
+  <% end %>
+
+  <% if @reply.persisted? %>
+    <% if @reply.snapshot_json.present? %>
+      <section class="section-card" aria-label="Submitted revision">
+        <%= section_heading 'Submitted revision', hint: 'Approval and copy actions recheck the group rules, thread context and offer against this revision.' %>
+        <pre class="whitespace-pre-wrap break-words text-sm"><%= JSON.parse(@reply.snapshot_json).fetch('text') %></pre>
+      </section>
+    <% end %>
+
+    <% if @reply.offer %>
+      <section class="section-card" aria-label="Current offer">
+        <%= section_heading "Current offer: #{@reply.offer.code}", hint: "Expires #{@reply.offer.ends_at.to_fs(:short)}." do %>
+          <span class="<%= @reply.offer.shareable? ? 'pill-fern' : 'pill-clay' %>"><%= @reply.offer.shareable? ? 'Ready to share' : 'Needs review' %></span>
+        <% end %>
+        <p class="whitespace-pre-wrap text-sm"><%= @reply.offer.terms %></p>
+        <% unless @reply.offer.shareable? %><p class="text-sm text-mocha">Verification or active dates need review before sharing.</p><% end %>
+        <p class="text-sm"><%= link_to 'Open offer destination', @reply.offer.destination_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% if can_write %> · <%= link_to 'Edit offer record', edit_marketing_offer_path(@reply.offer), class: 'underline' %><% end %></p>
+      </section>
+    <% end %>
+
+    <section class="section-card" aria-label="Workflow">
+      <%= section_heading 'Workflow' %>
+      <% if can_review && @reply.status == 'pending_review' %>
+        <p class="text-sm text-mocha">Approve this revision from the header, or record a different decision below.</p>
+        <%= form_with url: transition_marketing_reply_path(@reply), class: 'space-y-3' do |f| %>
+          <%= hidden_field_tag :lock_version, @reply.lock_version %>
+          <div><%= label_tag :note, 'Review note', class: 'field-label' %><%= text_area_tag :note, nil, class: 'input w-full', maxlength: 3000, required: true, rows: 3 %></div>
+          <div><%= label_tag :transition, 'Decision', class: 'field-label' %><%= select_tag :transition, options_for_select([['Request changes', 'changes'], ['Reject', 'reject']]), class: 'select w-full' %></div>
+          <%= f.submit 'Record review decision', class: 'btn-ghost' %>
+        <% end %>
+      <% end %>
+      <% if can_write && @reply.status == 'approved' %>
+        <%= form_with url: transition_marketing_reply_path(@reply), class: 'space-y-3' do |f| %>
+          <%= hidden_field_tag :lock_version, @reply.lock_version %><%= hidden_field_tag :transition, 'publish' %>
+          <div><%= label_tag :published_url, 'Published reply URL', class: 'field-label' %><%= url_field_tag :published_url, nil, class: 'input w-full', required: true %></div>
+          <label class="block text-sm"><%= check_box_tag :exact_text, '1', false, required: true %> I published the exact approved text. Changed wording requires a new review.</label>
+          <%= f.submit 'Record manual publication', class: 'btn-ghost' %>
+        <% end %>
+      <% end %>
+      <% if @reply.published_url.present? %><p class="text-sm"><%= link_to 'Published reply', @reply.published_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %> · <%= @reply.published_at.to_fs(:short) %></p><% end %>
+      <% if can_write && @reply.status == 'published' %>
+        <%= form_with url: transition_marketing_reply_path(@reply), class: 'toolbar' do |f| %>
+          <%= hidden_field_tag :lock_version, @reply.lock_version %><%= hidden_field_tag :transition, 'remove' %>
+          <div class="toolbar-field"><%= label_tag :note, 'Removal reason', class: 'field-label' %><%= text_field_tag :note, nil, class: 'input', required: true %></div>
+          <div class="toolbar-actions"><%= f.submit 'Record removal', class: 'btn-ghost' %></div>
+        <% end %>
+      <% end %>
+      <% if !can_write && !can_review %><p class="text-sm text-mocha">No workflow actions are available with your access.</p><% end %>
+    </section>
+
+    <section class="section-card" aria-label="Revision and review history">
+      <%= section_heading 'Revision and review history', hint: 'Latest 50 events. Publication records are operator attestations.' %>
+      <% @reply.review_events.order(id: :desc).limit(50).each do |event| %>
+        <details class="explainer">
+          <summary class="explainer-summary"><%= event.action.humanize %> · actor <%= event.actor_id %> · <%= event.created_at.to_fs(:short) %></summary>
+          <pre class="mt-2 whitespace-pre-wrap break-words text-xs"><%= JSON.pretty_generate(JSON.parse(event.payload_json)) %></pre>
+        </details>
+      <% end %>
+    </section>
   <% end %>
 </div>

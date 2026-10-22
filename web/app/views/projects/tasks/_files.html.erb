@@ -1,0 +1,21 @@
+<% files = @task.attachments.select(:id, :filename, :content_type, :byte_size, :user_id, :created_at).to_a %>
+<section id="files" class="card card-pad">
+  <h2 class="font-display text-lg text-ink">Files</h2>
+  <ul class="mt-3 space-y-1.5 text-sm">
+    <% files.each do |file| %>
+      <li class="flex items-center gap-2">
+        <%= link_to file.filename, projects_task_attachment_path(@task, file), class: "min-w-0 flex-1 truncate font-medium text-olive hover:underline" %>
+        <span class="shrink-0 text-xs text-taupe"><%= number_to_human_size(file.byte_size) %></span>
+        <% if @can_edit %><%= button_to "Remove", projects_task_attachment_path(@task, file), method: :delete, class: "text-xs text-taupe hover:text-rose", "aria-label": "Remove #{file.filename}" %><% end %>
+      </li>
+    <% end %>
+    <% if files.empty? %><li class="text-taupe">No files attached.</li><% end %>
+  </ul>
+  <% if @can_edit %>
+    <%= form_with url: projects_task_attachments_path(@task), multipart: true, class: "mt-3 flex items-center gap-2" do %>
+      <%= file_field_tag :file, accept: ".png,.jpg,.jpeg,.gif,.pdf,.txt,.csv", class: "min-w-0 flex-1 text-xs", "aria-label": "File to attach" %>
+      <%= submit_tag "Attach", class: "btn-ghost btn-sm" %>
+    <% end %>
+    <p class="mt-1 text-xs text-taupe">PNG, JPG, GIF, PDF, TXT or CSV, up to 5 MB.</p>
+  <% end %>
+</section>

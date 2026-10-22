@@ -1,57 +1,70 @@
-<% content_for :title, "Goal" %>
+<% content_for :title, @goal.name %>
+<% can_write = Current.user.can?("projects.write") %>
+<% menu = [] %>
+<% menu << ['Mark achieved', transition_goals_goal_path(@goal, event: "achieve"), { method: :post }] if @goal.may_achieve? %>
+<% menu << ['Abandon', transition_goals_goal_path(@goal, event: "abandon"), { method: :post, form: { data: { turbo_confirm: "Abandon this goal? Its progress is kept but it will no longer be tracked." } } }] if @goal.may_abandon? %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= @goal.name %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <span class="<%= @goal.achieved? ? "pill-fern" : @goal.active? ? "pill-olive" : @goal.abandoned? ? "pill-taupe" : "pill-clay" %>"><%= @goal.status %></span>
-        <% if @goal.due_on %><span class="ml-2 text-taupe">Due <%= l(@goal.due_on, format: :long) %></span><% end %>
-      </p>
-    </div>
-    <div class="flex items-center gap-2">
-      <% if @goal.may_activate? %><%= button_to "Activate", transition_goals_goal_path(@goal, event: "activate"), method: :post, class: "btn-primary btn-sm" %><% end %>
-      <% if @goal.may_achieve? %><%= button_to "Mark achieved", transition_goals_goal_path(@goal, event: "achieve"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-      <% if @goal.may_abandon? %><%= button_to "Abandon", transition_goals_goal_path(@goal, event: "abandon"), method: :post, class: "btn-ghost btn-sm", data: { confirm: "Abandon this goal? Its progress is kept but it will no longer be tracked." } %><% end %>
-      <% if Current.user.can?("projects.write") %>
-        <%= link_to "Edit", edit_goals_goal_path(@goal), class: "btn-ghost btn-sm" %>
-      <% end %>
-    </div>
-  </section>
+  <%= page_header @goal.name, subtitle: @goal.description.presence || "No description.", menu: menu do %>
+    <% if can_write %><%= link_to "Edit", edit_goals_goal_path(@goal), class: "btn-ghost" %><% end %>
+    <% if @goal.may_activate? %><%= button_to "Activate", transition_goals_goal_path(@goal, event: "activate"), method: :post, class: "btn-primary" %><% end %>
+  <% end %>
 
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+  <dl class="facts">
+    <div><dt>Status</dt><dd><span class="<%= @goal.achieved? ? "pill-fern" : @goal.active? ? "pill-olive" : @goal.abandoned? ? "pill-taupe" : "pill-clay" %>"><%= @goal.status.to_s.humanize %></span></dd></div>
+    <% if @goal.unit %><div><dt>Unit</dt><dd><%= @goal.unit %></dd></div><% end %>
+    <% if @goal.due_on %><div><dt>Due</dt><dd><%= l(@goal.due_on, format: :long) %></dd></div><% end %>
+  </dl>
+
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-label="Goal progress">
     <div class="stat">
       <p class="stat-label">Current</p>
-      <p class="stat-value mt-1"><%= number_with_precision(@goal.current_value, precision: 2) %></p>
+      <p class="stat-value mt-1"><%= number_with_precision(@goal.current_value, precision: 2, delimiter: ',') %></p>
       <% if @goal.unit %><p class="mt-1 text-xs text-taupe"><%= @goal.unit %></p><% end %>
     </div>
     <div class="stat">
       <p class="stat-label">Target</p>
-      <p class="stat-value mt-1"><%= number_with_precision(@goal.target_value, precision: 2) %></p>
+      <p class="stat-value mt-1"><%= number_with_precision(@goal.target_value, precision: 2, delimiter: ',') %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Progress</p>
       <p class="stat-value mt-1"><%= @goal.progress_pct ? "#{@goal.progress_pct}%" : "—" %></p>
-      <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-haze">
-        <div class="h-full rounded-full <%= @goal.progress_pct && @goal.progress_pct >= 100 ? "bg-fern" : "bg-olive" %>" style="width: <%= @goal.progress_pct || 0 %>%"></div>
-      </div>
+      <progress class="learning-progress mt-2 w-full" value="<%= [@goal.progress_pct || 0, 100].min %>" max="100" aria-label="Progress toward target"><%= @goal.progress_pct || 0 %>%</progress>
     </div>
   </section>
 
-  <div class="card card-pad">
-    <h2 class="font-display text-lg text-ink">Update progress</h2>
-    <p class="mt-1 text-sm text-mocha"><%= @goal.description.presence || "No description." %></p>
-    <% if Current.user.can?("projects.write") %>
-      <%= form_with model: @goal, url: goals_goal_path(@goal), method: :patch, class: "mt-4 flex flex-wrap items-end gap-3" do |f| %>
-        <div>
-          <%= f.label :current_value, "Current value", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-          <%= f.number_field :current_value, step: "0.01", class: "input w-40" %>
+  <% if can_write %>
+    <section class="section-card">
+      <%= section_heading 'Update progress', hint: 'Enter the latest value; the target can be adjusted here too.' %>
+      <%= form_with model: @goal, url: goals_goal_path(@goal), method: :patch, class: "toolbar" do |f| %>
+        <div class="toolbar-field">
+          <%= f.label :current_value, "Current value", class: "field-label" %>
+          <%= f.number_field :current_value, step: "0.01", class: "input" %>
         </div>
-        <div>
-          <%= f.label :target_value, "Target", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-          <%= f.number_field :target_value, step: "0.01", class: "input w-40" %>
+        <div class="toolbar-field">
+          <%= f.label :target_value, "Target", class: "field-label" %>
+          <%= f.number_field :target_value, step: "0.01", class: "input" %>
         </div>
-        <%= f.submit "Save", class: "btn-primary btn-sm" %>
+        <div class="toolbar-actions"><%= f.submit "Save", class: "btn-primary" %></div>
       <% end %>
-    <% end %>
-  </div>
+    </section>
+  <% end %>
+
+  <% linked = Projects::Project.where(goal_id: @goal.id).where.not(status: "archived").order(:name).to_a %>
+  <% if linked.any? %>
+    <% counts = Projects::Task.where(project_id: linked.map(&:id)).group(:project_id, :status).count %>
+    <section class="section-card" aria-labelledby="goal-projects-title">
+      <h2 id="goal-projects-title" class="section-title">Projects working toward this goal</h2>
+      <ul class="divide-y divide-fog">
+        <% linked.each do |project| %>
+          <% project.preload_task_stats(Projects::Task::BOARD_STATUSES.index_with { |status| counts[[project.id, status]].to_i }, 0) %>
+          <li class="flex flex-wrap items-center gap-3 py-3">
+            <%= link_to project.name, project, class: "min-w-0 flex-1 truncate text-sm font-semibold text-olive hover:underline" %>
+            <%= project_status_pill(project) %>
+            <span class="w-24 text-right text-xs text-taupe"><%= project.task_counts["done"] %> of <%= project.task_total %> tasks</span>
+            <div class="w-28"><%= render "projects/shared/progress_bar", counts: project.task_counts %></div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
 </div>

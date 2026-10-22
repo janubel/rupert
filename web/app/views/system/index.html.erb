@@ -1,21 +1,12 @@
-<% content_for :title, "System" %>
+<%# System health: an Overview page (docs/ui-standards.md §4). Stats first, then one card per subsystem. %>
 <div class="space-y-6">
-  <% if @sqlite[:supported] %>
-    <section class="card card-pad">
-      <h2 class="font-display text-lg">SQLite operations</h2>
-      <p class="mt-2 text-sm text-mocha">Library <%= @sqlite[:sqlite_version] %> · journal <%= @sqlite[:journal_mode] %> · configured lock wait <%= @sqlite[:configured_timeout_ms] %> ms</p>
-      <p class="mt-2 text-sm">WAL <%= number_to_human_size(@sqlite[:wal_bytes]) %> · reusable space <%= number_to_human_size(@sqlite[:free_bytes]) %></p>
-      <p class="mt-2 text-sm"><%= link_to 'SQLite tuning, backup and scaling guide', 'https://techmore.github.io/rupert/sqlite-incus.html', class: 'underline' %></p>
-    </section>
-  <% end %>
-  <%= page_header 'System health', subtitle: "Server resources, database, and query health. Uptime #{distance_of_time_in_words(@system.uptime_seconds)} on #{@system.cpu_count} cores." do %>
-    <%= link_to "Updates · #{BuildInfo.current.label}", system_updates_path, class: "btn-ghost btn-sm" %>
-    <a href="/system" class="btn-ghost btn-sm">Refresh</a>
-  <% end %>
+  <%= page_header 'System health',
+                  subtitle: "Uptime #{distance_of_time_in_words(@system.uptime_seconds)} on #{@system.cpu_count} cores.",
+                  menu: [["Updates · #{BuildInfo.current.label}", system_updates_path], ['Reload', system_path]] %>
 
   <% load1 = @system.load_averages[0].to_f %>
   <% load_color = load1 < @system.cpu_count ? "text-fern" : load1 < @system.cpu_count * 1.5 ? "text-clay" : "text-rose" %>
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Server resources">
     <div class="stat">
       <p class="stat-label">Load average</p>
       <p class="stat-value mt-1 <%= load_color %>"><%= load1 %></p>
@@ -26,7 +17,7 @@
       <p class="stat-value mt-1"><%= @system.mem_used_mb %> MB</p>
       <p class="mt-1 text-xs text-taupe">of <%= @system.mem_total_mb %> MB used · <%= @system.mem_available_mb %> MB free</p>
       <% if @system.mem_available_mb < 200 %>
-        <p class="mt-1 text-xs font-semibold text-rose">Low memory — check swap/processes</p>
+        <p class="mt-1 text-xs font-semibold text-rose">Low memory: check swap and processes</p>
       <% end %>
     </div>
     <div class="stat">
@@ -42,59 +33,47 @@
   </section>
 
   <section class="grid gap-4 lg:grid-cols-2">
-    <div class="card card-pad">
-      <h2 class="font-display text-lg text-ink">Web server</h2>
-      <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
-        <div class="rounded-xl bg-haze px-4 py-3">
-          <dt class="text-xs font-medium text-mocha">Puma memory</dt>
-          <dd class="font-display text-2xl text-ink"><%= @system.puma_rss_mb %> MB</dd>
-        </div>
-        <div class="rounded-xl bg-haze px-4 py-3">
-          <dt class="text-xs font-medium text-mocha">Puma threads</dt>
-          <dd class="font-display text-2xl text-ink"><%= @system.puma_threads %></dd>
-        </div>
+    <div class="section-card">
+      <%= section_heading 'Web server' %>
+      <dl class="facts">
+        <div><dt>Puma memory</dt><dd class="stat-value-sm"><%= @system.puma_rss_mb %> MB</dd></div>
+        <div><dt>Puma threads</dt><dd class="stat-value-sm"><%= @system.puma_threads %></dd></div>
       </dl>
-      <p class="mt-3 text-xs text-taupe">If memory is tight, stop duplicate `rails server` instances — each runs a full app copy.</p>
+      <p class="text-xs text-taupe">If memory is tight, stop duplicate <code>rails server</code> instances; each runs a full app copy.</p>
     </div>
 
-    <div class="card card-pad">
-      <h2 class="font-display text-lg text-ink">Background jobs</h2>
-      <dl class="mt-3 grid grid-cols-3 gap-3 text-sm">
-        <div class="rounded-xl bg-haze px-4 py-3">
-          <dt class="text-xs font-medium text-mocha">Ready</dt>
-          <dd class="font-display text-2xl text-ink"><%= @system.job_pending %></dd>
-        </div>
-        <div class="rounded-xl bg-haze px-4 py-3">
-          <dt class="text-xs font-medium text-mocha">Scheduled</dt>
-          <dd class="font-display text-2xl text-ink"><%= @system.job_queued %></dd>
-        </div>
-        <div class="rounded-xl bg-haze px-4 py-3">
-          <dt class="text-xs font-medium text-mocha">Failed</dt>
-          <dd class="font-display text-2xl <%= @system.job_failed.positive? ? "text-rose" : "text-ink" %>"><%= @system.job_failed %></dd>
-        </div>
+    <div class="section-card">
+      <%= section_heading 'Background jobs' %>
+      <dl class="facts">
+        <div><dt>Ready</dt><dd class="stat-value-sm"><%= @system.job_pending %></dd></div>
+        <div><dt>Scheduled</dt><dd class="stat-value-sm"><%= @system.job_queued %></dd></div>
+        <div><dt>Failed</dt><dd class="stat-value-sm <%= @system.job_failed.positive? ? "text-rose" : "" %>"><%= @system.job_failed %></dd></div>
       </dl>
-      <p class="mt-3 text-xs text-taupe">Sync success rate: <span class="font-semibold text-ink"><%= @system.sync_success_rate %>%</span></p>
+      <p class="text-xs text-taupe">Sync success rate: <span class="font-semibold text-ink"><%= @system.sync_success_rate %>%</span></p>
     </div>
   </section>
+
+  <%= render 'system/ops_activity', activity: @ops_activity %>
 
   <%= render 'system/backups', backups: @backups %>
 
   <%= render 'system/ai_health', ai_health: @ai_health %>
 
-  <section class="card card-pad">
-    <h2 class="font-display text-lg text-ink">Database</h2>
-    <dl class="mt-3 grid max-w-2xl grid-cols-2 gap-3 text-sm">
-      <div class="rounded-xl bg-haze px-4 py-3">
-        <dt class="text-xs font-medium text-mocha">Connections</dt>
-        <dd class="font-display text-2xl text-ink"><%= @system.db_connections %> / <%= @system.db_max_connections %></dd>
-      </div>
-      <div class="rounded-xl bg-haze px-4 py-3">
-        <dt class="text-xs font-medium text-mocha">Size</dt>
-        <dd class="font-display text-2xl text-ink"><%= @system.db_size_mb %> MB</dd>
-      </div>
+  <section class="section-card">
+    <%= section_heading 'Database' %>
+    <dl class="facts">
+      <div><dt>Connections</dt><dd class="stat-value-sm"><%= @system.db_connections %> / <%= @system.db_max_connections %></dd></div>
+      <div><dt>Size</dt><dd class="stat-value-sm"><%= @system.db_size_mb %> MB</dd></div>
+      <div><dt>App cache</dt><dd><%= @system.cache_entries || "n/a" %> entries · <%= @system.cache_dir_mb %> MB on disk</dd></div>
     </dl>
-    <div class="mt-4 text-xs text-taupe">
-      App cache: <%= @system.cache_entries || "n/a" %> entries · <%= @system.cache_dir_mb %> MB on disk
-    </div>
+    <% if @sqlite[:supported] %>
+      <dl class="facts">
+        <div><dt>SQLite</dt><dd>Library <%= @sqlite[:sqlite_version] %> · journal <%= @sqlite[:journal_mode] %></dd></div>
+        <div><dt>Lock wait</dt><dd><%= @sqlite[:configured_timeout_ms] %> ms configured</dd></div>
+        <div><dt>WAL</dt><dd><%= number_to_human_size(@sqlite[:wal_bytes]) %></dd></div>
+        <div><dt>Reusable space</dt><dd><%= number_to_human_size(@sqlite[:free_bytes]) %></dd></div>
+      </dl>
+      <p class="text-xs text-taupe"><%= link_to 'SQLite tuning, backup and scaling guide', 'https://techmore.github.io/rupert/sqlite-incus.html', class: 'underline' %></p>
+    <% end %>
   </section>
 </div>

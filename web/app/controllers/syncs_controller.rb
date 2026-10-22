@@ -63,12 +63,15 @@ class SyncsController < AuthenticatedController
 
     summary = SyncEngine.import_swipesimple_csv!(swipesimple_csv, actor: Current.user.email,
       expected_fingerprint: confirmation.fetch('fingerprint'))
+    OpsLog.import(kind: 'swipesimple_orders', outcome: 'ok', rows: summary.orders, lines: summary.lines, unchanged: summary.unchanged_orders,
+      skipped: summary.skipped_rows)
     notice = "Imported #{summary.orders} new order(s), #{summary.lines} line(s) from SwipeSimple."
     notice += " #{summary.unchanged_orders} unchanged order(s) left intact." if summary.unchanged_orders.positive?
     notice += " #{summary.refunded_orders} order(s) with refunds left unchanged." if summary.refunded_orders.to_i.positive?
     notice += " #{summary.skipped_rows} blank row(s) skipped." if summary.skipped_rows.positive?
     redirect_to(syncs_path, notice: notice)
   rescue ArgumentError, CSV::MalformedCSVError, SyncEngine::AlreadyRunning => e
+    OpsLog.import(kind: 'swipesimple_orders', outcome: 'rejected', error_class: e.class.name)
     import_error(e)
   end
 

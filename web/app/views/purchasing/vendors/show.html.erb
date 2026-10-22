@@ -1,55 +1,48 @@
 <% content_for :title, @vendor.name %>
+<% can_write = Current.user.can?('purchasing.write') %>
+<% menu = [] %>
+<% if can_write %>
+  <% menu << ['Edit', edit_purchasing_vendor_path(@vendor)] %>
+  <% menu << ['Remove', purchasing_vendor_path(@vendor), { method: :delete, data: { turbo_confirm: "Remove #{@vendor.name}?" } }] %>
+<% end %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= @vendor.name %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <% if @vendor.email.present? %><span><%= @vendor.email %></span><% end %>
-        <% if @vendor.phone.present? %><span class="ml-2"><%= @vendor.phone %></span><% end %>
-        <span class="ml-2 pill-taupe"><%= @vendor.payment_terms %></span>
-      </p>
-    </div>
-    <div class="flex gap-2">
-      <%= link_to "Back to vendors", purchasing_vendors_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "New purchase order", new_purchasing_purchase_order_path(vendor_id: @vendor), class: "btn-primary btn-sm" %>
-      <%= link_to "Edit", edit_purchasing_vendor_path(@vendor), class: "btn-ghost btn-sm" %>
-      <%= button_to "Remove", @vendor, method: :delete, class: "btn-ghost btn-sm", data: { confirm: "Remove #{@vendor.name}?" } %>
-    </div>
-  </section>
-
-  <% if @vendor.address.present? %>
-    <section class="card card-pad max-w-xl">
-      <h2 class="font-display text-lg text-ink">Address</h2>
-      <p class="mt-1 whitespace-pre-wrap text-sm text-mocha"><%= @vendor.address %></p>
-    </section>
+  <%= page_header @vendor.name, subtitle: 'Vendor contact, terms and purchase orders.', menu: menu do %>
+    <% if can_write %><%= link_to 'Add purchase order', new_purchasing_purchase_order_path(vendor_id: @vendor), class: 'btn-primary' %><% end %>
   <% end %>
 
+  <dl class="facts">
+    <div><dt>Contact</dt><dd><%= @vendor.contact_name.presence || '—' %></dd></div>
+    <div><dt>Email</dt><dd><%= @vendor.email.presence || '—' %></dd></div>
+    <div><dt>Phone</dt><dd><%= @vendor.phone.presence || '—' %></dd></div>
+    <div><dt>Payment terms</dt><dd><span class="pill-taupe"><%= @vendor.payment_terms.presence || '—' %></span></dd></div>
+    <% if @vendor.address.present? %><div><dt>Address</dt><dd class="whitespace-pre-wrap"><%= @vendor.address %></dd></div><% end %>
+    <% if @vendor.notes.present? %><div><dt>Notes</dt><dd class="whitespace-pre-wrap"><%= @vendor.notes %></dd></div><% end %>
+  </dl>
+
   <section class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">Purchase orders</h2>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="card-pad pb-3"><%= section_heading 'Purchase orders' %></div>
+    <div class="table-region" role="region" tabindex="0" aria-label="Purchase orders from <%= @vendor.name %>">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Order</th>
             <th scope="col" class="th">Created</th>
             <th scope="col" class="th">Expected</th>
             <th scope="col" class="th">Status</th>
-            <th scope="col" class="th text-right">Total</th>
+            <th scope="col" class="th num">Total</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @purchase_orders.empty? %>
-            <tr><td colspan="5" class="empty-row">No purchase orders yet.</td></tr>
+            <tr><td colspan="5" class="empty-row">No purchase orders yet.<% if can_write %> <%= link_to 'Add the first purchase order', new_purchasing_purchase_order_path(vendor_id: @vendor), class: 'font-semibold text-olive-deep underline' %><% end %></td></tr>
           <% end %>
           <% @purchase_orders.each do |po| %>
-            <tr class="hover:bg-cream">
-              <td class="td font-medium text-ink"><%= link_to po.order_number, po, class: "hover:text-olive hover:underline" %></td>
+            <tr>
+              <td class="td font-medium text-ink"><%= link_to po.order_number, po, class: 'hover:text-olive hover:underline' %></td>
               <td class="td text-mocha"><%= l(po.created_at.to_date, format: :short) %></td>
-              <td class="td text-mocha"><%= po.expected_date ? l(po.expected_date, format: :short) : "—" %></td>
-              <td class="td"><span class="<%= po.status == "received" ? "pill-fern" : po.status == "ordered" ? "pill-olive" : po.status == "cancelled" ? "pill-rose" : "pill-taupe" %>"><%= po.status %></span></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(po.total_cents / 100.0) %></td>
+              <td class="td text-mocha"><%= po.expected_date ? l(po.expected_date, format: :short) : '—' %></td>
+              <td class="td"><span class="<%= po.status == 'received' ? 'pill-fern' : po.status == 'ordered' ? 'pill-olive' : po.status == 'cancelled' ? 'pill-rose' : 'pill-taupe' %>"><%= po.status.humanize %></span></td>
+              <td class="td num font-medium text-ink"><%= number_to_currency(po.total_cents / 100.0) %></td>
             </tr>
           <% end %>
         </tbody>

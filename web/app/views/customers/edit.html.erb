@@ -1,11 +1,7 @@
 <% content_for :title, "Edit #{@customer.name}" %>
-<div class="space-y-6">
-  <nav aria-label="Breadcrumb" class="text-xs text-taupe"><%= link_to "Customers", customers_path, class: "font-semibold text-olive hover:underline" %> <span aria-hidden="true">/</span> <%= link_to @customer.name, customer_path(@customer), class: "font-semibold text-olive hover:underline" %> <span aria-hidden="true">/</span> <span aria-current="page">Edit</span></nav>
-  <section>
-    <h1 class="page-title">Edit customer</h1>
-    <p class="mt-1 text-sm text-mocha"><%= @customer.name %></p>
-  </section>
-  <div class="card card-pad max-w-2xl">
-    <%= render "form", customer: @customer %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Edit customer', subtitle: @customer.name %>
+  <div class="card card-pad">
+    <%= render 'form', customer: @customer %>
   </div>
 </div>

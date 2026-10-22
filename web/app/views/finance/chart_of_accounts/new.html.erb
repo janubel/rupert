@@ -1,9 +1,7 @@
-<% content_for :title, "Add account" %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
-
+<% content_for :title, 'Add account' %>
+<div class="page-narrow space-y-6">
   <%= page_header 'Add account', subtitle: 'Add a code to the chart of accounts.' %>
-  <div class="card card-pad page-narrow">
-    <%= render "form", account: @account %>
+  <div class="card card-pad">
+    <%= render 'form', account: @account %>
   </div>
 </div>

@@ -133,7 +133,7 @@ class ReportsFlowTest < ActionDispatch::IntegrationTest
   test 'sales tax is a report tab with custom dates, source filter and CSV' do
     get sales_tax_reports_path(from: 1.day.ago.to_date.iso8601, to: Date.current.iso8601)
     assert_response :success
-    assert_select 'h1', /Sales tax report/
+    assert_select 'h1', 'Sales tax'
     assert_select 'nav[aria-label=Reports] a[aria-current=page]', 'Sales tax'
     assert_select 'td', /Main Shop/
     assert_select '[data-controller=report-table] table'
@@ -165,7 +165,7 @@ class ReportsFlowTest < ActionDispatch::IntegrationTest
     end
     get register_summary_reports_path
     assert_response :success
-    assert_select 'nav[aria-label=Reports] a[aria-current=page]', 'Daily register'
+    assert_select 'nav[aria-label=Reports] a[aria-current=page]', 'Register summary'
     assert_select '[data-controller=report-table] table', 4
   end
 

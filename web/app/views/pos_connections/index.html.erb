@@ -1,13 +1,18 @@
-<% content_for :title, 'POS & payment connections' %>
+<%# POS & payments: an Overview page listing every provider (docs/ui-standards.md §4). %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
-  <%= link_to 'Master credentials & sync', connections_path, class: 'text-sm text-olive' %>
-  <%= page_header 'POS & payment connections', subtitle: 'Prepare the accounts and terminals used by your business, and evaluate alternatives when you are ready.' %>
-  <div class="grid gap-5 lg:grid-cols-2">
+  <%= page_header 'POS & payments', subtitle: 'Prepare the accounts and terminals your business uses, and evaluate alternatives when you are ready.' %>
+  <div class="grid gap-4 lg:grid-cols-2">
     <% @providers.each do |provider| %>
       <% connection = @connections[provider[:key]] || PosConnection.new(provider: provider[:key]) %>
-      <section class="card card-pad space-y-3"><p class="text-xs text-taupe"><%= provider[:relationship] %></p><h2 class="font-display text-xl"><%= provider[:name] %></h2><p class="text-sm text-mocha"><%= provider[:description] %></p><p class="pill-taupe"><%= connection.status_label %></p><%= link_to 'Review setup', pos_connection_path(provider[:key]), class: 'btn-ghost' %></section>
+      <section class="section-card">
+        <%= section_heading provider[:name], hint: provider[:relationship], level: :h3 do %>
+          <span class="pill-taupe"><%= connection.status_label %></span>
+        <% end %>
+        <p class="text-sm text-mocha"><%= provider[:description] %></p>
+        <div><%= link_to 'Open setup', pos_connection_path(provider[:key]), class: 'btn-ghost btn-sm' %></div>
+      </section>
     <% end %>
   </div>
-  <section class="card card-pad"><%= fold_explainer('A provider check confirms only the documented operation shown on its setup page: API authentication, merchant profile access or a store/location read. Payment collection, refunds, terminal commands and automatic POS imports need their own provider adapter and checkout validation. Your existing POS remains the place to complete sales.', class: 'text-sm text-mocha') %></section>
+  <%= fold_explainer('A provider check confirms only the documented operation shown on its setup page: API authentication, merchant profile access or a store/location read. Payment collection, refunds, terminal commands and automatic POS imports need their own provider adapter and checkout validation. Your existing POS remains the place to complete sales.', class: 'text-sm text-mocha') %>
 </div>

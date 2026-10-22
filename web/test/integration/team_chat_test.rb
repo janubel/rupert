@@ -465,7 +465,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_room_path(TeamChat::Room.ensure_defaults!(@admin))
     assert_select '.chat-typing[data-team-chat-target=typing]'
     assert_select "dialog[data-team-chat-target=newDm] form[action='#{team_chat_dms_path}']", 1
-    assert_select 'main#main.max-w-none'
+    assert_select 'main#main.app-main-wide'
     get team_chat_dock_room_path('admins')
     assert_select 'turbo-frame#chat_dock .chat-typing'
   end
@@ -696,5 +696,50 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_equal [false, 'off'], json.values_at('shown', 'mode')
     get team_chat_room_path('admins')
     assert_select 'input[data-team-chat-target="presenceToggle"][disabled]'
+  end
+
+  test 'a person can hide a room from their own list and show it again' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.create!(name: 'test-qwen', slug: 'test-qwen', kind: 'channel', created_by: @admin)
+    room.membership_for(@admin)
+    room.messages.create!(author_kind: 'system', body: 'unread notice')
+
+    get team_chat_unread_path, as: :json
+    before = json['unread']
+    patch team_chat_visibility_path('test-qwen'), params: { hidden: '1' }
+    assert_redirected_to team_chat_room_path('test-qwen')
+    assert room.membership_for(@admin).reload.hidden?
+
+    get team_chat_room_path('admins')
+    assert_select 'details.chat-rail-hidden summary', 'Hidden rooms (1)'
+    assert_select 'details.chat-rail-hidden a.chat-rail-room', /test-qwen/
+    get team_chat_unread_path, as: :json
+    assert_equal before - 1, json['unread'], 'a hidden room no longer adds to the badge'
+
+    get team_chat_room_path('test-qwen')
+    assert_select 'details.chat-rail-hidden[open]'
+    assert_select 'button', 'Show in my list'
+    patch team_chat_visibility_path('test-qwen'), params: { hidden: '0' }
+    assert_not room.membership_for(@admin).reload.hidden?
+    get team_chat_room_path('admins')
+    assert_select 'details.chat-rail-hidden', 0
+  end
+
+  test 'the bot key shows each bot latest test grades and the best local bot for money questions' do
+    ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
+    TeamChat::BatteryRun.create!(run_key: 'q-fin', set_name: 'finance', agent: 'qwen', model: 'qwen3.5-4b', status: 'done', questions: 21, answered: 21, avg_grade: 4.52, started_at: 1.hour.ago)
+    TeamChat::BatteryRun.create!(run_key: 'q-old', set_name: 'finance', agent: 'qwen', model: 'qwen3.5-4b', status: 'done', questions: 21, answered: 21, avg_grade: 3.4, started_at: 1.day.ago)
+    TeamChat::BatteryRun.create!(run_key: 'l-fin', set_name: 'finance', agent: 'liquid', model: 'lfm2.5-8b-a1b', status: 'done', questions: 21, answered: 21, avg_grade: 3.4, started_at: 1.hour.ago)
+    TeamChat::BatteryRun.create!(run_key: 'l-gen', set_name: 'default', agent: 'liquid', model: 'lfm2.5-8b-a1b', status: 'done', questions: 21, answered: 21, avg_grade: 4.1, started_at: 1.hour.ago)
+    TeamChat::BatteryRun.create!(run_key: 'l-part', set_name: 'default (part)', agent: 'liquid', model: 'lfm2.5-8b-a1b', status: 'done', questions: 3, answered: 3, avg_grade: 1.0, started_at: 1.minute.ago)
+    sign_in(@admin)
+    get team_chat_path
+    follow_redirect!
+    assert_select '.chat-bots-row', text: /@qwen.*💰 Best local bot for money questions.*Tested: finance 4\.5\/5/m
+    assert_select '.chat-bots-row', text: /@liquid.*Tested: general 4\.1\/5 · finance 3\.4\/5/m
+    assert_select '.chat-bots-row', text: /@liquid.*Best local bot/m, count: 0
+  ensure
+    ENV.delete('RUPERT_LOCAL_LLM_URL')
   end
 end

@@ -1,8 +1,8 @@
-<% content_for :title, "Locations" %>
+<% content_for :title, 'Locations' %>
 <div class="space-y-6">
-  <%= page_header 'Locations', subtitle: 'Where stock lives — Shopify and Square locations plus any manual ones.' do %>
-    <% if Current.user.can?("inventory.write") %>
-      <%= link_to "Add location", new_location_path, class: "btn-primary" %>
+  <%= page_header 'Locations', subtitle: 'Where stock lives: Shopify and Square locations plus any manual ones.' do %>
+    <% if Current.user.can?('inventory.write') %>
+      <%= link_to 'Add location', new_location_path, class: 'btn-primary' %>
     <% end %>
   <% end %>
 
@@ -19,40 +19,37 @@
       <div class="stat">
         <p class="stat-label capitalize"><%= source %></p>
         <p class="stat-value mt-1"><%= count %></p>
-        <p class="mt-1 text-xs text-taupe">location(s)</p>
+        <p class="mt-1 text-xs text-taupe"><%= 'location'.pluralize(count) %></p>
       </div>
     <% end %>
   </section>
 
   <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="table-region" role="region" tabindex="0" aria-label="Locations">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Name</th>
             <th scope="col" class="th">Source</th>
             <th scope="col" class="th">Kind</th>
-            <th scope="col" class="th text-right">Units</th>
+            <th scope="col" class="th num">Units</th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @locations.empty? %>
             <tr>
-              <td colspan="5" class="td py-8 text-center">
-                <p class="text-taupe">No locations yet.</p>
-                <%= link_to "Add your first location", new_location_path, class: "btn-primary btn-sm mt-2" %>
-              </td>
+              <td colspan="5" class="empty-row">No locations yet.<% if Current.user.can?('inventory.write') %> <%= link_to 'Add your first location', new_location_path, class: 'font-semibold text-olive-deep underline' %><% end %></td>
             </tr>
           <% end %>
           <% @locations.each do |location| %>
-            <tr class="hover:bg-cream">
-              <td class="td font-medium text-ink"><%= link_to location.name, location, class: "hover:text-olive hover:underline" %></td>
+            <tr>
+              <td class="td font-medium text-ink"><%= link_to location.name, location, class: 'hover:text-olive hover:underline' %></td>
               <td class="td"><span class="pill-taupe capitalize"><%= location.source %></span></td>
-              <td class="td text-mocha capitalize"><%= location.kind.presence || "—" %></td>
-              <td class="td text-right text-mocha"><%= @units_by_location.fetch(location.id, 0) %></td>
+              <td class="td capitalize text-mocha"><%= location.kind.presence || '—' %></td>
+              <td class="td num text-mocha"><%= @units_by_location.fetch(location.id, 0) %></td>
               <td class="td">
-                <% if location.active %><span class="pill-fern">active</span><% else %><span class="pill-taupe">inactive</span><% end %>
+                <% if location.active %><span class="pill-fern">Active</span><% else %><span class="pill-taupe">Inactive</span><% end %>
               </td>
             </tr>
           <% end %>

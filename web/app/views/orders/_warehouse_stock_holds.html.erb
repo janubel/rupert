@@ -1,12 +1,11 @@
 <% if @warehouse_holds.any? %>
-  <section class="card card-pad mt-6 print:hidden">
-    <h2 class="font-display text-xl text-ink">Warehouse stock holds</h2>
-    <p class="mt-2 text-sm text-mocha">These units stay unavailable to other warehouse buyers until staff confirms fulfillment and the source stock adjustment, then refreshes Shopify inventory.</p>
-    <ul class="mt-3 space-y-2">
+  <section class="section-card mt-6 print:hidden">
+    <%= section_heading 'Warehouse stock holds', hint: 'These units stay unavailable to other warehouse buyers until staff confirms fulfillment and the source stock adjustment, then refreshes Shopify inventory.' %>
+    <ul class="space-y-2">
       <% @warehouse_holds.each do |hold| %>
         <% item = hold.warehouse_cart.items.find { |row| row.variant_id == hold.variant_id } %>
-        <li class="rounded-xl bg-haze px-4 py-3 text-sm">
-          <span class="font-semibold"><%= item&.title.presence || hold.variant_id %></span> · <%= hold.quantity %> units · <%= hold.status %>
+        <li class="rounded-control bg-haze px-4 py-3 text-sm">
+          <span class="font-semibold"><%= item&.title.presence || hold.variant_id %></span> · <%= hold.quantity %> units · <span class="<%= hold.status == 'held' ? 'pill-clay' : 'pill-fern' %>"><%= hold.status.to_s.humanize %></span>
           <% if hold.release_reason == 'fulfilled_source_adjusted' %>
             <p class="mt-1 text-xs text-taupe">Confirmed by <%= hold.released_by&.display_name %> at <%= l(hold.released_at, format: :short) %> · source reference <%= hold.source_adjustment_reference %></p>
           <% end %>
@@ -14,24 +13,27 @@
       <% end %>
     </ul>
     <% if @warehouse_holds.any? { |hold| hold.status == 'held' } && Current.user.can?('sales.write') && Current.user.can?('inventory.write') %>
-      <%= form_tag release_warehouse_stock_order_path(@order), method: :post, class: "mt-5 space-y-3" do %>
-        <label class="flex items-start gap-2 text-sm">
-          <%= check_box_tag :fulfillment_confirmed, '1', false, required: true %>
-          <span>I confirm this order has been fulfilled.</span>
-        </label>
-        <label class="flex items-start gap-2 text-sm">
-          <%= check_box_tag :source_stock_confirmed, '1', false, required: true %>
-          <span>I confirm the source stock was adjusted for these units and Shopify inventory was refreshed afterward.</span>
-        </label>
-        <div>
-          <%= label_tag :source_adjusted_at, "Source stock adjusted at (#{Time.zone.name})", class: 'block text-xs font-semibold text-mocha' %>
-          <%= datetime_local_field_tag :source_adjusted_at, nil, step: 1, required: true, class: 'input mt-1' %>
-        </div>
-        <div>
-          <%= label_tag :source_adjustment_reference, 'Source adjustment reference', class: 'block text-xs font-semibold text-mocha' %>
-          <%= text_field_tag :source_adjustment_reference, nil, required: true, maxlength: 500, class: 'input mt-1', placeholder: 'Inventory adjustment or fulfillment reference' %>
-        </div>
-        <%= submit_tag 'Confirm fulfillment and release holds', class: 'btn-primary' %>
+      <%= form_tag release_warehouse_stock_order_path(@order), method: :post, class: 'space-y-3 border-t border-fog pt-4' do %>
+        <fieldset class="space-y-3">
+          <legend class="card-title">Confirm fulfillment</legend>
+          <label class="flex items-start gap-2 text-sm">
+            <%= check_box_tag :fulfillment_confirmed, '1', false, required: true %>
+            <span>I confirm this order has been fulfilled.</span>
+          </label>
+          <label class="flex items-start gap-2 text-sm">
+            <%= check_box_tag :source_stock_confirmed, '1', false, required: true %>
+            <span>I confirm the source stock was adjusted for these units and Shopify inventory was refreshed afterward.</span>
+          </label>
+          <div>
+            <%= label_tag :source_adjusted_at, "Source stock adjusted at (#{Time.zone.name})", class: 'field-label' %>
+            <%= datetime_local_field_tag :source_adjusted_at, nil, step: 1, required: true, class: 'input' %>
+          </div>
+          <div>
+            <%= label_tag :source_adjustment_reference, 'Source adjustment reference', class: 'field-label' %>
+            <%= text_field_tag :source_adjustment_reference, nil, required: true, maxlength: 500, class: 'input', placeholder: 'Inventory adjustment or fulfillment reference' %>
+          </div>
+        </fieldset>
+        <div class="form-actions"><%= submit_tag 'Confirm fulfillment and release holds', class: 'btn-primary' %></div>
       <% end %>
     <% end %>
   </section>

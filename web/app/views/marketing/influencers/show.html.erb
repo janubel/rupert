@@ -1,14 +1,90 @@
-<div class="space-y-6 max-w-5xl">
-  <%= link_to 'Influencer directory', marketing_influencers_path, class: 'btn-ghost' %>
-  <h1 class="page-title"><%= @influencer.name %></h1>
-  <section class="card card-pad space-y-3"><p><%= @influencer.platform %> <%= @influencer.handle %> · <%= @influencer.stage.humanize %></p><% if @influencer.profile_url.present? %><%= link_to 'Public profile', @influencer.profile_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% end %><p>Owner: <%= @influencer.owner&.display_name || 'Unassigned' %> · Next follow-up: <%= @influencer.next_follow_up_at&.to_fs(:short) || 'Not scheduled' %></p><p class="whitespace-pre-wrap"><%= @influencer.topics %></p><p class="whitespace-pre-wrap"><%= @influencer.notes %></p>
-    <% if Current.user.can?('marketing.write') %><%= link_to 'Edit prospect / relationship', edit_marketing_influencer_path(@influencer), class: 'btn-ghost' %><%= link_to 'New collaboration', new_marketing_influencer_engagement_path(@influencer), class: 'btn-primary' %><% end %>
+<% content_for :title, @influencer.name %>
+<% can_write = Current.user.can?('marketing.write') %>
+<% can_contacts = Current.user.can?('marketing.contacts') %>
+<% menu = [] %>
+<% menu << ['Edit', edit_marketing_influencer_path(@influencer)] if can_write %>
+<% menu << ['Public profile', @influencer.profile_url, { target: '_blank', rel: 'noopener noreferrer' }] if @influencer.profile_url.present? %>
+<div class="space-y-6">
+  <%= page_header @influencer.name, subtitle: "#{@influencer.platform} #{@influencer.handle}".strip, eyebrow: 'Marketing · Influencer', menu: menu do %>
+    <span class="pill-taupe"><%= @influencer.stage.humanize %></span>
+    <% if can_write %><%= link_to 'Add collaboration', new_marketing_influencer_engagement_path(@influencer), class: 'btn-primary' %><% end %>
+  <% end %>
+
+  <section class="section-card" aria-label="Details">
+    <dl class="facts">
+      <div><dt>Platform</dt><dd><%= @influencer.platform %> <%= @influencer.handle %></dd></div>
+      <div><dt>Stage</dt><dd><%= @influencer.stage.humanize %></dd></div>
+      <div><dt>Owner</dt><dd><%= @influencer.owner&.display_name || 'Unassigned' %></dd></div>
+      <div><dt>Next follow-up</dt><dd><%= @influencer.next_follow_up_at&.to_fs(:short) || 'Not scheduled' %></dd></div>
+      <% if @influencer.profile_url.present? %><div><dt>Profile</dt><dd><%= link_to 'Public profile', @influencer.profile_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></dd></div><% end %>
+    </dl>
+    <% if @influencer.topics.present? %><div><h3 class="card-title">Topics</h3><p class="whitespace-pre-wrap text-sm"><%= @influencer.topics %></p></div><% end %>
+    <% if @influencer.notes.present? %><div><h3 class="card-title">Notes</h3><p class="whitespace-pre-wrap text-sm"><%= @influencer.notes %></p></div><% end %>
   </section>
-  <% if Current.user.can?('marketing.contacts') %><section class="card card-pad space-y-3"><h2 class="font-semibold">Restricted contact and recipient details</h2><p><%= @influencer.contact_email.presence || 'No contact email recorded' %></p><pre class="whitespace-pre-wrap"><%= @influencer.shipping_details %></pre><pre class="whitespace-pre-wrap"><%= @influencer.private_notes %></pre></section><% end %>
-  <section class="card card-pad space-y-3"><h2 class="text-lg font-semibold">Collaborations</h2><% @engagements.first(30).each do |engagement| %><p><%= link_to engagement.title, marketing_engagement_path(engagement), class: 'underline' %> · <%= engagement.campaign.name %> · <%= engagement.status.humanize %> · Due <%= engagement.due_at&.to_fs(:short) || 'not set' %></p><% end %><% if @engagements.empty? %><p>No collaborations yet.</p><% end %><% if @engagements.length > 30 %><p>Latest 30 collaborations shown.</p><% end %></section>
-  <% if Current.user.can?('marketing.contacts') %><section class="card card-pad space-y-4"><h2 class="text-lg font-semibold">Interaction log</h2><p class="text-sm text-mocha">Record conversations that happened outside Rupert. Nothing is sent from this form.</p>
-    <% if Current.user.can?('marketing.write') %><%= form_with url: marketing_influencer_interactions_path(@influencer), scope: :interaction, class: 'space-y-3' do |f| %><%= f.select :kind, %w[email dm call meeting note].map { |k| [k.humanize, k] }, {}, class: 'select', 'aria-label': 'Interaction kind' %><%= f.datetime_local_field :occurred_at, value: Time.current.strftime('%Y-%m-%dT%H:%M'), class: 'input', 'aria-label': 'Occurred at', required: true %><%= f.text_area :body, rows: 3, maxlength: 5000, class: 'input w-full', 'aria-label': 'Interaction notes', required: true %><%= f.submit 'Record interaction', class: 'btn-primary' %><% end %><% end %>
-    <% @interactions.each do |interaction| %><article><h3 class="font-semibold text-sm"><%= interaction.kind.humanize %> · <%= interaction.occurred_at.to_fs(:short) %></h3><p class="whitespace-pre-wrap text-sm"><%= interaction.body %></p></article><% end %><p class="text-xs">Latest 50 interactions shown.</p>
-  </section><% end %>
+
+  <% if can_contacts %>
+    <section class="section-card" aria-label="Restricted contact and recipient details">
+      <%= section_heading 'Restricted contact and recipient details' %>
+      <dl class="facts">
+        <div><dt>Contact email</dt><dd><%= @influencer.contact_email.presence || 'No contact email recorded' %></dd></div>
+        <div><dt>Shipping details</dt><dd class="whitespace-pre-wrap"><%= @influencer.shipping_details.presence || '—' %></dd></div>
+        <div><dt>Private notes</dt><dd class="whitespace-pre-wrap"><%= @influencer.private_notes.presence || '—' %></dd></div>
+      </dl>
+    </section>
+  <% end %>
+
+  <section class="section-card" aria-label="Collaborations">
+    <%= section_heading 'Collaborations' do %>
+      <% if can_write %><%= link_to 'Add collaboration', new_marketing_influencer_engagement_path(@influencer), class: 'btn-ghost btn-sm' %><% end %>
+    <% end %>
+    <% if @engagements.empty? %>
+      <p class="text-sm text-mocha">No collaborations yet.<%= ' Add the first collaboration for this influencer.' if can_write %></p>
+    <% else %>
+      <div class="table-region" role="region" tabindex="0" aria-label="Collaborations">
+        <table class="table">
+          <thead><tr><th scope="col" class="th">Collaboration</th><th scope="col" class="th">Campaign</th><th scope="col" class="th">Status</th><th scope="col" class="th">Due</th></tr></thead>
+          <tbody>
+            <% @engagements.first(30).each do |engagement| %>
+              <tr>
+                <td class="td font-medium text-ink"><%= link_to engagement.title, marketing_engagement_path(engagement), class: 'text-olive-deep hover:underline' %></td>
+                <td class="td text-mocha"><%= engagement.campaign.name %></td>
+                <td class="td"><span class="pill-taupe"><%= engagement.status.humanize %></span></td>
+                <td class="td whitespace-nowrap text-mocha"><%= engagement.due_at&.to_fs(:short) || 'Not set' %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <% if @engagements.length > 30 %><p class="text-xs text-taupe">Latest 30 collaborations shown.</p><% end %>
+    <% end %>
+  </section>
+
+  <% if can_contacts %>
+    <section class="section-card" aria-label="Interaction log">
+      <%= section_heading 'Interaction log', hint: 'Conversations that happened outside Rupert. Nothing is sent from this form.' %>
+      <% if can_write %>
+        <%= form_with url: marketing_influencer_interactions_path(@influencer), scope: :interaction, class: 'space-y-3 rounded-card bg-haze/60 p-4' do |f| %>
+          <%= section_heading 'Log an interaction', level: :h3 %>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div><%= f.label :kind, 'Type', class: 'field-label' %><%= f.select :kind, %w[email dm call meeting note].map { |k| [k.humanize, k] }, {}, class: 'select w-full' %></div>
+            <div><%= f.label :occurred_at, 'When', class: 'field-label' %><%= f.datetime_local_field :occurred_at, value: Time.current.strftime('%Y-%m-%dT%H:%M'), class: 'input', required: true %></div>
+          </div>
+          <div><%= f.label :body, 'What happened?', class: 'field-label' %><%= f.text_area :body, rows: 3, maxlength: 5000, class: 'input w-full', required: true %></div>
+          <%= f.submit 'Save interaction', class: 'btn-primary' %>
+        <% end %>
+      <% end %>
+      <% if @interactions.empty? %><p class="text-sm text-mocha">No interactions recorded yet.<%= ' Log the first call, email or note above.' if can_write %></p><% end %>
+      <ol class="divide-y divide-fog">
+        <% @interactions.each do |interaction| %>
+          <li class="py-3">
+            <p class="text-xs text-taupe"><span class="pill-taupe"><%= interaction.kind.humanize %></span> <%= interaction.occurred_at.to_fs(:short) %></p>
+            <p class="mt-1 whitespace-pre-wrap text-sm"><%= interaction.body %></p>
+          </li>
+        <% end %>
+      </ol>
+      <p class="text-xs text-taupe">Latest 50 interactions shown.</p>
+    </section>
+  <% end %>
+
   <%= render 'marketing/cms/history', record: @influencer %>
 </div>

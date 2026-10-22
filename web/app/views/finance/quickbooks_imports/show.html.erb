@@ -2,13 +2,11 @@
 <% summary = @summary %>
 <% closed = %w[discarded reversed].include?(@batch.status) %>
 <% open_batch = !closed %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
+<div class="space-y-6">
 
-  <%= page_header @batch.kind_label, eyebrow: "QuickBooks import · batch ##{@batch.id}",
-        subtitle: "#{@batch.filename} · uploaded #{l(@batch.created_at.in_time_zone, format: :short)}#{" by #{@batch.created_by_name}" if @batch.created_by_name.present?}" do %>
-    <%= link_to 'All uploads', finance_quickbooks_imports_path, class: 'btn-ghost btn-sm' %>
-  <% end %>
+  <%= page_header "#{@batch.kind_label} ##{@batch.id}", eyebrow: 'Bookkeeping · QuickBooks import',
+        subtitle: "#{@batch.filename} · uploaded #{l(@batch.created_at.in_time_zone, format: :short)}#{" by #{@batch.created_by_name}" if @batch.created_by_name.present?}",
+        menu: [['All uploads', finance_quickbooks_imports_path], ['General ledger', finance_journal_entries_path]] %>
 
   <div class="card card-pad text-sm" role="status">
     <p class="font-semibold">
@@ -22,12 +20,12 @@
   </div>
 
   <section aria-labelledby="read-heading" class="space-y-3">
-    <h2 id="read-heading" class="font-display text-xl">What Rupert read</h2>
+    <div class="card-head"><div><h2 id="read-heading" class="section-title">What Rupert read</h2></div></div>
     <dl class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       <% [['Rows', @batch.row_count], ['Transactions', @batch.transaction_count], ['Ready', @batch.accepted_count], ['Already imported', @batch.duplicate_count], ['Rejected', @batch.rejected_count]].each do |label, value| %>
-        <div class="stat"><dt class="text-xs text-mocha"><%= label %></dt><dd class="stat-value-sm"><%= value.to_fs(:delimited) %></dd></div>
+        <div class="stat"><dt class="stat-label"><%= label %></dt><dd class="stat-value-sm mt-1"><%= value.to_fs(:delimited) %></dd></div>
       <% end %>
-      <div class="stat"><dt class="text-xs text-mocha"><%= @batch.kind == 'trial_balance' ? 'As of' : 'Dates' %></dt><dd class="stat-value-sm"><%= @batch.kind == 'trial_balance' ? @batch.as_of : (@batch.date_from ? "#{@batch.date_from} – #{@batch.date_to}" : '—') %></dd></div>
+      <div class="stat"><dt class="stat-label"><%= @batch.kind == 'trial_balance' ? 'As of' : 'Dates' %></dt><dd class="stat-value-sm mt-1"><%= @batch.kind == 'trial_balance' ? @batch.as_of : (@batch.date_from ? "#{@batch.date_from} – #{@batch.date_to}" : '—') %></dd></div>
     </dl>
     <% if summary['notes'].present? || summary['skipped'].present? %>
       <ul class="list-disc space-y-1 pl-5 text-sm text-mocha">
@@ -40,7 +38,7 @@
 
   <% if summary['unbalanced_total'].to_i.positive? || @batch.rejected_count.positive? || summary['duplicate_transactions'].to_i.positive? || summary['resembling_transactions'].to_i.positive? %>
     <section aria-labelledby="problems-heading" class="space-y-3">
-      <h2 id="problems-heading" class="font-display text-xl">Needs your attention</h2>
+      <div class="card-head"><div><h2 id="problems-heading" class="section-title">Needs your attention</h2></div></div>
       <% if summary['unbalanced_total'].to_i.positive? %>
         <div class="card card-pad text-sm">
           <p class="font-semibold"><%= pluralize(summary['unbalanced_total'], 'transaction') %> will not be imported: <span class="font-normal text-mocha">not balanced, or containing a line Rupert could not read. Rupert never adjusts them.</span></p>
@@ -56,7 +54,7 @@
           <ul class="mt-2 space-y-1 text-mocha"><% summary['rejected_samples'].first(10).each do |row| %><li>File row <%= row['row'] %>: <%= row['reason'] %></li><% end %></ul>
         </div>
       <% end %>
-      <% if @batch.rejected_count.positive? %><p><%= link_to 'Download rejected rows (CSV)', rejected_finance_quickbooks_import_path(@batch), class: 'btn-ghost btn-sm' %></p><% end %>
+      <% if @batch.rejected_count.positive? %><p><%= link_to 'Download rejected rows CSV', rejected_finance_quickbooks_import_path(@batch), class: 'btn-ghost btn-sm', data: { turbo: false } %></p><% end %>
       <% if summary['duplicate_transactions'].to_i.positive? %>
         <p class="card card-pad text-sm"><strong><%= pluralize(summary['duplicate_transactions'], 'transaction') %></strong> were already imported in an earlier batch and are skipped, so overlapping exports do not double count.</p>
       <% end %>
@@ -68,7 +66,7 @@
 
   <% if @usage.any? %>
     <section aria-labelledby="mapping" id="mapping" class="space-y-3">
-      <h2 class="font-display text-xl">Match to Rupert</h2>
+      <div class="card-head"><div><h2 class="section-title">Match to Rupert</h2></div></div>
       <p class="text-sm text-mocha">
         <% if @entity_type == 'account' %>Every account must have a decision before a journal can be posted. Rupert never matches by itself: a similar existing account is only suggested. “Create” adds the account when you approve.
         <% elsif @entity_type == 'vendor' %>Map a vendor to an existing one, or create it when you approve this list. A vendor with the same name is never merged for you.
@@ -128,10 +126,10 @@
 
   <% if summary['totals_by_account'].present? && @batch.kind == 'journal' %>
     <section aria-labelledby="totals-heading" class="space-y-3">
-      <h2 id="totals-heading" class="font-display text-xl">Totals by account</h2>
-      <div class="card overflow-hidden">
-        <div class="operations-table-region" role="region" tabindex="0" aria-label="Totals by account">
-          <table class="operations-table finance-table w-full">
+      <div class="card-head"><div><h2 id="totals-heading" class="section-title">Totals by account</h2></div></div>
+      <div class="card">
+        <div class="table-region" role="region" tabindex="0" aria-label="Totals by account">
+          <table class="table finance-table">
             <caption class="sr-only">Lines read from the file, by QuickBooks account, in USD</caption>
             <thead><tr><th scope="col" class="th">Account</th><th scope="col" class="th num">Lines</th><th scope="col" class="th num">Debits</th><th scope="col" class="th num">Credits</th></tr></thead>
             <tbody>
@@ -148,7 +146,7 @@
 
   <% if @held.any? %>
     <section aria-labelledby="held-heading" class="space-y-3">
-      <h2 id="held-heading" class="font-display text-xl">Staged, not posted</h2>
+      <div class="card-head"><div><h2 id="held-heading" class="section-title">Staged, not posted</h2></div></div>
       <ul class="card card-pad space-y-1 text-sm">
         <% @held.each do |txn| %><li><%= txn.txn_date %> · <%= [txn.txn_type, txn.doc_number.presence&.then { |n| "##{n}" }].compact.join(' ') %> · <%= finance_money_text(txn.debit_cents) %> — <span class="text-mocha"><%= txn.reason %></span></li><% end %>
       </ul>
@@ -156,11 +154,11 @@
   <% end %>
 
   <% if @can_write && open_batch %>
-    <section aria-labelledby="approve-heading" class="card card-pad space-y-3" id="approve">
-      <h2 id="approve-heading" class="font-display text-xl"><%= @batch.postable? ? 'Approve and post' : 'Approve' %></h2>
+    <section aria-labelledby="approve-heading" class="section-card" id="approve">
+      <div class="card-head"><div><h2 id="approve-heading" class="section-title"><%= @batch.postable? ? 'Approve and post' : 'Approve' %></h2></div></div>
       <% if @batch.postable? %>
         <% if @native_overlap.positive? %>
-          <p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">Rupert already holds <strong><%= pluralize(@native_overlap, 'posted entry') %></strong> inside this file’s dates. Posting QuickBooks history over the same days would count the business twice. The last date below is set to the day before Rupert’s first own entry.</p>
+          <p role="alert" class="flash flash-alert">Rupert already holds <strong><%= pluralize(@native_overlap, 'posted entry') %></strong> inside this file’s dates. Posting QuickBooks history over the same days would count the business twice. The last date below is set to the day before Rupert’s first own entry.</p>
         <% end %>
         <p class="text-sm text-mocha">Posts each staged transaction as a balanced journal entry dated as in QuickBooks. Transactions after the last date, in locked periods, with a skipped account, or held above stay staged. Nothing already posted is edited.</p>
         <%= form_with url: approve_finance_quickbooks_import_path(@batch), class: 'space-y-3', data: { turbo_confirm: 'Post these transactions to your books?' } do |f| %>
@@ -184,8 +182,8 @@
   <% end %>
 
   <% if @can_write && @batch.approved? && @batch.postable? %>
-    <section aria-labelledby="reverse-heading" class="card card-pad space-y-3" id="reverse">
-      <h2 id="reverse-heading" class="font-display text-xl">Reverse this import</h2>
+    <section aria-labelledby="reverse-heading" class="section-card" id="reverse">
+      <div class="card-head"><div><h2 id="reverse-heading" class="section-title">Reverse this import</h2></div></div>
       <p class="text-sm text-mocha">Voids every journal entry this batch posted, so they drop out of every report. It is all or nothing and is refused while any of them is in a locked period. The original file and staged rows are kept.</p>
       <%= form_with url: reverse_finance_quickbooks_import_path(@batch), class: 'space-y-3', data: { turbo_confirm: 'Void every entry from this batch?' } do |f| %>
         <div><%= f.label :reason, 'Why are you reversing it?', class: 'field-label' %><%= f.text_area :reason, required: true, maxlength: 2000, rows: 2, class: 'input w-full' %></div>

@@ -1,11 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Cash flow dashboard: draws the two canvases from the embedded JSON block and
-// keeps the page current. Every 30 seconds it fetches the same page as a Turbo
-// Stream; the server swaps the figure, table, position and event regions in
-// place and this controller re-reads the data block and updates the charts
-// without recreating them (no flash, no layout jump). Colours come from the
-// theme's chart tokens, so the charts follow light, dark and the other
+// Cash flow dashboard: draws the canvases from the embedded JSON block and keeps
+// the page current. Every 30 seconds it fetches the same page as a Turbo Stream;
+// the server swaps the figure, table, position and event regions in place and
+// this controller re-reads the data block and updates the charts without
+// recreating them (no flash, no layout jump). Colours come from the theme's
+// chart tokens read off :root, so the charts follow light, dark and the other
 // appearances, and re-theme when the account menu changes them.
 const money = (cents) => {
   const dollars = Math.abs(cents) / 100
@@ -21,7 +21,7 @@ const compact = (cents) => {
 }
 
 export default class extends Controller {
-  static targets = ["bankChart", "netChart", "channelChart", "data", "live", "liveText"]
+  static targets = ["bankChart", "channelChart", "data", "live", "liveText"]
   static values = { interval: { type: Number, default: 30000 }, url: String }
 
   connect() {
@@ -63,6 +63,12 @@ export default class extends Controller {
     }
   }
 
+  // Charts size themselves from their width (no fixed heights in the markup);
+  // phones get a taller ratio so the bars keep room to breathe.
+  ratio(wide) {
+    return window.innerWidth < 640 ? wide * 0.6 : wide
+  }
+
   // --- drawing ----------------------------------------------------------------
 
   draw() {
@@ -70,13 +76,12 @@ export default class extends Controller {
     const data = this.payload()
     if (!Chart || !data) return
     this.drawBank(Chart, data)
-    this.drawNet(Chart, data)
     this.drawChannels(Chart, data)
   }
 
-  baseOptions(t, { stacked = false } = {}) {
+  baseOptions(t, { stacked = false, aspect = 2.2 } = {}) {
     return {
-      responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+      responsive: true, maintainAspectRatio: true, aspectRatio: this.ratio(aspect), animation: { duration: 250 },
       interaction: { mode: "index", intersect: false },
       layout: { padding: { top: 8 } },
       scales: {
@@ -84,7 +89,7 @@ export default class extends Controller {
         y: { stacked, grid: { color: t.grid, lineWidth: 1 }, border: { display: false }, ticks: { color: t.text, maxTicksLimit: 6, callback: (v) => compact(v) } }
       },
       plugins: {
-        legend: { position: "bottom", align: "start", labels: { color: t.text, usePointStyle: true, pointStyle: "rectRounded", boxWidth: 10, boxHeight: 10, padding: 16 } },
+        legend: { position: "bottom", align: "start", labels: { color: t.text, usePointStyle: true, boxWidth: 10, boxHeight: 10, padding: 16 } },
         tooltip: {
           backgroundColor: t.surface, titleColor: t.ink, bodyColor: t.ink, borderColor: t.grid, borderWidth: 1,
           padding: 10, displayColors: true, boxWidth: 8, boxHeight: 8, usePointStyle: true,
@@ -94,47 +99,46 @@ export default class extends Controller {
     }
   }
 
-  bankDatasets(t, bank) {
+  // The diverging in/out pair above and below the baseline, with the running net as a
+  // line on the same dollar axis. Forecast weeks (the retained scenario's own receipts
+  // less payments) continue the line past the range end as a dashed segment.
+  bankDatasets(t, bank, forecast) {
+    const actual = bank.in.length
+    const future = Array((forecast && forecast.labels || []).length).fill(null)
     return [
-      { type: "bar", label: "Into the bank", data: bank.in, backgroundColor: t.in, borderWidth: 0, borderRadius: 4, borderSkipped: "start", maxBarThickness: 24 },
-      { type: "bar", label: "Out of the bank", data: bank.out.map((v) => -v), backgroundColor: t.out, borderWidth: 0, borderRadius: 4, borderSkipped: "start", maxBarThickness: 24 }
+      { type: "bar", label: "Into the bank", data: [...bank.in, ...future], backgroundColor: t.in, borderWidth: 0, borderRadius: 4, borderSkipped: "start", maxBarThickness: 24, order: 2 },
+      { type: "bar", label: "Out of the bank", data: [...bank.out.map((v) => -v), ...future], backgroundColor: t.out, borderWidth: 0, borderRadius: 4, borderSkipped: "start", maxBarThickness: 24, order: 2 },
+      { type: "line", label: future.length ? "Running net (dashed: forecast)" : "Running net", data: [...bank.cumulative, ...((forecast && forecast.cumulative) || [])],
+        borderColor: t.ink, borderWidth: 2, tension: 0.25, pointRadius: 0, pointHoverRadius: 5, pointHitRadius: 12,
+        pointBackgroundColor: t.ink, pointBorderColor: t.surface, pointBorderWidth: 2, order: 1, spanGaps: true,
+        segment: { borderDash: (ctx) => (ctx.p1DataIndex >= actual ? [6, 4] : undefined) } }
     ]
   }
 
-  // The running total is its own slim chart: on one axis with the weekly bars it would flatten them.
-  netDatasets(t, bank) {
-    return [{ type: "line", label: "Running net", data: bank.cumulative, borderColor: t.ink, borderWidth: 2, tension: 0.25,
-      pointRadius: 0, pointHoverRadius: 5, pointBackgroundColor: t.ink, pointBorderColor: t.surface, pointBorderWidth: 2,
-      fill: true, backgroundColor: this.wash(t.ink) }]
-  }
-
-  // The series hue at ~10% opacity for an area wash.
-  wash(hex) {
-    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim())
-    return m ? `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, 0.1)` : "rgba(0,0,0,0.08)"
-  }
-
-  drawNet(Chart, data) {
-    if (!this.hasNetChartTarget) return
-    const t = this.tokens()
-    const options = this.baseOptions(t)
-    options.plugins.legend.display = false
-    options.scales.x.ticks.display = false
-    options.scales.y.ticks.maxTicksLimit = 3
-    options.scales.y.grid.color = (ctx) => (ctx.tick.value === 0 ? t.text : t.grid)
-    this.charts.net = new Chart(this.netChartTarget, { data: { labels: data.range.labels, datasets: this.netDatasets(t, data.bank) }, options })
+  bankLabels(data) {
+    return [...data.range.labels, ...((data.forecast && data.forecast.labels) || [])]
   }
 
   drawBank(Chart, data) {
     if (!this.hasBankChartTarget) return
     const t = this.tokens()
-    const options = this.baseOptions(t)
+    const actual = data.range.labels.length
+    const options = this.baseOptions(t, { aspect: 2.4 })
+    options.scales.x.stacked = true
     options.scales.y.grid.color = (ctx) => (ctx.tick.value === 0 ? t.text : t.grid)
+    options.plugins.legend.labels.usePointStyle = false
+    options.plugins.legend.labels.generateLabels = (chart) => chart.data.datasets.map((ds, i) => ({
+      text: ds.label, fillStyle: ds.type === "line" ? "transparent" : ds.backgroundColor, strokeStyle: ds.type === "line" ? ds.borderColor : ds.backgroundColor,
+      lineWidth: ds.type === "line" ? 2 : 0, lineDash: [], fontColor: t.text, datasetIndex: i, hidden: !chart.isDatasetVisible(i)
+    }))
+    options.plugins.tooltip.callbacks.title = (items) => items.length && items[0].dataIndex >= actual ? `${items[0].label} · forecast` : items.length ? items[0].label : ""
     options.plugins.tooltip.callbacks.label = (ctx) => {
+      if (ctx.parsed.y === null || ctx.parsed.y === undefined) return null
       const raw = ctx.dataset.label === "Out of the bank" ? -ctx.parsed.y : ctx.parsed.y
-      return ` ${money(Math.round(raw))}  ${ctx.dataset.label}`
+      const name = ctx.dataset.type === "line" ? (ctx.dataIndex >= actual ? "Running net, forecast" : "Running net") : ctx.dataset.label
+      return ` ${money(Math.round(raw))}  ${name}`
     }
-    this.charts.bank = new Chart(this.bankChartTarget, { data: { labels: data.range.labels, datasets: this.bankDatasets(t, data.bank) }, options })
+    this.charts.bank = new Chart(this.bankChartTarget, { data: { labels: this.bankLabels(data), datasets: this.bankDatasets(t, data.bank, data.forecast) }, options })
   }
 
   channelDatasets(t, channels) {
@@ -150,7 +154,7 @@ export default class extends Controller {
     const t = this.tokens()
     this.charts.channels = new Chart(this.channelChartTarget, {
       type: "bar", data: { labels: data.range.labels, datasets: this.channelDatasets(t, data.channels) },
-      options: this.baseOptions(t, { stacked: true })
+      options: this.baseOptions(t, { stacked: true, aspect: 2 })
     })
   }
 
@@ -160,15 +164,11 @@ export default class extends Controller {
     if (!data) return
     const t = this.tokens()
     if (this.charts.bank) {
-      this.charts.bank.data.labels = data.range.labels
-      const sets = this.bankDatasets(t, data.bank)
-      this.charts.bank.data.datasets.forEach((ds, i) => { ds.data = sets[i].data })
-      this.charts.bank.update("none")
-    }
-    if (this.charts.net) {
-      this.charts.net.data.labels = data.range.labels
-      this.charts.net.data.datasets[0].data = data.bank.cumulative
-      this.charts.net.update("none")
+      const chart = this.charts.bank
+      chart.data.labels = this.bankLabels(data)
+      const sets = this.bankDatasets(t, data.bank, data.forecast)
+      chart.data.datasets.forEach((ds, i) => { ds.data = sets[i].data; ds.label = sets[i].label })
+      chart.update("none")
     }
     if (this.charts.channels) {
       const chart = this.charts.channels

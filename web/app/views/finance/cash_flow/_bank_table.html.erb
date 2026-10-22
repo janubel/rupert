@@ -1,15 +1,21 @@
 <details id="cash-flow-bank-table" class="cash-flow-table">
   <summary class="text-xs text-mocha underline">Show as table</summary>
-  <table class="mt-2 w-full text-sm">
-    <caption class="sr-only">Money in and out of the bank per <%= report.bucket %></caption>
-    <thead><tr><th class="text-left">Period</th><th class="text-right">In</th><th class="text-right">Out</th><th class="text-right">Net</th><th class="text-right">Running net</th></tr></thead>
-    <tbody>
-      <% series = report.bank_series %>
-      <% report.bucket_labels.each_with_index do |label, i| %>
-        <tr><td><%= label %></td><td class="text-right"><%= finance_money(series[:in][i], zero: :dash) %></td><td class="text-right"><%= finance_money(series[:out][i], zero: :dash) %></td><td class="text-right"><%= finance_money(series[:net][i], zero: :dash) %></td><td class="text-right"><%= finance_money(series[:cumulative][i]) %></td></tr>
-      <% end %>
-    </tbody>
-    <tfoot><tr class="font-semibold"><td>Total</td><td class="text-right"><%= finance_money(report.cash_in_cents) %></td><td class="text-right"><%= finance_money(report.cash_out_cents) %></td><td class="text-right"><%= finance_money(report.net_cents) %></td><td></td></tr></tfoot>
-  </table>
-  <p class="mt-2 text-xs text-taupe"><%= pluralize(report.bank_line_count, 'statement line') %> in this range<% if report.pending_count.positive? %> · <%= link_to "#{report.pending_count} still need a decision", bank_statements_path, class: 'underline' %><% end %>.</p>
+  <% series = report.bank_series %>
+  <% forecast = report.forecast_series %>
+  <div class="table-region" role="region" tabindex="0" aria-label="Money in and out of the bank per <%= report.bucket %>">
+    <table class="table mt-2">
+      <caption class="sr-only">Money in and out of the bank per <%= report.bucket %>, then the cash forecast's weeks</caption>
+      <thead><tr><th scope="col" class="th">Period</th><th scope="col" class="th num">In</th><th scope="col" class="th num">Out</th><th scope="col" class="th num">Net</th><th scope="col" class="th num">Running net</th></tr></thead>
+      <tbody>
+        <% report.bucket_labels.each_with_index do |label, i| %>
+          <tr><td class="td"><%= label %></td><td class="td num"><%= finance_money(series[:in][i], zero: :dash) %></td><td class="td num"><%= finance_money(series[:out][i], zero: :dash) %></td><td class="td num"><%= finance_money(series[:net][i], zero: :dash) %></td><td class="td num"><%= finance_money(series[:cumulative][i]) %></td></tr>
+        <% end %>
+        <% forecast[:labels].each_with_index do |label, i| %>
+          <tr class="text-mocha"><td class="td"><%= label %> <span class="text-xs">· forecast</span></td><td class="td num">—</td><td class="td num">—</td><td class="td num"><%= finance_money(forecast[:net][i], zero: :dash) %></td><td class="td num"><%= finance_money(forecast[:cumulative][i]) %></td></tr>
+        <% end %>
+      </tbody>
+      <tfoot><tr class="font-semibold"><td class="td">Total</td><td class="td num"><%= finance_money(report.cash_in_cents) %></td><td class="td num"><%= finance_money(report.cash_out_cents) %></td><td class="td num"><%= finance_money(report.net_cents) %></td><td class="td"></td></tr></tfoot>
+    </table>
+  </div>
+  <p class="mt-2 text-xs text-taupe"><%= pluralize(report.bank_line_count, 'statement line') %> in this range<% if report.pending_count.positive? %> · <%= link_to "#{report.pending_count} still need a decision", bank_statements_path, class: 'underline' %><% end %>.<% if forecast[:labels].any? %> Forecast weeks are the retained scenario's own receipts less payments<%= forecast[:as_of] ? ", entered as of #{forecast[:as_of].strftime('%b %-d, %Y')}" : '' %>; nothing is predicted.<% end %></p>
 </details>

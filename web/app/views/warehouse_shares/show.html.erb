@@ -1,89 +1,71 @@
-<% content_for :title, "Manage · #{@share.name}" %>
+<% content_for :title, @share.name %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= @share.name %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <span class="pill-<%= @share.active? ? "fern" : "taupe" %>"><span class="dot <%= @share.active? ? "bg-fern" : "bg-taupe" %>"></span><%= @share.status %></span>
-        <span class="ml-2 text-taupe">multiplier <%= number_with_precision(@share.priceMultiplier, precision: 2) %>×</span>
-      </p>
-    </div>
-    <div class="flex gap-2">
-      <%= link_to "Back to warehouse", warehouse_path, class: "btn-ghost btn-sm" %>
-      <%= button_to "Delete link", warehouse_share_path(@share), method: :delete, class: "btn-ghost btn-sm", data: { confirm: "Delete this vendor link permanently? Anyone with the URL will lose access." } %>
+  <%= page_header @share.name, subtitle: "Vendor link · multiplier #{number_with_precision(@share.priceMultiplier, precision: 2)}×.", eyebrow: 'Stock · Warehouse sales',
+      menu: [['Remove link', warehouse_share_path(@share), { method: :delete, data: { turbo_confirm: 'Delete this vendor link permanently? Anyone with the URL will lose access.' } }]] do %>
+    <span class="<%= @share.active? ? 'pill-fern' : 'pill-taupe' %>"><%= @share.status.to_s.humanize %></span>
+  <% end %>
+
+  <section class="section-card">
+    <%= section_heading 'Vendor link', hint: 'Copy this secret URL and send it to the vendor. The token in the URL is the only access control.' %>
+    <div class="flex items-center gap-2" data-controller="copy">
+      <code data-copy-target="source" class="min-w-0 flex-1 truncate rounded-control border border-fog bg-haze px-3 py-2 font-mono text-xs text-mocha"><%= warehouse_sale_url(@share.token) %></code>
+      <button type="button" data-action="click->copy#copy" class="btn-ghost btn-sm shrink-0">Copy</button>
+      <span data-copy-target="status" class="text-xs text-fern" hidden>Copied</span>
     </div>
   </section>
 
   <div class="grid gap-4 lg:grid-cols-2">
-    <div class="card card-pad">
-      <h2 class="font-display text-xl text-ink">Vendor link</h2>
-      <p class="mt-1 text-sm text-mocha">Copy this secret URL and send it to the vendor. The token in the URL is the only access control.</p>
-      <div class="mt-4 flex items-center gap-2" data-controller="copy">
-        <code data-copy-target="source" class="min-w-0 flex-1 truncate rounded-xl border border-fog bg-haze px-3 py-2 font-mono text-xs text-mocha"><%= warehouse_sale_url(@share.token) %></code>
-        <button type="button" data-action="click->copy#copy" class="btn-ghost btn-sm shrink-0">Copy</button>
-        <span data-copy-target="status" class="text-xs text-fern" hidden>Copied!</span>
-      </div>
-    </div>
-
-    <div class="card card-pad">
-      <h2 class="font-display text-xl text-ink">Settings</h2>
-      <%= form_tag warehouse_share_path(@share), method: :patch, class: "mt-4 space-y-4" do %>
+    <section class="section-card">
+      <%= section_heading 'Settings' %>
+      <%= form_tag warehouse_share_path(@share), method: :patch, class: 'space-y-4' do %>
         <div>
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="name">Vendor name</label>
+          <label class="field-label" for="name">Vendor name</label>
           <input type="text" id="name" name="name" required class="input" value="<%= @share.name %>">
         </div>
         <div>
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="priceMultiplier">Price multiplier</label>
-          <div class="flex items-center gap-2">
-            <input type="number" id="priceMultiplier" name="priceMultiplier" step="0.01" min="0" value="<%= @share.priceMultiplier %>" class="input w-32">
-            <span class="text-sm text-taupe">e.g. 0.85 = 15% off list price</span>
-          </div>
+          <label class="field-label" for="priceMultiplier">Price multiplier</label>
+          <input type="number" id="priceMultiplier" name="priceMultiplier" step="0.01" min="0" value="<%= @share.priceMultiplier %>" class="input" aria-describedby="price-multiplier-hint">
+          <p id="price-multiplier-hint" class="mt-1 text-xs text-taupe">0.85 = 15% off list price.</p>
         </div>
         <div>
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="status">Status</label>
+          <label class="field-label" for="status">Status</label>
           <select id="status" name="status" class="select w-full">
-            <option value="active" <%= "selected" if @share.active? %>>active</option>
-            <option value="inactive" <%= "selected" unless @share.active? %>>inactive</option>
+            <option value="active" <%= 'selected' if @share.active? %>>Active</option>
+            <option value="inactive" <%= 'selected' unless @share.active? %>>Inactive</option>
           </select>
         </div>
         <label class="flex items-center gap-2 text-sm text-mocha">
-          <%= check_box_tag "useCustomTiers", "1", @share.use_custom_tiers?, class: "accent-olive" %>
+          <%= check_box_tag 'useCustomTiers', '1', @share.use_custom_tiers? %>
           Use custom bulk tiers for this vendor
         </label>
-        <%= submit_tag "Save settings", class: "btn-primary" %>
+        <div class="form-actions"><%= submit_tag 'Save', class: 'btn-primary' %></div>
       <% end %>
-    </div>
-  </div>
+    </section>
 
-  <div class="card card-pad">
-    <div class="flex items-baseline justify-between">
-      <h2 class="font-display text-xl text-ink">Bulk tiers</h2>
-      <span class="text-xs text-taupe"><%= @share.use_custom_tiers? ? "custom schedule" : "using global defaults" %></span>
-    </div>
-    <p class="mt-1 text-sm text-mocha">Quantity thresholds with a % discount off the vendor price. Leave the quantity blank to remove a row.</p>
-    <%= form_tag update_tiers_warehouse_share_path(@share), method: :post, class: "mt-4 space-y-3" do %>
-      <% @custom_tiers.each do |tier| %>
-        <div class="flex items-center gap-2">
-          <%= hidden_field_tag "tiers[#{tier.id}][id]", tier.id %>
-          <%= number_field_tag "tiers[#{tier.id}][minQty]", tier.minQty, min: 1, class: "input w-24", placeholder: "Min qty" %>
+    <section class="section-card">
+      <%= section_heading 'Bulk tiers', hint: "#{@share.use_custom_tiers? ? 'Custom schedule' : 'Using global defaults'} · quantity thresholds with a % discount off the vendor price. Leave the quantity blank to remove a row." %>
+      <%= form_tag update_tiers_warehouse_share_path(@share), method: :post, class: 'space-y-3' do %>
+        <% @custom_tiers.each do |tier| %>
+          <div class="flex flex-wrap items-center gap-2">
+            <%= hidden_field_tag "tiers[#{tier.id}][id]", tier.id %>
+            <%= number_field_tag "tiers[#{tier.id}][minQty]", tier.minQty, min: 1, class: 'input w-24', placeholder: 'Min qty', aria: { label: 'Minimum quantity' } %>
+            <span class="text-sm text-taupe">+ units</span>
+            <%= number_field_tag "tiers[#{tier.id}][discountPercent]", tier.discountPercent, min: 0, max: 99, step: '0.5', class: 'input w-24', placeholder: '% off', aria: { label: 'Percent off' } %>
+            <span class="text-sm text-taupe">% off</span>
+            <label class="flex items-center gap-1.5 text-xs text-mocha"><%= check_box_tag "tiers[#{tier.id}][_destroy]", '1' %> Remove</label>
+          </div>
+        <% end %>
+        <% if @custom_tiers.empty? %>
+          <p class="text-sm text-taupe">No tiers yet. Add one below, for example 10+ units = 5% off.</p>
+        <% end %>
+        <div class="flex flex-wrap items-center gap-2">
+          <%= number_field_tag 'tiers[new][minQty]', nil, min: 1, class: 'input w-24', placeholder: 'Min qty', aria: { label: 'New tier minimum quantity' } %>
           <span class="text-sm text-taupe">+ units</span>
-          <%= number_field_tag "tiers[#{tier.id}][discountPercent]", tier.discountPercent, min: 0, max: 99, step: "0.5", class: "input w-24", placeholder: "% off" %>
+          <%= number_field_tag 'tiers[new][discountPercent]', nil, min: 0, max: 99, step: '0.5', class: 'input w-24', placeholder: '% off', aria: { label: 'New tier percent off' } %>
           <span class="text-sm text-taupe">% off</span>
-          <label class="flex items-center gap-1.5 text-xs text-mocha">
-            <%= check_box_tag "tiers[#{tier.id}][_destroy]", "1" %> remove
-          </label>
         </div>
+        <div class="form-actions"><%= submit_tag 'Save', class: 'btn-primary' %></div>
       <% end %>
-      <% if @custom_tiers.empty? %>
-        <p class="text-sm text-taupe">No tiers yet — add one below (e.g. 10+ units = 5% off).</p>
-      <% end %>
-      <div class="flex items-center gap-2">
-        <%= number_field_tag "tiers[new][minQty]", nil, min: 1, class: "input w-24", placeholder: "Min qty" %>
-        <span class="text-sm text-taupe">+ units</span>
-        <%= number_field_tag "tiers[new][discountPercent]", nil, min: 0, max: 99, step: "0.5", class: "input w-24", placeholder: "% off" %>
-        <span class="text-sm text-taupe">% off</span>
-      </div>
-      <%= submit_tag "Save tiers", class: "btn-primary" %>
-    <% end %>
+    </section>
   </div>
 </div>

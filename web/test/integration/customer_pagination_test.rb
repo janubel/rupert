@@ -16,12 +16,12 @@ class CustomerPaginationTest < ActionDispatch::IntegrationTest
 
     get customers_path
     assert_response :success
-    first_page = css_select('tbody a').map { |link| link['href'] }
+    first_page = css_select('tbody tr td:first-child a').map { |link| link['href'] }
     assert_equal customers.reverse.first(25).map { |customer| customer_path(customer) }, first_page
 
     get customers_path, params: { page: 2 }
     assert_response :success
-    assert_equal [customer_path(customers.first)], css_select('tbody a').map { |link| link['href'] }
+    assert_equal [customer_path(customers.first)], css_select('tbody tr td:first-child a').map { |link| link['href'] }
   ensure
     Current.reset
   end

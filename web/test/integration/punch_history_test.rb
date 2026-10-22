@@ -84,8 +84,8 @@ class PunchHistoryTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'C-Trax ctrax-long'
     assert_includes response.body, 'missed clock-out'
-    assert_select 'nav[aria-label="Time workspace"] a', text: 'Punch report'
-    assert_select 'nav[aria-label="Time workspace"] a', text: 'Timesheets'
+    assert_select 'header.page-header h1.page-title', text: 'Punch report'
+    assert_select 'nav[aria-label="Module"] a', text: 'Timesheets'
     assert_select 'select#range option', text: 'This pay week'
     assert_select '[data-time-source="ctrax"]'
 

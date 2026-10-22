@@ -75,6 +75,21 @@ export default class extends Controller {
     this.fitToWindow()
   }
 
+  // What the page shows under the chat (the help bar in the rail layout), so the chat leaves room for it
+  // and the page itself never scrolls.
+  heightBelow(main) {
+    if (!main) return 0
+    let block = this.element
+    while (block.parentElement && block.parentElement !== main) block = block.parentElement
+    let total = 0
+    for (let next = block.nextElementSibling; next; next = next.nextElementSibling) {
+      const style = getComputedStyle(next)
+      if (style.display === "none" || style.position === "fixed" || style.position === "absolute") continue
+      total += next.getBoundingClientRect().height + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0)
+    }
+    return total
+  }
+
   stopFitting() {
     if (!this.onResize) return
     window.removeEventListener("resize", this.onResize)
@@ -89,7 +104,7 @@ export default class extends Controller {
     const top = this.element.getBoundingClientRect().top + window.scrollY
     const main = this.element.closest("main")
     const gap = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0
-    const height = Math.max(this.constructor.MIN_HEIGHT, Math.floor(viewport - top - gap))
+    const height = Math.max(this.constructor.MIN_HEIGHT, Math.floor(viewport - top - gap - this.heightBelow(main)))
     if (this.element.style.height !== `${height}px`) this.element.style.height = `${height}px`
   }
 

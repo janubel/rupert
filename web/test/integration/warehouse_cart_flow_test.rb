@@ -82,7 +82,7 @@ class WarehouseCartFlowTest < ActionDispatch::IntegrationTest
   test 'add to cart, update quantities, and see server-priced totals' do
     get warehouse_sale_path(@share.token)
     assert_response :success
-    assert_select 'a.btn-primary', /View cart/
+    assert_select 'a.btn-primary', /Open cart/
 
     post warehouse_cart_add_item_path(@share.token), params: { variant_id: @variant.id, quantity: '5' }
     assert_redirected_to warehouse_cart_path(@share.token)

@@ -1,3 +1,15 @@
-<section class="card card-pad space-y-3"><h2 class="font-semibold">Activity history</h2><p class="text-xs text-mocha">Latest 20 events. Private details require contacts access.</p>
-  <% influencer_cms_events(record).each do |event| %><div><p class="text-sm"><%= event.action.humanize %> · actor <%= event.actor_id %> · <%= event.created_at.to_fs(:short) %></p><% if Current.user.can?('marketing.contacts') %><details><summary class="text-xs">Details</summary><pre class="whitespace-pre-wrap break-words text-xs"><%= JSON.pretty_generate(JSON.parse(event.payload_json)) %></pre></details><% end %></div><% end %>
+<section class="section-card" aria-label="Activity history">
+  <%= section_heading 'Activity history', hint: 'Latest 20 events. Private details require contacts access.' %>
+  <% events = influencer_cms_events(record) %>
+  <% if events.empty? %><p class="text-sm text-mocha">No activity recorded yet.</p><% end %>
+  <% events.each do |event| %>
+    <% if Current.user.can?('marketing.contacts') %>
+      <details class="explainer">
+        <summary class="explainer-summary"><%= event.action.humanize %> · actor <%= event.actor_id %> · <%= event.created_at.to_fs(:short) %></summary>
+        <pre class="mt-2 whitespace-pre-wrap break-words text-xs"><%= JSON.pretty_generate(JSON.parse(event.payload_json)) %></pre>
+      </details>
+    <% else %>
+      <p class="text-sm"><%= event.action.humanize %> · actor <%= event.actor_id %> · <%= event.created_at.to_fs(:short) %></p>
+    <% end %>
+  <% end %>
 </section>

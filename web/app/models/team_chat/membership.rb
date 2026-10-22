@@ -8,6 +8,8 @@ module TeamChat
     belongs_to :room, class_name: 'TeamChat::Room'
     belongs_to :user
 
+    def hidden? = hidden_at.present?
+
     def unread_count
       room.messages.visible.top_level.where('id > ?', last_read_message_id).where.not(user_id: user_id).count
     end

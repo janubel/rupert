@@ -1,50 +1,51 @@
-<% content_for :title, "Record payment" %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
-
-  <%= page_header 'Record payment', subtitle: 'A payment to a vendor reduces their accounts-payable balance.' %>
-  <div class="card card-pad page-narrow">
-    <%= render "shared/form_errors", model: @payment %>
-    <%= form_with model: @payment, scope: :vendor_payment, url: finance_vendor_payments_path, class: "mt-6 space-y-4",
-          data: { controller: "finance-form", finance_form_locks_value: finance_locks_json,
-                  finance_form_confirm_value: "Record this vendor payment?\n\nAmount: {amount}\nVendor: {who}\nDate: {date}\n\nIt reduces the amount owed to this vendor in the payments register. No money moves; this records a payment already made. You can remove it later and restore it.",
-                  action: "submit->finance-form#confirm input->finance-form#sync change->finance-form#sync" } do |f| %>
-      <div>
-        <%= f.label :vendor_id, "Vendor", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.collection_select :vendor_id, @vendors, :id, :name, {}, class: "select w-full", data: { finance_form_target: "who" } %>
-      </div>
-      <div class="grid gap-4 sm:grid-cols-2">
+<% content_for :title, 'Add payment' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add payment', subtitle: 'A payment to a vendor reduces their accounts-payable balance.' %>
+  <div class="card card-pad">
+    <%= form_with model: @payment, scope: :vendor_payment, url: finance_vendor_payments_path, class: 'space-y-4',
+          data: { controller: 'finance-form', finance_form_locks_value: finance_locks_json,
+                  finance_form_confirm_value: "Add this vendor payment?\n\nAmount: {amount}\nVendor: {who}\nDate: {date}\n\nIt reduces the amount owed to this vendor in the payments register. No money moves; this records a payment already made. You can remove it later and restore it.",
+                  action: 'submit->finance-form#confirm input->finance-form#sync change->finance-form#sync' } do |f| %>
+      <%= render 'shared/form_errors', model: @payment %>
+      <fieldset class="space-y-4 min-w-0">
+        <legend class="card-title">Payment</legend>
         <div>
-          <%= f.label :amount, "Amount (USD)", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-          <div class="flex items-center gap-1">
-            <span class="text-sm text-mocha" aria-hidden="true">$</span>
-            <%= f.text_field :amount, required: true, inputmode: "decimal", placeholder: "0.00", class: "input money", autocomplete: "off", aria: { describedby: "finance-amount-help" }, data: { finance_form_target: "amount" } %>
+          <%= f.label :vendor_id, 'Vendor', class: 'field-label' %>
+          <%= f.collection_select :vendor_id, @vendors, :id, :name, {}, class: 'select w-full', data: { finance_form_target: 'who' } %>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <%= f.label :amount, 'Amount (USD)', class: 'field-label' %>
+            <div class="flex items-center gap-1">
+              <span class="text-sm text-mocha" aria-hidden="true">$</span>
+              <%= f.text_field :amount, required: true, inputmode: 'decimal', placeholder: '0.00', class: 'input money', autocomplete: 'off', aria: { describedby: 'finance-amount-help' }, data: { finance_form_target: 'amount' } %>
+            </div>
+            <p id="finance-amount-help" class="mt-1 text-xs text-mocha">Dollars with up to two decimals, no $ sign or commas. This records a payment already made; it does not transfer money.</p>
+          </div>
+          <div>
+            <%= f.label :paid_on, 'Date', class: 'field-label' %>
+            <%= f.date_field :paid_on, class: 'input', required: true, data: { finance_form_target: 'date' } %>
+          </div>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <%= f.label :method, 'Method', class: 'field-label' %>
+            <%= f.select :method, Finance::VendorPayment::METHODS, {}, class: 'select w-full' %>
+          </div>
+          <div>
+            <%= f.label :reference, 'Reference', class: 'field-label' %>
+            <%= f.text_field :reference, class: 'input', autocomplete: 'off' %>
           </div>
         </div>
         <div>
-          <%= f.label :paid_on, "Date", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-          <%= f.date_field :paid_on, class: "select w-full", required: true, data: { finance_form_target: "date" } %>
+          <%= f.label :notes, 'Notes', class: 'field-label' %>
+          <%= f.text_area :notes, rows: 3, class: 'input' %>
         </div>
-      </div>
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div>
-          <%= f.label :method, "Method", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-          <%= f.select :method, Finance::VendorPayment::METHODS, {}, class: "select w-full" %>
-        </div>
-        <div>
-          <%= f.label :reference, "Reference", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-          <%= f.text_field :reference, class: "input", autocomplete: "off" %>
-        </div>
-      </div>
-      <div>
-        <%= f.label :notes, "Notes", class: "mb-1 block text-sm font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.text_area :notes, rows: 3, class: "input retail-notes" %>
-      </div>
-      <p id="finance-amount-help" class="text-sm text-mocha">Enter dollars with up to two decimal places, no $ sign or commas. This records an existing payment in Rupert; it does not transfer money.</p>
+      </fieldset>
       <ul class="form-reasons" aria-live="polite" data-finance-form-target="reasons" hidden></ul>
-      <div class="flex flex-wrap items-center gap-3 pt-2">
-        <%= f.submit "Record payment", class: "btn-primary", data: { finance_form_target: "submit" } %>
-        <%= link_to "Cancel", finance_vendor_payments_path, class: "btn-ghost" %>
+      <div class="form-actions">
+        <%= f.submit 'Save', class: 'btn-primary', data: { finance_form_target: 'submit' } %>
+        <%= link_to 'Cancel', finance_vendor_payments_path, class: 'btn-ghost' %>
       </div>
     <% end %>
   </div>

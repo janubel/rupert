@@ -1,1 +1,5 @@
-<%= render 'privacy' %><% content_for :title, 'New owner checklist' %><div class="space-y-6"><section><%= link_to 'Owner checklists', owner_checklists_path, class: 'text-sm text-olive', data: { turbo: false } %><h1 class="page-title mt-3">New domain checklist</h1><p class="mt-2 text-sm text-mocha">Private domain context, service references and owner reviews. This does not create a vendor account or publish anything.</p></section><%= render 'owner_form' %></div>
+<%= render 'privacy' %><% content_for :title, 'Add domain checklist' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add domain checklist', subtitle: 'Private domain context, service references and owner reviews. This does not create a vendor account or publish anything.' %>
+  <%= render 'owner_form' %>
+</div>

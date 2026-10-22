@@ -1,26 +1,18 @@
 <% content_for :title, "Staff" %>
+<% menu = [] %>
+<% menu << ['Sync staff now', sync_directory_people_employees_path, { method: :post }] if Current.user.can?("hr.write") && Current.user.can?("sync.write") %>
+<% menu << ['Consolidate profiles', consolidation_people_employees_path] if Current.user.can?("hr.write") && Current.user.can_manage_accounts? %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Staff</h1>
-      <p class="mt-1 text-sm text-mocha">The team directory with their department, position, and employment status.</p>
-    </div>
-    <div class="flex flex-wrap gap-2" <%= tour_anchor('actions') %>>
-      <%= link_to 'Staff problem reports', people_work_reports_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
-      <%= link_to "Departments", people_departments_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "Positions", people_positions_path, class: "btn-ghost btn-sm" %>
-      <% if Current.user.can?("hr.write") && Current.user.can?("sync.write") %>
-        <%= button_to "Sync staff now", sync_directory_people_employees_path, class: "btn-ghost btn-sm" %>
-      <% end %>
+  <div <%= tour_anchor('actions') %>>
+    <%= page_header 'Staff', subtitle: 'The team directory with department, position and employment status.', menu: menu do %>
       <% if Current.user.can?("hr.write") %>
-        <%= link_to 'Consolidate profiles', consolidation_people_employees_path, class: 'btn-ghost btn-sm' if Current.user.can_manage_accounts? %>
         <%= link_to "Add staff member", new_people_employee_path, class: "btn-primary" %>
       <% end %>
-    </div>
-  </section>
+    <% end %>
+  </div>
 
   <%= render "shared/directory_sync_status", kind: "employees", tour: "sync" %>
-  <p class="text-xs text-taupe">Each staff member can have accounts in several apps. Consolidated profiles retain every source identity. Confirm employment type and payroll details before payroll.</p>
+  <%= fold_explainer('Each staff member can have accounts in several apps. Consolidated profiles retain every source identity. Confirm employment type and payroll details before payroll.', class: 'text-sm text-mocha') %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" <%= tour_anchor('stats') %>>
     <div class="stat">
@@ -45,24 +37,40 @@
     </div>
   </section>
 
-  <p class="text-sm"><%= @missing_logins %> active employee records need a login. <%= link_to 'Review staff without logins', people_employees_path(login: 'missing'), class: 'font-semibold hover:underline' %></p>
-  <%= form_tag people_employees_path, method: :get, class: "flex flex-wrap gap-2", data: { tour: 'filters' } do %>
-    <input type="search" name="q" value="<%= params[:q] %>" placeholder="Search name, staff member #, email…" aria-label="Search staff" class="search w-full sm:max-w-xs" autocomplete="off">
-    <select name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select w-auto">
-      <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
-      <% People::Employee.aasm.states.map(&:name).each do |status| %>
-        <option value="<%= status %>" <%= @status == status.to_s ? "selected" : "" %>><%= status.to_s.titleize %></option>
-      <% end %>
-    </select>
-    <%= select_tag :source, options_for_select([['All sources', '']] + Directories::Sync::PAIRS.keys.map { |v| [directory_label(v), v] }, params[:source]), class: 'select w-auto', aria: { label: 'Source filter' } %>
-    <%= select_tag :login, options_for_select([['All logins', ''], ['Needs login', 'missing'], ['Linked login', 'linked']], params[:login]), class: 'select w-auto', aria: { label: 'Login filter' } %>
-    <%= submit_tag 'Filter', class: 'btn-ghost btn-sm' %>
+  <p class="text-sm text-mocha"><%= @missing_logins %> active staff records need a login. <%= link_to 'Review staff without logins', people_employees_path(login: 'missing'), class: 'font-semibold text-olive-deep hover:underline' %></p>
+
+  <%= form_tag people_employees_path, method: :get, class: "toolbar", data: { tour: 'filters' } do %>
+    <div class="toolbar-field">
+      <label class="field-label" for="staff-q">Search</label>
+      <input id="staff-q" type="search" name="q" value="<%= params[:q] %>" placeholder="Name, staff member # or email" class="input" autocomplete="off">
+    </div>
+    <div class="toolbar-field">
+      <label class="field-label" for="staff-status">Status</label>
+      <select id="staff-status" name="status" data-controller="auto-submit" data-action="change->auto-submit#submit" class="select">
+        <option value="all" <%= @status == "all" ? "selected" : "" %>>All statuses</option>
+        <% People::Employee.aasm.states.map(&:name).each do |status| %>
+          <option value="<%= status %>" <%= @status == status.to_s ? "selected" : "" %>><%= status.to_s.humanize %></option>
+        <% end %>
+      </select>
+    </div>
+    <div class="toolbar-field">
+      <%= label_tag :source, 'Source', class: 'field-label' %>
+      <%= select_tag :source, options_for_select([['All sources', '']] + Directories::Sync::PAIRS.keys.map { |v| [directory_label(v), v] }, params[:source]), class: 'select' %>
+    </div>
+    <div class="toolbar-field">
+      <%= label_tag :login, 'Login', class: 'field-label' %>
+      <%= select_tag :login, options_for_select([['All logins', ''], ['Needs login', 'missing'], ['Linked login', 'linked']], params[:login]), class: 'select' %>
+    </div>
+    <div class="toolbar-actions">
+      <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
+      <%= link_to 'Clear', people_employees_path, class: 'btn-ghost' %>
+    </div>
   <% end %>
 
-  <div class="card overflow-hidden" <%= tour_anchor('table') %>>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+  <div class="card" <%= tour_anchor('table') %>>
+    <div class="table-region" role="region" tabindex="0" aria-label="Staff">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Department</th>
@@ -72,12 +80,12 @@
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @employees.empty? %>
-            <tr><td colspan="6" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No staff yet — add the first one." %></td></tr>
+            <tr><td colspan="6" class="empty-row"><%= @q.present? ? "No staff match that search. Clear the filters to see everyone." : "No staff yet. Add your first staff member." %></td></tr>
           <% end %>
           <% @employees.each do |employee| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td">
                 <p class="font-medium text-ink"><%= link_to employee.name, people_employee_path(employee), class: "hover:text-olive hover:underline" %></p>
                 <% employee.source_identities.each do |identity| %><p class="text-xs text-taupe"><%= directory_label(identity.source) %> · <%= identity.source_active.nil? ? 'status not supplied' : identity.source_active ? 'active' : 'inactive' %></p><% end %>
@@ -88,16 +96,13 @@
               <td class="td text-mocha"><%= employee.user ? (employee.user.active? ? "Login linked" : "Login disabled") : "Needs login" %></td>
               <td class="td"><%= render 'access_badges', employee: employee, compact: true %><%= link_to 'Review access', people_employee_path(employee, anchor: 'access'), class: 'mt-2 inline-block text-xs text-olive underline' %></td>
               <td class="td">
-                <span class="<%= employee.active? ? "pill-fern" : employee.on_leave? ? "pill-olive" : "pill-rose" %>">
-                  <span class="dot <%= employee.active? ? "bg-fern" : employee.on_leave? ? "bg-olive" : "bg-rose" %>"></span>
-                  <%= employee.status.tr("_", " ") %>
-                </span>
+                <span class="<%= employee.active? ? "pill-fern" : employee.on_leave? ? "pill-olive" : "pill-rose" %>"><%= employee.status.tr("_", " ").capitalize %></span>
               </td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
-    <div class="p-4"><%== @pagy.series_nav if @pagy.pages > 1 %></div>
+    <% if @pagy.pages > 1 %><div class="p-4"><%== @pagy.series_nav %></div><% end %>
   </div>
 </div>

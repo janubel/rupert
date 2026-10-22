@@ -687,22 +687,26 @@ class PageGuides
     ),
     'projects' => Guide.new(
       key: 'projects', title: 'Projects',
-      summary: 'Track initiatives end to end — owners, phases, and current status.',
+      summary: 'Plan a piece of work, give it an owner and a team, and watch its tasks move to done.',
       sections: [
-        { heading: "What you're seeing", body: 'Projects with their stage and task counts. Open a project to see its tasks and move work through your workflow.' }
+        { heading: "What you're seeing", body: 'Each card is a project with its status, health, progress bar and how many tasks are overdue or blocked. Open one for its board, a timeline of task dates, and its team, goal and logged time.' },
+        { heading: 'Finishing and reusing', body: 'Complete a project when the work is done. If tasks are still open you choose whether to mark them done or leave them open. Completed and archived projects can be reopened. Save a project as a template to start the next one with the same tasks and checklists, dated from its new start.' }
       ],
       tips: [
-        'Move projects through statuses as work completes so the pipeline stays honest.'
+        'Link a project to the goal it supports and the goal page will list its progress.',
+        'Export CSV (top right) gives a spreadsheet of every active project.'
       ]
     ),
     'tasks' => Guide.new(
       key: 'tasks', title: 'Tasks',
-      summary: "Every task across all projects in one list — the team's to-do board.",
+      summary: "Every task across all projects, as a board, a list or a calendar of due dates.",
       sections: [
-        { heading: "What you're seeing", body: "All tasks with their project and status, so nothing is buried inside a project you're not looking at." }
+        { heading: "What you're seeing", body: 'The board groups tasks by status; drag a card to another column, or up and down inside one to set the order you want. Open a task for its checklist, discussion, time, files and what it is waiting on.' },
+        { heading: 'Blocked and waiting', body: 'Blocking a task asks what is needed, and the team is told. A task that waits on another cannot start or finish until that one is done; its assignee is notified when it is free.' }
       ],
       tips: [
-        "Use this list as the daily stand-up — sort by project or status to see what's open."
+        'Use Mine, Overdue and Due this week as the daily stand-up.',
+        'The bell in the header collects assignments, comments and a morning reminder for what is due.'
       ]
     ),
     'goals' => Guide.new(

@@ -1,67 +1,64 @@
 <% content_for :title, "Edit #{@family.name}" %>
-<div class="mx-auto max-w-xl space-y-6">
-  <section>
-    <h1 class="page-title">Edit <%= @family.name %></h1>
-    <p class="mt-1 text-sm text-mocha">Sizes are the SKUs you sell (e.g. 3.5g, 7g, 14g, 28g). Each is derived as floor(root grams ÷ its grams).</p>
-  </section>
+<div class="page-narrow space-y-6">
+  <%= page_header "Edit #{@family.name}", subtitle: 'Sizes are the SKUs you sell (e.g. 3.5g, 7g, 14g, 28g); each is derived as floor(root grams ÷ its grams).' %>
 
   <div class="card card-pad">
-    <%= form_with(model: @family, url: size_family_path(@family), method: :patch) do |form| %>
-      <div class="space-y-4">
+    <%= form_with(model: @family, url: size_family_path(@family), method: :patch, class: 'space-y-4') do |form| %>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Family</legend>
         <div>
-          <%= form.label :name, class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-          <%= form.text_field :name, class: "input", required: true %>
+          <%= form.label :name, class: 'field-label' %>
+          <%= form.text_field :name, class: 'input', required: true %>
         </div>
         <div>
-          <%= form.label :root_sku, "Root SKU (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-          <%= form.text_field :root_sku, class: "input" %>
+          <%= form.label :root_sku, 'Root SKU (optional)', class: 'field-label' %>
+          <%= form.text_field :root_sku, class: 'input' %>
         </div>
         <div>
-          <%= form.label :mode, class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-          <%= form.select :mode, options_for_select([["Approval-only", "approval"], ["Auto-apply", "auto"]], @family.mode), class: "select" %>
+          <%= form.label :mode, class: 'field-label' %>
+          <%= form.select :mode, options_for_select([['Approval-only', 'approval'], ['Auto-apply', 'auto']], @family.mode), class: 'input' %>
         </div>
-        <div>
-          <%= form.submit "Save family", class: "btn-primary" %>
-          <%= link_to "Cancel", size_families_path, class: "btn-ghost" %>
-        </div>
+      </fieldset>
+      <div class="form-actions">
+        <%= form.submit 'Save', class: 'btn-primary', name: nil %>
+        <%= link_to 'Cancel', size_families_path, class: 'btn-ghost' %>
       </div>
     <% end %>
   </div>
 
-  <div class="card card-pad">
-    <h2 class="font-display text-lg text-ink">Sizes</h2>
-    <p class="mt-1 text-xs text-taupe">The SKU should match a Square variation SKU so it can be linked and written back.</p>
+  <section class="section-card">
+    <%= section_heading 'Sizes', hint: 'The SKU should match a Square variation SKU so it can be linked and written back.', level: :h3 %>
 
-    <div class="mt-3 space-y-2">
+    <div class="space-y-2">
       <% @family.members.order(:grams).each do |member| %>
-        <div class="flex items-center justify-between rounded-xl bg-haze px-4 py-2.5">
-          <div class="flex items-center gap-3">
+        <div class="flex items-center justify-between gap-3 rounded-control bg-haze px-4 py-2.5">
+          <div class="flex flex-wrap items-center gap-3">
             <span class="font-mono text-sm text-ink"><%= member.sku %></span>
             <span class="text-xs text-taupe"><%= member.grams %>g</span>
             <% if member.square_variation_id.present? %>
-              <span class="pill-fern">linked</span>
+              <span class="pill-fern">Linked</span>
             <% else %>
-              <span class="pill-taupe">unlinked</span>
+              <span class="pill-taupe">Unlinked</span>
             <% end %>
           </div>
-          <%= button_to "Remove", remove_member_size_family_path(@family, member_id: member.id), method: :post, class: "text-xs font-semibold text-rose hover:underline" %>
+          <%= button_to 'Remove', remove_member_size_family_path(@family, member_id: member.id), method: :post, class: 'btn-ghost btn-sm', form_class: 'contents' %>
         </div>
       <% end %>
       <% if @family.members.empty? %>
-        <p class="rounded-xl bg-haze px-4 py-2.5 text-sm text-taupe">No sizes yet.</p>
+        <p class="text-sm text-taupe">No sizes yet. Add the first size below.</p>
       <% end %>
     </div>
 
-    <%= form_tag add_member_size_family_path(@family), method: :post, class: "mt-3 flex items-end gap-2" do %>
-      <div class="flex-1">
-        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="new_sku">SKU</label>
+    <%= form_tag add_member_size_family_path(@family), method: :post, class: 'toolbar' do %>
+      <div class="toolbar-field">
+        <label class="field-label" for="new_sku">SKU</label>
         <input type="text" id="new_sku" name="sku" placeholder="e.g. afghan7" class="input">
       </div>
-      <div class="w-32">
-        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="new_grams">Grams</label>
+      <div class="toolbar-field">
+        <label class="field-label" for="new_grams">Grams</label>
         <input type="number" step="0.1" min="0.1" id="new_grams" name="grams" placeholder="e.g. 7" class="input">
       </div>
-      <%= submit_tag "Add size", class: "btn-primary btn-sm" %>
+      <div class="toolbar-actions"><%= submit_tag 'Add size', class: 'btn-ghost', name: nil %></div>
     <% end %>
-  </div>
+  </section>
 </div>

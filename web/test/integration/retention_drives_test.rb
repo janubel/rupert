@@ -69,6 +69,12 @@ class RetentionDrivesTest < ActionDispatch::IntegrationTest
   test 'disconnect preserves source originals and previously verified receipts' do
     connection = RetentionDriveConnection.create!(refresh_token: 'private', account_email: 'owner@example.com', generation: 'same-account', enabled: true)
     item = RetentionDriveItem.create!(generation: 'same-account', item_key: 'document:1', remote_id: 'verified-file', status: 'verified')
+    get retention_drive_path
+    assert_response :success
+    assert_select 'h1', 'Drive copies'
+    assert_select 'h1', count: 1
+    assert_includes response.body, 'owner@example.com'
+    assert_select 'form[action=?] button', sync_retention_drive_path, text: 'Sync now'
     post disconnect_retention_drive_path
     assert_redirected_to retention_drive_path
     assert_nil connection.reload.refresh_token

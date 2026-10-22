@@ -1,64 +1,74 @@
 <% content_for :title, 'Product names' %>
 <% summary = @crosswalk.summary %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :stock %>
-  <section class="space-y-3">
-    <h1 class="page-title">Product names</h1>
-    <p class="max-w-3xl text-sm text-mocha">One name per product. The website (Shopify) name is primary; Square, SwipeSimple and C-Trax names are matched to it by SKU, then by name. This page is read-only and never changes a name in any system.</p>
-    <div class="flex flex-wrap gap-2" aria-label="Print sheets">
-      <% ProductNamePdf::SHEETS.each do |sheet, label| %><%= link_to "Print: #{label}", pdf_product_names_path(sheet: sheet), target: '_blank', rel: 'noopener', class: 'btn-primary' %><% end %>
-      <%= link_to 'Download CSV', product_names_path(format: :csv), class: 'btn-ghost' %>
-    </div>
-  </section>
+<% sheets = ProductNamePdf::SHEETS.to_a %>
+<% menu = sheets.drop(1).map { |sheet, label| ["#{label} PDF", pdf_product_names_path(sheet: sheet), { target: '_blank', rel: 'noopener' }] } %>
+<% menu << ['Download CSV', product_names_path(format: :csv)] %>
+<div class="space-y-6">
+  <%= page_header 'Product names', subtitle: 'One name per product: the website (Shopify) name is primary and Square, SwipeSimple and C-Trax names are matched to it.', menu: menu do %>
+    <%= link_to 'Download PDF', pdf_product_names_path(sheet: sheets.first.first), class: 'btn-primary', target: '_blank', rel: 'noopener' %>
+  <% end %>
+  <%= fold_explainer('Secondary names are matched by SKU first, then by name. This page is read-only and never changes a name in any system; the PDFs in More are print sheets for checking names on the floor.', class: 'text-sm text-mocha') %>
+
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Product name overview">
     <% [['Website products (current)', summary[:website]], ['Square matched', "#{summary[:square]} of #{summary[:square_total]}"], ['SwipeSimple matched', @crosswalk.swipesimple_available? ? "#{summary[:swipesimple]} of #{summary[:swipesimple_total]}" : 'No catalog loaded'], ['C-Trax matched', "#{summary[:ctrax]} of #{summary[:ctrax_total]}"]].each do |label, value| %>
-      <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value"><%= value %></p></div>
+      <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value-sm mt-1"><%= value %></p></div>
     <% end %>
   </section>
-  <p class="text-xs text-taupe">C-Trax read: <%= retail_source_time(@crosswalk.ctrax_read_at) %> · SwipeSimple Item Catalog: <%= @crosswalk.swipesimple_available? ? "loaded #{retail_source_time(@crosswalk.swipesimple_read_at)}" : 'not loaded (the sheets omit it)' %> · <%= summary[:verify] %> matches to verify · <%= summary[:unmatched] %> secondary items without a website match.</p>
-  <section class="card card-pad">
-    <%= form_tag product_names_path, method: :get, class: 'operations-filters' do %>
-      <label class="field-label">Show
-        <%= select_tag :filter, options_for_select([['All website products', 'all'], ['Matches to verify', 'verify'], ['Unmatched secondary items', 'unmatched']], @filter), class: 'input mt-1' %>
-      </label>
-      <label class="field-label">Search <%= text_field_tag :q, @query, class: 'input mt-1', placeholder: 'Name or SKU' %></label>
-      <%= submit_tag 'Filter', class: 'btn-primary' %>
-    <% end %>
-  </section>
+  <p class="text-xs text-taupe">C-Trax read: <%= retail_source_time(@crosswalk.ctrax_read_at) %> · SwipeSimple item catalog: <%= @crosswalk.swipesimple_available? ? "loaded #{retail_source_time(@crosswalk.swipesimple_read_at)}" : 'not loaded (the sheets omit it)' %> · <%= summary[:verify] %> matches to verify · <%= summary[:unmatched] %> secondary items without a website match.</p>
+
+  <%= form_tag product_names_path, method: :get, class: 'toolbar' do %>
+    <div class="toolbar-field">
+      <%= label_tag :filter, 'Show', class: 'field-label' %>
+      <%= select_tag :filter, options_for_select([['All website products', 'all'], ['Matches to verify', 'verify'], ['Unmatched secondary items', 'unmatched']], @filter), class: 'input' %>
+    </div>
+    <div class="toolbar-field">
+      <%= label_tag :q, 'Search', class: 'field-label' %>
+      <%= search_field_tag :q, @query, class: 'input', placeholder: 'Name or SKU' %>
+    </div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', product_names_path, class: 'btn-ghost' %></div>
+  <% end %>
+
   <% systems = %i[swipesimple square ctrax] %>
   <% last_page = @pagy.page >= @pagy.pages %>
-  <div class="operations-header retail-anchor"><h2 class="font-display text-xl">Name crosswalk</h2><p role="status" class="text-sm text-mocha"><%= @pagy.count %> website products · <%= @unmatched_items.size %> items with no website match</p></div>
+  <div class="retail-anchor">
+    <%= section_heading 'Name crosswalk', hint: "#{@pagy.count} website products · #{@unmatched_items.size} items with no website match" %>
+  </div>
   <p class="text-xs text-mocha sm:hidden">Swipe the table sideways to see every system.</p>
-  <div class="card overflow-hidden"><div class="operations-table-region" role="region" tabindex="0" aria-label="Product names table">
-    <table class="w-full text-sm">
-      <thead><tr>
-        <th scope="col" class="th">Website (Shopify)</th>
-        <% systems.each do |system| %><th scope="col" class="th"><%= ProductNameCrosswalk::SYSTEMS.fetch(system) %></th><% end %>
-      </tr></thead>
-      <tbody class="divide-y divide-fog">
-        <% @page_rows.each do |row| %>
-          <tr>
-            <td class="td"><p class="font-medium"><%= link_to row[:name], shopify_variant_path(row[:variant_id]), class: 'hover:underline' %></p><p class="text-xs text-taupe"><%= row[:sku].presence || 'No SKU' %></p><% row[:issues].each do |issue| %><p class="text-xs text-clay"><%= issue %></p><% end %></td>
-            <% systems.each do |system| %>
-              <% match = row[system] %>
-              <td class="td"><% if match %><p><%= match[:name] %></p><p class="text-xs text-taupe"><%= match[:how] %> · <%= match[:comparison] %></p><% else %><span class="text-taupe">—</span><% end %></td>
-            <% end %>
-          </tr>
-        <% end %>
-        <% if last_page && @unmatched_items.any? %>
-          <tr><th scope="rowgroup" colspan="<%= systems.size + 1 %>" class="th bg-paper">Not on the website · no match found (<%= @unmatched_items.size %>). A suggested website name appears in parentheses; it is a guess to review, not a match.</th></tr>
-          <% @unmatched_items.each do |item| %>
-            <tr data-unmatched-row>
-              <td class="td"><% if item[:suggestion].present? %><span class="italic text-clay" title="Suggested website match, not confirmed">(<%= item[:suggestion] %>)</span><% else %><span class="text-taupe">—</span><% end %></td>
+  <div class="card overflow-hidden">
+    <div class="table-region" role="region" tabindex="0" aria-label="Product names">
+      <table class="table">
+        <thead><tr>
+          <th scope="col" class="th">Website (Shopify)</th>
+          <% systems.each do |system| %><th scope="col" class="th"><%= ProductNameCrosswalk::SYSTEMS.fetch(system) %></th><% end %>
+        </tr></thead>
+        <tbody>
+          <% @page_rows.each do |row| %>
+            <tr>
+              <td class="td"><p class="font-medium text-ink"><%= link_to row[:name], shopify_variant_path(row[:variant_id]), class: 'hover:underline' %></p><p class="text-xs text-taupe"><%= row[:sku].presence || 'No SKU' %></p><% row[:issues].each do |issue| %><p class="text-xs text-clay"><%= issue %></p><% end %></td>
               <% systems.each do |system| %>
-                <td class="td"><% if item[:system] == system %><p class="font-medium"><%= item[:name] %></p><p class="text-xs text-taupe"><%= [item[:sku].presence, item[:note]].compact.join(' · ') %></p><% end %></td>
+                <% match = row[system] %>
+                <td class="td"><% if match %><p><%= match[:name] %></p><p class="text-xs text-taupe"><%= match[:how] %> · <%= match[:comparison] %></p><% else %><span class="text-taupe">—</span><% end %></td>
               <% end %>
             </tr>
           <% end %>
-        <% end %>
-      </tbody>
-    </table>
-  </div></div>
-  <%== @pagy.series_nav if @pagy.pages > 1 %>
+          <% if @page_rows.empty? && !(last_page && @unmatched_items.any?) %>
+            <tr><td colspan="<%= systems.size + 1 %>" class="empty-row">No website products match. Clear the filters or run a Shopify sync.</td></tr>
+          <% end %>
+          <% if last_page && @unmatched_items.any? %>
+            <tr><th scope="rowgroup" colspan="<%= systems.size + 1 %>" class="th bg-paper">Not on the website · no match found (<%= @unmatched_items.size %>). A suggested website name appears in parentheses; it is a guess to review, not a match.</th></tr>
+            <% @unmatched_items.each do |item| %>
+              <tr data-unmatched-row>
+                <td class="td"><% if item[:suggestion].present? %><span class="italic text-clay" title="Suggested website match, not confirmed">(<%= item[:suggestion] %>)</span><% else %><span class="text-taupe">—</span><% end %></td>
+                <% systems.each do |system| %>
+                  <td class="td"><% if item[:system] == system %><p class="font-medium text-ink"><%= item[:name] %></p><p class="text-xs text-taupe"><%= [item[:sku].presence, item[:note]].compact.join(' · ') %></p><% end %></td>
+                <% end %>
+              </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
   <% if !last_page && @unmatched_items.any? %><p class="text-xs text-mocha"><%= @unmatched_items.size %> items with no website match are listed below the last page.</p><% end %>
 </div>

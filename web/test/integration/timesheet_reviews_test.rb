@@ -162,7 +162,7 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
     sign_in
     get people_timesheets_path
     assert_response :success
-    assert_select 'nav[aria-label="Time workspace"] a[aria-current="page"]', text: 'Timesheets'
+    assert_select 'nav[aria-label="Module"] a[aria-current="page"]', text: 'Timesheets'
     assert_select 'section[aria-label="Week calendar"]'
     assert_select 'aside#emp-key-title, aside[aria-labelledby="emp-key-title"]'
     body = response.body
@@ -182,7 +182,6 @@ class TimesheetReviewsTest < ActionDispatch::IntegrationTest
       assert_select 'select[name=to] option', minimum: 50
       assert_select 'select[name=status]'
     end
-    assert_select 'nav[aria-label="Time workspace"] details summary', /More/
 
     inside = (@sheet.period_start + 1).iso8601
     get people_timesheets_path(view: 'list', status: 'all', from: inside, to: inside)

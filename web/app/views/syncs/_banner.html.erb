@@ -2,8 +2,8 @@
     controller trigger a full refresh once a running sync completes. %>
 <div id="sync-banner" data-just-finished="<%= @just_finished ? "1" : "0" %>" <%= tour_anchor('banner') %>>
   <% if SyncEngine.running? %>
-    <div class="rounded-xl border border-butter/40 bg-butter/10 px-4 py-3 text-sm text-ink">
-      A sync is currently running — updates appear here automatically.
+    <div class="flash flash-notice" role="status">
+      Syncing… Updates appear here automatically.
     </div>
   <% end %>
 </div>

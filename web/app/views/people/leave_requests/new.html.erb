@@ -1,42 +1,44 @@
-<% content_for :title, "New leave request" %>
-<div class="space-y-6">
-  <%= page_header 'New leave request', subtitle: 'Request time off for a staff member.' %>
-
-  <%= form_with model: @leave_request, url: people_leave_requests_path, class: "mt-6 space-y-4" do |f| %>
-    <div class="grid gap-4 sm:grid-cols-2">
-      <div>
-        <%= f.label :employee_id, "Staff member", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.select :employee_id, @employees.map { |e| [e.name, e.id] }, { include_blank: "Select staff member…" }, class: "select w-full", required: true %>
+<% content_for :title, "Add leave request" %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add leave request', subtitle: 'Request time off for a staff member.' %>
+  <div class="card card-pad">
+    <%= form_with model: @leave_request, url: people_leave_requests_path, class: "space-y-6" do |f| %>
+      <% if @leave_request.errors.any? %><div role="alert" class="flash flash-alert"><%= @leave_request.errors.full_messages.to_sentence %></div><% end %>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Request</legend>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <%= f.label :employee_id, "Staff member", class: "field-label" %>
+            <%= f.select :employee_id, @employees.map { |e| [e.name, e.id] }, { include_blank: "Select staff member…" }, class: "select w-full", required: true %>
+          </div>
+          <div>
+            <%= f.label :leave_type, "Type", class: "field-label" %>
+            <%= f.select :leave_type, People::LeaveRequest::LEAVE_TYPES.map { |t| [t.humanize, t] }, {}, class: "select w-full" %>
+          </div>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <div>
+            <%= f.label :starts_on, "Starts", class: "field-label" %>
+            <%= f.date_field :starts_on, class: "input" %>
+          </div>
+          <div>
+            <%= f.label :ends_on, "Ends", class: "field-label" %>
+            <%= f.date_field :ends_on, class: "input" %>
+          </div>
+          <div>
+            <%= f.label :hours, "Hours (optional)", class: "field-label" %>
+            <%= f.number_field :hours, step: 0.5, min: 0, class: "input" %>
+          </div>
+        </div>
+        <div>
+          <%= f.label :reason, "Reason", class: "field-label" %>
+          <%= f.text_area :reason, rows: 2, class: "input" %>
+        </div>
+      </fieldset>
+      <div class="form-actions">
+        <%= f.submit "Save", class: "btn-primary" %>
+        <%= link_to "Cancel", people_leave_requests_path, class: "btn-ghost" %>
       </div>
-      <div>
-        <%= f.label :leave_type, "Type", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.select :leave_type, People::LeaveRequest::LEAVE_TYPES.map { |t| [t.titleize, t] }, {}, class: "select w-full" %>
-      </div>
-    </div>
-
-    <div class="grid gap-4 sm:grid-cols-3">
-      <div>
-        <%= f.label :starts_on, "Starts", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.date_field :starts_on, class: "input" %>
-      </div>
-      <div>
-        <%= f.label :ends_on, "Ends", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.date_field :ends_on, class: "input" %>
-      </div>
-      <div>
-        <%= f.label :hours, "Hours (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-        <%= f.number_field :hours, step: 0.5, min: 0, class: "input" %>
-      </div>
-    </div>
-
-    <div>
-      <%= f.label :reason, "Reason", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_area :reason, rows: 2, class: "input !rounded-2xl" %>
-    </div>
-
-    <div class="flex items-center gap-3 pt-2">
-      <%= f.submit "Create request", class: "btn-primary" %>
-      <%= link_to "Cancel", people_leave_requests_path, class: "btn-ghost" %>
-    </div>
-  <% end %>
+    <% end %>
+  </div>
 </div>

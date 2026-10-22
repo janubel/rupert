@@ -3,12 +3,9 @@
 <% day = (window[:to] || Date.current.iso8601) %>
 <% tabs = [['sales', 'Sales', sales_reports_path(window)], ['sales_tax', 'Sales tax', sales_tax_reports_path(window)],
            ['financial', 'Financial', financial_reports_path(window)], ['inventory', 'Inventory', inventory_reports_path(window)],
-           ['operations', 'Operations', operations_reports_path(window)], ['reconciliation', 'Reconciliation', reconciliation_reports_path(window)],
-           ['register_summary', 'Daily register', register_summary_reports_path(day: day)]] %>
+           ['operations', 'Operations', operations_reports_path(window)], ['reconciliation', 'Inventory reconciliation', reconciliation_reports_path(window)],
+           ['register_summary', 'Register summary', register_summary_reports_path(day: day)]] %>
 <% tabs << ['statements', 'Statements', finance_reports_path(window.slice(:from, :to).compact)] if Current.user&.can?('finance.read') %>
-<nav class="flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-fog bg-paper p-1" aria-label="Reports" <%= tour_anchor('tabs') %>>
-  <% tabs.each do |key, label, path| %>
-    <% active = controller_path == 'reports' && action_name == key %>
-    <%= link_to label, path, class: "nav-pill whitespace-nowrap #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (active ? 'page' : nil) } %>
-  <% end %>
-</nav>
+<div <%= tour_anchor('tabs') %>>
+  <%= page_tabs(tabs.map { |key, label, path| [label, path, controller_path == 'reports' && action_name == key] }, label: 'Reports') %>
+</div>

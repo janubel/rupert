@@ -1,28 +1,23 @@
 <% content_for :title, @pay_run.name %>
+<% can_write = Current.user.can?("payroll.write") %>
+<% menu = [] %>
+<% menu << ['Regenerate from timesheets', generate_payslips_people_pay_run_path(@pay_run), { method: :post, data: { turbo_confirm: "Rebuild all payslips from approved timesheets? Manual payslips will be replaced." } }] if can_write && @pay_run.draft? %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= @pay_run.name %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <%= @pay_run.period_label %>
-        <span class="text-taupe">·</span>
-        <span class="<%= @pay_run.paid? ? "pill-fern" : @pay_run.finalized? ? "pill-olive" : "pill-taupe" %>"><%= @pay_run.status %></span>
-        <% if @pay_run.paid_on %><span class="text-taupe">· paid <%= l(@pay_run.paid_on, format: :long) %></span><% end %>
-      </p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <% if Current.user.can?("payroll.write") %>
-        <% if @pay_run.draft? %>
-          <%= button_to "Regenerate from timesheets", generate_payslips_people_pay_run_path(@pay_run), method: :post, class: "btn-ghost btn-sm", data: { confirm: "Rebuild all payslips from approved timesheets? Manual payslips will be replaced." } %>
-          <%= button_to "Finalize", finalize_people_pay_run_path(@pay_run), method: :post, class: "btn-primary btn-sm", data: { confirm: "Lock in these payslips and totals?" } %>
-        <% elsif @pay_run.finalized? %>
-          <%= button_to "Mark paid", pay_people_pay_run_path(@pay_run), method: :post, class: "btn-primary btn-sm", data: { confirm: "Mark this pay run as paid?" } %>
-        <% end %>
-      <% end %>
-    </div>
-  </section>
+  <%= page_header @pay_run.name, subtitle: @pay_run.period_label, menu: menu do %>
+    <% if can_write && @pay_run.draft? %>
+      <%= button_to "Finalize", finalize_people_pay_run_path(@pay_run), method: :post, class: "btn-primary", data: { turbo_confirm: "Lock in these payslips and totals?" } %>
+    <% elsif can_write && @pay_run.finalized? %>
+      <%= button_to "Mark paid", pay_people_pay_run_path(@pay_run), method: :post, class: "btn-primary", data: { turbo_confirm: "Mark this pay run as paid?" } %>
+    <% end %>
+  <% end %>
 
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <dl class="facts">
+    <div><dt>Status</dt><dd><span class="<%= @pay_run.paid? ? "pill-fern" : @pay_run.finalized? ? "pill-olive" : "pill-taupe" %>"><%= @pay_run.status.humanize %></span></dd></div>
+    <% if @pay_run.paid_on %><div><dt>Paid</dt><dd><%= l(@pay_run.paid_on, format: :long) %></dd></div><% end %>
+    <div><dt>Staff</dt><dd><%= @pay_run.payslips.count %></dd></div>
+  </dl>
+
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-label="Pay run totals">
     <div class="stat">
       <div class="stat-label">Gross<%= define('gross_pay') %></div>
       <p class="stat-value mt-1"><%= number_to_currency(@pay_run.total_gross_cents / 100.0) %></p>
@@ -41,35 +36,29 @@
             note: 'Deductions not entered by hand are filled with a flat 15% estimate when the run is finalized. That is a placeholder, not a tax calculation, and marking the run paid moves no money.',
             term: 'net_pay') %>
     </div>
-    <div class="stat">
-      <p class="stat-label">Staff</p>
-      <p class="stat-value mt-1"><%= @pay_run.payslips.count %></p>
-    </div>
   </section>
 
-  <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">Payslips</h2>
-    </div>
+  <section class="section-card">
+    <%= section_heading 'Payslips' %>
 
-    <% if @pay_run.draft? && Current.user.can?("payroll.write") %>
-      <div class="border-b border-fog bg-haze/40 px-5 py-3">
+    <% if @pay_run.draft? && can_write %>
+      <div class="rounded-card bg-haze/40 p-4">
         <p class="text-xs text-taupe">Add a manual payslip (bonus, commission, off-cycle). Deductions default to a 15% tax estimate on finalize.</p>
         <%= form_with model: [@pay_run, @slip], url: add_payslip_people_pay_run_path(@pay_run), method: :post, class: "mt-2 flex flex-wrap items-end gap-2" do |f| %>
           <div>
-            <%= f.label :employee_id, "Staff member", class: "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-mocha" %>
+            <%= f.label :employee_id, "Staff member", class: "field-label" %>
             <%= f.select :employee_id, @employees.map { |e| [e.name, e.id] }, { include_blank: "…" }, class: "select w-auto", required: true %>
           </div>
           <div>
-            <%= f.label :gross_cents, "Gross $", class: "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-mocha" %>
+            <%= f.label :gross_cents, "Gross $", class: "field-label" %>
             <%= f.number_field :gross_cents, step: 100, min: 0, class: "input w-32" %>
           </div>
           <div>
-            <%= f.label :deductions_cents, "Deductions $", class: "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-mocha" %>
+            <%= f.label :deductions_cents, "Deductions $", class: "field-label" %>
             <%= f.number_field :deductions_cents, step: 100, min: 0, value: 0, class: "input w-32" %>
           </div>
           <div>
-            <%= f.label :hours, "Hours", class: "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-mocha" %>
+            <%= f.label :hours, "Hours", class: "field-label" %>
             <%= f.number_field :hours, step: 0.25, min: 0, value: 0, class: "input w-24" %>
           </div>
           <%= f.submit "Add payslip", class: "btn-primary btn-sm" %>
@@ -80,45 +69,45 @@
       </div>
     <% end %>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="table-region" role="region" tabindex="0" aria-label="Payslips">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Staff member</th>
             <th scope="col" class="th">Rate</th>
-            <th scope="col" class="th text-right">Hours<%= define('timesheet') %></th>
-            <th scope="col" class="th text-right">Gross<%= define('gross_pay') %></th>
-            <th scope="col" class="th text-right">Deductions<%= define('deductions') %></th>
-            <th scope="col" class="th text-right">Net<%= define('net_pay') %></th>
-            <% if @pay_run.draft? && Current.user.can?("payroll.write") %><th scope="col" class="th"></th><% end %>
+            <th scope="col" class="th num">Hours<%= define('timesheet') %></th>
+            <th scope="col" class="th num">Gross<%= define('gross_pay') %></th>
+            <th scope="col" class="th num">Deductions<%= define('deductions') %></th>
+            <th scope="col" class="th num">Net<%= define('net_pay') %></th>
+            <% if @pay_run.draft? && can_write %><th scope="col" class="th"><span class="sr-only">Actions</span></th><% end %>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @pay_run.payslips.empty? %>
-            <tr><td colspan="<%= @pay_run.draft? ? 7 : 6 %>" class="empty-row">No payslips yet — regenerate from timesheets or add one manually.</td></tr>
+            <tr><td colspan="<%= @pay_run.draft? ? 7 : 6 %>" class="empty-row">No payslips yet. Regenerate from timesheets or add one by hand.</td></tr>
           <% end %>
           <% @pay_run.payslips.includes(:employee, :pay_rate).order(id: :asc).each do |slip| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td font-medium text-ink"><%= link_to slip.employee&.name, people_employee_path(slip.employee), class: "hover:text-olive hover:underline" %></td>
               <td class="td text-mocha"><%= slip.pay_rate&.label || "—" %></td>
-              <td class="td text-right text-mocha"><%= number_with_precision(slip.hours, precision: 1) %></td>
-              <td class="td text-right text-mocha"><%= number_to_currency(slip.gross_cents / 100.0) %></td>
-              <td class="td text-right text-mocha"><%= number_to_currency(slip.deductions_cents / 100.0) %></td>
-              <td class="td text-right font-medium text-ink"><%= number_to_currency(slip.net_cents / 100.0) %></td>
-              <% if @pay_run.draft? && Current.user.can?("payroll.write") %>
-                <td class="td text-right"><%= button_to "Remove", remove_payslip_people_pay_run_path(@pay_run, payslip_id: slip.id), method: :post, class: "text-xs font-semibold text-rose hover:underline" %></td>
+              <td class="td num"><%= number_with_precision(slip.hours, precision: 1) %></td>
+              <td class="td num"><%= number_to_currency(slip.gross_cents / 100.0) %></td>
+              <td class="td num"><%= number_to_currency(slip.deductions_cents / 100.0) %></td>
+              <td class="td num font-medium text-ink"><%= number_to_currency(slip.net_cents / 100.0) %></td>
+              <% if @pay_run.draft? && can_write %>
+                <td class="td text-right"><%= button_to "Remove", remove_payslip_people_pay_run_path(@pay_run, payslip_id: slip.id), method: :post, class: "btn-ghost btn-sm text-rose" %></td>
               <% end %>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 
   <% if @pay_run.notes.present? %>
-    <section class="card card-pad">
-      <h2 class="font-display text-lg text-ink">Notes</h2>
-      <p class="mt-1 whitespace-pre-wrap text-sm text-mocha"><%= @pay_run.notes %></p>
+    <section class="section-card">
+      <%= section_heading 'Notes' %>
+      <p class="whitespace-pre-wrap text-sm text-mocha"><%= @pay_run.notes %></p>
     </section>
   <% end %>
 </div>

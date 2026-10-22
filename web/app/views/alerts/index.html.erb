@@ -1,15 +1,12 @@
-<% content_for :title, "Alerts" %>
+<% content_for :title, 'Stock alerts' %>
 <div class="space-y-6" data-controller="bulk">
-  <%= page_header 'Alerts', subtitle: 'Low-stock flags raised from inventory levels.' %>
+  <%= page_header 'Stock alerts', subtitle: 'Low-stock flags raised from inventory levels, most urgent first.' %>
 
-  <nav class="flex flex-wrap gap-1" aria-label="Alert status" <%= tour_anchor('tabs') %>>
-    <% ["open", "resolved", "ignored", "all"].each do |tab| %>
-      <%= link_to "#{tab} #{@counts[tab] ? "(#{@counts[tab]})" : ""}", alerts_path(status: tab),
-            class: (@status == tab ? "rounded-full bg-olive px-3.5 py-1.5 text-sm font-medium text-cream" : "rounded-full px-3.5 py-1.5 text-sm font-medium text-mocha hover:bg-haze hover:text-ink") %>
-    <% end %>
-  </nav>
+  <div <%= tour_anchor('tabs') %>>
+    <%= page_tabs(%w[open resolved ignored all].map { |tab| ["#{tab.capitalize}#{@counts[tab] ? " (#{@counts[tab]})" : ''}", alerts_path(status: tab), @status == tab] }, label: 'Alert status') %>
+  </div>
 
-  <p class="text-xs text-taupe">Open alerts are sorted by urgency — least days of cover first. "Suggested" reorders ~30 days of stock at the recent sales pace; it's advice, nothing is ordered automatically.</p>
+  <%= fold_explainer('Open alerts are sorted by urgency, least days of cover first. "Suggested" reorders about 30 days of stock at the recent sales pace; it is advice, and nothing is ordered automatically.', class: 'text-sm text-mocha') %>
   <% example = @alerts.map { |alert| [alert, @advice[alert.id]] }.find { |_alert, row| row&.days_of_cover } %>
   <% if example %>
     <% alert, row = example; on_hand = row.shop_qty.to_i + row.pos_qty.to_i; pace = row.sold_30.to_f / RestockAdvisor::COVER_DAYS %>
@@ -23,79 +20,79 @@
   <%= form_tag bulk_update_alerts_path, method: :post do %>
     <%= hidden_field_tag :tab, @status %>
     <div class="card overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-fog bg-haze/40 px-5 py-3" <%= tour_anchor('bulk') %>>
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-fog px-5 py-3" <%= tour_anchor('bulk') %>>
         <span data-bulk-target="count" class="text-sm text-taupe">Select rows to update</span>
         <div data-bulk-target="actions" class="hidden items-center gap-2">
-          <%= submit_tag "Resolve selected", name: "status", value: "resolved", class: "btn-primary btn-sm" %>
-          <%= submit_tag "Ignore selected", name: "status", value: "ignored", class: "btn-ghost btn-sm" %>
+          <%= submit_tag 'Resolve selected', name: 'status', value: 'resolved', class: 'btn-primary btn-sm' %>
+          <%= submit_tag 'Ignore selected', name: 'status', value: 'ignored', class: 'btn-ghost btn-sm' %>
         </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
+      <div class="table-region" role="region" tabindex="0" aria-label="Stock alerts">
+        <table class="table">
+          <thead>
             <tr>
               <th scope="col" class="th w-10">
                 <input type="checkbox" data-bulk-target="all" data-action="change->bulk#toggleAll" class="accent-olive" aria-label="Select all">
               </th>
               <th scope="col" class="th">SKU</th>
               <th scope="col" class="th">Product</th>
-              <th scope="col" class="th text-right" title="Units held at Shopify locations">Shop</th>
-              <th scope="col" class="th text-right" title="Units held at Square locations">POS</th>
-              <th scope="col" class="th text-right" title="Units sold in the last 14 days, all channels" <%= tour_anchor('pace') %>>Sold 14d<%= define('sales_pace') %></th>
-              <th scope="col" class="th text-right" title="Units sold in the last 30 days, all channels">Sold 30d</th>
-              <th scope="col" class="th text-right" title="Days until you run out at the recent sales pace" <%= tour_anchor('cover') %>>Cover<%= define('days_of_cover') %></th>
-              <th scope="col" class="th text-right" title="Units to reorder to cover ~30 days at recent pace" <%= tour_anchor('suggested') %>>Suggested<%= define('suggested_reorder') %></th>
+              <th scope="col" class="th num" title="Units held at Shopify locations">Shop</th>
+              <th scope="col" class="th num" title="Units held at Square locations">POS</th>
+              <th scope="col" class="th num" title="Units sold in the last 14 days, all channels" <%= tour_anchor('pace') %>>Sold 14d<%= define('sales_pace') %></th>
+              <th scope="col" class="th num" title="Units sold in the last 30 days, all channels">Sold 30d</th>
+              <th scope="col" class="th num" title="Days until you run out at the recent sales pace" <%= tour_anchor('cover') %>>Cover<%= define('days_of_cover') %></th>
+              <th scope="col" class="th num" title="Units to reorder to cover ~30 days at recent pace" <%= tour_anchor('suggested') %>>Suggested<%= define('suggested_reorder') %></th>
               <th scope="col" class="th">Raised</th>
               <th scope="col" class="th text-right">Action</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-fog" data-bulk-target="rows">
+          <tbody data-bulk-target="rows">
             <% if @alerts.empty? %>
               <tr>
-                <td colspan="11" class="empty-row">No alerts here.</td>
+                <td colspan="11" class="empty-row"><%= @status == 'open' ? 'No open alerts. Stock is above every low-stock threshold.' : 'No alerts here.' %></td>
               </tr>
             <% end %>
             <% @alerts.each do |alert| %>
               <% row = @advice[alert.id] %>
-              <tr class="hover:bg-cream">
+              <tr>
                 <td class="td">
                   <input type="checkbox" name="alert_ids[]" value="<%= alert.id %>" data-bulk-row data-action="change->bulk#toggleRow" class="accent-olive" aria-label="Select <%= alert.sku %>">
                 </td>
-                <td class="td font-mono text-xs text-mocha"><%= alert.sku.presence || "—" %></td>
+                <td class="td font-mono text-xs text-mocha"><%= alert.sku.presence || '—' %></td>
                 <td class="td">
-                  <p class="font-medium text-ink"><%= alert.product_name.presence || "—" %></p>
+                  <p class="font-medium text-ink"><%= alert.product_name.presence || '—' %></p>
                   <p class="text-xs text-taupe"><%= alert.variant_name %></p>
                 </td>
-                <td class="td text-right font-medium text-ink"><%= row&.shop_qty || "—" %></td>
-                <td class="td text-right font-medium text-ink"><%= row&.pos_qty || "—" %></td>
-                <td class="td text-right text-mocha"><%= row&.sold_14 || 0 %></td>
-                <td class="td text-right text-mocha"><%= row&.sold_30 || 0 %></td>
-                <td class="td text-right">
+                <td class="td num font-medium text-ink"><%= row&.shop_qty || '—' %></td>
+                <td class="td num font-medium text-ink"><%= row&.pos_qty || '—' %></td>
+                <td class="td num text-mocha"><%= row&.sold_14 || 0 %></td>
+                <td class="td num text-mocha"><%= row&.sold_30 || 0 %></td>
+                <td class="td num">
                   <% if row && row.days_of_cover %>
-                    <span class="<%= row.days_of_cover < 7 ? "font-semibold text-rose" : "text-mocha" %>"><%= row.days_of_cover %>d</span>
+                    <span class="<%= row.days_of_cover < 7 ? 'font-semibold text-rose' : 'text-mocha' %>"><%= row.days_of_cover %>d</span>
                   <% else %>
                     <span class="text-xs text-taupe">no sales</span>
                   <% end %>
                 </td>
-                <td class="td text-right">
+                <td class="td num">
                   <% if row && row.suggested_qty %>
-                    <span class="rounded-lg bg-haze px-2 py-1 font-semibold text-ink"><%= row.suggested_qty %></span>
+                    <span class="font-semibold text-ink"><%= row.suggested_qty %></span>
                   <% else %>
                     <span class="text-xs text-taupe">—</span>
                   <% end %>
                 </td>
                 <td class="td whitespace-nowrap text-mocha"><%= l(alert.createdAt, format: :short) %></td>
                 <td class="td text-right">
-                  <% if alert.status == "open" %>
+                  <% if alert.status == 'open' %>
                     <div class="flex justify-end gap-1.5">
-                      <%= form_tag update_status_alerts_path, method: :post, class: "inline" do %>
+                      <%= form_tag update_status_alerts_path, method: :post, class: 'inline' do %>
                         <%= hidden_field_tag :id, alert.id %>
-                        <%= button_tag "Resolve", name: "status", value: "resolved", class: "btn-ghost btn-sm" %>
-                        <%= button_tag "Ignore", name: "status", value: "ignored", class: "btn-ghost btn-sm" %>
+                        <%= button_tag 'Resolve', name: 'status', value: 'resolved', class: 'btn-ghost btn-sm' %>
+                        <%= button_tag 'Ignore', name: 'status', value: 'ignored', class: 'btn-ghost btn-sm' %>
                       <% end %>
                     </div>
                   <% else %>
-                    <span class="text-xs text-taupe"><%= alert.resolvedAt ? l(alert.resolvedAt, format: :short) : "—" %></span>
+                    <span class="text-xs text-taupe"><%= alert.resolvedAt ? l(alert.resolvedAt, format: :short) : '—' %></span>
                   <% end %>
                 </td>
               </tr>

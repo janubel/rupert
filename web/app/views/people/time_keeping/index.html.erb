@@ -4,32 +4,25 @@
 <% status_pill = ->(status) { { 'On schedule' => 'pill-fern', 'Unscheduled' => 'pill-clay', 'Over schedule' => 'pill-clay', 'Under schedule' => 'pill-clay', 'C-Trax only' => 'pill-taupe' }.fetch(status, 'pill-rose') } %>
 <% totals = @report.totals %>
 <div class="space-y-6">
-  <%= render 'shared/time_navigation' %>
+  <%= page_header 'Time keeping', subtitle: 'Who was scheduled and who actually worked, for any dates.',
+        menu: [['Download daily CSV', people_time_keeping_path(base.merge(format: :csv, kind: 'daily')), { data: { turbo: false } }],
+               ['Download staff CSV', people_time_keeping_path(base.merge(format: :csv, kind: 'staff')), { data: { turbo: false } }],
+               ['Download schedule CSV', people_time_keeping_path(base.merge(format: :csv, kind: 'shifts')), { data: { turbo: false } }]] do %>
+    <%= link_to 'Download PDF', people_time_keeping_path(base.merge(format: :pdf)), class: 'btn-primary', data: { turbo: false } %>
+  <% end %>
+  <%= fold_explainer('Worked hours count Rupert clock and Square punches; Rupert wins where they overlap, so nothing is counted twice. C-Trax register shifts are shown for comparison only. This page changes nothing.', class: 'text-sm text-mocha') %>
 
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Time keeping</h1>
-      <p class="mt-1 text-sm text-mocha">Who was scheduled and who actually worked, for any dates. Worked hours are counted Rupert clock and Square punches (Rupert wins where they overlap, so nothing is counted twice). C-Trax register shifts are shown for comparison only.</p>
-    </div>
-    <div class="flex flex-wrap gap-2">
-      <%= link_to 'Download PDF', people_time_keeping_path(base.merge(format: :pdf)), class: 'btn-primary btn-sm', data: { turbo: false } %>
-      <%= link_to 'Daily CSV', people_time_keeping_path(base.merge(format: :csv, kind: 'daily')), class: 'btn-ghost btn-sm', data: { turbo: false } %>
-      <%= link_to 'Staff CSV', people_time_keeping_path(base.merge(format: :csv, kind: 'staff')), class: 'btn-ghost btn-sm', data: { turbo: false } %>
-      <%= link_to 'Schedule CSV', people_time_keeping_path(base.merge(format: :csv, kind: 'shifts')), class: 'btn-ghost btn-sm', data: { turbo: false } %>
-    </div>
-  </section>
-
-  <%= form_with url: people_time_keeping_path, method: :get, class: 'card card-pad space-y-3' do %>
+  <%= form_with url: people_time_keeping_path, method: :get, class: 'toolbar' do %>
     <%= hidden_field_tag :view, @view %>
-    <div class="flex flex-wrap items-end gap-3">
-      <%= render 'shared/time_range_picker', from: @from, to: @to %>
-      <% if @all_employees %>
-        <div><%= label_tag :employee_id, 'Staff member', class: 'field-label' %><%= select_tag :employee_id, options_for_select([['All staff', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
-      <% end %>
-      <%= submit_tag 'Show', class: 'btn-primary', name: nil %>
-      <%= link_to 'Reset', people_time_keeping_path(view: @view), class: 'btn-ghost btn-sm' %>
+    <%= render 'shared/time_range_picker', from: @from, to: @to %>
+    <% if @all_employees %>
+      <div class="toolbar-field"><%= label_tag :employee_id, 'Staff member', class: 'field-label' %><%= select_tag :employee_id, options_for_select([['All staff', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
+    <% end %>
+    <div class="toolbar-actions">
+      <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
+      <%= link_to 'Clear', people_time_keeping_path(view: @view), class: 'btn-ghost' %>
     </div>
-    <p class="text-sm text-mocha"><%= @from.strftime('%a %b %-d, %Y') %> – <%= @to.strftime('%a %b %-d, %Y') %> · <%= pluralize(@report.dates.size, 'day') %><% unless @all_employees %> · your own time only<% end %></p>
+    <p class="basis-full text-sm text-mocha"><%= @from.strftime('%a %b %-d, %Y') %> – <%= @to.strftime('%a %b %-d, %Y') %> · <%= pluralize(@report.dates.size, 'day') %><% unless @all_employees %> · your own time only<% end %></p>
   <% end %>
 
   <section class="grid grid-cols-2 gap-3 sm:grid-cols-5" aria-label="Totals">
@@ -40,62 +33,57 @@
     <div class="stat"><p class="stat-label">Needs a look</p><p class="stat-value mt-1 <%= 'text-rose' if totals[:attention].positive? %>"><%= totals[:attention] %></p><p class="text-xs text-mocha">person-days</p></div>
   </section>
 
-  <nav class="flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-fog bg-paper p-1" aria-label="Time keeping views">
-    <% [['calendar', 'Calendar'], ['roster', 'Roster'], ['daily', 'Daily report'], ['staff', 'Staff summary']].each do |key, label| %>
-      <%= link_to label, people_time_keeping_path(base.merge(view: key)), class: "nav-pill whitespace-nowrap #{@view == key ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { current: (@view == key ? 'page' : nil) } %>
-    <% end %>
-  </nav>
+  <%= page_tabs([['calendar', 'Calendar'], ['roster', 'Roster'], ['daily', 'Daily report'], ['staff', 'Staff summary']].map { |key, label| [label, people_time_keeping_path(base.merge(view: key)), @view == key] }, label: 'Time keeping views') %>
 
   <% case @view %>
   <% when 'calendar' %>
     <% first = @from.beginning_of_week(:sunday); last = @to.end_of_week(:sunday) %>
     <% if (last - first).to_i > 186 %>
-      <p class="card card-pad text-sm text-mocha">The calendar shows up to six months. Pick a shorter range, or use the Daily report for this one.</p>
+      <%= empty_state 'The calendar shows up to six months', hint: 'Pick a shorter range, or use the Daily report for this one.' %>
     <% else %>
-      <section class="card overflow-x-auto" aria-label="Schedule calendar">
-        <table class="time-keeping-calendar w-full table-fixed text-xs">
-          <caption class="sr-only">Scheduled shifts and worked hours by day</caption>
-          <thead class="border-b border-fog bg-haze/60"><tr><% %w[Sun Mon Tue Wed Thu Fri Sat].each do |d| %><th scope="col" class="th"><%= d %></th><% end %></tr></thead>
-          <tbody>
-            <% (first..last).each_slice(7) do |week| %>
-              <tr class="align-top">
-                <% week.each do |date| %>
-                  <% inside = date.between?(@from, @to); entries = @report.days_by_date.fetch(date, []) %>
-                  <td class="border border-fog p-1.5 <%= inside ? '' : 'bg-haze/40 text-taupe' %> <%= 'ring-2 ring-inset ring-olive' if date == Date.current %>" style="min-width:7.5rem;height:6rem">
-                    <div class="mb-1 flex items-baseline justify-between"><span class="font-semibold <%= 'text-olive-deep' if date == Date.current %>"><%= date.day == 1 || date == first ? date.strftime('%b %-d') : date.day %></span>
-                      <% if inside && entries.any? %><span class="text-[10px] text-mocha"><%= h.call(entries.sum(&:worked_hours)) %>h</span><% end %></div>
-                    <% if inside %>
-                      <ul class="space-y-1">
-                        <% entries.each do |day| %>
-                          <li class="rounded-md border border-fog bg-paper px-1.5 py-1 leading-tight" title="<%= day.employee_name %> · <%= day.status %>">
-                            <span class="block truncate font-medium text-ink"><%= day.employee_name %></span>
-                            <span class="block truncate text-mocha"><%= day.schedule_label.presence || 'Not scheduled' %></span>
-                            <span class="block"><%= h.call(day.worked_hours) %>h worked<% if day.attention? %> · <span class="<%= status_pill.call(day.status) %>"><%= day.status %></span><% end %></span>
-                          </li>
-                        <% end %>
-                      </ul>
-                    <% end %>
-                  </td>
-                <% end %>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+      <section class="card" aria-label="Schedule calendar">
+        <div class="table-region" role="region" tabindex="0" aria-label="Schedule calendar by week">
+          <table class="time-keeping-calendar table table-fixed text-xs">
+            <caption class="sr-only">Scheduled shifts and worked hours by day</caption>
+            <thead><tr><% %w[Sun Mon Tue Wed Thu Fri Sat].each do |d| %><th scope="col" class="th"><%= d %></th><% end %></tr></thead>
+            <tbody>
+              <% (first..last).each_slice(7) do |week| %>
+                <tr class="align-top">
+                  <% week.each do |date| %>
+                    <% inside = date.between?(@from, @to); entries = @report.days_by_date.fetch(date, []) %>
+                    <td class="h-24 min-w-[7.5rem] border border-fog p-1.5 <%= inside ? '' : 'bg-haze/40 text-taupe' %> <%= 'ring-2 ring-inset ring-olive' if date == Date.current %>">
+                      <div class="mb-1 flex items-baseline justify-between"><span class="font-semibold <%= 'text-olive-deep' if date == Date.current %>"><%= date.day == 1 || date == first ? date.strftime('%b %-d') : date.day %></span>
+                        <% if inside && entries.any? %><span class="text-xs text-mocha"><%= h.call(entries.sum(&:worked_hours)) %>h</span><% end %></div>
+                      <% if inside %>
+                        <ul class="space-y-1">
+                          <% entries.each do |day| %>
+                            <li class="rounded-md border border-fog bg-paper px-1.5 py-1 leading-tight" title="<%= day.employee_name %> · <%= day.status %>">
+                              <span class="block truncate font-medium text-ink"><%= day.employee_name %></span>
+                              <span class="block truncate text-mocha"><%= day.schedule_label.presence || 'Not scheduled' %></span>
+                              <span class="block"><%= h.call(day.worked_hours) %>h worked<% if day.attention? %> · <span class="<%= status_pill.call(day.status) %>"><%= day.status %></span><% end %></span>
+                            </li>
+                          <% end %>
+                        </ul>
+                      <% end %>
+                    </td>
+                  <% end %>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
       </section>
     <% end %>
 
   <% when 'roster' %>
     <% if @report.dates.size > 45 %>
-      <p class="card card-pad text-sm text-mocha">The roster shows up to 45 days side by side. Pick a shorter range (a pay week or a month), or use the Daily report.</p>
+      <%= empty_state 'The roster shows up to 45 days side by side', hint: 'Pick a shorter range (a pay week or a month), or use the Daily report.' %>
     <% else %>
-      <div class="card overflow-hidden">
-        <div class="border-b border-fog px-5 py-3">
-          <h2 class="font-display text-lg text-ink">Roster</h2>
-          <p class="text-xs text-mocha">One row per person, one column per day: scheduled shift, then hours worked. Use Columns to hide days or totals.</p>
-        </div>
+      <section class="section-card">
+        <%= section_heading 'Roster', hint: 'One row per person, one column per day: scheduled shift, then hours worked. Use Columns to hide days or totals.' %>
         <%= report_table "time-roster-#{@report.dates.size}", label: 'Roster' do %>
-          <table class="operations-table w-full text-xs">
-            <thead class="border-b border-fog bg-haze/60">
+          <table class="table text-xs">
+            <thead>
               <tr>
                 <th scope="col" class="th" data-col="staff">Staff member</th>
                 <% @report.dates.each do |date| %><th scope="col" class="th whitespace-nowrap" data-col="d-<%= date.iso8601 %>" data-label="<%= date.strftime('%a %b %-d') %>"><%= date.strftime('%a') %><br><%= date.strftime('%b %-d') %></th><% end %>
@@ -104,10 +92,10 @@
                 <th scope="col" class="th num" data-col="variance">Difference</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-fog">
+            <tbody>
               <% @report.roster_people.each do |person, name| %>
                 <% cells = @report.dates.map { |date| @report.roster_cell(person, date) } %>
-                <tr class="hover:bg-cream">
+                <tr>
                   <th scope="row" class="td whitespace-nowrap text-left font-medium text-ink"><%= name %></th>
                   <% cells.each do |day| %>
                     <td class="td whitespace-nowrap <%= 'bg-rose/10' if day&.attention? %>" data-sort-value="<%= day&.worked_hours %>" title="<%= day&.status %>">
@@ -122,22 +110,19 @@
                   <td class="td num"><%= h.call(cells.compact.sum(&:variance)) %></td>
                 </tr>
               <% end %>
-              <% if @report.roster_people.empty? %><tr><td class="empty-row" colspan="<%= @report.dates.size + 4 %>">No staff in this view.</td></tr><% end %>
+              <% if @report.roster_people.empty? %><tr><td class="empty-row" colspan="<%= @report.dates.size + 4 %>">Nothing scheduled or punched in this range. Pick other dates.</td></tr><% end %>
             </tbody>
           </table>
         <% end %>
-      </div>
+      </section>
     <% end %>
 
   <% when 'daily' %>
-    <div class="card overflow-hidden">
-      <div class="border-b border-fog px-5 py-3">
-        <h2 class="font-display text-lg text-ink">Daily report</h2>
-        <p class="text-xs text-mocha">Every person-day with a scheduled shift or a punch. Status calls out missing punches, unscheduled work, open punches, likely missed clock-outs and differences over <%= TimeKeepingReport::VARIANCE_ALERT_HOURS %> hours.</p>
-      </div>
+    <section class="section-card">
+      <%= section_heading 'Daily report', hint: "Every person-day with a scheduled shift or a punch. Status calls out missing punches, unscheduled work, open punches, likely missed clock-outs and differences over #{TimeKeepingReport::VARIANCE_ALERT_HOURS} hours." %>
       <%= report_table 'time-daily', label: 'Daily report' do %>
-        <table class="operations-table w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
+        <table class="table">
+          <thead>
             <tr>
               <th scope="col" class="th" data-col="date">Date</th>
               <th scope="col" class="th" data-col="staff">Staff member</th>
@@ -151,9 +136,9 @@
               <th scope="col" class="th" data-col="status">Status</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-fog">
+          <tbody>
             <% @report.days.reverse_each do |day| %>
-              <tr class="hover:bg-cream">
+              <tr>
                 <td class="td whitespace-nowrap" data-sort-value="<%= day.date.iso8601 %>"><%= day.date.strftime('%a %b %-d, %Y') %></td>
                 <td class="td font-medium text-ink"><%= day.employee_name %></td>
                 <td class="td text-mocha"><%= day.schedule_label.presence || 'Not scheduled' %></td>
@@ -166,20 +151,18 @@
                 <td class="td"><span class="<%= status_pill.call(day.status) %>"><%= day.status %></span></td>
               </tr>
             <% end %>
-            <% if @report.days.empty? %><tr><td class="empty-row" colspan="10">Nothing scheduled or punched in this range.</td></tr><% end %>
+            <% if @report.days.empty? %><tr><td class="empty-row" colspan="10">Nothing scheduled or punched in this range. Pick other dates.</td></tr><% end %>
           </tbody>
         </table>
       <% end %>
-    </div>
+    </section>
 
   <% else %>
-    <div class="card overflow-hidden">
-      <div class="border-b border-fog px-5 py-3">
-        <h2 class="font-display text-lg text-ink">Staff summary</h2>
-      </div>
+    <section class="section-card">
+      <%= section_heading 'Staff summary' %>
       <%= report_table 'time-staff', label: 'Staff summary' do %>
-        <table class="operations-table w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
+        <table class="table">
+          <thead>
             <tr>
               <th scope="col" class="th" data-col="staff">Staff member</th>
               <th scope="col" class="th num" data-col="shifts">Shifts</th>
@@ -194,9 +177,9 @@
               <th scope="col" class="th num" data-col="attention">Needs a look</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-fog">
+          <tbody>
             <% @report.staff.each do |row| %>
-              <tr class="hover:bg-cream">
+              <tr>
                 <td class="td font-medium text-ink"><%= link_to row.employee_name, people_time_keeping_path(base.merge(view: 'daily', employee_id: row.employee_id)), class: 'underline decoration-fog' %></td>
                 <td class="td num"><%= row.shifts %></td>
                 <td class="td num"><%= h.call(row.scheduled_hours) %></td>
@@ -210,12 +193,12 @@
                 <td class="td num <%= 'text-rose' if row.attention_days.positive? %>"><%= row.attention_days %></td>
               </tr>
             <% end %>
-            <% if @report.staff.empty? %><tr><td class="empty-row" colspan="11">Nothing scheduled or punched in this range.</td></tr><% end %>
+            <% if @report.staff.empty? %><tr><td class="empty-row" colspan="11">Nothing scheduled or punched in this range. Pick other dates.</td></tr><% end %>
           </tbody>
         </table>
       <% end %>
-    </div>
+    </section>
   <% end %>
 
-  <p class="text-xs text-mocha">Schedules are edited in <%= link_to 'Schedule', people_scheduled_shifts_path, class: 'underline' %>; punch detail is in the <%= link_to 'Punch report', people_punch_history_path(from: @from.iso8601, to: @to.iso8601), class: 'underline' %>. This page changes nothing.</p>
+  <p class="text-xs text-mocha">Schedules are edited in <%= link_to 'Shifts', people_scheduled_shifts_path, class: 'underline' %>; punch detail is in the <%= link_to 'Punch report', people_punch_history_path(from: @from.iso8601, to: @to.iso8601), class: 'underline' %>.</p>
 </div>

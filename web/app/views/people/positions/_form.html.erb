@@ -1,27 +1,30 @@
-<%= form_with model: position, url: (position.persisted? ? people_position_path(position) : people_positions_path), class: "mt-6 space-y-4" do |f| %>
-  <div class="grid gap-4 sm:grid-cols-2">
-    <div>
-      <%= f.label :name, "Position title", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_field :name, class: "input", autocomplete: "off", required: true, placeholder: "e.g. Shift lead" %>
+<div class="card card-pad">
+  <%= form_with model: position, url: (position.persisted? ? people_position_path(position) : people_positions_path), class: "space-y-6" do |f| %>
+    <% if position.errors.any? %><div role="alert" class="flash flash-alert"><%= position.errors.full_messages.to_sentence %></div><% end %>
+    <fieldset class="space-y-4">
+      <legend class="card-title">Position</legend>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <%= f.label :name, "Position title", class: "field-label" %>
+          <%= f.text_field :name, class: "input", autocomplete: "off", required: true, placeholder: "e.g. Shift lead" %>
+        </div>
+        <div>
+          <%= f.label :pay_grade, "Pay grade", class: "field-label" %>
+          <%= f.text_field :pay_grade, class: "input", autocomplete: "off", placeholder: "G2" %>
+        </div>
+      </div>
+      <div>
+        <%= f.label :department_id, "Department", class: "field-label" %>
+        <%= f.select :department_id, @departments.map { |d| [d.name, d.id] }, { include_blank: "—" }, class: "select w-full" %>
+      </div>
+      <div>
+        <%= f.label :description, "Description", class: "field-label" %>
+        <%= f.text_area :description, rows: 2, class: "input" %>
+      </div>
+    </fieldset>
+    <div class="form-actions">
+      <%= f.submit "Save", class: "btn-primary" %>
+      <%= link_to "Cancel", people_positions_path, class: "btn-ghost" %>
     </div>
-    <div>
-      <%= f.label :pay_grade, "Pay grade", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_field :pay_grade, class: "input", autocomplete: "off", placeholder: "G2" %>
-    </div>
-  </div>
-
-  <div>
-    <%= f.label :department_id, "Department", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-    <%= f.select :department_id, @departments.map { |d| [d.name, d.id] }, { include_blank: "—" }, class: "select w-full sm:max-w-xs" %>
-  </div>
-
-  <div>
-    <%= f.label :description, "Description", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-    <%= f.text_area :description, rows: 2, class: "input !rounded-2xl" %>
-  </div>
-
-  <div class="flex items-center gap-3 pt-2">
-    <%= f.submit position.persisted? ? "Save changes" : "Add position", class: "btn-primary" %>
-    <%= link_to "Cancel", people_positions_path, class: "btn-ghost" %>
-  </div>
-<% end %>
+  <% end %>
+</div>

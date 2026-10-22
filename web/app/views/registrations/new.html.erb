@@ -1,10 +1,18 @@
-<% content_for :title, 'Start free with Rupert' %>
-<div class="mx-auto max-w-xl pt-10"><section class="card card-pad space-y-5">
-<p class="text-xs uppercase tracking-wide">Your business, connected</p><h1 class="page-title">Meet your new back office.</h1>
-<p>Create your account free with Google. No card required. You can choose a paid subscription from your workspace.</p>
-<%= form_with scope: :registration, url: start_path, data: {turbo: false}, class: 'space-y-4' do |f| %>
-<div><%= f.label :workspace_name, 'Business name', class: 'field-label' %><%= f.text_field :workspace_name, required: true, maxlength: 160, class: 'input' %></div>
-<div><%= f.label :requested_subdomain, 'Workspace address', class: 'field-label' %><%= f.text_field :requested_subdomain, required: true, minlength: 2, maxlength: 63, pattern: '[a-z0-9][a-z0-9\-]*[a-z0-9]', class: 'input', autocapitalize: 'none' %></div>
-<p class="text-sm">Google verifies your email before we create your account. Connecting a business provider is a separate permission you control.</p>
-<%= f.submit 'Create free account with Google', class: 'btn-primary' %><% end %>
-<%= link_to 'Already a customer? Sign in', login_path, class: 'underline' %></section></div>
+<%# Free account: a Form page (docs/ui-standards.md §4). %>
+<% content_for :title, 'Create your free account' %>
+<div class="page-narrow space-y-6 pt-6">
+  <%= page_header 'Create your free account', subtitle: 'Create your account free with Google; no card required.', eyebrow: 'Your business, connected' %>
+  <p class="text-sm text-mocha">Google verifies your email before we create your account. Connecting a business provider is a separate permission you control, and you can choose a paid subscription from your workspace.</p>
+
+  <%= form_with scope: :registration, url: start_path, data: { turbo: false }, class: 'card card-pad space-y-4' do |f| %>
+    <fieldset class="space-y-3">
+      <legend class="card-title">Your business</legend>
+      <div><%= f.label :workspace_name, 'Business name', class: 'field-label' %><%= f.text_field :workspace_name, required: true, maxlength: 160, class: 'input' %></div>
+      <div><%= f.label :requested_subdomain, 'Workspace address', class: 'field-label' %><%= f.text_field :requested_subdomain, required: true, minlength: 2, maxlength: 63, pattern: '[a-z0-9][a-z0-9\-]*[a-z0-9]', class: 'input', autocapitalize: 'none' %></div>
+    </fieldset>
+    <div class="form-actions">
+      <%= f.submit 'Continue with Google', class: 'btn-primary' %>
+      <%= link_to 'Already a customer? Sign in', login_path, class: 'btn-ghost' %>
+    </div>
+  <% end %>
+</div>

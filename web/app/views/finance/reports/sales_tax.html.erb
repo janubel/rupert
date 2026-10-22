@@ -1,23 +1,11 @@
-<% content_for :title, "Sales tax report" %>
-<div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
-
-  <%= render layout: 'finance/page_header', locals: { title: 'Sales tax report', range: "#{@from} through #{@to}", print: true,
-        explain: 'Tax collected on sales between any two dates, by source and store. Pick the dates your filing period uses.' } do %>
-    <%= link_to "All reports", finance_reports_path, class: "btn-ghost btn-sm" %>
-  <% end %>
-
-  <%= render 'window', path: finance_reports_sales_tax_path, csv_path: finance_reports_sales_tax_path(format: :csv, from: @from, to: @to) %>
-  <nav class="no-print flex flex-wrap gap-2 text-sm" aria-label="Quick date ranges">
-    <% today = Date.current %>
-    <%= link_to 'This month', finance_reports_sales_tax_path(from: today.beginning_of_month, to: today), class: 'btn-ghost btn-sm' %>
-    <%= link_to 'Last month', finance_reports_sales_tax_path(from: (today - 1.month).beginning_of_month, to: (today - 1.month).end_of_month), class: 'btn-ghost btn-sm' %>
-    <%= link_to 'This quarter', finance_reports_sales_tax_path(from: today.beginning_of_quarter, to: today), class: 'btn-ghost btn-sm' %>
-    <%= link_to 'Last quarter', finance_reports_sales_tax_path(from: (today - 3.months).beginning_of_quarter, to: (today - 3.months).end_of_quarter), class: 'btn-ghost btn-sm' %>
-    <%= link_to 'Year to date', finance_reports_sales_tax_path(from: today.beginning_of_year, to: today), class: 'btn-ghost btn-sm' %>
-  </nav>
-
-  <p class="text-sm text-mocha">Each source and store is its own line and lines are not added together: a card sale can appear in a store and in its processor. Unavailable means the source did not report the amount. <%= link_to 'Open in Reports to filter sources or estimate SwipeSimple tax', sales_tax_reports_path(from: @from, to: @to), class: 'font-semibold underline' %>.</p>
+<% content_for :title, 'Sales tax' %>
+<div class="space-y-6">
+  <%= render layout: 'finance/page_header', locals: { title: 'Sales tax', range: report_range_label(@from, @to), print: true,
+        menu: [['Download CSV', finance_reports_sales_tax_path(format: :csv, from: @from, to: @to), { data: { turbo: false } }],
+               ['Filter sources or estimate SwipeSimple tax', sales_tax_reports_path(from: @from, to: @to)], ['All statements', finance_reports_path]],
+        explain: 'Tax collected on sales between any two dates, by source and store. Pick the dates your filing period uses. Each source and store is its own line and lines are not added together: a card sale can appear in a store and in its processor. Unavailable means the source did not report the amount.' } do %><% end %>
+  <%= render 'finance/reports/tabs' %>
+  <%= render 'window', path: finance_reports_sales_tax_path %>
 
   <%= render 'reports/sales_tax_table', report: @report %>
 </div>

@@ -1,30 +1,44 @@
-<% content_for :title, 'Match Authorize.net payments to sales' %>
+<% content_for :title, 'Authorize.net payment matches' %>
+<% menu = [['Commission preview', commission_preview_time_clock_path]] %>
+<% menu.unshift(['Connection and live payment reports', pos_connection_path('authorize_net_reporting')]) if Current.user.can?('settings.read') %>
 <div class="space-y-6">
-  <section class="card card-pad space-y-3"><h1 class="page-title">Match Authorize.net payments to sales</h1>
-    <p>Confirm that a gateway charge paid for an existing sale. Each match stays with that sale as payment statuses change. Refunds and voids remove it from the 1% estimate; replayed events never add another sale.</p>
-    <%= fold_explainer('Suggestions use an exact invoice reference, currency and full amount. A suggestion still needs review. When no shared reference is available, verify both source receipts before entering the exact sale number and source. Matching by amount or time alone is insufficient. Partial and split payments are not supported here.', class: 'text-sm text-mocha') %>
-    <div class="flex gap-3"><%= link_to 'Connection & live payment reports', pos_connection_path('authorize_net_reporting'), class: 'btn-ghost' if Current.user.can?('settings.read') %><%= link_to 'Commission preview', commission_preview_time_clock_path, class: 'btn-ghost' %></div>
-  </section>
-  <% if @payments.empty? %><section class="card card-pad"><p>No production API payments have been imported. Save the existing reporting credentials, check access and import payments first. Manual portal exports remain available as evidence but do not activate this live matching workflow.</p></section><% end %>
+  <%= page_header 'Authorize.net payment matches', subtitle: 'Confirm that a gateway charge paid for an existing sale; each match stays with that sale as payment statuses change.', menu: menu %>
+  <%= fold_explainer('Refunds and voids remove a match from the 1% estimate; replayed events never add another sale. Suggestions use an exact invoice reference, currency and full amount. A suggestion still needs review. When no shared reference is available, verify both source receipts before entering the exact sale number and source. Matching by amount or time alone is insufficient. Partial and split payments are not supported here.', class: 'text-sm text-mocha') %>
+  <% if @payments.empty? %>
+    <section class="card">
+      <%= empty_state 'No production API payments imported yet', hint: 'Save the existing reporting credentials, check access and import payments first. Manual portal exports remain available as evidence but do not activate this live matching workflow.' do %>
+        <% if Current.user.can?('settings.read') %><%= link_to 'Open connection', pos_connection_path('authorize_net_reporting'), class: 'btn-ghost' %><% end %>
+      <% end %>
+    </section>
+  <% end %>
   <% @payments.each do |payment| %>
     <% link = @links[payment.id] %>
-    <section class="card card-pad space-y-3">
-      <h2 class="font-display text-xl">Gateway <%= payment.gateway_id %> · transaction <%= payment.source_transaction_id %></h2>
-      <p class="text-sm"><%= payment.transaction_type %> · <%= payment.payment_status %> · <%= payment.currency || 'Unknown currency' %> · authorized <%= payment.authorized_amount.to_s('F') %> · settled <%= payment.settled_amount.to_s('F') %></p>
-      <p class="text-xs text-taupe">Submitted <%= l(payment.submitted_at, format: :long) %> · observed <%= l(payment.observed_at, format: :long) %> · invoice <%= payment.invoice_number.presence || 'Not supplied' %></p>
+    <section class="section-card">
+      <%= section_heading "Gateway #{payment.gateway_id} · transaction #{payment.source_transaction_id}", hint: "Submitted #{l(payment.submitted_at, format: :long)} · observed #{l(payment.observed_at, format: :long)} · invoice #{payment.invoice_number.presence || 'Not supplied'}" do %>
+        <span class="<%= link ? 'pill-fern' : 'pill-clay' %>"><%= link ? 'Matched' : 'Unmatched' %></span>
+      <% end %>
+      <dl class="facts">
+        <div><dt>Type</dt><dd><%= payment.transaction_type %></dd></div>
+        <div><dt>Status</dt><dd><%= payment.payment_status %></dd></div>
+        <div><dt>Currency</dt><dd><%= payment.currency || 'Unknown currency' %></dd></div>
+        <div><dt>Authorized</dt><dd class="num text-left"><%= payment.authorized_amount.to_s('F') %></dd></div>
+        <div><dt>Settled</dt><dd class="num text-left"><%= payment.settled_amount.to_s('F') %></dd></div>
+      </dl>
       <% if link %>
-        <p><strong>Matched:</strong> <%= link.order.source.capitalize %> sale <%= link.order.display_number %> · <%= link.eligible_payment? ? 'Gateway payment qualifies; sale/item/shift checks still apply.' : 'Payment does not currently qualify for commission.' %></p>
-        <p class="text-sm">Evidence: <%= link.evidence_note %></p>
-        <%= button_to 'Revoke incorrect match', revoke_authorize_net_sale_link_path(link), method: :post, class: 'btn-ghost', data: { turbo: false } if Current.user.can?('payroll.write') %>
+        <p class="text-sm"><strong>Matched:</strong> <%= link.order.source.capitalize %> sale <%= link.order.display_number %> · <%= link.eligible_payment? ? 'Gateway payment qualifies; sale/item/shift checks still apply.' : 'Payment does not currently qualify for commission.' %></p>
+        <p class="text-sm text-mocha">Evidence: <%= link.evidence_note %></p>
+        <%= button_to 'Remove match', revoke_authorize_net_sale_link_path(link), method: :post, class: 'btn-ghost btn-sm', data: { turbo: false } if Current.user.can?('payroll.write') %>
       <% elsif Current.user.can?('payroll.write') %>
         <% candidates = @candidates[payment.id] %>
-        <p class="text-sm">Exact-reference suggestions: <%= candidates.empty? ? 'None' : candidates.map { |order| "#{order.source.capitalize}: #{order.display_number}" }.join('; ') %></p>
-        <%= form_with url: authorize_net_sale_links_path, method: :post, data: { turbo: false }, class: 'grid gap-3 sm:grid-cols-2' do %>
+        <p class="text-sm text-mocha">Exact-reference suggestions: <%= candidates.empty? ? 'None' : candidates.map { |order| "#{order.source.capitalize}: #{order.display_number}" }.join('; ') %></p>
+        <%= form_with url: authorize_net_sale_links_path, method: :post, data: { turbo: false }, class: 'space-y-3' do %>
           <%= hidden_field_tag :payment_id, payment.id %>
-          <label>Sales source <%= select_tag :source, options_for_select(CommissionPreview::SOURCES.map { |s| [s.capitalize, s] }, candidates.one? ? candidates.first.source : nil), class: 'input' %></label>
-          <label>Exact sale number / source order ID <%= text_field_tag :order_reference, candidates.one? ? candidates.first.display_number : nil, required: true, maxlength: 200, class: 'input' %></label>
-          <label class="sm:col-span-2">Receipt or source evidence confirming this is the same sale <%= text_area_tag :evidence_note, nil, required: true, minlength: 10, maxlength: 1000, class: 'input' %></label>
-          <%= submit_tag 'Confirm payment-to-sale match', class: 'btn-primary' %>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div><%= label_tag "source_#{payment.id}", 'Sales source', class: 'field-label' %><%= select_tag :source, options_for_select(CommissionPreview::SOURCES.map { |s| [s.capitalize, s] }, candidates.one? ? candidates.first.source : nil), id: "source_#{payment.id}", class: 'select w-full' %></div>
+            <div><%= label_tag "order_reference_#{payment.id}", 'Exact sale number / source order ID', class: 'field-label' %><%= text_field_tag :order_reference, candidates.one? ? candidates.first.display_number : nil, id: "order_reference_#{payment.id}", required: true, maxlength: 200, class: 'input' %></div>
+            <div class="sm:col-span-2"><%= label_tag "evidence_note_#{payment.id}", 'Receipt or source evidence confirming this is the same sale', class: 'field-label' %><%= text_area_tag :evidence_note, nil, id: "evidence_note_#{payment.id}", required: true, minlength: 10, maxlength: 1000, rows: 3, class: 'input' %></div>
+          </div>
+          <div class="form-actions"><%= submit_tag 'Confirm match', class: 'btn-primary' %></div>
         <% end %>
       <% end %>
     </section>

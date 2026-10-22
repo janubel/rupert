@@ -1,22 +1,27 @@
 <% kind = @checkout.sandbox_payment? ? 'Sandbox receipt' : (@checkout.demo? ? 'Demo receipt' : 'Receipt') %>
 <% content_for :title, "#{kind} #{@checkout.reference}" %>
-<div class="space-y-6">
-  <%= render 'shared/retail_navigation' %>
-  <div class="mx-auto max-w-2xl space-y-5">
-    <header><p class="eyebrow text-olive-deep"><%= @checkout.location.name %></p><div class="mt-2 flex flex-wrap items-center justify-between gap-3"><h1 class="page-title"><%= kind %></h1><span class="<%= @checkout.paid? ? 'pill-fern' : @checkout.unresolved? ? 'pill-clay' : 'pill-taupe' %>"><%= @checkout.paid? ? (@checkout.sandbox_payment? ? 'Sandbox complete' : 'Paid') : @checkout.status.humanize %></span></div><p class="mt-2 break-words text-sm text-mocha"><%= @checkout.reference %> · USD</p></header>
-    <% if @checkout.unresolved? %><div class="flash flash-alert" role="status"><p class="font-semibold">Payment outcome needs verification</p><p class="mt-1">Check this receipt and the gateway before collecting another payment. Rechecking reads the existing payment; it does not send another charge.</p></div><% end %>
-    <section class="card card-pad space-y-4" aria-label="Receipt totals">
-      <h2 class="font-display text-xl">Sale details</h2>
-      <% @checkout.lines.each do |line| %><div class="flex items-start justify-between gap-3 border-b border-fog pb-3"><p class="min-w-0 text-sm"><span class="font-semibold"><%= line['title'] %></span><br><span class="text-mocha"><%= line['quantity'] %> × <%= line['unit_price'] %> USD</span></p></div><% end %>
-      <dl class="space-y-2"><% { 'Subtotal' => @checkout.subtotal_cents, 'Tax' => @checkout.tax_cents, 'Tip' => @checkout.tip_cents, 'Total' => @checkout.total_cents, 'Cash received' => @checkout.cash_received_cents, 'Change' => @checkout.change_cents }.each do |label, value| %><% unless value.nil? %><div class="flex justify-between gap-3 <%= label == 'Total' ? 'border-y border-fog py-3 text-lg' : 'text-sm' %>"><dt><%= label %></dt><dd class="retail-money font-semibold"><%= ctrax_money(value) %></dd></div><% end %><% end %></dl>
-      <details class="text-sm text-mocha"><summary class="cursor-pointer font-semibold text-olive-deep">How total and change are calculated</summary><p class="mt-3">Subtotal <%= ctrax_money(@checkout.subtotal_cents) %> + tax <%= ctrax_money(@checkout.tax_cents) %> + tip <%= ctrax_money(@checkout.tip_cents) %> = <%= ctrax_money(@checkout.total_cents) %> due.</p><% if @checkout.cash_received_cents && @checkout.change_cents %><p class="mt-2">Cash received <%= ctrax_money(@checkout.cash_received_cents) %> − total due <%= ctrax_money(@checkout.total_cents) %> = <%= ctrax_money(@checkout.change_cents) %> change.</p><% end %><%= link_to 'Practice reading a checkout', learning_path('checkout', anchor: 'lesson-example'), class: 'mt-3 inline-block text-olive-deep underline' %></details>
-    </section>
-    <p class="text-sm text-mocha"><%= @checkout.demo? ? 'Demonstration only. No real payment or inventory movement was made.' : @checkout.sandbox_payment? ? 'Sandbox gateway test. No live sale or source stock movement was made.' : "Tender: #{@checkout.tender.humanize}. A paid receipt requires recorded cash collection or verified gateway approval." %></p>
+<div class="page-medium space-y-6">
+  <%= page_header kind, subtitle: "#{@checkout.reference} · USD", eyebrow: "Retail POS · #{@checkout.location.name}" do %>
+    <span class="<%= @checkout.paid? ? 'pill-fern' : @checkout.unresolved? ? 'pill-clay' : 'pill-taupe' %>"><%= @checkout.paid? ? (@checkout.sandbox_payment? ? 'Sandbox complete' : 'Paid') : @checkout.status.humanize %></span>
+    <%= link_to 'Open cashier', ctrax_pos_path(location_id: @checkout.location_id, display_id: (@checkout.pos_display_session.active? && @checkout.user_id == Current.user.id ? @checkout.pos_display_session_id : nil)), class: 'btn-primary' %>
+  <% end %>
+  <% if @checkout.unresolved? %><div class="flash flash-alert" role="status"><p class="font-semibold">Payment outcome needs verification</p><p class="mt-1">Check this receipt and the gateway before collecting another payment. Rechecking reads the existing payment; it does not send another charge.</p></div><% end %>
+  <section class="section-card" aria-label="Receipt totals">
+    <%= section_heading 'Sale details' %>
+    <% @checkout.lines.each do |line| %><div class="flex items-start justify-between gap-3 border-b border-fog pb-3"><p class="min-w-0 text-sm"><span class="font-semibold"><%= line['title'] %></span><br><span class="text-mocha"><%= line['quantity'] %> × <%= line['unit_price'] %> USD</span></p></div><% end %>
+    <dl class="space-y-2"><% { 'Subtotal' => @checkout.subtotal_cents, 'Tax' => @checkout.tax_cents, 'Tip' => @checkout.tip_cents, 'Total' => @checkout.total_cents, 'Cash received' => @checkout.cash_received_cents, 'Change' => @checkout.change_cents }.each do |label, value| %><% unless value.nil? %><div class="flex justify-between gap-3 <%= label == 'Total' ? 'border-y border-fog py-3 text-lg' : 'text-sm' %>"><dt><%= label %></dt><dd class="num font-semibold"><%= ctrax_money(value) %></dd></div><% end %><% end %></dl>
+    <details class="explainer text-sm text-mocha"><summary class="explainer-summary">How total and change are calculated</summary><p class="mt-3">Subtotal <%= ctrax_money(@checkout.subtotal_cents) %> + tax <%= ctrax_money(@checkout.tax_cents) %> + tip <%= ctrax_money(@checkout.tip_cents) %> = <%= ctrax_money(@checkout.total_cents) %> due.</p><% if @checkout.cash_received_cents && @checkout.change_cents %><p class="mt-2">Cash received <%= ctrax_money(@checkout.cash_received_cents) %> − total due <%= ctrax_money(@checkout.total_cents) %> = <%= ctrax_money(@checkout.change_cents) %> change.</p><% end %><%= link_to 'Practice reading a checkout', learning_path('checkout', anchor: 'lesson-example'), class: 'mt-3 inline-block text-olive-deep underline' %></details>
+  </section>
+  <p class="text-sm text-mocha"><%= @checkout.demo? ? 'Demonstration only. No real payment or inventory movement was made.' : @checkout.sandbox_payment? ? 'Sandbox gateway test. No live sale or source stock movement was made.' : "Tender: #{@checkout.tender.humanize}. A paid receipt requires recorded cash collection or verified gateway approval." %></p>
+  <% if %w[ready declined].include?(@checkout.status) || @checkout.unresolved? %>
     <div class="flex flex-wrap gap-2">
       <% if %w[ready declined].include?(@checkout.status) %><%= button_to 'Cancel unpaid checkout', cancel_pos_checkout_path(@checkout), method: :post, class: 'btn-ghost', data: { turbo: false } %><% end %>
       <% if @checkout.unresolved? %><%= button_to 'Recheck gateway payment', reconcile_pos_checkout_path(@checkout), method: :post, class: 'btn-ghost', data: { turbo: false } %><% end %>
-      <%= link_to 'Back to cashier', ctrax_pos_path(location_id: @checkout.location_id, display_id: (@checkout.pos_display_session.active? && @checkout.user_id == Current.user.id ? @checkout.pos_display_session_id : nil)), class: 'btn-primary' %>
     </div>
-    <section class="card card-pad space-y-3"><h2 class="font-display text-xl">Stock updates</h2><% if @checkout.pos_stock_allocations.empty? %><p class="text-sm text-mocha">No source stock allocation is recorded for this receipt.</p><% end %><% @checkout.pos_stock_allocations.each do |allocation| %><div class="flex flex-wrap items-center justify-between gap-2 border-t border-fog pt-3"><p class="text-sm">Variant #<%= allocation.variant_id %> · <%= allocation.quantity %> units</p><span class="pill-taupe"><%= allocation.status.humanize %></span></div><% end %></section>
-  </div>
+  <% end %>
+  <section class="section-card">
+    <%= section_heading 'Stock updates' %>
+    <% if @checkout.pos_stock_allocations.empty? %><p class="text-sm text-mocha">No source stock allocation is recorded for this receipt.</p><% end %>
+    <% @checkout.pos_stock_allocations.each do |allocation| %><div class="flex flex-wrap items-center justify-between gap-2 border-t border-fog pt-3"><p class="text-sm">Variant #<%= allocation.variant_id %> · <%= allocation.quantity %> units</p><span class="<%= allocation.status == 'applied' ? 'pill-fern' : 'pill-taupe' %>"><%= allocation.status.humanize %></span></div><% end %>
+  </section>
 </div>

@@ -166,6 +166,8 @@ Rails.application.routes.draw do
       get :catalog, to: 'catalog#index'
       get :inventory, to: 'inventory#index'
       get :roadmap, to: 'roadmap#index'
+      get :metrics, to: 'metrics#index'
+      get 'metrics/:name', to: 'metrics#show', as: :metric
       resources :uploads, only: %i[index show create]
     end
   end
@@ -208,6 +210,7 @@ Rails.application.routes.draw do
   get    '/chat/:room/dock',                          to: 'team_chat#dock_room',       as: :team_chat_dock_room
   get    '/chat/:room',                               to: 'team_chat#show',            as: :team_chat_room
   patch  '/chat/:room',                               to: 'team_chat#update_room'
+  patch  '/chat/:room/visibility',                    to: 'team_chat#visibility',      as: :team_chat_visibility
   get    '/chat/:room/messages',                      to: 'team_chat#messages',        as: :team_chat_messages
   post   '/chat/:room/messages',                      to: 'team_chat#create_message'
   patch  '/chat/:room/messages/:id',                  to: 'team_chat#update_message'
@@ -248,14 +251,28 @@ Rails.application.routes.draw do
   namespace :projects do
     get 'getting-started', to: 'guides#show', as: :getting_started
     resources :projects, only: %i[index show new create edit update destroy] do
-      member { post :transition }
+      get :export, on: :collection
+      member do
+        post :transition
+        post :save_template
+      end
     end
-    resources :tasks, only: %i[index create update destroy] do
+    resources :templates, only: :destroy, controller: 'project_templates'
+    resources :tasks, only: %i[index show create update destroy] do
+      get :export, on: :collection
       member do
         post :transition
         post :move
       end
+      resources :comments, only: :create, controller: 'task_comments'
+      resources :checklist_items, only: %i[create update destroy], controller: 'task_checklist_items'
+      resources :dependencies, only: %i[create destroy], controller: 'task_dependencies'
+      resources :time_entries, only: %i[create destroy], controller: 'task_time_entries'
+      resources :attachments, only: %i[create show destroy], controller: 'task_attachments'
     end
+  end
+  resources :notifications, only: %i[index show] do
+    post :read_all, on: :collection
   end
   namespace :goals do
     resources :goals, only: %i[index show new create edit update destroy] do
@@ -498,6 +515,7 @@ Rails.application.routes.draw do
     member { get :document }
   end
   get '/system', to: 'system#index', as: :system
+  get '/system/style_guide', to: 'style_guide#show', as: :system_style_guide
   post '/system/ai_health/check', to: 'system#check_ai_health', as: :check_system_ai_health
   get '/system/updates', to: 'updates#show', as: :system_updates
   post '/system/updates/check', to: 'updates#check', as: :check_system_updates

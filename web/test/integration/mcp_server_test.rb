@@ -128,6 +128,7 @@ class McpServerTest < ActionDispatch::IntegrationTest
       arguments = case tool.tool_name
       when 'submit_feedback' then { kind: 'task_report', summary: 'Smoke test done' }
       when 'create_task' then { title: 'Check the tea shelf', priority: 'low', due_on: '2026-11-01' }
+      when 'metric' then { name: 'gross_sales', period: 'last_month' }
       when 'update_task' then { task_id: Projects::Task.find_by!(title: 'Check the tea shelf').id, assignee: 'me', status: 'in_progress', note: 'Started' }
       when 'report_context' then { report_id: AgentFeedback.create!(kind: 'bug', summary: 'Smoke report').id }
       else {}
@@ -144,6 +145,23 @@ class McpServerTest < ActionDispatch::IntegrationTest
     result = call_tool(full, 'sales_tax_report', { from: '2026-10-01T00:00:00Z', to: '2026-10-15', sources: ['shopify'] })
     assert_equal false, result['isError'], result.dig('content', 0, 'text')
     assert_equal '2026-10-01', result.dig('structuredContent', 'from')
+  end
+
+  test 'update_task will not start a task that waits on an open one' do
+    _, secret = issue
+    blocker = Projects::Task.create!(title: 'Order the tins', priority: 'medium')
+    task = Projects::Task.create!(title: 'Pack the tins', priority: 'medium')
+    task.dependencies.create!(blocker: blocker)
+
+    result = call_tool(secret, 'update_task', { task_id: task.id, status: 'in_progress' })
+    assert_equal true, result['isError']
+    assert_match(/waiting on Order the tins/, result.dig('content', 0, 'text'))
+    assert task.reload.todo?
+
+    blocker.move_to!('done')
+    result = call_tool(secret, 'update_task', { task_id: task.id, status: 'in_progress' })
+    assert_equal false, result['isError'], result.dig('content', 0, 'text')
+    assert task.reload.in_progress?
   end
 
   test 'bad or missing token is rejected with 401' do

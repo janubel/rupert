@@ -1,41 +1,45 @@
-<% content_for :title, "Vendors" %>
+<% content_for :title, 'Vendors' %>
 <div class="space-y-6">
   <%= page_header 'Vendors', subtitle: 'Who the shop buys from, with their purchase-order history.' do %>
-    <% if Current.user.can?("purchasing.write") %>
-      <%= link_to "Add vendor", new_purchasing_vendor_path, class: "btn-primary" %>
+    <% if Current.user.can?('purchasing.write') %>
+      <%= link_to 'Add vendor', new_purchasing_vendor_path, class: 'btn-primary' %>
     <% end %>
   <% end %>
 
-  <%= form_tag purchasing_vendors_path, method: :get, class: "max-w-sm" do %>
-    <input type="search" name="q" value="<%= @q %>" placeholder="Search vendors…" aria-label="Search vendors" class="search w-full" autocomplete="off">
+  <%= form_tag purchasing_vendors_path, method: :get, class: 'toolbar' do %>
+    <div class="toolbar-field">
+      <label class="field-label" for="q">Search</label>
+      <input type="search" id="q" name="q" value="<%= @q %>" placeholder="Vendor name" class="input" autocomplete="off">
+    </div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', purchasing_vendors_path, class: 'btn-ghost' %></div>
   <% end %>
 
   <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="table-region" role="region" tabindex="0" aria-label="Vendors">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Vendor</th>
             <th scope="col" class="th">Contact</th>
             <th scope="col" class="th">Email</th>
             <th scope="col" class="th">Terms<%= define('payment_terms') %></th>
-            <th scope="col" class="th text-right">Orders</th>
-            <th scope="col" class="th text-right">Open PO<%= define('open_po') %></th>
+            <th scope="col" class="th num">Orders</th>
+            <th scope="col" class="th num">Open PO<%= define('open_po') %></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @vendors.empty? %>
-            <tr><td colspan="6" class="empty-row"><%= @q.present? ? "Nothing matches that search." : "No vendors yet — add the first one." %></td></tr>
+            <tr><td colspan="6" class="empty-row"><% if @q.present? %>Nothing matches that search. Clear the search to see every vendor.<% else %>No vendors yet.<% if Current.user.can?('purchasing.write') %> <%= link_to 'Add the first vendor', new_purchasing_vendor_path, class: 'font-semibold text-olive-deep underline' %><% end %><% end %></td></tr>
           <% end %>
           <% @vendors.each do |vendor| %>
-            <tr class="hover:bg-cream">
-              <td class="td font-medium text-ink"><%= link_to vendor.name, vendor, class: "hover:text-olive hover:underline" %></td>
-              <td class="td text-mocha"><%= vendor.contact_name.presence || "—" %></td>
-              <td class="td text-mocha"><%= vendor.email.presence || "—" %></td>
-              <td class="td"><span class="pill-taupe"><%= vendor.payment_terms.presence || "—" %></span></td>
-              <td class="td text-right text-mocha"><%= vendor.purchase_orders.count %></td>
-              <td class="td text-right">
-                <% open = vendor.purchase_orders.where(status: ["draft", "ordered"]).count %>
+            <tr>
+              <td class="td font-medium text-ink"><%= link_to vendor.name, vendor, class: 'hover:text-olive hover:underline' %></td>
+              <td class="td text-mocha"><%= vendor.contact_name.presence || '—' %></td>
+              <td class="td text-mocha"><%= vendor.email.presence || '—' %></td>
+              <td class="td"><span class="pill-taupe"><%= vendor.payment_terms.presence || '—' %></span></td>
+              <td class="td num text-mocha"><%= vendor.purchase_orders.count %></td>
+              <td class="td num">
+                <% open = vendor.purchase_orders.where(status: %w[draft ordered]).count %>
                 <% if open.positive? %><span class="pill-clay"><%= open %> open</span><% else %><span class="text-taupe">—</span><% end %>
               </td>
             </tr>

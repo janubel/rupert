@@ -40,7 +40,7 @@ namespace :team_chat do
 end
 
 namespace :team_chat do
-  desc 'Run the test battery (config/team_chat/battery.yml) on one bot in #liquid-testing: each answer timed and graded by DeepSeek. ' \
+  desc 'Run the test battery (config/team_chat/battery.yml) on one bot in its test room (#test-<bot>): each answer timed and graded by DeepSeek. ' \
        'AGENT=liquid (or qwen, gemma, gemma-e2b, gemma-e4b-ud, rupert) BATTERY=finance USER_EMAIL=... ONLY=d1,w1 REPORT=path.md'
   task battery: :environment do
     tenant = ENV['TENANT_ID'].present? ? Tenant.find(ENV['TENANT_ID']) : Tenant.where(status: 'active').first
@@ -70,6 +70,8 @@ namespace :team_chat do
     Tenant.where(status: 'active').find_each do |tenant|
       Current.tenant = tenant
       puts "#{tenant.name}: #{TeamChat::BatteryRun.backfill!} runs saved"
+      admin = User.where(tenant_id: tenant.id, role: %w[admin super_admin], active: true).first
+      puts "  test rooms: #{TeamChat::Battery.ensure_rooms!(admin).map { |room| "##{room.slug}" }.join(' ')}" if admin
     end
   end
 end
