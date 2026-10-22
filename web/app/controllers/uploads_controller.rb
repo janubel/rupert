@@ -19,7 +19,7 @@ class UploadsController < AuthenticatedController
     scope = Upload.newest_first
     scope = scope.where(status: FILTERS.fetch(@filter)) if FILTERS.key?(@filter)
     scope = scope.where('filename LIKE ?', "%#{Upload.sanitize_sql_like(params[:q].to_s.strip.first(80))}%") if params[:q].present?
-    @pagy, @uploads = pagy(scope, items: 25)
+    @pagy, @uploads = pagy(:offset, scope, limit: 25)
     @counts = Upload.group(:status).count
     @stale = Upload.where(status: 'needs_review', retained: true).where.not(recognizer_version: Uploads::Registry.signature).count
     @can_write = Current.user.can?('uploads.write')

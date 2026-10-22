@@ -111,7 +111,7 @@
       </table>
     </div>
   </div>
-  <%== pagy_nav(@pagy) if @pagy && @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy && @pagy.pages > 1 %>
   <% else %>
   <% if @reviewer %>
     <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Timesheet summary">
@@ -184,7 +184,7 @@
     </div>
   </div>
   <% end %>
-  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
   <% end %>
 
   <% if @reviewer && @calendar_view %>

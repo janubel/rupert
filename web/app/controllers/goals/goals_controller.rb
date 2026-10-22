@@ -7,7 +7,7 @@ module Goals
     def index
       authorize(:module, :projects_read?)
       @q = Goals::Goal.ransack(params[:q])
-      @pagy, @goals = pagy(@q.result.order(updated_at: :desc), items: 20)
+      @pagy, @goals = pagy(:offset, @q.result.order(updated_at: :desc), limit: 20)
     end
 
     def show

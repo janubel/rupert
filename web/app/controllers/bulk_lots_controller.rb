@@ -34,6 +34,6 @@ class BulkLotsController < BulkInventoryController
   end
 
   def load_movements
-    @pagy, @movements = pagy(@lot.bulk_movements.order(created_at: :desc, id: :desc), limit: 30)
+    @pagy, @movements = pagy(:offset, @lot.bulk_movements.order(created_at: :desc, id: :desc), limit: 30)
   end
 end

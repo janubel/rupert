@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Align the employee mobile app with Expo SDK 58's supported dependency set: Expo 58.0.17 and TypeScript 6.0.3, preserving React 19.3.0, React Native 0.88.0 and the verified security backports.
+
 - **Zelle tab for payment-source reports.** `/zelle_reports` sits beside SwipeSimple (a shared **Payment sources** tab strip on both pages, plus a Sync link) and imports a bank-statement CSV you download yourself, since Zelle has no merchant API and Rupert never touches bank credentials. Same safety rules as the SwipeSimple importer: preview then import within 15 minutes, whole-file validation, 8 MiB / 10,000-row bounds, encrypted original, replay and overlap protection, tenant scoping, `reports.read` to view, `sync.write` to preview/import/download, no-store responses and filtered log parameters. Entries are `zelle` tender, unverified until reconciled, with their own daily received/sent totals; they never enter SwipeSimple totals, orders or the ledger. Columns (assumed, to be confirmed against the bank): Date, Amount, Direction (credit/debit), Reference ID, optional Counterparty and Memo. See `docs/ops/zelle-reporting.md`. Two new tables, no existing table changes.
 
 - **Upload insights.** **Uploads → Insights** charts how the inbox is doing over 30, 90 or 365 days: uploads by outcome, how far files get (kept, matched, dry run, imported), why files wait or are refused (a new `reason_code` on every upload), how well each detected type and importer performs, and how long a file takes to reach an import. Aggregates only, with a table behind every chart; it exists to show what to build or tighten next. See `docs/ops/uploads-inbox.md`.

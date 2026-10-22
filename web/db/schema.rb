@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_020000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -88,10 +88,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.index ["shopifyVariantId"], name: "index_InventoryMovement_on_shopifyVariantId"
     t.index ["source"], name: "index_InventoryMovement_on_source"
     t.index ["syncRunId"], name: "index_InventoryMovement_on_syncRunId"
+    t.index ["tenant_id", "createdAt"], name: "idx_inventory_movements_tenant_created_at"
     t.index ["tenant_id", "sku"], name: "idx_inventory_movements_tenant_sku"
     t.index ["tenant_id", "source", "createdAt"], name: "idx_inventory_movements_tenant_source_created_at"
     t.index ["tenant_id", "squareVariationId"], name: "idx_inventory_movements_tenant_square_variation"
-    t.index ["tenant_id"], name: "index_InventoryMovement_on_tenant_id"
   end
 
   create_table "InventoryPolicy", primary_key: "sku", id: :string, force: :cascade do |t|
@@ -831,11 +831,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.string "filename", null: false
     t.string "content_type", null: false
     t.integer "byte_size", default: 0, null: false
-    t.binary "data", null: false
+    t.binary "data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "drive_file_id"
+    t.string "drive_status"
+    t.string "drive_md5"
+    t.datetime "drive_stored_at"
+    t.string "drive_error"
     t.index ["message_id"], name: "index_chat_attachments_on_message_id"
     t.index ["room_id"], name: "index_chat_attachments_on_room_id"
+    t.index ["tenant_id", "drive_status"], name: "index_chat_attachments_on_tenant_id_and_drive_status"
+  end
+
+  create_table "chat_battery_runs", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "run_key", null: false
+    t.string "set_name", default: "default", null: false
+    t.string "agent"
+    t.string "model"
+    t.string "engine"
+    t.string "revision"
+    t.string "status", default: "running", null: false
+    t.integer "questions", default: 0, null: false
+    t.integer "answered", default: 0, null: false
+    t.decimal "avg_grade", precision: 3, scale: 2
+    t.float "avg_seconds"
+    t.float "max_seconds"
+    t.integer "flagged", default: 0, null: false
+    t.text "by_cadence"
+    t.text "results"
+    t.integer "room_id"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["run_key"], name: "index_chat_battery_runs_on_run_key", unique: true
+    t.index ["tenant_id", "started_at"], name: "index_chat_battery_runs_on_tenant_id_and_started_at"
   end
 
   create_table "chat_memberships", force: :cascade do |t|
@@ -845,6 +877,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.bigint "last_read_message_id", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "typing_at"
     t.index ["room_id", "user_id"], name: "index_chat_memberships_on_room_id_and_user_id", unique: true
     t.index ["room_id"], name: "index_chat_memberships_on_room_id"
     t.index ["tenant_id", "user_id"], name: "index_chat_memberships_on_tenant_id_and_user_id"
@@ -865,10 +898,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "pinned_at"
+    t.bigint "pinned_by_id"
+    t.datetime "edited_at"
     t.index ["room_id", "id"], name: "index_chat_messages_on_room_id_and_id"
     t.index ["room_id", "parent_id", "id"], name: "index_chat_messages_on_room_id_and_parent_id_and_id"
+    t.index ["room_id", "pinned_at"], name: "index_chat_messages_on_room_id_and_pinned_at"
     t.index ["room_id", "status"], name: "index_chat_messages_on_room_id_and_status"
     t.index ["room_id"], name: "index_chat_messages_on_room_id"
+  end
+
+  create_table "chat_ratings", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "message_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "value", null: false
+    t.string "agent", default: "rupert", null: false
+    t.string "model"
+    t.string "engine"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "reason"
+    t.index ["message_id", "user_id"], name: "index_chat_ratings_on_message_id_and_user_id", unique: true
+    t.index ["message_id"], name: "index_chat_ratings_on_message_id"
+    t.index ["tenant_id", "model"], name: "index_chat_ratings_on_tenant_id_and_model"
   end
 
   create_table "chat_reactions", force: :cascade do |t|
@@ -894,6 +947,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.datetime "archived_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "drive_folder_id"
     t.index ["tenant_id", "kind", "created_by_id"], name: "index_chat_rooms_on_tenant_id_and_kind_and_created_by_id"
     t.index ["tenant_id", "slug"], name: "index_chat_rooms_on_tenant_id_and_slug", unique: true
   end
@@ -3069,6 +3123,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.string "tenant_id"
     t.datetime "updated_at", null: false
     t.string "referral_domain"
+    t.datetime "last_active_at"
+    t.boolean "presence_hidden"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["referral_domain"], name: "index_users_on_referral_domain"
     t.index ["shopify_user_id"], name: "index_users_on_shopify_user_id", unique: true
@@ -3334,6 +3390,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
   add_foreign_key "chat_attachments", "chat_rooms", column: "room_id"
   add_foreign_key "chat_memberships", "chat_rooms", column: "room_id"
   add_foreign_key "chat_messages", "chat_rooms", column: "room_id"
+  add_foreign_key "chat_ratings", "chat_messages", column: "message_id"
   add_foreign_key "chat_reactions", "chat_messages", column: "message_id"
   add_foreign_key "clock_corrections", "clock_shifts"
   add_foreign_key "clock_corrections", "tenants"

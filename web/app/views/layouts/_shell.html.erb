@@ -1,7 +1,9 @@
 <%# The management shell (docs/ui-standards.md §2): one top bar, one navigation rail built
     from ModuleRegistry, one main column. Nothing page-specific lives in the chrome. %>
 <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-ink focus:fixed focus:left-4 focus:top-3">Skip to content</a>
-<div class="app-shell" data-controller="rail<% if Current.user %> help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %><%= ' team-chat-badge' if team_chat_badge_available? %><% end %>"<% if Current.user %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %><% if team_chat_badge_available? %> data-team-chat-badge-url-value="<%= team_chat_messages_path('general') %>" data-team-chat-badge-chat-path-value="<%= team_chat_path %>"<% end %>>
+<% team_chat_on = Current.user && TeamChat.allowed?(Current.user) %>
+<% chat_dock_here = team_chat_on && controller_name != 'team_chat' %>
+<div class="app-shell" data-controller="rail<% if Current.user %> help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %><%= ' chat-dock team-chat-badge' if team_chat_on %><% end %>"<% if Current.user %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %><% if team_chat_on %> data-chat-dock-unread-url-value="<%= team_chat_unread_path %>" data-chat-dock-dock-url-value="<%= team_chat_dock_path %>" data-team-chat-badge-url-value="<%= team_chat_messages_path('general') %>" data-team-chat-badge-chat-path-value="<%= team_chat_path %>"<% end %>>
   <% if Current.user&.super_admin? && Current.tenant_id != Current.user.tenant_id %>
     <div role="status" class="flash flash-notice support-banner"><span>Read-only customer support · <%= Current.tenant.name %></span><%= button_to 'Leave support session', leave_platform_support_path, method: :delete, class: 'btn-ghost btn-sm' %></div>
   <% end %>
@@ -30,7 +32,10 @@
         <% if Current.user.can?('dashboard.read') %>
           <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility topbar-search-icon" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
         <% end %>
-        <% if team_chat_badge_available? %><%= link_to team_chat_path, class: "nav-utility#{' nav-pill-active' if controller_name == 'team_chat'}", aria: { label: 'Team chat', current: (controller_name == 'team_chat' ? 'page' : nil) }, title: 'Team chat', data: { action: 'team-chat-badge#open' } do %><%= navigation_icon('chat') %><span class="badge nav-badge" data-team-chat-badge-target="count" hidden>0</span><span class="nav-hint">Team chat</span><% end %><% end %>
+        <% if team_chat_on %>
+          <%= link_to team_chat_path, class: "nav-utility chat-dock-trigger#{' nav-pill-active' if controller_name == 'team_chat'}", aria: { label: 'Team chat', current: (controller_name == 'team_chat' ? 'page' : nil), haspopup: (chat_dock_here ? 'dialog' : nil), expanded: 'false' }, title: 'Team chat',
+                data: { action: 'click->chat-dock#toggle', chat_dock_target: 'trigger' } do %><%= navigation_icon('chat') %><span class="chat-dock-badge" data-chat-dock-target="badge" hidden></span><span class="nav-hint">Team chat</span><% end %>
+        <% end %>
         <%= render 'shared/header_sync_pill', sync: @last_sync %>
         <%= render 'shared/feedback_button' %>
         <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>
@@ -98,7 +103,7 @@
       <div class="rail-backdrop" data-action="click->rail#closeDrawer"></div>
     <% end %>
 
-    <main id="main" tabindex="-1" class="app-main focus:outline-none">
+    <main id="main" tabindex="-1" class="app-main<%= ' app-main-wide' if content_for?(:wide_page) %> focus:outline-none">
       <% if (down_location = card_processing_down_location) %>
         <div role="alert" class="flash flash-alert mb-4 flex flex-wrap items-center justify-between gap-3" data-card-processing-banner>
           <span><strong>Card processing is down.</strong> Customers cannot pay by card until the payment gateway is connected and verified.</span>
@@ -131,6 +136,11 @@
   <%= render 'shared/help_panel' if Current.user %>
   <%= render 'shared/feedback_panel' if Current.user %>
   <%= render 'shared/ask_rupert' if ask_rupert_available? %>
+  <% if chat_dock_here %>
+    <section id="chat-dock-panel" class="chat-dock" data-chat-dock-target="panel" data-turbo-permanent role="dialog" aria-label="Team chat" hidden>
+      <turbo-frame id="chat_dock" data-chat-dock-target="frame"></turbo-frame>
+    </section>
+  <% end %>
 </div>
 
 <% if Current.user&.can?('dashboard.read') %>

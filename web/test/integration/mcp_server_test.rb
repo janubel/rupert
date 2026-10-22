@@ -51,6 +51,9 @@ class McpServerTest < ActionDispatch::IntegrationTest
     assert_includes uris, 'rupert://guide/getting-started'
     rpc(secret, 'resources/read', { uri: 'rupert://guide/getting-started' })
     assert_match(/submit_feedback/, response.parsed_body.dig('result', 'contents', 0, 'text'))
+    assert_includes uris, 'rupert://guide/data'
+    rpc(secret, 'resources/read', { uri: 'rupert://guide/data' })
+    assert_match(/### Sales tax\nTools: `sales_tax_report`/, response.parsed_body.dig('result', 'contents', 0, 'text'))
     rpc(secret, 'resources/read', { uri: 'rupert://nope' })
     assert_equal(-32_002, response.parsed_body.dig('error', 'code'))
   end
@@ -59,7 +62,7 @@ class McpServerTest < ActionDispatch::IntegrationTest
     _, limited = issue(scopes: ['roadmap:read'])
     rpc(limited, 'tools/list')
     names = response.parsed_body.dig('result', 'tools').map { |tool| tool['name'] }
-    assert_equal %w[get_workspace_info submit_feedback list_my_feedback].sort, names.sort
+    assert_equal %w[get_workspace_info data_guide submit_feedback list_my_feedback].sort, names.sort
 
     _, full = issue
     rpc(full, 'tools/list')
@@ -125,6 +128,7 @@ class McpServerTest < ActionDispatch::IntegrationTest
       arguments = case tool.tool_name
       when 'submit_feedback' then { kind: 'task_report', summary: 'Smoke test done' }
       when 'create_task' then { title: 'Check the tea shelf', priority: 'low', due_on: '2026-11-01' }
+      when 'update_task' then { task_id: Projects::Task.find_by!(title: 'Check the tea shelf').id, assignee: 'me', status: 'in_progress', note: 'Started' }
       when 'report_context' then { report_id: AgentFeedback.create!(kind: 'bug', summary: 'Smoke report').id }
       else {}
       end
@@ -188,6 +192,31 @@ class McpServerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
     rpc(secret, 'ping', nil, headers: { 'Origin' => 'http://www.example.com' })
     assert_response :success
+  end
+
+  test 'MCP origin must match scheme, host and port or an explicit origin allowlist' do
+    _, secret = issue
+    host! 'www.example.com'
+
+    rpc(secret, 'ping', nil, headers: { 'Origin' => 'http://www.example.com' })
+    assert_response :success
+
+    [
+      'https://www.example.com',
+      'http://www.example.com:3001',
+      'http://user@www.example.com',
+      'http://www.example.com/untrusted'
+    ].each do |origin|
+      rpc(secret, 'ping', nil, headers: { 'Origin' => origin })
+      assert_response :forbidden, "expected #{origin.inspect} to be rejected"
+    end
+
+    previous = ENV['MCP_ALLOWED_ORIGINS']
+    ENV['MCP_ALLOWED_ORIGINS'] = 'https://client.example:8443/'
+    rpc(secret, 'ping', nil, headers: { 'Origin' => 'https://client.example:8443' })
+    assert_response :success
+  ensure
+    ENV['MCP_ALLOWED_ORIGINS'] = previous
   end
 
   test 'oversized request body is rejected when Content-Length is absent or understated' do

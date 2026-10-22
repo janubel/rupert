@@ -37,7 +37,7 @@ module People
         end
         return send_data data, filename: 'square-timecard-history.csv', type: 'text/csv'
       end
-      @pagy, @cards = pagy(scope.order(started_at: :desc, id: :desc).includes(:employee), items: 30)
+      @pagy, @cards = pagy(:offset, scope.order(started_at: :desc, id: :desc).includes(:employee), limit: 30)
     rescue Date::Error
       redirect_to people_square_timesheets_path, alert: 'Choose valid dates.'
     end

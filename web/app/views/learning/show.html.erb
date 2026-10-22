@@ -4,6 +4,14 @@
   <%= page_header @lesson[:title], subtitle: @lesson[:summary] %>
   <p class="text-sm text-mocha"><span class="pill-taupe"><%= @lesson[:minutes] %> minute lesson</span><% if @journey.completed.include?(@lesson[:key]) %> <span class="pill-fern">Completed</span><% end %></p>
   <nav class="flex flex-wrap gap-4 text-sm text-olive-deep" aria-label="Lesson sections"><a href="#lesson-steps" class="underline">1. Learn the task</a><a href="#lesson-example" class="underline">2. See an example</a><% if @lesson[:practice] %><a href="#lesson-try" class="underline">3. Try it</a><% end %><a href="#lesson-practice" class="underline"><%= @lesson[:practice] ? '4' : '3' %>. Check understanding</a></nav>
+  <% if @lesson[:video].present? %>
+    <section class="section-card space-y-3" aria-labelledby="lesson-video-title">
+      <h2 id="lesson-video-title" class="section-title">Watch it first</h2>
+      <video class="lesson-video" controls preload="metadata" playsinline src="<%= @lesson[:video] %>">Your browser cannot play this video.</video>
+      <% replay = PageTours.for_path(@lesson[:destination].to_s, Current.user) %>
+      <% if replay %><p class="text-sm text-mocha">Then try it for real: <%= link_to "#{@lesson[:action]} with the guided tour", "#{replay.path}?tour=1", class: 'underline font-semibold text-olive-deep' %>.</p><% end %>
+    </section>
+  <% end %>
   <section id="lesson-steps" class="space-y-4 scroll-mt-6">
     <%= section_heading 'Learn the task' %>
     <ol class="space-y-4">

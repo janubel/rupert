@@ -86,7 +86,7 @@
       </table>
     <% end %>
   </div>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
 
   <section class="space-y-4">
     <%= section_heading 'Where assistants get stuck', hint: 'Counted automatically every time an MCP tool call fails or is denied, even when the assistant never writes feedback. Arguments are never stored.' %>

@@ -40,7 +40,7 @@
       </article>
     <% end %>
     <% if @shifts.empty? %><%= empty_state 'No shifts yet', hint: 'Your shifts appear here after you clock in.' %><% end %>
-    <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+    <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
   </section>
 
   <% if @pending_corrections %><section class="space-y-3">

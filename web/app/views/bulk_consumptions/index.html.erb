@@ -29,7 +29,7 @@
       </table>
     </div>
   </div>
-  <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== pagy_nav(@pagy) %></div><% end %>
+  <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
 
   <section class="card overflow-hidden">
     <div class="card-pad pb-3"><%= section_heading 'Latest material-use receipts', hint: 'The 25 most recent immutable receipts, all dates.' %></div>

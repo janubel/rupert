@@ -47,7 +47,7 @@
       </table>
     </div>
     <p class="text-xs text-taupe">Only token hashes are stored. Revocation takes effect on the next API request.</p>
-    <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+    <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
   </section>
 
   <section class="section-card">

@@ -142,7 +142,7 @@
         </table>
       </div>
     </div>
-    <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== pagy_nav(@pagy) %></div><% end %>
+    <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
   <% end %>
 
   <details class="section-card explainer" <%= tour_anchor('sources') %>>

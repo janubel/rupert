@@ -2,7 +2,7 @@
 
 class BulkRecipesController < BulkInventoryController
   def index
-    @pagy, @recipes = pagy(BulkRecipe.includes(:bulk_material).order(created_at: :desc, id: :desc), items: 30)
+    @pagy, @recipes = pagy(:offset, BulkRecipe.includes(:bulk_material).order(created_at: :desc, id: :desc), limit: 30)
   end
 
   def new

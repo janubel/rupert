@@ -81,7 +81,7 @@
     <% if @pagy.pages > 1 %>
       <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-taupe">
         <span>Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %> linked items.</span>
-        <%== pagy_nav(@pagy) %>
+        <%== @pagy.series_nav %>
       </div>
     <% end %>
   </section>

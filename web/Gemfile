@@ -64,7 +64,7 @@ gem "nostr"
 
 # --- ERP framework gems ---
 # Fast pagination
-gem "pagy", "~> 8.6"
+gem "pagy", "~> 43.0"
 # Search / sort / filter for index pages
 gem "ransack"
 # Time-series grouping (group_by_hour/day/week/month)

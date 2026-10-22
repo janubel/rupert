@@ -77,6 +77,6 @@
         </tbody>
       </table>
     </div>
-    <%== pagy_nav(@pagy) if @uploads.any? && @pagy.pages > 1 %>
+    <%== @pagy.series_nav if @uploads.any? && @pagy.pages > 1 %>
   </section>
 </div>

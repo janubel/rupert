@@ -88,5 +88,5 @@
     </div>
   </div>
   <p class="text-xs text-mocha">Totals count active payments only. <%= pluralize(@removed_count, 'removed payment') %> in the list. This register records payments that already happened; no money is transferred.</p>
-  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
 </div>

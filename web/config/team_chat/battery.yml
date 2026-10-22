@@ -1,0 +1,92 @@
+# The team chat test battery (TeamChat::Battery, rake team_chat:battery).
+# Each question is asked to one bot on its own; `checks` are the Rupert tools
+# whose output the grader (DeepSeek) gets as the truth. Arguments may name a
+# date preset, e.g. last_month.from / last_month.to (TimeRangePicker keys).
+questions:
+  - id: d1
+    cadence: daily
+    question: How did we do yesterday compared with the day before?
+    checks: [{ tool: period_review, args: { period: yesterday } }]
+  - id: d2
+    cadence: daily
+    question: What is waiting to be processed right now?
+    checks: [order_queues]
+  - id: d3
+    cadence: daily
+    question: Are there paid online orders that have not shipped yet? Which one is the oldest?
+    checks: [order_queues]
+  - id: d4
+    cadence: daily
+    question: Is sync healthy right now?
+    checks: [sync_health]
+  - id: d5
+    cadence: daily
+    question: Any open stock alerts I should look at today?
+    checks: [list_alerts]
+  - id: w1
+    cadence: weekly
+    question: How was last week compared with the week before?
+    checks: [{ tool: period_review, args: { period: last_week } }]
+  - id: w2
+    cadence: weekly
+    question: Which tasks are overdue?
+    checks: [{ tool: list_tasks, args: { overdue: true } }]
+  - id: w3
+    cadence: weekly
+    question: How many hours did the team work last pay week?
+    expect: Quotes the worked hours from time_keeping_report for last pay week.
+    checks: [{ tool: time_keeping_report, args: { from: last_pay_week.from, to: last_pay_week.to } }, { tool: period_review, args: { period: last_pay_week } }]
+  - id: w4
+    cadence: weekly
+    question: What were our top products last week?
+    checks: [{ tool: period_review, args: { period: last_week } }]
+  - id: m1
+    cadence: monthly
+    question: How did last month go compared with the month before?
+    checks: [{ tool: period_review, args: { period: last_month } }]
+  - id: m2
+    cadence: monthly
+    question: Is last month closed in the books? What is left to do?
+    expect: Says whether last month is locked (closed) and lists what is still open.
+    checks: [compliance_check]
+  - id: m3
+    cadence: monthly
+    question: How much sales tax did we collect last month?
+    expect: Reports tax per source (sources overlap and must not be added together), in dollars.
+    checks: [{ tool: sales_tax_report, args: { from: last_month.from, to: last_month.to } }]
+  - id: m4
+    cadence: monthly
+    question: How much have we spent on expenses so far this month?
+    checks: [{ tool: period_review, args: { period: this_month } }]
+  - id: q1
+    cadence: quarterly
+    question: How is this quarter going compared with last quarter?
+    checks: [{ tool: period_review, args: { period: this_quarter } }]
+  - id: q2
+    cadence: quarterly
+    question: How did last quarter go, and is it locked in the books?
+    checks: [{ tool: period_review, args: { period: last_quarter } }, compliance_check]
+  - id: c1
+    cadence: compliance
+    question: What is overdue for compliance or record keeping?
+    checks: [compliance_check]
+  - id: c2
+    cadence: compliance
+    question: Are there timesheets waiting for approval?
+    checks: [compliance_check]
+  - id: c3
+    cadence: compliance
+    question: Is our document retention to Google Drive working?
+    checks: [compliance_check]
+  - id: o1
+    cadence: orders
+    question: Are any purchase orders late or still waiting for delivery?
+    checks: [order_queues]
+  - id: o2
+    cadence: orders
+    question: Are there any card payments stuck or not resolved?
+    checks: [order_queues]
+  - id: g1
+    cadence: general
+    question: Where do I approve timesheets?
+    checks: []

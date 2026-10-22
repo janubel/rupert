@@ -78,6 +78,6 @@
   <section class="space-y-3" aria-labelledby="follow-up-history">
     <div class="card-head"><div><h2 id="follow-up-history" class="section-title">History</h2><p class="card-hint">Every status change, assignment and note, newest first.</p></div></div>
     <% @events.each do |event| %><% detail = event.details %><article class="section-card"><div class="card-head"><p class="text-sm font-semibold"><%= ReconciliationFollowUp::STATUSES[detail['status']] %> · <%= detail['actor_name'] %></p><p class="text-xs text-mocha"><%= event.created_at.in_time_zone.strftime('%b %-d, %Y at %-I:%M %p %Z') %></p></div><p class="text-xs text-mocha">Due <%= Date.iso8601(detail['due_on']).strftime('%b %-d, %Y') %> · <%= detail['owner_name'].presence || 'Unassigned' %><%= detail['document_id'] ? " · evidence ##{detail['document_id']}" : '' %></p><% if detail['title'].present? && detail['title'] != @follow_up.title %><p class="text-xs text-mocha">Title at this update: <%= detail['title'] %></p><% end %><p class="whitespace-pre-wrap break-words text-sm"><%= detail['notes'] %></p></article><% end %>
-    <%== pagy_nav(@events_pagy) if @events_pagy.pages > 1 %>
+    <%== @events_pagy.series_nav if @events_pagy.pages > 1 %>
   </section>
 </div>

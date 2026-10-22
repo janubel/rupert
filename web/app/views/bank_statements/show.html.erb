@@ -48,7 +48,7 @@
         <nav class="flex flex-wrap items-center justify-between gap-3 text-sm" aria-label="Statement pages">
           <p class="text-mocha">Lines <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %>. Save this page before moving to the next; choices on other pages are not kept.</p>
           <div class="flex gap-2">
-            <% if @pagy.prev %><%= link_to 'Previous lines', bank_statement_path(@document.id, show: @filter, page: @pagy.prev), class: 'btn-ghost btn-sm', rel: 'prev' %><% end %>
+            <% if @pagy.previous %><%= link_to 'Previous lines', bank_statement_path(@document.id, show: @filter, page: @pagy.previous), class: 'btn-ghost btn-sm', rel: 'prev' %><% end %>
             <% if @pagy.next %><%= link_to 'Next lines', bank_statement_path(@document.id, show: @filter, page: @pagy.next), class: 'btn-ghost btn-sm', rel: 'next' %><% end %>
           </div>
         </nav>

@@ -14,8 +14,7 @@ module Finance
       @committed_total = @payables.sum { |row| row[:committed_cents] }
       @payables_count = @payables.count { |row| row[:balance_cents].positive? }
       @receivables_count = @receivables.size
-      @pagy = Pagy.new(count: @receivables_count, page: params[:page], items: 50)
-      @receivables = @receivables.slice(@pagy.offset, @pagy.items) || []
+      @pagy, @receivables = pagy(:offset, @receivables, limit: 50)
       response.headers['Cache-Control'] = 'private, no-store'
     end
   end

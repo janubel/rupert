@@ -117,6 +117,10 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     get customer_path(@customer), params: { activity_page: 2 }
     assert_response :success
     assert_select '#timeline ol li', count: 1
+    get customer_path(@customer), params: { activity_page: 99 }
+    assert_response :success
+    assert_select '#timeline ol li', count: 1
+    assert_select 'nav.pagy.series-nav [aria-current="page"]', text: '2'
   end
   test 'verified directory and retained historical profiles can be filtered independently' do
     time = Time.current.change(usec: 0)

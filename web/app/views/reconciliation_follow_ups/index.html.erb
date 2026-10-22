@@ -51,6 +51,6 @@
   <% else %>
     <div class="grid gap-4 md:grid-cols-2"><% @follow_ups.each do |item| %><%= render 'card', item: item, close_day: @day, queue_filters: @queue_filters %><% end %></div>
   <% end %>
-  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
   <p class="text-xs text-mocha">A file may already be retained but not linked to its request.</p>
 </div>

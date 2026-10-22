@@ -58,7 +58,7 @@
             </li>
           <% end %>
         </ul>
-        <%== pagy_nav(@follow_ups_pagy) if @follow_ups_pagy.pages > 1 %>
+        <%== @follow_ups_pagy.series_nav if @follow_ups_pagy.pages > 1 %>
         <% if can_write %>
           <%= form_with url: customer_follow_ups_path(@customer), scope: :follow_up, id: 'schedule-follow-up', class: 'space-y-3 border-t border-fog pt-4' do |f| %>
             <%= section_heading 'Schedule a follow-up', level: :h3 %>
@@ -94,7 +94,7 @@
             </li>
           <% end %>
         </ol>
-        <%== pagy_nav(@interactions_pagy) if @interactions_pagy.pages > 1 %>
+        <%== @interactions_pagy.series_nav if @interactions_pagy.pages > 1 %>
       </section>
 
       <section class="section-card" aria-label="Order history">
@@ -114,7 +114,7 @@
             </li>
           <% end %>
         </ul>
-        <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+        <%== @pagy.series_nav if @pagy.pages > 1 %>
       </section>
     </div>
   </div>

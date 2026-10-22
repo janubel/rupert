@@ -102,6 +102,6 @@
       </div>
     </div>
     <% if @receivables_count > @receivables.size %><p class="text-xs text-mocha">Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @receivables_count %> balances. The currency figures above include every recorded balance.</p><% end %>
-    <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+    <%== @pagy.series_nav if @pagy.pages > 1 %>
   </section>
 </div>
