@@ -50,7 +50,11 @@ module TeamChat
       Agent.new(handle: 'gemma-e2b', name: 'Gemma E2B', model: 'gemma-4-e2b', color: '#a855f7',
         about: 'Google Gemma 4 E2B (Unsloth UD-Q4_K_XL), local'),
       Agent.new(handle: 'gemma-e4b-ud', name: 'Gemma E4B UD', model: 'gemma-4-e4b-ud', color: '#7e22ce',
-        about: 'Google Gemma 4 E4B (Unsloth UD-Q4_K_XL), local')
+        about: 'Google Gemma 4 E4B (Unsloth UD-Q4_K_XL), local'),
+      Agent.new(handle: 'lfm-24b', name: 'Liquid 24B', model: 'lfm2.5-24b-a2b', color: '#115e59',
+        about: 'Liquid AI LFM2.5 24B-A2B (QAD Q4_0), local'),
+      Agent.new(handle: 'qwen-35b', name: 'Qwen 35B', model: 'qwen3.6-35b-a3b', color: '#9a3412',
+        about: 'Alibaba Qwen3.6 35B-A3B (Unsloth UD-Q3_K_S), local')
     ].freeze
 
     def self.trial(handle) = (TRIALS.find { |agent| agent.handle == handle.to_s } if enabled?)
