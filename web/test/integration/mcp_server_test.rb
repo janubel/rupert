@@ -190,6 +190,31 @@ class McpServerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test 'MCP origin must match scheme, host and port or an explicit origin allowlist' do
+    _, secret = issue
+    host! 'www.example.com'
+
+    rpc(secret, 'ping', nil, headers: { 'Origin' => 'http://www.example.com' })
+    assert_response :success
+
+    [
+      'https://www.example.com',
+      'http://www.example.com:3001',
+      'http://user@www.example.com',
+      'http://www.example.com/untrusted'
+    ].each do |origin|
+      rpc(secret, 'ping', nil, headers: { 'Origin' => origin })
+      assert_response :forbidden, "expected #{origin.inspect} to be rejected"
+    end
+
+    previous = ENV['MCP_ALLOWED_ORIGINS']
+    ENV['MCP_ALLOWED_ORIGINS'] = 'https://client.example:8443/'
+    rpc(secret, 'ping', nil, headers: { 'Origin' => 'https://client.example:8443' })
+    assert_response :success
+  ensure
+    ENV['MCP_ALLOWED_ORIGINS'] = previous
+  end
+
   test 'oversized request body is rejected when Content-Length is absent or understated' do
     _, secret = issue
     body = 'x' * (McpController::MAX_BODY_BYTES + 1)
