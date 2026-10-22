@@ -5,7 +5,7 @@ module Mcp
   module Registry
     def self.tools
       [
-        Tools::GetWorkspaceInfo, Tools::ListReports, Tools::SalesSummary, Tools::PeriodReview, Tools::SalesTaxReport,
+        Tools::GetWorkspaceInfo, Tools::DataGuide, Tools::ListReports, Tools::SalesSummary, Tools::PeriodReview, Tools::SalesTaxReport,
         Tools::ComplianceCheck, Tools::OrderQueues,
         Tools::InventorySearch, Tools::StockComparison, Tools::SwipesimpleItems, Tools::TimeKeepingReport, Tools::ListTasks,
         Tools::CreateTask, Tools::UpdateTask, Tools::ListAlerts, Tools::AiHealth, Tools::SubmitFeedback, Tools::ListMyFeedback,

@@ -65,6 +65,32 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     assert_includes roles, ['user', 'Rupert: Earl'], "@rupert's reply is quoted as another voice"
   end
 
+  test 'a local bot gets only the tools for what the question is about, and the matching data guide card' do
+    requests = script_model({ text: 'Two orders.' })
+    reply = post('@qwen how much sales tax did we collect last month?').replies.first
+    TeamChat::Agent.new(reply).run
+
+    tools = requests.first['tools'].map { |tool| tool.dig('function', 'name') }
+    assert_includes tools, 'sales_tax_report'
+    assert_includes tools, 'where_is'
+    assert_not_includes tools, 'list_alerts'
+    assert_not_includes tools, 'create_task'
+    assert_operator tools.size, :<, 12
+    system = requests.first['messages'].first['content']
+    assert_includes system, '## About this question'
+    assert_match(/Sales tax \(tools: sales_tax_report\): .*never add sources together/, system)
+    assert_equal %w[tax sales], reply.reload.meta['topics']
+  end
+
+  test 'a question with no topic keeps every tool' do
+    requests = script_model({ text: 'Hi!' })
+    reply = post('@qwen hello there').replies.first
+    TeamChat::Agent.new(reply).run
+    assert_includes requests.first['tools'].map { |tool| tool.dig('function', 'name') }, 'list_alerts'
+    assert_not_includes requests.first['messages'].first['content'], '## About this question'
+    assert_nil reply.reload.meta['topics']
+  end
+
   test 'a gateway that is down fails the reply plainly without falling back to the cloud model' do
     stub_request(:post, "#{LLM_BASE}/chat/completions").to_return(status: 503, body: { error: { message: 'timed out loading qwen3.5-4b' } }.to_json)
     reply = post('@qwen hi').replies.first
