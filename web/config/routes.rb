@@ -444,6 +444,12 @@ Rails.application.routes.draw do
       post :push_guard_unfreeze
     end
   end
+  resource :uploads_drive, path: 'uploads/drive', controller: 'uploads_drive', only: :show do
+    post :connect
+    post :folder
+    post :import
+    post :disconnect
+  end
   resources :uploads, only: %i[index show create] do
     collection do
       post :recognize_all
