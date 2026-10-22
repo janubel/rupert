@@ -207,8 +207,7 @@ systemctl enable --now rupert-agent
 ### The opencode key (you must supply one)
 
 The old key (host `~/.local/share/opencode/auth.json`) is expired. Create a key in the OpenCode Console and add it to
-`/etc/rupert-agent/secrets.env` as `OPENCODE_API_KEY=…`, then `systemctl enable --now rupert-agent`. Tell me whether it is
-a Zen or a Go key: `deepseek-v4.1-flash` (in `opencode.json`) is in the Zen catalog, not Go's. The free tier does not
+`/etc/rupert-agent/secrets.env` as `OPENCODE_API_KEY=…`, then `systemctl enable --now rupert-agent`. The plan in use is **OpenCode Go**: `opencode.json` uses `opencode-go/deepseek-v4.1-flash`, and the credential in `auth.json` must be the `opencode-go` entry. The free tier does not
 work: calls from anything but the OpenCode apps return `403 free tier can only be used from within OpenCode`.
 The AI-health card in Rupert reads `OPENCODE_API_KEY` from Rupert's own environment, so it will keep saying "not set"
 unless you also put a key there (a second key is safest); the agent does not need Rupert to hold it.
