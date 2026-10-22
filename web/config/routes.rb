@@ -474,6 +474,10 @@ Rails.application.routes.draw do
     collection { post :preview }
     member { get :document }
   end
+  resources :zelle_reports, only: %i[index create] do
+    collection { post :preview }
+    member { get :document }
+  end
   get '/system', to: 'system#index', as: :system
   post '/system/ai_health/check', to: 'system#check_ai_health', as: :check_system_ai_health
   get '/system/updates', to: 'updates#show', as: :system_updates

@@ -1,0 +1,5 @@
+﻿Date,Amount,Direction,Reference ID,Counterparty,Memo
+2026-10-14,$48.00,credit,ZTEST-1001,Fictional Customer A,Order 1001
+10/14/2026,"1,200.50",credit,ZTEST-1002,Fictional Customer B,Wholesale deposit
+2026-10-14,15.25,debit,ZTEST-1003,Fictional Vendor,Refund to customer
+2026-10-15,30.00,credit,ZTEST-1004,,

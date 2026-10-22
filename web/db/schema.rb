@@ -3265,6 +3265,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
+  create_table "zelle_entries", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "zelle_export_id", null: false
+    t.string "identity", null: false
+    t.text "bank_reference", null: false
+    t.text "counterparty"
+    t.text "memo"
+    t.string "direction", null: false
+    t.string "tender", default: "zelle", null: false
+    t.string "verification", default: "unverified", null: false
+    t.integer "amount_cents", null: false
+    t.date "posted_on", null: false
+    t.integer "source_row", null: false
+    t.index ["tenant_id", "identity"], name: "idx_zelle_tenant_identity"
+    t.index ["tenant_id", "posted_on"], name: "idx_zelle_tenant_day"
+    t.index ["zelle_export_id", "identity"], name: "idx_zelle_export_identity", unique: true
+    t.index ["zelle_export_id"], name: "index_zelle_entries_on_zelle_export_id"
+  end
+
+  create_table "zelle_exports", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "account_label", null: false
+    t.string "currency", null: false
+    t.string "fingerprint", null: false
+    t.string "sha256", null: false
+    t.datetime "exported_at", null: false
+    t.date "first_posted_on"
+    t.date "last_posted_on"
+    t.integer "row_count", default: 0, null: false
+    t.text "original_csv", null: false
+    t.integer "imported_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["imported_by_id"], name: "index_zelle_exports_on_imported_by_id"
+    t.index ["tenant_id", "account_label", "exported_at"], name: "idx_zelle_export_scope"
+    t.index ["tenant_id", "fingerprint"], name: "index_zelle_exports_on_tenant_id_and_fingerprint", unique: true
+  end
+
   add_foreign_key "InventoryLevel", "ShopifyVariant", column: "shopifyVariantId", on_delete: :nullify
   add_foreign_key "InventoryLevel", "SquareVariation", column: "squareVariationId", on_delete: :nullify
   add_foreign_key "ReconcileItem", "ReconcileRun", column: "runId", on_delete: :cascade
