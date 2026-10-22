@@ -9,13 +9,13 @@ class BuzzChatSyncJob < ApplicationJob
   # page is not held up by a slow relay, as with Solid Queue in production.
   self.queue_adapter = :async if Rails.env.development?
 
-  def perform(tenant_id)
+  def perform(tenant_id, channel = nil)
     tenant = Tenant.find_by(id: tenant_id)
     return unless tenant
 
     previous = Current.tenant
     Current.tenant = tenant
-    BuzzChat.sync!
+    BuzzChat.sync!(channel: channel)
   ensure
     Current.tenant = previous
   end

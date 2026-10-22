@@ -132,11 +132,10 @@ Rules enforced by Rupert (`FeedbackIntake`), not by the prompt:
 - Via MCP, `submit_feedback` accepts the same fields (`open_task`, `source`,
   `source_ref`, `source_sender`, `ready_for_development`) with the same rules.
 
-Which agent runs this: the prompt applies to the tool-using agent started with
-`bin/buzz_acp_agent` (it can run the quick reports and the intake script). The
-rule-based `BuzzListener` and the tool-less `OpencodeChatAgent` cannot run commands
-and do not file reports. The agent is not deployed by this change; whoever runs it
-must restart it so it reads the new prompt.
+Which agent runs this: the prompt applies to the tool-using agent in the sandboxed `rupert-agent` container
+(docs/ops/buzz-relay-ser8.md), which files reports through the `submit_feedback` MCP tool with a scoped token. The
+rule-based `BuzzListener` and the tool-less `OpencodeChatAgent` cannot file reports. Restart the agent service after the
+prompt changes so it reads the new `/etc/rupert-agent/prompt.txt`.
 
 ## Not built yet (follow-ups)
 

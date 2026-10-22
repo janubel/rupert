@@ -297,7 +297,7 @@ class OpencodeChatAgent
     PROMPT
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     output = Timeout.timeout(90) do
-      IO.popen(OpencodeCli.run_command(binary: 'opencode', agent: 'chat', prompt: prompt), **OpencodeCli.popen_options, &:read)
+      IO.popen(OpencodeCli.env, OpencodeCli.run_command(binary: 'opencode', agent: 'chat', prompt: prompt), **OpencodeCli.popen_options, &:read)
     end
     reply = extract_text(output)
     record_usage(output, reply_present: reply.present?, started: started)

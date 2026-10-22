@@ -5,7 +5,7 @@
 # the prompt cannot drift between them:
 #
 #   :text_only  OpencodeChatAgent (opencode run, no tools)
-#   :acp        the buzz-acp harness (bin/buzz_acp_agent); docs/ops/buzz-agent-prompt.txt
+#   :acp        the buzz-acp harness in the sandboxed agent container (deploy/ser8/agent); docs/ops/buzz-agent-prompt.txt
 #               is this text rendered, kept in sync by test and `rake buzz:prompt`
 #
 # The text lives in config/buzz_agent/*.md so it can be reviewed like prose.

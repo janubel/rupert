@@ -54,10 +54,32 @@ class Handler(BaseHTTPRequestHandler):
         tools = [t['function']['name'] for t in body.get('tools', []) if 'function' in t]
         self.send_response(200); self.send_header('Content-Type', 'text/event-stream'); self.end_headers()
         if messages and messages[-1].get('role') == 'tool':
+            sys.stderr.write('mock: TOOL RESULT %s\n' % str(messages[-1].get('content'))[:400].replace('\n', ' ')); sys.stderr.flush()
             sse(self, {'role': 'assistant', 'content': 'done'}); sse(self, {}, 'stop')
         else:
             text = last_user_text(messages)
             tag = next((k for k in CASES if re.search(r'\b%s\b' % k, text)), 'ALLOWED')
+            if re.search(r'\bTOOL:(\w+)', text):  # TOOL:<name-fragment> calls the first offered tool whose name contains it
+                want = re.search(r'\bTOOL:(\w+)', text).group(1)
+                name = next((t for t in tools if want in t), None)
+                channel = next(iter(re.findall(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', text)), CHANNEL)
+                sys.stderr.write('mock: offered tools=%s picked=%s\n' % (tools, name)); sys.stderr.flush()
+                if name:
+                    if 'reply' in want:
+                        arguments = {'channel': channel, 'content': 'pong via the bridge'}
+                    elif 'submit_feedback' in want:  # SENDER:/REF: in the test message stand in for the [Context] metadata
+                        sender = re.search(r'SENDER:([0-9a-f]{64})', text); ref = re.search(r'REF:([0-9a-f]{64})', text)
+                        arguments = {'kind': 'question', 'summary': 'SANDBOX TEST report', 'details': 'Filed by the sandbox test.',
+                                     'source': 'buzz', 'open_task': True, 'ready_for_development': 'READY:1' in text}
+                        if sender: arguments['source_sender'] = sender.group(1)
+                        if ref: arguments['source_ref'] = ref.group(1)
+                    else:
+                        arguments = {}
+                    args = json.dumps(arguments)
+                    sse(self, {'role': 'assistant', 'tool_calls': [{'index': 0, 'id': 'call_mock1', 'type': 'function', 'function': {'name': name, 'arguments': args}}]})
+                    sse(self, {}, 'tool_calls')
+                    self.wfile.write(b'data: [DONE]\n\n'); self.wfile.flush()
+                    return
             shell = next((t for t in tools if t in ('bash', 'shell')), 'shell')
             args = json.dumps({'command': CASES[tag], 'description': 'permission test'})
             sse(self, {'role': 'assistant', 'tool_calls': [{'index': 0, 'id': 'call_mock1', 'type': 'function', 'function': {'name': shell, 'arguments': args}}]})

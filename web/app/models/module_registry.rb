@@ -116,6 +116,7 @@ class ModuleRegistry
     Entry.new(key: 'pos_connections', name: 'POS & payments', path: -> { pos_connections_path }, permission: 'settings.read', position: 94),
     Entry.new(key: 'sync', name: 'Sync', path: -> { syncs_path }, permission: 'sync.read', position: 90),
     Entry.new(key: 'uploads', name: 'Uploads', path: -> { uploads_path }, permission: 'uploads.read', position: 90.5),
+    Entry.new(key: 'buzz_mirror', name: 'Buzz mirror', path: -> { admin_buzz_mirror_path }, permission: 'settings.write', position: 96),
     Entry.new(key: 'settings', name: 'Settings', path: -> { settings_path }, permission: 'settings.read', position: 100),
     Entry.new(key: 'api_access_tokens', name: 'API access', path: -> { api_access_tokens_path }, permission: 'settings.write', position: 108),
     Entry.new(key: 'agent_feedback', name: 'AI assistant feedback', path: -> { agent_feedbacks_path }, permission: 'settings.read', position: 108),
@@ -213,11 +214,11 @@ class ModuleRegistry
         ] },
       { key: 'system', name: 'System',
         modules: %w[system platform activity access_log
-                    connections pos_connections sync uploads
+                    connections pos_connections sync uploads buzz_mirror
                     settings api_access_tokens agent_feedback ask_rupert_usage owner_checklists roadmap style_guide],
         groups: [
           { name: 'Health', modules: %w[system platform activity access_log] },
-          { name: 'Connections', modules: %w[connections pos_connections sync uploads] },
+          { name: 'Connections', modules: %w[connections pos_connections sync uploads buzz_mirror] },
           { name: 'Settings', modules: %w[settings api_access_tokens agent_feedback ask_rupert_usage owner_checklists roadmap style_guide] }
         ] }
     ].freeze

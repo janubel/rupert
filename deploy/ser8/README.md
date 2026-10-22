@@ -77,14 +77,15 @@ When updating an installed watcher, replace the copied `/usr/local/sbin/rupert-a
 
 ## Buzz relay and the @rupert agent
 
-The self-hosted Buzz relay is an Incus container (`buzz`) on SER8; its files are not installed from this directory.
-This directory holds what runs around it:
+The self-hosted Buzz relay is an Incus container (`buzz`) on SER8, and the `@rupert` agent runs in its own sandboxed
+container (`rupert-agent`); neither is installed from this directory. This directory holds what runs around them:
 
-- `rupert-buzz.service`: the one `@rupert` agent (buzz-acp driving opencode), inside the `rupert` container.
-- `buzz/opencode.json`: the opencode config (agent `buzz` limited to the buzz CLI and Rupert's report scripts; agent
-  `chat` with every tool denied). Install as `/etc/rupert-buzz/opencode.json`.
+- `agent/`: everything for the sandboxed agent container: `rupert_mcp_bridge.py` (its only tools), `opencode.json`,
+  `rupert-agent.service`, `rupert-agent-run`, `agent.env.example`, `egress_proxy.py` + `egress-proxy.service` (the
+  allow-list proxy that runs in the `buzz` container), `sandbox-test/` (mock-model check that the agent has no shell,
+  file or web tools) and `test_bridge.py`.
 - `buzz/backup-buzz.sh`, `buzz-backup.service`, `buzz-backup.timer`: encrypted off-container backup of the relay's
   Postgres, media and secrets (host user timer, same key as `rupert-offhost-backup.sh`).
-- `buzz/permission-test/`: mock-model check that the agent's permission rules hold.
 
-Full runbook, install steps, rollback and what is unverified: [docs/ops/buzz-relay-ser8.md](../../docs/ops/buzz-relay-ser8.md).
+Full runbook, threat model, install steps, revocation, rollback and what is unverified:
+[docs/ops/buzz-relay-ser8.md](../../docs/ops/buzz-relay-ser8.md).

@@ -121,7 +121,7 @@ class BuzzChatFlowTest < ActionDispatch::IntegrationTest
     assert_equal asked, @relay.requests.size, 'within the interval nothing is asked of the relay'
 
     BuzzChatState.where(tenant_id: @tenant.id).update_all(last_attempt_at: 1.minute.ago)
-    assert_enqueued_with(job: BuzzChatSyncJob, args: [@tenant.id]) { get buzz_chat_messages_path }
+    assert_enqueued_with(job: BuzzChatSyncJob, args: [@tenant.id, BuzzAgent.channel_id]) { get buzz_chat_messages_path }
   end
 
   test 'the sync job brings the copy up to date and scrollback pages through it' do

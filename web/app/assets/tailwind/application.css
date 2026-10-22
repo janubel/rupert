@@ -1541,3 +1541,77 @@ body.tour-active { overflow-x:hidden; }
 .upload-bar-note { margin:.25rem 0 0;font-size:.75rem;color:var(--color-mocha); }
 @media (forced-colors: active) { .upload-seg { stroke:CanvasText;fill:Highlight; } .upload-bar span { background:Highlight; } }
 @media (max-width: 640px) { .upload-axis { font-size:16px; } }
+
+/* Buzz workspace mirror: a Slack-like three-pane shell that mirrors the Buzz
+   desktop client's cream sidebar, channel rail and conversation pane. */
+.buzz-app { display:grid;grid-template-columns:16.5rem minmax(0,1fr);height:calc(100dvh - 9rem);min-height:34rem;border:1px solid var(--color-edge);border-radius:1rem;overflow:hidden;background:var(--color-paper);box-shadow:0 24px 60px -38px rgba(35,30,15,.45); }
+.buzz-rail { display:flex;flex-direction:column;gap:.55rem;background:#f4efd9;border-right:1px solid #e6dfc4;padding:.9rem .7rem .7rem;min-height:0; }
+.buzz-workspace { display:flex;align-items:center;gap:.6rem;padding:.15rem .35rem .35rem; }
+.buzz-workspace-mark { width:2rem;height:2rem;border-radius:.6rem;background:#2f2a1f;color:#fff;display:grid;place-items:center;font-weight:800;font-size:.9rem;flex:none; }
+.buzz-workspace-name { margin:0;font-size:.95rem;font-weight:750;line-height:1.1;color:#2b281f;font-family:var(--font-display,inherit); }
+.buzz-workspace-text p { margin:.1rem 0 0;font-size:.66rem;color:#857c65; }
+.buzz-search { display:flex;align-items:center;gap:.4rem;background:#fffdf3;border:1px solid #e3dcc3;border-radius:.55rem;padding:.4rem .55rem;color:#8a8068;font-size:.76rem; }
+.buzz-search input { border:0;background:transparent;outline:0;width:100%;font:inherit;color:inherit;min-width:0; }
+.buzz-search input::placeholder { color:#9b927c; }
+.buzz-search kbd { font-size:.6rem;border:1px solid #ddd4b8;border-radius:.25rem;padding:.05rem .25rem;background:#f8f4e4;color:#8a8068; }
+.buzz-rail-nav { display:flex;flex-direction:column;gap:.08rem; }
+.buzz-rail-link { display:flex;align-items:center;gap:.5rem;padding:.38rem .55rem;border-radius:.45rem;color:#4d4737;font-size:.8rem;font-weight:600;text-decoration:none; }
+.buzz-rail-link:hover { background:#ece5cb;color:#2c281c; }
+.buzz-rail-link[aria-current="page"] { background:#dfd7b6;color:#2c281c; }
+.buzz-rail-link .nav-symbol { width:16px;height:16px;flex:none; }
+.buzz-rail-section { margin-top:.3rem;min-height:0;overflow-y:auto; }
+.buzz-rail-label { margin:.5rem .55rem .25rem;font-size:.63rem;font-weight:750;text-transform:uppercase;letter-spacing:.08em;color:#91876c; }
+.buzz-rail-channel { display:flex;align-items:center;gap:.35rem;padding:.32rem .55rem;border-radius:.45rem;color:#5a5341;font-size:.8rem;text-decoration:none; }
+.buzz-rail-channel:hover { background:#ece5cb;color:#2c281c; }
+.buzz-rail-channel.is-active { background:#e3dcc0;color:#252217;font-weight:700; }
+.buzz-hash { color:#9a9074;font-weight:600; }
+.buzz-rail-channel-name { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.buzz-rail-channel-count { margin-left:auto;font-size:.63rem;color:#93896e; }
+.buzz-rail-user { display:flex;align-items:center;gap:.55rem;border-top:1px solid #e2d9be;padding:.6rem .4rem 0;margin-top:auto; }
+.buzz-rail-user-text strong { display:block;font-size:.76rem;color:#353024;line-height:1.15; }
+.buzz-rail-user-text span { font-size:.66rem;color:#8a8068; }
+.buzz-avatar { width:1.75rem;height:1.75rem;border-radius:50%;background:#7c9a6a;color:#fff;display:grid;place-items:center;font-size:.7rem;font-weight:750;flex:none; }
+.buzz-main { display:flex;flex-direction:column;min-width:0;min-height:0;background:#fffdf7; }
+.buzz-channel-head { display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:.75rem 1.2rem .65rem;border-bottom:1px solid #eee8d5; }
+.buzz-channel-title h2 { margin:0;font-size:1rem;font-weight:750;color:#2b281f;display:flex;gap:.2rem;align-items:center; }
+.buzz-channel-title p { margin:.1rem 0 0;font-size:.7rem;color:#8d846d; }
+.buzz-channel-tools { display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;justify-content:flex-end;font-size:.7rem;color:#8d846d; }
+.buzz-channel-tools .buzz-status { margin:0; }
+.buzz-members { white-space:nowrap; }
+.buzz-open { color:#5b6f45;font-weight:650;text-decoration:none;border:1px solid #ddd6bd;border-radius:.45rem;padding:.26rem .5rem;background:#fff; }
+.buzz-open:hover { background:#f6f2e0; }
+.buzz-chat { display:flex;flex-direction:column;min-height:0;flex:1; }
+.buzz-log-wrap { position:relative;flex:1;min-height:0; }
+.buzz-log { height:100%;min-height:0;overflow-y:auto;padding:.55rem 1rem .9rem;background:#fffdf7;overscroll-behavior:contain; }
+.buzz-msg { padding:.22rem .5rem;margin:.06rem 0;border-radius:.5rem;border-left:0; }
+.buzz-msg:hover { background:#f7f3e6; }
+.buzz-msg-mine { background:#f4f7ea; }
+.buzz-msg-row { display:flex;gap:.6rem;align-items:flex-start; }
+.buzz-msg-avatar { width:2rem;height:2rem;border-radius:.55rem;display:grid;place-items:center;color:#fff;font-size:.68rem;font-weight:750;flex:none;margin-top:.08rem;user-select:none; }
+.buzz-msg-avatar.is-spacer { visibility:hidden; }
+.buzz-msg-main { min-width:0;flex:1; }
+.buzz-msg-head { display:flex;align-items:baseline;gap:.45rem;flex-wrap:wrap;margin:0; }
+.buzz-msg-author { font-weight:750;font-size:.82rem;color:#262319; }
+.buzz-msg-time { font-size:.66rem;color:#9a927d; }
+.buzz-msg-body { font-size:.86rem;line-height:1.45;color:#353026;overflow-wrap:anywhere; }
+.buzz-msg-body a { color:#3f6b8a;text-decoration:underline; }
+.buzz-msg-body code { background:#f0ecdc;padding:.05rem .25rem;border-radius:.25rem;font-size:.82em; }
+.buzz-badge { display:inline-flex;align-items:center;padding:.02rem .35rem;border:0;border-radius:999px;background:#eef1e4;color:#52683c;font-size:.6rem;font-weight:700; }
+.buzz-day { display:flex;align-items:center;gap:.6rem;margin:.7rem 0 .3rem;color:#9a927d;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em; }
+.buzz-day::before,.buzz-day::after { content:"";flex:1;height:1px;background:#eee8d5; }
+.buzz-compose { border-top:1px solid #eee8d5;padding:.65rem 1.1rem .85rem;background:#fffdf7; }
+.buzz-composer { border:1px solid #ded6ba;border-radius:.75rem;background:#fffef9;padding:.5rem .65rem .4rem;box-shadow:0 1px 2px rgba(40,35,20,.04); }
+.buzz-composer:focus-within { border-color:#b9ae8a;box-shadow:0 0 0 3px rgba(150,135,90,.12); }
+.buzz-input { width:100%;border:0;outline:0;resize:none;background:transparent;font:inherit;font-size:.86rem;line-height:1.45;color:#2f2b21;min-height:1.5rem;max-height:10rem; }
+.buzz-input::placeholder { color:#aaa18a; }
+.buzz-composer-bar { display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.3rem; }
+.buzz-composer-hint { font-size:.64rem;color:#a09880; }
+.buzz-send { width:2rem;height:2rem;border-radius:50%;border:0;background:#3b382e;color:#fff;display:grid;place-items:center;font-size:1rem;cursor:pointer; }
+.buzz-send:disabled { opacity:.35;cursor:default; }
+.buzz-count { margin:.3rem 0 0;font-size:.68rem;color:#9a927d;text-align:right; }
+.buzz-count[data-over="true"] { color:#b23b2e; }
+.buzz-error { margin:0 0 .4rem;color:#a53428;font-size:.74rem; }
+.buzz-more { display:block;margin:0 auto .55rem; }
+.buzz-jump { position:absolute;right:1.1rem;bottom:.7rem;border:1px solid #ded6ba;background:#fff;border-radius:999px;padding:.28rem .7rem;font-size:.7rem;font-weight:650;color:#4d4737;box-shadow:0 4px 12px rgba(40,35,20,.12); }
+.buzz-log > .buzz-hint { text-align:center;padding:.9rem 0; }
+@media (max-width:760px) { .buzz-app { grid-template-columns:1fr;height:calc(100dvh - 7rem); } .buzz-rail { display:none; } }

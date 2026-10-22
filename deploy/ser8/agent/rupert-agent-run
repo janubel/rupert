@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Start the @rupert agent: buzz-acp (the Buzz harness) driving `opencode acp`. Runs inside the sandboxed `rupert-agent`
+# container as the unprivileged service user; the environment comes from /etc/rupert-agent/{agent,secrets}.env via
+# systemd. No Rails, no Rupert files. See docs/ops/buzz-relay-ser8.md.
+set -euo pipefail
+: "${BUZZ_PRIVATE_KEY:?BUZZ_PRIVATE_KEY missing from /etc/rupert-agent/secrets.env}"
+: "${BUZZ_RELAY_URL:?BUZZ_RELAY_URL missing from /etc/rupert-agent/agent.env}"
+export BUZZ_ACP_AGENT_COMMAND=/usr/local/bin/opencode
+export BUZZ_ACP_AGENT_ARGS=acp
+export BUZZ_ACP_SYSTEM_PROMPT_FILE=/etc/rupert-agent/prompt.txt
+# Membership of the closed relay is the gate; the default `owner-only` would ignore everybody but the agent's owner.
+export BUZZ_ACP_RESPOND_TO="${BUZZ_ACP_RESPOND_TO:-anyone}"
+exec /usr/local/bin/buzz-acp "$@"

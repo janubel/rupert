@@ -10,7 +10,7 @@ import { Controller } from "@hotwired/stimulus"
 // link is plain text plus an href. Nothing linked is fetched or previewed.
 export default class extends Controller {
   static targets = ["log", "more", "status", "notice", "form", "input", "send", "count", "jump", "empty", "loading"]
-  static values = { url: String, canPost: Boolean, postMax: { type: Number, default: 1500 }, interval: { type: Number, default: 4000 } }
+  static values = { url: String, channel: String, canPost: Boolean, postMax: { type: Number, default: 1500 }, interval: { type: Number, default: 4000 } }
 
   static GROUP_SECONDS = 5 * 60
 
@@ -97,6 +97,7 @@ export default class extends Controller {
     this.busy = true
     try {
       const params = new URLSearchParams()
+      if (this.channelValue) params.set("channel", this.channelValue)
       if (after) params.set("after", after)
       if (before) params.set("before", before)
       const query = params.toString()
@@ -192,6 +193,15 @@ export default class extends Controller {
     if (message.mine) item.classList.add("buzz-msg-mine")
     if (grouped) item.classList.add("buzz-msg-grouped")
     item.dataset.messageId = message.id
+
+    const row = document.createElement("div")
+    row.className = "buzz-msg-row"
+    const avatar = this.avatar(message.author, message.key)
+    if (grouped) avatar.classList.add("is-spacer")
+    row.append(avatar)
+
+    const main = document.createElement("div")
+    main.className = "buzz-msg-main"
     if (!grouped) {
       const head = document.createElement("header")
       head.className = "buzz-msg-head"
@@ -207,7 +217,7 @@ export default class extends Controller {
       time.textContent = this.timeLabel(new Date(message.at))
       time.title = new Date(message.at).toLocaleString()
       head.append(time)
-      item.append(head)
+      main.append(head)
     }
     const body = document.createElement("div")
     body.className = "buzz-msg-body"
@@ -215,8 +225,26 @@ export default class extends Controller {
       if (index > 0) body.append(document.createElement("br"))
       this.constructor.parseLine(line).forEach((part) => body.append(this.partNode(part)))
     })
-    item.append(body)
+    main.append(body)
+    row.append(main)
+    item.append(row)
     return item
+  }
+
+  avatar(name, key) {
+    const node = document.createElement("span")
+    node.className = "buzz-msg-avatar"
+    node.setAttribute("aria-hidden", "true")
+    node.textContent = this.constructor.initials(name)
+    let hash = 0
+    for (const char of String(key || name || "")) hash = (hash * 31 + char.charCodeAt(0)) % 360
+    node.style.background = `hsl(${hash} 38% 48%)`
+    return node
+  }
+
+  static initials(name) {
+    const words = String(name || "?").trim().split(/\s+/).filter(Boolean)
+    return (words.slice(0, 2).map((word) => word[0]).join("") || "?").toUpperCase()
   }
 
   partNode(part) {
@@ -341,7 +369,7 @@ export default class extends Controller {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": this.csrf },
         credentials: "same-origin",
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({ message: text, channel: this.channelValue })
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
