@@ -114,8 +114,22 @@ module TeamChat
         attachments: deleted? ? [] : attachment_infos.map { |attachment| attachment.as_payload(room) },
         mentions: mention_ids.filter_map { |id| { id: id, name: people[id] } if people[id] }, mentions_me: mention_ids.include?(viewer.id),
         reactions: reaction_summary(viewer), rating: rating_summary(viewer),
-        pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?), edited: edited_at.present?
+        pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?), edited: edited_at.present?,
+        answer: answer_timing
       }
+    end
+
+    LOCAL_ENGINES = %w[local_gateway ollama].freeze
+
+    # How long a finished assistant reply took and which model wrote it, shown next to the post.
+    def answer_timing
+      return nil unless assistant? && status == 'done'
+
+      info = meta.to_h
+      return nil if info['duration_ms'].blank?
+
+      { seconds: (info['duration_ms'].to_f / 1000).round(1), model: info['model'].presence,
+        where: LOCAL_ENGINES.include?(info['engine']) ? 'local' : 'cloud' }
     end
 
     # Changes the text of one's own message; mentions no longer in the text are dropped.

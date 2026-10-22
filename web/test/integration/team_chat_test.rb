@@ -535,4 +535,28 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     TeamChat::ModelConfig.any_instance.stubs(:configured?).returns(false)
     assert_empty TeamChat::LocalAgents.all
   end
+
+  test 'the bot key explains each bot, and bot replies show how long they took' do
+    ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
+    ENV['RUPERT_CHAT_API_KEY'] = 'test-key'
+    sign_in(@admin)
+    get team_chat_path
+    follow_redirect!
+    assert_select '.chat-bots .chat-bots-row', 6
+    assert_select '.chat-bots-row dt', /@rupert/
+    assert_select '.chat-bots-row dt', /@deepseek\s+cloud/
+    assert_select '.chat-bots-row dt', /@qwen\s+local/
+
+    room = TeamChat::Room.find_by(slug: 'admins')
+    asked = room.messages.create!(user: @admin, body: '@qwen sales?')
+    room.messages.create!(author_kind: 'assistant', status: 'done', body: 'Two orders.',
+      meta: { 'asked_by' => @admin.id, 'trigger_id' => asked.id, 'agent' => 'qwen', 'engine' => 'local_gateway', 'model' => 'qwen3.5-4b', 'duration_ms' => 31_240 })
+    get team_chat_messages_path('admins'), as: :json
+    answer = json['messages'].last['answer']
+    assert_equal({ 'seconds' => 31.2, 'model' => 'qwen3.5-4b', 'where' => 'local' }, answer)
+    assert_nil json['messages'].first['answer']
+  ensure
+    ENV.delete('RUPERT_LOCAL_LLM_URL')
+    ENV.delete('RUPERT_CHAT_API_KEY')
+  end
 end
