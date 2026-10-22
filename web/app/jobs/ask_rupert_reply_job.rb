@@ -2,7 +2,7 @@
 
 # Writes the reply to one pending Ask Rupert message, as the person who asked.
 class AskRupertReplyJob < ApplicationJob
-  queue_as :default
+  queue_as :chat
   # In development jobs normally run inline; run this one in the background so the
   # panel can show the reply arriving, as it does with Solid Queue in production.
   self.queue_adapter = :async if Rails.env.development?
