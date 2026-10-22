@@ -1,5 +1,8 @@
 # SER8 host-side watcher
 
+For the end-to-end branch, CI, deployment, receipt and acceptance policy, see
+the [development and deployment workflow](../../docs/development-and-deployment-workflow.md).
+
 `rupert-sync-watch` runs on the SER8 **host** as a user timer (every 15 minutes) and fails when Rupert's newest
 successful sync is older than 45 minutes or `rupert-jobs` is not active. A failed run is visible in Cockpit and in
 `systemctl --user --failed`. It is read-only: it never restarts anything.

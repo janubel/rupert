@@ -1,5 +1,10 @@
 # Nightly releases and build totals
 
+This workflow uses the repository's
+[development and deployment workflow](../development-and-deployment-workflow.md).
+Publishing a nightly prerelease does not itself install it on SER8; the live
+revision depends on the updater mode and must be verified separately.
+
 The nightly Codex task runs at 02:00 America/New_York. It reviews integrated
 changes, investigates regressions, prepares tested fixes and release notes, and
 publishes a `nightly-YYYY-MM-DD-<short SHA>` **prerelease** only after the exact

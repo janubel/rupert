@@ -9,8 +9,11 @@ The `main` branch is the Ruby on Rails (ROR) app in `web/`, the production imple
 - Naming: `fix/…`, `feature/…`, `docs/…`, or a tool prefix such as `codex/…` / `claude/…`.
 - Head branches are **auto-deleted on merge** (repository setting), which keeps the branch list short.
 
-## Deploys are not merges
+## Deployment and acceptance
 
-Production runs on SER8 in Incus and does **not** deploy from GitHub — pushing a
-commit or creating a release does not deploy it. See
-[Production and deployment](../README.md#production-and-deployment).
+SER8's updater polls `main`; eligible commits can install automatically when
+the instance is in automatic mode. In click-only mode an operator must request
+the install. A merge, stable release, deployment and operator acceptance are
+separate states. Verify the installed mode and SHA before describing a change
+as live. See the [development and deployment workflow](development-and-deployment-workflow.md)
+and [SER8 updater runbook](../deploy/ser8/README.md#auto-deploy-rupert-autodeploy).
