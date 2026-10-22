@@ -229,7 +229,7 @@
       "area": "Work",
       "name": "Projects and tasks",
       "status": "Available",
-      "scope": "Project/task transitions and tracking.",
+      "scope": "Projects and tasks: board, list, calendar and timeline views; task pages with checklist, comments, files, time, dependencies and recurrence; goals, members, templates, notifications and CSV export.",
       "evidence": "web/app/modules/projects/task.rb",
       "phase": "0"
     },

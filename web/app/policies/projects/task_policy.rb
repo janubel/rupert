@@ -6,6 +6,13 @@ module Projects
       user&.active? && (user.employee? ? module?('tasks.self') : module?('projects.read'))
     end
 
+    def show?
+      return false unless user&.active? && tenant?
+      return user.tenant_id.present? && module?('tasks.self') && record.assignee_id.to_s == user.id.to_s if user.employee?
+
+      module?('projects.read') || module?('projects.write')
+    end
+
     def create?
       user&.active? && !user.employee? && module?('projects.write')
     end

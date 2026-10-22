@@ -7,11 +7,13 @@
     <div class="inline-flex rounded-full bg-haze p-1" role="group" aria-label="View" <%= tour_anchor('views') %>>
       <%= link_to "Board", tasks_filter_path(view: nil), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "board"}" %>
       <%= link_to "List", tasks_filter_path(view: "list"), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "list"}" %>
+      <%= link_to "Calendar", tasks_filter_path(view: "calendar"), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "calendar"}" %>
     </div>
+    <%= link_to "Export CSV", tasks_export_path, class: "btn-ghost btn-sm" unless own_tasks %>
     <%= link_to "Projects", projects_projects_path, class: "btn-ghost btn-sm" unless own_tasks %>
   <% end %>
 
-  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" <%= tour_anchor('stats') %>>
+  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" data-live-region="stats" <%= tour_anchor('stats') %>>
     <%= link_to tasks_filter_path(status: nil, due: nil, mine: nil), class: "stat block hover:border-taupe" do %>
       <p class="stat-label">Open</p><p class="stat-value"><%= @open_count %></p>
     <% end %>
@@ -27,7 +29,9 @@
   </section>
 
   <%= form_with url: projects_tasks_path, method: :get, class: "flex flex-wrap items-center gap-2", data: { controller: "auto-submit", tour: 'filters' } do %>
-    <%= hidden_field_tag :view, @view if @view == "list" %>
+    <%= hidden_field_tag :view, @view if @view != "board" %>
+    <%= hidden_field_tag :month, params[:month] if params[:month].present? %>
+    <%= hidden_field_tag :label, params[:label] if params[:label].present? %>
     <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
     <%= search_field_tag :q, params[:q], placeholder: "Search tasks…", class: "search w-56", "aria-label": "Search tasks" %>
     <%= select_tag :project_id, options_from_collection_for_select(@projects, :id, :name, params[:project_id]), include_blank: "All projects", class: "select", "aria-label": "Project", data: { action: "change->auto-submit#submit" } %>
@@ -35,8 +39,9 @@
     <%= link_to "Mine (#{@mine_count})", tasks_filter_path(mine: params[:mine] == "1" ? nil : "1"), class: "nav-pill nav-pill-idle-sm border border-fog #{"nav-pill-active-sm" if params[:mine] == "1"}" %>
     <%= link_to "Overdue", tasks_filter_path(due: params[:due] == "overdue" ? nil : "overdue"), class: "nav-pill nav-pill-idle-sm border border-fog #{"nav-pill-active-sm" if params[:due] == "overdue"}" %>
     <%= link_to "Due this week", tasks_filter_path(due: params[:due] == "week" ? nil : "week"), class: "nav-pill nav-pill-idle-sm border border-fog #{"nav-pill-active-sm" if params[:due] == "week"}" %>
+    <% if params[:label].present? %><span class="rounded-full bg-haze px-2.5 py-1 text-xs font-medium text-ink">Label: <%= params[:label] %></span><% end %>
     <% if tasks_filtered? %>
-      <%= link_to "Clear", projects_tasks_path(view: (@view == "list" ? "list" : nil)), class: "text-xs font-semibold text-olive hover:underline" %>
+      <%= link_to "Clear", projects_tasks_path(view: (@view == "board" ? nil : @view)), class: "text-xs font-semibold text-olive hover:underline" %>
     <% end %>
     <noscript><%= submit_tag "Filter", class: "btn-ghost btn-sm" %></noscript>
   <% end %>
@@ -57,6 +62,8 @@
     <% else %>
       <%= render "projects/shared/board", columns: @columns, assignees: @assignees, show_project: true, can_write: can_write %>
     <% end %>
+  <% elsif @view == "calendar" %>
+    <%= render "projects/tasks/calendar" %>
   <% else %>
     <div class="space-y-2">
       <% if @tasks.empty? %>
@@ -67,7 +74,7 @@
           <div class="flex min-w-0 flex-1 items-start gap-3">
             <span class="mt-1.5"><%= priority_dot(task.priority) %></span>
             <div class="min-w-0">
-              <p class="<%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= task.title %></p>
+              <p class="<%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= link_to task.title, projects_task_path(task), class: "hover:underline" %></p>
               <% if task.description.present? %><p class="mt-0.5 text-sm text-mocha"><%= task.description %></p><% end %>
               <p class="mt-1 text-xs text-taupe">
                 <% if task.project %>

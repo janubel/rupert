@@ -1,0 +1,30 @@
+<% links = @task.dependencies.includes(:blocker).to_a %>
+<% dependents = @task.dependents.includes(:task).to_a %>
+<section id="waiting" class="card card-pad">
+  <h2 class="font-display text-lg text-ink">Depends on</h2>
+  <ul class="mt-3 space-y-1.5 text-sm">
+    <% links.each do |link| %>
+      <li class="flex items-center gap-2">
+        <span class="h-2 w-2 shrink-0 rounded-full <%= link.blocker.done? ? "bg-fern" : "bg-clay" %>" title="<%= status_label(link.blocker.status) %>"></span>
+        <%= link_to link.blocker.title, projects_task_path(link.blocker), class: "min-w-0 flex-1 truncate font-medium text-olive hover:underline #{"line-through" if link.blocker.done?}" %>
+        <% if @can_manage %><%= button_to "Remove", projects_task_dependency_path(@task, link), method: :delete, class: "text-xs text-taupe hover:text-rose", "aria-label": "Stop waiting on #{link.blocker.title}" %><% end %>
+      </li>
+    <% end %>
+    <% if links.empty? %><li class="text-taupe">Nothing. This task can start any time.</li><% end %>
+  </ul>
+  <% if dependents.any? %>
+    <p class="mt-3 text-xs font-semibold uppercase tracking-wider text-mocha">Others wait on this</p>
+    <ul class="mt-1 space-y-1 text-sm">
+      <% dependents.each do |link| %><li><%= link_to link.task.title, projects_task_path(link.task), class: "text-olive hover:underline" %></li><% end %>
+    </ul>
+  <% end %>
+  <% if @can_manage %>
+    <% choices = Projects::Task.unfinished.where.not(id: [@task.id, *links.map(&:blocker_id)]).where(project_id: @task.project_id).order(:title).limit(200) %>
+    <% if choices.any? %>
+      <%= form_with scope: :dependency, url: projects_task_dependencies_path(@task), class: "mt-3 flex gap-2" do |f| %>
+        <%= f.select :blocker_id, options_from_collection_for_select(choices, :id, :title), { include_blank: "Waits on…" }, class: "select min-w-0 flex-1", "aria-label": "Task this one waits on" %>
+        <%= f.submit "Add", class: "btn-ghost btn-sm" %>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

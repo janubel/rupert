@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -1927,6 +1927,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_030000) do
     t.index ["tenant_id", "period_kind", "period_from"], name: "idx_money_reconciliation_period", unique: true
   end
 
+  create_table "notifications", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.string "kind", null: false
+    t.string "title", null: false
+    t.text "body"
+    t.string "url"
+    t.string "dedupe_key"
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "dedupe_key"], name: "index_notifications_on_user_id_and_dedupe_key", unique: true
+    t.index ["user_id", "read_at", "created_at"], name: "index_notifications_on_user_id_and_read_at_and_created_at"
+  end
+
   create_table "oauth_allowed_domains", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "domain", null: false
@@ -2286,6 +2301,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_030000) do
     t.index ["tenant_id", "name"], name: "index_positions_on_tenant_id_and_name"
   end
 
+  create_table "project_members", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "project_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["project_id", "user_id"], name: "index_project_members_on_project_id_and_user_id", unique: true
+    t.index ["project_id"], name: "index_project_members_on_project_id"
+  end
+
+  create_table "project_templates", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.text "payload", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "projects", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -2295,6 +2330,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_030000) do
     t.string "status", default: "planned", null: false
     t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
+    t.date "start_on"
+    t.bigint "goal_id"
+    t.index ["goal_id"], name: "index_projects_on_goal_id"
     t.index ["tenant_id", "owner_id"], name: "index_projects_on_tenant_id_and_owner_id"
     t.index ["tenant_id", "status"], name: "index_projects_on_tenant_id_and_status"
   end
@@ -2990,6 +3028,64 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_030000) do
     t.index ["tenant_id", "source", "operation", "queued_at"], name: "idx_sync_attempts_source_history"
   end
 
+  create_table "task_attachments", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "task_id", null: false
+    t.bigint "user_id"
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.integer "byte_size", null: false
+    t.binary "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["task_id"], name: "index_task_attachments_on_task_id"
+  end
+
+  create_table "task_checklist_items", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "task_id", null: false
+    t.string "title", null: false
+    t.boolean "done", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["task_id"], name: "index_task_checklist_items_on_task_id"
+  end
+
+  create_table "task_comments", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "task_id", null: false
+    t.bigint "user_id"
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["task_id"], name: "index_task_comments_on_task_id"
+    t.index ["tenant_id", "task_id", "created_at"], name: "index_task_comments_on_tenant_id_and_task_id_and_created_at"
+  end
+
+  create_table "task_dependencies", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "task_id", null: false
+    t.bigint "blocker_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["blocker_id"], name: "index_task_dependencies_on_blocker_id"
+    t.index ["task_id", "blocker_id"], name: "index_task_dependencies_on_task_id_and_blocker_id", unique: true
+    t.index ["task_id"], name: "index_task_dependencies_on_task_id"
+  end
+
+  create_table "task_time_entries", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "task_id", null: false
+    t.bigint "user_id"
+    t.integer "minutes", null: false
+    t.date "logged_on", null: false
+    t.string "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["task_id"], name: "index_task_time_entries_on_task_id"
+  end
+
   create_table "tasks", force: :cascade do |t|
     t.string "assignee_id"
     t.datetime "completed_at"
@@ -2997,12 +3093,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_030000) do
     t.text "description"
     t.date "due_on"
     t.string "priority", default: "medium"
-    t.string "project_id"
+    t.bigint "project_id"
     t.string "status", default: "todo", null: false
     t.string "tenant_id", null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
+    t.date "start_on"
+    t.text "blocked_reason"
+    t.integer "position"
+    t.text "labels"
+    t.string "recurrence"
+    t.datetime "next_spawned_at"
+    t.integer "estimate_minutes"
     t.index ["tenant_id", "assignee_id"], name: "index_tasks_on_tenant_id_and_assignee_id"
+    t.index ["tenant_id", "due_on"], name: "index_tasks_on_tenant_id_and_due_on"
     t.index ["tenant_id", "project_id"], name: "index_tasks_on_tenant_id_and_project_id"
     t.index ["tenant_id", "status"], name: "index_tasks_on_tenant_id_and_status"
   end
@@ -3516,6 +3620,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_030000) do
   add_foreign_key "pos_stock_allocations", "Location", column: "location_id"
   add_foreign_key "pos_stock_allocations", "pos_checkouts"
   add_foreign_key "pos_stock_allocations", "tenants"
+  add_foreign_key "project_members", "projects"
   add_foreign_key "purchase_deliveries", "purchase_orders"
   add_foreign_key "purchase_receipt_events", "purchase_receipts"
   add_foreign_key "purchase_receipt_events", "tenants"
@@ -3569,6 +3674,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_030000) do
   add_foreign_key "swipesimple_exports", "users", column: "imported_by_id", on_delete: :nullify
   add_foreign_key "swipesimple_report_rows", "swipesimple_exports"
   add_foreign_key "sync_attempts", "tenants", on_delete: :cascade
+  add_foreign_key "task_attachments", "tasks"
+  add_foreign_key "task_checklist_items", "tasks"
+  add_foreign_key "task_comments", "tasks"
+  add_foreign_key "task_dependencies", "tasks"
+  add_foreign_key "task_dependencies", "tasks", column: "blocker_id"
+  add_foreign_key "task_time_entries", "tasks"
+  add_foreign_key "tasks", "projects"
   add_foreign_key "warehouse_payment_attempts", "warehouse_carts"
   add_foreign_key "warehouse_stock_holds", "orders"
   add_foreign_key "warehouse_stock_holds", "users", column: "released_by_id"

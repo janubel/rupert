@@ -42,7 +42,17 @@ class ApplicationController < ActionController::Base
     when 'employee_access'
       %w[edit update].include?(action_name)
     when 'projects/tasks'
-      %w[index update transition move].include?(action_name)
+      %w[index show update transition move].include?(action_name)
+    when 'projects/task_comments'
+      action_name == 'create'
+    when 'projects/task_checklist_items'
+      %w[create update destroy].include?(action_name)
+    when 'projects/task_time_entries'
+      %w[create destroy].include?(action_name)
+    when 'projects/task_attachments'
+      %w[create show destroy].include?(action_name)
+    when 'notifications'
+      %w[index show read_all].include?(action_name)
     when 'projects/guides'
       action_name == 'show'
     when 'receipts'

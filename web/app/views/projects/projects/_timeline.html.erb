@@ -1,0 +1,33 @@
+<%# Gantt-style bars over the project's span. Needs @timeline from ProjectsController#build_timeline. %>
+<% t = @timeline %>
+<section class="card card-pad" aria-label="Project timeline">
+  <% if t[:range].nil? %>
+    <p class="text-sm text-taupe">Give tasks a start or due date and they appear here.</p>
+  <% else %>
+    <div class="mb-1 flex items-center justify-between text-xs text-taupe">
+      <span><%= l(t[:range][0], format: :long) %></span><span><%= l(t[:range][1], format: :long) %></span>
+    </div>
+    <div class="relative h-5 border-b border-fog text-[10px] text-taupe" aria-hidden="true">
+      <% t[:months].each do |mark| %><span class="absolute top-0" style="left: <%= mark[:left] %>%"><%= mark[:label] %></span><% end %>
+    </div>
+    <ol class="relative mt-2 space-y-1.5">
+      <% if t[:today] %><div class="pointer-events-none absolute inset-y-0 w-px bg-clay/70" style="left: <%= t[:today] %>%" title="Today"></div><% end %>
+      <% t[:rows].each do |row| %>
+        <% task = row[:task] %>
+        <li class="relative h-7">
+          <%= link_to projects_task_path(task), title: "#{task.title} · #{status_label(task.status)}#{" · due #{l(task.due_on, format: :short)}" if task.due_on}",
+                class: "absolute top-0 flex h-7 items-center overflow-hidden rounded-md px-2 text-xs font-medium text-cream hover:brightness-110 #{task.done? ? "bg-fern" : task.blocked? ? "bg-rose" : task.overdue? ? "bg-clay" : task.in_progress? ? "bg-olive" : "bg-taupe"}",
+                style: "left: #{[row[:left], 100 - row[:width]].min}%; width: #{row[:width]}%; min-width: 6rem" do %>
+            <span class="truncate"><%= task.title %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+    <% if t[:unscheduled].any? %>
+      <p class="mt-4 text-xs font-semibold uppercase tracking-wider text-mocha">No dates yet</p>
+      <ul class="mt-1 flex flex-wrap gap-2 text-sm">
+        <% t[:unscheduled].each do |task| %><li><%= link_to task.title, projects_task_path(task), class: "text-olive hover:underline" %></li><% end %>
+      </ul>
+    <% end %>
+  <% end %>
+</section>

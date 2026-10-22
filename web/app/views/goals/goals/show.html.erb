@@ -54,4 +54,23 @@
       <% end %>
     <% end %>
   </div>
+
+  <% linked = Projects::Project.where(goal_id: @goal.id).where.not(status: "archived").order(:name).to_a %>
+  <% if linked.any? %>
+    <% counts = Projects::Task.where(project_id: linked.map(&:id)).group(:project_id, :status).count %>
+    <section class="card card-pad">
+      <h2 class="font-display text-lg text-ink">Projects working toward this goal</h2>
+      <ul class="mt-3 divide-y divide-fog">
+        <% linked.each do |project| %>
+          <% project.preload_task_stats(Projects::Task::BOARD_STATUSES.index_with { |status| counts[[project.id, status]].to_i }, 0) %>
+          <li class="flex flex-wrap items-center gap-3 py-3">
+            <%= link_to project.name, project, class: "min-w-0 flex-1 truncate text-sm font-semibold text-olive hover:underline" %>
+            <%= project_status_pill(project) %>
+            <span class="w-24 text-right text-xs text-taupe"><%= project.task_counts["done"] %> of <%= project.task_total %> tasks</span>
+            <div class="w-28"><%= render "projects/shared/progress_bar", counts: project.task_counts %></div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
 </div>

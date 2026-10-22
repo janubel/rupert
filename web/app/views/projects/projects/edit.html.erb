@@ -1,4 +1,10 @@
 <div class="space-y-5">
   <%= page_header 'Edit project', eyebrow: 'Projects' %>
   <%= render "form", project: @project, url: projects_project_path(@project), method: :patch, submit: "Save project", cancel_path: @project %>
+  <section class="card card-pad max-w-2xl">
+    <h2 class="font-display text-lg text-ink">Delete project</h2>
+    <p class="mt-1 text-sm text-mocha">Removes the project and all <%= pluralize(@project.task_total, "task") %> in it, with their comments, files and time. To keep the history, archive it instead.</p>
+    <%= button_to "Delete project", projects_project_path(@project), method: :delete, class: "btn-ghost btn-sm mt-3 !text-rose",
+          form: { data: { turbo_confirm: "Delete “#{@project.name}” and #{pluralize(@project.task_total, "task")}? This cannot be undone." } } %>
+  </section>
 </div>

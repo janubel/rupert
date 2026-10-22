@@ -133,7 +133,7 @@ class TasksFlowTest < ActionDispatch::IntegrationTest
     other = Tenant.create!(name: 'Other', subdomain: 'other')
     foreign = Projects::Project.create!(name: 'Foreign', tenant_id: other.id)
     patch projects_task_path(@task), params: PARAMS.merge(task: { project_id: foreign.id })
-    assert_equal @project.id.to_s, task_now.project_id
+    assert_equal @project.id, task_now.project_id
   end
 
   test 'project page shows a board and progress' do

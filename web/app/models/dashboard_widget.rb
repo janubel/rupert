@@ -16,6 +16,7 @@ class DashboardWidget
     Widget.new(key: 'revenue', label: 'Revenue · last 30 days', partial: 'home/widgets/revenue', position: 30),
     Widget.new(key: 'cash_flow', label: 'Cash flow · last 30 days', partial: 'home/widgets/cash_flow', position: 35),
     Widget.new(key: 'sync_history', label: 'Sync history', partial: 'home/widgets/sync_history', position: 60),
+    Widget.new(key: 'my_tasks', label: 'My tasks', partial: 'home/widgets/my_tasks', position: 72),
     Widget.new(key: 'goals', label: 'Goals & KPIs', partial: 'home/widgets/goals', position: 75),
     Widget.new(key: 'commissions', label: 'Shift commissions · today', partial: 'home/widgets/commissions', position: 77),
     Widget.new(key: 'people', label: 'People', partial: 'home/widgets/people', position: 80)
@@ -43,6 +44,7 @@ class DashboardWidget
     'revenue' => %w[sales.read],
     'cash_flow' => %w[finance.read],
     'sync_history' => %w[sync.read],
+    'my_tasks' => %w[projects.read tasks.self],
     'goals' => %w[projects.read],
     'commissions' => %w[payroll.read],
     'people' => %w[hr.read]

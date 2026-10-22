@@ -1,0 +1,29 @@
+<% entries = @task.time_entries.includes(:user).to_a %>
+<section id="time" class="card card-pad">
+  <div class="flex items-baseline justify-between">
+    <h2 class="font-display text-lg text-ink">Time</h2>
+    <span class="text-xs text-taupe"><%= duration_label(entries.sum(&:minutes)) %><% if @task.estimate_minutes %> of <%= duration_label(@task.estimate_minutes) %><% end %></span>
+  </div>
+  <ul class="mt-3 space-y-1.5 text-sm">
+    <% entries.first(8).each do |entry| %>
+      <li class="flex items-center gap-2">
+        <span class="w-14 shrink-0 font-semibold text-ink"><%= duration_label(entry.minutes) %></span>
+        <span class="min-w-0 flex-1 truncate text-mocha"><%= l(entry.logged_on, format: :short) %> · <%= @people[entry.user_id.to_s] || "Someone" %><%= " · #{entry.note}" if entry.note.present? %></span>
+        <% if @can_edit && (entry.user_id.to_s == Current.user.id.to_s || @can_manage) %><%= button_to "Remove", projects_task_time_entry_path(@task, entry), method: :delete, class: "text-xs text-taupe hover:text-rose", "aria-label": "Remove #{duration_label(entry.minutes)} entry" %><% end %>
+      </li>
+    <% end %>
+    <% if entries.empty? %><li class="text-taupe">No time logged.</li><% end %>
+  </ul>
+  <% if @can_edit %>
+    <%= form_with scope: :entry, url: projects_task_time_entries_path(@task), class: "mt-3 space-y-2" do |f| %>
+      <div class="flex gap-2">
+        <%= f.text_field :hours, class: "input w-24", placeholder: "1.5 or 1:30", "aria-label": "Time spent", required: true %>
+        <%= f.date_field :logged_on, value: Date.current, class: "select flex-1", "aria-label": "Date" %>
+      </div>
+      <div class="flex gap-2">
+        <%= f.text_field :note, class: "input flex-1", placeholder: "Note (optional)", maxlength: 200, "aria-label": "Note" %>
+        <%= f.submit "Log", class: "btn-ghost btn-sm" %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

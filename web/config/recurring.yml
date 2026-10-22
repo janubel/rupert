@@ -17,6 +17,10 @@ production:
     class: DailyReconciliationArchiveJob
     queue: default
     schedule: "15 7 * * * America/New_York"
+  task_reminders:
+    class: TaskReminderJob
+    queue: default
+    schedule: "30 7 * * * America/New_York"
   source_directories:
     class: DirectorySyncJob
     queue: default
