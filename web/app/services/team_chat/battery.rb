@@ -19,7 +19,7 @@ module TeamChat
 
     Item = Struct.new(:id, :cadence, :question, :checks, :expect, :module, keyword_init: true)
     Result = Struct.new(:item, :seconds, :tools, :status, :answer, :grade, :tokens_in, :tokens_out, :unverified, :message_id, :load_seconds,
-      keyword_init: true)
+      :verify, keyword_init: true)
 
     attr_reader :run_id, :room, :results, :record
 
@@ -102,7 +102,11 @@ module TeamChat
     def self.revision = BuildInfo.current.short_revision
 
     # The saved name of this run's question set; a run of only some questions is marked so it never counts as the full set.
-    def record_set_name = @partial ? "#{@set} (part)" : @set
+    # Runs with the answer check (RUPERT_VERIFY) are kept apart: "finance+verify".
+    def record_set_name
+      name = Verify.enabled_for?(@agent) ? "#{@set}+verify" : @set
+      @partial ? "#{name} (part)" : name
+    end
 
     # The same bot, model and question set already finished on this Rupert build, if any.
     def already_done = BatteryRun.already_done(agent: @agent&.handle, model: model_name, set_name: record_set_name, revision: self.class.revision)
@@ -137,15 +141,17 @@ module TeamChat
       load_seconds = (meta['load_ms'].to_f / 1000).round(1).nonzero?
       grade = grade_for(item, reply)
       post_grade(reply, grade, seconds) if grade
-      log "    #{reply.status} in #{format_seconds(seconds)}#{" (#{format_seconds(load_seconds)} model load)" if load_seconds} · tools #{Array(meta['tools']).join(', ').presence || 'none'} · grade #{grade&.dig(:score) || '—'}"
+      check = meta['verify']
+      check_note = (" · check: #{Array(check['failed']).size} failed, kept #{check['kept']}" if check)
+      log "    #{reply.status} in #{format_seconds(seconds)}#{" (#{format_seconds(load_seconds)} model load)" if load_seconds}#{check_note} · tools #{Array(meta['tools']).join(', ').presence || 'none'} · grade #{grade&.dig(:score) || '—'}"
       Result.new(item: item, seconds: seconds, tools: Array(meta['tools']), status: reply.status, answer: reply.body.to_s,
         grade: grade, tokens_in: meta['tokens_in'], tokens_out: meta['tokens_out'], unverified: Array(meta['unverified']), message_id: reply.id,
-        load_seconds: load_seconds)
+        load_seconds: load_seconds, verify: check&.except('draft'))
     end
 
     def result_row(result)
       { 'id' => result.item.id, 'cadence' => result.item.cadence, 'module' => result.item.module, 'question' => result.item.question, 'status' => result.status,
-        'seconds' => result.seconds.round(1), 'load_seconds' => result.load_seconds, 'tools' => result.tools, 'grade' => result.grade&.dig(:score),
+        'seconds' => result.seconds.round(1), 'load_seconds' => result.load_seconds, 'verify' => result.verify, 'tools' => result.tools, 'grade' => result.grade&.dig(:score),
         'verdict' => result.grade&.dig(:verdict).to_s.first(300), 'unverified' => result.unverified.to_a, 'message_id' => result.message_id }
     end
 

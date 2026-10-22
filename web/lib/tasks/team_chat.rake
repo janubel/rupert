@@ -41,7 +41,8 @@ end
 
 namespace :team_chat do
   desc 'Run the test battery (config/team_chat/battery.yml) on one bot in its test room (#test-<bot>): each answer timed and graded by DeepSeek. ' \
-       'AGENT=liquid (or qwen, gemma, gemma-e2b, gemma-e4b-ud, rupert) BATTERY=finance USER_EMAIL=... ONLY=d1,w1 REPORT=path.md'
+       'AGENT=liquid (or qwen, gemma, gemma-e2b, gemma-e4b-ud, rupert) BATTERY=finance USER_EMAIL=... ONLY=d1,w1 REPORT=path.md ' \
+       'RUPERT_VERIFY=1 (check and fix each answer; saved as e.g. finance+verify)'
   task battery: :environment do
     tenant = ENV['TENANT_ID'].present? ? Tenant.find(ENV['TENANT_ID']) : Tenant.where(status: 'active').first
     Current.tenant = tenant

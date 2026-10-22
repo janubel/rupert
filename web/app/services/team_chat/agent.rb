@@ -67,7 +67,7 @@ module TeamChat
       # question and the model server reuses them from its cache, and the question names the tools to use.
       only = DataGuide.tools_for(@topics) if @local_agent && @topics.any? && !all_tools?
       @toolbox = Toolbox.new(user: @asker, room: @room, reply: @reply, only: only, execution: @execution)
-      text = answer
+      text = verified(answer)
       finish(text, started)
     rescue Run::Stopped
       @execution.run.expire! if @execution && @execution.run.deadline_at <= Time.current
@@ -276,6 +276,7 @@ module TeamChat
       body = Links.real_paths_only(AskRupert::ReplyFormat.tidy(text))
       body = FAILURES[:error] if body.blank? && @reply.reload.actions_list.empty?
       meta = meta_with(started, 'ok')
+      meta['verify'] = @verify_meta if @verify_meta
       load_ms = model_load_ms
       meta['load_ms'] = load_ms if load_ms
       unverified = NumberCheck.call(body, checked_sources)
@@ -335,6 +336,18 @@ module TeamChat
       Array(@toolbox&.results) + transcript.map { |entry| entry[:content] }
     rescue StandardError
       Array(@toolbox&.results)
+    end
+
+    # With RUPERT_VERIFY, a local bot's answer is checked sentence by sentence against its tool data and the
+    # sentences that fail are corrected (TeamChat::Verify). Otherwise the answer is returned as it is.
+    def verified(text)
+      return text unless @local_agent && @config.native? && text.present? && Verify.enabled_for?(@local_agent)
+
+      activity!('Checking the answer')
+      outcome = Verify.new(config: @config, question: @trigger.body, evidence: @toolbox.results, draft: text,
+        session: "rupert-room-#{@room.id}").call
+      @verify_meta = outcome.meta
+      outcome.text
     end
 
     # How long this reply waited for the model server to load its model, when it had to (local bots only). Shown

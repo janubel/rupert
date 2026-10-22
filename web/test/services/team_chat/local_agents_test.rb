@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require 'minitest/mock'
 require_relative '../../support/team_chat_helper'
 
 class TeamChatLocalAgentsTest < ActiveSupport::TestCase
@@ -88,6 +89,29 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
       assert_nil reply.reload.meta['load_ms'], load.inspect
       assert_not reply.answer_timing.key?(:load_seconds)
     end
+  end
+
+  test 'with RUPERT_VERIFY a local reply is the checked answer, and the check is recorded' do
+    previous = ENV['RUPERT_VERIFY']
+    ENV['RUPERT_VERIFY'] = 'qwen'
+    script_model({ text: 'There were 12 orders.' })
+    reply = post('@qwen how many orders yesterday?').replies.first
+    given = nil
+    outcome = TeamChat::Verify::Outcome.new(text: 'There were 14 orders.', claims: [], fixed: true, kept: 'fixed', draft: 'There were 12 orders.', ms: 900)
+    checker = Object.new
+    checker.define_singleton_method(:call) { outcome }
+    TeamChat::Verify.stub(:new, lambda { |**args|
+      given = args
+      checker
+    }) { TeamChat::Agent.new(reply).run }
+    reply.reload
+
+    assert_equal 'There were 12 orders.', given[:draft]
+    assert_equal 'There were 14 orders.', reply.body
+    assert_equal({ 'claims' => 0, 'supported' => 0, 'failed' => [], 'fixed' => true, 'kept' => 'fixed', 'ms' => 900, 'draft' => 'There were 12 orders.' },
+      reply.meta['verify'])
+  ensure
+    ENV['RUPERT_VERIFY'] = previous
   end
 
   test 'a local bot gets only the tools for what the question is about, and the matching data guide card' do

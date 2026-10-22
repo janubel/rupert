@@ -355,6 +355,27 @@ real Solid Queue execution with sync, monitor, and backup probes, without model 
 vendor calls. Adding another named application queue requires updating the worker
 configuration and routing regression.
 
+### Checking answers (RUPERT_VERIFY, 2026-10-22)
+
+`RUPERT_VERIFY=1` (every local bot) or `RUPERT_VERIFY=qwen-4b,qwen-2b` (named bots) adds two passes after a local
+bot answers (`TeamChat::Verify`):
+
+1. **Check.** The answer is split into sentences. The same model gets only those sentences and the tool data (never
+   the conversation or its own reasoning) and returns, per sentence, `supported` / `contradicted` / `not_found` /
+   `no_fact` with an `evidence_quote` copied from the data (JSON schema enforced by llama-server). Rupert confirms the
+   quote is really in the data. A sentence fails when it has a $/% figure the number check cannot find, when the data
+   contradicts it (with a real quote), or when it states a figure the data does not have or "supports" with an invented
+   quote. Sentences without figures that the data does not mention are left alone (they are usually fine).
+2. **Fix**, only when something failed. The model is told exactly which sentences and why, and rewrites or removes
+   only those. The fix is kept only if it still has every figure that was right and adds no unchecked figure;
+   otherwise the original answer stands. One round, no loops.
+
+Why this shape: prompted self-correction without outside evidence makes models worse (Huang et al. 2023; small models
+especially, and challenged models flip right answers about half the time, FlipFlop 2023). Checking claims against tool
+evidence works (CRITIC 2023), and verification that cannot see the draft repeats fewer of its mistakes (Chain-of-
+Verification 2023). Sentence-level checks are enough (MiniCheck 2024). The reply's `meta['verify']` records claims,
+failures, whether a fix was tried and kept, the time taken and the draft when it was replaced. The battery saves such
+runs under their own set name (`finance+verify`), so the bot key's scores stay those of plain runs.
 ### Durable room replies
 
 Every new room assistant reply creates a private `chat_runs` row in the same
