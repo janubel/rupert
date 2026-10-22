@@ -14,7 +14,7 @@ class StockRequestsController < AuthenticatedController
     @kind = %w[transfer backorder].include?(params[:kind]) ? params[:kind] : 'transfer'
     scope = StockRequest.where(request_kind: @kind).includes(:source_pool, :destination_pool).order(created_at: :desc, id: :desc)
     scope = scope.where(status: params[:status]) if params[:status].present?
-    @pagy, @requests = pagy(scope, items: 30)
+    @pagy, @requests = pagy(:offset, scope, limit: 30)
   end
 
   def show

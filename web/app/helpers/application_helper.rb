@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 module ApplicationHelper
-  include Pagy::Frontend
-
   # Ask Rupert, the help chat, is for signed-in staff with the Rupert Chat permission
   # (administrators by default) in their own workspace (not customer-support views,
   # not the employee app) while an administrator keeps it on.

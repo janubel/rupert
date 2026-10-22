@@ -2,7 +2,7 @@
 
 # Pagy config — lightweight pagination for index pages.
 require 'pagy'
-require 'pagy/extras/overflow'
 
-Pagy::DEFAULT[:items] = 25
-Pagy::DEFAULT[:overflow] = :last_page
+Pagy::OPTIONS[:limit] = 25
+Pagy::OPTIONS[:raise_range_error] = true
+Pagy::OPTIONS.freeze

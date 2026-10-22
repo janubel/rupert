@@ -153,7 +153,7 @@
   <% if @pagy.pages > 1 %>
     <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-taupe">
       <span>Showing products <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %>.</span>
-      <%== pagy_nav(@pagy) %>
+      <%== @pagy.series_nav %>
     </div>
   <% elsif @q.blank? && @products.length >= 40 %>
     <p class="text-xs text-taupe">All products shown.</p>

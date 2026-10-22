@@ -11,5 +11,5 @@
       <% if @lots.empty? %><tr><td class="td py-8 text-center text-taupe" colspan="5">No lots yet. Record a receipt to add material.</td></tr><% end %>
     </tbody>
   </table></div>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
 </div>

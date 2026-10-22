@@ -28,7 +28,7 @@ module Finance
         debits: entry_ids.any? ? JournalLine.where(journal_entry_id: entry_ids).sum(:debit_cents) : 0,
         credits: entry_ids.any? ? JournalLine.where(journal_entry_id: entry_ids).sum(:credit_cents) : 0
       }
-      @pagy, @entries = pagy(filtered.includes(:journal_lines).order(posted_on: :desc, id: :desc), items: 50)
+      @pagy, @entries = pagy(:offset, filtered.includes(:journal_lines).order(posted_on: :desc, id: :desc), limit: 50)
       response.headers['Cache-Control'] = 'private, no-store'
     end
 

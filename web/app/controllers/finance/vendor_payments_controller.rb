@@ -33,7 +33,7 @@ module Finance
         send_data payments_csv(ordered), filename: "vendor-payments-#{@from}-#{@through}.csv", type: 'text/csv'
         return
       end
-      @pagy, @payments = pagy(ordered, items: 50)
+      @pagy, @payments = pagy(:offset, ordered, limit: 50)
       @activity = register_activity('Finance::VendorPayment', @payments.map(&:id))
       @locks = register_locks
       @can_write = Current.user.can?('finance.write')

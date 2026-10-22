@@ -12,5 +12,5 @@
     <% @requests.each do |record| %><tr><td class="td"><%= link_to record.reference, record, class: 'font-medium hover:underline' %><br><%= record.due_on || 'No due date' %></td><td class="td"><%= record.source_pool.item_label %><br><%= record.source_pool.source.capitalize %></td><td class="td"><%= record.source_pool.location_name %></td><td class="td"><%= record.destination_pool&.location_name || '—' %></td><td class="td"><%= record.quantity %> / <%= record.received_quantity %></td><td class="td"><%= record.status.humanize %></td></tr><% end %>
     <% if @requests.empty? %><tr><td colspan="6" class="empty-row">No <%= @kind.pluralize %> match.</td></tr><% end %>
   </tbody></table></div>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
 </div>

@@ -4,7 +4,7 @@ require 'csv'
 
 class BulkMaterialsController < BulkInventoryController
   def index
-    @pagy, @materials = pagy(BulkMaterial.order(:name, :id), items: 30)
+    @pagy, @materials = pagy(:offset, BulkMaterial.order(:name, :id), limit: 30)
     ids = @materials.map(&:id)
     @balances = BulkLot.where(bulk_material_id: ids).group(:bulk_material_id).sum(:balance_mg)
     @lot_counts = BulkLot.where(bulk_material_id: ids).group(:bulk_material_id).count
@@ -44,7 +44,7 @@ class BulkMaterialsController < BulkInventoryController
   def show
     @material = BulkMaterial.find(params[:id])
     @balance = @material.bulk_lots.sum(:balance_mg)
-    @pagy, @lots = pagy(@material.bulk_lots.order(created_at: :desc, id: :desc), items: 30)
+    @pagy, @lots = pagy(:offset, @material.bulk_lots.order(created_at: :desc, id: :desc), limit: 30)
   end
 
   private
