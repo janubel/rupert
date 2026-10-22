@@ -230,8 +230,22 @@ module TeamChat
     def finish(text, started)
       body = Links.real_paths_only(AskRupert::ReplyFormat.tidy(text))
       body = FAILURES[:error] if body.blank? && @reply.reload.actions_list.empty?
-      @reply.reload.update!(body: body.to_s, status: 'done', activity: nil, meta: meta_with(started, 'ok'))
+      meta = meta_with(started, 'ok')
+      @reply.reload.update!(body: body.to_s, status: 'done', activity: nil, meta: meta)
       note_ai_health('ok')
+      note_slow(meta)
+    end
+
+    # The goal is every answer within ModelScores::SLOW_SECONDS; slower ones are logged and listed on Model scores.
+    def note_slow(meta)
+      seconds = meta['duration_ms'].to_f / 1000
+      return if seconds <= ModelScores::SLOW_SECONDS
+
+      details = "seconds=#{seconds.round}; agent=#{meta['agent'].presence || 'rupert'}; model=#{meta['model']}; tools=#{Array(meta['tools']).join(',')}; message=#{@reply.id}"
+      Rails.logger.warn("[TeamChat] slow answer #{details}")
+      ActivityLogger.log('team_chat_slow_answer', actor: @asker, details: details.first(300))
+    rescue StandardError => e
+      Rails.logger.warn("[TeamChat] could not log a slow answer: #{e.class}")
     end
 
     def fail!(kind, started)
@@ -261,6 +275,9 @@ module TeamChat
     # --- conversation ---
 
     def context_rows
+      # A test-battery question is answered on its own, without the room around it.
+      return [@trigger] if @reply.meta.to_h['isolated']
+
       scope = @room.messages.visible.where(id: ..@trigger.id).where.not(id: @reply.id).where.not(status: 'pending')
       if @trigger.parent_id
         root = @trigger.parent

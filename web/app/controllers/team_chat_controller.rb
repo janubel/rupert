@@ -196,6 +196,7 @@ class TeamChatController < AuthenticatedController
   def scores
     @days = params[:days].present? ? params[:days].to_i.clamp(1, 365) : 30
     @rows = TeamChat::ModelScores.call(since: @days.days.ago)
+    @slow = TeamChat::ModelScores.slow(since: @days.days.ago).select { |row| row.room&.visible_to?(Current.user) }
     @notes = TeamChat::Rating.where.not(reason: [nil, '']).where(created_at: @days.days.ago..).includes(:user).order(updated_at: :desc).limit(30)
     @current = TeamChat::ModelConfig.current
   end
