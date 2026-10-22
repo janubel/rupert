@@ -5,7 +5,7 @@
       <h1 class="page-title">Scan count</h1>
       <span class="pill-taupe"><%= @count.status %></span>
     </div>
-    <p class="mt-1 text-sm text-mocha">Counted <%= l(@count.countedAt, format: :long) %> · <%= @count.location&.name || "no location" %></p>
+    <p class="mt-1 text-sm text-mocha">Counted <%= l(@count.countedAt, format: :long) %> · Target: <%= @count.location ? "#{@count.location.source.titleize} · #{@count.location.name}" : "no source/location selected" %></p>
     <p class="mt-2 text-sm text-mocha">Scan a label containing an exact SKU, type a SKU, or use a barcode already stored in the catalog. Each entry saves to this worksheet. Use Add units for repeated scans, or Set total for a counted quantity. Approved counts remain audit records.</p>
     <p class="mt-2 rounded-xl bg-haze px-4 py-3 text-sm text-ink">Add units increases the quantities already saved below. Prepared sheets start with system quantities: use Set total for each SKU's first physical count. A new blank scanner count starts at zero.</p>
   </section>
