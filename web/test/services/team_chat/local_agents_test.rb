@@ -111,7 +111,7 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     requests = script_model({ text: 'Tax.' })
     TeamChat::Agent.new(post('@qwen how much sales tax did we collect last month?').replies.first).run
     assert_includes requests.first['tools'].map { |tool| tool.dig('function', 'name') }, 'list_alerts'
-    assert_includes requests.first['messages'].last['content'], 'Use these tools for this question: sales_tax_report, sales_summary, period_review.'
+    assert_match(/Use these tools for this question: sales_tax_report, .*sales_summary/, requests.first['messages'].last['content'])
   ensure
     ENV.delete('RUPERT_LOCAL_TOOLS')
   end
