@@ -24,6 +24,6 @@
         </li>
       <% end %>
     </ul>
-    <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
+    <div class="text-xs text-taupe"><%== @pagy.series_nav if @pagy.pages > 1 %></div>
   <% end %>
 </div>

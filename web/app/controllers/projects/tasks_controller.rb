@@ -29,7 +29,7 @@ module Projects
               when 'board' then load_board
               when 'calendar' then load_calendar
               else
-                @pagy, @tasks = pagy(@scope.by_board_order.includes(:checklist_items), items: 30)
+                @pagy, @tasks = pagy(:offset, @scope.by_board_order.includes(:checklist_items), limit: 30)
                 @tasks
               end
       @assignees = assignee_lookup(shown)

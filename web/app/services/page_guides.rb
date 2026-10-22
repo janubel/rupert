@@ -493,6 +493,18 @@ class PageGuides
         'A failed sync shows the error here — most are transient; the next scheduled run recovers.'
       ]
     ),
+    'team_chat' => Guide.new(
+      key: 'team_chat', title: 'Team chat',
+      summary: 'Rooms and direct messages for the admin team, with Rupert’s bots answering from Rupert’s own data.',
+      sections: [
+        { heading: 'Rooms and people', body: '#admins holds every admin and Rupert. Direct lists each person; your own room with Rupert answers every message. Make more rooms with + next to Rooms.' },
+        { heading: 'Bots', body: '@rupert is DeepSeek in the cloud (fast). @liquid, @qwen and @gemma run privately on this server (slower). @all asks every bot and shows their answers side by side. Every bot reply shows its model and time; rate it with a thumb and say why.' },
+        { heading: 'Messages', body: 'Hover a message to reply in a thread, react, pin it as the room banner, copy a link to it or edit your own. Paste or drop photos and files.' }
+      ],
+      tips: ['Bots change nothing on their own: a proposed change waits for someone to press Approve.',
+             'Never paste passwords or card numbers into chat.',
+             'The ? button in the room header replays the tour and plays the demo video.']
+    ),
     'settings' => Guide.new(
       key: 'settings', title: 'Settings',
       summary: "Your store's configuration — business details, Google sign-in, size families, warehouse links and a link to team chat. Platform administrators also manage instance backups.",
@@ -753,6 +765,7 @@ class PageGuides
   # appears automatically on the right page regardless of module-registry keys.
   PATH_MAP = [
     # Most specific prefixes first: the list is matched in order with start_with?.
+    ['/chat', 'team_chat'],
     ['/books_check', 'books_check'],
     ['/books/locks', 'period_locks'],
     ['/books', 'books_desk'],

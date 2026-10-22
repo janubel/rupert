@@ -12,6 +12,12 @@ module TeamChat
       room.messages.visible.top_level.where('id > ?', last_read_message_id).where.not(user_id: user_id).count
     end
 
+    TYPING_FOR = 6.seconds
+
+    def typing!
+      update_columns(typing_at: Time.current) if typing_at.nil? || typing_at < 2.seconds.ago
+    end
+
     def mark_read!(message_id)
       return if message_id.to_i <= last_read_message_id
 

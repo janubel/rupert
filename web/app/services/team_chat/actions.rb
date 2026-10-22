@@ -60,6 +60,7 @@ module TeamChat
       outcome = tool.new(token: Token.new(user, write: tool.scope)).call(action['arguments'] || {})
       action['status'] = 'done'
       action['result'] = outcome.text.to_s.first(300)
+      action['assignee_id'] = outcome.data.to_h[:assignee_id].presence if outcome.data.to_h.key?(:assignee_id)
       ActivityLogger.log('team_chat_action', actor: user, details: "tool=#{tool.tool_name}; outcome=done")
     rescue Mcp::ToolError => e
       action['status'] = 'failed'
@@ -74,14 +75,39 @@ module TeamChat
         when 'failed' then "#{action['decided_by']} approved “#{action['summary']}”, but it did not work: #{action['result']}"
         else "#{action['decided_by']} dismissed “#{action['summary']}”."
         end
-      message.room.messages.create!(author_kind: 'system', body: text, parent_id: message.parent_id)
+      message.room.messages.create!(author_kind: 'system', body: text, parent_id: message.parent_id, mentions: notify_ids(message.room, action).presence)
+    end
+
+    # The person a task was just given to sees the notice as a mention, when they use team chat.
+    def notify_ids(room, action)
+      return [] unless action['status'] == 'done' && action['assignee_id'].present?
+
+      person = User.find_by(id: action['assignee_id'], tenant_id: room.tenant_id, active: true)
+      return [] unless person && TeamChat.allowed?(person) && room.visible_to?(person)
+
+      [person.id]
+    end
+
+    # The name on the card for a pinned email ("nobody" stays as it is).
+    def person_label(value)
+      return 'nobody' if value.to_s == 'nobody'
+
+      person = User.find_by(email: value.to_s, tenant_id: Current.tenant_id)
+      person ? Mcp::Assignee.label(person) : value.to_s.first(60)
     end
 
     def summary(tool, args)
       case tool
       when 'create_task'
-        extras = [args['priority'], ("due #{args['due_on']}" if args['due_on'].present?), ('assigned to them' if args['assign_to_me'])].compact
+        who = args['assignee'].present? ? "for #{person_label(args['assignee'])}" : ('assigned to them' if args['assign_to_me'])
+        extras = [args['priority'], ("due #{args['due_on']}" if args['due_on'].present?), who].compact
         "Create task “#{args['title'].to_s.first(120)}”#{" (#{extras.join(', ')})" if extras.any?}"
+      when 'update_task'
+        changes = [("assign to #{person_label(args['assignee'])}" if args['assignee'].present?), ("move to #{args['status'].to_s.tr('_', ' ')}" if args['status'].present?),
+                   ("priority #{args['priority']}" if args['priority'].present?), ("due #{args['due_on']}" if args['due_on'].present?),
+                   ('remove the due date' if args['clear_due_date']), ("rename to “#{args['title'].to_s.first(80)}”" if args['title'].present?),
+                   ('add a note' if args['note'].present?)].compact
+        "Task ##{args['task_id']} “#{args['task_title'].to_s.first(80)}”: #{changes.join(', ').presence || 'no change'}"
       when 'submit_feedback'
         "File #{args['kind'].to_s.tr('_', ' ').presence || 'feedback'}: “#{args['summary'].to_s.first(120)}”"
       else

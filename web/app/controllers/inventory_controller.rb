@@ -25,8 +25,7 @@ class InventoryController < AuthenticatedController
         filename: "shopify-ctrax-stock-#{Time.current.strftime('%Y-%m-%d-%H%M')}.pdf",
         type: 'application/pdf', disposition: 'attachment'
     else
-      @pagy = Pagy.new(count: @comparison.rows.size, page: params[:page], items: 50)
-      @rows = @comparison.rows.slice(@pagy.offset, @pagy.items) || []
+      @pagy, @rows = pagy(:offset, @comparison.rows, limit: 50)
       render 'stock_comparisons/index'
     end
   end
@@ -61,7 +60,7 @@ class InventoryController < AuthenticatedController
       @transfers = StockRequest.where(request_kind: 'transfer', status: %w[allocated dispatched]).count
       @backorders = StockRequest.where(request_kind: 'backorder', status: 'pending').count
       @reservations = StockReservation.active_at.count
-      @pagy, levels = pagy(scope, items: 50)
+      @pagy, levels = pagy(:offset, scope, limit: 50)
       @rows = InventoryWorkspace.new(levels.to_a).rows
     end
   end
@@ -77,7 +76,7 @@ class InventoryController < AuthenticatedController
     days = params[:days].to_i
     days = 30 unless (1..365).cover?(days)
     scope = scope.where('"createdAt" >= ?', days.days.ago)
-    @pagy, @movements = pagy(scope, items: 50)
+    @pagy, @movements = pagy(:offset, scope, limit: 50)
     @names = movement_names(@movements)
     @sources = InventoryMovement.unscoped.where(tenant_id: Current.tenant_id)
                                 .distinct.order(:source).pluck(:source)

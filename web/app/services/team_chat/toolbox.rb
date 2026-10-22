@@ -19,13 +19,15 @@ module TeamChat
     MAX_RESULT_CHARS = 6_000
     MAX_CALLS = 8
     LOOKUPS = %w[where_is how_do_i search system_status].freeze
-    WRITE_TOOLS = %w[create_task submit_feedback].freeze
+    WRITE_TOOLS = %w[create_task update_task submit_feedback].freeze
 
     Definition = Struct.new(:name, :description, :schema, :kind, :activity, keyword_init: true)
 
-    attr_reader :calls, :tools_used
+    attr_reader :calls, :tools_used, :results
 
-    def initialize(user:, room:, reply:)
+    # only: tool names to offer (the question's data guide topics, for local bots); nil offers every tool.
+    def initialize(user:, room:, reply:, only: nil)
+      @only = only&.map(&:to_s)
       @user = user
       @room = room
       @reply = reply
@@ -33,6 +35,7 @@ module TeamChat
       @lookups = AskRupert::Tools.new(user: user)
       @calls = 0
       @tools_used = []
+      @results = []
     end
 
     def definitions
@@ -99,18 +102,20 @@ module TeamChat
     end
 
     def mcp_definitions
-      Mcp::Registry.available_to(@token).select(&:read_only).map do |tool|
+      Mcp::Registry.available_to(@token).select(&:read_only).select { |tool| offered?(tool.tool_name) }.map do |tool|
         Definition.new(name: tool.tool_name, description: tool.description, kind: :mcp, schema: tool.input_schema,
           activity: "Checking #{tool.title.to_s.downcase.presence || tool.tool_name.tr('_', ' ')}")
       end
     end
 
     def write_definitions
-      WRITE_TOOLS.filter_map { |name| Mcp::Registry.find(name) }.select { |tool| Actions.permitted?(@user, tool) }.map do |tool|
+      WRITE_TOOLS.select { |name| offered?(name) }.filter_map { |name| Mcp::Registry.find(name) }.select { |tool| Actions.permitted?(@user, tool) }.map do |tool|
         Definition.new(name: tool.tool_name, kind: :write, schema: tool.input_schema, activity: 'Preparing a change for approval',
           description: "PROPOSES a change; nothing happens until a person presses Approve on the card it creates. #{tool.description}")
       end
     end
+
+    def offered?(name) = @only.nil? || @only.include?(name.to_s)
 
     def run_lookup(name, args)
       result = @lookups.call(name, args)
@@ -120,20 +125,60 @@ module TeamChat
     def run_mcp(name, args)
       tool = Mcp::Registry.find(name)
       outcome = tool.new(token: @token).call(args)
-      AskRupert::Redactor.personal("#{outcome.text}\n#{JSON.generate(outcome.data)}")
+      AskRupert::Redactor.personal("#{outcome.text}\n#{JSON.generate(with_dollars(outcome.data))}")
+    end
+
+    # Adds a ready-made "$214.83" beside every *_cents amount, so models quote dollars instead of converting cents.
+    def with_dollars(value)
+      case value
+      when Hash
+        value.each_with_object({}) do |(key, inner), out|
+          out[key] = with_dollars(inner)
+          name = key.to_s
+          out["#{name.delete_suffix('_cents')}_dollars"] = dollars(inner) if name.end_with?('_cents') && inner.is_a?(Numeric)
+        end
+      when Array then value.map { |inner| with_dollars(inner) }
+      else value
+      end
+    end
+
+    def dollars(cents)
+      "#{'-' if cents.negative?}$#{ActiveSupport::NumberHelper.number_to_delimited(format('%.2f', cents.abs / 100.0))}"
     end
 
     def propose(name, args)
+      args = prepare(name, args)
       action = Actions.propose!(@reply, tool: name, arguments: args, proposed_for: @user)
       "Proposed as action #{action['id']}: “#{action['summary']}”. A card with Approve and Dismiss is shown in the room. " \
         'Tell them it is waiting for their approval. Do not say it is done.'
+    end
+
+    # Checks what can be checked before a card is shown, so the model can ask
+    # again (which person? which task?) instead of the change failing at Approve.
+    # The person is pinned by email so Approve assigns exactly who the card names.
+    def prepare(name, args)
+      args = args.dup
+      if args['assignee'].present? && %w[create_task update_task].include?(name)
+        person = Mcp::Assignee.resolve(@user, args['assignee'])
+        args['assignee'] = person == :nobody ? 'nobody' : person.email
+      end
+      if name == 'update_task'
+        task = Projects::TaskPolicy::Scope.new(@user, Projects::Task).resolve.find_by(id: args['task_id'])
+        raise Mcp::ToolError.new("No task ##{args['task_id']} that this person can see. Use list_tasks to find it.", kind: 'not_found') unless task
+        raise Mcp::ToolError.new("This person cannot change task ##{task.id}.", kind: 'denied') unless Projects::TaskPolicy.new(@user, task).update?
+
+        args['task_title'] = task.title
+      end
+      args
     end
 
     def log(name, started, outcome, text)
       ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
       ActivityLogger.log('team_chat_tool', actor: @user,
         details: "tool=#{name.to_s.gsub(/[^\w]/, '?').first(30)}; outcome=#{outcome}; duration_ms=#{ms}; room=#{@room.id}")
-      text.to_s.first(MAX_RESULT_CHARS)
+      text = text.to_s.first(MAX_RESULT_CHARS)
+      @results << text
+      text
     end
   end
 end

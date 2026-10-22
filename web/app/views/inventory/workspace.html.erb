@@ -53,5 +53,5 @@
       <% if @rows.empty? %><tr><td colspan="11" class="empty-row">No mirrored pools match. Read connected source stock, or change these filters.</td></tr><% end %>
     </tbody>
   </table></div>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
 </div>

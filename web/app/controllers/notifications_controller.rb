@@ -3,7 +3,7 @@
 # A person's own notifications: the bell in the header opens this list.
 class NotificationsController < AuthenticatedController
   def index
-    @pagy, @notifications = pagy(mine.newest, items: 30)
+    @pagy, @notifications = pagy(:offset, mine.newest, limit: 30)
     @unread = mine.unread.count
   end
 

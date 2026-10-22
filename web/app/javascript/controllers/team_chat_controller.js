@@ -11,14 +11,17 @@ import { Controller } from "@hotwired/stimulus"
 // `code`, @mentions, http(s) links and same-site [label](/path) links.
 export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
-    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput"]
+    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins", "typing", "newDm", "threadSuggest",
+    "media", "mediaSearch", "mediaStatus", "mediaGrid", "mediaMore", "presence", "presenceToggle", "presenceLabel"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
-    people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
+    compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
   static GROUP_SECONDS = 5 * 60
+  static MIN_HEIGHT = 320
   static FAST = 1000
   static SLOW = 3000
   static RUPERT = { id: null, name: "rupert", label: "Rupert — the assistant" }
+  static ALL = { id: null, name: "all", label: "all — every bot answers, side by side" }
   static SHRINK_OVER = 1.5 * 1024 * 1024
   static SHRINK_TO = 2048
 
@@ -33,6 +36,12 @@ export default class extends Controller {
     this.suggestions = []
     this.pendingFiles = []
     this.mentionIds = new Set()
+    this.pins = []
+    this.lastTypingPing = 0
+    this.editingId = null
+    this.pinsOpen = false
+    this.quoting = { main: null, thread: null }
+    this.startFitting()
     this.load()
     this.schedule()
     this.onVisible = () => { if (!document.hidden) this.poll() }
@@ -42,7 +51,46 @@ export default class extends Controller {
   disconnect() {
     clearTimeout(this.timer)
     document.removeEventListener("visibilitychange", this.onVisible)
-    document.title = this.titleValue
+    this.stopFitting()
+    if (!this.compactValue) document.title = this.titleValue
+  }
+
+  // --- layout: the full page fills the window, so the message box stays at the bottom ---
+
+  startFitting() {
+    if (this.compactValue) return
+    this.onResize = () => {
+      cancelAnimationFrame(this.fitFrame)
+      this.fitFrame = requestAnimationFrame(() => this.fitToWindow())
+    }
+    window.addEventListener("resize", this.onResize)
+    window.visualViewport?.addEventListener("resize", this.onResize)
+    // The header can wrap to two lines or gain a banner; re-fit when anything above the chat changes size.
+    if (window.ResizeObserver) {
+      this.fitObserver = new ResizeObserver(this.onResize)
+      const header = document.querySelector("header.app-header")
+      if (header) this.fitObserver.observe(header)
+      this.fitObserver.observe(document.body)
+    }
+    this.fitToWindow()
+  }
+
+  stopFitting() {
+    if (!this.onResize) return
+    window.removeEventListener("resize", this.onResize)
+    window.visualViewport?.removeEventListener("resize", this.onResize)
+    this.fitObserver?.disconnect()
+    cancelAnimationFrame(this.fitFrame)
+  }
+
+  // Height = the visible window below the chat's top edge, minus the page's bottom padding.
+  fitToWindow() {
+    const viewport = window.visualViewport?.height || window.innerHeight
+    const top = this.element.getBoundingClientRect().top + window.scrollY
+    const main = this.element.closest("main")
+    const gap = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0
+    const height = Math.max(this.constructor.MIN_HEIGHT, Math.floor(viewport - top - gap))
+    if (this.element.style.height !== `${height}px`) this.element.style.height = `${height}px`
   }
 
   // --- text formatting (pure; also used by the tests) ---
@@ -136,7 +184,18 @@ export default class extends Controller {
     this.hasMore = data.has_more
     this.merge(data.messages)
     this.renderRooms(data.rooms)
+    this.setPins(data.pins)
+    this.presenceMap = data.presence || {}
     this.render({ stick: true })
+    const params = new URLSearchParams(window.location.search)
+    const thread = Number(params.get("thread"))
+    const target = Number(params.get("message"))
+    if (thread && !this.compactValue) {
+      await this.openThread(thread)
+      if (target) this.flash(this.threadLogTarget.querySelector(`[data-id="${target}"]`))
+    } else if (target && !this.compactValue) {
+      this.jumpToMessage(target)
+    }
   }
 
   async poll() {
@@ -148,7 +207,11 @@ export default class extends Controller {
     this.since = data.now
     const fresh = this.merge(data.messages)
     this.renderRooms(data.rooms)
+    this.setPins(data.pins)
+    this.renderTyping(data.typing)
+    if (data.presence) this.presenceMap = data.presence
     if (fresh.changed) this.render({ stick: false, newItems: fresh.added })
+    else this.applyPresence()
   }
 
   async loadEarlier() {
@@ -205,7 +268,7 @@ export default class extends Controller {
         added += message.parent_id ? 0 : 1
         changed = true
       } else if (old.updated_at !== message.updated_at || old.reply_count !== message.reply_count || old.body !== message.body || old.activity !== message.activity ||
-          JSON.stringify(old.reactions) !== JSON.stringify(message.reactions)) {
+          JSON.stringify(old.reactions) !== JSON.stringify(message.reactions) || JSON.stringify(old.rating) !== JSON.stringify(message.rating) || old.pinned !== message.pinned || old.edited !== message.edited) {
         changed = true
       }
       this.byId.set(message.id, { ...old, ...message })
@@ -241,13 +304,23 @@ export default class extends Controller {
     } else if (newItems > 0) {
       this.jumpTarget.hidden = false
     }
-    if (this.threadId) this.renderThread()
+    if (this.threadId && this.hasThreadTarget) this.renderThread()
+    this.applyPresence()
   }
 
   renderList(messages, { thread }) {
     const nodes = []
     let previous = null
+    const compared = new Set()
     messages.forEach((message) => {
+      // @all: the bots' answers to one question render once, as side-by-side columns.
+      if (message.compare_of) {
+        if (compared.has(message.compare_of)) return
+        compared.add(message.compare_of)
+        nodes.push(this.compareNode(messages.filter((other) => other.compare_of === message.compare_of)))
+        previous = null
+        return
+      }
       const day = new Date(message.created_at).toDateString()
       if (!thread && (!previous || new Date(previous.created_at).toDateString() !== day)) nodes.push(this.dayDivider(message.created_at))
       const continued = previous && previous.author.name === message.author.name && previous.kind === message.kind &&
@@ -258,6 +331,26 @@ export default class extends Controller {
       previous = message
     })
     return nodes
+  }
+
+  compareNode(answers) {
+    const box = document.createElement("section")
+    box.className = "chat-compare"
+    box.setAttribute("aria-label", "Every bot’s answer, side by side")
+    const head = document.createElement("p")
+    head.className = "chat-compare-head"
+    const done = answers.filter((answer) => answer.status !== "pending").length
+    head.textContent = done === answers.length ? `Every bot answered · ${answers.length} answers · rate the best one` : `Asking every bot · ${done} of ${answers.length} answered`
+    const grid = document.createElement("div")
+    grid.className = "chat-compare-grid"
+    answers.forEach((answer) => {
+      const column = document.createElement("div")
+      column.className = "chat-compare-col"
+      column.append(this.messageNode(answer, { continued: false, thread: true }))
+      grid.append(column)
+    })
+    box.append(head, grid)
+    return box
   }
 
   dayDivider(iso) {
@@ -281,6 +374,8 @@ export default class extends Controller {
     avatar.setAttribute("aria-hidden", "true")
     if (message.kind === "person") avatar.style.background = message.author.color
     avatar.textContent = message.author.initials
+    avatar.title = this.whoTitle(message.author)
+    if (message.kind === "person" && message.author.user_id) avatar.dataset.presenceUser = message.author.user_id
     row.append(avatar)
 
     const main = document.createElement("div")
@@ -291,6 +386,7 @@ export default class extends Controller {
       const author = document.createElement("span")
       author.className = "chat-msg-author"
       author.textContent = message.author.name
+      author.title = this.whoTitle(message.author)
       head.append(author)
       if (message.kind !== "person") {
         const badge = document.createElement("span")
@@ -298,14 +394,30 @@ export default class extends Controller {
         badge.textContent = message.kind === "system" ? "Notice" : "Assistant"
         head.append(badge)
       }
+      if (message.pinned) {
+        const pin = document.createElement("span")
+        pin.className = "chat-msg-pinned"
+        pin.textContent = "📌 Pinned"
+        pin.title = message.pinned_by ? `Pinned by ${message.pinned_by}` : "Pinned"
+        head.append(pin)
+      }
       const time = document.createElement("time")
       time.className = "chat-msg-time"
       time.dateTime = message.created_at
       time.title = new Date(message.created_at).toLocaleString()
       time.textContent = new Date(message.created_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
       head.append(time)
+      if (message.answer) head.append(this.answerNode(message.answer))
+      if (message.edited) {
+        const edited = document.createElement("span")
+        edited.className = "chat-msg-edited"
+        edited.textContent = "(edited)"
+        head.append(edited)
+      }
       main.append(head)
     }
+
+    if (message.quote && !message.deleted) main.append(this.quoteNode(message.quote))
 
     const body = document.createElement("div")
     body.className = "chat-msg-body"
@@ -314,15 +426,19 @@ export default class extends Controller {
       gone.className = "chat-msg-deleted"
       gone.textContent = "This message was deleted."
       body.append(gone)
+    } else if (this.editingId === message.id) {
+      body.append(this.editorNode(message))
     } else {
       if (message.body) body.append(...this.formatted(message.body))
       if (message.status === "pending") body.append(this.activityNode(message))
     }
     main.append(body)
 
+    if (!message.deleted && message.unverified?.length) main.append(this.unverifiedNode(message.unverified))
     if (!message.deleted && message.attachments?.length) main.append(this.attachmentsNode(message.attachments))
     ;(message.actions || []).forEach((action) => main.append(this.actionNode(message, action)))
     if (message.reactions?.length) main.append(this.reactionsNode(message))
+    if (message.rating && !message.deleted) main.append(this.ratingNode(message))
 
     if (!thread && message.reply_count > 0) {
       const replies = document.createElement("button")
@@ -337,12 +453,234 @@ export default class extends Controller {
     if (!message.deleted && message.status !== "pending") {
       const tools = document.createElement("div")
       tools.className = "chat-msg-tools"
+      if (message.kind !== "system") tools.append(this.toolButton("↩ Reply", (event) => this.startQuote(message, event.currentTarget)))
+      if (!thread && !message.parent_id && message.kind !== "system" && !this.compactValue) tools.append(this.toolButton("💬 Thread", () => this.openThread(message.id)))
       tools.append(this.toolButton("React", (event) => this.openPalette(message, event.currentTarget)))
-      if (!thread && message.kind !== "system") tools.append(this.toolButton("Reply in thread", () => this.openThread(message.id)))
+      if (message.kind !== "system") tools.append(this.toolButton(message.pinned ? "Unpin" : "Pin", () => this.togglePin(message.id)))
+      tools.append(this.toolButton("Copy link", () => this.copyLink(message)))
+      if (message.mine) tools.append(this.toolButton("Edit", () => this.startEdit(message)))
       if (message.mine) tools.append(this.toolButton("Delete", () => this.deleteMessage(message)))
       if (tools.childElementCount) row.append(tools)
     }
+    // On touch screens there is no hover: a tap on the message shows its tools.
+    row.addEventListener("click", (event) => {
+      if (event.target.closest("a, button, input, textarea, video, summary")) return
+      this.element.querySelectorAll(".chat-msg.is-selected").forEach((other) => { if (other !== row) other.classList.remove("is-selected") })
+      row.classList.toggle("is-selected")
+    })
     return row
+  }
+
+  // --- Media: the room's photos and files, searchable ---
+
+  showTab(event) {
+    const tab = event.currentTarget.dataset.tab
+    this.element.querySelectorAll(".chat-tabs .chat-tab").forEach((button) => {
+      const on = button.dataset.tab === tab
+      button.classList.toggle("is-active", on)
+      button.setAttribute("aria-selected", on ? "true" : "false")
+    })
+    const media = tab === "media"
+    this.mediaTarget.hidden = !media
+    this.element.querySelector(".chat-body").hidden = media
+    if (this.hasPinsTarget) this.pinsTarget.classList.toggle("is-tab-hidden", media)
+    if (media) {
+      this.mediaFilter ||= "all"
+      if (!this.mediaLoaded) this.loadMedia()
+      this.mediaSearchTarget.focus()
+    }
+  }
+
+  searchMedia() {
+    clearTimeout(this.mediaTimer)
+    this.mediaTimer = setTimeout(() => this.loadMedia(), 250)
+  }
+
+  mediaKind(event) {
+    this.mediaFilter = event.currentTarget.dataset.kind
+    this.element.querySelectorAll(".chat-media-kinds .chat-tab").forEach((button) => {
+      const on = button.dataset.kind === this.mediaFilter
+      button.classList.toggle("is-active", on)
+      button.setAttribute("aria-pressed", on ? "true" : "false")
+    })
+    this.loadMedia()
+  }
+
+  moreMedia() {
+    this.loadMedia({ append: true })
+  }
+
+  async loadMedia({ append = false } = {}) {
+    const url = new URL(this.mediaTarget.dataset.url, window.location.origin)
+    const query = this.mediaSearchTarget.value.trim()
+    if (query) url.searchParams.set("q", query)
+    if (this.mediaFilter && this.mediaFilter !== "all") url.searchParams.set("kind", this.mediaFilter)
+    if (append && this.mediaLastId) url.searchParams.set("before", this.mediaLastId)
+    const ticket = (this.mediaTicket = (this.mediaTicket || 0) + 1)
+    if (!append) this.mediaStatusTarget.textContent = "Loading…"
+    this.mediaStatusTarget.hidden = append
+    const data = await this.fetchJson(url.pathname + url.search)
+    if (!data || ticket !== this.mediaTicket) return
+    this.mediaLoaded = true
+    const nodes = data.items.map((item) => this.mediaNode(item))
+    append ? this.mediaGridTarget.append(...nodes) : this.mediaGridTarget.replaceChildren(...nodes)
+    if (data.items.length) this.mediaLastId = data.items[data.items.length - 1].id
+    this.mediaMoreTarget.hidden = !data.has_more
+    const shown = this.mediaGridTarget.childElementCount
+    this.mediaStatusTarget.hidden = shown > 0
+    this.mediaStatusTarget.textContent = query ? `Nothing matches “${query}”.` : "No photos or files in this room yet. Paste, drop or 📎 attach one in a message."
+  }
+
+  mediaNode(item) {
+    const card = document.createElement("figure")
+    card.className = `chat-media-item${item.image ? " is-image" : ""}`
+    const open = document.createElement("a")
+    open.href = item.url
+    open.target = "_blank"
+    open.rel = "noopener"
+    open.className = "chat-media-open"
+    if (item.image) {
+      const img = document.createElement("img")
+      img.src = item.url
+      img.alt = item.name
+      img.loading = "lazy"
+      open.append(img)
+    } else {
+      const icon = document.createElement("span")
+      icon.className = "chat-media-icon"
+      icon.textContent = item.type === "application/pdf" ? "PDF" : (item.name.split(".").pop() || "file").toUpperCase().slice(0, 4)
+      const name = document.createElement("span")
+      name.className = "chat-media-name"
+      name.textContent = item.name
+      open.append(icon, name)
+    }
+    const caption = document.createElement("figcaption")
+    const who = document.createElement("span")
+    who.textContent = item.author
+    who.title = this.whoTitle({ name: item.author, email: item.email })
+    const when = document.createElement("time")
+    when.dateTime = item.created_at
+    when.textContent = new Date(item.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    when.title = new Date(item.created_at).toLocaleString()
+    const show = document.createElement("button")
+    show.type = "button"
+    show.className = "chat-media-show"
+    show.textContent = "Show in chat"
+    show.title = item.excerpt || item.name
+    show.addEventListener("click", () => this.showMediaMessage(item))
+    caption.append(who, when, show)
+    card.append(open, caption)
+    return card
+  }
+
+  async showMediaMessage(item) {
+    this.element.querySelector('.chat-tabs .chat-tab[data-tab="messages"]').click()
+    if (item.parent_id && !this.compactValue) {
+      await this.openThread(item.parent_id)
+      return this.flash(this.threadLogTarget.querySelector(`[data-id="${item.message_id}"]`))
+    }
+    this.jumpToMessage(item.message_id)
+  }
+
+  // A bot answer quoted figures that are not in the data its tools returned.
+  unverifiedNode(figures) {
+    const note = document.createElement("p")
+    note.className = "chat-unverified"
+    note.setAttribute("role", "note")
+    note.title = "Rupert compares every $ amount and % in a bot answer with the data its tools returned. These were not found there: the bot may have calculated or made them up."
+    const icon = document.createElement("span")
+    icon.setAttribute("aria-hidden", "true")
+    icon.textContent = "⚠"
+    const text = document.createElement("span")
+    text.textContent = `Not found in Rupert's data: ${figures.join(", ")}. Check before relying on ${figures.length === 1 ? "it" : "them"}.`
+    note.append(icon, text)
+    return note
+  }
+
+  // "Name · email" on hover, so two people with the same name can be told apart.
+  whoTitle(author) {
+    return author.email ? `${author.name} · ${author.email}` : author.name
+  }
+
+  // --- replies: quote a message in the room (or in the thread) ---
+
+  quoteNode(quote) {
+    const node = document.createElement("button")
+    node.type = "button"
+    node.className = `chat-quote${quote.deleted ? " is-deleted" : ""}`
+    node.setAttribute("aria-label", `Replying to ${quote.author}. Show that message.`)
+    const who = document.createElement("strong")
+    who.textContent = quote.author
+    const text = document.createElement("span")
+    text.textContent = quote.excerpt
+    node.append(who, text)
+    node.addEventListener("click", (event) => this.showQuoted(quote, event.currentTarget))
+    return node
+  }
+
+  async showQuoted(quote, from) {
+    const inThread = from.closest(".chat-thread-log")
+    if (inThread) return this.flash(inThread.querySelector(`[data-id="${quote.id}"]`))
+    if (quote.parent_id && !this.compactValue) {
+      await this.openThread(quote.parent_id)
+      return this.flash(this.threadLogTarget.querySelector(`[data-id="${quote.id}"]`))
+    }
+    this.jumpToMessage(quote.parent_id || quote.id)
+  }
+
+  startQuote(message, from) {
+    const where = from.closest(".chat-thread-log") ? "thread" : "main"
+    this.quoting[where] = message
+    this.renderQuoteBar(where)
+    const field = where === "thread" ? this.threadInputTarget : this.inputTarget
+    field.focus()
+  }
+
+  clearQuote(where) {
+    if (!this.quoting[where]) return false
+    this.quoting[where] = null
+    this.renderQuoteBar(where)
+    return true
+  }
+
+  renderQuoteBar(where) {
+    const field = where === "thread" ? this.threadInputTarget : this.inputTarget
+    const composer = field.closest(".chat-composer")
+    let bar = composer.querySelector(".chat-quote-bar")
+    const message = this.quoting[where]
+    if (!message) return bar?.remove()
+    if (!bar) {
+      bar = document.createElement("div")
+      bar.className = "chat-quote-bar"
+      field.before(bar)
+    }
+    const label = document.createElement("span")
+    const who = document.createElement("strong")
+    who.textContent = `Replying to ${message.author.name}`
+    const text = document.createElement("span")
+    text.className = "chat-quote-bar-text"
+    const plain = (message.body || "").replace(/\[([^\]]+)\]\([^)\s]+\)/g, "$1").replace(/\*\*|`/g, "").replace(/\s+/g, " ").trim() || (message.attachments?.length ? `📎 ${message.attachments[0].name}` : "")
+    text.textContent = plain.length > 90 ? `${plain.slice(0, 89)}…` : plain
+    label.append(who, text)
+    const hint = document.createElement("span")
+    hint.className = "chat-quote-bar-hint"
+    hint.textContent = message.kind === "assistant" ? "it answers your reply" : ""
+    const cancel = document.createElement("button")
+    cancel.type = "button"
+    cancel.setAttribute("aria-label", "Cancel reply")
+    cancel.textContent = "✕"
+    cancel.addEventListener("click", () => { this.clearQuote(where); field.focus() })
+    bar.replaceChildren(label, hint, cancel)
+  }
+
+  // "31s · qwen3.5-4b · local" next to a bot reply.
+  answerNode(answer) {
+    const node = document.createElement("span")
+    node.className = `chat-msg-answer is-${answer.where}`
+    const seconds = answer.seconds < 10 ? answer.seconds.toFixed(1) : Math.round(answer.seconds)
+    node.textContent = [`${seconds}s`, answer.model, answer.where].filter(Boolean).join(" · ")
+    node.title = `Answered in ${answer.seconds} seconds${answer.model ? ` by ${answer.model}` : ""} (${answer.where === "local" ? "on this server" : "cloud"})`
+    return node
   }
 
   toolButton(label, handler) {
@@ -380,7 +718,20 @@ export default class extends Controller {
         size.textContent = this.constructor.fileSize(file.size)
         link.append(icon, name, size)
       }
-      holder.append(link)
+      if (file.drive_url) {
+        const wrap = document.createElement("span")
+        wrap.className = "chat-attachment"
+        const drive = document.createElement("a")
+        drive.className = "chat-attachment-drive"
+        drive.href = file.drive_url
+        drive.target = "_blank"
+        drive.rel = "noopener noreferrer"
+        drive.textContent = "Open in Google Drive"
+        wrap.append(link, drive)
+        holder.append(wrap)
+      } else {
+        holder.append(link)
+      }
     })
     return holder
   }
@@ -404,6 +755,347 @@ export default class extends Controller {
       row.append(pill)
     })
     return row
+  }
+
+  // --- typing, editing and links ---
+
+  // Tells the room you are typing, at most every three seconds.
+  pingTyping() {
+    const now = Date.now()
+    if (now - this.lastTypingPing < 3000) return
+    this.lastTypingPing = now
+    fetch(`${this.roomUrlValue}/typing`, { method: "POST", headers: this.csrf(), credentials: "same-origin" }).catch(() => {})
+  }
+
+  renderTyping(names) {
+    if (!this.hasTypingTarget || !Array.isArray(names)) return
+    const text = names.length === 0 ? "" : names.length === 1 ? `${names[0]} is typing…` : names.length === 2 ? `${names[0]} and ${names[1]} are typing…` : "Several people are typing…"
+    this.typingTarget.hidden = text === ""
+    this.typingTarget.textContent = text
+  }
+
+  startEdit(message) {
+    this.editingId = message.id
+    this.render({ stick: false })
+    const field = this.element.querySelector(`[data-id="${message.id}"] .chat-edit-input`)
+    if (field) {
+      field.focus()
+      field.setSelectionRange(field.value.length, field.value.length)
+    }
+  }
+
+  editorNode(message) {
+    const form = document.createElement("form")
+    form.className = "chat-edit"
+    form.dataset.busy = "false"
+    const field = document.createElement("textarea")
+    field.className = "chat-input chat-edit-input"
+    field.value = message.body || ""
+    field.rows = Math.min(8, Math.max(1, field.value.split("\n").length))
+    field.setAttribute("aria-label", "Edit message")
+    const bar = document.createElement("div")
+    bar.className = "chat-edit-bar"
+    const hint = document.createElement("span")
+    hint.textContent = "Enter saves · Esc cancels"
+    const cancel = document.createElement("button")
+    cancel.type = "button"
+    cancel.className = "btn-ghost btn-sm"
+    cancel.textContent = "Cancel"
+    const save = document.createElement("button")
+    save.type = "submit"
+    save.className = "btn-primary btn-sm"
+    save.textContent = "Save"
+    bar.append(hint, cancel, save)
+    form.append(field, bar)
+    const stop = () => { this.editingId = null; this.render({ stick: false }) }
+    cancel.addEventListener("click", stop)
+    field.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { event.preventDefault(); stop() }
+      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) { event.preventDefault(); form.requestSubmit() }
+    })
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault()
+      const text = field.value.trim()
+      if (text === (message.body || "").trim()) return stop()
+      save.disabled = true
+      const data = await this.fetchJson(`${this.urlValue}/${message.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: text })
+      })
+      if (!data) { save.disabled = false; return }
+      this.editingId = null
+      this.merge(data.messages)
+      this.render({ stick: false })
+    })
+    return form
+  }
+
+  // A link straight to this message (its thread for a reply), to paste anywhere.
+  async copyLink(message) {
+    const url = new URL(this.roomUrlValue, window.location.origin)
+    if (message.parent_id) url.searchParams.set("thread", message.parent_id)
+    url.searchParams.set("message", message.id)
+    try {
+      await navigator.clipboard.writeText(url.href)
+      this.toast("Link copied.")
+      this.showNotice(null)
+    } catch (_error) {
+      window.prompt("Copy this link", url.href)
+    }
+  }
+
+  async jumpToMessage(id) {
+    for (let tries = 0; tries < 10; tries += 1) {
+      const node = this.logTarget.querySelector(`[data-id="${id}"]`)
+      if (node) return this.flash(node)
+      if (!this.hasMore) break
+      await this.loadEarlier()
+    }
+    this.showNotice("That message is no longer in this room.")
+  }
+
+  flash(node) {
+    if (!node) return
+    node.scrollIntoView({ block: "center", behavior: "smooth" })
+    node.classList.remove("is-flash")
+    void node.offsetWidth
+    node.classList.add("is-flash")
+  }
+
+  // --- "recently active" dots ---
+
+  // Updates every avatar that names a person: data-presence drives the dot, the title says when.
+  applyPresence() {
+    if (!this.presenceMap) return
+    this.element.querySelectorAll("[data-presence-user]").forEach((node) => {
+      const status = this.presenceMap[node.dataset.presenceUser]
+      if (node.dataset.baseTitle === undefined) node.dataset.baseTitle = node.getAttribute("title") || ""
+      if (status) {
+        node.dataset.presence = status.state
+        node.dataset.presenceLabel = status.label
+      } else {
+        delete node.dataset.presence
+        delete node.dataset.presenceLabel
+      }
+      const base = node.dataset.baseTitle
+      const title = [base, status?.label].filter(Boolean).join(" · ")
+      if (title) node.setAttribute("title", title)
+      else node.removeAttribute("title")
+    })
+  }
+
+  openPresence() {
+    if (this.hasPresenceTarget) this.presenceTarget.showModal()
+  }
+
+  closePresence() {
+    this.presenceTarget.close()
+  }
+
+  async togglePresence(event) {
+    const shown = event.currentTarget.checked
+    const form = new FormData()
+    form.append("hidden", shown ? "0" : "1")
+    const data = await this.fetchJson(this.presenceTarget.dataset.url, { method: "PATCH", body: form })
+    if (!data) {
+      event.currentTarget.checked = !shown
+      return
+    }
+    this.afterPresence(data)
+    this.toast(data.shown ? "Others can see when you are active." : "Your activity is hidden.")
+  }
+
+  async savePresencePolicy(event) {
+    event.preventDefault()
+    const data = await this.fetchJson(this.presenceTarget.dataset.policyUrl, { method: "PATCH", body: new FormData(event.currentTarget) })
+    if (!data) return
+    this.afterPresence(data)
+    this.toast("Workspace rule saved.")
+  }
+
+  afterPresence(data) {
+    this.presenceMap = data.presence || {}
+    this.applyPresence()
+    if (this.hasPresenceToggleTarget) {
+      this.presenceToggleTarget.checked = data.shown
+      this.presenceToggleTarget.disabled = data.mode !== "choice"
+    }
+    if (this.hasPresenceLabelTarget) this.presenceLabelTarget.textContent = `${data.shown ? "Shown as active" : "Activity hidden"} · change`
+  }
+
+  openNewDm() {
+    this.newDmTarget.showModal()
+  }
+
+  closeNewDm() {
+    this.newDmTarget.close()
+  }
+
+  // --- pins: the newest is a banner above the messages, the rest a click away ---
+
+  setPins(pins) {
+    if (!Array.isArray(pins) || !this.hasPinsTarget) return
+    if (JSON.stringify(pins) === JSON.stringify(this.pins)) return
+    this.pins = pins
+    this.renderPins()
+  }
+
+  renderPins() {
+    const holder = this.pinsTarget
+    holder.hidden = this.pins.length === 0
+    if (!this.pins.length) {
+      holder.replaceChildren()
+      return
+    }
+    const latest = this.pins[0]
+    const bar = document.createElement("div")
+    bar.className = "chat-pins-bar"
+    bar.append(this.pinButton(latest, true))
+    if (this.pins.length > 1) {
+      const more = document.createElement("button")
+      more.type = "button"
+      more.className = "chat-pins-more"
+      more.setAttribute("aria-expanded", this.pinsOpen ? "true" : "false")
+      more.textContent = this.pinsOpen ? "Hide" : `+${this.pins.length - 1} more`
+      more.addEventListener("click", () => { this.pinsOpen = !this.pinsOpen; this.renderPins() })
+      bar.append(more)
+    }
+    bar.append(this.unpinButton(latest))
+    const nodes = [bar]
+    if (this.pinsOpen && this.pins.length > 1) {
+      const list = document.createElement("ul")
+      list.className = "chat-pins-list"
+      this.pins.slice(1).forEach((pin) => {
+        const item = document.createElement("li")
+        item.append(this.pinButton(pin, false), this.unpinButton(pin))
+        list.append(item)
+      })
+      nodes.push(list)
+    }
+    holder.replaceChildren(...nodes)
+  }
+
+  pinButton(pin, banner) {
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = banner ? "chat-pin chat-pin-banner" : "chat-pin"
+    button.title = `Pinned by ${pin.pinned_by || "someone"} · show the message`
+    const icon = document.createElement("span")
+    icon.setAttribute("aria-hidden", "true")
+    icon.textContent = "📌"
+    const who = document.createElement("strong")
+    who.textContent = `${pin.author}:`
+    const text = document.createElement("span")
+    text.className = "chat-pin-text"
+    text.textContent = pin.excerpt
+    button.append(icon, who, text)
+    button.addEventListener("click", () => this.jumpToPin(pin))
+    return button
+  }
+
+  unpinButton(pin) {
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "chat-pin-unpin"
+    button.setAttribute("aria-label", `Unpin message from ${pin.author}`)
+    button.title = "Unpin"
+    button.textContent = "✕"
+    button.addEventListener("click", () => this.togglePin(pin.id))
+    return button
+  }
+
+  async togglePin(id) {
+    const data = await this.fetchJson(`${this.urlValue}/${id}/pin`, { method: "POST" })
+    if (!data) return
+    this.merge(data.messages)
+    this.setPins(data.pins)
+    this.render({ stick: false })
+  }
+
+  // Shows the pinned message: its thread when it is a reply, else the message in the log.
+  async jumpToPin(pin) {
+    if (pin.parent_id) {
+      await this.openThread(pin.parent_id)
+      if (this.hasThreadLogTarget) this.flash(this.threadLogTarget.querySelector(`[data-id="${pin.id}"]`))
+      return
+    }
+    return this.jumpToMessage(pin.id)
+  }
+
+  // 👍 / 👎 on an assistant reply, so Model scores can show which models people like.
+  ratingNode(message) {
+    const row = document.createElement("div")
+    row.className = "chat-rating"
+    row.setAttribute("role", "group")
+    row.setAttribute("aria-label", "Rate this reply")
+    ;[["up", "👍", "Helpful"], ["down", "👎", "Not helpful"]].forEach(([value, emoji, label]) => {
+      const button = document.createElement("button")
+      button.type = "button"
+      button.className = `chat-rating-button${message.rating.mine === value ? " is-mine" : ""}`
+      button.setAttribute("aria-pressed", message.rating.mine === value ? "true" : "false")
+      button.title = `${label} (counts toward Model scores)`
+      const count = message.rating[value]
+      button.textContent = count > 0 ? `${emoji} ${count}` : emoji
+      button.setAttribute("aria-label", `${label}${count ? `, ${count}` : ""}`)
+      button.addEventListener("click", () => this.rate(message, value))
+      row.append(button)
+    })
+    if (message.rating.mine) row.append(this.reasonNode(message))
+    return row
+  }
+
+  // After a thumb: an optional one-line "why", saved with the rating. Never blocks anything.
+  reasonNode(message) {
+    const saved = message.rating.my_reason
+    if (saved && this.reasonOpenFor !== message.id) {
+      const note = document.createElement("button")
+      note.type = "button"
+      note.className = "chat-rating-note"
+      note.title = "Edit why"
+      note.textContent = `“${saved}”`
+      note.addEventListener("click", () => { this.reasonOpenFor = message.id; this.render({ stick: false }); this.focusReason(message.id) })
+      return note
+    }
+    if (this.reasonOpenFor !== message.id) return document.createTextNode("")
+    const form = document.createElement("form")
+    form.className = "chat-rating-reason"
+    form.dataset.busy = "false"
+    const field = document.createElement("input")
+    field.type = "text"
+    field.maxLength = 500
+    field.value = saved || ""
+    field.placeholder = message.rating.mine === "up" ? "What made it good? (optional)" : "What was wrong? (optional)"
+    field.setAttribute("aria-label", "Why (optional)")
+    const close = () => { this.reasonOpenFor = null; this.render({ stick: false }) }
+    field.addEventListener("keydown", (event) => { if (event.key === "Escape") { event.preventDefault(); close() } })
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault()
+      const data = await this.fetchJson(`${this.urlValue}/${message.id}/rating/reason`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: field.value })
+      })
+      if (!data) return
+      this.reasonOpenFor = null
+      this.merge(data.messages)
+      this.render({ stick: false })
+    })
+    form.append(field)
+    return form
+  }
+
+  focusReason(id) {
+    requestAnimationFrame(() => this.element.querySelector(`[data-id="${id}"] .chat-rating-reason input`)?.focus())
+  }
+
+  async rate(message, value) {
+    const data = await this.fetchJson(`${this.urlValue}/${message.id}/rating`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value })
+    })
+    if (data) {
+      const after = data.messages.find((row) => row.id === message.id)
+      this.reasonOpenFor = after?.rating?.mine && !after.rating.my_reason ? message.id : null
+      this.merge(data.messages)
+      this.render({ stick: false })
+      if (this.reasonOpenFor) this.focusReason(message.id)
+    }
   }
 
   openPalette(message, anchor) {
@@ -510,7 +1202,7 @@ export default class extends Controller {
 
   inlineNodes(line) {
     const names = this.peopleValue.map((person) => person.name).concat(this.meValue ? [this.meValue] : [])
-    const handles = ["rupert", ...this.agentsValue.map((agent) => agent.name)]
+    const handles = ["rupert", "all", ...this.agentsValue.map((agent) => agent.name)]
     return this.constructor.parseInline(line, names, handles).map((part) => {
       if (part.type === "text") return document.createTextNode(part.text)
       const node = document.createElement(part.type === "bold" ? "strong" : part.type === "code" ? "code" : part.type === "link" ? "a" : "span")
@@ -518,7 +1210,7 @@ export default class extends Controller {
       if (part.type === "mention") node.className = "chat-mention"
       if (part.type === "link") {
         node.href = part.href
-        if (part.external) {
+        if (part.external && new URL(part.href).origin !== window.location.origin) {
           node.target = "_blank"
           node.rel = "noopener noreferrer nofollow"
         }
@@ -542,12 +1234,19 @@ export default class extends Controller {
       badge.classList.toggle("is-mention", mentions > 0)
       link.classList.toggle("has-unread", unread > 0 || mentions > 0)
     })
-    document.title = total > 0 ? `(${total}) ${this.titleValue}` : this.titleValue
+    if (!this.compactValue) document.title = total > 0 ? `(${total}) ${this.titleValue}` : this.titleValue
   }
 
   // --- threads ---
 
   async openThread(id) {
+    // The dock has no room for a thread pane: open the thread in the full page.
+    if (this.compactValue || !this.hasThreadTarget) {
+      const url = `${this.roomUrlValue}?thread=${id}`
+      window.Turbo ? window.Turbo.visit(url) : (window.location.href = url)
+      return
+    }
+    if (this.threadId !== id) this.clearQuote("thread")
     this.threadId = id
     this.threadTarget.hidden = false
     this.renderThread()
@@ -561,6 +1260,7 @@ export default class extends Controller {
 
   closeThread() {
     this.threadId = null
+    this.clearQuote("thread")
     this.threadTarget.hidden = true
   }
 
@@ -578,14 +1278,19 @@ export default class extends Controller {
   // --- composing ---
 
   input() {
+    this.historyAt = null
     this.autosize(this.inputTarget)
     this.sendTarget.disabled = this.inputTarget.value.trim() === "" && this.pendingFiles.length === 0
-    this.updateSuggest()
+    this.updateSuggest(this.inputTarget, this.suggestTarget)
+    this.pingTyping()
   }
 
   threadInputChanged() {
+    this.historyAt = null
+    this.pingTyping()
     this.autosize(this.threadInputTarget)
     this.threadSendTarget.disabled = this.threadInputTarget.value.trim() === ""
+    if (this.hasThreadSuggestTarget) this.updateSuggest(this.threadInputTarget, this.threadSuggestTarget)
   }
 
   autosize(field) {
@@ -594,52 +1299,109 @@ export default class extends Controller {
   }
 
   keydown(event) {
-    if (!this.suggestTarget.hidden) {
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        event.preventDefault()
-        const step = event.key === "ArrowDown" ? 1 : -1
-        this.suggestIndex = (this.suggestIndex + step + this.suggestions.length) % this.suggestions.length
-        this.renderSuggest()
-        return
-      }
-      if (event.key === "Tab" || event.key === "Enter") {
-        event.preventDefault()
-        this.completeMention(this.suggestions[this.suggestIndex])
-        return
-      }
-      if (event.key === "Escape") {
-        this.suggestTarget.hidden = true
-        return
-      }
-    }
+    if (this.handleSuggestKeys(event)) return
+    if (this.historyKey(event, this.inputTarget)) return
+    if (event.key === "Escape" && this.clearQuote("main")) return
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault()
       this.formTarget.requestSubmit()
     }
   }
 
+  // ↑ / ↓ in the message box step through what you sent before, like a terminal.
+  // ↑ only from the first line and ↓ only from the last, so moving inside a
+  // multi-line message still works. ↓ past the newest brings back what you were typing.
+  historyKey(event, field) {
+    if (!["ArrowUp", "ArrowDown"].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return false
+    const up = event.key === "ArrowUp"
+    if (up && field.value.slice(0, field.selectionStart).includes("\n")) return false
+    if (!up && field.value.slice(field.selectionEnd).includes("\n")) return false
+    if (this.historyField !== field) {
+      this.historyField = field
+      this.historyAt = null
+    }
+    const sent = this.sentHistory()
+    if (up) {
+      if (this.historyAt === null || this.historyAt === undefined) {
+        if (!sent.length) return false
+        this.historyDraft = field.value
+        this.historyAt = 0
+      } else if (this.historyAt < sent.length - 1) {
+        this.historyAt += 1
+      } else {
+        event.preventDefault()
+        return true
+      }
+    } else {
+      if (this.historyAt === null || this.historyAt === undefined) return false
+      this.historyAt -= 1
+    }
+    event.preventDefault()
+    const at = this.historyAt
+    field.value = at < 0 ? (this.historyDraft || "") : sent[at]
+    if (at < 0) this.historyAt = null
+    field.selectionStart = field.selectionEnd = field.value.length
+    this.autosize(field)
+    if (field === this.inputTarget) this.sendTarget.disabled = field.value.trim() === "" && this.pendingFiles.length === 0
+    else this.threadSendTarget.disabled = field.value.trim() === ""
+    return true
+  }
+
+  // Your own messages in this room, newest first, each text once.
+  sentHistory() {
+    const mine = [...this.byId.values()].filter((message) => message.mine && !message.deleted && message.body).sort((a, b) => b.id - a.id)
+    return [...new Set(mine.map((message) => message.body))]
+  }
+
+  // Arrow keys, Tab/Enter and Escape drive the @ list while it is open. Returns true when handled.
+  handleSuggestKeys(event) {
+    const list = this.suggestList
+    if (!list || list.hidden || !this.suggestions.length || event.target !== this.suggestField) return false
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault()
+      const step = event.key === "ArrowDown" ? 1 : -1
+      this.suggestIndex = (this.suggestIndex + step + this.suggestions.length) % this.suggestions.length
+      this.renderSuggest()
+      return true
+    }
+    if (event.key === "Tab" || event.key === "Enter") {
+      event.preventDefault()
+      this.completeMention(this.suggestions[this.suggestIndex])
+      return true
+    }
+    if (event.key === "Escape") {
+      list.hidden = true
+      return true
+    }
+    return false
+  }
+
   threadKeydown(event) {
+    if (this.handleSuggestKeys(event)) return
+    if (this.historyKey(event, this.threadInputTarget)) return
+    if (event.key === "Escape" && this.clearQuote("thread")) return
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault()
       event.target.form.requestSubmit()
     }
   }
 
-  // "@" plus the start of a name suggests Rupert and the people who use team chat.
-  updateSuggest() {
-    const field = this.inputTarget
+  // "@" plus the start of a name suggests Rupert, the model @agents and the people who use team chat.
+  updateSuggest(field, list) {
+    this.suggestField = field
+    this.suggestList = list
     const before = field.value.slice(0, field.selectionStart)
     const match = before.match(/(?:^|\s)@([\p{L}\p{N}'-]{0,30})$/u)
     if (!match) {
-      this.suggestTarget.hidden = true
+      list.hidden = true
       this.suggestions = []
       return
     }
     const term = match[1].toLowerCase()
     const starts = (name) => name.toLowerCase().split(/\s+/).some((word) => word.startsWith(term)) || name.toLowerCase().startsWith(term)
-    const options = [this.constructor.RUPERT, ...this.agentsValue, ...this.peopleValue.map((person) => ({ ...person, label: person.name }))].filter((option) => starts(option.name)).slice(0, 8)
+    const options = [this.constructor.RUPERT, this.constructor.ALL, ...this.agentsValue, ...this.peopleValue.map((person) => ({ ...person, label: person.email ? `${person.name} — ${person.email}` : person.name }))].filter((option) => starts(option.name)).slice(0, 8)
     if (!options.length || (options.length === 1 && options[0].name.toLowerCase() === term)) {
-      this.suggestTarget.hidden = true
+      list.hidden = true
       this.suggestions = []
       return
     }
@@ -657,21 +1419,21 @@ export default class extends Controller {
       li.addEventListener("mousedown", (event) => { event.preventDefault(); this.completeMention(option) })
       return li
     })
-    this.suggestTarget.replaceChildren(...items)
-    this.suggestTarget.hidden = false
+    this.suggestList.replaceChildren(...items)
+    this.suggestList.hidden = false
   }
 
   completeMention(option) {
-    if (!option) return
-    const field = this.inputTarget
+    if (!option || !this.suggestField) return
+    const field = this.suggestField
     const cursor = field.selectionStart
     const before = field.value.slice(0, cursor).replace(/@[\p{L}\p{N}'-]*$/u, `@${option.name} `)
     field.value = before + field.value.slice(cursor)
     field.selectionStart = field.selectionEnd = before.length
     if (option.id) this.mentionIds.add(option.id)
-    this.suggestTarget.hidden = true
+    this.suggestList.hidden = true
     this.suggestions = []
-    this.input()
+    field === this.inputTarget ? this.input() : this.threadInputChanged()
   }
 
   // --- files ---
@@ -805,6 +1567,8 @@ export default class extends Controller {
     const form = new FormData()
     form.append("body", body)
     if (parentId) form.append("parent_id", parentId)
+    const where = field === this.inputTarget ? "main" : "thread"
+    if (this.quoting[where]) form.append("quote_id", this.quoting[where].id)
     files.forEach((entry) => form.append("files[]", entry.file, entry.file.name))
     this.mentionIds.forEach((id) => form.append("mention_ids[]", id))
     const data = await this.fetchJson(this.urlValue, { method: "POST", body: form })
@@ -815,6 +1579,7 @@ export default class extends Controller {
     }
     field.value = ""
     this.autosize(field)
+    this.clearQuote(where)
     if (!parentId) {
       this.pendingFiles = []
       this.mentionIds = new Set()

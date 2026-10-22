@@ -43,6 +43,6 @@ class ApiAccessTokensController < AuthenticatedController
   end
 
   def load_tokens
-    @pagy, @tokens = pagy(ApiAccessToken.includes(:user).order(created_at: :desc, id: :desc), items: 30)
+    @pagy, @tokens = pagy(:offset, ApiAccessToken.includes(:user).order(created_at: :desc, id: :desc), limit: 30)
   end
 end

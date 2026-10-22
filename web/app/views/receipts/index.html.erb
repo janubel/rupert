@@ -12,5 +12,5 @@
       <% if @receipts.empty? %><tr><td colspan="4" class="empty-row">No receipts match this status.</td></tr><% end %>
     </tbody></table>
   </div>
-  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
 </div>

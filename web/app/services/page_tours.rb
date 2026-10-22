@@ -5,7 +5,9 @@
 # tour controller highlights each anchored element in order and skips steps
 # whose anchor is not on the page for this person. Tours never start by
 # themselves: the help bar and the welcome card offer them, and finishing or
-# skipping one records it for the account so the offer quietens down.
+# skipping one records it for the account so the offer quietens down. The one
+# exception is team chat, whose tour starts by itself on a person's first visit
+# (and can be replayed from its ? help or "Show me around").
 #
 # Steps also render as a plain numbered list inside "How this page works", so
 # the same guidance is available without JavaScript.
@@ -216,7 +218,23 @@ class PageTours
         { anchor: 'check', title: 'Books check', body: 'Opens the health check for the same window: missing imports, unmatched payments and backups.' },
         { anchor: 'csv', title: 'Export CSV', body: 'Downloads the current report for the current window. Sources and currencies stay separate in the file.' }
       ]
-    )
+    ),
+    Tour.new(
+      key: 'team_chat', title: 'Team chat', paths: ['/chat'], permission: 'team_chat',
+      intro: 'Rooms, direct messages and Rupert’s bots in one place. Two minutes to find your way around.',
+      steps: [
+        { anchor: 'chat-rooms', title: 'Rooms and people',
+          body: '#admins holds every admin and Rupert. Under Direct, click a name to message one person; your own room with Rupert is at the top.' },
+        { anchor: 'chat-composer', title: 'Write, mention, attach',
+          body: 'Type @ to mention a person or a bot: @rupert for the main assistant, or @all to ask every bot and compare their answers side by side. Paste or drop photos and files. Enter sends.' },
+        { anchor: 'chat-bots', title: 'Which bot is which',
+          body: '@rupert is DeepSeek in the cloud (fast). @liquid, @qwen and @gemma run privately on this server (slower). Every bot reply shows its model and how long it took.' },
+        { anchor: 'chat-messages', title: 'Work with a message',
+          body: 'Hover a message to reply in a thread, react, pin it as the room banner, copy a link to it, or edit your own. Rate bot replies with a thumb and say why, so Model scores shows which bot helps most.' },
+        { anchor: 'chat-help', title: 'Help any time',
+          body: 'The ? button explains this again, plays the demo video and replays this tour.' }
+      ]
+    ),
   ].freeze
 
   class << self
@@ -245,6 +263,7 @@ class PageTours
       when nil then true
       when 'staff' then user.can?('timesheets.self')
       when 'pos' then user.can_use_pos?
+      when 'team_chat' then TeamChat.allowed?(user)
       else user.can?(tour.permission)
       end
     end

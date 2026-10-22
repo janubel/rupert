@@ -54,9 +54,12 @@ module TeamChat
 
     def image? = IMAGE_TYPES.include?(content_type)
 
+    def in_drive? = drive_status == 'stored' && drive_file_id.present?
+
     def as_payload(room)
       { id: id, name: filename, type: content_type, size: byte_size, image: image?,
-        url: Rails.application.routes.url_helpers.team_chat_attachment_path(room, id) }
+        url: Rails.application.routes.url_helpers.team_chat_attachment_path(room, id),
+        drive_url: (DriveStore.drive_url(drive_file_id) if in_drive?) }
     end
   end
 end

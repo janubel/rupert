@@ -28,6 +28,6 @@
   <p class="text-sm" role="status"><%= @pagy.count %> matching follow-ups · earliest due first<%= " · covers #{@day.strftime('%b %-d, %Y')}" if @day %><%= " · #{reconciliation_source(@source)}" if @source %><%= " · #{ReconciliationFollowUp::CATEGORIES[@category]}" if @category %><%= ' · no original linked' if @evidence_filter %></p><p class="text-xs text-mocha">Shortcut counts cover all dates; the list uses your selected filters. A file may already be retained but not linked to its request.</p>
   <div class="grid gap-4 md:grid-cols-2"><% @follow_ups.each do |item| %><%= render 'card', item: item, close_day: @day, queue_filters: @queue_filters %><% end %></div>
   <% if @follow_ups.empty? %><div class="card card-pad"><h2 class="font-display text-xl">No follow-ups match this view</h2><p class="mt-2 text-sm text-mocha">This queue shows saved requests only. Check the financial close for untracked missing reports, or broaden these filters to find existing work.</p></div><% end %>
-  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <%== @pagy.series_nav if @pagy.pages > 1 %>
   <p class="text-xs text-mocha">Follow-ups are saved in Rupert. Status changes, assignments and notes remain in their history. Closing records a reviewer's decision; it does not assert a match or change source transactions.</p>
 </div>

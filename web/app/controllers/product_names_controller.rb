@@ -14,8 +14,7 @@ class ProductNamesController < AuthenticatedController
       @query = params[:q].to_s.strip[0, 255]
       @rows = @filter == 'unmatched' ? [] : filtered_rows
       @unmatched_items = @filter == 'verify' ? [] : filtered_unmatched
-      @pagy = Pagy.new(count: @rows.size, page: params[:page], items: 50)
-      @page_rows = @rows.slice(@pagy.offset, @pagy.items) || []
+      @pagy, @page_rows = pagy(:offset, @rows, limit: 50)
     end
   end
 

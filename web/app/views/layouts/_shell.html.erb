@@ -1,5 +1,7 @@
 <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-ink focus:fixed focus:left-4 focus:top-3">Skip to content</a>
-<div class="min-h-full" <% if Current.user %>data-controller="help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %>" data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %>>
+<% team_chat_on = Current.user && TeamChat.allowed?(Current.user) %>
+<% chat_dock_here = team_chat_on && controller_name != 'team_chat' %>
+<div class="min-h-full" <% if Current.user %>data-controller="help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %><%= ' chat-dock' if team_chat_on %>"<% if team_chat_on %> data-chat-dock-unread-url-value="<%= team_chat_unread_path %>" data-chat-dock-dock-url-value="<%= team_chat_dock_path %>"<% end %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %>>
   <% if Current.user&.super_admin? && Current.tenant_id != Current.user.tenant_id %>
     <div role="status" class="flash flash-notice flex flex-wrap items-center justify-between gap-3"><span>Read-only customer support · <%= Current.tenant.name %></span><%= button_to 'Leave support session', leave_platform_support_path, method: :delete, class: 'btn-ghost' %></div>
   <% end %>
@@ -31,6 +33,10 @@
             <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
           <% end %>
           <%= render 'shared/header_notifications' %>
+          <% if team_chat_on %>
+            <%= link_to team_chat_path, class: 'nav-utility chat-dock-trigger', aria: { label: 'Team chat', haspopup: (chat_dock_here ? 'dialog' : nil), expanded: 'false' }, title: 'Team chat',
+                  data: { action: 'click->chat-dock#toggle', chat_dock_target: 'trigger' } do %><%= navigation_icon('chat') %><span class="chat-dock-badge" data-chat-dock-target="badge" hidden></span><span class="nav-hint">Team chat</span><% end %>
+          <% end %>
           <%= render 'shared/header_sync_pill', sync: @last_sync %>
           <%= render 'shared/feedback_button' %>
           <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>
@@ -112,7 +118,7 @@
       </div>
     </div>
   <% end %>
-  <main id="main" tabindex="-1" class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 focus:outline-none">
+  <main id="main" tabindex="-1" class="mx-auto <%= content_for?(:wide_page) ? 'max-w-none px-3 py-3 sm:px-4 sm:py-4' : 'max-w-6xl px-4 py-6 sm:px-6 sm:py-8' %> focus:outline-none">
     <%= render 'shared/workspace_help' if Current.user %>
     <% if notice %><div aria-live="polite" role="status" class="flash flash-notice mb-4"><%= notice %></div><% end %>
     <% if alert %><div aria-live="assertive" role="alert" class="flash flash-alert mb-4"><%= alert %></div><% end %>
@@ -121,6 +127,11 @@
   <%= render 'shared/help_panel' if Current.user %>
   <%= render 'shared/feedback_panel' if Current.user %>
   <%= render 'shared/ask_rupert' if ask_rupert_available? %>
+  <% if chat_dock_here %>
+    <section id="chat-dock-panel" class="chat-dock" data-chat-dock-target="panel" data-turbo-permanent role="dialog" aria-label="Team chat" hidden>
+      <turbo-frame id="chat_dock" data-chat-dock-target="frame"></turbo-frame>
+    </section>
+  <% end %>
 </div>
 
 <% if Current.user&.can?('dashboard.read') %>

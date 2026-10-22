@@ -1,0 +1,74 @@
+<turbo-frame id="chat_dock">
+  <div class="chat-dock-body"
+       data-controller="team-chat"
+       data-team-chat-compact-value="true"
+       data-team-chat-url-value="<%= team_chat_messages_path(@room) %>"
+       data-team-chat-room-url-value="<%= team_chat_room_path(@room) %>"
+       data-team-chat-room-value="<%= @room.slug %>"
+       data-team-chat-direct-value="<%= @room.direct? %>"
+       data-team-chat-post-max-value="<%= TeamChat::Message::BODY_MAX %>"
+       data-team-chat-people-value="<%= @people.to_json %>"
+       data-team-chat-agents-value="<%= @local_agents.to_json %>"
+       data-team-chat-me-value="<%= Current.user.display_name %>"
+       data-team-chat-emoji-value="<%= TeamChat::Reaction::EMOJI.to_json %>"
+       data-team-chat-file-max-value="<%= TeamChat::Attachment::MAX_BYTES %>"
+       data-team-chat-file-count-value="<%= TeamChat::Attachment::MAX_PER_MESSAGE %>">
+    <div class="chat-dock-head">
+      <%= link_to team_chat_dock_path, class: 'chat-dock-icon', title: 'All rooms', aria: { label: 'Back to all rooms' } do %>‹<% end %>
+      <h2 class="chat-dock-title">
+        <% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true">R</span>Rupert<% elsif @room.dm? %><%= @room.display_name(Current.user) %><% else %><span class="chat-hash">#</span><%= @room.name %><% end %>
+      </h2>
+      <div class="chat-dock-tools">
+        <%= link_to team_chat_room_path(@room), class: 'chat-dock-icon', title: 'Open in full team chat', aria: { label: 'Open in full team chat' }, data: { turbo_frame: '_top' } do %>⤢<% end %>
+        <button type="button" class="chat-dock-icon" data-action="chat-dock#close" title="Close" aria-label="Close team chat">✕</button>
+      </div>
+    </div>
+
+    <div class="chat-pins" data-team-chat-target="pins" hidden></div>
+    <div class="chat-log-wrap">
+      <div class="chat-log" data-team-chat-target="log" data-action="scroll->team-chat#onScroll" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"
+           aria-label="Messages in <%= @room.direct? ? 'your room with Rupert' : "##{@room.name}" %>">
+        <button type="button" class="btn-ghost btn-sm chat-more" data-team-chat-target="more" data-action="team-chat#loadEarlier" hidden>Load earlier messages</button>
+        <p class="chat-hint" data-team-chat-target="loading">Loading messages…</p>
+        <div class="chat-empty" data-team-chat-target="empty" hidden>
+          <% if @room.direct? %>
+            <p class="chat-empty-title">Ask Rupert anything about the business.</p>
+            <div class="chat-starters">
+              <% ['How were sales yesterday?', 'Anything low on stock?', 'Any alerts?'].each do |starter| %>
+                <button type="button" class="chat-starter" data-action="team-chat#useStarter"><%= starter %></button>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="chat-empty-title">Nothing here yet.</p>
+            <p>Say hello, or write <strong>@rupert</strong> with a question.</p>
+          <% end %>
+        </div>
+        <div data-team-chat-list></div>
+      </div>
+      <button type="button" class="chat-jump" data-team-chat-target="jump" data-action="team-chat#scrollToEnd" hidden>New messages ↓</button>
+    </div>
+
+    <form class="chat-compose" data-busy="false" data-team-chat-target="form" data-action="submit->team-chat#send dragover->team-chat#dragOver dragleave->team-chat#dragLeave drop->team-chat#drop">
+      <p class="chat-typing" data-team-chat-target="typing" aria-live="polite" hidden></p>
+      <p class="chat-error" data-team-chat-target="notice" role="alert" hidden></p>
+      <div class="chat-composer">
+        <label for="chat-dock-input" class="sr-only">Message</label>
+        <ul class="chat-suggest" data-team-chat-target="suggest" role="listbox" hidden></ul>
+        <div class="chat-files" data-team-chat-target="files" hidden></div>
+        <textarea id="chat-dock-input" class="chat-input" rows="1" maxlength="<%= TeamChat::Message::BODY_MAX %>" data-team-chat-target="input"
+                  data-action="input->team-chat#input keydown->team-chat#keydown paste->team-chat#paste" autocomplete="off"
+                  placeholder="<%= @room.direct? ? 'Ask Rupert…' : "Message #{@room.dm? ? @room.display_name(Current.user) : "##{@room.name}"}" %>"></textarea>
+        <div class="chat-composer-bar">
+          <span class="chat-composer-hint"><%= @room.direct? ? 'Rupert answers every message here.' : '@ to mention · Enter sends' %></span>
+          <span class="chat-composer-actions">
+            <label class="chat-attach" title="Add images or files">
+              <span aria-hidden="true">📎</span><span class="sr-only">Add images or files</span>
+              <input type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,.csv,.txt" data-team-chat-target="fileInput" data-action="change->team-chat#pickFiles" hidden>
+            </label>
+            <button type="submit" class="chat-send" data-team-chat-target="send" aria-label="Send message" disabled>↑</button>
+          </span>
+        </div>
+      </div>
+    </form>
+  </div>
+</turbo-frame>

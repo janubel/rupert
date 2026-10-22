@@ -6,6 +6,7 @@ module Mcp
   module Resources
     GUIDE_URI = 'rupert://guide/getting-started'
     TOOLS_URI = 'rupert://guide/tools'
+    DATA_URI = 'rupert://guide/data'
 
     GUIDE = <<~MARKDOWN
       # Working with Rupert
@@ -43,7 +44,9 @@ module Mcp
         { uri: GUIDE_URI, name: 'getting-started', title: 'How to work with Rupert', mimeType: 'text/markdown',
           description: 'Data conventions (sources, unknown vs zero, cents, dates) and how to send feedback.' },
         { uri: TOOLS_URI, name: 'tools', title: 'Tools this token can use', mimeType: 'text/markdown',
-          description: 'The tools available to this token, and the scopes that would unlock the others.' }
+          description: 'The tools available to this token, and the scopes that would unlock the others.' },
+        { uri: DATA_URI, name: 'data', title: 'How Rupert stores data, and which tool answers what', mimeType: 'text/markdown',
+          description: 'One card per topic (sales, comparisons, tax, books, staff hours, stock, queues, tasks, sync).' }
       ]
     end
 
@@ -51,6 +54,7 @@ module Mcp
       case uri
       when GUIDE_URI then GUIDE
       when TOOLS_URI then tools_markdown(token)
+      when DATA_URI then ::DataGuide.markdown
       end
     end
 

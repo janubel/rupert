@@ -12,6 +12,7 @@ Only the clients in --allow may call it. Python standard library only.
 import argparse
 import http.client
 import json
+import re
 import logging
 import os
 import signal
@@ -98,6 +99,23 @@ class Engine:
                     self.lock.release()
 
 
+def log_timings(model_id, tail, seconds):
+    """One line per request: prompt tokens read fresh vs reused from the cache, and speeds (llama-server 'timings')."""
+    match = None
+    for match in re.finditer(rb'"timings"\s*:\s*(\{[^{}]*\})', tail):
+        pass
+    if not match:
+        log.info('request model=%s seconds=%.1f (no timings)', model_id, seconds)
+        return
+    try:
+        t = json.loads(match.group(1))
+    except ValueError:
+        return
+    log.info('request model=%s seconds=%.1f prompt_new=%s prompt_cached=%s prompt_ms=%.0f prompt_tps=%.0f gen=%s gen_tps=%.1f',
+             model_id, seconds, t.get('prompt_n'), t.get('cache_n'), t.get('prompt_ms', 0), t.get('prompt_per_second', 0),
+             t.get('predicted_n'), t.get('predicted_per_second', 0))
+
+
 def make_handler(engine, allow):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.0'  # streamed bodies end when the connection closes
@@ -161,13 +179,17 @@ def make_handler(engine, allow):
             self.send_response(upstream.status)
             self.send_header('Content-Type', upstream.getheader('Content-Type', 'application/json'))
             self.end_headers()
+            started = time.monotonic()
+            tail = b''
             while True:
                 chunk = upstream.read1(65536) if hasattr(upstream, 'read1') else upstream.read(65536)
                 if not chunk:
                     break
+                tail = (tail + chunk)[-32768:]
                 self.wfile.write(chunk)
                 self.wfile.flush()
             conn.close()
+            log_timings(body.get('model'), tail, time.monotonic() - started)
 
     return Handler
 

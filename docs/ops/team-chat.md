@@ -32,10 +32,15 @@ rows survives deploys.
   tasks, alerts, uploads, history, system health). They run in-process **as the
   person who asked**, with that person's permissions. Contact details are removed
   before the model sees results.
-- **Propose changes:** `create_task` and `submit_feedback` save an action card on
-  the reply. Nothing happens until someone allowed to make that change presses
+- **Propose changes:** `create_task`, `update_task` and `submit_feedback` save an
+  action card on the reply; nothing changes until someone allowed to make it presses
   **Approve**. It then runs as that person, and Rupert posts a notice saying what
-  happened. Dismiss runs nothing.
+  happened. People ask in plain words ("assign the tea shelf count to Jan, due
+  Friday", "move it to done"): the bot finds the task with `list_tasks`, and
+  `Mcp::Assignee` turns a name, email, "me" or "nobody" into one active person
+  before the card is shown (a name shared by two people goes back to the bot to ask
+  which one; the card pins that person by email). When the change gives the task
+  to someone who uses team chat, the notice mentions them.
 - **Context:** the last 30 room messages, or the whole thread when asked in a
   thread. Messages are passed as "Name: text" and treated as untrusted data.
 
@@ -105,7 +110,7 @@ fork (upstream llama.cpp and Ollama cannot load its PQ2_0 packing). So all three
 
 - a request for a model that is not loaded waits for the request in flight, stops the running model and starts the
   requested one; requests are served one at a time, so two models are never in memory together;
-- a model with no request for 5 minutes (`--idle-seconds 300`) is unloaded; the next mention loads it again (Bonsai
+- a model with no request for 10 minutes (`--idle-seconds 600`) is unloaded; the next mention loads it again (Bonsai
   loaded in 9 s);
 - only `rupert` (10.96.131.8) and localhost may call it (the gateway checks, and the Incus ACL `rupert-llm-isolated`
   drops all other inbound traffic and ALL outbound traffic: the container needs no internet once the models are in);
@@ -179,3 +184,118 @@ intake scripts) is preserved on the `archive/buzz` branch.
 the host's `buzz-backup.timer` if it was installed
 (`systemctl --user disable --now buzz-backup.timer`). Do not delete the
 containers yet.
+
+## Bots and #admins (2026-10-22)
+
+- The main room is **#admins**: every admin, plus Rupert. An existing #general is renamed in place, and old `/chat/general` links still open it.
+- **Direct** lists every other admin. A click opens the direct message, or starts it the first time.
+- Bots are @mentioned. @ suggestions work in the main box and in thread replies, and the 🤖 Bots key in the room header explains each one:
+
+| Mention | Model | Where it runs |
+| --- | --- | --- |
+| `@rupert` | DeepSeek V4.1 Flash (`RUPERT_CHAT_PROVIDER=opencode_go`, `RUPERT_CHAT_MODEL=deepseek-v4.1-flash`) | cloud, OpenCode Go plan |
+| `@liquid` | Liquid AI LFM2.5 8B-A1B | local `rupert-llm` gateway |
+| `@qwen` | Qwen3.5 4B | local |
+| `@gemma` | Google Gemma 4 E4B (`gemma-4-e4b`, `gemma-4-E4B_q4_0-it.gguf`) | local (added back 2026-10-23 at the owner's request) |
+
+- Every bot reply shows its time and model, for example "4s · deepseek-v4.1-flash · cloud".
+- Replies from the old handles still show proper names: @lfm shows as Liquid, and @ternary/@bonsai replies still show as Ternary. **@ternary was removed on 2026-10-23 (too slow); its model file was deleted from `rupert-llm`.** @deepseek is retired as a handle (it is @rupert now).
+
+## Replies, Media and people (2026-10-22)
+
+- **↩ Reply** quotes a message (in the room or in a thread). The quoted id lives in
+  `meta['quote_id']` on the person's message; the payload carries a short `quote`
+  preview. Replying to a bot's answer without naming a bot asks that bot again, and
+  the bot sees "(replying to …)" in its context. **💬 Thread** opens the side thread.
+- **Media** tab (`GET /chat/:room/media.json?q=&kind=images|files&before=`): the
+  room's photos and files, newest first, searchable by file name, message text and
+  poster name or email; "Show in chat" jumps to the message (or its thread).
+- Hovering a person shows their email (two accounts can share a name); @
+  suggestions and the direct-message list show it too.
+
+## Recently active (2026-10-23)
+
+- `users.last_active_at` is set at most once a minute by any signed-in HTML page
+  view (`AuthenticatedController#note_presence`) and by chat polls while the tab is
+  in front. A green dot means active in the last 5 minutes; a ring, within the
+  hour; hover shows "Active 23 min ago". Shown on the rail, room members, direct
+  message header, message avatars and the dock.
+- Each person can hide theirs ("Shown as active · change" under their name in the
+  rail): `users.presence_hidden`.
+- Administrators set a workspace rule in the same dialog: Everyone = "Each person
+  chooses" (default), "Always shown" or "Never shown", with an override per role
+  (Rupert's groups). The rule is the `team_chat_presence` Setting
+  (`TeamChat::Presence`); "Always"/"Never" override what people chose.
+
+## Test battery and the 2-minute goal (2026-10-23)
+
+- New read-only tools for every bot: `period_review` (day, week, pay week, month,
+  quarter, year vs the period before), `compliance_check` (Books check, month and
+  quarter close, people queues, Uploads, Drive retention, sales tax filings marked
+  unknown) and `order_queues` (unshipped, unpaid, stock requests, purchase orders,
+  receipts, holds, unresolved card payments, follow-ups).
+- `bin/rails team_chat:battery AGENT=liquid USER_EMAIL=…` asks the 21 questions in
+  `config/team_chat/battery.yml` one at a time in **#liquid-testing**, isolated from
+  each other, times each answer, and has DeepSeek (OpenCode Go) grade it 1–5 against
+  what Rupert's own tools return. Proposals are dismissed; a summary is pinned and a
+  markdown report saved under `tmp/battery/`. `AGENT` can be any @bot, `rupert`, or a
+  trial model (`gemma-e2b`, `gemma-e4b-ud`) that is on the gateway but not @mentionable.
+  It must run in the production container: only it can reach the `rupert-llm` gateway.
+- Goal: every answer within 2 minutes. Slower answers log `[TeamChat] slow answer …`
+  and a `team_chat_slow_answer` activity, and are listed on **Model scores** with each
+  model's share over 2 minutes.
+- Gateway models (`/etc/rupert-llm/models.json`, mirrored in
+  `deploy/ser8/team-chat/llm-gateway/models.json`): adding one needs
+  `systemctl restart rupert-llm-gateway` inside `rupert-llm` (the list is read at start).
+
+## Local models on the Radeon 780M (2026-10-22)
+
+SER8 is an AMD Ryzen 7 8745HS with a Radeon 780M integrated GPU. Since 2026-10-22 the `rupert-llm` gateway runs the
+official llama.cpp **Vulkan** build (`b11819`, `/opt/llama/llama-b11819-vulkan`, `/opt/llama/current` points to it)
+with `--n-gpu-layers 99` for every model. The GPU is passed in as `gpu0` (`incus config device add rupert-llm gpu0 gpu
+gid=990 mode=0660`, gid 990 = the container's `llm` group); `mesa-vulkan-drivers` and `libvulkan1` were downloaded on
+the host and installed with `dpkg -i` (the container still has no internet). The PrismML CPU build stays in
+`/opt/llama/llama-prism-b10787-73bfe6c`; Ternary Bonsai, the only model that needed it, is gone.
+
+`llama-bench` on SER8 (same files, 8 threads, tokens per second):
+
+| Model | Prompt 4096, CPU | Prompt 4096, 780M | Generate, CPU | Generate, 780M |
+| --- | --- | --- | --- | --- |
+| LFM2.5 8B-A1B Q4_K_M (@liquid) | 253 | 1,219 | 46 | 66 |
+| Gemma 4 E4B QAT Q4_0 (@gemma) | 118 | 698 | 14 | 25 |
+| Gemma 4 E4B UD-Q4_K_XL | 136 | 555 | 15 | 23 |
+| Gemma 4 E2B UD-Q4_K_XL | 264 | 1,035 | 26 | 44 |
+
+A bot answer reads ~8,000 prompt tokens (instructions + tool list) twice and writes ~100–300, so reading dominates.
+Through Rupert, "How were sales yesterday?" went from 112 s to 22 s for @gemma and takes 18 s for @liquid; models load
+in 2–4 s.
+
+**Rollback to CPU** (inside `rupert-llm`): `ln -sfn /opt/llama/llama-prism-b10787-73bfe6c /opt/llama/current`,
+`cp /etc/rupert-llm/models.json.cpu-20261022 /etc/rupert-llm/models.json`, `systemctl restart rupert-llm-gateway`.
+
+The test battery shares the gateway with people: while it runs, a person's @bot question waits behind the battery's
+current question (one model at a time). Run it when nobody is chatting, or expect short waits.
+
+### Tuning on the 780M (2026-10-22)
+
+`llama-bench` sweep inside `rupert-llm` (prompt 4096 tokens, tokens/s; generation speed did not change with any setting):
+
+| Model | default | flash attention + best ubatch | ubatch |
+| --- | --- | --- | --- |
+| LFM2.5 8B-A1B | 921 | 1,212 | 2048 |
+| LFM2.5 24B-A2B (QAD Q4_0) | 584 | 893 | 2048 |
+| Gemma 4 E4B | 639 | 691 | 1024 |
+| Qwen3.5 4B | 465 | 481 | 512 |
+
+q8_0 KV cache gave no speed (memory only), so it is not used. Every model now runs with `--flash-attn on --batch-size 2048`
+and its best `--ubatch-size` (models.json). GPU memory is not charged to the container's 14 GiB limit (a 13 GB model left
+the container at ~230 MB); the real limits are the 780M's 17.3 GB (4 GB BIOS carve-out + 13.3 GB GTT) and host RAM.
+Backups: `/etc/rupert-llm/models.json.pre-tune-20261022`.
+
+The gateway logs one line per request: `prompt_new` (tokens read), `prompt_cached` (reused from the previous request),
+`prompt_tps`, `gen`, `gen_tps` (`journalctl -u rupert-llm-gateway`). Within one answer the second step reuses the first
+(~9,000 cached tokens, under a second); a new question currently re-reads the whole prompt (~8 s for 9,000 tokens),
+because per-question parts come early in the prompt.
+
+Test models on the gateway (battery only, `AGENT=lfm-24b` / `qwen-35b`): LFM2.5-24B-A2B QAD-Q4_0 (13.6 GB) and
+Qwen3.6-35B-A3B Unsloth UD-Q3_K_S (15.4 GB).

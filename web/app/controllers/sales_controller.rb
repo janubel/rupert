@@ -20,7 +20,7 @@ class SalesController < AuthenticatedController
     @freshness = DashboardPresenter.new(user: Current.user).sales_freshness
     journal = Core::Order.on_day(@date).by_source(selected_source)
     journal = journal.where(status: @status) unless @status == 'all'
-    @pagy, @day_sales = pagy(journal.includes(:fulfillments, :location).order(occurred_at: :asc, id: :asc), items: 50)
+    @pagy, @day_sales = pagy(:offset, journal.includes(:fulfillments, :location).order(occurred_at: :asc, id: :asc), limit: 50)
     @hourly = hourly_pivot(@date, selected_source)
   end
 
