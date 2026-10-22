@@ -652,4 +652,35 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_room_path('admins')
     assert_select '.chat-tab[data-tab="media"]'
   end
+
+  test 'recently active: page views mark people active, each person can hide it, and the admin rule overrides' do
+    sign_in(@admin)
+    get team_chat_room_path('admins')
+    assert_response :success
+    assert @admin.reload.last_active_at > 1.minute.ago
+    assert_select ".chat-avatar[data-presence-user='#{@admin.id}'][data-presence='active']"
+
+    get team_chat_messages_path('admins'), as: :json
+    assert_equal({ 'state' => 'active', 'label' => 'Active now' }, json['presence'][@admin.id.to_s])
+
+    @admin.update_column(:last_active_at, 20.minutes.ago)
+    get team_chat_messages_path('admins'), as: :json
+    assert_equal 'recent', json['presence'][@admin.id.to_s]['state']
+    assert_match(/Active 20 min ago/, json['presence'][@admin.id.to_s]['label'])
+
+    patch team_chat_presence_path, params: { hidden: '1' }, as: :json
+    assert_equal [true, false, 'choice'], json.values_at('hidden', 'shown', 'mode')
+    assert_nil json['presence'][@admin.id.to_s]
+
+    patch team_chat_presence_policy_path, params: { everyone: 'on', roles: { manager: 'off', admin: 'same' } }, as: :json
+    assert_response :success
+    assert_equal({ 'everyone' => 'on', 'roles' => { 'manager' => 'off' } }, json['policy'])
+    assert_equal [true, 'on'], json.values_at('shown', 'mode'), 'Always shown overrides hiding'
+    assert json['presence'][@admin.id.to_s]
+
+    patch team_chat_presence_policy_path, params: { everyone: 'choice', roles: { admin: 'off' } }, as: :json
+    assert_equal [false, 'off'], json.values_at('shown', 'mode')
+    get team_chat_room_path('admins')
+    assert_select 'input[data-team-chat-target="presenceToggle"][disabled]'
+  end
 end

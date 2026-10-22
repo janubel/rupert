@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_000500) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_010000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -3097,6 +3097,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_000500) do
     t.string "tenant_id"
     t.datetime "updated_at", null: false
     t.string "referral_domain"
+    t.datetime "last_active_at"
+    t.boolean "presence_hidden"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["referral_domain"], name: "index_users_on_referral_domain"
     t.index ["shopify_user_id"], name: "index_users_on_shopify_user_id", unique: true

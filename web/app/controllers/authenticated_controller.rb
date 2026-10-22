@@ -8,6 +8,7 @@ class AuthenticatedController < ApplicationController
   include Pagy::Method
 
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
+  before_action :note_presence
 
   # Pagy 43 removed the legacy :last_page overflow option. Preserve the app's
   # existing behavior by retrying an out-of-range request at that paginator's
@@ -24,6 +25,15 @@ class AuthenticatedController < ApplicationController
   # Never raises; the details name the export, not its contents.
   def log_export(label, details = nil)
     ActivityLogger.log('data_exported', details: [label, details].compact.join(': '))
+  end
+
+  # "Recently active" in team chat: a page view counts (at most one write a minute).
+  def note_presence
+    return unless request.get? && request.format.html?
+
+    TeamChat::Presence.touch(Current.user)
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.warn("[presence] #{e.class}")
   end
 
   def pundit_user

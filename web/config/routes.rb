@@ -203,6 +203,8 @@ Rails.application.routes.draw do
   get    '/chat/dock',                                to: 'team_chat#dock',            as: :team_chat_dock
   get    '/chat/unread',                              to: 'team_chat#unread',          as: :team_chat_unread
   get    '/chat/models',                              to: 'team_chat#scores',          as: :team_chat_scores
+  patch  '/chat/presence',                            to: 'team_chat#presence',        as: :team_chat_presence
+  patch  '/chat/presence/policy',                     to: 'team_chat#presence_policy', as: :team_chat_presence_policy
   get    '/chat/:room/dock',                          to: 'team_chat#dock_room',       as: :team_chat_dock_room
   get    '/chat/:room',                               to: 'team_chat#show',            as: :team_chat_room
   patch  '/chat/:room',                               to: 'team_chat#update_room'

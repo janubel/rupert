@@ -15,7 +15,7 @@
           <span class="chat-rail-bot" aria-hidden="true">R</span><span class="chat-dock-room-name">Rupert <small>direct</small></span>
         <% elsif room.dm? %>
           <% partner = room.dm_partner(Current.user) %>
-          <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[partner&.id.to_i % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= partner&.display_name.to_s.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span><span class="chat-dock-room-name"><%= partner&.display_name || 'Direct message' %> <small>direct</small></span>
+          <span class="chat-rail-person" <%= presence_attrs(partner) %> style="background:<%= TeamChat::Message::COLORS[partner&.id.to_i % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= partner&.display_name.to_s.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span><span class="chat-dock-room-name"><%= partner&.display_name || 'Direct message' %> <small>direct</small></span>
         <% else %>
           <span class="chat-hash" aria-hidden="true">#</span><span class="chat-dock-room-name"><%= room.name %></span>
         <% end %>
