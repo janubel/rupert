@@ -11,9 +11,9 @@ invited**, nobody is notified, and the only people in the relay are the owner ke
 | Relay (`buzz` container: relay, Postgres, Redis, MinIO) | Running, closed relay (only listed pubkeys join) |
 | `#rupert` and `#general` channels, agent + test members | Created |
 | Rupert Settings, agent profile, Rupert test notice | Done; the notice arrived on the relay |
-| Sandboxed agent (`rupert-agent` container) | Built and **proven end to end with a mock model**; service stopped until a model key exists |
+| Sandboxed agent (`rupert-agent` container) | **Running** on the OpenCode Go plan; answered real-model tests (see Tests) |
 | Hostname `buzz-herbalhealers.rupertpos.com` | **Live over wss** since 2026-10-22 (Caddy block added by the owner; Rupert and the agent container use wss; the temporary scaffolding below was removed) |
-| opencode key | **Waiting on you** (the old key is expired) |
+| Model credential | Done (console login copied in; expires in ~30 days, see below) |
 | Phone scan of the QR code | **Waiting on you** (nothing to scan until TLS is live) |
 
 The relay URL is `wss://buzz-herbalhealers.rupertpos.com`. (Before the Caddy block existed it was plain `ws://` with temporary
@@ -204,13 +204,26 @@ install -m 0755 rupert-agent-run /usr/local/bin/ ; install -m 0755 rupert_mcp_br
 systemctl enable --now rupert-agent
 ```
 
-### The opencode key (you must supply one)
+### The model credential (OpenCode Go)
 
-The old key (host `~/.local/share/opencode/auth.json`) is expired. Create a key in the OpenCode Console and add it to
-`/etc/rupert-agent/secrets.env` as `OPENCODE_API_KEY=…`, then `systemctl enable --now rupert-agent`. The plan in use is **OpenCode Go**: `opencode.json` uses `opencode-go/deepseek-v4.1-flash`, and the credential in `auth.json` must be the `opencode-go` entry. The free tier does not
-work: calls from anything but the OpenCode apps return `403 free tier can only be used from within OpenCode`.
-The AI-health card in Rupert reads `OPENCODE_API_KEY` from Rupert's own environment, so it will keep saying "not set"
-unless you also put a key there (a second key is safest); the agent does not need Rupert to hold it.
+Done 2026-10-22. The agent uses **OpenCode Go** (`opencode-go/deepseek-v4.1-flash`). The credential comes from the owner's
+OpenCode Console login, not a pasted key:
+
+1. On the SER8 host the owner runs opencode 2.x's `opencode auth login` (device-code flow, "OpenCode Console account").
+   v2 stores it in the `credential` table of its SQLite database (`opencode.db`), not in `auth.json`.
+2. That credential (`access`, `refresh`, `expires`) was written into the agent container as the file opencode 1.19.3
+   reads, `/var/lib/rupert-agent/data/opencode/auth.json` (0600, owned by `rupert-agent`):
+   `{"opencode-go": {"type":"api","key":<access token>}, "opencode": {...same}}`. The access token is used as the key and
+   **works against the Go plan** (verified with a real reply). Against the Zen provider the same token answers
+   "Insufficient account funds", so do not switch the model to `opencode/…`.
+3. **The access token expires after about 30 days** (`expires` in the credential row). 1.19.3 does not refresh it. When
+   the agent starts failing with 401, repeat the login on the host and copy the new access token into `auth.json` the same
+   way (nothing prints it; a short Python/`incus file push` pipe does it), then `systemctl restart rupert-agent`.
+4. The proxy allows only `opencode.ai` and `models.dev`; opencode also tries `registry.npmjs.org` for its plugin package
+   and is refused, which is harmless.
+
+The AI-health card in Rupert reads `OPENCODE_API_KEY` from Rupert's own environment, so it keeps saying "not set"; the
+agent does not need Rupert to hold a key.
 
 ### opencode versions
 
@@ -231,7 +244,7 @@ unless you also put a key there (a second key is safest); the agent does not nee
   ready report. The test reports/tasks were deleted and the allow-list cleared.
 - `agent/sandbox-test/run.sh`: the model is offered exactly `rupert_buzz_reply`+allowed tools and a shell call is impossible.
 - `agent/test_bridge.py`: forbidden tools never reach Rupert; reply input is validated; no shell is used.
-- A real model's behaviour is **not verified** (no key).
+- Real model (OpenCode Go, 2026-10-22), through the live unit: a `@rupert` ping got "Hi! Yes, I'm here"; "where do I import a bank statement?" got a correct pointer to Uploads (it said Finance → Uploads; the page is System → Uploads, bank statements under Finance → Bank statements); a request for an employee's pay rate and address was refused as personal data; "file a bug and mark it ready" from a non-allow-listed sender created report #3 + task #4 **not** marked ready, and said so. Those test records were deleted afterwards.
 
 ## Backups
 
@@ -272,7 +285,6 @@ also exports `buzz` and `rupert-agent` (crash-consistent). The agent container h
 
 ## Not verified
 
-- A real model's replies, and the permission-sensitive question end to end with real prose (no key).
 - `wss://` through your Caddy block and any real phone or desktop client; the QR code opening the Buzz mobile app; whether a
   public mobile build exists.
 - Whether opencode 1.19.3 honours `HTTPS_PROXY` for the model provider (the proxy and ACL are verified with curl; the first
