@@ -40,7 +40,7 @@ class TeamChatLeaderboardTest < ActiveSupport::TestCase
     assert_equal 60, top.cells['honesty'].score
     assert top.cells['sell'].best
     assert second.cells['stock'].best, 'Liquid wins Stock (5 vs 4)'
-    assert_equal 83, top.overall # (5+5+4+5+5+3+3)/7 = 4.14 -> 83
+    assert_equal 86, top.overall # (5+5+4+5+5+3+3)/7 = 4.29 -> 86
     assert_equal 'qwen3.6-35b-a3b', TeamChat::Leaderboard.leader_model
   end
 
