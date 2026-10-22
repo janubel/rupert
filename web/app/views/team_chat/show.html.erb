@@ -144,7 +144,12 @@
               <% TeamChat::LocalAgents.key.each do |bot| %>
                 <div class="chat-bots-row">
                   <dt><strong>@<%= bot[:handle] %></strong> <span class="chat-bots-where is-<%= bot[:where] == 'cloud' ? 'cloud' : 'local' %>"><%= bot[:where] == 'cloud' ? 'cloud' : 'local' %></span></dt>
-                  <dd><span class="chat-bots-model"><%= bot[:model] %></span> — <%= bot[:purpose] %></dd>
+                  <dd><span class="chat-bots-model"><%= bot[:model] %></span> — <%= bot[:purpose] %>
+                    <% if bot[:best_for_money] %><span class="chat-bots-best">💰 Best local bot for money questions</span><% end %>
+                    <% if bot[:scores].present? %>
+                      <span class="chat-bots-scores">Tested: <%= bot[:scores].sort.map { |set, score| "#{set == 'default' ? 'general' : set} #{format('%.1f', score)}/5" }.join(' · ') %></span>
+                    <% end %>
+                  </dd>
                 </div>
               <% end %>
             </dl>

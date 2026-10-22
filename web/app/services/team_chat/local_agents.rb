@@ -90,11 +90,22 @@ module TeamChat
     end
 
     # Every bot that can answer here, for the bot key: @rupert first, then the @agents.
+    # Every bot that can answer here, for the bot key: @rupert first, then the @agents, each with its latest
+    # test-battery grades (finance and general) and which local bot tested best on money questions.
     def self.key
       rupert = ModelConfig.current
-      [{ handle: 'rupert', name: 'Rupert', model: rupert.model.presence || rupert.label, where: rupert.local? ? 'this server' : 'cloud',
-         purpose: "The main assistant: answers when you write @rupert, and every message in your own Rupert room. Now using #{rupert.label}." }] +
-        all.map { |agent| { handle: agent.handle, name: agent.name, model: agent.model, where: agent.cloud? ? 'cloud' : 'this server', purpose: agent.purpose } }
+      scores = begin
+        BatteryRun.latest_scores
+      rescue ActiveRecord::StatementInvalid
+        {}
+      end
+      rows = [{ handle: 'rupert', name: 'Rupert', model: rupert.model.presence || rupert.label, where: rupert.local? ? 'this server' : 'cloud',
+                purpose: "The main assistant: answers when you write @rupert, and every message in your own Rupert room. Now using #{rupert.label}." }] +
+             all.map { |agent| { handle: agent.handle, name: agent.name, model: agent.model, where: agent.cloud? ? 'cloud' : 'this server', purpose: agent.purpose } }
+      rows.each { |row| row[:scores] = scores[[row[:handle], row[:model].to_s]] || {} }
+      best = rows.reject { |row| row[:handle] == 'rupert' }.select { |row| row[:scores]['finance'] }.max_by { |row| row[:scores]['finance'] }
+      best[:best_for_money] = true if best && best[:scores]['finance'] >= 4.0
+      rows
     end
 
     def self.persona(agent)
@@ -113,7 +124,7 @@ module TeamChat
         You know the business only through Rupert's tools. Every number you give comes from a tool you ran in this conversation.
 
         ## How you sound
-        - Short and plain. One to four sentences, or a short list. No headings, no filler.
+        - Short and plain. One to four sentences, or a short list, under about 80 words unless they ask for detail. No headings, no filler, no repeating the question.
         - Reply in the language the person wrote in. Lead with the answer.
         - If you are unsure, say so. A missing number is unknown, not zero.
         - Never calculate. Quote every amount, count and percentage exactly as a tool gave it (money from the *_dollars values). If the number you need is not in a tool result, say you could not get it.

@@ -1853,3 +1853,6 @@ body.tour-active { overflow-x:hidden; }
 .chat-rail-hidden > summary::before { content:"▸ ";color:var(--color-taupe); }
 .chat-rail-hidden[open] > summary::before { content:"▾ "; }
 .chat-rail-hidden .chat-rail-room { opacity:.8; }
+/* Team chat bot key: latest test grades and the best local bot for money questions */
+.chat-bots-scores { display:block;margin-top:.1rem;font-size:.7rem;color:var(--color-taupe); }
+.chat-bots-best { display:inline-block;margin:.15rem 0 0;padding:.05rem .4rem;border-radius:999px;background:color-mix(in srgb,#16a34a 14%,var(--color-paper));color:var(--color-ink);font-size:.68rem;font-weight:650; }
