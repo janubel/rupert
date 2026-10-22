@@ -217,6 +217,13 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test 'old Buzz addresses lead to team chat' do
+    %w[/admin/buzz /buzz /buzz/chat].each do |path|
+      get path
+      assert_redirected_to '/chat', path
+    end
+  end
+
   test 'every page has a header chat button and a dock that lists rooms and opens one compactly' do
     sign_in(@admin)
     get root_path

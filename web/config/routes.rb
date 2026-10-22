@@ -216,6 +216,12 @@ Rails.application.routes.draw do
   post   '/chat/:room/messages/:id/pin',              to: 'team_chat#pin',             as: :team_chat_pin
   get    '/chat/:room/files/:id',                     to: 'team_chat#attachment',      as: :team_chat_attachment
   post   '/chat/:room/messages/:id/actions/:action_id', to: 'team_chat#decide',        as: :team_chat_action
+
+  # Buzz was retired for team chat; old bookmarks land in team chat.
+  get '/admin/buzz', to: redirect('/chat')
+  get '/buzz', to: redirect('/chat')
+  get '/buzz/chat', to: redirect('/chat')
+
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)
