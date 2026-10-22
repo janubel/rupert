@@ -14,7 +14,7 @@ class TeamChatController < AuthenticatedController
 
   before_action :require_access
   before_action -> { response.headers['Cache-Control'] = 'no-store' }, except: %i[index show]
-  before_action :load_room, except: %i[index create_room create_dm dock unread scores]
+  before_action :load_room, except: %i[index create_room create_dm dock unread scores presence presence_policy]
 
   # GET /chat — the last room you were in, else #general.
   def index
@@ -80,9 +80,12 @@ class TeamChatController < AuthenticatedController
       end
     has_more = params[:since].blank? && rows.size == PAGE
     rows |= thread_rows(scope) if params[:thread].present?
-    mark_read(rows) if params[:visible] == '1'
+    if params[:visible] == '1'
+      mark_read(rows)
+      TeamChat::Presence.touch(Current.user)
+    end
     render json: {
-      now: Time.current.iso8601(6), messages: payload(rows), has_more: has_more, pins: pins, typing: typing_names,
+      now: Time.current.iso8601(6), messages: payload(rows), has_more: has_more, pins: pins, typing: typing_names, presence: presence_map,
       rooms: rail_rooms.map { |room| { slug: room.slug, unread: room.unread, mentions: room.mentions } }
     }
   end
@@ -96,6 +99,22 @@ class TeamChatController < AuthenticatedController
     render json: { error: e.message }, status: :unprocessable_entity
   rescue TeamChat::Post::Limited => e
     render json: { error: e.message }, status: :too_many_requests
+  end
+
+  # PATCH /chat/presence { hidden } — show or hide your own "recently active".
+  def presence
+    Current.user.update_column(:presence_hidden, ActiveModel::Type::Boolean.new.cast(params[:hidden]) ? true : nil)
+    render json: presence_settings
+  end
+
+  # PATCH /chat/presence/policy { everyone, roles: { role => choice|on|off|same } } — admins only.
+  def presence_policy
+    return render json: { error: 'Only administrators set the workspace rule.' }, status: :forbidden unless TeamChat::Presence.manage?(Current.user)
+
+    roles = params[:roles].respond_to?(:to_unsafe_h) ? params[:roles].to_unsafe_h : {}
+    TeamChat::Presence.save_policy!(everyone: params[:everyone], roles: roles)
+    ActivityLogger.log('team_chat_presence_policy', actor: Current.user, details: TeamChat::Presence.policy.to_json.first(300))
+    render json: presence_settings
   end
 
   # GET /chat/:room/files/:id — an attachment, only to people who can open the room.
@@ -278,6 +297,17 @@ class TeamChatController < AuthenticatedController
 
   def pins
     @room.messages.visible.pinned.includes(:user, :pinned_by, :attachment_infos).order(pinned_at: :desc).limit(TeamChat::Message::PINS_SHOWN).map(&:pin_payload)
+  end
+
+  # Who is active now (or was within the hour), for everyone who uses team chat.
+  def presence_map
+    TeamChat::Presence.statuses(TeamChat::Post.mentionable).transform_keys(&:to_s)
+  end
+
+  def presence_settings
+    rules = TeamChat::Presence.policy
+    mode = TeamChat::Presence.mode_for(Current.user, rules)
+    { hidden: Current.user.presence_hidden == true, mode: mode, shown: TeamChat::Presence.shown?(Current.user, rules), policy: rules, presence: presence_map }
   end
 
   def mentionable_people

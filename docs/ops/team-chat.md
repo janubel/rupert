@@ -212,3 +212,17 @@ containers yet.
   poster name or email; "Show in chat" jumps to the message (or its thread).
 - Hovering a person shows their email (two accounts can share a name); @
   suggestions and the direct-message list show it too.
+
+## Recently active (2026-10-23)
+
+- `users.last_active_at` is set at most once a minute by any signed-in HTML page
+  view (`AuthenticatedController#note_presence`) and by chat polls while the tab is
+  in front. A green dot means active in the last 5 minutes; a ring, within the
+  hour; hover shows "Active 23 min ago". Shown on the rail, room members, direct
+  message header, message avatars and the dock.
+- Each person can hide theirs ("Shown as active · change" under their name in the
+  rail): `users.presence_hidden`.
+- Administrators set a workspace rule in the same dialog: Everyone = "Each person
+  chooses" (default), "Always shown" or "Never shown", with an override per role
+  (Rupert's groups). The rule is the `team_chat_presence` Setting
+  (`TeamChat::Presence`); "Always"/"Never" override what people chose.

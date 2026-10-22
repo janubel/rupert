@@ -12,7 +12,7 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
     "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins", "typing", "newDm", "threadSuggest",
-    "media", "mediaSearch", "mediaStatus", "mediaGrid", "mediaMore"]
+    "media", "mediaSearch", "mediaStatus", "mediaGrid", "mediaMore", "presence", "presenceToggle", "presenceLabel"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
     compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
@@ -185,6 +185,7 @@ export default class extends Controller {
     this.merge(data.messages)
     this.renderRooms(data.rooms)
     this.setPins(data.pins)
+    this.presenceMap = data.presence || {}
     this.render({ stick: true })
     const params = new URLSearchParams(window.location.search)
     const thread = Number(params.get("thread"))
@@ -208,7 +209,9 @@ export default class extends Controller {
     this.renderRooms(data.rooms)
     this.setPins(data.pins)
     this.renderTyping(data.typing)
+    if (data.presence) this.presenceMap = data.presence
     if (fresh.changed) this.render({ stick: false, newItems: fresh.added })
+    else this.applyPresence()
   }
 
   async loadEarlier() {
@@ -302,6 +305,7 @@ export default class extends Controller {
       this.jumpTarget.hidden = false
     }
     if (this.threadId && this.hasThreadTarget) this.renderThread()
+    this.applyPresence()
   }
 
   renderList(messages, { thread }) {
@@ -371,6 +375,7 @@ export default class extends Controller {
     if (message.kind === "person") avatar.style.background = message.author.color
     avatar.textContent = message.author.initials
     avatar.title = this.whoTitle(message.author)
+    if (message.kind === "person" && message.author.user_id) avatar.dataset.presenceUser = message.author.user_id
     row.append(avatar)
 
     const main = document.createElement("div")
@@ -838,6 +843,67 @@ export default class extends Controller {
     node.classList.remove("is-flash")
     void node.offsetWidth
     node.classList.add("is-flash")
+  }
+
+  // --- "recently active" dots ---
+
+  // Updates every avatar that names a person: data-presence drives the dot, the title says when.
+  applyPresence() {
+    if (!this.presenceMap) return
+    this.element.querySelectorAll("[data-presence-user]").forEach((node) => {
+      const status = this.presenceMap[node.dataset.presenceUser]
+      if (node.dataset.baseTitle === undefined) node.dataset.baseTitle = node.getAttribute("title") || ""
+      if (status) {
+        node.dataset.presence = status.state
+        node.dataset.presenceLabel = status.label
+      } else {
+        delete node.dataset.presence
+        delete node.dataset.presenceLabel
+      }
+      const base = node.dataset.baseTitle
+      const title = [base, status?.label].filter(Boolean).join(" · ")
+      if (title) node.setAttribute("title", title)
+      else node.removeAttribute("title")
+    })
+  }
+
+  openPresence() {
+    if (this.hasPresenceTarget) this.presenceTarget.showModal()
+  }
+
+  closePresence() {
+    this.presenceTarget.close()
+  }
+
+  async togglePresence(event) {
+    const shown = event.currentTarget.checked
+    const form = new FormData()
+    form.append("hidden", shown ? "0" : "1")
+    const data = await this.fetchJson(this.presenceTarget.dataset.url, { method: "PATCH", body: form })
+    if (!data) {
+      event.currentTarget.checked = !shown
+      return
+    }
+    this.afterPresence(data)
+    this.toast(data.shown ? "Others can see when you are active." : "Your activity is hidden.")
+  }
+
+  async savePresencePolicy(event) {
+    event.preventDefault()
+    const data = await this.fetchJson(this.presenceTarget.dataset.policyUrl, { method: "PATCH", body: new FormData(event.currentTarget) })
+    if (!data) return
+    this.afterPresence(data)
+    this.toast("Workspace rule saved.")
+  }
+
+  afterPresence(data) {
+    this.presenceMap = data.presence || {}
+    this.applyPresence()
+    if (this.hasPresenceToggleTarget) {
+      this.presenceToggleTarget.checked = data.shown
+      this.presenceToggleTarget.disabled = data.mode !== "choice"
+    }
+    if (this.hasPresenceLabelTarget) this.presenceLabelTarget.textContent = `${data.shown ? "Shown as active" : "Activity hidden"} · change`
   }
 
   openNewDm() {

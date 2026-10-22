@@ -1802,3 +1802,13 @@ body.tour-active { overflow-x:hidden; }
 .chat-media-show { margin-left:auto;border:0;background:none;color:var(--color-mocha);font:inherit;font-size:.7rem;text-decoration:underline;cursor:pointer;white-space:nowrap; }
 .chat-dm-email { display:block;font-size:.72rem;color:var(--color-taupe); }
 .chat-body[hidden] { display:none; }
+/* Team chat: "recently active" dots (green = now, ring = within the hour) */
+[data-presence-user] { position:relative; }
+[data-presence-user][data-presence]::after { content:"";position:absolute;right:-.15rem;bottom:-.15rem;width:.55rem;height:.55rem;border:2px solid var(--color-paper);border-radius:50%;background:#16a34a;box-sizing:content-box; }
+[data-presence-user][data-presence="recent"]::after { background:var(--color-paper);box-shadow:inset 0 0 0 2px #16a34a; }
+.chat-rail-person[data-presence]::after { width:.42rem;height:.42rem;border-width:1.5px; }
+.chat-presence-button { display:block;padding:0;border:0;background:none;color:var(--color-taupe);font:inherit;font-size:.66rem;text-align:left;cursor:pointer; }
+.chat-presence-button:hover { color:var(--color-ink);text-decoration:underline; }
+.chat-presence-choice { display:flex;align-items:center;gap:.5rem;margin:.6rem 0 .3rem;font-size:.9rem;color:var(--color-ink); }
+.chat-presence-policy { margin-top:.9rem;padding-top:.8rem;border-top:1px solid var(--color-fog); }
+.chat-presence-policy .field { display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:.35rem 0; }

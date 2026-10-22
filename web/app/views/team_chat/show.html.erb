@@ -58,14 +58,14 @@
         <% if (room = dm_rooms[person.id]) %>
           <%= link_to team_chat_room_path(room), class: "chat-rail-room #{'is-active' if room == @room}", aria: { current: (room == @room ? 'page' : nil) },
                 title: "#{person.display_name} · #{person.email}", data: { team_chat_target: 'roomLink', slug: room.slug, name: label } do %>
-            <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= initials %></span>
+            <span class="chat-rail-person" <%= presence_attrs(person) %> style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= initials %></span>
             <span class="chat-rail-room-name"><%= label %></span>
             <span class="chat-unread" data-unread hidden></span>
           <% end %>
         <% else %>
           <%= button_to team_chat_dms_path, params: { user_id: person.id }, class: 'chat-rail-room chat-rail-room-button', title: "Message #{person.display_name} · #{person.email}",
                 form: { class: 'chat-rail-form', data: { turbo: false, team_chat_target: 'roomLink', slug: "new-dm-#{person.id}", name: label } } do %>
-            <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= initials %></span>
+            <span class="chat-rail-person" <%= presence_attrs(person) %> style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= initials %></span>
             <span class="chat-rail-room-name"><%= label %></span>
           <% end %>
         <% end %>
@@ -85,10 +85,15 @@
       <% end %>
     </nav>
 
+    <% presence_rules = TeamChat::Presence.policy %>
+    <% presence_mode = TeamChat::Presence.mode_for(me, presence_rules) %>
     <div class="chat-rail-user">
-      <span class="chat-avatar" aria-hidden="true"><%= my_initials %></span>
+      <span class="chat-avatar" <%= presence_attrs(me) %> aria-hidden="true"><%= my_initials %></span>
       <div class="chat-rail-user-text">
         <strong><%= me.display_name %></strong>
+        <button type="button" class="chat-presence-button" data-action="team-chat#openPresence" data-team-chat-target="presenceLabel">
+          <%= TeamChat::Presence.shown?(me, presence_rules) ? 'Shown as active' : 'Activity hidden' %> · change
+        </button>
         <span title="<%= @model.disclosure %>">Rupert: <%= @model.label %> · <%= link_to 'Model scores', team_chat_scores_path, class: 'underline' %></span>
       </div>
     </div>
@@ -97,7 +102,7 @@
   <main class="chat-main">
     <header class="chat-head">
       <div class="chat-head-title">
-        <h2><% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true">R</span>Rupert<% elsif dm_partner %><span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[dm_partner.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= dm_partner.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span><%= dm_partner.display_name %><% else %><span class="chat-hash">#</span><%= @room.name %><% end %></h2>
+        <h2><% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true">R</span>Rupert<% elsif dm_partner %><span class="chat-rail-person" <%= presence_attrs(dm_partner) %> style="background:<%= TeamChat::Message::COLORS[dm_partner.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= dm_partner.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span><%= dm_partner.display_name %><% else %><span class="chat-hash">#</span><%= @room.name %><% end %></h2>
         <p data-team-chat-target="topic"><%= @room.dm? ? "#{dm_partner&.email} · Direct message: only the two of you read it. Mention @rupert to bring him in." : (@room.topic.presence || 'No topic yet.') %></p>
         <div class="chat-tabs" role="tablist" aria-label="Show">
           <button type="button" role="tab" class="chat-tab is-active" aria-selected="true" data-tab="messages" data-action="team-chat#showTab">Messages</button>
@@ -145,7 +150,7 @@
           <span class="chat-member-stack" aria-label="People in this room">
             <% @members.first(6).each do |member| %>
               <% initials = member.display_name.to_s.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %>
-              <span class="chat-member-avatar" style="background:<%= TeamChat::Message::COLORS[member.id % TeamChat::Message::COLORS.size] %>" title="<%= member.display_name %> · <%= member.email %>"><%= initials %></span>
+              <span class="chat-member-avatar" <%= presence_attrs(member) %> style="background:<%= TeamChat::Message::COLORS[member.id % TeamChat::Message::COLORS.size] %>" title="<%= member.display_name %> · <%= member.email %>"><%= initials %></span>
             <% end %>
             <span class="chat-member-avatar is-bot" title="Rupert">R</span>
           </span>
@@ -267,6 +272,51 @@
     </form>
   </aside>
 
+  <dialog class="chat-dialog" data-team-chat-target="presence" aria-labelledby="chat-presence-title"
+          data-url="<%= team_chat_presence_path %>" data-policy-url="<%= team_chat_presence_policy_path %>">
+    <div class="chat-dialog-form">
+      <h3 id="chat-presence-title" class="font-display text-lg">Recently active</h3>
+      <p class="text-sm text-mocha">A green dot shows who used Rupert in the last <%= TeamChat::Presence::ACTIVE_FOR.in_minutes.to_i %> minutes; a ring, within the hour. Hover a dot for the time.</p>
+      <label class="chat-presence-choice">
+        <input type="checkbox" data-team-chat-target="presenceToggle" data-action="change->team-chat#togglePresence"
+               <%= 'checked' if TeamChat::Presence.shown?(me, presence_rules) %> <%= 'disabled' unless presence_mode == 'choice' %>>
+        <span>Show others when I’m active</span>
+      </label>
+      <% unless presence_mode == 'choice' %>
+        <p class="text-xs text-taupe">Your workspace <%= presence_mode == 'on' ? 'always shows' : 'never shows' %> activity<%= " for #{me.role.to_s.humanize.downcase.pluralize}" if presence_rules['roles'].key?(me.role.to_s) %>, so this is set for you.</p>
+      <% end %>
+      <% if TeamChat::Presence.manage?(me) %>
+        <form class="chat-presence-policy" data-action="submit->team-chat#savePresencePolicy">
+          <h4 class="field-label">Workspace rule <span class="text-taupe">(administrators)</span></h4>
+          <label class="field">
+            <span class="field-label">Everyone</span>
+            <select name="everyone" class="select select-sm">
+              <% TeamChat::Presence::MODES.each do |value, label| %>
+                <option value="<%= value %>" <%= 'selected' if presence_rules['everyone'] == value %>><%= label %></option>
+              <% end %>
+            </select>
+          </label>
+          <%# Only roles whose people can open team chat (today: administrators). %>
+          <% roles_here = TeamChat::Post.mentionable.map(&:role).uniq.compact.sort_by { |role| User.roles.keys.index(role).to_i } %>
+          <% roles_here.each do |role| %>
+            <label class="field chat-presence-role">
+              <span class="field-label"><%= role.humanize.pluralize %></span>
+              <select name="roles[<%= role %>]" class="select select-sm">
+                <option value="same">Same as everyone</option>
+                <% TeamChat::Presence::MODES.each do |value, label| %>
+                  <option value="<%= value %>" <%= 'selected' if presence_rules['roles'][role] == value %>><%= label %></option>
+                <% end %>
+              </select>
+            </label>
+          <% end %>
+          <p class="text-xs text-taupe">“Always shown” or “Never shown” overrides what each person chose.</p>
+          <div class="chat-dialog-actions"><button type="submit" class="btn-primary btn-sm">Save rule</button></div>
+        </form>
+      <% end %>
+      <div class="chat-dialog-actions"><button type="button" class="btn-ghost" data-action="team-chat#closePresence">Close</button></div>
+    </div>
+  </dialog>
+
   <dialog class="chat-dialog" data-team-chat-target="newDm" aria-labelledby="chat-new-dm-title">
     <div class="chat-dialog-form">
       <h3 id="chat-new-dm-title" class="font-display text-lg">Direct message</h3>
@@ -277,7 +327,7 @@
       <div class="chat-dm-people">
         <% people.each do |person| %>
           <%= button_to team_chat_dms_path, params: { user_id: person.id }, class: 'chat-dm-person', form: { data: { turbo: false } } do %>
-            <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= person.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span>
+            <span class="chat-rail-person" <%= presence_attrs(person) %> style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= person.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span>
             <span><%= person.display_name %> <span class="chat-dm-email"><%= person.email %></span></span>
           <% end %>
         <% end %>
