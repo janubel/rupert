@@ -11,7 +11,8 @@ module TeamChat
     BODY_MAX = 4_000
     MENTION = /(?<![\w@])@rupert\b/i
     # A reply still pending after this long is treated as failed (a worker died).
-    STALE_AFTER = 4.minutes
+    # Local CPU models can take several minutes for a tool round, so this is generous.
+    STALE_AFTER = 12.minutes
     COLORS = %w[#2563eb #0891b2 #7c3aed #db2777 #ea580c #16a34a #4f46e5 #0d9488].freeze
 
     belongs_to :room, class_name: 'TeamChat::Room'
@@ -23,6 +24,7 @@ module TeamChat
     has_many :attachment_infos, -> { select(:id, :message_id, :room_id, :filename, :content_type, :byte_size).order(:id) },
       class_name: 'TeamChat::Attachment', inverse_of: false
     has_many :reactions, class_name: 'TeamChat::Reaction', dependent: :delete_all
+    has_many :ratings, class_name: 'TeamChat::Rating', dependent: :delete_all
 
     serialize :actions, coder: JSON
     serialize :meta, coder: JSON
@@ -104,8 +106,17 @@ module TeamChat
         actions: deleted? ? [] : actions_list.map { |action| action.slice('id', 'tool', 'title', 'summary', 'status', 'decided_by', 'result') },
         attachments: deleted? ? [] : attachment_infos.map { |attachment| attachment.as_payload(room) },
         mentions: mention_ids.filter_map { |id| { id: id, name: people[id] } if people[id] }, mentions_me: mention_ids.include?(viewer.id),
-        reactions: reaction_summary(viewer)
+        reactions: reaction_summary(viewer), rating: rating_summary(viewer)
       }
+    end
+
+    # Thumbs on a finished assistant reply: counts plus this viewer's choice.
+    def rating_summary(viewer)
+      return nil unless assistant? && status == 'done'
+
+      mine = ratings.find { |rating| rating.user_id == viewer.id }&.value
+      { up: ratings.count { |rating| rating.value == 1 }, down: ratings.count { |rating| rating.value == -1 },
+        mine: { 1 => 'up', -1 => 'down' }[mine] }
     end
 
     def reaction_summary(viewer)

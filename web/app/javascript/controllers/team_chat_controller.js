@@ -13,7 +13,7 @@ export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
     "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
-    people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
+    compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
   static GROUP_SECONDS = 5 * 60
   static FAST = 1000
@@ -42,7 +42,7 @@ export default class extends Controller {
   disconnect() {
     clearTimeout(this.timer)
     document.removeEventListener("visibilitychange", this.onVisible)
-    document.title = this.titleValue
+    if (!this.compactValue) document.title = this.titleValue
   }
 
   // --- text formatting (pure; also used by the tests) ---
@@ -137,6 +137,8 @@ export default class extends Controller {
     this.merge(data.messages)
     this.renderRooms(data.rooms)
     this.render({ stick: true })
+    const thread = Number(new URLSearchParams(window.location.search).get("thread"))
+    if (thread && !this.compactValue) this.openThread(thread)
   }
 
   async poll() {
@@ -205,7 +207,7 @@ export default class extends Controller {
         added += message.parent_id ? 0 : 1
         changed = true
       } else if (old.updated_at !== message.updated_at || old.reply_count !== message.reply_count || old.body !== message.body || old.activity !== message.activity ||
-          JSON.stringify(old.reactions) !== JSON.stringify(message.reactions)) {
+          JSON.stringify(old.reactions) !== JSON.stringify(message.reactions) || JSON.stringify(old.rating) !== JSON.stringify(message.rating)) {
         changed = true
       }
       this.byId.set(message.id, { ...old, ...message })
@@ -241,7 +243,7 @@ export default class extends Controller {
     } else if (newItems > 0) {
       this.jumpTarget.hidden = false
     }
-    if (this.threadId) this.renderThread()
+    if (this.threadId && this.hasThreadTarget) this.renderThread()
   }
 
   renderList(messages, { thread }) {
@@ -323,6 +325,7 @@ export default class extends Controller {
     if (!message.deleted && message.attachments?.length) main.append(this.attachmentsNode(message.attachments))
     ;(message.actions || []).forEach((action) => main.append(this.actionNode(message, action)))
     if (message.reactions?.length) main.append(this.reactionsNode(message))
+    if (message.rating && !message.deleted) main.append(this.ratingNode(message))
 
     if (!thread && message.reply_count > 0) {
       const replies = document.createElement("button")
@@ -404,6 +407,37 @@ export default class extends Controller {
       row.append(pill)
     })
     return row
+  }
+
+  // 👍 / 👎 on an assistant reply, so Model scores can show which models people like.
+  ratingNode(message) {
+    const row = document.createElement("div")
+    row.className = "chat-rating"
+    row.setAttribute("role", "group")
+    row.setAttribute("aria-label", "Rate this reply")
+    ;[["up", "👍", "Helpful"], ["down", "👎", "Not helpful"]].forEach(([value, emoji, label]) => {
+      const button = document.createElement("button")
+      button.type = "button"
+      button.className = `chat-rating-button${message.rating.mine === value ? " is-mine" : ""}`
+      button.setAttribute("aria-pressed", message.rating.mine === value ? "true" : "false")
+      button.title = `${label} (counts toward Model scores)`
+      const count = message.rating[value]
+      button.textContent = count > 0 ? `${emoji} ${count}` : emoji
+      button.setAttribute("aria-label", `${label}${count ? `, ${count}` : ""}`)
+      button.addEventListener("click", () => this.rate(message, value))
+      row.append(button)
+    })
+    return row
+  }
+
+  async rate(message, value) {
+    const data = await this.fetchJson(`${this.urlValue}/${message.id}/rating`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value })
+    })
+    if (data) {
+      this.merge(data.messages)
+      this.render({ stick: false })
+    }
   }
 
   openPalette(message, anchor) {
@@ -542,12 +576,18 @@ export default class extends Controller {
       badge.classList.toggle("is-mention", mentions > 0)
       link.classList.toggle("has-unread", unread > 0 || mentions > 0)
     })
-    document.title = total > 0 ? `(${total}) ${this.titleValue}` : this.titleValue
+    if (!this.compactValue) document.title = total > 0 ? `(${total}) ${this.titleValue}` : this.titleValue
   }
 
   // --- threads ---
 
   async openThread(id) {
+    // The dock has no room for a thread pane: open the thread in the full page.
+    if (this.compactValue || !this.hasThreadTarget) {
+      const url = `${this.roomUrlValue}?thread=${id}`
+      window.Turbo ? window.Turbo.visit(url) : (window.location.href = url)
+      return
+    }
     this.threadId = id
     this.threadTarget.hidden = false
     this.renderThread()

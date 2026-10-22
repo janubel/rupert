@@ -133,4 +133,30 @@ class TeamChatAgentTest < ActiveSupport::TestCase
       assert_equal 'opencode_cli', TeamChat::ModelConfig.new({}, auth_file: none).engine
     end
   end
+
+  test 'links to pages Rupert does not have become plain text' do
+    script_model({ text: 'See [Alerts](/inventory/alerts) and [Timesheets](/people/timesheets) or [Home](/).' })
+    reply = ask('@rupert where?')
+    TeamChat::Agent.new(reply, config: team_chat_config).run
+    assert_equal 'See Alerts and [Timesheets](/people/timesheets) or [Home](/).', reply.reload.body
+  end
+
+  test 'local_gateway sends @rupert to the rupert-llm gateway with long timeouts and no key' do
+    config = TeamChat::ModelConfig.new({ 'RUPERT_CHAT_PROVIDER' => 'local_gateway', 'RUPERT_CHAT_MODEL' => 'qwen3.5-4b',
+                                         'RUPERT_LOCAL_LLM_URL' => 'http://10.0.0.7:8080/v1/' })
+    assert config.configured?
+    assert config.local?
+    assert_equal 'http://10.0.0.7:8080/v1', config.api_base
+    assert_equal 'qwen3.5-4b on this server', config.label
+    assert_match(/nothing leaves it/, config.disclosure)
+    stub = stub_request(:post, 'http://10.0.0.7:8080/v1/chat/completions')
+           .with { |request| JSON.parse(request.body)['model'] == 'qwen3.5-4b' && JSON.parse(request.body)['messages'].first['role'] == 'system' }
+           .to_return(status: 200, headers: { 'Content-Type' => 'text/event-stream' }, body: sse_for(text: 'Local hello.'))
+    reply = ask('@rupert hi')
+    assert_no_difference -> { AiAgentRun.count } do
+      TeamChat::Agent.new(reply, config: config).run
+    end
+    assert_requested stub
+    assert_equal 'Local hello.', reply.reload.body
+  end
 end
