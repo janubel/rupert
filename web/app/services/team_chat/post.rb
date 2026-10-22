@@ -11,7 +11,7 @@ module TeamChat
     REPLIES_PER_WINDOW = 30
     WINDOW = 10.minutes
 
-    Result = Struct.new(:message, :reply, keyword_init: true)
+    Result = Struct.new(:message, :reply, :replies, keyword_init: true)
 
     def self.call(...) = new(...).call
 
@@ -31,18 +31,19 @@ module TeamChat
 
       people = mentioned_people
       message = nil
-      reply = nil
+      replies = []
       Message.transaction do
         message = @room.messages.new(user: @user, author_kind: 'person', body: @body, parent_id: @parent_id, mentions: people.map(&:id).presence)
         attachments.each { |attachment| attachment.room = @room }
         message.attachments = attachments
         message.save!
         people.each { |person| @room.membership_for(person) }
-        reply = start_reply(message) if answer?(message)
+        replies << start_reply(message) if answer?(message)
+        LocalAgents.mentioned(@body).each { |agent| replies << start_reply(message, agent: agent) }
       end
       @room.membership_for(@user).mark_read!(message.id)
-      ReplyJob.perform_later(reply.id) if reply
-      Result.new(message: message, reply: reply)
+      replies.each { |reply| ReplyJob.perform_later(reply.id) }
+      Result.new(message: message, reply: replies.first, replies: replies)
     rescue ActiveRecord::RecordInvalid => e
       raise Invalid, e.record.errors.full_messages.to_sentence
     end
@@ -82,11 +83,15 @@ module TeamChat
       end
     end
 
-    def start_reply(message)
+    # A pending assistant reply. A local @agent's reply says "Waiting for the model"
+    # until the gateway has it loaded (only one model runs at a time).
+    def start_reply(message, agent: nil)
       raise Limited, 'Rupert has answered a lot of your messages in the last few minutes. Wait a moment and ask again.' if limited?
 
-      @room.messages.create!(author_kind: 'assistant', status: 'pending', activity: 'Thinking', parent_id: message.parent_id,
-        meta: { 'asked_by' => @user.id, 'trigger_id' => message.id })
+      meta = { 'asked_by' => @user.id, 'trigger_id' => message.id }
+      meta['agent'] = agent.handle if agent
+      @room.messages.create!(author_kind: 'assistant', status: 'pending', activity: agent ? "Loading #{agent.name}" : 'Thinking',
+        parent_id: message.parent_id, meta: meta)
     end
 
     def limited?

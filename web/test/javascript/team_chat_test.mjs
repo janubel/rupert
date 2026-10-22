@@ -44,3 +44,9 @@ test('a label never hides an outside address, and unsafe schemes stay text', () 
   assert.equal(Chat.safeUrl('https://user:pw@evil.example'), null);
   assert.equal(Chat.safeUrl('javascript:alert(1)'), null);
 });
+
+test('local model @agents are highlighted as mentions when listed', () => {
+  assert.deepEqual(types(Chat.parseInline('hey @gemma and @rupert', [], ['rupert', 'gemma'])), ['text', 'mention', 'text', 'mention']);
+  assert.deepEqual(types(Chat.parseInline('hey @gemma', [])), ['text'], 'not a mention unless the agent exists');
+  assert.deepEqual(types(Chat.parseInline('mail me@gemma.com', [], ['rupert', 'gemma'])), ['text']);
+});

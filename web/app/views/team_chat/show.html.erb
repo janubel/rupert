@@ -12,6 +12,7 @@
      data-team-chat-post-max-value="<%= TeamChat::Message::BODY_MAX %>"
      data-team-chat-title-value="<%= content_for(:title) %>"
      data-team-chat-people-value="<%= @people.to_json %>"
+     data-team-chat-agents-value="<%= (@local_agents || []).to_json %>"
      data-team-chat-me-value="<%= me.display_name %>"
      data-team-chat-emoji-value="<%= TeamChat::Reaction::EMOJI.to_json %>"
      data-team-chat-file-max-value="<%= TeamChat::Attachment::MAX_BYTES %>"

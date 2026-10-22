@@ -33,16 +33,17 @@ module TeamChat
       end
     end
 
-    def initialize(reply, config: ModelConfig.current)
+    def initialize(reply, config: nil)
       @reply = reply
       @room = reply.room
-      @config = config
+      @local_agent = reply.local_agent
+      @config = config || (@local_agent ? ModelConfig.for_local(@local_agent) : ModelConfig.current)
       @asker = User.find_by(id: reply.meta.to_h['asked_by'])
       @trigger = Message.find_by(id: reply.meta.to_h['trigger_id'])
       @last_publish = 0.0
       @tokens_in = 0
       @tokens_out = 0
-      @engine = config.engine
+      @engine = @config.engine
     end
 
     # Fills in the reply. Never raises.
@@ -95,7 +96,7 @@ module TeamChat
           "People in it: #{members.to_sentence.presence || 'unknown'}. Everyone in it can read your reply"
       end
       <<~PROMPT
-        #{Soul.text}
+        #{@local_agent ? LocalAgents.persona(@local_agent) : Soul.text}
 
         ## This conversation
         You are in #{where}.
@@ -139,6 +140,7 @@ module TeamChat
       chat.with_instructions(system_prompt).with_temperature(0.2)
       chat.with_tools(*@toolbox.llm_tools)
       chat.before_tool_call { |tool_call| activity!(@toolbox.activity_for(tool_call.name)) }
+      activity!("Waiting for #{@local_agent.name}") if @local_agent
       transcript.each { |entry| chat.add_message(role: entry[:role], content: entry[:content]) }
 
       steps = 0
@@ -273,7 +275,9 @@ module TeamChat
 
       case row.author_kind
       when 'person' then { role: :user, content: "#{row.author_name}: #{AskRupert::Redactor.clean(text)}" }
-      when 'assistant' then { role: :assistant, content: text }
+      # Another assistant's reply (@rupert or a different local @agent) is a voice in the room, not this model's own.
+      when 'assistant'
+        row.local_agent&.handle == @local_agent&.handle ? { role: :assistant, content: text } : { role: :user, content: "#{row.author_name}: #{text}" }
       else { role: :user, content: "(Rupert notice) #{text}" }
       end
     end
