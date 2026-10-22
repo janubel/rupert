@@ -57,11 +57,12 @@ module TeamChat
     end
 
     def self.persona(agent)
-      what = if agent.cloud?
-               "a cloud model (#{agent.about.sub(/, cloud\z/, '')}) that Rupert, the retail operations app this business runs on, reaches for team chat"
-             else
-               "an open model (#{agent.about.sub(/, local\z/, '')}) running on this business's own server inside Rupert, the retail operations app it runs on"
-             end
+      what =
+        if agent.cloud?
+          "a cloud model (#{agent.about.sub(/, cloud\z/, '')}) that Rupert, the retail operations app this business runs on, reaches for team chat"
+        else
+          "an open model (#{agent.about.sub(/, local\z/, '')}) running on this business's own server inside Rupert, the retail operations app it runs on"
+        end
       <<~TEXT.strip
         # #{agent.name}
 

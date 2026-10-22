@@ -24,7 +24,7 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
   def post(text) = TeamChat::Post.call(room: @room, user: @user, body: text)
 
   test 'local agents exist only when the gateway is configured' do
-    assert_equal %w[lfm bonsai gemma], TeamChat::LocalAgents.all.map(&:handle)
+    assert_equal %w[qwen lfm bonsai gemma], TeamChat::LocalAgents.all.map(&:handle)
     ENV['RUPERT_LOCAL_LLM_URL'] = nil
     assert_empty TeamChat::LocalAgents.all
     assert_empty post('@gemma hello').replies
