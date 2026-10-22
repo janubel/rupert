@@ -195,7 +195,7 @@ containers yet.
 | --- | --- | --- |
 | `@rupert` | DeepSeek V4.1 Flash (`RUPERT_CHAT_PROVIDER=opencode_go`, `RUPERT_CHAT_MODEL=deepseek-v4.1-flash`) | cloud, OpenCode Go plan |
 | `@liquid` | Liquid AI LFM2.5 8B-A1B | local `rupert-llm` gateway |
-| `@qwen` | Qwen3.5 4B | local |
+| `@qwen` | Qwen3.6 35B-A3B (Unsloth UD-Q3_K_S) since 2026-10-22; was Qwen3.5 4B (now the `qwen-4b` test model) | local |
 | `@gemma` | Google Gemma 4 E4B (`gemma-4-e4b`, `gemma-4-E4B_q4_0-it.gguf`) | local (added back 2026-10-23 at the owner's request) |
 
 - Every bot reply shows its time and model, for example "4s · deepseek-v4.1-flash · cloud".
@@ -299,3 +299,10 @@ because per-question parts come early in the prompt.
 
 Test models on the gateway (battery only, `AGENT=lfm-24b` / `qwen-35b`): LFM2.5-24B-A2B QAD-Q4_0 (13.6 GB) and
 Qwen3.6-35B-A3B Unsloth UD-Q3_K_S (15.4 GB).
+
+### @qwen is Qwen3.6-35B-A3B (2026-10-22)
+
+The test battery put Qwen3.6-35B-A3B first among local models (finance 4.62, general 4.33, about 15 s; see
+`docs/ops/local-ai-report-2026-10-22.md`), so it now answers as @qwen. It fills the 780M on its own (about 2 GB left), which
+the one-model-at-a-time gateway already handles. Qwen3.5-4B stays on the gateway as the `qwen-4b` test model. The bot key's
+grades and 💰 badge follow the model, so they carry over from the runs made under `qwen-35b`.

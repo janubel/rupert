@@ -29,9 +29,11 @@ module TeamChat
       Agent.new(handle: 'liquid', name: 'Liquid', model: 'lfm2.5-8b-a1b', color: '#0f766e', aliases: %w[lfm lfm2 lfm2.5],
         about: 'Liquid AI LFM2.5 8B-A1B, local',
         purpose: 'Local mixture-of-experts model: quick for its size. Private.'),
-      Agent.new(handle: 'qwen', name: 'Qwen', model: 'qwen3.5-4b', color: '#c2410c', aliases: %w[qwen3 qwen3.5],
-        about: 'Alibaba Qwen3.5 4B, local',
-        purpose: 'Best of the local models at using Rupert’s tools. Private, slower.'),
+      # Qwen3.6 35B-A3B since 2026-10-22: best local model in the test battery (finance 4.62, general 4.33),
+      # mixture of experts with ~3B active, so it answers in about 15 s on the 780M. It fills the GPU on its own.
+      Agent.new(handle: 'qwen', name: 'Qwen', model: 'qwen3.6-35b-a3b', color: '#c2410c', aliases: %w[qwen3 qwen3.5 qwen3.6],
+        about: 'Alibaba Qwen3.6 35B-A3B, local',
+        purpose: 'Best local bot in Rupert’s tests, on a par with @rupert for money questions. Private, about 15 seconds.'),
       Agent.new(handle: 'gemma', name: 'Gemma', model: 'gemma-4-e4b', color: '#9333ea', aliases: %w[gemma4 gemma-4],
         about: 'Google Gemma 4 E4B, local',
         purpose: 'Google’s open model: good with Rupert’s tools, about 1½–2 minutes an answer. Private.')
@@ -54,7 +56,9 @@ module TeamChat
       Agent.new(handle: 'lfm-24b', name: 'Liquid 24B', model: 'lfm2.5-24b-a2b', color: '#115e59',
         about: 'Liquid AI LFM2.5 24B-A2B (QAD Q4_0), local'),
       Agent.new(handle: 'qwen-35b', name: 'Qwen 35B', model: 'qwen3.6-35b-a3b', color: '#9a3412',
-        about: 'Alibaba Qwen3.6 35B-A3B (Unsloth UD-Q3_K_S), local')
+        about: 'Alibaba Qwen3.6 35B-A3B (Unsloth UD-Q3_K_S), local'),
+      Agent.new(handle: 'qwen-4b', name: 'Qwen 4B', model: 'qwen3.5-4b', color: '#ea580c',
+        about: 'Alibaba Qwen3.5 4B, local (was @qwen until 2026-10-22)')
     ].freeze
 
     def self.trial(handle) = (TRIALS.find { |agent| agent.handle == handle.to_s } if enabled?)
@@ -102,7 +106,7 @@ module TeamChat
       rows = [{ handle: 'rupert', name: 'Rupert', model: rupert.model.presence || rupert.label, where: rupert.local? ? 'this server' : 'cloud',
                 purpose: "The main assistant: answers when you write @rupert, and every message in your own Rupert room. Now using #{rupert.label}." }] +
              all.map { |agent| { handle: agent.handle, name: agent.name, model: agent.model, where: agent.cloud? ? 'cloud' : 'this server', purpose: agent.purpose } }
-      rows.each { |row| row[:scores] = scores[[row[:handle], row[:model].to_s]] || {} }
+      rows.each { |row| row[:scores] = scores[row[:model].to_s] || {} }
       best = rows.reject { |row| row[:handle] == 'rupert' }.select { |row| row[:scores]['finance'] }.max_by { |row| row[:scores]['finance'] }
       best[:best_for_money] = true if best && best[:scores]['finance'] >= 4.0
       rows
