@@ -360,15 +360,21 @@ configuration and routing regression.
 `RUPERT_VERIFY=1` (every local bot) or `RUPERT_VERIFY=qwen-4b,qwen-2b` (named bots) adds two passes after a local
 bot answers (`TeamChat::Verify`):
 
-1. **Check.** The answer is split into sentences. The same model gets only those sentences and the tool data (never
-   the conversation or its own reasoning) and returns, per sentence, `supported` / `contradicted` / `not_found` /
-   `no_fact` with an `evidence_quote` copied from the data (JSON schema enforced by llama-server). Rupert confirms the
-   quote is really in the data. A sentence fails when it has a $/% figure the number check cannot find, when the data
-   contradicts it (with a real quote), or when it states a figure the data does not have or "supports" with an invented
-   quote. Sentences without figures that the data does not mention are left alone (they are usually fine).
-2. **Fix**, only when something failed. The model is told exactly which sentences and why, and rewrites or removes
-   only those. The fix is kept only if it still has every figure that was right and adds no unchecked figure;
-   otherwise the original answer stands. One round, no loops.
+1. **Check.** The answer is split into sentences. Rupert checks every number in them against the tool data itself
+   ($ and % with the number check, and every other figure the same way; dates, times and years are skipped). The same
+   model then gets only those sentences and the tool data (never the conversation or its own reasoning) and returns a
+   verdict per sentence (`supported` / `contradicted` / `not_found` / `no_fact`, JSON schema enforced by llama-server).
+   A sentence fails when it has a figure the data does not have, or when the model shows the data contradicts it with a
+   quote that Rupert confirms is really in the data. The model's `not_found` alone fails nothing: small models miss
+   evidence that is there.
+2. **Fix**, only when something failed. The model gets the failed sentences and why, and returns a replacement (or an
+   empty one to remove the sentence) for each. Rupert puts them in place of those sentences, so the rest of the answer
+   stays word for word, and skips any replacement with a figure the data does not have. One round, no loops.
+
+Both passes use the same system prompt and start with the same DATA block, so the model server reuses it for the fix.
+
+The first version (#372) let the model rewrite the whole answer and trusted its "not found": in the smoke test it
+deleted a correct paragraph and flagged sentences whose only number was the year. This version fixes both.
 
 Why this shape: prompted self-correction without outside evidence makes models worse (Huang et al. 2023; small models
 especially, and challenged models flip right answers about half the time, FlipFlop 2023). Checking claims against tool

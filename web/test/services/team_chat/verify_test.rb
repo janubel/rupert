@@ -20,17 +20,18 @@ class TeamChatVerifyTest < ActiveSupport::TestCase
     end
   end
 
-  EVIDENCE = '{"gross_sales_dollars":"$1,250.00","orders":14,"top_product":"Tea 50g","period":"2026-09"}'
+  EVIDENCE = '{"gross_sales_dollars":"$1,250.00","orders":14,"hours":102.5,"staff":7,"top_product":"Tea 50g","sources":["shopify"]}'
 
   setup { @prompts = [] }
 
   def verify(draft, *replies)
     chats = replies.dup
     factory = ->(_instructions) { FakeChat.new(chats, @prompts) }
-    TeamChat::Verify.new(config: nil, question: 'How did September go?', evidence: [EVIDENCE], draft: draft, chat_factory: factory).call
+    TeamChat::Verify.new(config: nil, question: 'How did last week go?', evidence: [EVIDENCE], draft: draft, chat_factory: factory).call
   end
 
   def checks(*rows) = { 'checks' => rows.each_with_index.map { |(verdict, quote), index| { 'id' => index + 1, 'verdict' => verdict, 'evidence_quote' => quote.to_s } } }
+  def fixes(*replacements) = { 'fixes' => replacements.each_with_index.map { |text, index| { 'id' => index + 1, 'replacement' => text } } }
 
   test 'splits an answer into sentences and list items without markdown, skipping fragments' do
     text = "September went well. Gross sales were **$1,250.00**.\n- 14 orders in [Sales](/sales).\n- Top: Tea 50g\nThanks!"
@@ -38,67 +39,72 @@ class TeamChatVerifyTest < ActiveSupport::TestCase
       TeamChat::Verify.sentences(text)
   end
 
+  test 'dates, times and years are not figures' do
+    assert_equal %w[14 3], TeamChat::Verify.figures('On Oct 15–21, 2026 (2026-10-15 at 9:30 am) we had 14 orders in Q3, 3 late.')
+  end
+
   test 'an answer the data supports is kept as it is, with no fix pass' do
-    draft = 'Gross sales were $1,250.00 in September. There were 14 orders.'
-    outcome = verify(draft, checks(['supported', 'gross_sales_dollars $1,250.00'], ['supported', 'orders 14']))
+    draft = "The team worked 102.5 hours last week (October 15–21, 2026), 7 staff.\n\nGross sales were $1,250.00 from 14 orders."
+    outcome = verify(draft, checks(['supported'], ['supported']))
 
     assert_equal draft, outcome.text
     assert_equal 'original', outcome.kept
     assert_not outcome.fixed
     assert_empty outcome.failed
     assert_equal 1, @prompts.size, 'only the check ran'
-    assert_match(/\ADATA:\n.*SENTENCES:\n1\. Gross sales/m, @prompts.first)
-    assert_not_includes @prompts.first, 'How did September go', 'the checker sees sentences and data, not the conversation'
+    assert_match(/\ADATA:\n.*TASK: CHECK.*^1\. The team worked/m, @prompts.first)
+    assert_not_includes @prompts.first, 'How did last week go', 'the checker sees sentences and data, not the conversation'
   end
 
-  test 'a sentence the data contradicts is fixed, and the fix is kept when it keeps the right figures' do
-    draft = 'Gross sales were $1,250.00 in September. There were 12 orders.'
-    fixed = 'Gross sales were $1,250.00 in September. There were 14 orders.'
-    outcome = verify(draft, checks(['supported', '$1,250.00'], ['contradicted', 'orders 14']), fixed)
+  test 'a number the data does not have fails, and only that sentence is replaced' do
+    draft = "The team worked 102.5 hours last week.\n\nGross sales were $1,250.00. There were 12 orders."
+    outcome = verify(draft, checks(['supported'], ['supported'], ['supported']), fixes('There were 14 orders.'))
 
-    assert_equal fixed, outcome.text
+    assert_equal "The team worked 102.5 hours last week.\n\nGross sales were $1,250.00. There were 14 orders.", outcome.text
     assert_equal 'fixed', outcome.kept
-    assert_equal ['There were 12 orders.'], outcome.failed.map(&:text)
-    assert_includes @prompts.last, "WRONG:\n- \"There were 12 orders.\" (the data says otherwise"
-    assert_equal 'fixed', outcome.meta['kept']
+    assert_equal ['12 is not in the data'], outcome.failed.map(&:reason)
+    assert_includes @prompts.last, "WRONG SENTENCES:\n1. There were 12 orders. (12 is not in the data)"
     assert_equal draft, outcome.meta['draft']
+    assert outcome.meta['failed'].first['fixed']
   end
 
-  test 'a fix that drops a figure that was right is not kept' do
-    draft = 'Gross sales were $1,250.00 in September. There were 12 orders.'
-    outcome = verify(draft, checks(['supported', '$1,250.00'], ['contradicted', 'orders 14']), 'There were 14 orders.')
+  test 'a money figure that is not in the data fails even when the checker calls it supported' do
+    outcome = verify('Gross sales were $1,520.00 last week.', checks(['supported']), fixes('Gross sales were $1,250.00 last week.'))
+
+    assert_equal '$1,520.00 is not in the data', outcome.failed.first.reason
+    assert_equal 'Gross sales were $1,250.00 last week.', outcome.text
+  end
+
+  test 'a replacement with a figure the data does not have is not used' do
+    draft = 'Gross sales were $1,250.00. There were 12 orders.'
+    outcome = verify(draft, checks(['supported'], ['supported']), fixes('There were 13 orders.'))
 
     assert_equal draft, outcome.text
     assert outcome.fixed, 'a fix was tried'
     assert_equal 'original', outcome.kept
   end
 
-  test 'a fix that adds a figure the data does not have is not kept' do
-    draft = 'Gross sales were $1,250.00 in September. There were 12 orders.'
-    outcome = verify(draft, checks(['supported', '$1,250.00'], ['contradicted', 'orders 14']),
-      'Gross sales were $1,250.00 in September, up $300.00. There were 14 orders.')
+  test 'an empty replacement removes the sentence, and a list item with it' do
+    draft = "Last week:\n- Gross sales were $1,250.00.\n- There were 12 orders in total.\n- Top product: Tea 50g."
+    outcome = verify(draft, checks(['no_fact'], ['supported'], ['supported'], ['supported']), fixes(''))
 
-    assert_equal draft, outcome.text
+    assert_equal "Last week:\n- Gross sales were $1,250.00.\n- Top product: Tea 50g.", outcome.text
   end
 
-  test 'a figure "supported" by a quote that is not in the data fails' do
-    outcome = verify('There were 14 orders, mostly online.', checks(['supported', 'online orders were 14 this month']), 'There were 14 orders.')
+  test 'a contradiction counts only with a quote that is really in the data' do
+    real = verify('All sales came from Square last week.', checks(['contradicted', '"sources":["shopify"]']), fixes('All sales came from Shopify last week.'))
+    assert_equal 'All sales came from Shopify last week.', real.text
 
-    assert_equal 'the quoted evidence is not in the data', outcome.failed.first.reason
+    @prompts.clear
+    invented = verify('All sales came from Shopify last week.', checks(['contradicted', 'sales came mostly from square stores']))
+    assert_empty invented.failed
+    assert_equal 1, @prompts.size
   end
 
-  test 'a money figure that is not in the data fails even when the checker calls it supported' do
-    outcome = verify('Gross sales were $1,520.00.', checks(['supported', '$1,250.00']), 'Gross sales were $1,250.00.')
-
-    assert_equal '$1,520.00 is not in the data', outcome.failed.first.reason
-    assert_equal 'Gross sales were $1,250.00.', outcome.text
-  end
-
-  test 'a sentence without figures that the data does not mention is left alone' do
-    outcome = verify('Things look steady overall.', checks(['not_found', '']))
+  test 'a sentence whose numbers are all in the data passes even when the checker cannot find it' do
+    outcome = verify('There were 14 orders, mostly online.', checks(['not_found']))
 
     assert_empty outcome.failed
-    assert_equal 1, @prompts.size
   end
 
   test 'nothing is checked without tool data, and a failing model leaves the draft' do
