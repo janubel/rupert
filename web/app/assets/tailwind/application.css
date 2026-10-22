@@ -451,6 +451,13 @@
 .table-region { max-width:100%;overflow-x:auto;border-radius:var(--radius-card); }
 .table-region:focus-visible { outline:2px solid var(--color-olive);outline-offset:3px; }
 
+/* Pagination (pagy_nav): quiet numbers, the current page filled. */
+.pagy { display:flex;flex-wrap:wrap;align-items:center;gap:.25rem;font-size:.85rem; }
+.pagy > a,.pagy > span { display:inline-flex;align-items:center;justify-content:center;min-width:2.1rem;min-height:2.1rem;padding:0 .5rem;border-radius:.5rem;color:var(--color-mocha); }
+.pagy > a:hover { background:var(--color-haze);color:var(--color-ink); }
+.pagy > a[aria-current=page],.pagy > .current { background:var(--color-olive);color:var(--color-cream);font-weight:600; }
+.pagy > a[aria-disabled=true],.pagy > .disabled { opacity:.5;pointer-events:none; }
+
 /* The page-help line sits under the content, out of the way until needed. */
 .help-bar { margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--color-fog); }
 
