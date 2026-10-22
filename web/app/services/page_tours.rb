@@ -218,7 +218,7 @@ class PageTours
         { anchor: 'check', title: 'Books check', body: 'Opens the health check for the same window: missing imports, unmatched payments and backups.' },
         { anchor: 'csv', title: 'Export CSV', body: 'Downloads the current report for the current window. Sources and currencies stay separate in the file.' }
       ]
-    )
+    ),
     Tour.new(
       key: 'team_chat', title: 'Team chat', paths: ['/chat'], permission: 'team_chat',
       intro: 'Rooms, direct messages and Rupert’s bots in one place. Two minutes to find your way around.',
