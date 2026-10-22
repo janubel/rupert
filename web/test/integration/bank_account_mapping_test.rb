@@ -117,7 +117,14 @@ class BankAccountMappingTest < ActionDispatch::IntegrationTest
   test 'foreign accounts, nonasset accounts, duplicate account aliases and read-only writes are refused' do
     line('Bank', -500)
     other = Tenant.create!(name: 'Other bank tenant', subdomain: 'bank-other')
+    foreign_line = BankStatementLine.create!(tenant_id: other.id, document_id: 1, line_no: 2, account_label: 'Bank',
+      posted_on: Date.current, description: 'Foreign-only bank evidence', amount_cents: -500, fingerprint: SecureRandom.hex(24))
     foreign = Finance::Account.create!(tenant_id: other.id, code: '1100', name: 'Foreign', account_type: 'asset')
+    assert_empty reconcile('Bank').lines.select { |candidate| candidate.id == foreign_line.id }
+    get finance_bank_reconciliation_path(account_label: 'Bank')
+    assert_response :success
+    refute_includes response.body, 'Foreign-only bank evidence'
+
     post finance_bank_reconciliation_account_path, params: { account_label: 'Bank', ledger_account_id: foreign.id }
     assert_response :not_found
     post finance_bank_reconciliation_account_path, params: { account_label: 'Bank', ledger_account_id: @expense.id }
