@@ -17,6 +17,8 @@ class BuzzChatController < AuthenticatedController
     @state = BuzzChat.state
     @channels = BuzzChannels.list
     @channel = selected_channel
+    @members = BuzzMembers.roster(@channel)
+    @member_overflow = BuzzMembers.extra_count(@channel)
     @can_post = Current.user.can?('buzz.post')
     @can_configure = Current.user.can?('settings.write')
     @chat_base_path = buzz_chat_path
@@ -39,11 +41,11 @@ class BuzzChatController < AuthenticatedController
   def create
     channel = selected_channel
     text = params[:message].to_s
-    row = BuzzChat.post!(user: Current.user, text: text, channel: channel.id)
+    row = BuzzChat.post!(user: Current.user, text: text, channel: channel.id, reply_to: params[:reply_to].presence)
     if text.match?(BuzzMirrorReplyJob::MENTION)
       BuzzMirrorReplyJob.perform_later(Current.tenant_id, Current.user.id, channel.id, text, row&.event_id)
     end
-    render json: { ok: true }, status: :created
+    render json: { ok: true, event_id: row&.event_id }, status: :created
   rescue BuzzChat::RateLimited
     render json: { error: 'You are posting quickly. Wait a moment and try again.' }, status: :too_many_requests
   rescue BuzzChat::Error => e

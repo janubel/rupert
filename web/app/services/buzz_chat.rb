@@ -41,6 +41,7 @@ class BuzzChat
   CONTROL = /[^\P{Cc}\n\t]/
   HEX64 = /\A\h{64}\z/
   PROFILE_BATCH = 50
+  ATTACHMENT_MAX = 4
 
   class << self
     # :unconfigured (no relay or no agent key), :no_channel, or :ready.
@@ -132,20 +133,27 @@ class BuzzChat
 
     # Posts as the Rupert agent. Raises NotReady, Invalid, RateLimited or
     # PostFailed with a message that is safe to show.
-    def post!(user:, text:, channel: nil)
+    def post!(user:, text:, channel: nil, reply_to: nil)
       ch = channel.presence || self.channel
       raise NotReady, 'Team chat is not set up yet.' unless ready? && ch.present?
 
       clean = clean_post(text)
+      parent = reply_to.to_s.presence
+      if parent && !(parent.match?(HEX64) && messages_scope(ch).exists?(event_id: parent))
+        raise Invalid, 'That thread is no longer available.'
+      end
+
       enforce_rate_limit!(user)
-      event = BuzzAgent.build_event(content: "#{sender_name(user)}#{VIA}#{clean}", channel: ch, tags: [['client', CLIENT_TAG]])
+      tags = [['client', CLIENT_TAG]]
+      tags << ['e', parent, '', 'reply'] if parent
+      event = BuzzAgent.build_event(content: "#{sender_name(user)}#{VIA}#{clean}", channel: ch, tags: tags)
       ok, reason = BuzzRelayClient.publish(event)
       unless ok
         Rails.logger.warn("[BuzzChat] post failed for user #{user.id}: #{reason.to_s[0, 120]}")
         raise PostFailed, 'Rupert could not reach Buzz, so your message was not sent. Try again in a moment.'
       end
 
-      row = store_posted(event, user, ch)
+      row = store_posted(event, user, ch, parent)
       ActivityLogger.log('buzz_chat_post', details: "event=#{event.id[0, 12]} chars=#{clean.length}")
       row
     end
@@ -218,9 +226,11 @@ class BuzzChat
       tags = event['tags']
       return unless tags.any? { |t| t[0] == 'h' && t[1] == ch }
 
+      media = attachments(tags)
       {
         tenant_id: Current.tenant_id, event_id: event['id'], pubkey: event['pubkey'], kind: event['kind'], channel: ch,
         content: clean_incoming(event['content']), reply_to: reply_target(tags), client: client_tag(tags),
+        attachments: media.any? ? JSON.generate(media) : nil,
         posted_at: event['created_at'], created_at: now, updated_at: now
       }
     end
@@ -251,6 +261,22 @@ class BuzzChat
 
     def reply_target(tags)
       tags.find { |t| t[0] == 'e' && t[1].to_s.match?(HEX64) }&.at(1)
+    end
+
+    # NIP-92 media references look like ["imeta", "url https://...", "m image/png"].
+    def attachments(tags)
+      Array(tags).filter_map do |tag|
+        next unless tag.is_a?(Array) && tag[0] == 'imeta'
+
+        fields = tag.drop(1).filter_map do |entry|
+          key, value = entry.to_s.split(' ', 2)
+          [key, value] if value.present?
+        end.to_h
+        url = fields['url'].to_s
+        next unless url.match?(%r{\Ahttps?://}i)
+
+        { 'url' => url.first(2000), 'mime' => fields['m'].to_s.first(120), 'alt' => fields['alt'].to_s.first(200) }
+      end.first(ATTACHMENT_MAX)
     end
 
     def client_tag(tags)
@@ -311,10 +337,27 @@ class BuzzChat
       end
       {
         id: row.event_id, cursor: row.cursor, at: Time.zone.at(row.posted_at).iso8601, text: text, reply: row.reply_to.present?,
+        reply_to: row.reply_to, attachments: parse_attachments(row.attachments),
         author: via_person || name || (is_agent ? BuzzAgentPrompt::NAME : short_npub(row.pubkey)),
         key: short_npub(row.pubkey), agent: is_agent, via_rupert: via_person.present?, named: (via_person || name).present?,
         mine: viewer.present? && row.rupert_user_id == viewer.id
       }
+    end
+
+    def parse_attachments(value)
+      return [] if value.blank?
+
+      data = JSON.parse(value)
+      Array(data).filter_map do |entry|
+        next unless entry.is_a?(Hash)
+
+        url = entry['url'].to_s
+        next unless url.match?(%r{\Ahttps?://}i)
+
+        { 'url' => url, 'mime' => entry['mime'].to_s, 'alt' => entry['alt'].to_s }
+      end.first(ATTACHMENT_MAX)
+    rescue JSON::ParserError
+      []
     end
 
     # --- posting helpers ---
@@ -340,10 +383,10 @@ class BuzzChat
       end
     end
 
-    def store_posted(event, user, ch)
+    def store_posted(event, user, ch, reply_to = nil)
       BuzzMessage.create!(
         event_id: event.id, pubkey: event.pubkey.to_s, kind: event.kind, channel: ch, content: clean_incoming(event.content),
-        client: CLIENT_TAG, rupert_user_id: user.id, posted_at: event.created_at
+        reply_to: reply_to, client: CLIENT_TAG, rupert_user_id: user.id, posted_at: event.created_at
       )
     rescue ActiveRecord::RecordNotUnique
       BuzzMessage.find_by(event_id: event.id)

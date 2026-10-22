@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_153000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -734,6 +734,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
     t.integer "kind", null: false
     t.string "channel", null: false
     t.text "content", default: "", null: false
+    t.text "attachments"
     t.string "reply_to", limit: 64
     t.string "client", limit: 40
     t.bigint "rupert_user_id"

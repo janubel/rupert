@@ -236,4 +236,35 @@ class BuzzChatFlowTest < ActionDispatch::IntegrationTest
     refute result.ready
     assert_match(/allow-list/, result.ready_denied_reason)
   end
+  test 'a reply posted from the mirror is threaded under its parent' do
+    start_buzz_relay
+    @relay.add(@relay.message(@alice, 'root message', at: @t0))
+    sign_in_admin
+    get buzz_chat_messages_path
+    parent = json['messages'].last
+
+    post buzz_chat_messages_path, params: { message: 'thread answer', reply_to: parent['id'] }, as: :json
+
+    assert_response :created
+    assert_equal @relay.published.last['id'], json['event_id']
+    assert_includes @relay.published.last['tags'], ['e', parent['id'], '', 'reply']
+  end
+
+  test 'the channel header shows named member icons when members are known' do
+    start_buzz_relay
+    EnvStore.set('BUZZ_MEMBER_NAMES', { @alice[:public_key] => 'Sean', @bob[:public_key] => 'Derek' }.to_json)
+    @relay.add(FakeBuzzRelay.signed(@alice, kind: 39_000, content: '',
+      tags: [['d', BuzzChatHelper::CHANNEL], ['name', 'rupert']]))
+    @relay.add(FakeBuzzRelay.signed(@alice, kind: 39_002, content: '',
+      tags: [['d', BuzzChatHelper::CHANNEL], ['p', @alice[:public_key], '', 'owner'], ['p', @bob[:public_key], '', 'member']]))
+    BuzzChannels.refresh!
+    sign_in_admin
+
+    get buzz_chat_path
+
+    assert_response :success
+    assert_select '.buzz-member-avatar', 2
+    assert_select '.buzz-member-avatar[title=?]', 'Sean'
+    assert_select '.buzz-member-avatar[title=?]', 'Derek'
+  end
 end
