@@ -12,12 +12,12 @@ invited**, nobody is notified, and the only people in the relay are the owner ke
 | `#rupert` and `#general` channels, agent + test members | Created |
 | Rupert Settings, agent profile, Rupert test notice | Done; the notice arrived on the relay |
 | Sandboxed agent (`rupert-agent` container) | Built and **proven end to end with a mock model**; service stopped until a model key exists |
-| Hostname `buzz-herbalhealers.rupertpos.com` | DNS already resolves to 71.162.207.117; **needs the Caddy block below** |
+| Hostname `buzz-herbalhealers.rupertpos.com` | **Live over wss** since 2026-10-22 (Caddy block added by the owner; Rupert and the agent container use wss; the temporary scaffolding below was removed) |
 | opencode key | **Waiting on you** (the old key is expired) |
 | Phone scan of the QR code | **Waiting on you** (nothing to scan until TLS is live) |
 
-Until the Caddy block exists the relay URL is plain `ws://buzz-herbalhealers.rupertpos.com` and works only from SER8's own
-containers through temporary scaffolding (below).
+The relay URL is `wss://buzz-herbalhealers.rupertpos.com`. (Before the Caddy block existed it was plain `ws://` with temporary
+scaffolding; that is gone, and the sections below that describe it are kept as the record of how to redo it.)
 
 ## Layout
 
