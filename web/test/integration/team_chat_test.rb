@@ -505,29 +505,24 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_select 'form.chat-rail-form', 0
   end
 
-  test 'models are @mentionable: @deepseek through OpenCode and the local ones through the gateway' do
+  test 'the local models are @mentionable and answer through the gateway' do
     ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
-    ENV['RUPERT_CHAT_API_KEY'] = 'test-key'
-    handles = TeamChat::LocalAgents.all.map(&:handle)
-    assert_equal %w[deepseek qwen lfm bonsai gemma], handles
-    deepseek = TeamChat::LocalAgents.find('deepseek')
-    config = TeamChat::ModelConfig.for_local(deepseek)
-    assert_equal %w[opencode_go deepseek-v4.1-flash], [config.engine, config.model]
-    assert_equal 'local_gateway', TeamChat::ModelConfig.for_local(TeamChat::LocalAgents.find('qwen')).engine
-    assert_match(/cloud model/, TeamChat::LocalAgents.persona(deepseek))
+    assert_equal %w[liquid qwen ternary], TeamChat::LocalAgents.all.map(&:handle)
+    qwen = TeamChat::LocalAgents.find('qwen')
+    assert_equal %w[local_gateway qwen3.5-4b], [TeamChat::ModelConfig.for_local(qwen).engine, TeamChat::ModelConfig.for_local(qwen).model]
+    assert_match(/open model/, TeamChat::LocalAgents.persona(qwen))
 
     sign_in(@admin)
     get team_chat_path
     assert_enqueued_jobs 2, only: TeamChat::ReplyJob do
-      post team_chat_messages_path('admins'), params: { body: '@deepseek and @qwen: sales yesterday?' }, as: :json
+      post team_chat_messages_path('admins'), params: { body: '@liquid and @qwen: sales yesterday?' }, as: :json
     end
-    assert_equal %w[deepseek qwen], json['messages'].drop(1).map { |reply| reply['author']['agent'] }
+    assert_equal %w[liquid qwen], json['messages'].drop(1).map { |reply| reply['author']['agent'] }
     get team_chat_room_path('admins')
-    assert_select '[data-team-chat-agents-value*=deepseek]'
+    assert_select '[data-team-chat-agents-value*=liquid]'
     assert_select '.chat-thread .chat-suggest[data-team-chat-target=threadSuggest]'
   ensure
     ENV.delete('RUPERT_LOCAL_LLM_URL')
-    ENV.delete('RUPERT_CHAT_API_KEY')
   end
 
   test 'without a gateway or a cloud key no model @agents are offered' do
@@ -542,9 +537,9 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     sign_in(@admin)
     get team_chat_path
     follow_redirect!
-    assert_select '.chat-bots .chat-bots-row', 6
+    assert_select '.chat-bots .chat-bots-row', 4
     assert_select '.chat-bots-row dt', /@rupert/
-    assert_select '.chat-bots-row dt', /@deepseek\s+cloud/
+    assert_select '.chat-bots-row dt', /@rupert\s+cloud/
     assert_select '.chat-bots-row dt', /@qwen\s+local/
 
     room = TeamChat::Room.find_by(slug: 'admins')
@@ -558,5 +553,15 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   ensure
     ENV.delete('RUPERT_LOCAL_LLM_URL')
     ENV.delete('RUPERT_CHAT_API_KEY')
+  end
+
+  test 'older replies from renamed or retired bots keep their names' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'admins')
+    %w[lfm bonsai deepseek].each { |handle| room.messages.create!(author_kind: 'assistant', status: 'done', body: "from #{handle}", meta: { 'agent' => handle }) }
+    get team_chat_messages_path('admins'), as: :json
+    assert_equal %w[Liquid Ternary DeepSeek], json['messages'].last(3).map { |row| row['author']['name'] }
+    assert_equal %w[liquid ternary deepseek], json['messages'].last(3).map { |row| row['author']['agent'] }
   end
 end

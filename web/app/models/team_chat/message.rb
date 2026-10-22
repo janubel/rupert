@@ -58,7 +58,7 @@ module TeamChat
     # The local @agent that wrote this reply (LocalAgents), or nil for @rupert.
     def local_agent
       handle = meta.to_h['agent'] if assistant?
-      handle && LocalAgents::ALL.find { |agent| agent.handle == handle }
+      LocalAgents.for_reply(handle)
     end
 
     def mention_ids = Array(mentions).map(&:to_i)

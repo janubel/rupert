@@ -4,16 +4,16 @@ module TeamChat
   # Models people can @mention in team chat next to @rupert, each answering with the
   # same tools, permissions and approve-cards as @rupert:
   #
-  # - local (@qwen, @gemma, @lfm, @bonsai): open models on this server (the
+  # - local (@liquid, @qwen, @ternary): open models on this server (the
   #   `rupert-llm` container) through one OpenAI-compatible gateway that keeps only
   #   ONE model in memory at a time, swaps on demand and unloads after ten idle
   #   minutes (deploy/ser8/team-chat/llm-gateway). On when RUPERT_LOCAL_LLM_URL is set.
-  # - cloud (@deepseek): through OpenCode Go, on when its key is available (see
-  #   ModelConfig). What is asked is sent to that service.
+  # @rupert itself is DeepSeek through OpenCode Go (RUPERT_CHAT_PROVIDER / _MODEL);
+  # the cloud flag below remains for agents served that way.
   #
   # Which are on comes from the instance environment, never from a web setting.
   module LocalAgents
-    Agent = Struct.new(:handle, :name, :model, :about, :color, :cloud, :purpose, keyword_init: true) do
+    Agent = Struct.new(:handle, :name, :model, :about, :color, :cloud, :purpose, :aliases, keyword_init: true) do
       def mention = /(?<![\w@])@#{handle}\b/i
       def cloud? = cloud == true
       def initials = name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase
@@ -21,22 +21,31 @@ module TeamChat
     end
 
     ALL = [
-      Agent.new(handle: 'deepseek', name: 'DeepSeek', model: ModelConfig::DEFAULT_GO_MODEL, color: '#1d4ed8', cloud: true,
-        about: 'DeepSeek V4.1 Flash via OpenCode, cloud',
-        purpose: 'Fastest and strongest at reasoning. Runs in the cloud through OpenCode, so what you ask is sent there.'),
-      Agent.new(handle: 'qwen', name: 'Qwen 3.5', model: 'qwen3.5-4b', color: '#c2410c',
-        about: 'Alibaba Qwen3.5 4B, local',
-        purpose: 'Best of the small local models at using Rupert’s tools. Private, slower.'),
-      Agent.new(handle: 'lfm', name: 'LFM2.5', model: 'lfm2.5-8b-a1b', color: '#0f766e',
-        about: 'Liquid AI LFM2.5-8B-A1B, local',
+      Agent.new(handle: 'liquid', name: 'Liquid', model: 'lfm2.5-8b-a1b', color: '#0f766e', aliases: %w[lfm],
+        about: 'Liquid AI LFM2.5 8B-A1B, local',
         purpose: 'Local mixture-of-experts model: quick for its size. Private.'),
-      Agent.new(handle: 'bonsai', name: 'Ternary Bonsai', model: 'ternary-bonsai-2-9b', color: '#65a30d',
+      Agent.new(handle: 'qwen', name: 'Qwen', model: 'qwen3.5-4b', color: '#c2410c',
+        about: 'Alibaba Qwen3.5 4B, local',
+        purpose: 'Best of the local models at using Rupert’s tools. Private, slower.'),
+      Agent.new(handle: 'ternary', name: 'Ternary', model: 'ternary-bonsai-2-9b', color: '#65a30d', aliases: %w[bonsai],
         about: 'PrismML Ternary Bonsai 2 9B, local',
-        purpose: 'Experimental 1.58-bit local model. Private.'),
-      Agent.new(handle: 'gemma', name: 'Gemma 4', model: 'gemma-4-e4b', color: '#9333ea',
-        about: 'Google Gemma 4 E4B, local',
-        purpose: 'Google’s small local model, good for general questions. Private.')
+        purpose: 'Experimental 1.58-bit local model. Private.')
     ].freeze
+
+    # Handles no longer offered, kept so older replies still show who wrote them.
+    RETIRED = [
+      Agent.new(handle: 'deepseek', name: 'DeepSeek', model: 'deepseek-v4.1-flash', color: '#1d4ed8', cloud: true,
+        about: 'DeepSeek V4.1 Flash via OpenCode, cloud (now @rupert)'),
+      Agent.new(handle: 'gemma', name: 'Gemma', model: 'gemma-4-e4b', color: '#9333ea',
+        about: 'Google Gemma 4 E4B, local')
+    ].freeze
+
+    # The agent that wrote a reply, by its current handle or a former one (lfm → liquid, bonsai → ternary).
+    def self.for_reply(handle)
+      return nil if handle.blank?
+
+      (ALL + RETIRED).find { |agent| agent.handle == handle || Array(agent.aliases).include?(handle) }
+    end
 
     def self.base_url = ENV['RUPERT_LOCAL_LLM_URL'].to_s.strip.chomp('/').presence
 
