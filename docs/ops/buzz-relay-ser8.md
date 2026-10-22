@@ -1,79 +1,99 @@
-# Self-hosted Buzz relay on SER8
+# Self-hosted Buzz relay and sandboxed @rupert agent on SER8
 
-Written 2026-10-21 while building it; every step below was run on SER8 unless marked **not verified**. It covers the
-relay (an Incus container), the `@rupert` agent (a systemd service in the `rupert` container), how Rupert is wired to
-it, backups, rollback, and what is still waiting on a person. Background on Buzz itself, deep links and the Settings
-keys is in [buzz.md](buzz.md).
+Written 2026-10-21/22 while building it; every step below was run on SER8 unless marked **not verified**. Background on
+Buzz itself, deep links and the Settings keys is in [buzz.md](buzz.md). This is an admin-only setup: **no staff have been
+invited**, nobody is notified, and the only people in the relay are the owner key, the agent, and two test identities.
 
 ## Status
 
 | Piece | State |
 | --- | --- |
 | Relay (`buzz` container: relay, Postgres, Redis, MinIO) | Running, closed relay (only listed pubkeys join) |
-| Channels `#rupert` and `#general`, owner, agent, test identities | Created |
-| Rupert Settings (`BUZZ_RELAY_URL`, `BUZZ_CHANNEL`, agent key) | Set; agent profile published |
-| `buzz`, `buzz-acp`, `opencode` in the `rupert` container | Installed (`/usr/local/bin`) |
-| `rupert-buzz` agent service | Unit and config committed; **install after the PR deploys** (steps below) |
-| Public hostname and TLS | **Waiting on you** (Caddy block and DNS record below) |
-| opencode key | **Waiting on you**: the old key is expired |
-| Phone scan of the QR code | **Waiting on you** (cannot be done from here) |
+| `#rupert` and `#general` channels, agent + test members | Created |
+| Rupert Settings, agent profile, Rupert test notice | Done; the notice arrived on the relay |
+| Sandboxed agent (`rupert-agent` container) | Built and **proven end to end with a mock model**; service stopped until a model key exists |
+| Hostname `buzz-herbalhealers.rupertpos.com` | DNS already resolves to 71.162.207.117; **needs the Caddy block below** |
+| opencode key | **Waiting on you** (the old key is expired) |
+| Phone scan of the QR code | **Waiting on you** (nothing to scan until TLS is live) |
 
-Until the Caddy block and DNS record exist, the relay URL is plain `ws://buzz.stoverparc.org` and works only from SER8's
-own containers through temporary scaffolding (see "Temporary scaffolding"). Phones cannot reach it yet.
+Until the Caddy block exists the relay URL is plain `ws://buzz-herbalhealers.rupertpos.com` and works only from SER8's own
+containers through temporary scaffolding (below).
 
-## What was added and where
+## Layout
 
 ```
-Incus container `buzz` (Ubuntu 24.04, 10.96.131.4 pinned, 4 CPU, 4 GiB RAM, own 30 GiB btrfs pool `buzz`)
-  Docker (docker.io 29.1.3 + compose 2.40.3) running the upstream production bundle in /opt/buzz
-    relay    ghcr.io/block/buzz@sha256:0a818e27…862422   (main at revision c37d6b8e, 2026-10-21; pinned by digest)
-    postgres 17-alpine, redis 7-alpine, minio (Silo fork, pinned by digest upstream)
-  /opt/buzz/.env             root-only secrets (relay key, Postgres, Redis, S3, hook HMAC)
-  /root/buzz-secrets/        root-only: owner.key/.pub, tester.key/.pub, reader.key/.pub
-Incus container `rupert` (production Rails, unchanged apart from the items marked below)
-  /usr/local/bin/buzz, buzz-acp   built from block/buzz at c37d6b8e (Rust 1.95, release build)
-  /usr/local/bin/opencode         v2.0.32
+host (Caddy: TLS, public 71.162.207.117:443)
+  |-- buzz-herbalhealers.rupertpos.com --> buzz container 10.96.131.4:3000   (relay)
+  |-- herbalhealers.rupertpos.com      --> rupert container 10.96.131.8:3000 (production Rails, untouched)
+
+Incus container `buzz` (Ubuntu 24.04, 4 CPU, 4 GiB, own 30 GiB btrfs pool `buzz`, isolated idmap, nesting)
+  Docker: relay (pinned by digest), postgres 17, redis 7, minio; /opt/buzz/.env and /root/buzz-secrets (root-only)
+  egress-proxy.service: allow-list HTTPS CONNECT proxy 10.96.131.4:3128 for the agent (opencode.ai, models.dev)
+
+Incus container `rupert-agent` (Ubuntu 24.04, 10.96.131.6, 2 CPU, 1.5 GiB, isolated idmap, same btrfs pool)
+  /usr/local/bin/{buzz, buzz-acp} built from block/buzz c37d6b8e; opencode 1.19.3
+  rupert-agent.service -> buzz-acp -> opencode acp -> rupert_mcp_bridge.py (its only tools)
+  network ACL `rupert-agent-egress`: tcp 443 to 71.162.207.117/32 and tcp 3128 to 10.96.131.4/32, everything else dropped
 ```
 
-Why a container with Docker inside: upstream ships a Compose bundle only (relay + Postgres + Redis + S3-compatible
-store); Incus 6.0.5 here has no native OCI containers. The relay itself uses about 70 MB of RAM; the whole stack
-about 250 MB idle.
+### Why a separate `rupert-agent` container (not the `buzz` one, not `rupert`)
 
-Capacity before creating anything (2026-10-21 17:58): host disk 94 GB free of 915 GB (90 % used), 21 GB RAM available
-of 26 GB. The new container is bounded by its own 30 GiB pool (a loop file that grows as written), 4 CPUs and 4 GiB.
+The agent turns text written by chat participants into tool calls, so it is the most attackable process in the system.
+`rupert` holds the production database, `/etc/rupert.env` and the Rails app; `buzz` holds the relay signing key, the
+owner key, Postgres/Redis/S3 passwords and the backups of them. A third, empty container holding only the agent's own key
+and a scoped token means a fully compromised agent gets neither. It also lets the network ACL name exactly what the agent
+may reach.
 
-### Choices that were not obvious
+## Threat model and what limits a compromised agent
 
-- **Own storage pool.** The `default` pool is a plain `dir` pool with no quota. A 30 GiB btrfs loop pool gives the relay
-  a hard disk ceiling and cheap snapshots.
-- **`security.idmap.isolated=true`.** With the shared idmap, Docker failed to start containers with
-  `unable to join session keyring: disk quota exceeded`: the kernel's per-uid key quota is shared by every container
-  that uses the default idmap. An isolated idmap gives the `buzz` container its own uid range and quota.
-- **`security.nesting=true`** plus `security.syscalls.intercept.mknod/setxattr` for Docker.
-- **Do not snapshot the `rupert` container.** On the `dir` pool a snapshot is a full copy: its root is about 49 GB (mostly
-  `/var`) and took host free space from 88 GB to 40 GB within a minute. That snapshot was deleted at once. Changes to
-  `rupert` are therefore small files with their own rollback (see Rollback). The `buzz` container sits on btrfs, where
-  snapshots are cheap: `baseline-before-start` and `stack-up-clean` exist.
-- **Closed relay.** Upstream defaults kept: `BUZZ_REQUIRE_RELAY_MEMBERSHIP=true`, `BUZZ_REQUIRE_AUTH_TOKEN=true`,
-  `RELAY_OWNER_PUBKEY` set, no admin console (`BUZZ_ADMIN_HOST` unset), push gateway off.
-- The relay derives its **community from the host name** in `RELAY_URL` and expects NIP-42 `relay` tags to equal
-  `<scheme-from-RELAY_URL>://<Host header>`. A client must therefore connect with the real host name; an IP address or
-  a port in the URL does not work.
+Assume the model is fully controlled by an attacker (prompt injection from a chat message, a poisoned tool result, or a
+bug in opencode). What it can do:
+
+| It can | Limit |
+| --- | --- |
+| Post messages as `@rupert` in channels the agent was added to | By design; the relay is closed and admin-only today |
+| Call Rupert tools | Only the bridge's allow-list (`rupert_mcp_bridge.py`): `get_workspace_info`, `list_reports`, `sales_summary`, `sales_tax_report`, `inventory_search`, `stock_comparison`, `swipesimple_items`, `list_tasks`, `list_alerts`, `submit_feedback`, `list_my_feedback`. `create_task`, `ai_health`, `recent_errors`, `list_feedback`, `report_context` and everything else are refused by the bridge even though the token could reach some |
+| ... with the token | `reports:read inventory:read alerts:read tasks:read tasks:write`, owned by the first super admin; every call is re-checked against that owner's permissions; revocable (below). `tasks:write` exists only so an allow-listed sender can mark a report "ready"; the allow-list (`FEEDBACK_READY_SENDERS`) is enforced by Rupert, not the agent |
+| Run commands, read files, browse | **Cannot**: opencode's `rupert` agent is `{"*": "deny", "rupert_*": "allow"}`, so the model is offered no shell, file, web or task tools at all (verified: `agent/sandbox-test/run.sh`) |
+| Reach the network | Only via the ACL (next table) |
+| Touch `rupert` files, DB, `/etc/rupert.env`, Rails, sockets | There is no mount, no shared storage and no Rails in the container; the only route to Rupert is HTTPS to its public API with the token |
+
+Network probes run from inside `rupert-agent` after the ACL was applied (2026-10-22):
+
+| Destination | Result |
+| --- | --- |
+| `https://herbalhealers.rupertpos.com/up` via 71.162.207.117:443 (Rupert, relay front) | 200 |
+| `opencode.ai`, `models.dev` through the proxy | 200 |
+| `example.com` through the proxy | refused (403) |
+| direct internet (`1.1.1.1`), DNS, host bridge `10.96.131.1`, the `rupert` container, other containers (`haven`), the relay on 3000/80 directly | dropped |
+
+Residual risks, stated plainly: the agent shares the public front (71.162.207.117:443) with every public Caddy site, so
+it can talk to any of them like an internet user can; the agent holds the same Nostr key Rupert uses for notices (see
+Keys), so compromise of either lets an attacker post as `@rupert`; the proxy lives in the `buzz` container, so the agent
+can reach one extra port (3128) there; nothing stops the agent from sending data out through the model provider (it must
+be allowed to call it). The Buzz channel is only as private as its member list.
+
+### Revoking the agent (any one of these cuts it off)
+
+1. **Rupert token:** System → API access → revoke "Buzz agent (sandboxed container)". The bridge then gets 401 on every
+   tool call; the reply tool still works.
+2. **Stop it:** `incus exec rupert-agent -- systemctl disable --now rupert-agent` (or `incus stop rupert-agent`).
+3. **Relay:** `incus exec buzz -- bash -c 'cd /opt/buzz && ./run.sh remove-member <agent hex pubkey>'`.
+4. **Rotate the key** (if it may have leaked): generate a new keypair, put it in `/etc/rupert-agent/secrets.env` as
+   `BUZZ_PRIVATE_KEY` and in Rupert Settings, add the new pubkey to the relay and channels, remove the old one.
+5. **Network:** `incus config device set rupert-agent eth0 security.acls=` (and stop it) removes nothing from the
+   container; to cut it off at the wire delete the ACL rules instead: `incus network acl rule remove rupert-agent-egress egress`.
 
 ## Hostname and TLS: what you need to add
 
-The relay host name used everywhere so far is **`buzz.stoverparc.org`**. I chose it because `stoverparc.org` names
-(`rupert.stoverparc.org`, `tasks.stoverparc.org`) already resolve to 71.162.207.117 and are served by the same Caddy; it
-does not exist in DNS yet. If you prefer another name (for example under `rupertpos.com`), tell me before you add
-anything and I will change `RELAY_URL` and the Rupert setting; do not add DNS for a different name first, because the
-relay's community is keyed by the host name.
+The chosen name is **`buzz-herbalhealers.rupertpos.com`**. Its DNS already answers `71.162.207.117`, the same address
+`herbalhealers.rupertpos.com` has (checked 2026-10-22), so **no DNS change is needed** unless that answer is a placeholder.
 
-1. **DNS** (wherever `stoverparc.org` is managed): `buzz.stoverparc.org  A  71.162.207.117` (the same address as
-   `rupert.stoverparc.org`; a CNAME to that name works as well).
-2. **Caddy** (`/etc/caddy/Caddyfile` on the host), next to the other site blocks, same conventions:
+1. **Caddy** (`/etc/caddy/Caddyfile`), same conventions as the existing `herbalhealers.rupertpos.com` block (WebSockets
+   work through `reverse_proxy` with no extra settings):
 
    ```
-   buzz.stoverparc.org {
+   buzz-herbalhealers.rupertpos.com {
        import cockpit_incus_access
        bind 192.168.3.251
        encode zstd gzip
@@ -81,226 +101,181 @@ relay's community is keyed by the host name.
    }
    ```
 
-   Then `sudo systemctl reload caddy` (or however you reload it). Caddy proxies WebSockets without extra settings, so
-   `wss://buzz.stoverparc.org` works through the same block.
-3. Check from any machine: `curl -s -H 'Accept: application/nostr+json' https://buzz.stoverparc.org/ | head -c 200`
-   should print JSON that starts with `{"name":"Buzz Relay"`.
+   then reload Caddy.
+2. Check from anywhere: `curl -s -H 'Accept: application/nostr+json' https://buzz-herbalhealers.rupertpos.com/ | head -c 200`
+   prints JSON starting `{"name":"Buzz Relay"`.
 
-This exposes the relay to the internet exactly as Rupert is exposed. The relay is closed (only pubkeys added by the
-owner can read or write), and the admin console is off.
+The relay derives its community from this host name, so changing the name later means recreating the channels.
 
-**After it answers**, tell me (or run these on SER8):
+**After it answers, switch to wss (all on SER8):**
 
 ```bash
-# relay: switch the community URL to wss and restart the relay only
-incus exec buzz -- sed -i 's|^RELAY_URL=.*|RELAY_URL=wss://buzz.stoverparc.org|' /opt/buzz/.env
+incus exec buzz -- sed -i 's|^RELAY_URL=.*|RELAY_URL=wss://buzz-herbalhealers.rupertpos.com|' /opt/buzz/.env
 incus exec buzz -- bash -c 'cd /opt/buzz && ./run.sh restart'
-# remove the temporary scaffolding
-incus exec buzz -- bash -c 'systemctl disable --now buzz-test-port80; rm /etc/systemd/system/buzz-test-port80.service; sed -i "/buzz.stoverparc.org/d" /etc/hosts'
-incus exec rupert -- sed -i '/buzz.stoverparc.org/d' /etc/hosts
+# agent container: relay now via the public front, drop the temporary pieces
+incus exec rupert-agent -- bash -c 'sed -i "s#^BUZZ_RELAY_URL=.*#BUZZ_RELAY_URL=wss://buzz-herbalhealers.rupertpos.com#" /etc/rupert-agent/agent.env
+  sed -i "/buzz-herbalhealers/d" /etc/hosts; echo "71.162.207.117 buzz-herbalhealers.rupertpos.com" >> /etc/hosts'
+incus network acl rule remove rupert-agent-egress egress destination=10.96.131.4/32 destination_port=80 protocol=tcp
+# remove the temporary port-80 forwarder and hosts lines
+incus exec buzz -- bash -c 'systemctl disable --now buzz-test-port80; rm /etc/systemd/system/buzz-test-port80.service; sed -i "/buzz-herbalhealers/d" /etc/hosts'
+incus exec rupert -- sed -i '/buzz-herbalhealers/d' /etc/hosts
 ```
 
-and change Rupert's `BUZZ_RELAY_URL` to `wss://buzz.stoverparc.org` (Settings → Buzz agent, or the runner recipe below),
-then **Check status**.
+and set Rupert's `BUZZ_RELAY_URL` to `wss://buzz-herbalhealers.rupertpos.com` (Settings → Buzz agent), then **Check status**.
+The agent container resolves names only from `/etc/hosts` (it has no DNS), so if `71.162.207.117` ever changes, update
+`/etc/hosts` there and the ACL destination.
 
-### Temporary scaffolding (remove after DNS and TLS work)
+### Temporary scaffolding (remove when TLS is live)
 
-| Where | What | Remove with |
-| --- | --- | --- |
-| `buzz` container | `buzz-test-port80.service`: `socat` from port 80 to the relay on 3000, and `127.0.0.1 buzz.stoverparc.org` in `/etc/hosts` | commands above |
-| `rupert` container | one line in `/etc/hosts`: `10.96.131.4 buzz.stoverparc.org` | commands above |
-| `buzz` `.env` | `RELAY_URL=ws://buzz.stoverparc.org` (plain) | switch to `wss://` as above |
+| Where | What |
+| --- | --- |
+| `buzz` container | `buzz-test-port80.service` (`socat` 80 → relay 3000) and `127.0.0.1 buzz-herbalhealers.rupertpos.com` in `/etc/hosts`; `RELAY_URL=ws://…` in `.env` |
+| `rupert` container | one `/etc/hosts` line `10.96.131.4 buzz-herbalhealers.rupertpos.com` |
+| `rupert-agent` | `/etc/hosts` line to `10.96.131.4` and the ACL rule tcp 80 → `10.96.131.4/32` |
 
 ## Keys and secrets (nothing is in Git or in chat)
 
-| What | Where | Notes |
-| --- | --- | --- |
-| Relay signing key, Postgres/Redis/S3 secrets, hook HMAC | `buzz` container `/opt/buzz/.env` (0600 root) | must stay stable across restarts |
-| Community owner identity | `buzz` container `/root/buzz-secrets/owner.key` (0600 root); public key `650f1cfa…d1c198` | used for `buzz-admin`/CLI administration |
-| Test sender and test reader identities | `/root/buzz-secrets/tester.key`, `reader.key` | public keys `5aab33c6…a793c` (member) and `e18a849d…a98f65` (guest) |
-| The `@rupert` agent key | Rupert Settings (`BUZZ_PRIVATE_KEY`, encrypted at rest) | public key `454095f3…371b4`, npub `npub1g4qftu7d8p3ly0ek8etrkaeps94cec4ylve3rwnmkhv2k4wnwx6qffluc8` |
-| Backups of all of the above | `~/backups/buzz/` on the host, AES-256 encrypted with `~/.config/rupert/offhost.key` | see Backups |
+| What | Where |
+| --- | --- |
+| Relay signing key, DB/Redis/S3 secrets | `buzz` `/opt/buzz/.env` (0600 root) |
+| Community owner key; test sender and reader keys | `buzz` `/root/buzz-secrets/*.key` (0600 root). Public keys: owner `650f1cfa…d1c198`, tester `5aab33c6…a793c` (member), reader `e18a849d…a98f65` (guest) |
+| Agent Nostr key | `rupert-agent` `/etc/rupert-agent/secrets.env` (0600 root, `BUZZ_PRIVATE_KEY`); also in Rupert Settings (encrypted) because Rupert posts its own notices with it. Public key `454095f3…371b4`, npub `npub1g4qftu7d8p3ly0ek8etrkaeps94cec4ylve3rwnmkhv2k4wnwx6qffluc8`. It is the key Rupert already had (since 2026-08-14), copied without printing it. |
+| Rupert token | `/etc/rupert-agent/secrets.env` (`RUPERT_MCP_TOKEN`), name "Buzz agent (sandboxed container)", expires 2027-10-21 |
+| Model key | `/etc/rupert-agent/secrets.env` (`OPENCODE_API_KEY`) once you supply it |
+| Backups of the relay secrets | `~/backups/buzz/` on the host, AES-256 with `~/.config/rupert/offhost.key` |
 
-The agent key is the one Rupert already had (generated 2026-08-14 for an earlier community). It was kept so the agent keeps
-one identity; it is a member of the new relay as role `bot`.
+## Channels and members
 
-## Channels, members, test identities
+| Channel | Id |
+| --- | --- |
+| `#rupert` (Rupert's `BUZZ_CHANNEL`) | `61d13f21-6b96-4ac4-ae80-ee9dd455a500` |
+| `#general` | `89c42578-6603-46c1-a92e-21ac225403ff` |
 
-| Channel | Id | Purpose |
-| --- | --- | --- |
-| `#rupert` | `1fa0b6c7-e910-4dcf-b93b-018caa224642` | `BUZZ_CHANNEL`: Rupert notices and the agent |
-| `#general` | `2a5156df-36d4-4994-980d-87913a6f5d3e` | team chat |
-
-Relay members (`./run.sh list-members` in `/opt/buzz`): owner, the agent (`bot`), `tester` (member), `reader` (guest).
-Channel creation and membership are done with the `buzz` CLI as the owner:
+(The first community, on the earlier host name `buzz.stoverparc.org`, was discarded; its channel ids no longer exist.)
+Members: owner, agent (`bot`), tester (`member`), reader (`guest`). Add a person:
 
 ```bash
-incus exec buzz -- bash -c 'export BUZZ_RELAY_URL=http://buzz.stoverparc.org BUZZ_PRIVATE_KEY=$(cat /root/buzz-secrets/owner.key)
-  buzz channels create --name ops --type stream --visibility open
+incus exec buzz -- bash -c 'cd /opt/buzz && ./run.sh add-member npub1… --role member'
+# then each channel, as the owner:
+incus exec buzz -- bash -c 'export BUZZ_RELAY_URL=http://buzz-herbalhealers.rupertpos.com BUZZ_PRIVATE_KEY=$(cat /root/buzz-secrets/owner.key)
   buzz channels add-member --channel <uuid> --pubkey <hex> --role member'
 ```
 
-**Adding people.** A person installs Buzz Desktop (link on Rupert's `/buzz` card), creates their identity, and gives you
-their public key (`npub1…`). Then, on SER8:
-
-```bash
-incus exec buzz -- bash -c 'cd /opt/buzz && ./run.sh add-member npub1… --role member'   # relay membership (closed relay)
-# then add them to each channel with the owner CLI above (use their hex pubkey)
-```
-
-Add yourself first as `--role admin`. When adding several people in a loop, `sleep 1` between calls (upstream note).
-I could not find a CLI command that creates invite links, so the flow is "send your npub".
+Nobody else has been added; the Rupert header's Buzz card is visible to staff with Overview access, so hold off sharing it
+until you want staff in.
 
 ## Rupert settings (production tenant)
 
-Set from a `rails runner` (the same `EnvStore`/`BuzzAgent` calls the Settings page makes):
-
-| Key | Value now | Before 2026-10-21 |
+| Key | Now | Before 2026-10-21 |
 | --- | --- | --- |
-| `BUZZ_RELAY_URL` | `ws://buzz.stoverparc.org` (becomes `wss://` after DNS) | `wss://techmore.communities.buzz.xyz` |
-| `BUZZ_CHANNEL` | `1fa0b6c7-e910-4dcf-b93b-018caa224642` (`#rupert`) | `c4c0ac29-2440-4914-afee-ab1b26e06a31` |
-| `BUZZ_PRIVATE_KEY` | unchanged (set 2026-08-14) | same |
+| `BUZZ_RELAY_URL` | `ws://buzz-herbalhealers.rupertpos.com` (`wss://` after TLS) | `wss://techmore.communities.buzz.xyz` |
+| `BUZZ_CHANNEL` | `61d13f21-6b96-4ac4-ae80-ee9dd455a500` | `c4c0ac29-2440-4914-afee-ab1b26e06a31` |
 
-**Heads-up:** [buzz.md](buzz.md) said Buzz was not configured in production, but the settings above already existed,
-pointing at a hosted community that is still online (`techmore.communities.buzz.xyz`). They were overwritten before
-this was noticed (the previous values were recovered from the 22:09 UTC SQLite backup). To go back:
-`EnvStore.set('BUZZ_RELAY_URL', 'wss://techmore.communities.buzz.xyz'); EnvStore.set('BUZZ_CHANNEL', 'c4c0ac29-2440-4914-afee-ab1b26e06a31')`
-under `Current.tenant = Tenant.first`. Nothing else referenced those values.
+[buzz.md](buzz.md) said Buzz was not configured, but those settings existed and the hosted community is still online. They
+were overwritten before this was noticed. To go back: `EnvStore.set('BUZZ_RELAY_URL', 'wss://techmore.communities.buzz.xyz')` and
+`EnvStore.set('BUZZ_CHANNEL', 'c4c0ac29-2440-4914-afee-ab1b26e06a31')` under `Current.tenant = Tenant.first`.
 
-The agent profile was published with `BuzzAgent.register!`; the owner added the agent to the relay
-(`./run.sh add-member`) and to both channels.
+Rupert still holds the agent key so `BuzzNotifyJob` (sync and stock notices) can post. Because the agent key now lives
+in two places, a leak of either means rotating it (Revoking, step 4).
 
-### Bug found and fixed on the way: Rupert never actually delivered a message
+### Fixed on the way: Rupert never delivered a message
 
-`BuzzAgent.publish` and `NostrPublisher.publish` took the **first** `OK` the relay sent as the answer to their event.
-The relay also answers the NIP-42 `AUTH` event with an `OK`, so both returned success and closed the socket before the
-real event was stored. Against the live relay `BuzzAgent.notify` and `register!` reported `[true, "OK"]` and nothing
-arrived; the profile never appeared. They now accept only the `OK` whose event id is the one they sent
-(`web/test/services/buzz_agent_test.rb`, `nostr_publisher_test.rb` fail on the old behaviour). Until this ships, run
-`register!` and the Settings test message only after the deploy.
+`BuzzAgent.publish` / `NostrPublisher.publish` took the **first** `OK` as the answer to their event, but the relay also
+answers the NIP-42 `AUTH` event with an `OK`; both returned success and closed before the event was stored. Fixed in
+#297 (match the `OK` to the event id); verified live: `register!` and a notice now arrive and the status shows "registered".
 
-## The agent (`rupert-buzz`)
+## Running the agent
 
-**One runner**: `buzz-acp` drives `opencode acp`. It replies by running the `buzz` CLI, reads Rupert through the
-read-only `scripts/quick_reports.rb`, `scripts/sales_report.rb`, and files reports through `scripts/feedback_intake.rb`
-(the allow-list for "ready for development" is enforced server-side, see [feedback-reports.md](feedback-reports.md)).
-Do not also run `bin/opencode_agent` or `bin/buzz_listener`: they speak as the same identity.
+Files (all in `deploy/ser8/agent/`): `rupert_mcp_bridge.py` (the only tool set: `buzz_reply`, plus the allow-listed Rupert
+tools), `opencode.json` (agent `rupert`, `"*": "deny"`), `rupert-agent-run`, `rupert-agent.service`, `agent.env.example`.
+`buzz-acp` runs `opencode acp` with `BUZZ_ACP_RESPOND_TO=anyone` (membership of the closed relay is the gate).
 
-**Two runners, one identity.** `OpencodeChatAgent` (`bin/opencode_agent`, unit `deploy/ser8/rupert-buzz-chat.service`) is the
-text-only runner that "Ask Rupert in Buzz" (link codes, direct messages) is built on; it cannot file reports or run the
-quick reports. `buzz-acp` (unit `rupert-buzz.service`) can file reports and run the quick reports but does not do
-Ask Rupert in Buzz. The two units list each other in `Conflicts=`, so starting one stops the other. This install uses
-`buzz-acp` because the intake flow (reports, "ready for development") needs it. To switch to Ask Rupert in Buzz:
-`systemctl disable --now rupert-buzz && systemctl enable --now rupert-buzz-chat` (after installing that unit).
+**Why no shell tool:** replying is done by the bridge's `buzz_reply`, which runs `buzz messages send` as an argument list
+(no shell), so opencode needs no bash. Filing reports is the Rupert `submit_feedback` tool; the allow-list for "ready for
+development" is checked by Rupert from the sender pubkey in the event metadata, as before.
 
-Pieces in this repo:
-
-- `deploy/ser8/rupert-buzz.service` (and the optional `rupert-buzz-chat.service`): the unit (user `rupert`, `Restart=on-failure`, no listening port,
-  `ProtectSystem=strict` with only `storage`, `tmp`, `log` and its own `/var/lib/rupert-buzz` writable).
-- `web/bin/buzz_acp_agent`: reads the key, relay and `BUZZ_AUTH_TAG` from the tenant settings with one Rails call, writes
-  the current acp prompt, then execs `buzz-acp` with `opencode acp` as the agent and `BUZZ_ACP_RESPOND_TO=anyone`
-  (membership of the closed relay is the gate; the default `owner-only` would ignore everybody but the agent's owner).
-- `deploy/ser8/buzz/opencode.json`: install as `/etc/rupert-buzz/opencode.json`. Agent `buzz` (the default) may run only
-  `buzz messages send *`, the three Rupert scripts, and nothing else; agent `chat` denies every tool (Ask Rupert).
-
-### Install (after the PR deploys, on SER8)
+Install (already done in this container; for a rebuild):
 
 ```bash
-incus exec rupert -- install -d -m 0755 /etc/rupert-buzz
-incus file push deploy/ser8/buzz/opencode.json rupert/etc/rupert-buzz/opencode.json --mode 0644 --uid 0 --gid 0
-incus file push deploy/ser8/rupert-buzz.service rupert/etc/systemd/system/rupert-buzz.service --mode 0644 --uid 0 --gid 0
-incus exec rupert -- bash -c 'systemctl daemon-reload && systemctl enable --now rupert-buzz && sleep 8 && systemctl status rupert-buzz --no-pager | head -12'
+useradd --system --home-dir /var/lib/rupert-agent --shell /usr/sbin/nologin rupert-agent
+install -d /etc/rupert-agent        # then push: opencode.json, prompt.txt (docs/ops/buzz-agent-prompt.txt), agent.env
+install -m 0755 rupert-agent-run /usr/local/bin/ ; install -m 0755 rupert_mcp_bridge.py /usr/local/lib/rupert-agent/
+# secrets.env (0600): BUZZ_PRIVATE_KEY, RUPERT_MCP_TOKEN, OPENCODE_API_KEY
+systemctl enable --now rupert-agent
 ```
 
-The service only starts when `BUZZ_PRIVATE_KEY` and `BUZZ_RELAY_URL` are set, and `opencode` needs a working key (below).
+### The opencode key (you must supply one)
 
-### The opencode key (you must supply a new one)
+The old key (host `~/.local/share/opencode/auth.json`) is expired. Create a key in the OpenCode Console and add it to
+`/etc/rupert-agent/secrets.env` as `OPENCODE_API_KEY=…`, then `systemctl enable --now rupert-agent`. Tell me whether it is
+a Zen or a Go key: `deepseek-v4-flash` (in `opencode.json`) is in the Zen catalog, not Go's. The free tier does not
+work: calls from anything but the OpenCode apps return `403 free tier can only be used from within OpenCode`.
+The AI-health card in Rupert reads `OPENCODE_API_KEY` from Rupert's own environment, so it will keep saying "not set"
+unless you also put a key there (a second key is safest); the agent does not need Rupert to hold it.
 
-The key in the host's `~/.local/share/opencode/auth.json` is expired (`401 api_key_expired`, see
-[ai-health-monitor.md](ai-health-monitor.md)). Create a key in the OpenCode Console and put it in `/etc/rupert.env` as
-`OPENCODE_API_KEY=…` (root-only file; the unit and the AI-health job both read it), then
-`systemctl restart rupert-buzz rupert-jobs`. Also set `OPENCODE_PROVIDER=zen` (or the model in
-`opencode.json`) to match the plan the key belongs to: `deepseek-v4-flash` is in the Zen catalog, not the Go catalog.
-Until then the agent connects and sees messages but the model call fails; **System → AI health** shows the key as
-expired. The free tier is not an option: calling it from anything but the OpenCode apps returns
-`403 free tier can only be used from within OpenCode`.
+### opencode versions
 
-### opencode version and flags
+- **Agent: opencode 1.19.3** (GitHub release, tarball sha256 `13a8fb29…3336c9b`). It is the one that exposes MCP tools and
+  enforces `permission` for them.
+- opencode 2.0.32 (what is on the host) **does not expose configured MCP servers to the model** (tried remote and local
+  servers, config and ACP, every permission open), and 1.19.3 crashes (`embedder failed to suspend thread`) in a plain
+  container but runs in the nesting-enabled containers used here. That is why the agent container has `security.nesting=true`.
+- `OpencodeCli` (merged in #297) keeps Ask Rupert and the text-only runner working with 2.0.32's flags; Ask Rupert's
+  provider needs `opencode` and a `chat` agent in the `rupert` container, which this change no longer installs.
 
-- **Pinned: opencode 2.0.32** (the build already on the host; binary sha256 `489b5181…47ab607`). Copied to
-  `/usr/local/bin/opencode` in `rupert`.
-- v1.19.3 (latest on GitHub) was tried and **crashes in these containers** (`embedder failed to suspend thread`), so it
-  is not an alternative here.
-- 2.0.32 has no `--pure` or `--dir` and runs a persistent background service unless `--standalone` is given.
-  `OpencodeCli` (new, `web/app/services/opencode_cli.rb`) now builds the one-shot command
-  (`run --standalone --format json --agent <name> <prompt>`, working directory `/tmp/opencode`) for
-  `OpencodeChatAgent` and Ask Rupert, which were failing with `Unrecognized flag: --pure`.
-- Commands that talk to the background service (`opencode debug …`, `opencode mcp list`) start a long-lived server that
-  cannot be killed from another `incus exec` session; avoid them on production. `run --standalone` needs stdin closed
-  (`< /dev/null`; systemd and `IO.popen` with `in: File::NULL` do that) or it never exits.
-- Ask Rupert needs the same `chat` agent: set `OPENCODE_CONFIG=/etc/rupert-buzz/opencode.json` for the web and jobs
-  processes (for example in `/etc/rupert.env`) and restart them. Not done here (out of scope for the Buzz change).
-- MCP: opencode 2.0.32 did not expose a configured remote MCP server to the model (the tool list stayed at the built-in
-  tools even with every permission open), so the planned read-only Rupert MCP token was **not** used and was revoked.
-  The agent reads Rupert through the report scripts instead.
+### Tests that were run
 
-### What the permission rules were tested against
-
-Run with a mock OpenAI-compatible model (so no key is needed) driving `buzz-acp` → `opencode acp` → the `buzz` CLI → the
-relay, on SER8. Each row is a command the "model" tried:
-
-| Command | Result |
-| --- | --- |
-| `buzz messages send --channel … --content "pong"` | allowed, message posted by the agent identity |
-| `ls /root`, `cat /etc/passwd` | denied |
-| `buzz messages send …; ls /root`, `… && ls`, `… \| cat`, newline + second command | denied |
-| `buzz messages send … --content "$(ls /root)"`, backticks | denied |
-| `buzz messages send … --content "$BUZZ_PRIVATE_KEY"` (any `$`) | denied |
-| `buzz messages send … > /root/pwned.txt` | denied (output redirection) |
-| `buzz messages send … --content - < /etc/hostname` | denied (input redirection) |
-| `bin/rails runner scripts/feedback_intake.rb file <<'END' … END` (heredoc) | allowed |
-| same with an extra `< /etc/passwd` | denied |
-| `bin/rails runner scripts/quick_reports.rb today` | allowed |
-
-The first version of the rules allowed `> file`; the redirect and `$` rules were added after that test. The mock server
-and test script are in `deploy/ser8/buzz/permission-test/`; rerun them whenever `opencode.json` or the opencode version
-changes. The real model's behaviour on the same inputs is **not verified** (no key).
+- Mock model, real everything else, through the real unit (relay → buzz-acp → opencode 1.19.3 → bridge → relay / Rupert):
+  a `@rupert` ping from the tester identity got a reply from the agent; `get_workspace_info` returned live data from
+  Rupert through the ACL; `submit_feedback` with `ready_for_development` from a **non-allow-listed** sender created a
+  report "NOT marked ready for development"; after adding the tester to `FEEDBACK_READY_SENDERS` the same call produced a
+  ready report. The test reports/tasks were deleted and the allow-list cleared.
+- `agent/sandbox-test/run.sh`: the model is offered exactly `rupert_buzz_reply`+allowed tools and a shell call is impossible.
+- `agent/test_bridge.py`: forbidden tools never reach Rupert; reply input is validated; no shell is used.
+- A real model's behaviour is **not verified** (no key).
 
 ## Backups
 
-- **`~/.local/bin/buzz-backup.sh`** (from `deploy/ser8/buzz/backup-buzz.sh`) with a host user timer
-  (`buzz-backup.timer`, every 6 h) writes three AES-256 encrypted, decrypt-verified sets to `~/backups/buzz/`: a `pg_dump`,
-  the MinIO and git volumes, and `/opt/buzz/.env` with `/root/buzz-secrets`. It uses the same key file as
-  `rupert-offhost-backup.sh` and keeps 35 sets.
-- The weekly `incus-backup.timer` already exports every instance, so the `buzz` container is included automatically
-  (crash-consistent only, as that script says).
-- **Restore drill done:** the latest dump was restored into a scratch database: 93 tables and 83 events, identical to the
-  live database; the scratch database was dropped.
-- Restore: see the header of `backup-buzz.sh`.
+`~/.local/bin/buzz-backup.sh` + host user timer `buzz-backup.timer` (every 6 h): encrypted, decrypt-verified `pg_dump`,
+MinIO/git volumes and relay secrets in `~/backups/buzz/` (same key as `rupert-offhost-backup.sh`, keeps 35). A restore drill
+loaded the dump into a scratch database (93 tables, 83 events, equal to live) and dropped it. The weekly `incus-backup.timer`
+also exports `buzz` and `rupert-agent` (crash-consistent). The agent container has nothing to back up beyond its env files.
+
+## Operations notes and incidents
+
+- **Never snapshot, freeze or restart the production `rupert` container.** On the `dir` pool a snapshot copies the 49 GB
+  root while the instance is frozen. An early `incus snapshot create rupert …` here froze production for about 4.5
+  minutes (22:05–22:09 UTC 2026-10-21; `/up` returned nothing) and took host free space from 88 GB to 40 GB; the snapshot
+  was deleted straight away. No other operation has touched `rupert` beyond reads, the planned Settings changes, one
+  `/etc/hosts` line, and installing then removing the agent binaries. Snapshots of `buzz`/`rupert-agent` are on btrfs.
+- `incus snapshot create buzz …` sometimes hangs the client; kill it and retry with `timeout`. Processes started in one
+  `incus exec` session often cannot be killed from another in these isolated-idmap containers (`Permission denied`); restart
+  the container instead.
+- `security.idmap.isolated=true` is needed for Docker in `buzz`; the default idmap shares a kernel key quota
+  (`unable to join session keyring: disk quota exceeded`).
+- The relay derives its community from the host in `RELAY_URL` and checks NIP-42 `relay` tags against
+  `<scheme>://<Host header>`; IP or port URLs do not authenticate.
+- Upgrading the relay: back up, change `BUZZ_IMAGE` in `/opt/buzz/.env` to a newer digest, `./run.sh upgrade`; rebuild
+  `buzz`/`buzz-acp` from the matching source revision (Rust 1.95 in a throwaway Ubuntu 24.04 container, not the 26.04 host:
+  glibc 2.43 binaries do not run on 24.04). Current binaries (block/buzz `c37d6b8e`): `buzz` sha256 `37624a48…be7850`,
+  `buzz-acp` `7aef093d…dc54763`.
 
 ## Rollback
 
 | Change | Undo |
 | --- | --- |
-| Relay stack | `incus exec buzz -- bash -c 'cd /opt/buzz && ./run.sh stop'`; or `incus snapshot restore buzz stack-up-clean`; or delete the container and pool (`incus delete -f buzz; incus storage delete buzz`). Nothing else uses them. |
-| Rupert Settings | the `EnvStore.set` lines under "Rupert settings" |
-| Binaries in `rupert` | `rm /usr/local/bin/{buzz,buzz-acp,opencode}` |
-| `/etc/hosts` line in `rupert` | `sed -i '/buzz.stoverparc.org/d' /etc/hosts` |
-| Agent service (once installed) | `systemctl disable --now rupert-buzz; rm /etc/systemd/system/rupert-buzz.service` |
+| Relay stack | `incus exec buzz -- bash -c 'cd /opt/buzz && ./run.sh stop'`, `incus snapshot restore buzz stack-up-clean`, or `incus delete -f buzz; incus storage delete buzz` once `rupert-agent` is gone too |
+| Agent | `incus delete -f rupert-agent; incus network acl delete rupert-agent-egress`; revoke its token |
+| Proxy | `incus exec buzz -- systemctl disable --now egress-proxy` |
+| Rupert Settings | the `EnvStore.set` lines above |
+| `rupert` `/etc/hosts` line | `sed -i '/buzz-herbalhealers/d' /etc/hosts` |
 | Backup timer | `systemctl --user disable --now buzz-backup.timer` |
 
 ## Not verified
 
-- The agent's replies from a **real model** (no valid key): the mock model proved the plumbing and permissions only.
-- `wss://` through your Caddy block and a real phone or desktop client (needs DNS); the QR code on the `/buzz` card
-  opening the Buzz mobile app; whether any public mobile build exists.
-- That `opencode` does not need extra files at runtime on a clean machine beyond `OPENCODE_CONFIG` and an API key.
-- Behaviour of the relay under real use and upgrades. To upgrade: take a backup, change `BUZZ_IMAGE` in `.env` to a newer
-  digest, `./run.sh upgrade`; the binaries in `rupert` should then be rebuilt from the matching source revision.
-
-## Build record
-
-Rust 1.95 (rustup) in a throwaway Ubuntu 24.04 container (`buzz-build`, deleted afterwards) on the `buzz` pool;
-`cargo build --release -p buzz-acp -p buzz-cli -p buzz-admin` at block/buzz `c37d6b8e`. Binary sha256:
-`buzz` `37624a48…be7850`, `buzz-acp` `7aef093d…dc54763`, `buzz-admin` `b3ab54ca…fe8e33`. The host is Ubuntu 26.04 (glibc 2.43)
-and the containers are 24.04 (glibc 2.39), which is why the binaries were not built on the host.
+- A real model's replies, and the permission-sensitive question end to end with real prose (no key).
+- `wss://` through your Caddy block and any real phone or desktop client; the QR code opening the Buzz mobile app; whether a
+  public mobile build exists.
+- Whether opencode 1.19.3 honours `HTTPS_PROXY` for the model provider (the proxy and ACL are verified with curl; the first
+  real model call will show in `journalctl -u egress-proxy` in the `buzz` container as `CONNECT opencode.ai`).
+- Behaviour of the relay under real use.

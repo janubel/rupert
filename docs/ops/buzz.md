@@ -59,7 +59,7 @@ Audit on 2026-10-21 found three overlapping implementations with three different
 | Implementation | What it is | Decision |
 | --- | --- | --- |
 | `OpencodeChatAgent` (`bin/opencode_agent`) | LLM reply through `opencode run` with every tool disabled, plus a one-line operations snapshot | Text-only fallback. Uses `BuzzAgentPrompt` in `text_only` mode |
-| `bin/buzz_acp_agent` + `docs/ops/buzz-agent-prompt.txt` | The upstream `buzz-acp` harness driving `opencode acp`; runs read-only quick reports and files reports | **The runner deployed on SER8** (`deploy/ser8/rupert-buzz.service`, see [buzz-relay-ser8.md](buzz-relay-ser8.md)). The opencode agent it drives is limited to the listed commands (`deploy/ser8/buzz/opencode.json`) |
+| `buzz-acp` in the sandboxed `rupert-agent` container + `docs/ops/buzz-agent-prompt.txt` | The upstream `buzz-acp` harness driving `opencode acp`; reads Rupert and files reports only through a scoped MCP token | **The runner deployed on SER8** (`deploy/ser8/agent/`, see [buzz-relay-ser8.md](buzz-relay-ser8.md)). It has no shell, file or web tools |
 | `BuzzListener` + `BuzzResponder` | Regex rules ("sync now", "status", "counts"), no LLM | Legacy fallback; not the recommended runner. It can start a sync from chat, which the LLM agent cannot |
 
 One agent is enough: they all speak as `@rupert` with the same key, so run exactly one. The acp prompt in `docs/ops/` is generated; after editing `config/buzz_agent/*.md` refresh it with

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "autoupdate": false,
+  "model": "opencode/deepseek-v4-flash",
+  "default_agent": "rupert",
+  "mcp": {
+    "rupert": {
+      "type": "local",
+      "command": ["python3", "/usr/local/lib/rupert-agent/rupert_mcp_bridge.py"],
+      "enabled": true
+    }
+  },
+  "agent": {
+    "rupert": {
+      "mode": "primary",
+      "description": "The @rupert agent in Buzz. Its only tools are the rupert_* ones from the bridge: post a reply, read Rupert, file a report. Shell, file and web tools do not exist for it.",
+      "permission": {
+        "*": "deny",
+        "rupert_*": "allow"
+      }
+    }
+  }
+}
