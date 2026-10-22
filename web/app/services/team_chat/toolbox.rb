@@ -25,7 +25,9 @@ module TeamChat
 
     attr_reader :calls, :tools_used, :results
 
-    def initialize(user:, room:, reply:)
+    # only: tool names to offer (the question's data guide topics, for local bots); nil offers every tool.
+    def initialize(user:, room:, reply:, only: nil)
+      @only = only&.map(&:to_s)
       @user = user
       @room = room
       @reply = reply
@@ -100,18 +102,20 @@ module TeamChat
     end
 
     def mcp_definitions
-      Mcp::Registry.available_to(@token).select(&:read_only).map do |tool|
+      Mcp::Registry.available_to(@token).select(&:read_only).select { |tool| offered?(tool.tool_name) }.map do |tool|
         Definition.new(name: tool.tool_name, description: tool.description, kind: :mcp, schema: tool.input_schema,
           activity: "Checking #{tool.title.to_s.downcase.presence || tool.tool_name.tr('_', ' ')}")
       end
     end
 
     def write_definitions
-      WRITE_TOOLS.filter_map { |name| Mcp::Registry.find(name) }.select { |tool| Actions.permitted?(@user, tool) }.map do |tool|
+      WRITE_TOOLS.select { |name| offered?(name) }.filter_map { |name| Mcp::Registry.find(name) }.select { |tool| Actions.permitted?(@user, tool) }.map do |tool|
         Definition.new(name: tool.tool_name, kind: :write, schema: tool.input_schema, activity: 'Preparing a change for approval',
           description: "PROPOSES a change; nothing happens until a person presses Approve on the card it creates. #{tool.description}")
       end
     end
+
+    def offered?(name) = @only.nil? || @only.include?(name.to_s)
 
     def run_lookup(name, args)
       result = @lookups.call(name, args)

@@ -51,6 +51,9 @@ class McpServerTest < ActionDispatch::IntegrationTest
     assert_includes uris, 'rupert://guide/getting-started'
     rpc(secret, 'resources/read', { uri: 'rupert://guide/getting-started' })
     assert_match(/submit_feedback/, response.parsed_body.dig('result', 'contents', 0, 'text'))
+    assert_includes uris, 'rupert://guide/data'
+    rpc(secret, 'resources/read', { uri: 'rupert://guide/data' })
+    assert_match(/### Sales tax\nTools: `sales_tax_report`/, response.parsed_body.dig('result', 'contents', 0, 'text'))
     rpc(secret, 'resources/read', { uri: 'rupert://nope' })
     assert_equal(-32_002, response.parsed_body.dig('error', 'code'))
   end
@@ -59,7 +62,7 @@ class McpServerTest < ActionDispatch::IntegrationTest
     _, limited = issue(scopes: ['roadmap:read'])
     rpc(limited, 'tools/list')
     names = response.parsed_body.dig('result', 'tools').map { |tool| tool['name'] }
-    assert_equal %w[get_workspace_info submit_feedback list_my_feedback].sort, names.sort
+    assert_equal %w[get_workspace_info data_guide submit_feedback list_my_feedback].sort, names.sort
 
     _, full = issue
     rpc(full, 'tools/list')

@@ -51,7 +51,10 @@ module TeamChat
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       return fail!(:error, started) unless @asker && @trigger && TeamChat.allowed?(@asker)
 
-      @toolbox = Toolbox.new(user: @asker, room: @room, reply: @reply)
+      @topics = question_topics
+      # Local bots get only the tools for what the question is about: a smaller prompt, faster and fewer wrong picks.
+      only = DataGuide.tools_for(@topics) if @local_agent && @topics.any?
+      @toolbox = Toolbox.new(user: @asker, room: @room, reply: @reply, only: only)
       text = answer
       finish(text, started)
     rescue Failure => e
@@ -105,6 +108,7 @@ module TeamChat
         You are answering #{@asker.display_name} (role: #{@asker.role.to_s.tr('_', ' ')}). Messages from people are written as "Name: text".
         Today is #{Date.current.strftime('%A')} #{Date.current.iso8601} (#{Time.zone.name}). Rupert's time zone applies to every date you give.
 
+        #{about_this_question}
         ## Using tools
         - For any figure, record, list or status, call a tool first; never guess. Pick the narrowest tool and date range that answers the question.
         - You may call several tools, at most #{Toolbox::MAX_CALLS} per message. If a tool fails or is not available, say what you could not check.
@@ -242,6 +246,23 @@ module TeamChat
       note_slow(meta)
     end
 
+    # The data guide topics a question is about: from its own words, else from the conversation just before it.
+    def question_topics
+      found = DataGuide.match(@trigger.body)
+      return found if found.any?
+
+      DataGuide.match(context_rows.last(4).map(&:body).join("\n"))
+    rescue StandardError
+      []
+    end
+
+    def about_this_question
+      return '' if @topics.blank?
+
+      "## About this question (how this data is stored)\n" +
+        @topics.map { |topic| "- #{topic.title} (tools: #{topic.tools.join(', ')}): #{topic.card}" }.join("\n") + "\n"
+    end
+
     # What the bot was given: its tool results and the conversation it saw.
     def checked_sources
       Array(@toolbox&.results) + transcript.map { |entry| entry[:content] }
@@ -283,6 +304,7 @@ module TeamChat
       ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
       @reply.meta.to_h.merge('engine' => @engine, 'model' => (@engine == 'opencode_cli' ? AskRupert::Providers::Opencode.new.model : @config.model),
         'tokens_in' => @tokens_in, 'tokens_out' => @tokens_out, 'tools' => @toolbox&.tools_used.to_a.uniq, 'duration_ms' => ms, 'outcome' => outcome)
+        .tap { |meta| meta['topics'] = @topics.map(&:key) if @topics.present? }
     end
 
     # --- conversation ---
