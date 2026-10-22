@@ -101,6 +101,21 @@
         <p data-team-chat-target="topic"><%= @room.dm? ? 'Direct message: only the two of you read it. Mention @rupert to bring him in.' : (@room.topic.presence || 'No topic yet.') %></p>
       </div>
       <div class="chat-head-tools">
+        <details class="chat-bots">
+          <summary class="chat-bots-button" aria-label="Bot key: which bots can answer here">🤖 <span>Bots</span></summary>
+          <div class="chat-bots-panel" role="note">
+            <p class="chat-bots-intro">Mention a bot with @ to ask it. Each uses Rupert’s tools with your permissions, and changes wait for your Approve.</p>
+            <dl>
+              <% TeamChat::LocalAgents.key.each do |bot| %>
+                <div class="chat-bots-row">
+                  <dt><strong>@<%= bot[:handle] %></strong> <span class="chat-bots-where is-<%= bot[:where] == 'cloud' ? 'cloud' : 'local' %>"><%= bot[:where] == 'cloud' ? 'cloud' : 'local' %></span></dt>
+                  <dd><span class="chat-bots-model"><%= bot[:model] %></span> — <%= bot[:purpose] %></dd>
+                </div>
+              <% end %>
+            </dl>
+            <p class="chat-bots-foot">Local models load on first use and unload after 10 idle minutes, so the first answer after a break is slower. Each reply shows how long it took; <%= link_to 'Model scores', team_chat_scores_path, class: 'underline' %> compares them.</p>
+          </div>
+        </details>
         <% if @room.channel? %>
           <span class="chat-member-stack" aria-label="People in this room">
             <% @members.first(6).each do |member| %>

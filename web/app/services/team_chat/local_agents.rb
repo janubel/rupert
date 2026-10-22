@@ -13,7 +13,7 @@ module TeamChat
   #
   # Which are on comes from the instance environment, never from a web setting.
   module LocalAgents
-    Agent = Struct.new(:handle, :name, :model, :about, :color, :cloud, keyword_init: true) do
+    Agent = Struct.new(:handle, :name, :model, :about, :color, :cloud, :purpose, keyword_init: true) do
       def mention = /(?<![\w@])@#{handle}\b/i
       def cloud? = cloud == true
       def initials = name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase
@@ -22,15 +22,20 @@ module TeamChat
 
     ALL = [
       Agent.new(handle: 'deepseek', name: 'DeepSeek', model: ModelConfig::DEFAULT_GO_MODEL, color: '#1d4ed8', cloud: true,
-        about: 'DeepSeek V4.1 Flash via OpenCode, cloud'),
+        about: 'DeepSeek V4.1 Flash via OpenCode, cloud',
+        purpose: 'Fastest and strongest at reasoning. Runs in the cloud through OpenCode, so what you ask is sent there.'),
       Agent.new(handle: 'qwen', name: 'Qwen 3.5', model: 'qwen3.5-4b', color: '#c2410c',
-        about: 'Alibaba Qwen3.5 4B, local'),
+        about: 'Alibaba Qwen3.5 4B, local',
+        purpose: 'Best of the small local models at using Rupert’s tools. Private, slower.'),
       Agent.new(handle: 'lfm', name: 'LFM2.5', model: 'lfm2.5-8b-a1b', color: '#0f766e',
-        about: 'Liquid AI LFM2.5-8B-A1B, local'),
+        about: 'Liquid AI LFM2.5-8B-A1B, local',
+        purpose: 'Local mixture-of-experts model: quick for its size. Private.'),
       Agent.new(handle: 'bonsai', name: 'Ternary Bonsai', model: 'ternary-bonsai-2-9b', color: '#65a30d',
-        about: 'PrismML Ternary Bonsai 2 9B, local'),
+        about: 'PrismML Ternary Bonsai 2 9B, local',
+        purpose: 'Experimental 1.58-bit local model. Private.'),
       Agent.new(handle: 'gemma', name: 'Gemma 4', model: 'gemma-4-e4b', color: '#9333ea',
-        about: 'Google Gemma 4 E4B, local')
+        about: 'Google Gemma 4 E4B, local',
+        purpose: 'Google’s small local model, good for general questions. Private.')
     ].freeze
 
     def self.base_url = ENV['RUPERT_LOCAL_LLM_URL'].to_s.strip.chomp('/').presence
@@ -54,6 +59,14 @@ module TeamChat
     def self.mentioned(body)
       text = body.to_s
       all.select { |agent| text.match?(agent.mention) }.sort_by { |agent| text =~ agent.mention }
+    end
+
+    # Every bot that can answer here, for the bot key: @rupert first, then the @agents.
+    def self.key
+      rupert = ModelConfig.current
+      [{ handle: 'rupert', name: 'Rupert', model: rupert.model.presence || rupert.label, where: rupert.local? ? 'this server' : 'cloud',
+         purpose: "The main assistant: answers when you write @rupert, and every message in your own Rupert room. Now using #{rupert.label}." }] +
+        all.map { |agent| { handle: agent.handle, name: agent.name, model: agent.model, where: agent.cloud? ? 'cloud' : 'this server', purpose: agent.purpose } }
     end
 
     def self.persona(agent)

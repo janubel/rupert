@@ -1722,3 +1722,21 @@ body.tour-active { overflow-x:hidden; }
 .chat-main > .chat-head,.chat-main > .chat-pins,.chat-body > .chat-compose,.chat-thread > .chat-compose,.chat-thread > .chat-thread-head { flex:none; }
 .chat-app > .chat-rail,.chat-app > .chat-main,.chat-app > .chat-thread { min-height:0; }
 .chat-thread > .chat-thread-log { flex:1;height:auto;min-height:0; }
+/* Team chat: bot key (hover or tap) and answer times next to bot replies. */
+.chat-bots { position:relative; }
+.chat-bots-button { display:inline-flex;align-items:center;gap:.3rem;min-height:2rem;padding:.2rem .6rem;border:1px solid var(--color-edge);border-radius:999px;background:var(--color-paper);color:var(--color-ink);font-size:.76rem;font-weight:650;cursor:pointer;list-style:none; }
+.chat-bots-button::-webkit-details-marker { display:none; }
+.chat-bots-panel { position:absolute;right:0;top:calc(100% + .35rem);z-index:25;display:none;width:min(24rem,80vw);padding:.75rem .85rem;border:1px solid var(--color-edge);border-radius:.75rem;background:var(--color-paper);box-shadow:0 16px 40px -18px rgba(0,0,0,.4);font-size:.78rem;color:var(--color-ink); }
+.chat-bots[open] .chat-bots-panel,.chat-bots:hover .chat-bots-panel,.chat-bots:focus-within .chat-bots-panel { display:block; }
+.chat-bots-intro,.chat-bots-foot { margin:0;color:var(--color-mocha); }
+.chat-bots-foot { margin-top:.5rem;font-size:.72rem; }
+.chat-bots-panel dl { margin:.5rem 0 0; }
+.chat-bots-row { padding:.4rem 0;border-top:1px solid var(--color-fog); }
+.chat-bots-row dt { display:flex;align-items:center;gap:.4rem; }
+.chat-bots-row dd { margin:.15rem 0 0;color:var(--color-mocha); }
+.chat-bots-model { font-family:ui-monospace,monospace;font-size:.72rem;color:var(--color-ink); }
+.chat-bots-where { padding:0 .35rem;border-radius:.3rem;font-size:.62rem;font-weight:750;text-transform:uppercase;letter-spacing:.04em; }
+.chat-bots-where.is-cloud { background:color-mix(in srgb,#2563eb 14%,var(--color-paper));color:#1d4ed8; }
+.chat-bots-where.is-local { background:color-mix(in srgb,#16a34a 14%,var(--color-paper));color:#15803d; }
+.chat-msg-answer { font-size:.66rem;color:var(--color-taupe);white-space:nowrap; }
+@media (max-width:760px) { .chat-member-stack { display:none; } .chat-head { flex-wrap:wrap;gap:.4rem; } .chat-bots-button span { display:none; } }
