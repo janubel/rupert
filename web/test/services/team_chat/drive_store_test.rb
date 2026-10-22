@@ -77,6 +77,14 @@ class TeamChatDriveStoreTest < ActiveSupport::TestCase
     Rack::Test::UploadedFile.new(file.path, 'image/png', true, original_filename: 'shelf-3.png')
   end
 
+  # Jobs reset Current when they finish; the test carries on as the same person.
+  def run_jobs(only, &block)
+    block ? perform_enqueued_jobs(only: only, &block) : perform_enqueued_jobs(only: only)
+  ensure
+    Current.tenant = @tenant
+    Current.user = @user
+  end
+
   def post_file
     TeamChat::Post.call(room: @room, user: @user, body: 'shelf', files: [upload]).message.attachments.first
   end
@@ -84,7 +92,7 @@ class TeamChatDriveStoreTest < ActiveSupport::TestCase
   test 'posting a file queues a copy to Drive; the copy lands in the room folder and is verified' do
     attachment = nil
     assert_enqueued_with(job: TeamChat::AttachmentDriveJob) { attachment = post_file }
-    perform_enqueued_jobs(only: TeamChat::AttachmentDriveJob)
+    run_jobs(TeamChat::AttachmentDriveJob)
     attachment.reload
     assert_equal 'stored', attachment.drive_status
     assert_equal Digest::MD5.hexdigest(PNG), attachment.drive_md5
@@ -97,20 +105,20 @@ class TeamChatDriveStoreTest < ActiveSupport::TestCase
     assert_equal TeamChat::DriveStore.drive_url(attachment.drive_file_id), attachment.as_payload(@room)[:drive_url]
 
     second = post_file
-    perform_enqueued_jobs(only: TeamChat::AttachmentDriveJob)
+    run_jobs(TeamChat::AttachmentDriveJob)
     assert_equal stored[:metadata].parents.first, @drive.files.fetch(second.reload.drive_file_id)[:metadata].parents.first, 'folders are reused'
   end
 
   test 'a failed copy is recorded and the daily sweep retries it, then drops the local copy after the keep period' do
     @drive.fail_upload = true
     attachment = post_file
-    perform_enqueued_jobs(only: TeamChat::AttachmentDriveJob)
+    run_jobs(TeamChat::AttachmentDriveJob)
     assert_equal 'failed', attachment.reload.drive_status
     assert attachment.drive_error.present?
     assert attachment.data.present?, 'Rupert keeps the file until Drive has it'
 
     @drive.fail_upload = false
-    perform_enqueued_jobs(only: TeamChat::AttachmentDriveJob) { TeamChat::AttachmentDriveSweepJob.perform_now }
+    run_jobs(TeamChat::AttachmentDriveJob) { TeamChat::AttachmentDriveSweepJob.perform_now }
     Current.tenant = @tenant
     assert_equal 'stored', attachment.reload.drive_status
     assert attachment.data.present?
@@ -124,7 +132,7 @@ class TeamChatDriveStoreTest < ActiveSupport::TestCase
 
   test 'a Drive copy that changed is refused when fetched' do
     attachment = post_file
-    perform_enqueued_jobs(only: TeamChat::AttachmentDriveJob)
+    run_jobs(TeamChat::AttachmentDriveJob)
     @drive.corrupt_download = true
     assert_raises(TeamChat::DriveStore::Error) { TeamChat::DriveStore.new.fetch(attachment.reload) }
   end
@@ -136,9 +144,10 @@ class TeamChatDriveStoreTest < ActiveSupport::TestCase
 
   test 'deleting a message moves its Drive copies to the trash' do
     attachment = post_file
-    perform_enqueued_jobs(only: TeamChat::AttachmentDriveJob)
+    run_jobs(TeamChat::AttachmentDriveJob)
     id = attachment.reload.drive_file_id
-    perform_enqueued_jobs(only: TeamChat::DriveTrashJob) { attachment.message.soft_delete! }
+    message = attachment.message
+    run_jobs(TeamChat::DriveTrashJob) { message.soft_delete! }
     assert @drive.files.fetch(id)[:trashed]
   end
 end
