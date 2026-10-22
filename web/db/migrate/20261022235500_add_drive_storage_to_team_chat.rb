@@ -6,7 +6,8 @@
 class AddDriveStorageToTeamChat < ActiveRecord::Migration[8.1]
   def change
     add_column :chat_attachments, :drive_file_id, :string
-    add_column :chat_attachments, :drive_status, :string, null: false, default: 'local'
+    # nil = only in Rupert (local); 'stored' = verified in Drive; 'failed' = last copy attempt failed.
+    add_column :chat_attachments, :drive_status, :string
     add_column :chat_attachments, :drive_md5, :string
     add_column :chat_attachments, :drive_stored_at, :datetime
     add_column :chat_attachments, :drive_error, :string

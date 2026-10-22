@@ -835,7 +835,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_235500) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "drive_file_id"
-    t.string "drive_status", default: "local", null: false
+    t.string "drive_status"
     t.string "drive_md5"
     t.datetime "drive_stored_at"
     t.string "drive_error"

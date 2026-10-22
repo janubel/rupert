@@ -14,7 +14,7 @@ module TeamChat
         Current.tenant = tenant
         next unless DriveStore.available?
 
-        Attachment.where(drive_status: %w[local failed]).where.not(data: nil).order(:id).limit(BATCH).pluck(:id)
+        Attachment.where(drive_status: [nil, 'local', 'failed']).where.not(data: nil).order(:id).limit(BATCH).pluck(:id)
                   .each { |id| AttachmentDriveJob.perform_later(id) }
         Attachment.where(drive_status: 'stored', drive_stored_at: ...DriveStore::KEEP_LOCAL_FOR.ago).where.not(data: nil)
                   .update_all(data: nil, updated_at: Time.current)
