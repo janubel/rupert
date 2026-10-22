@@ -537,7 +537,8 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     sign_in(@admin)
     get team_chat_path
     follow_redirect!
-    assert_select '.chat-bots .chat-bots-row', 4
+    assert_select '.chat-bots .chat-bots-row', 5
+    assert_select '.chat-bots-row dt', /@gemma\s+local/
     assert_select '.chat-bots-row dt', /@rupert/
     assert_select '.chat-bots-row dt', /@rupert\s+cloud/
     assert_select '.chat-bots-row dt', /@qwen\s+local/
