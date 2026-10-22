@@ -9,7 +9,12 @@ module Finance
   # Posting rules (cash vs accrual kept deliberately simple for v1):
   #   expense        DR <expense account>      CR <cash/card by method>
   #   vendor payment DR accounts payable       CR <cash/card by method>
-  #   sale           DR <cash by method>       CR sales revenue (+ sales tax)
+  #   sale           DR <receipt account>      CR sales revenue (+ sales tax)
+  #   refund         DR refunds (+ sales tax)  CR <receipt account>
+  #
+  # Sales are recognised when the payment is taken. Card receipts wait in "Card
+  # settlements receivable" (1150) until the processor's deposit clears them;
+  # that settlement step (deposit net of fees) is not posted automatically yet.
   class Posting
     # Raised when an entry cannot be posted (for example a required account is
     # missing). Callers post inside the same transaction as the record, so the
@@ -23,6 +28,20 @@ module Finance
       'ach' => '1100',
       'card' => '2200'           # Credit cards payable (settlement clears it)
     }.freeze
+
+    # Debit (sale) / credit (refund) account by tender. Card receipts are not
+    # cash: they sit in the settlements account until the processor deposits.
+    # Gift card, check-less "other" and store credit keep the historical Cash
+    # treatment; there is no liability account for them yet.
+    RECEIPT_BY_METHOD = {
+      'card' => '1150',
+      'check' => '1100'
+    }.freeze
+    CARD_CLEARING_CODE = '1150'
+    REFUNDS_CODE = '4200'
+    # Tenders with no honest ledger treatment yet (they create or consume a
+    # liability, not cash); refunds in these are flagged for a manual entry.
+    MANUAL_REFUND_METHODS = %w[store_credit gift_card].freeze
 
     # Default expense account by Finance::Expense category.
     EXPENSE_BY_CATEGORY = {
@@ -94,15 +113,13 @@ module Finance
         posted = JournalEntry.for_source('Core::Payment', payment.id).posted.first
         return posted if posted
 
-        # All receipts land in Cash; splitting card vs cash settlement is a
-        # bank-reconciliation concern (roadmap F40), not a posting concern.
-        cash = account(FALLBACK_CASH_CODE)
+        receipt = account(RECEIPT_BY_METHOD.fetch(payment.method.to_s, FALLBACK_CASH_CODE))
         revenue = account(REVENUE_CODE)
         amount = payment.amount_cents.to_i
         tax = sales_tax_portion(payment)
         net = amount - tax
         lines = [
-          { account_id: cash.id, debit_cents: amount, memo: cash.name },
+          { account_id: receipt.id, debit_cents: amount, memo: receipt.name },
           { account_id: revenue.id, credit_cents: net, memo: revenue.name }
         ]
         if tax.positive?
@@ -117,6 +134,75 @@ module Finance
         )
       end
 
+      # Money back to the customer: the reverse of a sale for the refunded
+      # amount, tax portion included. Idempotent per refund.
+      def refund(refund, created_by: nil)
+        posted = JournalEntry.for_source('Core::Refund', refund.id).posted.first
+        return posted if posted
+
+        if MANUAL_REFUND_METHODS.include?(refund.method.to_s)
+          raise Error, "A #{refund.method.to_s.tr('_', ' ')} refund needs a manual journal entry; it was not posted automatically."
+        end
+
+        receipt = account(RECEIPT_BY_METHOD.fetch(refund.method.to_s, FALLBACK_CASH_CODE))
+        refunds = account(REFUNDS_CODE)
+        amount = refund.amount_cents.to_i
+        tax = refund_tax_portion(refund)
+        lines = [
+          { account_id: refunds.id, debit_cents: amount - tax, memo: refunds.name },
+          { account_id: receipt.id, credit_cents: amount, memo: receipt.name }
+        ]
+        lines.insert(1, { account_id: account(SALES_TAX_CODE).id, debit_cents: tax, memo: 'Sales tax refunded' }) if tax.positive?
+        JournalEntry.post!(
+          kind: 'refund',
+          posted_on: (refund.refunded_at || Time.current).to_date,
+          memo: "Refund · #{refund.order&.order_number}".strip,
+          source_type: 'Core::Refund', source_id: refund.id, created_by: created_by,
+          lines: lines
+        )
+      end
+
+      # Keep a payment's ledger entry true to the payment (the live hook). A
+      # completed payment is posted; a changed one is voided and posted again
+      # (as expenses are); one that is no longer completed loses its entry.
+      def sync_sale(payment, created_by: nil)
+        unless payment.status == 'completed'
+          void_source('Core::Payment', payment.id)
+          return nil
+        end
+        existing = JournalEntry.for_source('Core::Payment', payment.id).posted.first
+        return existing if existing && sale_entry_current?(existing, payment)
+
+        existing&.void!
+        sale(payment, created_by: created_by)
+      end
+
+      def sync_refund(refund, created_by: nil)
+        if refund.discarded?
+          void_source('Core::Refund', refund.id)
+          return nil
+        end
+
+        existing = JournalEntry.for_source('Core::Refund', refund.id).posted.first
+        return existing if existing && existing.journal_lines.sum { |l| l.credit_cents.to_i } == refund.amount_cents.to_i
+
+        existing&.void!
+        refund(refund, created_by: created_by)
+      end
+
+      # Completed payments and live refunds with no posted entry, for the
+      # reports notice and the backfill task. Current tenant only.
+      def unposted_sales
+        Core::Payment.completed.where.not(id: posted_source_ids('Core::Payment'))
+      end
+
+      def unposted_refunds
+        Core::Refund.where.not(id: posted_source_ids('Core::Refund'))
+      end
+
+      # The standard account with this code, seeding the chart if it is missing.
+      def ledger_account(code) = account(code)
+
       # Void the posted entry for a source record (used when an expense changes
       # or is removed). Returns the voided entry, or nil when none was posted.
       def void_source(source_type, source_id)
@@ -127,7 +213,7 @@ module Finance
 
       # Re-post every money record that has no entry yet. Safe to re-run.
       def backfill!(created_by: nil)
-        counts = { expenses: 0, vendor_payments: 0, sales: 0 }
+        counts = { expenses: 0, vendor_payments: 0, sales: 0, refunds: 0 }
         Finance::Expense.find_each do |expense|
           expense(expense, created_by: created_by)
           counts[:expenses] += 1
@@ -140,10 +226,25 @@ module Finance
           sale(payment, created_by: created_by)
           counts[:sales] += 1
         end
+        Core::Refund.find_each do |refund|
+          refund(refund, created_by: created_by)
+          counts[:refunds] += 1
+        end
         counts
       end
 
       private
+
+      def posted_source_ids(source_type)
+        JournalEntry.posted.where(source_type: source_type).select(Arel.sql('CAST(source_id AS INTEGER)'))
+      end
+
+      def sale_entry_current?(entry, payment)
+        lines = entry.journal_lines
+        entry.posted_on == (payment.paid_at || Time.current).to_date &&
+          lines.sum { |l| l.debit_cents.to_i } == payment.amount_cents.to_i &&
+          lines.any? { |l| l.account_id == account(RECEIPT_BY_METHOD.fetch(payment.method.to_s, FALLBACK_CASH_CODE)).id && l.debit_cents.to_i.positive? }
+      end
 
       # Re-posting a source (after an edit voided its entry) leaves a bank
       # statement line pointing at the voided entry. Move the link to the new
@@ -194,6 +295,22 @@ module Finance
         previous = order.payments.completed.where('id < ?', payment.id).sum(:amount_cents)
         before = [(previous * tax) / total, tax].min
         after = [((previous + payment.amount_cents.to_i) * tax) / total, tax].min
+        after - before
+      end
+
+      # A refund gives back tax in proportion to the amount refunded, like a
+      # payment collected it; earlier refunds on the order use up their share.
+      def refund_tax_portion(refund)
+        order = refund.order
+        return 0 unless order
+        gross = order.gross_cents.to_i
+        tax = order.tax_cents.to_i
+        return 0 if gross <= 0 || tax <= 0
+
+        total = gross + order.tip_cents.to_i
+        previous = order.refunds.where('id < ?', refund.id).sum(:amount_cents)
+        before = [(previous * tax) / total, tax].min
+        after = [((previous + refund.amount_cents.to_i) * tax) / total, tax].min
         after - before
       end
     end

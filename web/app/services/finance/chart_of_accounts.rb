@@ -9,6 +9,7 @@ module Finance
       # Assets
       { code: '1000', name: 'Cash', type: 'asset' },
       { code: '1100', name: 'Checking account', type: 'asset' },
+      { code: '1150', name: 'Card settlements receivable', type: 'asset' },
       { code: '1200', name: 'Accounts receivable', type: 'asset' },
       { code: '1300', name: 'Inventory', type: 'asset' },
       { code: '1400', name: 'Fixed assets', type: 'asset' },

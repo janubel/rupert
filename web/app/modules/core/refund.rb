@@ -21,5 +21,21 @@ module Core
     validates :refunded_at, presence: true
 
     scope :recent, ->(limit = 50) { order(refunded_at: :desc).limit(limit) }
+
+    after_commit :sync_ledger
+
+    private
+
+    # See Core::Payment#sync_ledger: reported, never raised, and visible as unposted.
+    def sync_ledger
+      tenant = self.tenant || Current.tenant
+      return unless tenant
+
+      Current.set(tenant: tenant) do
+        destroyed? ? Finance::Posting.void_source('Core::Refund', id) : Finance::Posting.sync_refund(self)
+      end
+    rescue StandardError => e
+      Rails.error.report(e, handled: true, context: { refund_id: id, source: 'ledger_refund_posting' })
+    end
   end
 end
