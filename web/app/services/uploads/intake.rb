@@ -46,9 +46,9 @@ module Uploads
     private
 
     # Over capacity is an error, not a new row: a flood must not keep growing the table.
-    def check_capacity!
+    def check_capacity!(incoming_bytes: 0)
       raise Error, "This workspace has reached its limit of #{DAILY_LIMIT} uploads in 24 hours. Try again tomorrow, or ask an administrator." if Upload.where('created_at > ?', 1.day.ago).count >= DAILY_LIMIT
-      raise Error, 'The inbox storage limit (2 GiB) has been reached. Ask an administrator.' if Upload.where(retained: true).sum(:byte_size) >= STORAGE_LIMIT
+      raise Error, 'The inbox storage limit (2 GiB) has been reached. Ask an administrator.' if Upload.where(retained: true).sum(:byte_size) + incoming_bytes > STORAGE_LIMIT
     end
 
     def format = Limits::FORMATS[Filename.extension(@filename)]
@@ -79,6 +79,7 @@ module Uploads
         # Serialize with SQLite's writer lock so two identical uploads cannot both be kept.
         Tenant.unscoped.where(id: Current.tenant_id, status: 'active').update_all(updated_at: Arel.sql('updated_at'))
         earlier = Upload.find_by(sha256: sha, retained: true)
+        check_capacity!(incoming_bytes: earlier ? 0 : bytes.bytesize)
         if earlier
           upload = create_row(status: 'duplicate', byte_size: bytes.bytesize, sha256: sha, duplicate_of_id: earlier.id,
             reason: duplicate_reason(earlier), reason_code: 'duplicate')
@@ -100,7 +101,11 @@ module Uploads
     end
 
     def reject(code, reason, bytes: nil, byte_size: nil)
-      upload = create_row(status: 'rejected', reason_code: code, reason: reason, byte_size: byte_size || bytes&.bytesize || 0, sha256: bytes && Digest::SHA256.hexdigest(bytes))
+      upload = Upload.transaction do
+        Tenant.unscoped.where(id: Current.tenant_id, status: 'active').update_all(updated_at: Arel.sql('updated_at'))
+        check_capacity!
+        create_row(status: 'rejected', reason_code: code, reason: reason, byte_size: byte_size || bytes&.bytesize || 0, sha256: bytes && Digest::SHA256.hexdigest(bytes))
+      end
       Audit.record('rejected', upload, actor: @actor)
       Result.new(upload: upload, created: false)
     end

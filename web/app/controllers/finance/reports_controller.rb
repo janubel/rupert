@@ -5,7 +5,16 @@ module Finance
   # window drives trial balance and the income statement; the balance sheet is
   # cumulative through the chosen date.
   class ReportsController < AuthenticatedController
-    COVERAGE_NOTICE = 'Incomplete ledger coverage: sales receipts, settlements and refunds are not automatically posted. These reports show posted entries only; a balanced ledger does not establish complete business accounts.'
+    COVERAGE_NOTICE = 'Incomplete ledger coverage: sales and refunds post as they are taken, but card settlements (processor deposits net of fees) are not matched yet, so Card settlements receivable carries a balance until they are. These reports show posted entries only; a balanced ledger does not establish complete business accounts.'
+
+    # The standing notice, plus how many payments and refunds are still missing
+    # from the ledger (dated before live posting, or refused by a locked period).
+    def self.coverage_notice
+      missing = Finance::Posting.unposted_sales.count + Finance::Posting.unposted_refunds.count
+      return COVERAGE_NOTICE if missing.zero?
+
+      "#{COVERAGE_NOTICE} #{missing} completed #{'payment or refund'.pluralize(missing)} #{missing == 1 ? 'is' : 'are'} not in the ledger yet."
+    end
 
     before_action :set_window
 
@@ -82,7 +91,7 @@ module Finance
       require 'csv'
       CSV.generate do |csv|
         csv << [action_name.humanize, "From #{@from}", "To #{@to}", 'Amounts in USD']
-        csv << ['Coverage', COVERAGE_NOTICE]
+        csv << ['Coverage', self.class.coverage_notice]
         csv << ['Status', balance_state] if action_name != 'income_statement'
         case action_name
         when 'trial_balance'

@@ -18,7 +18,8 @@ class TenantScopeGuardTest < ActiveSupport::TestCase
     'SupportAccessEvent' => 'platform audit; customer history is explicitly tenant-filtered',
     'WorkspaceSignup' => 'platform-owner review queue; rows exist before a tenant does',
     'WarehouseCart' => 'anonymous vendor carts resolved by token with the tenant taken from the share',
-    'WarehouseCartItem' => 'belongs to a WarehouseCart; tenant set from the cart'
+    'WarehouseCartItem' => 'belongs to a WarehouseCart; tenant set from the cart',
+    'OpsEvent' => 'server diagnostics written by the web and job processes (often with no tenant in context); only platform administrators read them (System page, recent_errors)'
   }.freeze
 
   TENANT_COLUMNS = %w[tenant_id tenantId].freeze

@@ -217,17 +217,35 @@ class Worker:
         return True
 
 
+POLL_SECONDS = 15
+
+
+def next_delay(delay, found_work, maximum):
+    """Poll every POLL_SECONDS while there is work; back off (doubling) while idle.
+
+    Seconds between polls of /internal/workspaces/claim. Idle polls were ~5,800 requests a day, each an
+    authenticated database read for nothing. Set RUPERT_PROVISIONER_MAX_IDLE_SECONDS=15 to keep the old rate.
+    """
+    if found_work:
+        return POLL_SECONDS
+    return min(max(delay, POLL_SECONDS) * 2, max(maximum, POLL_SECONDS))
+
+
 def main():
     worker = Worker()
     if "--once" in sys.argv:
         worker.once()
     else:
+        maximum = int(os.environ.get("RUPERT_PROVISIONER_MAX_IDLE_SECONDS", "60"))
+        delay = POLL_SECONDS
         while True:
+            found = False
             try:
-                worker.once()
+                found = worker.once()
             except (OSError, ValueError, urllib.error.HTTPError):
                 print("Provisioning control plane unavailable; retrying.", flush=True)
-            time.sleep(15)
+            delay = next_delay(delay, found, maximum)
+            time.sleep(delay)
 
 
 if __name__ == "__main__":

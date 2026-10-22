@@ -1,0 +1,6 @@
+<%= link_to team_chat_room_path(room), class: "chat-rail-room #{'is-active' if room == @room}", aria: { current: (room == @room ? 'page' : nil) },
+      data: { team_chat_target: 'roomLink', slug: room.slug, name: room.name } do %>
+  <span class="chat-hash" aria-hidden="true">#</span>
+  <span class="chat-rail-room-name"><%= room.name %></span>
+  <span class="chat-unread" data-unread hidden></span>
+<% end %>

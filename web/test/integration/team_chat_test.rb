@@ -697,4 +697,32 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_room_path('admins')
     assert_select 'input[data-team-chat-target="presenceToggle"][disabled]'
   end
+
+  test 'a person can hide a room from their own list and show it again' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.create!(name: 'test-qwen', slug: 'test-qwen', kind: 'channel', created_by: @admin)
+    room.membership_for(@admin)
+    room.messages.create!(author_kind: 'system', body: 'unread notice')
+
+    get team_chat_unread_path, as: :json
+    before = json['unread']
+    patch team_chat_visibility_path('test-qwen'), params: { hidden: '1' }
+    assert_redirected_to team_chat_room_path('test-qwen')
+    assert room.membership_for(@admin).reload.hidden?
+
+    get team_chat_room_path('admins')
+    assert_select 'details.chat-rail-hidden summary', 'Hidden rooms (1)'
+    assert_select 'details.chat-rail-hidden a.chat-rail-room', /test-qwen/
+    get team_chat_unread_path, as: :json
+    assert_equal before - 1, json['unread'], 'a hidden room no longer adds to the badge'
+
+    get team_chat_room_path('test-qwen')
+    assert_select 'details.chat-rail-hidden[open]'
+    assert_select 'button', 'Show in my list'
+    patch team_chat_visibility_path('test-qwen'), params: { hidden: '0' }
+    assert_not room.membership_for(@admin).reload.hidden?
+    get team_chat_room_path('admins')
+    assert_select 'details.chat-rail-hidden', 0
+  end
 end

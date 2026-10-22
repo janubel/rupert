@@ -116,5 +116,19 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(any('init' in args for args, _ in self.calls))
 
 
+class PollingTest(unittest.TestCase):
+    def test_idle_polls_back_off_to_the_cap_and_work_resets_them(self):
+        delay = m.POLL_SECONDS
+        seen = []
+        for _ in range(5):
+            delay = m.next_delay(delay, False, 60)
+            seen.append(delay)
+        self.assertEqual([30, 60, 60, 60, 60], seen)
+        self.assertEqual(m.POLL_SECONDS, m.next_delay(60, True, 60))
+
+    def test_the_old_rate_can_be_kept(self):
+        self.assertEqual(15, m.next_delay(15, False, 15))
+
+
 if __name__ == '__main__':
     unittest.main()
