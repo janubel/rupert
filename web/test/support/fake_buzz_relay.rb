@@ -53,10 +53,14 @@ class FakeBuzzRelay
     self
   end
 
+  # The accept loop polls with a stop flag and client sockets are shut down
+  # rather than closed from here: closing a socket another thread is blocked
+  # on can wait forever on some Rubies.
   def stop
+    @stopping = true
+    @thread&.join(3)
     @server&.close
-    @lock.synchronize { @connections.dup }.each(&:close)
-    @thread&.kill
+    @lock.synchronize { @connections.dup }.each(&:shutdown)
   rescue StandardError
     nil
   end
@@ -116,8 +120,12 @@ class FakeBuzzRelay
   private
 
   def accept_loop
-    loop do
-      socket = @server.accept
+    until @stopping
+      next unless IO.select([@server], nil, nil, 0.1)
+
+      socket = @server.accept_nonblock(exception: false)
+      next if socket == :wait_readable
+
       if @refuse
         socket.close
         next
@@ -189,6 +197,13 @@ class FakeBuzzRelay
     ensure
       @relay.send(:forget, self)
       close
+    end
+
+    # Ends the read loop from another thread without waiting on it.
+    def shutdown
+      @socket.shutdown unless @socket.closed?
+    rescue StandardError
+      nil
     end
 
     def close

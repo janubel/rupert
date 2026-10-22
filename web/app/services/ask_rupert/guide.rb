@@ -127,6 +127,8 @@ module AskRupert
         title_words = tokenize_all(page.title)
         total = score(tokenize_all(page.words), title_words, tokens)
         total += 1 if tokenize_all(page.area).intersect?(tokens)
+        # A title the question covers completely ("Sync") beats one it only touches ("C-Trax history").
+        total += 2 if title_words.any? && (title_words - tokens).empty?
         [page, total] if total.positive?
       end.sort_by { |page, total| [-total, page.title] }.first(limit)
     end

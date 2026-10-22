@@ -61,15 +61,15 @@ class BuzzChatFlowTest < ActionDispatch::IntegrationTest
   test 'the card shows the Team chat tab to people who can read it' do
     sign_in_admin
     get buzz_path
-    assert_select "a[href='#{buzz_chat_path}']", 1
-    assert_select "a[aria-current='page']", text: /Agent/
+    assert_select "nav[aria-label='Buzz sections'] a[href='#{buzz_chat_path}']", 1
+    assert_select "nav[aria-label='Buzz sections'] a[aria-current='page']", text: /Agent/
   end
 
   test 'when Buzz is not set up the tab explains it instead of failing' do
     sign_in_admin
     get buzz_chat_path
     assert_response :success
-    assert_select 'section[role=status] h1', /not set up yet/
+    assert_select 'section[role=status] h2', /not set up yet/
     assert_select '[data-controller~=buzz-chat]', 0
     get buzz_chat_messages_path
     assert_response :success
@@ -82,7 +82,7 @@ class BuzzChatFlowTest < ActionDispatch::IntegrationTest
     EnvStore.set('BUZZ_CHANNEL', nil)
     sign_in_admin
     get buzz_chat_path
-    assert_select 'section[role=status] h1', /No channel chosen/
+    assert_select 'section[role=status] h2', /No channel chosen/
   end
 
   test 'the chat shows history and never puts message text in the page markup' do

@@ -99,7 +99,7 @@ class AuthorizeNetReportingIntegrationTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, '126.25'
     assert_includes response.body, '100 of 102'
-    assert_select 'tbody tr', count: 100
+    assert_select '[aria-label="Payments this day"] tbody tr', count: 100
     assert_not_includes response.body, '999.00'
     get @path, params: { report_date: 'invalid' }
     assert_response :redirect

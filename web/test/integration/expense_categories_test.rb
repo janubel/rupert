@@ -52,7 +52,7 @@ class ExpenseCategoriesTest < ActionDispatch::IntegrationTest
 
     # Recategorize a recorded line through the expense editor, coming back to the statement.
     get bank_statement_path(doc.id, show: 'all')
-    assert_select "a[href*='#{edit_finance_expense_path(expense)}']", 'Change'
+    assert_select "a[href*='#{edit_finance_expense_path(expense)}']", 'Edit'
     patch finance_expense_path(expense), params: { return_to: bank_statement_path(doc.id), expense: { category: 'shipping' } }
     assert_redirected_to bank_statement_path(doc.id)
     assert_equal 'shipping', expense.reload.category

@@ -108,7 +108,7 @@ class UploadsIntegrationTest < ActionDispatch::IntegrationTest
     assert_redirected_to upload_path(upload)
     assert_equal 3, BankStatementLine.count
     follow_redirect!
-    assert_select 'a', text: 'See the imported records'
+    assert_select 'a', text: 'Open imported records'
     assert_equal 'imported', upload.reload.status
     assert ActivityLog.where(action: 'upload_imported').exists?
   end
