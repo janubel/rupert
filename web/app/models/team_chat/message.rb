@@ -112,8 +112,17 @@ module TeamChat
         attachments: deleted? ? [] : attachment_infos.map { |attachment| attachment.as_payload(room) },
         mentions: mention_ids.filter_map { |id| { id: id, name: people[id] } if people[id] }, mentions_me: mention_ids.include?(viewer.id),
         reactions: reaction_summary(viewer), rating: rating_summary(viewer),
-        pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?)
+        pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?), edited: edited_at.present?
       }
+    end
+
+    # Changes the text of one's own message; mentions no longer in the text are dropped.
+    def edit_body!(text)
+      text = text.to_s.scrub('').gsub(AskRupert::Redactor::CONTROL, '').strip
+      raise ActiveRecord::RecordInvalid, self if text.blank? && attachment_infos.empty?
+
+      kept = mention_ids.select { |id| (name = User.find_by(id: id)&.display_name) && text.include?("@#{name}") }
+      update!(body: text.first(BODY_MAX), edited_at: Time.current, mentions: kept.presence)
     end
 
     # Pins or unpins this message as `user`. Pinning posts a short notice in the room.

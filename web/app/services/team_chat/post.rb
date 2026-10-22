@@ -37,11 +37,14 @@ module TeamChat
         attachments.each { |attachment| attachment.room = @room }
         message.attachments = attachments
         message.save!
-        people.each { |person| @room.membership_for(person) }
+        # Mentioning someone pulls them into a channel, never into a private conversation.
+        people.each { |person| @room.membership_for(person) } if @room.channel?
         replies << start_reply(message) if answer?(message)
         LocalAgents.mentioned(@body).each { |agent| replies << start_reply(message, agent: agent) }
       end
-      @room.membership_for(@user).mark_read!(message.id)
+      membership = @room.membership_for(@user)
+      membership.mark_read!(message.id)
+      membership.update_columns(typing_at: nil) if membership.typing_at
       replies.each { |reply| ReplyJob.perform_later(reply.id) }
       Result.new(message: message, reply: replies.first, replies: replies)
     rescue ActiveRecord::RecordInvalid => e

@@ -199,6 +199,7 @@ Rails.application.routes.draw do
   # Team chat: rooms inside Rupert with the @rupert assistant (docs/ops/team-chat.md).
   get    '/chat',                                     to: 'team_chat#index',           as: :team_chat
   post   '/chat/rooms',                               to: 'team_chat#create_room',     as: :team_chat_rooms
+  post   '/chat/dms',                                 to: 'team_chat#create_dm',       as: :team_chat_dms
   get    '/chat/dock',                                to: 'team_chat#dock',            as: :team_chat_dock
   get    '/chat/unread',                              to: 'team_chat#unread',          as: :team_chat_unread
   get    '/chat/models',                              to: 'team_chat#scores',          as: :team_chat_scores
@@ -207,6 +208,8 @@ Rails.application.routes.draw do
   patch  '/chat/:room',                               to: 'team_chat#update_room'
   get    '/chat/:room/messages',                      to: 'team_chat#messages',        as: :team_chat_messages
   post   '/chat/:room/messages',                      to: 'team_chat#create_message'
+  patch  '/chat/:room/messages/:id',                  to: 'team_chat#update_message'
+  post   '/chat/:room/typing',                        to: 'team_chat#typing',          as: :team_chat_typing
   delete '/chat/:room/messages/:id',                  to: 'team_chat#destroy_message', as: :team_chat_message
   post   '/chat/:room/messages/:id/reactions',        to: 'team_chat#react',           as: :team_chat_reactions
   post   '/chat/:room/messages/:id/rating',           to: 'team_chat#rate',            as: :team_chat_rating

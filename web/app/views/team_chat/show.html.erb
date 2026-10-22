@@ -1,8 +1,12 @@
-<% content_for :title, @room.direct? ? 'Rupert · Team chat' : "##{@room.name} · Team chat" %>
+<% content_for :title, "#{@room.direct? ? 'Rupert' : (@room.dm? ? @room.display_name(Current.user) : "##{@room.name}")} · Team chat" %>
 <% me = Current.user %>
 <% my_initials = me.display_name.to_s.split(/\s+/).first(2).map { |word| word[0] }.join.upcase.presence || 'U' %>
 <% channels = @rooms.select(&:channel?) %>
 <% direct = @rooms.find(&:direct?) %>
+<% dms = @rooms.select(&:dm?).map { |room| [room, room.dm_partner(me)] }.select(&:last) %>
+<% dm_partner = @room.dm_partner(me) if @room.dm? %>
+<% room_label = @room.direct? ? 'Rupert' : (dm_partner ? dm_partner.display_name : "##{@room.name}") %>
+<% content_for :wide_page, true %>
 <div class="chat-app"
      data-controller="team-chat"
      data-team-chat-url-value="<%= team_chat_messages_path(@room) %>"
@@ -32,12 +36,23 @@
     </label>
 
     <nav class="chat-rail-section" aria-label="Rooms">
-      <% if direct %>
+      <div class="chat-rail-head">
         <p class="chat-rail-label">Direct</p>
+        <button type="button" class="chat-rail-add" data-action="team-chat#openNewDm" aria-label="New direct message" title="New direct message">+</button>
+      </div>
+      <% if direct %>
         <%= link_to team_chat_room_path(direct), class: "chat-rail-room #{'is-active' if direct == @room}", aria: { current: (direct == @room ? 'page' : nil) },
               data: { team_chat_target: 'roomLink', slug: direct.slug, name: 'rupert' } do %>
           <span class="chat-rail-bot" aria-hidden="true">R</span>
           <span class="chat-rail-room-name">Rupert</span>
+          <span class="chat-unread" data-unread hidden></span>
+        <% end %>
+      <% end %>
+      <% dms.each do |room, partner| %>
+        <%= link_to team_chat_room_path(room), class: "chat-rail-room #{'is-active' if room == @room}", aria: { current: (room == @room ? 'page' : nil) },
+              data: { team_chat_target: 'roomLink', slug: room.slug, name: partner.display_name } do %>
+          <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[partner.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= partner.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span>
+          <span class="chat-rail-room-name"><%= partner.display_name %></span>
           <span class="chat-unread" data-unread hidden></span>
         <% end %>
       <% end %>
@@ -68,11 +83,11 @@
   <main class="chat-main">
     <header class="chat-head">
       <div class="chat-head-title">
-        <h2><% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true">R</span>Rupert<% else %><span class="chat-hash">#</span><%= @room.name %><% end %></h2>
-        <p data-team-chat-target="topic"><%= @room.topic.presence || 'No topic yet.' %></p>
+        <h2><% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true">R</span>Rupert<% elsif dm_partner %><span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[dm_partner.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= dm_partner.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span><%= dm_partner.display_name %><% else %><span class="chat-hash">#</span><%= @room.name %><% end %></h2>
+        <p data-team-chat-target="topic"><%= @room.dm? ? 'Direct message: only the two of you read it. Mention @rupert to bring him in.' : (@room.topic.presence || 'No topic yet.') %></p>
       </div>
       <div class="chat-head-tools">
-        <% unless @room.direct? %>
+        <% if @room.channel? %>
           <span class="chat-member-stack" aria-label="People in this room">
             <% @members.first(6).each do |member| %>
               <% initials = member.display_name.to_s.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %>
@@ -106,7 +121,7 @@
     <section class="chat-body" aria-label="Messages">
       <div class="chat-log-wrap">
         <div class="chat-log" data-team-chat-target="log" data-action="scroll->team-chat#onScroll" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"
-             aria-label="Messages in <%= @room.direct? ? 'your room with Rupert' : "##{@room.name}" %>">
+             aria-label="Messages in <%= @room.direct? ? 'your room with Rupert' : room_label %>">
           <button type="button" class="btn-ghost btn-sm chat-more" data-team-chat-target="more" data-action="team-chat#loadEarlier" hidden>Load earlier messages</button>
           <p class="chat-hint" data-team-chat-target="loading">Loading messages…</p>
           <div class="chat-empty" data-team-chat-target="empty" hidden>
@@ -118,7 +133,7 @@
                 <% end %>
               </div>
             <% else %>
-              <p class="chat-empty-title">This is the start of #<%= @room.name %>.</p>
+              <p class="chat-empty-title">This is the start of <%= room_label %>.</p>
               <p>Say hello, or write <strong>@rupert</strong> with a question about sales, stock, tasks or how Rupert works.</p>
             <% end %>
           </div>
@@ -128,14 +143,15 @@
       </div>
 
       <form class="chat-compose" data-busy="false" data-team-chat-target="form" data-action="submit->team-chat#send dragover->team-chat#dragOver dragleave->team-chat#dragLeave drop->team-chat#drop">
-        <p class="chat-error" data-team-chat-target="notice" role="alert" hidden></p>
+        <p class="chat-typing" data-team-chat-target="typing" aria-live="polite" hidden></p>
+      <p class="chat-error" data-team-chat-target="notice" role="alert" hidden></p>
         <div class="chat-composer">
           <label for="chat-input" class="sr-only">Message</label>
           <ul class="chat-suggest" data-team-chat-target="suggest" role="listbox" hidden></ul>
           <div class="chat-files" data-team-chat-target="files" hidden></div>
           <textarea id="chat-input" class="chat-input" rows="1" maxlength="<%= TeamChat::Message::BODY_MAX %>" data-team-chat-target="input"
                     data-action="input->team-chat#input keydown->team-chat#keydown paste->team-chat#paste" autocomplete="off"
-                    placeholder="<%= @room.direct? ? 'Ask Rupert…' : "Message ##{@room.name}" %>"></textarea>
+                    placeholder="<%= @room.direct? ? 'Ask Rupert…' : "Message #{room_label}" %>"></textarea>
           <div class="chat-composer-bar">
             <span class="chat-composer-hint">
               <% if @room.direct? %>Rupert answers every message here.<% elsif @room.assistant_mode == 'off' %>Rupert is off in this room.<% else %>Write <strong>@rupert</strong> to ask him.<% end %>
@@ -173,6 +189,25 @@
       </div>
     </form>
   </aside>
+
+  <dialog class="chat-dialog" data-team-chat-target="newDm" aria-labelledby="chat-new-dm-title">
+    <div class="chat-dialog-form">
+      <h3 id="chat-new-dm-title" class="font-display text-lg">Direct message</h3>
+      <% people = TeamChat::Post.mentionable.reject { |person| person.id == me.id } %>
+      <% if people.empty? %>
+        <p class="text-sm text-mocha">Nobody else uses team chat yet. Direct messages are between people who can open team chat (administrators for now).</p>
+      <% end %>
+      <div class="chat-dm-people">
+        <% people.each do |person| %>
+          <%= button_to team_chat_dms_path, params: { user_id: person.id }, class: 'chat-dm-person', form: { data: { turbo: false } } do %>
+            <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= person.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span>
+            <span><%= person.display_name %></span>
+          <% end %>
+        <% end %>
+      </div>
+      <div class="chat-dialog-actions"><button type="button" class="btn-ghost" data-action="team-chat#closeNewDm">Close</button></div>
+    </div>
+  </dialog>
 
   <dialog class="chat-dialog" data-team-chat-target="newRoom" aria-labelledby="chat-new-room-title">
     <%= form_with url: team_chat_rooms_path, method: :post, class: 'chat-dialog-form' do |form| %>

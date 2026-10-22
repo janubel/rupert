@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_233000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_234500) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -845,6 +845,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_233000) do
     t.bigint "last_read_message_id", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "typing_at"
     t.index ["room_id", "user_id"], name: "index_chat_memberships_on_room_id_and_user_id", unique: true
     t.index ["room_id"], name: "index_chat_memberships_on_room_id"
     t.index ["tenant_id", "user_id"], name: "index_chat_memberships_on_tenant_id_and_user_id"
@@ -867,6 +868,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_233000) do
     t.datetime "updated_at", null: false
     t.datetime "pinned_at"
     t.bigint "pinned_by_id"
+    t.datetime "edited_at"
     t.index ["room_id", "id"], name: "index_chat_messages_on_room_id_and_id"
     t.index ["room_id", "parent_id", "id"], name: "index_chat_messages_on_room_id_and_parent_id_and_id"
     t.index ["room_id", "pinned_at"], name: "index_chat_messages_on_room_id_and_pinned_at"
