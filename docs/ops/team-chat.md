@@ -247,3 +247,31 @@ containers yet.
 - Gateway models (`/etc/rupert-llm/models.json`, mirrored in
   `deploy/ser8/team-chat/llm-gateway/models.json`): adding one needs
   `systemctl restart rupert-llm-gateway` inside `rupert-llm` (the list is read at start).
+
+## Local models on the Radeon 780M (2026-10-22)
+
+SER8 is an AMD Ryzen 7 8745HS with a Radeon 780M integrated GPU. Since 2026-10-22 the `rupert-llm` gateway runs the
+official llama.cpp **Vulkan** build (`b11819`, `/opt/llama/llama-b11819-vulkan`, `/opt/llama/current` points to it)
+with `--n-gpu-layers 99` for every model. The GPU is passed in as `gpu0` (`incus config device add rupert-llm gpu0 gpu
+gid=990 mode=0660`, gid 990 = the container's `llm` group); `mesa-vulkan-drivers` and `libvulkan1` were downloaded on
+the host and installed with `dpkg -i` (the container still has no internet). The PrismML CPU build stays in
+`/opt/llama/llama-prism-b10787-73bfe6c`; Ternary Bonsai, the only model that needed it, is gone.
+
+`llama-bench` on SER8 (same files, 8 threads, tokens per second):
+
+| Model | Prompt 4096, CPU | Prompt 4096, 780M | Generate, CPU | Generate, 780M |
+| --- | --- | --- | --- | --- |
+| LFM2.5 8B-A1B Q4_K_M (@liquid) | 253 | 1,219 | 46 | 66 |
+| Gemma 4 E4B QAT Q4_0 (@gemma) | 118 | 698 | 14 | 25 |
+| Gemma 4 E4B UD-Q4_K_XL | 136 | 555 | 15 | 23 |
+| Gemma 4 E2B UD-Q4_K_XL | 264 | 1,035 | 26 | 44 |
+
+A bot answer reads ~8,000 prompt tokens (instructions + tool list) twice and writes ~100–300, so reading dominates.
+Through Rupert, "How were sales yesterday?" went from 112 s to 22 s for @gemma and takes 18 s for @liquid; models load
+in 2–4 s.
+
+**Rollback to CPU** (inside `rupert-llm`): `ln -sfn /opt/llama/llama-prism-b10787-73bfe6c /opt/llama/current`,
+`cp /etc/rupert-llm/models.json.cpu-20261022 /etc/rupert-llm/models.json`, `systemctl restart rupert-llm-gateway`.
+
+The test battery shares the gateway with people: while it runs, a person's @bot question waits behind the battery's
+current question (one model at a time). Run it when nobody is chatting, or expect short waits.
