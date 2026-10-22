@@ -115,7 +115,7 @@ class TeamChatController < AuthenticatedController
     message = @room.messages.find(params[:id])
     return head :forbidden unless message.assistant? && message.meta.to_h['asked_by'] == Current.user.id
 
-    TeamChat::Run.for_reply!(message).cancel! if message.pending?
+    TeamChat::Run.for_reply!(message).cancel!(user: Current.user) if message.pending?
     render json: { messages: payload([message.reload]) }
   end
 
@@ -272,6 +272,8 @@ class TeamChatController < AuthenticatedController
 
   # POST /chat/:room/messages/:id/actions/:action_id { decision: approve|dismiss }
   def decide
+    return render json: { error: 'Choose approve or dismiss.' }, status: :bad_request unless %w[approve dismiss].include?(params[:decision])
+
     message = @room.messages.find(params[:id])
     TeamChat::Actions.decide!(message, params[:action_id], user: Current.user, approve: params[:decision] == 'approve')
     render json: { messages: payload([message.reload]) }

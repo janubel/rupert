@@ -24,7 +24,7 @@ module TeamChat
     Definition = Struct.new(:name, :description, :schema, :kind, :activity, keyword_init: true)
 
     attr_reader :calls, :tools_used, :results
-    attr_accessor :call_id
+    attr_accessor :call_id, :execution_info
 
     # only: tool names to offer (the question's data guide topics, for local bots); nil offers every tool.
     def initialize(user:, room:, reply:, only: nil, execution: nil)
@@ -157,7 +157,7 @@ module TeamChat
 
     def propose(name, args)
       args = prepare(name, args)
-      action = Actions.propose!(@reply, tool: name, arguments: args, proposed_for: @user)
+      action = Actions.propose!(@reply, tool: name, arguments: args, proposed_for: @user, execution_info: execution_info || {})
       "Proposed as action #{action['id']}: “#{action['summary']}”. A card with Approve and Dismiss is shown in the room. " \
         'Tell them it is waiting for their approval. Do not say it is done.'
     end

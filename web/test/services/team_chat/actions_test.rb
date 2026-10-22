@@ -29,9 +29,7 @@ class TeamChatActionsTest < ActiveSupport::TestCase
     assert_equal [decided, second], @reply.reload.actions_list
     assert_equal 'done', @reply.actions_list.first['status']
     assert_no_difference -> { Projects::Task.count } do
-      assert_raises(TeamChat::Actions::Denied) do
-        TeamChat::Actions.decide!(@reply, first['id'], user: @user, approve: true)
-      end
+      assert_equal decided, TeamChat::Actions.decide!(@reply, first['id'], user: @user, approve: true)
     end
   end
 

@@ -160,6 +160,7 @@ module TeamChat
       @execution.chat = chat
       chat.before_tool_call do |tool_call|
         @execution.check!
+        stamp_tool_source!
         @toolbox.call_id = "#{@execution.run.steps}:#{tool_call.id}"
         activity!(@toolbox.activity_for(tool_call.name))
       end
@@ -223,6 +224,12 @@ module TeamChat
 
     # --- opencode CLI, text tool protocol (no native tool calling) ---
 
+    def stamp_tool_source!
+      cli = @engine == 'opencode_cli'
+      @toolbox.execution_info = { 'engine' => @engine, 'model' => cli ? AskRupert::Providers::Opencode.new.model : @config.model,
+                                 'harness' => 'TeamChat::Agent', 'harness_version' => cli ? 'OpenCode CLI' : "RubyLLM #{RubyLLM::VERSION}" }
+    end
+
     def answer_with_cli
       provider = AskRupert::Providers::Opencode.new
       system = "#{system_prompt}\n## Tool protocol\nTo use a tool, reply with ONE line and nothing else:\n" \
@@ -236,6 +243,7 @@ module TeamChat
       while @execution.run.steps <= CLI_TOOL_ROUNDS
         round = @execution.run.steps
         @execution.check!
+        stamp_tool_source!
         @toolbox.call_id = "cli-#{round}"
         reply = provider.complete(system: system, messages: messages, deadline: @execution.run.deadline_at, checkpoint: -> { @execution.check! }) { |partial| publish(partial) unless partial.to_s.lstrip.start_with?('TOOL') }
         @tokens_in += reply.tokens_in.to_i

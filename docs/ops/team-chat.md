@@ -416,3 +416,58 @@ take a lease interval plus the next minute scan and chat queue wait; it does not
 extend a reply's deadline. Regression coverage includes simultaneous claims,
 actual SIGKILL/restart replay, stale-owner fencing, cancellation during silent
 HTTP, deadlines, CLI replay, and cancellation authorization.
+
+### Durable tool approvals and attribution
+
+New action cards have canonical `chat_approvals` records; message JSON is only
+the existing UI projection. The immutable proposal contains the exact tool
+arguments, a UUID, and requester provenance. The audit events record proposal,
+approval/dismissal, execution/failure, and cancellation, with actors and times.
+Terminal receipts cannot be edited through the model; audit event instances are
+read-only after creation. A hard-deleted chat message nulls the live message
+reference but retains the approval, receipt, source snapshot and audit events.
+These records follow tenant scoping and existing room access checks.
+
+Approve/dismiss runs under the message lock. For the explicit local allow-list
+(`create_task`, `update_task`, `submit_feedback`), the database mutation, receipt,
+audit events, activity entry, card projection and room notice commit in one
+transaction. Expected tool failures roll back partial writes in a savepoint
+before committing a failed receipt. A crash before commit rolls everything back;
+a retry can execute once. A crash or lost HTTP response after commit returns the
+saved receipt without another mutation or notice. The same decision is idempotent;
+a conflicting decision is rejected. Permission and room access are checked again
+on every request, including receipt replay. Unexpected errors leave the proposal
+retryable instead of committing a false success. Failed receipts do not retry the
+tool; ask for a new proposal after addressing the failure.
+
+This protocol covers local database writes, not arbitrary remote effects. Do not
+add Shopify, Square, email, or other external writes to the allow-list without a
+provider idempotency/reconciliation design and their required user authorization.
+
+The requester is the person whose message triggered the run, independently of
+who approves. The run snapshots that message when it is created, including its
+text, timestamp, author and thread. Later messages and edits cannot change it.
+Approval provenance records the model, engine, harness/version, loaded build,
+proposal time, requesting message and room URL; execution events add duration
+and result references. CLI fallback proposals record their actual CLI route.
+For task creation the description names the requester and links the source chat;
+creation, updates and closing also write structured provenance to the task's
+`team_chat_action` activity entry. The approver remains the action's actor.
+Requester attribution never implies assignment. Explicit assignees remain pinned
+to their identity; even “assign to me” refers to the requester, not the approver.
+An unavailable or changed assignee requires a fresh proposal. Source chat links
+retain normal room permissions; the snapshot is private audit data, not room JSON.
+
+Cancellation/deadline expiry dismiss canonical pending approvals and append audit
+events in the same transaction as stopping the reply. Completed decisions remain
+intact. Existing JSON-only cards are adopted lazily under the same lock when
+decided or cancelled; existing terminal cards import as receipts and cannot run
+again. Missing historical harness/proposal times remain unknown. Legacy run
+snapshots unavailable before this migration are marked as current-message
+attribution, rather than claimed to be an original request snapshot.
+
+Rollout requires `CreateChatApprovals` before restarting web and workers. It adds
+the two approval tables and a nullable request snapshot to runs; it does not
+execute or bulk-rewrite old cards. Regression tests exercise concurrent service decisions and HTTP retries, SIGKILL on both sides of commit, partial failures, canonical
+argument replay, immutable audit/receipts, legacy adoption, cancellation,
+permissions, requester/approver separation and source-message edits.
