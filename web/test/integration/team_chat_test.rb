@@ -283,11 +283,11 @@ class TeamChatTest < ActionDispatch::IntegrationTest
       meta: { 'asked_by' => @admin.id, 'trigger_id' => person.id, 'agent' => 'gemma', 'engine' => 'local_gateway', 'model' => 'gemma-4-e4b', 'duration_ms' => 80_000 })
 
     post team_chat_rating_path('admins', qwen.id), params: { value: 'up' }, as: :json
-    assert_equal({ 'up' => 1, 'down' => 0, 'mine' => 'up' }, json['messages'].first['rating'])
+    assert_equal({ 'up' => 1, 'down' => 0, 'mine' => 'up', 'my_reason' => nil }, json['messages'].first['rating'])
     post team_chat_rating_path('admins', qwen.id), params: { value: 'down' }, as: :json
-    assert_equal({ 'up' => 0, 'down' => 1, 'mine' => 'down' }, json['messages'].first['rating'])
+    assert_equal({ 'up' => 0, 'down' => 1, 'mine' => 'down', 'my_reason' => nil }, json['messages'].first['rating'])
     post team_chat_rating_path('admins', qwen.id), params: { value: 'down' }, as: :json
-    assert_equal({ 'up' => 0, 'down' => 0, 'mine' => nil }, json['messages'].first['rating'])
+    assert_equal({ 'up' => 0, 'down' => 0, 'mine' => nil, 'my_reason' => nil }, json['messages'].first['rating'])
     assert_equal 0, TeamChat::Rating.count
 
     post team_chat_rating_path('admins', qwen.id), params: { value: 'up' }, as: :json
