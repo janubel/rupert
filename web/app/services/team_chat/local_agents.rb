@@ -19,6 +19,7 @@ module TeamChat
         names = ([handle] + Array(aliases)).sort_by { |name| -name.length }.map { |name| Regexp.escape(name) }
         /(?<![\w@])@(?:#{names.join('|')})(?![\w-])/i
       end
+
       def cloud? = cloud == true
       def initials = name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase
       def label = "#{name} — #{about}"
