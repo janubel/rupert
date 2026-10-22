@@ -4,7 +4,7 @@ module TeamChat
   # Models people can @mention in team chat next to @rupert, each answering with the
   # same tools, permissions and approve-cards as @rupert:
   #
-  # - local (@liquid, @qwen, @gemma, @ternary): open models on this server (the
+  # - local (@liquid, @qwen, @gemma): open models on this server (the
   #   `rupert-llm` container) through one OpenAI-compatible gateway that keeps only
   #   ONE model in memory at a time, swaps on demand and unloads after ten idle
   #   minutes (deploy/ser8/team-chat/llm-gateway). On when RUPERT_LOCAL_LLM_URL is set.
@@ -29,16 +29,15 @@ module TeamChat
         purpose: 'Best of the local models at using Rupert’s tools. Private, slower.'),
       Agent.new(handle: 'gemma', name: 'Gemma', model: 'gemma-4-e4b', color: '#9333ea',
         about: 'Google Gemma 4 E4B, local',
-        purpose: 'Google’s open model: good with Rupert’s tools, about 1½–2 minutes an answer. Private.'),
-      Agent.new(handle: 'ternary', name: 'Ternary', model: 'ternary-bonsai-2-9b', color: '#65a30d', aliases: %w[bonsai],
-        about: 'PrismML Ternary Bonsai 2 9B, local',
-        purpose: 'Experimental 1.58-bit local model. Private.')
+        purpose: 'Google’s open model: good with Rupert’s tools, about 1½–2 minutes an answer. Private.')
     ].freeze
 
     # Handles no longer offered, kept so older replies still show who wrote them.
     RETIRED = [
       Agent.new(handle: 'deepseek', name: 'DeepSeek', model: 'deepseek-v4.1-flash', color: '#1d4ed8', cloud: true,
-        about: 'DeepSeek V4.1 Flash via OpenCode, cloud (now @rupert)')
+        about: 'DeepSeek V4.1 Flash via OpenCode, cloud (now @rupert)'),
+      Agent.new(handle: 'ternary', name: 'Ternary', model: 'ternary-bonsai-2-9b', color: '#65a30d', aliases: %w[bonsai],
+        about: 'PrismML Ternary Bonsai 2 9B, local (removed 2026-10-23: too slow)')
     ].freeze
 
     # Models on the gateway that only the test battery asks (rake team_chat:battery AGENT=gemma-e2b); never @mentionable.
