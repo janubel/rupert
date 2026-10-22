@@ -10,6 +10,57 @@
   <span class="ml-auto text-xs text-taupe">@rupert currently answers with <strong><%= @current.label %></strong>.</span>
 </div>
 
+<section class="mb-6" id="leaderboard">
+  <div class="flex flex-wrap items-baseline gap-2">
+    <h2 class="font-display text-lg text-ink">Leaderboard</h2>
+    <span class="text-sm text-mocha">Each model’s latest test runs, scored out of 100 per part of Rupert. A score is the average grade as a percentage (4.6/5 = 92).</span>
+  </div>
+  <% if @leaderboard.empty? %>
+    <p class="mt-2 text-sm text-mocha">No test runs yet.</p>
+  <% else %>
+    <div class="card mt-2 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-fog bg-haze/60">
+            <tr>
+              <th scope="col" class="th">#</th>
+              <th scope="col" class="th">Model</th>
+              <% TeamChat::Leaderboard::COLUMNS.each do |key, label| %>
+                <th scope="col" class="th text-right"><%= label %></th>
+              <% end %>
+              <th scope="col" class="th text-right">Overall</th>
+              <th scope="col" class="th text-right">Avg time</th>
+              <th scope="col" class="th text-right">Questions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-fog">
+            <% @leaderboard.each_with_index do |row, index| %>
+              <tr class="hover:bg-cream <%= 'bg-haze/40' if row.leader %>">
+                <td class="td text-taupe"><%= index + 1 %></td>
+                <td class="td whitespace-nowrap">
+                  <% if row.leader %><span title="Top of the leaderboard">🏆</span><% end %>
+                  <strong class="text-ink">@<%= row.handle %></strong>
+                  <span class="text-xs text-taupe"><%= row.model %> · <%= row.where %></span>
+                </td>
+                <% TeamChat::Leaderboard::COLUMNS.each_key do |key| %>
+                  <% cell = row.cells[key] %>
+                  <td class="td whitespace-nowrap text-right <%= 'font-semibold text-fern' if cell&.best %>" title="<%= cell ? pluralize(cell.count, 'question') : 'not tested' %>">
+                    <%= cell ? cell.score : '—' %><% if cell&.best %> 🥇<% end %>
+                  </td>
+                <% end %>
+                <td class="td text-right font-semibold"><%= row.overall %></td>
+                <td class="td text-right"><%= row.avg_seconds ? "#{row.avg_seconds} s" : '—' %></td>
+                <td class="td text-right text-xs text-taupe" title="<%= row.sets.map { |set| set == 'default' ? 'general' : set }.join(', ') %>"><%= row.graded %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="mt-2 text-xs text-taupe">🏆 needs at least <%= TeamChat::Leaderboard::MIN_QUESTIONS %> graded questions; 🥇 marks the best score in each column (at least <%= TeamChat::Leaderboard::MIN_COLUMN %> questions). Hover a score for how many questions it covers. Question sets: general, finance and cross-discipline.</p>
+  <% end %>
+</section>
+
 <div class="card overflow-hidden">
   <div class="overflow-x-auto">
     <table class="w-full text-sm">

@@ -742,4 +742,21 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   ensure
     ENV.delete('RUPERT_LOCAL_LLM_URL')
   end
+
+  test 'the leaderboard on Model scores and the trophy in the bot key' do
+    ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
+    results = [{ 'id' => 'f15', 'cadence' => 'tax', 'grade' => 5 }] * 21
+    TeamChat::BatteryRun.create!(run_key: 'lb-1', set_name: 'finance', agent: 'qwen-35b', model: 'qwen3.6-35b-a3b', engine: 'local_gateway',
+      status: 'done', questions: 21, answered: 21, avg_grade: 5, results: results, avg_seconds: 14.3, started_at: 1.hour.ago)
+    sign_in(@admin)
+    get team_chat_scores_path
+    assert_select '#leaderboard tbody tr', 1
+    assert_select '#leaderboard td', /🏆\s*@qwen/
+    assert_select '#leaderboard td', /100 🥇/
+    get team_chat_path
+    follow_redirect!
+    assert_select '.chat-bots-row', text: /@qwen.*🏆 #1 on the leaderboard/m
+  ensure
+    ENV.delete('RUPERT_LOCAL_LLM_URL')
+  end
 end

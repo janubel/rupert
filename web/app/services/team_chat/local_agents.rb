@@ -111,6 +111,12 @@ module TeamChat
       rows.each { |row| row[:scores] = scores[row[:model].to_s] || {} }
       best = rows.reject { |row| row[:handle] == 'rupert' }.select { |row| row[:scores]['finance'] }.max_by { |row| row[:scores]['finance'] }
       best[:best_for_money] = true if best && best[:scores]['finance'] >= 4.0
+      leader = begin
+        Leaderboard.leader_model
+      rescue ActiveRecord::StatementInvalid
+        nil
+      end
+      rows.each { |row| row[:leader] = row[:model].to_s == leader } if leader
       rows
     end
 

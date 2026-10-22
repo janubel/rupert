@@ -1,0 +1,63 @@
+# Cross-discipline battery (rake team_chat:battery BATTERY=cross): questions that need more than one module,
+# so a bot has to call several tools and connect the answers. Graded like the others against `checks`.
+questions:
+  - id: x01
+    cadence: cross
+    module: cross
+    question: Which of last month's top-selling products are low on stock right now?
+    checks: [{ tool: sales_summary, args: { from: last_month.from, to: last_month.to, top_products: 10 } }, list_alerts]
+    expect: Names products that appear in both the top sellers and the open stock alerts (or says none overlap). No invented products.
+  - id: x02
+    cadence: cross
+    module: cross
+    question: Are any unshipped paid orders waiting while their products are low on stock?
+    checks: [order_queues, list_alerts]
+    expect: Uses the unshipped orders and the stock alerts together; says plainly if Rupert cannot tell which products the waiting orders contain.
+  - id: x03
+    cadence: cross
+    module: cross
+    question: Compare last month's sales with last month's expenses.
+    checks: [{ tool: period_review, args: { period: last_month } }]
+    expect: Quotes last month's gross sales and expenses as the tools give them and says which is larger. Does not present the difference as profit.
+  - id: x04
+    cadence: cross
+    module: cross
+    question: Is anything stopping us from closing last month's books, and does any of it involve sales or payments?
+    checks: [compliance_check, { tool: period_review, args: { period: last_month } }]
+    expect: Lists the open close items and identifies which relate to sales, payments, deposits or bank lines.
+  - id: x05
+    cadence: cross
+    module: cross
+    question: How many hours did the team work last pay week, and how did sales do over the same days?
+    checks: [{ tool: time_keeping_report, args: { from: last_pay_week.from, to: last_pay_week.to } }, { tool: sales_summary, args: { from: last_pay_week.from, to: last_pay_week.to } }]
+    expect: Quotes worked hours and gross sales for the same pay week. Does not compute sales per hour unless a tool gives it.
+  - id: x06
+    cadence: cross
+    module: cross
+    question: Are there overdue tasks about stock or inventory counts, and is that stock still low?
+    checks: [{ tool: list_tasks, args: { overdue: true } }, list_alerts]
+    expect: Uses overdue tasks and stock alerts together; says so if there are no overdue tasks.
+  - id: x07
+    cadence: cross
+    module: cross
+    question: Is sync healthy enough that yesterday's sales figures can be trusted?
+    checks: [sync_health, { tool: sales_summary, args: { from: yesterday.from, to: yesterday.to } }]
+    expect: Names any failing source and says which of yesterday's figures it could affect; quotes yesterday's sales.
+  - id: x08
+    cadence: cross
+    module: cross
+    question: Which source sold the most last week, and is that source syncing correctly?
+    checks: [{ tool: metric, args: { name: sales_by_source, period: last_week, compare: none } }, sync_health]
+    expect: Names the top source with its gross and share, and that source's sync status.
+  - id: x09
+    cadence: cross
+    module: cross
+    question: Give me a quick health check of the business today - sales so far, anything waiting, and any alerts.
+    checks: [{ tool: metric, args: { name: gross_sales, period: today, compare: none } }, order_queues, list_alerts]
+    expect: Covers all three (today's sales, waiting queues, alerts) with tool figures, briefly.
+  - id: x10
+    cadence: cross
+    module: cross
+    question: Our tea shelf count is due - is there a task for it, and are any tea products low on stock?
+    checks: [{ tool: list_tasks, args: { query: tea } }, { tool: inventory_search, args: { query: tea } }, list_alerts]
+    expect: Says whether a tea count task exists (and its status) and which tea products are low, from the tools.
