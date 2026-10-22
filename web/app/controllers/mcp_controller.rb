@@ -54,13 +54,23 @@ class McpController < ActionController::API
   end
 
   def allowed_origin?(origin)
-    uri = URI.parse(origin)
-    return true if uri.host.present? && uri.host.casecmp?(request.host)
+    candidate = origin_tuple(origin)
+    return false unless candidate
+    return true if candidate == origin_tuple(request.base_url)
 
-    extra = ENV.fetch('MCP_ALLOWED_ORIGINS', '').split(',').map { |value| value.strip.chomp('/') }.reject(&:blank?)
-    extra.include?(origin.chomp('/'))
+    ENV.fetch('MCP_ALLOWED_ORIGINS', '').split(',').any? do |value|
+      candidate == origin_tuple(value.strip)
+    end
+  end
+
+  def origin_tuple(value)
+    uri = URI.parse(value.to_s)
+    return unless uri.is_a?(URI::HTTP) && uri.host.present? && uri.userinfo.nil? &&
+      (uri.path.blank? || uri.path == '/') && uri.query.nil? && uri.fragment.nil?
+
+    [uri.scheme.downcase, uri.host.downcase, uri.port]
   rescue URI::InvalidURIError
-    false
+    nil
   end
 
   def authenticate_token
