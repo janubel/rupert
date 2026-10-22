@@ -726,7 +726,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_select 'details.chat-rail-hidden', 0
   end
 
-  test 'the bot key shows each bot's latest test grades and the best local bot for money questions' do
+  test 'the bot key shows each bot latest test grades and the best local bot for money questions' do
     ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
     TeamChat::BatteryRun.create!(run_key: 'q-fin', set_name: 'finance', agent: 'qwen', model: 'qwen3.5-4b', status: 'done', questions: 21, answered: 21, avg_grade: 4.52, started_at: 1.hour.ago)
     TeamChat::BatteryRun.create!(run_key: 'q-old', set_name: 'finance', agent: 'qwen', model: 'qwen3.5-4b', status: 'done', questions: 21, answered: 21, avg_grade: 3.4, started_at: 1.day.ago)
