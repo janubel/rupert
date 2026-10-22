@@ -42,7 +42,11 @@ module Mcp
           raise ToolError.new("The task was not saved: #{task.errors.full_messages.to_sentence}.", kind: 'invalid_arguments') if changes.any? && !task.save
 
           if target.present? && target != task.status
-            raise ToolError.new("Task ##{task.id} cannot move from #{task.status} to #{target}.", kind: 'invalid_arguments') unless task.move_to!(target)
+            unless task.move_to!(target)
+              waiting = %w[in_progress done].include?(target) ? task.open_blockers.limit(3).pluck(:title) : []
+              raise ToolError.new("Task ##{task.id} cannot move from #{task.status} to #{target}#{"; it is waiting on #{waiting.to_sentence}" if waiting.any?}.",
+                kind: 'invalid_arguments')
+            end
 
             changes << "moved to #{target.tr('_', ' ')}"
           end

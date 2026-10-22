@@ -146,6 +146,23 @@ class McpServerTest < ActionDispatch::IntegrationTest
     assert_equal '2026-10-01', result.dig('structuredContent', 'from')
   end
 
+  test 'update_task will not start a task that waits on an open one' do
+    _, secret = issue
+    blocker = Projects::Task.create!(title: 'Order the tins', priority: 'medium')
+    task = Projects::Task.create!(title: 'Pack the tins', priority: 'medium')
+    task.dependencies.create!(blocker: blocker)
+
+    result = call_tool(secret, 'update_task', { task_id: task.id, status: 'in_progress' })
+    assert_equal true, result['isError']
+    assert_match(/waiting on Order the tins/, result.dig('content', 0, 'text'))
+    assert task.reload.todo?
+
+    blocker.move_to!('done')
+    result = call_tool(secret, 'update_task', { task_id: task.id, status: 'in_progress' })
+    assert_equal false, result['isError'], result.dig('content', 0, 'text')
+    assert task.reload.in_progress?
+  end
+
   test 'bad or missing token is rejected with 401' do
     post mcp_path, params: { jsonrpc: '2.0', id: 1, method: 'tools/list' }.to_json, headers: { 'Content-Type' => 'application/json' }
     assert_response :unauthorized

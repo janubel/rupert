@@ -249,14 +249,28 @@ Rails.application.routes.draw do
   namespace :projects do
     get 'getting-started', to: 'guides#show', as: :getting_started
     resources :projects, only: %i[index show new create edit update destroy] do
-      member { post :transition }
+      get :export, on: :collection
+      member do
+        post :transition
+        post :save_template
+      end
     end
-    resources :tasks, only: %i[index create update destroy] do
+    resources :templates, only: :destroy, controller: 'project_templates'
+    resources :tasks, only: %i[index show create update destroy] do
+      get :export, on: :collection
       member do
         post :transition
         post :move
       end
+      resources :comments, only: :create, controller: 'task_comments'
+      resources :checklist_items, only: %i[create update destroy], controller: 'task_checklist_items'
+      resources :dependencies, only: %i[create destroy], controller: 'task_dependencies'
+      resources :time_entries, only: %i[create destroy], controller: 'task_time_entries'
+      resources :attachments, only: %i[create show destroy], controller: 'task_attachments'
     end
+  end
+  resources :notifications, only: %i[index show] do
+    post :read_all, on: :collection
   end
   namespace :goals do
     resources :goals, only: %i[index show new create edit update destroy] do

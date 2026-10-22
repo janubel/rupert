@@ -1,31 +1,44 @@
 <% content_for :title, @project.name %>
 <% can_write = Current.user.can?("projects.write") %>
+<% open_count = @project.unfinished_count %>
 <% menu = [['Getting started', projects_getting_started_path]] %>
 <% if can_write %>
   <% menu << ['Put on hold', transition_projects_project_path(@project, event: "hold"), { method: :post }] if @project.may_hold? %>
-  <% menu << ['Mark complete', transition_projects_project_path(@project, event: "complete"), { method: :post }] if @project.may_complete? %>
+  <% if @project.may_complete? %>
+    <% if open_count.positive? %>
+      <% menu << ["Mark complete and finish #{pluralize(open_count, 'open task')}", transition_projects_project_path(@project, event: "complete", open_tasks: "finish"), { method: :post }] %>
+      <% menu << ["Mark complete, leave #{open_count == 1 ? 'it' : 'them'} open", transition_projects_project_path(@project, event: "complete", open_tasks: "leave"), { method: :post }] %>
+    <% else %>
+      <% menu << ['Mark complete', transition_projects_project_path(@project, event: "complete"), { method: :post }] %>
+    <% end %>
+  <% end %>
   <% menu << ['Archive', transition_projects_project_path(@project, event: "archive"), { method: :post, form: { data: { turbo_confirm: "Archive this project? It leaves the default list." } } }] if @project.may_archive? %>
 <% end %>
-<% owner = User.find_by(tenant_id: Current.tenant_id, id: @project.owner_id) %>
+<% owner = @assignees[@project.owner_id.to_s] %>
+<% members = @project.project_members.map { |m| @assignees[m.user_id.to_s] }.compact %>
 <div class="space-y-6">
   <%= page_header @project.name, subtitle: @project.description.presence || "No description.", menu: menu do %>
     <% if can_write %>
       <%= link_to "Edit", edit_projects_project_path(@project), class: "btn-ghost" %>
       <% if @project.may_start? %><%= button_to (@project.on_hold? ? "Resume" : "Start"), transition_projects_project_path(@project, event: "start"), method: :post, class: "btn-primary" %><% end %>
+      <% if @project.may_reopen? %><%= button_to (@project.archived? ? "Restore" : "Reopen"), transition_projects_project_path(@project, event: "reopen"), method: :post, class: "btn-primary" %><% end %>
     <% end %>
   <% end %>
 
-  <dl class="facts">
+  <dl class="facts" data-live-region="facts">
     <div><dt>Status</dt><dd><%= project_status_pill(@project) %></dd></div>
     <div><dt>Health</dt><dd><%= project_health_pill(@project) %></dd></div>
-    <% if owner %><div><dt>Owner</dt><dd><%= owner.display_name %></dd></div><% end %>
+    <% if owner %><div><dt>Owner</dt><dd><%= owner %></dd></div><% end %>
+    <% if @project.start_on %><div><dt>Starts</dt><dd><%= l(@project.start_on, format: :long) %></dd></div><% end %>
     <% if @project.due_on %>
       <div><dt>Due</dt><dd class="<%= @project.due_on < Date.current && !@project.completed? ? "font-semibold text-rose" : "" %>"><%= l(@project.due_on, format: :long) %><% unless @project.completed? %> (<%= @project.due_on < Date.current ? "#{pluralize(-@project.days_left, "day")} overdue" : "#{pluralize(@project.days_left, "day")} left" %>)<% end %></dd></div>
     <% end %>
+    <% if @goal %><div><dt>Goal</dt><dd><%= link_to @goal.name, goals_goal_path(@goal), class: "font-semibold text-olive-deep hover:underline" %><%= " (#{@goal.progress_pct}%)" if @goal.progress_pct %></dd></div><% end %>
+    <% if members.any? %><div><dt>Team</dt><dd><%= members.to_sentence %></dd></div><% end %>
     <div><dt>Progress</dt><dd><%= @project.progress_pct %>% · <%= @project.task_counts["done"] %> of <%= @project.task_total %> tasks complete</dd></div>
   </dl>
 
-  <section class="section-card">
+  <section class="section-card" data-live-region="progress">
     <%= section_heading 'Progress', level: :h3 %>
     <%= render "projects/shared/progress_bar", counts: @project.task_counts, height: "h-3" %>
     <ul class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-mocha">
@@ -33,6 +46,10 @@
         <li class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-pill <%= ProjectsHelper::STATUS_BAR[status] == "bg-fog" ? "bg-taupe/40" : ProjectsHelper::STATUS_BAR[status] %>"></span><%= status_label(status) %> <strong class="text-ink"><%= @project.task_counts[status] %></strong></li>
       <% end %>
       <% if @project.overdue_count.positive? %><li class="font-semibold text-rose"><%= @project.overdue_count %> overdue</li><% end %>
+      <% logged = @project.logged_minutes %>
+      <% if logged.positive? || @project.estimated_minutes.to_i.positive? %>
+        <li>Time <strong class="text-ink"><%= duration_label(logged) %></strong><% if @project.estimated_minutes.to_i.positive? %> of <%= duration_label(@project.estimated_minutes) %> estimated<% end %></li>
+      <% end %>
     </ul>
   </section>
 
@@ -40,8 +57,20 @@
     <%= render "projects/shared/quick_add", project: @project, assign_self: false %>
   <% end %>
 
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <%= page_tabs([["Board", projects_project_path(@project), @view == "board"], ["Timeline", projects_project_path(@project, view: "timeline"), @view == "timeline"], ["List", projects_tasks_path(project_id: @project.id, view: "list"), false]], label: 'Project views') %>
+    <% if can_write %>
+      <%= form_with url: save_template_projects_project_path(@project), method: :post, class: "toolbar-actions" do %>
+        <%= text_field_tag :name, nil, placeholder: "Template name", class: "input w-48", "aria-label": "Template name" %>
+        <%= submit_tag "Save template", class: "btn-ghost btn-sm" %>
+      <% end %>
+    <% end %>
+  </div>
+
   <% if @columns.values.all?(&:empty?) %>
     <%= empty_state "No tasks yet.", hint: (can_write ? "Add the first one above to start the board." : "Nothing has been planned for this project.") %>
+  <% elsif @view == "timeline" %>
+    <%= render "projects/projects/timeline" %>
   <% else %>
     <% if @board_total > Projects::TasksController::BOARD_LIMIT %>
       <p class="text-sm text-mocha" role="status">Showing <%= Projects::TasksController::BOARD_LIMIT %> of <%= @board_total %> tasks. <%= link_to "Open the full list", projects_tasks_path(project_id: @project.id, view: "list"), class: "font-semibold text-olive-deep hover:underline" %>.</p>

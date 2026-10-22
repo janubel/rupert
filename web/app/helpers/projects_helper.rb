@@ -3,14 +3,15 @@
 # Shared look for the Projects and Tasks screens: one place for status colors,
 # priority marks and project health.
 module ProjectsHelper
-  def project_person_options(selected_id = nil)
+  # Options for a person picker. selected is one id or a list; a selected person who
+  # has since been deactivated stays listed so saving does not silently drop them.
+  def project_person_options(selected = nil)
     @project_people ||= Projects::Task.available_people.to_a
+    chosen = Array(selected).map(&:to_s).compact_blank
     options = @project_people.map { |person| [person.display_name, person.id.to_s] }
-    if selected_id.present? && options.none? { |_, id| id == selected_id.to_s }
-      person = User.find_by(tenant_id: Current.tenant_id, id: selected_id)
-      options << ["#{person.display_name} (inactive)", person.id.to_s] if person
-    end
-    options_for_select(options, selected_id.to_s)
+    missing = chosen - options.map(&:last)
+    User.where(tenant_id: Current.tenant_id, id: missing).each { |person| options << ["#{person.display_name} (inactive)", person.id.to_s] }
+    options_for_select(options, chosen)
   end
 
   STATUS_LABELS = {
@@ -74,6 +75,23 @@ module ProjectsHelper
     end
   end
 
+  # 90 -> "1h 30m", 45 -> "45m", 120 -> "2h".
+  def duration_label(minutes)
+    minutes = minutes.to_i
+    return '0m' if minutes.zero?
+
+    hours, rest = minutes.divmod(60)
+    [("#{hours}h" if hours.positive?), ("#{rest}m" if rest.positive?)].compact.join(' ')
+  end
+
+  def label_chips(task)
+    safe_join(Array(task.labels).map { |label| link_to(label, tasks_filter_path(label: label), class: 'rounded-full bg-haze px-2 py-0.5 text-[11px] font-medium text-mocha hover:text-ink') }, ' ')
+  end
+
+  def recurrence_label(task)
+    Projects::Task::RECURRENCES[task.recurrence]
+  end
+
   def initials(name)
     name.to_s.split.first(2).map { |w| w[0] }.join.upcase.presence || '?'
   end
@@ -81,11 +99,16 @@ module ProjectsHelper
   # Tasks index URL that keeps the current filters, with overrides applied.
   # A nil override removes that filter.
   def tasks_filter_path(**overrides)
-    current = params.permit(:q, :priority, :project_id, :mine, :due, :status, :view).to_h.symbolize_keys
+    current = params.permit(:q, :priority, :project_id, :mine, :due, :status, :view, :label, :month).to_h.symbolize_keys
     projects_tasks_path(current.merge(overrides).compact_blank)
   end
 
+  def tasks_export_path
+    current = params.permit(:q, :priority, :project_id, :mine, :due, :status, :label).to_h.symbolize_keys
+    export_projects_tasks_path(current.compact_blank)
+  end
+
   def tasks_filtered?
-    %i[q priority project_id mine due status].any? { |key| params[key].present? }
+    %i[q priority project_id mine due status label].any? { |key| params[key].present? }
   end
 end

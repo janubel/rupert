@@ -1,7 +1,7 @@
 <% content_for :title, "Projects" %>
 <% filters = [["Active work", nil], ["Planned", "planned"], ["Active", "active"], ["On hold", "on_hold"], ["Completed", "completed"], ["Archived", "archived"]] %>
 <div class="space-y-6">
-  <%= page_header 'Projects', subtitle: 'Plan work, track tasks and hit goals.', menu: [['Getting started', projects_getting_started_path]] do %>
+  <%= page_header 'Projects', subtitle: 'Plan work, track tasks and hit goals.', menu: [['Getting started', projects_getting_started_path], ['Export CSV', export_projects_projects_path]] do %>
     <% if Current.user.can?("projects.write") %>
       <%= link_to "Add project", new_projects_project_path, class: "btn-primary" %>
     <% end %>

@@ -5,10 +5,20 @@
          data-move-url="<%= move_projects_task_path(task) %>" <%= "draggable=true".html_safe if can_write %>>
   <div class="flex items-start gap-2">
     <%= priority_dot(task.priority) %>
-    <p class="min-w-0 flex-1 text-sm leading-snug <%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= task.title %></p>
+    <p class="min-w-0 flex-1 text-sm leading-snug <%= task.done? ? "text-taupe line-through" : "font-medium text-ink" %>"><%= link_to task.title, projects_task_path(task), draggable: "false", class: "hover:underline" %></p>
   </div>
-  <% if task.description.present? %>
+  <% if task.blocked? && task.blocked_reason.present? %>
+    <p class="mt-1 line-clamp-2 pl-4 text-xs text-rose">Blocked: <%= task.blocked_reason %></p>
+  <% elsif task.description.present? %>
     <p class="mt-1 line-clamp-2 pl-4 text-xs text-mocha"><%= task.description %></p>
+  <% end %>
+  <% checked, total = task.checklist_progress %>
+  <% if task.labels.any? || total.positive? || task.recurrence.present? %>
+    <div class="mt-1.5 flex flex-wrap items-center gap-1.5 pl-4 text-[11px] text-taupe">
+      <% task.labels.first(3).each do |label| %><span class="rounded-full bg-haze px-2 py-0.5 font-medium text-mocha"><%= label %></span><% end %>
+      <% if total.positive? %><span title="Checklist"><%= checked %>/<%= total %> ✓</span><% end %>
+      <% if task.recurrence.present? %><span title="<%= recurrence_label(task) %>">↻</span><% end %>
+    </div>
   <% end %>
   <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 pl-4 text-xs">
     <% if show_project && task.project %>

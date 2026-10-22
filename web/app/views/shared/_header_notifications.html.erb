@@ -1,0 +1,3 @@
+<%# Header bell: opens the person's notifications, with an unread count. %>
+<% unread = Notification.unread_count_for(Current.user) %>
+<%= link_to notifications_path, class: "nav-utility#{' nav-pill-active' if controller_name == 'notifications'}", aria: { label: (unread.positive? ? "Notifications, #{unread} unread" : 'Notifications'), current: (controller_name == 'notifications' ? 'page' : nil) }, title: 'Notifications' do %><%= navigation_icon('bell') %><% if unread.positive? %><span class="absolute right-1 top-1 grid h-4 min-w-[1rem] place-items-center rounded-full bg-clay px-1 text-[10px] font-bold leading-none text-cream" aria-hidden="true"><%= unread > 9 ? "9+" : unread %></span><% end %><span class="nav-hint">Notifications</span><% end %>

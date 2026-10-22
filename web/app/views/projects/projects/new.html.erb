@@ -1,5 +1,18 @@
 <% content_for :title, "Add project" %>
 <div class="page-narrow space-y-6">
   <%= page_header 'Add project', subtitle: 'Name the work, say what done looks like and pick an owner.' %>
-  <%= render "form", project: @project, url: projects_projects_path, method: :post, cancel_path: projects_projects_path %>
+  <%= render "form", project: @project, url: projects_projects_path, method: :post, cancel_path: projects_projects_path, templates: @templates %>
+  <% if @templates.any? %>
+    <section class="section-card" aria-labelledby="templates-title">
+      <h2 id="templates-title" class="section-title">Saved templates</h2>
+      <ul class="divide-y divide-fog text-sm">
+        <% @templates.each do |template| %>
+          <li class="flex items-center justify-between gap-3 py-2">
+            <span class="min-w-0 truncate"><strong class="text-ink"><%= template.name %></strong> <span class="text-taupe">· <%= pluralize(template.task_count, "task") %></span></span>
+            <%= button_to "Remove", projects_template_path(template), method: :delete, class: "btn-ghost btn-sm", form: { data: { turbo_confirm: "Remove the template “#{template.name}”? Projects made from it are not affected." } } %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
 </div>

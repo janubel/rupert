@@ -27,7 +27,7 @@
         <span>Rupert</span>
       <% end %>
       <% if Current.user %>
-        <div class="flex items-center gap-3 text-sm"><% unless @preview %><%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %><%= render 'shared/feedback_button' %><% end %><span><%= Current.user.display_name %></span><% unless @preview %><%= button_to 'Sign out', logout_path, method: :delete, class: 'text-mocha underline' %><% end %></div>
+        <div class="flex items-center gap-3 text-sm"><% unless @preview %><%= render 'shared/header_notifications' %><%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %><%= render 'shared/feedback_button' %><% end %><span><%= Current.user.display_name %></span><% unless @preview %><%= button_to 'Sign out', logout_path, method: :delete, class: 'text-mocha underline' %><% end %></div>
       <% end %>
     </div>
     <% if Current.user %>
