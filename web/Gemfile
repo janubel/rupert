@@ -141,3 +141,6 @@ group :test do
 end
 
 gem "shopify_app", "~> 23.0"
+
+# In-app team chat: model client with native tool calling (Ollama, OpenAI-compatible endpoints).
+gem "ruby_llm", "~> 2.1"

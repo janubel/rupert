@@ -196,6 +196,17 @@ Rails.application.routes.draw do
   get '/search', to: 'search#index', as: :search
   get '/dashboard', to: 'home#index'
   get '/roadmap', to: 'roadmap#index', as: :roadmap
+  # Team chat: rooms inside Rupert with the @rupert assistant (docs/ops/team-chat.md).
+  get    '/chat',                                     to: 'team_chat#index',           as: :team_chat
+  post   '/chat/rooms',                               to: 'team_chat#create_room',     as: :team_chat_rooms
+  get    '/chat/:room',                               to: 'team_chat#show',            as: :team_chat_room
+  patch  '/chat/:room',                               to: 'team_chat#update_room'
+  get    '/chat/:room/messages',                      to: 'team_chat#messages',        as: :team_chat_messages
+  post   '/chat/:room/messages',                      to: 'team_chat#create_message'
+  delete '/chat/:room/messages/:id',                  to: 'team_chat#destroy_message', as: :team_chat_message
+  post   '/chat/:room/messages/:id/reactions',        to: 'team_chat#react',           as: :team_chat_reactions
+  get    '/chat/:room/files/:id',                     to: 'team_chat#attachment',      as: :team_chat_attachment
+  post   '/chat/:room/messages/:id/actions/:action_id', to: 'team_chat#decide',        as: :team_chat_action
   get '/buzz', to: 'buzz#show', as: :buzz
   get '/buzz/chat', to: 'buzz_chat#show', as: :buzz_chat
   get '/buzz/chat/messages', to: 'buzz_chat#messages', as: :buzz_chat_messages

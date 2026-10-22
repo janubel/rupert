@@ -1,0 +1,193 @@
+# frozen_string_literal: true
+
+# Team chat: Slack-style rooms inside Rupert, with @rupert answering from
+# Rupert's own tools (docs/ops/team-chat.md). Administrators only for now.
+#
+# The page polls one JSON endpoint: new and changed messages since the last
+# poll (so a reply being written, or an action someone approved, shows up),
+# plus unread counts for the room list. Production runs SQLite without Redis,
+# so polling local rows is the simplest thing that survives deploys.
+class TeamChatController < AuthenticatedController
+  PAGE = 50
+  CHANGED_MAX = 200
+
+  before_action :require_access
+  before_action -> { response.headers['Cache-Control'] = 'no-store' }, except: %i[index show]
+  before_action :load_room, except: %i[index create_room]
+
+  # GET /chat — the last room you were in, else #general.
+  def index
+    general = TeamChat::Room.ensure_defaults!(Current.user)
+    last = TeamChat::Membership.where(user_id: Current.user.id).order(updated_at: :desc).first&.room
+    redirect_to team_chat_room_path(last&.visible_to?(Current.user) ? last : general)
+  end
+
+  # GET /chat/:room
+  def show
+    TeamChat::Room.ensure_defaults!(Current.user)
+    @membership = @room.membership_for(Current.user)
+    @membership.touch
+    @rooms = rail_rooms
+    @members = @room.direct? ? [Current.user] : @room.members.where(active: true).order(:id).limit(12).to_a
+    @model = TeamChat::ModelConfig.current
+    @people = TeamChat::Post.mentionable.reject { |person| person.id == Current.user.id }.map { |person| { id: person.id, name: person.display_name } }
+  end
+
+  # GET /chat/:room/messages(.json)
+  #   (none)        the latest page of the room
+  #   before=<id>   an older page
+  #   since=<time>  messages created or changed since the last poll
+  #   thread=<id>   also the whole thread under that message
+  def messages
+    scope = @room.messages.includes(:user, :attachment_infos, reactions: :user)
+    rows =
+      if params[:since].present?
+        since = Time.zone.parse(params[:since].to_s) rescue nil
+        return render json: { error: 'Bad cursor.' }, status: :unprocessable_entity unless since
+
+        expire_stale
+        scope.where(updated_at: since..).order(:id).limit(CHANGED_MAX).to_a
+      elsif params[:before].present?
+        scope.visible.top_level.where(id: ...params[:before].to_i).order(id: :desc).limit(PAGE).to_a.reverse
+      else
+        expire_stale
+        scope.visible.top_level.order(id: :desc).limit(PAGE).to_a.reverse
+      end
+    has_more = params[:since].blank? && rows.size == PAGE
+    rows |= thread_rows(scope) if params[:thread].present?
+    mark_read(rows) if params[:visible] == '1'
+    render json: {
+      now: Time.current.iso8601(6), messages: payload(rows), has_more: has_more,
+      rooms: rail_rooms.map { |room| { slug: room.slug, unread: room.unread, mentions: room.mentions } }
+    }
+  end
+
+  # POST /chat/:room/messages { body, parent_id }
+  def create_message
+    result = TeamChat::Post.call(room: @room, user: Current.user, body: params[:body], parent_id: params[:parent_id],
+      files: params[:files], mention_ids: params[:mention_ids])
+    render json: { messages: payload([result.message, result.reply].compact) }, status: :created
+  rescue TeamChat::Post::Invalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  rescue TeamChat::Post::Limited => e
+    render json: { error: e.message }, status: :too_many_requests
+  end
+
+  # GET /chat/:room/files/:id — an attachment, only to people who can open the room.
+  def attachment
+    file = TeamChat::Attachment.where(room_id: @room.id).find(params[:id])
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Content-Security-Policy'] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
+    response.headers['Cache-Control'] = 'private, max-age=86400'
+    send_data file.data, type: file.content_type, filename: file.filename, disposition: file.image? || file.content_type == 'application/pdf' ? 'inline' : 'attachment'
+  end
+
+  # POST /chat/:room/messages/:id/reactions { emoji } — adds or removes yours.
+  def react
+    message = @room.messages.visible.find(params[:id])
+    return render json: { error: 'Pick one of the offered reactions.' }, status: :unprocessable_entity unless TeamChat::Reaction::EMOJI.include?(params[:emoji])
+
+    TeamChat::Reaction.toggle!(message, Current.user, params[:emoji])
+    render json: { messages: payload([message.reload]) }
+  end
+
+  # DELETE /chat/:room/messages/:id — your own messages only.
+  def destroy_message
+    message = @room.messages.find(params[:id])
+    return head :forbidden unless message.person? && message.user_id == Current.user.id
+
+    message.soft_delete!
+    render json: { messages: payload([message]) }
+  end
+
+  # POST /chat/:room/messages/:id/actions/:action_id { decision: approve|dismiss }
+  def decide
+    message = @room.messages.find(params[:id])
+    TeamChat::Actions.decide!(message, params[:action_id], user: Current.user, approve: params[:decision] == 'approve')
+    render json: { messages: payload([message.reload]) }
+  rescue TeamChat::Actions::Denied => e
+    render json: { error: e.message }, status: :forbidden
+  end
+
+  # POST /chat/rooms { name, topic, assistant_mode }
+  def create_room
+    room = TeamChat::Room.create!(room_params.merge(kind: 'channel', created_by: Current.user))
+    room.membership_for(Current.user)
+    ActivityLogger.log('team_chat_room_created', details: "room=#{room.slug}")
+    redirect_to team_chat_room_path(room)
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to team_chat_path, alert: "The room was not created: #{e.record.errors.full_messages.to_sentence}."
+  end
+
+  # PATCH /chat/:room { topic, assistant_mode, archived }
+  def update_room
+    return head :forbidden if @room.direct? && params[:archived].present?
+
+    attributes = room_params.slice(:assistant_mode)
+    attributes[:topic] = params[:topic].to_s.strip.presence if params.key?(:topic)
+    attributes[:archived_at] = Time.current if ActiveModel::Type::Boolean.new.cast(params[:archived]) && @room.slug != 'general'
+    @room.update!(attributes)
+    ActivityLogger.log('team_chat_room_updated', details: "room=#{@room.slug}; fields=#{attributes.keys.join(',')}")
+    respond_to do |format|
+      format.json { render json: { ok: true, assistant_mode: @room.assistant_mode, topic: @room.topic } }
+      format.html { redirect_to(@room.archived? ? team_chat_path : team_chat_room_path(@room)) }
+    end
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
+  private
+
+  def require_access
+    return head :forbidden unless TeamChat.allowed?(Current.user)
+
+    authorize(:module, :dashboard_read?)
+  end
+
+  def load_room
+    @room = TeamChat::Room.find_by(slug: params[:room].to_s)
+    head :not_found unless @room&.visible_to?(Current.user)
+  end
+
+  def room_params
+    params.permit(:name, :topic, :assistant_mode).to_h.symbolize_keys.compact_blank
+  end
+
+  def rail_rooms
+    @rail_rooms ||= begin
+      rooms = TeamChat::Room.visible_to(Current.user).order(:kind, :name).to_a
+      reads = TeamChat::Membership.where(user_id: Current.user.id, room_id: rooms.map(&:id)).pluck(:room_id, :last_read_message_id).to_h
+      me = Current.user.id
+      rooms.each do |room|
+        unread = room.messages.visible.where('id > ?', reads[room.id].to_i).where('user_id IS NULL OR user_id != ?', me).where.not(status: 'pending')
+        room.define_singleton_method(:unread) { unread.top_level.count }
+        # Mentions count in threads too; the JSON column holds a plain id list.
+        room.define_singleton_method(:mentions) { unread.where('mentions LIKE ? OR mentions LIKE ? OR mentions LIKE ? OR mentions = ?', "[#{me},%", "%,#{me},%", "%,#{me}]", "[#{me}]").count }
+      end
+    end
+  end
+
+  def thread_rows(scope)
+    root = scope.find_by(id: params[:thread].to_i, parent_id: nil)
+    root ? [root, *scope.where(parent_id: root.id).order(:id).to_a] : []
+  end
+
+  def payload(rows)
+    roots = rows.map { |row| row.parent_id || row.id }.uniq
+    counts = @room.messages.visible.where(parent_id: roots).group(:parent_id).count
+    ids = rows.flat_map(&:mention_ids).uniq
+    people = ids.any? ? User.where(id: ids, tenant_id: Current.tenant_id).to_h { |user| [user.id, user.display_name] } : {}
+    rows.sort_by(&:id).map { |row| row.as_payload(viewer: Current.user, reply_counts: counts, people: people) }
+  end
+
+  def mark_read(rows)
+    latest = rows.select { |row| row.parent_id.nil? }.map(&:id).max
+    @room.membership_for(Current.user).mark_read!(latest) if latest
+  end
+
+  def expire_stale
+    @room.messages.pending.where(created_at: ...TeamChat::Message::STALE_AFTER.ago).find_each do |row|
+      row.update!(status: 'failed', activity: nil, body: TeamChat::Agent::FAILURES[:error])
+    end
+  end
+end

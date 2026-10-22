@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -280,6 +280,80 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_180000) do
     t.index ["tenant_id", "startedAt"], name: "idx_sync_runs_tenant_started_at"
     t.index ["tenant_id"], name: "index_SyncRun_on_running_per_tenant", unique: true, where: "status = 'running'"
     t.index ["tenant_id"], name: "index_SyncRun_on_tenant_id"
+  end
+
+  create_table "chat_attachments", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "room_id", null: false
+    t.integer "message_id", null: false
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.integer "byte_size", default: 0, null: false
+    t.binary "data", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_chat_attachments_on_message_id"
+    t.index ["room_id"], name: "index_chat_attachments_on_room_id"
+  end
+
+  create_table "chat_memberships", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "room_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "last_read_message_id", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_id", "user_id"], name: "index_chat_memberships_on_room_id_and_user_id", unique: true
+    t.index ["room_id"], name: "index_chat_memberships_on_room_id"
+    t.index ["tenant_id", "user_id"], name: "index_chat_memberships_on_tenant_id_and_user_id"
+  end
+
+  create_table "chat_messages", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "room_id", null: false
+    t.bigint "user_id"
+    t.string "author_kind", default: "person", null: false
+    t.text "body", default: "", null: false
+    t.bigint "parent_id"
+    t.string "status", default: "done", null: false
+    t.string "activity"
+    t.text "actions"
+    t.text "mentions"
+    t.text "meta"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_id", "id"], name: "index_chat_messages_on_room_id_and_id"
+    t.index ["room_id", "parent_id", "id"], name: "index_chat_messages_on_room_id_and_parent_id_and_id"
+    t.index ["room_id", "status"], name: "index_chat_messages_on_room_id_and_status"
+    t.index ["room_id"], name: "index_chat_messages_on_room_id"
+  end
+
+  create_table "chat_reactions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "message_id", null: false
+    t.bigint "user_id", null: false
+    t.string "emoji", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "user_id", "emoji"], name: "index_chat_reactions_on_message_id_and_user_id_and_emoji", unique: true
+    t.index ["message_id"], name: "index_chat_reactions_on_message_id"
+  end
+
+  create_table "chat_rooms", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.string "topic"
+    t.string "kind", default: "channel", null: false
+    t.string "assistant_mode", default: "mentions", null: false
+    t.bigint "created_by_id"
+    t.datetime "last_message_at"
+    t.datetime "archived_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "kind", "created_by_id"], name: "index_chat_rooms_on_tenant_id_and_kind_and_created_by_id"
+    t.index ["tenant_id", "slug"], name: "index_chat_rooms_on_tenant_id_and_slug", unique: true
   end
 
   create_table "uploads", force: :cascade do |t|
@@ -3192,6 +3266,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_180000) do
   end
 
   add_foreign_key "buzz_person_keys", "users", on_delete: :cascade
+  add_foreign_key "chat_attachments", "chat_messages", column: "message_id"
+  add_foreign_key "chat_attachments", "chat_rooms", column: "room_id"
+  add_foreign_key "chat_memberships", "chat_rooms", column: "room_id"
+  add_foreign_key "chat_messages", "chat_rooms", column: "room_id"
+  add_foreign_key "chat_reactions", "chat_messages", column: "message_id"
   add_foreign_key "feedback_attachments", "agent_feedbacks"
   add_foreign_key "workspace_deployments", "tenants"
   add_foreign_key "workspace_deployments", "users", column: "owner_id"
