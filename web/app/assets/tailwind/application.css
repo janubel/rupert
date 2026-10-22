@@ -1814,3 +1814,10 @@ body.tour-active { overflow-x:hidden; }
 .chat-presence-policy .field { display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:.35rem 0; }
 /* Team chat: a bot answer with figures not found in its tool data */
 .chat-unverified { display:flex;gap:.35rem;align-items:flex-start;max-width:40rem;margin:.3rem 0 0;padding:.3rem .55rem;border-left:3px solid #d97706;border-radius:.3rem;background:color-mix(in srgb,#f59e0b 12%,var(--color-paper));color:var(--color-ink);font-size:.78rem; }
+/* Team chat: rooms a person hid from their list */
+.chat-rail-hidden { margin-top:.4rem; }
+.chat-rail-hidden > summary { cursor:pointer;list-style:none;padding:.2rem .5rem; }
+.chat-rail-hidden > summary::-webkit-details-marker { display:none; }
+.chat-rail-hidden > summary::before { content:"▸ ";color:var(--color-taupe); }
+.chat-rail-hidden[open] > summary::before { content:"▾ "; }
+.chat-rail-hidden .chat-rail-room { opacity:.8; }

@@ -1,0 +1,50 @@
+<%# Recent errors and activity. Counts and redacted one-line summaries from OpsEvent; never raw log lines. %>
+<% a = activity %>
+<% state_pill = { 'ok' => ['pill-fern', 'All quiet'], 'warning' => ['pill-clay', 'Worth a look'], 'error' => ['pill-rose', 'Needs attention'] }.fetch(a[:state]) %>
+<% level_pill = { 'warn' => 'pill-clay', 'error' => 'pill-rose', 'fatal' => 'pill-rose' } %>
+<section class="card card-pad" id="ops-activity" aria-labelledby="ops-activity-title">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h2 id="ops-activity-title" class="font-display text-lg text-ink">Recent errors and activity</h2>
+      <p class="mt-1 text-xs text-taupe">Last <%= a[:window_hours] %> hours · warnings and errors from the web server and the job worker, repeats counted once.</p>
+    </div>
+    <span class="<%= state_pill[0] %>"><%= state_pill[1] %></span>
+  </div>
+
+  <dl class="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+    <% a[:tiles].each do |tile| %>
+      <div class="rounded-xl bg-haze px-4 py-3">
+        <dt class="text-xs font-medium text-mocha"><%= tile[:label] %></dt>
+        <dd class="font-display text-2xl <%= tile[:count].positive? && %w[server_error job_failure].include?(tile[:category]) ? 'text-rose' : 'text-ink' %>"><%= number_with_delimiter(tile[:count]) %></dd>
+      </div>
+    <% end %>
+  </dl>
+
+  <% if a[:recent].empty? %>
+    <p class="mt-4 rounded-xl border border-fog bg-haze px-4 py-3 text-sm text-mocha">Nothing has gone wrong in the last <%= a[:window_hours] %> hours.</p>
+  <% else %>
+    <ul class="mt-4 divide-y divide-fog rounded-xl border border-fog" aria-label="Recent problems">
+      <% a[:recent].each do |row| %>
+        <li class="flex flex-col gap-1 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="<%= level_pill.fetch(row[:level], 'pill-taupe') %>"><%= row[:label] %></span>
+              <% if row[:occurrences] > 1 %><span class="text-xs font-semibold text-mocha">×<%= number_with_delimiter(row[:occurrences]) %></span><% end %>
+            </div>
+            <p class="mt-1 break-words text-ink"><%= row[:summary].presence || row[:kind].humanize %></p>
+          </div>
+          <div class="shrink-0 text-xs text-taupe sm:text-right">
+            <p><%= time_ago_in_words(Time.zone.parse(row[:last_seen_at])) %> ago</p>
+            <% if row[:request_id] %><p class="font-mono" title="Request id: find it with rupert-logs request <%= row[:request_id] %>"><%= row[:request_id].first(8) %></p><% end %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <p class="mt-4 text-xs text-taupe">
+    Logging: <%= a[:config][:format] %> lines at <%= a[:config][:level] %> level · slow requests from <%= number_with_delimiter(a[:config][:slow_request_ms]) %> ms ·
+    <%= number_with_delimiter(a[:config][:stored]) %> problems kept for <%= a[:config][:retention_days] %> days ·
+    Sentry <%= a[:config][:sentry] ? 'on' : 'off' %>. Full detail stays in the server log; use <code>rupert-logs</code> on the server (see docs/ops/logging.md).
+  </p>
+</section>

@@ -159,8 +159,10 @@ module Mcp
     # Audit trail: tool, token id, outcome and duration — never arguments or results.
     def record(tool_name, outcome, started)
       ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
-      ActivityLogger.log('mcp_tool_call', subject: token,
-        details: "tool=#{tool_name.to_s.gsub(/[^\w.:()-]/, '?').first(80)}; token_id=#{token.id}; outcome=#{outcome}; duration_ms=#{ms}")
+      name = tool_name.to_s.gsub(/[^\w.:()-]/, '?').first(80)
+      ActivityLogger.log('mcp_tool_call', subject: token, details: "tool=#{name}; token_id=#{token.id}; outcome=#{outcome}; duration_ms=#{ms}")
+      OpsLog.event('mcp_tool_call', level: outcome == 'ok' ? :info : :warn, tool: name, token_id: token.id, tenant_id: token.try(:tenant_id),
+        outcome: outcome, duration_ms: ms, persist: outcome == 'internal_error')
     end
 
     def success(id, result)

@@ -77,6 +77,8 @@
     </div>
   </section>
 
+  <%= render 'system/ops_activity', activity: @ops_activity %>
+
   <%= render 'system/backups', backups: @backups %>
 
   <%= render 'system/ai_health', ai_health: @ai_health %>

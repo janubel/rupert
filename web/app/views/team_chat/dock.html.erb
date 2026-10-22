@@ -7,7 +7,7 @@
     </div>
   </div>
   <nav class="chat-dock-rooms" aria-label="Rooms">
-    <% @rooms.sort_by { |room| [room.direct? ? 0 : 1, -(room.last_message_at || room.created_at).to_i] }.each do |room| %>
+    <% @rooms.reject(&:hidden?).sort_by { |room| [room.direct? ? 0 : 1, -(room.last_message_at || room.created_at).to_i] }.each do |room| %>
       <% unread = room.unread %>
       <% mentions = room.mentions %>
       <%= link_to team_chat_dock_room_path(room), class: "chat-dock-room #{'has-unread' if unread.positive? || mentions.positive?}", data: { chat_dock_room: room.slug } do %>

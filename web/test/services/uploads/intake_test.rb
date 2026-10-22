@@ -14,6 +14,23 @@ class UploadsIntakeTest < ActiveSupport::TestCase
 
   teardown { Current.reset }
 
+  test 'the inbox audit is a structured upload event with hash, size and outcome, never contents or file names' do
+    io = StringIO.new
+    tap_logger = Logger.new(io, level: Logger::INFO)
+    tap_logger.formatter = Logger::Formatter.new.tap { |formatter| formatter.extend(OpsLog::Formatter) }
+    Rails.logger.broadcast_to(tap_logger)
+    OpsLog.with_format('json') { intake(BANK_CSV, 'Smith-payroll.csv') }
+    event = io.string.lines.map { |line| JSON.parse(line) }.find { |line| line['event'] == 'upload' }
+    assert event, io.string
+    assert_equal 64, event['sha256'].size
+    assert_equal BANK_CSV.bytesize.to_s, event['byte_size']
+    assert_equal 'web', event['origin']
+    assert event['outcome'].present?
+    ['Smith', 'payroll', BANK_CSV.lines[1].strip].each { |text| assert_not_includes io.string, text }
+  ensure
+    Rails.logger.stop_broadcasting_to(tap_logger)
+  end
+
   def intake(content, name = 'statement.csv', **options)
     Uploads::Intake.call(StringIO.new(content), filename: name, origin: 'web', actor: @admin, **options)
   end
@@ -102,7 +119,7 @@ class UploadsIntakeTest < ActiveSupport::TestCase
     intake("Date,Description,Amount\n2026-10-14,SECRETPAYEE,-1.00\n", 'secret-name.csv')
     Rails.logger = previous
     logged = io.string
-    assert_match(/\[uploads\] .*event=received/, logged)
+    assert_match(/upload action=received/, logged)
     assert_match(/sha256=\h{64}/, logged)
     assert_no_match(/SECRETPAYEE|secret-name/, logged)
     assert_no_match(/SECRETPAYEE/, ActivityLog.where(tenant_id: @tenant.id).pluck(:details).join)
@@ -115,6 +132,50 @@ class UploadsIntakeTest < ActiveSupport::TestCase
       before = Upload.count
       assert_raises(Uploads::Intake::Error) { intake(SQUARE_CSV, 'b.csv') }
       assert_equal before, Upload.count
+    end
+  end
+
+  test 'a retained file must fit the remaining storage allowance and duplicates use no more bytes' do
+    stub_const(Uploads::Intake, :STORAGE_LIMIT, BANK_CSV.bytesize) do
+      first = intake(BANK_CSV)
+      assert first.created
+      assert_equal 'duplicate', intake(BANK_CSV, 'copy.csv').upload.status
+      assert_raises(Uploads::Intake::Error) { intake(UNKNOWN_CSV, 'more.csv') }
+      assert_equal BANK_CSV.bytesize, Upload.where(retained: true).sum(:byte_size)
+      assert_equal 2, Upload.count
+    end
+  end
+
+  test 'a new original cannot overrun a partially used storage allowance' do
+    stub_const(Uploads::Intake, :STORAGE_LIMIT, BANK_CSV.bytesize + UNKNOWN_CSV.bytesize - 1) do
+      intake(BANK_CSV)
+      assert_raises(Uploads::Intake::Error) { intake(UNKNOWN_CSV, 'more.csv') }
+      assert_equal 1, Upload.count
+      assert_equal BANK_CSV.bytesize, Upload.where(retained: true).sum(:byte_size)
+    end
+  end
+
+  test 'capacity consumed during validation is rechecked before retaining a file' do
+    assert_capacity_rechecked(nil)
+  end
+
+  test 'capacity consumed during validation is rechecked before recording a rejection' do
+    assert_capacity_rechecked(['not_text', 'Refused fixture'])
+  end
+
+  def assert_capacity_rechecked(validation_result)
+    stub_const(Uploads::Intake, :DAILY_LIMIT, 1) do
+      # Models another request committing after the initial capacity read but
+      # before this request obtains SQLite's writer lock. No private data needed.
+      validation = lambda do |*|
+        Upload.create!(filename: 'other.txt', origin: 'web', status: 'rejected', byte_size: 0)
+        validation_result
+      end
+      Uploads::Validator.stub(:problem, validation) do
+        assert_raises(Uploads::Intake::Error) { intake(BANK_CSV) }
+      end
+      assert_equal 1, Upload.count
+      assert_equal 0, Upload.where(retained: true).count
     end
   end
 

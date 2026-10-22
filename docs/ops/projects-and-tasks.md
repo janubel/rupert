@@ -36,7 +36,7 @@ and only ever served as downloads.
 
 ## Operations
 
-* **Migration `20261023030000`.** Adds the new tables and columns and converts `tasks.project_id` from a string
+* **Migration `20261023120000`.** Adds the new tables and columns and converts `tasks.project_id` from a string
   to an integer with a foreign key to `projects`. Before the change, any `project_id` that does not name a project in
   the **same workspace** (stray text, deleted or foreign projects) is set to NULL, so those tasks become unfiled
   work rather than failing the migration. Back up first (the normal procedure); the migration is reversible in

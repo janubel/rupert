@@ -6,6 +6,9 @@ module Mcp
       include OperationsAccess
 
       BOOTED_AT = Time.current
+      # Uptime comes from the monotonic clock so a test that travels in time while this
+      # class autoloads cannot make it negative.
+      BOOTED_MONOTONIC = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
       tool 'instance_status',
         title: 'Rupert instance status',
@@ -22,7 +25,7 @@ module Mcp
         data = {
           ready: ready, checks: checks,
           build: { revision: build.revision, short: build.short_revision, built_at: iso(build.built_at) },
-          process: { started_at: iso(BOOTED_AT), uptime_seconds: (Time.current - BOOTED_AT).to_i, rails: Rails.version, ruby: RUBY_VERSION,
+          process: { started_at: iso(BOOTED_AT), uptime_seconds: uptime_seconds, rails: Rails.version, ruby: RUBY_VERSION,
                      environment: Rails.env, node_mode: WorkspaceNode.isolated? ? 'workspace' : 'shared' },
           workspace: { name: tenant.name, active_users: User.where(tenant_id: tenant.id, active: true).count,
                        open_feedback_reports: AgentFeedback.where(status: %w[new triaged planned]).count,
@@ -33,6 +36,10 @@ module Mcp
                "up #{ActiveSupport::Duration.build(data[:process][:uptime_seconds]).inspect}."
         result(text, data)
       end
+
+      private
+
+      def uptime_seconds = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - BOOTED_MONOTONIC).to_i
     end
   end
 end

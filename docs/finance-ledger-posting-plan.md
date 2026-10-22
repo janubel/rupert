@@ -1,33 +1,50 @@
-# Plan: post vendor payments and sales to the ledger live (for owner approval)
+# Plan: post sales and refunds to the ledger live
 
-Status: **proposal only. No posting rule or code has been changed.**
+Status: **decided by the owner (2026-10-21, issue #204) and implemented in the sales-posting change.** Vendor payments are a separate step (see the end). Nothing here is run against production data until the owner confirms the dry runs.
 
-## What is true today (verified in code)
+## What was true before this change
 
-- `Finance::Posting.expense` runs when an expense is recorded, edited, removed or restored.
-- `Finance::Posting.vendor_payment` and `Finance::Posting.sale` are **never called** by the app. `Posting.backfill!` is also never called (no rake task, job or controller). So vendor payments and sales reach the general ledger and reports only if someone runs it from a console.
-- Removing a vendor payment does not void any ledger entry (it has none).
-- Sales are created in four places: `Pos::Checkout`, `WarehouseCheckoutService`, `SwipesimpleImporter`, `CanonicalOrderImporter`. Imports can re-run and can change or cancel orders.
-- `Posting.expense` raises if the chart of accounts is not seeded (seeding currently happens only when Chart of accounts is opened).
+- `Finance::Posting.expense` ran when an expense was recorded, edited, removed or restored.
+- `Finance::Posting.sale` had no caller. Production nevertheless held 11,550 posted `sale` entries, all created in one batch on 2026-10-17 (a console `Posting.backfill!`), for 11,573 completed payments. The 23 payments after that batch were unposted, and the gap grew with every sale.
+- Every receipt, card included, was debited to Cash 1000, so about $854K of card sales sat in Cash while the bank screen held 909 unmatched deposit lines.
+- There were no refunds, tips or locked periods in production, so none of those paths had real data behind them.
+- Sales are created in four places (`Pos::Checkout`, `WarehouseCheckoutService`, `SwipesimpleImporter`, `CanonicalOrderImporter`); imports can re-run and change a payment.
 
-## Decisions I need from you before building
+## Decisions
 
-1. **Which sales count?** Only `Core::Payment` rows with status `completed` (current posting rule), or also refunds? Refunds have no posting rule yet.
-2. **Card sales** post to Cash 1000 today and the bank screen says card settlement is a separate step. Keep that, or post card receipts to a clearing account?
-3. **Backfill scope and date.** Backfilling history posts entries into possibly locked periods. Proposal: backfill only unlocked periods, list the locked ones for a decision, never touch locked months.
-4. **Source of truth for imports.** If an import later changes a payment, should the entry be voided and re-posted (as expenses do) or reversed? I recommend reversal, which is the audit-friendly option and matches the new Reverse action.
+1. **Authoritative source and basis.** `Core::Payment` rows with status `completed` are the sales source, recognised when the payment is taken (cash basis for revenue). Sales tax is the payment's proportional share of its order's tax (tips excluded), as before.
+2. **Card receipts go to `1150 Card settlements receivable`**, a new standard asset account, not Cash. Cash, gift card and "other" tenders still debit Cash 1000; check debits Checking 1100. Gift card and store credit have no liability account yet and are flagged below.
+3. **Refunds** post their own entry (kind `refund`): debit `4200 Refunds` and `2100 Sales tax payable` (the refunded share of tax), credit the tender's receipt account. The original sale is never edited. Store credit and gift card refunds create or use a liability that has no account yet, so they are **not** posted automatically; they surface as unposted and need a manual journal entry. Discarding a refund voids its entry.
+4. **Imports that change a payment**: the entry is voided and posted again, exactly as expenses are ("entries produced from a payment are corrected on that record"). A payment that stops being `completed`, or is deleted, loses its entry. Entries are never edited or deleted.
+5. **Duplicates**: one posted entry per `(source_type, source_id)`; every posting call is idempotent.
+6. **Failures never block the till or an import.** The hook runs after the payment commits; a refusal (a locked period, a missing account) is reported through `Rails.error` and leaves the payment unposted. Unposted records are counted in the notice on every finance report and listed by the backfill task.
+7. **Historical backfill and reclass stay separate, dry-run first, owner-reviewed.** Neither changes anything without `CONFIRM=1` and an explicit `TENANT_ID`.
+8. **Card settlements are not matched yet.** Until the processor's deposit (net of fees) is posted against `1150`, that account carries a balance. The report notice says so; that is the remaining accepted limitation.
 
-## Proposed steps (each its own commit, each with tests)
+## What was built
 
-1. **Safety first.** Seed the chart of accounts when a tenant is created and make every `Posting` call fail loudly inside the same transaction as the record it posts (record and entry succeed or fail together; no more saved expense with no entry).
-2. **Vendor payments.** Call `Posting.vendor_payment` on create; on remove, void or reverse that entry (per decision 4); on restore, post again. Blocked inside locked periods, same as the record.
-3. **Sales.** Post from a single hook on `Core::Payment` completion (after commit), covering all four creators. Idempotent: the existing unique index on `(source_type, source_id)` for posted entries already prevents doubles. Cancellations and refunds follow decision 1.
-4. **Backfill with a dry run.** A rake task that prints counts and totals per month, skips locked periods, and only posts with `CONFIRM=1`. Run on a copy first.
-5. **Reconcile the numbers.** A read-only check on Books health: for each month, ledger sales and vendor payments versus the registers, shown as "Balanced / differs by $X".
-6. **UI.** Source links on entries already work; add "posted to ledger / not yet posted" status on the payments register.
+- Live hook: `Core::Payment` and `Core::Refund` call `Finance::Posting.sync_sale` / `sync_refund` after commit.
+- `Finance::Posting.sale` and `.refund`, with the receipt-account rules above; `refund` is a new journal entry kind.
+- `Finance::SalesBackfill` and `rake finance:sales:backfill`: unposted payments and refunds by month. Posts record by record and reports what a locked period or missing account refused.
+- `Finance::CardReclass` and `rake finance:sales:reclass_card`: one dated entry per month moving card receipts still in Cash to 1150 (debit 1150, credit 1000). It works as a delta against earlier reclass entries, so re-running is safe. The dry run never seeds the chart.
+- The standard chart gains 1150; an existing tenant gets it the first time something posts (the chart seed is idempotent and only adds missing codes).
+- Report notice: now says card settlements are not matched yet, plus a count of payments and refunds still missing from the ledger.
 
-## Risks
+## Running it on production (after owner review)
 
-- Changing historical reports: backfilled months will change totals. Mitigation: dry run, locked months untouched, owner review of the per-month table before confirming.
-- Double counting sales with expenses or card settlement: covered by decision 2 and the check in step 5.
-- Nothing is sent to Shopify or Square; this is local database only.
+```sh
+# dry runs: print only
+TENANT_ID=<id> bin/rails finance:sales:backfill
+TENANT_ID=<id> bin/rails finance:sales:reclass_card
+# post, after reviewing the tables: backfill first, then reclass
+CONFIRM=1 TENANT_ID=<id> bin/rails finance:sales:backfill
+CONFIRM=1 TENANT_ID=<id> bin/rails finance:sales:reclass_card
+```
+
+Do this before any month is locked: locked periods refuse the entries, and the tasks report them rather than skipping silently. Run on a copy first. Remaining acceptance for #204: the owner-reviewed dry run tables, a representative sale/refund reconciled against its source (SwipeSimple or Square), and the recorded accepted limitation (item 8).
+
+## Still open
+
+- Vendor payments (`Posting.vendor_payment`) are not posted live yet; removing one does not void an entry. Separate change.
+- Card settlement posting: match each processor deposit (bank statement line) to the sales it settles, post net deposit to Checking, fees to 6000 Bank & processing fees, and clear 1150.
+- A liability account for store credit and gift cards.

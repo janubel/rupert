@@ -29,6 +29,40 @@ class SystemPageTest < ActionDispatch::IntegrationTest
     assert_select 'h2', %r{Web server|Background jobs|Database}
   end
 
+  test 'recent errors card is empty and calm when nothing went wrong' do
+    users(:regular_user).update!(role: 'super_admin')
+    OpsEvent.delete_all
+    get system_path
+    assert_select '#ops-activity h2', 'Recent errors and activity'
+    assert_select '#ops-activity', /All quiet/
+    assert_select '#ops-activity', /Nothing has gone wrong/
+  end
+
+  test 'recent errors card shows counts and one redacted line per problem, never raw log text' do
+    users(:regular_user).update!(role: 'super_admin')
+    OpsEvent.delete_all
+    3.times { OpsLog.event('request', level: :error, method: 'POST', route: '/orders', status: 500, controller: 'orders', action: 'create', request_id: 'abc12345-0000', error_class: 'ActiveRecord::StatementInvalid') }
+    OpsLog.event('validation_failed', level: :warn, model: 'Core::Customer', fields: %w[crm_status], kinds: %w[inclusion], controller: 'customers', action: 'create')
+    OpsLog.event('job', level: :error, job_class: 'BackupJob', queue: 'default', error_class: 'Errno::ENOSPC', outcome: 'failed')
+    get system_path
+    assert_response :success
+    assert_select '#ops-activity', /Needs attention/
+    assert_select '#ops-activity dl div', /Server errors\s*3/
+    assert_select '#ops-activity dl div', /Rejected forms\s*1/
+    assert_select '#ops-activity dl div', /Job failures\s*1/
+    assert_select '#ops-activity li', /POST \/orders 500 \(orders#create\) ActiveRecord::StatementInvalid/
+    assert_select '#ops-activity li', /×3/
+    assert_select '#ops-activity li', /BackupJob on default/
+    assert_select '#ops-activity li', /abc12345/
+    assert_no_match(/"ts":|"level":/, response.body)
+  end
+
+  test 'recent errors card is for platform administrators only' do
+    users(:regular_user).update!(role: 'admin')
+    get system_path
+    assert_redirected_to root_path
+  end
+
   test 'AI health card shows the expired-key warning, tokens and rate limits without any secret' do
     # Midday in the store's zone, so "an hour ago" is still today whenever CI runs.
     travel_to Time.zone.now.change(hour: 12)

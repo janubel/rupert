@@ -4,7 +4,7 @@ require 'securerandom'
 
 module TeamChat
   # A fixed set of questions (config/team_chat/battery.yml) asked to one bot in
-  # the #liquid-testing room, one at a time, timed. Each answer is then graded by
+  # the bot's own test room (#test-liquid, #test-qwen, ...), one at a time, timed. Each answer is then graded by
   # DeepSeek (Battery::Grader) against the data Rupert's own tools return for the
   # same question, and the grade is posted under it. Everyone in the room can
   # watch a run; the summary is posted and pinned at the end.
@@ -12,8 +12,9 @@ module TeamChat
   # Questions only read data. A bot that proposes a change anyway gets its card
   # dismissed, so a test run never changes anything.
   class Battery
-    ROOM_SLUG = 'liquid-testing'
-    ROOM_TOPIC = 'Test runs: a fixed set of questions asked to one bot (usually @liquid), timed, and graded 1–5 by DeepSeek against Rupert’s own data.'
+    # Each bot has its own test room (#test-liquid, #test-qwen, ...). Runs from before that are in #liquid-testing.
+    LEGACY_ROOM_SLUG = 'liquid-testing'
+    ROOM_TOPIC = 'Test runs for @%<handle>s: a fixed set of questions, each answer timed and graded 1–5 by DeepSeek against Rupert’s own data. Scorecard: Model scores → Test runs.'
     CONFIG = Rails.root.join('config/team_chat/battery.yml')
 
     Item = Struct.new(:id, :cadence, :question, :checks, :expect, keyword_init: true)
@@ -61,15 +62,25 @@ module TeamChat
     def handle = @agent&.handle || 'rupert'
     def bot_name = @agent&.name || 'Rupert'
 
-    def self.room_for(user)
-      room = Room.find_by(slug: ROOM_SLUG) ||
-             Room.create!(name: ROOM_SLUG, slug: ROOM_SLUG, kind: 'channel', topic: ROOM_TOPIC, assistant_mode: 'off', created_by: user)
+    def self.room_slug(handle) = "test-#{handle.presence || 'rupert'}"
+
+    # The bot's test room, created (with every chat user in it) the first time.
+    def self.room_for(user, handle = 'liquid')
+      slug = room_slug(handle)
+      room = Room.find_by(slug: slug) ||
+             Room.create!(name: slug, slug: slug, kind: 'channel', topic: format(ROOM_TOPIC, handle: handle.presence || 'rupert'),
+               assistant_mode: 'off', created_by: user)
       Post.mentionable.each { |person| room.membership_for(person) }
       room
     end
 
+    # A test room for @rupert, every @bot and every trial model, so people can open them before any run.
+    def self.ensure_rooms!(user)
+      (['rupert'] + LocalAgents.all.map(&:handle) + (LocalAgents.enabled? ? LocalAgents::TRIALS.map(&:handle) : [])).map { |handle| room_for(user, handle) }
+    end
+
     def run
-      @room = self.class.room_for(@user)
+      @room = self.class.room_for(@user, handle)
       started = Time.current
       post_notice("🧪 Test run #{@run_id}#{" (#{@set} questions)" unless @set == 'default'}: #{@items.size} questions to @#{handle} (#{model_name}), asked as #{@user.display_name}. " \
                   "Each answer is timed and graded 1–5 by #{@grader.label} against Rupert’s own data.")

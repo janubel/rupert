@@ -33,7 +33,9 @@ module ShopifyAppTemplateRuby
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    # lib/ops_log is required explicitly at boot (config/initializers/ops_log.rb): the log
+    # formatter and middleware must not be reloaded.
+    config.autoload_lib(ignore: %w[assets tasks ops_log ops_log.rb])
 
     if ShopifyAPI::Context.embedded?
       config.action_dispatch.default_headers = config.action_dispatch.default_headers.merge({

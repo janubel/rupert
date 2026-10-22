@@ -17,6 +17,21 @@ systemctl --user daemon-reload && systemctl --user enable --now rupert-sync-watc
 
 Check by hand: `~/.local/bin/rupert-sync-watch.sh` (exit 0 = fresh). `MAX_AGE_MIN=0` forces a failure to test alerting.
 
+## Logs (`rupert-logs`, journald caps)
+
+Rupert logs one JSON object per line to journald. Inside the `rupert` container:
+
+```sh
+install -m755 deploy/ser8/rupert-logs /usr/local/bin/
+install -Dm644 deploy/ser8/journald-rupert.conf /etc/systemd/journald.conf.d/rupert.conf
+systemctl restart systemd-journald && journalctl --vacuum-size=400M
+rupert-logs errors            # also: request <id>, user <id>, upload, slow, noise, tail
+```
+
+`journald-rupert.conf` makes the journal persistent and caps it (400 MB, 30 days, 2 GB kept free). See
+[`docs/ops/logging.md`](../../docs/ops/logging.md). The customer provisioner (`customer_provisioner.py`) backs off to
+one poll a minute while idle; `RUPERT_PROVISIONER_MAX_IDLE_SECONDS=15` keeps the old 15 s rate.
+
 ## Backups
 
 Five layers (5-minute rolling snapshot and 6-hourly sets inside the container, an encrypted copy on the host, a mirror on

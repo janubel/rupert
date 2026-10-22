@@ -30,8 +30,10 @@ class SwipesimpleReportsController < AuthenticatedController
     end
     receipt = SwipesimpleReportImporter.import!(csv_text, import_context,
       expected_fingerprint: token.fetch('fingerprint'), actor: Current.user)
+    OpsLog.import(kind: 'swipesimple_report', outcome: 'ok', export_id: receipt.id)
     redirect_to(swipesimple_reports_path, notice: "SwipeSimple export ##{receipt.id} saved or already present. Original source evidence retained.")
   rescue SwipesimpleReportImporter::Error => e
+    OpsLog.import(kind: 'swipesimple_report', outcome: 'rejected', error_class: e.class.name)
     redirect_to(swipesimple_reports_path, alert: e.message)
   end
 

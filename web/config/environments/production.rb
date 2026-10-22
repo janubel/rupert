@@ -53,13 +53,18 @@ Rails.application.configure do
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   config.force_ssl = true
 
-  # Log to STDOUT by default
+  # Log to STDOUT (journald under systemd). OpsLog (config/initializers/ops_log.rb) formats
+  # every line as one JSON object and replaces Rails' multi-line request log with one
+  # structured line per request; see docs/ops/logging.md. RUPERT_LOG_FORMAT=rails turns that off.
   config.logger = ActiveSupport::Logger.new($stdout)
                                        .tap { |logger| logger.formatter = Logger::Formatter.new }
                                        .then { |logger| ActiveSupport::TaggedLogging.new(logger) }
 
   # Prepend all log lines with the following tags.
   config.log_tags = [:request_id]
+
+  # Job arguments can hold anything a person submitted; never write them to the log.
+  config.active_job.log_arguments = false
 
   # "info" includes generic and useful information about system operation, but avoids logging too much
   # information to avoid inadvertent exposure of personally identifiable information (PII). If you
