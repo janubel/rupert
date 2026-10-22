@@ -328,3 +328,29 @@ in one pass. A/B on the finance battery (21 questions each, DeepSeek grading, sa
 99% of drafted tokens were accepted in the probe. `--spec-draft-n-max 2` made llama-server exit, so it stays at 3.
 n-gram speculation was tried earlier and dropped: it only helps when an answer repeats text word for word. Rollback:
 `/etc/rupert-llm/models.json.pre-mtp`. The UD-Q3_K_S file stays on the gateway until it is deleted by hand.
+
+### Dedicated inference worker
+
+`TeamChat::ReplyJob` and `AskRupertReplyJob` use the `chat` queue. `config/queue.yml`
+starts a dedicated one-thread, one-process chat worker beside the operational
+`default` worker under the existing `bin/jobs` Solid Queue supervisor. On SER8,
+`rupert-jobs.service` owns both worker processes, so normal deployment restarts
+and service health checks still apply. `JOB_THREADS` and `JOB_CONCURRENCY` tune
+only the operational pool; inference remains serialized in its own pool.
+Do not restore a wildcard operational queue: it would also claim chat jobs.
+
+Before first rollout, drain any previously queued `TeamChat::ReplyJob` and
+`AskRupertReplyJob` entries on `default` (including scheduled retries), and let
+claimed replies finish. Persisted jobs retain their original queue; changing
+`queue_as` only routes new enqueues. Inspect ready, scheduled, and claimed job
+counts before restarting. Do not delete pending replies or run two supervisors
+against a legacy inference backlog as a substitute for draining it.
+
+After restart, verify two registered Worker processes with distinct queue metadata
+(`default` and `chat`), and one chat execution at most. A blocked inference must
+leave the default worker claiming operational jobs. This isolates execution slots,
+not the shared SQLite writer, CPU, memory, or network; tools must still keep database
+transactions short. `test/jobs/chat_worker_isolation_test.rb` exercises a blocked
+real Solid Queue execution with sync, monitor, and backup probes, without model or
+vendor calls. Adding another named application queue requires updating the worker
+configuration and routing regression.

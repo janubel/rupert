@@ -3,11 +3,17 @@ default: &default
     - polling_interval: 1
       batch_size: 500
   workers:
-    - queues: "*"
+    - queues: default
       # SQLite has one writer; default to one job thread to reduce contention
       # with web requests.
       threads: <%= ENV.fetch("JOB_THREADS", 1) %>
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      polling_interval: 1
+    # A separate worker process owns model calls. Never use "*" above: it
+    # would let operational workers claim chat and block scheduled work.
+    - queues: chat
+      threads: 1
+      processes: 1
       polling_interval: 1
 
 development:
