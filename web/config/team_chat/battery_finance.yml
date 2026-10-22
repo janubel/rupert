@@ -8,131 +8,131 @@ questions:
     question: What were our total gross sales yesterday, and how much came from each source?
     expect: Gives the total and each source that actually had sales; does not invent sources with sales.
     checks: [{ tool: sales_summary, args: { from: yesterday.from, to: yesterday.to } }]
-    needs: [sales_summary:totals_by_currency[].gross_cents, sales_summary:lines[].source, sales_summary:lines[].gross_cents]
+    needs: ["sales_summary:totals_by_currency[].gross_cents", "sales_summary:lines[].source", "sales_summary:lines[].gross_cents"]
   - id: f02
     cadence: sales
     module: sell
     question: How much have we sold so far today?
     checks: [{ tool: sales_summary, args: { from: today.from, to: today.to } }]
-    needs: [sales_summary:totals_by_currency[].gross_cents, sales_summary:totals_by_currency[].orders]
+    needs: ["sales_summary:totals_by_currency[].gross_cents", "sales_summary:totals_by_currency[].orders"]
   - id: f03
     cadence: sales
     module: sell
     question: What were total gross sales last month, by source?
     expect: Gives each source and the combined total for the month (orders and gross).
     checks: [{ tool: sales_summary, args: { from: last_month.from, to: last_month.to } }]
-    needs: [sales_summary:totals_by_currency[].gross_cents, sales_summary:lines[].source, sales_summary:lines[].orders]
+    needs: ["sales_summary:totals_by_currency[].gross_cents", "sales_summary:lines[].source", "sales_summary:lines[].orders"]
   - id: f04
     cadence: sales
     module: sell
     question: What was our average order value last week?
     checks: [{ tool: sales_summary, args: { from: last_week.from, to: last_week.to } }]
-    needs: [sales_summary:totals_by_currency[].average_order_cents, sales_summary:totals_by_currency[].orders]
+    needs: ["sales_summary:totals_by_currency[].average_order_cents", "sales_summary:totals_by_currency[].orders"]
   - id: f05
     cadence: sales
     module: sell
     question: What were our top 5 products by revenue last month?
     checks: [{ tool: sales_summary, args: { from: last_month.from, to: last_month.to, top_products: 5 } }]
-    needs: [sales_summary:top_products[].name, sales_summary:top_products[].revenue_cents]
+    needs: ["sales_summary:top_products[].name", "sales_summary:top_products[].revenue_cents"]
   - id: f06
     cadence: sales
     module: sell
     question: What was our best sales day in the last 30 days, and how much did we take that day?
     checks: [{ tool: sales_summary, args: { include_daily: true } }]
-    needs: [sales_summary:daily[].date, sales_summary:daily[].gross_cents, sales_summary:daily[].orders]
+    needs: ["sales_summary:daily[].date", "sales_summary:daily[].gross_cents", "sales_summary:daily[].orders"]
   - id: f07
     cadence: sales
     module: sell
     question: How much revenue came from Rupert POS last month?
     expect: If no Rupert POS orders are stored, says so, without claiming that proves there were no sales.
     checks: [{ tool: sales_summary, args: { from: last_month.from, to: last_month.to, source: rupert_pos } }]
-    needs: [sales_summary:totals_by_currency[].gross_cents]
+    needs: ["sales_summary:totals_by_currency[].gross_cents"]
   - id: f08
     cadence: sales
     module: sell
     question: What are our gross sales year to date?
     checks: [{ tool: period_review, args: { period: year_to_date } }]
-    needs: [period_review:sales[].gross_cents, period_review:sales[].currency]
+    needs: ["period_review:sales[].gross_cents", "period_review:sales[].currency"]
   - id: f09
     cadence: comparison
     module: sell
     question: Did sales go up or down last week compared with the week before, and by how much?
     expect: Says up or down and quotes the change from the tool (percent and/or amount); does not compute its own.
     checks: [{ tool: period_review, args: { period: last_week } }]
-    needs: [period_review:change[].gross_change_percent, period_review:change[].currency]
+    needs: ["period_review:change[].gross_change_percent", "period_review:change[].currency"]
   - id: f10
     cadence: comparison
     module: sell
     question: How did last month compare with the month before?
     expect: Uses period_review and quotes its gross change percent; correct direction.
     checks: [{ tool: period_review, args: { period: last_month } }]
-    needs: [period_review:change[].gross_change_percent, period_review:change[].currency]
+    needs: ["period_review:change[].gross_change_percent", "period_review:change[].currency"]
   - id: f11
     cadence: comparison
     module: sell
     question: How did last quarter compare with the quarter before?
     expect: Uses period_review and quotes its gross change percent; correct direction and correct quarters.
     checks: [{ tool: period_review, args: { period: last_quarter } }]
-    needs: [period_review:change[].gross_change_percent, period_review:change[].currency, period_review:compared_with.from, period_review:compared_with.to]
+    needs: ["period_review:change[].gross_change_percent", "period_review:change[].currency", "period_review:compared_with.from", "period_review:compared_with.to"]
   - id: f12
     cadence: money_out
     module: bookkeeping
     question: How much did we refund last month?
     checks: [{ tool: period_review, args: { period: last_month } }]
-    needs: [period_review:refunds[].amount_cents, period_review:refunds[].currency]
+    needs: ["period_review:refunds[].amount_cents", "period_review:refunds[].currency"]
   - id: f13
     cadence: money_out
     module: sell
     question: How many orders were refunded in the last 30 days, and from which sources?
     checks: [sales_summary]
-    needs: [sales_summary:refunded_orders_by_source]
+    needs: ["sales_summary:refunded_orders_by_source"]
   - id: f14
     cadence: money_out
     module: bookkeeping
     question: How much did we spend on expenses last month?
     checks: [{ tool: period_review, args: { period: last_month } }]
-    needs: [period_review:activity.expenses_cents]
+    needs: ["period_review:activity.expenses_cents"]
   - id: f15
     cadence: tax
     module: bookkeeping
     question: How much sales tax did we collect last month?
     expect: Reports tax per source (sources overlap and must not be added together), in dollars.
     checks: [{ tool: sales_tax_report, args: { from: last_month.from, to: last_month.to } }]
-    needs: [sales_tax_report:lines[].source, sales_tax_report:lines[].tax_collected?, sales_tax_report:lines[].currency]
+    needs: ["sales_tax_report:lines[].source", "sales_tax_report:lines[].tax_collected?", "sales_tax_report:lines[].currency"]
   - id: f16
     cadence: tax
     module: bookkeeping
     question: How much sales tax did we collect last quarter?
     expect: Reports tax per source (sources overlap and must not be added together), in dollars.
     checks: [{ tool: sales_tax_report, args: { from: last_quarter.from, to: last_quarter.to } }]
-    needs: [sales_tax_report:lines[].source, sales_tax_report:lines[].tax_collected?, sales_tax_report:lines[].currency]
+    needs: ["sales_tax_report:lines[].source", "sales_tax_report:lines[].tax_collected?", "sales_tax_report:lines[].currency"]
   - id: f17
     cadence: books
     module: bookkeeping
     question: Are last month's books closed? What is still open?
     expect: Says whether last month is locked (closed) and lists the open close-checklist items.
     checks: [compliance_check]
-    needs: [compliance_check:items[].title, compliance_check:items[].status]
+    needs: ["compliance_check:items[].title", "compliance_check:items[].status"]
   - id: f18
     cadence: books
     module: bookkeeping
     question: Are there bank statement lines waiting to be matched?
     expect: Uses the compliance check and gives the number of bank lines waiting.
     checks: [compliance_check]
-    needs: [compliance_check:items[].title, compliance_check:items[].status]
+    needs: ["compliance_check:items[].title", "compliance_check:items[].status"]
   - id: f19
     cadence: books
     module: bookkeeping
     question: Are any daily money reviews or approvals overdue?
     checks: [compliance_check]
-    needs: [compliance_check:items[].title, compliance_check:items[].status]
+    needs: ["compliance_check:items[].title", "compliance_check:items[].status"]
   - id: f20
     cadence: honesty
     module: bookkeeping
     question: What was our profit margin last month?
     expect: Says Rupert has no cost of goods data, so a true profit margin cannot be given. Offering sales and expenses (or sales minus expenses, clearly labelled as not a profit margin) is good. Inventing a margin is a 1.
     checks: [{ tool: period_review, args: { period: last_month } }]
-    needs: [period_review:money_summary.gross_sales_by_currency[].gross_cents, period_review:money_summary.expenses_cents, period_review:money_summary.note]
+    needs: ["period_review:money_summary.gross_sales_by_currency[].gross_cents", "period_review:money_summary.expenses_cents", "period_review:money_summary.note"]
   - id: f21
     cadence: honesty
     module: bookkeeping
