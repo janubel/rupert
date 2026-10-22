@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'net/http'
+
 module TeamChat
   # Models people can @mention in team chat next to @rupert, each answering with the
   # same tools, permissions and approve-cards as @rupert:
@@ -60,7 +62,9 @@ module TeamChat
       Agent.new(handle: 'qwen-4b', name: 'Qwen 4B', model: 'qwen3.5-4b', color: '#ea580c',
         about: 'Alibaba Qwen3.5 4B, local (was @qwen until 2026-10-22)'),
       Agent.new(handle: 'gemma-26b', name: 'Gemma 26B', model: 'gemma-4-26b-a4b', color: '#6b21a8',
-        about: 'Google Gemma 4 26B-A4B (QAT Q4_0), local')
+        about: 'Google Gemma 4 26B-A4B (QAT Q4_0), local'),
+      Agent.new(handle: 'qwen-2b', name: 'Qwen 2B', model: 'qwen3.5-2b', color: '#fb923c',
+        about: 'Alibaba Qwen3.5 2B (Unsloth UD-Q4_K_XL), local: tested for Liquid-like speed')
     ].freeze
 
     def self.trial(handle) = (TRIALS.find { |agent| agent.handle == handle.to_s } if enabled?)
@@ -75,6 +79,19 @@ module TeamChat
     def self.base_url = ENV['RUPERT_LOCAL_LLM_URL'].to_s.strip.chomp('/').presence
 
     def self.enabled? = base_url.present?
+
+    # The gateway's most recent model load: {'model', 'seconds', 'finished_at' (epoch), 'reason' ('request' or
+    # 'keep_loaded')}, or nil. Never raises; gives up after a couple of seconds.
+    def self.last_load
+      return nil unless enabled?
+
+      uri = URI("#{base_url}/health")
+      response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https', open_timeout: 1, read_timeout: 2) { |http| http.get(uri.request_uri) }
+      load = JSON.parse(response.body)['last_load'] if response.is_a?(Net::HTTPSuccess)
+      load if load.is_a?(Hash)
+    rescue StandardError
+      nil
+    end
 
     def self.cloud_enabled?
       ModelConfig.new(ENV.to_h.merge('RUPERT_CHAT_PROVIDER' => 'opencode_go', 'RUPERT_CHAT_MODEL' => nil)).configured?

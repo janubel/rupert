@@ -134,7 +134,8 @@ module TeamChat
       return nil if info['duration_ms'].blank?
 
       { seconds: (info['duration_ms'].to_f / 1000).round(1), model: info['model'].presence,
-        where: LOCAL_ENGINES.include?(info['engine']) ? 'local' : 'cloud' }
+        where: LOCAL_ENGINES.include?(info['engine']) ? 'local' : 'cloud',
+        load_seconds: (info['load_ms'].to_f / 1000).round(1).nonzero? }.compact
     end
 
     # Changes the text of one's own message; mentions no longer in the text are dropped.

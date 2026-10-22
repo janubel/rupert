@@ -18,7 +18,8 @@ module TeamChat
     CONFIG = Rails.root.join('config/team_chat/battery.yml')
 
     Item = Struct.new(:id, :cadence, :question, :checks, :expect, :module, keyword_init: true)
-    Result = Struct.new(:item, :seconds, :tools, :status, :answer, :grade, :tokens_in, :tokens_out, :unverified, :message_id, keyword_init: true)
+    Result = Struct.new(:item, :seconds, :tools, :status, :answer, :grade, :tokens_in, :tokens_out, :unverified, :message_id, :load_seconds,
+      keyword_init: true)
 
     attr_reader :run_id, :room, :results, :record
 
@@ -133,16 +134,18 @@ module TeamChat
       dismiss_proposals(reply)
       meta = reply.meta.to_h
       seconds = meta['duration_ms'].to_f / 1000
+      load_seconds = (meta['load_ms'].to_f / 1000).round(1).nonzero?
       grade = grade_for(item, reply)
       post_grade(reply, grade, seconds) if grade
-      log "    #{reply.status} in #{format_seconds(seconds)} · tools #{Array(meta['tools']).join(', ').presence || 'none'} · grade #{grade&.dig(:score) || '—'}"
+      log "    #{reply.status} in #{format_seconds(seconds)}#{" (#{format_seconds(load_seconds)} model load)" if load_seconds} · tools #{Array(meta['tools']).join(', ').presence || 'none'} · grade #{grade&.dig(:score) || '—'}"
       Result.new(item: item, seconds: seconds, tools: Array(meta['tools']), status: reply.status, answer: reply.body.to_s,
-        grade: grade, tokens_in: meta['tokens_in'], tokens_out: meta['tokens_out'], unverified: Array(meta['unverified']), message_id: reply.id)
+        grade: grade, tokens_in: meta['tokens_in'], tokens_out: meta['tokens_out'], unverified: Array(meta['unverified']), message_id: reply.id,
+        load_seconds: load_seconds)
     end
 
     def result_row(result)
       { 'id' => result.item.id, 'cadence' => result.item.cadence, 'module' => result.item.module, 'question' => result.item.question, 'status' => result.status,
-        'seconds' => result.seconds.round(1), 'tools' => result.tools, 'grade' => result.grade&.dig(:score),
+        'seconds' => result.seconds.round(1), 'load_seconds' => result.load_seconds, 'tools' => result.tools, 'grade' => result.grade&.dig(:score),
         'verdict' => result.grade&.dig(:verdict).to_s.first(300), 'unverified' => result.unverified.to_a, 'message_id' => result.message_id }
     end
 

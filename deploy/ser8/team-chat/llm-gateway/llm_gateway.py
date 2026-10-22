@@ -5,6 +5,9 @@ Serves an OpenAI-compatible API (GET /v1/models, POST /v1/chat/completions, stre
 llama.cpp's llama-server. Only ONE model is ever loaded: a request for another model waits for the request in
 flight, stops the running llama-server and starts the requested one. Requests are handled one at a time.
 A model with no request for IDLE_SECONDS (default 300) is unloaded, so nothing sits in memory between chats.
+With --keep-loaded MODEL that model is never unloaded for being idle, and is loaded again in the background once
+another model has been idle for IDLE_SECONDS, so the main bot never waits for a load. /health reports the last load
+(model, seconds, when, and whether a request or the keep-loaded warm-up caused it), so Rupert can show load time.
 
 Models come from models.json: {"id": {"file": "/path/model.gguf", "ctx": 16384, "args": [...]}}.
 Only the clients in --allow may call it. Python standard library only.
@@ -27,7 +30,7 @@ log = logging.getLogger('llm_gateway')
 class Engine:
     """Owns the single llama-server process."""
 
-    def __init__(self, models, server_bin, port, threads, idle_seconds, start_timeout):
+    def __init__(self, models, server_bin, port, threads, idle_seconds, start_timeout, keep_loaded=None):
         self.models = models
         self.server_bin = server_bin
         self.port = port
@@ -38,11 +41,15 @@ class Engine:
         self.proc = None
         self.current = None
         self.last_used = time.monotonic()
+        self.keep_loaded = keep_loaded if keep_loaded in models else None
+        self.last_load = None
+        self.warm_failed_at = 0.0
 
     def status(self):
-        return {'loaded': self.current, 'idle_seconds': round(time.monotonic() - self.last_used), 'busy': self.lock.locked()}
+        return {'loaded': self.current, 'idle_seconds': round(time.monotonic() - self.last_used), 'busy': self.lock.locked(),
+                'keep_loaded': self.keep_loaded, 'last_load': self.last_load}
 
-    def ensure(self, model_id):
+    def ensure(self, model_id, reason='request'):
         """Load model_id, unloading any other model first. Caller holds self.lock."""
         if self.current == model_id and self.proc and self.proc.poll() is None:
             return
@@ -65,7 +72,9 @@ class Engine:
                 ready = conn.getresponse().status == 200
                 conn.close()
                 if ready:
-                    log.info('loaded %s in %.1fs', model_id, time.monotonic() - started)
+                    seconds = time.monotonic() - started
+                    log.info('loaded %s in %.1fs (%s)', model_id, seconds, reason)
+                    self.last_load = {'model': model_id, 'seconds': round(seconds, 1), 'finished_at': round(time.time(), 1), 'reason': reason}
                     return
             except OSError:
                 pass
@@ -87,16 +96,31 @@ class Engine:
 
     def reap_idle(self):
         while True:
-            time.sleep(15)
-            if self.current is None:
-                continue
             if self.lock.acquire(blocking=False):
                 try:
-                    if self.current and time.monotonic() - self.last_used > self.idle_seconds:
-                        log.info('idle for %ss', self.idle_seconds)
-                        self.stop()
+                    self.tidy()
                 finally:
                     self.lock.release()
+            time.sleep(15)
+
+    def tidy(self):
+        """Unload an idle model; with keep_loaded, put the kept model back instead. Caller holds self.lock."""
+        idle = time.monotonic() - self.last_used > self.idle_seconds
+        if self.keep_loaded:
+            if self.current == self.keep_loaded and self.proc and self.proc.poll() is None:
+                return
+            if self.current and not idle:
+                return
+            if time.monotonic() - self.warm_failed_at < 300:
+                return
+            try:
+                self.ensure(self.keep_loaded, reason='keep_loaded')
+            except RuntimeError as error:
+                self.warm_failed_at = time.monotonic()
+                log.warning('could not load %s to keep it loaded: %s', self.keep_loaded, error)
+        elif self.current and idle:
+            log.info('idle for %ss', self.idle_seconds)
+            self.stop()
 
 
 def log_timings(model_id, tail, seconds):
@@ -204,10 +228,11 @@ def main():
     parser.add_argument('--threads', type=int, default=8)
     parser.add_argument('--idle-seconds', type=int, default=300)
     parser.add_argument('--start-timeout', type=int, default=240)
+    parser.add_argument('--keep-loaded', help='model id that stays loaded (the main bot); others still unload when idle')
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     models = json.load(open(args.models))
-    engine = Engine(models, args.server_bin, args.server_port, args.threads, args.idle_seconds, args.start_timeout)
+    engine = Engine(models, args.server_bin, args.server_port, args.threads, args.idle_seconds, args.start_timeout, args.keep_loaded)
     threading.Thread(target=engine.reap_idle, daemon=True).start()
     host, port = args.listen.rsplit(':', 1)
     server = ThreadingHTTPServer((host, int(port)), make_handler(engine, set(args.allow)))

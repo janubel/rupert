@@ -688,13 +688,15 @@ export default class extends Controller {
     bar.replaceChildren(label, hint, cancel)
   }
 
-  // "31s · qwen3.5-4b · local" next to a bot reply.
+  // "31s · qwen3.5-4b · local" next to a bot reply; "31s (17s load)" when the model had to be loaded first.
   answerNode(answer) {
     const node = document.createElement("span")
     node.className = `chat-msg-answer is-${answer.where}`
-    const seconds = answer.seconds < 10 ? answer.seconds.toFixed(1) : Math.round(answer.seconds)
-    node.textContent = [`${seconds}s`, answer.model, answer.where].filter(Boolean).join(" · ")
-    node.title = `Answered in ${answer.seconds} seconds${answer.model ? ` by ${answer.model}` : ""} (${answer.where === "local" ? "on this server" : "cloud"})`
+    const short = (value) => value < 10 ? value.toFixed(1) : Math.round(value)
+    const time = answer.load_seconds ? `${short(answer.seconds)}s (${short(answer.load_seconds)}s load)` : `${short(answer.seconds)}s`
+    node.textContent = [time, answer.model, answer.where].filter(Boolean).join(" · ")
+    node.title = `Answered in ${answer.seconds} seconds${answer.model ? ` by ${answer.model}` : ""} (${answer.where === "local" ? "on this server" : "cloud"})` +
+      (answer.load_seconds ? `, including ${answer.load_seconds} seconds loading the model` : "")
     return node
   }
 

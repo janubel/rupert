@@ -112,6 +112,12 @@ fork (upstream llama.cpp and Ollama cannot load its PQ2_0 packing). So all three
   requested one; requests are served one at a time, so two models are never in memory together;
 - a model with no request for 10 minutes (`--idle-seconds 600`) is unloaded; the next mention loads it again (Bonsai
   loaded in 9 s);
+- `--keep-loaded qwen3.6-35b-a3b` (since 2026-10-22): @qwen's model is never unloaded for being idle, and once another
+  model has been idle for 10 minutes the gateway puts Qwen back, so @qwen does not wait ~17 s for a load. The 780M
+  shares system RAM, so this holds about 15 GB of SER8's memory while it is loaded;
+- `/health` reports the last load (model, seconds, when, and `reason`: `request` or `keep_loaded`). A local reply that
+  waited for a load records `load_ms` and shows it with the answer time ("31s (17s load) · qwen3.6-35b-a3b · local");
+  battery results carry `load_seconds`. Use these to judge how long models should stay loaded;
 - only `rupert` (10.96.131.8) and localhost may call it (the gateway checks, and the Incus ACL `rupert-llm-isolated`
   drops all other inbound traffic and ALL outbound traffic: the container needs no internet once the models are in);
   `GET /health` says which model is loaded.

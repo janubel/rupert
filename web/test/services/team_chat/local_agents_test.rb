@@ -65,6 +65,31 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     assert(users.any? { |content| content.include?("\nRupert: Earlier answer from Rupert.") }, "@rupert's reply is quoted as another voice")
   end
 
+  test 'a reply that waited for the model to load says how long the load took' do
+    @gateway_last_load = { model: 'qwen3.6-35b-a3b', seconds: 17.5, finished_at: Time.now.to_f, reason: 'request' }
+    script_model({ text: 'Loaded and ready.' })
+    reply = post('@qwen hello').replies.first
+    TeamChat::Agent.new(reply).run
+    reply.reload
+
+    assert_equal 17_500, reply.meta['load_ms']
+    assert_equal 17.5, reply.answer_timing[:load_seconds]
+  end
+
+  test 'a load for another model, an older load or the keep-loaded warm-up is not counted' do
+    [{ model: 'lfm2.5-8b-a1b', finished_at: Time.now.to_f, reason: 'request' },
+     { model: 'qwen3.6-35b-a3b', finished_at: Time.now.to_f - 600, reason: 'request' },
+     { model: 'qwen3.6-35b-a3b', finished_at: Time.now.to_f, reason: 'keep_loaded' }].each do |load|
+      @gateway_last_load = load.merge(seconds: 17.5)
+      script_model({ text: 'Ready.' })
+      reply = post('@qwen hello').replies.first
+      TeamChat::Agent.new(reply).run
+
+      assert_nil reply.reload.meta['load_ms'], load.inspect
+      assert_not reply.answer_timing.key?(:load_seconds)
+    end
+  end
+
   test 'a local bot gets only the tools for what the question is about, and the matching data guide card' do
     requests = script_model({ text: 'Two orders.' })
     reply = post('@qwen how much sales tax did we collect last month?').replies.first

@@ -17,6 +17,7 @@ module TeamChatHelper
     requests = []
     responses = turns.map { |turn| { status: 200, headers: { 'Content-Type' => 'text/event-stream' }, body: sse_for(turn) } }
     stub_request(:post, "#{LLM_BASE}/chat/completions").with { |request| requests << JSON.parse(request.body) }.to_return(*responses)
+    stub_request(:get, "#{LLM_BASE}/health").to_return(body: { loaded: nil, last_load: @gateway_last_load }.to_json)
     requests
   end
 

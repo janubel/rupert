@@ -49,6 +49,7 @@ module TeamChat
     # Fills in the reply. Never raises.
     def run
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      @asked_at = Time.now.to_f
       return fail!(:error, started) unless @asker && @trigger && TeamChat.allowed?(@asker)
 
       @topics = question_topics
@@ -231,6 +232,8 @@ module TeamChat
       body = Links.real_paths_only(AskRupert::ReplyFormat.tidy(text))
       body = FAILURES[:error] if body.blank? && @reply.reload.actions_list.empty?
       meta = meta_with(started, 'ok')
+      load_ms = model_load_ms
+      meta['load_ms'] = load_ms if load_ms
       unverified = NumberCheck.call(body, checked_sources)
       meta['unverified'] = unverified if unverified.any?
       @reply.reload.update!(body: body.to_s, status: 'done', activity: nil, meta: meta)
@@ -289,12 +292,23 @@ module TeamChat
       Array(@toolbox&.results)
     end
 
+    # How long this reply waited for the model server to load its model, when it had to (local bots only). Shown
+    # with the answer time and in test results, to judge how long models should stay loaded.
+    def model_load_ms
+      return nil unless @engine == 'local_gateway' && @asked_at
+
+      load = LocalAgents.last_load
+      return nil unless load && load['reason'] == 'request' && load['model'] == @config.model && load['finished_at'].to_f >= @asked_at - 1
+
+      (load['seconds'].to_f * 1000).round
+    end
+
     # The goal is every answer within ModelScores::SLOW_SECONDS; slower ones are logged and listed on Model scores.
     def note_slow(meta)
       seconds = meta['duration_ms'].to_f / 1000
       return if seconds <= ModelScores::SLOW_SECONDS
 
-      details = "seconds=#{seconds.round}; agent=#{meta['agent'].presence || 'rupert'}; model=#{meta['model']}; tools=#{Array(meta['tools']).join(',')}; message=#{@reply.id}"
+      details = "seconds=#{seconds.round}; #{"model_load_seconds=#{(meta['load_ms'] / 1000.0).round}; " if meta['load_ms']}agent=#{meta['agent'].presence || 'rupert'}; model=#{meta['model']}; tools=#{Array(meta['tools']).join(',')}; message=#{@reply.id}"
       Rails.logger.warn("[TeamChat] slow answer #{details}")
       ActivityLogger.log('team_chat_slow_answer', actor: @asker, details: details.first(300))
     rescue StandardError => e
