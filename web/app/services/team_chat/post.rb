@@ -39,8 +39,14 @@ module TeamChat
         message.save!
         # Mentioning someone pulls them into a channel, never into a private conversation.
         people.each { |person| @room.membership_for(person) } if @room.channel?
-        replies << start_reply(message) if answer?(message)
-        LocalAgents.mentioned(@body).each { |agent| replies << start_reply(message, agent: agent) }
+        if asks_everyone?
+          # @all: every bot answers the same question; the page shows the answers side by side.
+          replies << start_reply(message, compare: true)
+          LocalAgents.all.each { |agent| replies << start_reply(message, agent: agent, compare: true) }
+        else
+          replies << start_reply(message) if answer?(message)
+          LocalAgents.mentioned(@body).each { |agent| replies << start_reply(message, agent: agent) }
+        end
       end
       membership = @room.membership_for(@user)
       membership.mark_read!(message.id)
@@ -79,6 +85,10 @@ module TeamChat
       end
     end
 
+    ALL_MENTION = /(?<![\w@])@all\b/i
+
+    def asks_everyone? = @body.match?(ALL_MENTION)
+
     def answer?(message)
       case @room.assistant_mode
       when 'all' then true
@@ -89,11 +99,12 @@ module TeamChat
 
     # A pending assistant reply. A local @agent's reply says "Waiting for the model"
     # until the gateway has it loaded (only one model runs at a time).
-    def start_reply(message, agent: nil)
+    def start_reply(message, agent: nil, compare: false)
       raise Limited, 'Rupert has answered a lot of your messages in the last few minutes. Wait a moment and ask again.' if limited?
 
       meta = { 'asked_by' => @user.id, 'trigger_id' => message.id }
       meta['agent'] = agent.handle if agent
+      meta['compare_of'] = message.id if compare
       @room.messages.create!(author_kind: 'assistant', status: 'pending', activity: agent ? "Loading #{agent.name}" : 'Thinking',
         parent_id: message.parent_id, meta: meta)
     end
