@@ -24,15 +24,18 @@ class BuzzChannels
       []
     end
 
+    # Explicit channel selection may arrive before this process has a cached
+    # channel list (for example a bookmarked ?channel= URL), so fall back to one
+    # relay read. The default channel never does that: polling stays cheap.
     def find(id)
       return nil if id.blank?
 
-      list_cached&.find { |channel| channel.id == id.to_s }
+      (list_cached || list).find { |channel| channel.id == id.to_s }
     end
 
     def default
       id = BuzzAgent.channel_id
-      find(id) || Channel.new(id: id, name: 'rupert', about: 'Team chat', members: 0)
+      list_cached&.find { |channel| channel.id == id } || Channel.new(id: id, name: 'rupert', about: 'Team chat', members: 0)
     end
 
     def fallback

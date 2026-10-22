@@ -9,7 +9,7 @@ import { Controller } from "@hotwired/stimulus"
 // (**bold**, `code`, http(s) links, line breaks) is built from DOM nodes, and a
 // link is plain text plus an href. Nothing linked is fetched or previewed.
 export default class extends Controller {
-  static targets = ["log", "more", "status", "notice", "form", "input", "send", "count", "jump", "empty", "loading"]
+  static targets = ["log", "more", "status", "notice", "form", "input", "send", "count", "jump", "empty", "loading", "search"]
   static values = { url: String, channel: String, canPost: Boolean, postMax: { type: Number, default: 1500 }, interval: { type: Number, default: 4000 } }
 
   static GROUP_SECONDS = 5 * 60
@@ -332,6 +332,16 @@ export default class extends Controller {
   onScroll() {
     const log = this.logTarget
     if (log.scrollHeight - log.scrollTop - log.clientHeight < 80) this.hideJump()
+  }
+
+  // The workspace search filters the channel rail. Buzz's full search spans all
+  // history; the mirror keeps this to the channels that are on screen.
+  filter() {
+    if (!this.hasSearchTarget) return
+    const query = this.searchTarget.value.trim().toLowerCase()
+    this.element.querySelectorAll(".buzz-rail-channel").forEach((link) => {
+      link.hidden = query.length > 0 && !link.textContent.toLowerCase().includes(query)
+    })
   }
 
   // --- posting ---

@@ -3,7 +3,12 @@
   <% can_admin = Current.user.can?('settings.write') %>
   <% can_read = Current.user.can?('buzz.read') %>
   <% user_initials = Current.user.display_name.to_s.split(/\s+/).first(2).map { |word| word[0] }.join.upcase.presence || 'U' %>
-  <div class="buzz-app">
+  <div class="buzz-app"
+       data-controller="buzz-chat"
+       data-buzz-chat-url-value="<%= @chat_messages_path || buzz_chat_messages_path %>"
+       data-buzz-chat-channel-value="<%= @channel.id %>"
+       data-buzz-chat-can-post-value="<%= @can_post %>"
+       data-buzz-chat-post-max-value="<%= BuzzChat::POST_MAX %>">
     <aside class="buzz-rail" aria-label="Buzz workspace">
       <div class="buzz-workspace">
         <span class="buzz-workspace-mark" aria-hidden="true">B</span>
@@ -14,8 +19,8 @@
       </div>
 
       <label class="buzz-search">
-        <span class="sr-only">Search Buzz</span>
-        <input type="search" placeholder="Search everything" disabled>
+        <span class="sr-only">Search channels</span>
+        <input type="search" placeholder="Search channels" data-buzz-chat-target="search" data-action="input->buzz-chat#filter">
         <kbd>⌘K</kbd>
       </label>
 
@@ -51,12 +56,7 @@
       </div>
     </aside>
 
-    <main class="buzz-main"
-          data-controller="buzz-chat"
-          data-buzz-chat-url-value="<%= @chat_messages_path || buzz_chat_messages_path %>"
-          data-buzz-chat-channel-value="<%= @channel.id %>"
-          data-buzz-chat-can-post-value="<%= @can_post %>"
-          data-buzz-chat-post-max-value="<%= BuzzChat::POST_MAX %>">
+    <main class="buzz-main">
       <header class="buzz-channel-head">
         <div class="buzz-channel-title">
           <h2><span class="buzz-hash">#</span><%= @channel.name %></h2>
@@ -64,7 +64,7 @@
         </div>
         <div class="buzz-channel-tools">
           <span class="buzz-status" data-buzz-chat-target="status" data-tone="ok" role="status" aria-live="polite">Connecting to Buzz…</span>
-          <span class="buzz-members" title="Channel members">◎ <%= @channel.members %></span>
+          <span class="buzz-members" title="Channel members"><%= pluralize(@channel.members, 'member') %></span>
           <%= link_to 'Open in Buzz', BuzzConnect.chat_url, class: 'buzz-open', aria: { label: 'Open this channel in the Buzz app' } if BuzzConnect.chat_url %>
         </div>
       </header>
