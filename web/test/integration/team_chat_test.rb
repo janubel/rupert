@@ -655,7 +655,8 @@ class TeamChatTest < ActionDispatch::IntegrationTest
 
   test 'recently active: page views mark people active, each person can hide it, and the admin rule overrides' do
     sign_in(@admin)
-    get team_chat_room_path('admins')
+    get team_chat_path
+    follow_redirect!
     assert_response :success
     assert @admin.reload.last_active_at > 1.minute.ago
     assert_select ".chat-avatar[data-presence-user='#{@admin.id}'][data-presence='active']"

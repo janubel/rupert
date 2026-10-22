@@ -30,6 +30,8 @@ class AuthenticatedController < ApplicationController
   # "Recently active" in team chat: a page view counts (at most one write a minute).
   def note_presence
     return unless request.get? && request.format.html?
+    # Previews (an administrator viewing employee screens) write nothing.
+    return if controller_name == 'employee_preview' || params[:preview].to_s == '1'
 
     TeamChat::Presence.touch(Current.user)
   rescue ActiveRecord::ActiveRecordError => e
