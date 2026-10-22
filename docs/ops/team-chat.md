@@ -105,7 +105,7 @@ fork (upstream llama.cpp and Ollama cannot load its PQ2_0 packing). So all three
 
 - a request for a model that is not loaded waits for the request in flight, stops the running model and starts the
   requested one; requests are served one at a time, so two models are never in memory together;
-- a model with no request for 5 minutes (`--idle-seconds 300`) is unloaded; the next mention loads it again (Bonsai
+- a model with no request for 10 minutes (`--idle-seconds 600`) is unloaded; the next mention loads it again (Bonsai
   loaded in 9 s);
 - only `rupert` (10.96.131.8) and localhost may call it (the gateway checks, and the Incus ACL `rupert-llm-isolated`
   drops all other inbound traffic and ALL outbound traffic: the container needs no internet once the models are in);
@@ -179,3 +179,20 @@ intake scripts) is preserved on the `archive/buzz` branch.
 the host's `buzz-backup.timer` if it was installed
 (`systemctl --user disable --now buzz-backup.timer`). Do not delete the
 containers yet.
+
+## @agents and #admins (2026-10-22)
+
+- The main room is **#admins**: every admin, plus Rupert. An existing #general is renamed in place, and old `/chat/general` links still open it.
+- **Direct** lists every other admin. A click opens the direct message, or starts it the first time.
+- Pick a model by @mentioning it. @ suggestions work in the main box and in thread replies:
+
+| Mention | Model | Where it runs |
+| --- | --- | --- |
+| `@rupert` | the instance default (`RUPERT_CHAT_PROVIDER` / `RUPERT_CHAT_MODEL`) | as configured |
+| `@deepseek` | DeepSeek V4.1 Flash | cloud, through OpenCode Go (on when its key is available) |
+| `@qwen` | Qwen3.5 4B | local `rupert-llm` gateway |
+| `@gemma` | Gemma 4 E4B | local |
+| `@lfm` | LFM2.5 8B-A1B | local |
+| `@bonsai` | Ternary Bonsai 2 9B | local |
+
+Gemma 4 E2B is also on the gateway (`gemma-4-e2b`), but it has no @handle. It gave wrong totals in the 2026-10-22 comparison.

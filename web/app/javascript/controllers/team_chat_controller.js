@@ -11,7 +11,7 @@ import { Controller } from "@hotwired/stimulus"
 // `code`, @mentions, http(s) links and same-site [label](/path) links.
 export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
-    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins", "typing", "newDm"]
+    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins", "typing", "newDm", "threadSuggest"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
     compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
@@ -868,7 +868,7 @@ export default class extends Controller {
   input() {
     this.autosize(this.inputTarget)
     this.sendTarget.disabled = this.inputTarget.value.trim() === "" && this.pendingFiles.length === 0
-    this.updateSuggest()
+    this.updateSuggest(this.inputTarget, this.suggestTarget)
     this.pingTyping()
   }
 
@@ -876,6 +876,7 @@ export default class extends Controller {
     this.pingTyping()
     this.autosize(this.threadInputTarget)
     this.threadSendTarget.disabled = this.threadInputTarget.value.trim() === ""
+    if (this.hasThreadSuggestTarget) this.updateSuggest(this.threadInputTarget, this.threadSuggestTarget)
   }
 
   autosize(field) {
@@ -884,44 +885,52 @@ export default class extends Controller {
   }
 
   keydown(event) {
-    if (!this.suggestTarget.hidden) {
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        event.preventDefault()
-        const step = event.key === "ArrowDown" ? 1 : -1
-        this.suggestIndex = (this.suggestIndex + step + this.suggestions.length) % this.suggestions.length
-        this.renderSuggest()
-        return
-      }
-      if (event.key === "Tab" || event.key === "Enter") {
-        event.preventDefault()
-        this.completeMention(this.suggestions[this.suggestIndex])
-        return
-      }
-      if (event.key === "Escape") {
-        this.suggestTarget.hidden = true
-        return
-      }
-    }
+    if (this.handleSuggestKeys(event)) return
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault()
       this.formTarget.requestSubmit()
     }
   }
 
+  // Arrow keys, Tab/Enter and Escape drive the @ list while it is open. Returns true when handled.
+  handleSuggestKeys(event) {
+    const list = this.suggestList
+    if (!list || list.hidden || !this.suggestions.length || event.target !== this.suggestField) return false
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault()
+      const step = event.key === "ArrowDown" ? 1 : -1
+      this.suggestIndex = (this.suggestIndex + step + this.suggestions.length) % this.suggestions.length
+      this.renderSuggest()
+      return true
+    }
+    if (event.key === "Tab" || event.key === "Enter") {
+      event.preventDefault()
+      this.completeMention(this.suggestions[this.suggestIndex])
+      return true
+    }
+    if (event.key === "Escape") {
+      list.hidden = true
+      return true
+    }
+    return false
+  }
+
   threadKeydown(event) {
+    if (this.handleSuggestKeys(event)) return
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault()
       event.target.form.requestSubmit()
     }
   }
 
-  // "@" plus the start of a name suggests Rupert and the people who use team chat.
-  updateSuggest() {
-    const field = this.inputTarget
+  // "@" plus the start of a name suggests Rupert, the model @agents and the people who use team chat.
+  updateSuggest(field, list) {
+    this.suggestField = field
+    this.suggestList = list
     const before = field.value.slice(0, field.selectionStart)
     const match = before.match(/(?:^|\s)@([\p{L}\p{N}'-]{0,30})$/u)
     if (!match) {
-      this.suggestTarget.hidden = true
+      list.hidden = true
       this.suggestions = []
       return
     }
@@ -929,7 +938,7 @@ export default class extends Controller {
     const starts = (name) => name.toLowerCase().split(/\s+/).some((word) => word.startsWith(term)) || name.toLowerCase().startsWith(term)
     const options = [this.constructor.RUPERT, ...this.agentsValue, ...this.peopleValue.map((person) => ({ ...person, label: person.name }))].filter((option) => starts(option.name)).slice(0, 8)
     if (!options.length || (options.length === 1 && options[0].name.toLowerCase() === term)) {
-      this.suggestTarget.hidden = true
+      list.hidden = true
       this.suggestions = []
       return
     }
@@ -947,21 +956,21 @@ export default class extends Controller {
       li.addEventListener("mousedown", (event) => { event.preventDefault(); this.completeMention(option) })
       return li
     })
-    this.suggestTarget.replaceChildren(...items)
-    this.suggestTarget.hidden = false
+    this.suggestList.replaceChildren(...items)
+    this.suggestList.hidden = false
   }
 
   completeMention(option) {
-    if (!option) return
-    const field = this.inputTarget
+    if (!option || !this.suggestField) return
+    const field = this.suggestField
     const cursor = field.selectionStart
     const before = field.value.slice(0, cursor).replace(/@[\p{L}\p{N}'-]*$/u, `@${option.name} `)
     field.value = before + field.value.slice(cursor)
     field.selectionStart = field.selectionEnd = before.length
     if (option.id) this.mentionIds.add(option.id)
-    this.suggestTarget.hidden = true
+    this.suggestList.hidden = true
     this.suggestions = []
-    this.input()
+    field === this.inputTarget ? this.input() : this.threadInputChanged()
   }
 
   // --- files ---

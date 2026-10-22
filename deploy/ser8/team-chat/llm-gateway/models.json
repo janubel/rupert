@@ -19,5 +19,21 @@
       "--chat-template-kwargs",
       "{\"enable_thinking\":false}"
     ]
+  },
+  "qwen3.5-4b": {
+    "file": "/var/lib/rupert-llm/models/Qwen3.5-4B-Q4_K_M.gguf",
+    "ctx": 16384,
+    "args": [
+      "--chat-template-kwargs",
+      "{\"enable_thinking\":false}"
+    ]
+  },
+  "gemma-4-e2b": {
+    "file": "/var/lib/rupert-llm/models/gemma-4-E2B-it-UD-Q4_K_XL.gguf",
+    "ctx": 16384,
+    "args": [
+      "--chat-template-kwargs",
+      "{\"enable_thinking\":false}"
+    ]
   }
 }

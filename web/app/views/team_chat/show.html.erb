@@ -48,12 +48,26 @@
           <span class="chat-unread" data-unread hidden></span>
         <% end %>
       <% end %>
-      <% dms.each do |room, partner| %>
-        <%= link_to team_chat_room_path(room), class: "chat-rail-room #{'is-active' if room == @room}", aria: { current: (room == @room ? 'page' : nil) },
-              data: { team_chat_target: 'roomLink', slug: room.slug, name: partner.display_name } do %>
-          <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[partner.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= partner.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span>
-          <span class="chat-rail-room-name"><%= partner.display_name %></span>
-          <span class="chat-unread" data-unread hidden></span>
+      <%# Every other admin is listed; a click opens (or starts) the direct message. %>
+      <% dm_rooms = dms.to_h { |room, partner| [partner.id, room] } %>
+      <% teammates = TeamChat::Post.mentionable.reject { |person| person.id == me.id } %>
+      <% repeated = teammates.map(&:display_name).tally.select { |_name, count| count > 1 }.keys %>
+      <% teammates.each do |person| %>
+        <% initials = person.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %>
+        <% label = repeated.include?(person.display_name) ? "#{person.display_name} (#{person.email.to_s.split('@').first})" : person.display_name %>
+        <% if (room = dm_rooms[person.id]) %>
+          <%= link_to team_chat_room_path(room), class: "chat-rail-room #{'is-active' if room == @room}", aria: { current: (room == @room ? 'page' : nil) },
+                data: { team_chat_target: 'roomLink', slug: room.slug, name: label } do %>
+            <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= initials %></span>
+            <span class="chat-rail-room-name"><%= label %></span>
+            <span class="chat-unread" data-unread hidden></span>
+          <% end %>
+        <% else %>
+          <%= button_to team_chat_dms_path, params: { user_id: person.id }, class: 'chat-rail-room chat-rail-room-button', title: "Message #{person.display_name}",
+                form: { class: 'chat-rail-form', data: { turbo: false, team_chat_target: 'roomLink', slug: "new-dm-#{person.id}", name: label } } do %>
+            <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= initials %></span>
+            <span class="chat-rail-room-name"><%= label %></span>
+          <% end %>
         <% end %>
       <% end %>
 
@@ -107,7 +121,7 @@
             <summary class="btn-ghost btn-sm" aria-label="Room options">⋯</summary>
             <div class="chat-menu-panel">
               <button type="button" class="chat-menu-item" data-action="team-chat#editTopic">Edit topic</button>
-              <% unless @room.slug == 'general' %>
+              <% unless @room.slug == TeamChat::Room::MAIN_SLUG %>
                 <%= button_to 'Archive room', team_chat_room_path(@room), method: :patch, params: { archived: true }, class: 'chat-menu-item is-danger',
                       form: { data: { turbo_confirm: "Archive ##{@room.name}? Its messages are kept but it leaves the list." } } %>
               <% end %>
@@ -186,6 +200,7 @@
     <form class="chat-compose" data-busy="false" data-action="submit->team-chat#sendThread">
       <div class="chat-composer">
         <label for="chat-thread-input" class="sr-only">Reply in thread</label>
+        <ul class="chat-suggest" data-team-chat-target="threadSuggest" role="listbox" hidden></ul>
         <textarea id="chat-thread-input" class="chat-input" rows="1" maxlength="<%= TeamChat::Message::BODY_MAX %>" data-team-chat-target="threadInput"
                   data-action="input->team-chat#threadInputChanged keydown->team-chat#threadKeydown" placeholder="Reply…" autocomplete="off"></textarea>
         <div class="chat-composer-bar">

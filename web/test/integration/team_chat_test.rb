@@ -38,14 +38,14 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
-  test 'it opens #general with a direct room for Rupert and appears in navigation' do
+  test 'it opens #admins with a direct room for Rupert and appears in navigation' do
     sign_in(@admin)
     get team_chat_path
-    assert_redirected_to team_chat_room_path('general')
+    assert_redirected_to team_chat_room_path('admins')
     follow_redirect!
     assert_response :success
     assert_select '[data-controller="team-chat"]'
-    assert_select '.chat-rail-room', text: /general/
+    assert_select '.chat-rail-room', text: /admins/
     assert_select ".chat-rail-room[href='#{team_chat_room_path("rupert-#{@admin.id}")}']"
     assert_includes ModuleRegistry.nav_for(@admin).map(&:key), 'team_chat'
   end
@@ -53,12 +53,12 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'posting, mentioning @rupert and polling' do
     sign_in(@admin)
     get team_chat_path
-    post team_chat_messages_path('general'), params: { body: 'Good morning' }, as: :json
+    post team_chat_messages_path('admins'), params: { body: 'Good morning' }, as: :json
     assert_response :created
     assert_equal 1, json['messages'].size
 
     assert_enqueued_with(job: TeamChat::ReplyJob) do
-      post team_chat_messages_path('general'), params: { body: '@rupert how were sales yesterday?' }, as: :json
+      post team_chat_messages_path('admins'), params: { body: '@rupert how were sales yesterday?' }, as: :json
     end
     assert_response :created
     person, reply = json['messages']
@@ -66,35 +66,35 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_equal 'assistant', reply['kind']
     assert_equal 'pending', reply['status']
 
-    get team_chat_messages_path('general'), as: :json
+    get team_chat_messages_path('admins'), as: :json
     assert_equal ['Good morning', '@rupert how were sales yesterday?', ''], json['messages'].pluck('body')
     since = json['now']
 
     travel 2.seconds
     TeamChat::Message.find(reply['id']).update!(body: 'Sales were fine.', status: 'done')
-    get team_chat_messages_path('general', since: since), as: :json
+    get team_chat_messages_path('admins', since: since), as: :json
     assert_equal ['Sales were fine.'], json['messages'].pluck('body')
   end
 
   test 'empty and oversized messages are refused' do
     sign_in(@admin)
     get team_chat_path
-    post team_chat_messages_path('general'), params: { body: '  ' }, as: :json
+    post team_chat_messages_path('admins'), params: { body: '  ' }, as: :json
     assert_response :unprocessable_entity
-    post team_chat_messages_path('general'), params: { body: 'x' * (TeamChat::Message::BODY_MAX + 1) }, as: :json
+    post team_chat_messages_path('admins'), params: { body: 'x' * (TeamChat::Message::BODY_MAX + 1) }, as: :json
     assert_response :unprocessable_entity
   end
 
   test 'thread replies stay out of the main page but come with their thread' do
     sign_in(@admin)
     get team_chat_path
-    post team_chat_messages_path('general'), params: { body: 'Root' }, as: :json
+    post team_chat_messages_path('admins'), params: { body: 'Root' }, as: :json
     root = json['messages'].first['id']
-    post team_chat_messages_path('general'), params: { body: 'In thread', parent_id: root }, as: :json
-    get team_chat_messages_path('general'), as: :json
+    post team_chat_messages_path('admins'), params: { body: 'In thread', parent_id: root }, as: :json
+    get team_chat_messages_path('admins'), as: :json
     assert_equal ['Root'], json['messages'].pluck('body')
     assert_equal 1, json['messages'].first['reply_count']
-    get team_chat_messages_path('general', thread: root), as: :json
+    get team_chat_messages_path('admins', thread: root), as: :json
     assert_equal %w[Root In\ thread], json['messages'].pluck('body')
   end
 
@@ -111,12 +111,12 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'you can delete only your own messages' do
     sign_in(@admin)
     get team_chat_path
-    room = TeamChat::Room.find_by(slug: 'general')
+    room = TeamChat::Room.find_by(slug: 'admins')
     theirs = room.messages.create!(user: manager, body: 'Not yours')
-    delete team_chat_message_path('general', theirs.id), as: :json
+    delete team_chat_message_path('admins', theirs.id), as: :json
     assert_response :forbidden
-    post team_chat_messages_path('general'), params: { body: 'Mine' }, as: :json
-    delete team_chat_message_path('general', json['messages'].first['id']), as: :json
+    post team_chat_messages_path('admins'), params: { body: 'Mine' }, as: :json
+    delete team_chat_message_path('admins', json['messages'].first['id']), as: :json
     assert_response :success
     assert json['messages'].first['deleted']
   end
@@ -139,13 +139,13 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'unread counts follow what you have read' do
     sign_in(@admin)
     get team_chat_path
-    room = TeamChat::Room.find_by(slug: 'general')
+    room = TeamChat::Room.find_by(slug: 'admins')
     room.messages.create!(user: manager, body: 'one')
     room.messages.create!(user: manager, body: 'two')
     get team_chat_messages_path(TeamChat::Room.direct_for(@admin)), as: :json
-    assert_equal 2, json['rooms'].find { |row| row['slug'] == 'general' }['unread']
-    get team_chat_messages_path('general', visible: 1), as: :json
-    assert_equal 0, json['rooms'].find { |row| row['slug'] == 'general' }['unread']
+    assert_equal 2, json['rooms'].find { |row| row['slug'] == 'admins' }['unread']
+    get team_chat_messages_path('admins', visible: 1), as: :json
+    assert_equal 0, json['rooms'].find { |row| row['slug'] == 'admins' }['unread']
   end
 
   PNG = "\x89PNG\r\n\x1A\n".b + ('x' * 64)
@@ -161,7 +161,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'images and files are posted, served only to the room, and judged by their bytes' do
     sign_in(@admin)
     get team_chat_path
-    post team_chat_messages_path('general'), params: { body: '', files: [upload(PNG, 'shelf.png', 'image/png'), upload("a,b\n1,2\n", 'counts.csv', 'text/csv')] }
+    post team_chat_messages_path('admins'), params: { body: '', files: [upload(PNG, 'shelf.png', 'image/png'), upload("a,b\n1,2\n", 'counts.csv', 'text/csv')] }
     assert_response :created
     files = json['messages'].first['attachments']
     assert_equal %w[image/png text/csv], files.pluck('type')
@@ -173,7 +173,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_equal 'nosniff', response.headers['X-Content-Type-Options']
     assert_match(/sandbox/, response.headers['Content-Security-Policy'])
 
-    post team_chat_messages_path('general'), params: { body: 'x', files: [upload('<html><script>alert(1)</script>', 'evil.png', 'image/png')] }
+    post team_chat_messages_path('admins'), params: { body: 'x', files: [upload('<html><script>alert(1)</script>', 'evil.png', 'image/png')] }
     assert_response :unprocessable_entity
     assert_match(/not a supported file/, json['error'])
 
@@ -182,7 +182,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     secret = direct.messages.new(user: other, body: 'private')
     secret.attachments.build(room: direct, filename: 'p.png', content_type: 'image/png', byte_size: PNG.bytesize, data: PNG)
     secret.save!
-    get team_chat_attachment_path('general', secret.attachments.first.id)
+    get team_chat_attachment_path('admins', secret.attachments.first.id)
     assert_response :not_found
   end
 
@@ -190,7 +190,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     alex = User.create!(tenant: @tenant, email: 'alex@example.com', role: 'admin', password: 'password123', name: 'Alex Rivera')
     sign_in(@admin)
     get team_chat_path
-    post team_chat_messages_path('general'), params: { body: '@Alex Rivera can you count?', mention_ids: [alex.id, manager.id] }
+    post team_chat_messages_path('admins'), params: { body: '@Alex Rivera can you count?', mention_ids: [alex.id, manager.id] }
     assert_response :created
     message = json['messages'].first
     assert_equal [{ 'id' => alex.id, 'name' => 'Alex Rivera' }], message['mentions']
@@ -198,22 +198,22 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     delete logout_path
     sign_in(alex, password: 'password123')
     get team_chat_messages_path(TeamChat::Room.direct_for(alex)), as: :json
-    row = json['rooms'].find { |room| room['slug'] == 'general' }
+    row = json['rooms'].find { |room| room['slug'] == 'admins' }
     assert_equal 1, row['mentions']
-    get team_chat_messages_path('general'), as: :json
+    get team_chat_messages_path('admins'), as: :json
     assert json['messages'].last['mentions_me']
   end
 
   test 'reactions toggle and only offered emoji are accepted' do
     sign_in(@admin)
     get team_chat_path
-    post team_chat_messages_path('general'), params: { body: 'Done!' }, as: :json
+    post team_chat_messages_path('admins'), params: { body: 'Done!' }, as: :json
     id = json['messages'].first['id']
-    post team_chat_reactions_path('general', id), params: { emoji: '🎉' }, as: :json
+    post team_chat_reactions_path('admins', id), params: { emoji: '🎉' }, as: :json
     assert_equal [{ 'emoji' => '🎉', 'count' => 1, 'mine' => true, 'names' => [@admin.display_name] }], json['messages'].first['reactions']
-    post team_chat_reactions_path('general', id), params: { emoji: '🎉' }, as: :json
+    post team_chat_reactions_path('admins', id), params: { emoji: '🎉' }, as: :json
     assert_empty json['messages'].first['reactions']
-    post team_chat_reactions_path('general', id), params: { emoji: '💩' }, as: :json
+    post team_chat_reactions_path('admins', id), params: { emoji: '💩' }, as: :json
     assert_response :unprocessable_entity
   end
 
@@ -233,14 +233,14 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_dock_path
     assert_response :success
     assert_select 'turbo-frame#chat_dock'
-    assert_select "turbo-frame#chat_dock a.chat-dock-room[href='#{team_chat_dock_room_path('general')}']"
+    assert_select "turbo-frame#chat_dock a.chat-dock-room[href='#{team_chat_dock_room_path('admins')}']"
     assert_select "turbo-frame#chat_dock a[href='#{team_chat_path}'][data-turbo-frame='_top']"
     assert_no_match(/<html/, response.body)
 
-    get team_chat_dock_room_path('general')
+    get team_chat_dock_room_path('admins')
     assert_response :success
     assert_select "turbo-frame#chat_dock [data-controller='team-chat'][data-team-chat-compact-value='true']"
-    assert_select "turbo-frame#chat_dock a[href='#{team_chat_room_path('general')}'][data-turbo-frame='_top']"
+    assert_select "turbo-frame#chat_dock a[href='#{team_chat_room_path('admins')}'][data-turbo-frame='_top']"
     assert_select 'turbo-frame#chat_dock textarea.chat-input'
   end
 
@@ -254,7 +254,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'the header badge counts unread messages and mentions across rooms' do
     sign_in(@admin)
     get team_chat_path
-    room = TeamChat::Room.find_by(slug: 'general')
+    room = TeamChat::Room.find_by(slug: 'admins')
     room.messages.create!(user: manager, body: 'one')
     room.messages.create!(user: manager, body: "@#{@admin.display_name} two", mentions: [@admin.id])
     get team_chat_unread_path, as: :json
@@ -275,32 +275,32 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'assistant replies can be rated up or down once per person, and Model scores compares models' do
     sign_in(@admin)
     get team_chat_path
-    room = TeamChat::Room.find_by(slug: 'general')
+    room = TeamChat::Room.find_by(slug: 'admins')
     person = room.messages.create!(user: @admin, body: 'question')
     qwen = room.messages.create!(author_kind: 'assistant', status: 'done', body: 'Answer A',
       meta: { 'asked_by' => @admin.id, 'trigger_id' => person.id, 'engine' => 'local_gateway', 'model' => 'qwen3.5-4b', 'duration_ms' => 40_000, 'tools' => ['sales_summary'] })
     gemma = room.messages.create!(author_kind: 'assistant', status: 'done', body: 'Answer B',
       meta: { 'asked_by' => @admin.id, 'trigger_id' => person.id, 'agent' => 'gemma', 'engine' => 'local_gateway', 'model' => 'gemma-4-e4b', 'duration_ms' => 80_000 })
 
-    post team_chat_rating_path('general', qwen.id), params: { value: 'up' }, as: :json
+    post team_chat_rating_path('admins', qwen.id), params: { value: 'up' }, as: :json
     assert_equal({ 'up' => 1, 'down' => 0, 'mine' => 'up' }, json['messages'].first['rating'])
-    post team_chat_rating_path('general', qwen.id), params: { value: 'down' }, as: :json
+    post team_chat_rating_path('admins', qwen.id), params: { value: 'down' }, as: :json
     assert_equal({ 'up' => 0, 'down' => 1, 'mine' => 'down' }, json['messages'].first['rating'])
-    post team_chat_rating_path('general', qwen.id), params: { value: 'down' }, as: :json
+    post team_chat_rating_path('admins', qwen.id), params: { value: 'down' }, as: :json
     assert_equal({ 'up' => 0, 'down' => 0, 'mine' => nil }, json['messages'].first['rating'])
     assert_equal 0, TeamChat::Rating.count
 
-    post team_chat_rating_path('general', qwen.id), params: { value: 'up' }, as: :json
-    post team_chat_rating_path('general', gemma.id), params: { value: 'down' }, as: :json
+    post team_chat_rating_path('admins', qwen.id), params: { value: 'up' }, as: :json
+    post team_chat_rating_path('admins', gemma.id), params: { value: 'down' }, as: :json
     rating = TeamChat::Rating.find_by(message_id: gemma.id)
     assert_equal %w[gemma gemma-4-e4b local_gateway], [rating.agent, rating.model, rating.engine]
 
-    post team_chat_rating_path('general', person.id), params: { value: 'up' }, as: :json
+    post team_chat_rating_path('admins', person.id), params: { value: 'up' }, as: :json
     assert_response :unprocessable_entity
-    post team_chat_rating_path('general', qwen.id), params: { value: 'meh' }, as: :json
+    post team_chat_rating_path('admins', qwen.id), params: { value: 'meh' }, as: :json
     assert_response :unprocessable_entity
 
-    get team_chat_messages_path('general'), as: :json
+    get team_chat_messages_path('admins'), as: :json
     assert_nil json['messages'].find { |row| row['id'] == person.id }['rating']
 
     get team_chat_scores_path
@@ -320,11 +320,11 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'messages and thread replies can be pinned; the newest pin leads the banner list' do
     sign_in(@admin)
     get team_chat_path
-    room = TeamChat::Room.find_by(slug: 'general')
+    room = TeamChat::Room.find_by(slug: 'admins')
     first = room.messages.create!(user: manager, body: 'Count the tea wall tonight after close.')
     reply = room.messages.create!(user: manager, body: 'Bring the scanner.', parent_id: first.id)
 
-    post team_chat_pin_path('general', first.id), as: :json
+    post team_chat_pin_path('admins', first.id), as: :json
     assert_response :success
     assert json['messages'].first['pinned']
     assert_equal @admin.display_name, json['messages'].first['pinned_by']
@@ -333,15 +333,15 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_match(/pinned a message from Mo Manager: “Count the tea wall/, notice['body'])
 
     travel 1.second
-    post team_chat_pin_path('general', reply.id), as: :json
+    post team_chat_pin_path('admins', reply.id), as: :json
     assert_equal [reply.id, first.id], json['pins'].pluck('id')
     assert_equal first.id, json['pins'].first['parent_id']
 
-    get team_chat_messages_path('general'), as: :json
+    get team_chat_messages_path('admins'), as: :json
     assert_equal [reply.id, first.id], json['pins'].pluck('id')
 
     assert_no_difference -> { room.messages.where(author_kind: 'system').count }, 'unpinning posts no notice' do
-      post team_chat_pin_path('general', reply.id), as: :json
+      post team_chat_pin_path('admins', reply.id), as: :json
     end
     assert_not json['messages'].first['pinned']
     assert_equal [first.id], json['pins'].pluck('id')
@@ -350,14 +350,14 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'deleting a pinned message unpins it, and notices cannot be pinned' do
     sign_in(@admin)
     get team_chat_path
-    post team_chat_messages_path('general'), params: { body: 'Pin me' }, as: :json
+    post team_chat_messages_path('admins'), params: { body: 'Pin me' }, as: :json
     id = json['messages'].first['id']
-    post team_chat_pin_path('general', id), as: :json
+    post team_chat_pin_path('admins', id), as: :json
     notice_id = json['messages'].last['id']
-    delete team_chat_message_path('general', id), as: :json
-    get team_chat_messages_path('general'), as: :json
+    delete team_chat_message_path('admins', id), as: :json
+    get team_chat_messages_path('admins'), as: :json
     assert_empty json['pins']
-    post team_chat_pin_path('general', notice_id), as: :json
+    post team_chat_pin_path('admins', notice_id), as: :json
     assert_response :unprocessable_entity
   end
 
@@ -365,7 +365,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     sign_in(@admin)
     get team_chat_room_path(TeamChat::Room.ensure_defaults!(@admin))
     assert_select '.chat-pins[data-team-chat-target=pins][hidden]'
-    get team_chat_dock_room_path('general')
+    get team_chat_dock_room_path('admins')
     assert_select 'turbo-frame#chat_dock .chat-pins[data-team-chat-target=pins]'
   end
 
@@ -373,12 +373,12 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     @other_admin ||= User.create!(tenant: @tenant, email: 'jo-admin@example.com', role: 'admin', password: 'password123', name: 'Jo Park')
   end
 
-  test '#general holds every team chat user, and Rupert is listed with them' do
+  test '#admins holds every team chat user, and Rupert is listed with them' do
     other_admin
     sign_in(@admin)
     get team_chat_path
     follow_redirect!
-    general = TeamChat::Room.find_by(slug: 'general')
+    general = TeamChat::Room.find_by(slug: 'admins')
     assert_includes general.members, other_admin
     assert_includes general.members, @admin
     assert_not_includes general.members, manager
@@ -415,16 +415,16 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'typing shows to others for a few seconds and stops when the message is sent' do
     sign_in(@admin)
     get team_chat_path
-    room = TeamChat::Room.find_by(slug: 'general')
+    room = TeamChat::Room.find_by(slug: 'admins')
     room.membership_for(other_admin).update!(typing_at: Time.current)
-    post team_chat_typing_path('general')
+    post team_chat_typing_path('admins')
     assert_response :no_content
-    get team_chat_messages_path('general'), as: :json
+    get team_chat_messages_path('admins'), as: :json
     assert_equal ['Jo Park'], json['typing']
-    post team_chat_messages_path('general'), params: { body: 'sent' }, as: :json
+    post team_chat_messages_path('admins'), params: { body: 'sent' }, as: :json
     assert_nil room.membership_for(@admin).reload.typing_at
     travel 10.seconds
-    get team_chat_messages_path('general'), as: :json
+    get team_chat_messages_path('admins'), as: :json
     assert_empty json['typing']
   end
 
@@ -432,19 +432,19 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     other_admin
     sign_in(@admin)
     get team_chat_path
-    post team_chat_messages_path('general'), params: { body: '@Jo Park count shelf 3', mention_ids: [other_admin.id] }, as: :json
+    post team_chat_messages_path('admins'), params: { body: '@Jo Park count shelf 3', mention_ids: [other_admin.id] }, as: :json
     id = json['messages'].first['id']
-    patch team_chat_message_path('general', id), params: { body: 'Count shelf 4 please' }, as: :json
+    patch team_chat_message_path('admins', id), params: { body: 'Count shelf 4 please' }, as: :json
     assert_response :success
     edited = json['messages'].first
     assert_equal 'Count shelf 4 please', edited['body']
     assert edited['edited']
     assert_empty edited['mentions']
-    patch team_chat_message_path('general', id), params: { body: '  ' }, as: :json
+    patch team_chat_message_path('admins', id), params: { body: '  ' }, as: :json
     assert_response :unprocessable_entity
 
-    theirs = TeamChat::Room.find_by(slug: 'general').messages.create!(user: other_admin, body: 'mine')
-    patch team_chat_message_path('general', theirs.id), params: { body: 'hacked' }, as: :json
+    theirs = TeamChat::Room.find_by(slug: 'admins').messages.create!(user: other_admin, body: 'mine')
+    patch team_chat_message_path('admins', theirs.id), params: { body: 'hacked' }, as: :json
     assert_response :forbidden
   end
 
@@ -455,14 +455,14 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_select '.chat-typing[data-team-chat-target=typing]'
     assert_select "dialog[data-team-chat-target=newDm] form[action='#{team_chat_dms_path}']", 1
     assert_select 'main#main.max-w-none'
-    get team_chat_dock_room_path('general')
+    get team_chat_dock_room_path('admins')
     assert_select 'turbo-frame#chat_dock .chat-typing'
   end
 
   test 'a file whose local copy was dropped is served from Google Drive, or a clear error' do
     sign_in(@admin)
     get team_chat_path
-    room = TeamChat::Room.find_by(slug: 'general')
+    room = TeamChat::Room.find_by(slug: 'admins')
     message = room.messages.new(user: @admin, body: 'file')
     file = message.attachments.build(room: room, filename: 'a.png', content_type: 'image/png', byte_size: PNG.bytesize, data: nil,
       drive_status: 'stored', drive_file_id: 'drive-1', drive_md5: Digest::MD5.hexdigest(PNG))
@@ -470,13 +470,69 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     store = mock('drive store')
     store.expects(:fetch).returns(PNG)
     TeamChat::DriveStore.stubs(:new).returns(store)
-    get team_chat_attachment_path('general', file.id)
+    get team_chat_attachment_path('admins', file.id)
     assert_response :success
     assert_equal PNG, response.body
 
     TeamChat::DriveStore.stubs(:new).raises(TeamChat::DriveStore::Error, 'not connected')
-    get team_chat_attachment_path('general', file.id)
+    get team_chat_attachment_path('admins', file.id)
     assert_response :bad_gateway
     assert_match(/Google Drive/, response.body)
+  end
+
+  test 'an existing #general becomes #admins, keeping its messages, and old links still open it' do
+    room = TeamChat::Room.create!(name: 'general', slug: 'general', created_by: @admin)
+    room.messages.create!(user: @admin, body: 'before the rename')
+    sign_in(@admin)
+    get team_chat_path
+    assert_redirected_to team_chat_room_path('admins')
+    assert_equal %w[admins admins], [room.reload.slug, room.name]
+    get team_chat_room_path('general')
+    assert_response :success
+    get team_chat_messages_path('general'), as: :json
+    assert_equal ['before the rename'], json['messages'].pluck('body')
+  end
+
+  test 'Direct lists every other admin, with a one-click way to start a message' do
+    other_admin
+    sign_in(@admin)
+    get team_chat_room_path(TeamChat::Room.ensure_defaults!(@admin))
+    assert_select "form.chat-rail-form[action='#{team_chat_dms_path}'] input[name=user_id][value='#{other_admin.id}']", 1
+    assert_select 'form.chat-rail-form button', /Jo Park/
+    post team_chat_dms_path, params: { user_id: other_admin.id }
+    follow_redirect!
+    assert_select "a.chat-rail-room[href='#{team_chat_room_path(TeamChat::Room.find_by(kind: 'dm'))}']", /Jo Park/
+    assert_select 'form.chat-rail-form', 0
+  end
+
+  test 'models are @mentionable: @deepseek through OpenCode and the local ones through the gateway' do
+    ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
+    ENV['RUPERT_CHAT_API_KEY'] = 'test-key'
+    handles = TeamChat::LocalAgents.all.map(&:handle)
+    assert_equal %w[deepseek qwen lfm bonsai gemma], handles
+    deepseek = TeamChat::LocalAgents.find('deepseek')
+    config = TeamChat::ModelConfig.for_local(deepseek)
+    assert_equal %w[opencode_go deepseek-v4.1-flash], [config.engine, config.model]
+    assert_equal 'local_gateway', TeamChat::ModelConfig.for_local(TeamChat::LocalAgents.find('qwen')).engine
+    assert_match(/cloud model/, TeamChat::LocalAgents.persona(deepseek))
+
+    sign_in(@admin)
+    get team_chat_path
+    assert_enqueued_jobs 2, only: TeamChat::ReplyJob do
+      post team_chat_messages_path('admins'), params: { body: '@deepseek and @qwen: sales yesterday?' }, as: :json
+    end
+    assert_equal %w[deepseek qwen], json['messages'].drop(1).map { |reply| reply['author']['agent'] }
+    get team_chat_room_path('admins')
+    assert_select '[data-team-chat-agents-value*=deepseek]'
+    assert_select '.chat-thread .chat-suggest[data-team-chat-target=threadSuggest]'
+  ensure
+    ENV.delete('RUPERT_LOCAL_LLM_URL')
+    ENV.delete('RUPERT_CHAT_API_KEY')
+  end
+
+  test 'without a gateway or a cloud key no model @agents are offered' do
+    ENV.delete('RUPERT_LOCAL_LLM_URL')
+    TeamChat::ModelConfig.any_instance.stubs(:configured?).returns(false)
+    assert_empty TeamChat::LocalAgents.all
   end
 end

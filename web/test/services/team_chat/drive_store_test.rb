@@ -99,7 +99,7 @@ class TeamChatDriveStoreTest < ActiveSupport::TestCase
     stored = @drive.files.fetch(attachment.drive_file_id)
     assert_equal 'shelf-3.png', stored[:metadata].name
     room_folder = @drive.files.fetch(stored[:metadata].parents.first)
-    assert_equal '#general', room_folder[:metadata].name
+    assert_equal '#admins', room_folder[:metadata].name
     root = @drive.files.fetch(room_folder[:metadata].parents.first)
     assert_equal "Rupert Team Chat — #{@tenant.name}", root[:metadata].name
     assert_equal TeamChat::DriveStore.drive_url(attachment.drive_file_id), attachment.as_payload(@room)[:drive_url]
