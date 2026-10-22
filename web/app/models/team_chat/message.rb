@@ -115,7 +115,7 @@ module TeamChat
         mentions: mention_ids.filter_map { |id| { id: id, name: people[id] } if people[id] }, mentions_me: mention_ids.include?(viewer.id),
         reactions: reaction_summary(viewer), rating: rating_summary(viewer),
         pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?), edited: edited_at.present?,
-        answer: answer_timing
+        answer: answer_timing, compare_of: (meta.to_h['compare_of'] if assistant?)
       }
     end
 

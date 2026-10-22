@@ -564,4 +564,19 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_equal %w[Liquid Ternary DeepSeek], json['messages'].last(3).map { |row| row['author']['name'] }
     assert_equal %w[liquid ternary deepseek], json['messages'].last(3).map { |row| row['author']['agent'] }
   end
+
+  test '@all asks every bot the same question, grouped for side-by-side answers' do
+    ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
+    sign_in(@admin)
+    get team_chat_path
+    assert_enqueued_jobs 4, only: TeamChat::ReplyJob do
+      post team_chat_messages_path('admins'), params: { body: '@all how were sales yesterday?' }, as: :json
+    end
+    question, *answers = json['messages']
+    assert_equal [nil, 'liquid', 'qwen', 'ternary'], answers.map { |reply| reply['author']['agent'] }
+    assert(answers.all? { |reply| reply['compare_of'] == question['id'] })
+    assert_nil question['compare_of']
+  ensure
+    ENV.delete('RUPERT_LOCAL_LLM_URL')
+  end
 end

@@ -20,6 +20,7 @@ export default class extends Controller {
   static FAST = 1000
   static SLOW = 3000
   static RUPERT = { id: null, name: "rupert", label: "Rupert — the assistant" }
+  static ALL = { id: null, name: "all", label: "all — every bot answers, side by side" }
   static SHRINK_OVER = 1.5 * 1024 * 1024
   static SHRINK_TO = 2048
 
@@ -304,7 +305,16 @@ export default class extends Controller {
   renderList(messages, { thread }) {
     const nodes = []
     let previous = null
+    const compared = new Set()
     messages.forEach((message) => {
+      // @all: the bots' answers to one question render once, as side-by-side columns.
+      if (message.compare_of) {
+        if (compared.has(message.compare_of)) return
+        compared.add(message.compare_of)
+        nodes.push(this.compareNode(messages.filter((other) => other.compare_of === message.compare_of)))
+        previous = null
+        return
+      }
       const day = new Date(message.created_at).toDateString()
       if (!thread && (!previous || new Date(previous.created_at).toDateString() !== day)) nodes.push(this.dayDivider(message.created_at))
       const continued = previous && previous.author.name === message.author.name && previous.kind === message.kind &&
@@ -315,6 +325,26 @@ export default class extends Controller {
       previous = message
     })
     return nodes
+  }
+
+  compareNode(answers) {
+    const box = document.createElement("section")
+    box.className = "chat-compare"
+    box.setAttribute("aria-label", "Every bot’s answer, side by side")
+    const head = document.createElement("p")
+    head.className = "chat-compare-head"
+    const done = answers.filter((answer) => answer.status !== "pending").length
+    head.textContent = done === answers.length ? `Every bot answered · ${answers.length} answers · rate the best one` : `Asking every bot · ${done} of ${answers.length} answered`
+    const grid = document.createElement("div")
+    grid.className = "chat-compare-grid"
+    answers.forEach((answer) => {
+      const column = document.createElement("div")
+      column.className = "chat-compare-col"
+      column.append(this.messageNode(answer, { continued: false, thread: true }))
+      grid.append(column)
+    })
+    box.append(head, grid)
+    return box
   }
 
   dayDivider(iso) {
@@ -844,7 +874,7 @@ export default class extends Controller {
 
   inlineNodes(line) {
     const names = this.peopleValue.map((person) => person.name).concat(this.meValue ? [this.meValue] : [])
-    const handles = ["rupert", ...this.agentsValue.map((agent) => agent.name)]
+    const handles = ["rupert", "all", ...this.agentsValue.map((agent) => agent.name)]
     return this.constructor.parseInline(line, names, handles).map((part) => {
       if (part.type === "text") return document.createTextNode(part.text)
       const node = document.createElement(part.type === "bold" ? "strong" : part.type === "code" ? "code" : part.type === "link" ? "a" : "span")
@@ -988,7 +1018,7 @@ export default class extends Controller {
     }
     const term = match[1].toLowerCase()
     const starts = (name) => name.toLowerCase().split(/\s+/).some((word) => word.startsWith(term)) || name.toLowerCase().startsWith(term)
-    const options = [this.constructor.RUPERT, ...this.agentsValue, ...this.peopleValue.map((person) => ({ ...person, label: person.name }))].filter((option) => starts(option.name)).slice(0, 8)
+    const options = [this.constructor.RUPERT, this.constructor.ALL, ...this.agentsValue, ...this.peopleValue.map((person) => ({ ...person, label: person.name }))].filter((option) => starts(option.name)).slice(0, 8)
     if (!options.length || (options.length === 1 && options[0].name.toLowerCase() === term)) {
       list.hidden = true
       this.suggestions = []
