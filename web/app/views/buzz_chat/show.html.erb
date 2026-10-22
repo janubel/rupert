@@ -1,14 +1,14 @@
-<% content_for :title, 'Team chat' %>
+<% content_for :title, @chat_title || 'Team chat' %>
 <div class="mx-auto max-w-3xl space-y-4">
-  <%= render 'buzz/tabs', current: :chat %>
+  <%= render 'buzz/tabs', current: @chat_tab || :chat %>
 
   <% if @state == :ready %>
     <section class="card buzz-chat" aria-labelledby="buzz-chat-title"
-             data-controller="buzz-chat" data-buzz-chat-url-value="<%= buzz_chat_messages_path %>"
+             data-controller="buzz-chat" data-buzz-chat-url-value="<%= @chat_messages_path || buzz_chat_messages_path %>"
              data-buzz-chat-can-post-value="<%= @can_post %>" data-buzz-chat-post-max-value="<%= BuzzChat::POST_MAX %>">
       <header class="buzz-chat-head">
         <div class="min-w-0">
-          <h1 id="buzz-chat-title" class="font-display text-xl">Team chat</h1>
+          <h1 id="buzz-chat-title" class="font-display text-xl"><%= @chat_title || 'Team chat' %></h1>
           <p class="buzz-status" data-buzz-chat-target="status" data-tone="ok" role="status" aria-live="polite">Connecting to Buzz…</p>
         </div>
         <%= link_to 'Open in Buzz', BuzzConnect.chat_url, class: 'btn-ghost btn-sm shrink-0', aria: { label: 'Open this channel in the Buzz app' } if BuzzConnect.chat_url %>

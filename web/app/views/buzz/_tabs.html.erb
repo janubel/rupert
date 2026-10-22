@@ -1,7 +1,15 @@
-<%# Tabs shared by the Buzz card and the Team chat. The chat tab only shows to people who may read it. %>
-<% if Current.user&.can?('buzz.read') %>
+<%# Tabs shared by the Buzz card, the Team chat and the admin mirror. Each tab
+    only shows to people who may use it. %>
+<% can_read_chat = Current.user&.can?('buzz.read') %>
+<% can_admin = Current.user&.can?('settings.write') %>
+<% if can_read_chat || can_admin %>
   <nav class="buzz-tabs" aria-label="Buzz sections">
-    <%= link_to 'Agent & setup', buzz_path, class: 'buzz-tab', aria: { current: (current == :card ? 'page' : nil) } %>
-    <%= link_to buzz_chat_path, class: 'buzz-tab', aria: { current: (current == :chat ? 'page' : nil) } do %><%= navigation_icon('chat') %><span>Team chat</span><% end %>
+    <% if can_read_chat %>
+      <%= link_to 'Agent & setup', buzz_path, class: 'buzz-tab', aria: { current: (current == :card ? 'page' : nil) } %>
+      <%= link_to buzz_chat_path, class: 'buzz-tab', aria: { current: (current == :chat ? 'page' : nil) } do %><%= navigation_icon('chat') %><span>Team chat</span><% end %>
+    <% end %>
+    <% if can_admin %>
+      <%= link_to admin_buzz_mirror_path, class: 'buzz-tab', aria: { current: (current == :mirror ? 'page' : nil) } do %><%= navigation_icon('chat') %><span>Admin mirror</span><% end %>
+    <% end %>
   </nav>
 <% end %>
