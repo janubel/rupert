@@ -1718,3 +1718,8 @@ body.tour-active { overflow-x:hidden; }
 .chat-rail-form { margin:0; }
 .chat-rail-form[hidden] { display:none; }
 .chat-rail-room-button { width:100%;border:0;background:none;font:inherit;text-align:left;cursor:pointer; }
+/* Sign-in: email + password folded away behind Google (initial setup only). */
+.login-password-toggle { display:block;padding:.4rem 0;text-align:center;font-size:.8rem;font-weight:600;color:var(--color-mocha);cursor:pointer;list-style:none; }
+.login-password-toggle::-webkit-details-marker { display:none; }
+.login-password-toggle:hover,.login-password-toggle:focus-visible { color:var(--color-ink);text-decoration:underline;text-underline-offset:3px; }
+.login-password[open] > .login-password-toggle { color:var(--color-taupe); }
