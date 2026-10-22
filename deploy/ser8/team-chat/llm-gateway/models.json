@@ -106,5 +106,21 @@
       "--ubatch-size",
       "1024"
     ]
+  },
+  "gemma-4-26b-a4b": {
+    "file": "/var/lib/rupert-llm/models/gemma-4-26B_q4_0-it.gguf",
+    "ctx": 16384,
+    "args": [
+      "--chat-template-kwargs",
+      "{\"enable_thinking\":false}",
+      "--n-gpu-layers",
+      "99",
+      "--flash-attn",
+      "on",
+      "--batch-size",
+      "2048",
+      "--ubatch-size",
+      "1024"
+    ]
   }
 }
