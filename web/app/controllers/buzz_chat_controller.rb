@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
-# The Team chat tab on the Buzz page: the channel's recent messages, live
-# updates by polling, and a composer. Reading needs buzz.read and posting needs
-# buzz.post (administrators by default; delegable on the Permissions screen).
-# Messages are other people's text and are returned as plain strings for the
-# page to show as text. Posts go out as the Rupert agent with the sender's name
-# in front, so the relay never sees a per-person key (see BuzzChat).
+# The Team chat tab on the Buzz page: the workspace's channels, recent
+# messages, live updates by polling, scrollback and a composer. Reading needs
+# buzz.read and posting needs buzz.post (administrators by default; delegable
+# on the Permissions screen). Messages are other people's text and are returned
+# as plain strings for the page to show as text. Posts go out as the Rupert
+# agent with the sender's name in front, so the relay never sees a per-person
+# key (see BuzzChat).
 class BuzzChatController < AuthenticatedController
   before_action :require_read
   before_action :require_post, only: :create
@@ -14,24 +15,30 @@ class BuzzChatController < AuthenticatedController
   # GET /buzz/chat
   def show
     @state = BuzzChat.state
+    @channels = BuzzChannels.list
+    @channel = selected_channel
     @can_post = Current.user.can?('buzz.post')
     @can_configure = Current.user.can?('settings.write')
+    @chat_base_path = buzz_chat_path
   end
 
-  # GET /buzz/chat/messages(.json) — ?before=<cursor> for scrollback, ?after=<cursor> for new messages.
+  # GET /buzz/chat/messages(.json) — ?channel=<id>, ?before=<cursor> for
+  # scrollback, ?after=<cursor> for new messages.
   def messages
     before = BuzzMessage.parse_cursor(params[:before]) if params[:before].present?
     after = BuzzMessage.parse_cursor(params[:after]) if params[:after].present?
     return render json: { error: 'Bad cursor.' }, status: :unprocessable_entity if (params[:before].present? && before.nil?) || (params[:after].present? && after.nil?)
 
-    keep_fresh unless before
-    page = BuzzChat.page(before: before, after: after, viewer: Current.user)
-    render json: page.merge(status: status_json)
+    channel = selected_channel
+    keep_fresh(channel) unless before
+    page = BuzzChat.page(before: before, after: after, viewer: Current.user, channel: channel.id)
+    render json: page.merge(status: status_json, channel: { id: channel.id, name: channel.name })
   end
 
-  # POST /buzz/chat/messages { message: "..." }
+  # POST /buzz/chat/messages { message: "...", channel: "..." }
   def create
-    BuzzChat.post!(user: Current.user, text: params[:message])
+    channel = selected_channel
+    BuzzChat.post!(user: Current.user, text: params[:message], channel: channel.id)
     render json: { ok: true }, status: :created
   rescue BuzzChat::RateLimited
     render json: { error: 'You are posting quickly. Wait a moment and try again.' }, status: :too_many_requests
@@ -51,16 +58,33 @@ class BuzzChatController < AuthenticatedController
     head :forbidden unless Current.user.can?('buzz.post')
   end
 
+  # Only channels the Rupert agent can see are selectable; anything else falls
+  # back to the configured channel. This keeps arbitrary relay group ids from
+  # being used as a read oracle.
+  def selected_channel
+    return @selected_channel if defined?(@selected_channel)
+
+    requested = params[:channel].to_s
+    @selected_channel =
+      if @channels
+        @channels.find { |channel| channel.id == requested } ||
+          @channels.find { |channel| channel.id == BuzzAgent.channel_id } ||
+          @channels.first || BuzzChannels.fallback
+      else
+        BuzzChannels.find(requested) || BuzzChannels.default || BuzzChannels.fallback
+      end
+  end
+
   # The first look fills the copy right away; after that a background job brings
   # it up to date, at most every few seconds however many pages are open.
-  def keep_fresh
+  def keep_fresh(channel)
     return unless BuzzChat.ready?
     return unless BuzzChatState.claim_attempt!
 
-    if BuzzChat.empty_cache?
-      BuzzChat.sync!
+    if BuzzChat.empty_cache?(channel: channel.id)
+      BuzzChat.sync!(channel: channel.id)
     else
-      BuzzChatSyncJob.perform_later(Current.tenant_id)
+      BuzzChatSyncJob.perform_later(Current.tenant_id, channel.id)
     end
   end
 

@@ -1,20 +1,18 @@
 # frozen_string_literal: true
 
-# Admin-only mirror of the team Buzz channel. It reuses the Team chat UI and
-# actions (reading, polling, scrollback and posting) from BuzzChatController,
-# but the page and its JSON endpoint are gated behind settings.write so the
-# mirror can sit in the administrator GUI without widening who can read the
-# channel.
+# Admin-only mirror of the Buzz workspace. It reuses the Team chat UI and
+# actions (channel list, reading, polling, scrollback and posting) from
+# BuzzChatController, but the page and its JSON endpoint are gated behind
+# settings.write so the mirror can sit in the administrator GUI without
+# widening who can read Buzz.
 class Admin::BuzzMirrorController < BuzzChatController
   # GET /admin/buzz
   def show
-    @state = BuzzChat.state
-    @can_post = Current.user.can?('buzz.post')
-    @can_configure = Current.user.can?('settings.write')
+    super
     @chat_title = 'Buzz mirror'
     @chat_tab = :mirror
     @chat_messages_path = admin_buzz_mirror_messages_path
-    render 'buzz_chat/show'
+    @chat_base_path = admin_buzz_mirror_path
   end
 
   private

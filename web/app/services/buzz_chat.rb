@@ -65,11 +65,12 @@ class BuzzChat
     # Asks the relay for what is new (or the latest page on first use) and
     # stores it. Returns the number of new messages, or nil when the relay could
     # not be read; the reason is kept for the page. Never raises.
-    def sync!
-      return unless ready?
+    def sync!(channel: nil)
+      ch = channel.presence || self.channel
+      return unless ready? && ch.present?
 
-      newest = messages_scope.maximum(:posted_at)
-      filter = { kinds: KINDS, '#h': [channel] }
+      newest = messages_scope(ch).maximum(:posted_at)
+      filter = { kinds: KINDS, '#h': [ch] }
       if newest
         filter[:since] = [newest - CATCH_UP_OVERLAP, 0].max
         filter[:limit] = CATCH_UP_LIMIT
@@ -78,7 +79,7 @@ class BuzzChat
       end
       events = BuzzRelayClient.query([filter])
       drop_gap(events) if newest && events.size >= CATCH_UP_LIMIT
-      stored = ingest(events)
+      stored = ingest(events, ch)
       refresh_profiles
       BuzzChatState.succeeded!
       stored
@@ -95,20 +96,22 @@ class BuzzChat
     #   before: cursor  -> a page of earlier messages (asks the relay when the copy runs out)
     #   after:  cursor  -> messages newer than the cursor
     #   neither         -> the latest page
-    def page(before: nil, after: nil, limit: PAGE, viewer: nil)
+    def page(before: nil, after: nil, limit: PAGE, viewer: nil, channel: nil)
+      ch = channel.presence || self.channel
       limit = limit.to_i.clamp(1, 100)
+      scope = messages_scope(ch)
       rows, has_more, older_failed =
         if after
-          [messages_scope.newer_than(after).oldest_first.limit(limit * 3).to_a, false, false]
+          [scope.newer_than(after).oldest_first.limit(limit * 3).to_a, false, false]
         elsif before
-          older_page(before, limit)
+          older_page(ch, before, limit)
         else
-          latest_page(limit)
+          latest_page(ch, limit)
         end
       { messages: present(rows, viewer: viewer), has_more: has_more, older_failed: older_failed }
     end
 
-    def empty_cache? = messages_scope.none?
+    def empty_cache?(channel: nil) = messages_scope(channel.presence || self.channel).none?
 
     # What the page shows about the connection.
     def status
@@ -129,19 +132,20 @@ class BuzzChat
 
     # Posts as the Rupert agent. Raises NotReady, Invalid, RateLimited or
     # PostFailed with a message that is safe to show.
-    def post!(user:, text:)
-      raise NotReady, 'Team chat is not set up yet.' unless ready?
+    def post!(user:, text:, channel: nil)
+      ch = channel.presence || self.channel
+      raise NotReady, 'Team chat is not set up yet.' unless ready? && ch.present?
 
       clean = clean_post(text)
       enforce_rate_limit!(user)
-      event = BuzzAgent.build_event(content: "#{sender_name(user)}#{VIA}#{clean}", channel: channel, tags: [['client', CLIENT_TAG]])
+      event = BuzzAgent.build_event(content: "#{sender_name(user)}#{VIA}#{clean}", channel: ch, tags: [['client', CLIENT_TAG]])
       ok, reason = BuzzRelayClient.publish(event)
       unless ok
         Rails.logger.warn("[BuzzChat] post failed for user #{user.id}: #{reason.to_s[0, 120]}")
         raise PostFailed, 'Rupert could not reach Buzz, so your message was not sent. Try again in a moment.'
       end
 
-      row = store_posted(event, user)
+      row = store_posted(event, user, ch)
       ActivityLogger.log('buzz_chat_post', details: "event=#{event.id[0, 12]} chars=#{clean.length}")
       row
     end
@@ -163,27 +167,27 @@ class BuzzChat
 
     private
 
-    def messages_scope = BuzzMessage.in_channel(channel)
+    def messages_scope(ch = channel) = BuzzMessage.in_channel(ch)
 
-    def latest_page(limit)
-      rows = messages_scope.newest_first.limit(limit + 1).to_a
+    def latest_page(ch, limit)
+      rows = messages_scope(ch).newest_first.limit(limit + 1).to_a
       [rows.first(limit).reverse, rows.size > limit, false]
     end
 
-    def older_page(cursor, limit)
+    def older_page(ch, cursor, limit)
       failed = false
-      if messages_scope.older_than(cursor).limit(limit + 1).count <= limit
-        failed = !fetch_older(cursor)
+      if messages_scope(ch).older_than(cursor).limit(limit + 1).count <= limit
+        failed = !fetch_older(ch, cursor)
       end
-      rows = messages_scope.older_than(cursor).newest_first.limit(limit + 1).to_a
+      rows = messages_scope(ch).older_than(cursor).newest_first.limit(limit + 1).to_a
       [rows.first(limit).reverse, rows.size > limit || failed, failed]
     end
 
-    def fetch_older(cursor)
-      return false unless ready?
+    def fetch_older(ch, cursor)
+      return false unless ready? && ch.present?
 
-      events = BuzzRelayClient.query([{ kinds: KINDS, '#h': [channel], until: cursor[0], limit: OLDER_FETCH }])
-      ingest(events)
+      events = BuzzRelayClient.query([{ kinds: KINDS, '#h': [ch], until: cursor[0], limit: OLDER_FETCH }])
+      ingest(events, ch)
       refresh_profiles
       true
     rescue BuzzRelayClient::Error
@@ -198,9 +202,9 @@ class BuzzChat
     end
 
     # Validates and stores relay events; returns how many were new.
-    def ingest(events)
+    def ingest(events, ch)
       now = Time.current
-      rows = Array(events).filter_map { |event| row_for(event, now) }
+      rows = Array(events).filter_map { |event| row_for(event, now, ch) }
       return 0 if rows.empty?
 
       before = BuzzMessage.count
@@ -208,14 +212,14 @@ class BuzzChat
       BuzzMessage.count - before
     end
 
-    def row_for(event, now)
+    def row_for(event, now, ch)
       return unless valid_event?(event)
 
       tags = event['tags']
-      return unless tags.any? { |t| t[0] == 'h' && t[1] == channel }
+      return unless tags.any? { |t| t[0] == 'h' && t[1] == ch }
 
       {
-        tenant_id: Current.tenant_id, event_id: event['id'], pubkey: event['pubkey'], kind: event['kind'], channel: channel,
+        tenant_id: Current.tenant_id, event_id: event['id'], pubkey: event['pubkey'], kind: event['kind'], channel: ch,
         content: clean_incoming(event['content']), reply_to: reply_target(tags), client: client_tag(tags),
         posted_at: event['created_at'], created_at: now, updated_at: now
       }
@@ -261,7 +265,7 @@ class BuzzChat
     # nameless so it is not asked again until the refresh window passes.
     def refresh_profiles
       known = BuzzProfile.fresh.pluck(:pubkey)
-      wanted = (messages_scope.distinct.limit(500).pluck(:pubkey) - known).first(PROFILE_BATCH)
+      wanted = (BuzzMessage.distinct.limit(500).pluck(:pubkey) - known).first(PROFILE_BATCH)
       return if wanted.empty?
 
       events = BuzzRelayClient.query([{ kinds: [0], authors: wanted, limit: wanted.size * 3 }])
@@ -336,9 +340,9 @@ class BuzzChat
       end
     end
 
-    def store_posted(event, user)
+    def store_posted(event, user, ch)
       BuzzMessage.create!(
-        event_id: event.id, pubkey: event.pubkey.to_s, kind: event.kind, channel: channel, content: clean_incoming(event.content),
+        event_id: event.id, pubkey: event.pubkey.to_s, kind: event.kind, channel: ch, content: clean_incoming(event.content),
         client: CLIENT_TAG, rupert_user_id: user.id, posted_at: event.created_at
       )
     rescue ActiveRecord::RecordNotUnique
