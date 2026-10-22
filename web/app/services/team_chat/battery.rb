@@ -21,6 +21,18 @@ module TeamChat
 
     attr_reader :run_id, :room, :results
 
+    # The question set: the default battery, or config/team_chat/battery_<name>.yml (e.g. finance).
+    def self.config_for(name)
+      name = name.to_s.strip
+      return CONFIG if name.blank? || name == 'default'
+      raise ArgumentError, "Battery names are lowercase letters, digits and _: #{name.first(40)}" unless name.match?(/\A[a-z0-9_]+\z/)
+
+      path = Rails.root.join("config/team_chat/battery_#{name}.yml")
+      raise ArgumentError, "No battery called #{name} (#{path.basename} is missing)." unless path.exist?
+
+      path
+    end
+
     def self.items(path = CONFIG)
       YAML.safe_load_file(path).fetch('questions').map do |row|
         Item.new(id: row.fetch('id'), cadence: row.fetch('cadence'), question: row.fetch('question'), checks: Array(row['checks']))
@@ -28,7 +40,10 @@ module TeamChat
     end
 
     # user: who the questions are asked as (their permissions). agent: a local bot handle, or 'rupert'.
-    def initialize(user:, agent: 'liquid', only: nil, grader: Grader.new, items: self.class.items, out: $stdout)
+    attr_reader :set
+
+    def initialize(user:, agent: 'liquid', only: nil, grader: Grader.new, items: self.class.items, out: $stdout, set: 'default')
+      @set = set.to_s.presence || 'default'
       @user = user
       @agent = agent.to_s == 'rupert' ? nil : (LocalAgents.find(agent) || LocalAgents.trial(agent))
       raise ArgumentError, "No bot @#{agent} is available here." if agent.to_s != 'rupert' && !@agent
@@ -54,7 +69,7 @@ module TeamChat
     def run
       @room = self.class.room_for(@user)
       started = Time.current
-      post_notice("🧪 Test run #{@run_id}: #{@items.size} questions to @#{handle} (#{model_name}), asked as #{@user.display_name}. " \
+      post_notice("🧪 Test run #{@run_id}#{" (#{@set} questions)" unless @set == 'default'}: #{@items.size} questions to @#{handle} (#{model_name}), asked as #{@user.display_name}. " \
                   "Each answer is timed and graded 1–5 by #{@grader.label} against Rupert’s own data.")
       @items.each_with_index { |item, index| @results << run_item(item, index) }
       summary = post_notice(summary_text(Time.current - started))
@@ -66,7 +81,7 @@ module TeamChat
 
     # Markdown for docs: one row per question.
     def report_markdown
-      lines = ["### Run #{@run_id}: @#{handle} (#{model_name}), graded by #{@grader.label}", '',
+      lines = ["### Run #{@run_id}#{" (#{@set})" unless @set == 'default'}: @#{handle} (#{model_name}), graded by #{@grader.label}", '',
                '| # | Cadence | Question | Time | Tools | Grade | Grader’s note |', '| --- | --- | --- | --- | --- | --- | --- |']
       @results.each_with_index do |result, index|
         lines << "| #{index + 1} | #{result.item.cadence} | #{result.item.question.tr('|', '/')} | #{format_seconds(result.seconds)} | " \

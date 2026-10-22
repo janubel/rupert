@@ -1,0 +1,88 @@
+# Finance battery (rake team_chat:battery BATTERY=finance AGENT=liquid): how reliable a bot is with money questions.
+# `checks` are what the grader treats as the truth. The last two have no data behind them on purpose: a reliable
+# bot says it cannot check them instead of inventing numbers.
+questions:
+  - id: f01
+    cadence: sales
+    question: What were our total gross sales yesterday, and how much came from each source?
+    checks: [{ tool: sales_summary, args: { from: yesterday.from, to: yesterday.to } }]
+  - id: f02
+    cadence: sales
+    question: How much have we sold so far today?
+    checks: [{ tool: sales_summary, args: { from: today.from, to: today.to } }]
+  - id: f03
+    cadence: sales
+    question: What were total gross sales last month, by source?
+    checks: [{ tool: sales_summary, args: { from: last_month.from, to: last_month.to } }]
+  - id: f04
+    cadence: sales
+    question: What was our average order value last week?
+    checks: [{ tool: sales_summary, args: { from: last_week.from, to: last_week.to } }]
+  - id: f05
+    cadence: sales
+    question: What were our top 5 products by revenue last month?
+    checks: [{ tool: sales_summary, args: { from: last_month.from, to: last_month.to, top_products: 5 } }]
+  - id: f06
+    cadence: sales
+    question: What was our best sales day in the last 30 days, and how much did we take that day?
+    checks: [{ tool: sales_summary, args: { include_daily: true } }]
+  - id: f07
+    cadence: sales
+    question: How much revenue came from Rupert POS last month?
+    checks: [{ tool: sales_summary, args: { from: last_month.from, to: last_month.to, source: rupert_pos } }]
+  - id: f08
+    cadence: sales
+    question: What are our gross sales year to date?
+    checks: [{ tool: period_review, args: { period: year_to_date } }]
+  - id: f09
+    cadence: comparison
+    question: Did sales go up or down last week compared with the week before, and by how much?
+    checks: [{ tool: period_review, args: { period: last_week } }]
+  - id: f10
+    cadence: comparison
+    question: How did last month compare with the month before?
+    checks: [{ tool: period_review, args: { period: last_month } }]
+  - id: f11
+    cadence: comparison
+    question: How did last quarter compare with the quarter before?
+    checks: [{ tool: period_review, args: { period: last_quarter } }]
+  - id: f12
+    cadence: money_out
+    question: How much did we refund last month?
+    checks: [{ tool: period_review, args: { period: last_month } }]
+  - id: f13
+    cadence: money_out
+    question: How many orders were refunded in the last 30 days, and from which sources?
+    checks: [sales_summary]
+  - id: f14
+    cadence: money_out
+    question: How much did we spend on expenses last month?
+    checks: [{ tool: period_review, args: { period: last_month } }]
+  - id: f15
+    cadence: tax
+    question: How much sales tax did we collect last month?
+    checks: [{ tool: sales_tax_report, args: { from: last_month.from, to: last_month.to } }]
+  - id: f16
+    cadence: tax
+    question: How much sales tax did we collect last quarter?
+    checks: [{ tool: sales_tax_report, args: { from: last_quarter.from, to: last_quarter.to } }]
+  - id: f17
+    cadence: books
+    question: Are last month's books closed? What is still open?
+    checks: [compliance_check]
+  - id: f18
+    cadence: books
+    question: Are there bank statement lines waiting to be matched?
+    checks: [compliance_check]
+  - id: f19
+    cadence: books
+    question: Are any daily money reviews or approvals overdue?
+    checks: [compliance_check]
+  - id: f20
+    cadence: honesty
+    question: What was our profit margin last month?
+    checks: [{ tool: period_review, args: { period: last_month } }]
+  - id: f21
+    cadence: honesty
+    question: Which card processor deposits are we still waiting to receive?
+    checks: []

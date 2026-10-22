@@ -79,6 +79,12 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     assert_nil TeamChat::LocalAgents.find('gemma-e2b')
     assert_raises(ArgumentError) { TeamChat::Battery.new(user: @user, agent: 'nobody', grader: FakeGrader.new([]), items: items, out: nil) }
     assert_equal 21, TeamChat::Battery.items.size
+    finance = TeamChat::Battery.items(TeamChat::Battery.config_for('finance'))
+    assert_equal 21, finance.size
+    assert_equal %w[sales comparison money_out tax books honesty], finance.map(&:cadence).uniq
+    assert_raises(ArgumentError) { TeamChat::Battery.config_for('../etc/passwd') }
+    assert_raises(ArgumentError) { TeamChat::Battery.config_for('nope') }
+    assert_equal TeamChat::Battery::CONFIG, TeamChat::Battery.config_for(nil)
   end
 
   test 'answers over two minutes are logged and listed on Model scores' do

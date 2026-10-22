@@ -41,16 +41,18 @@ end
 
 namespace :team_chat do
   desc 'Run the test battery (config/team_chat/battery.yml) on one bot in #liquid-testing: each answer timed and graded by DeepSeek. ' \
-       'AGENT=liquid (or qwen, gemma, gemma-e2b, gemma-e4b-ud, rupert) USER_EMAIL=... ONLY=d1,w1 REPORT=path.md'
+       'AGENT=liquid (or qwen, gemma, gemma-e2b, gemma-e4b-ud, rupert) BATTERY=finance USER_EMAIL=... ONLY=d1,w1 REPORT=path.md'
   task battery: :environment do
     tenant = ENV['TENANT_ID'].present? ? Tenant.find(ENV['TENANT_ID']) : Tenant.where(status: 'active').first
     Current.tenant = tenant
     user = ENV['USER_EMAIL'].present? ? User.find_by!(email: ENV['USER_EMAIL'], tenant_id: tenant.id) : User.where(tenant_id: tenant.id, role: %w[admin super_admin], active: true).first
     Current.user = user
-    battery = TeamChat::Battery.new(user: user, agent: ENV.fetch('AGENT', 'liquid'), only: ENV['ONLY'].to_s.split(','))
+    set = ENV['BATTERY'].presence || 'default'
+    battery = TeamChat::Battery.new(user: user, agent: ENV.fetch('AGENT', 'liquid'), only: ENV['ONLY'].to_s.split(','),
+      items: TeamChat::Battery.items(TeamChat::Battery.config_for(set)), set: set)
     battery.run
     report = battery.report_markdown
-    path = ENV['REPORT'].presence || Rails.root.join('tmp', 'battery', "#{battery.run_id}-#{battery.handle}.md").to_s
+    path = ENV['REPORT'].presence || Rails.root.join('tmp', 'battery', "#{battery.run_id}-#{set}-#{battery.handle}.md").to_s
     FileUtils.mkdir_p(File.dirname(path))
     File.write(path, report)
     puts "\n#{report}\n\nReport saved to #{path}"
