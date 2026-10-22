@@ -11,7 +11,7 @@ import { Controller } from "@hotwired/stimulus"
 // `code`, @mentions, http(s) links and same-site [label](/path) links.
 export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
-    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput"]
+    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
     compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
@@ -33,6 +33,8 @@ export default class extends Controller {
     this.suggestions = []
     this.pendingFiles = []
     this.mentionIds = new Set()
+    this.pins = []
+    this.pinsOpen = false
     this.load()
     this.schedule()
     this.onVisible = () => { if (!document.hidden) this.poll() }
@@ -136,6 +138,7 @@ export default class extends Controller {
     this.hasMore = data.has_more
     this.merge(data.messages)
     this.renderRooms(data.rooms)
+    this.setPins(data.pins)
     this.render({ stick: true })
     const thread = Number(new URLSearchParams(window.location.search).get("thread"))
     if (thread && !this.compactValue) this.openThread(thread)
@@ -150,6 +153,7 @@ export default class extends Controller {
     this.since = data.now
     const fresh = this.merge(data.messages)
     this.renderRooms(data.rooms)
+    this.setPins(data.pins)
     if (fresh.changed) this.render({ stick: false, newItems: fresh.added })
   }
 
@@ -207,7 +211,7 @@ export default class extends Controller {
         added += message.parent_id ? 0 : 1
         changed = true
       } else if (old.updated_at !== message.updated_at || old.reply_count !== message.reply_count || old.body !== message.body || old.activity !== message.activity ||
-          JSON.stringify(old.reactions) !== JSON.stringify(message.reactions) || JSON.stringify(old.rating) !== JSON.stringify(message.rating)) {
+          JSON.stringify(old.reactions) !== JSON.stringify(message.reactions) || JSON.stringify(old.rating) !== JSON.stringify(message.rating) || old.pinned !== message.pinned) {
         changed = true
       }
       this.byId.set(message.id, { ...old, ...message })
@@ -300,6 +304,13 @@ export default class extends Controller {
         badge.textContent = message.kind === "system" ? "Notice" : "Assistant"
         head.append(badge)
       }
+      if (message.pinned) {
+        const pin = document.createElement("span")
+        pin.className = "chat-msg-pinned"
+        pin.textContent = "📌 Pinned"
+        pin.title = message.pinned_by ? `Pinned by ${message.pinned_by}` : "Pinned"
+        head.append(pin)
+      }
       const time = document.createElement("time")
       time.className = "chat-msg-time"
       time.dateTime = message.created_at
@@ -341,6 +352,7 @@ export default class extends Controller {
       const tools = document.createElement("div")
       tools.className = "chat-msg-tools"
       tools.append(this.toolButton("React", (event) => this.openPalette(message, event.currentTarget)))
+      if (message.kind !== "system") tools.append(this.toolButton(message.pinned ? "Unpin" : "Pin", () => this.togglePin(message.id)))
       if (!thread && message.kind !== "system") tools.append(this.toolButton("Reply in thread", () => this.openThread(message.id)))
       if (message.mine) tools.append(this.toolButton("Delete", () => this.deleteMessage(message)))
       if (tools.childElementCount) row.append(tools)
@@ -407,6 +419,105 @@ export default class extends Controller {
       row.append(pill)
     })
     return row
+  }
+
+  // --- pins: the newest is a banner above the messages, the rest a click away ---
+
+  setPins(pins) {
+    if (!Array.isArray(pins) || !this.hasPinsTarget) return
+    if (JSON.stringify(pins) === JSON.stringify(this.pins)) return
+    this.pins = pins
+    this.renderPins()
+  }
+
+  renderPins() {
+    const holder = this.pinsTarget
+    holder.hidden = this.pins.length === 0
+    if (!this.pins.length) {
+      holder.replaceChildren()
+      return
+    }
+    const latest = this.pins[0]
+    const bar = document.createElement("div")
+    bar.className = "chat-pins-bar"
+    bar.append(this.pinButton(latest, true))
+    if (this.pins.length > 1) {
+      const more = document.createElement("button")
+      more.type = "button"
+      more.className = "chat-pins-more"
+      more.setAttribute("aria-expanded", this.pinsOpen ? "true" : "false")
+      more.textContent = this.pinsOpen ? "Hide" : `+${this.pins.length - 1} more`
+      more.addEventListener("click", () => { this.pinsOpen = !this.pinsOpen; this.renderPins() })
+      bar.append(more)
+    }
+    bar.append(this.unpinButton(latest))
+    const nodes = [bar]
+    if (this.pinsOpen && this.pins.length > 1) {
+      const list = document.createElement("ul")
+      list.className = "chat-pins-list"
+      this.pins.slice(1).forEach((pin) => {
+        const item = document.createElement("li")
+        item.append(this.pinButton(pin, false), this.unpinButton(pin))
+        list.append(item)
+      })
+      nodes.push(list)
+    }
+    holder.replaceChildren(...nodes)
+  }
+
+  pinButton(pin, banner) {
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = banner ? "chat-pin chat-pin-banner" : "chat-pin"
+    button.title = `Pinned by ${pin.pinned_by || "someone"} · show the message`
+    const icon = document.createElement("span")
+    icon.setAttribute("aria-hidden", "true")
+    icon.textContent = "📌"
+    const who = document.createElement("strong")
+    who.textContent = `${pin.author}:`
+    const text = document.createElement("span")
+    text.className = "chat-pin-text"
+    text.textContent = pin.excerpt
+    button.append(icon, who, text)
+    button.addEventListener("click", () => this.jumpToPin(pin))
+    return button
+  }
+
+  unpinButton(pin) {
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "chat-pin-unpin"
+    button.setAttribute("aria-label", `Unpin message from ${pin.author}`)
+    button.title = "Unpin"
+    button.textContent = "✕"
+    button.addEventListener("click", () => this.togglePin(pin.id))
+    return button
+  }
+
+  async togglePin(id) {
+    const data = await this.fetchJson(`${this.urlValue}/${id}/pin`, { method: "POST" })
+    if (!data) return
+    this.merge(data.messages)
+    this.setPins(data.pins)
+    this.render({ stick: false })
+  }
+
+  // Shows the pinned message: its thread when it is a reply, else the message in the log.
+  async jumpToPin(pin) {
+    if (pin.parent_id) return this.openThread(pin.parent_id)
+    for (let tries = 0; tries < 10; tries += 1) {
+      const node = this.logTarget.querySelector(`[data-id="${pin.id}"]`)
+      if (node) {
+        node.scrollIntoView({ block: "center", behavior: "smooth" })
+        node.classList.remove("is-flash")
+        void node.offsetWidth
+        node.classList.add("is-flash")
+        return
+      }
+      if (!this.hasMore) break
+      await this.loadEarlier()
+    }
+    this.showNotice("That pinned message is no longer in this room.")
   }
 
   // 👍 / 👎 on an assistant reply, so Model scores can show which models people like.

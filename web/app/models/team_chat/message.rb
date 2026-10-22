@@ -18,6 +18,7 @@ module TeamChat
     belongs_to :room, class_name: 'TeamChat::Room'
     belongs_to :user, optional: true
     belongs_to :parent, class_name: 'TeamChat::Message', optional: true
+    belongs_to :pinned_by, class_name: 'User', optional: true
     has_many :replies, class_name: 'TeamChat::Message', foreign_key: :parent_id, inverse_of: :parent, dependent: :nullify
     has_many :attachments, class_name: 'TeamChat::Attachment', dependent: :delete_all
     # The same rows without their bytes, for listing.
@@ -39,6 +40,9 @@ module TeamChat
     scope :visible, -> { where(deleted_at: nil) }
     scope :top_level, -> { where(parent_id: nil) }
     scope :pending, -> { where(status: 'pending') }
+    scope :pinned, -> { where.not(pinned_at: nil) }
+
+    PINS_SHOWN = 10
 
     after_create_commit :touch_room
 
@@ -47,6 +51,7 @@ module TeamChat
     def system? = author_kind == 'system'
     def pending? = status == 'pending'
     def deleted? = deleted_at.present?
+    def pinned? = pinned_at.present?
 
     def mentions_rupert? = body.to_s.match?(MENTION)
 
@@ -91,7 +96,7 @@ module TeamChat
       transaction do
         attachments.delete_all
         reactions.delete_all
-        update_columns(deleted_at: Time.current, body: '', actions: nil, mentions: nil, updated_at: Time.current)
+        update_columns(deleted_at: Time.current, body: '', actions: nil, mentions: nil, pinned_at: nil, pinned_by_id: nil, updated_at: Time.current)
       end
     end
 
@@ -106,8 +111,32 @@ module TeamChat
         actions: deleted? ? [] : actions_list.map { |action| action.slice('id', 'tool', 'title', 'summary', 'status', 'decided_by', 'result') },
         attachments: deleted? ? [] : attachment_infos.map { |attachment| attachment.as_payload(room) },
         mentions: mention_ids.filter_map { |id| { id: id, name: people[id] } if people[id] }, mentions_me: mention_ids.include?(viewer.id),
-        reactions: reaction_summary(viewer), rating: rating_summary(viewer)
+        reactions: reaction_summary(viewer), rating: rating_summary(viewer),
+        pinned: pinned?, pinned_by: (pinned_by&.display_name if pinned?)
       }
+    end
+
+    # Pins or unpins this message as `user`. Pinning posts a short notice in the room.
+    # Returns the notice when one was posted.
+    def toggle_pin!(user)
+      if pinned?
+        update!(pinned_at: nil, pinned_by: nil)
+        nil
+      else
+        update!(pinned_at: Time.current, pinned_by: user)
+        room.messages.create!(author_kind: 'system', body: "#{user.display_name} pinned a message from #{author_name}: “#{excerpt(80)}”")
+      end
+    end
+
+    # A one-line preview for pin banners and notices.
+    def excerpt(length = 140)
+      text = body.to_s.gsub(/\s+/, ' ').strip
+      text = "📎 #{attachment_infos.map(&:filename).first(2).join(', ')}" if text.blank? && attachment_infos.any?
+      text.length > length ? "#{text.first(length - 1)}…" : text
+    end
+
+    def pin_payload
+      { id: id, parent_id: parent_id, author: author_name, excerpt: excerpt, pinned_by: pinned_by&.display_name, pinned_at: pinned_at&.iso8601 }
     end
 
     # Thumbs on a finished assistant reply: counts plus this viewer's choice.

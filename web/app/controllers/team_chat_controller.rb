@@ -63,7 +63,7 @@ class TeamChatController < AuthenticatedController
   #   since=<time>  messages created or changed since the last poll
   #   thread=<id>   also the whole thread under that message
   def messages
-    scope = @room.messages.includes(:user, :attachment_infos, :ratings, reactions: :user)
+    scope = @room.messages.includes(:user, :pinned_by, :attachment_infos, :ratings, reactions: :user)
     rows =
       if params[:since].present?
         since = Time.zone.parse(params[:since].to_s) rescue nil
@@ -81,7 +81,7 @@ class TeamChatController < AuthenticatedController
     rows |= thread_rows(scope) if params[:thread].present?
     mark_read(rows) if params[:visible] == '1'
     render json: {
-      now: Time.current.iso8601(6), messages: payload(rows), has_more: has_more,
+      now: Time.current.iso8601(6), messages: payload(rows), has_more: has_more, pins: pins,
       rooms: rail_rooms.map { |room| { slug: room.slug, unread: room.unread, mentions: room.mentions } }
     }
   end
@@ -123,6 +123,16 @@ class TeamChatController < AuthenticatedController
 
     TeamChat::Rating.rate!(message, Current.user, params[:value])
     render json: { messages: payload([message.reload]) }
+  end
+
+  # POST /chat/:room/messages/:id/pin — pins (or unpins) a message as the room's banner.
+  def pin
+    message = @room.messages.visible.where.not(status: 'pending').find(params[:id])
+    return head :unprocessable_entity if message.system?
+
+    notice = message.toggle_pin!(Current.user)
+    ActivityLogger.log('team_chat_pin', details: "room=#{@room.slug}; message=#{message.id}; pinned=#{message.pinned?}")
+    render json: { messages: payload([message.reload, notice].compact), pins: pins }
   end
 
   # GET /chat/models — which models people like, and how fast and reliable each is.
@@ -192,6 +202,10 @@ class TeamChatController < AuthenticatedController
 
   def room_params
     params.permit(:name, :topic, :assistant_mode).to_h.symbolize_keys.compact_blank
+  end
+
+  def pins
+    @room.messages.visible.pinned.includes(:user, :pinned_by, :attachment_infos).order(pinned_at: :desc).limit(TeamChat::Message::PINS_SHOWN).map(&:pin_payload)
   end
 
   def mentionable_people

@@ -309,4 +309,55 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_scores_path
     assert_response :forbidden
   end
+
+  test 'messages and thread replies can be pinned; the newest pin leads the banner list' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'general')
+    first = room.messages.create!(user: manager, body: 'Count the tea wall tonight after close.')
+    reply = room.messages.create!(user: manager, body: 'Bring the scanner.', parent_id: first.id)
+
+    post team_chat_pin_path('general', first.id), as: :json
+    assert_response :success
+    assert json['messages'].first['pinned']
+    assert_equal @admin.display_name, json['messages'].first['pinned_by']
+    notice = json['messages'].last
+    assert_equal 'system', notice['kind']
+    assert_match(/pinned a message from Mo Manager: “Count the tea wall/, notice['body'])
+
+    travel 1.second
+    post team_chat_pin_path('general', reply.id), as: :json
+    assert_equal [reply.id, first.id], json['pins'].pluck('id')
+    assert_equal first.id, json['pins'].first['parent_id']
+
+    get team_chat_messages_path('general'), as: :json
+    assert_equal [reply.id, first.id], json['pins'].pluck('id')
+
+    post team_chat_pin_path('general', reply.id), as: :json
+    assert_not json['messages'].first['pinned']
+    assert_equal [first.id], json['pins'].pluck('id')
+    assert_equal 1, room.messages.where(author_kind: 'system').count, 'unpinning posts no notice'
+  end
+
+  test 'deleting a pinned message unpins it, and notices cannot be pinned' do
+    sign_in(@admin)
+    get team_chat_path
+    post team_chat_messages_path('general'), params: { body: 'Pin me' }, as: :json
+    id = json['messages'].first['id']
+    post team_chat_pin_path('general', id), as: :json
+    notice_id = json['messages'].last['id']
+    delete team_chat_message_path('general', id), as: :json
+    get team_chat_messages_path('general'), as: :json
+    assert_empty json['pins']
+    post team_chat_pin_path('general', notice_id), as: :json
+    assert_response :unprocessable_entity
+  end
+
+  test 'both room views carry the pin banner' do
+    sign_in(@admin)
+    get team_chat_room_path(TeamChat::Room.ensure_defaults!(@admin))
+    assert_select '.chat-pins[data-team-chat-target=pins][hidden]'
+    get team_chat_dock_room_path('general')
+    assert_select 'turbo-frame#chat_dock .chat-pins[data-team-chat-target=pins]'
+  end
 end
