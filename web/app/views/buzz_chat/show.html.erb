@@ -1,4 +1,8 @@
-<% content_for :title, @chat_title || 'Buzz' %>
+<% content_for :title, @chat_title || 'Team chat' %>
+<%= page_header(@chat_title || 'Team chat', subtitle: 'Your Buzz workspace, mirrored here: channels, recent messages and a composer.') do %>
+  <%= link_to 'Open in Buzz', BuzzConnect.chat_url, class: 'btn-primary', aria: { label: 'Open this channel in the Buzz app' } if @state == :ready && BuzzConnect.chat_url %>
+<% end %>
+<%= render 'buzz/tabs', current: (@chat_tab || :chat) %>
 <% if @state == :ready %>
   <% can_admin = Current.user.can?('settings.write') %>
   <% can_read = Current.user.can?('buzz.read') %>
@@ -8,7 +12,7 @@
       <div class="buzz-workspace">
         <span class="buzz-workspace-mark" aria-hidden="true">B</span>
         <div class="buzz-workspace-text">
-          <h1 class="buzz-workspace-name"><%= @chat_title || 'Buzz' %></h1>
+          <p class="buzz-workspace-name">Buzz</p>
           <p>Buzz workspace</p>
         </div>
       </div>
@@ -65,7 +69,6 @@
         <div class="buzz-channel-tools">
           <span class="buzz-status" data-buzz-chat-target="status" data-tone="ok" role="status" aria-live="polite">Connecting to Buzz…</span>
           <span class="buzz-members" title="Channel members">◎ <%= @channel.members %></span>
-          <%= link_to 'Open in Buzz', BuzzConnect.chat_url, class: 'buzz-open', aria: { label: 'Open this channel in the Buzz app' } if BuzzConnect.chat_url %>
         </div>
       </header>
 
@@ -102,7 +105,7 @@
   </div>
 <% else %>
   <section class="card card-pad" role="status">
-    <h1 class="font-display text-xl"><%= @state == :unconfigured ? 'Team chat is not set up yet' : 'No channel chosen yet' %></h1>
+    <h2 class="section-title"><%= @state == :unconfigured ? 'Team chat is not set up yet' : 'No channel chosen yet' %></h2>
     <p class="mt-2 text-sm text-mocha">
       <% if @state == :unconfigured %>
         Rupert needs a Buzz relay address and the agent's identity before it can show the channel.
