@@ -1,82 +1,82 @@
-<% content_for :title, "Movement history" %>
+<% content_for :title, 'Movements' %>
 <% source_labels = {
-  "square" => "Square sync",
-  "shopify" => "Shopify sync",
-  "negative-fix" => "Negative fix",
-  "reconcile" => "Reconcile",
-  "size-derive" => "Size derive",
+  'square' => 'Square sync',
+  'shopify' => 'Shopify sync',
+  'negative-fix' => 'Negative fix',
+  'reconcile' => 'Reconcile',
+  'size-derive' => 'Size derive'
 } %>
-<div class="space-y-6 operations-workspace">
-  <%= page_header 'Movement history', subtitle: 'Every recorded quantity change — who or what changed it, why, and from → to. Mirrors are read-only snapshots from Square/Shopify.' do %>
-    <%= link_to "Inventory", inventory_index_path, class: "btn-ghost" %>
-  <% end %>
+<div class="space-y-6">
+  <%= page_header 'Movements', subtitle: 'Every recorded quantity change: who or what changed it, why, and from → to.' %>
+  <%= fold_explainer('Mirrors are read-only snapshots from Square and Shopify. A movement records the change Rupert observed between two reads, or an action Rupert took, with the sync run that produced it.', class: 'text-sm text-mocha') %>
 
-  <%= form_tag movements_inventory_index_path, method: :get, class: "flex flex-wrap items-end gap-2" do %>
-    <div class="w-56">
-      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="q">SKU</label>
-      <input type="search" id="q" name="q" value="<%= params[:q] %>" placeholder="Search SKUs…" aria-label="Search movement SKUs" class="input" autocomplete="off">
+  <%= form_tag movements_inventory_index_path, method: :get, class: 'toolbar' do %>
+    <div class="toolbar-field">
+      <label class="field-label" for="q">SKU</label>
+      <input type="search" id="q" name="q" value="<%= params[:q] %>" placeholder="Search SKUs" aria-label="Search movement SKUs" class="input" autocomplete="off">
     </div>
-    <div>
-      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="source">Source</label>
-      <%= select_tag :source, options_for_select([["All sources", ""]] + @sources.map { |s| [source_labels.fetch(s, s.humanize), s] }, params[:source]), class: "select" %>
+    <div class="toolbar-field">
+      <label class="field-label" for="source">Source</label>
+      <%= select_tag :source, options_for_select([['All sources', '']] + @sources.map { |s| [source_labels.fetch(s, s.humanize), s] }, params[:source]), class: 'input' %>
     </div>
-    <div>
-      <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="days">Since</label>
-      <%= select_tag :days, options_for_select([["30 days", "30"], ["7 days", "7"], ["90 days", "90"], ["180 days", "180"], ["1 year", "365"]], params[:days] || "30"), class: "select" %>
+    <div class="toolbar-field">
+      <label class="field-label" for="days">Since</label>
+      <%= select_tag :days, options_for_select([['30 days', '30'], ['7 days', '7'], ['90 days', '90'], ['180 days', '180'], ['1 year', '365']], params[:days] || '30'), class: 'input' %>
     </div>
-    <%= submit_tag "Filter", class: "btn-primary" %>
-    <%= link_to "Clear", movements_inventory_index_path, class: "btn-ghost" %>
+    <div class="toolbar-actions">
+      <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
+      <%= link_to 'Clear', movements_inventory_index_path, class: 'btn-ghost' %>
+    </div>
   <% end %>
 
   <div class="card overflow-hidden">
-    <div class="operations-table-region" role="region" tabindex="0" aria-label="Inventory table">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="table-region" role="region" tabindex="0" aria-label="Inventory movements">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">When</th>
             <th scope="col" class="th">SKU</th>
             <th scope="col" class="th">Item</th>
             <th scope="col" class="th">Source</th>
-            <th scope="col" class="th text-right">Change</th>
-            <th scope="col" class="th text-right">Qty</th>
+            <th scope="col" class="th num">Change</th>
+            <th scope="col" class="th num">Qty</th>
             <th scope="col" class="th">Reason</th>
             <th scope="col" class="th">Actor</th>
             <th scope="col" class="th">Sync run</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @movements.empty? %>
             <tr>
-              <td class="empty-row" colspan="9">No movements match those filters.</td>
+              <td class="empty-row" colspan="9">No movements match those filters. Widen the period or clear the search.</td>
             </tr>
           <% end %>
           <% @movements.each do |m| %>
             <% info = @names[m.sku] %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td whitespace-nowrap font-medium text-ink"><%= l(m.createdAt, format: :datetime) %></td>
-              <td class="td font-mono text-xs text-mocha"><%= m.sku.presence || "—" %></td>
+              <td class="td font-mono text-xs text-mocha"><%= m.sku.presence || '—' %></td>
               <td class="td">
-                <p class="font-medium text-ink"><%= info ? info[:name] : "—" %></p>
+                <p class="font-medium text-ink"><%= info ? info[:name] : '—' %></p>
                 <% if info && info[:product].present? %><p class="text-xs text-taupe"><%= info[:product] %></p><% end %>
               </td>
               <td class="td">
                 <% pill = case m.source
-                  when "square" then "pill-olive"
-                  when "shopify" then "pill-fern"
-                  when "reconcile" then "pill-clay"
-                  when "size-derive" then "pill-taupe"
-                  else "pill-taupe"
+                  when 'square' then 'pill-olive'
+                  when 'shopify' then 'pill-fern'
+                  when 'reconcile' then 'pill-clay'
+                  else 'pill-taupe'
                 end %>
                 <span class="<%= pill %>"><%= source_labels.fetch(m.source, m.source.humanize) %></span>
               </td>
-              <td class="td text-right">
-                <span class="font-mono text-xs font-semibold <%= m.delta.negative? ? "text-clay" : m.delta.positive? ? "text-fern" : "text-taupe" %>">
+              <td class="td num">
+                <span class="font-mono text-xs font-semibold <%= m.delta.negative? ? 'text-clay' : m.delta.positive? ? 'text-fern' : 'text-taupe' %>">
                   <%= m.delta >= 0 ? "+#{m.delta}" : m.delta %>
                 </span>
               </td>
-              <td class="td text-right whitespace-nowrap text-mocha"><%= m.quantityBefore %> → <span class="font-semibold text-ink"><%= m.quantityAfter %></span></td>
-              <td class="td text-xs text-mocha"><%= m.reason.presence || "—" %></td>
-              <td class="td text-xs text-mocha"><%= m.actor.presence || "—" %></td>
+              <td class="td num whitespace-nowrap text-mocha"><%= m.quantityBefore %> → <span class="font-semibold text-ink"><%= m.quantityAfter %></span></td>
+              <td class="td text-xs text-mocha"><%= m.reason.presence || '—' %></td>
+              <td class="td text-xs text-mocha"><%= m.actor.presence || '—' %></td>
               <td class="td whitespace-nowrap">
                 <% if m.sync_run %>
                   <span class="font-mono text-xs text-taupe" title="Started <%= l(m.sync_run.startedAt, format: :long) %> · <%= m.sync_run.mode %>">

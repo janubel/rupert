@@ -1,7 +1,4 @@
 <%# Tabs shared by the Buzz card and the Team chat. The chat tab only shows to people who may read it. %>
 <% if Current.user&.can?('buzz.read') %>
-  <nav class="buzz-tabs" aria-label="Buzz sections">
-    <%= link_to 'Agent & setup', buzz_path, class: 'buzz-tab', aria: { current: (current == :card ? 'page' : nil) } %>
-    <%= link_to buzz_chat_path, class: 'buzz-tab', aria: { current: (current == :chat ? 'page' : nil) } do %><%= navigation_icon('chat') %><span>Team chat</span><% end %>
-  </nav>
+  <%= page_tabs([['Agent & setup', buzz_path, current == :card], ['Team chat', buzz_chat_path, current == :chat]], label: 'Buzz sections') %>
 <% end %>

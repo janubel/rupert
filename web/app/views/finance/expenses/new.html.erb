@@ -1,8 +1,7 @@
-<% content_for :title, "Record expense" %>
-<div class="space-y-6 operations-workspace">
-
-  <%= page_header 'Record expense', subtitle: 'Money out — supplies, shipping, labor, rent, and more.' %>
-  <div class="card card-pad page-narrow">
-    <%= render "form", expense: @expense %>
+<% content_for :title, 'Add expense' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add expense', subtitle: 'Money out: supplies, shipping, labor, rent and more.' %>
+  <div class="card card-pad">
+    <%= render 'form', expense: @expense %>
   </div>
 </div>

@@ -14,7 +14,7 @@ class PageHeaderPagesTest < ActionDispatch::IntegrationTest
   {
     'Add staff member' => :new_user_path,
     'Record expense' => :new_finance_expense_path,
-    'Alerts' => :alerts_path,
+    'Stock alerts' => :alerts_path,
     'New goal' => :new_goals_goal_path,
     'New department' => :new_people_department_path,
     'Add location' => :new_location_path

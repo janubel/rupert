@@ -1,15 +1,13 @@
-<% content_for :title, "New journal entry" %>
+<% content_for :title, 'Add journal entry' %>
 <% rows = @form_lines.presence || [] %>
 <% row_count = [rows.size, 6].max %>
 <% errors_by_line = (@line_errors || []).group_by { |e| e[:line] } %>
-<div class="space-y-6 operations-workspace">
+<div class="space-y-6">
+  <%= page_header 'Add journal entry', subtitle: 'Post a manual adjustment, accrual, opening balance or owner draw; total debits must equal total credits.' %>
+  <%= fold_explainer('A posted entry cannot be edited; to correct it, reverse it. Enter a dollar amount in either the Debit or the Credit column for each used line, never both: digits with up to two decimals, no $ sign or commas. Leave unused rows blank.', class: 'text-sm text-mocha') %>
 
-  <%= page_header 'New journal entry', subtitle: 'Post a manual adjustment, accrual, opening balance or owner draw. Total debits must equal total credits. A posted entry cannot be edited; to correct it, reverse it.' do %>
-    <%= link_to "Back to ledger", finance_journal_entries_path, class: "btn-ghost btn-sm" %>
-  <% end %>
-
-  <%= form_with url: finance_journal_entries_path, method: :post, class: "space-y-4",
-        data: { controller: "journal-form", journal_form_locks_value: finance_locks_json, action: "submit->journal-form#confirm input->journal-form#sync change->journal-form#sync" } do |f| %>
+  <%= form_with url: finance_journal_entries_path, method: :post, class: 'space-y-4',
+        data: { controller: 'journal-form', journal_form_locks_value: finance_locks_json, action: 'submit->journal-form#confirm input->journal-form#sync change->journal-form#sync' } do |f| %>
     <% if @form_error %>
       <div role="alert" class="flash flash-alert">
         <p class="font-semibold">Not posted. Nothing was saved.</p>
@@ -21,20 +19,23 @@
       </div>
     <% end %>
 
-    <div class="grid gap-4 sm:grid-cols-2">
-      <div>
-        <%= label_tag :posted_on, "Date", class: "field-label" %>
-        <%= date_field_tag :posted_on, @entry.posted_on, class: "select w-full", required: true, data: { journal_form_target: "date" } %>
-      </div>
-      <div>
-        <%= label_tag :memo, "Memo", class: "field-label" %>
-        <%= text_field_tag :memo, @entry.memo, class: "input w-full", placeholder: "What this entry records", autocomplete: "off", data: { journal_form_target: "memo" } %>
-      </div>
+    <div class="card card-pad">
+      <fieldset class="grid gap-4 sm:grid-cols-2">
+        <legend class="card-title mb-3">Entry</legend>
+        <div>
+          <%= label_tag :posted_on, 'Date', class: 'field-label' %>
+          <%= date_field_tag :posted_on, @entry.posted_on, class: 'input', required: true, data: { journal_form_target: 'date' } %>
+        </div>
+        <div>
+          <%= label_tag :memo, 'Memo', class: 'field-label' %>
+          <%= text_field_tag :memo, @entry.memo, class: 'input w-full', placeholder: 'What this entry records', autocomplete: 'off', data: { journal_form_target: 'memo' } %>
+        </div>
+      </fieldset>
     </div>
 
-    <div class="card overflow-hidden">
-      <div class="operations-table-region" role="region" tabindex="0" aria-label="Journal entry lines">
-        <table class="operations-table finance-table w-full">
+    <div class="card">
+      <div class="table-region" role="region" tabindex="0" aria-label="Journal entry lines">
+        <table class="table finance-table">
           <caption class="sr-only">Journal entry lines. Enter a debit or a credit on each line.</caption>
           <thead>
             <tr>
@@ -51,15 +52,15 @@
               <% bad = errors_by_line[i + 1].present? %>
               <tr data-journal-form-target="row" class="<%= 'line-invalid' if bad %>">
                 <th scope="row" class="td text-mocha"><%= i + 1 %><% if bad %> <span class="sr-only">has a problem</span><% end %></th>
-                <td class="td"><%= select_tag "lines[][account_id]", options_for_select(@accounts.map { |a| [a.label, a.id] }, row[:account_id].to_s.presence&.to_i), include_blank: "Choose account", class: "select w-full", aria: { label: "Line #{i + 1} account", invalid: bad.to_s }, data: { field: "account" } %></td>
-                <td class="td"><%= text_field_tag "lines[][debit]", row[:debit], class: "input w-full text-right money", inputmode: "decimal", placeholder: "0.00", autocomplete: "off", aria: { label: "Line #{i + 1} debit", invalid: bad.to_s }, data: { field: "debit" } %></td>
-                <td class="td"><%= text_field_tag "lines[][credit]", row[:credit], class: "input w-full text-right money", inputmode: "decimal", placeholder: "0.00", autocomplete: "off", aria: { label: "Line #{i + 1} credit", invalid: bad.to_s }, data: { field: "credit" } %></td>
-                <td class="td"><%= text_field_tag "lines[][memo]", row[:memo], class: "input w-full", autocomplete: "off", aria: { label: "Line #{i + 1} memo" } %></td>
+                <td class="td"><%= select_tag 'lines[][account_id]', options_for_select(@accounts.map { |a| [a.label, a.id] }, row[:account_id].to_s.presence&.to_i), include_blank: 'Choose account', class: 'select w-full', aria: { label: "Line #{i + 1} account", invalid: bad.to_s }, data: { field: 'account' } %></td>
+                <td class="td"><%= text_field_tag 'lines[][debit]', row[:debit], class: 'input w-full text-right money', inputmode: 'decimal', placeholder: '0.00', autocomplete: 'off', aria: { label: "Line #{i + 1} debit", invalid: bad.to_s }, data: { field: 'debit' } %></td>
+                <td class="td"><%= text_field_tag 'lines[][credit]', row[:credit], class: 'input w-full text-right money', inputmode: 'decimal', placeholder: '0.00', autocomplete: 'off', aria: { label: "Line #{i + 1} credit", invalid: bad.to_s }, data: { field: 'credit' } %></td>
+                <td class="td"><%= text_field_tag 'lines[][memo]', row[:memo], class: 'input w-full', autocomplete: 'off', aria: { label: "Line #{i + 1} memo" } %></td>
               </tr>
             <% end %>
           </tbody>
           <tfoot>
-            <tr>
+            <tr class="font-semibold">
               <th scope="row" class="td" colspan="2">Totals</th>
               <td class="td num"><span class="money" data-journal-form-target="debitTotal">$0.00</span></td>
               <td class="td num"><span class="money" data-journal-form-target="creditTotal">$0.00</span></td>
@@ -68,27 +69,25 @@
           </tfoot>
         </table>
       </div>
+      <div class="card-pad border-t border-fog"><button type="button" class="btn-ghost btn-sm" data-action="journal-form#addLine">Add a line</button></div>
     </div>
 
     <template data-journal-form-target="template">
       <tr data-journal-form-target="row">
         <th scope="row" class="td text-mocha">+</th>
-        <td class="td"><%= select_tag "lines[][account_id]", options_for_select(@accounts.map { |a| [a.label, a.id] }), include_blank: "Choose account", class: "select w-full", aria: { label: "Added line account" }, data: { field: "account" } %></td>
-        <td class="td"><%= text_field_tag "lines[][debit]", nil, class: "input w-full text-right money", inputmode: "decimal", placeholder: "0.00", autocomplete: "off", aria: { label: "Added line debit" }, data: { field: "debit" } %></td>
-        <td class="td"><%= text_field_tag "lines[][credit]", nil, class: "input w-full text-right money", inputmode: "decimal", placeholder: "0.00", autocomplete: "off", aria: { label: "Added line credit" }, data: { field: "credit" } %></td>
-        <td class="td"><%= text_field_tag "lines[][memo]", nil, class: "input w-full", autocomplete: "off", aria: { label: "Added line memo" } %></td>
+        <td class="td"><%= select_tag 'lines[][account_id]', options_for_select(@accounts.map { |a| [a.label, a.id] }), include_blank: 'Choose account', class: 'select w-full', aria: { label: 'Added line account' }, data: { field: 'account' } %></td>
+        <td class="td"><%= text_field_tag 'lines[][debit]', nil, class: 'input w-full text-right money', inputmode: 'decimal', placeholder: '0.00', autocomplete: 'off', aria: { label: 'Added line debit' }, data: { field: 'debit' } %></td>
+        <td class="td"><%= text_field_tag 'lines[][credit]', nil, class: 'input w-full text-right money', inputmode: 'decimal', placeholder: '0.00', autocomplete: 'off', aria: { label: 'Added line credit' }, data: { field: 'credit' } %></td>
+        <td class="td"><%= text_field_tag 'lines[][memo]', nil, class: 'input w-full', autocomplete: 'off', aria: { label: 'Added line memo' } %></td>
       </tr>
     </template>
 
     <p class="balance-status" role="status" aria-live="polite" data-journal-form-target="status" data-balance="bad">Nothing entered yet.</p>
     <ul class="form-reasons" aria-live="polite" data-journal-form-target="reasons" hidden></ul>
 
-    <p class="text-sm text-mocha">Enter a dollar amount in either the Debit or the Credit column for each used line, never both: digits with up to two decimals, no $ sign or commas. Leave unused rows blank.</p>
-
-    <div class="flex flex-wrap items-center gap-3">
-      <button type="button" class="btn-ghost" data-action="journal-form#addLine">Add a line</button>
-      <%= f.submit "Post entry", class: "btn-primary", data: { journal_form_target: "submit" } %>
-      <%= link_to "Cancel", finance_journal_entries_path, class: "btn-ghost" %>
+    <div class="form-actions">
+      <%= f.submit 'Post entry', class: 'btn-primary', data: { journal_form_target: 'submit' } %>
+      <%= link_to 'Cancel', finance_journal_entries_path, class: 'btn-ghost' %>
     </div>
   <% end %>
 </div>

@@ -4,13 +4,15 @@
 <% summary = BackupStatus.summary(backups, now: now) %>
 <% headline = { 'ok' => ['All backup layers are fresh', 'pill-fern'], 'failed' => ['A backup layer failed', 'pill-rose'],
                 'stale' => ['A backup layer is overdue', 'pill-clay'], 'missing' => ['A backup layer has never reported', 'pill-clay'] }.fetch(summary) %>
-<section class="card card-pad" id="backups" data-backups-summary="<%= summary %>">
-  <div class="flex flex-wrap items-baseline justify-between gap-2">
-    <h2 class="font-display text-lg text-ink">Backups</h2>
-    <span class="pill <%= headline[1] %>"><%= headline[0] %></span>
-  </div>
-  <p class="mt-1 text-sm text-mocha">Five layers, each for a different way of losing data. A layer that has not reported in its usual interval is marked overdue; one that has never reported is not installed on this server.</p>
-  <ul class="mt-4 divide-y divide-fog">
+<section class="section-card" id="backups" data-backups-summary="<%= summary %>">
+  <%= section_heading 'Backups', hint: 'Five layers, each for a different way of losing data.' do %>
+    <span class="<%= headline[1] %>"><%= headline[0] %></span>
+  <% end %>
+  <details class="explainer text-sm text-mocha">
+    <summary class="explainer-summary">How layers are judged</summary>
+    <p class="mt-1">A layer that has not reported in its usual interval is marked overdue; one that has never reported is not installed on this server.</p>
+  </details>
+  <ul class="divide-y divide-fog">
     <% backups.each do |layer| %>
       <% state = layer.state(now) %>
       <% pill = { 'ok' => ['OK', 'pill-fern'], 'failed' => ['Failed', 'pill-rose'], 'stale' => ['Overdue', 'pill-clay'], 'missing' => ['Not reporting', 'pill-taupe'] }.fetch(state) %>
@@ -33,9 +35,9 @@
             <p class="mt-1 text-sm text-taupe">Never reported on this server. Install it: see the backups guide.</p>
           <% end %>
         </div>
-        <span class="pill <%= pill[1] %> shrink-0 self-start"><%= pill[0] %></span>
+        <span class="<%= pill[1] %> shrink-0 self-start"><%= pill[0] %></span>
       </li>
     <% end %>
   </ul>
-  <p class="mt-3 text-xs text-taupe">Restore steps, install commands and what each file contains: <%= link_to 'docs/ops/backups.md', 'https://github.com/techmore/rupert/blob/main/docs/ops/backups.md', class: 'underline' %>.</p>
+  <p class="text-xs text-taupe">Restore steps, install commands and what each file contains: <%= link_to 'docs/ops/backups.md', 'https://github.com/techmore/rupert/blob/main/docs/ops/backups.md', class: 'underline' %>.</p>
 </section>

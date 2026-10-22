@@ -1,5 +1,5 @@
 <% content_for :report_filters do %><%= render 'reports/sales_tax_filters', report: @report %><% end %>
-<%= render "reports/layout", title: "Sales tax report", subtitle: "Tax collected from #{@report.from.strftime('%b %-d, %Y')} through #{@report.to.strftime('%b %-d, %Y')}, by source and store — Shopify, Square, Rupert POS, C-Trax and SwipeSimple." do %>
+<%= render 'reports/layout', title: 'Sales tax', subtitle: "Tax collected from #{@report.from.strftime('%b %-d, %Y')} through #{@report.to.strftime('%b %-d, %Y')}, by source and store." do %>
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <% reported = @report.lines.select(&:tax_collected) %>
     <div class="stat">
@@ -8,7 +8,7 @@
     </div>
     <div class="stat">
       <div class="stat-label">Sources shown</div>
-      <p class="stat-value mt-1 text-base"><%= @report.sources.map { |key| SalesTaxReport::SOURCES[key] }.join(', ') %></p>
+      <p class="stat-value-sm mt-1"><%= @report.sources.map { |key| SalesTaxReport::SOURCES[key] }.join(', ') %></p>
     </div>
     <div class="stat">
       <div class="stat-label">Days in range</div>
@@ -20,7 +20,7 @@
     </div>
   </section>
 
-  <p class="text-sm text-mocha">Each source and store is its own line and lines are not added together: a card sale can appear in a store and in its processor (for example C-Trax and SwipeSimple). <strong>Unavailable</strong> means the source did not report the amount. Estimated tax is shown only for lines without reported tax, assumes every sale was taxed at the rate given, and is not a filing figure.</p>
+  <%= fold_explainer('Each source and store is its own line and lines are not added together: a card sale can appear in a store and in its processor (for example C-Trax and SwipeSimple). Unavailable means the source did not report the amount. Estimated tax is shown only for lines without reported tax, assumes every sale was taxed at the rate given, and is not a filing figure.', class: 'text-sm text-mocha') %>
 
   <%= render 'reports/sales_tax_table', report: @report %>
 <% end %>

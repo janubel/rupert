@@ -1,6 +1,5 @@
-<% locked = customer.source != "manual" %>
-<% label_class = "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-<%= form_with model: customer, scope: :customer, url: customer.persisted? ? customer_path(customer) : customers_path, class: "space-y-6" do |f| %>
+<% locked = customer.source != 'manual' %>
+<%= form_with model: customer, scope: :customer, url: customer.persisted? ? customer_path(customer) : customers_path, class: 'space-y-6' do |f| %>
   <% if customer.errors.any? %>
     <div role="alert" class="flash flash-alert">
       <p class="font-semibold">Please fix the following:</p>
@@ -9,34 +8,34 @@
   <% end %>
 
   <fieldset class="space-y-4">
-    <legend class="font-display text-lg text-ink">Contact details</legend>
-    <% if locked %><p class="text-sm text-mocha" id="contact-locked">Contact details are maintained by <%= directory_label(customer.source) %>. Rupert CRM fields below survive directory refreshes.</p><% end %>
+    <legend class="card-title">Contact details</legend>
+    <% if locked %><p class="text-sm text-mocha" id="contact-locked">Contact details are maintained by <%= directory_label(customer.source) %>. The relationship fields below survive directory refreshes.</p><% end %>
     <div class="grid gap-4 sm:grid-cols-2">
-      <div><%= f.label :first_name, "First name", class: label_class %><%= f.text_field :first_name, class: "input", readonly: locked, autocomplete: "off", aria: { describedby: (locked ? "contact-locked" : nil) } %></div>
-      <div><%= f.label :last_name, "Last name", class: label_class %><%= f.text_field :last_name, class: "input", readonly: locked, autocomplete: "off", aria: { describedby: (locked ? "contact-locked" : nil) } %></div>
-      <div><%= f.label :email, "Email", class: label_class %><%= f.email_field :email, class: "input", readonly: locked, autocomplete: "off", aria: { describedby: (locked ? "contact-locked" : nil) } %></div>
-      <div><%= f.label :phone, "Phone", class: label_class %><%= f.telephone_field :phone, class: "input", readonly: locked, autocomplete: "off", aria: { describedby: (locked ? "contact-locked" : nil) } %></div>
+      <div><%= f.label :first_name, 'First name', class: 'field-label' %><%= f.text_field :first_name, class: 'input', readonly: locked, autocomplete: 'off', aria: { describedby: (locked ? 'contact-locked' : nil) } %></div>
+      <div><%= f.label :last_name, 'Last name', class: 'field-label' %><%= f.text_field :last_name, class: 'input', readonly: locked, autocomplete: 'off', aria: { describedby: (locked ? 'contact-locked' : nil) } %></div>
+      <div><%= f.label :email, 'Email', class: 'field-label' %><%= f.email_field :email, class: 'input', readonly: locked, autocomplete: 'off', aria: { describedby: (locked ? 'contact-locked' : nil) } %></div>
+      <div><%= f.label :phone, 'Phone', class: 'field-label' %><%= f.telephone_field :phone, class: 'input', readonly: locked, autocomplete: 'off', aria: { describedby: (locked ? 'contact-locked' : nil) } %></div>
     </div>
   </fieldset>
 
   <fieldset class="space-y-4">
-    <legend class="font-display text-lg text-ink">Relationship</legend>
+    <legend class="card-title">Relationship</legend>
     <div class="grid gap-4 sm:grid-cols-2">
-      <div><%= f.label :preferred_name, "Display name", class: label_class %><%= f.text_field :preferred_name, class: "input", maxlength: 255, aria: { describedby: "display-name-hint" } %><p id="display-name-hint" class="mt-1 text-xs text-taupe">Shown instead of the contact name, e.g. a nickname or business name.</p></div>
-      <div><%= f.label :crm_status, "Relationship", class: label_class %><%= f.select :crm_status, Core::Customer::CRM_STATUSES.map { |s| [s.titleize, s] }, {}, class: "select w-full" %></div>
-      <div><%= f.label :tags, "Tags", class: label_class %><%= f.text_field :tags, class: "input", maxlength: 1000, placeholder: "retail, wholesale, event", aria: { describedby: "tags-hint" } %><p id="tags-hint" class="mt-1 text-xs text-taupe">Separate with commas.</p></div>
-      <div><%= f.label :owner_id, "Assigned to", class: label_class %><%= f.select :owner_id, @owners.map { |u| [u.display_name, u.id] }, { include_blank: "Unassigned" }, class: "select w-full" %></div>
+      <div><%= f.label :preferred_name, 'Display name', class: 'field-label' %><%= f.text_field :preferred_name, class: 'input', maxlength: 255, aria: { describedby: 'display-name-hint' } %><p id="display-name-hint" class="mt-1 text-xs text-taupe">Shown instead of the contact name, such as a nickname or business name.</p></div>
+      <div><%= f.label :crm_status, 'Relationship', class: 'field-label' %><%= f.select :crm_status, Core::Customer::CRM_STATUSES.map { |s| [s.titleize, s] }, {}, class: 'select w-full' %></div>
+      <div><%= f.label :tags, 'Tags', class: 'field-label' %><%= f.text_field :tags, class: 'input', maxlength: 1000, placeholder: 'retail, wholesale, event', aria: { describedby: 'tags-hint' } %><p id="tags-hint" class="mt-1 text-xs text-taupe">Separate with commas.</p></div>
+      <div><%= f.label :owner_id, 'Assigned to', class: 'field-label' %><%= f.select :owner_id, @owners.map { |u| [u.display_name, u.id] }, { include_blank: 'Unassigned' }, class: 'select w-full' %></div>
     </div>
   </fieldset>
 
   <fieldset>
-    <legend class="font-display text-lg text-ink">Notes</legend>
-    <%= f.label :notes, "Private notes", class: "sr-only" %>
-    <%= f.text_area :notes, rows: 5, class: "input !rounded-2xl mt-2", maxlength: 10_000, placeholder: "Preferences, sizing, anything the team should know…" %>
+    <legend class="card-title">Notes</legend>
+    <%= f.label :notes, 'Private notes', class: 'sr-only' %>
+    <%= f.text_area :notes, rows: 5, class: 'input mt-2', maxlength: 10_000, placeholder: 'Preferences, sizing, anything the team should know…' %>
   </fieldset>
 
-  <div class="flex flex-wrap items-center gap-3">
-    <%= f.submit (customer.persisted? ? "Save changes" : "Add customer"), class: "btn-primary" %>
-    <%= link_to "Cancel", customer.persisted? ? customer_path(customer) : customers_path, class: "btn-ghost" %>
+  <div class="form-actions">
+    <%= f.submit 'Save', class: 'btn-primary' %>
+    <%= link_to 'Cancel', customer.persisted? ? customer_path(customer) : customers_path, class: 'btn-ghost' %>
   </div>
 <% end %>

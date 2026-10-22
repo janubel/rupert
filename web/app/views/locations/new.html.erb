@@ -1,7 +1,7 @@
-<% content_for :title, "Add location" %>
-<div class="space-y-6">
-  <%= page_header 'Add location', subtitle: 'A manual stock location for the shop (synced locations come from Shopify/Square automatically).' %>
-  <div class="card card-pad page-narrow">
-    <%= render "form", location: @location %>
+<% content_for :title, 'Add location' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add location', subtitle: 'A manual stock location for the shop; synced locations come from Shopify and Square automatically.' %>
+  <div class="card card-pad">
+    <%= render 'form', location: @location %>
   </div>
 </div>

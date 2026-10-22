@@ -1,15 +1,38 @@
-<% content_for :title, @kind == 'transfer' ? 'Stock transfers' : 'Backorders' %>
-<div class="space-y-6 operations-workspace">
-  <%= page_header @kind == 'transfer' ? 'Stock transfers' : 'Backorders' do %>
-    <%= link_to "New #{@kind}", new_stock_request_path(kind: @kind), class: 'btn-primary' if Current.user.can?('inventory.write') %>
+<% content_for :title, 'Transfers & backorders' %>
+<% transfer = @kind == 'transfer' %>
+<div class="space-y-6">
+  <%= page_header 'Transfers & backorders', subtitle: (transfer ? 'Reserve one native item at its source location, record dispatch, then receive it at the destination.' : 'Record demand at a fulfillment location, allocate available stock, then confirm fulfillment.') do %>
+    <%= link_to (transfer ? 'Add transfer' : 'Add backorder'), new_stock_request_path(kind: @kind), class: 'btn-primary' if Current.user.can?('inventory.write') %>
   <% end %>
-  <div class="text-sm text-mocha"><%= @kind == 'transfer' ? 'Reserve one native item at its source location, record dispatch, then receive it at the destination. Partial receipts stay in transit until every unit arrives.' : 'Record demand at a fulfillment location, allocate available stock, then confirm fulfillment. Waiting demand does not hold stock.' %><%= define(@kind == 'transfer' ? 'transfer' : 'backorder') %><%= define('allocation') %></div>
-  <%= form_with url: stock_requests_path, method: :get, class: 'flex flex-wrap gap-3 items-end' do %>
-    <%= hidden_field_tag :kind, @kind %><label>Status<%= select_tag :status, options_for_select(%w[pending allocated dispatched completed cancelled].map { |s| [s.humanize, s] }, params[:status]), include_blank: 'All statuses', class: 'input' %></label><%= submit_tag 'Filter', class: 'btn-ghost' %>
+  <%= page_tabs([['Transfers', stock_requests_path(kind: 'transfer'), transfer], ['Backorders', stock_requests_path(kind: 'backorder'), !transfer]], label: 'Request kind') %>
+  <div class="text-sm text-mocha"><%= transfer ? 'Partial receipts stay in transit until every unit arrives.' : 'Waiting demand does not hold stock.' %><%= define(transfer ? 'transfer' : 'backorder') %><%= define('allocation') %></div>
+
+  <%= form_with url: stock_requests_path, method: :get, class: 'toolbar' do %>
+    <%= hidden_field_tag :kind, @kind %>
+    <div class="toolbar-field"><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select(%w[pending allocated dispatched completed cancelled].map { |s| [s.humanize, s] }, params[:status]), include_blank: 'All statuses', class: 'input' %></div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', stock_requests_path(kind: @kind), class: 'btn-ghost' %></div>
   <% end %>
-  <div class="card overflow-x-auto"><table class="w-full text-sm"><thead><tr><% [['Reference / due', nil], ['Item / source', 'native_id'], ['From / fulfillment', 'pool'], ['Destination', nil], ['Quantity / received', 'received_quantity'], ['Status', nil]].each do |label, term| %><th scope="col" class="th"><%= label %><%= define(term) if term %></th><% end %></tr></thead><tbody class="divide-y divide-fog">
-    <% @requests.each do |record| %><tr><td class="td"><%= link_to record.reference, record, class: 'font-medium hover:underline' %><br><%= record.due_on || 'No due date' %></td><td class="td"><%= record.source_pool.item_label %><br><%= record.source_pool.source.capitalize %></td><td class="td"><%= record.source_pool.location_name %></td><td class="td"><%= record.destination_pool&.location_name || '—' %></td><td class="td"><%= record.quantity %> / <%= record.received_quantity %></td><td class="td"><%= record.status.humanize %></td></tr><% end %>
-    <% if @requests.empty? %><tr><td colspan="6" class="empty-row">No <%= @kind.pluralize %> match.</td></tr><% end %>
-  </tbody></table></div>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+
+  <div class="card overflow-hidden">
+    <div class="table-region" role="region" tabindex="0" aria-label="<%= transfer ? 'Transfers' : 'Backorders' %>">
+      <table class="table">
+        <thead><tr><% [['Reference / due', nil], ['Item / source', 'native_id'], ['From / fulfillment', 'pool'], ['Destination', nil], ['Quantity / received', 'received_quantity'], ['Status', nil]].each do |label, term| %><th scope="col" class="th<%= ' num' if label.start_with?('Quantity') %>"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
+        <tbody>
+          <% @requests.each do |record| %>
+            <% pill = case record.status when 'completed' then 'pill-fern' when 'cancelled' then 'pill-taupe' when 'pending' then 'pill-clay' else 'pill-olive' end %>
+            <tr>
+              <td class="td"><%= link_to record.reference, record, class: 'font-medium text-ink hover:underline' %><p class="text-xs text-taupe"><%= record.due_on || 'No due date' %></p></td>
+              <td class="td"><%= record.source_pool.item_label %><p class="text-xs text-taupe"><%= record.source_pool.source.capitalize %></p></td>
+              <td class="td"><%= record.source_pool.location_name %></td>
+              <td class="td"><%= record.destination_pool&.location_name || '—' %></td>
+              <td class="td num"><%= record.quantity %> / <%= record.received_quantity %></td>
+              <td class="td"><span class="<%= pill %>"><%= record.status.humanize %></span></td>
+            </tr>
+          <% end %>
+          <% if @requests.empty? %><tr><td colspan="6" class="empty-row">No <%= @kind.pluralize %> yet.<% if Current.user.can?('inventory.write') %> <%= link_to (transfer ? 'Add the first transfer' : 'Add the first backorder'), new_stock_request_path(kind: @kind), class: 'font-semibold text-olive-deep underline' %><% end %></td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== pagy_nav(@pagy) %></div><% end %>
 </div>

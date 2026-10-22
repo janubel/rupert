@@ -1,22 +1,17 @@
 <% content_for :title, @location.name %>
+<% can_write = Current.user.can?('inventory.write') %>
+<% menu = can_write ? [['Remove', location_path(@location), { method: :delete, data: { turbo_confirm: 'Remove this location?' } }]] : nil %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= @location.name %></h1>
-      <p class="mt-1 text-sm text-mocha">
-        <span class="pill-taupe capitalize"><%= @location.source %></span>
-        <% if @location.kind %><span class="ml-2 text-taupe capitalize"><%= @location.kind.downcase %></span><% end %>
-        <% if @location.active %><span class="ml-2 pill-fern">active</span><% else %><span class="ml-2 pill-taupe">inactive</span><% end %>
-      </p>
-    </div>
-    <% if Current.user.can?("inventory.write") %>
-      <div class="flex gap-2">
-        <%= link_to "Back to locations", locations_path, class: "btn-ghost btn-sm" %>
-        <%= link_to "Edit", edit_location_path(@location), class: "btn-ghost btn-sm" %>
-        <%= button_to "Remove", @location, method: :delete, class: "btn-ghost btn-sm", data: { confirm: "Remove this location?" } %>
-      </div>
-    <% end %>
-  </section>
+  <%= page_header @location.name, subtitle: 'Stock mirrored at this location.', menu: menu do %>
+    <% if can_write %><%= link_to 'Edit', edit_location_path(@location), class: 'btn-primary' %><% end %>
+  <% end %>
+
+  <dl class="facts">
+    <div><dt>Source</dt><dd><span class="pill-taupe capitalize"><%= @location.source %></span></dd></div>
+    <div><dt>Kind</dt><dd class="capitalize"><%= @location.kind.present? ? @location.kind.downcase : '—' %></dd></div>
+    <div><dt>Status</dt><dd><% if @location.active %><span class="pill-fern">Active</span><% else %><span class="pill-taupe">Inactive</span><% end %></dd></div>
+    <% if @location.timezone.present? %><div><dt>Timezone</dt><dd><%= @location.timezone %></dd></div><% end %>
+  </dl>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-3">
     <div class="stat">
@@ -30,29 +25,27 @@
   </section>
 
   <div class="card overflow-hidden">
-    <div class="border-b border-fog px-5 py-3">
-      <h2 class="font-display text-lg text-ink">Stock at this location</h2>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="card-pad pb-3"><%= section_heading 'Stock at this location' %></div>
+    <div class="table-region" role="region" tabindex="0" aria-label="Stock at <%= @location.name %>">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">SKU</th>
             <th scope="col" class="th">Item</th>
-            <th scope="col" class="th text-right">Quantity</th>
-            <th scope="col" class="th text-right">Available</th>
+            <th scope="col" class="th num">Quantity</th>
+            <th scope="col" class="th num">Available</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @levels.empty? %>
-            <tr><td colspan="4" class="empty-row">No stock recorded at this location.</td></tr>
+            <tr><td colspan="4" class="empty-row">No stock recorded at this location. Run a sync to read its stock.</td></tr>
           <% end %>
           <% @levels.each do |level| %>
-            <tr class="hover:bg-cream">
-              <td class="td font-mono text-xs text-mocha"><%= level.shopify_variant&.sku.presence || "—" %></td>
-              <td class="td font-medium text-ink"><%= level.shopify_variant&.title.presence || "—" %></td>
-              <td class="td text-right text-mocha"><%= level.quantity %></td>
-              <td class="td text-right text-mocha"><%= level.available %></td>
+            <tr>
+              <td class="td font-mono text-xs text-mocha"><%= level.shopify_variant&.sku.presence || '—' %></td>
+              <td class="td font-medium text-ink"><%= level.shopify_variant&.title.presence || '—' %></td>
+              <td class="td num text-mocha"><%= level.quantity %></td>
+              <td class="td num text-mocha"><%= level.available %></td>
             </tr>
           <% end %>
         </tbody>

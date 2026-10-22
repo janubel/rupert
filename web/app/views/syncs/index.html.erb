@@ -1,25 +1,14 @@
-<% content_for :title, "Sync" %>
+<%# Sync: a List page of sync runs with the live banner (docs/ui-standards.md §4). %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6" data-controller="live-sync">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Sync</h1>
-      <p class="mt-1 text-sm text-mocha">Every pull from Shopify and Square is recorded here. Syncs run on a schedule and can be triggered manually.</p>
-    </div>
-    <div class="flex gap-2" <%= tour_anchor('run') %>>
+  <div <%= tour_anchor('run') %>>
+    <%= page_header 'Sync', subtitle: 'Every pull from Shopify and Square is recorded here; syncs run on a schedule and can be started by hand.',
+                    menu: [['Sync Square only', source_syncs_path(source: 'square'), { method: :post }], ['Sync Shopify only', source_syncs_path(source: 'shopify'), { method: :post }]] do %>
       <%= form_tag syncs_path, method: :post, class: "inline" do %>
-        <%= submit_tag "Sync everything", class: "btn-primary" %>
+        <%= submit_tag "Sync now", class: "btn-primary", data: { turbo_submits_with: 'Syncing…' } %>
       <% end %>
-      <%= form_tag source_syncs_path, method: :post, class: "inline" do %>
-        <%= hidden_field_tag :source, "square" %>
-        <%= submit_tag "Square only", class: "btn-ghost btn-sm" %>
-      <% end %>
-      <%= form_tag source_syncs_path, method: :post, class: "inline" do %>
-        <%= hidden_field_tag :source, "shopify" %>
-        <%= submit_tag "Shopify only", class: "btn-ghost btn-sm" %>
-      <% end %>
-    </div>
-  </section>
+    <% end %>
+  </div>
 
   <%= render "syncs/banner" %>
 
@@ -30,22 +19,23 @@
   <section class="grid gap-4 lg:grid-cols-2">
     <%= render "syncs/runs" %>
 
-    <div class="card card-pad" <%= tour_anchor('movements') %>>
-      <h2 class="font-display text-xl text-ink">Recent inventory activity</h2>
-      <ul class="mt-4 space-y-2.5">
-        <% if @recent_movements.empty? %>
-          <li class="py-3 text-sm text-taupe">No inventory movements yet — they appear after a sync runs.</li>
-        <% end %>
-        <% @recent_movements.each do |movement| %>
-          <li class="flex items-start gap-3">
-            <span class="pill-taupe shrink-0"><%= movement.source %></span>
-            <div class="min-w-0">
-              <p class="truncate text-sm text-ink"><%= movement.reason %></p>
-              <p class="text-xs text-taupe"><%= movement.sku.presence || "—" %> · <%= movement.quantityBefore %> → <%= movement.quantityAfter %> · <%= time_ago_in_words(movement.createdAt) %> ago</p>
-            </div>
-          </li>
-        <% end %>
-      </ul>
+    <div class="section-card" <%= tour_anchor('movements') %>>
+      <%= section_heading 'Recent inventory activity' %>
+      <% if @recent_movements.empty? %>
+        <%= empty_state 'No inventory movements yet', hint: 'They appear after a sync runs.' %>
+      <% else %>
+        <ul class="space-y-2.5">
+          <% @recent_movements.each do |movement| %>
+            <li class="flex items-start gap-3">
+              <span class="pill-taupe shrink-0"><%= movement.source %></span>
+              <div class="min-w-0">
+                <p class="truncate text-sm text-ink"><%= movement.reason %></p>
+                <p class="text-xs text-taupe"><%= movement.sku.presence || "—" %> · <%= movement.quantityBefore %> → <%= movement.quantityAfter %> · <%= time_ago_in_words(movement.createdAt) %> ago</p>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
     </div>
   </section>
 </div>

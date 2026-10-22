@@ -1,53 +1,53 @@
-<% content_for :title, "Trial balance" %>
-<%= render 'finance/reports/coverage_notice' %>
-<div class="space-y-6 operations-workspace">
+<% content_for :title, 'Trial balance' %>
+<div class="space-y-6">
+  <%= render layout: 'finance/page_header', locals: { title: 'Trial balance', range: report_range_label(@from, @to), print: true,
+        menu: [['Download CSV', finance_reports_trial_balance_path(format: :csv, from: @from, to: @to), { data: { turbo: false } }], ['All statements', finance_reports_path]],
+        explain: 'Lists every account with activity, with the total debited and credited. If the books are in order, the two totals are equal.' } do %><% end %>
+  <%= render 'finance/reports/coverage_notice' %>
+  <%= render 'finance/reports/tabs' %>
+  <%= render 'window', path: finance_reports_trial_balance_path %>
 
-  <%= render layout: 'finance/page_header', locals: { title: 'Trial balance', range: "#{@from} through #{@to}", print: true,
-        explain: 'Lists every account with activity, with the total debited and credited. If the books are in order, the two totals are equal.' } do %>
-    <%= link_to "All reports", finance_reports_path, class: "btn-ghost btn-sm" %>
-  <% end %>
-
-  <%= render 'window', path: finance_reports_trial_balance_path, csv_path: finance_reports_trial_balance_path(format: :csv) %>
-
-  <div class="card overflow-hidden">
-    <table class="operations-table finance-table w-full">
-      <caption class="sr-only">Trial balance, <%= @from %> through <%= @to %>, amounts in USD</caption>
-      <thead class="border-b border-fog bg-haze/60">
-        <tr>
-          <th scope="col" class="th">Code</th>
-          <th scope="col" class="th">Account</th>
-          <th scope="col" class="th num">Debit</th>
-          <th scope="col" class="th num">Credit</th>
-          <th scope="col" class="th num">Balance<%= define('account_balance') %></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if @rows.empty? %><tr><td colspan="5" class="empty-row">No posted entries in these dates. Widen the dates, or post entries from the <%= link_to "General ledger", finance_journal_entries_path, class: "link" %>.</td></tr><% end %>
-        <% @rows.each do |row| %>
+  <div class="card">
+    <div class="table-region" role="region" tabindex="0" aria-label="Trial balance">
+      <table class="table finance-table">
+        <caption class="sr-only">Trial balance, <%= report_range_label(@from, @to) %>, amounts in USD</caption>
+        <thead>
           <tr>
-            <td class="td whitespace-nowrap"><%= link_to row.account.code, finance_chart_of_account_path(row.account, from: @from, to: @to), class: "link", aria: { label: "Ledger lines for #{finance_account_label(row.account)}" } %></td>
-            <td class="td"><%= row.account.name %></td>
-            <td class="td num"><%= finance_money(row.debit, zero: :dash) %></td>
-            <td class="td num"><%= finance_money(row.credit, zero: :dash) %></td>
-            <td class="td num"><%= finance_money(row.balance) %></td>
+            <th scope="col" class="th">Code</th>
+            <th scope="col" class="th">Account</th>
+            <th scope="col" class="th num">Debit</th>
+            <th scope="col" class="th num">Credit</th>
+            <th scope="col" class="th num">Balance<%= define('account_balance') %></th>
           </tr>
-        <% end %>
-      </tbody>
-      <tfoot>
-        <tr class="font-semibold">
-          <th scope="row" class="td" colspan="2">Totals<%= define('debit_credit') %></th>
-          <td class="td num"><%= finance_money(@total_debit) %></td>
-          <td class="td num"><%= finance_money(@total_credit) %></td>
-          <td class="td num"></td>
-        </tr>
-      </tfoot>
-    </table>
+        </thead>
+        <tbody>
+          <% if @rows.empty? %><tr><td colspan="5" class="empty-row">No posted entries in these dates. Widen the dates, or post entries from the <%= link_to 'General ledger', finance_journal_entries_path, class: 'link' %>.</td></tr><% end %>
+          <% @rows.each do |row| %>
+            <tr>
+              <td class="td whitespace-nowrap"><%= link_to row.account.code, finance_chart_of_account_path(row.account, from: @from, to: @to), class: 'link', aria: { label: "Ledger lines for #{finance_account_label(row.account)}" } %></td>
+              <td class="td"><%= row.account.name %></td>
+              <td class="td num"><%= finance_money(row.debit, zero: :dash) %></td>
+              <td class="td num"><%= finance_money(row.credit, zero: :dash) %></td>
+              <td class="td num"><%= finance_money(row.balance) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr class="font-semibold">
+            <th scope="row" class="td" colspan="2">Totals<%= define('debit_credit') %></th>
+            <td class="td num"><%= finance_money(@total_debit) %></td>
+            <td class="td num"><%= finance_money(@total_credit) %></td>
+            <td class="td num"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </div>
 
-  <%= finance_balance_status(@total_debit - @total_credit, balanced_text: "Balanced: debits equal credits") %>
+  <%= finance_balance_status(@total_debit - @total_credit, balanced_text: 'Balanced: debits equal credits') %>
   <%= explain_calculation(title: 'Does the trial balance balance?', id: 'trial-balance-check',
         formula: 'Total debits − total credits across every account with posted activity in the dates. In order means the result is zero.',
-        rows: [["Accounts with activity · #{@from} through #{@to}", @rows.size], ['Total debits', finance_money(@total_debit)], ['Total credits', "− #{finance_money(@total_credit)}"],
+        rows: [["Accounts with activity · #{report_range_label(@from, @to)}", @rows.size], ['Total debits', finance_money(@total_debit)], ['Total credits', "− #{finance_money(@total_credit)}"],
                ['Difference', finance_money(@total_debit - @total_credit)]],
         note: 'Every posted entry has equal debits and credits, so the totals should agree. Equal totals do not prove each entry went to the right account; void entries are left out.',
         term: 'trial_balance', lesson: 'books') %>

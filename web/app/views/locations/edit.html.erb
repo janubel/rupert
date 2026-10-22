@@ -1,9 +1,7 @@
 <% content_for :title, "Edit #{@location.name}" %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title">Edit <%= @location.name %></h1>
-  </section>
-  <div class="card card-pad max-w-xl">
-    <%= render "form", location: @location %>
+<div class="page-narrow space-y-6">
+  <%= page_header "Edit #{@location.name}", subtitle: 'Name, kind, timezone and whether the location is active.' %>
+  <div class="card card-pad">
+    <%= render 'form', location: @location %>
   </div>
 </div>

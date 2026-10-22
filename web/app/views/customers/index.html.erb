@@ -1,57 +1,48 @@
-<% content_for :title, "Customer CRM" %>
-<% can_write = Current.user.can?("customers.write") %>
+<% content_for :title, 'Customers' %>
+<% can_write = Current.user.can?('customers.write') %>
 <% search_key = :first_name_or_last_name_or_preferred_name_or_email_or_phone_cont %>
+<% menu = [] %>
+<% menu << ['Download CSV', export_customers_path(request.query_parameters.except('page')), { data: { turbo: false }, title: 'Downloads the customers matching the current filters' }] if can_write %>
+<% menu << ['Sync now', sync_directory_customers_path, { method: :post }] if can_write && Current.user.can?('sync.write') %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Customer CRM</h1>
-      <p class="mt-1 text-sm text-mocha">Your customers — contacts, relationship history, and follow-ups across your connected sources.</p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2" <%= tour_anchor('actions') %>>
-      <% if can_write && Current.user.can?("sync.write") %>
-        <%= button_to "Sync customers now", sync_directory_customers_path, class: "btn-ghost btn-sm" %>
-      <% end %>
-      <% if can_write %>
-        <%= link_to "Export CSV", export_customers_path(request.query_parameters.except("page")), class: "btn-ghost btn-sm", data: { turbo: false }, title: "Exports the customers matching the current filters" %>
-        <%= link_to "Add customer", new_customer_path, class: "btn-primary" %>
-      <% end %>
-    </div>
-  </section>
+  <%= page_header 'Customers', subtitle: 'Contacts, relationship history and follow-ups across your connected sources.', menu: menu do %>
+    <% if can_write %><span <%= tour_anchor('actions') %>><%= link_to 'Add customer', new_customer_path, class: 'btn-primary' %></span><% end %>
+  <% end %>
 
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Customer summary" <%= tour_anchor('stats') %>>
-    <%= link_to customers_path, class: "stat block hover:border-taupe" do %>
+    <%= link_to customers_path, class: 'stat block hover:border-taupe' do %>
       <p class="stat-label">All customers</p>
       <p class="stat-value mt-1"><%= number_with_delimiter(@total_customers) %></p>
-      <p class="mt-1 text-xs text-taupe">source profiles, including retained history</p>
+      <p class="mt-1 text-xs text-taupe">Source profiles, including retained history</p>
     <% end %>
-    <%= link_to customers_path(status: "lead"), class: "stat block hover:border-taupe" do %>
+    <%= link_to customers_path(status: 'lead'), class: 'stat block hover:border-taupe' do %>
       <p class="stat-label">Leads</p>
-      <p class="stat-value mt-1"><%= number_with_delimiter(@status_counts.fetch("lead", 0)) %></p>
-      <p class="mt-1 text-xs text-taupe">people to win over</p>
+      <p class="stat-value mt-1"><%= number_with_delimiter(@status_counts.fetch('lead', 0)) %></p>
+      <p class="mt-1 text-xs text-taupe">People to win over</p>
     <% end %>
-    <%= link_to customers_path(status: "vip"), class: "stat block hover:border-taupe" do %>
+    <%= link_to customers_path(status: 'vip'), class: 'stat block hover:border-taupe' do %>
       <p class="stat-label">VIPs</p>
-      <p class="stat-value mt-1"><%= number_with_delimiter(@status_counts.fetch("vip", 0)) %></p>
-      <p class="mt-1 text-xs text-taupe">your best relationships</p>
+      <p class="stat-value mt-1"><%= number_with_delimiter(@status_counts.fetch('vip', 0)) %></p>
+      <p class="mt-1 text-xs text-taupe">Your best relationships</p>
     <% end %>
-    <%= link_to customers_path(due: "1"), class: "stat block hover:border-taupe" do %>
+    <%= link_to customers_path(due: '1'), class: 'stat block hover:border-taupe' do %>
       <p class="stat-label">Follow-ups due</p>
-      <p class="stat-value mt-1"><%= @due_count %></p>
-      <p class="mt-1 text-xs text-taupe">due today or overdue</p>
+      <p class="stat-value mt-1 <%= 'text-rose' if @due_count.positive? %>"><%= @due_count %></p>
+      <p class="mt-1 text-xs text-taupe">Due today or overdue</p>
     <% end %>
   </section>
 
   <% if @due_count.positive? %>
-    <section class="card card-pad" aria-labelledby="due-heading">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="due-heading" class="font-display text-lg">Follow-ups due <span class="pill-clay"><%= @due_count %></span></h2>
-        <%= link_to "Show these customers", customers_path(due: "1"), class: "text-xs font-semibold text-olive hover:underline" %>
-      </div>
-      <ul class="mt-2 divide-y divide-fog">
+    <section class="section-card" aria-label="Follow-ups due">
+      <%= section_heading 'Follow-ups due' do %>
+        <span class="pill-clay"><%= @due_count %> due</span>
+        <%= link_to 'Open these customers', customers_path(due: '1'), class: 'btn-ghost btn-sm' %>
+      <% end %>
+      <ul class="divide-y divide-fog">
         <% @due_follow_ups.each do |task| %>
           <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-            <span><%= link_to task.customer.name, customer_path(task.customer), class: "font-semibold hover:underline" %> · <%= task.title %></span>
-            <span class="text-xs text-taupe"><span class="<%= follow_up_state(task).last %>"><%= follow_up_state(task).first %></span> <%= l(task.due_on, format: :short) %> · <%= task.owner&.display_name || "Unassigned" %></span>
+            <span><%= link_to task.customer.name, customer_path(task.customer), class: 'font-semibold hover:underline' %> · <%= task.title %></span>
+            <span class="text-xs text-taupe"><span class="<%= follow_up_state(task).last %>"><%= follow_up_state(task).first %></span> <%= l(task.due_on, format: :short) %> · <%= task.owner&.display_name || 'Unassigned' %></span>
           </li>
         <% end %>
       </ul>
@@ -59,66 +50,48 @@
   <% end %>
 
   <section class="card card-pad space-y-4" aria-label="Find customers" <%= tour_anchor('search') %>>
-    <%= search_form_for @q, url: customers_path, class: "flex flex-wrap items-center gap-3" do |f| %>
-      <%= f.search_field search_key, placeholder: "Search name, email, or phone…", aria_label: "Search customers", class: "search min-w-0 flex-1 basis-60" %>
-      <%= hidden_field_tag :sort, @sort if @sort != "recent" %>
-      <%= f.submit "Search", class: "btn-primary btn-sm" %>
-      <details class="w-full" <%= "open" if params[:source].present? || params[:owner].present? || params[:directory].present? || params.dig(:q, :tags_cont).present? %>>
-        <summary class="cursor-pointer text-xs font-semibold text-olive hover:underline focus-visible:outline-2 focus-visible:outline-olive">More filters</summary>
-        <div class="mt-3 flex flex-wrap items-center gap-3">
-          <%= f.search_field :tags_cont, placeholder: "Filter tags", aria_label: "Filter tags", class: "search w-40" %>
-          <%= select_tag :source, options_for_select([["All sources", ""]] + Core::Customer::SOURCES.map { |v| [directory_label(v), v] }, params[:source]), class: "select w-auto", aria: { label: "Source filter" } %>
-          <%= select_tag :directory, options_for_select([["All profiles", ""], ["Verified in latest read", "verified"], ["Unverified / historical", "historical"]], params[:directory]), class: "select w-auto", aria: { label: "Directory verification filter" } %>
-          <%= select_tag :owner, options_for_select([["All assignments", ""], ["Assigned to me", "mine"], ["Unassigned", "unassigned"]], params[:owner]), class: "select w-auto", aria: { label: "Assignment filter" } %>
-        </div>
-      </details>
-      <%= hidden_field_tag :due, "1" if params[:due] == "1" %>
+    <%= search_form_for @q, url: customers_path, class: 'toolbar' do |f| %>
+      <div class="toolbar-field"><%= f.label search_key, 'Search', class: 'field-label' %><%= f.search_field search_key, placeholder: 'Name, email or phone', class: 'search' %></div>
+      <div class="toolbar-field"><%= f.label :tags_cont, 'Tag', class: 'field-label' %><%= f.search_field :tags_cont, placeholder: 'Any tag', class: 'search' %></div>
+      <div class="toolbar-field"><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', '']] + Core::Customer::SOURCES.map { |v| [directory_label(v), v] }, params[:source]), class: 'select w-full' %></div>
+      <div class="toolbar-field"><%= label_tag :directory, 'Profiles', class: 'field-label' %><%= select_tag :directory, options_for_select([['All profiles', ''], ['Verified in latest read', 'verified'], ['Unverified / historical', 'historical']], params[:directory]), class: 'select w-full' %></div>
+      <div class="toolbar-field"><%= label_tag :owner, 'Assignment', class: 'field-label' %><%= select_tag :owner, options_for_select([['All assignments', ''], ['Assigned to me', 'mine'], ['Unassigned', 'unassigned']], params[:owner]), class: 'select w-full' %></div>
+      <div class="toolbar-field"><%= label_tag :sort, 'Sort', class: 'field-label' %><%= select_tag :sort, options_for_select(CustomersController::SORTS.map { |key, (_, label)| [label, key] }, @sort), class: 'select w-full' %></div>
+      <%= hidden_field_tag :due, '1' if params[:due] == '1' %>
       <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', customers_path, class: 'btn-ghost' %></div>
     <% end %>
 
-    <nav class="flex flex-wrap items-center gap-2" aria-label="Relationship filter">
-      <% all_active = params[:status].blank? %>
-      <%= link_to customers_path(customer_filter_params.except("status")), class: "rounded-full px-3 py-1 text-xs font-semibold #{all_active ? 'bg-olive text-cream' : 'bg-haze text-mocha hover:text-ink'}", aria: { current: (all_active ? "true" : nil) } do %>All <span class="opacity-70"><%= @total_customers %></span><% end %>
-      <% Core::Customer::CRM_STATUSES.each do |status| %>
-        <% active = params[:status] == status %>
-        <%= link_to customers_path(customer_filter_params.merge("status" => status)), class: "rounded-full px-3 py-1 text-xs font-semibold #{active ? 'bg-olive text-cream' : 'bg-haze text-mocha hover:text-ink'}", aria: { current: (active ? "true" : nil) } do %><%= status.titleize %> <span class="opacity-70"><%= @status_counts.fetch(status, 0) %></span><% end %>
-      <% end %>
-    </nav>
+    <%= page_tabs([['All · ' + @total_customers.to_s, customers_path(customer_filter_params.except('status')), params[:status].blank?]] +
+                  Core::Customer::CRM_STATUSES.map { |status| ["#{status.titleize} · #{@status_counts.fetch(status, 0)}", customers_path(customer_filter_params.merge('status' => status)), params[:status] == status] },
+                  label: 'Relationship filter') %>
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="text-sm text-mocha" role="status" aria-live="polite">
-        <strong class="text-ink"><%= number_with_delimiter(@pagy.count) %></strong> <%= "customer".pluralize(@pagy.count) %><%= " match your filters" if @filtered %>
-      </p>
-      <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Sort customers">
-        <span class="text-xs text-taupe">Sort</span>
-        <% CustomersController::SORTS.each do |key, (_, label)| %><%= customer_sort_link(label, key) %><% end %>
-      </div>
-    </div>
+    <p class="text-sm text-mocha" role="status" aria-live="polite">
+      <strong class="text-ink"><%= number_with_delimiter(@pagy.count) %></strong> <%= 'customer'.pluralize(@pagy.count) %><%= ' match your filters' if @filtered %> · <%= CustomersController::SORTS.fetch(@sort).last.downcase %>
+    </p>
 
     <% chips = customer_filter_chips %>
     <% if chips.any? %>
       <ul class="flex flex-wrap items-center gap-2" aria-label="Active filters">
         <% chips.each do |label, chip_params| %>
-          <li><%= link_to customers_path(chip_params), class: "pill-olive hover:bg-olive/20", title: "Remove this filter", aria: { label: "Remove filter #{label}" } do %><%= label %> <span aria-hidden="true">×</span><% end %></li>
+          <li><%= link_to customers_path(chip_params), class: 'pill-olive hover:bg-olive/20', title: 'Remove this filter', aria: { label: "Remove filter #{label}" } do %><%= label %> <span aria-hidden="true">×</span><% end %></li>
         <% end %>
-        <li><%= link_to "Clear all", customers_path, class: "text-xs font-semibold text-olive hover:underline" %></li>
+        <li><%= link_to 'Clear filters', customers_path, class: 'btn-ghost btn-sm' %></li>
       </ul>
     <% end %>
   </section>
 
   <% if @customers.empty? %>
-    <section class="card card-pad text-center" aria-label="No customers">
+    <section class="card" aria-label="No customers">
       <% if @filtered %>
-        <h2 class="font-display text-lg text-ink">No customers match these filters</h2>
-        <p class="mt-1 text-sm text-mocha">Try a different search, or clear the filters to see everyone.</p>
-        <%= link_to "Clear all filters", customers_path, class: "btn-ghost mt-4" %>
+        <%= empty_state 'No customers match these filters', hint: 'Try a different search, or clear the filters to see everyone.' do %>
+          <%= link_to 'Clear filters', customers_path, class: 'btn-ghost' %>
+        <% end %>
       <% else %>
-        <h2 class="font-display text-lg text-ink">No customers yet</h2>
-        <p class="mt-1 text-sm text-mocha">Customers appear here after a directory sync from Shopify, Square, C-Trax or SwipeSimple, or when you add one by hand.</p>
-        <div class="mt-4 flex flex-wrap justify-center gap-2">
-          <% if can_write %><%= link_to "Add the first customer", new_customer_path, class: "btn-primary" %><% end %>
-          <% if Current.user.can?("settings.read") %><%= link_to "Manage connections", connections_path, class: "btn-ghost" %><% end %>
-        </div>
+        <%= empty_state 'No customers yet', hint: 'Customers appear after a directory sync from Shopify, Square, C-Trax or SwipeSimple, or when you add one by hand.' do %>
+          <% if can_write %><%= link_to 'Add customer', new_customer_path, class: 'btn-primary' %><% end %>
+          <% if Current.user.can?('settings.read') %><%= link_to 'Open connections', connections_path, class: 'btn-ghost' %><% end %>
+        <% end %>
       <% end %>
     </section>
   <% else %>
@@ -126,52 +99,54 @@
       <% @customers.each do |customer| %>
         <li class="card card-pad">
           <div class="flex items-start justify-between gap-2">
-            <%= link_to customer.name, customer_path(customer), class: "text-base font-semibold text-ink hover:text-olive hover:underline" %>
+            <%= link_to customer.name, customer_path(customer), class: 'text-base font-semibold text-ink hover:text-olive hover:underline' %>
             <%= customer_status_pill(customer) %>
           </div>
-          <p class="mt-1 text-sm text-mocha"><%= customer.email.presence || "No email" %> · <%= customer.phone.presence || "No phone" %></p>
+          <p class="mt-1 text-sm text-mocha"><%= customer.email.presence || 'No email' %> · <%= customer.phone.presence || 'No phone' %></p>
           <p class="mt-2 flex flex-wrap items-center gap-2 text-xs text-taupe">
             <span class="pill-taupe"><%= directory_label(customer.source) %></span>
-            <%= @order_counts[customer.id] || 0 %> orders · <%= customer_money(@lifetime_totals.select { |(id, _), _| id == customer.id }.to_h { |(_, currency), total| [currency, total] }) %>
+            <%= pluralize(@order_counts[customer.id] || 0, 'order') %> · <%= customer_money(@lifetime_totals.select { |(id, _), _| id == customer.id }.to_h { |(_, currency), total| [currency, total] }) %>
           </p>
         </li>
       <% end %>
     </ul>
 
     <div class="card hidden overflow-hidden md:block" <%= tour_anchor('table') %>>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+      <div class="table-region" role="region" tabindex="0" aria-label="Customers">
+        <table class="table">
           <caption class="sr-only">Customers, <%= CustomersController::SORTS.fetch(@sort).last.downcase %></caption>
-          <thead class="border-b border-fog bg-haze/60">
+          <thead>
             <tr>
               <th scope="col" class="th">Name</th>
               <th scope="col" class="th">Contact</th>
               <th scope="col" class="th">Relationship</th>
               <th scope="col" class="th">Source</th>
-              <th scope="col" class="th text-right">Orders</th>
-              <th scope="col" class="th text-right">Lifetime</th>
+              <th scope="col" class="th num">Orders</th>
+              <th scope="col" class="th num">Lifetime</th>
+              <th scope="col" class="th"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-fog">
+          <tbody>
             <% @customers.each do |customer| %>
-              <tr class="hover:bg-cream">
-                <td class="td font-medium text-ink"><%= link_to customer.name, customer_path(customer), class: "hover:text-olive hover:underline" %></td>
-                <td class="td text-mocha"><%= customer.email.presence || "—" %><br><span class="text-xs text-taupe"><%= customer.phone.presence || "—" %></span></td>
-                <td class="td"><%= customer_status_pill(customer) %><% if customer.tag_list.any? %><p class="mt-1 text-xs text-taupe"><%= customer.tag_list.join(", ") %></p><% end %></td>
+              <tr>
+                <td class="td font-medium text-ink"><%= link_to customer.name, customer_path(customer), class: 'text-olive-deep hover:underline' %></td>
+                <td class="td text-mocha"><%= customer.email.presence || '—' %><p class="text-xs text-taupe"><%= customer.phone.presence || '—' %></p></td>
+                <td class="td"><%= customer_status_pill(customer) %><% if customer.tag_list.any? %><p class="mt-1 text-xs text-taupe"><%= customer.tag_list.join(', ') %></p><% end %></td>
                 <td class="td"><span class="pill-taupe"><%= directory_label(customer.source) %></span><p class="mt-1 text-xs text-taupe"><%= customer_directory_status(customer) %></p></td>
-                <td class="td text-right text-mocha"><%= @order_counts[customer.id] || 0 %></td>
-                <td class="td text-right font-medium text-ink"><%= customer_money(@lifetime_totals.select { |(id, _), _| id == customer.id }.to_h { |(_, currency), total| [currency, total] }) %></td>
+                <td class="td num text-mocha"><%= @order_counts[customer.id] || 0 %></td>
+                <td class="td num font-medium text-ink"><%= customer_money(@lifetime_totals.select { |(id, _), _| id == customer.id }.to_h { |(_, currency), total| [currency, total] }) %></td>
+                <td class="td text-right"><%= link_to 'Open', customer_path(customer), class: 'btn-ghost btn-sm' %></td>
               </tr>
             <% end %>
           </tbody>
         </table>
       </div>
     </div>
-    <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
+    <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== pagy_nav(@pagy) %></div><% end %>
   <% end %>
 
-  <details class="card card-pad" <%= tour_anchor('sources') %>>
-    <summary class="cursor-pointer text-sm font-semibold text-ink">Where customers come from (directory sync status)</summary>
-    <div class="mt-3"><%= render "shared/directory_sync_status", kind: "customers" %></div>
+  <details class="section-card explainer" <%= tour_anchor('sources') %>>
+    <summary class="explainer-summary">Where customers come from (directory sync status)</summary>
+    <div class="mt-3"><%= render 'shared/directory_sync_status', kind: 'customers' %></div>
   </details>
 </div>

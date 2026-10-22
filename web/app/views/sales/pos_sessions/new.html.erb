@@ -1,29 +1,27 @@
-<% content_for :title, "Open Rupert register" %>
-<div class="space-y-6">
-  <%= page_header 'Open register', subtitle: 'Start a Rupert checkout shift and enter the cash physically in its drawer.' %>
-  <div class="card card-pad page-narrow">
-    <%= render "shared/form_errors", model: @session %>
-    <%= form_with model: @session, scope: :pos_session, url: sales_pos_sessions_path, class: "space-y-4" do |f| %>
-      <div class="grid gap-4 sm:grid-cols-2">
+<% content_for :title, 'Open register' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Open register', subtitle: 'Start a checkout shift and enter the cash physically in its drawer.' %>
+  <div class="card card-pad">
+    <%= render 'shared/form_errors', model: @session %>
+    <%= form_with model: @session, scope: :pos_session, url: sales_pos_sessions_path, class: 'space-y-4' do |f| %>
+      <fieldset class="space-y-3">
+        <legend class="card-title">Register</legend>
         <div>
-          <%= f.label :name, "Register name", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-          <%= f.text_field :name, placeholder: "Front counter", class: "input" %>
+          <%= f.label :name, 'Register name', class: 'field-label' %>
+          <%= f.text_field :name, placeholder: 'Front counter', class: 'input' %>
         </div>
         <div>
-          <%= f.label :location_id, "Location", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-          <%= f.collection_select :location_id, Location.order(:name), :id, :name, { include_blank: "No location" }, class: "select w-full" %>
+          <%= f.label :location_id, 'Location', class: 'field-label' %>
+          <%= f.collection_select :location_id, Location.order(:name), :id, :name, { include_blank: 'No location' }, class: 'select w-full' %>
         </div>
         <div>
-          <%= f.label :opening_cash, "Opening cash (USD)", class: "mb-1 block text-xs font-semibold uppercase tracking-wider text-mocha" %>
-          <div class="relative">
-            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-mocha">$</span>
-            <%= f.number_field :opening_cash, value: 0, min: 0, max: 999999.99, step: "0.01", inputmode: "decimal", class: "input pl-7" %>
-          </div>
+          <%= f.label :opening_cash, 'Opening cash (USD)', class: 'field-label' %>
+          <%= f.number_field :opening_cash, value: 0, min: 0, max: 999999.99, step: '0.01', inputmode: 'decimal', class: 'input' %>
         </div>
-      </div>
-      <div class="flex items-center gap-3">
-        <%= f.submit "Open register", class: "btn-primary" %>
-        <%= link_to "Cancel", sales_pos_sessions_path, class: "btn-ghost" %>
+      </fieldset>
+      <div class="form-actions">
+        <%= f.submit 'Open register', class: 'btn-primary' %>
+        <%= link_to 'Cancel', sales_pos_sessions_path, class: 'btn-ghost' %>
       </div>
     <% end %>
   </div>

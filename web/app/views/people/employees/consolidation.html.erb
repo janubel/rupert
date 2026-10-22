@@ -1,19 +1,33 @@
 <% content_for :title, 'Consolidate staff profiles' %>
-<section class="card card-pad space-y-4">
-  <h1 class="page-title">Consolidate staff profiles</h1>
-  <p>Confirm these accounts belong to the same person. The primary profile supplies the name and contact details. All source accounts and HR history are retained. Conflicting HR details, overlapping time records, and duplicate payroll or leave records require review first. Existing setup links and app sessions are revoked.</p>
-  <%= form_tag consolidate_people_employees_path, class: 'space-y-4' do %>
-    <label class="block">Keep primary profile
-      <%= select_tag :primary_id, options_from_collection_for_select(@employees, :id, :name), class: 'select', required: true %>
-    </label>
-    <fieldset class="space-y-2">
-      <legend>Duplicate profiles to combine into the primary</legend>
-      <% @employees.each do |employee| %>
-        <label class="block"><%= check_box_tag 'duplicate_ids[]', employee.id %> <%= employee.name %> · <%= employee.email %> · <%= employee.source_identities.map { |identity| directory_label(identity.source) }.uniq.join(', ') %> <%= "· #{employee.user.role.humanize} login" if employee.user %></label>
-      <% end %>
-    </fieldset>
-    <label class="block">How was identity confirmed?<%= text_area_tag :reason, nil, class: 'input w-full', required: true, maxlength: 2000 %></label>
-    <%= submit_tag 'Consolidate selected profiles', class: 'btn-primary' %>
-  <% end %>
-  <%= link_to 'Back to staff', people_employees_path, class: 'btn-ghost' %>
-</section>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Consolidate staff profiles', subtitle: 'Confirm these accounts belong to the same person.' %>
+  <%= fold_explainer('The primary profile supplies the name and contact details. All source accounts and HR history are retained. Conflicting HR details, overlapping time records, and duplicate payroll or leave records require review first. Existing setup links and app sessions are revoked.', class: 'text-sm text-mocha') %>
+  <div class="card card-pad">
+    <%= form_tag consolidate_people_employees_path, class: 'space-y-6' do %>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Profiles</legend>
+        <div>
+          <%= label_tag :primary_id, 'Keep primary profile', class: 'field-label' %>
+          <%= select_tag :primary_id, options_from_collection_for_select(@employees, :id, :name), class: 'select w-full', required: true %>
+        </div>
+        <fieldset class="space-y-2">
+          <legend class="field-label">Duplicate profiles to combine into the primary</legend>
+          <% @employees.each do |employee| %>
+            <label class="flex items-start gap-2 text-sm"><%= check_box_tag 'duplicate_ids[]', employee.id, false, class: 'checkbox mt-0.5' %><span><%= employee.name %> · <%= employee.email %> · <%= employee.source_identities.map { |identity| directory_label(identity.source) }.uniq.join(', ') %> <%= "· #{employee.user.role.humanize} login" if employee.user %></span></label>
+          <% end %>
+        </fieldset>
+      </fieldset>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Confirmation</legend>
+        <div>
+          <%= label_tag :reason, 'How was identity confirmed?', class: 'field-label' %>
+          <%= text_area_tag :reason, nil, class: 'input w-full', required: true, maxlength: 2000, rows: 3 %>
+        </div>
+      </fieldset>
+      <div class="form-actions">
+        <%= submit_tag 'Consolidate profiles', class: 'btn-primary' %>
+        <%= link_to 'Cancel', people_employees_path, class: 'btn-ghost' %>
+      </div>
+    <% end %>
+  </div>
+</div>

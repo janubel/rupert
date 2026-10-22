@@ -1,28 +1,30 @@
-<% content_for :title, "New size family" %>
-<div class="mx-auto max-w-xl space-y-6">
-  <%= page_header 'New size family', subtitle: 'Group a base-gram product\'s sizes. The root SKU (optional) seeds the gram bank from its Square count the first time you derive.' %>
+<% content_for :title, 'Add size family' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add size family', subtitle: 'Group a base-gram product\'s sizes under one root gram bank.' %>
+  <%= fold_explainer('The root SKU (optional) seeds the gram bank from its Square count the first time you derive. Leave it blank and set root grams manually instead.', class: 'text-sm text-mocha') %>
 
   <div class="card card-pad">
-    <%= form_with(model: @family, url: size_families_path) do |form| %>
-      <div class="space-y-4">
+    <%= form_with(model: @family, url: size_families_path, class: 'space-y-4') do |form| %>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Family</legend>
         <div>
-          <%= form.label :name, class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-          <%= form.text_field :name, placeholder: "e.g. Afghan Black Hash", class: "input", required: true %>
+          <%= form.label :name, class: 'field-label' %>
+          <%= form.text_field :name, placeholder: 'e.g. Afghan Black Hash', class: 'input', required: true %>
         </div>
         <div>
-          <%= form.label :root_sku, "Root SKU (optional)", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-          <%= form.text_field :root_sku, placeholder: "e.g. afghan1", class: "input" %>
-          <p class="mt-1 text-xs text-taupe">The "1 gram" carrier item whose Square count seeds base grams. Leave blank and set root grams manually.</p>
+          <%= form.label :root_sku, 'Root SKU (optional)', class: 'field-label' %>
+          <%= form.text_field :root_sku, placeholder: 'e.g. afghan1', class: 'input' %>
+          <p class="mt-1 text-xs text-taupe">The "1 gram" carrier item whose Square count seeds base grams.</p>
         </div>
         <div>
-          <%= form.label :mode, class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-          <%= form.select :mode, options_for_select([["Approval-only (recommended)", "approval"], ["Auto-apply", "auto"]], "approval"), class: "select" %>
+          <%= form.label :mode, class: 'field-label' %>
+          <%= form.select :mode, options_for_select([['Approval-only (recommended)', 'approval'], ['Auto-apply', 'auto']], 'approval'), class: 'input' %>
           <p class="mt-1 text-xs text-taupe">Approval-only records derived sizes as pending; auto-apply writes them to Square every sync.</p>
         </div>
-        <div>
-          <%= form.submit "Create family", class: "btn-primary" %>
-          <%= link_to "Cancel", size_families_path, class: "btn-ghost" %>
-        </div>
+      </fieldset>
+      <div class="form-actions">
+        <%= form.submit 'Save', class: 'btn-primary', name: nil %>
+        <%= link_to 'Cancel', size_families_path, class: 'btn-ghost' %>
       </div>
     <% end %>
   </div>

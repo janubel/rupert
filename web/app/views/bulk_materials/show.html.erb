@@ -1,15 +1,23 @@
 <% content_for :title, @material.name %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div><%= link_to 'Bulk materials', bulk_materials_path, class: 'text-sm text-olive hover:underline' %><h1 class="page-title mt-2"><%= @material.name %></h1><p class="mt-1 text-sm text-mocha">Remaining across lots: <strong><%= bulk_mass_label(@balance, @material.unit) %></strong></p></div>
-    <% if Current.user.can?('inventory.write') %><%= link_to 'Receive new lot', new_bulk_material_bulk_lot_path(@material), class: 'btn-primary' %><% end %>
-  </section>
-  <div class="card overflow-x-auto"><table class="w-full text-sm">
-    <thead class="border-b border-fog bg-haze/60"><tr><th class="th" scope="col">Lot<%= define('lot') %></th><th class="th" scope="col">Remaining<%= define('lot_balance') %></th><th class="th" scope="col">First received</th><th class="th" scope="col">Note</th><th class="th" scope="col"></th></tr></thead>
-    <tbody class="divide-y divide-fog">
-      <% @lots.each do |lot| %><tr><td class="td font-medium"><%= lot.code %></td><td class="td"><%= bulk_mass_label(lot.balance_mg, @material.unit) %></td><td class="td"><%= l(lot.created_at, format: :short) %></td><td class="td"><%= lot.note.presence || '—' %></td><td class="td"><%= link_to 'Open ledger', bulk_material_bulk_lot_path(@material, lot), class: 'text-olive hover:underline' %></td></tr><% end %>
-      <% if @lots.empty? %><tr><td class="td py-8 text-center text-taupe" colspan="5">No lots yet. Record a receipt to add material.</td></tr><% end %>
-    </tbody>
-  </table></div>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <%= page_header @material.name, subtitle: 'Lots of this material and what remains in each.' do %>
+    <% if Current.user.can?('inventory.write') %><%= link_to 'Receive lot', new_bulk_material_bulk_lot_path(@material), class: 'btn-primary' %><% end %>
+  <% end %>
+  <dl class="facts">
+    <div><dt>Remaining across lots</dt><dd><%= bulk_mass_label(@balance, @material.unit) %></dd></div>
+    <div><dt>Display unit</dt><dd><%= @material.unit %></dd></div>
+    <div><dt>Lots</dt><dd><%= @pagy.count %></dd></div>
+  </dl>
+  <div class="card overflow-hidden">
+    <div class="table-region" role="region" tabindex="0" aria-label="Lots of <%= @material.name %>">
+      <table class="table">
+        <thead><tr><th class="th" scope="col">Lot<%= define('lot') %></th><th class="th" scope="col">Remaining<%= define('lot_balance') %></th><th class="th" scope="col">First received</th><th class="th" scope="col">Note</th><th class="th" scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          <% @lots.each do |lot| %><tr><td class="td font-medium text-ink"><%= link_to lot.code, bulk_material_bulk_lot_path(@material, lot), class: 'hover:underline' %></td><td class="td"><%= bulk_mass_label(lot.balance_mg, @material.unit) %></td><td class="td"><%= l(lot.created_at, format: :short) %></td><td class="td"><%= lot.note.presence || '—' %></td><td class="td text-right"><%= link_to 'Open', bulk_material_bulk_lot_path(@material, lot), class: 'btn-ghost btn-sm' %></td></tr><% end %>
+          <% if @lots.empty? %><tr><td class="empty-row" colspan="5">No lots yet.<% if Current.user.can?('inventory.write') %> <%= link_to 'Receive the first lot', new_bulk_material_bulk_lot_path(@material), class: 'font-semibold text-olive-deep underline' %> to add material.<% end %></td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== pagy_nav(@pagy) %></div><% end %>
 </div>

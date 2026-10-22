@@ -1,19 +1,17 @@
-<% content_for :title, 'Export .env' %>
-
-<div class="max-w-md mx-auto mt-10 card p-6">
-  <h1 class="page-title">Confirm password</h1>
-  <p class="mt-2 text-sm text-taupe">
-    Exporting the raw .env reveals every managed secret. Re-enter your password to continue.
-  </p>
-  <%= form_with(url: env_export_settings_path, method: :post, local: true, data: { turbo: false }) do %>
-    <div class="mt-4">
-      <%= label_tag :password, 'Password', class: 'block text-sm font-semibold text-ink' %>
-      <%= password_field_tag :password, nil, autofocus: true, required: true,
-                             class: 'mt-1 w-full rounded border border-clay/40 px-3 py-2' %>
-    </div>
-    <div class="mt-4 flex gap-2">
-      <%= submit_tag 'Download .env', class: 'btn-primary' %>
-      <%= link_to 'Cancel', settings_path, class: 'btn-ghost' %>
-    </div>
-  <% end %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Download .env', subtitle: 'The raw .env reveals every managed secret, so confirm your password first.' %>
+  <div class="card card-pad">
+    <%= form_with(url: env_export_settings_path, method: :post, local: true, data: { turbo: false }, class: 'space-y-4') do %>
+      <fieldset class="space-y-3">
+        <div>
+          <%= label_tag :password, 'Password', class: 'field-label' %>
+          <%= password_field_tag :password, nil, autofocus: true, required: true, autocomplete: 'current-password', class: 'input' %>
+        </div>
+      </fieldset>
+      <div class="form-actions">
+        <%= submit_tag 'Download .env', class: 'btn-primary' %>
+        <%= link_to 'Cancel', settings_path, class: 'btn-ghost' %>
+      </div>
+    <% end %>
+  </div>
 </div>

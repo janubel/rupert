@@ -4,16 +4,18 @@
   <% if channels.empty? %>
     <p class="mt-2 text-sm text-taupe">No recorded sales in this range.</p>
   <% else %>
-  <table class="mt-2 w-full text-sm">
-    <caption class="sr-only">Sales by channel per <%= report.bucket %></caption>
-    <thead><tr><th class="text-left">Period</th><% channels.each do |c| %><th class="text-right"><%= c[:name] %></th><% end %><th class="text-right">All</th></tr></thead>
-    <tbody>
-      <% report.bucket_labels.each_with_index do |label, i| %>
-        <tr><td><%= label %></td><% channels.each do |c| %><td class="text-right"><%= finance_money(c[:values][i], zero: :dash) %></td><% end %><td class="text-right"><%= finance_money(report.sales_series[i], zero: :dash) %></td></tr>
-      <% end %>
-    </tbody>
-    <tfoot><tr class="font-semibold"><td>Total</td><% channels.each do |c| %><td class="text-right"><%= finance_money(c[:total_cents]) %></td><% end %><td class="text-right"><%= finance_money(report.sales_cents) %></td></tr></tfoot>
-  </table>
+  <div class="table-region" role="region" tabindex="0" aria-label="Sales by channel per <%= report.bucket %>">
+    <table class="table mt-2">
+      <caption class="sr-only">Sales by channel per <%= report.bucket %></caption>
+      <thead><tr><th scope="col" class="th">Period</th><% channels.each do |c| %><th scope="col" class="th num"><%= c[:name] %></th><% end %><th scope="col" class="th num">All</th></tr></thead>
+      <tbody>
+        <% report.bucket_labels.each_with_index do |label, i| %>
+          <tr><td class="td"><%= label %></td><% channels.each do |c| %><td class="td num"><%= finance_money(c[:values][i], zero: :dash) %></td><% end %><td class="td num"><%= finance_money(report.sales_series[i], zero: :dash) %></td></tr>
+        <% end %>
+      </tbody>
+      <tfoot><tr class="font-semibold"><td class="td">Total</td><% channels.each do |c| %><td class="td num"><%= finance_money(c[:total_cents]) %></td><% end %><td class="td num"><%= finance_money(report.sales_cents) %></td></tr></tfoot>
+    </table>
+  </div>
   <% end %>
   <% report.sales_warnings.each do |warning| %><p class="mt-2 text-xs text-warn"><%= warning %></p><% end %>
 </details>

@@ -1,39 +1,36 @@
 <% count = @count %>
-<div class="space-y-6 operations-workspace">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <div class="flex items-center gap-3">
-        <h1 class="page-title">Manual count</h1>
-        <span class="<%= count.draft? ? "pill-taupe" : count.pending? ? "pill-clay" : count.approved? ? "pill-fern" : "pill-rose" %>"><%= count.status %></span>
-      </div>
-      <p class="mt-1 text-sm text-mocha">
-        Counted <%= l(count.countedAt, format: :long) %> · <%= count.location&.name || "no location" %> ·
-        recorded by <%= count.createdBy.presence || "—" %>
-      </p>
-    </div>
-    <div class="flex flex-wrap gap-2">
-      <% if count.draft? && Current.user.can?('inventory.write') %>
-        <%= link_to "Scan count", scan_inventory_count_path(count), class: "btn-primary" %>
-        <%= link_to "Edit", edit_inventory_count_path(count), class: "btn-ghost" %>
-        <%= button_to "Submit for approval", submit_inventory_count_path(count), method: :post, class: "btn-primary", data: { turbo: false } %>
-        <%= button_to "Delete", inventory_count_path(count), method: :delete, class: "btn-ghost", data: { turbo_confirm: "Delete this draft count?" } %>
-      <% elsif count.pending? && Current.user.can?('inventory.write') %>
-        <%= button_to "Approve count", approve_inventory_count_path(count), method: :post, class: "btn-primary", data: { turbo_confirm: "Approve this count? It is recorded for audit and does not change platform inventory." } %>
-        <%= button_to "Reject", reject_inventory_count_path(count), method: :post, class: "btn-ghost", data: { turbo: false } %>
-      <% elsif count.rejected? && Current.user.can?('inventory.write') %>
-        <%= button_to "Reopen as draft", reopen_inventory_count_path(count), method: :post, class: "btn-ghost", data: { turbo: false } %>
-      <% end %>
-    </div>
-  </section>
-
-  <% if count.note.present? %>
-    <p class="rounded-xl bg-haze px-4 py-3 text-sm text-mocha"><%= count.note %></p>
+<% content_for :title, "Count · #{l(count.countedAt, format: :short)}" %>
+<% can_write = Current.user.can?('inventory.write') %>
+<% menu = [] %>
+<% if count.draft? && can_write %>
+  <% menu << ['Edit', edit_inventory_count_path(count)] %>
+  <% menu << ['Remove', inventory_count_path(count), { method: :delete, data: { turbo_confirm: 'Remove this draft count?' } }] %>
+<% elsif count.pending? && can_write %>
+  <% menu << ['Reject', reject_inventory_count_path(count), { method: :post, data: { turbo: false } }] %>
+<% elsif count.rejected? && can_write %>
+  <% menu << ['Reopen as draft', reopen_inventory_count_path(count), { method: :post, data: { turbo: false } }] %>
+<% end %>
+<div class="space-y-6">
+  <%= page_header "Count · #{l(count.countedAt, format: :short)}", subtitle: "#{count.location&.name || 'No location'} · recorded by #{count.createdBy.presence || '—'}", menu: menu do %>
+    <% if count.draft? && can_write %>
+      <%= link_to 'Scan count', scan_inventory_count_path(count), class: 'btn-ghost' %>
+      <%= button_to 'Submit for approval', submit_inventory_count_path(count), method: :post, class: 'btn-primary', form_class: 'contents', data: { turbo: false } %>
+    <% elsif count.pending? && can_write %>
+      <%= button_to 'Approve', approve_inventory_count_path(count), method: :post, class: 'btn-primary', form_class: 'contents', data: { turbo_confirm: 'Approve this count? It is recorded for audit and does not change platform inventory.' } %>
+    <% end %>
   <% end %>
 
+  <dl class="facts">
+    <div><dt>Status</dt><dd><span class="<%= count.draft? ? 'pill-taupe' : count.pending? ? 'pill-clay' : count.approved? ? 'pill-fern' : 'pill-rose' %>"><%= count.status.humanize %></span></dd></div>
+    <div><dt>Counted</dt><dd><%= l(count.countedAt, format: :long) %></dd></div>
+    <div><dt>Location</dt><dd><%= count.location&.name || 'No location' %></dd></div>
+    <div><dt>Recorded by</dt><dd><%= count.createdBy.presence || '—' %></dd></div>
+    <% if count.approved? %><div><dt>Approved</dt><dd><%= l(count.approvedAt, format: :long) %></dd></div><% end %>
+    <% if count.note.present? %><div><dt>Note</dt><dd><%= count.note %></dd></div><% end %>
+  </dl>
+
   <% if count.approved? %>
-    <p class="flash flash-notice">
-      Approved <%= l(count.approvedAt, format: :long) %> as an audit record. Counted quantities do not change platform inventory.
-    </p>
+    <p class="flash flash-notice" role="status">Approved as an audit record. Counted quantities do not change platform inventory.</p>
   <% end %>
 
   <%= fold_explainer('Comparisons freeze one source, location and item at submission. New Shopify comparisons use signed native on-hand snapshots less than one hour old with matching catalog identity; available stock and legacy aggregates are excluded. Missing or ambiguous pools have no numerical delta. Historical comparisons retain their original labeled basis. Stored observations do not guarantee current shelf stock or reserve stock against other sales.', class: 'text-sm text-mocha') %>
@@ -41,7 +38,7 @@
   <% items = count.items.order(:sku).to_a; known = items.reject { |item| item.delta.nil? } %>
   <div class="card overflow-hidden">
     <div class="card-pad pb-3">
-      <h2 class="font-display text-xl text-ink">Counted items</h2>
+      <%= section_heading 'Counted items', hint: "#{items.size} #{'item'.pluralize(items.size)}" %>
       <% if items.any? %>
         <%= explain_calculation(title: 'Net variance for this sheet', id: 'count-variance',
               formula: 'Counted − mirrored comparison, item by item, for items with a matched comparison; items without one have no numerical delta.',
@@ -52,31 +49,31 @@
               term: 'variance', lesson: 'counts') %>
       <% end %>
     </div>
-    <div class="operations-table-region" role="region" tabindex="0" aria-label="Inventory Counts table">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="table-region" role="region" tabindex="0" aria-label="Counted items">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Item</th>
-            <th scope="col" class="th text-right">Counted<%= define('counted') %></th>
-            <th scope="col" class="th text-right">Mirrored stock<%= define('comparison_quantity') %></th>
-            <th scope="col" class="th text-right">Delta<%= render 'shared/definition', term: 'variance' %></th>
+            <th scope="col" class="th num">Counted<%= define('counted') %></th>
+            <th scope="col" class="th num">Mirrored stock<%= define('comparison_quantity') %></th>
+            <th scope="col" class="th num">Delta<%= define('variance') %></th>
             <th scope="col" class="th">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if items.empty? %>
             <tr>
-              <td colspan="5" class="empty-row">No items recorded.</td>
+              <td colspan="5" class="empty-row">No items recorded. <% if count.draft? && can_write %>Scan or edit the sheet to add items.<% end %></td>
             </tr>
           <% end %>
           <% items.each do |item| %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td">
                 <div class="flex items-center gap-3">
                   <% if item.inventory_thumbnail %>
-                    <%= image_tag item.inventory_thumbnail, alt: item.sku, loading: "lazy", class: "h-10 w-10 shrink-0 rounded-lg border border-fog bg-haze object-cover" %>
+                    <%= image_tag item.inventory_thumbnail, alt: item.sku, loading: 'lazy', class: 'h-10 w-10 shrink-0 rounded-control border border-fog bg-haze object-cover' %>
                   <% else %>
-                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-fog bg-haze font-display text-base text-taupe"><%= item.sku.first.upcase %></span>
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-control border border-fog bg-haze font-display text-base text-taupe"><%= item.sku.first.upcase %></span>
                   <% end %>
                   <div class="min-w-0">
                     <p class="truncate font-medium text-ink"><%= item.inventory_title.presence || item.sku %></p>
@@ -84,32 +81,32 @@
                   </div>
                 </div>
               </td>
-              <td class="td text-right font-medium text-ink"><%= item.quantity %></td>
-              <td class="td text-right text-mocha">
-                <p><%= item.previousQuantity.presence || "—" %></p>
+              <td class="td num font-medium text-ink"><%= item.quantity %></td>
+              <td class="td num text-mocha">
+                <p><%= item.previousQuantity.presence || '—' %></p>
                 <p class="mt-1 max-w-xs text-xs text-taupe"><%= item.comparison_label %></p>
                 <% if item.comparison['status'] == 'matched' %>
-                  <p class="mt-1 text-xs text-taupe">Item <%= item.comparison['source_item_id'] %> · mirror <%= item.comparison['mirrored_at'] || "time unavailable" %></p>
+                  <p class="mt-1 text-xs text-taupe">Item <%= item.comparison['source_item_id'] %> · mirror <%= item.comparison['mirrored_at'] || 'time unavailable' %></p>
                 <% end %>
               </td>
-              <td class="td text-right">
+              <td class="td num">
                 <% if item.delta.nil? %>
                   <span class="text-taupe">—</span>
                 <% else %>
-                  <span class="<%= item.delta.zero? ? "text-taupe" : item.delta.positive? ? "text-fern" : "text-rose" %>">
+                  <span class="<%= item.delta.zero? ? 'text-taupe' : item.delta.positive? ? 'text-fern' : 'text-rose' %>">
                     <%= item.delta.positive? ? "+#{item.delta}" : item.delta %>
                   </span>
                 <% end %>
               </td>
               <td class="td">
                 <% if item.applied? %>
-                  <span class="pill-fern">applied</span>
+                  <span class="pill-fern">Applied</span>
                 <% elsif count.approved? %>
-                  <span class="pill-taupe">recorded</span>
+                  <span class="pill-taupe">Recorded</span>
                 <% elsif item.shopifyVariantId.present? || item.squareVariationId.present? || item.comparison['status'] == 'matched' %>
-                  <span class="pill-taupe">linked</span>
+                  <span class="pill-taupe">Linked</span>
                 <% else %>
-                  <span class="pill-rose">unlinked</span>
+                  <span class="pill-rose">Unlinked</span>
                 <% end %>
               </td>
             </tr>

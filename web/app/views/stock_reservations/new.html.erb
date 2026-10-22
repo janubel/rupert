@@ -1,34 +1,38 @@
-<% content_for :title, 'Reserve stock' %>
-<div class="space-y-6">
-  <h1 class="page-title">Reserve stock</h1>
-  <p class="text-sm text-mocha">Choose a specific platform and location. This advisory hold affects Rupert only; Shopify and Square can still sell the stock.</p>
-  <%= form_with url: new_stock_reservation_path, method: :get, class: 'card card-pad flex flex-wrap gap-3 items-end' do %>
-    <div class="flex-1"><%= label_tag :q, 'Find item by SKU or name', class: 'field-label' %><%= text_field_tag :q, @query, class: 'input' %></div>
-    <%= submit_tag 'Find stock', class: 'btn-ghost' %>
+<% content_for :title, 'Add reservation' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add reservation', subtitle: 'An advisory hold on one platform item at one location; Shopify and Square can still sell the stock.' %>
+
+  <%= form_with url: new_stock_reservation_path, method: :get, class: 'toolbar' do %>
+    <div class="toolbar-field"><%= label_tag :q, 'Find item', class: 'field-label' %><%= search_field_tag :q, @query, class: 'input', placeholder: 'SKU or name' %></div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %></div>
   <% end %>
-  <% if @reservation.errors.any? %><div class="card card-pad text-rose" role="alert"><%= @reservation.errors.full_messages.to_sentence %></div><% end %>
+
+  <% if @reservation.errors.any? %><div class="flash flash-alert" role="alert"><%= @reservation.errors.full_messages.to_sentence %></div><% end %>
   <%= form_with model: @reservation, url: stock_reservations_path, class: 'card card-pad space-y-4' do |form| %>
     <%= form.hidden_field :request_token %>
-    <div>
-      <%= label_tag 'stock_reservation_inventory_level_id', 'Platform / location / item', class: 'field-label' %>
-      <select id="stock_reservation_inventory_level_id" name="stock_reservation[inventory_level_id]" class="input" required>
-        <option value="">Choose stock pool</option>
-        <% @levels.each do |level| %>
-          <% item = level.source == 'shopify' ? level.shopify_variant : level.square_variation %>
-          <% next unless item && level.location && level.location.source == level.source %>
-          <% label = [level.source.capitalize, level.location.name, item.sku, level.source == 'shopify' ? item.title : item.name].compact.join(' · ') %>
-          <% mirrored = level.local_capacity %>
-          <% held = @held_by_pool.fetch([level.source, level.locationId, item.id], 0) + (level.source == 'shopify' ? @warehouse_holds.fetch(item.id, 0) : 0) %>
-          <option value="<%= level.id %>" <%= 'selected' if @selected_level&.id == level.id %>><%= label %> (mirrored: <%= mirrored %>, local holds: <%= held %>, available-to-promise: <%= [mirrored - held, 0].max %>)</option>
-        <% end %>
-      </select>
-      <p class="mt-1 text-xs text-taupe">Up to 100 matching pools shown. Availability is checked again when you save, including other active local holds.</p>
-    </div>
-    <div class="grid gap-4 sm:grid-cols-3">
-      <div><%= form.label :quantity, class: 'field-label' %><%= form.number_field :quantity, min: 1, step: 1, required: true, class: 'input' %></div>
-      <div><%= form.label :reference, 'Order / customer reference', class: 'field-label' %><%= form.text_field :reference, maxlength: 200, required: true, class: 'input' %></div>
-      <div><%= form.label :expires_at, 'Expires at (optional)', class: 'field-label' %><%= form.datetime_local_field :expires_at, class: 'input' %></div>
-    </div>
-    <div class="flex gap-3"><%= form.submit 'Create local reservation', class: 'btn-primary' %><%= link_to 'Cancel', stock_reservations_path, class: 'btn-ghost' %></div>
+    <fieldset class="space-y-4">
+      <legend class="card-title">Hold</legend>
+      <div>
+        <%= label_tag 'stock_reservation_inventory_level_id', 'Platform / location / item', class: 'field-label' %>
+        <select id="stock_reservation_inventory_level_id" name="stock_reservation[inventory_level_id]" class="input" required>
+          <option value="">Choose stock pool</option>
+          <% @levels.each do |level| %>
+            <% item = level.source == 'shopify' ? level.shopify_variant : level.square_variation %>
+            <% next unless item && level.location && level.location.source == level.source %>
+            <% label = [level.source.capitalize, level.location.name, item.sku, level.source == 'shopify' ? item.title : item.name].compact.join(' · ') %>
+            <% mirrored = level.local_capacity %>
+            <% held = @held_by_pool.fetch([level.source, level.locationId, item.id], 0) + (level.source == 'shopify' ? @warehouse_holds.fetch(item.id, 0) : 0) %>
+            <option value="<%= level.id %>" <%= 'selected' if @selected_level&.id == level.id %>><%= label %> (mirrored: <%= mirrored %>, local holds: <%= held %>, available-to-promise: <%= [mirrored - held, 0].max %>)</option>
+          <% end %>
+        </select>
+        <p class="mt-1 text-xs text-taupe">Up to 100 matching pools shown. Availability is checked again when you save, including other active local holds.</p>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div><%= form.label :quantity, class: 'field-label' %><%= form.number_field :quantity, min: 1, step: 1, required: true, class: 'input' %></div>
+        <div><%= form.label :reference, 'Order / customer reference', class: 'field-label' %><%= form.text_field :reference, maxlength: 200, required: true, class: 'input' %></div>
+        <div><%= form.label :expires_at, 'Expires at (optional)', class: 'field-label' %><%= form.datetime_local_field :expires_at, class: 'input' %></div>
+      </div>
+    </fieldset>
+    <div class="form-actions"><%= form.submit 'Save', class: 'btn-primary', name: nil %><%= link_to 'Cancel', stock_reservations_path, class: 'btn-ghost' %></div>
   <% end %>
 </div>

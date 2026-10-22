@@ -1,25 +1,27 @@
+<%# Team chat: the live Buzz channel through the Rupert agent. %>
 <% content_for :title, 'Team chat' %>
-<div class="mx-auto max-w-3xl space-y-4">
+<div class="page-medium space-y-4">
+  <%= page_header 'Team chat', eyebrow: 'Team chat · Buzz', subtitle: 'The team’s Buzz channel, shown through the Rupert agent.' do %>
+    <%= link_to 'Open in Buzz', BuzzConnect.chat_url, class: 'btn-ghost', aria: { label: 'Open this channel in the Buzz app' } if @state == :ready && BuzzConnect.chat_url %>
+  <% end %>
   <%= render 'buzz/tabs', current: :chat %>
 
   <% if @state == :ready %>
-    <section class="card buzz-chat" aria-labelledby="buzz-chat-title"
+    <section class="card buzz-chat" aria-label="Team chat"
              data-controller="buzz-chat" data-buzz-chat-url-value="<%= buzz_chat_messages_path %>"
              data-buzz-chat-can-post-value="<%= @can_post %>" data-buzz-chat-post-max-value="<%= BuzzChat::POST_MAX %>">
       <header class="buzz-chat-head">
         <div class="min-w-0">
-          <h1 id="buzz-chat-title" class="font-display text-xl">Team chat</h1>
           <p class="buzz-status" data-buzz-chat-target="status" data-tone="ok" role="status" aria-live="polite">Connecting to Buzz…</p>
         </div>
-        <%= link_to 'Open in Buzz', BuzzConnect.chat_url, class: 'btn-ghost btn-sm shrink-0', aria: { label: 'Open this channel in the Buzz app' } if BuzzConnect.chat_url %>
       </header>
 
-      <p class="buzz-disclosure">This is the team's Buzz channel, shown through the Rupert agent. Everyone in the channel reads what is posted, and channel membership is wider than Rupert permissions, so keep customer personal details, pay and keys out of it. Rupert keeps a copy of recent messages for <%= BuzzChat::RETENTION.in_days.to_i %> days.</p>
+      <p class="buzz-disclosure">Everyone in the channel reads what is posted, and channel membership is wider than Rupert permissions, so keep customer personal details, pay and keys out of it. Rupert keeps a copy of recent messages for <%= BuzzChat::RETENTION.in_days.to_i %> days.</p>
 
       <div class="buzz-log-wrap">
         <div class="buzz-log" data-buzz-chat-target="log" data-action="scroll->buzz-chat#onScroll" role="log" aria-live="polite" aria-relevant="additions" aria-label="Team chat messages" tabindex="0">
           <button type="button" class="btn-ghost btn-sm buzz-more" data-buzz-chat-target="more" data-action="buzz-chat#loadEarlier" hidden>Load earlier messages</button>
-          <p class="buzz-hint" data-buzz-chat-target="loading">Loading messages…</p>
+          <p class="buzz-hint" data-buzz-chat-target="loading">Loading…</p>
           <p class="buzz-hint" data-buzz-chat-target="empty" hidden>No messages yet. Say hello below.</p>
           <div data-buzz-chat-list></div>
         </div>
@@ -43,21 +45,18 @@
       <% end %>
     </section>
   <% else %>
-    <section class="card card-pad" role="status">
-      <h1 class="font-display text-xl"><%= @state == :unconfigured ? 'Team chat is not set up yet' : 'No channel chosen yet' %></h1>
-      <p class="mt-2 text-sm text-mocha">
-        <% if @state == :unconfigured %>
-          Rupert needs a Buzz relay address and the agent's identity before it can show the channel.
-        <% else %>
-          The relay is set but no channel is, so there is nothing to show yet.
-        <% end %>
-        <% if @can_configure %>
-          Set it in <%= link_to 'Settings → Buzz agent', settings_path(anchor: 'buzz'), class: 'underline' %>.
-        <% else %>
-          Ask an administrator to set it up in Settings.
-        <% end %>
-        You can still <%= link_to 'connect your own device', buzz_path, class: 'underline' %> to Buzz.
-      </p>
+    <section role="status">
+      <%= empty_state(@state == :unconfigured ? 'Team chat is not set up yet' : 'No channel chosen yet',
+                      hint: @state == :unconfigured ? "Rupert needs a Buzz relay address and the agent's identity before it can show the channel." : 'The relay is set but no channel is, so there is nothing to show yet.') do %>
+        <p class="text-sm text-mocha">
+          <% if @can_configure %>
+            Set it in <%= link_to 'Settings → Buzz agent', settings_path(anchor: 'buzz'), class: 'underline' %>.
+          <% else %>
+            Ask an administrator to set it up in Settings.
+          <% end %>
+          You can still <%= link_to 'connect your own device', buzz_path, class: 'underline' %> to Buzz.
+        </p>
+      <% end %>
     </section>
   <% end %>
 </div>

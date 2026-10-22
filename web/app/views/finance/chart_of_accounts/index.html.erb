@@ -1,51 +1,49 @@
-<% content_for :title, "Chart of accounts" %>
-<div class="space-y-6 operations-workspace">
-
-  <%= render layout: 'finance/page_header', locals: { title: 'Chart of accounts', currency: nil, print: true,
-        explain: "The list of accounts the ledger posts to, in code order and grouped by type. #{@active_count} active of #{@grouped.values.sum(&:length)} accounts. Select a code to see every entry posted to it. An archived account stays on record but cannot be used for new entries." } do %>
-    <% if Current.user.can?("finance.write") %>
-      <%= link_to "Add account", new_finance_chart_of_account_path, class: "btn-primary" %>
-    <% end %>
+<% content_for :title, 'Chart of accounts' %>
+<% can_write = Current.user.can?('finance.write') %>
+<div class="space-y-6">
+  <%= render layout: 'finance/page_header', locals: { title: 'Chart of accounts', currency: nil, print: true, range: "#{@active_count} active of #{@grouped.values.sum(&:length)} accounts",
+        menu: [['General ledger', finance_journal_entries_path], ['Trial balance', finance_reports_trial_balance_path]],
+        explain: 'The list of accounts the ledger posts to, in code order and grouped by type. Select a code to see every entry posted to it. An archived account stays on record but cannot be used for new entries.' } do %>
+    <% if can_write %><%= link_to 'Add account', new_finance_chart_of_account_path, class: 'btn-primary' %><% end %>
   <% end %>
 
   <% Finance::Account::TYPE_LABELS.each do |type, label| %>
     <% accounts = @grouped.fetch(type, []) %>
-    <section class="card overflow-hidden">
-      <div class="flex items-center justify-between border-b border-fog px-5 py-3">
-        <h2 class="font-display text-lg text-ink"><%= label %></h2>
-        <span class="pill-taupe"><%= accounts.count(&:active) %> active</span>
+    <section class="card">
+      <div class="card-pad border-b border-fog">
+        <%= section_heading label do %><span class="pill-taupe"><%= accounts.count(&:active) %> active</span><% end %>
       </div>
-      <div class="operations-table-region" role="region" tabindex="0" aria-label="Finance record table">
-        <table class="operations-table finance-table w-full">
-          <thead class="border-b border-fog bg-haze/60">
+      <div class="table-region" role="region" tabindex="0" aria-label="<%= label %> accounts">
+        <table class="table finance-table">
+          <thead>
             <tr>
               <th scope="col" class="th">Code</th>
               <th scope="col" class="th">Name</th>
               <th scope="col" class="th">Increases with<%= define('normal_balance') %></th>
               <th scope="col" class="th">Description</th>
-              <th scope="col" class="th num"></th>
+              <th scope="col" class="th"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-fog">
+          <tbody>
             <% if accounts.empty? %>
-              <tr><td colspan="5" class="empty-row">No <%= label.downcase %> accounts.</td></tr>
+              <tr><td colspan="5" class="empty-row">No <%= label.downcase %> accounts<%= can_write ? '. Add one from the header.' : '.' %></td></tr>
             <% end %>
             <% accounts.each do |account| %>
-              <tr class="<%= "row-removed" unless account.active %>">
-                <td class="td font-mono text-mocha"><%= link_to account.code, finance_chart_of_account_path(account), class: "link", aria: { label: "Ledger lines for #{finance_account_label(account)}" } %></td>
+              <tr class="<%= 'row-removed' unless account.active %>">
+                <td class="td font-mono text-mocha"><%= link_to account.code, finance_chart_of_account_path(account), class: 'link', aria: { label: "Ledger lines for #{finance_account_label(account)}" } %></td>
                 <td class="td font-medium text-ink">
                   <%= account.name %>
-                  <% unless account.active %><span class="ml-2 status-tag status-removed">Archived</span><% end %>
+                  <% unless account.active %><span class="ml-2 pill-taupe status-removed">Archived</span><% end %>
                 </td>
                 <td class="td capitalize"><%= account.normal_balance %></td>
-                <td class="td text-mocha"><%= account.description.presence || "—" %></td>
+                <td class="td text-mocha"><%= account.description.presence || '—' %></td>
                 <td class="td whitespace-nowrap text-right">
-                  <% if Current.user.can?("finance.write") %>
-                    <%= link_to "Edit", edit_finance_chart_of_account_path(account), class: "text-sm font-semibold text-olive hover:underline" %>
+                  <% if can_write %>
+                    <%= link_to 'Edit', edit_finance_chart_of_account_path(account), class: 'btn-ghost btn-sm' %>
                     <% if account.active %>
-                      <%= button_to "Archive", archive_finance_chart_of_account_path(account), method: :post, class: "ml-2 text-sm font-semibold text-mocha hover:text-rose", form: { data: { turbo_confirm: "Archive account #{finance_account_label(account)}?\n\nIt stays in the chart and keeps its history, but cannot be chosen for new entries. Existing entries and reports are not changed. You can restore it later." } } %>
+                      <%= button_to 'Archive', archive_finance_chart_of_account_path(account), method: :post, class: 'btn-ghost btn-sm', form: { class: 'inline', data: { turbo_confirm: "Archive account #{finance_account_label(account)}?\n\nIt stays in the chart and keeps its history, but cannot be chosen for new entries. Existing entries and reports are not changed. You can restore it later." } } %>
                     <% else %>
-                      <%= button_to "Restore", restore_finance_chart_of_account_path(account), method: :post, class: "ml-2 text-sm font-semibold text-fern hover:underline" %>
+                      <%= button_to 'Restore', restore_finance_chart_of_account_path(account), method: :post, class: 'btn-ghost btn-sm', form: { class: 'inline' } %>
                     <% end %>
                   <% end %>
                 </td>

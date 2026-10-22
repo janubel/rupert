@@ -1,27 +1,30 @@
-<%= form_with model: department, url: (department.persisted? ? people_department_path(department) : people_departments_path), class: "mt-6 space-y-4" do |f| %>
-  <div class="grid gap-4 sm:grid-cols-2">
-    <div>
-      <%= f.label :name, "Department name", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_field :name, class: "input", autocomplete: "off", required: true %>
+<div class="card card-pad">
+  <%= form_with model: department, url: (department.persisted? ? people_department_path(department) : people_departments_path), class: "space-y-6" do |f| %>
+    <% if department.errors.any? %><div role="alert" class="flash flash-alert"><%= department.errors.full_messages.to_sentence %></div><% end %>
+    <fieldset class="space-y-4">
+      <legend class="card-title">Department</legend>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <%= f.label :name, "Department name", class: "field-label" %>
+          <%= f.text_field :name, class: "input", autocomplete: "off", required: true %>
+        </div>
+        <div>
+          <%= f.label :code, "Code", class: "field-label" %>
+          <%= f.text_field :code, class: "input", autocomplete: "off", placeholder: "RET" %>
+        </div>
+      </div>
+      <div>
+        <%= f.label :manager_id, "Manager", class: "field-label" %>
+        <%= f.select :manager_id, @managers.map { |m| [m.name, m.id] }, { include_blank: "—" }, class: "select w-full" %>
+      </div>
+      <div>
+        <%= f.label :description, "Description", class: "field-label" %>
+        <%= f.text_area :description, rows: 2, class: "input" %>
+      </div>
+    </fieldset>
+    <div class="form-actions">
+      <%= f.submit "Save", class: "btn-primary" %>
+      <%= link_to "Cancel", people_departments_path, class: "btn-ghost" %>
     </div>
-    <div>
-      <%= f.label :code, "Code", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-      <%= f.text_field :code, class: "input", autocomplete: "off", placeholder: "RET" %>
-    </div>
-  </div>
-
-  <div>
-    <%= f.label :manager_id, "Manager", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-    <%= f.select :manager_id, @managers.map { |m| [m.name, m.id] }, { include_blank: "—" }, class: "select w-full sm:max-w-xs" %>
-  </div>
-
-  <div>
-    <%= f.label :description, "Description", class: "mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" %>
-    <%= f.text_area :description, rows: 2, class: "input !rounded-2xl" %>
-  </div>
-
-  <div class="flex items-center gap-3 pt-2">
-    <%= f.submit department.persisted? ? "Save changes" : "Add department", class: "btn-primary" %>
-    <%= link_to "Cancel", people_departments_path, class: "btn-ghost" %>
-  </div>
-<% end %>
+  <% end %>
+</div>

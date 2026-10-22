@@ -1,50 +1,48 @@
-<div class="max-w-3xl space-y-6" data-controller="inventory-count-scanner">
-  <section>
-    <div class="flex flex-wrap items-center gap-3">
-      <h1 class="page-title">Scan count</h1>
-      <span class="pill-taupe"><%= @count.status %></span>
-    </div>
-    <p class="mt-1 text-sm text-mocha">Counted <%= l(@count.countedAt, format: :long) %> · <%= @count.location&.name || "no location" %></p>
-    <p class="mt-2 text-sm text-mocha">Scan a label containing an exact SKU, type a SKU, or use a barcode already stored in the catalog. Each entry saves to this worksheet. Use Add units for repeated scans, or Set total for a counted quantity. Approved counts remain audit records.</p>
-    <p class="mt-2 rounded-xl bg-haze px-4 py-3 text-sm text-ink">Add units increases the quantities already saved below. Prepared sheets start with system quantities: use Set total for each SKU's first physical count. A new blank scanner count starts at zero.</p>
-  </section>
+<% content_for :title, 'Scan count' %>
+<div class="page-narrow space-y-6" data-controller="inventory-count-scanner">
+  <%= page_header 'Scan count', subtitle: "Counted #{l(@count.countedAt, format: :long)} · #{@count.location&.name || 'no location'}", menu: (@count.draft? ? [['Edit worksheet', edit_inventory_count_path(@count)]] : nil) do %>
+    <%= link_to 'Open count', inventory_count_path(@count), class: 'btn-ghost' %>
+  <% end %>
+  <p class="text-sm text-mocha">Scan a label with an exact SKU, type a SKU, or use a barcode already stored in the catalog. Each entry saves to this worksheet. <span class="pill-taupe"><%= @count.status.humanize %></span></p>
+  <p class="text-sm text-ink">Add units increases the quantities already saved below. Prepared sheets start with system quantities: use Set total for each SKU's first physical count. A new blank scanner count starts at zero.</p>
 
   <% if @count.draft? %>
-    <%= form_tag record_scan_inventory_count_path(@count), method: :post, class: "card card-pad space-y-4", data: { inventory_count_scanner_target: "form", action: "submit->inventory-count-scanner#record", busy: false, turbo: false } do %>
-      <%= hidden_field_tag :request_token, SecureRandom.uuid, data: { inventory_count_scanner_target: "token" } %>
-      <div>
-        <%= label_tag :code, "Barcode or exact SKU", class: "mb-1 block text-sm font-medium text-ink" %>
-        <%= text_field_tag :code, nil, autofocus: true, required: true, maxlength: 255, autocomplete: "off", class: "input font-mono", data: { inventory_count_scanner_target: "code" } %>
-      </div>
-      <div class="grid gap-4 sm:grid-cols-2">
+    <%= form_tag record_scan_inventory_count_path(@count), method: :post, class: 'card card-pad space-y-4', data: { inventory_count_scanner_target: 'form', action: 'submit->inventory-count-scanner#record', busy: false, turbo: false } do %>
+      <%= hidden_field_tag :request_token, SecureRandom.uuid, data: { inventory_count_scanner_target: 'token' } %>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Scan an item</legend>
         <div>
-          <%= label_tag :mode, "Counting mode", class: "mb-1 block text-sm font-medium text-ink" %>
-          <%= select_tag :mode, options_for_select([["Set this SKU's total", "set"], ["Add units to this SKU", "increment"]]), class: "input" %>
+          <%= label_tag :code, 'Barcode or exact SKU', class: 'field-label' %>
+          <%= text_field_tag :code, nil, autofocus: true, required: true, maxlength: 255, autocomplete: 'off', class: 'input font-mono', data: { inventory_count_scanner_target: 'code' } %>
         </div>
-        <div>
-          <%= label_tag :quantity, "Units", class: "mb-1 block text-sm font-medium text-ink" %>
-          <%= number_field_tag :quantity, 1, min: 0, max: 2147483647, step: 1, required: true, class: "input" %>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <%= label_tag :mode, 'Counting mode', class: 'field-label' %>
+            <%= select_tag :mode, options_for_select([["Set this SKU's total", 'set'], ['Add units to this SKU', 'increment']]), class: 'input' %>
+          </div>
+          <div>
+            <%= label_tag :quantity, 'Units', class: 'field-label' %>
+            <%= number_field_tag :quantity, 1, min: 0, max: 2_147_483_647, step: 1, required: true, class: 'input' %>
+          </div>
         </div>
+      </fieldset>
+      <div class="form-actions">
+        <%= submit_tag 'Save scan', class: 'btn-primary btn-lg', name: nil, data: { inventory_count_scanner_target: 'submit' } %>
       </div>
-      <%= submit_tag "Record scan", class: "btn-primary", data: { inventory_count_scanner_target: "submit" } %>
       <p class="text-xs text-taupe">A USB or Bluetooth scanner that types a code and Enter works here. Wait for “Saved” before scanning the next item. Unknown or conflicting codes stay unsaved.</p>
     <% end %>
   <% else %>
-    <p class="flash flash-notice">Scanning is closed for this <%= @count.status %> count.</p>
+    <p class="flash flash-notice" role="status">Scanning is closed for this <%= @count.status %> count.</p>
   <% end %>
 
   <p role="status" aria-live="polite" class="text-sm text-ink" data-inventory-count-scanner-target="status"></p>
-  <div class="card card-pad space-y-3">
-    <h2 class="font-display text-xl text-ink">Saved quantities</h2>
+  <section class="section-card">
+    <%= section_heading 'Saved quantities', level: :h3 %>
     <p class="text-sm text-mocha"><span data-inventory-count-scanner-target="itemCount"><%= @items.size %></span> SKUs · <span data-inventory-count-scanner-target="total"><%= @count.total_quantity %></span> units</p>
     <ul class="divide-y divide-fog" data-inventory-count-scanner-target="items">
       <% @items.each do |item| %>
         <li class="flex justify-between gap-4 py-2" data-sku="<%= item.sku %>"><span class="font-mono text-sm"><%= item.sku %></span><strong data-quantity><%= item.quantity %></strong></li>
       <% end %>
     </ul>
-  </div>
-  <div class="flex flex-wrap gap-3">
-    <%= link_to "Review count", inventory_count_path(@count), class: "btn-primary" %>
-    <% if @count.draft? %><%= link_to "Edit worksheet", edit_inventory_count_path(@count), class: "btn-ghost" %><% end %>
-  </div>
+  </section>
 </div>

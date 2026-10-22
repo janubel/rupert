@@ -76,7 +76,7 @@ class BulkSaleWorkflowTest < ActionDispatch::IntegrationTest
     post preview_bulk_consumptions_path, params: preview_payload(lot: @short_lot)
     assert_response :success
     assert_select '[role=alert]', /5,500 mg/
-    assert_select "input[value='Record reviewed material use']", count: 0
+    assert_select "input[value='Save material use']", count: 0
     assert_select "input[name='bulk_consumption[preview_token]']", count: 0
     assert_equal 0, BulkConsumption.count
     assert_equal 5000, @short_lot.reload.balance_mg

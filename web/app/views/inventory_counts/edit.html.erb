@@ -1,53 +1,50 @@
 <% count = @count %>
-<div class="max-w-3xl space-y-6 operations-workspace">
-  <section>
-    <div class="flex items-center gap-3">
-      <h1 class="page-title">Edit manual count</h1>
-      <span class="pill-taupe"><%= count.status %></span>
-    </div>
-    <p class="mt-1 text-sm text-mocha">Adjust the counted quantities, then submit for approval.</p>
-  </section>
+<% content_for :title, 'Edit count' %>
+<div class="page-medium space-y-6">
+  <%= page_header 'Edit count', subtitle: 'Adjust the counted quantities, then submit the sheet for approval.' %>
 
-  <%= form_tag inventory_count_path(count), method: :patch, class: "space-y-6", data: { controller: "count-sheet" } do %>
+  <%= form_tag inventory_count_path(count), method: :patch, class: 'space-y-6', data: { controller: 'count-sheet' } do %>
     <%= render 'errors', count: count %>
     <div class="card card-pad space-y-4">
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label class="field-label">Date &amp; time counted</label>
-          <%= datetime_field_tag "inventory_count[countedAt]", count.countedAt&.strftime("%Y-%m-%dT%H:%M"), class: "input" %>
+      <fieldset class="space-y-4">
+        <legend class="card-title">Count sheet <span class="pill-taupe ml-2 align-middle"><%= count.status.humanize %></span></legend>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="field-label" for="inventory_count_countedAt">Date and time counted</label>
+            <%= datetime_field_tag 'inventory_count[countedAt]', count.countedAt&.strftime('%Y-%m-%dT%H:%M'), class: 'input', id: 'inventory_count_countedAt' %>
+          </div>
+          <div>
+            <label class="field-label" for="inventory_count_locationId">Location <span class="font-normal text-taupe">(optional)</span></label>
+            <select name="inventory_count[locationId]" id="inventory_count_locationId" class="input">
+              <option value="">No specific location</option>
+              <% @locations.each do |loc| %>
+                <option value="<%= loc.id %>" <%= 'selected' if count.locationId == loc.id %>><%= loc.source.titleize %> · <%= loc.name %></option>
+              <% end %>
+            </select>
+          </div>
         </div>
         <div>
-          <label class="field-label">Location <span class="text-taupe">(optional)</span></label>
-          <select name="inventory_count[locationId]" class="input">
-            <option value="">— no specific location —</option>
-            <% @locations.each do |loc| %>
-              <option value="<%= loc.id %>" <%= "selected" if count.locationId == loc.id %>><%= loc.source.titleize %> · <%= loc.name %></option>
-            <% end %>
-          </select>
+          <label class="field-label" for="inventory_count_note">Note <span class="font-normal text-taupe">(optional)</span></label>
+          <textarea name="inventory_count[note]" id="inventory_count_note" rows="2" class="input"><%= count.note %></textarea>
         </div>
-      </div>
-      <div>
-        <label class="field-label">Note <span class="text-taupe">(optional)</span></label>
-        <textarea name="inventory_count[note]" rows="2" class="input"><%= count.note %></textarea>
-      </div>
+      </fieldset>
     </div>
 
     <div class="card card-pad">
-      <div class="flex items-baseline justify-between">
-        <h2 class="font-display text-xl text-ink">Counted items</h2>
+      <%= section_heading 'Counted items', level: :h3 do %>
         <button type="button" data-action="click->count-sheet#addRow" class="btn-ghost btn-sm">Add row</button>
-      </div>
+      <% end %>
       <div data-count-sheet-target="rows" data-action="click->count-sheet#removeRow" class="mt-3 space-y-2">
         <% count.items.each do |item| %>
-          <%= render "item_row", item: item %>
+          <%= render 'item_row', item: item %>
         <% end %>
-        <%= render "item_row", item: count.items.build if count.items.empty? %>
+        <%= render 'item_row', item: count.items.build if count.items.empty? %>
       </div>
     </div>
 
-    <div class="flex items-center gap-3">
-      <%= submit_tag "Save changes", class: "btn-primary" %>
-      <%= link_to "Cancel", inventory_count_path(count), class: "btn-ghost" %>
+    <div class="form-actions">
+      <%= submit_tag 'Save', class: 'btn-primary', name: nil %>
+      <%= link_to 'Cancel', inventory_count_path(count), class: 'btn-ghost' %>
     </div>
   <% end %>
 
@@ -59,9 +56,9 @@
 
   <template data-count-sheet-target="template">
     <div data-row class="flex items-center gap-2">
-      <input type="text" name="items[][sku]" list="known-skus" placeholder="SKU" class="input flex-1 font-mono" autocomplete="off">
-      <input type="number" name="items[][quantity]" min="0" placeholder="Qty" class="input w-24">
-      <button type="button" data-remove-row class="text-xs font-medium text-taupe hover:text-rose">Remove</button>
+      <input type="text" name="items[][sku]" list="known-skus" placeholder="SKU" aria-label="SKU" class="input flex-1 font-mono" autocomplete="off">
+      <input type="number" name="items[][quantity]" min="0" placeholder="Qty" aria-label="Counted quantity" class="input w-24">
+      <button type="button" data-remove-row class="btn-ghost btn-sm">Remove</button>
     </div>
   </template>
 </div>

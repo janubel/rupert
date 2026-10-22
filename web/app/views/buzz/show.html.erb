@@ -1,50 +1,46 @@
+<%# The Buzz card: a Detail-style page for the agent and how to connect (docs/ui-standards.md §4). %>
 <% content_for :title, 'Buzz' %>
 <% relay = BuzzConnect.relay_url %>
 <% channel = BuzzConnect.channel_id %>
 <% npub = BuzzConnect.agent_npub %>
 <% chat_url = BuzzConnect.chat_url %>
 <% connect_url = BuzzConnect.connect_url %>
-<div class="mx-auto max-w-3xl space-y-6">
-  <%= render 'buzz/tabs', current: :card %>
-  <section class="card card-pad" aria-labelledby="buzz-profile-title">
-    <div class="flex flex-wrap items-start gap-4">
-      <span class="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-haze"><%= render 'shared/rupert_face', size: 56 %></span>
-      <div class="min-w-0 flex-1">
-        <p class="eyebrow text-olive-deep">Team chat · Buzz</p>
-        <h1 id="buzz-profile-title" class="page-title"><%= BuzzAgentPrompt::NAME %> <span class="text-base font-normal text-mocha"><%= BuzzAgentPrompt::HANDLE %></span></h1>
-        <p class="mt-1 text-sm text-mocha"><span class="pill-olive">AI agent</span> <%= BuzzAgentPrompt.about %></p>
-      </div>
-    </div>
-
-    <% if npub %>
-      <div class="mt-4 flex items-center gap-2" data-controller="copy">
-        <code data-copy-target="source" class="min-w-0 flex-1 break-all rounded-xl border border-fog bg-haze px-3 py-2 font-mono text-xs text-ink" aria-label="Agent public key"><%= npub %></code>
-        <button type="button" class="btn-ghost btn-sm shrink-0" data-action="copy#copy" aria-label="Copy the agent's public key">Copy</button>
-        <span hidden data-copy-target="status" role="status" class="text-xs text-olive-deep">Copied</span>
-      </div>
-    <% else %>
-      <p class="mt-4 text-sm text-mocha">The agent has no identity yet<%= " — an administrator can create one in Settings." if @can_configure %></p>
-    <% end %>
-
-    <div class="mt-5 flex flex-wrap items-center gap-3">
-      <% if chat_url %>
-        <%= link_to chat_url, class: 'btn-primary inline-flex items-center gap-2', aria: { label: (@state == :ready ? 'Open the team chat in Buzz' : 'Add the workspace in Buzz') } do %><%= navigation_icon('chat') %><span><%= @state == :ready ? 'Open chat' : 'Add workspace' %></span><% end %>
-      <% else %>
-        <span class="btn-primary inline-flex items-center gap-2" role="link" aria-disabled="true" aria-describedby="buzz-state-note"><%= navigation_icon('chat') %><span>Open chat</span></span>
-      <% end %>
-      <%= link_to '#get-buzz', class: 'btn-ghost inline-flex items-center gap-2', aria: { label: 'Get the Buzz app' } do %><%= navigation_icon('download') %><span>Get Buzz</span><% end %>
-    </div>
+<div class="page-medium space-y-6">
+  <%= page_header "#{BuzzAgentPrompt::NAME} #{BuzzAgentPrompt::HANDLE}", eyebrow: 'Team chat · Buzz', subtitle: BuzzAgentPrompt.about do %>
+    <%= link_to '#get-buzz', class: 'btn-ghost inline-flex items-center gap-2', aria: { label: 'Get the Buzz app' } do %><%= navigation_icon('download') %><span>Get Buzz</span><% end %>
     <% if chat_url %>
-      <p class="mt-2 text-xs text-taupe">Opens the Buzz app on this device. If nothing happens, install it first (Get Buzz), then try again.</p>
+      <%= link_to chat_url, class: 'btn-primary inline-flex items-center gap-2', aria: { label: (@state == :ready ? 'Open the team chat in Buzz' : 'Add the workspace in Buzz') } do %><%= navigation_icon('chat') %><span><%= @state == :ready ? 'Open chat' : 'Add workspace' %></span><% end %>
+    <% else %>
+      <span class="btn-primary inline-flex items-center gap-2" role="link" aria-disabled="true" aria-describedby="buzz-state-note"><%= navigation_icon('chat') %><span>Open chat</span></span>
     <% end %>
+  <% end %>
+  <%= render 'buzz/tabs', current: :card %>
+
+  <section class="section-card" aria-label="Agent profile">
+    <div class="flex flex-wrap items-start gap-4">
+      <span class="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-pill bg-haze"><%= render 'shared/rupert_face', size: 56 %></span>
+      <div class="min-w-0 flex-1 space-y-3">
+        <p class="text-sm text-mocha"><span class="pill-olive">AI agent</span></p>
+        <% if npub %>
+          <div class="flex items-center gap-2" data-controller="copy">
+            <code data-copy-target="source" class="min-w-0 flex-1 break-all rounded-control border border-fog bg-haze px-3 py-2 font-mono text-xs text-ink" aria-label="Agent public key"><%= npub %></code>
+            <button type="button" class="btn-ghost btn-sm shrink-0" data-action="copy#copy" aria-label="Copy the agent's public key">Copy</button>
+            <span hidden data-copy-target="status" role="status" class="text-xs text-olive-deep">Copied</span>
+          </div>
+        <% else %>
+          <p class="text-sm text-mocha">The agent has no identity yet<%= ". An administrator can create one in Settings." if @can_configure %></p>
+        <% end %>
+        <% if chat_url %>
+          <p class="text-xs text-taupe">Open chat opens the Buzz app on this device. If nothing happens, install it first (Get Buzz), then try again.</p>
+        <% end %>
+      </div>
+    </div>
   </section>
 
   <% unless @state == :ready %>
-    <section class="card card-pad" id="buzz-state-note" role="status">
-      <h2 class="font-display text-xl">
-        <%= @state == :unconfigured ? 'Buzz is not set up yet' : 'No channel chosen yet' %>
-      </h2>
-      <p class="mt-2 text-sm text-mocha">
+    <section class="section-card" id="buzz-state-note" role="status">
+      <%= section_heading(@state == :unconfigured ? 'Buzz is not set up yet' : 'No channel chosen yet') %>
+      <p class="text-sm text-mocha">
         <% if @state == :unconfigured %>
           Rupert has no Buzz relay address, so there is nothing to connect to. You can still install the app below.
         <% else %>
@@ -60,15 +56,14 @@
   <% end %>
 
   <% if relay %>
-    <section class="card card-pad" aria-labelledby="buzz-connect-title">
-      <h2 id="buzz-connect-title" class="font-display text-xl">Connect your own device</h2>
-      <p class="mt-1 text-sm text-mocha">Everyone uses their own Buzz identity in their own app. Rupert shows only the public details below and never your key.</p>
-      <div class="mt-4 grid gap-5 sm:grid-cols-[1fr_auto]">
+    <section class="section-card" aria-label="Connect your own device">
+      <%= section_heading 'Connect your own device', hint: 'Everyone uses their own Buzz identity in their own app. Rupert shows only the public details below and never your key.' %>
+      <div class="grid gap-5 sm:grid-cols-[1fr_auto]">
         <div class="space-y-4">
           <div data-controller="copy">
             <p class="field-label" id="buzz-relay-label">Relay address</p>
             <div class="flex items-center gap-2">
-              <code data-copy-target="source" aria-labelledby="buzz-relay-label" class="min-w-0 flex-1 break-all rounded-xl border border-fog bg-haze px-3 py-2 font-mono text-xs text-ink"><%= relay %></code>
+              <code data-copy-target="source" aria-labelledby="buzz-relay-label" class="min-w-0 flex-1 break-all rounded-control border border-fog bg-haze px-3 py-2 font-mono text-xs text-ink"><%= relay %></code>
               <button type="button" class="btn-ghost btn-sm shrink-0" data-action="copy#copy" aria-label="Copy the relay address">Copy</button>
               <span hidden data-copy-target="status" role="status" class="text-xs text-olive-deep">Copied</span>
             </div>
@@ -77,7 +72,7 @@
             <div data-controller="copy">
               <p class="field-label" id="buzz-channel-label">Channel</p>
               <div class="flex items-center gap-2">
-                <code data-copy-target="source" aria-labelledby="buzz-channel-label" class="min-w-0 flex-1 break-all rounded-xl border border-fog bg-haze px-3 py-2 font-mono text-xs text-ink"><%= channel %></code>
+                <code data-copy-target="source" aria-labelledby="buzz-channel-label" class="min-w-0 flex-1 break-all rounded-control border border-fog bg-haze px-3 py-2 font-mono text-xs text-ink"><%= channel %></code>
                 <button type="button" class="btn-ghost btn-sm shrink-0" data-action="copy#copy" aria-label="Copy the channel id">Copy</button>
                 <span hidden data-copy-target="status" role="status" class="text-xs text-olive-deep">Copied</span>
               </div>
@@ -95,7 +90,7 @@
         </div>
         <% if connect_url %>
           <div class="mx-auto w-44 sm:mx-0" data-controller="qr" data-qr-text-value="<%= connect_url %>" data-qr-label-value="QR code that adds the <%= BuzzConnect.workspace_name %> Buzz workspace">
-            <div data-qr-target="canvas" class="aspect-square w-full overflow-hidden rounded-xl border border-fog bg-white [&_svg]:h-full [&_svg]:w-full"></div>
+            <div data-qr-target="canvas" class="aspect-square w-full overflow-hidden rounded-card border border-fog bg-white [&_svg]:h-full [&_svg]:w-full"></div>
             <p class="mt-2 text-center text-xs text-taupe">Scan with your phone to add the workspace in Buzz.</p>
           </div>
         <% end %>
@@ -105,12 +100,11 @@
 
   <%= render 'buzz/link' if @can_link %>
 
-  <section id="get-buzz" class="card card-pad scroll-mt-24" aria-labelledby="buzz-get-title">
-    <h2 id="buzz-get-title" class="font-display text-xl">Get Buzz</h2>
-    <p class="mt-1 text-sm text-mocha">Buzz is the open-source team chat Rupert's agent lives in. Install it on each device you want to use.</p>
-    <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+  <section id="get-buzz" class="section-card scroll-mt-24" aria-label="Get Buzz">
+    <%= section_heading 'Get Buzz', hint: 'Buzz is the open-source team chat Rupert’s agent lives in. Install it on each device you want to use.' %>
+    <ul class="grid gap-3 sm:grid-cols-2">
       <% @platforms.each do |platform| %>
-        <li class="flex flex-col justify-between gap-3 rounded-xl border border-fog bg-paper p-4">
+        <li class="flex flex-col justify-between gap-3 rounded-card border border-fog bg-paper p-4">
           <div>
             <p class="font-semibold text-ink"><%= platform.label %></p>
             <p class="mt-1 text-xs text-mocha"><%= platform.note %></p>
@@ -123,6 +117,6 @@
         </li>
       <% end %>
     </ul>
-    <p class="mt-4 text-xs text-taupe">Download links come from the Buzz project and can be changed in Settings<%= " (Environment card)" if @can_configure %>.</p>
+    <p class="text-xs text-taupe">Download links come from the Buzz project and can be changed in Settings<%= " (Environment card)" if @can_configure %>.</p>
   </section>
 </div>

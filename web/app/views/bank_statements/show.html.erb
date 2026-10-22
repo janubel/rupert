@@ -1,30 +1,30 @@
-<% content_for :title, 'Review bank statement' %>
+<% content_for :title, "#{@document.filename} · Bank transactions" %>
 <% money = ->(cents) { finance_money_text(cents.abs) }
-   total_lines = @counts.values.sum; decided = total_lines - @counts.fetch('pending', 0) %>
-<div class="mx-auto max-w-6xl space-y-6 operations-workspace">
-  <header class="flex flex-wrap items-start justify-between gap-4">
-    <div>
-      <p class="text-xs font-semibold uppercase tracking-widest text-mocha">Bank statement</p>
-      <h1 class="page-title mt-2"><%= @document.filename %></h1>
-      <p class="mt-2 text-sm text-mocha"><%= @document.period_from %> to <%= @document.period_to %> · <%= @counts.fetch('pending', 0) %> to review · <%= @counts.fetch('recorded', 0) %> recorded · <%= @counts.fetch('ignored', 0) %> ignored · <%= @counts.fetch('matched', 0) %> matched.</p>
-      <% if @flagged_count.positive? %><p class="mt-2 text-sm font-semibold"><%= @flagged_count %> flagged for your clarification. Open questions stay pending until you decide.</p><% end %>
-      <div class="desk-meter mt-3 max-w-sm" role="progressbar" aria-valuemin="0" aria-valuemax="<%= total_lines %>" aria-valuenow="<%= decided %>" aria-label="Lines decided"><span style="width: <%= total_lines.zero? ? 0 : decided * 100 / total_lines %>%"></span></div>
-      <p class="mt-1 text-xs text-mocha"><%= decided %> of <%= pluralize(total_lines, 'line') %> decided</p>
-    </div>
-    <div class="flex flex-wrap gap-2">
-      <%= link_to 'Back to statements', bank_statements_path, class: 'btn-ghost btn-sm' %>
-      <%= link_to 'Bookkeeping overview', bookkeeping_path(month: @document.period_from.strftime('%Y-%m')), class: 'btn-ghost btn-sm' %>
-      <% if @flagged_count.positive? %><%= link_to 'Flagged questions', bank_statement_path(@document.id, show: 'flagged'), class: 'btn-ghost btn-sm' %><% end %>
-      <%= link_to(@filter == 'all' ? 'Only waiting' : 'Show everything', bank_statement_path(@document.id, show: (@filter == 'all' ? 'pending' : 'all')), class: 'btn-ghost btn-sm') %>
-      <%= link_to 'Original file', document_daily_reconciliation_path(@document), class: 'btn-ghost btn-sm', data: { turbo: false } %>
-    </div>
-  </header>
+   total_lines = @counts.values.sum; decided = total_lines - @counts.fetch('pending', 0)
+   menu = [['Download original file', document_daily_reconciliation_path(@document), { data: { turbo: false } }],
+           ["Open bookkeeping for #{@document.period_from.strftime('%B %Y')}", bookkeeping_path(month: @document.period_from.strftime('%Y-%m'))]]
+   menu << ['Edit expense categories', finance_expense_categories_path] if Current.user.can?('finance.read')
+   tabs = [['Waiting', bank_statement_path(@document.id, show: 'pending'), @filter == 'pending'], ['Everything', bank_statement_path(@document.id, show: 'all'), @filter == 'all']]
+   tabs << ["Flagged · #{@flagged_count}", bank_statement_path(@document.id, show: 'flagged'), @filter == 'flagged'] if @flagged_count.positive? || @filter == 'flagged' %>
+<div class="space-y-6">
+  <%= page_header @document.filename, subtitle: "#{@document.period_from} to #{@document.period_to} · #{@counts.fetch('pending', 0)} to review · #{@counts.fetch('recorded', 0)} recorded · #{@counts.fetch('ignored', 0)} ignored · #{@counts.fetch('matched', 0)} matched.", menu: menu %>
+
+  <section class="section-card" aria-label="Review progress">
+    <dl class="facts">
+      <div><dt>Lines decided</dt><dd><%= decided %> of <%= pluralize(total_lines, 'line') %></dd></div>
+      <div><dt>Flagged</dt><dd><%= @flagged_count.positive? ? "#{@flagged_count} for your clarification" : 'None' %></dd></div>
+      <div><dt>Statement</dt><dd><%= @document.metadata['note'].presence || @document.filename %></dd></div>
+    </dl>
+    <div class="desk-meter max-w-md" role="progressbar" aria-valuemin="0" aria-valuemax="<%= total_lines %>" aria-valuenow="<%= decided %>" aria-label="Lines decided"><span style="width: <%= total_lines.zero? ? 0 : decided * 100 / total_lines %>%"></span></div>
+    <% if @flagged_count.positive? %><p class="text-sm">Open questions stay pending until you decide.</p><% end %>
+  </section>
+
+  <%= page_tabs(tabs, label: 'Statement lines') %>
 
   <% if @lines.empty? %>
-    <div class="card card-pad space-y-2 text-sm">
-      <p class="font-semibold"><%= @filter == 'flagged' ? 'No flagged questions waiting.' : 'Nothing waiting. Every line has a decision.' %></p>
-      <% if Current.user.can?('reports.read') %><p><%= link_to 'Back to the Books desk', books_desk_path, class: 'font-semibold text-olive-deep underline' %> for the rest of the week’s cleanup.</p><% end %>
-    </div>
+    <%= empty_state(@filter == 'flagged' ? 'No flagged questions waiting' : 'Nothing waiting', hint: @filter == 'flagged' ? 'Every flagged line has a decision.' : 'Every line has a decision.') do %>
+      <% if Current.user.can?('reports.read') %><%= link_to 'Open Close & review', books_desk_path, class: 'btn-ghost' %><% end %>
+    <% end %>
   <% else %>
     <%= form_with url: decide_bank_statement_path(@document.id), class: 'space-y-4', data: { controller: 'bank-decisions', action: 'submit->bank-decisions#submit' } do |f| %>
       <% if @can_write && @lines.any? { |l| l.pending? && l.money_out? && @suggestions[l.id] != 'other' } %>
@@ -42,7 +42,6 @@
           <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#acceptDeposits" data-bank-decisions-target="deposits">Accept all deposits</button>
         </div>
       <% end %>
-      <p class="text-sm"><%= link_to 'Edit expense categories', finance_expense_categories_path, class: 'font-semibold text-olive-deep underline' if Current.user.can?('finance.read') %></p>
       <%= hidden_field_tag :show, @filter %>
       <%= hidden_field_tag :page, @pagy.page if @pagy.pages > 1 %>
       <% if @pagy.pages > 1 %>
@@ -54,16 +53,16 @@
           </div>
         </nav>
       <% end %>
-      <div class="card overflow-x-auto"><table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60"><tr>
-          <th scope="col" class="th">Date</th><th scope="col" class="th">Description</th><th scope="col" class="th text-right">Out<%= define('expense') %></th><th scope="col" class="th text-right">In<%= define('deposit') %></th><th scope="col" class="th">What was it?<%= define('decision') %></th>
+      <div class="table-region" role="region" tabindex="0" aria-label="Statement lines"><table class="table">
+        <thead><tr>
+          <th scope="col" class="th">Date</th><th scope="col" class="th">Description</th><th scope="col" class="th num">Out<%= define('expense') %></th><th scope="col" class="th num">In<%= define('deposit') %></th><th scope="col" class="th">What was it?<%= define('decision') %></th>
         </tr></thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% @lines.each do |line| %>
             <tr id="bank-line-<%= line.id %>" class="<%= 'bank-flagged' if line.review_flag? %>">
               <td class="td whitespace-nowrap"><%= line.posted_on.strftime('%b %-d, %Y') %></td>
               <td class="td max-w-md break-words"><%= line.description %>
-                <% if line.review_category.present? %><span class="block mt-1 text-xs font-semibold"><%= '⚑ ' if line.review_flag? %><%= line.review_category_label %></span><% end %>
+                <% if line.review_category.present? %><span class="mt-1 block text-xs font-semibold"><%= '⚑ ' if line.review_flag? %><%= line.review_category_label %></span><% end %>
                 <% if line.review_note.present? %><span class="bank-review-note"><%= line.review_note %></span><% end %>
                 <% if line.money_in? %>
                   <% if @can_write %>
@@ -75,14 +74,14 @@
                   <% end %>
                 <% end %>
               </td>
-              <td class="td text-right"><%= line.money_out? ? money.call(line.amount_cents) : '' %></td>
-              <td class="td text-right"><%= line.money_out? ? '' : money.call(line.amount_cents) %></td>
+              <td class="td num"><%= line.money_out? ? "−#{money.call(line.amount_cents)}" : '' %></td>
+              <td class="td num"><%= line.money_out? ? '' : money.call(line.amount_cents) %></td>
               <td class="td">
                 <% if !line.pending? %>
-                  <%= line.status.humanize %><%= " by #{line.decided_by_name}" if line.decided_by_name %>
+                  <span class="<%= line.status == 'ignored' ? 'pill-taupe' : 'pill-fern' %>"><%= line.status.humanize %></span><%= " by #{line.decided_by_name}" if line.decided_by_name %>
                   <% if line.expense_id && (expense = @expenses_by_id[line.expense_id]) %>
-                    <span class="block text-xs">Category: <strong><%= expense.category_label %></strong>
-                      <% if @can_write %> · <%= link_to 'Change', edit_finance_expense_path(expense, return_to: bank_statement_path(@document.id, anchor: "bank-line-#{line.id}")), class: 'font-semibold text-olive-deep underline', 'aria-label': "Change category for #{line.description.first(40)}" %><% end %>
+                    <span class="mt-1 block text-xs">Category: <strong><%= expense.category_label %></strong>
+                      <% if @can_write %> · <%= link_to 'Edit', edit_finance_expense_path(expense, return_to: bank_statement_path(@document.id, anchor: "bank-line-#{line.id}")), class: 'font-semibold text-olive-deep hover:underline', 'aria-label': "Edit category for #{line.description.first(40)}" %><% end %>
                     </span>
                   <% end %>
                 <% elsif @can_write %>
@@ -98,7 +97,7 @@
                         data: { bank_decisions_target: 'choice', action: 'change->bank-decisions#change', suggestion: suggestion } %>
                   <% if suggestion %><span class="block text-xs text-taupe">Suggestion: <%= @category_labels.fetch(@suggestions[line.id], @suggestions[line.id].to_s.humanize) %></span><% end %>
                 <% else %>
-                  Waiting
+                  <span class="pill-taupe">Waiting</span>
                 <% end %>
               </td>
             </tr>
@@ -108,10 +107,10 @@
       <% if @can_write %>
         <div class="bank-save-bar">
           <p class="text-sm font-semibold" data-bank-decisions-target="count" aria-live="polite"><%= pluralize(@lines.count(&:pending?), 'line') %> waiting</p>
-          <%= f.submit 'Save my decisions', class: 'btn-primary', data: { bank_decisions_target: 'save' } %>
+          <%= f.submit 'Save decisions', class: 'btn-primary', data: { bank_decisions_target: 'save', turbo_submits_with: 'Saving…' } %>
         </div>
         <% if @pagy.pages > 1 %><p class="text-xs text-mocha">Page <%= @pagy.page %> of <%= @pagy.pages %>. Only the lines on this page are saved.</p><% end %>
-        <p class="text-xs text-mocha">Only lines where you picked something are changed. Each one records your name and the time, appears in the Activity log, and is never deleted. If a line falls in a day you already approved, that approval will show as changed.</p>
+        <%= fold_explainer('Only lines where you picked something are changed. Each one records your name and the time, appears in the Activity log, and is never deleted. If a line falls in a day you already approved, that approval will show as changed.', class: 'text-xs text-mocha') %>
       <% end %>
     <% end %>
   <% end %>

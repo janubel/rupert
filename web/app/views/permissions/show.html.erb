@@ -1,44 +1,32 @@
 <% can_manage_accounts = Current.user.can_manage_accounts? %>
 <% content_for :title, "Permissions" %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Permissions</h1>
-      <p class="mt-1 text-sm text-mocha">What each role can do. Super admin always has full access; overrides below replace a role's built-in defaults.</p>
-      <p class="mt-1 text-sm text-mocha">Staff access is fixed to POS, their own time records and assigned tasks and cannot be expanded by overrides.</p>
-    </div>
-    <div class="flex gap-2">
-      <% if can_manage_accounts %>
-      <%= form_tag reset_permissions_path, method: :post do %>
-        <%= submit_tag "Reset to defaults", class: "btn-ghost", data: { confirm: "Clear all role overrides and use the built-in defaults?" } %>
-      <% end %>
-      <% end %>
-      <%= link_to "Accounts", users_path, class: "btn-ghost btn-sm" %>
-    </div>
-  </section>
+  <%= page_header 'Permissions', subtitle: 'What each role can do.',
+        menu: (can_manage_accounts ? [['Reset to defaults', reset_permissions_path, { method: :post, data: { turbo_confirm: "Clear all role overrides and use the built-in defaults?" } }]] : nil) %>
+  <%= fold_explainer('Super admin always has full access; overrides below replace a role\'s built-in defaults. Staff access is fixed to POS, their own time records and assigned tasks and cannot be expanded by overrides. Empty cells mean a role uses its built-in default for that permission.', class: 'text-sm text-mocha') %>
 
-  <%= form_tag save_permissions_path, method: :post do %>
-    <div class="card overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
+  <%= form_tag save_permissions_path, method: :post, class: "space-y-4" do %>
+    <div class="card">
+      <div class="table-region" role="region" tabindex="0" aria-label="Permissions by role">
+        <table class="table">
+          <thead>
             <tr>
-              <th scope="col" class="th min-w-[180px]">Area / permission</th>
+              <th scope="col" class="th min-w-44">Area / permission</th>
               <% @roles.each do |role| %>
-                <th scope="col" class="th text-center capitalize"><%= role %></th>
+                <th scope="col" class="th text-center"><%= role.to_s.humanize %></th>
               <% end %>
             </tr>
           </thead>
-          <tbody class="divide-y divide-fog">
+          <tbody>
             <% @catalog.each do |group| %>
               <tr class="bg-haze/40">
-                <td colspan="<%= @roles.length + 1 %>" class="px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-mocha"><%= group[:area] %></td>
+                <th scope="rowgroup" colspan="<%= @roles.length + 1 %>" class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-mocha"><%= group[:area] %></th>
               </tr>
               <% group[:permissions].each do |permission| %>
-                <tr class="hover:bg-cream">
+                <tr>
                   <td class="td">
-                    <p class="font-medium text-ink"><%= permission.split(".").last.titleize %></p>
-                    <p class="font-mono text-[10px] text-taupe"><%= permission %></p>
+                    <p class="font-medium text-ink"><%= permission.split(".").last.humanize %></p>
+                    <p class="font-mono text-xs text-taupe"><%= permission %></p>
                   </td>
                   <% @roles.each do |role| %>
                     <% checked = if @overrides[[role, permission]]
@@ -52,7 +40,7 @@
                       <% elsif @builtin.fetch(role, []).include?("*") %>
                         <span class="text-taupe" title="Super admin — always allowed">—</span>
                       <% else %>
-                        <input type="checkbox" name="roles[<%= role %>][<%= permission %>]" value="1" <%= checked ? "checked" : "" %> class="accent-olive" <%= "disabled" unless can_manage_accounts %>>
+                        <input type="checkbox" name="roles[<%= role %>][<%= permission %>]" value="1" <%= checked ? "checked" : "" %> class="checkbox" aria-label="<%= role.to_s.humanize %> · <%= permission %>" <%= "disabled" unless can_manage_accounts %>>
                       <% end %>
                     </td>
                   <% end %>
@@ -64,11 +52,11 @@
       </div>
     </div>
 
-    <div class="mt-4 flex items-center gap-3">
-      <% if can_manage_accounts %>
+    <% if can_manage_accounts %>
+    <div class="form-actions">
       <%= submit_tag "Save permissions", class: "btn-primary" %>
-      <% end %>
-      <span class="text-xs text-taupe">Empty cells mean a role uses its built-in default for that permission.</span>
+      <%= link_to "Cancel", permissions_path, class: "btn-ghost" %>
     </div>
+    <% end %>
   <% end %>
 </div>

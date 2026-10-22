@@ -1,30 +1,29 @@
-<% content_for :title, 'Features & roadmap' %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title">Features &amp; roadmap</h1>
-    <p class="mt-2 text-sm text-mocha">Available means implemented in this release. Your role and configured connections determine access. Planned features are not enabled.</p>
-    <p class="mt-2 text-sm"><%= link_to 'Competitor functionality matrix', 'https://techmore.github.io/rupert/competitors.html', class: 'underline' %> · Reviewed <%= @catalog.fetch('reviewed') %></p>
-  </section>
+<%# Features & roadmap: a reading page (docs/ui-standards.md §4, Settings width). %>
+<div class="page-medium space-y-6">
+  <%= page_header 'Features & roadmap', subtitle: 'Available means implemented in this release; planned features are not enabled.',
+                  menu: [['Competitor functionality matrix', 'https://techmore.github.io/rupert/competitors.html']] %>
+  <p class="text-xs text-taupe">Your role and configured connections determine access. Reviewed <%= @catalog.fetch('reviewed') %>.</p>
   <% @catalog.fetch('phases').each do |phase| %>
-    <section class="card card-pad">
-      <h2 class="font-display text-xl"><%= phase.fetch('name') %></h2>
-      <p class="mt-2 text-sm text-mocha"><%= phase.fetch('goal') %></p>
-      <p class="mt-2 text-sm"><strong>Acceptance:</strong> <%= phase.fetch('acceptance') %></p>
+    <section class="section-card">
+      <%= section_heading phase.fetch('name'), hint: phase.fetch('goal') %>
+      <p class="text-sm"><strong>Acceptance:</strong> <%= phase.fetch('acceptance') %></p>
     </section>
   <% end %>
-  <section class="card overflow-x-auto">
-    <table class="w-full text-left text-sm">
-      <caption class="p-4 text-left font-semibold">Functionality inventory</caption>
-      <thead><tr><th class="p-3" scope="col">Area / feature</th><th class="p-3" scope="col">Status</th><th class="p-3" scope="col">Scope</th></tr></thead>
-      <tbody>
-        <% @catalog.fetch('features').each do |feature| %>
-          <tr class="border-t border-fog">
-            <th class="p-3 font-medium" scope="row"><%= feature.fetch('area') %> / <%= feature.fetch('name') %></th>
-            <td class="p-3"><%= feature.fetch('status') %></td>
-            <td class="p-3"><%= feature.fetch('scope') %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+  <section class="space-y-4">
+    <%= section_heading 'Functionality inventory' %>
+    <div class="table-region" role="region" tabindex="0" aria-label="Functionality inventory">
+      <table class="table">
+        <thead><tr><th class="th" scope="col">Area / feature</th><th class="th" scope="col">Status</th><th class="th" scope="col">Scope</th></tr></thead>
+        <tbody>
+          <% @catalog.fetch('features').each do |feature| %>
+            <tr>
+              <th class="td text-left font-medium" scope="row"><%= feature.fetch('area') %> / <%= feature.fetch('name') %></th>
+              <td class="td"><%= feature.fetch('status') %></td>
+              <td class="td"><%= feature.fetch('scope') %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>

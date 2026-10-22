@@ -1,17 +1,14 @@
 <% code = flash[:buzz_link_code] %>
-<section id="buzz-link" class="card card-pad scroll-mt-24" aria-labelledby="buzz-link-title">
-  <h2 id="buzz-link-title" class="font-display text-xl">Link your Buzz account</h2>
-  <p class="mt-1 text-sm text-mocha">
-    Link your Buzz account to your Rupert account and <%= BuzzAgentPrompt::HANDLE %> can answer you in Buzz as you, in a direct message or when you mention it in another channel.
-    In Buzz it only says where things are and how to do them; it never shows records or figures. Anything you write to it stays in Buzz, which Rupert cannot clear.
-  </p>
+<section id="buzz-link" class="section-card scroll-mt-24" aria-label="Link your Buzz account">
+  <%= section_heading 'Link your Buzz account', hint: "Link your Buzz account to your Rupert account and #{BuzzAgentPrompt::HANDLE} can answer you in Buzz as you." %>
+  <%= fold_explainer('It answers in a direct message or when you mention it in another channel. In Buzz it only says where things are and how to do them; it never shows records or figures. Anything you write to it stays in Buzz, which Rupert cannot clear.', class: 'text-sm text-mocha') %>
 
   <% @links.each do |link| %>
-    <div class="mt-4 rounded-xl border border-fog bg-paper p-4">
+    <div class="rounded-card border border-fog bg-paper p-4">
       <% if link.pending? %>
         <p class="font-semibold text-ink">Confirm this is your Buzz account</p>
         <p class="mt-1 text-sm text-mocha">A Buzz account sent your code. Check that this matches the public key in your own Buzz app (Profile). If you don't recognise it, decline.</p>
-        <code class="mt-2 block break-all rounded-xl border border-fog bg-haze px-3 py-2 font-mono text-xs text-ink" aria-label="Public key waiting to be linked"><%= link.npub || link.pubkey %></code>
+        <code class="mt-2 block break-all rounded-control border border-fog bg-haze px-3 py-2 font-mono text-xs text-ink" aria-label="Public key waiting to be linked"><%= link.npub || link.pubkey %></code>
         <div class="mt-3 flex flex-wrap gap-3">
           <%= button_to 'Yes, link it', confirm_buzz_link_path(link), method: :post, class: 'btn-primary btn-sm' %>
           <%= button_to 'Decline', remove_buzz_link_path(link), method: :delete, class: 'btn-ghost btn-sm' %>
@@ -29,10 +26,10 @@
   <% end %>
 
   <% if code %>
-    <div class="mt-4 rounded-xl border border-fog bg-paper p-4" role="status">
+    <div class="rounded-card border border-fog bg-paper p-4" role="status">
       <p class="font-semibold text-ink">Your code (valid for <%= BuzzIdentity::CODE_TTL.in_minutes.to_i %> minutes)</p>
       <div class="mt-2 flex items-center gap-2" data-controller="copy">
-        <code data-copy-target="source" class="min-w-0 flex-1 rounded-xl border border-fog bg-haze px-3 py-2 font-mono text-lg tracking-widest text-ink"><%= code %></code>
+        <code data-copy-target="source" class="min-w-0 flex-1 rounded-control border border-fog bg-haze px-3 py-2 font-mono text-lg tracking-widest text-ink"><%= code %></code>
         <button type="button" class="btn-ghost btn-sm shrink-0" data-action="copy#copy" aria-label="Copy the code">Copy</button>
         <span hidden data-copy-target="status" role="status" class="text-xs text-olive-deep">Copied</span>
       </div>
@@ -44,7 +41,7 @@
     </div>
   <% end %>
 
-  <div class="mt-4 flex flex-wrap items-center gap-3">
+  <div class="flex flex-wrap items-center gap-3">
     <%= button_to (code || @open_code ? 'Make a new code' : 'Link my Buzz account'), buzz_link_path, method: :post, class: 'btn-primary btn-sm' %>
     <% if @open_code && !code %><p class="text-xs text-taupe">You have a code that has not been used yet. A new one replaces it.</p><% end %>
   </div>

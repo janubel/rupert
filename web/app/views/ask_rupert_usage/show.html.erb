@@ -1,10 +1,9 @@
-<% content_for :title, 'Ask Rupert usage' %>
+<%# Ask Rupert usage: a Settings page (docs/ui-standards.md §4) with a stat row, the limits form and the usage table. %>
 <% can_edit = Current.user.can?('settings.write') %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title">Ask Rupert usage</h1>
-    <p class="mt-1 max-w-3xl text-sm text-mocha">Ask Rupert is the help chat behind the speech-bubble button beside Rupert's face in the header. Who can use it is the <strong>Rupert Chat</strong> permission on the <%= link_to 'Permissions', permissions_path, class: 'underline' %> screen: administrators by default, and you can give it to other roles or people. These are counts only: who asked how often and how many tokens it used, never what anyone asked. Limits are light on purpose. Nobody is locked out; a person who goes over is asked to wait a little.</p>
-  </section>
+<div class="page-medium space-y-6">
+  <%= page_header 'Ask Rupert usage', subtitle: 'Counts only: who asked how often and how many tokens it used, never what anyone asked.' %>
+  <%= fold_explainer("Ask Rupert is the help chat behind the speech-bubble button beside Rupert's face in the header. Who can use it is the Rupert Chat permission on the Permissions screen: administrators by default, and you can give it to other roles or people. Limits are light on purpose. Nobody is locked out; a person who goes over is asked to wait a little.", class: 'text-sm text-mocha') %>
+  <p class="text-xs text-taupe"><%= link_to 'Open permissions', permissions_path, class: 'underline' %></p>
 
   <section class="grid grid-cols-2 gap-3 sm:grid-cols-5" aria-label="Last seven days">
     <div class="stat"><p class="stat-label">Questions, 7 days</p><p class="stat-value mt-1"><%= @totals[:questions] %></p></div>
@@ -14,19 +13,19 @@
     <div class="stat"><p class="stat-label">Lookups run</p><p class="stat-value mt-1"><%= @totals[:tool_calls] %></p></div>
   </section>
 
-  <section class="card p-5">
-    <h2 class="font-display text-lg">Limits and settings</h2>
-    <%= form_with url: ask_rupert_usage_path, method: :patch, scope: :ask_rupert, class: 'mt-3 grid gap-4 sm:grid-cols-2' do |form| %>
-      <fieldset <%= 'disabled' unless can_edit %> class="contents">
+  <section class="section-card">
+    <%= section_heading 'Limits and settings' %>
+    <%= form_with url: ask_rupert_usage_path, method: :patch, scope: :ask_rupert, class: 'space-y-4' do |form| %>
+      <fieldset <%= 'disabled' unless can_edit %> class="grid gap-4 sm:grid-cols-2">
         <div class="sm:col-span-2 flex items-center gap-3">
           <%= hidden_field_tag 'ask_rupert[enabled]', '0', id: nil %>
-          <%= check_box_tag 'ask_rupert[enabled]', '1', @config.enabled?, id: 'ask_rupert_enabled', class: 'h-5 w-5' %>
+          <%= check_box_tag 'ask_rupert[enabled]', '1', @config.enabled?, id: 'ask_rupert_enabled', class: 'checkbox' %>
           <%= label_tag 'ask_rupert_enabled', 'Ask Rupert is on for this workspace', class: 'text-sm font-semibold text-ink' %>
         </div>
         <div class="sm:col-span-2">
           <div class="flex items-center gap-3">
             <%= hidden_field_tag 'ask_rupert[buzz_enabled]', '0', id: nil %>
-            <%= check_box_tag 'ask_rupert[buzz_enabled]', '1', @config['buzz_enabled'], id: 'ask_rupert_buzz_enabled', class: 'h-5 w-5' %>
+            <%= check_box_tag 'ask_rupert[buzz_enabled]', '1', @config['buzz_enabled'], id: 'ask_rupert_buzz_enabled', class: 'checkbox' %>
             <%= label_tag 'ask_rupert_buzz_enabled', 'Let the @rupert agent in Buzz answer linked people', class: 'text-sm font-semibold text-ink' %>
           </div>
           <p class="mt-1 text-xs text-taupe">
@@ -36,7 +35,7 @@
         </div>
         <div class="sm:col-span-2">
           <%= label_tag 'ask_rupert_provider_mode', 'Which model answers', class: 'field-label' %>
-          <%= select_tag 'ask_rupert[provider_mode]', options_for_select(AskRupert::Config::MODES.map { |key, label| [label, key] }, @config.mode), id: 'ask_rupert_provider_mode', class: 'select' %>
+          <%= select_tag 'ask_rupert[provider_mode]', options_for_select(AskRupert::Config::MODES.map { |key, label| [label, key] }, @config.mode), id: 'ask_rupert_provider_mode', class: 'input' %>
           <p class="mt-1 text-xs text-taupe">
             Cloud: <%= AskRupert::Providers::Opencode.new.model %> through OpenCode. Local: <%= @config.local_configured? ? "#{@config.local_model} (Ollama on this network)" : 'not set up on this server (set OLLAMA_URL and ASK_RUPERT_LOCAL_MODEL)' %>.
             The panel tells everyone which one is in use.
@@ -51,34 +50,34 @@
             <% if hint.present? %><p class="mt-1 text-xs text-taupe"><%= hint %></p><% end %>
           </div>
         <% end %>
-        <div class="sm:col-span-2 flex items-center gap-3">
-          <% if can_edit %><%= submit_tag 'Save settings', class: 'btn-primary' %><% else %><p class="text-sm text-taupe">You can view these settings. Changing them needs settings-write access.</p><% end %>
-        </div>
       </fieldset>
+      <div class="form-actions">
+        <% if can_edit %><%= submit_tag 'Save', class: 'btn-primary' %><% else %><p class="text-sm text-taupe">You can view these settings. Changing them needs settings-write access.</p><% end %>
+      </div>
     <% end %>
   </section>
 
-  <section class="card overflow-hidden">
-    <h2 class="px-5 pt-5 font-display text-lg">By person, last 7 days</h2>
+  <section class="section-card">
+    <%= section_heading 'By person, last 7 days' %>
     <% if @people.empty? %>
-      <p class="px-5 pb-5 pt-2 text-sm text-mocha">Nobody has asked yet.</p>
+      <%= empty_state 'Nobody has asked yet', hint: 'Counts appear here after the first question.' %>
     <% else %>
-      <div class="overflow-x-auto">
-        <table class="operations-table w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60"><tr>
-            <th scope="col" class="th">Person</th><th scope="col" class="th">Last 24 hours</th><th scope="col" class="th">7 days</th><th scope="col" class="th">Tokens</th><th scope="col" class="th">Asked to wait</th><th scope="col" class="th">Last asked</th>
+      <div class="table-region" role="region" tabindex="0" aria-label="Questions by person">
+        <table class="table operations-table">
+          <thead><tr>
+            <th scope="col" class="th">Person</th><th scope="col" class="th num">Last 24 hours</th><th scope="col" class="th num">7 days</th><th scope="col" class="th num">Tokens</th><th scope="col" class="th num">Asked to wait</th><th scope="col" class="th">Last asked</th>
           </tr></thead>
-          <tbody class="divide-y divide-fog">
+          <tbody>
             <% @people.each do |row| %>
-              <tr><th scope="row" class="td text-left font-medium"><%= row[:name] %></th><td class="td"><%= row[:day] %></td><td class="td"><%= row[:week] %></td><td class="td"><%= number_with_delimiter(row[:tokens]) %></td><td class="td"><%= row[:limited] %></td><td class="td"><%= row[:last] ? l(row[:last], format: :short) : '—' %></td></tr>
+              <tr><th scope="row" class="td text-left font-medium"><%= row[:name] %></th><td class="td num"><%= row[:day] %></td><td class="td num"><%= row[:week] %></td><td class="td num"><%= number_with_delimiter(row[:tokens]) %></td><td class="td num"><%= row[:limited] %></td><td class="td"><%= row[:last] ? l(row[:last], format: :short) : '—' %></td></tr>
             <% end %>
           </tbody>
         </table>
       </div>
     <% end %>
     <% if @by_provider.any? %>
-      <p class="px-5 py-3 text-xs text-taupe">By model: <%= @by_provider.map { |provider, model, count, tokens| "#{provider || 'none'}#{" / #{model}" if model} — #{count} questions, #{number_with_delimiter(tokens.to_i)} tokens" }.join(' · ') %></p>
+      <p class="text-xs text-taupe">By model: <%= @by_provider.map { |provider, model, count, tokens| "#{provider || 'none'}#{" / #{model}" if model}: #{count} questions, #{number_with_delimiter(tokens.to_i)} tokens" }.join(' · ') %></p>
     <% end %>
-    <p class="px-5 pb-4 text-xs text-taupe"><%= pluralize(@conversations, 'chat') %> stored right now. People can delete their own with Clear. <%= @config['retention_days'].zero? ? 'Chats are otherwise saved.' : "The rest are removed after #{@config['retention_days']} days." %> Every lookup the assistant runs is recorded in <%= link_to 'Activity', activity_path, class: 'underline' %> by tool name and time only.</p>
+    <p class="text-xs text-taupe"><%= pluralize(@conversations, 'chat') %> stored right now. People can delete their own with Clear. <%= @config['retention_days'].zero? ? 'Chats are otherwise saved.' : "The rest are removed after #{@config['retention_days']} days." %> Every lookup the assistant runs is recorded in <%= link_to 'Activity', activity_path, class: 'underline' %> by tool name and time only.</p>
   </section>
 </div>

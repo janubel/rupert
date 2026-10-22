@@ -71,7 +71,7 @@ class InventoryPdfTest < ActionDispatch::IntegrationTest
     get stock_comparison_path
     assert_response :success
     download_href = nil
-    assert_select 'a', text: 'Download comparison CSV' do |links|
+    assert_select 'a', text: 'Download CSV' do |links|
       download_href = links.first['href']
     end
     get download_href

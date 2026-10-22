@@ -1,15 +1,19 @@
 <% content_for :title, 'Bulk materials' %>
 <div class="space-y-6">
-  <%= page_header 'Bulk materials', subtitle: 'Track local bulk stock by material and lot, with receipts, consumption and an append-only movement ledger.' do %>
-    <%= link_to 'Export ledger CSV', export_bulk_materials_path, class: 'btn-ghost' %><% if Current.user.can?('inventory.write') %><%= link_to 'New material', new_bulk_material_path, class: 'btn-primary' %><% end %>
+  <%= page_header 'Bulk materials', subtitle: 'Local bulk stock by material and lot, with receipts, use and an append-only movement ledger.', menu: [['Download CSV', export_bulk_materials_path]] do %>
+    <% if Current.user.can?('inventory.write') %><%= link_to 'Add material', new_bulk_material_path, class: 'btn-primary' %><% end %>
   <% end %>
-  <%= fold_explainer('This ledger tracks bulk material inside Rupert. It does not change Shopify or Square quantities or SKUs. Weights use integer milligrams; decimal inputs round once to the nearest milligram. Automatic sale-to-gram mappings and Google Sheets synchronization are pending. Export the ledger CSV for manual import into Sheets.', class: 'card card-pad text-sm text-mocha') %>
-  <div class="card overflow-x-auto"><table class="w-full text-sm">
-    <thead class="border-b border-fog bg-haze/60"><tr><th class="th" scope="col">Material</th><th class="th" scope="col">Lots<%= define('lot') %></th><th class="th" scope="col">Remaining<%= define('lot_balance') %></th><th class="th" scope="col"></th></tr></thead>
-    <tbody class="divide-y divide-fog">
-      <% @materials.each do |material| %><tr><td class="td font-medium"><%= material.name %></td><td class="td"><%= @lot_counts.fetch(material.id, 0) %></td><td class="td"><%= bulk_mass_label(@balances.fetch(material.id, 0), material.unit) %></td><td class="td"><%= link_to 'View lots', bulk_material_path(material), class: 'text-olive hover:underline' %></td></tr><% end %>
-      <% if @materials.empty? %><tr><td class="td py-8 text-center text-taupe" colspan="4">No bulk materials yet. Add a material, then receive its first lot.</td></tr><% end %>
-    </tbody>
-  </table></div>
-  <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
+  <%= fold_explainer('This ledger tracks bulk material inside Rupert and never changes Shopify or Square quantities or SKUs. Weights use integer milligrams; decimal inputs round once to the nearest milligram. Automatic sale-to-gram mappings and Google Sheets synchronization are pending, so download the ledger CSV for a manual import into Sheets.', class: 'text-sm text-mocha') %>
+  <div class="card overflow-hidden">
+    <div class="table-region" role="region" tabindex="0" aria-label="Bulk materials">
+      <table class="table">
+        <thead><tr><th class="th" scope="col">Material</th><th class="th num" scope="col">Lots<%= define('lot') %></th><th class="th" scope="col">Remaining<%= define('lot_balance') %></th><th class="th" scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          <% @materials.each do |material| %><tr><td class="td font-medium text-ink"><%= link_to material.name, bulk_material_path(material), class: 'hover:underline' %></td><td class="td num"><%= @lot_counts.fetch(material.id, 0) %></td><td class="td"><%= bulk_mass_label(@balances.fetch(material.id, 0), material.unit) %></td><td class="td text-right"><%= link_to 'Open', bulk_material_path(material), class: 'btn-ghost btn-sm' %></td></tr><% end %>
+          <% if @materials.empty? %><tr><td class="empty-row" colspan="4">No bulk materials yet.<% if Current.user.can?('inventory.write') %> <%= link_to 'Add a material', new_bulk_material_path, class: 'font-semibold text-olive-deep underline' %>, then receive its first lot.<% end %></td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== pagy_nav(@pagy) %></div><% end %>
 </div>

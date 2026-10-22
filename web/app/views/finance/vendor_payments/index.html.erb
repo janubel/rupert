@@ -1,39 +1,36 @@
-<% content_for :title, "Payments to vendors" %>
-<% range_text = @month ? "#{@from.strftime('%B %Y')} (#{@from} through #{@through})" : "#{@from} through #{@through}" %>
-<div class="space-y-6 operations-workspace">
-
-  <%= render layout: 'finance/page_header', locals: { title: 'Payments to vendors', range: range_text, print: true,
-        explain: 'Payments already made against vendor purchase orders (accounts payable). Recording one lowers what is owed to that vendor.' } do %>
-    <%= link_to "Export CSV", finance_vendor_payments_path(request.query_parameters.merge(format: :csv)), class: "btn-ghost btn-sm", data: { turbo: false } %>
-    <% if @can_write %><%= link_to "Record payment", new_finance_vendor_payment_path, class: "btn-primary" %><% end %>
+<% content_for :title, 'Vendor payments' %>
+<% range_text = @month ? @from.strftime('%B %Y') : report_range_label(@from, @through) %>
+<div class="space-y-6">
+  <%= render layout: 'finance/page_header', locals: { title: 'Vendor payments', range: range_text, print: true,
+        menu: [['Download CSV', finance_vendor_payments_path(request.query_parameters.merge(format: :csv)), { data: { turbo: false } }], ['Accounts', finance_accounts_path], ['By payee', finance_payees_path]],
+        explain: 'Payments already made against vendor purchase orders (accounts payable). Adding one lowers what is owed to that vendor.' } do %>
+    <% if @can_write %><%= link_to 'Add payment', new_finance_vendor_payment_path, class: 'btn-primary' %><% end %>
   <% end %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-label="Payment summary">
     <div class="stat">
       <div class="stat-label">Recorded payments · USD<%= define('vendor_payment') %></div>
       <p class="stat-value mt-1"><%= finance_money(@total_cents) %></p>
-      <p class="mt-1 text-sm text-mocha"><%= pluralize(@entry_count, 'active payment') %> in range<%= ', filtered' if @q.present? || @min_cents || @max_cents %></p>
+      <p class="mt-1 text-xs text-taupe"><%= pluralize(@entry_count, 'active payment') %> in range<%= ', filtered' if @q.present? || @min_cents || @max_cents %></p>
     </div>
   </section>
 
-  <%= form_tag finance_vendor_payments_path, method: :get, class: "card card-pad operations-filters", role: "search", aria: { label: "Filter payments" } do %>
-    <div><%= label_tag :q, "Vendor or reference", class: "field-label" %><%= search_field_tag :q, @q, class: "input", autocomplete: "off" %></div>
-    <div><%= label_tag :month, "Month (optional)", class: "field-label" %><%= month_field_tag :month, @month, min: '2000-01', max: '2099-12', class: "input" %></div>
-    <div><%= label_tag :from, "From", class: "field-label" %><%= date_field_tag :from, @from, class: "select w-full" %></div>
-    <div><%= label_tag :to, "To", class: "field-label" %><%= date_field_tag :to, @through, class: "select w-full" %></div>
-    <div><%= label_tag :min, "Amount from (USD)", class: "field-label" %><%= text_field_tag :min, params[:min], class: "input money", inputmode: "decimal", placeholder: "0.00" %></div>
-    <div><%= label_tag :max, "Amount to (USD)", class: "field-label" %><%= text_field_tag :max, params[:max], class: "input money", inputmode: "decimal", placeholder: "0.00" %></div>
-    <%= hidden_field_tag :include_deleted, "0", id: nil %>
-    <label class="flex items-center gap-1.5 text-base text-mocha"><%= check_box_tag :include_deleted, "1", @include_deleted %> Show removed payments</label>
-    <%= submit_tag "Apply filters", class: "btn-primary btn-sm" %>
-    <%= link_to "Clear", finance_vendor_payments_path, class: "btn-ghost btn-sm" %>
+  <%= form_tag finance_vendor_payments_path, method: :get, class: 'toolbar', role: 'search', aria: { label: 'Filter payments' } do %>
+    <div class="toolbar-field"><%= label_tag :q, 'Vendor or reference', class: 'field-label' %><%= search_field_tag :q, @q, class: 'input', autocomplete: 'off' %></div>
+    <div class="toolbar-field"><%= label_tag :month, 'Month (optional)', class: 'field-label' %><%= month_field_tag :month, @month, min: '2000-01', max: '2099-12', class: 'input' %></div>
+    <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from, class: 'input' %></div>
+    <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @through, class: 'input' %></div>
+    <div class="toolbar-field"><%= label_tag :min, 'Amount from (USD)', class: 'field-label' %><%= text_field_tag :min, params[:min], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
+    <div class="toolbar-field"><%= label_tag :max, 'Amount to (USD)', class: 'field-label' %><%= text_field_tag :max, params[:max], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
+    <%= hidden_field_tag :include_deleted, '0', id: nil %>
+    <label class="flex items-center gap-1.5 pb-2 text-sm text-mocha"><%= check_box_tag :include_deleted, '1', @include_deleted, class: 'checkbox' %> Show removed payments</label>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_vendor_payments_path, class: 'btn-ghost' %></div>
   <% end %>
   <% if @filter_problem %><p role="alert" class="flash flash-alert"><%= @filter_problem %></p><% end %>
 
-  <p class="text-base text-mocha">Totals count active payments only. <%= pluralize(@removed_count, 'removed payment') %> in the list. This register records payments that already happened; no money is transferred.</p>
-  <div class="card overflow-hidden">
-    <div class="operations-table-region" role="region" tabindex="0" aria-label="Vendor payment register">
-      <table class="operations-table finance-table w-full">
+  <div class="card">
+    <div class="table-region" role="region" tabindex="0" aria-label="Vendor payment register">
+      <table class="table finance-table">
         <caption class="sr-only">Vendor payments from <%= range_text %>, newest first, amounts in USD</caption>
         <thead>
           <tr>
@@ -48,31 +45,31 @@
         </thead>
         <tbody>
           <% if @payments.empty? %>
-            <tr><td colspan="7" class="empty-row">No payments match. Widen the dates, clear the filters<%= ', or record a payment' if @can_write %>.</td></tr>
+            <tr><td colspan="7" class="empty-row">No payments match. Widen the dates, clear the filters<%= ', or add a payment' if @can_write %>.</td></tr>
           <% end %>
           <% @payments.each do |payment| %>
             <% lock = finance_lock_in(@locks, payment.paid_on) %>
             <% history = finance_history(payment, @activity[payment.id.to_s]) %>
             <tr class="<%= 'row-removed' if payment.discarded? %>">
               <td class="td whitespace-nowrap"><%= l(payment.paid_on, format: :short) %></td>
-              <td class="td font-medium"><%= retail_business_access?('purchasing.read') ? link_to(payment.vendor.name, payment.vendor, class: 'link') : payment.vendor.name %></td>
+              <td class="td font-medium text-ink"><%= retail_business_access?('purchasing.read') ? link_to(payment.vendor.name, payment.vendor, class: 'link') : payment.vendor.name %></td>
               <td class="td capitalize"><%= payment.method.to_s.tr('_', ' ') %></td>
               <td class="td"><%= payment.reference.presence || '—' %></td>
               <td class="td num <%= 'line-through' if payment.discarded? %>"><%= finance_money(payment.amount_cents) %></td>
               <td class="td">
-                <% if payment.discarded? %><span class="status-tag status-removed">Removed</span><% else %><span class="status-tag status-active">Active</span><% end %>
-                <% if lock %><span class="status-tag status-locked" title="<%= PeriodLock.locked_message(lock) %>">Locked · <%= lock.label %></span><% end %>
-                <details class="mt-1"><summary class="text-sm text-mocha cursor-pointer"><%= history.last %></summary>
-                  <ul class="text-sm text-mocha mt-1"><% history.each do |line| %><li><%= line %></li><% end %></ul></details>
+                <% if payment.discarded? %><span class="pill-rose status-removed">Removed</span><% else %><span class="pill-fern status-active">Active</span><% end %>
+                <% if lock %><span class="pill-clay status-locked" title="<%= PeriodLock.locked_message(lock) %>">Locked · <%= lock.label %></span><% end %>
+                <details class="mt-1"><summary class="cursor-pointer text-xs text-mocha"><%= history.last %></summary>
+                  <ul class="mt-1 text-xs text-mocha"><% history.each do |line| %><li><%= line %></li><% end %></ul></details>
               </td>
-              <td class="td no-print whitespace-nowrap">
+              <td class="td no-print whitespace-nowrap text-right">
                 <% if @can_write %>
-                  <% if lock %><span class="text-sm text-mocha">Read-only: period locked</span>
+                  <% if lock %><span class="text-xs text-mocha">Read-only: period locked</span>
                   <% elsif payment.discarded? %>
-                    <%= button_to "Restore", restore_finance_vendor_payment_path(payment), method: :post, class: "row-action text-fern" %>
+                    <%= button_to 'Restore', restore_finance_vendor_payment_path(payment), method: :post, class: 'btn-ghost btn-sm' %>
                   <% else %>
-                    <%= button_to "Remove", finance_vendor_payment_path(payment), method: :delete, class: "row-action text-rose",
-                          form: { data: { turbo_confirm: finance_remove_confirm('payment', payment.amount_cents, payment.vendor.name, payment.paid_on, ledger: false) } },
+                    <%= button_to 'Remove', finance_vendor_payment_path(payment), method: :delete, class: 'btn-ghost btn-sm text-rose',
+                          form: { class: 'inline', data: { turbo_confirm: finance_remove_confirm('payment', payment.amount_cents, payment.vendor.name, payment.paid_on, ledger: false) } },
                           aria: { label: "Remove payment to #{payment.vendor.name} #{finance_money_text(payment.amount_cents)}" } %>
                   <% end %>
                 <% end %>
@@ -81,7 +78,7 @@
           <% end %>
         </tbody>
         <tfoot>
-          <tr>
+          <tr class="font-semibold">
             <th scope="row" class="td" colspan="4">Total of active payments in range (all pages)</th>
             <td class="td num"><%= finance_money(@total_cents) %></td>
             <td class="td" colspan="2"><%= pluralize(@entry_count, 'payment') %></td>
@@ -90,5 +87,6 @@
       </table>
     </div>
   </div>
+  <p class="text-xs text-mocha">Totals count active payments only. <%= pluralize(@removed_count, 'removed payment') %> in the list. This register records payments that already happened; no money is transferred.</p>
   <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
 </div>

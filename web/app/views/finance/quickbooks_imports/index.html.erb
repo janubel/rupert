@@ -1,54 +1,51 @@
 <% content_for :title, 'QuickBooks import' %>
-<div class="space-y-6 operations-workspace">
-  <%= page_header 'QuickBooks import', eyebrow: 'Bookkeeping · history', subtitle: 'Upload a QuickBooks report or list saved as CSV. Rupert keeps the original file unchanged, shows what it read, and adds nothing to your books until you map the accounts and approve. An approved import can be reversed as a whole.' %>
+<div class="space-y-6">
+  <%= page_header 'QuickBooks import', subtitle: 'Upload a QuickBooks report or list saved as CSV; nothing reaches your books until you map the accounts and approve.', menu: [['History', finance_history_path], ['General ledger', finance_journal_entries_path]] %>
+  <%= fold_explainer('Rupert keeps the original file unchanged, shows what it read, and adds nothing to your books until you map the accounts and approve. An approved import can be reversed as a whole. Only the Journal can be posted to your books; charts, vendor and customer lists set up the mappings, and a trial balance is kept to check Rupert’s numbers against.', class: 'text-sm text-mocha') %>
 
-  <% if @form_error %><p role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><%= @form_error %></p><% end %>
+  <% if @form_error %><p role="alert" class="flash flash-alert"><%= @form_error %></p><% end %>
 
   <% if @can_write %>
-    <section class="card card-pad space-y-3" id="upload">
-      <h2 class="font-display text-xl">Upload an export</h2>
-      <%= form_with url: finance_quickbooks_imports_path, multipart: true, class: 'space-y-3' do |f| %>
-        <div>
-          <%= f.label :kind, 'What is this file?', class: 'field-label' %>
-          <%= f.select :kind, ImportBatch::KIND_LABELS.map { |key, label| [label, key] }, { selected: params[:kind] || 'journal' }, class: 'select w-full', data: { quickbooks_kind: true } %>
-          <p class="mt-1 text-xs text-mocha">Only the Journal can be posted to your books. Charts, vendor and customer lists set up the mappings; a trial balance is kept to check Rupert’s numbers against.</p>
-        </div>
-        <div>
-          <%= f.label :as_of, 'Trial balance “as of” date (trial balance only)', class: 'field-label' %>
-          <%= f.date_field :as_of, value: params[:as_of], class: 'input' %>
+    <section class="section-card" id="upload">
+      <%= section_heading 'Upload an export', hint: 'CSV only. Reading a file posts nothing.' %>
+      <%= form_with url: finance_quickbooks_imports_path, multipart: true, class: 'space-y-4' do |f| %>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <%= f.label :kind, 'What is this file?', class: 'field-label' %>
+            <%= f.select :kind, ImportBatch::KIND_LABELS.map { |key, label| [label, key] }, { selected: params[:kind] || 'journal' }, class: 'select w-full', data: { quickbooks_kind: true } %>
+          </div>
+          <div>
+            <%= f.label :as_of, 'Trial balance “as of” date (trial balance only)', class: 'field-label' %>
+            <%= f.date_field :as_of, value: params[:as_of], class: 'input' %>
+          </div>
         </div>
         <div><%= f.label :file, 'QuickBooks CSV', class: 'field-label' %><%= f.file_field :file, accept: '.csv,.txt,text/csv', required: true, class: 'input' %></div>
-        <%= f.submit 'Read file', class: 'btn-primary' %>
-        <p class="text-xs text-mocha">Up to <%= QuickbooksCsv::MAX_ROWS.to_fs(:delimited) %> rows and <%= QuickbooksCsv::MAX_BYTES / 1024 / 1024 %> MiB. Excel workbooks are not read; export as CSV. Dates are read month first and numbers in US format. Nothing is posted by reading a file.</p>
+        <p class="text-xs text-mocha">Up to <%= QuickbooksCsv::MAX_ROWS.to_fs(:delimited) %> rows and <%= QuickbooksCsv::MAX_BYTES / 1024 / 1024 %> MiB. Excel workbooks are not read; export as CSV. Dates are read month first and numbers in US format.</p>
+        <div class="form-actions"><%= f.submit 'Read file', class: 'btn-primary' %></div>
       <% end %>
     </section>
   <% end %>
 
-  <section class="space-y-3">
-    <h2 class="font-display text-xl">Uploaded files</h2>
-    <% if @batches.empty? %>
-      <p class="card card-pad text-sm text-mocha">Nothing uploaded yet.</p>
-    <% else %>
-      <div class="card overflow-hidden">
-        <div class="operations-table-region" role="region" tabindex="0" aria-label="QuickBooks batches">
-          <table class="operations-table finance-table w-full">
-            <caption class="sr-only">QuickBooks import batches, newest first</caption>
-            <thead><tr><% ['Batch', 'File', 'Kind', 'Dates', 'Rows', 'Status'].each do |h| %><th scope="col" class="th"><%= h %></th><% end %></tr></thead>
-            <tbody>
-              <% @batches.each do |batch| %>
-                <tr>
-                  <td class="td"><%= link_to "##{batch.id}", finance_quickbooks_import_path(batch), class: 'link' %></td>
-                  <td class="td text-xs text-taupe"><%= batch.filename %></td>
-                  <td class="td"><%= batch.kind_label %></td>
-                  <td class="td"><%= batch.kind == 'trial_balance' ? "as of #{batch.as_of}" : (batch.date_from ? "#{batch.date_from} to #{batch.date_to}" : '—') %></td>
-                  <td class="td num"><%= batch.row_count.to_fs(:delimited) %></td>
-                  <td class="td"><span class="status-tag <%= { 'approved' => 'status-active', 'staged' => 'status-locked' }.fetch(batch.status, '') %>"><%= batch.status.humanize %></span></td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    <% end %>
+  <section class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading 'Uploaded files', hint: 'Newest first. Open a batch to map accounts, approve or reverse it.' %></div>
+    <div class="table-region" role="region" tabindex="0" aria-label="QuickBooks batches">
+      <table class="table finance-table">
+        <caption class="sr-only">QuickBooks import batches, newest first</caption>
+        <thead><tr><% ['Batch', 'File', 'Kind', 'Dates'].each do |h| %><th scope="col" class="th"><%= h %></th><% end %><th scope="col" class="th num">Rows</th><th scope="col" class="th">Status</th></tr></thead>
+        <tbody>
+          <% if @batches.empty? %><tr><td colspan="6" class="empty-row">Nothing uploaded yet.<%= ' Upload your first QuickBooks CSV above.' if @can_write %></td></tr><% end %>
+          <% @batches.each do |batch| %>
+            <tr>
+              <td class="td"><%= link_to "##{batch.id}", finance_quickbooks_import_path(batch), class: 'link' %></td>
+              <td class="td text-xs text-taupe"><%= batch.filename %></td>
+              <td class="td"><%= batch.kind_label %></td>
+              <td class="td"><%= batch.kind == 'trial_balance' ? "as of #{batch.as_of}" : (batch.date_from ? "#{batch.date_from} to #{batch.date_to}" : '—') %></td>
+              <td class="td num"><%= batch.row_count.to_fs(:delimited) %></td>
+              <td class="td"><span class="<%= { 'approved' => 'pill-fern', 'staged' => 'pill-clay', 'reversed' => 'pill-rose' }.fetch(batch.status, 'pill-taupe') %>"><%= batch.status.humanize %></span></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>

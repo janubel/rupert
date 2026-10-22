@@ -1,10 +1,8 @@
-<div id="sync-runs" class="card overflow-hidden" <%= tour_anchor('runs') %>>
-  <div class="card-pad pb-3">
-    <h2 class="font-display text-xl text-ink">Sync runs</h2>
-  </div>
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead class="border-b border-fog bg-haze/60">
+<div id="sync-runs" class="section-card" <%= tour_anchor('runs') %>>
+  <%= section_heading 'Sync runs' %>
+  <div class="table-region" role="region" tabindex="0" aria-label="Sync runs">
+    <table class="table">
+      <thead>
         <tr>
           <th scope="col" class="th">Started</th>
           <th scope="col" class="th">Mode</th>
@@ -12,24 +10,24 @@
           <th scope="col" class="th">Status</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-fog">
+      <tbody>
         <% if @runs.empty? %>
           <tr>
-            <td class="td py-8 text-center">
-              <p class="text-taupe">No syncs recorded yet.</p>
-              <%= button_to "Run first sync", syncs_path, method: :post, class: "btn-primary btn-sm mt-2" %>
+            <td class="td empty-row" colspan="4">
+              No syncs recorded yet.
+              <%= button_to "Sync now", syncs_path, method: :post, class: "btn-primary btn-sm mt-2" %>
             </td>
           </tr>
         <% end %>
         <% @runs.each do |run| %>
-          <tr class="hover:bg-cream">
+          <tr>
             <td class="td whitespace-nowrap text-mocha"><%= l(run.startedAt, format: :short) %></td>
             <td class="td text-mocha"><%= run.mode %></td>
             <td class="td text-mocha"><%= run.source.presence || "—" %></td>
             <td class="td">
               <span class="<%= run.success? ? "pill-fern" : run.failed? ? "pill-rose" : "pill-taupe" %>"><%= run.status %></span>
               <% if run.error.present? %>
-                <p class="mt-1 max-w-[260px] text-xs text-rose"><%= run.error.truncate(120) %></p>
+                <p class="mt-1 max-w-xs text-xs text-rose"><%= run.error.truncate(120) %></p>
               <% end %>
             </td>
           </tr>

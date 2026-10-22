@@ -1,34 +1,41 @@
-<% content_for :title, "#{@service.name} credentials" %>
+<%# Credentials for one service: a Form page (docs/ui-standards.md §4). %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
-<div class="space-y-6">
-  <section><%= link_to 'Master credentials & sync', connections_path, class: 'text-sm text-olive' %><h1 class="page-title mt-3"><%= @service.name %> credentials</h1><p class="mt-2 text-sm text-mocha"><%= @service.description %></p></section>
-  <section class="card card-pad space-y-3 text-sm text-mocha">
+<div class="page-narrow space-y-6">
+  <%= page_header "#{@service.name} credentials", subtitle: @service.description %>
+  <section class="section-card text-sm text-mocha">
     <p><%= @service.find_hint %></p>
     <% if @service.renewal_note %><p><%= @service.renewal_note %></p><% end %>
-    <% if @service.find_url %><%= link_to 'Open provider setup', @service.find_url, target: '_blank', rel: 'noopener noreferrer', class: 'btn-ghost btn-sm' %><% end %>
-    <% if @service.key == 'google_sign_in' %><%= link_to 'Allowed sign-in domains', settings_path(anchor: 'google-sign-in'), class: 'btn-ghost btn-sm' %><% end %>
+    <div class="flex flex-wrap gap-2">
+      <% if @service.find_url %><%= link_to 'Open provider setup', @service.find_url, target: '_blank', rel: 'noopener noreferrer', class: 'btn-ghost btn-sm' %><% end %>
+      <% if @service.key == 'google_sign_in' %><%= link_to 'Allowed sign-in domains', settings_path(anchor: 'google-sign-in'), class: 'btn-ghost btn-sm' %><% end %>
+    </div>
   </section>
   <section class="card card-pad space-y-4">
-    <h2 class="font-display text-xl">Workspace credentials</h2>
-    <p class="text-sm text-mocha">Leave a field blank to keep it. Replacement values are encrypted in Rupert. Saving runs no check and queues no sync. Existing schedules may use new values on their next run.</p>
+    <%= section_heading 'Workspace credentials', hint: 'Leave a field blank to keep it. Replacement values are encrypted in Rupert.' %>
+    <%= fold_explainer('Saving runs no check and queues no sync. Existing schedules may use new values on their next run.', class: 'text-sm text-mocha') %>
     <% if @fields.any? { |field| field[:unreadable] } %><p role="alert" class="flash flash-alert">Saved credentials cannot be read. Ask the platform operator to restore the encryption keys before editing.</p><% end %>
     <% if Current.user.can?('settings.write') %>
       <%= form_with url: connection_path(@service.key), method: :patch, scope: :connection_credentials, data: { turbo: false }, class: 'space-y-4' do |form| %>
         <%= form.hidden_field :edit_token, value: @edit_token %>
-        <% @fields.each do |field| %>
-          <div>
-            <label for="credential_<%= field[:key] %>" class="block text-sm font-medium"><%= field[:label] %></label>
-            <p class="mt-1 text-xs text-taupe"><%= field[:unreadable] ? 'Unreadable' : field[:saved] ? 'Saved in Rupert' : field[:optional] ? 'Optional · not set' : 'Not set' %></p>
-            <% if !field[:secret] && field[:value].present? %><p class="mt-1 break-all text-xs text-mocha">Current value: <%= field[:value] %></p><% end %>
-            <% if field[:choices] %>
-              <%= select_tag "connection_credentials[values][#{field[:key]}]", options_for_select([['Keep saved value', '']] + field[:choices].map { |choice| [choice.humanize, choice] }), id: "credential_#{field[:key]}", class: 'input mt-2' %>
-            <% else %>
-              <%= tag.input type: field[:secret] ? 'password' : 'text', name: "connection_credentials[values][#{field[:key]}]", id: "credential_#{field[:key]}", value: '', maxlength: 4096, autocomplete: field[:secret] ? 'new-password' : 'off', class: 'input mt-2', placeholder: field[:saved] ? 'Leave blank to keep saved value' : nil %>
-            <% end %>
-            <% if field[:saved] %><label class="mt-2 flex items-center gap-2 text-xs text-mocha"><%= check_box_tag 'connection_credentials[clear_keys][]', field[:key], false, id: "clear_#{field[:key]}" %> Remove saved <%= field[:label] %></label><% end %>
-          </div>
-        <% end %>
-        <%= form.submit 'Save credentials', class: 'btn-primary' %>
+        <fieldset class="space-y-4">
+          <% @fields.each do |field| %>
+            <div>
+              <label for="credential_<%= field[:key] %>" class="field-label"><%= field[:label] %></label>
+              <p class="mt-1 text-xs text-taupe"><%= field[:unreadable] ? 'Unreadable' : field[:saved] ? 'Saved in Rupert' : field[:optional] ? 'Optional · not set' : 'Not set' %></p>
+              <% if !field[:secret] && field[:value].present? %><p class="mt-1 break-all text-xs text-mocha">Current value: <%= field[:value] %></p><% end %>
+              <% if field[:choices] %>
+                <%= select_tag "connection_credentials[values][#{field[:key]}]", options_for_select([['Keep saved value', '']] + field[:choices].map { |choice| [choice.humanize, choice] }), id: "credential_#{field[:key]}", class: 'input mt-2' %>
+              <% else %>
+                <%= tag.input type: field[:secret] ? 'password' : 'text', name: "connection_credentials[values][#{field[:key]}]", id: "credential_#{field[:key]}", value: '', maxlength: 4096, autocomplete: field[:secret] ? 'new-password' : 'off', class: 'input mt-2', placeholder: field[:saved] ? 'Leave blank to keep saved value' : nil %>
+              <% end %>
+              <% if field[:saved] %><label class="mt-2 flex items-center gap-2 text-xs text-mocha"><%= check_box_tag 'connection_credentials[clear_keys][]', field[:key], false, id: "clear_#{field[:key]}", class: 'checkbox' %> Remove saved <%= field[:label] %></label><% end %>
+            </div>
+          <% end %>
+        </fieldset>
+        <div class="form-actions">
+          <%= form.submit 'Save', class: 'btn-primary' %>
+          <%= link_to 'Cancel', connections_path, class: 'btn-ghost' %>
+        </div>
       <% end %>
     <% else %>
       <p class="text-sm text-mocha">You can review setup. A person with settings-write permission must replace credentials.</p>

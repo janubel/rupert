@@ -1,31 +1,23 @@
 <% content_for :title, "Account #{@account.code}" %>
-<div class="space-y-6 operations-workspace">
+<% range_text = @from || @to ? "#{@from ? @from.to_date.strftime('%b %-d, %Y') : 'Start'} – #{@to ? @to.to_date.strftime('%b %-d, %Y') : 'today'}" : 'All dates' %>
+<div class="space-y-6">
+  <%= page_header finance_account_label(@account), eyebrow: 'Bookkeeping · Account',
+        subtitle: "#{@account.type_label.singularize} account · normal balance #{@account.normal_balance} · #{range_text} · USD",
+        menu: [['Chart of accounts', finance_chart_of_accounts_path], ['Trial balance', finance_reports_trial_balance_path(from: @from, to: @to)]] do %>
+    <% if Current.user.can?('finance.write') %><%= link_to 'Edit', edit_finance_chart_of_account_path(@account), class: 'btn-primary' %><% end %>
+  <% end %>
+  <% unless @account.active %><p><span class="pill-taupe">Archived</span> <span class="text-sm text-mocha">Kept on record; cannot be used for new entries.</span></p><% end %>
 
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title"><%= finance_account_label(@account) %></h1>
-      <p class="mt-1 text-base text-mocha">
-        <%= @account.type_label.singularize %> account · normal balance <%= @account.normal_balance %> ·
-        <%= @from || @to ? "#{@from || 'start'} through #{@to || 'today'}" : 'All dates' %> · USD
-        <% unless @account.active %> · <span class="pill-taupe">Archived</span><% end %>
-      </p>
-      <p class="mt-1 text-sm text-mocha">Every posted ledger line that touched this account. Select an entry to see all of its lines and its source.</p>
-    </div>
-    <div class="flex gap-2">
-      <%= link_to "Chart of accounts", finance_chart_of_accounts_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "Trial balance", finance_reports_trial_balance_path(from: @from, to: @to), class: "btn-ghost btn-sm" %>
-    </div>
-  </section>
-
-  <%= form_tag finance_chart_of_account_path(@account), method: :get, class: "card card-pad operations-filters" do %>
-    <label class="flex items-center gap-1.5 text-base text-mocha">From <%= date_field_tag :from, @from, class: "select" %></label>
-    <label class="flex items-center gap-1.5 text-base text-mocha">To <%= date_field_tag :to, @to, class: "select" %></label>
-    <%= submit_tag "Apply dates", class: "btn-ghost btn-sm" %>
+  <%= form_tag finance_chart_of_account_path(@account), method: :get, class: 'toolbar' do %>
+    <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from, class: 'input' %></div>
+    <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @to, class: 'input' %></div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_chart_of_account_path(@account), class: 'btn-ghost' %></div>
   <% end %>
 
-  <div class="card overflow-hidden">
-    <div class="operations-table-region" role="region" tabindex="0" aria-label="Ledger lines for <%= finance_account_label(@account) %>">
-      <table class="operations-table finance-table w-full">
+  <section class="card">
+    <div class="card-pad border-b border-fog"><%= section_heading 'Ledger lines', hint: 'Every posted ledger line that touched this account. Select an entry to see all of its lines and its source.' %></div>
+    <div class="table-region" role="region" tabindex="0" aria-label="Ledger lines for <%= finance_account_label(@account) %>">
+      <table class="table finance-table">
         <caption class="sr-only">Posted ledger lines for <%= finance_account_label(@account) %>, in USD</caption>
         <thead>
           <tr>
@@ -38,12 +30,12 @@
         </thead>
         <tbody>
           <% if @rows.empty? %>
-            <tr><td colspan="5" class="empty-row">No posted lines for this account in this range. Widen the dates, or post an entry from the <%= link_to "General ledger", finance_journal_entries_path, class: "link" %>.</td></tr>
+            <tr><td colspan="5" class="empty-row">No posted lines for this account in this range. Widen the dates, or post an entry from the <%= link_to 'General ledger', finance_journal_entries_path, class: 'link' %>.</td></tr>
           <% end %>
           <% @rows.each do |row| %>
             <tr>
-              <td class="td whitespace-nowrap"><%= row[:entry].posted_on %></td>
-              <td class="td"><%= link_to (row[:entry].memo.presence || "Entry ##{row[:entry].id}"), finance_journal_entry_path(row[:entry]), class: "link" %><% if row[:line].memo.present? %> <span class="text-mocha">· <%= row[:line].memo %></span><% end %></td>
+              <td class="td whitespace-nowrap"><%= l(row[:entry].posted_on, format: :short) %></td>
+              <td class="td"><%= link_to (row[:entry].memo.presence || "Entry ##{row[:entry].id}"), finance_journal_entry_path(row[:entry]), class: 'link' %><% if row[:line].memo.present? %> <span class="text-mocha">· <%= row[:line].memo %></span><% end %></td>
               <td class="td num"><%= finance_money(row[:line].debit_cents, zero: :dash) %></td>
               <td class="td num"><%= finance_money(row[:line].credit_cents, zero: :dash) %></td>
               <td class="td num"><%= finance_money(row[:running_balance]) %></td>
@@ -52,7 +44,7 @@
         </tbody>
         <% if @rows.any? %>
           <tfoot>
-            <tr>
+            <tr class="font-semibold">
               <th scope="row" class="td" colspan="2">Totals for these lines</th>
               <td class="td num"><%= finance_money(@total_debit) %></td>
               <td class="td num"><%= finance_money(@total_credit) %></td>
@@ -62,6 +54,6 @@
         <% end %>
       </table>
     </div>
-  </div>
-  <p class="text-sm text-mocha">The running balance starts at $0.00 at the first line shown, so it is the account balance only when the range starts at the first posting. Balances are shown on the account's normal side (<%= @account.normal_balance %>); a negative number means the opposite side.</p>
+  </section>
+  <p class="text-xs text-mocha">The running balance starts at $0.00 at the first line shown, so it is the account balance only when the range starts at the first posting. Balances are shown on the account's normal side (<%= @account.normal_balance %>); a negative number means the opposite side.</p>
 </div>

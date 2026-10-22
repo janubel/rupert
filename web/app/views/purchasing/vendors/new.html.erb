@@ -1,7 +1,7 @@
-<% content_for :title, "Add vendor" %>
-<div class="space-y-6">
+<% content_for :title, 'Add vendor' %>
+<div class="page-narrow space-y-6">
   <%= page_header 'Add vendor', subtitle: 'A supplier the shop buys from.' %>
-  <div class="card card-pad page-narrow">
-    <%= render "form", vendor: @vendor %>
+  <div class="card card-pad">
+    <%= render 'form', vendor: @vendor %>
   </div>
 </div>

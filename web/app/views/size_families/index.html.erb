@@ -1,25 +1,20 @@
-<% content_for :title, "Sizes" %>
-<% can_manage = Current.user.can?("settings.write") %>
-<% can_apply = Current.user.can?("reconcile.write") %>
+<% content_for :title, 'Sizes' %>
+<% can_manage = Current.user.can?('settings.write') %>
+<% can_apply = Current.user.can?('reconcile.write') %>
 <% total_pending = @pending_changes.length %>
 <% total_root = @families.sum { |f| f[:root] || 0 } %>
 <% auto_count = @families.count { |f| f[:family].auto? } %>
+<% menu = [] %>
+<% menu << ['Derive all now', derive_all_size_families_path, { method: :post, data: { turbo_submits_with: 'Deriving…' } }] if can_apply %>
+<% menu << ['Approve all pending', approve_all_size_families_path, { method: :post, data: { turbo_confirm: 'Write every pending size to Square?' } }] if can_apply && total_pending.positive? %>
 
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="page-title">Sizes</h1>
-      <p class="mt-1 text-sm text-mocha">Multi-size gram products derived from a root gram bank. Every 15-minute sync folds in new sales and recomputes each size as <code class="font-mono text-xs">floor(root grams ÷ size grams)</code>, then writes to Square instead of trusting realtime counts.</p>
-    </div>
-    <div class="flex flex-wrap gap-2">
-      <% if can_apply %>
-        <%= button_to "Derive all now", derive_all_size_families_path, method: :post, class: "btn-ghost", data: { disable_with: "Deriving…" } %>
-      <% end %>
-      <% if can_manage %>
-        <%= link_to "New family", new_size_family_path, class: "btn-primary" %>
-      <% end %>
-    </div>
-  </section>
+  <%= page_header 'Sizes', subtitle: 'Multi-size gram products derived from a root gram bank and written to Square on approval.', menu: menu do %>
+    <% if can_manage %>
+      <%= link_to 'Add family', new_size_family_path, class: 'btn-primary' %>
+    <% end %>
+  <% end %>
+  <%= fold_explainer('Every 15-minute sync folds in new sales and recomputes each size as floor(root grams ÷ size grams), then writes to Square instead of trusting realtime counts. Approval-only families record derived sizes as pending; auto-apply families write them every sync.', class: 'text-sm text-mocha') %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
@@ -28,7 +23,7 @@
     </div>
     <div class="stat">
       <p class="stat-label">Pending approvals</p>
-      <p class="stat-value mt-1 <%= total_pending.positive? ? "text-clay" : "" %>"><%= total_pending %></p>
+      <p class="stat-value mt-1 <%= total_pending.positive? ? 'text-clay' : '' %>"><%= total_pending %></p>
     </div>
     <div class="stat">
       <p class="stat-label">Root grams tracked</p>
@@ -41,157 +36,135 @@
   </section>
 
   <% if @families.empty? %>
-    <div class="card card-pad">
-      <p class="text-sm text-taupe">No size families yet.</p>
-      <% if can_manage %>
-        <p class="mt-1 text-sm text-taupe">Create one to start deriving your multi-size products.</p>
-        <div class="mt-4"><%= link_to "Create the first family", new_size_family_path, class: "btn-primary" %></div>
-      <% end %>
-    </div>
+    <%= empty_state 'No size families yet', hint: (can_manage ? 'Add one to start deriving your multi-size products.' : 'A settings editor can add the first family.') do %>
+      <% if can_manage %><%= link_to 'Add family', new_size_family_path, class: 'btn-primary' %><% end %>
+    <% end %>
   <% end %>
 
   <% @families.each do |row| %>
     <% family = row[:family] %>
-    <div class="card">
-      <div class="border-b border-fog bg-haze/60 px-5 py-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <div>
-              <h2 class="font-display text-xl text-ink"><%= family.name %></h2>
-              <p class="mt-0.5 text-xs text-taupe">
-                Root SKU <%= family.root_sku.presence || "manual" %>
-                · <%= family.auto? ? "auto-apply" : "approval-only" %>
-                <% if row[:last_derived] %> · derived <%= time_ago_in_words(row[:last_derived]) %> ago<% end %>
-              </p>
-            </div>
-            <span class="<%= family.auto? ? "pill-fern" : "pill-taupe" %>"><%= family.auto? ? "AUTO" : "APPROVAL" %></span>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <% if can_apply %>
-              <%= button_to "Derive now", derive_size_family_path(family), method: :post, class: "btn-ghost btn-sm", data: { turbo_submits_with: "Deriving…" } %>
-              <% if row[:pending_count].positive? %>
-                <%= button_to "Approve all (#{row[:pending_count]})", approve_all_size_family_path(family), method: :post, class: "btn-primary btn-sm", data: { confirm: "Write all pending sizes for #{family.name} to Square?" } %>
-              <% end %>
-            <% end %>
-            <% if can_manage %>
-              <%= link_to "Edit", edit_size_family_path(family), class: "btn-ghost btn-sm" %>
-            <% end %>
-          </div>
-        </div>
-      </div>
+    <section class="section-card">
+      <%= section_heading family.name, hint: "Root SKU #{family.root_sku.presence || 'manual'} · #{family.auto? ? 'auto-apply' : 'approval-only'}#{row[:last_derived] ? " · derived #{time_ago_in_words(row[:last_derived])} ago" : ''}" do %>
+        <span class="<%= family.auto? ? 'pill-fern' : 'pill-taupe' %>"><%= family.auto? ? 'Auto' : 'Approval' %></span>
+        <% if can_apply %>
+          <%= button_to 'Derive now', derive_size_family_path(family), method: :post, class: 'btn-ghost btn-sm', form_class: 'contents', data: { turbo_submits_with: 'Deriving…' } %>
+          <% if row[:pending_count].positive? %>
+            <%= button_to "Approve all (#{row[:pending_count]})", approve_all_size_family_path(family), method: :post, class: 'btn-primary btn-sm', form_class: 'contents', data: { turbo_confirm: "Write all pending sizes for #{family.name} to Square?" } %>
+          <% end %>
+        <% end %>
+        <% if can_manage %>
+          <%= link_to 'Edit', edit_size_family_path(family), class: 'btn-ghost btn-sm' %>
+        <% end %>
+      <% end %>
 
-      <div class="card-pad">
-        <div class="grid gap-4 lg:grid-cols-3">
-          <div class="rounded-xl bg-haze px-4 py-3">
-            <p class="text-xs font-medium text-mocha">Root gram bank</p>
-            <p class="mt-1 font-display text-3xl text-ink"><%= row[:root] ? number_with_precision(row[:root], precision: 1) : "—" %><span class="text-base text-taupe"> g</span></p>
-            <p class="mt-1 text-xs text-taupe">
-              <% if family.sales_watermark %>
-                Sales fold in from <%= l(family.sales_watermark, format: :short) %>.
-              <% else %>
-                Set root grams to start tracking.
-              <% end %>
-            </p>
-            <% if can_manage %>
-              <%= form_tag set_root_size_family_path(family), method: :post, class: "mt-2 flex items-end gap-2" do %>
-                <div class="flex-1">
-                  <label class="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-taupe" for="base_grams_<%= family.id %>">Override root grams</label>
-                  <input type="number" step="0.1" min="0" id="base_grams_<%= family.id %>" name="base_grams" placeholder="e.g. 420" class="input">
-                </div>
-                <%= submit_tag "Set", class: "btn-primary btn-sm" %>
-              <% end %>
-            <% end %>
-          </div>
-
-          <div class="rounded-xl bg-haze px-4 py-3 lg:col-span-2">
-            <p class="text-xs font-medium text-mocha">Derived sizes</p>
-            <% if row[:members].empty? %>
-              <p class="mt-1 text-sm text-taupe">No sizes yet — add them on the Edit screen.</p>
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div class="stat">
+          <p class="stat-label">Root gram bank</p>
+          <p class="stat-value mt-1"><%= row[:root] ? number_with_precision(row[:root], precision: 1) : '—' %><span class="text-base text-taupe"> g</span></p>
+          <p class="mt-1 text-xs text-taupe">
+            <% if family.sales_watermark %>
+              Sales fold in from <%= l(family.sales_watermark, format: :short) %>.
             <% else %>
-              <div class="mt-2 overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="text-left text-[11px] font-semibold uppercase tracking-wide text-taupe">
-                      <th scope="col" class="py-1 pr-3">Size</th>
-                      <th scope="col" class="py-1 pr-3">SKU</th>
-                      <th scope="col" class="py-1 pr-3 text-right">Current</th>
-                      <th scope="col" class="py-1 pr-3 text-right">Target</th>
-                      <th scope="col" class="py-1"></th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-fog">
-                    <% row[:members].each do |m| %>
-                      <tr>
-                        <td class="py-2 pr-3 font-medium text-ink"><%= m[:member].grams %>g</td>
-                        <td class="py-2 pr-3 font-mono text-xs text-mocha"><%= m[:member].sku %></td>
-                        <td class="py-2 pr-3 text-right text-mocha"><%= m[:current].nil? ? "—" : m[:current] %></td>
-                        <td class="py-2 pr-3 text-right font-semibold text-olive"><%= m[:target].nil? ? "—" : m[:target] %></td>
-                        <td class="py-2 text-right">
-                          <% if m[:pending] %>
-                            <% if can_apply %>
-                              <%= button_to "Approve", approve_size_family_path(family, change_id: m[:pending].id), method: :post, class: "btn-primary btn-sm", data: { confirm: "Write #{m[:member].sku} to #{m[:pending].target_quantity} on Square?" } %>
-                            <% else %>
-                              <span class="pill-rose">pending</span>
-                            <% end %>
-                          <% elsif m[:in_sync] %>
-                            <span class="pill-fern">in sync</span>
-                          <% else %>
-                            <span class="pill-taupe">derives on sync</span>
-                          <% end %>
-                        </td>
-                      </tr>
-                    <% end %>
-                  </tbody>
-                </table>
-              </div>
+              Set root grams to start tracking.
             <% end %>
-          </div>
+          </p>
+          <% if can_manage %>
+            <%= form_tag set_root_size_family_path(family), method: :post, class: 'mt-3 flex items-end gap-2' do %>
+              <div class="min-w-0 flex-1">
+                <label class="field-label" for="base_grams_<%= family.id %>">Override root grams</label>
+                <input type="number" step="0.1" min="0" id="base_grams_<%= family.id %>" name="base_grams" placeholder="e.g. 420" class="input">
+              </div>
+              <%= submit_tag 'Save', class: 'btn-ghost btn-sm', name: nil %>
+            <% end %>
+          <% end %>
+        </div>
+
+        <div class="lg:col-span-2">
+          <h3 class="card-title">Derived sizes</h3>
+          <% if row[:members].empty? %>
+            <p class="mt-1 text-sm text-taupe">No sizes yet. Add them on the Edit screen.</p>
+          <% else %>
+            <div class="table-region mt-2" role="region" tabindex="0" aria-label="Derived sizes for <%= family.name %>">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col" class="th">Size</th>
+                    <th scope="col" class="th">SKU</th>
+                    <th scope="col" class="th num">Current</th>
+                    <th scope="col" class="th num">Target</th>
+                    <th scope="col" class="th"><span class="sr-only">Status</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% row[:members].each do |m| %>
+                    <tr>
+                      <td class="td font-medium text-ink"><%= m[:member].grams %>g</td>
+                      <td class="td font-mono text-xs text-mocha"><%= m[:member].sku %></td>
+                      <td class="td num text-mocha"><%= m[:current].nil? ? '—' : m[:current] %></td>
+                      <td class="td num font-semibold text-olive"><%= m[:target].nil? ? '—' : m[:target] %></td>
+                      <td class="td text-right">
+                        <% if m[:pending] %>
+                          <% if can_apply %>
+                            <%= button_to 'Approve', approve_size_family_path(family, change_id: m[:pending].id), method: :post, class: 'btn-primary btn-sm', form_class: 'contents', data: { turbo_confirm: "Write #{m[:member].sku} to #{m[:pending].target_quantity} on Square?" } %>
+                          <% else %>
+                            <span class="pill-rose">Pending</span>
+                          <% end %>
+                        <% elsif m[:in_sync] %>
+                          <span class="pill-fern">In sync</span>
+                        <% else %>
+                          <span class="pill-taupe">Derives on sync</span>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% end %>
         </div>
       </div>
-    </div>
+    </section>
   <% end %>
 
   <section class="card overflow-hidden">
-    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-fog bg-haze/60 px-4 py-3">
-      <div>
-        <h2 class="font-display text-lg text-ink">Pending approvals</h2>
-        <p class="text-xs text-taupe">Derived quantities from the last sync awaiting sign-off before they're written to Square.</p>
-      </div>
-      <% if total_pending.positive? && can_apply %>
-        <%= button_to "Approve all (across families)", approve_all_size_families_path, method: :post, class: "btn-primary btn-sm", data: { confirm: "Write every pending size to Square?" } %>
+    <div class="card-pad pb-3">
+      <%= section_heading 'Pending approvals', hint: 'Derived quantities from the last sync awaiting sign-off before they are written to Square.' do %>
+        <% if total_pending.positive? && can_apply %>
+          <%= button_to 'Approve all', approve_all_size_families_path, method: :post, class: 'btn-primary btn-sm', form_class: 'contents', data: { turbo_confirm: 'Write every pending size to Square?' } %>
+        <% end %>
       <% end %>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-fog bg-haze/60">
+    <div class="table-region" role="region" tabindex="0" aria-label="Pending size approvals">
+      <table class="table">
+        <thead>
           <tr>
             <th scope="col" class="th">Family</th>
             <th scope="col" class="th">Size</th>
             <th scope="col" class="th">SKU</th>
-            <th scope="col" class="th text-right">Root grams</th>
-            <th scope="col" class="th text-right">Current</th>
-            <th scope="col" class="th text-right">Target</th>
-            <th scope="col" class="th text-right">Change</th>
-            <th scope="col" class="th text-right"></th>
+            <th scope="col" class="th num">Root grams</th>
+            <th scope="col" class="th num">Current</th>
+            <th scope="col" class="th num">Target</th>
+            <th scope="col" class="th num">Change</th>
+            <th scope="col" class="th"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-fog">
+        <tbody>
           <% if @pending_changes.empty? %>
             <tr>
-              <td class="empty-row" colspan="8">Nothing pending — sizes are in sync with their root gram banks.</td>
+              <td class="empty-row" colspan="8">Nothing pending. Sizes are in sync with their root gram banks.</td>
             </tr>
           <% end %>
           <% @pending_changes.each do |change| %>
             <% current = change.square_variation_id ? InventoryLevel.total_for_variation(change.square_variation_id) : nil %>
             <% delta = current && change.target_quantity ? change.target_quantity - current : nil %>
-            <tr class="hover:bg-cream">
+            <tr>
               <td class="td text-mocha"><%= change.family.name %></td>
               <td class="td text-ink"><%= change.grams %>g</td>
               <td class="td font-mono text-xs text-mocha"><%= change.sku %></td>
-              <td class="td text-right text-mocha"><%= number_with_precision(change.root_grams, precision: 1) %></td>
-              <td class="td text-right text-mocha"><%= current.nil? ? "—" : current %></td>
-              <td class="td text-right font-semibold text-olive"><%= change.target_quantity %></td>
-              <td class="td text-right">
+              <td class="td num text-mocha"><%= number_with_precision(change.root_grams, precision: 1) %></td>
+              <td class="td num text-mocha"><%= current.nil? ? '—' : current %></td>
+              <td class="td num font-semibold text-olive"><%= change.target_quantity %></td>
+              <td class="td num">
                 <% if delta.nil? %>
                   <span class="text-taupe">—</span>
                 <% elsif delta.positive? %>
@@ -204,7 +177,7 @@
               </td>
               <td class="td text-right">
                 <% if can_apply %>
-                  <%= button_to "Approve", approve_size_family_path(change.family, change_id: change.id), method: :post, class: "btn-primary btn-sm", data: { confirm: "Write #{change.sku} to #{change.target_quantity} on Square?" } %>
+                  <%= button_to 'Approve', approve_size_family_path(change.family, change_id: change.id), method: :post, class: 'btn-primary btn-sm', form_class: 'contents', data: { turbo_confirm: "Write #{change.sku} to #{change.target_quantity} on Square?" } %>
                 <% end %>
               </td>
             </tr>

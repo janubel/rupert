@@ -1,11 +1,13 @@
-<fieldset class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-taupe">
-  <legend class="sr-only">Sources</legend>
-  <span>Sources</span>
+<fieldset class="toolbar-field">
+  <legend class="field-label">Sources</legend>
   <% chosen = report.sources %>
-  <% SalesTaxReport::SOURCES.each do |key, label| %>
-    <label class="inline-flex items-center gap-1 text-sm text-ink"><%= check_box_tag 'sources[]', key, chosen.include?(key), id: "sources_#{key}" %> <%= label %></label>
-  <% end %>
+  <div class="flex flex-wrap gap-x-3 gap-y-1">
+    <% SalesTaxReport::SOURCES.each do |key, label| %>
+      <label class="inline-flex items-center gap-1 text-sm text-ink"><%= check_box_tag 'sources[]', key, chosen.include?(key), id: "sources_#{key}", class: 'checkbox' %> <%= label %></label>
+    <% end %>
+  </div>
 </fieldset>
-<label class="text-xs text-taupe">Estimate rate %
-  <%= text_field_tag :rate, report.rate&.to_s('F'), inputmode: 'decimal', placeholder: 'none', class: 'select w-24', title: 'Optional tax rate used only to estimate tax for sources that do not report it (SwipeSimple)' %>
-</label>
+<div class="toolbar-field">
+  <%= label_tag :rate, 'Estimate rate %', class: 'field-label' %>
+  <%= text_field_tag :rate, report.rate&.to_s('F'), inputmode: 'decimal', placeholder: 'none', class: 'input', title: 'Optional tax rate used only to estimate tax for sources that do not report it (SwipeSimple)' %>
+</div>

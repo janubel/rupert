@@ -1,9 +1,7 @@
 <% content_for :title, "Edit #{@vendor.name}" %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title">Edit <%= @vendor.name %></h1>
-  </section>
-  <div class="card card-pad max-w-2xl">
-    <%= render "form", vendor: @vendor %>
+<div class="page-narrow space-y-6">
+  <%= page_header "Edit #{@vendor.name}", subtitle: 'Contact details and payment terms for this vendor.' %>
+  <div class="card card-pad">
+    <%= render 'form', vendor: @vendor %>
   </div>
 </div>

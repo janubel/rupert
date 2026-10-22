@@ -1,5 +1,5 @@
 <% content_for :title, 'Add expense category' %>
-<div class="space-y-6 operations-workspace">
-  <h1 class="page-title">Add expense category</h1>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add expense category', subtitle: 'A label for expenses, receipts and bank lines, and the ledger account it posts to.' %>
   <%= render 'form', category: @category %>
 </div>

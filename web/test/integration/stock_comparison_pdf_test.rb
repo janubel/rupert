@@ -102,7 +102,7 @@ class StockComparisonPdfTest < ActionDispatch::IntegrationTest
     get inventory_reports_path
     assert_select pdf, 'Download store comparison PDF'
     get stock_comparison_path
-    assert_select 'a#store-comparison-pdf.btn-primary', 'Download store comparison PDF'
+    assert_select 'a#store-comparison-pdf.btn-primary', 'Download PDF'
     assert_select "nav[aria-label='Module'] a[aria-current='page']", /Store comparison/
     assert_equal 'stock', ModuleRegistry.area_key_for('stock_comparison')
   end

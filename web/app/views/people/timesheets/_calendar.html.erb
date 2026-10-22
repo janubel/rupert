@@ -17,7 +17,7 @@
   <div class="grid items-start gap-3 lg:grid-cols-[15rem_minmax(0,1fr)]">
   <aside class="card card-pad space-y-2 lg:sticky lg:top-24" aria-labelledby="emp-key-title">
     <div class="flex items-center justify-between gap-2">
-      <h2 id="emp-key-title" class="text-sm font-semibold">Staff member key</h2>
+      <h2 id="emp-key-title" class="card-title">Staff member key</h2>
       <span class="text-xs text-mocha" data-schedule-filter-target="count" aria-live="polite"></span>
     </div>
     <% if calendar.employees.empty? %>
@@ -28,7 +28,7 @@
         <% calendar.employees.each do |id, name| %>
           <li>
             <button type="button" role="switch" data-schedule-filter-target="toggle" data-employee-id="<%= id %>" data-action="schedule-filter#toggle" aria-checked="true" aria-pressed="true"
-              class="emp-key flex w-full items-center gap-2 rounded-lg border border-fog bg-paper px-2.5 py-1.5 text-left text-sm">
+              class="emp-key flex w-full items-center gap-2 rounded-control border border-fog bg-paper px-2.5 py-1.5 text-left text-sm">
               <span class="emp-swatch inline-block size-3.5 flex-none rounded border-2" style="background: hsl(<%= hue.call(id) %> 70% 50%); border-color: hsl(<%= hue.call(id) %> 70% 50%)"></span>
               <span class="min-w-0 flex-1 truncate"><%= name %></span>
               <% if hours[id] %><span class="flex-none text-xs text-mocha"><%= number_with_precision(hours[id].values.max, precision: 1, strip_insignificant_zeros: true) %>h</span><% end %>
@@ -45,22 +45,22 @@
   <div class="min-w-0 space-y-3">
   <div class="card overflow-hidden">
     <header class="flex flex-wrap items-center justify-between gap-2 border-b border-fog px-4 py-3">
-      <h2 class="text-base font-semibold"><time datetime="<%= week.iso8601 %>"><%= week.strftime('%b %-d') %> – <%= (week + 6).strftime(week.month == (week + 6).month ? '%-d, %Y' : '%b %-d, %Y') %></time></h2>
+      <h2 class="card-title"><time datetime="<%= week.iso8601 %>"><%= week.strftime('%b %-d') %> – <%= (week + 6).strftime(week.month == (week + 6).month ? '%-d, %Y' : '%b %-d, %Y') %></time></h2>
       <nav aria-label="Week" class="flex items-center gap-2">
         <span class="inline-flex overflow-hidden rounded-lg border border-fog bg-paper text-sm">
           <%= link_to people_timesheets_path(status: params[:status], q: params[:q], wk: params[:wk].presence, period: (week - 7).iso8601), class: 'flex h-9 w-9 items-center justify-center hover:bg-haze', title: 'Previous week' do %><span class="sr-only">Previous week</span><span aria-hidden="true">‹</span><% end %>
           <%= link_to 'Today', people_timesheets_path(status: params[:status], q: params[:q], wk: params[:wk].presence, period: week_start_for(Date.current).iso8601), class: 'flex items-center border-x border-fog px-3.5 font-semibold hover:bg-haze' %>
           <%= link_to people_timesheets_path(status: params[:status], q: params[:q], wk: params[:wk].presence, period: (week + 7).iso8601), class: 'flex h-9 w-9 items-center justify-center hover:bg-haze', title: 'Next week' do %><span class="sr-only">Next week</span><span aria-hidden="true">›</span><% end %>
         </span>
-        <%= link_to 'Mon–Sun', people_timesheets_path(status: params[:status], q: params[:q], period: week.iso8601), class: "btn-sm #{params[:wk].blank? ? 'btn-primary' : 'btn-ghost'}" %>
-        <%= link_to 'Thu–Wed', people_timesheets_path(status: params[:status], q: params[:q], wk: 'thu', period: week.iso8601), class: "btn-sm #{params[:wk] == 'thu' ? 'btn-primary' : 'btn-ghost'}" %>
+        <%= link_to 'Mon–Sun', people_timesheets_path(status: params[:status], q: params[:q], period: week.iso8601), class: 'btn-ghost btn-sm', aria: { pressed: params[:wk].blank? } %>
+        <%= link_to 'Thu–Wed', people_timesheets_path(status: params[:status], q: params[:q], wk: 'thu', period: week.iso8601), class: 'btn-ghost btn-sm', aria: { pressed: params[:wk] == 'thu' } %>
         <%= link_to 'All weeks', people_timesheets_path(status: params[:status], q: params[:q]), class: 'btn-ghost btn-sm' %>
       </nav>
       <%= form_with url: people_timesheets_path, method: :get, class: 'flex flex-wrap items-center gap-2 text-sm', 'aria-label': 'Custom start date' do %>
         <%= hidden_field_tag :status, params[:status] if params[:status].present? %><%= hidden_field_tag :q, params[:q] if params[:q].present? %><%= hidden_field_tag :wk, 'custom' %>
         <label for="custom-start" class="text-mocha">Custom 7 days from</label>
         <%= date_field_tag :period, (params[:wk] == 'custom' ? week.iso8601 : nil), id: 'custom-start', class: 'input w-auto', required: true %>
-        <%= submit_tag 'Custom', class: "btn-sm #{params[:wk] == 'custom' ? 'btn-primary' : 'btn-ghost'}" %>
+        <%= submit_tag 'Apply', class: 'btn-ghost btn-sm', name: nil, aria: { pressed: params[:wk] == 'custom' } %>
       <% end %>
     </header>
     <div class="grid border-b border-fog bg-haze/60 text-sm" style="grid-template-columns: 3.5rem repeat(7, minmax(0, 1fr))">
@@ -95,7 +95,7 @@
           <% end %>
         </div>
         <% days.each do |day| %>
-          <div class="relative border-l border-fog/70 <%= day < Date.current ? 'bg-haze/40' : '' %> <%= holidays[day] ? 'bg-amber-50' : '' %>"
+          <div class="relative border-l border-fog/70 <%= day < Date.current ? 'bg-haze/40' : '' %> <%= holidays[day] ? 'bg-butter/20' : '' %>"
                style="background-image: linear-gradient(to bottom, rgb(0 0 0 / .06) 1px, transparent 1px); background-size: 100% <%= hour_px %>px">
             <% calendar.blocks_for(day).each do |b| %>
               <% h = hue.call(b.employee_id) %>
@@ -115,7 +115,7 @@
               </div>
             <% end %>
             <% if day == Date.current %>
-              <div class="pointer-events-none absolute inset-x-0 border-t-2 border-rose-500" style="top: <%= (Time.current.seconds_since_midnight / 86_400.0 * 100).round(3) %>%"></div>
+              <div class="pointer-events-none absolute inset-x-0 border-t-2 border-rose" style="top: <%= (Time.current.seconds_since_midnight / 86_400.0 * 100).round(3) %>%"></div>
             <% end %>
           </div>
         <% end %>
@@ -125,7 +125,7 @@
   </div>
   </div>
   <div class="card card-pad">
-    <h2 class="text-sm font-semibold">Upcoming holidays</h2>
+    <h2 class="card-title">Upcoming holidays</h2>
     <ul class="mt-2 grid gap-1 text-sm text-mocha sm:grid-cols-2 lg:grid-cols-3">
       <% upcoming.each do |day, name| %><li><%= link_to day.strftime('%a, %b %-d'), people_timesheets_path(period: day.beginning_of_week.iso8601), class: 'text-olive hover:underline' %> — <%= name %></li><% end %>
     </ul>

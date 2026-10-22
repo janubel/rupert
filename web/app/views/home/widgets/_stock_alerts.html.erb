@@ -1,17 +1,18 @@
-<div class="card card-pad">
-  <h2 class="font-display text-xl text-ink">Stock alerts · last 14 days</h2>
-  <ul class="mt-4 divide-y divide-fog">
-    <% if presenter.recent_alerts.empty? %>
-      <li class="py-3 text-sm text-taupe">No recent alerts.</li>
-    <% end %>
-    <% presenter.recent_alerts.each do |alert| %>
-      <li class="flex items-center justify-between gap-4 py-3">
-        <div class="min-w-0">
-          <p class="truncate text-sm font-medium text-ink"><%= alert.sku.presence || alert.id.first(10) %></p>
-          <p class="text-xs text-taupe"><%= l(alert.createdAt, format: :short) %></p>
-        </div>
-        <span class="<%= alert.quantity <= 0 ? "pill-rose" : "pill-clay" %>"><%= alert.quantity %> / <%= alert.threshold %></span>
-      </li>
-    <% end %>
-  </ul>
+<div class="section-card">
+  <%= section_heading 'Stock alerts · last 14 days' %>
+  <% if presenter.recent_alerts.empty? %>
+    <%= empty_state 'No recent alerts', hint: 'Low-stock alerts from the last 14 days appear here.' %>
+  <% else %>
+    <ul class="divide-y divide-fog">
+      <% presenter.recent_alerts.each do |alert| %>
+        <li class="flex items-center justify-between gap-4 py-3">
+          <div class="min-w-0">
+            <p class="truncate text-sm font-medium text-ink"><%= alert.sku.presence || alert.id.first(10) %></p>
+            <p class="text-xs text-taupe"><%= l(alert.createdAt, format: :short) %></p>
+          </div>
+          <span class="<%= alert.quantity <= 0 ? "pill-rose" : "pill-clay" %>"><%= alert.quantity %> / <%= alert.threshold %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
 </div>

@@ -1,121 +1,102 @@
-<% content_for :title, "Warehouse" %>
+<% content_for :title, 'Warehouse sales' %>
 <div class="space-y-6">
-  <%= page_header 'Warehouse sales', subtitle: 'Secret links shared with vendors — each has its own pricing multiplier and bulk tiers. Links are never listed in navigation; the token in the URL is the access.' %>
+  <%= page_header 'Warehouse sales', subtitle: 'Secret links shared with vendors, each with its own pricing multiplier and bulk tiers.' do %>
+    <a href="#add-vendor-link" class="btn-primary">Add vendor link</a>
+  <% end %>
+  <p class="text-sm text-mocha">Links are never listed in navigation; the token in the URL is the access.</p>
 
   <% if @stock_holds %>
-    <section class="card card-pad">
-      <h2 class="font-display text-xl text-ink">Stock awaiting fulfillment confirmation</h2>
-      <p class="mt-1 text-sm text-mocha"><%= @hold_count %> held lines. Open the paid order after fulfillment and source inventory reconciliation. Uncertain payments require review in the original gateway account.</p>
-      <ul class="mt-3 space-y-2">
+    <section class="section-card">
+      <%= section_heading 'Stock awaiting fulfillment confirmation', hint: "#{pluralize(@hold_count, 'held line')}. Open the paid order after fulfillment and source inventory reconciliation. Uncertain payments require review in the original gateway account." %>
+      <ul class="space-y-2">
         <% @stock_holds.each do |hold| %>
           <% item = hold.warehouse_cart.items.find { |row| row.variant_id == hold.variant_id } %>
-          <li class="rounded-xl bg-haze px-4 py-3 text-sm">
+          <li class="rounded-control bg-haze px-4 py-3 text-sm">
             <span class="font-semibold"><%= item&.title.presence || hold.variant_id %></span> · <%= hold.quantity %> units · <%= hold.warehouse_cart.share&.name || 'Retired vendor link' %>
             <% if hold.order %>
-              · <%= link_to "Order #{hold.order.display_number}", order_path(hold.order), class: 'text-olive hover:underline' %>
+              · <%= link_to "Order #{hold.order.display_number}", order_path(hold.order), class: 'text-olive-deep hover:underline' %>
             <% else %>
               · payment <%= hold.warehouse_payment_attempt&.status %> · reference <%= hold.warehouse_payment_attempt&.invoice_number %>
             <% end %>
           </li>
         <% end %>
       </ul>
-      <% if @hold_count > 100 %><p class="mt-2 text-xs text-taupe">Showing the oldest 100 held lines.</p><% end %>
+      <% if @hold_count > 100 %><p class="text-xs text-taupe">Showing the oldest 100 held lines.</p><% end %>
     </section>
   <% end %>
 
-  <section class="grid gap-4 lg:grid-cols-2">
-    <div class="card card-pad">
-      <h2 class="font-display text-xl text-ink">Global bulk tiers</h2>
-      <p class="mt-1 text-sm text-mocha">Applied to every vendor unless a vendor uses custom tiers.</p>
-      <%= form_tag update_warehouse_tiers_path, method: :post, class: "mt-4 space-y-3" do %>
-        <% @global_tiers.each do |tier| %>
-          <div class="flex items-center gap-2">
-            <%= hidden_field_tag "tiers[#{tier.id}][id]", tier.id %>
-            <%= number_field_tag "tiers[#{tier.id}][minQty]", tier.minQty, min: 1, class: "input w-24", placeholder: "Min qty" %>
-            <span class="text-sm text-taupe">+ units</span>
-            <%= number_field_tag "tiers[#{tier.id}][discountPercent]", tier.discountPercent, min: 0, max: 99, step: "0.5", class: "input w-24", placeholder: "% off" %>
-            <span class="text-sm text-taupe">% off</span>
-            <label class="flex items-center gap-1.5 text-xs text-mocha">
-              <%= check_box_tag "tiers[#{tier.id}][_destroy]", "1" %> remove
-            </label>
-          </div>
-        <% end %>
-        <% if @global_tiers.empty? %>
-          <p class="text-sm text-taupe">No tiers yet — add one below (e.g. 10+ units = 5% off).</p>
-        <% end %>
-        <div class="flex items-center gap-2">
-          <%= number_field_tag "tiers[new][minQty]", nil, min: 1, class: "input w-24", placeholder: "Min qty" %>
-          <span class="text-sm text-taupe">+ units</span>
-          <%= number_field_tag "tiers[new][discountPercent]", nil, min: 0, max: 99, step: "0.5", class: "input w-24", placeholder: "% off" %>
-          <span class="text-sm text-taupe">% off</span>
-        </div>
-        <%= submit_tag "Save global tiers", class: "btn-primary" %>
-      <% end %>
-    </div>
-
-    <div class="card card-pad">
-      <h2 class="font-display text-xl text-ink">New vendor link</h2>
-      <p class="mt-1 text-sm text-mocha">A secret, unguessable URL is generated automatically.</p>
-      <%= form_tag warehouse_shares_path, method: :post, class: "mt-4 space-y-4" do %>
-        <div>
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="name">Vendor name</label>
-          <input type="text" id="name" name="name" required class="input" placeholder="e.g. GreenLeaf Distributors">
-        </div>
-        <div>
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-mocha" for="priceMultiplier">Price multiplier</label>
-          <div class="flex items-center gap-2">
-            <input type="number" id="priceMultiplier" name="priceMultiplier" step="0.01" min="0" value="0.85" class="input w-32">
-            <span class="text-sm text-taupe">e.g. 0.85 = 15% off list price</span>
-          </div>
-        </div>
-        <%= submit_tag "Create link", class: "btn-primary" %>
-      <% end %>
+  <section class="section-card">
+    <%= section_heading 'Vendor links' %>
+    <div class="table-region" role="region" tabindex="0" aria-label="Vendor links">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col" class="th">Vendor</th>
+            <th scope="col" class="th num">Multiplier</th>
+            <th scope="col" class="th">Status</th>
+            <th scope="col" class="th">Link</th>
+            <th scope="col" class="th"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @shares.empty? %>
+            <tr><td class="empty-row" colspan="5">No vendor links yet. Add one below.</td></tr>
+          <% end %>
+          <% @shares.each do |share| %>
+            <tr>
+              <td class="td"><%= link_to share.name, warehouse_share_path(share), class: 'font-medium text-olive-deep hover:underline' %></td>
+              <td class="td num text-mocha"><%= number_with_precision(share.priceMultiplier, precision: 2) %>×</td>
+              <td class="td"><span class="<%= share.active? ? 'pill-fern' : 'pill-taupe' %>"><%= share.status.to_s.humanize %></span></td>
+              <td class="td"><code class="rounded-control bg-haze px-2 py-0.5 font-mono text-xs text-mocha"><%= warehouse_sale_url(share.token) %></code></td>
+              <td class="td text-right"><%= link_to 'Open', warehouse_share_path(share), class: 'btn-ghost btn-sm' %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
     </div>
   </section>
 
-  <section>
-    <div class="card overflow-hidden">
-      <div class="card-pad pb-3">
-        <h2 class="font-display text-xl text-ink">Vendor links</h2>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="border-b border-fog bg-haze/60">
-            <tr>
-              <th scope="col" class="th">Vendor</th>
-              <th scope="col" class="th text-right">Multiplier</th>
-              <th scope="col" class="th">Status</th>
-              <th scope="col" class="th">Link</th>
-              <th scope="col" class="th"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-fog">
-            <% if @shares.empty? %>
-              <tr>
-                <td class="td py-8 text-center">
-                  <p class="text-taupe">No vendor links yet.</p>
-                  <p class="mt-1 text-xs text-taupe">Create one with the form on the right.</p>
-                </td>
-              </tr>
-            <% end %>
-            <% @shares.each do |share| %>
-              <tr class="hover:bg-cream">
-                <td class="td">
-                  <%= link_to share.name, warehouse_share_path(share), class: "font-medium text-olive hover:underline" %>
-                </td>
-                <td class="td text-right text-mocha"><%= number_with_precision(share.priceMultiplier, precision: 2) %>×</td>
-                <td class="td"><span class="<%= share.active? ? "pill-fern" : "pill-taupe" %>"><%= share.status %></span></td>
-                <td class="td">
-                  <code class="rounded bg-haze px-2 py-0.5 font-mono text-xs text-mocha"><%= warehouse_sale_url(share.token) %></code>
-                </td>
-                <td class="td text-right">
-                  <%= link_to "Manage", warehouse_share_path(share), class: "text-xs font-semibold text-olive hover:underline" %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
+  <section class="grid gap-4 lg:grid-cols-2">
+    <div id="add-vendor-link" class="section-card">
+      <%= section_heading 'Add vendor link', hint: 'A secret, unguessable URL is generated automatically.' %>
+      <%= form_tag warehouse_shares_path, method: :post, class: 'space-y-4' do %>
+        <div>
+          <label class="field-label" for="name">Vendor name</label>
+          <input type="text" id="name" name="name" required class="input" placeholder="GreenLeaf Distributors">
+        </div>
+        <div>
+          <label class="field-label" for="priceMultiplier">Price multiplier</label>
+          <input type="number" id="priceMultiplier" name="priceMultiplier" step="0.01" min="0" value="0.85" class="input" aria-describedby="price-multiplier-hint">
+          <p id="price-multiplier-hint" class="mt-1 text-xs text-taupe">0.85 = 15% off list price.</p>
+        </div>
+        <div class="form-actions"><%= submit_tag 'Save', class: 'btn-primary' %></div>
+      <% end %>
+    </div>
+
+    <div class="section-card">
+      <%= section_heading 'Global bulk tiers', hint: 'Applied to every vendor unless a vendor uses custom tiers.' %>
+      <%= form_tag update_warehouse_tiers_path, method: :post, class: 'space-y-3' do %>
+        <% @global_tiers.each do |tier| %>
+          <div class="flex flex-wrap items-center gap-2">
+            <%= hidden_field_tag "tiers[#{tier.id}][id]", tier.id %>
+            <%= number_field_tag "tiers[#{tier.id}][minQty]", tier.minQty, min: 1, class: 'input w-24', placeholder: 'Min qty', aria: { label: 'Minimum quantity' } %>
+            <span class="text-sm text-taupe">+ units</span>
+            <%= number_field_tag "tiers[#{tier.id}][discountPercent]", tier.discountPercent, min: 0, max: 99, step: '0.5', class: 'input w-24', placeholder: '% off', aria: { label: 'Percent off' } %>
+            <span class="text-sm text-taupe">% off</span>
+            <label class="flex items-center gap-1.5 text-xs text-mocha"><%= check_box_tag "tiers[#{tier.id}][_destroy]", '1' %> Remove</label>
+          </div>
+        <% end %>
+        <% if @global_tiers.empty? %>
+          <p class="text-sm text-taupe">No tiers yet. Add one below, for example 10+ units = 5% off.</p>
+        <% end %>
+        <div class="flex flex-wrap items-center gap-2">
+          <%= number_field_tag 'tiers[new][minQty]', nil, min: 1, class: 'input w-24', placeholder: 'Min qty', aria: { label: 'New tier minimum quantity' } %>
+          <span class="text-sm text-taupe">+ units</span>
+          <%= number_field_tag 'tiers[new][discountPercent]', nil, min: 0, max: 99, step: '0.5', class: 'input w-24', placeholder: '% off', aria: { label: 'New tier percent off' } %>
+          <span class="text-sm text-taupe">% off</span>
+        </div>
+        <div class="form-actions"><%= submit_tag 'Save', class: 'btn-primary' %></div>
+      <% end %>
     </div>
   </section>
 </div>

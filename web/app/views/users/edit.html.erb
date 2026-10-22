@@ -1,59 +1,52 @@
 <% can_manage_accounts = Current.user.can_manage_accounts? %>
-<% content_for :title, "Edit #{@user.display_name}" %>
-<div class="space-y-6">
-  <section>
-    <h1 class="page-title">Edit <%= @user.display_name %></h1>
-    <p class="mt-1 text-sm text-mocha"><%= @user.email %> · <span class="capitalize"><%= @user.role %></span> role</p>
-  </section>
+<% content_for :title, "Edit user" %>
+<div class="page-medium space-y-6">
+  <%= page_header 'Edit user', subtitle: "#{@user.display_name} · #{@user.email} · #{@user.role.to_s.humanize} role" %>
 
   <% if can_manage_accounts && (Current.user.super_admin? || !@user.super_admin?) %>
-  <div class="card card-pad max-w-xl">
+  <div class="card card-pad">
     <%= render "form", user: @user %>
   </div>
 
   <% if @user.employee? %>
-    <section class="card card-pad">
-      <h2 class="font-display text-xl text-ink">Staff-only access</h2>
-      <p class="mt-1 text-sm text-mocha">This account can use POS and its own time clock, timesheets, time off and personal pay reports, plus view and update its assigned tasks. It cannot access sales history, reconciliation, company financial reports, customer records or account management. Permission overrides cannot expand the staff role.</p>
+    <section class="section-card">
+      <%= section_heading 'Staff-only access' %>
+      <p class="text-sm text-mocha">This account can use POS and its own time clock, timesheets, time off and personal pay reports, plus view and update its assigned tasks. It cannot access sales history, reconciliation, company financial reports, customer records or account management. Permission overrides cannot expand the staff role.</p>
     </section>
   <% end %>
   <% unless @user.super_admin? || @user.employee? %>
-    <section class="card card-pad">
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <h2 class="font-display text-xl text-ink">Per-person permissions</h2>
-          <p class="mt-1 text-sm text-mocha">Optional exceptions just for <%= @user.display_name %>. Leave empty to use their role's permissions (see the <a href="<%= permissions_path %>" class="text-olive hover:underline">Permissions</a> screen).</p>
-        </div>
+    <section class="section-card">
+      <%= section_heading 'Per-person permissions', hint: "Optional exceptions just for #{@user.display_name}. Leave empty to use their role's permissions." do %>
         <% if @user.permission_overrides? %>
-          <span class="pill-clay">overrides active</span>
+          <span class="pill-clay">Overrides active</span>
         <% else %>
-          <span class="pill-taupe">using role defaults</span>
+          <span class="pill-taupe">Using role defaults</span>
         <% end %>
-      </div>
+      <% end %>
 
-      <%= form_tag update_permissions_user_path(@user), method: :post, class: "mt-4" do %>
-        <div class="overflow-x-auto rounded-xl border border-fog">
-          <table class="w-full text-sm">
-            <thead class="border-b border-fog bg-haze/60">
+      <%= form_tag update_permissions_user_path(@user), method: :post, class: "space-y-4" do %>
+        <div class="table-region" role="region" tabindex="0" aria-label="Per-person permissions">
+          <table class="table">
+            <thead>
               <tr>
                 <th scope="col" class="th">Area / permission</th>
                 <th scope="col" class="th w-24 text-center">Grant</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-fog">
+            <tbody>
               <% @catalog.each do |group| %>
                 <tr class="bg-haze/40">
-                  <td colspan="2" class="px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-mocha"><%= group[:area] %></td>
+                  <th scope="rowgroup" colspan="2" class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-mocha"><%= group[:area] %></th>
                 </tr>
                 <% group[:permissions].each do |permission| %>
                   <% checked = @user.user_permissions.find_by(permission: permission)&.enabled? %>
-                  <tr class="hover:bg-cream">
+                  <tr>
                     <td class="td">
-                      <p class="font-medium text-ink"><%= permission.split(".").last.titleize %></p>
-                      <p class="font-mono text-[10px] text-taupe"><%= permission %></p>
+                      <label for="perm-<%= permission.tr('.', '-') %>" class="font-medium text-ink"><%= permission.split(".").last.humanize %></label>
+                      <p class="font-mono text-xs text-taupe"><%= permission %></p>
                     </td>
                     <td class="td text-center">
-                      <input type="checkbox" name="permissions[<%= permission %>]" value="1" <%= checked ? "checked" : "" %> class="accent-olive">
+                      <input type="checkbox" id="perm-<%= permission.tr('.', '-') %>" name="permissions[<%= permission %>]" value="1" <%= checked ? "checked" : "" %> class="checkbox">
                     </td>
                   </tr>
                 <% end %>
@@ -62,7 +55,7 @@
           </table>
         </div>
 
-        <div class="mt-4 flex items-center gap-3">
+        <div class="form-actions">
           <%= submit_tag "Save permissions", class: "btn-primary" %>
           <span class="text-xs text-taupe">Unchecking everything returns <%= @user.display_name %> to role defaults.</span>
         </div>
