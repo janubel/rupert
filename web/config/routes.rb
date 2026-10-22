@@ -198,10 +198,6 @@ Rails.application.routes.draw do
   get '/roadmap', to: 'roadmap#index', as: :roadmap
   # Team chat: rooms inside Rupert with the @rupert assistant (docs/ops/team-chat.md).
   get    '/chat',                                     to: 'team_chat#index',           as: :team_chat
-  # Buzz was retired for team chat; old bookmarks land in team chat.
-  get '/admin/buzz', to: redirect('/chat')
-  get '/buzz', to: redirect('/chat')
-  get '/buzz/chat', to: redirect('/chat')
   post   '/chat/rooms',                               to: 'team_chat#create_room',     as: :team_chat_rooms
   get    '/chat/:room',                               to: 'team_chat#show',            as: :team_chat_room
   patch  '/chat/:room',                               to: 'team_chat#update_room'
@@ -211,6 +207,12 @@ Rails.application.routes.draw do
   post   '/chat/:room/messages/:id/reactions',        to: 'team_chat#react',           as: :team_chat_reactions
   get    '/chat/:room/files/:id',                     to: 'team_chat#attachment',      as: :team_chat_attachment
   post   '/chat/:room/messages/:id/actions/:action_id', to: 'team_chat#decide',        as: :team_chat_action
+
+  # Buzz was retired for team chat; old bookmarks land in team chat.
+  get '/admin/buzz', to: redirect('/chat')
+  get '/buzz', to: redirect('/chat')
+  get '/buzz/chat', to: redirect('/chat')
+
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)
