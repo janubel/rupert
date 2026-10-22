@@ -27,7 +27,12 @@ module TeamChat
         'id' => SecureRandom.hex(6), 'tool' => tool, 'arguments' => arguments, 'status' => 'proposed',
         'title' => mcp&.title.to_s.sub(/\s*\(.*\)\z/, ''), 'summary' => summary(tool, arguments), 'proposed_for' => proposed_for.id
       }
-      reply.update_columns(actions: (reply.actions_list + [action]), updated_at: Time.current)
+      # Generation can continue while another request approves a previous card.
+      # with_lock reloads the reply and serializes this append with decide!;
+      # appending the agent's stale JSON would resurrect the earlier proposal.
+      reply.with_lock do
+        reply.update_columns(actions: (reply.actions_list + [action]), updated_at: Time.current)
+      end
       action
     end
 

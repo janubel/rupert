@@ -76,6 +76,92 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_equal ['Sales were fine.'], json['messages'].pluck('body')
   end
 
+  test 'the initial poll retains an update committed after its messages were selected' do
+    travel_to Time.zone.local(2026, 10, 22, 12)
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'admins')
+    reply = room.messages.create!(author_kind: 'assistant', status: 'pending')
+
+    finish_reply_after_selection(reply)
+    get team_chat_messages_path('admins', visible: 1), as: :json
+    assert_equal 'pending', json['messages'].find { |message| message['id'] == reply.id }['status']
+    cursor = json['now']
+
+    get team_chat_messages_path('admins', since: cursor), as: :json
+    assert_equal ['Finished while polling.'], json['messages'].select { |message| message['id'] == reply.id }.pluck('body')
+  end
+
+  test 'a change poll retains an update committed after its messages were selected' do
+    travel_to Time.zone.local(2026, 10, 22, 12)
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'admins')
+    reply = room.messages.create!(author_kind: 'assistant', status: 'pending')
+    get team_chat_messages_path('admins'), as: :json
+    cursor = json['now']
+
+    finish_reply_after_selection(reply)
+    get team_chat_messages_path('admins', since: cursor, visible: 1), as: :json
+    assert_equal 'pending', json['messages'].find { |message| message['id'] == reply.id }['status']
+    cursor = json['now']
+
+    get team_chat_messages_path('admins', since: cursor), as: :json
+    assert_equal ['Finished while polling.'], json['messages'].select { |message| message['id'] == reply.id }.pluck('body')
+  end
+
+  test 'change polling drains a capped backlog with tied timestamps and updates to older messages' do
+    travel_to Time.zone.local(2026, 10, 22, 12)
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by(slug: 'admins')
+    reply = room.messages.create!(author_kind: 'assistant', status: 'pending')
+    get team_chat_messages_path('admins'), as: :json
+    cursor = json['now']
+
+    travel 1.second
+    TeamChat::Message.insert_all!((TeamChatController::CHANGED_MAX + 3).times.map do |index|
+      { tenant_id: @tenant.id, room_id: room.id, user_id: @admin.id, body: "Backlog #{index}", created_at: Time.current, updated_at: Time.current }
+    end)
+    expected_ids = room.messages.pluck(:id)
+    travel 1.second
+    reply.update!(body: 'An older message finished last.', status: 'done')
+    travel 1.second
+
+    seen = []
+    get team_chat_messages_path('admins', since: cursor), as: :json
+    assert_equal TeamChatController::CHANGED_MAX, json['messages'].size
+    assert json['has_more_changes']
+    seen.concat(json['messages'])
+
+    get team_chat_messages_path('admins', since: json['now']), as: :json
+    assert_not json['has_more_changes']
+    seen.concat(json['messages'])
+    assert_equal expected_ids.sort, seen.pluck('id').sort
+    assert_equal 'done', seen.find { |message| message['id'] == reply.id }['status']
+  end
+
+  test 'invalid change cursors are refused' do
+    sign_in(@admin)
+    get team_chat_path
+    ['not-a-time', '2026-10-22T12:00:00Z|oops', '2026-10-22T12:00:00Z|0', '2026-10-22T12:00:00Z|1|2'].each do |cursor|
+      get team_chat_messages_path('admins', since: cursor), as: :json
+      assert_response :unprocessable_entity
+      assert_equal 'Bad cursor.', json['error']
+    end
+  end
+
+  # Reproduce a worker finishing after the SELECT, before the response cursor
+  # is built. Advancing again after the write makes the old cursor skip it.
+  def finish_reply_after_selection(reply)
+    TeamChatController.any_instance.expects(:mark_read).with do |_rows|
+      travel 1.second
+      TeamChat::Message.find(reply.id).update!(body: 'Finished while polling.', status: 'done')
+      travel 1.second
+      true
+    end
+  end
+
   test 'empty and oversized messages are refused' do
     sign_in(@admin)
     get team_chat_path

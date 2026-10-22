@@ -6,7 +6,7 @@ import { test } from 'node:test';
 const source = readFileSync(new URL('../../app/javascript/controllers/team_chat_controller.js', import.meta.url), 'utf8')
   .replace('import { Controller } from "@hotwired/stimulus"', 'class Controller {}')
   .replace('export default class', 'globalThis.TeamChat = class');
-const context = { URL };
+const context = { URL, document: { hidden: false } };
 vm.createContext(context);
 vm.runInContext(source, context);
 const Chat = context.TeamChat;
@@ -49,4 +49,33 @@ test('local model @agents are highlighted as mentions when listed', () => {
   assert.deepEqual(types(Chat.parseInline('hey @gemma and @rupert', [], ['rupert', 'gemma'])), ['text', 'mention', 'text', 'mention']);
   assert.deepEqual(types(Chat.parseInline('hey @gemma', [])), ['text'], 'not a mention unless the agent exists');
   assert.deepEqual(types(Chat.parseInline('mail me@gemma.com', [], ['rupert', 'gemma'])), ['text']);
+});
+
+async function pollChange(before, after) {
+  const chat = new Chat();
+  chat.byId = new Map([[before.id, before]]);
+  chat.since = '2026-10-22T12:00:00.000000Z';
+  chat.query = () => '/messages';
+  chat.fetchJson = async () => ({ now: '2026-10-22T12:00:01.000000Z', messages: [after] });
+  chat.renderRooms = chat.setPins = chat.renderTyping = chat.applyPresence = () => {};
+  const rendered = [];
+  chat.render = () => rendered.push(chat.byId.get(after.id));
+  await chat.poll();
+  return rendered;
+}
+
+test('polling renders an action decision even when text and timestamps are unchanged', async () => {
+  const before = { id: 1, body: 'Proposed.', status: 'pending', updated_at: '2026-10-22T12:00:00Z',
+    actions: [{ id: 'a', status: 'proposed' }] };
+  const after = { ...before, actions: [{ id: 'a', status: 'done', result: 'Created task #1' }] };
+  const rendered = await pollChange(before, after);
+  assert.equal(rendered.length, 1);
+  assert.equal(rendered[0].actions[0].status, 'done');
+});
+
+test('polling renders completion even when the final text was already streamed', async () => {
+  const before = { id: 1, body: 'Ready for approval.', status: 'pending', activity: null, updated_at: '2026-10-22T12:00:00Z' };
+  const rendered = await pollChange(before, { ...before, status: 'done' });
+  assert.equal(rendered.length, 1);
+  assert.equal(rendered[0].status, 'done');
 });
