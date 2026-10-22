@@ -604,7 +604,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     room = TeamChat::Room.find_by(slug: 'admins')
     asked = room.messages.create!(user: @admin, body: 'How were sales?')
     answer = room.messages.create!(author_kind: 'assistant', status: 'done', body: 'Two orders, $214.83.',
-      meta: { 'asked_by' => @admin.id, 'trigger_id' => asked.id, 'agent' => 'qwen' })
+      meta: { 'asked_by' => @admin.id, 'trigger_id' => asked.id })
 
     post team_chat_messages_path('admins'), params: { body: 'Nice, thanks', quote_id: asked.id }, as: :json
     assert_response :created
@@ -619,7 +619,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
       post team_chat_messages_path('admins'), params: { body: 'And refunds?', quote_id: answer.id }, as: :json
     end
     reply = TeamChat::Message.find(json['messages'].last['id'])
-    assert_equal 'qwen', reply.meta['agent']
+    assert_equal ['assistant', nil], [reply.author_kind, reply.meta['agent']]
 
     get team_chat_messages_path('admins'), as: :json
     row = json['messages'].find { |message| message['body'] == 'And refunds?' }

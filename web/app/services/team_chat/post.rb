@@ -51,11 +51,8 @@ module TeamChat
           agents = LocalAgents.mentioned(@body)
           # Replying to a bot's answer, without naming a bot, asks that same bot again.
           if !rupert && agents.empty? && quote&.assistant? && quote.status == 'done'
-            if quote.local_agent
-              agents = LocalAgents.all.select { |agent| agent.handle == quote.local_agent.handle }
-            else
-              rupert = true
-            end
+            agents = LocalAgents.all.select { |agent| agent.handle == quote.local_agent&.handle }
+            rupert = agents.empty? # @rupert's own answer, or a local bot that is not running now
           end
           replies << start_reply(message) if rupert
           agents.each { |agent| replies << start_reply(message, agent: agent) }
