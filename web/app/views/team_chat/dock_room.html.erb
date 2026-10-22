@@ -24,6 +24,7 @@
       </div>
     </div>
 
+    <div class="chat-pins" data-team-chat-target="pins" hidden></div>
     <div class="chat-log-wrap">
       <div class="chat-log" data-team-chat-target="log" data-action="scroll->team-chat#onScroll" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"
            aria-label="Messages in <%= @room.direct? ? 'your room with Rupert' : "##{@room.name}" %>">

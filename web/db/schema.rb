@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_233000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -865,8 +865,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_230000) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "pinned_at"
+    t.bigint "pinned_by_id"
     t.index ["room_id", "id"], name: "index_chat_messages_on_room_id_and_id"
     t.index ["room_id", "parent_id", "id"], name: "index_chat_messages_on_room_id_and_parent_id_and_id"
+    t.index ["room_id", "pinned_at"], name: "index_chat_messages_on_room_id_and_pinned_at"
     t.index ["room_id", "status"], name: "index_chat_messages_on_room_id_and_status"
     t.index ["room_id"], name: "index_chat_messages_on_room_id"
   end
