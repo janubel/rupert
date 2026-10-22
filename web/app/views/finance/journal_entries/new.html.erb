@@ -3,7 +3,6 @@
 <% row_count = [rows.size, 6].max %>
 <% errors_by_line = (@line_errors || []).group_by { |e| e[:line] } %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= page_header 'New journal entry', subtitle: 'Post a manual adjustment, accrual, opening balance or owner draw. Total debits must equal total credits. A posted entry cannot be edited; to correct it, reverse it.' do %>
     <%= link_to "Back to ledger", finance_journal_entries_path, class: "btn-ghost btn-sm" %>

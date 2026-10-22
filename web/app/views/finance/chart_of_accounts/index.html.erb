@@ -1,6 +1,5 @@
 <% content_for :title, "Chart of accounts" %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= render layout: 'finance/page_header', locals: { title: 'Chart of accounts', currency: nil, print: true,
         explain: "The list of accounts the ledger posts to, in code order and grouped by type. #{@active_count} active of #{@grouped.values.sum(&:length)} accounts. Select a code to see every entry posted to it. An archived account stays on record but cannot be used for new entries." } do %>

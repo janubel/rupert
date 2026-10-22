@@ -138,7 +138,7 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     get customers_path
     assert_response :success
     assert_select 'nav[aria-label="Module areas"] a[aria-current="page"]', text: /Sell/
-    assert_select 'nav[aria-label="Module"] .module-menu-panel a[href=?][aria-current="page"]', customers_path
+    assert_select 'nav[aria-label="Module"] a[href=?][aria-current="page"]', customers_path
     assert_select 'a.nav-utility[href=?]', customers_path, count: 0
     OnboardingController.stubs(:configured?).returns(true)
     get root_path

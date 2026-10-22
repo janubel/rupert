@@ -1,6 +1,5 @@
 <% content_for :title, 'Accounts' %>
 <div class="operations-workspace space-y-6">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <header class="operations-header"><div><p class="eyebrow text-olive-deep">Finance · balances and next steps</p><h1 class="page-title mt-2">Accounts</h1><p class="mt-2 max-w-3xl text-sm text-mocha">Review recorded vendor balances and customer receivables, then open the close workspace for source evidence and bank checks.</p></div><% if retail_business_access?('reports.read') %><%= link_to 'Review the latest closed day', financial_close_path(day: Date.yesterday), class: 'btn-primary' %><% end %></header>
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-3" aria-label="Vendor balance summary">

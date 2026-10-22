@@ -1,7 +1,6 @@
 <% content_for :title, 'Cash forecast' %>
 <% values = @values || {}; horizon = %w[4 8 13].include?(values['horizon']) ? values['horizon'].to_i : 8 %>
 <div class="mx-auto max-w-6xl space-y-6 operations-workspace" data-controller="cash-forecast-form" data-cash-forecast-form-calculated-value="<%= @forecast.present? %>" data-cash-forecast-form-baseline-date-value="<%= @baseline&.day&.iso8601 %>">
-  <%= render 'shared/operations_navigation', workspace: :money, day: @baseline&.day %>
   <%= render layout: 'finance/page_header', locals: { title: 'Cash forecast', currency: nil, range: (@baseline ? "from #{@baseline.day.strftime('%B %-d, %Y')}" : nil),
         explain: 'A weekly plan of bank receipts and payments built from the assumptions you enter. Calculating only previews; retaining saves a version. Nothing here moves money.' } do %>
     <%= link_to 'Back to day close', financial_close_path(day: @baseline&.day&.iso8601), class: 'btn-ghost' %>

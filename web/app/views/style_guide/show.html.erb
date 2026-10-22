@@ -1,0 +1,138 @@
+<%# The living style guide (docs/ui-standards.md). Sample data only; every piece below is the
+    real class or helper a page uses, so a change to the stylesheet shows here first. %>
+<% content_for :title, 'Style guide' %>
+<div class="space-y-10">
+  <%= page_header 'Style guide', subtitle: 'Every template and component a Rupert page is built from, rendered from the real stylesheet.', menu: [['Download CSV', '#'], ['Print', '#']] do %>
+    <%= link_to 'Add item', '#', class: 'btn-primary' %>
+  <% end %>
+
+  <%= page_tabs([['Templates', '#templates', true], ['Components', '#components', false], ['Colour & type', '#tokens', false], ['Verbiage', '#verbiage', false]], label: 'Style guide sections') %>
+
+  <section id="templates" class="space-y-6">
+    <%= section_heading 'Page templates', hint: 'Six skeletons. A page picks one and fills its slots.' %>
+    <div class="grid gap-4 md:grid-cols-2">
+      <% [
+        ['Overview', 'A section landing page', 'page_header → stat row → work queues'],
+        ['List', 'Records of one kind', 'page_header (Add X) → toolbar → table → pagination or empty state'],
+        ['Detail', 'One record', 'page_header (Edit, More) → facts → related section cards'],
+        ['Form', 'Add or edit', 'page-narrow → page_header → card with fieldsets → form actions'],
+        ['Report', 'Figures over a period', 'page_header → tabs → period toolbar → report table'],
+        ['Settings', 'Configuration', 'page-medium → page_header → one section card per topic']
+      ].each do |name, use, skeleton| %>
+        <article class="section-card">
+          <%= section_heading name, hint: use, level: :h3 %>
+          <p class="text-sm text-mocha"><%= skeleton %></p>
+        </article>
+      <% end %>
+    </div>
+  </section>
+
+  <section id="components" class="space-y-8">
+    <%= section_heading 'Components' %>
+
+    <article class="section-card">
+      <%= section_heading 'Stats', hint: 'Figures that matter; the value scales to its card.', level: :h3 %>
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="stat"><p class="stat-label">Recorded sales</p><p class="stat-value mt-1">$12,480.50</p><p class="mt-1 text-xs text-taupe">Oct 21, 2026</p></div>
+        <div class="stat"><p class="stat-label">Sales recorded</p><p class="stat-value mt-1">184</p><p class="mt-1 text-xs text-taupe">paid and fulfilled</p></div>
+        <div class="stat"><p class="stat-label">Average sale</p><p class="stat-value mt-1">$67.83</p><p class="mt-1 text-xs text-taupe">recorded sales only</p></div>
+        <div class="stat"><p class="stat-label">Follow-ups due</p><p class="stat-value mt-1 text-rose">3</p><p class="mt-1 text-xs text-taupe">due today or overdue</p></div>
+      </div>
+    </article>
+
+    <article class="section-card">
+      <%= section_heading 'Toolbar and table', hint: 'A List page: search and filters above, rows below, one empty state.', level: :h3 %>
+      <form class="toolbar" onsubmit="return false">
+        <div class="toolbar-field"><label class="field-label" for="sg-q">Search</label><input id="sg-q" type="search" class="input" placeholder="Name, email or phone"></div>
+        <div class="toolbar-field"><label class="field-label" for="sg-status">Status</label><select id="sg-status" class="input"><option>All statuses</option><option>Lead</option><option>VIP</option></select></div>
+        <div class="toolbar-actions"><button type="submit" class="btn-primary">Apply</button><button type="reset" class="btn-ghost">Clear</button></div>
+      </form>
+      <div class="table-region" role="region" tabindex="0" aria-label="Sample customers">
+        <table class="table">
+          <thead><tr><th scope="col" class="th">Customer</th><th scope="col" class="th">Status</th><th scope="col" class="th num">Lifetime</th><th scope="col" class="th">Last order</th><th scope="col" class="th"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            <tr><td class="td"><a href="#" class="font-semibold text-olive-deep hover:underline">Avery Chen</a><p class="text-xs text-taupe">avery@example.test</p></td><td class="td"><span class="pill-fern">VIP</span></td><td class="td num">$4,210.00</td><td class="td">Oct 18, 2026</td><td class="td text-right"><a href="#" class="btn-ghost btn-sm">Open</a></td></tr>
+            <tr><td class="td"><a href="#" class="font-semibold text-olive-deep hover:underline">Jordan Reyes</a><p class="text-xs text-taupe">jordan@example.test</p></td><td class="td"><span class="pill-clay">Needs attention</span></td><td class="td num">$320.75</td><td class="td">Sep 2, 2026</td><td class="td text-right"><a href="#" class="btn-ghost btn-sm">Open</a></td></tr>
+            <tr><td class="td"><a href="#" class="font-semibold text-olive-deep hover:underline">Sam Okafor</a><p class="text-xs text-taupe">sam@example.test</p></td><td class="td"><span class="pill-taupe">Lead</span></td><td class="td num">—</td><td class="td">—</td><td class="td text-right"><a href="#" class="btn-ghost btn-sm">Open</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <%= empty_state 'No customers yet', hint: 'Add your first customer to start tracking follow-ups.' do %><a href="#" class="btn-primary">Add customer</a><% end %>
+    </article>
+
+    <article class="section-card">
+      <%= section_heading 'Facts', hint: 'The key–value summary at the top of a Detail page.', level: :h3 %>
+      <dl class="facts">
+        <div><dt>Order</dt><dd>#10432</dd></div>
+        <div><dt>Placed</dt><dd>Oct 21, 2026 · 3:40 PM</dd></div>
+        <div><dt>Source</dt><dd>Shopify · Online store</dd></div>
+        <div><dt>Status</dt><dd><span class="pill-fern">Paid</span></dd></div>
+        <div><dt>Total</dt><dd class="num text-left">$128.40</dd></div>
+      </dl>
+    </article>
+
+    <article class="section-card page-narrow">
+      <%= section_heading 'Form', hint: 'One card, fieldsets, Save and Cancel at the end.', level: :h3 %>
+      <form class="space-y-4" onsubmit="return false">
+        <fieldset class="space-y-3">
+          <legend class="card-title">Contact</legend>
+          <div><label class="field-label" for="sg-name">Name</label><input id="sg-name" class="input" value="Avery Chen"></div>
+          <div><label class="field-label" for="sg-email">Email</label><input id="sg-email" class="input" value="not-an-email" aria-invalid="true" aria-describedby="sg-email-error"><p id="sg-email-error" class="mt-1 text-xs text-danger">Enter an email address like name@example.com.</p></div>
+          <div><label class="field-label" for="sg-notes">Notes</label><textarea id="sg-notes" class="input" rows="3">Prefers texts over calls.</textarea></div>
+        </fieldset>
+        <div class="form-actions"><button type="submit" class="btn-primary">Save</button><a href="#" class="btn-ghost">Cancel</a><button type="button" class="btn-danger">Remove</button></div>
+      </form>
+    </article>
+
+    <article class="section-card">
+      <%= section_heading 'Buttons, pills and flashes', level: :h3 %>
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="btn-primary" type="button">Primary</button><button class="btn-ghost" type="button">Ghost</button><button class="btn-danger" type="button">Danger</button><button class="btn-ghost btn-sm" type="button">Small</button><button class="btn-primary" type="button" disabled>Disabled</button>
+        <%= page_menu([['Download CSV', '#'], ['Print', '#'], ['Remove', '#']]) %>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="pill-fern">Done</span><span class="pill-olive">Open</span><span class="pill-clay">Needs attention</span><span class="pill-rose">Overdue</span><span class="pill-taupe">Draft</span>
+      </div>
+      <div class="space-y-2">
+        <div class="flash flash-notice" role="status">Customer saved.</div>
+        <div class="flash flash-alert" role="alert">The statement could not be imported: the file has no date column.</div>
+      </div>
+    </article>
+
+    <article class="section-card">
+      <%= section_heading 'Tabs and explainers', hint: 'Tabs switch views of the same report; explainers keep the caveat one click away.', level: :h3 %>
+      <%= page_tabs([['Sales', '#', true], ['Sales tax', '#', false], ['Financial', '#', false], ['Inventory', '#', false]], label: 'Sample report tabs') %>
+      <%= fold_explainer('Totals include paid and fulfilled orders once, before refunds. Tips, payment reports and bank deposits stay separate so a day never counts money twice. The order journal status filter changes only the journal below.', class: 'text-sm text-mocha') %>
+    </article>
+  </section>
+
+  <section id="tokens" class="space-y-6">
+    <%= section_heading 'Colour and type', hint: 'Tokens from application.css; switch Appearance in the account menu to see each theme.' %>
+    <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <% %w[oat cream paper haze fog edge ink mocha taupe olive olive-deep fern sage clay rose butter].each do |token| %>
+        <div class="section-card !p-3"><div class="h-10 rounded-control border border-fog bg-<%= token %>"></div><p class="mt-2 text-xs font-semibold text-ink"><%= token %></p></div>
+      <% end %>
+    </div>
+    <div class="section-card">
+      <p class="page-title">Page title · display serif</p>
+      <p class="section-title mt-2">Section title · display serif 1.25rem</p>
+      <p class="card-title mt-2">Card title · sans 1rem semibold</p>
+      <p class="mt-2 text-sm text-ink">Body · sans 0.875rem. One idea per sentence.</p>
+      <p class="mt-1 text-xs text-mocha">Caption · 0.75rem, secondary colour.</p>
+      <p class="eyebrow mt-3 text-olive">Eyebrow · section and group</p>
+    </div>
+  </section>
+
+  <section id="verbiage" class="space-y-4">
+    <%= section_heading 'Verbiage', hint: 'One verb per intent, sentence case everywhere.' %>
+    <div class="table-region"><table class="table">
+      <thead><tr><th class="th" scope="col">Intent</th><th class="th" scope="col">Use</th><th class="th" scope="col">Not</th></tr></thead>
+      <tbody>
+        <% [['Create a record', 'Add', 'New, Create, Record'], ['Change', 'Edit', 'Update, Modify'], ['Persist a form', 'Save', 'Submit, Update'], ['Drop changes', 'Cancel', 'Back, Discard'], ['Go to a record', 'Open', 'View, See, Show'], ['Get a file', 'Download CSV', 'Export'], ['Run a filter', 'Apply', 'Filter, Refresh, Find'], ['Pull from a source', 'Sync now', 'Refresh, Pull'], ['More actions', 'More', 'Actions, Options, Tools']].each do |intent, use, no| %>
+          <tr><td class="td"><%= intent %></td><td class="td font-semibold"><%= use %></td><td class="td text-mocha"><%= no %></td></tr>
+        <% end %>
+      </tbody>
+    </table></div>
+    <p class="text-sm text-mocha">The full standard: <code>docs/ui-standards.md</code>.</p>
+  </section>
+</div>

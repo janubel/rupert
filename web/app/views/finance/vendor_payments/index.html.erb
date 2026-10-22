@@ -1,7 +1,6 @@
 <% content_for :title, "Payments to vendors" %>
 <% range_text = @month ? "#{@from.strftime('%B %Y')} (#{@from} through #{@through})" : "#{@from} through #{@through}" %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= render layout: 'finance/page_header', locals: { title: 'Payments to vendors', range: range_text, print: true,
         explain: 'Payments already made against vendor purchase orders (accounts payable). Recording one lowers what is owed to that vendor.' } do %>

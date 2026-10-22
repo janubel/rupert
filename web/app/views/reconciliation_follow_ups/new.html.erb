@@ -1,6 +1,5 @@
 <% content_for :title, 'New reconciliation follow-up' %>
 <div class="mx-auto max-w-3xl space-y-5 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money, day: @close_day %>
 <h1 class="page-title">Track a missing report or difference</h1><p class="text-sm text-mocha">Name the missing report or difference to investigate, choose an owner and set a due date. Original source context stays fixed after saving; progress and closing notes keep a history.</p><p class="rounded-xl border border-fog bg-paper p-3 text-sm">Saved in Rupert only. No email or message is sent.</p>
   <% if @follow_up.errors.any? %><div role="alert" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm"><%= @follow_up.errors.full_messages.to_sentence %></div><% end %>
   <%= form_with model: @follow_up, scope: :follow_up, class: 'card card-pad space-y-4', data: { controller: 'reconciliation-request-form reconciliation-follow-up-form' } do |f| %>

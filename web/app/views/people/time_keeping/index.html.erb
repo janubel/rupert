@@ -4,7 +4,6 @@
 <% status_pill = ->(status) { { 'On schedule' => 'pill-fern', 'Unscheduled' => 'pill-clay', 'Over schedule' => 'pill-clay', 'Under schedule' => 'pill-clay', 'C-Trax only' => 'pill-taupe' }.fetch(status, 'pill-rose') } %>
 <% totals = @report.totals %>
 <div class="space-y-6">
-  <%= render 'shared/time_navigation' %>
 
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>

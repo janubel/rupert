@@ -1,7 +1,6 @@
 <% content_for :title, 'Cash flow' %>
 <% report = @report %>
 <div class="mx-auto max-w-7xl space-y-6 operations-workspace cash-flow-workspace" data-controller="cash-flow" data-cash-flow-interval-value="30000" data-cash-flow-url-value="<%= finance_cash_flow_path(request.query_parameters) %>">
-  <%= render 'shared/operations_navigation', workspace: :finance %>
 
   <header class="operations-header">
     <div>

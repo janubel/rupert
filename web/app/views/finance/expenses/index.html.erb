@@ -1,7 +1,6 @@
 <% content_for :title, "Expenses" %>
 <% range_text = @month ? "#{@from.strftime('%B %Y')} (#{@from} through #{@through})" : "#{@from} through #{@through}" %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= render layout: 'finance/page_header', locals: { title: 'Expenses', range: range_text, print: true,
         explain: 'Money the business has paid out. Each expense posts to the ledger. Removing one keeps it on this list as Removed and can be undone.' } do %>

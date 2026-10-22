@@ -1,6 +1,5 @@
 <% content_for :title, "Team schedule" %>
 <div class="space-y-6">
-  <%= render 'shared/time_navigation' %>
   <%= page_header 'Team schedule', subtitle: 'Hours worked per staff member per day, pulled from Rupert punches, Square timecards and C-Trax shifts. Read-only.' do %>
     <%= link_to 'Previous week', people_team_schedule_path(week: @prev_week.iso8601), class: 'btn-ghost btn-sm' %>
     <%= link_to 'This week', people_team_schedule_path, class: 'btn-ghost btn-sm' %>

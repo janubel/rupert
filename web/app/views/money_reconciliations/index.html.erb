@@ -1,6 +1,5 @@
 <% content_for :title, 'Source reports' %>
 <div class="operations-workspace space-y-6">
-  <%= render 'shared/operations_navigation', workspace: :money, day: @report.from %>
   <%= render layout: 'finance/page_header', locals: { title: 'Source reports', currency: nil, range: "#{@report.from} through #{@report.to}",
         explain: 'Saved totals from each sales source for a day, week, month, quarter or year. Each source and currency is shown on its own and never added to another.' } do %>
     <%= link_to 'Open day close', financial_close_path(day: @report.from.iso8601), class: 'btn-primary' %>

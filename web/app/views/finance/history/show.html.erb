@@ -2,7 +2,6 @@
 <% number = ->(n) { number_with_delimiter(n) } %>
 <% cents = ->(c) { finance_money_text(c, zero: :show) } %>
 <div class="space-y-8 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= page_header 'History', eyebrow: 'Bookkeeping · records', subtitle: 'What Rupert retains from each source, in one place. A source’s oldest record shows the coverage that was available to Rupert, not when the business began or proof that nothing older exists. Counts are records, not sales totals.' %>
 

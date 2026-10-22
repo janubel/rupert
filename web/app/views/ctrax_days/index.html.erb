@@ -1,7 +1,6 @@
 <% content_for :title, 'C-Trax daily close' %>
 <% today = Time.current.in_time_zone('America/New_York').to_date %>
 <div class="space-y-6">
-  <%= render 'shared/retail_navigation' %>
   <header><p class="eyebrow text-olive-deep">Review · native C-Trax records</p><h1 class="page-title mt-2">C-Trax daily close</h1><p class="mt-2 max-w-3xl text-sm text-mocha">Review recorded sales, tender details, and register cash for one business date. A local review does not close a C-Trax register or confirm bank settlement.</p><p class="mt-2 text-sm"><%= link_to 'SwipeSimple daily close for this date', swipesimple_days_path(date: @date), class: 'font-semibold text-olive-deep underline' %></p></header>
   <section class="card card-pad space-y-4" aria-label="Choose business date">
     <div class="flex flex-wrap items-end justify-between gap-3">

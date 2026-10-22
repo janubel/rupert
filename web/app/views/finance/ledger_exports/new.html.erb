@@ -1,6 +1,5 @@
 <% content_for :title, "Export ledger" %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= page_header 'Export ledger', subtitle: 'Download posted journal entries for your accountant or accounting software.' do %>
     <%= link_to "All reports", finance_reports_path, class: "btn-ghost btn-sm" %>

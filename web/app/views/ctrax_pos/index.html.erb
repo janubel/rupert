@@ -3,7 +3,6 @@
 <% image_options = @images.products.sort_by(&:title).map { |p| [p.title, p.id] } if retail_business_access?('inventory.write') %>
 <% stock_fresh = @snapshot && @snapshot.captured_at >= 60.minutes.ago %>
 <div class="retail-workspace space-y-5" data-action="pos-cart:changing->pos-display#pending pos-cart:checked->pos-display#checked" data-controller="pos-cart<%= ' pos-display' if @display %>" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>" <% if @display %>data-pos-cart-clear-url-value="<%= clear_pos_display_path(@display) %>" data-pos-display-status-url-value="<%= pos_display_path(@display) %>" data-pos-display-clear-url-value="<%= clear_pos_display_path(@display) %>"<% end %>>
-  <%= render 'shared/retail_navigation' %>
   <header class="flex flex-wrap items-start justify-between gap-3">
     <div><p class="eyebrow text-olive-deep">Sell · retail workspace</p><h1 class="page-title mt-2">C-Trax retail</h1><p class="mt-2 text-sm text-mocha">Find products, check your cart, then let the customer confirm their tip privately.</p></div>
     <% if @snapshot %><a href="#retail-cart" class="btn-ghost">Review cart · <span data-pos-cart-target="count">0</span> items</a><% end %>

@@ -1,7 +1,6 @@
 <% content_for :title, 'By payee' %>
 <% money = ->(cents) { number_to_currency(cents / 100.0) } %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= page_header 'By payee', subtitle: "Everything paid to one vendor or payee in the last #{@range_days} days, with the bank lines that mention them." do %>
     <% if @selected %>

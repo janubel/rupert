@@ -1,7 +1,6 @@
 <% kind = @checkout.sandbox_payment? ? 'Sandbox receipt' : (@checkout.demo? ? 'Demo receipt' : 'Receipt') %>
 <% content_for :title, "#{kind} #{@checkout.reference}" %>
 <div class="space-y-6">
-  <%= render 'shared/retail_navigation' %>
   <div class="mx-auto max-w-2xl space-y-5">
     <header><p class="eyebrow text-olive-deep"><%= @checkout.location.name %></p><div class="mt-2 flex flex-wrap items-center justify-between gap-3"><h1 class="page-title"><%= kind %></h1><span class="<%= @checkout.paid? ? 'pill-fern' : @checkout.unresolved? ? 'pill-clay' : 'pill-taupe' %>"><%= @checkout.paid? ? (@checkout.sandbox_payment? ? 'Sandbox complete' : 'Paid') : @checkout.status.humanize %></span></div><p class="mt-2 break-words text-sm text-mocha"><%= @checkout.reference %> · USD</p></header>
     <% if @checkout.unresolved? %><div class="flash flash-alert" role="status"><p class="font-semibold">Payment outcome needs verification</p><p class="mt-1">Check this receipt and the gateway before collecting another payment. Rechecking reads the existing payment; it does not send another charge.</p></div><% end %>

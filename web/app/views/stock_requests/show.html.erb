@@ -1,7 +1,6 @@
 <% content_for :title, @stock_request.reference %>
 <% record = @stock_request %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :stock %>
   <section class="space-y-2"><h1 class="page-title"><%= record.reference %></h1><p><%= record.request_kind.humanize %> · <%= record.status.humanize %></p>
     <p class="text-sm"><%= record.source_pool.item_label %> · <%= record.source_pool.source.capitalize %> · <%= record.source_pool.location_name %><%= " → #{record.destination_pool.location_name}" if record.destination_pool %></p>
     <div class="text-sm">Requested: <%= record.quantity %> · <%= record.transfer? ? 'Received' : 'Fulfilled' %>: <%= record.received_quantity %><%= define('received_quantity') %> · Due: <%= record.due_on || 'Not set' %><%= define(record.transfer? ? 'transfer' : 'backorder') %></div>

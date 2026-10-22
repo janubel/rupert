@@ -31,7 +31,7 @@ class CashFlowPageTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(css_select('script#cash-flow-data').first.text)
     assert_equal 120_000, payload['kpis']['cash_in']['cents']
     assert_equal 'day', payload['range']['bucket']
-    assert_select 'nav a.nav-pill-active', text: 'Cash flow'
+    assert_select 'nav[aria-label="Module"] a[aria-current=page]', text: 'Cash flow'
     assert_select 'a.nav-pill', text: 'Last 90 days'
   end
 

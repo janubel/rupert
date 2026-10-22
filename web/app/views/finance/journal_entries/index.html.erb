@@ -1,7 +1,6 @@
 <% content_for :title, "General ledger" %>
 <% range_text = (@from || @to) ? "#{@from || 'start'} through #{@to || 'today'}" : 'All dates' %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= render layout: 'finance/page_header', locals: { title: 'General ledger', range: range_text, print: true,
         explain: 'The record of every posted entry. Each entry has equal debits and credits. Entries from expenses and sales are created automatically; you can add manual entries and reverse them.' } do %>

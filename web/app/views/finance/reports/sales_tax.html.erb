@@ -1,6 +1,5 @@
 <% content_for :title, "Sales tax report" %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= render layout: 'finance/page_header', locals: { title: 'Sales tax report', range: "#{@from} through #{@to}", print: true,
         explain: 'Tax collected on sales between any two dates, by source and store. Pick the dates your filing period uses.' } do %>

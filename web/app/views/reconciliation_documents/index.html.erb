@@ -1,7 +1,6 @@
 <% content_for :title, 'Source documents' %>
 <% library_context = @library_context || {}; reset_context = library_context.merge(@close_day && !@report_request ? { from: @close_day.iso8601, to: @close_day.iso8601 } : {}) %>
 <div class="mx-auto max-w-7xl space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money, day: @close_day %>
   <%= render layout: 'finance/page_header', locals: { title: 'Source documents', currency: nil,
         explain: 'Find the original reports, invoices and statements behind the books, including every saved version, across dates.' } do %>
     <%= link_to 'Across days', overview_reconciliation_follow_ups_path, class: 'btn-ghost' %>

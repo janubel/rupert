@@ -471,6 +471,7 @@ Rails.application.routes.draw do
     member { get :document }
   end
   get '/system', to: 'system#index', as: :system
+  get '/system/style_guide', to: 'style_guide#show', as: :system_style_guide
   post '/system/ai_health/check', to: 'system#check_ai_health', as: :check_system_ai_health
   get '/system/updates', to: 'updates#show', as: :system_updates
   post '/system/updates/check', to: 'updates#check', as: :check_system_updates

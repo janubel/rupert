@@ -6,7 +6,6 @@
 <% comparisons = @report.comparisons %>
 <% attention = @attention.differences.size %>
 <div class="mx-auto max-w-7xl space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money, day: @report.day %>
   <%= render layout: 'finance/page_header', locals: { title: 'Daily reconciliation', range: @report.day.strftime('%A, %B %-d, %Y'), currency: nil,
         explain: 'Check the day against its source reports, keep the originals, and record anything that needs follow-up. Source, currency and location are never added together.' } do %>
     <%= link_to 'Day close', financial_close_path(day: @report.day.iso8601), class: 'btn-primary' %>

@@ -1,6 +1,5 @@
 <% content_for :title, 'Report requests & follow-ups' %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money, day: @day %>
   <%= render layout: 'finance/page_header', locals: { title: 'Report requests & follow-ups', currency: nil,
         explain: 'Missing reports and differences to investigate, kept visible across business days until each is closed with a reason.' } do %>
     <%= link_to 'Across days', overview_reconciliation_follow_ups_path(ending_on: @day&.iso8601), class: 'btn-ghost' %>

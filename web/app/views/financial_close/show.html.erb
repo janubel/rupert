@@ -1,7 +1,6 @@
 <% content_for :title, 'Day close' %>
 <% workflow = @workflow; day = workflow.day; issues = workflow.issues; can_write = Current.user.can?('reports.write') %>
 <div class="mx-auto max-w-7xl space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money, day: day %>
   <%= render layout: 'finance/page_header', locals: { title: 'Day close', range: day.strftime('%A, %B %-d, %Y'), currency: nil,
         explain: 'Work one business date from source originals to a saved close package. Start with the checks that need action.' } do %>
     <%= link_to 'Across days', overview_reconciliation_follow_ups_path(ending_on: day.iso8601), class: 'btn-ghost' %>

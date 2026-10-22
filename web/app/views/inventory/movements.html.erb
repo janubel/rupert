@@ -7,7 +7,6 @@
   "size-derive" => "Size derive",
 } %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :stock %>
   <%= page_header 'Movement history', subtitle: 'Every recorded quantity change — who or what changed it, why, and from → to. Mirrors are read-only snapshots from Square/Shopify.' do %>
     <%= link_to "Inventory", inventory_index_path, class: "btn-ghost" %>
   <% end %>

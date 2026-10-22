@@ -1,6 +1,5 @@
 <% content_for :title, 'Punch report' %>
 <div class="space-y-6" data-controller="punch-calendar">
-  <%= render 'shared/time_navigation' %>
   <section class="space-y-3">
     <%= page_header 'Punch report', subtitle: 'Every punch from Rupert, Square and C-Trax for a date range, with hours per staff member and anything that needs a look. Read-only: nothing here creates, edits or approves payroll, and a shift recorded in two sources is never added together.' do %>
       <%= link_to 'Download CSV', people_punch_history_path(time_range_query(@from, @to).merge(format: :csv)), class: 'btn-primary btn-sm' %>

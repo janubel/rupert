@@ -1,7 +1,6 @@
 <% content_for :title, "Trial balance" %>
 <%= render 'finance/reports/coverage_notice' %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= render layout: 'finance/page_header', locals: { title: 'Trial balance', range: "#{@from} through #{@to}", print: true,
         explain: 'Lists every account with activity, with the total debited and credited. If the books are in order, the two totals are equal.' } do %>

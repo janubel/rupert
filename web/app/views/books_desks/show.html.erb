@@ -3,7 +3,6 @@
    this_week = desk.this_week_days; focus_days = desk.focus_days; tasks = desk.focus_tasks
    week_state = desk.week_period(desk.focus_week).state %>
 <div class="mx-auto max-w-6xl space-y-8 operations-workspace books-desk">
-  <%= render 'shared/operations_navigation', workspace: :money, day: Date.yesterday %>
 
   <header class="operations-header">
     <div>

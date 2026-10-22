@@ -3,7 +3,6 @@
    bank_money = ->(cents) { currency ? operations_money(cents, currency: currency) : 'Currency unverified' }
    expense_categories = overview.expense_categories %>
 <div class="mx-auto max-w-7xl space-y-6 operations-workspace bookkeeping-workspace">
-  <%= render 'shared/operations_navigation', workspace: :finance %>
   <header class="operations-header bookkeeping-header">
     <div>
       <p class="eyebrow text-mocha">Your financial workspace</p>

@@ -1,7 +1,6 @@
 <% content_for :title, "Journal entry ##{@entry.id}" %>
 <% reversible = @can_write && %w[manual opening].include?(@entry.kind) && !@entry.void? && @reversed_by.nil? %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <section class="flex flex-wrap items-end justify-between gap-4">
     <div>

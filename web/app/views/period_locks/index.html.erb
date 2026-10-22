@@ -2,7 +2,6 @@
 <% c = @checklist; event = c.lock_event; locked = c.locked?
    stamp = ->(time) { time.in_time_zone.strftime('%b %-d, %Y at %-I:%M %p') } %>
 <div class="mx-auto max-w-6xl space-y-8 operations-workspace books-desk">
-  <%= render 'shared/operations_navigation', workspace: :money, day: Date.yesterday %>
 
   <%= render layout: 'finance/page_header', locals: { title: 'Period locks', currency: nil,
         explain: 'Lock a finished month, quarter or year so nothing dated inside it can be added, changed or removed: expenses, payments, bank decisions, reviews, closes and approvals. Each lock keeps a dated archive of the totals. Unlocking needs a written reason and is recorded.' } do %>

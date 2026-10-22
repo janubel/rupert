@@ -1,7 +1,6 @@
 <% content_for :title, "Balance sheet" %>
 <%= render 'finance/reports/coverage_notice' %>
 <div class="space-y-6 operations-workspace">
-  <%= render 'shared/operations_navigation', workspace: :money %>
 
   <%= render layout: 'finance/page_header', locals: { title: 'Balance sheet', range: "as of #{@to}", print: true,
         explain: 'What the business owns (assets), owes (liabilities) and is worth to the owner (equity) on one date. Assets must equal liabilities plus equity.' } do %>

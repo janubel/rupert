@@ -1,6 +1,5 @@
 <% content_for :title, "Registers" %>
 <div class="space-y-6">
-  <%= render "shared/retail_navigation" %>
   <%= page_header 'Rupert registers', subtitle: 'Checkout shifts and local cash counts. Native C-Trax sessions and bank deposits are reviewed separately.' do %>
     <% if Current.user.can?("sales.write") %>
       <%= link_to "Open register", new_sales_pos_session_path, class: "btn-primary" %>
