@@ -253,6 +253,20 @@ MinIO/git volumes and relay secrets in `~/backups/buzz/` (same key as `rupert-of
 loaded the dump into a scratch database (93 tables, 83 events, equal to live) and dropped it. The weekly `incus-backup.timer`
 also exports `buzz` and `rupert-agent` (crash-consistent). The agent container has nothing to back up beyond its env files.
 
+## People in the WebUI Buzz client
+
+Each Rupert person who can post (`buzz.post`) gets their own Buzz key (`BuzzPersonKey`), so the relay and the agent see
+them as themselves; see [buzz.md](buzz.md) "Team chat inside Rupert". New keys must be added to the closed relay:
+
+```bash
+incus exec rupert -- bash -c 'cd /opt/rupert/web && set -a && . /etc/rupert.env && set +a && RAILS_ENV=production PATH=/opt/rbenv/versions/4.0.6/bin:$PATH runuser -p -u rupert -- bundle exec rails buzz:person_keys' | cut -f4 | deploy/ser8/buzz/add-member.sh
+```
+
+Always run Rails in the container as the `rupert` user (as above). Running it as root on 2026-10-22 ~03:36 UTC left about
+1,590 root-owned files under `/opt/rupert/web/tmp/cache`, including the Buzz channel-list cache entry; the web process
+(user `rupert`) then failed every Buzz request with `Errno::EACCES` and the page showed "disconnected" until the files
+were given back with `find /opt/rupert/web/tmp/cache -not -user rupert -exec chown -h rupert:rupert {} +`.
+
 ## Ask Rupert and the text-only runner inside the `rupert` container
 
 These still run `opencode` inside `rupert` (the sandboxed agent above is separate). `OpencodeCli.env` keeps everything

@@ -56,6 +56,9 @@ class BuzzChannels
       Channel.new(id: BuzzAgent.channel_id, name: 'rupert', about: 'Team chat', members: 0, pubkeys: [])
     end
 
+    # The channel list as last fetched, without asking the relay (nil when none).
+    def cached = list_cached
+
     private
 
     def list_cached = Rails.cache.read(cache_key)

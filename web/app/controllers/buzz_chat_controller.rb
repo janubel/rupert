@@ -9,7 +9,7 @@
 # key (see BuzzChat).
 class BuzzChatController < AuthenticatedController
   before_action :require_read
-  before_action :require_post, only: :create
+  before_action :require_post, only: %i[create typing]
   before_action -> { response.headers['Cache-Control'] = 'no-store' }, except: :show
 
   # GET /buzz/chat
@@ -34,7 +34,19 @@ class BuzzChatController < AuthenticatedController
     channel = selected_channel
     keep_fresh(channel) unless before
     page = BuzzChat.page(before: before, after: after, viewer: Current.user, channel: channel.id)
-    render json: page.merge(status: status_json, channel: { id: channel.id, name: channel.name })
+    render json: page.merge(status: status_json, channel: { id: channel.id, name: channel.name }, typing: typing_json(channel))
+  end
+
+  # POST /buzz/chat/typing { channel: "...", reply_to: "..." } — the person is
+  # typing; sent on as their own Buzz identity, at most every few seconds.
+  def typing
+    channel = selected_channel
+    key = "buzz_typing_sent/#{Current.user.id}/#{channel.id}"
+    unless Rails.cache.read(key)
+      Rails.cache.write(key, true, expires_in: 3.seconds)
+      BuzzChat.typing!(user: Current.user, channel: channel.id, reply_to: params[:reply_to].presence)
+    end
+    head :no_content
   end
 
   # POST /buzz/chat/messages { message: "...", channel: "..." }
@@ -42,10 +54,9 @@ class BuzzChatController < AuthenticatedController
     channel = selected_channel
     text = params[:message].to_s
     row = BuzzChat.post!(user: Current.user, text: text, channel: channel.id, reply_to: params[:reply_to].presence)
-    if text.match?(BuzzMirrorReplyJob::MENTION)
-      BuzzMirrorReplyJob.perform_later(Current.tenant_id, Current.user.id, channel.id, text, row&.event_id)
-    end
     render json: { ok: true, event_id: row&.event_id }, status: :created
+  rescue BuzzChat::NotMember => e
+    render json: { error: e.message }, status: :conflict
   rescue BuzzChat::RateLimited
     render json: { error: 'You are posting quickly. Wait a moment and try again.' }, status: :too_many_requests
   rescue BuzzChat::Error => e
@@ -92,6 +103,23 @@ class BuzzChatController < AuthenticatedController
     else
       BuzzChatSyncJob.perform_later(Current.tenant_id, channel.id)
     end
+  end
+
+  # People typing in this channel now (not the viewer), from the live
+  # subscription BuzzTyping keeps while the page is open.
+  def typing_json(channel)
+    channels = (BuzzChannels.cached || []).map(&:id) | [channel.id]
+    BuzzTyping.watch!(Current.tenant_id, channels)
+    mine = BuzzPersonKey.find_by(user_id: Current.user.id)&.pubkey
+    agent = BuzzChat.agent_pubkey
+    BuzzTyping.current(Current.tenant_id, channel.id).filter_map do |entry|
+      next if entry[:pubkey] == mine
+
+      { name: BuzzChat.display_name(entry[:pubkey]), agent: entry[:pubkey] == agent, thread: entry[:thread] }
+    end
+  rescue StandardError => e
+    Rails.logger.info("[BuzzChat] typing unavailable: #{e.class}")
+    []
   end
 
   def status_json

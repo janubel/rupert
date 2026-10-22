@@ -12,6 +12,7 @@ class Admin::BuzzMirrorController < BuzzChatController
     @chat_title = 'Buzz mirror'
     @chat_tab = :mirror
     @chat_messages_path = admin_buzz_mirror_messages_path
+    @chat_typing_path = admin_buzz_mirror_typing_path
     @chat_base_path = admin_buzz_mirror_path
   end
 

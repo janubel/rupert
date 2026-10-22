@@ -86,13 +86,15 @@ class AdminBuzzMirrorTest < ActionDispatch::IntegrationTest
 
     post admin_buzz_mirror_messages_path, params: { message: 'hello from the mirror' }, as: :json
     assert_response :created
-    assert_equal BuzzAgent.public_key_hex, @relay.published.last['pubkey']
-    assert_match(/ via Rupert: hello from the mirror\z/, @relay.published.last['content'])
+    message = @relay.published.find { |event| event['kind'] == 9 }
+    assert_not_equal BuzzAgent.public_key_hex, message['pubkey'], 'posted as the admin, not the agent'
+    assert_equal 'hello from the mirror', message['content']
 
     get admin_buzz_mirror_messages_path
     posted = json['messages'].last
     assert_equal 'hello from the mirror', posted['text']
-    assert posted['mine'] && posted['via_rupert'] && posted['agent']
+    assert posted['mine']
+    assert_not posted['agent']
   end
 
   test 'a bad cursor is refused' do

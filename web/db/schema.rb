@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_153000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_180000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -743,6 +743,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_153000) do
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "channel", "posted_at", "event_id"], name: "idx_buzz_messages_timeline"
     t.index ["tenant_id", "event_id"], name: "idx_buzz_messages_event", unique: true
+  end
+
+  create_table "buzz_person_keys", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "user_id", null: false
+    t.string "pubkey", limit: 64, null: false
+    t.text "private_key", null: false
+    t.datetime "profile_published_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["pubkey"], name: "idx_buzz_person_keys_pubkey", unique: true
+    t.index ["tenant_id", "user_id"], name: "idx_buzz_person_keys_user", unique: true
+    t.index ["user_id"], name: "index_buzz_person_keys_on_user_id"
   end
 
   create_table "buzz_profiles", force: :cascade do |t|
@@ -3178,6 +3191,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_153000) do
     t.index ["status", "created_at", "id"], name: "idx_workspace_signups_queue"
   end
 
+  add_foreign_key "buzz_person_keys", "users", on_delete: :cascade
   add_foreign_key "feedback_attachments", "agent_feedbacks"
   add_foreign_key "workspace_deployments", "tenants"
   add_foreign_key "workspace_deployments", "users", column: "owner_id"

@@ -115,9 +115,22 @@ Why polling and not Turbo Streams / Action Cable: production runs SQLite with no
 
 ### Posting identity (v1) and the allow-list
 
-- Posts are signed by the **Rupert agent key** with the text `Sam via Rupert: <message>` and a `["client","rupert-chat"]` tag, as a kind 9 message with the channel's `h` tag. In Rupert the page strips the prefix and shows the person's name with a **via Rupert** badge, but only for events signed by the agent key that carry the client tag, so nobody else can borrow that look.
-- Rupert stores no per-person Nostr keys. Per-person keys would need encrypted storage, a kind 0 profile and channel membership per person, which could not be verified against a real relay here. A possible later design is a key derived from the agent key and the Rupert user id (nothing stored), with an invitation step.
-- **The allow-list is not bypassed.** `FEEDBACK_READY_SENDERS` lists people's own Nostr keys; the chat intake only trusts the event's signing key. A message posted from the Team chat is signed by the agent, which `FeedbackIntake` now refuses as a "ready" sender even when someone lists it (`FeedbackIntake.ready_senders` subtracts the agent's key; tested). So work can never be marked ready from this UI, whatever the text says or whose name is on it. To mark work ready, a listed person posts from their own Buzz app, or the owner uses `/ai_feedback`.
+- **Each person posts as themselves** (since 2026-10-22). Rupert creates one Buzz key per person on first use
+  (`BuzzPersonKey`, private key encrypted at rest, never shown), publishes a kind 0 profile with their name, and signs
+  their messages, replies (`e` reply tag) and typing indicators with it. A message that says `@rupert` also carries a
+  `["p", <agent key>]` tag, which is how Buzz delivers a mention: the sandboxed agent then answers the person itself, as
+  it does for the Buzz apps (the old Rails-side `BuzzMirrorReplyJob` is gone). Messages posted before this change were
+  signed by the agent as `Sam via Rupert: …` and are still shown with the person's name.
+- **The relay is closed**, so a new person's key must be added before they can post: run
+  `incus exec rupert -- … rails buzz:person_keys` (creates keys for everyone with `buzz.post`, prints public keys only)
+  and pipe column 4 into `deploy/ser8/buzz/add-member.sh` on SER8 (adds each key to the relay and every channel as the
+  owner). Until then posting answers "Your Buzz identity is not on the team relay yet … npub1…".
+- **Typing and "Rupert is working".** Buzz typing indicators are ephemeral kind 20002 events (channel `h` tag, re-sent
+  every 3 s, valid 8 s, never stored). `BuzzTyping` keeps one live subscription per web process while someone has the page
+  open (it stops a minute after the last poll) and every poll returns who is typing in that channel; the page shows
+  "Sam is typing" and "Rupert is working on a reply" (the agent harness sends the same events while it works). Typing in
+  Rupert's composer is sent as the person, at most every 3 s. Not verified: how this looks in the Buzz desktop app.
+- **The allow-list is not bypassed.** `FEEDBACK_READY_SENDERS` lists Nostr keys; the agent trusts only the event's signing key, and the agent's own key is always refused (`FeedbackIntake.ready_senders` subtracts it). A person's Rupert-held key counts only if the owner adds that key to the allow-list; it is not added automatically.
 - The agent does not answer messages posted here: `BuzzListener` ignores its own key, and `buzz-acp` answers only its owner or an allow-list unless set to `anyone` (not verified against a running agent).
 - Safeguards on posting: 1,500 characters, empty text refused, `nsec` keys refused, 6 posts per minute and 60 per hour per person, the Activity log records `buzz_chat_post` with the event id prefix and length (never the text), `BUZZ_PRIVATE_KEY` and any nsec are never shown or logged. The post is sent synchronously and reported as not sent if the relay does not acknowledge the event's own id.
 - Everything a message links to is plain text: nothing is fetched, embedded or previewed server-side or in the browser.
