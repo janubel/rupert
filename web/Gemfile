@@ -59,9 +59,8 @@ gem "solid_queue"
 gem "google-apis-drive_v3"
 gem "signet"
 
-# Buzz (Nostr) agent integration — Rupert publishes signed events to the relay
+# Nostr key decoding (npub) for the feedback ready-for-development allow-list
 gem "nostr"
-gem "websocket-client-simple"
 
 # --- ERP framework gems ---
 # Fast pagination
@@ -141,3 +140,6 @@ group :test do
 end
 
 gem "shopify_app", "~> 23.0"
+
+# In-app team chat: model client with native tool calling (Ollama, OpenAI-compatible endpoints).
+gem "ruby_llm", "~> 2.1"

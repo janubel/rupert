@@ -196,16 +196,17 @@ Rails.application.routes.draw do
   get '/search', to: 'search#index', as: :search
   get '/dashboard', to: 'home#index'
   get '/roadmap', to: 'roadmap#index', as: :roadmap
-  get '/buzz', to: 'buzz#show', as: :buzz
-  get '/buzz/chat', to: 'buzz_chat#show', as: :buzz_chat
-  get '/buzz/chat/messages', to: 'buzz_chat#messages', as: :buzz_chat_messages
-  post '/buzz/chat/messages', to: 'buzz_chat#create'
-  get  '/admin/buzz',          to: 'admin/buzz_mirror#show',     as: :admin_buzz_mirror
-  get  '/admin/buzz/messages', to: 'admin/buzz_mirror#messages', as: :admin_buzz_mirror_messages
-  post '/admin/buzz/messages', to: 'admin/buzz_mirror#create'
-  post '/buzz/link', to: 'buzz_links#create', as: :buzz_link
-  post '/buzz/link/:id/confirm', to: 'buzz_links#confirm', as: :confirm_buzz_link
-  delete '/buzz/link/:id', to: 'buzz_links#destroy', as: :remove_buzz_link
+  # Team chat: rooms inside Rupert with the @rupert assistant (docs/ops/team-chat.md).
+  get    '/chat',                                     to: 'team_chat#index',           as: :team_chat
+  post   '/chat/rooms',                               to: 'team_chat#create_room',     as: :team_chat_rooms
+  get    '/chat/:room',                               to: 'team_chat#show',            as: :team_chat_room
+  patch  '/chat/:room',                               to: 'team_chat#update_room'
+  get    '/chat/:room/messages',                      to: 'team_chat#messages',        as: :team_chat_messages
+  post   '/chat/:room/messages',                      to: 'team_chat#create_message'
+  delete '/chat/:room/messages/:id',                  to: 'team_chat#destroy_message', as: :team_chat_message
+  post   '/chat/:room/messages/:id/reactions',        to: 'team_chat#react',           as: :team_chat_reactions
+  get    '/chat/:room/files/:id',                     to: 'team_chat#attachment',      as: :team_chat_attachment
+  post   '/chat/:room/messages/:id/actions/:action_id', to: 'team_chat#decide',        as: :team_chat_action
   post '/dashboard/customize', to: 'home#customize', as: :customize_dashboard
 
   # ERP modules (registered in ModuleRegistry)
@@ -584,10 +585,6 @@ Rails.application.routes.draw do
     get :drive_oauth_callback
     post :drive_backup, defaults: { format: :json }
     post :drive_disconnect
-    post :buzz_generate
-    post :buzz_register
-    post :buzz_test
-    post :buzz_status
   end
 
   resources :size_families, only: %i[index new create edit update destroy] do

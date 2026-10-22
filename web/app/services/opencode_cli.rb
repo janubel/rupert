@@ -2,8 +2,8 @@
 
 require 'fileutils'
 
-# How Rupert runs `opencode run` for a one-shot, text-only reply (Ask Rupert and the text-only Buzz runner, inside the
-# rupert container). SER8 pins opencode 2.0.32 there (docs/ops/buzz-relay-ser8.md): that release has no `--pure` or
+# How Rupert runs `opencode run` for a one-shot, text-only reply (Ask Rupert and team chat's fallback engine, inside the
+# rupert container). SER8 pins opencode 2.0.32 there: that release has no `--pure` or
 # `--dir` (it rejects them as "Unrecognized flag"), runs a private server only with `--standalone` (otherwise it talks to
 # a background service), and works in the process's current directory.
 #

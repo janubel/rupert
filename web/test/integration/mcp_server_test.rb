@@ -316,6 +316,8 @@ class McpServerTest < ActionDispatch::IntegrationTest
   end
 
   test 'ai_health reports counts and classifications for an instance operator, never a key' do
+    # Midday in the store's zone, so "an hour ago" is still today whenever CI runs.
+    travel_to Time.zone.now.change(hour: 12)
     @owner.update!(role: 'super_admin')
     AiHealthCheck.create!(status: 'error', key_state: 'expired', error_code: 'api_key_expired', configured_model: 'deepseek-v4-flash',
       free_models: %w[beam-free], free_model_count: 1, checked_at: 1.minute.ago)

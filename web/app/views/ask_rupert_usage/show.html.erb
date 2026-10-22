@@ -24,17 +24,6 @@
           <%= label_tag 'ask_rupert_enabled', 'Ask Rupert is on for this workspace', class: 'text-sm font-semibold text-ink' %>
         </div>
         <div class="sm:col-span-2">
-          <div class="flex items-center gap-3">
-            <%= hidden_field_tag 'ask_rupert[buzz_enabled]', '0', id: nil %>
-            <%= check_box_tag 'ask_rupert[buzz_enabled]', '1', @config['buzz_enabled'], id: 'ask_rupert_buzz_enabled', class: 'h-5 w-5' %>
-            <%= label_tag 'ask_rupert_buzz_enabled', 'Let the @rupert agent in Buzz answer linked people', class: 'text-sm font-semibold text-ink' %>
-          </div>
-          <p class="mt-1 text-xs text-taupe">
-            Off by default. People link their own Buzz account first (Buzz page). In Buzz the agent only explains where things are and how to do them; it never shows records or figures there.
-            What people write to it in Buzz is stored on the Buzz relay, which Rupert cannot clear. Restart the agent after changing this.
-          </p>
-        </div>
-        <div class="sm:col-span-2">
           <%= label_tag 'ask_rupert_provider_mode', 'Which model answers', class: 'field-label' %>
           <%= select_tag 'ask_rupert[provider_mode]', options_for_select(AskRupert::Config::MODES.map { |key, label| [label, key] }, @config.mode), id: 'ask_rupert_provider_mode', class: 'select' %>
           <p class="mt-1 text-xs text-taupe">

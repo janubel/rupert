@@ -1,0 +1,19 @@
+# Install in the `rupert-llm` container as /etc/systemd/system/rupert-llm-gateway.service. See docs/ops/team-chat.md.
+[Unit]
+Description=One-model-at-a-time llama.cpp gateway for Team chat local agents
+After=network-online.target
+
+[Service]
+User=llm
+Group=llm
+ExecStart=/usr/bin/python3 /usr/local/lib/rupert-llm/llm_gateway.py --models /etc/rupert-llm/models.json --listen 0.0.0.0:8080 --allow 127.0.0.1 --allow 10.96.131.8 --server-bin /opt/llama/current/llama-server --threads 8 --idle-seconds 300
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadOnlyPaths=/var/lib/rupert-llm
+
+[Install]
+WantedBy=multi-user.target

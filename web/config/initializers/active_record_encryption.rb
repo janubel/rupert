@@ -3,7 +3,7 @@
 # Active Record encryption keys. In production these come from the droplet
 # environment (RAILS_ENCRYPTION_*_KEY) and are required: falling back to
 # well-known keys here would silently store every tenant token (Square, Shopify
-# client secret, Drive refresh, Buzz keys) in a way anyone with the source can
+# client secret, Drive refresh tokens) in a way anyone with the source can
 # decrypt. Development/test use fixed keys so encrypted settings work out of
 # the box locally.
 # SECRET_KEY_BASE_DUMMY marks a build-time run (asset precompile in the Docker

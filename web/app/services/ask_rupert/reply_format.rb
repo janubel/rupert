@@ -5,7 +5,7 @@ require 'json'
 module AskRupert
   # The rules for what comes out of, and goes back into, the model: how a tool
   # call is read, how a tool result is wrapped as data, and how an answer is
-  # cleaned before anyone sees it. Shared by the panel and the Buzz replies.
+  # cleaned before anyone sees it. Shared by the panel and team chat's CLI fallback.
   module ReplyFormat
     MAX_REPLY_CHARS = 3_000
     CALL_LINE = /\ATOOL_CALL:\s*(\{.*\})\s*\z/m

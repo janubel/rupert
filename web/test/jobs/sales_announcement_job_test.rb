@@ -31,14 +31,14 @@ class SalesAnnouncementJobTest < ActiveSupport::TestCase
   end
 
   test 'job announces new sales within the tenant scope' do
-    BuzzAgent.stubs(:configured?).returns(true)
+    TeamChat::Notices.stubs(:configured?).returns(true)
     make_entry(3.days.ago, gross: 1000)
     SalesAnnouncementJob.perform_now(@tenant.id)
 
     make_entry(1.hour.ago, gross: 2500, summary: 'THCA Pre-Roll')
 
     capture = nil
-    BuzzAgent.stubs(:notify).with do |content, *_|
+    TeamChat::Notices.stubs(:notify).with do |content, *_|
       capture = content
       true
     end.returns([true, 'OK'])
@@ -50,7 +50,7 @@ class SalesAnnouncementJobTest < ActiveSupport::TestCase
   end
 
   test 'job does not leak tenant across tenants' do
-    BuzzAgent.stubs(:configured?).returns(true)
+    TeamChat::Notices.stubs(:configured?).returns(true)
     other = Tenant.create!(name: 'Other Co', subdomain: 'otherco')
     make_entry(3.days.ago, gross: 1000, tenant: @tenant)
     SalesAnnouncementJob.perform_now(@tenant.id)
@@ -58,7 +58,7 @@ class SalesAnnouncementJobTest < ActiveSupport::TestCase
     make_entry(1.hour.ago, gross: 9999, summary: 'Other Sale', tenant: other)
 
     capture = nil
-    BuzzAgent.stubs(:notify).with do |content, *_|
+    TeamChat::Notices.stubs(:notify).with do |content, *_|
       capture = content
       true
     end.returns([true, 'OK'])
@@ -73,7 +73,7 @@ class SalesAnnouncementJobTest < ActiveSupport::TestCase
     missing = Tenant.create!(name: 'Gone', subdomain: 'goneco')
     missing.destroy
 
-    BuzzAgent.stubs(:configured?).returns(true)
+    TeamChat::Notices.stubs(:configured?).returns(true)
     assert_nothing_raised { SalesAnnouncementJob.perform_now(missing.id) }
     assert_nil Current.tenant
   end

@@ -1,0 +1,23 @@
+{
+  "lfm2.5-8b-a1b": {
+    "file": "/var/lib/rupert-llm/models/LFM2.5-8B-A1B-Q4_K_M.gguf",
+    "ctx": 16384,
+    "args": []
+  },
+  "ternary-bonsai-2-9b": {
+    "file": "/var/lib/rupert-llm/models/Ternary-Bonsai-2-9B-PQ2_0.gguf",
+    "ctx": 16384,
+    "args": [
+      "--chat-template-kwargs",
+      "{\"enable_thinking\":false}"
+    ]
+  },
+  "gemma-4-e4b": {
+    "file": "/var/lib/rupert-llm/models/gemma-4-E4B_q4_0-it.gguf",
+    "ctx": 16384,
+    "args": [
+      "--chat-template-kwargs",
+      "{\"enable_thinking\":false}"
+    ]
+  }
+}
