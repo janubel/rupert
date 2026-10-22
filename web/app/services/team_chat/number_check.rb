@@ -54,8 +54,8 @@ module TeamChat
 
     def found?(figure, known)
       tolerance = if figure.decimals.positive? then 0.0051
-                  elsif figure.decimals.zero? then 0.5
-                  else (10**-figure.decimals) / 2.0 # $28k matches 27,500–28,500
+      elsif figure.decimals.zero? then 0.5
+      else (10**-figure.decimals) / 2.0 # $28k matches 27,500–28,500
                   end
       tolerance = 0.051 if figure.kind == :percent && figure.decimals.positive?
       known.any? { |value| (value.abs - figure.value).abs <= tolerance }
