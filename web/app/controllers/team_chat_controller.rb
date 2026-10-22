@@ -73,21 +73,29 @@ class TeamChatController < AuthenticatedController
   # GET /chat/:room/messages(.json)
   #   (none)        the latest page of the room
   #   before=<id>   an older page
-  #   since=<time>  messages created or changed since the last poll
+  #   since=<cursor> messages created or changed since the last poll
   #   thread=<id>   also the whole thread under that message
+  # Return now unchanged as the next since cursor; it may include a pagination
+  # position when more than CHANGED_MAX messages changed (old time-only cursors
+  # are still accepted).
   def messages
+    cursor = change_cursor if params[:since].present?
+    return render json: { error: 'Bad cursor.' }, status: :unprocessable_entity if params[:since].present? && !cursor
+
+    expire_stale if cursor || params[:before].blank?
+    # Capture the boundary before selecting rows, including the initial load.
+    # A worker finishing during serialization must remain in the next window.
+    through = Time.current
+    next_cursor = through.iso8601(6)
+    has_more_changes = false
     scope = @room.messages.includes(:user, :pinned_by, :attachment_infos, :ratings, reactions: :user)
     rows =
-      if params[:since].present?
-        since = Time.zone.parse(params[:since].to_s) rescue nil
-        return render json: { error: 'Bad cursor.' }, status: :unprocessable_entity unless since
-
-        expire_stale
-        scope.where(updated_at: since..).order(:id).limit(CHANGED_MAX).to_a
+      if cursor
+        changed, next_cursor, has_more_changes = changed_messages(scope, cursor, through: through)
+        changed
       elsif params[:before].present?
         scope.visible.top_level.where(id: ...params[:before].to_i).order(id: :desc).limit(PAGE).to_a.reverse
       else
-        expire_stale
         scope.visible.top_level.order(id: :desc).limit(PAGE).to_a.reverse
       end
     has_more = params[:since].blank? && rows.size == PAGE
@@ -97,7 +105,7 @@ class TeamChatController < AuthenticatedController
       TeamChat::Presence.touch(Current.user)
     end
     render json: {
-      now: Time.current.iso8601(6), messages: payload(rows), has_more: has_more, pins: pins, typing: typing_names, presence: presence_map,
+      now: next_cursor, messages: payload(rows), has_more: has_more, has_more_changes: has_more_changes, pins: pins, typing: typing_names, presence: presence_map,
       rooms: rail_rooms.map { |room| { slug: room.slug, unread: room.unread, mentions: room.mentions } }
     }
   end
@@ -353,6 +361,30 @@ class TeamChatController < AuthenticatedController
   def thread_rows(scope)
     root = scope.find_by(id: params[:thread].to_i, parent_id: nil)
     root ? [root, *scope.where(parent_id: root.id).order(:id).to_a] : []
+  end
+
+  def change_cursor
+    timestamp, id, *extra = params[:since].to_s.split('|', -1)
+    return if extra.any? || (id && (!id.match?(/\A[1-9]\d*\z/) || id.to_i > 9_223_372_036_854_775_807))
+
+    [Time.iso8601(timestamp), id&.to_i]
+  rescue ArgumentError
+    nil
+  end
+
+  def changed_messages(scope, cursor, through:)
+    since, after_id = cursor
+    changed = scope.where(updated_at: since..through)
+    if after_id
+      changed = changed.where('chat_messages.updated_at > :since OR chat_messages.id > :id', since: since, id: after_id)
+    end
+    rows = changed.order(:updated_at, :id).limit(CHANGED_MAX + 1).to_a
+    more = rows.size > CHANGED_MAX
+    rows.pop if more
+    # Only advance past delivered rows. The ID breaks timestamp ties, so an
+    # offline tab can drain a large backlog instead of skipping or repeating it.
+    next_cursor = more ? "#{rows.last.updated_at.iso8601(6)}|#{rows.last.id}" : through.iso8601(6)
+    [rows, next_cursor, more]
   end
 
   def payload(rows)

@@ -29,6 +29,7 @@ export default class extends Controller {
     this.byId = new Map()
     this.since = null
     this.hasMore = false
+    this.hasMoreChanges = false
     this.threadId = null
     this.busy = false
     this.sending = false
@@ -188,7 +189,7 @@ export default class extends Controller {
   schedule() {
     clearTimeout(this.timer)
     const pending = [...this.byId.values()].some((message) => message.status === "pending")
-    this.timer = setTimeout(async () => { await this.poll(); this.schedule() }, pending ? this.constructor.FAST : this.constructor.SLOW)
+    this.timer = setTimeout(async () => { await this.poll(); this.schedule() }, pending || this.hasMoreChanges ? this.constructor.FAST : this.constructor.SLOW)
   }
 
   async load() {
@@ -220,6 +221,7 @@ export default class extends Controller {
     this.busy = false
     if (!data) return
     this.since = data.now
+    this.hasMoreChanges = !!data.has_more_changes
     const fresh = this.merge(data.messages)
     this.renderRooms(data.rooms)
     this.setPins(data.pins)
@@ -282,7 +284,8 @@ export default class extends Controller {
       if (!old) {
         added += message.parent_id ? 0 : 1
         changed = true
-      } else if (old.updated_at !== message.updated_at || old.reply_count !== message.reply_count || old.body !== message.body || old.activity !== message.activity ||
+      } else if (old.updated_at !== message.updated_at || old.reply_count !== message.reply_count || old.body !== message.body || old.activity !== message.activity || old.status !== message.status ||
+          JSON.stringify(old.actions) !== JSON.stringify(message.actions) ||
           JSON.stringify(old.reactions) !== JSON.stringify(message.reactions) || JSON.stringify(old.rating) !== JSON.stringify(message.rating) || old.pinned !== message.pinned || old.edited !== message.edited) {
         changed = true
       }
