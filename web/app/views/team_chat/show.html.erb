@@ -118,6 +118,7 @@
               <li><strong>Rooms</strong> on the left; <strong>Direct</strong> to message one person.</li>
               <li>Type <strong>@</strong> to mention someone or a bot. <strong>@rupert</strong> answers fast from the cloud; <strong>@liquid</strong>, <strong>@qwen</strong>, <strong>@gemma</strong>, <strong>@ternary</strong> run privately here; <strong>@all</strong> asks every bot side by side.</li>
               <li>Hover (or tap) a message to <strong>↩ Reply</strong> to it, start a <strong>💬 Thread</strong>, react, pin, copy its link or edit yours. Replying to a bot asks it again. Paste or drop photos; find them later under <strong>Media</strong>.</li>
+              <li><strong>↑</strong> in the message box brings back what you sent before; <strong>↓</strong> goes forward again.</li>
               <li>Rate bot replies 👍/👎 and say why. Changes a bot proposes wait for <strong>Approve</strong>.</li>
             </ul>
             <div class="chat-help-actions">
@@ -230,7 +231,7 @@
           <div class="chat-composer-bar">
             <span class="chat-composer-hint">
               <% if @room.direct? %>Rupert answers every message here.<% elsif @room.assistant_mode == 'off' %>Rupert is off in this room.<% else %>Write <strong>@rupert</strong> to ask him.<% end %>
-              @ to mention · Enter sends · Shift+Enter new line · paste or drop images.
+              @ to mention · Enter sends · Shift+Enter new line · ↑ ↓ your earlier messages · paste or drop images.
             </span>
             <span class="chat-composer-actions">
               <label class="chat-attach" title="Add images or files">

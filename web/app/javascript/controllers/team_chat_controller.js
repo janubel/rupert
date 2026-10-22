@@ -1262,6 +1262,7 @@ export default class extends Controller {
   // --- composing ---
 
   input() {
+    this.historyAt = null
     this.autosize(this.inputTarget)
     this.sendTarget.disabled = this.inputTarget.value.trim() === "" && this.pendingFiles.length === 0
     this.updateSuggest(this.inputTarget, this.suggestTarget)
@@ -1269,6 +1270,7 @@ export default class extends Controller {
   }
 
   threadInputChanged() {
+    this.historyAt = null
     this.pingTyping()
     this.autosize(this.threadInputTarget)
     this.threadSendTarget.disabled = this.threadInputTarget.value.trim() === ""
@@ -1282,11 +1284,57 @@ export default class extends Controller {
 
   keydown(event) {
     if (this.handleSuggestKeys(event)) return
+    if (this.historyKey(event, this.inputTarget)) return
     if (event.key === "Escape" && this.clearQuote("main")) return
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault()
       this.formTarget.requestSubmit()
     }
+  }
+
+  // ↑ / ↓ in the message box step through what you sent before, like a terminal.
+  // ↑ only from the first line and ↓ only from the last, so moving inside a
+  // multi-line message still works. ↓ past the newest brings back what you were typing.
+  historyKey(event, field) {
+    if (!["ArrowUp", "ArrowDown"].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return false
+    const up = event.key === "ArrowUp"
+    if (up && field.value.slice(0, field.selectionStart).includes("\n")) return false
+    if (!up && field.value.slice(field.selectionEnd).includes("\n")) return false
+    if (this.historyField !== field) {
+      this.historyField = field
+      this.historyAt = null
+    }
+    const sent = this.sentHistory()
+    if (up) {
+      if (this.historyAt === null || this.historyAt === undefined) {
+        if (!sent.length) return false
+        this.historyDraft = field.value
+        this.historyAt = 0
+      } else if (this.historyAt < sent.length - 1) {
+        this.historyAt += 1
+      } else {
+        event.preventDefault()
+        return true
+      }
+    } else {
+      if (this.historyAt === null || this.historyAt === undefined) return false
+      this.historyAt -= 1
+    }
+    event.preventDefault()
+    const at = this.historyAt
+    field.value = at < 0 ? (this.historyDraft || "") : sent[at]
+    if (at < 0) this.historyAt = null
+    field.selectionStart = field.selectionEnd = field.value.length
+    this.autosize(field)
+    if (field === this.inputTarget) this.sendTarget.disabled = field.value.trim() === "" && this.pendingFiles.length === 0
+    else this.threadSendTarget.disabled = field.value.trim() === ""
+    return true
+  }
+
+  // Your own messages in this room, newest first, each text once.
+  sentHistory() {
+    const mine = [...this.byId.values()].filter((message) => message.mine && !message.deleted && message.body).sort((a, b) => b.id - a.id)
+    return [...new Set(mine.map((message) => message.body))]
   }
 
   // Arrow keys, Tab/Enter and Escape drive the @ list while it is open. Returns true when handled.
@@ -1314,6 +1362,7 @@ export default class extends Controller {
 
   threadKeydown(event) {
     if (this.handleSuggestKeys(event)) return
+    if (this.historyKey(event, this.threadInputTarget)) return
     if (event.key === "Escape" && this.clearQuote("thread")) return
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault()
