@@ -90,12 +90,12 @@ module Mcp
           drive = RetentionDriveConnection.find_by(tenant_id: Current.tenant_id)
           failed = RetentionDriveItem.where(status: 'failed').count
           rows << if drive&.connected?
-                    { area: 'Records', title: 'Google Drive document retention', status: failed.positive? ? 'fix' : 'ok', count: failed,
-                      detail: failed.positive? ? "#{failed} files failed to copy." : "Connected#{", last copy #{drive.last_synced_at.to_date}" if drive.last_synced_at}.",
-                      path: paths.retention_drive_path }
-                  else
-                    { area: 'Records', title: 'Google Drive document retention', status: 'watch', detail: 'Not connected: retained originals stay only in Rupert.',
-                      path: paths.retention_drive_path }
+            { area: 'Records', title: 'Google Drive document retention', status: failed.positive? ? 'fix' : 'ok', count: failed,
+              detail: failed.positive? ? "#{failed} files failed to copy." : "Connected#{", last copy #{drive.last_synced_at.to_date}" if drive.last_synced_at}.",
+              path: paths.retention_drive_path }
+          else
+            { area: 'Records', title: 'Google Drive document retention', status: 'watch', detail: 'Not connected: retained originals stay only in Rupert.',
+              path: paths.retention_drive_path }
                   end
           rows
         end
@@ -103,8 +103,8 @@ module Mcp
 
       def queue(area, title, count, path, fix_over: nil)
         status = if count.zero? then 'ok'
-                 elsif fix_over && count > fix_over then 'fix'
-                 else 'watch'
+        elsif fix_over && count > fix_over then 'fix'
+        else 'watch'
                  end
         { area: area, title: title, status: status, count: count, path: path }
       end
