@@ -75,7 +75,7 @@ module TeamChat
             'grade' => grade&.meta.to_h&.dig('grade'), 'verdict' => grade&.body.to_s.lines.first.to_s.sub(/\AGrade \d\/5 for [^:]+: /, '').strip.first(300),
             'unverified' => Array(meta['unverified']), 'message_id' => reply&.id }
         end
-        first_reply = replies.values.first&.meta.to_h || {}
+        first_reply = replies.values.first&.meta.to_h
         done = rows.any? { |row| row.system? && row.body.to_s.start_with?('📋') }
         run = create!(run_key: key, set_name: set, agent: first_reply['agent'], model: first_reply['model'], engine: first_reply['engine'],
           status: done ? 'done' : 'stopped', questions: results.size, results: results, room: room,
