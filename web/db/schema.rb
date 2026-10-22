@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_130000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -951,6 +951,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
     t.string "drive_folder_id"
     t.index ["tenant_id", "kind", "created_by_id"], name: "index_chat_rooms_on_tenant_id_and_kind_and_created_by_id"
     t.index ["tenant_id", "slug"], name: "index_chat_rooms_on_tenant_id_and_slug", unique: true
+  end
+
+  create_table "chat_runs", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "message_id", null: false
+    t.string "state", default: "queued", null: false
+    t.string "owner_token"
+    t.datetime "lease_until"
+    t.datetime "heartbeat_at"
+    t.datetime "deadline_at", null: false
+    t.datetime "dispatched_at"
+    t.integer "attempts", default: 0, null: false
+    t.integer "steps", default: 0, null: false
+    t.json "transcript", default: [], null: false
+    t.json "tool_results", default: [], null: false
+    t.json "configuration", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_chat_runs_on_message_id", unique: true
+    t.index ["state", "deadline_at"], name: "index_chat_runs_on_state_and_deadline_at"
+    t.index ["state", "lease_until"], name: "index_chat_runs_on_state_and_lease_until"
+    t.index ["tenant_id"], name: "index_chat_runs_on_tenant_id"
   end
 
   create_table "clock_corrections", force: :cascade do |t|
@@ -3516,6 +3538,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
   add_foreign_key "chat_messages", "chat_rooms", column: "room_id"
   add_foreign_key "chat_ratings", "chat_messages", column: "message_id"
   add_foreign_key "chat_reactions", "chat_messages", column: "message_id"
+  add_foreign_key "chat_runs", "chat_messages", column: "message_id", on_delete: :cascade
   add_foreign_key "clock_corrections", "clock_shifts"
   add_foreign_key "clock_corrections", "tenants"
   add_foreign_key "clock_corrections", "users", column: "requested_by_id", on_delete: :nullify

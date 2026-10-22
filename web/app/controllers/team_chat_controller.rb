@@ -110,6 +110,15 @@ class TeamChatController < AuthenticatedController
     }
   end
 
+  # POST /chat/:room/messages/:id/cancel
+  def cancel
+    message = @room.messages.find(params[:id])
+    return head :forbidden unless message.assistant? && message.meta.to_h['asked_by'] == Current.user.id
+
+    TeamChat::Run.for_reply!(message).cancel! if message.pending?
+    render json: { messages: payload([message.reload]) }
+  end
+
   # POST /chat/:room/messages { body, parent_id }
   def create_message
     result = TeamChat::Post.call(room: @room, user: Current.user, body: params[:body], parent_id: params[:parent_id],
@@ -403,7 +412,7 @@ class TeamChatController < AuthenticatedController
   end
 
   def expire_stale
-    @room.messages.pending.where(created_at: ...TeamChat::Message::STALE_AFTER.ago).find_each do |row|
+    @room.messages.pending.where.missing(:run).where(created_at: ...TeamChat::Message::STALE_AFTER.ago).find_each do |row|
       row.update!(status: 'failed', activity: nil, body: TeamChat::Agent::FAILURES[:error])
     end
   end

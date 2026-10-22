@@ -354,3 +354,44 @@ transactions short. `test/jobs/chat_worker_isolation_test.rb` exercises a blocke
 real Solid Queue execution with sync, monitor, and backup probes, without model or
 vendor calls. Adding another named application queue requires updating the worker
 configuration and routing regression.
+
+### Durable room replies
+
+Every new room assistant reply creates a private `chat_runs` row in the same
+transaction as its pending message. The row is the enqueue outbox: the default
+queue's `TeamChat::RecoverRunsJob` scans every minute, dispatches queued or
+abandoned runs to `chat`, and expires deadlines without depending on a browser.
+Existing legacy replies acquire a run when their reply job executes.
+
+A conditional SQL update claims one owner token for a 30-second lease, renewed
+every five seconds. Every transcript checkpoint, tool start, proposal receipt,
+and public reply write checks that token, lease, and deadline. Reclaimed workers
+cannot publish or start another tool. Three claims are allowed; recovery fails
+an exhausted run. Duplicate queue deliveries do not consume another claim while
+the owner is live. Recovery enqueue attempts are throttled to once a minute.
+
+The deadline is fixed at message creation: two minutes for @rupert and five for
+local agents, including queue wait and all model/tool rounds. Native requests
+use the remaining budget with HTTP retries disabled. Stop is available only to
+the person who requested the reply, subject to existing room access. It cancels
+the run, releases silent native HTTP execution, and dismisses unapproved cards;
+already approved changes remain intact. Deadline expiration does the same with
+a time-limit message. An already running read tool finishes its own bounded I/O;
+its result and subsequent writes are rejected after cancellation or lease loss.
+Stopping Rupert does not guarantee cancellation of provider-side billing.
+
+Native RubyLLM transcripts checkpoint after each generation/tool batch. Tool
+results have stable per-step IDs; proposal creation and its replay receipt share
+a transaction, preventing duplicate approval cards across a crash between tool
+execution and the next model request. CLI tool rounds also persist their
+transcript and reuse receipts after restart. Step and tool budgets carry across
+recovery. A changed engine/model/endpoint fails recovery rather than silently
+continuing on another route. Private transcripts and receipts are never included
+in room JSON. The floating Ask Rupert panel retains its existing execution model.
+
+Deploy the additive `CreateChatRuns` migration before restarting workers and the
+Solid Queue scheduler. Verify the recovery schedule is registered. Recovery can
+take a lease interval plus the next minute scan and chat queue wait; it does not
+extend a reply's deadline. Regression coverage includes simultaneous claims,
+actual SIGKILL/restart replay, stale-owner fencing, cancellation during silent
+HTTP, deadlines, CLI replay, and cancellation authorization.

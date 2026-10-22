@@ -214,6 +214,7 @@ Rails.application.routes.draw do
   get    '/chat/:room/messages',                      to: 'team_chat#messages',        as: :team_chat_messages
   post   '/chat/:room/messages',                      to: 'team_chat#create_message'
   patch  '/chat/:room/messages/:id',                  to: 'team_chat#update_message'
+  post   '/chat/:room/messages/:id/cancel', to: 'team_chat#cancel', as: :cancel_team_chat_message
   post   '/chat/:room/typing',                        to: 'team_chat#typing',          as: :team_chat_typing
   delete '/chat/:room/messages/:id',                  to: 'team_chat#destroy_message', as: :team_chat_message
   post   '/chat/:room/messages/:id/reactions',        to: 'team_chat#react',           as: :team_chat_reactions

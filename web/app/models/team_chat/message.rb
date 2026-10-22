@@ -15,6 +15,8 @@ module TeamChat
     STALE_AFTER = 12.minutes
     COLORS = %w[#2563eb #0891b2 #7c3aed #db2777 #ea580c #16a34a #4f46e5 #0d9488].freeze
 
+    has_one :run, class_name: 'TeamChat::Run', dependent: :destroy
+
     belongs_to :room, class_name: 'TeamChat::Room'
     belongs_to :user, optional: true
     belongs_to :parent, class_name: 'TeamChat::Message', optional: true
@@ -113,6 +115,7 @@ module TeamChat
         author: { name: author_name, initials: author_initials, color: author_color, user_id: user_id, agent: local_agent&.handle, email: (user&.email if person?) },
         body: deleted? ? '' : body.to_s, deleted: deleted?, created_at: created_at.iso8601, updated_at: updated_at.iso8601,
         reply_count: reply_counts[id].to_i, mine: person? && user_id == viewer.id,
+        can_cancel: assistant? && pending? && meta.to_h['asked_by'] == viewer.id,
         actions: deleted? ? [] : actions_list.map { |action| action.slice('id', 'tool', 'title', 'summary', 'status', 'decided_by', 'result') },
         attachments: deleted? ? [] : attachment_infos.map { |attachment| attachment.as_payload(room) },
         mentions: mention_ids.filter_map { |id| { id: id, name: people[id] } if people[id] }, mentions_me: mention_ids.include?(viewer.id),

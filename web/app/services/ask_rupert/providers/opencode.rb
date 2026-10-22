@@ -24,9 +24,9 @@ module AskRupert
       def binary = ENV['ASK_RUPERT_OPENCODE_BIN'].presence || 'opencode'
       def agent = ENV['ASK_RUPERT_OPENCODE_AGENT'].presence || 'chat'
 
-      def complete(system:, messages:, &on_text)
+      def complete(system:, messages:, deadline: nil, checkpoint: nil, &on_text)
         prompt = build_prompt(system, messages)
-        stream(prompt, &on_text)
+        stream(prompt, deadline: deadline, checkpoint: checkpoint, &on_text)
       end
 
       private
@@ -37,7 +37,7 @@ module AskRupert
         prompt.length > MAX_PROMPT_CHARS ? prompt.last(MAX_PROMPT_CHARS) : prompt
       end
 
-      def stream(prompt)
+      def stream(prompt, deadline:, checkpoint:)
         text = +''
         tokens = Hash.new(0)
         raw_errors = +''
@@ -45,7 +45,7 @@ module AskRupert
         pid = nil
         IO.popen(OpencodeCli.env, OpencodeCli.run_command(binary: binary, agent: agent, prompt: prompt), **OpencodeCli.popen_options) do |io|
           pid = io.pid
-          io.each_line do |line|
+          lines(io, started: started, deadline: deadline, checkpoint: checkpoint) do |line|
             raise ProviderError.new('opencode timed out', kind: :timeout) if Process.clock_gettime(Process::CLOCK_MONOTONIC) - started > TIMEOUT
 
             event = parse(line)
@@ -64,6 +64,8 @@ module AskRupert
               raw_errors << event['error'].to_json.first(300)
             end
           end
+        ensure
+          kill(pid) if $!
         end
         raise_empty(raw_errors) if text.strip.empty?
         Reply.new(text: text.strip, tokens_in: tokens[:input] + tokens[:cache_read], tokens_out: tokens[:output] + tokens[:reasoning], provider: name, model: model)
@@ -72,6 +74,31 @@ module AskRupert
       rescue ProviderError
         kill(pid)
         raise
+      end
+
+      # A silent child must still obey the deadline and cancellation. each_line
+      # alone can wait forever before the first newline arrives.
+      def lines(io, started:, deadline:, checkpoint:)
+        buffer = +''
+        loop do
+          checkpoint&.call
+          if Process.clock_gettime(Process::CLOCK_MONOTONIC) - started > TIMEOUT || (deadline && Time.current >= deadline)
+            raise ProviderError.new('opencode timed out', kind: :timeout)
+          end
+          next unless IO.select([io], nil, nil, 0.25)
+
+          part = io.read_nonblock(16_384, exception: false)
+          break if part.nil?
+          next if part == :wait_readable
+
+          buffer << part
+          raise ProviderError.new('opencode output too large', kind: :error) if buffer.bytesize > 1_048_576
+
+          while (index = buffer.index("\n"))
+            yield buffer.slice!(0..index)
+          end
+        end
+        yield buffer unless buffer.empty?
       end
 
       def kill(pid)

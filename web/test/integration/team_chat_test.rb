@@ -162,6 +162,32 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'only the asker can stop an assistant reply and stopping is idempotent' do
+    sign_in(@admin)
+    get team_chat_path
+    post team_chat_messages_path('admins'), params: { body: '@rupert test cancellation' }, as: :json
+    reply = json['messages'].find { |message| message['kind'] == 'assistant' }
+    assert reply['can_cancel']
+    post cancel_team_chat_message_path('admins', reply['id']), as: :json
+    assert_response :success
+    assert_equal 'Stopped.', json['messages'].first['body']
+    assert_not json['messages'].first['can_cancel']
+    assert_equal 'cancelled', TeamChat::Run.unscoped.find_by!(message_id: reply['id']).state
+    post cancel_team_chat_message_path('admins', reply['id']), as: :json
+    assert_response :success
+  end
+
+  test 'another room member cannot cancel someone else reply' do
+    sign_in(@admin)
+    get team_chat_path
+    room = TeamChat::Room.find_by!(slug: 'admins')
+    other = User.create!(tenant: @tenant, email: 'cancel-other@example.com', role: 'admin', password: 'password123', name: 'Another admin')
+    reply = room.messages.create!(author_kind: 'assistant', status: 'pending', meta: { 'asked_by' => other.id })
+    post cancel_team_chat_message_path('admins', reply.id), as: :json
+    assert_response :forbidden
+    assert_equal 'pending', reply.reload.status
+  end
+
   test 'empty and oversized messages are refused' do
     sign_in(@admin)
     get team_chat_path

@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 production:
+  recover_chat_runs:
+    class: TeamChat::RecoverRunsJob
+    queue: default
+    schedule: every minute
   pos_payment_reconciliation:
     class: PosPaymentReconciliationJob
     queue: default

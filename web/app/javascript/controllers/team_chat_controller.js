@@ -451,6 +451,19 @@ export default class extends Controller {
       if (message.status === "pending") body.append(this.activityNode(message))
     }
     main.append(body)
+    if (message.can_cancel && message.status === "pending") {
+      const stop = document.createElement("button")
+      stop.type = "button"
+      stop.className = "btn-ghost btn-sm"
+      stop.textContent = "Stop"
+      stop.addEventListener("click", async () => {
+        stop.disabled = true
+        const data = await this.fetchJson(`${this.urlValue}/${message.id}/cancel`, { method: "POST" })
+        if (data) { this.merge(data.messages); this.render({ stick: false }) }
+        else stop.disabled = false
+      })
+      main.append(stop)
+    }
 
     if (!message.deleted && message.unverified?.length) main.append(this.unverifiedNode(message.unverified))
     if (!message.deleted && message.attachments?.length) main.append(this.attachmentsNode(message.attachments))

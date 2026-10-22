@@ -50,6 +50,15 @@ module TeamChat
     def run
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       @asked_at = Time.now.to_f
+      return unless @reply.reload.pending?
+
+      durable_run = Run.for_reply!(@reply)
+      token = durable_run.claim!
+      return unless token
+
+      @execution = Execution.new(durable_run, token)
+      @execution.start_watch
+      @execution.pin_configuration!(@config)
       return fail!(:error, started) unless @asker && @trigger && TeamChat.allowed?(@asker)
 
       @topics = question_topics
@@ -57,15 +66,20 @@ module TeamChat
       # RUPERT_LOCAL_TOOLS=all: then every tool, so the instructions and tool list stay the same from question to
       # question and the model server reuses them from its cache, and the question names the tools to use.
       only = DataGuide.tools_for(@topics) if @local_agent && @topics.any? && !all_tools?
-      @toolbox = Toolbox.new(user: @asker, room: @room, reply: @reply, only: only)
+      @toolbox = Toolbox.new(user: @asker, room: @room, reply: @reply, only: only, execution: @execution)
       text = answer
       finish(text, started)
+    rescue Run::Stopped
+      @execution.run.expire! if @execution && @execution.run.deadline_at <= Time.current
+      nil
     rescue Failure => e
       Rails.logger.warn "[TeamChat] #{@engine} failed: #{e.kind}: #{e.message.to_s.first(160)}"
       fail!(e.kind, started)
     rescue StandardError => e
       Rails.error.report(e, handled: true, context: { team_chat: 'agent' })
       fail!(:error, started)
+    ensure
+      @execution&.stop_watch
     end
 
     # The conversation the model sees: role + text, oldest first, ending with the person's message.
@@ -139,27 +153,50 @@ module TeamChat
 
     # --- RubyLLM, native tool calling ---
 
-    def answer_native
-      chat = @config.chat(session: "rupert-room-#{@room.id}")
+    def native_chat
+      chat = @config.chat(session: "rupert-room-#{@room.id}", timeout: @execution.remaining)
       chat.with_instructions(system_prompt).with_temperature(0.2)
-      chat.with_tools(*@toolbox.llm_tools)
-      chat.before_tool_call { |tool_call| activity!(@toolbox.activity_for(tool_call.name)) }
-      activity!("Waiting for #{@local_agent.name}") if @local_agent
-      transcript_with_context.each { |entry| chat.add_message(role: entry[:role], content: entry[:content]) }
+      chat.with_tools(*@toolbox.llm_tools).with_tool_options(concurrency: false)
+      @execution.chat = chat
+      chat.before_tool_call do |tool_call|
+        @execution.check!
+        @toolbox.call_id = "#{@execution.run.steps}:#{tool_call.id}"
+        activity!(@toolbox.activity_for(tool_call.name))
+      end
+      if @execution.run.transcript.present?
+        chat.messages.clear
+        @execution.run.transcript.each { |entry| chat.add_message(entry.transform_keys(&:to_sym)) }
+      else
+        transcript_with_context.each { |entry| chat.add_message(role: entry[:role], content: entry[:content]) }
+        @execution.locked { @execution.run.update!(transcript: chat.messages.map(&:to_h)) }
+      end
+      chat
+    end
 
-      steps = 0
+    def answer_native
+      chat = nil
+      activity!("Waiting for #{@local_agent.name}") if @local_agent
       buffer = +''
-      until chat.complete?
-        steps += 1
-        raise Failure.new(:error, 'too many steps') if steps > MAX_STEPS
+      loop do
+        # Fresh request context applies the remaining whole-run budget to every
+        # HTTP attempt; a later round cannot reuse the first round's timeout.
+        chat = native_chat
+        break if chat.complete?
+        raise Failure.new(:error, 'too many steps') if @execution.run.steps >= MAX_STEPS
 
         buffer = +''
-        chat.step do |chunk|
-          next if chunk.content.blank?
+        last = chat.messages.reverse.find { |message| message.role != :system }
+        if last&.tool_call?
+          chat.run_tools
+        else
+          @execution.generate(chat) do |chunk|
+            next if chunk.content.blank?
 
-          buffer << chunk.content
-          publish(buffer)
+            buffer << chunk.content
+            publish(buffer)
+          end
         end
+        @execution.checkpoint!(chat)
       end
       count_tokens(chat)
       text = chat.messages.reverse.find { |message| message.role == :assistant }&.content.to_s
@@ -191,23 +228,30 @@ module TeamChat
       system = "#{system_prompt}\n## Tool protocol\nTo use a tool, reply with ONE line and nothing else:\n" \
                "TOOL_CALL: {\"name\":\"sales_summary\",\"arguments\":{\"start_date\":\"2026-10-01\"}}\n" \
                "You then receive the result and continue. At most #{CLI_TOOL_ROUNDS} tool calls.\nTools:\n#{@toolbox.prompt_section}"
-      messages = transcript_with_context.map { |entry| { role: entry[:role].to_s, content: entry[:content] } }
-      (CLI_TOOL_ROUNDS + 1).times do |round|
-        reply = provider.complete(system: system, messages: messages) { |partial| publish(partial) unless partial.to_s.lstrip.start_with?('TOOL') }
+      messages = @execution.run.transcript.map { |entry| entry.symbolize_keys }
+      if messages.empty?
+        messages = transcript_with_context.map { |entry| { role: entry[:role].to_s, content: entry[:content] } }
+        @execution.locked { @execution.run.update!(transcript: messages) }
+      end
+      while @execution.run.steps <= CLI_TOOL_ROUNDS
+        round = @execution.run.steps
+        @execution.check!
+        @toolbox.call_id = "cli-#{round}"
+        reply = provider.complete(system: system, messages: messages, deadline: @execution.run.deadline_at, checkpoint: -> { @execution.check! }) { |partial| publish(partial) unless partial.to_s.lstrip.start_with?('TOOL') }
         @tokens_in += reply.tokens_in.to_i
         @tokens_out += reply.tokens_out.to_i
         call = AskRupert::ReplyFormat.parse_call(reply.text)
         return reply.text unless call
 
         if round == CLI_TOOL_ROUNDS
-          messages << { role: 'user', content: 'No more tools can be used. Answer now from what you already have.' }
-          next
+          raise Failure.new(:error, 'no answer after tool rounds')
         end
         activity!(@toolbox.activity_for(call['name']))
         text = @toolbox.call(call['name'], call['arguments'])
         result = Struct.new(:ok, :text).new(true, text)
         messages << { role: 'assistant', content: "TOOL_CALL: #{JSON.generate(call.slice('name', 'arguments'))}" }
         messages << { role: 'user', content: AskRupert::ReplyFormat.tool_result_block(call['name'], result) }
+        @execution.locked { @execution.run.update!(transcript: messages, steps: round + 1) }
       end
       raise Failure.new(:error, 'no answer after tool rounds')
     rescue AskRupert::ProviderError => e
@@ -221,11 +265,11 @@ module TeamChat
       return if now - @last_publish < PUBLISH_EVERY
 
       @last_publish = now
-      @reply.update_columns(body: AskRupert::ReplyFormat.tidy(text, closing: false), activity: 'Writing', updated_at: Time.current)
+      @execution.write_reply!({ body: AskRupert::ReplyFormat.tidy(text, closing: false), activity: 'Writing' })
     end
 
     def activity!(text)
-      @reply.update_columns(activity: text.to_s.first(80), updated_at: Time.current)
+      @execution.write_reply!({ activity: text.to_s.first(80) })
     end
 
     def finish(text, started)
@@ -236,7 +280,8 @@ module TeamChat
       meta['load_ms'] = load_ms if load_ms
       unverified = NumberCheck.call(body, checked_sources)
       meta['unverified'] = unverified if unverified.any?
-      @reply.reload.update!(body: body.to_s, status: 'done', activity: nil, meta: meta)
+      @execution.write_reply!({ body: body.to_s, status: 'done', activity: nil, meta: meta }, terminal: 'succeeded')
+      @reply.reload
       note_ai_health('ok')
       note_slow(meta)
     end
@@ -316,8 +361,10 @@ module TeamChat
     end
 
     def fail!(kind, started)
-      @reply.update!(body: FAILURES.fetch(kind, FAILURES[:error]), status: 'failed', activity: nil, meta: meta_with(started, kind.to_s))
+      @execution.write_reply!({ body: FAILURES.fetch(kind, FAILURES[:error]), status: 'failed', activity: nil, meta: meta_with(started, kind.to_s) }, terminal: 'failed')
       note_ai_health('error')
+    rescue Run::Stopped
+      nil
     rescue StandardError => e
       Rails.logger.error "[TeamChat] could not record failure: #{e.class}"
     end

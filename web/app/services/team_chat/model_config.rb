@@ -53,9 +53,9 @@ module TeamChat
       def label = "#{agent.name} on this server"
       def disclosure = "#{agent.name} runs on this server; nothing leaves it."
 
-      def chat(session:)
+      def chat(session:, timeout: nil)
         context = RubyLLM.context do |config|
-          config.request_timeout = 600
+          config.request_timeout = timeout || 600
           config.max_retries = 0
           config.openai_api_base = api_base
           config.openai_api_key = 'local'
@@ -100,13 +100,13 @@ module TeamChat
     end
 
     # A RubyLLM chat for one room. The session header lets OpenCode Go group a room's requests.
-    def chat(session:)
+    def chat(session:, timeout: nil)
       raise ArgumentError, 'opencode_cli does not use RubyLLM' unless native?
 
       context = RubyLLM.context do |config|
         # A local CPU model may first wait for another model to unload and this one to load.
-        config.request_timeout = local? ? 600 : 120
-        config.max_retries = local? ? 0 : 1
+        config.request_timeout = timeout || (local? ? 600 : 120)
+        config.max_retries = timeout ? 0 : (local? ? 0 : 1)
         if engine == 'local_gateway'
           config.openai_api_base = api_base
           config.openai_api_key = 'local'
