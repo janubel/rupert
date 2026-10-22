@@ -44,7 +44,7 @@
                 </td>
                 <% TeamChat::Leaderboard::COLUMNS.each_key do |key| %>
                   <% cell = row.cells[key] %>
-                  <td class="td text-right <%= 'font-semibold text-fern' if cell&.best %>" title="<%= cell ? pluralize(cell.count, 'question') : 'not tested' %>">
+                  <td class="td whitespace-nowrap text-right <%= 'font-semibold text-fern' if cell&.best %>" title="<%= cell ? pluralize(cell.count, 'question') : 'not tested' %>">
                     <%= cell ? cell.score : '—' %><% if cell&.best %> 🥇<% end %>
                   </td>
                 <% end %>

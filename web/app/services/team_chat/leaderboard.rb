@@ -26,8 +26,9 @@ module TeamChat
       leader = rows.find { |row| row.graded >= MIN_QUESTIONS }
       leader.leader = true if leader
       COLUMNS.each_key do |column|
-        top = rows.select { |row| row.cells[column] && row.cells[column].count >= MIN_COLUMN }.max_by { |row| row.cells[column].score }
-        top.cells[column].best = true if top
+        eligible = rows.select { |row| row.cells[column] && row.cells[column].count >= MIN_COLUMN }
+        top = eligible.map { |row| row.cells[column].score }.max
+        eligible.each { |row| row.cells[column].best = true if row.cells[column].score == top } # ties share the medal
       end
       rows
     end

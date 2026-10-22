@@ -42,6 +42,9 @@ class TeamChatLeaderboardTest < ActiveSupport::TestCase
     assert second.cells['stock'].best, 'Liquid wins Stock (5 vs 4)'
     assert_equal 86, top.overall # (5+5+4+5+5+3+3)/7 = 4.29 -> 86
     assert_equal 'qwen3.6-35b-a3b', TeamChat::Leaderboard.leader_model
+    run!('deepseek-v4.1-flash', nil, 'finance', qwen, engine: 'opencode_go')
+    tied = TeamChat::Leaderboard.call.select { |row| row.cells['sell'].best }
+    assert_equal %w[deepseek-v4.1-flash qwen3.6-35b-a3b], tied.map(&:model).sort, 'ties share the medal'
   end
 
   test 'no trophy under the minimum number of graded questions' do
