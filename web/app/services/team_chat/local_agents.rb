@@ -14,20 +14,24 @@ module TeamChat
   # Which are on comes from the instance environment, never from a web setting.
   module LocalAgents
     Agent = Struct.new(:handle, :name, :model, :about, :color, :cloud, :purpose, :aliases, keyword_init: true) do
-      def mention = /(?<![\w@])@#{handle}\b/i
+      # @handle or any alias (@gemma4, @qwen3.5, @lfm), longest first; @gemma-e2b is not @gemma.
+      def mention
+        names = ([handle] + Array(aliases)).sort_by { |name| -name.length }.map { |name| Regexp.escape(name) }
+        /(?<![\w@])@(?:#{names.join('|')})(?![\w-])/i
+      end
       def cloud? = cloud == true
       def initials = name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase
       def label = "#{name} — #{about}"
     end
 
     ALL = [
-      Agent.new(handle: 'liquid', name: 'Liquid', model: 'lfm2.5-8b-a1b', color: '#0f766e', aliases: %w[lfm],
+      Agent.new(handle: 'liquid', name: 'Liquid', model: 'lfm2.5-8b-a1b', color: '#0f766e', aliases: %w[lfm lfm2 lfm2.5],
         about: 'Liquid AI LFM2.5 8B-A1B, local',
         purpose: 'Local mixture-of-experts model: quick for its size. Private.'),
-      Agent.new(handle: 'qwen', name: 'Qwen', model: 'qwen3.5-4b', color: '#c2410c',
+      Agent.new(handle: 'qwen', name: 'Qwen', model: 'qwen3.5-4b', color: '#c2410c', aliases: %w[qwen3 qwen3.5],
         about: 'Alibaba Qwen3.5 4B, local',
         purpose: 'Best of the local models at using Rupert’s tools. Private, slower.'),
-      Agent.new(handle: 'gemma', name: 'Gemma', model: 'gemma-4-e4b', color: '#9333ea',
+      Agent.new(handle: 'gemma', name: 'Gemma', model: 'gemma-4-e4b', color: '#9333ea', aliases: %w[gemma4 gemma-4],
         about: 'Google Gemma 4 E4B, local',
         purpose: 'Google’s open model: good with Rupert’s tools, about 1½–2 minutes an answer. Private.')
     ].freeze
