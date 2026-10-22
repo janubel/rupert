@@ -103,7 +103,11 @@ class UploadsApiTest < ActionDispatch::IntegrationTest
     secret = issue(['uploads:write'])
     Rack::Attack.enabled = true
     Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
-    31.times { |i| send_file(secret, "a,b\n#{i},#{i}\n", "f#{i}.csv") }
+    # Rack::Attack counts in fixed one-minute windows; freeze the clock inside one
+    # so a slow run can't straddle a boundary and reset the count.
+    travel_to(Time.zone.at(((Time.current.to_i / 60) * 60) + 1)) do
+      31.times { |i| send_file(secret, "a,b\n#{i},#{i}\n", "f#{i}.csv") }
+    end
     assert_response :too_many_requests
   ensure
     Rack::Attack.enabled = false
