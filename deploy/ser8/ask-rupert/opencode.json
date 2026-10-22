@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "autoupdate": false,
+  "model": "opencode-go/deepseek-v4.1-flash",
+  "agent": {
+    "chat": {
+      "mode": "primary",
+      "description": "Text only. Every tool is denied. Used by Ask Rupert and the text-only Buzz runner inside the rupert container.",
+      "permission": {
+        "*": "deny"
+      }
+    }
+  }
+}

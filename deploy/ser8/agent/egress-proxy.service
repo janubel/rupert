@@ -1,0 +1,16 @@
+# Install in the `buzz` container as /etc/systemd/system/egress-proxy.service (script at /usr/local/lib/rupert-agent/).
+[Unit]
+Description=Allow-list HTTPS proxy for the sandboxed @rupert agent
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/lib/rupert-agent/egress_proxy.py --listen 10.96.131.4:3128 --client 10.96.131.6 --allow opencode.ai --allow models.dev
+Restart=on-failure
+DynamicUser=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -8,13 +8,14 @@ class BuzzAgentPromptTest < ActiveSupport::TestCase
     BuzzAgentPrompt::MODES.each { |mode| assert_includes BuzzAgentPrompt.render(mode: mode), core }
   end
 
-  test 'text-only mode has no tools and acp mode lists only the read-only reports' do
+  test 'text-only mode has no tools and acp mode lists only the sandbox tools' do
     assert_includes BuzzAgentPrompt.render(mode: :text_only), 'no tools'
-    refute_includes BuzzAgentPrompt.render(mode: :text_only), 'quick_reports'
+    refute_includes BuzzAgentPrompt.render(mode: :text_only), 'rupert_buzz_reply'
     acp = BuzzAgentPrompt.render(mode: :acp)
-    assert_includes acp, 'scripts/quick_reports.rb'
-    assert_includes acp, 'buzz messages send'
-    assert_includes acp, 'never edit files'
+    assert_includes acp, 'rupert_buzz_reply'
+    assert_includes acp, 'rupert_submit_feedback'
+    assert_includes acp, 'you cannot run commands, read or write files, or browse'
+    refute_includes acp, 'quick_reports'
   end
 
   test 'the prompt states purpose, limits and the injection and secret rules' do

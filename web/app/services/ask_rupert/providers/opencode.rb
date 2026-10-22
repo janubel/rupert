@@ -43,7 +43,7 @@ module AskRupert
         raw_errors = +''
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         pid = nil
-        IO.popen(OpencodeCli.run_command(binary: binary, agent: agent, prompt: prompt), **OpencodeCli.popen_options) do |io|
+        IO.popen(OpencodeCli.env, OpencodeCli.run_command(binary: binary, agent: agent, prompt: prompt), **OpencodeCli.popen_options) do |io|
           pid = io.pid
           io.each_line do |line|
             raise ProviderError.new('opencode timed out', kind: :timeout) if Process.clock_gettime(Process::CLOCK_MONOTONIC) - started > TIMEOUT
