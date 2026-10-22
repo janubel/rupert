@@ -17,7 +17,7 @@ module TeamChat
     CONFIG = Rails.root.join('config/team_chat/battery.yml')
 
     Item = Struct.new(:id, :cadence, :question, :checks, keyword_init: true)
-    Result = Struct.new(:item, :seconds, :tools, :status, :answer, :grade, :tokens_in, :tokens_out, keyword_init: true)
+    Result = Struct.new(:item, :seconds, :tools, :status, :answer, :grade, :tokens_in, :tokens_out, :unverified, keyword_init: true)
 
     attr_reader :run_id, :room, :results
 
@@ -108,7 +108,7 @@ module TeamChat
       post_grade(reply, grade, seconds) if grade
       log "    #{reply.status} in #{format_seconds(seconds)} · tools #{Array(meta['tools']).join(', ').presence || 'none'} · grade #{grade&.dig(:score) || '—'}"
       Result.new(item: item, seconds: seconds, tools: Array(meta['tools']), status: reply.status, answer: reply.body.to_s,
-        grade: grade, tokens_in: meta['tokens_in'], tokens_out: meta['tokens_out'])
+        grade: grade, tokens_in: meta['tokens_in'], tokens_out: meta['tokens_out'], unverified: Array(meta['unverified']))
     end
 
     def grade_for(item, reply)
@@ -145,6 +145,8 @@ module TeamChat
 
     def post_grade(reply, grade, seconds)
       issues = Array(grade[:issues]).first(3).map { |issue| "\n- #{issue}" }.join
+      flagged = Array(reply.meta.to_h['unverified'])
+      issues += "\n⚠ Number check: #{flagged.join(', ')} not found in Rupert's data." if flagged.any?
       @room.messages.create!(author_kind: 'system', parent_id: nil,
         body: "Grade #{grade[:score]}/5 for #{bot_name} (#{format_seconds(seconds)}, #{Array(reply.meta.to_h['tools']).join(', ').presence || 'no tools'}): " \
               "#{grade[:verdict]}#{issues}\n— graded by #{@grader.label} in #{format_seconds(grade[:seconds].to_f)}",
@@ -169,6 +171,7 @@ module TeamChat
         ("Average grade #{format('%.1f', graded.sum.to_f / graded.size)}/5 (#{graded.tally.sort.reverse.map { |score, count| "#{count}× #{score}" }.join(', ')})." if graded.any?),
         ("Time per answer: average #{format_seconds(times.sum / times.size)}, fastest #{format_seconds(times.min)}, slowest #{format_seconds(times.max)}." if times.any?),
         ("By cadence: #{by_cadence.join(' · ')}." if by_cadence.any?),
+        "Number check: figures not found in Rupert's data in #{@results.count { |result| result.unverified.to_a.any? }} of #{@results.size} answers.",
         ("Whole run took #{format_seconds(elapsed)}." if elapsed)
       ].compact.join("\n")
     end

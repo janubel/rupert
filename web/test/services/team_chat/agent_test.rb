@@ -52,6 +52,29 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     assert tool_message, 'the tool result goes back to the model'
   end
 
+  test 'figures not in the tool results are flagged on the reply, and tools hand the model dollar amounts' do
+    order = Core::Order.create!(source: 'shopify', source_order_id: 'nc-1', occurred_at: 1.day.ago.change(hour: 12), gross_cents: 21_483, tax_cents: 0, currency: 'USD')
+    order.mark_paid!
+    requests = script_model({ tool: 'sales_summary', arguments: { from: (Date.current - 1).iso8601, to: (Date.current - 1).iso8601 } },
+      { text: 'Yesterday: $214.83 from 1 order, about $215. Up 12% on the day before, so roughly $999.99 this week.' })
+    reply = ask('@rupert how were sales yesterday?')
+    TeamChat::Agent.new(reply, config: team_chat_config).run
+
+    assert_equal ['12%', '$999.99'], reply.reload.meta['unverified']
+    assert_equal ['12%', '$999.99'], reply.as_payload(viewer: @user)[:unverified]
+    tool_message = requests.last['messages'].find { |message| message['role'] == 'tool' }
+    assert_includes tool_message['content'], '"gross_dollars":"$214.83"'
+    assert_includes requests.first['messages'].first['content'], 'Never add, subtract, average, convert'
+  end
+
+  test 'a reply whose figures all come from its tools has nothing flagged' do
+    script_model({ text: 'Nothing to report.' })
+    reply = ask('@rupert anything new?')
+    TeamChat::Agent.new(reply, config: team_chat_config).run
+    assert_nil reply.reload.meta['unverified']
+    assert_nil reply.as_payload(viewer: @user)[:unverified]
+  end
+
   test 'a write tool only proposes; approving runs it as the approver and posts a notice' do
     script_model({ tool: 'create_task', arguments: { title: 'Recount the tea shelf', priority: 'high' } },
       { text: 'I proposed the task; approve it below.' })
