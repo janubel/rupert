@@ -1539,7 +1539,7 @@ body.tour-active { overflow-x:hidden; }
 .chat-head-title { min-width:0; }
 .chat-head-title h2 { display:flex;align-items:center;gap:.2rem;margin:0;font-size:1rem;font-weight:750;color:var(--color-ink); }
 .chat-head-title p { margin:.1rem 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.74rem;color:var(--color-taupe); }
-.chat-head-tools { display:flex;align-items:center;gap:.7rem;flex:none; }
+.chat-head-tools { display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:.5rem .7rem;flex:0 1 auto;min-width:0; }
 .chat-member-stack { display:flex;align-items:center; }
 .chat-member-avatar { display:grid;place-items:center;width:1.6rem;height:1.6rem;margin-left:-.35rem;border:2px solid var(--color-paper);border-radius:50%;color:#fff;font-size:.58rem;font-weight:750; }
 .chat-member-avatar:first-child { margin-left:0; }
