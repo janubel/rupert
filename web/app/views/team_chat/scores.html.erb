@@ -23,12 +23,13 @@
           <th scope="col" class="th text-right">Failed</th>
           <th scope="col" class="th text-right">Typical wait</th>
           <th scope="col" class="th text-right">Slowest</th>
+          <th scope="col" class="th text-right" title="Answers that took over <%= TeamChat::ModelScores::SLOW_SECONDS / 60 %> minutes. The goal is none.">Over 2 min</th>
           <th scope="col" class="th text-right">Tools / reply</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-fog">
         <% if @rows.empty? %>
-          <tr><td colspan="9" class="empty-row">No assistant replies in this period yet. Ask @rupert or a local @agent something in team chat.</td></tr>
+          <tr><td colspan="10" class="empty-row">No assistant replies in this period yet. Ask @rupert or a local @agent something in team chat.</td></tr>
         <% end %>
         <% @rows.each do |row| %>
           <tr class="hover:bg-cream">
@@ -40,6 +41,7 @@
             <td class="td text-right <%= 'text-rose' if row.failed.positive? %>"><%= row.failed %></td>
             <td class="td text-right"><%= row.median_seconds ? "#{row.median_seconds} s" : '—' %></td>
             <td class="td text-right"><%= row.slowest_seconds ? "#{row.slowest_seconds} s" : '—' %></td>
+            <td class="td text-right <%= 'text-rose font-semibold' if row.slow.to_i.positive? %>"><%= row.slow.to_i %><% if row.slow_percent %> <span class="text-xs text-taupe">(<%= row.slow_percent %>%)</span><% end %></td>
             <td class="td text-right"><%= row.tools_per_reply %></td>
           </tr>
         <% end %>
@@ -48,6 +50,26 @@
   </div>
 </div>
 <p class="mt-3 text-xs text-taupe">Each person has one vote per reply; pressing the same thumb again takes it back. "Liked" is 👍 out of all votes. Rows with few votes are not yet a fair comparison.</p>
+
+<section class="mt-6">
+  <h2 class="font-display text-lg text-ink">Answers over 2 minutes</h2>
+  <p class="mt-1 text-sm text-mocha">The goal is every answer within <%= TeamChat::ModelScores::SLOW_SECONDS / 60 %> minutes. These took longer (local models include loading time after a break).</p>
+  <% if @slow.empty? %>
+    <p class="mt-2 text-sm text-fern">None in this period. 🎯</p>
+  <% else %>
+    <ul class="mt-2 divide-y divide-fog rounded-xl border border-fog bg-paper">
+      <% @slow.each do |row| %>
+        <li class="flex items-baseline gap-3 px-4 py-2 text-sm">
+          <span class="w-16 shrink-0 text-right font-semibold text-rose"><%= row.seconds >= 90 ? "#{row.seconds / 60}m #{row.seconds % 60}s" : "#{row.seconds}s" %></span>
+          <div class="min-w-0">
+            <p class="truncate text-ink"><%= link_to row.question.presence || 'Open the reply', team_chat_room_path(row.room, message: row.id, thread: row.parent_id), class: 'hover:underline' %></p>
+            <p class="text-xs text-taupe">@<%= row.agent %> · <%= row.model.presence || 'unknown model' %> · <%= row.tools.join(', ').presence || 'no tools' %> · #<%= row.room.slug %><%= ' · test run' if row.battery %> · <%= time_ago_in_words(row.created_at) %> ago</p>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>
 
 <section class="mt-6">
   <h2 class="font-display text-lg text-ink">Why people rated</h2>

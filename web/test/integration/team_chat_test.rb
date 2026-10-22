@@ -306,7 +306,9 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_scores_path
     assert_response :success
     rows = css_select('tbody tr').map { |row| row.css('td').map { |cell| cell.text.squish } }
-    assert_equal ['@rupert · qwen3.5-4b local gateway', '100%', '1', '0', '1', '0', '40.0 s', '40.0 s', '1.0'], rows.first
+    assert_equal ['@rupert · qwen3.5-4b local gateway', '100%', '1', '0', '1', '0', '40.0 s', '40.0 s', '0 (0%)', '1.0'], rows.first
+    assert_select 'h2', 'Answers over 2 minutes'
+    assert_match(/None in this period/, response.body)
     assert_equal '@gemma · gemma-4-e4b local gateway', rows.second.first
     assert_equal '0%', rows.second.second
   end

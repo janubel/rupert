@@ -227,3 +227,24 @@ containers yet.
   chooses" (default), "Always shown" or "Never shown", with an override per role
   (Rupert's groups). The rule is the `team_chat_presence` Setting
   (`TeamChat::Presence`); "Always"/"Never" override what people chose.
+
+## Test battery and the 2-minute goal (2026-10-23)
+
+- New read-only tools for every bot: `period_review` (day, week, pay week, month,
+  quarter, year vs the period before), `compliance_check` (Books check, month and
+  quarter close, people queues, Uploads, Drive retention, sales tax filings marked
+  unknown) and `order_queues` (unshipped, unpaid, stock requests, purchase orders,
+  receipts, holds, unresolved card payments, follow-ups).
+- `bin/rails team_chat:battery AGENT=liquid USER_EMAIL=…` asks the 21 questions in
+  `config/team_chat/battery.yml` one at a time in **#liquid-testing**, isolated from
+  each other, times each answer, and has DeepSeek (OpenCode Go) grade it 1–5 against
+  what Rupert's own tools return. Proposals are dismissed; a summary is pinned and a
+  markdown report saved under `tmp/battery/`. `AGENT` can be any @bot, `rupert`, or a
+  trial model (`gemma-e2b`, `gemma-e4b-ud`) that is on the gateway but not @mentionable.
+  It must run in the production container: only it can reach the `rupert-llm` gateway.
+- Goal: every answer within 2 minutes. Slower answers log `[TeamChat] slow answer …`
+  and a `team_chat_slow_answer` activity, and are listed on **Model scores** with each
+  model's share over 2 minutes.
+- Gateway models (`/etc/rupert-llm/models.json`, mirrored in
+  `deploy/ser8/team-chat/llm-gateway/models.json`): adding one needs
+  `systemctl restart rupert-llm-gateway` inside `rupert-llm` (the list is read at start).

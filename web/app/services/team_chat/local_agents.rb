@@ -41,11 +41,21 @@ module TeamChat
         about: 'DeepSeek V4.1 Flash via OpenCode, cloud (now @rupert)')
     ].freeze
 
+    # Models on the gateway that only the test battery asks (rake team_chat:battery AGENT=gemma-e2b); never @mentionable.
+    TRIALS = [
+      Agent.new(handle: 'gemma-e2b', name: 'Gemma E2B', model: 'gemma-4-e2b', color: '#a855f7',
+        about: 'Google Gemma 4 E2B (Unsloth UD-Q4_K_XL), local'),
+      Agent.new(handle: 'gemma-e4b-ud', name: 'Gemma E4B UD', model: 'gemma-4-e4b-ud', color: '#7e22ce',
+        about: 'Google Gemma 4 E4B (Unsloth UD-Q4_K_XL), local')
+    ].freeze
+
+    def self.trial(handle) = (TRIALS.find { |agent| agent.handle == handle.to_s } if enabled?)
+
     # The agent that wrote a reply, by its current handle or a former one (lfm → liquid, bonsai → ternary).
     def self.for_reply(handle)
       return nil if handle.blank?
 
-      (ALL + RETIRED).find { |agent| agent.handle == handle || Array(agent.aliases).include?(handle) }
+      (ALL + RETIRED + TRIALS).find { |agent| agent.handle == handle || Array(agent.aliases).include?(handle) }
     end
 
     def self.base_url = ENV['RUPERT_LOCAL_LLM_URL'].to_s.strip.chomp('/').presence

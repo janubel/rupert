@@ -35,5 +35,13 @@
       "--chat-template-kwargs",
       "{\"enable_thinking\":false}"
     ]
+  },
+  "gemma-4-e4b-ud": {
+    "file": "/var/lib/rupert-llm/models/gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+    "ctx": 16384,
+    "args": [
+      "--chat-template-kwargs",
+      "{\"enable_thinking\":false}"
+    ]
   }
 }
