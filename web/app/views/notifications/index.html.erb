@@ -1,0 +1,29 @@
+<% content_for :title, "Notifications" %>
+<div class="mx-auto max-w-3xl space-y-5">
+  <%= page_header "Notifications", subtitle: (@unread.positive? ? "#{pluralize(@unread, "unread message")}." : "You're all caught up."), eyebrow: "Me" do %>
+    <% if @unread.positive? %><%= button_to "Mark all read", read_all_notifications_path, method: :post, class: "btn-ghost btn-sm" %><% end %>
+  <% end %>
+
+  <% if @notifications.empty? %>
+    <div class="card card-pad py-10 text-center">
+      <p class="font-display text-lg text-ink">Nothing yet.</p>
+      <p class="mt-1 text-sm text-taupe">Task assignments, comments, blocked work and due dates show up here.</p>
+    </div>
+  <% else %>
+    <ul class="card divide-y divide-fog">
+      <% @notifications.each do |notification| %>
+        <li>
+          <%= link_to notification_path(notification), class: "flex items-start gap-3 px-4 py-3 hover:bg-haze/60" do %>
+            <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full <%= notification.read? ? "bg-transparent" : "bg-olive" %>" aria-hidden="true"></span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm <%= notification.read? ? "text-mocha" : "font-semibold text-ink" %>"><%= notification.title %><% unless notification.read? %> <span class="sr-only">(unread)</span><% end %></span>
+              <% if notification.body.present? %><span class="mt-0.5 line-clamp-2 block text-xs text-taupe"><%= notification.body %></span><% end %>
+            </span>
+            <span class="shrink-0 text-xs text-taupe"><%= time_ago_in_words(notification.created_at) %> ago</span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+    <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
+  <% end %>
+</div>

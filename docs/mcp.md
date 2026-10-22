@@ -99,7 +99,7 @@ unless marked.
 | `stock_comparison` | `inventory:read` | `inventory.read` | Shopify vs C-Trax stock side by side, with issues. |
 | `swipesimple_items` | `inventory:read` | `inventory.read` | SwipeSimple item list matched to Shopify, Square and C-Trax. |
 | `time_keeping_report` | `timesheets:read` | `timesheets.read` | Scheduled vs worked hours (own hours only unless the owner reviews timesheets). |
-| `list_tasks` | `tasks:read` | `projects.read` | Tasks board, most urgent first. |
+| `list_tasks` | `tasks:read` | `projects.read` | Tasks board, most urgent first: status, priority, start and due dates, project, assignee, labels and the reason a blocked task is blocked. |
 | `create_task` | `tasks:write` | `projects.write` | **Writes:** adds a task to Rupert's own Tasks board, marked as added by an AI assistant. |
 | `list_alerts` | `alerts:read` | `alerts.read` | Low-stock alerts with counts per status. |
 | `list_uploads` | `uploads:read` | `uploads.read` | "Did my file arrive and what happened to it?": each upload's status (received, recognized, needs_review, imported, rejected, duplicate), who sent it and when, size, SHA-256, detected type and confidence, and the reason for any hold or refusal. Find by id, file-name fragment or SHA-256 prefix. Never returns file contents; cannot upload or approve. See [Uploads inbox](ops/uploads-inbox.md). |

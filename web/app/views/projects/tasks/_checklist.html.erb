@@ -1,0 +1,30 @@
+<% done, total = @task.checklist_progress %>
+<section id="checklist" class="card card-pad">
+  <div class="flex items-baseline justify-between">
+    <h2 class="font-display text-lg text-ink">Checklist</h2>
+    <% if total.positive? %><span class="text-xs text-taupe"><%= done %> of <%= total %></span><% end %>
+  </div>
+  <% if total.positive? %>
+    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-haze"><div class="h-full rounded-full bg-fern" style="width: <%= (done * 100.0 / total).round %>%"></div></div>
+  <% end %>
+  <ul class="mt-3 space-y-1">
+    <% @task.checklist_items.each do |item| %>
+      <li class="flex items-center gap-2 text-sm">
+        <% if @can_edit %>
+          <%= button_to projects_task_checklist_item_path(@task, item, done: !item.done), method: :patch, class: "grid h-5 w-5 place-items-center rounded border #{item.done ? "border-fern bg-fern text-cream" : "border-taupe bg-paper"}", "aria-label": "#{item.done ? "Uncheck" : "Check"} #{item.title}", "aria-pressed": item.done.to_s do %><%= item.done ? "✓" : "" %><% end %>
+        <% else %>
+          <span class="grid h-5 w-5 place-items-center rounded border <%= item.done ? "border-fern bg-fern text-cream" : "border-taupe" %>"><%= item.done ? "✓" : "" %></span>
+        <% end %>
+        <span class="min-w-0 flex-1 <%= "text-taupe line-through" if item.done %>"><%= item.title %></span>
+        <% if @can_edit %><%= button_to "Remove", projects_task_checklist_item_path(@task, item), method: :delete, class: "text-xs text-taupe hover:text-rose", "aria-label": "Remove #{item.title}" %><% end %>
+      </li>
+    <% end %>
+    <% if total.zero? %><li class="text-sm text-taupe">No checklist items.</li><% end %>
+  </ul>
+  <% if @can_edit %>
+    <%= form_with scope: :item, url: projects_task_checklist_items_path(@task), class: "mt-3 flex gap-2" do |f| %>
+      <%= f.text_field :title, class: "input flex-1", placeholder: "Add a step…", "aria-label": "New checklist item", required: true, maxlength: 200 %>
+      <%= f.submit "Add", class: "btn-ghost btn-sm" %>
+    <% end %>
+  <% end %>
+</section>

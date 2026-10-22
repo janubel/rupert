@@ -42,7 +42,7 @@ module Mcp
 
         ActivityLogger.log('task_created', subject: task, details: "Via MCP token #{token.token_hint}; assignee: #{task.assignee_id.presence || 'unassigned'}")
         result("Created task ##{task.id} “#{task.title}” (#{task.priority}).",
-          { id: task.id, title: task.title, status: task.status, priority: task.priority, due_on: task.due_on&.iso8601, project_id: task.project_id })
+          { id: task.id, title: task.title, status: task.status, priority: task.priority, due_on: task.due_on&.iso8601, project_id: task.project_id&.to_s })
       end
     end
   end

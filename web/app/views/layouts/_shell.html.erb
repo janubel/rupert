@@ -31,6 +31,7 @@
             <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
           <% end %>
           <%= render 'shared/header_buzz' if Current.user.can?('dashboard.read') %>
+          <%= render 'shared/header_notifications' %>
           <%= render 'shared/header_sync_pill', sync: @last_sync %>
           <%= render 'shared/feedback_button' %>
           <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>

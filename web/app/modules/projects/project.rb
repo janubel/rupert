@@ -9,10 +9,15 @@ module Projects
     self.table_name = 'projects'
 
     belongs_to :owner, class_name: 'User', foreign_key: :owner_id, optional: true
-    has_many :tasks, class_name: 'Projects::Task', foreign_key: :project_id, dependent: :destroy
+    belongs_to :goal, class_name: 'Goals::Goal', optional: true
+    has_many :tasks, class_name: 'Projects::Task', foreign_key: :project_id, inverse_of: :project, dependent: :destroy
+    has_many :project_members, class_name: 'Projects::ProjectMember', foreign_key: :project_id, inverse_of: :project, dependent: :destroy
+    has_many :members, through: :project_members, source: :user
 
-    validates :name, presence: true
+    validates :name, presence: true, length: { maximum: 120 }
     validate { validate_project_person(:owner_id) }
+    validate :goal_belongs_to_tenant
+    validate :dates_in_order
 
     scope :recent, ->(limit = 20) { order(updated_at: :desc).limit(limit) }
     scope :search, lambda { |term|
@@ -38,6 +43,9 @@ module Projects
       end
       event :archive do
         transitions from: %i[completed planned active on_hold], to: :archived
+      end
+      event :reopen do
+        transitions from: %i[completed archived], to: :active
       end
     end
 
@@ -79,6 +87,44 @@ module Projects
 
     def days_left
       (due_on - Date.current).to_i if due_on
+    end
+
+    def unfinished_count
+      task_total - task_counts['done'].to_i
+    end
+
+    # The owner and members: the people who hear about activity on the project.
+    def team_ids
+      ([owner_id] + project_members.pluck(:user_id).map(&:to_s)).compact_blank.uniq
+    end
+
+    def logged_minutes
+      Projects::TaskTimeEntry.where(task_id: tasks.select(:id)).sum(:minutes)
+    end
+
+    def estimated_minutes
+      tasks.sum(:estimate_minutes)
+    end
+
+    # First and last day shown on the timeline: the project's own dates and every task's.
+    def timeline_range
+      days = [start_on, due_on, *tasks.pluck(:start_on, :due_on).flatten].compact
+      return if days.empty?
+
+      [days.min, [days.max, days.min + 6].max]
+    end
+
+    private
+
+    def goal_belongs_to_tenant
+      return if goal_id.blank?
+      return if Goals::Goal.unscoped.exists?(id: goal_id, tenant_id: tenant_id || Current.tenant_id)
+
+      errors.add(:goal, 'was not found')
+    end
+
+    def dates_in_order
+      errors.add(:due_on, 'cannot be before the start date') if start_on && due_on && due_on < start_on
     end
   end
 end

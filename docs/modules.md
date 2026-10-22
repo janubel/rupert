@@ -39,7 +39,7 @@ The [Influencer CMS](ops/influencer-cms.md) adds prospect/relationship tracking,
 | --- | --- |
 | Reports | Sales, financial (P&L), inventory, and operations reports with date windows and CSV export. |
 | Ledger | Central transaction stream across all sources, filterable by window and source. |
-| Projects | Project + task tracking with status transitions. |
+| Projects | Projects and tasks: board, list, calendar and timeline; task pages with checklist, comments, files, time, dependencies and repeating tasks; goals, team, templates, notifications and CSV export. |
 | Goals & KPIs | Goals with measurable progress, KPIs, and reading history. |
 
 ## Purchasing

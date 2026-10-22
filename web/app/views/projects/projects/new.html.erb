@@ -1,4 +1,17 @@
 <div class="space-y-5">
   <%= page_header 'New project', eyebrow: 'Projects' %>
-  <%= render "form", project: @project, url: projects_projects_path, method: :post, submit: "Create project", cancel_path: projects_projects_path %>
+  <%= render "form", project: @project, url: projects_projects_path, method: :post, submit: "Create project", cancel_path: projects_projects_path, templates: @templates %>
+  <% if @templates.any? %>
+    <section class="card card-pad max-w-2xl">
+      <h2 class="font-display text-lg text-ink">Saved templates</h2>
+      <ul class="mt-3 divide-y divide-fog text-sm">
+        <% @templates.each do |template| %>
+          <li class="flex items-center justify-between gap-3 py-2">
+            <span class="min-w-0 truncate"><strong class="text-ink"><%= template.name %></strong> <span class="text-taupe">· <%= pluralize(template.task_count, "task") %></span></span>
+            <%= button_to "Delete", projects_template_path(template), method: :delete, class: "text-xs text-taupe hover:text-rose", form: { data: { turbo_confirm: "Delete the template “#{template.name}”? Projects made from it are not affected." } } %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
 </div>
