@@ -19,7 +19,7 @@ module TeamChat
     MAX_RESULT_CHARS = 6_000
     MAX_CALLS = 8
     LOOKUPS = %w[where_is how_do_i search system_status].freeze
-    WRITE_TOOLS = %w[create_task submit_feedback].freeze
+    WRITE_TOOLS = %w[create_task update_task submit_feedback].freeze
 
     Definition = Struct.new(:name, :description, :schema, :kind, :activity, keyword_init: true)
 
@@ -124,9 +124,29 @@ module TeamChat
     end
 
     def propose(name, args)
+      args = prepare(name, args)
       action = Actions.propose!(@reply, tool: name, arguments: args, proposed_for: @user)
       "Proposed as action #{action['id']}: “#{action['summary']}”. A card with Approve and Dismiss is shown in the room. " \
         'Tell them it is waiting for their approval. Do not say it is done.'
+    end
+
+    # Checks what can be checked before a card is shown, so the model can ask
+    # again (which person? which task?) instead of the change failing at Approve.
+    # The person is pinned by email so Approve assigns exactly who the card names.
+    def prepare(name, args)
+      args = args.dup
+      if args['assignee'].present? && %w[create_task update_task].include?(name)
+        person = Mcp::Assignee.resolve(@user, args['assignee'])
+        args['assignee'] = person == :nobody ? 'nobody' : person.email
+      end
+      if name == 'update_task'
+        task = Projects::TaskPolicy::Scope.new(@user, Projects::Task).resolve.find_by(id: args['task_id'])
+        raise Mcp::ToolError.new("No task ##{args['task_id']} that this person can see. Use list_tasks to find it.", kind: 'not_found') unless task
+        raise Mcp::ToolError.new("This person cannot change task ##{task.id}.", kind: 'denied') unless Projects::TaskPolicy.new(@user, task).update?
+
+        args['task_title'] = task.title
+      end
+      args
     end
 
     def log(name, started, outcome, text)
