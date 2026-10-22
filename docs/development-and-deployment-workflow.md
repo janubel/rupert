@@ -50,9 +50,13 @@ After a merge, verify the checks for the exact integrated `main` SHA. Preserve
 the links to required runs and any applicable mobile validation with the PR or
 release record. A successful check on an earlier or duplicate event is not a
 substitute for a failed required check on the current head. The deployment
-updater currently gates on the newest `CI (sqlite3)` check for the target SHA;
-requiring the product-site and security checks at deploy time remains an
-implementation decision tracked in [issue #334](https://github.com/techmore/rupert/issues/334).
+updater gates on the newest exact-SHA `CI (sqlite3)`, `Product site
+consistency`, and `Dependency and static scan` checks. Missing or pending
+checks wait; a completed non-success check blocks. `cla` is a PR-only check and
+does not run as an integrated-main gate. If mobile source, the SDK checker, or
+its workflow changes, the updater also requires the exact-SHA `validate` result
+from the Employee mobile workflow. Deployer tests cover missing, pending,
+failed, rerun and mobile-path results.
 
 Measure CI cost with runner-minute billing data and comparable windows. Record
 runner minutes, runs per unique PR SHA, duplicate event pairs, queue time,
@@ -69,7 +73,8 @@ installed mode and deployed SHA must be verified from the host/app status; do
 not infer either from repository configuration.
 
 The updater checks for a clean checkout and fast-forward, waits for the newest
-`CI (sqlite3)` check on the target SHA, takes a pre-deploy SQLite backup, installs
+`CI (sqlite3)`, `Product site consistency`, and `Dependency and static scan`
+checks on the target SHA (and `validate` when mobile paths changed), takes a pre-deploy SQLite backup, installs
 dependencies, migrates and precompiles assets, restarts services, then checks
 `/up`. On health-check failure it rolls back the code; it does not reverse
 database migrations. It records a failed SHA to avoid retry loops. A manual

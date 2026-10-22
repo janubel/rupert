@@ -44,9 +44,14 @@ restore procedure are in [docs/ops/backups.md](../../docs/ops/backups.md).
 ## Auto-deploy (`rupert-autodeploy`)
 
 Runs **inside the `rupert` Incus container** as root. Every 5 minutes it fetches `origin/main` and deploys it to
-`/opt/rupert` only when all of these hold: the move is a fast-forward, the checkout is clean, and the `CI (sqlite3)`
-check is green for that commit (read from the public GitHub API, no token; for a re-run job
-only its latest run counts).
+`/opt/rupert` only when all of these hold: the move is a fast-forward, the
+checkout is clean, and the latest exact-SHA `CI (sqlite3)`, `Product site
+consistency`, and `Dependency and static scan` checks are green (read from the
+public GitHub API, no token; for a re-run only its latest check run counts).
+Missing and pending checks wait; a completed non-success check blocks. `cla`
+is a pull-request check and is not expected on integrated `main`. Changes under
+`mobile/`, `bin/check-mobile-sdk.mjs`, or the employee-mobile workflow also
+require its exact-SHA `validate` check.
 
 Each deploy takes a SQLite backup first (last 5 kept in `/var/backups/rupert-autodeploy`), then runs `bundle install`,
 `db:migrate` and `assets:precompile`, restarts `rupert-web` and `rupert-jobs`, and checks `/up`. If the health check
@@ -91,7 +96,7 @@ outside Rupert.
 Check by hand: `DRY_RUN=1 /usr/local/sbin/rupert-autodeploy.sh`. Logs: `journalctl -u rupert-autodeploy`.
 Stop it with `systemctl disable --now rupert-autodeploy.timer`.
 
-When updating an installed watcher, replace the copied `/usr/local/sbin/rupert-autodeploy.sh` with the current repository version before re-enabling the timer. Older copies may still require the retired PostgreSQL CI check and otherwise keep deployments blocked. The source script now gates on `CI (sqlite3)` only.
+When updating an installed watcher, replace the copied `/usr/local/sbin/rupert-autodeploy.sh` with the current repository version before re-enabling the timer. Older copies may still require the retired PostgreSQL CI check or may gate on only one required check.
 
 ## Team chat (Buzz retired)
 

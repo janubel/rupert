@@ -9,9 +9,11 @@ and the [SER8 updater runbook](../../deploy/ser8/README.md#auto-deploy-rupert-au
 
 Each PR must pass the current required checks: `CI (sqlite3)`, `Product site
 consistency`, `Dependency and static scan`, and `cla`. Verify the exact
-integrated SHA and applicable mobile checks before a release. The updater
-currently checks only `CI (sqlite3)` at deployment time; expanding that gate is
-tracked in issue #334.
+integrated SHA and applicable mobile checks before a release. The updater waits
+for the newest exact-SHA `CI (sqlite3)`, `Product site consistency`, and
+`Dependency and static scan` checks. Missing or pending results wait; any
+completed non-success result blocks. `cla` remains a pull-request check, not an
+integrated-main check.
 
 ## 1. Cut the release (on a laptop)
 
