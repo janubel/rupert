@@ -11,7 +11,8 @@ import { Controller } from "@hotwired/stimulus"
 // `code`, @mentions, http(s) links and same-site [label](/path) links.
 export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
-    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins", "typing", "newDm", "threadSuggest"]
+    "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins", "typing", "newDm", "threadSuggest",
+    "media", "mediaSearch", "mediaStatus", "mediaGrid", "mediaMore"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
     compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
@@ -39,6 +40,7 @@ export default class extends Controller {
     this.lastTypingPing = 0
     this.editingId = null
     this.pinsOpen = false
+    this.quoting = { main: null, thread: null }
     this.startFitting()
     this.load()
     this.schedule()
@@ -368,6 +370,7 @@ export default class extends Controller {
     avatar.setAttribute("aria-hidden", "true")
     if (message.kind === "person") avatar.style.background = message.author.color
     avatar.textContent = message.author.initials
+    avatar.title = this.whoTitle(message.author)
     row.append(avatar)
 
     const main = document.createElement("div")
@@ -378,6 +381,7 @@ export default class extends Controller {
       const author = document.createElement("span")
       author.className = "chat-msg-author"
       author.textContent = message.author.name
+      author.title = this.whoTitle(message.author)
       head.append(author)
       if (message.kind !== "person") {
         const badge = document.createElement("span")
@@ -407,6 +411,8 @@ export default class extends Controller {
       }
       main.append(head)
     }
+
+    if (message.quote && !message.deleted) main.append(this.quoteNode(message.quote))
 
     const body = document.createElement("div")
     body.className = "chat-msg-body"
@@ -441,15 +447,209 @@ export default class extends Controller {
     if (!message.deleted && message.status !== "pending") {
       const tools = document.createElement("div")
       tools.className = "chat-msg-tools"
+      if (message.kind !== "system") tools.append(this.toolButton("↩ Reply", (event) => this.startQuote(message, event.currentTarget)))
+      if (!thread && !message.parent_id && message.kind !== "system" && !this.compactValue) tools.append(this.toolButton("💬 Thread", () => this.openThread(message.id)))
       tools.append(this.toolButton("React", (event) => this.openPalette(message, event.currentTarget)))
       if (message.kind !== "system") tools.append(this.toolButton(message.pinned ? "Unpin" : "Pin", () => this.togglePin(message.id)))
-      if (!thread && message.kind !== "system") tools.append(this.toolButton("Reply in thread", () => this.openThread(message.id)))
       tools.append(this.toolButton("Copy link", () => this.copyLink(message)))
       if (message.mine) tools.append(this.toolButton("Edit", () => this.startEdit(message)))
       if (message.mine) tools.append(this.toolButton("Delete", () => this.deleteMessage(message)))
       if (tools.childElementCount) row.append(tools)
     }
+    // On touch screens there is no hover: a tap on the message shows its tools.
+    row.addEventListener("click", (event) => {
+      if (event.target.closest("a, button, input, textarea, video, summary")) return
+      this.element.querySelectorAll(".chat-msg.is-selected").forEach((other) => { if (other !== row) other.classList.remove("is-selected") })
+      row.classList.toggle("is-selected")
+    })
     return row
+  }
+
+  // --- Media: the room's photos and files, searchable ---
+
+  showTab(event) {
+    const tab = event.currentTarget.dataset.tab
+    this.element.querySelectorAll(".chat-tabs .chat-tab").forEach((button) => {
+      const on = button.dataset.tab === tab
+      button.classList.toggle("is-active", on)
+      button.setAttribute("aria-selected", on ? "true" : "false")
+    })
+    const media = tab === "media"
+    this.mediaTarget.hidden = !media
+    this.element.querySelector(".chat-body").hidden = media
+    if (this.hasPinsTarget) this.pinsTarget.classList.toggle("is-tab-hidden", media)
+    if (media) {
+      this.mediaFilter ||= "all"
+      if (!this.mediaLoaded) this.loadMedia()
+      this.mediaSearchTarget.focus()
+    }
+  }
+
+  searchMedia() {
+    clearTimeout(this.mediaTimer)
+    this.mediaTimer = setTimeout(() => this.loadMedia(), 250)
+  }
+
+  mediaKind(event) {
+    this.mediaFilter = event.currentTarget.dataset.kind
+    this.element.querySelectorAll(".chat-media-kinds .chat-tab").forEach((button) => {
+      const on = button.dataset.kind === this.mediaFilter
+      button.classList.toggle("is-active", on)
+      button.setAttribute("aria-pressed", on ? "true" : "false")
+    })
+    this.loadMedia()
+  }
+
+  moreMedia() {
+    this.loadMedia({ append: true })
+  }
+
+  async loadMedia({ append = false } = {}) {
+    const url = new URL(this.mediaTarget.dataset.url, window.location.origin)
+    const query = this.mediaSearchTarget.value.trim()
+    if (query) url.searchParams.set("q", query)
+    if (this.mediaFilter && this.mediaFilter !== "all") url.searchParams.set("kind", this.mediaFilter)
+    if (append && this.mediaLastId) url.searchParams.set("before", this.mediaLastId)
+    const ticket = (this.mediaTicket = (this.mediaTicket || 0) + 1)
+    if (!append) this.mediaStatusTarget.textContent = "Loading…"
+    this.mediaStatusTarget.hidden = append
+    const data = await this.fetchJson(url.pathname + url.search)
+    if (!data || ticket !== this.mediaTicket) return
+    this.mediaLoaded = true
+    const nodes = data.items.map((item) => this.mediaNode(item))
+    append ? this.mediaGridTarget.append(...nodes) : this.mediaGridTarget.replaceChildren(...nodes)
+    if (data.items.length) this.mediaLastId = data.items[data.items.length - 1].id
+    this.mediaMoreTarget.hidden = !data.has_more
+    const shown = this.mediaGridTarget.childElementCount
+    this.mediaStatusTarget.hidden = shown > 0
+    this.mediaStatusTarget.textContent = query ? `Nothing matches “${query}”.` : "No photos or files in this room yet. Paste, drop or 📎 attach one in a message."
+  }
+
+  mediaNode(item) {
+    const card = document.createElement("figure")
+    card.className = `chat-media-item${item.image ? " is-image" : ""}`
+    const open = document.createElement("a")
+    open.href = item.url
+    open.target = "_blank"
+    open.rel = "noopener"
+    open.className = "chat-media-open"
+    if (item.image) {
+      const img = document.createElement("img")
+      img.src = item.url
+      img.alt = item.name
+      img.loading = "lazy"
+      open.append(img)
+    } else {
+      const icon = document.createElement("span")
+      icon.className = "chat-media-icon"
+      icon.textContent = item.type === "application/pdf" ? "PDF" : (item.name.split(".").pop() || "file").toUpperCase().slice(0, 4)
+      const name = document.createElement("span")
+      name.className = "chat-media-name"
+      name.textContent = item.name
+      open.append(icon, name)
+    }
+    const caption = document.createElement("figcaption")
+    const who = document.createElement("span")
+    who.textContent = item.author
+    who.title = this.whoTitle({ name: item.author, email: item.email })
+    const when = document.createElement("time")
+    when.dateTime = item.created_at
+    when.textContent = new Date(item.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    when.title = new Date(item.created_at).toLocaleString()
+    const show = document.createElement("button")
+    show.type = "button"
+    show.className = "chat-media-show"
+    show.textContent = "Show in chat"
+    show.title = item.excerpt || item.name
+    show.addEventListener("click", () => this.showMediaMessage(item))
+    caption.append(who, when, show)
+    card.append(open, caption)
+    return card
+  }
+
+  async showMediaMessage(item) {
+    this.element.querySelector('.chat-tabs .chat-tab[data-tab="messages"]').click()
+    if (item.parent_id && !this.compactValue) {
+      await this.openThread(item.parent_id)
+      return this.flash(this.threadLogTarget.querySelector(`[data-id="${item.message_id}"]`))
+    }
+    this.jumpToMessage(item.message_id)
+  }
+
+  // "Name · email" on hover, so two people with the same name can be told apart.
+  whoTitle(author) {
+    return author.email ? `${author.name} · ${author.email}` : author.name
+  }
+
+  // --- replies: quote a message in the room (or in the thread) ---
+
+  quoteNode(quote) {
+    const node = document.createElement("button")
+    node.type = "button"
+    node.className = `chat-quote${quote.deleted ? " is-deleted" : ""}`
+    node.setAttribute("aria-label", `Replying to ${quote.author}. Show that message.`)
+    const who = document.createElement("strong")
+    who.textContent = quote.author
+    const text = document.createElement("span")
+    text.textContent = quote.excerpt
+    node.append(who, text)
+    node.addEventListener("click", (event) => this.showQuoted(quote, event.currentTarget))
+    return node
+  }
+
+  async showQuoted(quote, from) {
+    const inThread = from.closest(".chat-thread-log")
+    if (inThread) return this.flash(inThread.querySelector(`[data-id="${quote.id}"]`))
+    if (quote.parent_id && !this.compactValue) {
+      await this.openThread(quote.parent_id)
+      return this.flash(this.threadLogTarget.querySelector(`[data-id="${quote.id}"]`))
+    }
+    this.jumpToMessage(quote.parent_id || quote.id)
+  }
+
+  startQuote(message, from) {
+    const where = from.closest(".chat-thread-log") ? "thread" : "main"
+    this.quoting[where] = message
+    this.renderQuoteBar(where)
+    const field = where === "thread" ? this.threadInputTarget : this.inputTarget
+    field.focus()
+  }
+
+  clearQuote(where) {
+    if (!this.quoting[where]) return false
+    this.quoting[where] = null
+    this.renderQuoteBar(where)
+    return true
+  }
+
+  renderQuoteBar(where) {
+    const field = where === "thread" ? this.threadInputTarget : this.inputTarget
+    const composer = field.closest(".chat-composer")
+    let bar = composer.querySelector(".chat-quote-bar")
+    const message = this.quoting[where]
+    if (!message) return bar?.remove()
+    if (!bar) {
+      bar = document.createElement("div")
+      bar.className = "chat-quote-bar"
+      field.before(bar)
+    }
+    const label = document.createElement("span")
+    const who = document.createElement("strong")
+    who.textContent = `Replying to ${message.author.name}`
+    const text = document.createElement("span")
+    text.className = "chat-quote-bar-text"
+    const plain = (message.body || "").replace(/\s+/g, " ").trim() || (message.attachments?.length ? `📎 ${message.attachments[0].name}` : "")
+    text.textContent = plain.length > 90 ? `${plain.slice(0, 89)}…` : plain
+    label.append(who, text)
+    const hint = document.createElement("span")
+    hint.className = "chat-quote-bar-hint"
+    hint.textContent = message.kind === "assistant" ? "it answers your reply" : ""
+    const cancel = document.createElement("button")
+    cancel.type = "button"
+    cancel.setAttribute("aria-label", "Cancel reply")
+    cancel.textContent = "✕"
+    cancel.addEventListener("click", () => { this.clearQuote(where); field.focus() })
+    bar.replaceChildren(label, hint, cancel)
   }
 
   // "31s · qwen3.5-4b · local" next to a bot reply.
@@ -964,6 +1164,7 @@ export default class extends Controller {
       window.Turbo ? window.Turbo.visit(url) : (window.location.href = url)
       return
     }
+    if (this.threadId !== id) this.clearQuote("thread")
     this.threadId = id
     this.threadTarget.hidden = false
     this.renderThread()
@@ -977,6 +1178,7 @@ export default class extends Controller {
 
   closeThread() {
     this.threadId = null
+    this.clearQuote("thread")
     this.threadTarget.hidden = true
   }
 
@@ -1014,6 +1216,7 @@ export default class extends Controller {
 
   keydown(event) {
     if (this.handleSuggestKeys(event)) return
+    if (event.key === "Escape" && this.clearQuote("main")) return
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault()
       this.formTarget.requestSubmit()
@@ -1045,6 +1248,7 @@ export default class extends Controller {
 
   threadKeydown(event) {
     if (this.handleSuggestKeys(event)) return
+    if (event.key === "Escape" && this.clearQuote("thread")) return
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault()
       event.target.form.requestSubmit()
@@ -1064,7 +1268,7 @@ export default class extends Controller {
     }
     const term = match[1].toLowerCase()
     const starts = (name) => name.toLowerCase().split(/\s+/).some((word) => word.startsWith(term)) || name.toLowerCase().startsWith(term)
-    const options = [this.constructor.RUPERT, this.constructor.ALL, ...this.agentsValue, ...this.peopleValue.map((person) => ({ ...person, label: person.name }))].filter((option) => starts(option.name)).slice(0, 8)
+    const options = [this.constructor.RUPERT, this.constructor.ALL, ...this.agentsValue, ...this.peopleValue.map((person) => ({ ...person, label: person.email ? `${person.name} — ${person.email}` : person.name }))].filter((option) => starts(option.name)).slice(0, 8)
     if (!options.length || (options.length === 1 && options[0].name.toLowerCase() === term)) {
       list.hidden = true
       this.suggestions = []
@@ -1232,6 +1436,8 @@ export default class extends Controller {
     const form = new FormData()
     form.append("body", body)
     if (parentId) form.append("parent_id", parentId)
+    const where = field === this.inputTarget ? "main" : "thread"
+    if (this.quoting[where]) form.append("quote_id", this.quoting[where].id)
     files.forEach((entry) => form.append("files[]", entry.file, entry.file.name))
     this.mentionIds.forEach((id) => form.append("mention_ids[]", id))
     const data = await this.fetchJson(this.urlValue, { method: "POST", body: form })
@@ -1242,6 +1448,7 @@ export default class extends Controller {
     }
     field.value = ""
     this.autosize(field)
+    this.clearQuote(where)
     if (!parentId) {
       this.pendingFiles = []
       this.mentionIds = new Set()

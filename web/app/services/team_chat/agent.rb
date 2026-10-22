@@ -276,7 +276,10 @@ module TeamChat
       return nil if text.blank? || row.status == 'failed'
 
       case row.author_kind
-      when 'person' then { role: :user, content: "#{row.author_name}: #{AskRupert::Redactor.clean(text)}" }
+      when 'person'
+        quoted = @room.messages.find_by(id: row.quote_id) if row.quote_id
+        reply_to = " (replying to #{quoted.author_name}: “#{quoted.excerpt(160)}”)" if quoted
+        { role: :user, content: "#{row.author_name}#{reply_to}: #{AskRupert::Redactor.clean(text)}" }
       # Another assistant's reply (@rupert or a different local @agent) is a voice in the room, not this model's own.
       when 'assistant'
         row.local_agent&.handle == @local_agent&.handle ? { role: :assistant, content: text } : { role: :user, content: "#{row.author_name}: #{text}" }

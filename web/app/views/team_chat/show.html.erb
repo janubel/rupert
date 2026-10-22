@@ -57,13 +57,13 @@
         <% label = repeated.include?(person.display_name) ? "#{person.display_name} (#{person.email.to_s.split('@').first})" : person.display_name %>
         <% if (room = dm_rooms[person.id]) %>
           <%= link_to team_chat_room_path(room), class: "chat-rail-room #{'is-active' if room == @room}", aria: { current: (room == @room ? 'page' : nil) },
-                data: { team_chat_target: 'roomLink', slug: room.slug, name: label } do %>
+                title: "#{person.display_name} · #{person.email}", data: { team_chat_target: 'roomLink', slug: room.slug, name: label } do %>
             <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= initials %></span>
             <span class="chat-rail-room-name"><%= label %></span>
             <span class="chat-unread" data-unread hidden></span>
           <% end %>
         <% else %>
-          <%= button_to team_chat_dms_path, params: { user_id: person.id }, class: 'chat-rail-room chat-rail-room-button', title: "Message #{person.display_name}",
+          <%= button_to team_chat_dms_path, params: { user_id: person.id }, class: 'chat-rail-room chat-rail-room-button', title: "Message #{person.display_name} · #{person.email}",
                 form: { class: 'chat-rail-form', data: { turbo: false, team_chat_target: 'roomLink', slug: "new-dm-#{person.id}", name: label } } do %>
             <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= initials %></span>
             <span class="chat-rail-room-name"><%= label %></span>
@@ -98,7 +98,11 @@
     <header class="chat-head">
       <div class="chat-head-title">
         <h2><% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true">R</span>Rupert<% elsif dm_partner %><span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[dm_partner.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= dm_partner.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span><%= dm_partner.display_name %><% else %><span class="chat-hash">#</span><%= @room.name %><% end %></h2>
-        <p data-team-chat-target="topic"><%= @room.dm? ? 'Direct message: only the two of you read it. Mention @rupert to bring him in.' : (@room.topic.presence || 'No topic yet.') %></p>
+        <p data-team-chat-target="topic"><%= @room.dm? ? "#{dm_partner&.email} · Direct message: only the two of you read it. Mention @rupert to bring him in." : (@room.topic.presence || 'No topic yet.') %></p>
+        <div class="chat-tabs" role="tablist" aria-label="Show">
+          <button type="button" role="tab" class="chat-tab is-active" aria-selected="true" data-tab="messages" data-action="team-chat#showTab">Messages</button>
+          <button type="button" role="tab" class="chat-tab" aria-selected="false" data-tab="media" data-action="team-chat#showTab" <%= tour_anchor('chat-media') %>>Media</button>
+        </div>
       </div>
       <div class="chat-head-tools">
         <details class="chat-bots chat-help" <%= tour_anchor('chat-help') %>>
@@ -108,7 +112,7 @@
             <ul class="chat-help-list">
               <li><strong>Rooms</strong> on the left; <strong>Direct</strong> to message one person.</li>
               <li>Type <strong>@</strong> to mention someone or a bot. <strong>@rupert</strong> answers fast from the cloud; <strong>@liquid</strong>, <strong>@qwen</strong>, <strong>@ternary</strong> run privately here; <strong>@all</strong> asks every bot side by side.</li>
-              <li>Hover a message to <strong>reply in a thread</strong>, react, pin, copy its link or edit yours. Paste or drop photos.</li>
+              <li>Hover (or tap) a message to <strong>↩ Reply</strong> to it, start a <strong>💬 Thread</strong>, react, pin, copy its link or edit yours. Replying to a bot asks it again. Paste or drop photos; find them later under <strong>Media</strong>.</li>
               <li>Rate bot replies 👍/👎 and say why. Changes a bot proposes wait for <strong>Approve</strong>.</li>
             </ul>
             <div class="chat-help-actions">
@@ -141,7 +145,7 @@
           <span class="chat-member-stack" aria-label="People in this room">
             <% @members.first(6).each do |member| %>
               <% initials = member.display_name.to_s.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %>
-              <span class="chat-member-avatar" style="background:<%= TeamChat::Message::COLORS[member.id % TeamChat::Message::COLORS.size] %>" title="<%= member.display_name %>"><%= initials %></span>
+              <span class="chat-member-avatar" style="background:<%= TeamChat::Message::COLORS[member.id % TeamChat::Message::COLORS.size] %>" title="<%= member.display_name %> · <%= member.email %>"><%= initials %></span>
             <% end %>
             <span class="chat-member-avatar is-bot" title="Rupert">R</span>
           </span>
@@ -168,6 +172,22 @@
     </header>
 
     <div class="chat-pins" data-team-chat-target="pins" hidden></div>
+    <section class="chat-media" data-team-chat-target="media" data-url="<%= team_chat_media_path(@room) %>" aria-label="Photos and files in <%= room_label %>" hidden>
+      <div class="chat-media-bar">
+        <label class="chat-media-search">
+          <span class="sr-only">Search photos and files</span>
+          <input type="search" placeholder="Search by file name, message or who posted it" data-team-chat-target="mediaSearch" data-action="input->team-chat#searchMedia" autocomplete="off">
+        </label>
+        <div class="chat-media-kinds" role="group" aria-label="Kind">
+          <% [['all', 'All'], ['images', 'Photos'], ['files', 'Files']].each do |value, label| %>
+            <button type="button" class="chat-tab <%= 'is-active' if value == 'all' %>" aria-pressed="<%= value == 'all' %>" data-kind="<%= value %>" data-action="team-chat#mediaKind"><%= label %></button>
+          <% end %>
+        </div>
+      </div>
+      <p class="chat-hint" data-team-chat-target="mediaStatus">Loading…</p>
+      <div class="chat-media-grid" data-team-chat-target="mediaGrid"></div>
+      <button type="button" class="btn-ghost btn-sm chat-more" data-team-chat-target="mediaMore" data-action="team-chat#moreMedia" hidden>Show older</button>
+    </section>
     <section class="chat-body" aria-label="Messages">
       <div class="chat-log-wrap">
         <div class="chat-log" <%= tour_anchor('chat-messages') %> data-team-chat-target="log" data-action="scroll->team-chat#onScroll" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"
@@ -258,7 +278,7 @@
         <% people.each do |person| %>
           <%= button_to team_chat_dms_path, params: { user_id: person.id }, class: 'chat-dm-person', form: { data: { turbo: false } } do %>
             <span class="chat-rail-person" style="background:<%= TeamChat::Message::COLORS[person.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= person.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span>
-            <span><%= person.display_name %></span>
+            <span><%= person.display_name %> <span class="chat-dm-email"><%= person.email %></span></span>
           <% end %>
         <% end %>
       </div>
