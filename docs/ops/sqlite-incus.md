@@ -33,9 +33,9 @@ The report reads adapter/version, PRAGMAs, page/free space and WAL size without 
 
 Keep write transactions short. Do API/network work before entering write transactions. Prefer tenant-scoped pagination and existing composite indexes; use `EXPLAIN QUERY PLAN` on real slow queries before adding indexes. Preserve the existing FTS5 path for three-or-more-character substring search and test two-character fallback separately. Do not run blanket VACUUM or forced TRUNCATE checkpoints on every request.
 
-## Latest workflow and provider deployment
+## October 15 workflow and provider deployment
 
-The [October 15 deployment receipt](https://github.com/techmore/rupert/blob/main/docs/ops/deployment-2026-10-15.md) records the live workflow/provider release, six-migration rollback/reapply rehearsal, preserved prior-table counts, private recovery points and postrestart checks. Provider account setup is deployed; no payment terminal or merchant account was activated.
+The [October 15 deployment receipt](https://github.com/techmore/rupert/blob/main/docs/ops/deployment-2026-10-15.md) records the workflow/provider release, six-migration rollback/reapply rehearsal, preserved prior-table counts, private recovery points and postrestart checks. Provider account setup was deployed; no payment terminal or merchant account was activated. The later [October 17 combined-release receipt](https://github.com/techmore/rupert/blob/main/docs/ops/combined-release-recovery-2026-10-17.md) records the subsequent application and recovery checkpoint.
 
 ## Measured query improvements
 
@@ -49,7 +49,7 @@ The current CI suite runs against the only supported database, SQLite. Before pr
 
 ## Incus operations and recovery
 
-Use the SER8-specific units in `deploy/rupert-jobs-ser8.service`, `deploy/rupert-backup-ser8.*`, and `deploy/ser8/` rather than old droplet units. Keep web and jobs under a non-root app user, secrets root-readable, persistent data outside disposable release directories, and the public entry point behind the existing TLS proxy. Snapshot the instance before promotion; a crash-consistent instance snapshot complements an application-consistent SQLite backup.
+Use the SER8-specific web, jobs and backup units in `deploy/rupert-web-ser8.service`, `deploy/rupert-jobs-ser8.service`, `deploy/rupert-backup-ser8.*`, and the host scripts under `deploy/ser8/`. The pre-Incus droplet units were removed from the current tree on October 20, 2026; consult Git history only for historical context. Keep web and jobs under a non-root app user, secrets root-readable, persistent data outside disposable release directories, and the public entry point behind the existing TLS proxy. Snapshot the instance before promotion; a crash-consistent instance snapshot complements an application-consistent SQLite backup.
 
 The cutover report documents AppArmor signal denials after profile changes: systemd could not kill older Puma processes, leaving port 3000 occupied. Inspect host kernel denials and service restart counts. Until the host policy issue is resolved, use the documented host-side Incus restart procedure, followed by web, worker heartbeat, sync freshness and backup-timer checks. Do not disable AppArmor or make the container privileged as a workaround. [Incus security model](https://linuxcontainers.org/incus/docs/main/explanation/security/).
 

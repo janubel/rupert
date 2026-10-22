@@ -182,6 +182,18 @@ class BuzzChatFlowTest < ActionDispatch::IntegrationTest
     assert_equal 'hello from Rupert', posted['text']
   end
 
+  test 'a mention of Rupert queues the shared answer path' do
+    start_buzz_relay
+    sign_in_admin
+    post buzz_chat_messages_path, params: { message: 'hello @rupert' }, as: :json
+    assert_response :created
+
+    job = enqueued_jobs.find { |entry| entry[:job] == BuzzMirrorReplyJob }
+    assert job, 'expected the mirror reply job'
+    assert_equal BuzzAgent.channel_id, job[:args][2]
+    assert_equal 'hello @rupert', job[:args][3]
+  end
+
   test 'people who can read but not post cannot post' do
     start_buzz_relay
     sign_in_role('manager', permissions: ['dashboard.read', 'buzz.read'])
