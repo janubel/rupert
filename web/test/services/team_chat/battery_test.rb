@@ -82,6 +82,7 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     assert_equal 21, TeamChat::Battery.items.size
     finance = TeamChat::Battery.items(TeamChat::Battery.config_for('finance'))
     assert_equal 21, finance.size
+    assert_match(/no cost of goods/, finance.find { |item| item.id == 'f20' }.expect)
     assert_equal %w[sales comparison money_out tax books honesty], finance.map(&:cadence).uniq
     assert_raises(ArgumentError) { TeamChat::Battery.config_for('../etc/passwd') }
     assert_raises(ArgumentError) { TeamChat::Battery.config_for('nope') }

@@ -34,6 +34,7 @@ questions:
   - id: w3
     cadence: weekly
     question: How many hours did the team work last pay week?
+    expect: Quotes the worked hours from time_keeping_report for last pay week.
     checks: [{ tool: time_keeping_report, args: { from: last_pay_week.from, to: last_pay_week.to } }, { tool: period_review, args: { period: last_pay_week } }]
   - id: w4
     cadence: weekly
@@ -46,10 +47,12 @@ questions:
   - id: m2
     cadence: monthly
     question: Is last month closed in the books? What is left to do?
+    expect: Says whether last month is locked (closed) and lists what is still open.
     checks: [compliance_check]
   - id: m3
     cadence: monthly
     question: How much sales tax did we collect last month?
+    expect: Reports tax per source (sources overlap and must not be added together), in dollars.
     checks: [{ tool: sales_tax_report, args: { from: last_month.from, to: last_month.to } }]
   - id: m4
     cadence: monthly

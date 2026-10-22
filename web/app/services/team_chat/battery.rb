@@ -16,7 +16,7 @@ module TeamChat
     ROOM_TOPIC = 'Test runs: a fixed set of questions asked to one bot (usually @liquid), timed, and graded 1–5 by DeepSeek against Rupert’s own data.'
     CONFIG = Rails.root.join('config/team_chat/battery.yml')
 
-    Item = Struct.new(:id, :cadence, :question, :checks, keyword_init: true)
+    Item = Struct.new(:id, :cadence, :question, :checks, :expect, keyword_init: true)
     Result = Struct.new(:item, :seconds, :tools, :status, :answer, :grade, :tokens_in, :tokens_out, :unverified, keyword_init: true)
 
     attr_reader :run_id, :room, :results
@@ -35,7 +35,8 @@ module TeamChat
 
     def self.items(path = CONFIG)
       YAML.safe_load_file(path).fetch('questions').map do |row|
-        Item.new(id: row.fetch('id'), cadence: row.fetch('cadence'), question: row.fetch('question'), checks: Array(row['checks']))
+        Item.new(id: row.fetch('id'), cadence: row.fetch('cadence'), question: row.fetch('question'), checks: Array(row['checks']),
+          expect: row['expect'].to_s.squish.presence)
       end
     end
 
@@ -114,7 +115,8 @@ module TeamChat
     def grade_for(item, reply)
       return { score: 1, verdict: "No answer: the reply #{reply.status == 'failed' ? 'failed' : 'was empty'}.", issues: [] } if reply.status != 'done' || reply.body.blank?
 
-      @grader.grade(question: item.question, answer: reply.body.to_s, reference: reference_for(item), tools_used: Array(reply.meta.to_h['tools']))
+      @grader.grade(question: item.question, answer: reply.body.to_s, reference: reference_for(item), tools_used: Array(reply.meta.to_h['tools']),
+        expect: item.expect)
     rescue Grader::Error => e
       log "    grading failed: #{e.message.first(160)}"
       nil

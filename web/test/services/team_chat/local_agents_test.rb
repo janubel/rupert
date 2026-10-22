@@ -79,6 +79,8 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     system = requests.first['messages'].first['content']
     assert_includes system, '## About this question'
     assert_match(/Sales tax \(tools: sales_tax_report\): .*never add sources together/, system)
+    last_month = Date.current.prev_month
+    assert_includes system, "last month = #{last_month.beginning_of_month.iso8601} to #{last_month.end_of_month.iso8601}"
     assert_equal %w[tax sales], reply.reload.meta['topics']
   end
 
