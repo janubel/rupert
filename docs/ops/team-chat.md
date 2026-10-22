@@ -43,6 +43,22 @@ Everyone in a room reads @rupert's reply. While the feature is admin-only that
 is fine. Before opening rooms to staff, the toolset must be limited to what
 every member of the room may see.
 
+### Automatic notices (#announcements)
+
+Rupert's own posts go into the **#announcements** room as notices
+(`TeamChat::Notices`, posted later by `TeamChat::NoticeJob`):
+
+- sync results and sync failures (`SyncJob`);
+- inventory count submissions;
+- sales announcements (`SalesAnnouncer`);
+- the operations brief (`OperationsBrief`);
+- fulfillment alerts (`FulfillmentMonitor`).
+
+The room is created on the first notice. Nothing is posted until team chat has
+been opened once in the workspace, so a fresh install stays quiet. A failed
+post is logged and never stops the sync or job that sent it. Mention `@rupert`
+in the room to ask about a notice.
+
 ## Model
 
 RubyLLM (`ruby_llm` 2.1), used without its own chat tables. Pick the model with
@@ -142,9 +158,24 @@ RUPERT_CHAT_MODEL=qwen3.5:4b bin/rails team_chat:try QUESTIONS="How were sales y
 Prefer the official Ollama library tags over `hf.co/...` GGUF pulls; tool
 calling is only reliable with the library's chat templates.
 
-## Retiring Buzz
+## Buzz (removed)
 
-Buzz (relay, mirror, `@rupert` agent container) is preserved on `archive/buzz`.
-It is removed from `main` in a follow-up change. The SER8 `buzz` and
-`rupert-agent` containers can be stopped, but should not be deleted until that
-change has deployed.
+Buzz has been removed from `main`. Its code (relay setup, mirror, `@rupert`
+agent container, `BUZZ_*` settings, the Buzz card and badge, the feedback
+intake scripts) is preserved on the `archive/buzz` branch.
+
+- Rupert's notices that went to Buzz channels now go to **#announcements**
+  (above).
+- The `BUZZ_*` keys, the `buzz.read` / `buzz.post` permissions, Ask Rupert's
+  Buzz switch and the Settings → Buzz agent card are gone.
+- The Buzz tables (`buzz_messages`, `buzz_identities`, `buzz_person_keys`,
+  `buzz_profiles`, `buzz_chat_states`) are kept for now, with their data. A
+  later change drops them.
+- Older reports filed from Buzz keep `source` `buzz`. MCP `submit_feedback`
+  still accepts `source: "buzz"` so older callers keep working.
+
+**Operator step on SER8**, after this change has deployed: stop the `buzz` and
+`rupert-agent` Incus containers (`incus stop buzz rupert-agent`), and disable
+the host's `buzz-backup.timer` if it was installed
+(`systemctl --user disable --now buzz-backup.timer`). Do not delete the
+containers yet.

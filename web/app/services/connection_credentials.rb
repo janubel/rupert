@@ -18,10 +18,6 @@ class ConnectionCredentials
       ['AUTHORIZE_NET_LOGIN_ID', 'API Login ID', true], ['AUTHORIZE_NET_TRANSACTION_KEY', 'Transaction Key', true],
       ['AUTHORIZE_NET_CLIENT_KEY', 'Public client key', true], ['AUTHORIZE_NET_SANDBOX', 'Sandbox checkout', false]
     ],
-    'buzz' => [
-      ['BUZZ_RELAY_URL', 'Relay URL', true], ['BUZZ_CHANNEL', 'Channel', false],
-      ['BUZZ_PRIVATE_KEY', 'Agent private key', true], ['BUZZ_ANNOUNCEMENTS_CHANNEL', 'Announcements channel (optional)', false]
-    ],
     'google_sign_in' => [
       ['GOOGLE_OAUTH_CLIENT_ID', 'Client ID', true], ['GOOGLE_OAUTH_CLIENT_SECRET', 'Client secret', true]
     ],
@@ -34,7 +30,7 @@ class ConnectionCredentials
     ]
   }.freeze
   OPTIONAL_KEYS = %w[SHOPIFY_LOCATION_ID SQUARE_APPLICATION_ID SQUARE_ENVIRONMENT SQUARE_LOCATION_ID
-    AUTHORIZE_NET_SANDBOX BUZZ_ANNOUNCEMENTS_CHANNEL GOOGLE_PAY_MERCHANT_ID].freeze
+    AUTHORIZE_NET_SANDBOX GOOGLE_PAY_MERCHANT_ID].freeze
   CHOICES = { 'SQUARE_ENVIRONMENT' => %w[production sandbox], 'AUTHORIZE_NET_SANDBOX' => %w[true false] }.freeze
 
   def self.fields(service)

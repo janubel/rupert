@@ -17,12 +17,10 @@ module AskRupert
       'max_message_chars' => 100..4_000, 'context_messages' => 2..30, 'context_chars' => 1_000..20_000,
       'retention_days' => 0..365
     }.freeze
-    EDITABLE = (%w[enabled buzz_enabled provider_mode] + BOUNDS.keys).freeze
+    EDITABLE = (%w[enabled provider_mode] + BOUNDS.keys).freeze
 
     DEFAULTS = {
       'enabled' => true,
-      # Lets the @rupert agent in Buzz answer linked people with Ask Rupert's help. Off until an administrator turns it on.
-      'buzz_enabled' => false,
       'provider_mode' => 'cloud', 'rate_limit_count' => 20, 'rate_limit_window_minutes' => 10,
       'daily_cap' => 200, 'max_message_chars' => 1_000, 'context_messages' => 12, 'context_chars' => 8_000,
       # Chats are saved until someone clears them. Set a number of days to expire them instead.
@@ -54,7 +52,6 @@ module AskRupert
 
     def [](key) = @values.fetch(key.to_s)
     def enabled? = self['enabled']
-    def buzz_enabled? = enabled? && self['buzz_enabled']
     def mode = self['provider_mode']
     def local_only? = mode == 'local_only'
     def to_h = @values.dup
@@ -70,7 +67,7 @@ module AskRupert
       source = values.to_h.stringify_keys.slice(*EDITABLE)
       source.each_with_object({}) do |(key, value), out|
         case key
-        when 'enabled', 'buzz_enabled' then out[key] = ActiveModel::Type::Boolean.new.cast(value) ? true : false
+        when 'enabled' then out[key] = ActiveModel::Type::Boolean.new.cast(value) ? true : false
         when 'provider_mode' then out[key] = value.to_s if MODES.key?(value.to_s)
         else
           next if value.to_s.strip.empty?

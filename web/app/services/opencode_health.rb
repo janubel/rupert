@@ -4,7 +4,7 @@ require 'json'
 require 'net/http'
 require 'uri'
 
-# Checks the opencode integration the @rupert Buzz agent depends on, without
+# Checks the opencode integration Ask Rupert and team chat depend on, without
 # spending tokens:
 #   1. GET <provider>/models with the configured key. The key is validated by
 #      the response (401 = rejected, with the vendor's code such as

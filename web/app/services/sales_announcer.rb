@@ -18,19 +18,19 @@ class SalesAnnouncer
   end
 
   def initialize(channel: nil)
-    @channel = channel.presence || announcements_channel
+    @room = channel.presence || announcements_channel
   end
 
-  # Returns the number of new sales announced (0 if none, or if Buzz/watermark
+  # Returns the number of new sales announced (0 if none, or if team chat/watermark
   # isn't yet usable).
   def announce!
-    return 0 unless BuzzAgent.configured?
+    return 0 unless TeamChat::Notices.configured?
     return 0 if baseline_not_established?
 
     entries = new_entries
     return 0 if entries.empty?
 
-    published, error = BuzzAgent.notify(format_message(entries), channel: @channel)
+    published, error = TeamChat::Notices.notify(format_message(entries), room: @room)
     raise "Sales announcement failed: #{error}" unless published
 
     advance_watermark(entries)
@@ -40,7 +40,7 @@ class SalesAnnouncer
   private
 
   def announcements_channel
-    EnvStore.fetch('BUZZ_ANNOUNCEMENTS_CHANNEL', '').presence || BuzzAgent.channel_id
+    TeamChat::Notices::ROOM_SLUG
   end
 
   def baseline_not_established?

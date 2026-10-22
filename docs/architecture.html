@@ -47,7 +47,7 @@ DataCache.bump!   (invalidate dashboard / report caches)</code></pre>
     <ul>
       <li><code>SyncSchedulerJob</code> — kicks off a sync for every active tenant (every 15 minutes in production)</li>
       <li><code>SyncJob</code> — runs the engine, then enqueues notifications</li>
-      <li><code>BuzzNotifyJob</code> — posts to the team's Buzz / Nostr channel</li>
+      <li><code>TeamChat::NoticeJob</code> — posts Rupert's notices to the #announcements team chat room</li>
       <li><code>BackupJob</code> — scheduled database snapshots to Google Drive</li>
     </ul>
   </section>

@@ -11,14 +11,14 @@ class SyncJobTest < ActiveJob::TestCase
     assert_enqueued_with(job: SyncJob) do
       SyncJob.perform_now(tenant_id: @tenant.id, mode: 'scheduled')
     end
-    assert_no_enqueued_jobs(only: BuzzNotifyJob)
+    assert_no_enqueued_jobs(only: TeamChat::NoticeJob)
   end
 
   test 'a credential failure is not retried and raises an alert' do
     SyncEngine.stubs(:run!).raises(ShopifyClient::Error.new('Token exchange failed (HTTP 401).', reason: :unauthorized))
     assert_raises(ShopifyClient::Error) { SyncJob.perform_now(tenant_id: @tenant.id, mode: 'scheduled') }
     assert_no_enqueued_jobs(only: SyncJob)
-    assert_enqueued_with(job: BuzzNotifyJob)
+    assert_enqueued_with(job: TeamChat::NoticeJob)
   end
 
   test 'the alert fires once when transient retries are exhausted' do
@@ -27,7 +27,7 @@ class SyncJobTest < ActiveJob::TestCase
     # retry_on counts attempts per exception class; this is the 4th TransientFailure.
     job.exception_executions = { '[SyncJob::TransientFailure]' => 3 }
     assert_raises(SyncJob::TransientFailure) { job.perform_now }
-    assert_enqueued_with(job: BuzzNotifyJob)
+    assert_enqueued_with(job: TeamChat::NoticeJob)
     assert_no_enqueued_jobs(only: SyncJob)
   end
 
@@ -35,7 +35,7 @@ class SyncJobTest < ActiveJob::TestCase
     run = SyncRun.new(status: 'success', source: 'square', mode: 'manual', details: { reconcile: { drift_count: 2 } }.to_json)
     SyncEngine.expects(:run_source!).with('square', actor: 'ops@example.com', tenant: @tenant).returns(run)
     SyncJob.perform_now('tenant_id' => @tenant.id, 'source' => 'square', 'actor' => 'ops@example.com')
-    assert_enqueued_with(job: BuzzNotifyJob, args: ['Sync complete · square · manual · drift 2'])
+    assert_enqueued_with(job: TeamChat::NoticeJob, args: [@tenant.id, 'Sync complete · square · manual · drift 2'])
     assert_enqueued_with(job: SalesAnnouncementJob, args: [@tenant.id])
   end
 

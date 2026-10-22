@@ -51,10 +51,10 @@ Two kinds of configuration exist. **Boot-time variables** live in `/etc/rupert.e
 | `GOOGLE_PAY_*`, `APPLE_PAY_*` | Wallet buttons on the warehouse checkout |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Google sign-in |
 | `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, `GOOGLE_DRIVE_REFRESH_TOKEN`, `GOOGLE_DRIVE_FOLDER_ID`, `GOOGLE_DRIVE_RETENTION` | Instance backups to Drive (platform administrator only) |
-| `BUZZ_RELAY_URL`, `BUZZ_PRIVATE_KEY`, `BUZZ_CHANNEL`, `BUZZ_ANNOUNCEMENTS_CHANNEL`, `BUZZ_INV_ADJUSTMENTS_CHANNEL`, `OPCODE_BUZZ_PRIVATE_KEY` | Buzz (Nostr) notifications |
-| `BUZZ_CHAT_LINK_TEMPLATE`, `BUZZ_CONNECT_LINK_TEMPLATE`, `BUZZ_DOWNLOAD_MACOS`, `BUZZ_DOWNLOAD_WINDOWS`, `BUZZ_DOWNLOAD_LINUX`, `BUZZ_DOWNLOAD_IOS`, `BUZZ_DOWNLOAD_ANDROID`, `BUZZ_WEB_URL` | Links on the Buzz card (open chat, add workspace and QR, per-platform downloads); defaults and rules in [buzz.md](buzz.md) |
-| `FEEDBACK_READY_SENDERS` | Who may mark chat reports "ready for development": comma, space or newline separated 64-hex Nostr public keys or `npub…` values (Settings → Environment). Empty means nobody; reports are then always for review. See `docs/ops/feedback-reports.md` |
+| `FEEDBACK_READY_SENDERS` | Who may mark reports filed through MCP `submit_feedback` "ready for development": comma, space or newline separated 64-hex Nostr public keys or `npub…` values (Settings → Environment). Empty means nobody; reports are then always for review. See `docs/ops/feedback-reports.md` |
 | `FULFILLMENT_ALERT_HOURS` | Unfulfilled-order alert threshold |
 | `PUSH_GUARD_*`, `PUSH_FREEZE_*` | Informational freeze/approval state (no longer enforced) |
+
+The `BUZZ_*` and `OPCODE_BUZZ_PRIVATE_KEY` keys were removed with Buzz. Rupert no longer reads them. Team chat's model settings (`RUPERT_CHAT_*`) are boot-time variables; see [team-chat.md](team-chat.md).
 
 Masked values are visible at `GET /settings/env.json`; a full export needs the password again and is logged. Imports and exports are audit-logged and rate-limited.

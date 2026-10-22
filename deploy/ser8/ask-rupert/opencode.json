@@ -6,7 +6,7 @@
   "agent": {
     "chat": {
       "mode": "primary",
-      "description": "Text only. Every tool is denied. Used by Ask Rupert and the text-only Buzz runner inside the rupert container.",
+      "description": "Text only. Every tool is denied. Used by Ask Rupert and team chat's opencode CLI fallback inside the rupert container.",
       "permission": {
         "*": "deny"
       }

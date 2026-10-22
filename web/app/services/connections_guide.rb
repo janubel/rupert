@@ -47,15 +47,6 @@ class ConnectionsGuide
       renewal_note: 'If authorization fails, the platform operator should review backup status and restore the approved connection through Settings. Verify a new backup and a separate restore drill.'
     ),
     Service.new(
-      key: 'buzz',
-      name: 'Buzz agent',
-      description: "Rupert's Nostr identity for channel announcements.",
-      keys: %w[BUZZ_RELAY_URL BUZZ_CHANNEL BUZZ_PRIVATE_KEY BUZZ_ANNOUNCEMENTS_CHANNEL],
-      find_url: nil,
-      find_hint: 'Relay URL and channel ids come from your Buzz workspace. The private key is generated inside Rupert (Settings → Buzz agent).',
-      renewal_note: 'Coordinate identity changes with the existing channels before replacing the agent keypair. Review the Settings workflow and verify channel access after an approved change.'
-    ),
-    Service.new(
       key: 'authorize_net',
       name: 'Authorize.net checkout',
       description: 'Card payments on warehouse-sale vendor links.',
