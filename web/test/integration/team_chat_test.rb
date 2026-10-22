@@ -222,6 +222,8 @@ class TeamChatTest < ActionDispatch::IntegrationTest
       get path
       assert_redirected_to '/chat', path
     end
+  end
+
   test 'every page has a header chat button and a dock that lists rooms and opens one compactly' do
     sign_in(@admin)
     get root_path
