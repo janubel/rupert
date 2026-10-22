@@ -1,11 +1,28 @@
 <section id="history" class="card card-pad">
   <h2 class="font-display text-lg text-ink">History</h2>
-  <ul class="mt-3 space-y-1.5 text-sm">
+  <% ai_activities = task_ai_activities(@history) %>
+  <ul class="mt-3 space-y-3 text-sm">
     <% @history.each do |entry| %>
-      <li class="flex flex-wrap gap-x-2 text-mocha">
-        <span class="w-24 shrink-0 text-xs text-taupe"><%= l(entry.created_at.in_time_zone, format: :short) %></span>
-        <span><strong class="text-ink"><%= entry.actor_name %></strong> <%= entry.action.delete_prefix("task_").humanize.downcase %><%= " — #{entry.details}" if entry.details.present? %></span>
-      </li>
+      <% if (ai = ai_activities[entry.id]) %>
+        <li class="rounded-xl border border-fog p-3 text-mocha" data-ai-activity="<%= entry.id %>">
+          <p class="font-semibold text-ink"><%= ai[:label] %></p>
+          <% if ai[:result].present? %><p class="mt-1 break-words"><%= ai[:result] %></p><% end %>
+          <dl class="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+            <div><dt class="text-xs text-taupe">Requested by</dt><dd class="break-words"><%= ai[:requester] %></dd></div>
+            <div><dt class="text-xs text-taupe">Approved by</dt><dd class="break-words"><%= entry.actor_name.presence || "Not recorded" %></dd></div>
+            <div><dt class="text-xs text-taupe">Model</dt><dd class="break-words"><%= ai[:model] %></dd></div>
+            <div><dt class="text-xs text-taupe">Harness</dt><dd class="break-words"><%= ai[:harness] %></dd></div>
+            <div><dt class="text-xs text-taupe">Requested</dt><dd><% if ai[:requested_at] %><time datetime="<%= ai[:requested_at].iso8601(6) %>"><%= task_activity_timestamp(ai[:requested_at]) %></time><% else %>Not recorded<% end %></dd></div>
+            <div><dt class="text-xs text-taupe">Executed</dt><dd><time datetime="<%= entry.created_at.iso8601(6) %>"><%= task_activity_timestamp(entry.created_at) %></time></dd></div>
+            <div><dt class="text-xs text-taupe">Source chat</dt><dd><% if ai[:source_path] %><%= link_to "View source message", ai[:source_path], class: "font-semibold text-olive hover:underline" %><% else %><%= ai[:source_label] %><% end %></dd></div>
+          </dl>
+        </li>
+      <% else %>
+        <li class="flex flex-wrap gap-x-2 text-mocha">
+          <span class="w-24 shrink-0 text-xs text-taupe"><%= l(entry.created_at.in_time_zone, format: :short) %></span>
+          <span><strong class="text-ink"><%= entry.actor_name %></strong> <%= entry.action.delete_prefix("task_").humanize.downcase %><%= " — #{entry.details}" if entry.details.present? %></span>
+        </li>
+      <% end %>
     <% end %>
     <% if @history.empty? %><li class="text-taupe">Nothing recorded yet.</li><% end %>
   </ul>

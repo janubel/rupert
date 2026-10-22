@@ -477,3 +477,16 @@ the two approval tables and a nullable request snapshot to runs; it does not
 execute or bulk-rewrite old cards. Regression tests exercise concurrent service decisions and HTTP retries, SIGKILL on both sides of commit, partial failures, canonical
 argument replay, immutable audit/receipts, legacy adoption, cancellation,
 permissions, requester/approver separation and source-message edits.
+
+### AI attribution in task history
+
+A task's History panel renders chat approvals as **AI created task**, **AI updated
+task**, or **AI closed task**, with the saved execution result. Each entry shows
+Requested by, Approved by, Model, Harness/version, Requested and Executed times
+(including seconds and timezone), and Source chat. The source-message link opens
+the exact message and thread, and is shown only when the viewer can access team
+chat and that room. Task access does not grant chat access. Private, deleted or
+missing sources show an unavailable label; original chat text and raw audit JSON
+are never printed in task history. Missing legacy metadata says Not recorded.
+Human activity keeps its existing text. This is a presentation change over the
+saved approval/audit records; it requires no migration or approval replay.
