@@ -1,8 +1,7 @@
 <% content_for :title, "Print #{l(@date, format: :long)}" %>
 <div class="card card-pad print:hidden">
-  <%= page_header "Print #{@doc == 'invoice' ? 'invoices' : 'packing slips'} · #{l(@date, format: :long)}", subtitle: pluralize(@orders.length, 'order'), eyebrow: 'Sell · Sales' do %>
-    <%= link_to @doc == 'invoice' ? 'Packing slips' : 'Invoices', sales_print_path(date: @date, doc: @doc == 'invoice' ? 'packing_slip' : 'invoice'), class: 'btn-ghost' %>
-    <%= link_to 'Sales', sales_path, class: 'btn-ghost' %>
+  <%= page_header "Print #{@doc == 'invoice' ? 'invoices' : 'packing slips'} · #{l(@date, format: :long)}", subtitle: pluralize(@orders.length, 'order'), eyebrow: 'Sell · Sales',
+      menu: [[@doc == 'invoice' ? 'Open packing slips' : 'Open invoices', sales_print_path(date: @date, doc: @doc == 'invoice' ? 'packing_slip' : 'invoice')], ['Open sales', sales_path]] do %>
     <button type="button" data-controller="print" data-action="click->print#print" class="btn-primary">Print</button>
   <% end %>
 </div>

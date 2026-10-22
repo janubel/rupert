@@ -26,7 +26,7 @@ class ProjectsGuideTest < ActionDispatch::IntegrationTest
     assert_select 'h1', 'Getting started'
     assert_includes response.body, @tenant.name
     assert_select '#managers h2', 'For managers: create a project and assign work'
-    assert_select 'a[href=?]', new_projects_project_path, text: 'New project'
+    assert_select 'a[href=?]', new_projects_project_path, text: 'Add project'
     assert_select '#employees h2', 'For employees: find and update your work'
     assert_includes response.body, 'Each employee task needs an Assignee.'
     assert_not_includes response.body, @project.description

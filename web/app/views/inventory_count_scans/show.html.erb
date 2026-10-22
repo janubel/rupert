@@ -4,7 +4,10 @@
     <%= link_to 'Open count', inventory_count_path(@count), class: 'btn-ghost' %>
   <% end %>
   <p class="text-sm text-mocha">Scan a label with an exact SKU, type a SKU, or use a barcode already stored in the catalog. Each entry saves to this worksheet. <span class="pill-taupe"><%= @count.status.humanize %></span></p>
-  <p class="text-sm text-ink">Add units increases the quantities already saved below. Prepared sheets start with system quantities: use Set total for each SKU's first physical count. A new blank scanner count starts at zero.</p>
+  <details class="explainer">
+    <summary class="explainer-summary">Set total or add units?</summary>
+    <p class="mt-1 text-sm text-ink">Add units increases the quantities already saved below. Prepared sheets start with system quantities: use Set total for each SKU's first physical count. A new blank scanner count starts at zero.</p>
+  </details>
 
   <% if @count.draft? %>
     <%= form_tag record_scan_inventory_count_path(@count), method: :post, class: 'card card-pad space-y-4', data: { inventory_count_scanner_target: 'form', action: 'submit->inventory-count-scanner#record', busy: false, turbo: false } do %>

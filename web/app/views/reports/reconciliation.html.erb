@@ -1,4 +1,4 @@
-<%= render "reports/layout", title: "Reconciliation report", subtitle: "Side-by-side Shopify and Square counts from the sync mirrors, refreshed every 15 minutes." do %>
+<%= render "reports/layout", title: "Inventory reconciliation", subtitle: "Side-by-side Shopify and Square stock counts from the sync mirrors, refreshed every 15 minutes." do %>
   <section class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     <div class="stat">
       <div class="stat-label">Linked SKUs<%= define('sku') %></div>
@@ -22,7 +22,7 @@
   </p>
 
   <div class="card">
-    <div class="card-pad border-b border-fog"><%= section_heading 'Side-by-side counts · <%= @reconciliation.rows.length %> items', hint: '† Shared Square total — one Square variation is linked to more than one Shopify variant, so its quantity can\'t be pinned to a single row.' %></div>
+    <div class="card-pad border-b border-fog"><%= section_heading "Side-by-side counts · #{pluralize(@reconciliation.rows.length, 'item')}", hint: '† Shared Square total: one Square variation is linked to more than one Shopify variant, so its quantity cannot be pinned to a single row.' %></div>
     <%= report_table 'reconciliation-counts', label: 'Side-by-side counts' do %>
       <table class="table">
         <thead>

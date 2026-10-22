@@ -1,4 +1,5 @@
-<div class="space-y-5">
-  <%= page_header 'New project', eyebrow: 'Projects' %>
-  <%= render "form", project: @project, url: projects_projects_path, method: :post, submit: "Create project", cancel_path: projects_projects_path %>
+<% content_for :title, "Add project" %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Add project', subtitle: 'Name the work, say what done looks like and pick an owner.' %>
+  <%= render "form", project: @project, url: projects_projects_path, method: :post, cancel_path: projects_projects_path %>
 </div>

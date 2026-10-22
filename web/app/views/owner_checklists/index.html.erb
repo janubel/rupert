@@ -1,12 +1,27 @@
-<%= render 'privacy' %><% content_for :title, 'Private owner checklists' %>
+<%= render 'privacy' %><% content_for :title, 'Owner checklists' %>
 <div class="space-y-6">
-  <section class="flex flex-wrap items-end justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-wide text-taupe">Private owner workspace</p><h1 class="page-title mt-2">Owner checklists</h1><p class="mt-2 max-w-3xl text-sm text-mocha">Keep a domain's purpose, service renewal references and owner feature reviews together. Only active owners in this workspace can open these records.</p></div><%= link_to 'New domain checklist', new_owner_checklist_path, class: 'btn-primary', data: { turbo: false } %></section>
-  <div class="card card-pad text-sm text-mocha">Record account references and password-manager labels here. Passwords, API keys, recovery codes and login tokens stay in your vault. Dates are manual planning references; this page does not send reminders or renew services.</div>
-  <section class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-    <% @checklists.each do |checklist| %><% data = checklist.data; active_services = checklist.services.values.reject { |service| owner_service_archived?(service) }; schedules = active_services.flat_map { |service| service_schedules(service) }; overdue = schedules.count { |entry| entry[:state] == :overdue }; today = schedules.count { |entry| entry[:state] == :today } %>
-      <article class="card card-pad space-y-3"><div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="font-display text-xl"><%= link_to data['name'], owner_checklist_path(checklist), class: 'text-ink hover:underline', data: { turbo: false } %></h2><p class="mt-1 break-all font-mono text-sm text-mocha"><%= data['domain'] %></p></div><div class="flex flex-wrap gap-2"><% if overdue.positive? %><span class="pill-rose"><%= overdue %> overdue dates</span><% end %><% if today.positive? %><span class="pill-clay"><%= today %> due today</span><% end %></div></div><p class="text-sm text-mocha"><%= truncate(data['purpose'].to_s, length: 220) %></p><p class="text-xs text-taupe"><%= active_services.length %> active service references · Updated <%= checklist.updated_at.iso8601 %></p><%= link_to 'Open private checklist', owner_checklist_path(checklist), class: 'btn-ghost btn-sm', data: { turbo: false } %></article>
+  <%= page_header 'Owner checklists', subtitle: 'A private place for each domain’s purpose, service renewals and owner feature reviews.' do %>
+    <%= link_to 'Add domain checklist', new_owner_checklist_path, class: 'btn-primary', data: { turbo: false } %>
+  <% end %>
+  <%= fold_explainer('Only active owners in this workspace can open these records. Record account references and password-manager labels here; passwords, API keys, recovery codes and login tokens stay in your vault. Dates are manual planning references: this page does not send reminders or renew services.', class: 'text-sm text-mocha') %>
+  <% if @checklists.empty? %>
+    <%= empty_state 'No owner checklists yet', hint: 'Add a domain checklist to collect service references and review the current feature catalog.' do %>
+      <%= link_to 'Add domain checklist', new_owner_checklist_path, class: 'btn-primary', data: { turbo: false } %>
     <% end %>
-    <% if @checklists.empty? %><div class="card card-pad text-sm text-mocha">No owner checklists yet. Create a domain checklist to collect service references and review the current feature catalog.</div><% end %>
-  </section>
+  <% else %>
+    <section class="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-label="Owner checklists">
+      <% @checklists.each do |checklist| %><% data = checklist.data; active_services = checklist.services.values.reject { |service| owner_service_archived?(service) }; schedules = active_services.flat_map { |service| service_schedules(service) }; overdue = schedules.count { |entry| entry[:state] == :overdue }; today = schedules.count { |entry| entry[:state] == :today } %>
+        <article class="section-card">
+          <%= section_heading data['name'], hint: data['domain'], level: :h3 do %>
+            <% if overdue.positive? %><span class="pill-rose"><%= overdue %> overdue dates</span><% end %>
+            <% if today.positive? %><span class="pill-clay"><%= today %> due today</span><% end %>
+          <% end %>
+          <p class="text-sm text-mocha"><%= truncate(data['purpose'].to_s, length: 220) %></p>
+          <p class="text-xs text-taupe"><%= active_services.length %> active service references · Updated <%= l(checklist.updated_at, format: :short) %></p>
+          <%= link_to 'Open', owner_checklist_path(checklist), class: 'btn-ghost btn-sm', data: { turbo: false } %>
+        </article>
+      <% end %>
+    </section>
+  <% end %>
   <% if @pagy.pages > 1 %><%== pagy_nav(@pagy) %><% end %>
 </div>

@@ -1,55 +1,43 @@
 <% content_for :title, "Projects" %>
 <% filters = [["Active work", nil], ["Planned", "planned"], ["Active", "active"], ["On hold", "on_hold"], ["Completed", "completed"], ["Archived", "archived"]] %>
-<div class="space-y-5">
-  <%= page_header 'Projects', subtitle: 'Plan work, track tasks, and hit goals.', eyebrow: 'Work' do %>
-    <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm" %>
-    <%= link_to "All tasks", projects_tasks_path, class: "btn-ghost btn-sm" %>
+<div class="space-y-6">
+  <%= page_header 'Projects', subtitle: 'Plan work, track tasks and hit goals.', menu: [['Getting started', projects_getting_started_path]] do %>
     <% if Current.user.can?("projects.write") %>
-      <%= link_to "New project", new_projects_project_path, class: "btn-primary" %>
+      <%= link_to "Add project", new_projects_project_path, class: "btn-primary" %>
     <% end %>
   <% end %>
 
-  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Project counts">
     <div class="stat"><p class="stat-label">Active projects</p><p class="stat-value"><%= @status_counts["active"].to_i %></p></div>
     <div class="stat"><p class="stat-label">Open tasks</p><p class="stat-value"><%= @open_tasks %></p></div>
     <%= link_to projects_tasks_path(due: "overdue"), class: "stat block hover:border-taupe" do %>
-      <p class="stat-label">Overdue tasks</p><p class="stat-value <%= "!text-rose" if @overdue_tasks.positive? %>"><%= @overdue_tasks %></p>
+      <p class="stat-label">Overdue tasks</p><p class="stat-value <%= "text-rose" if @overdue_tasks.positive? %>"><%= @overdue_tasks %></p>
     <% end %>
     <%= link_to projects_tasks_path(due: "week"), class: "stat block hover:border-taupe" do %>
       <p class="stat-label">Due this week</p><p class="stat-value"><%= @due_this_week %></p>
     <% end %>
   </section>
 
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <nav class="flex flex-wrap items-center gap-1 rounded-full bg-haze p-1" aria-label="Project status">
-      <% filters.each do |label, key| %>
-        <% count = key ? @status_counts[key].to_i : nil %>
-        <%= link_to projects_projects_path(status: key, q: params[:q].presence, sort: params[:sort].presence), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @status == key}" do %>
-          <%= label %><% if count&.positive? %><span class="ml-1.5 text-[11px] text-taupe"><%= count %></span><% end %>
-        <% end %>
-      <% end %>
-    </nav>
-    <%= form_with url: projects_projects_path, method: :get, class: "flex items-center gap-2", data: { controller: "auto-submit" } do %>
-      <%= hidden_field_tag :status, @status if @status %>
-      <%= search_field_tag :q, params[:q], placeholder: "Search projects…", class: "search w-52", "aria-label": "Search projects" %>
-      <%= select_tag :sort, options_for_select([["Recently updated", "updated"], ["Due date", "due"], ["Name", "name"]], params[:sort]), class: "select", "aria-label": "Sort", data: { action: "change->auto-submit#submit" } %>
-    <% end %>
-  </div>
+  <%= form_with url: projects_projects_path, method: :get, class: "toolbar", data: { controller: "auto-submit" } do %>
+    <div class="toolbar-field"><%= label_tag :q, "Search", class: "field-label" %><%= search_field_tag :q, params[:q], placeholder: "Project name", class: "search w-full" %></div>
+    <div class="toolbar-field"><%= label_tag :status, "Status", class: "field-label" %><%= select_tag :status, options_for_select(filters.map { |label, key| [key && @status_counts[key].to_i.positive? ? "#{label} (#{@status_counts[key]})" : label, key] }, @status), class: "select w-full", data: { action: "change->auto-submit#submit" } %></div>
+    <div class="toolbar-field"><%= label_tag :sort, "Sort", class: "field-label" %><%= select_tag :sort, options_for_select([["Recently updated", "updated"], ["Due date", "due"], ["Name", "name"]], params[:sort]), class: "select w-full", data: { action: "change->auto-submit#submit" } %></div>
+    <div class="toolbar-actions"><%= submit_tag "Apply", class: "btn-primary" %><%= link_to "Clear", projects_projects_path, class: "btn-ghost" %></div>
+  <% end %>
 
-  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-    <% if @projects.empty? %>
-      <div class="card card-pad col-span-full py-10 text-center">
-        <p class="font-display text-lg text-ink"><%= params[:q].present? || @status ? "No projects match." : "No projects yet." %></p>
-        <p class="mt-1 text-sm text-taupe">Create one to start tracking tasks and goals.</p>
-      </div>
+  <% if @projects.empty? %>
+    <%= empty_state(params[:q].present? || @status ? "No projects match." : "No projects yet.", hint: (params[:q].present? || @status ? "Clear the search or pick another status." : "Add your first project to start tracking tasks and goals.")) do %>
+      <% if Current.user.can?("projects.write") && params[:q].blank? && @status.nil? %><%= link_to "Add project", new_projects_project_path, class: "btn-primary" %><% end %>
     <% end %>
+  <% else %>
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
     <% @projects.each do |project| %>
       <%= link_to project, class: "card card-pad group block transition hover:-translate-y-0.5 hover:border-taupe hover:shadow-md" do %>
         <div class="flex items-start justify-between gap-2">
-          <h3 class="min-w-0 truncate font-display text-lg text-ink group-hover:text-olive-deep"><%= project.name %></h3>
+          <h3 class="card-title min-w-0 truncate group-hover:text-olive-deep"><%= project.name %></h3>
           <%= project_status_pill(project) %>
         </div>
-        <p class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-mocha"><%= project.description.presence || "No description." %></p>
+        <p class="mt-1 line-clamp-2 text-sm text-mocha"><%= project.description.presence || "No description." %></p>
         <div class="mt-4">
           <div class="mb-1.5 flex items-center justify-between text-xs text-taupe">
             <span><%= project.task_counts["done"] %> of <%= project.task_total %> tasks</span>
@@ -70,6 +58,7 @@
       <% end %>
     <% end %>
   </div>
+  <% end %>
 
-  <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
 </div>

@@ -12,7 +12,7 @@
   <% if workflow.attention.missing_controls.any? %><section id="close-missing-reports" class="space-y-3" aria-label="Missing reports blocking close"><%= section_heading 'Which register reports are missing?', level: :h3 %>
     <% workflow.attention.missing_controls.first(4).each do |row| %>
       <div class="section-card"><%= render 'financial_close/missing_report', row: row, request: workflow.missing_control_request(row), control_key: workflow.attention.control_key(row), day: day, can_write: can_write %></div>
-    <% end %><% if workflow.attention.missing_controls.size > 4 %><%= link_to 'See every missing register scope', daily_reconciliations_path(day: day.iso8601, anchor: 'missing-controls'), class: 'text-sm font-semibold text-olive-deep hover:underline' %><% end %>
+    <% end %><% if workflow.attention.missing_controls.size > 4 %><%= link_to 'Open every missing register scope', daily_reconciliations_path(day: day.iso8601, anchor: 'missing-controls'), class: 'text-sm font-semibold text-olive-deep hover:underline' %><% end %>
   </section><% end %>
   <% if workflow.open_follow_ups.any? %><section id="close-follow-ups" class="space-y-3" aria-label="Priority follow-ups blocking close"><%= section_heading 'Next follow-ups for this date', level: :h3 do %><%= link_to "All #{workflow.open_follow_ups.size} open follow-ups", reconciliation_follow_ups_path(day: day.iso8601), class: 'btn-ghost btn-sm' %><% end %><div class="grid gap-3 md:grid-cols-2"><% workflow.open_follow_ups.first(3).each do |item| %><%= render 'reconciliation_follow_ups/card', item: item, heading_tag: :h4, close_day: day %><% end %></div></section><% end %>
 </section>

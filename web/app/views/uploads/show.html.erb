@@ -120,7 +120,7 @@
             <p class="text-sm font-semibold">Imported</p>
             <p class="text-sm"><%= result['headline'] %></p>
             <% if result['counts'].present? %><dl class="facts text-sm"><% result['counts'].each do |label, number| %><div><dt><%= label %></dt><dd><%= number %></dd></div><% end %></dl><% end %>
-            <% if @upload.result_path.present? && @upload.result_path.start_with?('/') && !@upload.result_path.start_with?('//') %><p class="text-sm"><%= link_to 'See the imported records', @upload.result_path, class: 'underline font-semibold text-olive-deep' %></p><% end %>
+            <% if @upload.result_path.present? && @upload.result_path.start_with?('/') && !@upload.result_path.start_with?('//') %><p class="text-sm"><%= link_to 'Open imported records', @upload.result_path, class: 'underline font-semibold text-olive-deep' %></p><% end %>
           </div>
         <% end %>
       </section>

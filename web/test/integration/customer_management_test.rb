@@ -116,7 +116,7 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     26.times { |n| @customer.interactions.create!(author: @user, body: "Entry #{n}") }
     get customer_path(@customer), params: { activity_page: 2 }
     assert_response :success
-    assert_select '#timeline-heading ~ ol li', count: 1
+    assert_select '#timeline ol li', count: 1
   end
   test 'verified directory and retained historical profiles can be filtered independently' do
     time = Time.current.change(usec: 0)
@@ -165,7 +165,7 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     get customers_path, params: { sort: 'name' }
     assert_response :success
     assert_equal %w[Amy Zed], css_select('tbody tr td:first-child a').map { |a| a.text.split.first }
-    assert_select 'nav[aria-label="Relationship filter"] a[aria-current="true"]', text: /All/
+    assert_select 'nav[aria-label="Relationship filter"] a[aria-current="page"]', text: /All/
     get customers_path, params: { status: 'vip', q: { first_name_or_last_name_or_preferred_name_or_email_or_phone_cont: 'zed' } }
     assert_select 'ul[aria-label="Active filters"] a', minimum: 3
     assert_select 'tbody tr', count: 1
@@ -176,11 +176,11 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
 
   test 'empty states distinguish a new workspace from a filter with no matches' do
     get customers_path, params: { status: 'inactive' }
-    assert_select 'h2', text: 'No customers match these filters'
-    assert_select 'a[href=?]', customers_path, text: 'Clear all filters'
+    assert_select '.empty-state-title', text: 'No customers match these filters'
+    assert_select 'a[href=?]', customers_path, text: 'Clear filters'
     Core::Customer.delete_all
     get customers_path
-    assert_select 'h2', text: 'No customers yet'
+    assert_select '.empty-state-title', text: 'No customers yet'
     assert_select 'a[href=?]', new_customer_path
   end
 

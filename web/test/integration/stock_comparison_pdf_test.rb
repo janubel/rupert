@@ -61,7 +61,8 @@ class StockComparisonPdfTest < ActionDispatch::IntegrationTest
   test 'the stock comparison page links to the PDF with the current selections' do
     get stock_comparison_path(shopify_location_id: @online.id, ctrax_location_id: @retail.id, filter: 'attention', q: 'tea')
     assert_response :success
-    link = css_select('a').find { |a| a.text == 'Download store comparison PDF' }
+    link = css_select('a#store-comparison-pdf').first
+    assert_equal 'Download PDF', link.text
     params = Rack::Utils.parse_query(URI.parse(link['href']).query)
     assert_equal({ 'q' => 'tea', 'filter' => 'attention', 'shopify_location_id' => @online.id.to_s, 'ctrax_location_id' => @retail.id.to_s },
       params.except('format'))

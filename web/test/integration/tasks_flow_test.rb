@@ -292,7 +292,7 @@ class TasksFlowTest < ActionDispatch::IntegrationTest
     get_page projects_tasks_path, params: { project_id: @project.id }
     assert_select '[role="status"]', /Showing #{limit} of #{limit + 1} matching tasks/
     assert_select 'article', count: limit
-    assert_select 'a[href=?]', projects_tasks_path(project_id: @project.id, view: 'list'), text: 'View all in the list'
+    assert_select 'a[href=?]', projects_tasks_path(project_id: @project.id, view: 'list'), text: 'Open the full list'
     get_page projects_project_path(@project)
     assert_select '[role="status"]', /Showing #{limit} of #{limit + 1} tasks/
     assert_select 'article', count: limit

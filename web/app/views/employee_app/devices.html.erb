@@ -1,7 +1,6 @@
 <% content_for :title, 'Signed-in devices' %>
-<h1 class="page-title">Signed-in devices</h1>
-<p class="text-sm text-mocha">Sign out a device you no longer use.</p>
-<% if @sessions.empty? %><p class="card card-pad">No active device sessions.</p><% end %>
+<%= page_header 'Signed-in devices', subtitle: 'Sign out a device you no longer use.' %>
+<% if @sessions.empty? %><%= empty_state 'No active device sessions', hint: 'Devices appear here after you sign in to the staff app.' %><% end %>
 <% @sessions.each do |record| %>
-  <section class="card card-pad flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold"><%= record.device_name %></h2><p class="text-sm text-mocha">Expires <%= l(record.expires_at, format: :short) %></p></div><%= button_to 'Sign out device', revoke_employee_device_path(record), class: 'btn-ghost btn-sm' %></section>
+  <section class="card card-pad flex flex-wrap items-center justify-between gap-3"><div><h2 class="card-title"><%= record.device_name %></h2><p class="text-sm text-mocha">Expires <%= l(record.expires_at, format: :short) %></p></div><%= button_to 'Sign out device', revoke_employee_device_path(record), class: 'btn-ghost btn-sm' %></section>
 <% end %>

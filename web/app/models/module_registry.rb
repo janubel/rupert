@@ -88,7 +88,7 @@ class ModuleRegistry
     Entry.new(key: 'kpis', name: 'KPIs', path: -> { goals_kpis_path }, permission: 'projects.read', position: 78),
     # Me
     Entry.new(key: 'receipts', name: 'My receipts', path: -> { receipts_path }, permission: nil, position: 54),
-    Entry.new(key: 'time_clock', name: 'Time clock', path: -> { time_clock_path }, permission: nil, position: 88),
+    Entry.new(key: 'time_clock', name: 'Time clock', path: -> { time_clock_path }, permission: nil, position: 87.4),
     Entry.new(key: 'learning', name: 'Learn Rupert', path: -> { learning_index_path }, permission: nil, position: 89),
     # Team
     Entry.new(key: 'employees', name: 'Staff', path: -> { people_employees_path }, permission: 'hr.read', position: 85),

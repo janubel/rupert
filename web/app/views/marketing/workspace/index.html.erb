@@ -1,45 +1,156 @@
+<% content_for :title, 'Marketing' %>
+<% can_write = @enabled && Current.user.can?('marketing.write') %>
+<% can_review = can_write && Current.user.can?('marketing.review') %>
+<% menu = [] %>
+<% if can_write %>
+  <% menu << ['Add group', new_marketing_community_path] %>
+  <% menu << ['Add group code', new_marketing_offer_path] %>
+  <% menu << ['Save thread', new_marketing_thread_path] %>
+<% end %>
+<% menu << [@enabled ? 'Disable Marketing' : 'Enable Marketing', marketing_toggle_path, { method: :post, params: { enabled: @enabled ? '0' : '1' } }] if Current.user.can_manage_accounts? && Current.user.can?('settings.write') %>
 <div class="space-y-6">
-  <h1 class="page-title">Marketing</h1>
-  <p class="text-sm text-mocha">Find discussions through topic search, save relevant threads, and review replies with existing group discount codes. Publication is manual. Codes and inventory are not changed.</p>
-  <% if Current.user.can_manage_accounts? && Current.user.can?('settings.write') %>
-    <%= button_to(@enabled ? 'Disable Marketing' : 'Enable Marketing', marketing_toggle_path, params: { enabled: @enabled ? '0' : '1' }, class: 'btn-ghost') %>
+  <%= page_header 'Marketing', subtitle: 'Find discussions through topic search, save relevant threads and review replies that use existing group discount codes.', menu: menu do %>
+    <% if can_write %><%= link_to 'Add campaign', new_marketing_campaign_path, class: 'btn-primary' %><% end %>
   <% end %>
+  <%= fold_explainer('Publication is manual. Codes and inventory are not changed from here; Rupert never fetches group pages or posts replies on your behalf.', class: 'text-sm text-mocha') %>
+
   <% if @enabled %>
-    <%= link_to 'Influencer CMS', marketing_influencers_path, class: 'btn-primary' %>
-    <% if Current.user.can?('marketing.write') %><nav class="flex flex-wrap gap-2" aria-label="Marketing setup"><%= link_to 'New campaign', new_marketing_campaign_path, class: 'btn-primary' %><%= link_to 'New group', new_marketing_community_path, class: 'btn-ghost' %><%= link_to 'Record group code', new_marketing_offer_path, class: 'btn-ghost' %><%= link_to 'Save thread', new_marketing_thread_path, class: 'btn-ghost' %></nav><% end %>
-    <section class="card card-pad space-y-3"><h2 class="text-lg font-semibold">Campaigns</h2>
-      <% @campaigns.first(200).each do |campaign| %><p><%= campaign.name %> · <%= campaign.topics %> <% if Current.user.can?('marketing.write') %><%= link_to 'Edit', edit_marketing_campaign_path(campaign), class: 'underline' %><% end %></p><% end %>
-      <% if @campaigns.empty? %><p>Create a campaign with product topics and your storefront URL, then add groups.</p><% end %>
-      <% if @campaigns.length > 200 %><p>First 200 campaigns shown.</p><% end %>
+    <section class="section-card" aria-label="Campaigns">
+      <%= section_heading 'Campaigns' %>
+      <% if @campaigns.empty? %>
+        <%= empty_state 'No campaigns yet', hint: 'Add a campaign with product topics and your storefront URL, then add groups.' do %>
+          <% if can_write %><%= link_to 'Add campaign', new_marketing_campaign_path, class: 'btn-ghost' %><% end %>
+        <% end %>
+      <% else %>
+        <div class="table-region" role="region" tabindex="0" aria-label="Campaigns">
+          <table class="table">
+            <thead><tr><th scope="col" class="th">Campaign</th><th scope="col" class="th">Topics</th><th scope="col" class="th"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              <% @campaigns.first(200).each do |campaign| %>
+                <tr>
+                  <td class="td font-medium text-ink"><%= campaign.name %></td>
+                  <td class="td text-mocha"><%= campaign.topics %></td>
+                  <td class="td text-right"><% if can_write %><%= link_to 'Edit', edit_marketing_campaign_path(campaign), class: 'btn-ghost btn-sm' %><% end %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <% if @campaigns.length > 200 %><p class="text-xs text-taupe">First 200 campaigns shown.</p><% end %>
+      <% end %>
     </section>
-    <section class="card card-pad space-y-4"><h2 class="text-lg font-semibold">Groups and topic search</h2>
-      <% @communities.first(200).each do |group| %><article class="border-b border-sand pb-3 space-y-2"><h3 class="font-semibold"><%= group.name %> · <%= group.campaign.name %></h3>
-        <p class="text-sm"><%= link_to 'Open group', group.url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %> · <%= link_to 'Find threads with topic search', group.search_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %> · <%= link_to 'Read rules', group.rules_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></p>
-        <p class="text-sm whitespace-pre-wrap"><%= group.promotion_rules %></p><p class="text-xs text-mocha">Rules <%= group.rules_current? ? "checked #{group.rules_checked_at.to_fs(:short)}" : 'need review' %>. Search opens Bing; results are not imported automatically.</p>
-        <% if Current.user.can?('marketing.write') %><%= link_to 'Edit group', edit_marketing_community_path(group), class: 'btn-ghost' %><% end %>
-        <% if Current.user.can?('marketing.write') && Current.user.can?('marketing.review') %><%= button_to 'I checked these promotion rules', check_rules_marketing_community_path(group), params: { lock_version: group.lock_version }, class: 'btn-ghost' %><% end %>
-      </article><% end %><% if @communities.length > 200 %><p>First 200 groups shown.</p><% end %>
+
+    <section class="section-card" aria-label="Groups and topic search">
+      <%= section_heading 'Groups and topic search', hint: 'Search opens Bing; results are not imported automatically.' do %>
+        <% if can_write %><%= link_to 'Add group', new_marketing_community_path, class: 'btn-ghost btn-sm' %><% end %>
+      <% end %>
+      <% if @communities.empty? %><p class="text-sm text-mocha">No groups yet. Add a group with its promotion rules and topic search.</p><% end %>
+      <% @communities.first(200).each do |group| %>
+        <article class="space-y-2 border-t border-fog pt-4">
+          <%= section_heading group.name, hint: group.campaign.name, level: :h3 do %>
+            <span class="<%= group.rules_current? ? 'pill-fern' : 'pill-clay' %>"><%= group.rules_current? ? "Rules checked #{group.rules_checked_at.to_fs(:short)}" : 'Rules need review' %></span>
+          <% end %>
+          <p class="text-sm"><%= link_to 'Open group', group.url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %> · <%= link_to 'Find threads with topic search', group.search_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %> · <%= link_to 'Read rules', group.rules_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></p>
+          <p class="whitespace-pre-wrap text-sm text-mocha"><%= group.promotion_rules %></p>
+          <div class="flex flex-wrap gap-2">
+            <% if can_write %><%= link_to 'Edit', edit_marketing_community_path(group), class: 'btn-ghost btn-sm' %><% end %>
+            <% if can_review %><%= button_to 'I checked these promotion rules', check_rules_marketing_community_path(group), params: { lock_version: group.lock_version }, class: 'btn-ghost btn-sm' %><% end %>
+          </div>
+        </article>
+      <% end %>
+      <% if @communities.length > 200 %><p class="text-xs text-taupe">First 200 groups shown.</p><% end %>
     </section>
-    <section class="card card-pad space-y-4"><h2 class="text-lg font-semibold">Group discount codes</h2>
-      <% @offers.first(30).each do |offer| %><article class="border-b border-sand pb-3 space-y-2"><h3 class="font-semibold"><%= offer.code %> · <%= offer.community.name %> · <%= offer.shareable? ? 'Ready to share' : 'Not ready to share' %></h3><p class="whitespace-pre-wrap text-sm"><%= offer.terms %></p><p class="text-xs">Valid <%= offer.starts_at.to_fs(:short) %> – <%= offer.ends_at.to_fs(:short) %>. Evidence confirmed: <%= offer.verified_at&.to_fs(:short) || 'never' %>.</p>
-        <%= link_to 'Storefront destination', offer.destination_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %>
-        <% if offer.evidence_url.present? %> · <%= link_to 'Merchant evidence', offer.evidence_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% end %>
-        <% if Current.user.can?('marketing.write') %><%= link_to 'Edit code record', edit_marketing_offer_path(offer), class: 'btn-ghost' %><% end %>
-        <% if Current.user.can?('marketing.write') && Current.user.can?('marketing.review') %><%= form_with url: verify_marketing_offer_path(offer), class: 'space-y-2' do |f| %><%= hidden_field_tag :lock_version, offer.lock_version %><label class="block text-sm"><%= check_box_tag :confirmed, '1' %> I checked the merchant code, dates and all terms against the evidence.</label><%= f.submit 'Confirm merchant evidence for 24 hours', class: 'btn-ghost' %><% end %><% end %>
-      </article><% end %><% if @offers.length > 30 %><p>Latest 30 offers shown. Each reply links to its selected offer record.</p><% end %>
+
+    <section class="section-card" aria-label="Group discount codes">
+      <%= section_heading 'Group discount codes', hint: 'Each reply links to its selected offer record.' do %>
+        <% if can_write %><%= link_to 'Add group code', new_marketing_offer_path, class: 'btn-ghost btn-sm' %><% end %>
+      <% end %>
+      <% if @offers.empty? %><p class="text-sm text-mocha">No group codes recorded yet. Add an existing merchant code with its terms and evidence.</p><% end %>
+      <% @offers.first(30).each do |offer| %>
+        <article class="space-y-2 border-t border-fog pt-4">
+          <%= section_heading offer.code, hint: offer.community.name, level: :h3 do %>
+            <span class="<%= offer.shareable? ? 'pill-fern' : 'pill-clay' %>"><%= offer.shareable? ? 'Ready to share' : 'Not ready to share' %></span>
+          <% end %>
+          <p class="whitespace-pre-wrap text-sm"><%= offer.terms %></p>
+          <p class="text-xs text-mocha">Valid <%= offer.starts_at.to_fs(:short) %> – <%= offer.ends_at.to_fs(:short) %>. Evidence confirmed: <%= offer.verified_at&.to_fs(:short) || 'never' %>.</p>
+          <p class="text-sm"><%= link_to 'Storefront destination', offer.destination_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% if offer.evidence_url.present? %> · <%= link_to 'Merchant evidence', offer.evidence_url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %><% end %></p>
+          <div class="flex flex-wrap items-start gap-2">
+            <% if can_write %><%= link_to 'Edit', edit_marketing_offer_path(offer), class: 'btn-ghost btn-sm' %><% end %>
+            <% if can_review %>
+              <%= form_with url: verify_marketing_offer_path(offer), class: 'space-y-2' do |f| %>
+                <%= hidden_field_tag :lock_version, offer.lock_version %>
+                <label class="block text-sm"><%= check_box_tag :confirmed, '1' %> I checked the merchant code, dates and all terms against the evidence.</label>
+                <%= f.submit 'Confirm merchant evidence for 24 hours', class: 'btn-ghost btn-sm' %>
+              <% end %>
+            <% end %>
+          </div>
+        </article>
+      <% end %>
+      <% if @offers.length > 30 %><p class="text-xs text-taupe">Latest 30 offers shown.</p><% end %>
     </section>
-    <section class="card card-pad space-y-3"><h2 class="text-lg font-semibold">Replies waiting for review</h2>
-      <% @pending.first(30).each do |reply| %><p><%= link_to reply.thread.title, marketing_reply_path(reply), class: 'underline' %> · submitted <%= reply.updated_at.to_fs(:short) %></p><% end %>
-      <% if @pending.empty? %><p>No replies waiting for review.</p><% end %><% if @pending.length > 30 %><p>Oldest 30 pending replies shown.</p><% end %>
+
+    <section class="section-card" aria-label="Replies waiting for review">
+      <%= section_heading 'Replies waiting for review' %>
+      <% if @pending.empty? %>
+        <p class="text-sm text-mocha">No replies waiting for review.</p>
+      <% else %>
+        <ul class="divide-y divide-fog text-sm">
+          <% @pending.first(30).each do |reply| %>
+            <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+              <span><%= link_to reply.thread.title, marketing_reply_path(reply), class: 'font-medium text-olive-deep hover:underline' %> <span class="text-xs text-taupe">· submitted <%= reply.updated_at.to_fs(:short) %></span></span>
+              <%= link_to 'Review', marketing_reply_path(reply), class: 'btn-ghost btn-sm' %>
+            </li>
+          <% end %>
+        </ul>
+        <% if @pending.length > 30 %><p class="text-xs text-taupe">Oldest 30 pending replies shown.</p><% end %>
+      <% end %>
     </section>
-    <section class="card card-pad space-y-4"><h2 class="text-lg font-semibold">Thread review queue</h2>
-      <%= form_with url: marketing_path, method: :get, class: 'flex flex-wrap gap-2' do |f| %><%= f.search_field :q, value: params[:q], placeholder: 'Search saved context', 'aria-label': 'Search saved context', class: 'input' %><%= f.select :community_id, @communities.first(200).map { |g| [g.name, g.id] }, { include_blank: 'All groups', selected: params[:community_id] }, class: 'select', 'aria-label': 'Group' %><%= f.select :status, %w[new relevant dismissed snoozed].map { |s| [s.humanize, s] }, { include_blank: 'All due threads', selected: params[:status] }, class: 'select', 'aria-label': 'Status' %><%= f.submit 'Filter', class: 'btn-ghost' %><% end %>
-      <% @threads.first(30).each do |thread| %><article class="border-b border-sand pb-4 space-y-2"><h3 class="font-semibold"><%= link_to thread.title, thread.url, target: '_blank', rel: 'noopener noreferrer', class: 'underline' %></h3><p class="text-xs"><%= thread.community.name %> · <%= thread.status.humanize %> · <%= thread.availability %> · context checked <%= thread.checked_at&.to_fs(:short) || 'never' %></p><p class="whitespace-pre-wrap text-sm"><%= thread.excerpt %></p><p class="text-xs">Topic matches: <%= thread.relevance[:matched].join(', ').presence || 'none' %>. Excluded terms: <%= thread.relevance[:excluded].join(', ').presence || 'none' %>. These are keyword hints; review the actual discussion.</p>
-        <% if thread.triage_note.present? %><p class="text-sm"><%= thread.triage_note %></p><% end %>
-        <% if Current.user.can?('marketing.write') %><%= link_to 'Triage / edit', edit_marketing_thread_path(thread), class: 'btn-ghost' %><%= button_to 'I checked this thread context', check_context_marketing_thread_path(thread), params: { lock_version: thread.lock_version }, class: 'btn-ghost' %><% end %>
-        <% if thread.reply %><%= link_to "Reply: #{thread.reply.status.humanize}", marketing_reply_path(thread.reply), class: 'btn-ghost' %><% elsif Current.user.can?('marketing.write') %><%= link_to 'Draft reply', new_marketing_reply_path(thread_id: thread.id), class: 'btn-primary' %><% end %>
-      </article><% end %><% if @threads.empty? %><p>No matching threads. Open a group topic search and save a relevant discussion URL.</p><% end %>
-      <nav class="flex gap-3" aria-label="Thread pages"><% if @page > 1 %><%= link_to 'Previous', marketing_path(request.query_parameters.merge(page: @page - 1)), class: 'btn-ghost' %><% end %><% if @threads.length > 30 %><%= link_to 'Next', marketing_path(request.query_parameters.merge(page: @page + 1)), class: 'btn-ghost' %><% end %></nav>
+
+    <section class="section-card" aria-label="Thread review queue">
+      <%= section_heading 'Thread review queue' do %>
+        <% if can_write %><%= link_to 'Save thread', new_marketing_thread_path, class: 'btn-ghost btn-sm' %><% end %>
+      <% end %>
+      <%= form_with url: marketing_path, method: :get, class: 'toolbar' do |f| %>
+        <div class="toolbar-field"><%= f.label :q, 'Search', class: 'field-label' %><%= f.search_field :q, value: params[:q], placeholder: 'Saved context', class: 'search' %></div>
+        <div class="toolbar-field"><%= f.label :community_id, 'Group', class: 'field-label' %><%= f.select :community_id, @communities.first(200).map { |g| [g.name, g.id] }, { include_blank: 'All groups', selected: params[:community_id] }, class: 'select w-full' %></div>
+        <div class="toolbar-field"><%= f.label :status, 'Status', class: 'field-label' %><%= f.select :status, %w[new relevant dismissed snoozed].map { |s| [s.humanize, s] }, { include_blank: 'All due threads', selected: params[:status] }, class: 'select w-full' %></div>
+        <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', marketing_path, class: 'btn-ghost' %></div>
+      <% end %>
+      <% if @threads.empty? %>
+        <%= empty_state 'No matching threads', hint: 'Open a group topic search and save a relevant discussion URL.' do %>
+          <% if can_write %><%= link_to 'Save thread', new_marketing_thread_path, class: 'btn-ghost' %><% end %>
+        <% end %>
+      <% end %>
+      <% @threads.first(30).each do |thread| %>
+        <article class="space-y-2 border-t border-fog pt-4">
+          <%= section_heading thread.title, hint: "#{thread.community.name} · #{thread.availability} · context checked #{thread.checked_at&.to_fs(:short) || 'never'}", level: :h3 do %>
+            <span class="pill-taupe"><%= thread.status.humanize %></span>
+          <% end %>
+          <p class="whitespace-pre-wrap text-sm"><%= thread.excerpt %></p>
+          <p class="text-xs text-mocha">Topic matches: <%= thread.relevance[:matched].join(', ').presence || 'none' %>. Excluded terms: <%= thread.relevance[:excluded].join(', ').presence || 'none' %>. These are keyword hints; review the actual discussion.</p>
+          <% if thread.triage_note.present? %><p class="text-sm"><%= thread.triage_note %></p><% end %>
+          <div class="flex flex-wrap gap-2">
+            <%= link_to 'Read discussion', thread.url, target: '_blank', rel: 'noopener noreferrer', class: 'btn-ghost btn-sm' %>
+            <% if can_write %>
+              <%= link_to 'Edit', edit_marketing_thread_path(thread), class: 'btn-ghost btn-sm' %>
+              <%= button_to 'I checked this thread context', check_context_marketing_thread_path(thread), params: { lock_version: thread.lock_version }, class: 'btn-ghost btn-sm' %>
+            <% end %>
+            <% if thread.reply %>
+              <%= link_to "Open reply · #{thread.reply.status.humanize}", marketing_reply_path(thread.reply), class: 'btn-ghost btn-sm' %>
+            <% elsif can_write %>
+              <%= link_to 'Draft reply', new_marketing_reply_path(thread_id: thread.id), class: 'btn-ghost btn-sm' %>
+            <% end %>
+          </div>
+        </article>
+      <% end %>
+      <nav class="flex gap-3" aria-label="Thread pages">
+        <% if @page > 1 %><%= link_to 'Previous', marketing_path(request.query_parameters.merge(page: @page - 1)), class: 'btn-ghost btn-sm' %><% end %>
+        <% if @threads.length > 30 %><%= link_to 'Next', marketing_path(request.query_parameters.merge(page: @page + 1)), class: 'btn-ghost btn-sm' %><% end %>
+      </nav>
     </section>
-  <% else %><p>Marketing is disabled for this workspace. A workspace administrator can enable it here.</p><% end %>
+  <% else %>
+    <section class="card">
+      <%= empty_state 'Marketing is disabled for this workspace', hint: 'A workspace administrator can enable it from the More menu.' %>
+    </section>
+  <% end %>
 </div>

@@ -1,44 +1,45 @@
 <% content_for :title, "Tasks" %>
 <% own_tasks = Current.user.employee? %>
 <% can_write = own_tasks || Current.user.can?("projects.write") %>
-<div class="space-y-5">
-  <%= page_header own_tasks ? "My tasks" : "Tasks", subtitle: own_tasks ? "Your assigned work. Update notes or move tasks between columns as you work." : "Everything in flight across projects. Drag cards between columns to update their status.", eyebrow: 'Work' do %>
-    <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost btn-sm", data: { tour: 'guide' } %>
-    <div class="inline-flex rounded-full bg-haze p-1" role="group" aria-label="View" <%= tour_anchor('views') %>>
-      <%= link_to "Board", tasks_filter_path(view: nil), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "board"}" %>
-      <%= link_to "List", tasks_filter_path(view: "list"), class: "nav-pill nav-pill-idle-sm #{"nav-pill-active-sm" if @view == "list"}" %>
-    </div>
-    <%= link_to "Projects", projects_projects_path, class: "btn-ghost btn-sm" unless own_tasks %>
+<div class="space-y-6">
+  <%= page_header own_tasks ? "My tasks" : "Tasks", subtitle: own_tasks ? "Your assigned work; update notes or move tasks between columns as you go." : "Everything in flight across projects; drag cards between columns to update their status." do %>
+    <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost", data: { tour: 'guide' } %>
   <% end %>
 
-  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" <%= tour_anchor('stats') %>>
+  <div <%= tour_anchor('views') %>>
+    <%= page_tabs([["Board", tasks_filter_path(view: nil), @view == "board"], ["List", tasks_filter_path(view: "list"), @view == "list"]], label: 'Task views') %>
+  </div>
+
+  <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Task counts" <%= tour_anchor('stats') %>>
     <%= link_to tasks_filter_path(status: nil, due: nil, mine: nil), class: "stat block hover:border-taupe" do %>
       <p class="stat-label">Open</p><p class="stat-value"><%= @open_count %></p>
     <% end %>
     <%= link_to tasks_filter_path(status: "blocked"), class: "stat block hover:border-taupe" do %>
-      <p class="stat-label">Blocked</p><p class="stat-value <%= "!text-rose" if @blocked_count.positive? %>"><%= @blocked_count %></p>
+      <p class="stat-label">Blocked</p><p class="stat-value <%= "text-rose" if @blocked_count.positive? %>"><%= @blocked_count %></p>
     <% end %>
     <%= link_to tasks_filter_path(due: "overdue"), class: "stat block hover:border-taupe" do %>
-      <p class="stat-label">Overdue</p><p class="stat-value <%= "!text-rose" if @overdue_count.positive? %>"><%= @overdue_count %></p>
+      <p class="stat-label">Overdue</p><p class="stat-value <%= "text-rose" if @overdue_count.positive? %>"><%= @overdue_count %></p>
     <% end %>
     <%= link_to tasks_filter_path(status: "done"), class: "stat block hover:border-taupe" do %>
       <p class="stat-label">Done</p><p class="stat-value"><%= @done_count %></p>
     <% end %>
   </section>
 
-  <%= form_with url: projects_tasks_path, method: :get, class: "flex flex-wrap items-center gap-2", data: { controller: "auto-submit", tour: 'filters' } do %>
+  <%= form_with url: projects_tasks_path, method: :get, class: "toolbar", data: { controller: "auto-submit", tour: 'filters' } do %>
     <%= hidden_field_tag :view, @view if @view == "list" %>
     <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
-    <%= search_field_tag :q, params[:q], placeholder: "Search tasks…", class: "search w-56", "aria-label": "Search tasks" %>
-    <%= select_tag :project_id, options_from_collection_for_select(@projects, :id, :name, params[:project_id]), include_blank: "All projects", class: "select", "aria-label": "Project", data: { action: "change->auto-submit#submit" } %>
-    <%= select_tag :priority, options_for_select(Projects::Task::PRIORITIES.map { |p| [p.capitalize, p] }, params[:priority]), include_blank: "Any priority", class: "select", "aria-label": "Priority", data: { action: "change->auto-submit#submit" } %>
-    <%= link_to "Mine (#{@mine_count})", tasks_filter_path(mine: params[:mine] == "1" ? nil : "1"), class: "nav-pill nav-pill-idle-sm border border-fog #{"nav-pill-active-sm" if params[:mine] == "1"}" %>
-    <%= link_to "Overdue", tasks_filter_path(due: params[:due] == "overdue" ? nil : "overdue"), class: "nav-pill nav-pill-idle-sm border border-fog #{"nav-pill-active-sm" if params[:due] == "overdue"}" %>
-    <%= link_to "Due this week", tasks_filter_path(due: params[:due] == "week" ? nil : "week"), class: "nav-pill nav-pill-idle-sm border border-fog #{"nav-pill-active-sm" if params[:due] == "week"}" %>
-    <% if tasks_filtered? %>
-      <%= link_to "Clear", projects_tasks_path(view: (@view == "list" ? "list" : nil)), class: "text-xs font-semibold text-olive hover:underline" %>
-    <% end %>
-    <noscript><%= submit_tag "Filter", class: "btn-ghost btn-sm" %></noscript>
+    <%= hidden_field_tag :mine, params[:mine] if params[:mine].present? %>
+    <%= hidden_field_tag :due, params[:due] if params[:due].present? %>
+    <div class="toolbar-field"><%= label_tag :q, "Search", class: "field-label" %><%= search_field_tag :q, params[:q], placeholder: "Task title", class: "search w-full" %></div>
+    <div class="toolbar-field"><%= label_tag :project_id, "Project", class: "field-label" %><%= select_tag :project_id, options_from_collection_for_select(@projects, :id, :name, params[:project_id]), include_blank: "All projects", class: "select w-full", data: { action: "change->auto-submit#submit" } %></div>
+    <div class="toolbar-field"><%= label_tag :priority, "Priority", class: "field-label" %><%= select_tag :priority, options_for_select(Projects::Task::PRIORITIES.map { |p| [p.capitalize, p] }, params[:priority]), include_blank: "Any priority", class: "select w-full", data: { action: "change->auto-submit#submit" } %></div>
+    <div class="toolbar-actions">
+      <%= link_to "Mine (#{@mine_count})", tasks_filter_path(mine: params[:mine] == "1" ? nil : "1"), class: "btn-ghost btn-sm", aria: { pressed: params[:mine] == "1" } %>
+      <%= link_to "Overdue", tasks_filter_path(due: params[:due] == "overdue" ? nil : "overdue"), class: "btn-ghost btn-sm", aria: { pressed: params[:due] == "overdue" } %>
+      <%= link_to "Due this week", tasks_filter_path(due: params[:due] == "week" ? nil : "week"), class: "btn-ghost btn-sm", aria: { pressed: params[:due] == "week" } %>
+      <%= submit_tag "Apply", class: "btn-primary" %>
+      <% if tasks_filtered? %><%= link_to "Clear", projects_tasks_path(view: (@view == "list" ? "list" : nil)), class: "btn-ghost" %><% end %>
+    </div>
   <% end %>
 
   <% if can_write && !own_tasks %>
@@ -47,20 +48,17 @@
 
   <% if @view == "board" %>
     <% if @board_total > Projects::TasksController::BOARD_LIMIT %>
-      <p class="text-sm text-mocha" role="status">Showing <%= Projects::TasksController::BOARD_LIMIT %> of <%= @board_total %> matching tasks. <%= link_to "View all in the list", tasks_filter_path(view: "list"), class: "font-semibold text-olive hover:underline" %> or narrow the filters.</p>
+      <p class="text-sm text-mocha" role="status">Showing <%= Projects::TasksController::BOARD_LIMIT %> of <%= @board_total %> matching tasks. <%= link_to "Open the full list", tasks_filter_path(view: "list"), class: "font-semibold text-olive-deep hover:underline" %> or narrow the filters.</p>
     <% end %>
     <% if @columns.values.all?(&:empty?) %>
-      <div class="card card-pad py-10 text-center">
-        <p class="font-display text-lg text-ink"><%= tasks_filtered? ? "No tasks match these filters." : "A clean slate." %></p>
-        <p class="mt-1 text-sm text-taupe"><%= tasks_filtered? ? "Try clearing a filter." : (own_tasks ? "Tasks assigned to you will appear here." : "Add your first task above, or open a project to plan it.") %></p>
-      </div>
+      <%= empty_state(tasks_filtered? ? "No tasks match these filters." : "No tasks yet.", hint: (tasks_filtered? ? "Try clearing a filter." : (own_tasks ? "Tasks assigned to you will appear here." : "Add your first task above, or open a project to plan it."))) %>
     <% else %>
       <%= render "projects/shared/board", columns: @columns, assignees: @assignees, show_project: true, can_write: can_write %>
     <% end %>
   <% else %>
     <div class="space-y-2">
       <% if @tasks.empty? %>
-        <div class="card card-pad text-sm text-taupe">No tasks match.</div>
+        <%= empty_state(tasks_filtered? ? "No tasks match these filters." : "No tasks yet.", hint: (tasks_filtered? ? "Try clearing a filter." : (own_tasks ? "Tasks assigned to you will appear here." : "Add your first task above, or open a project to plan it."))) %>
       <% end %>
       <% @tasks.each do |task| %>
         <div class="card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -71,7 +69,7 @@
               <% if task.description.present? %><p class="mt-0.5 text-sm text-mocha"><%= task.description %></p><% end %>
               <p class="mt-1 text-xs text-taupe">
                 <% if task.project %>
-                  <% if own_tasks %><span><%= task.project.name %></span><% else %><%= link_to task.project.name, task.project, class: "font-semibold text-olive hover:underline" %><% end %> ·
+                  <% if own_tasks %><span><%= task.project.name %></span><% else %><%= link_to task.project.name, task.project, class: "font-semibold text-olive-deep hover:underline" %><% end %> ·
                 <% end %>
                 <% if task.due_on %><span class="<%= due_class(task) %>"><%= task.due_label %></span> · <% end %>
                 <% if (name = @assignees[task.assignee_id.to_s]) %><%= name %> · <% end %>
@@ -91,6 +89,6 @@
         </div>
       <% end %>
     </div>
-    <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
+    <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
   <% end %>
 </div>

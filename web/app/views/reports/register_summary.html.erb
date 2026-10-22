@@ -8,11 +8,11 @@
   <%= render 'reports/tabs' %>
 
   <div class="card card-pad space-y-3">
-    <nav class="flex items-center gap-2" aria-label="Report day">
-      <%= link_to '←', register_summary_reports_path(summary_query.merge(day: (@summary.day - 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'prev', aria: { label: 'Previous day' } %>
-      <strong class="text-sm text-ink"><%= @summary.day.strftime('%a %b %-d, %Y') %></strong>
+    <nav class="flex items-center gap-2" aria-label="Report period">
+      <%= link_to register_summary_reports_path(summary_query.merge(day: (@summary.day - 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'prev', title: 'Previous day' do %>←<span class="sr-only">Previous day</span><% end %>
+      <strong class="text-sm text-ink" aria-live="polite"><%= @summary.day.strftime('%a %b %-d, %Y') %></strong>
       <% if @summary.day < Date.current %>
-        <%= link_to '→', register_summary_reports_path(summary_query.merge(day: (@summary.day + 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'next', aria: { label: 'Next day' } %>
+        <%= link_to register_summary_reports_path(summary_query.merge(day: (@summary.day + 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'next', title: 'Next day' do %>→<span class="sr-only">Next day</span><% end %>
       <% else %>
         <span class="btn-ghost btn-sm cursor-not-allowed opacity-50" aria-disabled="true" title="No later day yet">→</span>
       <% end %>

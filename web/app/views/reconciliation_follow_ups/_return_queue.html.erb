@@ -1,6 +1,5 @@
-<section class="card card-pad space-y-3" aria-label="Return to your selected follow-up queue">
-  <h2 class="font-display text-xl">Keep your place in the queue</h2>
+<section class="section-card" aria-label="Return to your selected follow-up queue">
+  <%= section_heading 'Keep your place in the queue', level: :h3 do %><%= link_to 'Back to selected queue', reconciliation_follow_ups_path(@return_queue_filters), class: 'btn-ghost btn-sm' %><% end %>
   <p class="text-sm"><%= ReconciliationFollowUpQueue::STATUSES.fetch(@return_queue_filters[:status]) %><%= " · covers #{Date.iso8601(@return_queue_filters[:day]).strftime('%b %-d, %Y')}" if @return_queue_filters[:day] %><%= " · #{reconciliation_source(@return_queue_filters[:source])}" if @return_queue_filters[:source] %><%= @return_queue_filters[:owner] == 'mine' ? ' · assigned to me' : (' · unassigned' if @return_queue_filters[:owner]) %><%= " · #{ReconciliationFollowUp::CATEGORIES[@return_queue_filters[:category]]}" if @return_queue_filters[:category] %><%= ' · no original linked' if @return_queue_filters[:evidence] %><%= " · matches original ##{@return_queue_filters[:original]}" if @return_queue_filters[:original] %></p>
-  <%= link_to 'Back to selected queue', reconciliation_follow_ups_path(@return_queue_filters), class: 'btn-ghost btn-sm' %>
   <p class="text-xs text-mocha"><%= Current.user.can?('reports.write') ? 'Save and return to selected queue below records your note before returning. ' : '' %>The list uses the latest saved status, owner, due date and evidence, so resolved or rescheduled work may leave this view. Back returns without saving edits.</p>
 </section>

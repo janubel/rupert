@@ -1,0 +1,23 @@
+<%# The status bar (docs/ui-standards.md §2): one thin strip under every page with the sync
+    state, the Buzz unread badge and latest message, and the build. Badges, not popups. %>
+<% sync = local_assigns[:sync] || @last_sync %>
+<footer class="app-statusbar" aria-label="Status">
+  <% if Current.user.can?('sync.read') %>
+    <% event_at = sync && (sync.success? && sync.finishedAt ? sync.finishedAt : sync.startedAt) %>
+    <%= link_to syncs_path, class: 'statusbar-item', title: sync ? "#{sync.source.presence || 'Unknown source'} · #{sync.mode} · #{sync.status}" : 'Never synced' do %>
+      <span aria-hidden="true" class="dot <%= sync ? (sync.success? ? 'bg-fern' : 'bg-clay') : 'bg-taupe' %>"></span>
+      <span><% if event_at %>Synced <time datetime="<%= event_at.iso8601 %>"><%= time_ago_in_words(event_at) %> ago</time><% else %>Never synced<% end %></span>
+    <% end %>
+  <% end %>
+  <% if buzz_badge_available? %>
+    <%= link_to buzz_chat_path, class: 'statusbar-item statusbar-buzz', data: { action: 'buzz-badge#open' } do %>
+      <%= navigation_icon('chat', css_class: 'nav-symbol statusbar-icon') %>
+      <span>Buzz</span>
+      <span class="badge" data-buzz-badge-target="count" hidden>0</span>
+      <span class="statusbar-latest"><strong data-buzz-badge-target="author" hidden></strong> <span data-buzz-badge-target="latest" hidden></span></span>
+    <% end %>
+  <% end %>
+  <span class="statusbar-spacer"></span>
+  <button type="button" class="statusbar-item" data-action="click->help-panel#toggle" title="Help — press ?">Help <kbd>?</kbd></button>
+  <span class="statusbar-item statusbar-build" title="<%= BuildInfo.current.revision %>"><%= BuildInfo.current.label %></span>
+</footer>

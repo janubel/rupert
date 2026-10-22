@@ -1,20 +1,51 @@
 <% content_for :title, 'Source reports' %>
-<div class="operations-workspace space-y-6">
-  <%= render layout: 'finance/page_header', locals: { title: 'Source reports', currency: nil, range: "#{@report.from} through #{@report.to}",
+<% menu = [['Download CSV', money_reconciliations_path(kind: @report.kind, date: @report.from, saved: @saved&.id, format: :csv), { data: { turbo: false } }],
+           ['Daily reconciliation', daily_reconciliations_path(day: @report.from.iso8601)]]
+   menu << ['Save this review', money_reconciliations_path(kind: @report.kind, date: @report.from), { method: :post, form: { data: { turbo: false } } }] if Current.user.can?('sync.write')
+   menu << ['NAB / IRIS deposits and imports', pos_connection_path('iris_reporting')] if retail_business_access?('settings.read') %>
+<div class="space-y-6">
+  <%= render layout: 'finance/page_header', locals: { title: 'Source reports', currency: nil, range: "#{@report.from} through #{@report.to}", menu: menu,
         explain: 'Saved totals from each sales source for a day, week, month, quarter or year. Each source and currency is shown on its own and never added to another.' } do %>
     <%= link_to 'Open day close', financial_close_path(day: @report.from.iso8601), class: 'btn-primary' %>
   <% end %>
   <%= render 'shared/reconciliation_findings', findings: @findings %>
-  <section class="card card-pad space-y-4" aria-label="Money report period">
-    <%= form_tag money_reconciliations_path, method: :get, class: 'operations-filters' do %><div><%= label_tag :kind, 'Period', class: 'field-label' %><%= select_tag :kind, options_for_select([['Daily', 'daily'], ['Weekly · Monday to Sunday', 'weekly'], ['Monthly', 'monthly'], ['Quarterly', 'quarterly'], ['Yearly', 'yearly']], @report.kind), class: 'input' %></div><div><%= label_tag :date, 'Date within the period', class: 'field-label' %><%= date_field_tag :date, @report.from, required: true, min: '2000-01-01', max: '2099-12-31', class: 'input' %></div><%= submit_tag 'View report', class: 'btn-primary' %><% end %>
-    <div class="flex flex-wrap gap-2"><%= link_to 'Download CSV', money_reconciliations_path(kind: @report.kind, date: @report.from, saved: @saved&.id, format: :csv), class: 'btn-ghost', data: { turbo: false } %><%= link_to 'Daily controls and originals', daily_reconciliations_path(day: @report.from.iso8601), class: 'btn-ghost' %><% if Current.user.can?('sync.write') %><%= button_to 'Save / refresh this review', money_reconciliations_path(kind: @report.kind, date: @report.from), class: 'btn-ghost', form: { data: { turbo: false } } %><% end %></div>
+
+  <%= form_tag money_reconciliations_path, method: :get, class: 'toolbar', 'aria-label': 'Money report period' do %>
+    <div class="toolbar-field"><%= label_tag :kind, 'Period', class: 'field-label' %><%= select_tag :kind, options_for_select([['Daily', 'daily'], ['Weekly · Monday to Sunday', 'weekly'], ['Monthly', 'monthly'], ['Quarterly', 'quarterly'], ['Yearly', 'yearly']], @report.kind), class: 'select' %></div>
+    <div class="toolbar-field"><%= label_tag :date, 'Date within the period', class: 'field-label' %><%= date_field_tag :date, @report.from, required: true, min: '2000-01-01', max: '2099-12-31', class: 'input' %></div>
+    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><%= link_to 'Clear', money_reconciliations_path, class: 'btn-ghost' %></div>
+  <% end %>
+
+  <section class="section-card" aria-label="Period review status">
+    <%= section_heading "#{@payload['from']} through #{@payload['to']}", hint: "#{@saved ? 'Saved source review' : 'Current source observations'} · generated #{retail_event_time(@payload['generated_at'], timezone: 'America/New_York')}" do %><span class="pill-clay"><%= @payload['status'] %></span><% end %>
+    <div class="text-sm font-semibold">Orders, gateway payments and processor deposits may describe the same money. No combined total is calculated.<%= define('evidence_basis') %><%= define('deposit') %></div>
+    <details class="explainer"><summary class="explainer-summary text-sm font-semibold">Coverage and evidence notes · <%= @payload['warnings'].size %></summary><ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-mocha"><% @payload['warnings'].each do |warning| %><li><%= warning %></li><% end %></ul></details>
   </section>
-  <section class="card card-pad space-y-3" aria-label="Period review status"><div class="operations-header"><h2 class="font-display text-xl"><%= @payload['from'] %> through <%= @payload['to'] %></h2><span class="pill-clay"><%= @payload['status'] %></span></div><p class="text-xs text-mocha"><%= @saved ? 'Saved source review' : 'Current source observations' %> · generated <%= retail_event_time(@payload['generated_at'], timezone: 'America/New_York') %></p><div class="text-sm font-semibold">Orders, gateway payments and processor deposits may describe the same money. No combined total is calculated.<%= define('evidence_basis') %><%= define('deposit') %></div><details><summary class="disclosure-trigger text-sm font-semibold">Coverage and evidence notes · <%= @payload['warnings'].size %></summary><ul class="list-disc space-y-2 pl-5 text-sm text-mocha"><% @payload['warnings'].each do |warning| %><li><%= warning %></li><% end %></ul></details></section>
   <%= render 'shared/finance_source_coverage', coverage: @payload['source_coverage'] %>
-  <section class="space-y-4" aria-label="Money evidence by source"><h2 class="font-display text-xl">Source observations</h2>
-    <% @payload['rows'].group_by { |row| row['source'] }.each do |source, rows| %><article class="card overflow-hidden"><div class="card-pad"><h3 class="font-display text-xl"><%= source %></h3><p class="mt-1 text-xs text-mocha">Separate source evidence · amounts in each row’s currency</p></div><div class="operations-table-region" role="region" tabindex="0" aria-label="<%= source %> money observations"><table class="operations-table w-full text-sm"><thead><tr><% [['Account / scope', 'source'], ['Measure', nil], ['Currency', nil], ['Records', nil], ['Amount', 'unavailable'], ['Evidence basis', 'evidence_basis']].each do |label, term| %><th scope="col" class="th"><%= label %><%= define(term) if term %></th><% end %></tr></thead><tbody class="divide-y divide-fog"><% rows.each do |row| %><tr><td class="td"><%= row['account'] %></td><th scope="row" class="td text-left font-medium"><%= row['metric'] %></th><td class="td"><%= row['currency'].presence || 'Unconfirmed' %></td><td class="td"><%= row['count'] || 'Unknown' %></td><td class="td retail-money whitespace-nowrap"><%= row['amount'] %></td><td class="td text-xs text-mocha"><%= row['basis'] %></td></tr><% end %></tbody></table></div></article><% end %>
-    <% if @payload['rows'].empty? %><div class="card card-pad"><p class="font-semibold">No stored money observations for this period</p><p class="mt-2 text-sm text-mocha">Check source coverage and retained originals before treating missing activity as zero.</p></div><% end %>
+
+  <section class="space-y-4" aria-label="Money evidence by source">
+    <%= section_heading 'Source observations', hint: 'Separate source evidence · amounts in each row’s currency.' %>
+    <% @payload['rows'].group_by { |row| row['source'] }.each do |source, rows| %>
+      <article class="section-card">
+        <%= section_heading source, level: :h3 %>
+        <div class="table-region" role="region" tabindex="0" aria-label="<%= source %> money observations"><table class="table">
+          <thead><tr><% [['Account / scope', 'source', false], ['Measure', nil, false], ['Currency', nil, false], ['Records', nil, true], ['Amount', 'unavailable', true], ['Evidence basis', 'evidence_basis', false]].each do |label, term, numeric| %><th scope="col" class="th <%= 'num' if numeric %>"><%= label %><%= define(term) if term %></th><% end %></tr></thead>
+          <tbody><% rows.each do |row| %><tr><td class="td"><%= row['account'] %></td><th scope="row" class="td text-left font-medium"><%= row['metric'] %></th><td class="td"><%= row['currency'].presence || 'Unconfirmed' %></td><td class="td num"><%= row['count'] || 'Unknown' %></td><td class="td num whitespace-nowrap"><%= row['amount'] %></td><td class="td text-xs text-mocha"><%= row['basis'] %></td></tr><% end %></tbody>
+        </table></div>
+      </article>
+    <% end %>
+    <% if @payload['rows'].empty? %><%= empty_state 'No stored money observations for this period', hint: 'Check source coverage and retained originals before treating missing activity as zero.' %><% end %>
   </section>
-  <section class="space-y-3"><h2 class="font-display text-xl">Source freshness at generation</h2><div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><% @payload['sources'].each do |source| %><article class="card card-pad space-y-2 min-w-0"><h3 class="font-semibold"><%= source['label'] %></h3><span class="pill-taupe"><%= source['badge'] %></span><p class="text-xs text-mocha">Last recorded read: <%= source['last_at'] ? retail_event_time(source['last_at'], timezone: 'America/New_York') : 'No successful read yet' %></p></article><% end %></div><p class="text-xs text-mocha">These statuses belong to the generated review. Stock and backup health provide operational context, not payment or bank-settlement evidence.</p><%= link_to 'NAB / IRIS deposits and imports', pos_connection_path('iris_reporting'), class: 'btn-ghost btn-sm' if retail_business_access?('settings.read') %></section>
-  <details class="card card-pad"><summary class="disclosure-trigger font-semibold">Saved source reviews · <%= @history.size %></summary><p class="my-3 text-sm text-mocha">Daily at 12:20 a.m., Monday at 12:25 a.m., the first of each month at 12:30 a.m., the first of each quarter at 12:35 a.m. and January 1 at 12:40 a.m. Eastern, the previous completed period is retained. Saving a source review does not certify bank reconciliation or close a day.</p><div class="grid gap-2 sm:grid-cols-2"><% @history.each do |report| %><%= link_to "#{report.period_kind.capitalize} · #{report.period_from} through #{report.period_to}", money_reconciliations_path(saved: report.id), class: 'btn-ghost justify-start' %><% end %></div><% if @history.empty? %><p class="text-sm text-mocha">No saved reviews yet.</p><% end %></details>
+
+  <section class="space-y-3" aria-label="Source freshness">
+    <%= section_heading 'Source freshness at generation', hint: 'These statuses belong to the generated review. Stock and backup health provide operational context, not payment or bank-settlement evidence.' %>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><% @payload['sources'].each do |source| %><article class="section-card min-w-0"><div class="card-head"><h3 class="card-title"><%= source['label'] %></h3><span class="pill-taupe"><%= source['badge'] %></span></div><p class="text-xs text-mocha">Last recorded read: <%= source['last_at'] ? retail_event_time(source['last_at'], timezone: 'America/New_York') : 'No successful read yet' %></p></article><% end %></div>
+  </section>
+
+  <details class="explainer card card-pad">
+    <summary class="explainer-summary font-semibold">Saved source reviews · <%= @history.size %></summary>
+    <p class="my-3 text-sm text-mocha">Daily at 12:20 a.m., Monday at 12:25 a.m., the first of each month at 12:30 a.m., the first of each quarter at 12:35 a.m. and January 1 at 12:40 a.m. Eastern, the previous completed period is retained. Saving a source review does not certify bank reconciliation or close a day.</p>
+    <div class="grid gap-2 sm:grid-cols-2"><% @history.each do |report| %><%= link_to "#{report.period_kind.capitalize} · #{report.period_from} through #{report.period_to}", money_reconciliations_path(saved: report.id), class: 'btn-ghost justify-start' %><% end %></div>
+    <% if @history.empty? %><p class="text-sm text-mocha">No saved reviews yet.</p><% end %>
+  </details>
 </div>

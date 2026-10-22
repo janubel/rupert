@@ -103,7 +103,7 @@ end %>
       <%= form_with url: swipesimple_items_path, method: :post, multipart: true, class: 'toolbar' do %>
         <div class="toolbar-field"><%= label_tag :file, 'SwipeSimple item CSV', class: 'field-label' %><%= file_field_tag :file, accept: '.csv,text/csv', required: true, class: 'input' %></div>
         <div class="toolbar-field"><%= label_tag :merchant_account, 'Merchant account', class: 'field-label' %><%= text_field_tag :merchant_account, @default_account, class: 'input', maxlength: 120, placeholder: 'SwipeSimple' %></div>
-        <div class="toolbar-actions"><%= submit_tag 'Upload', class: 'btn-primary', name: nil %></div>
+        <div class="toolbar-actions"><%= submit_tag 'Upload', class: 'btn-ghost', name: nil %></div>
       <% end %>
     </section>
   <% end %>

@@ -1,7 +1,7 @@
 <%# The management shell (docs/ui-standards.md §2): one top bar, one navigation rail built
     from ModuleRegistry, one main column. Nothing page-specific lives in the chrome. %>
 <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-ink focus:fixed focus:left-4 focus:top-3">Skip to content</a>
-<div class="app-shell" data-controller="rail<% if Current.user %> help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %><% end %>"<% if Current.user %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %>>
+<div class="app-shell" data-controller="rail<% if Current.user %> help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %><%= ' buzz-badge' if buzz_badge_available? %><% end %>"<% if Current.user %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %><% if buzz_badge_available? %> data-buzz-badge-url-value="<%= buzz_chat_messages_path(format: :json) %>" data-buzz-badge-chat-path-value="<%= buzz_chat_path %>" data-buzz-badge-mention-value="<%= Current.user.display_name.to_s.split(/\s+/).first %>"<% end %>>
   <% if Current.user&.super_admin? && Current.tenant_id != Current.user.tenant_id %>
     <div role="status" class="flash flash-notice support-banner"><span>Read-only customer support · <%= Current.tenant.name %></span><%= button_to 'Leave support session', leave_platform_support_path, method: :delete, class: 'btn-ghost btn-sm' %></div>
   <% end %>
@@ -124,6 +124,10 @@
       <%= render 'shared/workspace_help' if Current.user %>
     </main>
   </div>
+  <% if Current.user %>
+    <%= render 'shared/status_bar', sync: @last_sync %>
+    <div class="toast-stack" data-controller="toasts" aria-live="polite"></div>
+  <% end %>
   <%= render 'shared/help_panel' if Current.user %>
   <%= render 'shared/feedback_panel' if Current.user %>
   <%= render 'shared/ask_rupert' if ask_rupert_available? %>

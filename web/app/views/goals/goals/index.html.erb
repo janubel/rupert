@@ -2,35 +2,36 @@
 <div class="space-y-6">
   <%= page_header 'Goals', subtitle: 'Targets with measurable progress.' do %>
     <% if Current.user.can?("projects.write") %>
-      <%= link_to "New goal", new_goals_goal_path, class: "btn-primary" %>
+      <%= link_to "Add goal", new_goals_goal_path, class: "btn-primary" %>
     <% end %>
   <% end %>
 
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <% if @goals.empty? %>
-      <div class="card card-pad col-span-full text-sm text-taupe">No goals yet — set a target and start tracking.</div>
+  <% if @goals.empty? %>
+    <%= empty_state 'No goals yet', hint: 'Set a target and start tracking progress toward it.' do %>
+      <% if Current.user.can?("projects.write") %><%= link_to "Add goal", new_goals_goal_path, class: "btn-primary" %><% end %>
     <% end %>
+  <% else %>
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <% @goals.each do |goal| %>
       <%= link_to goal, class: "card card-pad block hover:border-taupe" do %>
         <div class="flex items-center justify-between gap-2">
-          <h3 class="truncate font-display text-lg text-ink"><%= goal.name %></h3>
-          <span class="<%= goal.achieved? ? "pill-fern" : goal.active? ? "pill-olive" : goal.abandoned? ? "pill-taupe" : "pill-clay" %>"><%= goal.status %></span>
+          <h3 class="card-title truncate"><%= goal.name %></h3>
+          <span class="<%= goal.achieved? ? "pill-fern" : goal.active? ? "pill-olive" : goal.abandoned? ? "pill-taupe" : "pill-clay" %>"><%= goal.status.to_s.humanize %></span>
         </div>
         <p class="mt-1 text-sm text-mocha"><%= goal.description.presence || "No description." %></p>
         <div class="mt-3 flex items-baseline justify-between">
-          <p class="font-display text-2xl text-ink"><%= number_with_precision(goal.current_value, precision: 2) %></p>
-          <p class="text-xs text-taupe">target <%= number_with_precision(goal.target_value, precision: 2) %></p>
+          <p class="font-display text-2xl text-ink"><%= number_with_precision(goal.current_value, precision: 2, delimiter: ',') %></p>
+          <p class="text-xs text-taupe">target <%= number_with_precision(goal.target_value, precision: 2, delimiter: ',') %></p>
         </div>
         <% if goal.progress_pct %>
-          <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-haze">
-            <div class="h-full rounded-full <%= goal.progress_pct >= 100 ? "bg-fern" : "bg-olive" %>" style="width: <%= goal.progress_pct %>%"></div>
-          </div>
+          <progress class="learning-progress mt-2 w-full" value="<%= [goal.progress_pct, 100].min %>" max="100" aria-label="<%= goal.name %> progress"><%= goal.progress_pct %>%</progress>
           <p class="mt-1 text-xs text-taupe"><%= goal.progress_pct %>% complete</p>
         <% end %>
         <% if goal.due_on %><p class="mt-2 text-xs text-taupe">Due <%= l(goal.due_on, format: :long) %></p><% end %>
       <% end %>
     <% end %>
   </div>
+  <% end %>
 
-  <div class="text-xs text-taupe"><%== pagy_nav(@pagy) if @pagy.pages > 1 %></div>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
 </div>

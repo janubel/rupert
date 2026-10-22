@@ -1,16 +1,17 @@
 <% content_for :title, 'History' %>
 <% number = ->(n) { number_with_delimiter(n) } %>
 <% cents = ->(c) { finance_money_text(c, zero: :show) } %>
-<div class="space-y-8 operations-workspace">
-
-  <%= page_header 'History', eyebrow: 'Bookkeeping · records', subtitle: 'What Rupert retains from each source, in one place. A source’s oldest record shows the coverage that was available to Rupert, not when the business began or proof that nothing older exists. Counts are records, not sales totals.' %>
+<div class="space-y-6">
+  <%= page_header 'History', subtitle: 'What Rupert retains from each source, in one place.',
+        menu: [['QuickBooks import', finance_quickbooks_imports_path], ['Bank transactions', bank_statements_path]] %>
+  <%= fold_explainer('Counts are records, not sales totals. A source’s oldest record shows the coverage that was available to Rupert, not when the business began or proof that nothing older exists.', class: 'text-sm text-mocha') %>
 
   <section aria-labelledby="sources-heading" class="space-y-3">
-    <h2 id="sources-heading" class="font-display text-xl">By source</h2>
+    <div class="card-head"><div><h2 id="sources-heading" class="section-title">By source</h2></div></div>
     <div class="grid gap-4 md:grid-cols-2">
       <% @sources.each do |source| %>
         <article class="card card-pad space-y-2" aria-labelledby="source-<%= source.key %>">
-          <h3 id="source-<%= source.key %>" class="font-display text-lg"><%= link_to source.label, source.path, class: 'link' %></h3>
+          <h3 id="source-<%= source.key %>" class="card-title"><%= link_to source.label, source.path, class: 'link' %></h3>
           <p class="text-xs text-mocha"><%= source.role %></p>
           <% if source.records.zero? %>
             <p class="text-sm">Nothing retained from this source yet.</p>
@@ -50,10 +51,10 @@
   </section>
 
   <section aria-labelledby="years-heading" class="hidden space-y-3 md:block">
-    <h2 id="years-heading" class="font-display text-xl">Records by year and source</h2>
-    <div class="card overflow-hidden">
-      <div class="operations-table-region" role="region" tabindex="0" aria-label="Records by year and source">
-        <table class="operations-table finance-table w-full">
+    <div class="card-head"><div><h2 id="years-heading" class="section-title">Records by year and source</h2></div></div>
+    <div class="card">
+      <div class="table-region" role="region" tabindex="0" aria-label="Records by year and source">
+        <table class="table finance-table">
           <caption class="sr-only">Number of retained records per source for each calendar year; a dash means none are held</caption>
           <thead><tr><th scope="col" class="th">Source</th><% @years.each do |year| %><th scope="col" class="th num"><%= year %></th><% end %></tr></thead>
           <tbody>
@@ -71,21 +72,20 @@
   </section>
 
   <section aria-labelledby="recon-heading" class="space-y-4">
-    <h2 id="recon-heading" class="font-display text-xl">QuickBooks compared with Rupert</h2>
-    <p class="text-sm text-mocha">Differences are listed, never adjusted or matched for you. Amounts are net debit (positive) or credit (negative) in USD, from imported QuickBooks lines you have mapped to Rupert accounts.</p>
+    <div class="card-head"><div><h2 id="recon-heading" class="section-title">QuickBooks compared with Rupert</h2><p class="card-hint">Differences are listed, never adjusted or matched for you. Amounts are net debit (positive) or credit (negative) in USD, from imported QuickBooks lines you have mapped to Rupert accounts.</p></div></div>
 
     <% comparisons = [@ledger_comparison, *@trial_balances] %>
     <% comparisons.each do |comparison| %>
       <div class="card card-pad space-y-2">
-        <h3 class="font-display text-lg"><%= comparison.title %></h3>
+        <h3 class="card-title"><%= comparison.title %></h3>
         <% if comparison.period&.first %><p class="text-xs text-mocha">Days in common: <%= comparison.period.first %> to <%= comparison.period.last %></p><% end %>
         <% if comparison.message %>
           <p class="text-sm text-mocha"><%= comparison.message %></p>
         <% elsif comparison.rows.empty? %>
           <p class="text-sm text-mocha">No mapped accounts have activity to compare.</p>
         <% else %>
-          <div class="operations-table-region" role="region" tabindex="0" aria-label="<%= comparison.title %>">
-            <table class="operations-table finance-table w-full">
+          <div class="table-region" role="region" tabindex="0" aria-label="<%= comparison.title %>">
+            <table class="table finance-table">
               <caption class="sr-only"><%= comparison.title %>, in USD</caption>
               <thead><tr><th scope="col" class="th">Account</th><th scope="col" class="th num">QuickBooks</th><th scope="col" class="th num">Rupert</th><th scope="col" class="th num">Difference</th></tr></thead>
               <tbody>
@@ -107,9 +107,9 @@
 
     <% @bank_comparisons.each do |comparison| %>
       <div class="card card-pad space-y-2">
-        <h3 class="font-display text-lg"><%= comparison.title %></h3>
-        <div class="operations-table-region" role="region" tabindex="0" aria-label="<%= comparison.title %>">
-          <table class="operations-table finance-table w-full">
+        <h3 class="card-title"><%= comparison.title %></h3>
+        <div class="table-region" role="region" tabindex="0" aria-label="<%= comparison.title %>">
+          <table class="table finance-table">
             <caption class="sr-only"><%= comparison.title %> by month, in USD</caption>
             <thead><tr><th scope="col" class="th">Month</th><th scope="col" class="th num">QuickBooks</th><th scope="col" class="th num">Bank lines</th><th scope="col" class="th num">Difference</th></tr></thead>
             <tbody>

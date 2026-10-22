@@ -33,6 +33,21 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'header button[data-rail-target="menu"][aria-controls="app-rail"]', count: 1
   end
 
+  test 'every page carries the status bar with sync, the Buzz badge and the build' do
+    get inventory_index_path
+    assert_select 'footer.app-statusbar', count: 1
+    assert_select 'footer.app-statusbar a[href=?]', syncs_path
+    assert_select 'footer.app-statusbar a[href=?] .badge[data-buzz-badge-target="count"][hidden]', buzz_chat_path
+    assert_select 'header a[aria-label="Buzz team chat"] .badge[data-buzz-badge-target="count"]', count: 1
+    assert_select '.app-shell[data-controller~="buzz-badge"][data-buzz-badge-url-value=?]', buzz_chat_messages_path(format: :json)
+    assert_select '.toast-stack[data-controller="toasts"]', count: 1
+    @admin.update!(role: 'cashier')
+    get inventory_index_path
+    assert_select 'footer.app-statusbar', count: 1
+    assert_select 'footer.app-statusbar a[href=?]', buzz_chat_path, count: 0
+    assert_select '.app-shell[data-controller~="buzz-badge"]', count: 0
+  end
+
   test 'cashier sees work areas and personal help without administrative utility or sync metadata' do
     @admin.update!(role: 'cashier')
     SyncRun.create!(tenant_id: @tenant.id, source: 'swipesimple', mode: 'csv', status: 'success',

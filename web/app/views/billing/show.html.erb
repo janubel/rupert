@@ -1,20 +1,50 @@
-<% content_for :title, 'Your Rupert subscription' %>
-<div class="mx-auto max-w-4xl space-y-6"><section class="card card-pad space-y-3"><p class="text-xs uppercase tracking-wide">Your workspace</p><h1 class="page-title">Grow with Rupert.</h1>
-<p>Account access is free. Your current subscription: <strong><%= @subscription&.status || 'free' %></strong>.</p>
-<% if params[:checkout] %><p role="status">We are waiting for Stripe to confirm your subscription. Returning here does not confirm a payment. Refresh to see the latest status.</p><% end %>
-<p class="text-sm">Payments are processed by Stripe using the CSP Cyber Security Pilot billing account. Taxes may apply.</p>
-<% unless RupertBilling.configured? %><p role="status">Paid checkout is being configured. You can continue using your free account.</p><% end %></section>
-<% unless @subscription&.stripe_subscription_id.present? %><section class="grid gap-4 md:grid-cols-2">
-<% [['monthly', 'Monthly', '$499', 'Billed monthly.'], ['referral_year', 'Referred by a customer', '$249.50', '50% off for 12 months with an eligible customer code. A 12-month commitment, billed monthly: $2,994 total before tax. Then $499/month.']].each do |plan, title, price, description| %>
-<article class="card card-pad space-y-4"><h2 class="font-display text-xl"><%= title %></h2><p class="text-3xl"><%= price %><span class="text-sm"> USD / month</span></p><p><%= description %></p>
-<%= form_with url: billing_checkout_path, data: {turbo: false}, class: 'space-y-3' do |f| %><%= hidden_field_tag :plan, plan %>
-<% if plan == 'referral_year' %><%= label_tag :referral_code, 'Customer referral code' %><%= text_field_tag :referral_code, nil, required: true, maxlength: 40, class: 'input' %><% end %>
-<label class="flex gap-2"><%= check_box_tag :accepted, '1', false, required: true %><span>I agree to <%= description %> Billing terms version <%= RupertBilling::TERMS_VERSION %>.</span></label>
-<%= f.submit 'Continue to secure checkout', class: 'btn-primary', disabled: !RupertBilling.configured? %><% end %></article><% end %></section><% else %>
-<section class="card card-pad space-y-3"><h2 class="font-display text-xl">Subscription details</h2><p><%= @subscription.plan.humanize %> · Last confirmed <%= @subscription.last_synced_at&.utc&.iso8601 || 'Awaiting confirmation' %></p>
-<% if @subscription.commitment_ends_at %><p>Annual commitment ends <%= @subscription.commitment_ends_at.to_date %>. Contact support for payment-method updates or billing help during your commitment.</p><% end %>
-<%= button_to 'Manage billing', billing_portal_path, class: 'btn-primary', data: {turbo: false} %>
-<% if @subscription.paid? %><%= button_to 'Get my referral code', billing_referral_path, class: 'btn-ghost' %><% end %>
-<% if @referral %><p>Your referral code: <strong><%= @referral.code %></strong></p><% end %></section><% end %>
-<section class="card card-pad"><h2 class="font-display text-xl">You control customer support access</h2><p>Choose an administrator, grant temporary read access, and revoke it whenever you need.</p><%= link_to 'Manage support access', support_access_path, class: 'btn-ghost mt-3' %></section>
-<%= link_to 'Open workspace', root_path, class: 'btn-ghost' %></div>
+<%# Subscription: a Settings page (docs/ui-standards.md §4), one card per topic. %>
+<% content_for :title, 'Subscription' %>
+<div class="page-medium space-y-6">
+  <%= page_header 'Subscription', subtitle: "Account access is free; your current subscription is #{@subscription&.status || 'free'}.", eyebrow: 'Your workspace',
+                  menu: [['Support access', support_access_path], ['Open workspace', root_path]] %>
+
+  <% if params[:checkout] %><p class="flash flash-notice" role="status">We are waiting for Stripe to confirm your subscription. Returning here does not confirm a payment. Reload to see the latest status.</p><% end %>
+  <% unless RupertBilling.configured? %><p class="flash flash-notice" role="status">Paid checkout is being configured. You can continue using your free account.</p><% end %>
+
+  <% unless @subscription&.stripe_subscription_id.present? %>
+    <section class="grid gap-4 md:grid-cols-2" aria-label="Plans">
+      <% [['monthly', 'Monthly', '$499', 'Billed monthly.'], ['referral_year', 'Referred by a customer', '$249.50', '50% off for 12 months with an eligible customer code. A 12-month commitment, billed monthly: $2,994 total before tax. Then $499/month.']].each do |plan, title, price, description| %>
+        <article class="section-card">
+          <%= section_heading title, level: :h3 %>
+          <p class="stat-value"><%= price %> <span class="text-sm text-taupe">USD / month</span></p>
+          <p class="text-sm text-mocha"><%= description %></p>
+          <%= form_with url: billing_checkout_path, data: { turbo: false }, class: 'space-y-3' do |f| %>
+            <%= hidden_field_tag :plan, plan %>
+            <% if plan == 'referral_year' %><div><%= label_tag :referral_code, 'Customer referral code', class: 'field-label' %><%= text_field_tag :referral_code, nil, required: true, maxlength: 40, class: 'input' %></div><% end %>
+            <label class="flex items-start gap-2 text-sm text-mocha"><%= check_box_tag :accepted, '1', false, required: true, class: 'checkbox mt-0.5' %><span>I agree to <%= description %> Billing terms version <%= RupertBilling::TERMS_VERSION %>.</span></label>
+            <%= f.submit 'Continue to secure checkout', class: 'btn-primary', disabled: !RupertBilling.configured? %>
+          <% end %>
+        </article>
+      <% end %>
+    </section>
+  <% else %>
+    <section class="section-card">
+      <%= section_heading 'Subscription details' %>
+      <dl class="facts">
+        <div><dt>Plan</dt><dd><%= @subscription.plan.humanize %></dd></div>
+        <div><dt>Last confirmed</dt><dd><%= @subscription.last_synced_at&.utc&.iso8601 || 'Awaiting confirmation' %></dd></div>
+        <% if @subscription.commitment_ends_at %><div><dt>Annual commitment ends</dt><dd><%= @subscription.commitment_ends_at.to_date %></dd></div><% end %>
+        <% if @referral %><div><dt>Your referral code</dt><dd><strong><%= @referral.code %></strong></dd></div><% end %>
+      </dl>
+      <% if @subscription.commitment_ends_at %><p class="text-sm text-mocha">Contact support for payment-method updates or billing help during your commitment.</p><% end %>
+      <div class="flex flex-wrap items-center gap-2">
+        <%= button_to 'Manage billing', billing_portal_path, class: 'btn-primary', data: { turbo: false } %>
+        <% if @subscription.paid? %><%= button_to 'Get my referral code', billing_referral_path, class: 'btn-ghost' %><% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <section class="section-card">
+    <%= section_heading 'Support access', hint: 'Choose an administrator, grant temporary read access, and revoke it whenever you need.' do %>
+      <%= link_to 'Manage support access', support_access_path, class: 'btn-ghost btn-sm' %>
+    <% end %>
+  </section>
+
+  <%= fold_explainer('Payments are processed by Stripe using the CSP Cyber Security Pilot billing account. Taxes may apply. You review the amount before confirming payment, and account access stays free without a subscription.', class: 'text-xs text-taupe') %>
+</div>

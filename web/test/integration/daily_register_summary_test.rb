@@ -32,7 +32,7 @@ class DailyRegisterSummaryTest < ActionDispatch::IntegrationTest
 
     get register_summary_reports_path, params: { day: @day.iso8601 }
     assert_response :success
-    assert_select 'h1', 'Daily register summary'
+    assert_select 'h1', 'Register summary'
     assert_select 'td', 'EUR'
   end
 

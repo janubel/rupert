@@ -49,7 +49,7 @@
         <% if can_apply %>
           <%= button_to 'Derive now', derive_size_family_path(family), method: :post, class: 'btn-ghost btn-sm', form_class: 'contents', data: { turbo_submits_with: 'Deriving…' } %>
           <% if row[:pending_count].positive? %>
-            <%= button_to "Approve all (#{row[:pending_count]})", approve_all_size_family_path(family), method: :post, class: 'btn-primary btn-sm', form_class: 'contents', data: { turbo_confirm: "Write all pending sizes for #{family.name} to Square?" } %>
+            <%= button_to "Approve all (#{row[:pending_count]})", approve_all_size_family_path(family), method: :post, class: 'btn-ghost btn-sm', form_class: 'contents', data: { turbo_confirm: "Write all pending sizes for #{family.name} to Square?" } %>
           <% end %>
         <% end %>
         <% if can_manage %>
@@ -105,7 +105,7 @@
                       <td class="td text-right">
                         <% if m[:pending] %>
                           <% if can_apply %>
-                            <%= button_to 'Approve', approve_size_family_path(family, change_id: m[:pending].id), method: :post, class: 'btn-primary btn-sm', form_class: 'contents', data: { turbo_confirm: "Write #{m[:member].sku} to #{m[:pending].target_quantity} on Square?" } %>
+                            <%= button_to 'Approve', approve_size_family_path(family, change_id: m[:pending].id), method: :post, class: 'btn-ghost btn-sm', form_class: 'contents', data: { turbo_confirm: "Write #{m[:member].sku} to #{m[:pending].target_quantity} on Square?" } %>
                           <% else %>
                             <span class="pill-rose">Pending</span>
                           <% end %>
@@ -130,7 +130,7 @@
     <div class="card-pad pb-3">
       <%= section_heading 'Pending approvals', hint: 'Derived quantities from the last sync awaiting sign-off before they are written to Square.' do %>
         <% if total_pending.positive? && can_apply %>
-          <%= button_to 'Approve all', approve_all_size_families_path, method: :post, class: 'btn-primary btn-sm', form_class: 'contents', data: { turbo_confirm: 'Write every pending size to Square?' } %>
+          <%= button_to 'Approve all', approve_all_size_families_path, method: :post, class: 'btn-ghost btn-sm', form_class: 'contents', data: { turbo_confirm: 'Write every pending size to Square?' } %>
         <% end %>
       <% end %>
     </div>
@@ -177,7 +177,7 @@
               </td>
               <td class="td text-right">
                 <% if can_apply %>
-                  <%= button_to 'Approve', approve_size_family_path(change.family, change_id: change.id), method: :post, class: 'btn-primary btn-sm', form_class: 'contents', data: { turbo_confirm: "Write #{change.sku} to #{change.target_quantity} on Square?" } %>
+                  <%= button_to 'Approve', approve_size_family_path(change.family, change_id: change.id), method: :post, class: 'btn-ghost btn-sm', form_class: 'contents', data: { turbo_confirm: "Write #{change.sku} to #{change.target_quantity} on Square?" } %>
                 <% end %>
               </td>
             </tr>

@@ -3,7 +3,7 @@
 <% day = (window[:to] || Date.current.iso8601) %>
 <% tabs = [['sales', 'Sales', sales_reports_path(window)], ['sales_tax', 'Sales tax', sales_tax_reports_path(window)],
            ['financial', 'Financial', financial_reports_path(window)], ['inventory', 'Inventory', inventory_reports_path(window)],
-           ['operations', 'Operations', operations_reports_path(window)], ['reconciliation', 'Reconciliation', reconciliation_reports_path(window)],
+           ['operations', 'Operations', operations_reports_path(window)], ['reconciliation', 'Inventory reconciliation', reconciliation_reports_path(window)],
            ['register_summary', 'Register summary', register_summary_reports_path(day: day)]] %>
 <% tabs << ['statements', 'Statements', finance_reports_path(window.slice(:from, :to).compact)] if Current.user&.can?('finance.read') %>
 <div <%= tour_anchor('tabs') %>>

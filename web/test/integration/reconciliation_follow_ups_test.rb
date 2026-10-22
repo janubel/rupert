@@ -14,6 +14,16 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
   end
   teardown { Current.reset }
 
+  test 'the add follow-up form uses the narrow form template with Save and Cancel' do
+    get new_reconciliation_follow_up_path(close_day: '2026-10-14', period_from: '2026-10-14', period_to: '2026-10-14')
+    assert_response :success
+    assert_select 'h1', 'Add follow-up'
+    assert_select 'h1', count: 1
+    assert_select 'input[name="close_day"][value="2026-10-14"]'
+    assert_select '.form-actions input[type="submit"][value="Save"]'
+    assert_select '.form-actions a[href=?]', reconciliation_follow_ups_path, text: 'Cancel'
+  end
+
   test 'tracking and queue progress are local only and validation keeps the user on the form' do
     travel_to Time.zone.parse('2026-10-16 12:00') do
       assert_no_difference 'ActionMailer::Base.deliveries.size' do
@@ -384,7 +394,7 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
       queue = { status: 'overdue', source: 'bank', owner: 'mine', category: 'missing_report', evidence: 'missing', day: '2026-10-14' }
       get reconciliation_follow_ups_path(queue)
       assert_select 'a[href=?]', reconciliation_follow_up_path(item, close_day: '2026-10-14', queue: queue, anchor: 'record-progress'), text: 'Record progress'
-      assert_select 'a[href=?]', overview_reconciliation_follow_ups_path(ending_on: '2026-10-14'), text: 'Across days'
+      assert_select 'a[href=?]', overview_reconciliation_follow_ups_path(ending_on: '2026-10-14'), text: 'Open days'
       get reconciliation_follow_up_path(item, close_day: '2026-10-14', queue: queue)
       assert_select 'a[href=?]', reconciliation_follow_ups_path(queue), text: 'Back to selected queue'
       queue.each { |key, value| assert_select 'input[name=?][value=?]', "queue[#{key}]", value }
@@ -402,7 +412,7 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
           end
           assert_redirected_to reconciliation_follow_ups_path(queue)
           follow_redirect!
-          assert_select 'section[aria-label="Priorities in this filtered view"] article p.font-display', text: '0', count: 2
+          assert_select 'section[aria-label="Priorities in this filtered view"] article p.stat-value-sm', text: '0', count: 2
           assert_includes response.body, 'request may no longer match its filters'
         end
       end
@@ -465,7 +475,7 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
       end
       assert_response :success
       assert_select 'section[aria-label="Priorities in this filtered view"]' do
-        assert_select 'article p.font-display', text: '26', count: 2
+        assert_select 'article p.stat-value-sm', text: '26', count: 2
         assert_select 'a[href=?]', reconciliation_follow_up_path(requests.first, close_day: '2026-10-14', queue: filters, anchor: 'record-progress'), text: 'Work earliest due', count: 2
         assert_select 'a[href=?]', reconciliation_follow_ups_path(filters.merge(day: '2026-10-13')), text: 'Previous day'
         assert_select 'a[href=?]', reconciliation_follow_ups_path(filters.merge(day: '2026-10-15')), text: 'Next day'
@@ -474,8 +484,8 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
       end
       assert_select 'form[role="search"]'
       get reconciliation_follow_ups_path(filters.merge(day: '2026-09-30'))
-      assert_select 'section[aria-label="Priorities in this filtered view"] article p.font-display', text: '0', count: 2
-      assert_includes response.body, 'Check the financial close for untracked missing reports'
+      assert_select 'section[aria-label="Priorities in this filtered view"] article p.stat-value-sm', text: '0', count: 2
+      assert_includes response.body, 'Check the day close for untracked missing reports'
     end
   end
 
@@ -492,11 +502,11 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
       end
       item.update!(status: 'closed', notes: 'Synthetic reviewed exception.')
       get reconciliation_follow_ups_path(status: 'closed')
-      assert_select 'section[aria-label="Priorities in this filtered view"] article p.font-display', text: '0', count: 2
+      assert_select 'section[aria-label="Priorities in this filtered view"] article p.stat-value-sm', text: '0', count: 2
       other = Tenant.create!(name: 'Separate queue', subdomain: 'separate-queue')
       @user.update!(tenant: other)
       get reconciliation_follow_ups_path
-      assert_select 'section[aria-label="Priorities in this filtered view"] article p.font-display', text: '0', count: 2
+      assert_select 'section[aria-label="Priorities in this filtered view"] article p.stat-value-sm', text: '0', count: 2
       refute_includes response.body, item.title
       get reconciliation_follow_ups_path(original: doc.id)
       assert_response :not_found

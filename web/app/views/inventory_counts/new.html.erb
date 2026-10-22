@@ -12,7 +12,7 @@
         <%= label_tag :location_id, 'Platform location for this sheet', class: 'field-label' %>
         <%= select_tag :location_id, options_for_select(@locations.map { |loc| ["#{loc.source.titleize} · #{loc.name}", loc.id] }, count.locationId), include_blank: 'Choose a location', class: 'input' %>
       </div>
-      <div class="toolbar-actions"><%= submit_tag 'Load sheet', class: 'btn-primary', name: nil %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Load sheet', class: 'btn-ghost', name: nil %></div>
     <% end %>
   <% end %>
 

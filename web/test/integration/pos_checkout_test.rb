@@ -21,7 +21,7 @@ class PosCheckoutIntegrationTest < ActionDispatch::IntegrationTest
 
   test 'admins see a card processing banner linking to gateway setup until the gateway is verified' do
     get ctrax_pos_path
-    assert_select '[data-card-processing-banner] a[href=?]', pos_setting_path(@location.id), text: 'Click here to resolve'
+    assert_select '[data-card-processing-banner] a[href=?]', pos_setting_path(@location.id), text: 'Open POS settings'
     get pos_setting_path(@location.id)
     assert_select '[data-card-processing-banner]', false
     PosSetting.where(location: @location).update_all(card_enabled: true, verified_at: Time.current)

@@ -1,2 +1,5 @@
-<% content_for :title, 'Edit receipt details' %>
-<div class="space-y-6"><h1 class="page-title">Edit receipt details</h1><p class="text-sm text-mocha">Save a draft, check the purchase details, then submit it for someone else to review.</p><%= render 'form' %></div>
+<% content_for :title, 'Edit receipt' %>
+<div class="page-narrow space-y-6">
+  <%= page_header 'Edit receipt', subtitle: 'Saves the draft; check the purchase details, then submit it for someone else to review.' %>
+  <%= render 'form' %>
+</div>

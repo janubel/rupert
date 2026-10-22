@@ -122,7 +122,7 @@ class FinanceFlowTest < ActionDispatch::IntegrationTest
 
     get_page finance_vendor_payments_path
     assert_response :success
-    assert_select 'h1', /Payments to vendors/
+    assert_select 'h1', 'Vendor payments'
     assert_select 'td', /Payment Co/
     assert_select 'td', /25\.00/
   end

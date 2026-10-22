@@ -88,7 +88,7 @@
       <%= link_to 'Edit individual permissions', edit_user_path(account), class: 'text-sm text-olive underline' %>
     <% end %>
     <% if Current.user.can_manage_accounts? && Current.user.can?('hr.write') && @employee.active? %>
-      <%= button_to 'Create private setup / reset link', employee_access_path(employee_id: @employee.id), method: :post, class: 'btn-ghost btn-sm' if @employee.email.present? && (!@employee.user || @employee.user.employee?) %>
+      <%= button_to 'Generate setup / reset link', employee_access_path(employee_id: @employee.id), method: :post, class: 'btn-ghost btn-sm' if @employee.email.present? && (!@employee.user || @employee.user.employee?) %>
     <% end %>
   </section>
 

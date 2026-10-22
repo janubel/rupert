@@ -25,7 +25,7 @@ class EmployeePosAccessTest < ActionDispatch::IntegrationTest
     [ctrax_days_path, pos_connection_path('ctrax'), pos_setting_path(@location.id), new_sales_pos_session_path].each do |path|
       assert_select 'a[href=?]', path, count: 0
     end
-    assert_equal %w[ctrax_pos receipts time_clock timesheets], ModuleRegistry.nav_for(@user).map(&:key)
+    assert_equal %w[ctrax_pos receipts time_clock timesheets learning], ModuleRegistry.nav_for(@user).map(&:key)
     get root_path
     assert_redirected_to ctrax_pos_path
     post pos_displays_path, params: { location_id: @location.id, demo: '1' }
@@ -55,7 +55,7 @@ class EmployeePosAccessTest < ActionDispatch::IntegrationTest
     display = PosDisplaySession.create!(user: @user, location: @location)
     get ctrax_pos_path(location_id: @location.id, display_id: display.id)
     assert_response :success
-    assert_select 'nav[aria-label="Retail workspace"] a[aria-current="page"]', 'Retail POS'
+    assert_select 'nav[aria-label="My workspace"] a[aria-current="page"]', 'POS'
     assert_select '#retail-cart form input[value="Complete cash sale"]'
     assert_select 'select[name=register_id][required]'
     assert_includes response.body, 'Ask a manager to open a register'

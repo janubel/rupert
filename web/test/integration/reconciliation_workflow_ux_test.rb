@@ -92,10 +92,10 @@ class ReconciliationWorkflowUxTest < ActionDispatch::IntegrationTest
         assert_no_difference ['ReconciliationFollowUpEvent.count', 'ActionMailer::Base.deliveries.size'] do
           get reconciliation_documents_path(q: 'daily-control')
           assert_response :success
-          assert_select "#evidence-#{@doc.id} h2", text: '4 matching open follow-ups'
+          assert_select "#evidence-#{@doc.id} h4", text: '4 matching open follow-ups'
           assert_select "#evidence-#{@doc.id} a", text: 'Review & link this original', count: 3
           assert_includes response.body, '1 day overdue'
-          assert_select 'a[href=?]', reconciliation_follow_ups_path(original: @doc.id), text: 'See all 4 matching follow-ups'
+          assert_select 'a[href=?]', reconciliation_follow_ups_path(original: @doc.id), text: 'Open all 4 matching follow-ups'
           get reconciliation_follow_ups_path(original: @doc.id)
           assert_response :success
           items.each { |item| assert_includes response.body, item.title }
@@ -113,7 +113,7 @@ class ReconciliationWorkflowUxTest < ActionDispatch::IntegrationTest
       @user.update!(role: 'reporting')
       get reconciliation_documents_path(q: 'daily-control')
       assert_select 'a', text: 'Review & link this original', count: 0
-      assert_select 'a', text: 'View follow-up', count: 3
+      assert_select 'a', text: 'Open follow-up', count: 3
       foreign = Tenant.create!(name: 'Foreign original match', subdomain: 'foreign-original-match')
       @user.update!(tenant: foreign)
       get reconciliation_follow_ups_path(original: @doc.id)

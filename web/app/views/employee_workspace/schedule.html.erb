@@ -1,19 +1,19 @@
 <% content_for :title, 'My schedule' %>
 <% week_hours = @shifts.sum(&:hours) %>
 <%= page_header 'Schedule', subtitle: 'The shifts your manager has planned for you.' do %>
-  <%= link_to 'Request time off', personal_time_off_path(anchor: 'time-off-request'), class: 'text-sm text-olive underline' %>
+  <%= link_to 'Request time off', personal_time_off_path(anchor: 'time-off-request'), class: 'btn-ghost' %>
 <% end %>
 <section class="card card-pad space-y-4">
   <div class="flex items-center justify-between gap-2">
     <%= link_to '←', personal_schedule_path(week: (@week - 7).iso8601), class: 'btn-ghost btn-sm', aria: { label: 'Previous week' } %>
-    <div class="text-center"><h2 class="text-lg font-semibold"><%= @week.strftime('%b %-d') %> – <%= (@week + 6).strftime('%b %-d, %Y') %></h2><p class="text-xs text-mocha"><%= number_with_precision(week_hours, precision: 2, strip_insignificant_zeros: true) %> planned hours<% if @week == Date.current.beginning_of_week %> · This week<% else %> · <%= link_to 'Back to this week', personal_schedule_path, class: 'underline' %><% end %></p></div>
+    <div class="text-center"><h2 class="card-title"><%= @week.strftime('%b %-d') %> – <%= (@week + 6).strftime('%b %-d, %Y') %></h2><p class="text-xs text-mocha"><%= number_with_precision(week_hours, precision: 2, strip_insignificant_zeros: true) %> planned hours<% if @week == Date.current.beginning_of_week %> · This week<% else %> · <%= link_to 'Back to this week', personal_schedule_path, class: 'underline' %><% end %></p></div>
     <%= link_to '→', personal_schedule_path(week: (@week + 7).iso8601), class: 'btn-ghost btn-sm', aria: { label: 'Next week' } %>
   </div>
   <ol class="divide-y divide-fog" aria-label="Shifts this week">
     <% (@week..(@week + 6)).each do |day| %>
       <% day_shifts = @shifts.select { |shift| shift.starts_at.to_date == day } %>
       <% day_leave = @requests.select { |leave| leave.starts_on <= day && leave.ends_on >= day } %>
-      <li class="flex gap-3 py-3 <%= day == Date.current ? 'bg-haze/40 -mx-2 px-2 rounded-lg' : '' %>">
+      <li class="flex gap-3 py-3 <%= day == Date.current ? 'bg-haze/40 -mx-2 px-2 rounded-control' : '' %>">
         <div class="w-14 shrink-0 text-center"><p class="text-xs uppercase text-mocha"><%= day.strftime('%a') %></p><p class="text-lg font-semibold <%= day == Date.current ? 'text-olive' : '' %>"><%= day.day %></p></div>
         <div class="min-w-0 flex-1 space-y-1">
           <% day_shifts.each do |shift| %>

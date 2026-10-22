@@ -32,7 +32,7 @@ class CashFlowPageTest < ActionDispatch::IntegrationTest
     assert_equal 120_000, payload['kpis']['cash_in']['cents']
     assert_equal 'day', payload['range']['bucket']
     assert_select 'nav[aria-label="Module"] a[aria-current=page]', text: 'Cash flow'
-    assert_select 'a.nav-pill', text: 'Last 90 days'
+    assert_select 'nav[aria-label=Period] a.tab', text: 'Last 90 days'
   end
 
   test 'the live refresh returns turbo streams for every region and json is available' do

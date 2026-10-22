@@ -13,7 +13,7 @@ class ShopifyDiscountFlowTest < ActionDispatch::IntegrationTest
 
   test 'operator drafts reviews creates and copies a Shopify influencer offer' do
     get marketing_engagement_path(@engagement)
-    assert_select 'a', text: 'Create Shopify code'
+    assert_select 'a', text: 'Add Shopify code'
     get new_marketing_engagement_shopify_discount_path(@engagement)
     assert_response :success
     assert_select 'input[name="discount[ends_at]"][required]'

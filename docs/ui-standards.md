@@ -84,6 +84,15 @@ one thing, see the state of the business at a glance, and trust the numbers.
   dashboards, `.page-medium` (56rem) for reading and settings, `.page-narrow` (42rem) for forms
   and short detail pages. No other `max-w-*` on page wrappers.
 - **Page help** (`shared/workspace_help`): a quiet line under the page content, not above it.
+- **Status bar** (`.app-statusbar`): one thin strip at the bottom of every page: sync state,
+  Buzz unread badge with the latest message, build. Badges, not popups: a toast appears only
+  for something that needs attention now, and never stacks more than three.
+
+**Display size.** The management app is desktop first and sized large: one width per
+template (the three tiers above), the same on every page of that template, with no per-page
+exceptions. Phones must work (nothing breaks, nothing hides data) but are not the target: the
+mobile app and the Mac dock app are the small-screen experiences. Do not spend effort on
+phone-specific layouts in the management app beyond the drawer and stacking.
 
 Secondary navigation rows inside pages (`operations_navigation`, `retail_navigation`,
 `time_navigation`) are gone: the rail covers every page they listed. In-page **tabs** (`.tabs`)
@@ -155,6 +164,9 @@ Rules that apply to all templates:
 | `.flash-notice`, `.flash-alert` | Result of an action |
 | `.empty-state`, `.empty-state-title`, `.empty-state-hint` | Nothing here yet |
 | `.explainer` | Folded explanation |
+| `.badge`, `.nav-badge` | Unread count on an icon or label; hidden at zero |
+| `.app-statusbar`, `.statusbar-item` | The bottom status bar (sync, Buzz, help, build) |
+| `.toast-stack`, `.toast` | Attention-only popups raised with the `rupert:toast` event; three at most |
 
 Add a component by adding it here, to the stylesheet and to the Style guide, in that order.
 
@@ -234,7 +246,8 @@ Before a page is done:
 4. Labels follow the verb table; sentence case throughout.
 5. It has an empty state and (for forms) field errors.
 6. It renders in Herbal and Dark, at 375px and 1440px, without horizontal scroll.
-7. No `max-w-*` on the wrapper beyond the width tiers; no pixel font sizes; no hex colours.
+7. No `max-w-*` on the wrapper beyond the width tiers; no pixel font sizes; no hex colours;
+   no inline styles except a data-driven width on a meter or chart segment (`style="width: N%"`).
 
 ## 11. How to approach a new screen
 

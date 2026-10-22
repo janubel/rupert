@@ -1,13 +1,15 @@
-<% content_for :title, 'Request a private workspace' %>
-<div class="mx-auto max-w-xl pt-10">
-  <div class="card card-pad space-y-5">
-    <h1 class="page-title">Your company’s Rupert workspace</h1>
-    <p class="text-sm text-mocha">Use a Google account with your company email domain. We verify that email, then the platform owner reviews your request before creating a separate workspace.</p>
-    <p class="rounded-xl bg-haze p-3 text-sm text-mocha">This verifies your email access, not legal ownership of the domain. No payment account, provider connection or DNS configuration is created.</p>
+<%# Workspace request: a Form page (docs/ui-standards.md §4). %>
+<% content_for :title, 'Request a workspace' %>
+<div class="page-narrow space-y-6 pt-6">
+  <%= page_header 'Request a workspace', subtitle: 'Use a Google account with your company email domain; the platform owner reviews your request before creating a separate workspace.', eyebrow: 'Rupert' %>
+  <%= fold_explainer('We verify that you can receive email at this domain, not legal ownership of the domain. No payment account, provider connection or DNS configuration is created. Referral attribution: ' + WorkspaceSignup::REFERRAL_DOMAIN + '. This label grants the referrer no access to your workspace.', class: 'text-sm text-mocha') %>
+
+  <%= form_with scope: :workspace_signup, url: signup_path, method: :post, data: { turbo: false }, class: 'card card-pad space-y-4' do |f| %>
     <% if @signup.errors.any? %>
-      <div role="alert" class="rounded-xl bg-red-50 p-3 text-sm text-red-800"><%= @signup.errors.full_messages.to_sentence %></div>
+      <div role="alert" class="flash flash-alert"><%= @signup.errors.full_messages.to_sentence %></div>
     <% end %>
-    <%= form_with scope: :workspace_signup, url: signup_path, method: :post, data: { turbo: false }, class: 'space-y-4' do |f| %>
+    <fieldset class="space-y-3">
+      <legend class="card-title">Your company</legend>
       <div>
         <%= f.label :workspace_name, 'Company / workspace name', class: 'field-label' %>
         <%= f.text_field :workspace_name, value: @signup.workspace_name, required: true, maxlength: 160, class: 'input' %>
@@ -22,9 +24,10 @@
         <%= f.text_field :requested_subdomain, value: @signup.requested_subdomain, placeholder: 'your-company', required: true, minlength: 2, maxlength: 63, pattern: '[a-z0-9][a-z0-9\-]*[a-z0-9]', class: 'input', autocapitalize: 'none', spellcheck: false %>
         <p class="mt-1 text-xs text-mocha">Choose 2–63 lowercase letters, numbers or hyphens. A requested name does not create a working hostname.</p>
       </div>
-      <p class="text-xs text-mocha">Referral attribution: <%= WorkspaceSignup::REFERRAL_DOMAIN %>. This label grants the referrer no access to your workspace.</p>
+    </fieldset>
+    <div class="form-actions">
       <%= f.submit 'Verify company email with Google', class: 'btn-primary' %>
-    <% end %>
-    <%= link_to 'Already have an account? Sign in', login_path, class: 'text-sm underline' %>
-  </div>
+      <%= link_to 'Sign in instead', login_path, class: 'btn-ghost' %>
+    </div>
+  <% end %>
 </div>

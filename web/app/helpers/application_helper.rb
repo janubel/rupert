@@ -13,6 +13,12 @@ module ApplicationHelper
     @ask_rupert_available = !!(user&.active? && !user.employee? && user.can?('chat.use') && Current.tenant_id == user.tenant_id && AskRupert::Config.current.enabled?)
   end
 
+  # The Buzz unread badge polls the team chat; same people who may read it.
+  def buzz_badge_available?
+    user = Current.user
+    !!(user&.active? && !user.employee? && user.can?('buzz.read') && Current.tenant_id == user.tenant_id)
+  end
+
   # --- Module-area navigation helpers (see ModuleRegistry) ---
 
   def nav_areas
