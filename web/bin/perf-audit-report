@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Ranks the page audit written by PERF_AUDIT=1 bin/rails test (test/support/performance_audit.rb).
+require 'json'
+
+rows = Dir[File.expand_path('../tmp/perf_audit/*.jsonl', __dir__)].flat_map { |file| File.readlines(file).map { |line| JSON.parse(line) } }
+abort 'No audit data: run PERF_AUDIT=1 bin/rails test first.' if rows.empty?
+
+html = rows.select { |row| [nil, 'html', 'turbo_stream', '*/*'].include?(row['format']) && row['status'].to_i < 400 }
+by_action = html.group_by { |row| row['action'] }.map do |action, list|
+  worst = list.max_by { |row| row['queries'] }
+  n_plus_one = list.each_with_object(Hash.new(0)) { |row, sum| row['n_plus_one'].each { |key, count| sum[key] += count } }
+  { action: action, hits: list.size, max_queries: worst['queries'], max_ms: list.map { |row| row['ms'] }.max,
+    repeats: list.map { |row| row['repeats'] }.max, repeated: list.max_by { |row| row['repeats'] }['repeated'], n_plus_one: n_plus_one }
+end
+
+limit = (ARGV[0] || 40).to_i
+puts format('%-58s %5s %6s %6s %5s', 'action', 'hits', 'maxQ', 'maxMs', 'rep')
+by_action.sort_by { |row| -row[:max_queries] }.first(limit).each do |row|
+  puts format('%-58s %5d %6d %6.0f %5d', row[:action].to_s[0, 58], row[:hits], row[:max_queries], row[:max_ms], row[:repeats])
+end
+puts "\nMost repeated statements (N+1 shape, >= 5 in one request):"
+by_action.select { |row| row[:repeats] >= 5 }.sort_by { |row| -row[:repeats] }.first(limit).each do |row|
+  puts "  #{row[:repeats]}x #{row[:action]}: #{row[:repeated]}"
+end
+puts "\nRails N+1 warnings (strict loading):"
+by_action.reject { |row| row[:n_plus_one].empty? }.sort_by { |row| -row[:n_plus_one].values.sum }.first(limit).each do |row|
+  puts "  #{row[:action]}: #{row[:n_plus_one].sort_by { |_key, count| -count }.first(4).map { |key, count| "#{key} x#{count}" }.join(', ')}"
+end
+puts "\n#{by_action.size} actions, #{html.size} requests audited."
