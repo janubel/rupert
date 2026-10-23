@@ -554,6 +554,29 @@ are added, currencies converted or new financial calculations performed here.
 Replies contain at most twelve complete facts and explicitly disclose omissions.
 
 
+## Bounded cloud generation retries
+
+The native cloud agent may reserve one additional generation per durable run after
+an explicit HTTP 429, 500, 502, 503, 504 or 529 refusal, only before any streamed chunk.
+The SDK's automatic retry remains disabled when the agent supplies its remaining
+whole-run budget. Network timeouts/connection failures, malformed requests, authorization
+or billing errors, partially streamed responses and local model cold starts do not retry.
+
+The default wait is half a second. A valid Retry-After delay or HTTP date is honored
+only within five seconds and with at least one further second in the run budget.
+Invalid or longer hints fail normally. The wait polls current permissions, cancellation,
+claim ownership and deadlines. Each request is rebuilt from the durable transcript with
+a fresh remaining timeout; tools from a completed round are not repeated. Reservation
+is recorded before waiting and survives worker recovery, preventing a fresh allowance
+on each restart. This does not imply exactly-once provider billing.
+
+Telemetry keeps each physical provider attempt, its failed/successful outcome and nullable
+usage/cost. `generation_retry_reservations` counts durable reservations, including a retry
+cancelled before it starts; `provider_attempts` remains the actual observed attempt count.
+`transport_retries` continues to describe SDK retries within a generation; `retry_wait`
+records actual backoff duration and completion/interruption separately. No exception
+messages, provider bodies, conversation text or credentials enter retry facts.
+
 ## Durable chat telemetry
 
 `chat_telemetry` is the private operational ledger for new chat runs. It is tenant scoped,
@@ -601,25 +624,18 @@ partial token totals and per-field completeness, reported USD cost and cost comp
 Do not sum nested execution/generation/inference timings as elapsed time, or interpret
 `failed_spans` (which includes nested receipts) as a count of failed replies.
 
-## Bounded cloud generation retries
+## Assistant destination links
 
-The native cloud agent may reserve one additional generation per durable run after
-an explicit HTTP 429, 500, 502, 503, 504 or 529 refusal, only before any streamed chunk.
-The SDK's automatic retry remains disabled when the agent supplies its remaining
-whole-run budget. Network timeouts/connection failures, malformed requests, authorization
-or billing errors, partially streamed responses and local model cold starts do not retry.
+Model output is checked before each saved streaming draft and final reply. A GET route
+alone is insufficient: page-guide destinations require current permission, record links
+require the record policy and tenant, and chat files require current source-room access.
+Retained approval links must match the task in the executed receipt. Unknown destinations
+lose their active link while retaining the label. This does not replace controller checks
+or authorize disclosure of page contents.
 
-The default wait is half a second. A valid Retry-After delay or HTTP date is honored
-only within five seconds and with at least one further second in the run budget.
-Invalid or longer hints fail normally. The wait polls current permissions, cancellation,
-claim ownership and deadlines. Each request is rebuilt from the durable transcript with
-a fresh remaining timeout; tools from a completed round are not repeated. Reservation
-is recorded before waiting and survives worker recovery, preventing a fresh allowance
-on each restart. This does not imply exactly-once provider billing.
-
-Telemetry keeps each physical provider attempt, its failed/successful outcome and nullable
-usage/cost. `generation_retry_reservations` counts durable reservations, including a retry
-cancelled before it starts; `provider_attempts` remains the actual observed attempt count.
-`transport_retries` continues to describe SDK retries within a generation; `retry_wait`
-records actual backoff duration and completion/interruption separately. No exception
-messages, provider bodies, conversation text or credentials enter retry facts.
+Same-instance absolute URLs are converted to checked relative links. Other absolute
+addresses stay readable without becoming clickable; code spans remain literal. Encoded
+paths, authority-relative addresses and dot segments cannot bypass destination checks.
+Resumed drafts are checked before inference resumes. Each publication reloads the user;
+the ordinary durable execution fence still enforces permission revocation, cancellation,
+deadlines and claim ownership at the write boundary. Human messages are unaffected.

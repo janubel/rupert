@@ -58,6 +58,18 @@ class TeamChatGenerationRetryTest < ActiveSupport::TestCase
     assert_not_includes TeamChat::Telemetry.where(run_id: @run.id).map(&:facts).to_json, 'private provider detail'
   end
 
+  test 'a recovered provider response still filters destinations using current requester access' do
+    @user.update_permission_overrides!(%w[settings.write dashboard.read])
+    @reply = TeamChat::Post.call(room: @room, user: @user, body: '@rupert help me navigate payroll and explain it').reply
+    @run = @reply.run
+    request = endpoint(refusal, success('Open [Payroll](/people/pay_runs) or [Home](/).'))
+    answer
+    assert_requested request, times: 2
+    assert_equal 'succeeded', @run.reload.state
+    assert_equal 'Open Payroll or [Home](/).', @reply.reload.body
+    assert_equal 1, TeamChat::Telemetry.summary(@run)['generation_retry_reservations']
+  end
+
   test 'repeated refusals exhaust one durable allowance rather than looping' do
     request = endpoint(refusal)
     answer
