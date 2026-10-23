@@ -10,10 +10,10 @@ class PageBudgetTest < ActionDispatch::IntegrationTest
   SHELL = 14 # queries any signed-in page may spend on the shell (user, permissions, status bar, rail)
 
   BUDGETS = {
-    '/' => 45, '/sales' => 40, '/inventory' => 40, '/customers' => 35, '/bookkeeping' => 45,
-    '/finance/expenses' => 35, '/finance/cash_flow' => 45, '/people/employees' => 35, '/people/team_schedule' => 30,
-    '/people/scheduled_shifts' => 30, '/people/timesheets' => 50, '/projects/tasks' => 35, '/connections' => 90,
-    '/system' => 45, '/notifications' => SHELL + 6, '/books_desk' => 120, '/reports' => 40
+    root_path: 45, sales_path: 40, inventory_index_path: 40, customers_path: 35, bookkeeping_path: 45,
+    finance_expenses_path: 35, finance_cash_flow_path: 45, people_employees_path: 35, people_team_schedule_path: 30,
+    people_scheduled_shifts_path: 30, people_timesheets_path: 50, projects_tasks_path: 35, connections_path: 90,
+    system_path: 45, notifications_path: SHELL + 6, books_desk_path: 120, reports_path: 40
   }.freeze
 
   setup do
@@ -23,11 +23,14 @@ class PageBudgetTest < ActionDispatch::IntegrationTest
   end
 
   test 'main pages stay within their query budget' do
-    over = BUDGETS.filter_map do |path, budget|
-      count = count_queries { get path }
+    counts = {}
+    over = BUDGETS.filter_map do |helper, budget|
+      path = public_send(helper)
+      count = counts[path] = count_queries { get path }
       assert_includes [200, 302], response.status, "#{path} answered #{response.status}"
       "#{path}: #{count} queries (budget #{budget})" if count > budget
     end
+    puts counts.map { |path, count| "#{path} #{count}" }.join(' · ') if ENV['BUDGET_REPORT'] == '1'
     assert_empty over, "Pages over budget:\n#{over.join("\n")}"
   end
 
