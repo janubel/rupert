@@ -21,7 +21,7 @@ module PerformanceAudit
     FileUtils.mkdir_p(DIR)
     ActiveRecord::Base.strict_loading_by_default = true
     ActiveRecord::Base.strict_loading_mode = :n_plus_one_only
-    ActiveRecord::Base.action_on_strict_loading_violation = :log
+    ActiveRecord.action_on_strict_loading_violation = :log
 
     ActiveSupport::Notifications.subscribe('start_processing.action_controller') do |*_args|
       Thread.current[:perf_audit] = { queries: 0, statements: Hash.new(0), n_plus_one: Hash.new(0) }
