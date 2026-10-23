@@ -4,8 +4,23 @@
 # columns, sort by a heading, narrow rows and download what they see. See
 # app/javascript/controllers/report_table_controller.js.
 module ReportTableHelper
-  def report_table(key, label:, filename: nil, sortable: true, &block)
-    render('shared/report_table', key: key, label: label, filename: filename || key, sortable: sortable, table: capture(&block))
+  # filter: false drops the "Narrow rows" box (when a server search already
+  # narrows the page); download: false drops "Download view" (when the page
+  # header already offers the full CSV).
+  def report_table(key, label:, filename: nil, sortable: true, filter: true, download: true, &block)
+    render('shared/report_table', key: key, label: label, filename: filename || key, sortable: sortable,
+      filter: filter, download: download, table: capture(&block))
+  end
+
+  # Spreadsheet view (docs/ui-standards.md §5 "Data grid"): dense rows, sticky
+  # header row and first column, Columns chooser, click-to-sort headings,
+  # arrow-key cell movement and Download CSV. Pass csv_path to download every
+  # matching row from the server with the visible columns (headings carry
+  # data-csv keys); without it the CSV is built in the browser from the rows
+  # and columns on screen. Read-only.
+  def data_grid(key, label:, csv_path: nil, filename: nil, filter: false, &block)
+    render('shared/data_grid', key: key, label: label, csv_path: csv_path, filename: filename || key,
+      filter: filter, table: capture(&block))
   end
 
   # Date window carried between report tabs: explicit dates when chosen,

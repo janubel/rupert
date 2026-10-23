@@ -118,6 +118,26 @@
     </article>
 
     <article class="section-card">
+      <%= section_heading 'Data grid', hint: 'The spreadsheet view: dense rows, frozen header and first column, Columns, sort by heading, arrow keys between cells, Download CSV. Read-only; offered as List · Grid tabs beside a list.', level: :h3 %>
+      <%= page_tabs([['List', '#', false], ['Grid', '#', true]], label: 'Sample view switch') %>
+      <div class="card overflow-hidden">
+        <%= data_grid 'style-guide-grid', label: 'Sample stock grid', filename: 'sample-grid' do %>
+          <table class="data-grid-table">
+            <thead><tr><th scope="col" data-col="item">Item</th><th scope="col" data-col="location">Location</th><th scope="col" class="num" data-col="promise">Available to promise</th><th scope="col" data-col="state">Stock state</th><th scope="col" class="num" data-col="mirror">Mirror quantity</th><th scope="col" class="num" data-col="held">Local holds</th><th scope="col" data-col="read" data-default-hidden>Stock read</th></tr></thead>
+            <tbody>
+              <% [['CBD tincture 1000mg · 30ml', 'Downtown', 14, nil, 16, 2, 'Oct 21, 3:40 PM'],
+                  ['Hemp flower · 3.5g', 'Downtown', 3, ['pill-clay', 'Low'], 3, 0, 'Oct 21, 3:40 PM'],
+                  ['Calm gummies · 30ct', 'Online', 0, ['pill-rose', 'Oversold'], -2, 0, 'Oct 21, 3:38 PM'],
+                  ['Relief balm · 2oz', 'Online', 0, ['pill-taupe', 'Stock unknown'], nil, 0, 'Oct 20, 9:12 AM']].each do |item, location, promise, state, mirror, held, read| %>
+                <tr><td><%= item %></td><td><%= location %></td><td class="num font-semibold"><%= promise %></td><td><span class="<%= state&.first || 'pill-fern' %>"><%= state&.last || 'Available' %></span></td><td class="num<%= ' data-grid-negative' if mirror.to_i.negative? %>"><%= signed_stock(mirror) %></td><td class="num"><%= held %></td><td><%= read %></td></tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% end %>
+      </div>
+    </article>
+
+    <article class="section-card">
       <%= section_heading 'Badges, status bar and toasts', hint: 'Badges, not popups: a toast only when something needs attention now.', level: :h3 %>
       <div class="flex flex-wrap items-center gap-4">
         <span class="relative inline-flex"><span class="nav-utility" aria-hidden="true"><%= navigation_icon('chat') %></span><span class="badge nav-badge">3</span></span>

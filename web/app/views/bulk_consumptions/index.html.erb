@@ -2,11 +2,13 @@
 <div class="space-y-6">
   <%= page_header 'Material use', subtitle: 'Imported Shopify sale lines and the material used for each.', menu: [['Download CSV', export_bulk_consumptions_path(from: @from.iso8601, to: @to.iso8601)]] %>
 
-  <%= form_with url: bulk_consumptions_path, method: :get, class: 'toolbar' do |f| %>
-    <div class="toolbar-field"><%= f.label :from, 'From', class: 'field-label' %><%= f.date_field :from, value: @from, class: 'input' %></div>
-    <div class="toolbar-field"><%= f.label :to, 'Through', class: 'field-label' %><%= f.date_field :to, value: @to, class: 'input' %></div>
-    <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', bulk_consumptions_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <div class="toolbar-band">
+    <%= form_with url: bulk_consumptions_path, method: :get, class: 'toolbar' do |f| %>
+      <div class="toolbar-field"><%= f.label :from, 'From', class: 'field-label' %><%= f.date_field :from, value: @from, class: 'input' %></div>
+      <div class="toolbar-field"><%= f.label :to, 'Through', class: 'field-label' %><%= f.date_field :to, value: @to, class: 'input' %></div>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', bulk_consumptions_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </div>
   <p class="text-xs text-taupe">Windows run 1–31 days. The CSV in More covers receipts recorded in the selected dates.</p>
 
   <div class="card overflow-hidden">

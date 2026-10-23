@@ -25,7 +25,8 @@ class InventoryController < AuthenticatedController
         filename: "shopify-ctrax-stock-#{Time.current.strftime('%Y-%m-%d-%H%M')}.pdf",
         type: 'application/pdf', disposition: 'attachment'
     else
-      @pagy, @rows = pagy(:offset, @comparison.rows, limit: 50)
+      @view = remembered_view(:stock_comparison_view)
+      @pagy, @rows = pagy(:offset, @comparison.rows, limit: @view == 'grid' ? 200 : 50)
       render 'stock_comparisons/index'
     end
   end
@@ -44,23 +45,27 @@ class InventoryController < AuthenticatedController
     end
     if request.format.csv?
       # Read stock in bounded batches, including pools beyond the displayed page.
+      # columns= (from the grid's Columns chooser) picks and orders the columns;
+      # without it the historical column set is kept.
       log_export('Inventory pool CSV')
-      headers = ['Source', 'Location', 'Item', 'Native ID', 'Mirror quantity', 'Mirror available', 'Local holds', 'Warehouse holds', 'Available to promise', 'Incoming', 'Waiting backorders', 'Read at']
+      keys = inventory_csv_columns
       csv = CSV.generate do |out|
-        out << headers
+        out << keys.map { |key| StockHelper::INVENTORY_COLUMNS.fetch(key).last }
         scope.reorder(:id).find_in_batches(batch_size: 500) do |levels|
           InventoryWorkspace.new(levels).rows.each do |row|
-            out << [row[:level].source, row[:level].location&.name, row[:label], row[:native_id], row[:mirror_quantity], row[:available], row[:held], row[:warehouse], row[:promise], row[:incoming], row[:demand], row[:level].updatedAt.iso8601].map { |value| value.is_a?(String) ? FinanceHelper.csv_safe(value) : value }
+            out << keys.map { |key| helpers.inventory_cell(row, key) }.map { |value| value.is_a?(String) ? FinanceHelper.csv_safe(value) : value }
           end
         end
       end
       send_data csv, filename: "inventory-pools-#{Date.current.iso8601}.csv", type: 'text/csv'
     else
+      @view = remembered_view(:inventory_view)
       @counts = InventoryCount.where(status: 'pending').count
       @transfers = StockRequest.where(request_kind: 'transfer', status: %w[allocated dispatched]).count
       @backorders = StockRequest.where(request_kind: 'backorder', status: 'pending').count
       @reservations = StockReservation.active_at.count
-      @pagy, levels = pagy(:offset, scope, limit: 50)
+      # The grid is for scanning many rows at once; the list stays short.
+      @pagy, levels = pagy(:offset, scope, limit: @view == 'grid' ? 200 : 50)
       @rows = InventoryWorkspace.new(levels.to_a).rows
     end
   end
@@ -108,6 +113,25 @@ class InventoryController < AuthenticatedController
   end
 
   private
+
+  INVENTORY_VIEWS = %w[list grid].freeze
+  INVENTORY_CSV_DEFAULT = %w[source location item native_id mirror_quantity mirror_available local_holds warehouse_holds
+    promise incoming backorders read_at].freeze
+
+  # List or Grid: the URL wins, then the last choice in this browser.
+  def remembered_view(cookie)
+    if INVENTORY_VIEWS.include?(params[:view])
+      cookies[cookie] = { value: params[:view], expires: 1.year, same_site: :lax, httponly: true }
+      params[:view]
+    else
+      INVENTORY_VIEWS.include?(cookies[cookie]) ? cookies[cookie] : 'list'
+    end
+  end
+
+  def inventory_csv_columns
+    requested = params[:columns].to_s.split(',').map(&:strip) & StockHelper::INVENTORY_COLUMNS.keys
+    requested.presence || INVENTORY_CSV_DEFAULT
+  end
 
   def authorize_read
     authorize(:module, :inventory_read?)

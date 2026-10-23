@@ -18,7 +18,7 @@
               <td class="td font-medium text-ink"><% if reservation.stock_request %><%= link_to reservation.reference, reservation.stock_request, class: 'hover:underline' %><% else %><%= reservation.reference %><% end %></td>
               <td class="td"><%= pool.item_label %><p class="text-xs text-taupe"><%= pool.source.capitalize %></p></td>
               <td class="td"><%= pool.location_name %></td>
-              <td class="td num"><%= reservation.quantity %></td>
+              <td class="td num font-semibold text-ink"><%= reservation.quantity %></td>
               <td class="td"><span class="<%= status == 'active' ? 'pill-fern' : status == 'expired' ? 'pill-clay' : 'pill-taupe' %>"><%= status.capitalize %></span></td>
               <td class="td"><%= reservation.expires_at ? l(reservation.expires_at, format: :short) : 'No expiry' %></td>
               <td class="td text-xs"><%= reservation.created_by %><br><%= l(reservation.created_at, format: :short) %><% if reservation.released_by %><br>Released by <%= reservation.released_by %><% end %></td>

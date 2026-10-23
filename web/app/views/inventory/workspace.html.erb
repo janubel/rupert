@@ -1,7 +1,7 @@
 <% content_for :title, 'Inventory' %>
-<% csv_path = workspace_inventory_index_path(request.query_parameters.except('page').merge(format: :csv)) %>
+<% csv_path = workspace_inventory_index_path(request.query_parameters.except('page', 'view', 'columns', 'format').to_h.symbolize_keys.merge(format: :csv)) %>
 <div class="space-y-6">
-  <%= page_header 'Inventory', subtitle: 'Stock by item, source and location.',
+  <%= page_header 'Inventory', subtitle: 'What you can sell at each location, and how fresh each read is.',
         menu: [['Download CSV', csv_path],
                ['Download snapshot PDF', pdf_inventory_index_path, { data: { turbo: false } }],
                ['Download store comparison PDF', stock_comparison_path(format: :pdf), { data: { turbo: false } }]] do %>
@@ -21,51 +21,125 @@
     <% end %>
   </section>
 
-  <%= form_with url: workspace_inventory_index_path, method: :get, class: 'toolbar' do %>
-    <div class="toolbar-field"><%= label_tag :q, 'Search', class: 'field-label' %><%= search_field_tag :q, params[:q], class: 'input', placeholder: 'SKU or item' %></div>
-    <div class="toolbar-field"><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['Shopify', 'shopify'], ['Square', 'square']], params[:source]), include_blank: 'All sources', class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :location_id, 'Location', class: 'field-label' %><%= select_tag :location_id, options_from_collection_for_select(@locations, :id, :name, params[:location_id]), include_blank: 'All locations', class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :sort, 'Sort', class: 'field-label' %><%= select_tag :sort, options_for_select([['Item / location', 'item'], ['Lowest mirrored available', 'low'], ['Oldest stock read', 'oldest']], params[:sort]), class: 'input' %></div>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', workspace_inventory_index_path, class: 'btn-ghost' %></div>
-  <% end %>
-
-  <p class="text-xs text-taupe"><%= @pagy.count %> mirrored pools · <%= @rows.size %> on this page.</p>
-
-  <div class="card overflow-hidden">
-    <div class="table-region" role="region" tabindex="0" aria-label="Mirrored stock pools">
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col" class="th">Item / native ID</th>
-            <th scope="col" class="th">Source / location</th>
-            <% ['Mirror quantity', 'Mirror available', 'Local holds', 'Warehouse holds', 'Available to promise', 'Incoming', 'Backorder demand'].each do |label| %><th scope="col" class="th num"><%= label %></th><% end %>
-            <th scope="col" class="th">Stock read</th>
-            <th scope="col" class="th"><span class="sr-only">Actions</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @rows.each do |row| %><% level = row[:level] %>
-            <tr>
-              <td class="td"><% if level.source == 'shopify' && row[:native_id] %><%= link_to row[:label], shopify_variant_path(row[:native_id]), class: 'font-medium text-ink hover:underline' %><% else %><span class="font-medium text-ink"><%= row[:label] %></span><% end %><p class="break-all text-xs text-taupe"><%= row[:native_id] %></p></td>
-              <td class="td"><%= level.source.capitalize %><p class="text-xs text-taupe"><%= level.location&.name || 'Missing location' %></p></td>
-              <% [:mirror_quantity, :available, :held, :warehouse, :promise, :incoming, :demand].each do |key| %><td class="td num"><%= row[key].nil? ? 'Unknown' : row[key] %></td><% end %>
-              <td class="td text-xs whitespace-nowrap"><%= l(level.updatedAt, format: :short) %><br><span class="<%= row[:fresh] ? 'pill-fern' : 'pill-clay' %>"><%= row[:fresh] ? 'Current' : 'Review' %></span></td>
-              <td class="td">
-                <% if Current.user.can?('inventory.write') %>
-                  <div class="flex flex-col gap-1 text-sm">
-                    <%= link_to 'Reserve', new_stock_reservation_path(inventory_level_id: level.id), class: 'text-olive-deep hover:underline' %>
-                    <%= link_to 'Transfer', new_stock_request_path(kind: 'transfer', inventory_level_id: level.id), class: 'text-olive-deep hover:underline' %>
-                    <%= link_to 'Backorder', new_stock_request_path(kind: 'backorder', inventory_level_id: level.id), class: 'text-olive-deep hover:underline' %>
-                  </div>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-          <% if @rows.empty? %><tr><td colspan="11" class="empty-row">No mirrored pools match. Sync connected source stock, or clear these filters.</td></tr><% end %>
-        </tbody>
-      </table>
-    </div>
+  <% filters = request.query_parameters.except('page', 'view', 'columns', 'format').to_h.symbolize_keys %>
+  <% grid = @view == 'grid' %>
+  <% can_write = Current.user.can?('inventory.write') %>
+  <div class="toolbar-band">
+    <%= form_with url: workspace_inventory_index_path, method: :get, class: 'toolbar' do %>
+      <%= hidden_field_tag :view, @view, id: nil %>
+      <div class="toolbar-field"><%= label_tag :q, 'Search', class: 'field-label' %><%= search_field_tag :q, params[:q], class: 'input', placeholder: 'SKU or item' %></div>
+      <div class="toolbar-field"><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['Shopify', 'shopify'], ['Square', 'square']], params[:source]), include_blank: 'All sources', class: 'input' %></div>
+      <div class="toolbar-field"><%= label_tag :location_id, 'Location', class: 'field-label' %><%= select_tag :location_id, options_from_collection_for_select(@locations, :id, :name, params[:location_id]), include_blank: 'All locations', class: 'input' %></div>
+      <div class="toolbar-field"><%= label_tag :sort, 'Sort', class: 'field-label' %><%= select_tag :sort, options_for_select([['Item / location', 'item'], ['Lowest mirrored available', 'low'], ['Oldest stock read', 'oldest']], params[:sort]), class: 'input' %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', workspace_inventory_index_path, class: 'btn-ghost' %></div>
+    <% end %>
   </div>
+
+  <div class="stock-viewbar">
+    <p class="text-sm text-mocha"><strong class="text-ink"><%= @pagy.count %></strong> mirrored <%= 'pool'.pluralize(@pagy.count) %><% if @pagy.pages > 1 %> · <%= @pagy.from %>–<%= @pagy.to %> shown<% end %></p>
+    <%= page_tabs([['List', workspace_inventory_index_path(filters.merge(view: 'list')), !grid], ['Grid', workspace_inventory_index_path(filters.merge(view: 'grid')), grid]], label: 'Inventory view') %>
+  </div>
+
+  <% if grid %>
+    <div class="card overflow-hidden">
+      <%= data_grid 'inventory-grid', label: 'Inventory grid', csv_path: workspace_inventory_index_path(filters.merge(format: :csv)), filename: 'inventory-pools' do %>
+        <table class="data-grid-table">
+          <thead>
+            <tr>
+              <% StockHelper::INVENTORY_COLUMNS.each do |key, (label, _csv)| %>
+                <th scope="col" class="<%= 'num' unless %w[item native_id source location state read_at freshness].include?(key) %>" data-col="<%= key %>" data-csv="<%= key %>"<%= ' data-default-hidden' if key == 'native_id' %>><%= label %></th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @rows.each do |row| %><% level = row[:level] %>
+              <tr>
+                <% StockHelper::INVENTORY_COLUMNS.each_key do |key| %>
+                  <% value = inventory_cell(row, key) %>
+                  <% case key when 'item' %>
+                    <td title="<%= row[:label] %>"><% if level.source == 'shopify' && row[:native_id] %><%= link_to row[:label], shopify_variant_path(row[:native_id]) %><% else %><%= row[:label] %><% end %></td>
+                  <% when 'native_id' %>
+                    <td class="font-mono"><%= value || '—' %></td>
+                  <% when 'location' %>
+                    <td><%= value || 'Missing location' %></td>
+                  <% when 'state', 'freshness' %>
+                    <% pill = key == 'state' ? (stock_promise_state(row)&.first || 'pill-fern') : stock_freshness(row).first %>
+                    <td><span class="<%= pill %>"><%= value %></span></td>
+                  <% when 'read_at' %>
+                    <td data-sort-value="<%= value %>" data-export="<%= value %>"><%= l(level.updatedAt, format: :short) %></td>
+                  <% when 'mirror_quantity', 'mirror_available' %>
+                    <td class="num<%= ' data-grid-negative' if value.to_i.negative? %>" data-sort-value="<%= value %>"><%= signed_stock(value) %></td>
+                  <% when 'promise' %>
+                    <td class="num font-semibold" data-sort-value="<%= value %>"><%= value %></td>
+                  <% when 'source' %>
+                    <td><%= value %></td>
+                  <% else %>
+                    <td class="num" data-sort-value="<%= value %>"><%= value %></td>
+                  <% end %>
+                <% end %>
+              </tr>
+            <% end %>
+            <% if @rows.empty? %><tr><td colspan="<%= StockHelper::INVENTORY_COLUMNS.size %>" class="empty-row">No mirrored pools match. <%= link_to 'Clear the filters', workspace_inventory_index_path(view: 'grid'), class: 'font-semibold text-olive-deep underline' %> or sync source stock.</td></tr><% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </div>
+  <% else %>
+    <% secondary = [[:mirror_quantity, 'Mirror quantity'], [:available, 'Mirror available'], [:held, 'Local holds'], [:warehouse, 'Warehouse holds'], [:incoming, 'Incoming'], [:demand, 'Backorder demand']] %>
+    <div class="card overflow-hidden">
+      <%= report_table 'inventory-pools', label: 'Mirrored stock pools', filter: false, download: false do %>
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col" class="th" data-col="item">Item</th>
+              <th scope="col" class="th" data-col="where">Location / source</th>
+              <th scope="col" class="th num" data-col="promise">Available to promise</th>
+              <% secondary.each do |key, label| %><th scope="col" class="th num" data-col="<%= key %>" data-default-hidden><%= label %></th><% end %>
+              <th scope="col" class="th" data-col="read">Stock read</th>
+              <% if can_write %><th scope="col" class="th" data-col="actions" data-label="Actions" data-no-sort><span class="sr-only">Actions</span></th><% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @rows.each do |row| %><% level = row[:level] %>
+              <% state = stock_promise_state(row) %>
+              <% notes = [] %>
+              <% notes << "#{row[:held] + row[:warehouse]} held" if (row[:held] + row[:warehouse]).positive? %>
+              <% notes << "#{row[:incoming]} incoming" if row[:incoming].positive? %>
+              <% notes << "#{row[:demand]} on backorder" if row[:demand].positive? %>
+              <tr>
+                <td class="td" data-sort-value="<%= stock_item_name(row) %>">
+                  <div class="stock-item">
+                    <%= stock_thumbnail(row) %>
+                    <div class="min-w-0">
+                      <p class="stock-item-name"><% if level.source == 'shopify' && row[:native_id] %><%= link_to stock_item_name(row), shopify_variant_path(row[:native_id]), class: 'hover:underline' %><% else %><%= stock_item_name(row) %><% end %></p>
+                      <p class="stock-item-meta"><%= stock_item_sku(row) || 'No SKU' %><% if row[:native_id] %> · <span class="font-mono"><%= row[:native_id] %></span><% end %></p>
+                    </div>
+                  </div>
+                </td>
+                <td class="td" data-sort-value="<%= level.location&.name %>"><p class="text-ink"><%= level.location&.name || 'Missing location' %></p><p class="text-xs text-taupe"><%= level.source.capitalize %></p></td>
+                <td class="td num" data-sort-value="<%= row[:promise] %>">
+                  <div class="stock-promise"><% if state %><span class="<%= state.first %>"><%= state.last %></span><% end %><span class="stock-figure"><%= row[:promise] %></span></div>
+                  <% if notes.any? %><p class="stock-figure-note"><%= notes.join(' · ') %></p><% end %>
+                </td>
+                <% secondary.each do |key, _label| %><td class="td num text-mocha" data-sort-value="<%= row[key] %>"><%= signed_stock(row[key]) %></td><% end %>
+                <td class="td whitespace-nowrap" data-sort-value="<%= level.updatedAt&.iso8601 %>"><% fresh = stock_freshness(row) %><span class="<%= fresh.first %>"><%= fresh.last %></span><p class="mt-1 text-xs text-taupe"><%= l(level.updatedAt, format: :short) %></p></td>
+                <% if can_write %>
+                  <td class="td">
+                    <div class="stock-row-actions">
+                      <%= link_to 'Reserve', new_stock_reservation_path(inventory_level_id: level.id) %>
+                      <%= link_to 'Transfer', new_stock_request_path(kind: 'transfer', inventory_level_id: level.id) %>
+                      <%= link_to 'Backorder', new_stock_request_path(kind: 'backorder', inventory_level_id: level.id) %>
+                    </div>
+                  </td>
+                <% end %>
+              </tr>
+            <% end %>
+            <% if @rows.empty? %><tr><td colspan="<%= 4 + secondary.size + (can_write ? 1 : 0) %>" class="empty-row">No mirrored pools match. <%= link_to 'Clear the filters', workspace_inventory_index_path, class: 'font-semibold text-olive-deep underline' %> or sync source stock.</td></tr><% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </div>
+  <% end %>
   <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
 
   <% if @native_reads.any? %>

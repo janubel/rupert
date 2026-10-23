@@ -7,11 +7,13 @@
   <%= page_tabs([['Transfers', stock_requests_path(kind: 'transfer'), transfer], ['Backorders', stock_requests_path(kind: 'backorder'), !transfer]], label: 'Request kind') %>
   <div class="text-sm text-mocha"><%= transfer ? 'Partial receipts stay in transit until every unit arrives.' : 'Waiting demand does not hold stock.' %><%= define(transfer ? 'transfer' : 'backorder') %><%= define('allocation') %></div>
 
-  <%= form_with url: stock_requests_path, method: :get, class: 'toolbar' do %>
-    <%= hidden_field_tag :kind, @kind %>
-    <div class="toolbar-field"><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select(%w[pending allocated dispatched completed cancelled].map { |s| [s.humanize, s] }, params[:status]), include_blank: 'All statuses', class: 'input' %></div>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', stock_requests_path(kind: @kind), class: 'btn-ghost' %></div>
-  <% end %>
+  <div class="toolbar-band">
+    <%= form_with url: stock_requests_path, method: :get, class: 'toolbar' do %>
+      <%= hidden_field_tag :kind, @kind %>
+      <div class="toolbar-field"><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select(%w[pending allocated dispatched completed cancelled].map { |s| [s.humanize, s] }, params[:status]), include_blank: 'All statuses', class: 'input' %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', stock_requests_path(kind: @kind), class: 'btn-ghost' %></div>
+    <% end %>
+  </div>
 
   <div class="card overflow-hidden">
     <div class="table-region" role="region" tabindex="0" aria-label="<%= transfer ? 'Transfers' : 'Backorders' %>">
@@ -25,7 +27,7 @@
               <td class="td"><%= record.source_pool.item_label %><p class="text-xs text-taupe"><%= record.source_pool.source.capitalize %></p></td>
               <td class="td"><%= record.source_pool.location_name %></td>
               <td class="td"><%= record.destination_pool&.location_name || '—' %></td>
-              <td class="td num"><%= record.quantity %> / <%= record.received_quantity %></td>
+              <td class="td num"><span class="font-semibold text-ink"><%= record.quantity %></span><span class="text-taupe"> / <%= record.received_quantity %></span><% if transfer && record.quantity.to_i.positive? && %w[dispatched completed].include?(record.status) %><span class="stock-progress" role="img" aria-label="<%= record.received_quantity.to_i %> of <%= record.quantity %> received"><span style="width: <%= [(100.0 * record.received_quantity.to_i / record.quantity).round, 100].min %>%"></span></span><% end %></td>
               <td class="td"><span class="<%= pill %>"><%= record.status.humanize %></span></td>
             </tr>
           <% end %>

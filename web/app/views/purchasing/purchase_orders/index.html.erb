@@ -6,13 +6,15 @@
     <% end %>
   <% end %>
 
-  <%= form_tag purchasing_purchase_orders_path, method: :get, class: 'toolbar' do %>
-    <div class="toolbar-field">
-      <%= label_tag :status, 'Status', class: 'field-label' %>
-      <%= select_tag :status, options_for_select([['All statuses', 'all'], ['Draft', 'draft'], ['Ordered', 'ordered'], ['Received', 'received'], ['Cancelled', 'cancelled']], @status), class: 'input' %>
-    </div>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', purchasing_purchase_orders_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <div class="toolbar-band">
+    <%= form_tag purchasing_purchase_orders_path, method: :get, class: 'toolbar' do %>
+      <div class="toolbar-field">
+        <%= label_tag :status, 'Status', class: 'field-label' %>
+        <%= select_tag :status, options_for_select([['All statuses', 'all'], ['Draft', 'draft'], ['Ordered', 'ordered'], ['Received', 'received'], ['Cancelled', 'cancelled']], @status), class: 'input' %>
+      </div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', purchasing_purchase_orders_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </div>
 
   <div class="card overflow-hidden">
     <div class="table-region" role="region" tabindex="0" aria-label="Purchase orders">
@@ -30,17 +32,18 @@
         </thead>
         <tbody>
           <% if @purchase_orders.empty? %>
-            <tr><td colspan="7" class="empty-row">No purchase orders yet.<% if Current.user.can?('purchasing.write') %> <%= link_to 'Add the first purchase order', new_purchasing_purchase_order_path, class: 'font-semibold text-olive-deep underline' %><% end %></td></tr>
+            <tr><td colspan="7" class="empty-row"><%= @status.present? && @status != 'all' ? 'No purchase orders with that status.' : 'No purchase orders yet.' %><% if Current.user.can?('purchasing.write') %> <%= link_to 'Add the first purchase order', new_purchasing_purchase_order_path, class: 'font-semibold text-olive-deep underline' %><% end %></td></tr>
           <% end %>
           <% @purchase_orders.each do |po| %>
             <tr>
               <td class="td font-medium text-ink"><%= link_to po.order_number, po, class: 'hover:text-olive hover:underline' %></td>
               <td class="td text-mocha"><%= po.vendor.name %></td>
               <td class="td text-mocha"><%= l(po.created_at.to_date, format: :short) %></td>
-              <td class="td text-mocha"><%= po.expected_date ? l(po.expected_date, format: :short) : '—' %></td>
+              <td class="td text-mocha"><%= po.expected_date ? l(po.expected_date, format: :short) : '—' %><% if po.status == 'ordered' && po.expected_date && po.expected_date < Date.current %> <span class="pill-rose">Overdue</span><% end %></td>
               <td class="td"><span class="<%= po.status == 'received' ? 'pill-fern' : po.status == 'ordered' ? 'pill-olive' : po.status == 'cancelled' ? 'pill-rose' : 'pill-taupe' %>"><%= po.status.humanize %></span></td>
               <td class="td num font-medium text-ink"><%= number_to_currency(po.total_cents / 100.0) %></td>
-              <td class="td num text-mocha"><%= number_to_currency(po.received_cents / 100.0) %></td>
+              <% received = po.received_cents %>
+              <td class="td num text-mocha"><%= number_to_currency(received / 100.0) %><% if po.status == 'ordered' && po.total_cents.positive? %><span class="stock-progress" role="img" aria-label="<%= (100.0 * received / po.total_cents).round %>% received"><span style="width: <%= [(100.0 * received / po.total_cents).round, 100].min %>%"></span></span><% end %></td>
             </tr>
           <% end %>
         </tbody>

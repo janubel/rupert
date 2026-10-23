@@ -7,16 +7,18 @@
     <% end %>
   <% end %>
 
-  <%= form_tag inventory_counts_path, method: :get, class: 'toolbar', data: { tour: 'status' } do %>
-    <div class="toolbar-field">
-      <%= label_tag :status, 'Status', class: 'field-label' %>
-      <%= select_tag :status, options_for_select([['All statuses', ''], ['Draft', 'draft'], ['Pending', 'pending'], ['Approved', 'approved'], ['Rejected', 'rejected']], params[:status].to_s), class: 'input' %>
-    </div>
-    <div class="toolbar-actions">
-      <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
-      <%= link_to 'Clear', inventory_counts_path, class: 'btn-ghost' %>
-    </div>
-  <% end %>
+  <div class="toolbar-band">
+    <%= form_tag inventory_counts_path, method: :get, class: 'toolbar', data: { tour: 'status' } do %>
+      <div class="toolbar-field">
+        <%= label_tag :status, 'Status', class: 'field-label' %>
+        <%= select_tag :status, options_for_select([['All statuses', ''], ['Draft', 'draft'], ['Pending', 'pending'], ['Approved', 'approved'], ['Rejected', 'rejected']], params[:status].to_s), class: 'input' %>
+      </div>
+      <div class="toolbar-actions">
+        <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
+        <%= link_to 'Clear', inventory_counts_path, class: 'btn-ghost' %>
+      </div>
+    <% end %>
+  </div>
 
   <div class="card overflow-hidden" <%= tour_anchor('table') %>>
     <div class="table-region" role="region" tabindex="0" aria-label="Physical counts">
@@ -37,7 +39,7 @@
             <tr>
               <td colspan="7" class="empty-row">
                 <%= params[:status].present? ? 'No counts with that status.' : 'No counts yet.' %>
-                <% if Current.user.can?('inventory.write') && params[:status].blank? %><%= link_to 'Add your first count', new_inventory_count_path, class: 'ml-2 font-semibold text-olive-deep underline' %><% end %>
+                <% if params[:status].present? %><%= link_to 'Show all counts', inventory_counts_path, class: 'ml-2 font-semibold text-olive-deep underline' %><% elsif Current.user.can?('inventory.write') %><%= link_to 'Add your first count', new_inventory_count_path, class: 'ml-2 font-semibold text-olive-deep underline' %><% end %>
               </td>
             </tr>
           <% end %>

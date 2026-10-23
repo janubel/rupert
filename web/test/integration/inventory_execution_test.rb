@@ -33,6 +33,39 @@ class InventoryExecutionTest < ActionDispatch::IntegrationTest
     assert_equal @variant.id, rows.first['Native ID']
   end
 
+  test 'inventory grid view is a frozen-header sheet whose CSV keeps the filters' do
+    get workspace_inventory_index_path, params: { q: 'EXEC-UI', location_id: @source.id, view: 'grid' }
+    assert_response :success
+    assert_select 'nav[aria-label="Inventory view"] a[aria-current="page"]', 'Grid'
+    assert_select '.data-grid[data-controller~="data-grid"] .data-grid-scroll table.data-grid-table thead th[data-csv]',
+      StockHelper::INVENTORY_COLUMNS.size
+    assert_select 'table.data-grid-table th', text: 'Available to promise'
+    assert_select 'table.data-grid-table td', text: /Execution widget/, count: 1
+    link = css_select('.data-grid a[data-data-grid-target="csv"]').first
+    assert_equal 'Download CSV', link.text.strip
+    uri = URI.parse(link['href'])
+    assert uri.path.end_with?('.csv')
+    assert_equal({ 'q' => 'EXEC-UI', 'location_id' => @source.id.to_s }, Rack::Utils.parse_query(uri.query))
+    get link['href']
+    assert_response :success
+    assert_equal 1, CSV.parse(response.body, headers: true).size
+
+    # The grid's Columns chooser narrows and orders the CSV; unknown keys are ignored.
+    get workspace_inventory_index_path(format: :csv), params: { q: 'EXEC-UI', location_id: @source.id, columns: 'item,promise,state,bogus' }
+    rows = CSV.parse(response.body, headers: true)
+    assert_equal ['Item', 'Available to promise', 'Stock state'], rows.headers
+    assert_equal '8', rows.first['Available to promise']
+    assert_equal 'Available', rows.first['Stock state']
+
+    # The choice is remembered until List is chosen; List keeps secondary figures behind Columns.
+    get workspace_inventory_index_path
+    assert_select 'table.data-grid-table'
+    get workspace_inventory_index_path, params: { view: 'list' }
+    assert_select 'table.data-grid-table', count: 0
+    assert_select '.report-table th[data-default-hidden]', text: 'Mirror quantity'
+    assert_select 'td', text: /Execution widget/, count: 2
+  end
+
   test 'transfer form errors creation view cancellation and replay work end to end' do
     get new_stock_request_path, params: { kind: 'transfer', inventory_level_id: @level.id }
     assert_response :success

@@ -1,6 +1,6 @@
 <div class="report-table" data-controller="report-table" data-report-table-key-value="<%= key %>" data-report-table-filename-value="<%= filename %>" data-report-table-sortable-value="<%= sortable %>">
   <div class="report-table-toolbar no-print" <%= tour_anchor('columns') %>>
-    <input type="search" class="input report-table-filter" placeholder="Narrow rows…" aria-label="Narrow rows in <%= label %>" data-report-table-target="filter" data-action="input->report-table#filter keydown.esc->report-table#clearFilter">
+    <% if local_assigns.fetch(:filter, true) %><input type="search" class="input report-table-filter" placeholder="Narrow rows…" aria-label="Narrow rows in <%= label %>" data-report-table-target="filter" data-action="input->report-table#filter keydown.esc->report-table#clearFilter"><% end %>
     <details class="report-table-menu">
       <summary class="btn-ghost btn-sm">Columns</summary>
       <fieldset class="report-table-columns">
@@ -8,7 +8,7 @@
         <div data-report-table-target="columns"></div>
       </fieldset>
     </details>
-    <button type="button" class="btn-ghost btn-sm" data-action="report-table#download" title="Download the rows and columns shown, in this order">Download view</button>
+    <% if local_assigns.fetch(:download, true) %><button type="button" class="btn-ghost btn-sm" data-action="report-table#download" title="Download the rows and columns shown, in this order">Download view</button><% end %>
     <button type="button" class="btn-ghost btn-sm" data-action="report-table#reset" title="Show the default columns and order">Reset</button>
     <span class="report-table-count" data-report-table-target="count" aria-live="polite"></span>
   </div>

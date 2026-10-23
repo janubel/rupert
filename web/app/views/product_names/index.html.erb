@@ -15,17 +15,19 @@
   </section>
   <p class="text-xs text-taupe">C-Trax read: <%= retail_source_time(@crosswalk.ctrax_read_at) %> · SwipeSimple item catalog: <%= @crosswalk.swipesimple_available? ? "loaded #{retail_source_time(@crosswalk.swipesimple_read_at)}" : 'not loaded (the sheets omit it)' %> · <%= summary[:verify] %> matches to verify · <%= summary[:unmatched] %> secondary items without a website match.</p>
 
-  <%= form_tag product_names_path, method: :get, class: 'toolbar' do %>
-    <div class="toolbar-field">
-      <%= label_tag :filter, 'Show', class: 'field-label' %>
-      <%= select_tag :filter, options_for_select([['All website products', 'all'], ['Matches to verify', 'verify'], ['Unmatched secondary items', 'unmatched']], @filter), class: 'input' %>
-    </div>
-    <div class="toolbar-field">
-      <%= label_tag :q, 'Search', class: 'field-label' %>
-      <%= search_field_tag :q, @query, class: 'input', placeholder: 'Name or SKU' %>
-    </div>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', product_names_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <div class="toolbar-band">
+    <%= form_tag product_names_path, method: :get, class: 'toolbar' do %>
+      <div class="toolbar-field">
+        <%= label_tag :filter, 'Show', class: 'field-label' %>
+        <%= select_tag :filter, options_for_select([['All website products', 'all'], ['Matches to verify', 'verify'], ['Unmatched secondary items', 'unmatched']], @filter), class: 'input' %>
+      </div>
+      <div class="toolbar-field">
+        <%= label_tag :q, 'Search', class: 'field-label' %>
+        <%= search_field_tag :q, @query, class: 'input', placeholder: 'Name or SKU' %>
+      </div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', product_names_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </div>
 
   <% systems = %i[swipesimple square ctrax] %>
   <% last_page = @pagy.page >= @pagy.pages %>

@@ -10,24 +10,26 @@
   <%= page_header 'Movements', subtitle: 'Every recorded quantity change: who or what changed it, why, and from → to.' %>
   <%= fold_explainer('Mirrors are read-only snapshots from Square and Shopify. A movement records the change Rupert observed between two reads, or an action Rupert took, with the sync run that produced it.', class: 'text-sm text-mocha') %>
 
-  <%= form_tag movements_inventory_index_path, method: :get, class: 'toolbar' do %>
-    <div class="toolbar-field">
-      <label class="field-label" for="q">SKU</label>
-      <input type="search" id="q" name="q" value="<%= params[:q] %>" placeholder="Search SKUs" aria-label="Search movement SKUs" class="input" autocomplete="off">
-    </div>
-    <div class="toolbar-field">
-      <label class="field-label" for="source">Source</label>
-      <%= select_tag :source, options_for_select([['All sources', '']] + @sources.map { |s| [source_labels.fetch(s, s.humanize), s] }, params[:source]), class: 'input' %>
-    </div>
-    <div class="toolbar-field">
-      <label class="field-label" for="days">Since</label>
-      <%= select_tag :days, options_for_select([['30 days', '30'], ['7 days', '7'], ['90 days', '90'], ['180 days', '180'], ['1 year', '365']], params[:days] || '30'), class: 'input' %>
-    </div>
-    <div class="toolbar-actions">
-      <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
-      <%= link_to 'Clear', movements_inventory_index_path, class: 'btn-ghost' %>
-    </div>
-  <% end %>
+  <div class="toolbar-band">
+    <%= form_tag movements_inventory_index_path, method: :get, class: 'toolbar' do %>
+      <div class="toolbar-field">
+        <label class="field-label" for="q">SKU</label>
+        <input type="search" id="q" name="q" value="<%= params[:q] %>" placeholder="Search SKUs" aria-label="Search movement SKUs" class="input" autocomplete="off">
+      </div>
+      <div class="toolbar-field">
+        <label class="field-label" for="source">Source</label>
+        <%= select_tag :source, options_for_select([['All sources', '']] + @sources.map { |s| [source_labels.fetch(s, s.humanize), s] }, params[:source]), class: 'input' %>
+      </div>
+      <div class="toolbar-field">
+        <label class="field-label" for="days">Since</label>
+        <%= select_tag :days, options_for_select([['30 days', '30'], ['7 days', '7'], ['90 days', '90'], ['180 days', '180'], ['1 year', '365']], params[:days] || '30'), class: 'input' %>
+      </div>
+      <div class="toolbar-actions">
+        <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
+        <%= link_to 'Clear', movements_inventory_index_path, class: 'btn-ghost' %>
+      </div>
+    <% end %>
+  </div>
 
   <div class="card overflow-hidden">
     <div class="table-region" role="region" tabindex="0" aria-label="Inventory movements">

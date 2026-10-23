@@ -22,11 +22,13 @@
     </div>
   </section>
 
-  <%= form_tag reconcile_index_path, method: :get, class: 'toolbar', aria: { label: 'Catalog link filters' } do %>
-    <div class="toolbar-field"><%= label_tag :q, 'Product or SKU', class: 'field-label' %><%= search_field_tag :q, @query, maxlength: 150, placeholder: 'Product name or either source SKU', class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :status, 'Link status', class: 'field-label' %><%= select_tag :status, options_for_select([['All linked items', 'all'], ['SKU mismatches', 'mismatched'], ['Matched SKUs', 'matched']], @status), class: 'input' %></div>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', reconcile_index_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <div class="toolbar-band">
+    <%= form_tag reconcile_index_path, method: :get, class: 'toolbar', aria: { label: 'Catalog link filters' } do %>
+      <div class="toolbar-field"><%= label_tag :q, 'Product or SKU', class: 'field-label' %><%= search_field_tag :q, @query, maxlength: 150, placeholder: 'Product name or either source SKU', class: 'input' %></div>
+      <div class="toolbar-field"><%= label_tag :status, 'Link status', class: 'field-label' %><%= select_tag :status, options_for_select([['All linked items', 'all'], ['SKU mismatches', 'mismatched'], ['Matched SKUs', 'matched']], @status), class: 'input' %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', reconcile_index_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </div>
 
   <section>
     <%= section_heading 'Linked items', hint: "#{@pagy.count} matching links, mismatches first." %>
