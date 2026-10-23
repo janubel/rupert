@@ -10,7 +10,7 @@ module TeamChat
   module FinancialEvidence
     VERSION = 1
     CURRENCIES = %w[USD CAD EUR GBP AUD NZD CHF CNY HKD SGD MXN BRL ZAR INR].freeze
-    TOOLS = %w[metric sales_summary period_review business_pulse sales_tax_report].freeze
+    TOOLS = %w[metric sales_summary period_review business_pulse sales_tax_report daily_close].freeze
     CONTRACTS = (TOOLS + %w[time_keeping_report]).freeze
     MEANINGS = {
       'gross_sales' => ['Gross sales (paid or fulfilled orders)', 'money'],
@@ -20,6 +20,11 @@ module TeamChat
       'expenses_by_category' => ['Active expense-register total (not profit)', 'money'],
       'sales_by_source' => ['Gross sales by source', 'money']
     }.freeze
+    DAILY_CLOSE = [['net_cents', 'Store net sales (gross minus refunds; before tax and tips)'],
+                   ['gross_cents', 'Store gross sales (after discounts, before tax and tips)'],
+                   ['cash_cents', 'Cash taken at the store'], ['card_cents', 'Card taken at the store'],
+                   ['tax_cents', 'Sales tax collected at the store'], ['refunds_cents', 'Store refunds'],
+                   ['tips_cents', 'Tips at the store']].freeze
     ORDER_SOURCE = 'canonical orders: Shopify, Square, Rupert POS and manual; C-Trax/SwipeSimple excluded'
 
     module_function
@@ -107,6 +112,22 @@ module TeamChat
           { 'tax_collected' => 'Reported tax collected', 'tax_refunded' => 'Reported tax refunded', 'net_tax' => 'Net reported tax', 'estimated_tax' => 'Estimated tax (not reported tax)' }.each do |field, meaning|
             add(out, row[field], 'money', row['currency'], source, period, meaning, "lines.#{index}.#{field}")
           end
+        end
+      when 'daily_close'
+        first = args['from'] || Date.current.iso8601
+        period = window(data, first, args['to'] || first)
+        rows = Array(data['stores']).each_with_index.filter_map do |row, index|
+          store = row['store'].to_s
+          if store.blank? || store.length > 120 || AskRupert::Redactor.personal(store) != store
+            out['gaps'] << 'A store name could not be displayed safely; its figures were omitted.'
+            next
+          end
+          Array(row['notes']).each { |note| out['gaps'] << "#{store}: #{AskRupert::Redactor.personal(note.to_s).first(240)}" }
+          [row, index, "#{store}; in-person register, separate from online orders and from every other store"]
+        end
+        # Most useful first, so a long answer drops tips and refunds before net sales.
+        DAILY_CLOSE.each do |field, meaning|
+          rows.each { |row, index, source| add(out, row[field], 'money', row['currency'], source, period, meaning, "stores.#{index}.#{field}") }
         end
       when 'time_keeping_report'
         period = window(data, args['from'] || Date.current.beginning_of_month.iso8601, args['to'] || Date.current.end_of_month.iso8601)
