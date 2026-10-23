@@ -65,6 +65,7 @@ module TeamChat
 
         return deliver_privately! unless @room.direct?
 
+        sanitize_draft!
         @topics = question_topics
         # Local bots get only the tools for what the question is about (smaller prompt, fewer wrong picks), unless
         # RUPERT_LOCAL_TOOLS=all: then every tool, so the instructions and tool list stay the same from question to
@@ -315,6 +316,13 @@ module TeamChat
 
     # --- writing into the reply ---
 
+    def sanitize_draft!
+      return if @reply.body.blank?
+
+      sanitized = Links.for_user(@reply.body, user: @asker)
+      @execution.write_reply!({ body: sanitized }) if sanitized != @reply.body
+    end
+
     def publish(text)
       # Never expose draft figures before their semantic evidence is checked.
       return if @toolbox&.financial? || text.match?(/[\d$€£¥%]/)
@@ -323,7 +331,7 @@ module TeamChat
       return if now - @last_publish < PUBLISH_EVERY
 
       @last_publish = now
-      @execution.write_reply!({ body: AskRupert::ReplyFormat.tidy(text, closing: false), activity: 'Writing' })
+      @execution.write_reply!({ body: Links.for_user(AskRupert::ReplyFormat.tidy(text, closing: false), user: @asker), activity: 'Writing' })
     end
 
     def activity!(text)
@@ -331,12 +339,13 @@ module TeamChat
     end
 
     def finish(text, started)
-      body = Links.real_paths_only(AskRupert::ReplyFormat.tidy(text))
+      body = AskRupert::ReplyFormat.tidy(text)
       if @toolbox.financial?
         body = FinancialEvidence.render(@toolbox.financial_evidence)
       elsif FinancialEvidence.financial_text?(body)
         body = 'I could not verify financial figures for this request. Please ask for a supported financial report.'
       end
+      body = Links.for_user(body, user: @asker)
       body = FAILURES[:error] if body.blank? && @reply.reload.actions_list.empty?
       meta = meta_with(started, 'ok')
       meta['verify'] = @verify_meta if @verify_meta
