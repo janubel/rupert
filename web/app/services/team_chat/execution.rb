@@ -5,6 +5,7 @@ module TeamChat
   # model request or a read tool. Proposal + replay receipt commit together.
   class Execution
     AccessChanged = Class.new(Run::Stopped)
+    RequestChanged = Class.new(Run::Stopped)
     ACCESS_CHANGED = 'Access changed. Please ask Rupert again in your private room.'
 
     attr_reader :run, :token
@@ -27,6 +28,7 @@ module TeamChat
         raise Run::Stopped, 'Reply deleted'
       end
       check_access!
+      check_request!
       true
     end
 
@@ -48,6 +50,22 @@ module TeamChat
 
       stop_for_access_change!
       raise AccessChanged, 'Access changed'
+    end
+
+    def check_request!
+      trigger = Message.unscoped.find_by(id: run.request_context['trigger_id'], tenant_id: run.tenant_id)
+      return if run.request_matches?(trigger)
+
+      stop_for_request_change!
+      raise RequestChanged, 'Request changed or deleted'
+    end
+
+    def stop_for_request_change!
+      run.with_lock do
+        if run.state == 'running' && run.owner_token == token
+          run.terminalize!('cancelled', RequestRevision::STOPPED, dismiss: true)
+        end
+      end
     end
 
     def private_delivery!
@@ -72,6 +90,9 @@ module TeamChat
       # check! may run inside this transaction. Persist cancellation after its
       # rollback as well, so a rejected stream cannot leave a recoverable run.
       stop_for_access_change!
+      raise
+    rescue RequestChanged
+      stop_for_request_change!
       raise
     end
 

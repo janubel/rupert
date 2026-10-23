@@ -13,7 +13,9 @@ class TeamChatApprovalRestartTest < ActiveSupport::TestCase
     Current.user = @user
     @title = "Approval restart #{SecureRandom.hex(6)}"
     @room = TeamChat::Room.create!(name: @title, slug: "approval-#{SecureRandom.hex(6)}", kind: 'direct', created_by: @user, assistant_mode: 'off')
-    @reply = @room.messages.create!(author_kind: 'assistant', status: 'pending')
+    trigger = @room.messages.create!(author_kind: 'person', user: @user, body: "Create the task #{@title}.")
+    @reply = @room.messages.create!(author_kind: 'assistant', status: 'pending', meta: { 'asked_by' => @user.id, 'trigger_id' => trigger.id })
+    TeamChat::Run.for_reply!(@reply).claim!
     @card = TeamChat::Actions.propose!(@reply, tool: 'create_task', arguments: { 'title' => @title }, proposed_for: @user)
     @approval = TeamChat::Approval.find_by!(source_message_id: @reply.id, public_id: @card['id'])
   end

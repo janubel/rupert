@@ -242,9 +242,11 @@ class TeamChatController < AuthenticatedController
     return head :forbidden unless message.person? && message.user_id == Current.user.id
 
     message.edit_body!(params[:body])
-    render json: { messages: payload([message.reload]) }
-  rescue ActiveRecord::RecordInvalid
-    render json: { error: 'A message needs some text.' }, status: :unprocessable_entity
+    render json: { messages: payload([message.reload, *Array(message.revision_updates).select { |reply| reply.room_id == @room.id }]) }
+  rescue TeamChat::Post::Limited => e
+    render json: { error: e.message }, status: :too_many_requests
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence.presence || 'A message needs some text.' }, status: :unprocessable_entity
   end
 
   # POST /chat/:room/typing — "you are typing" heartbeat, shown to the others for a few seconds.
@@ -267,7 +269,7 @@ class TeamChatController < AuthenticatedController
     return head :forbidden unless message.person? && message.user_id == Current.user.id
 
     message.soft_delete!
-    render json: { messages: payload([message]) }
+    render json: { messages: payload([message, *Array(message.revision_updates).select { |reply| reply.room_id == @room.id }]) }
   end
 
   # POST /chat/:room/messages/:id/actions/:action_id { decision: approve|dismiss }

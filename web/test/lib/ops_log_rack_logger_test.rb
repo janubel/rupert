@@ -48,6 +48,7 @@ class OpsLogRackLoggerTest < ActiveSupport::TestCase
       calls = 0
       observer = lambda do |*|
         calls += 1
+        OpsLog.context[:explained] = true
         raise 'subscriber failure'
       end
       OpsLog.with_format(format) do
@@ -68,6 +69,7 @@ class OpsLogRackLoggerTest < ActiveSupport::TestCase
     calls = 0
     observer = lambda do |*|
       calls += 1
+      OpsLog.context[:explained] = true
       raise 'subscriber failure'
     end
     OpsLog.with_format('json') do
