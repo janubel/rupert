@@ -2,7 +2,7 @@
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6" data-controller="live-sync">
   <div <%= tour_anchor('run') %>>
-    <%= page_header 'Sync', subtitle: 'Every pull from Shopify and Square is recorded here; syncs run on a schedule and can be started by hand.',
+    <%= page_header 'Sync', subtitle: 'Every scheduled and manual pull from Shopify and Square.',
                     menu: [['Sync Square only', source_syncs_path(source: 'square'), { method: :post }], ['Sync Shopify only', source_syncs_path(source: 'shopify'), { method: :post }]] do %>
       <%= form_tag syncs_path, method: :post, class: "inline" do %>
         <%= submit_tag "Sync now", class: "btn-primary", data: { turbo_submits_with: 'Syncing…' } %>
@@ -11,11 +11,6 @@
   </div>
 
   <%= render "syncs/banner" %>
-
-  <%= render "syncs/push_guard" %>
-
-  <%= render "syncs/swipesimple_import" if Current.user.can?("sync.write") %>
-  <%= render "syncs/zelle_import" if Current.user.can?("sync.write") %>
 
   <section class="grid gap-4 lg:grid-cols-2">
     <%= render "syncs/runs" %>
@@ -38,5 +33,12 @@
         </ul>
       <% end %>
     </div>
+  </section>
+
+  <%= render "syncs/swipesimple_import" if Current.user.can?("sync.write") %>
+
+  <section class="grid gap-4 lg:grid-cols-2">
+    <%= render "syncs/push_guard" %>
+    <%= render "syncs/zelle_import" if Current.user.can?("sync.write") %>
   </section>
 </div>

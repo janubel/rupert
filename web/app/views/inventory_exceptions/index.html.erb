@@ -1,7 +1,7 @@
 <% content_for :title, 'Stock review' %>
 <% filter_params = { source: @queue.source, location_id: @queue.location_id, stale_hours: @queue.stale_hours } %>
 <div class="space-y-6">
-  <%= page_header 'Stock review', subtitle: 'Shortages, uncertain stock and catalog conflicts by exact source item and location, read from Rupert\'s local records.' %>
+  <%= page_header 'Stock review', subtitle: 'Shortages, uncertain stock and catalog conflicts to review.' %>
 
   <%= form_with url: inventory_exceptions_path, method: :get, class: 'toolbar' do |f| %>
     <div class="toolbar-field"><%= f.label :source, 'Platform stock', class: 'field-label' %><%= f.select :source, [['All sources', ''], ['Shopify', 'shopify'], ['Square', 'square']], { selected: @queue.source }, class: 'input' %></div>
@@ -11,24 +11,21 @@
     <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', inventory_exceptions_path, class: 'btn-ghost' %></div>
   <% end %>
 
-  <div class="text-sm text-mocha">
-    <p><strong class="text-ink"><%= @queue.summary[:shown] %></strong> exception rows found in the bounded results<%= @queue.section ? ' for this work type' : '' %>. Checked at <%= @queue.at.iso8601 %>.</p>
-    <% if @queue.summary[:limited] %><p role="status" class="mt-1 font-semibold text-clay">Results limited: additional matching records or identity members were not checked or displayed. Narrow the platform or location filter and review the coverage notes below.</p><% end %>
-    <details class="explainer">
-      <summary class="explainer-summary">More detail</summary>
-      <p class="mt-1">Shopify and Square stock remains independent; different quantities between channels are normal. Local holds are advisory and channels can still sell stock. A stock pool can have several exceptions, so these counts are not a complete inventory audit or a count of unique products.</p>
-      <p class="mt-1">The queue offers review links. It does not fix mirrors, change SKUs, reserve remote stock or apply counts. Unknown quantities remain unknown. Missing per-pool data can require source inspection even when a recent source import exists.</p>
-    </details>
-  </div>
+  <% if @queue.summary[:limited] %><p role="status" class="flash flash-alert">Results limited: additional matching records or identity members were not checked or displayed. Narrow the platform or location filter and review the coverage notes below.</p><% end %>
 
-  <section class="grid grid-cols-1 gap-3 md:grid-cols-3" aria-label="Exceptions by work type">
-    <% @queue.sections.each do |group| %>
-      <%= link_to inventory_exceptions_path(filter_params.merge(section: group[:key])), class: 'stat hover:bg-haze' do %>
-        <p class="stat-label"><%= group[:label] %></p>
-        <p class="stat-value mt-1"><%= group[:rows].length %><%= '+' if group[:limited] %></p>
-        <p class="mt-1 text-xs text-taupe">Bounded exception rows<%= group[:limited] ? ' · limited' : '' %></p>
+  <section class="card" aria-label="Exceptions by work type">
+    <ul class="row-list">
+      <% @queue.sections.each do |group| %>
+        <li class="row-item">
+          <div class="min-w-0">
+            <p class="font-semibold text-ink"><%= link_to group[:label], inventory_exceptions_path(filter_params.merge(section: group[:key])), class: 'hover:underline', aria: { current: (@queue.section.to_s == group[:key].to_s ? 'true' : nil) } %></p>
+            <p class="text-xs text-taupe">Bounded exception rows<%= group[:limited] ? ' · limited' : '' %></p>
+          </div>
+          <div class="row-item-end"><span class="num font-semibold text-ink"><%= group[:rows].length %><%= '+' if group[:limited] %></span></div>
+        </li>
       <% end %>
-    <% end %>
+    </ul>
+    <p class="row-list-foot text-xs text-taupe"><strong class="text-ink"><%= @queue.summary[:shown] %></strong> exception rows found in the bounded results<%= @queue.section ? ' for this work type' : '' %>. Checked at <%= @queue.at.iso8601 %>.</p>
   </section>
 
   <div class="card overflow-hidden">
@@ -58,9 +55,12 @@
   </div>
   <% if @queue.total_pages > 1 %><nav aria-label="Exception pages" class="flex flex-wrap items-center gap-3 text-sm"><span>Page <%= @queue.page %> of <%= @queue.total_pages %> in bounded results</span><% if @queue.page > 1 %><%= link_to 'Previous', inventory_exceptions_path(filter_params.merge(section: @queue.section, page: @queue.page - 1)), class: 'btn-ghost btn-sm' %><% end %><% if @queue.page < @queue.total_pages %><%= link_to 'Next', inventory_exceptions_path(filter_params.merge(section: @queue.section, page: @queue.page + 1)), class: 'btn-ghost btn-sm' %><% end %></nav><% end %>
 
-  <section class="section-card">
-    <%= section_heading 'Coverage and limits', hint: "Each exception query returns at most #{@queue.limit} matching records or groups." %>
+  <details class="section-card">
+    <summary class="disclosure-trigger font-semibold">Coverage and limits</summary>
+    <p class="text-sm text-mocha">Rows are read from Rupert's local records by exact source item and location. Each exception query returns at most <%= @queue.limit %> matching records or groups.</p>
+    <p class="text-sm text-mocha">Shopify and Square stock remains independent; different quantities between channels are normal. Local holds are advisory and channels can still sell stock. A stock pool can have several exceptions, so these counts are not a complete inventory audit or a count of unique products.</p>
+    <p class="text-sm text-mocha">The queue offers review links. It does not fix mirrors, change SKUs, reserve remote stock or apply counts. Unknown quantities remain unknown. Missing per-pool data can require source inspection even when a recent source import exists.</p>
     <% @queue.sections.each do |group| %><div><h3 class="card-title"><%= group[:label] %><%= ' · limited' if group[:limited] %></h3><p class="mt-1 text-sm text-mocha"><%= group[:scope_note] %></p><ul class="mt-2 list-disc pl-5 text-xs text-mocha"><% group[:checks].each do |check| %><li><%= check[:label] %>: <%= check[:returned] %> matching records/groups returned<%= check[:limited] ? '; more matching records not displayed' : '' %><%= check[:sample_limited] ? '; identity member sample limited' : '' %>.</li><% end %></ul></div><% end %>
     <p class="text-xs text-mocha">Duplicate identity members are sampled, with at most <%= InventoryExceptions::MEMBER_LIMIT %> IDs shown per group. Sales attribution, supplier lead times, reorder points, automatic recipe consumption and unknown original source timestamps are outside these checks.</p>
-  </section>
+  </details>
 </div>

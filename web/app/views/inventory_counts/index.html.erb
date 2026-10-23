@@ -1,12 +1,11 @@
 <% content_for :title, 'Physical counts' %>
 <div class="space-y-6">
-  <%= page_header 'Physical counts', subtitle: 'Count worksheets kept for review; approval records a count without changing platform stock.',
+  <%= page_header 'Physical counts', subtitle: 'Count worksheets kept for review.',
         menu: (Current.user.can?('inventory.write') ? [['Start scan count', new_inventory_count_path(prepared: 0, start_scanning: 1)]] : nil) do %>
     <% if Current.user.can?('inventory.write') %>
       <%= link_to 'Add count', new_inventory_count_path, class: 'btn-primary', data: { tour: 'start' } %>
     <% end %>
   <% end %>
-  <%= fold_explainer('C-Trax is the retail physical-count reference. A worksheet compares what was counted with the stored mirror at submission; approving keeps it as an audit record and writes nothing to Shopify, Square or C-Trax.', class: 'text-sm text-mocha') %>
 
   <%= form_tag inventory_counts_path, method: :get, class: 'toolbar', data: { tour: 'status' } do %>
     <div class="toolbar-field">
@@ -61,4 +60,9 @@
       </table>
     </div>
   </div>
+
+  <details class="explainer">
+    <summary class="explainer-summary">What approving a count does</summary>
+    <p class="mt-1 text-sm text-mocha">C-Trax is the retail physical-count reference. A worksheet compares what was counted with the stored mirror at submission; approving keeps it as an audit record and writes nothing to Shopify, Square or C-Trax.</p>
+  </details>
 </div>

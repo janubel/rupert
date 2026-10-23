@@ -10,7 +10,7 @@
     <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_payees_path, class: 'btn-ghost' %></div>
   <% end %>
 
-  <%= fold_explainer("#{report_range_label(@from, @through)} · USD. Expenses and vendor payments are separate records and are not added together, since a payment can settle a bill that is also an expense. Removed records are excluded.", class: 'text-sm text-mocha') %>
+  <%= fold_explainer("#{report_range_label(@from, @through)}. Expenses and vendor payments are separate records and are not added together, since a payment can settle a bill that is also an expense. Removed records are excluded.", class: 'text-sm text-mocha') %>
 
   <% if @selected %>
     <section class="section-card" aria-labelledby="payee-title">

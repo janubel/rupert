@@ -1,10 +1,8 @@
 <% content_for :title, 'C-Trax stock' %>
 <% menu = [] %>
 <% menu << ['Open C-Trax connection', pos_connection_path('ctrax')] if Current.user.can?('settings.read') %>
-<% menu << ['Open physical counts', inventory_counts_path] %>
 <div class="space-y-6">
   <%= page_header 'C-Trax stock', subtitle: 'The retail count reference, read store by store from C-Trax.', menu: menu %>
-  <%= fold_explainer('Negative stock is preserved and missing stock remains unknown. Each read replaces the local store snapshot after every page has been validated. C-Trax can change while pages are being read.', class: 'text-sm text-mocha') %>
   <% if @snapshots.empty? %>
     <section class="card">
       <%= empty_state 'No C-Trax stock imported yet', hint: 'Configure the connection, check access, then choose Sync stock.' do %>
@@ -28,4 +26,5 @@
       </div>
     </section>
   <% end %>
+  <%= fold_explainer('Negative stock is preserved and missing stock remains unknown. Each read replaces the local store snapshot after every page has been validated. C-Trax can change while pages are being read.', class: 'text-sm text-mocha') %>
 </div>

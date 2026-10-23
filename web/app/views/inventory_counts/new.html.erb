@@ -1,9 +1,7 @@
 <% count = @count %>
 <% toggle = @prepared ? ['Start blank sheet', new_inventory_count_path(prepared: 0, location_id: count.locationId)] : ['Use prepared sheet', new_inventory_count_path(location_id: count.locationId)] %>
 <div class="page-medium space-y-6">
-  <%= page_header 'Add count', subtitle: (@prepared ? 'Stored stock at one platform location is pre-filled; enter what is physically on hand.' : 'Enter what is physically on hand per item, then submit the sheet for approval.'), menu: [toggle] %>
-  <%= fold_explainer(@prepared ? 'Only unambiguous stored rows at the selected location appear. Shopify sheets use native on-hand stock from a current, tracked catalog read less than one hour old; available stock and legacy aggregates are excluded. Missing stock is not zero. C-Trax and Square retain their separate source bases. Replace pre-filled values with the physically counted totals.' : 'Approved counts are kept as audit worksheets and do not change platform inventory. Choose a C-Trax store for the retail stock reference.', class: 'text-sm text-mocha') %>
-
+  <%= page_header 'Add count', subtitle: (@prepared ? 'Stored stock is pre-filled; enter what is physically on hand.' : 'Enter what is physically on hand per item.'), menu: [toggle] %>
   <% if @prepared %>
     <%= form_tag new_inventory_count_path, method: :get, class: 'toolbar' do %>
       <%= hidden_field_tag :prepared, '1' %>
@@ -110,6 +108,8 @@
       <%= link_to 'Cancel', inventory_counts_path, class: 'btn-ghost' %>
     </div>
   <% end %>
+
+  <%= fold_explainer(@prepared ? 'Only unambiguous stored rows at the selected location appear. Shopify sheets use native on-hand stock from a current, tracked catalog read less than one hour old; available stock and legacy aggregates are excluded. Missing stock is not zero. C-Trax and Square retain their separate source bases. Replace pre-filled values with the physically counted totals.' : 'Approved counts are kept as audit worksheets and do not change platform inventory. Choose a C-Trax store for the retail stock reference.', class: 'text-sm text-mocha') %>
 
   <% unless @prepared %>
     <datalist id="known-skus">

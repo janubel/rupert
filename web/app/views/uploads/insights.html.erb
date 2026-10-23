@@ -2,7 +2,7 @@
 <% buckets = upload_chart_buckets(@insights.daily, @insights.days) %>
 <% kept = @insights.funnel.first[:count] %>
 <div class="space-y-6 operations-workspace">
-  <%= page_header 'Upload insights', subtitle: 'How the inbox is doing: which files wait and why, which importers read cleanly, how long a file takes to reach an import.' %>
+  <%= page_header 'Upload insights', subtitle: 'Which files wait and why, which importers read cleanly, and how long imports take.' %>
   <%= page_tabs(Uploads::Insights::RANGES.map { |days| ["Last #{days} days", insights_uploads_path(days: days), @insights.days == days] }, label: 'Time range') %>
   <p class="text-xs text-taupe">Counts and times only; no file contents, values or names appear here.</p>
 

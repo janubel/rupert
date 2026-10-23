@@ -12,7 +12,6 @@
         <% end %>
       <% end %>
     <% end %>
-    <% if Current.user.can?("sync.read") %><div class="mt-2"><%= render "shared/last_sync", sync: presenter.last_sync %></div><% end %>
   </div>
 
   <%= render 'shared/learning_welcome' %>
@@ -45,7 +44,6 @@
     </div>
   </section>
 
-  <%= render "home/daily_actions" %>
   <div id="dashboard-widgets" class="space-y-8">
     <% widgets.each do |widget, visible| %>
       <section id="dashboard-widget-<%= widget.key %>" data-widget-key="<%= widget.key %>" <%= visible ? "" : "hidden" %> <%= tour_anchor(widget.key) if %w[stats attention].include?(widget.key) %>>

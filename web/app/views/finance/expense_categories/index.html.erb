@@ -1,7 +1,7 @@
 <% content_for :title, 'Expense categories' %>
 <% can_write = Current.user.can?('finance.write') %>
 <div class="space-y-6">
-  <%= render layout: 'finance/page_header', locals: { title: 'Expense categories', currency: nil, menu: [['Bank transactions', bank_statements_path], ['Expenses', finance_expenses_path]],
+  <%= render layout: 'finance/page_header', locals: { title: 'Expense categories', currency: nil,
         explain: 'The categories you pick for expenses, receipts and bank transactions. Rename them, choose the ledger account each one posts to, add keywords so bank lines get suggested automatically, or add your own.' } do %>
     <% if can_write %><%= link_to 'Add category', new_finance_expense_category_path, class: 'btn-primary' %><% end %>
   <% end %>

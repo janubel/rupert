@@ -7,27 +7,26 @@
 <% csv_path = url_for(extra.merge(action: params[:action], format: :csv, days: @days, from: custom ? @range.to_date.iso8601 : nil, to: @to_date&.iso8601)) %>
 <div class="space-y-6">
   <%= page_header title, subtitle: subtitle,
-        menu: [['Download CSV', csv_path, { data: { turbo: false, tour: 'csv' } }], ['Books check', books_check_path(days: @days), { data: { tour: 'check' } }],
-               ['Money reconciliation', money_reconciliations_path], ['Daily controls and documents', daily_reconciliations_path]] %>
+        menu: [['Download CSV', csv_path, { data: { turbo: false, tour: 'csv' } }], ['Books check', books_check_path(days: @days), { data: { tour: 'check' } }]] + Array(local_assigns[:menu]) %>
   <%= render 'reports/tabs' %>
   <%= render 'reports/chart_theme' %>
 
-  <%# One period row for everything below: quick ranges as tabs, then the window or custom dates. %>
-  <div class="card card-pad space-y-3" data-tour="window">
-    <div class="flex flex-wrap items-center gap-3">
+  <%# One period band for everything below: quick ranges, the ‹ period › stepper, then the window or custom dates. %>
+  <section class="toolbar-band space-y-3" aria-label="Report period filters" data-tour="window">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <nav class="tabs" aria-label="Quick date ranges">
         <% report_date_presets.each do |label, from, to| %>
           <% active = custom && @range.to_date == from && @to_date == to %>
           <%= link_to label, url_for(extra.merge(action: params[:action], from: from.iso8601, to: to.iso8601)), class: "tab #{'tab-active' if active}".strip, aria: { current: (active ? 'page' : nil) } %>
         <% end %>
       </nav>
-      <nav class="flex items-center gap-2" aria-label="Report period">
-        <%= link_to url_for(extra.merge(action: params[:action], from: prev_from.iso8601, to: prev_to.iso8601)), class: 'btn-ghost btn-sm', rel: 'prev', title: report_range_label(prev_from, prev_to), aria: { label: "Previous period, #{report_range_label(prev_from, prev_to)}" } do %>←<% end %>
-        <strong class="text-sm text-ink" aria-live="polite"><%= report_range_label(win_from, win_to) %></strong>
+      <nav class="date-stepper" aria-label="Report period">
+        <%= link_to '‹', url_for(extra.merge(action: params[:action], from: prev_from.iso8601, to: prev_to.iso8601)), class: 'btn-ghost btn-sm', rel: 'prev', title: report_range_label(prev_from, prev_to), aria: { label: "Previous period, #{report_range_label(prev_from, prev_to)}" } %>
+        <strong class="px-2 text-sm text-ink" aria-live="polite"><%= report_range_label(win_from, win_to) %></strong>
         <% if next_from <= Date.current %>
-          <%= link_to url_for(extra.merge(action: params[:action], from: next_from.iso8601, to: next_to.iso8601)), class: 'btn-ghost btn-sm', rel: 'next', title: report_range_label(next_from, next_to), aria: { label: "Next period, #{report_range_label(next_from, next_to)}" } do %>→<% end %>
+          <%= link_to '›', url_for(extra.merge(action: params[:action], from: next_from.iso8601, to: next_to.iso8601)), class: 'btn-ghost btn-sm', rel: 'next', title: report_range_label(next_from, next_to), aria: { label: "Next period, #{report_range_label(next_from, next_to)}" } %>
         <% else %>
-          <span class="btn-ghost btn-sm cursor-not-allowed opacity-50" aria-disabled="true" title="No later period yet">→</span>
+          <span class="btn-ghost btn-sm cursor-not-allowed opacity-50" aria-disabled="true" title="No later period yet">›</span>
         <% end %>
       </nav>
     </div>
@@ -39,8 +38,8 @@
       <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= text_field_tag :from, custom ? @range.to_date.iso8601 : '', type: 'date', class: 'input' %></div>
       <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= text_field_tag :to, @to_date&.iso8601, type: 'date', class: 'input' %></div>
       <%= yield :report_filters %>
-      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', url_for(action: params[:action]), class: 'btn-ghost' %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><% if custom || extra.any? || params[:days].present? %><%= link_to 'Clear', url_for(action: params[:action]), class: 'btn-ghost' %><% end %></div>
     <% end %>
-  </div>
+  </section>
   <%= yield %>
 </div>

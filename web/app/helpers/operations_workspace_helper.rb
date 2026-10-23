@@ -20,6 +20,12 @@ module OperationsWorkspaceHelper
   def operations_money(cents, currency: 'USD')
     return 'Unknown' if cents.nil?
 
-    "#{currency.presence || 'Unknown currency'} #{number_with_precision(BigDecimal(cents.to_s) / 100, precision: 2, delimiter: ',')}"
+    amount = BigDecimal(cents.to_s) / 100
+    figure = number_with_precision(amount.abs, precision: 2, delimiter: ',')
+    sign = amount.negative? ? '−' : ''
+    # Dollars read as $1,234.56 (docs/ui-standards.md §7); other currencies keep their code.
+    return "#{sign}$#{figure}" if currency.to_s.upcase == 'USD'
+
+    "#{sign}#{currency.presence || 'Unknown currency'} #{figure}"
   end
 end

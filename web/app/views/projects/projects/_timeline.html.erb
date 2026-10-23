@@ -24,7 +24,7 @@
       <% end %>
     </ol>
     <% if t[:unscheduled].any? %>
-      <p class="mt-4 text-xs font-semibold uppercase tracking-wider text-mocha">No dates yet</p>
+      <p class="mt-4 text-xs font-semibold text-mocha">No dates yet</p>
       <ul class="mt-1 flex flex-wrap gap-2 text-sm">
         <% t[:unscheduled].each do |task| %><li><%= link_to task.title, projects_task_path(task), class: "text-olive hover:underline" %></li><% end %>
       </ul>

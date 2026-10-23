@@ -1,10 +1,7 @@
 <% content_for :title, 'Ask Rupert usage' %>
 <% can_edit = Current.user.can?('settings.write') %>
 <div class="space-y-6">
-  <section>
-    <h1 class="page-title">Ask Rupert usage</h1>
-    <p class="mt-1 max-w-3xl text-sm text-mocha">Ask Rupert is the help chat behind the speech-bubble button beside Rupert's face in the header. Who can use it is the <strong>Rupert Chat</strong> permission on the <%= link_to 'Permissions', permissions_path, class: 'underline' %> screen: administrators by default, and you can give it to other roles or people. These are counts only: who asked how often and how many tokens it used, never what anyone asked. Limits are light on purpose. Nobody is locked out; a person who goes over is asked to wait a little.</p>
-  </section>
+  <%= page_header 'Ask Rupert usage', subtitle: 'Who asked how often and how many tokens it used, never what anyone asked.' %>
 
   <section class="grid grid-cols-2 gap-3 sm:grid-cols-5" aria-label="Last seven days">
     <div class="stat"><p class="stat-label">Questions, 7 days</p><p class="stat-value mt-1"><%= @totals[:questions] %></p></div>
@@ -70,4 +67,9 @@
     <% end %>
     <p class="px-5 pb-4 text-xs text-taupe"><%= pluralize(@conversations, 'chat') %> stored right now. People can delete their own with Clear. <%= @config['retention_days'].zero? ? 'Chats are otherwise saved.' : "The rest are removed after #{@config['retention_days']} days." %> Every lookup the assistant runs is recorded in <%= link_to 'Activity', activity_path, class: 'underline' %> by tool name and time only.</p>
   </section>
+  <details class="explainer text-sm text-mocha">
+    <summary class="explainer-summary">Who can use Ask Rupert</summary>
+    <p class="mt-1">Ask Rupert is the help chat behind the speech-bubble button in the header. Who can use it is the <strong>Rupert Chat</strong> permission on the <%= link_to 'Permissions', permissions_path, class: 'underline' %> screen: administrators by default, and you can give it to other roles or people.</p>
+    <p class="mt-1">Limits are light on purpose. Nobody is locked out; a person who goes over is asked to wait a little.</p>
+  </details>
 </div>

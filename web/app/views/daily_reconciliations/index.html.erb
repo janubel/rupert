@@ -11,24 +11,25 @@
    menu << ['Register summary', register_summary_reports_path(day: day_param)]
    menu << ['Source reports', money_reconciliations_path(date: day_param)]
    menu << ['Source documents', reconciliation_documents_path(from: day_param, to: day_param)]
-   menu << ['Drive copies', retention_drive_path]
    [['Attention and follow-ups', '#attention-items'], ['Review day', '#review-day'], ['Source evidence', '#source-evidence'], ['Documents', '#documents'], ['Review and history', '#review-history']].each { |label, anchor| menu << [label, anchor] } %>
 <div class="space-y-6">
-  <%= page_header 'Daily reconciliation', subtitle: "#{@report.day.strftime('%A, %B %-d, %Y')} · check the day against its source reports, keep the originals, and record anything that needs follow-up.", menu: menu do %>
+  <%= page_header 'Daily reconciliation', subtitle: "#{@report.day.strftime('%A, %B %-d, %Y')} · check the day against its source reports and keep the originals.", menu: menu do %>
     <%= link_to 'Day close', financial_close_path(day: day_param), class: 'btn-primary' %>
   <% end %>
   <% if @form_error %><div role="alert" tabindex="-1" id="reconciliation-error" class="flash flash-alert"><p class="font-semibold"><%= @form_error %></p><p class="mt-1">Your entered text is still below. <%= link_to 'Return to the form', "##{@error_section}", class: 'font-semibold underline' %><%= @error_section == 'upload-document' ? ' Select the original file again before submitting.' : '' %></p></div><% end %>
 
-  <%= form_with url: daily_reconciliations_path, method: :get, class: 'toolbar' do |f| %>
-    <div class="toolbar-field"><%= f.label :day, 'Business day', class: 'field-label' %><%= f.date_field :day, value: @report.day, required: true, class: 'input' %></div>
-    <nav class="toolbar-actions" aria-label="Business days">
-      <%= f.submit 'Apply', class: 'btn-primary' %>
-      <%= link_to 'Previous day', daily_reconciliations_path(day: (@report.day - 1).iso8601), class: 'btn-ghost' %>
-      <%= link_to 'Next day', daily_reconciliations_path(day: (@report.day + 1).iso8601), class: 'btn-ghost' %>
-      <%= link_to 'Yesterday', daily_reconciliations_path(day: Date.yesterday.iso8601), class: 'btn-ghost' %>
-      <%= link_to 'Today', daily_reconciliations_path(day: Date.current.iso8601), class: 'btn-ghost' %>
-    </nav>
-  <% end %>
+  <section class="toolbar-band" aria-label="Business day">
+    <%= form_with url: daily_reconciliations_path, method: :get, class: 'toolbar' do |f| %>
+      <div class="toolbar-field"><%= f.label :day, 'Business day', class: 'field-label' %>
+        <nav class="date-stepper" aria-label="Business days">
+          <%= link_to '‹', daily_reconciliations_path(day: (@report.day - 1).iso8601), class: 'btn-ghost btn-sm', rel: 'prev', aria: { label: 'Previous day' }, title: 'Previous day' %>
+          <%= f.date_field :day, value: @report.day, required: true, class: 'input' %>
+          <%= link_to '›', daily_reconciliations_path(day: (@report.day + 1).iso8601), class: 'btn-ghost btn-sm', rel: 'next', aria: { label: 'Next day' }, title: 'Next day' %>
+        </nav>
+      </div>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><% if @report.day != Date.yesterday %><%= link_to 'Yesterday', daily_reconciliations_path(day: Date.yesterday.iso8601), class: 'btn-ghost' %><% end %></div>
+    <% end %>
+  </section>
 
   <section class="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Daily review overview">
     <div class="stat"><p class="stat-label">Your review</p><p class="stat-value-sm mt-1"><%= !review ? 'Not reviewed' : !review_current ? 'Changed since review' : review.status.humanize %></p><p class="mt-1 text-xs text-taupe"><%= review ? "Last note #{review.created_at.in_time_zone.strftime('%b %-d, %-I:%M %p')}" : 'Record a review after checking the evidence.' %></p></div>

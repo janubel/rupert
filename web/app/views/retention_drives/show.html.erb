@@ -4,9 +4,6 @@
    menu = []
    menu << ['Sync now', sync_retention_drive_path, { method: :post }] if connected && Current.user.can?('reports.write')
    menu << ['Reconnect Google Drive', connect_retention_drive_path, { data: { turbo: false } }] if connected && can_manage && RetentionDrive.configured?
-   menu << ['Open days', overview_reconciliation_follow_ups_path]
-   menu << ['Source documents', reconciliation_documents_path]
-   menu << ['Daily reconciliation', daily_reconciliations_path]
    copied = @counts.fetch('verified', 0); failed = @counts.fetch('failed', 0); waiting = [@total - copied - failed, 0].max %>
 <div class="page-medium space-y-6">
   <%= page_header 'Drive copies', subtitle: 'An automatic second copy of reports, invoices and every archived reconciliation in Google Drive.', menu: menu do %>

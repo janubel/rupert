@@ -1,5 +1,5 @@
 <section id="cash-flow-events" class="card card-pad">
-  <%= section_heading 'Latest money events', hint: 'Newest first, across sales, bank lines, expenses and vendor payments · refreshes every 30 seconds' %>
+  <%= section_heading 'Latest money events', hint: 'Sales, bank lines, expenses and vendor payments, newest first.' %>
   <% events = report.recent_events %>
   <% if events.empty? %>
     <%= empty_state 'Nothing recorded yet', hint: 'Sales appear after a sync; bank lines after a statement import.' %>

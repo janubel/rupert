@@ -2,10 +2,9 @@
 <% can_write = Current.user.can?("settings.write") %>
 <div class="page-medium space-y-6">
   <%= page_header 'Settings', subtitle: 'Environment keys, backups, business details, sign-in and integrations.' %>
-  <%= fold_explainer('Environment keys apply to the sync engine immediately. Boot-time keys (Shopify API key and secret, database) come from the server environment and cannot be changed here. Credentials for each source live under Credentials & sync.', class: 'text-sm text-mocha') %>
 
   <section id="env" class="section-card" data-controller="settings">
-    <%= section_heading 'Environment (.env)', hint: 'Import a .env file or paste its contents to update managed keys.' do %>
+    <%= section_heading 'Environment (.env)', hint: 'Paste or import a .env file to update managed keys.' do %>
       <% if Current.user.super_admin? %>
         <%= link_to "Download .env", env_export_confirm_settings_path, class: "btn-ghost btn-sm", data: { turbo: false } %>
       <% end %>
@@ -30,6 +29,10 @@
         </div>
       </form>
     <% end %>
+    <details class="explainer text-sm text-mocha">
+      <summary class="explainer-summary">Which keys can change here</summary>
+      <p class="mt-1">Environment keys apply to the sync engine immediately. Boot-time keys (Shopify API key and secret, database) come from the server environment and cannot be changed here. Credentials for each source live under Credentials & sync.</p>
+    </details>
   </section>
 
   <section class="section-card">
@@ -269,12 +272,9 @@
   <section class="section-card">
     <%= section_heading 'Size families', hint: 'Group a base-gram product’s sizes under one root gram bank.' do %>
       <span class="<%= SizeFamily.any? ? "pill-fern" : "pill-taupe" %>"><%= pluralize(SizeFamily.count, "family") %></span>
+      <%= link_to "Open size families", size_families_path, class: "btn-ghost btn-sm" %>
     <% end %>
-    <p class="text-xs text-taupe">Every 15-minute sync derives each size’s quantity (3.5g, 7g, 14g, 28g) from the root and, with your approval, writes it to Square instead of trusting realtime counts.</p>
-    <div class="flex flex-wrap items-center gap-2">
-      <%= link_to "Open size families", size_families_path, class: "btn-primary" %>
-      <%= link_to "Pending changes", size_families_path, class: "btn-ghost" %>
-    </div>
+    <p class="text-xs text-taupe">Every 15-minute sync derives each size’s quantity (3.5g, 7g, 14g, 28g) from the root and, with your approval, writes it to Square instead of trusting realtime counts. Pending changes are reviewed on the size families page.</p>
   </section>
 
   <section class="section-card scroll-mt-24" id="team-chat">

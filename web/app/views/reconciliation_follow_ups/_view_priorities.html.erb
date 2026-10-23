@@ -1,14 +1,16 @@
 <section class="section-card" aria-label="Priorities in this filtered view">
-  <%= section_heading "Work this view#{" · #{@day.strftime('%b %-d, %Y')}" if @day}", hint: 'These priorities use every selected filter across all result pages. A monthly request can cover several business days.' do %>
+  <%= section_heading "Work this view#{" · #{@day.strftime('%b %-d, %Y')}" if @day}", hint: 'Uses every selected filter, across all result pages.' do %>
     <% if @day %>
-      <%= link_to 'Previous day', reconciliation_follow_ups_path(@queue_filters.merge(day: (@day - 1).iso8601)), class: 'btn-ghost btn-sm' %>
-      <%= link_to 'Next day', reconciliation_follow_ups_path(@queue_filters.merge(day: (@day + 1).iso8601)), class: 'btn-ghost btn-sm' %>
+      <span class="date-stepper">
+        <%= link_to '‹', reconciliation_follow_ups_path(@queue_filters.merge(day: (@day - 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'prev', aria: { label: 'Previous day' }, title: 'Previous day' %>
+        <%= link_to '›', reconciliation_follow_ups_path(@queue_filters.merge(day: (@day + 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'next', aria: { label: 'Next day' }, title: 'Next day' %>
+      </span>
     <% end %>
   <% end %>
-  <% if @day %><nav class="flex flex-wrap gap-2" aria-label="Move between covered business days">
-    <%= link_to 'All dates with these filters', reconciliation_follow_ups_path(@queue_filters.except(:day)), class: 'btn-ghost btn-sm' %>
-    <%= link_to 'Open day close', financial_close_path(day: @day.iso8601), class: 'btn-ghost btn-sm' %>
-    <%= link_to 'Plan cash from this date', cash_forecast_path(day: @day.iso8601), class: 'btn-ghost btn-sm' %>
+  <% if @day %><nav class="flex flex-wrap gap-x-3 gap-y-1 text-sm" aria-label="Move between covered business days">
+    <%= link_to 'All dates with these filters', reconciliation_follow_ups_path(@queue_filters.except(:day)), class: 'font-semibold text-olive-deep hover:underline' %>
+    <%= link_to 'Open day close', financial_close_path(day: @day.iso8601), class: 'font-semibold text-olive-deep hover:underline' %>
+    <%= link_to 'Plan cash from this date', cash_forecast_path(day: @day.iso8601), class: 'font-semibold text-olive-deep hover:underline' %>
   </nav><% end %>
   <div class="grid gap-4 sm:grid-cols-2">
     <% [['Overdue follow-ups', @view_overdue_count, @view_next_overdue], ['Missing reports without a linked original', @view_missing_count, @view_next_missing]].each do |label, count, item| %>
@@ -20,5 +22,5 @@
       </article>
     <% end %>
   </div>
-  <p class="text-xs text-mocha">Saved requests do not include every missing close report. Review close checks before deciding a day is ready. The shortcuts below switch to all dates.</p>
+  <p class="text-xs text-mocha">Saved requests do not include every missing close report, and a monthly request can cover several business days. Review close checks before deciding a day is ready.</p>
 </section>

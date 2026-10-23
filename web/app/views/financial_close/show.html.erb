@@ -6,31 +6,39 @@
    menu << ['Close checklist', '#retain-close'] if can_write
    menu << ['Retained close versions', '#close-history'] %>
 <div class="space-y-6">
-  <%= page_header 'Day close', subtitle: "#{day.strftime('%A, %B %-d, %Y')} · work one business date from source originals to a saved close package.", menu: menu do %>
+  <%= page_header 'Day close', subtitle: "#{day.strftime('%A, %B %-d, %Y')} · from source originals to a saved close package.", menu: menu do %>
     <%= link_to 'Review the day', daily_reconciliations_path(day: day.iso8601), class: 'btn-primary' %>
   <% end %>
 
-  <%= form_with url: financial_close_path, method: :get, class: 'toolbar' do |f| %>
-    <div class="toolbar-field"><%= f.label :day, 'Business date', class: 'field-label' %><%= f.date_field :day, value: day, required: true, class: 'input' %></div>
-    <nav class="toolbar-actions" aria-label="Close business dates">
-      <%= f.submit 'Apply', class: 'btn-primary' %>
-      <%= link_to 'Previous day', financial_close_path(day: (day - 1).iso8601), class: 'btn-ghost' %>
-      <%= link_to 'Next day', financial_close_path(day: (day + 1).iso8601), class: 'btn-ghost' %>
-      <%= link_to 'Yesterday', financial_close_path(day: Date.yesterday.iso8601), class: 'btn-ghost' %>
-      <%= link_to 'Today', financial_close_path(day: Date.current.iso8601), class: 'btn-ghost' %>
-    </nav>
-  <% end %>
-  <% if (next_check = workflow.blockers.first) %><p class="text-sm text-mocha">Next check: <%= link_to next_check[:title], '#close-blockers', class: 'font-semibold text-olive-deep hover:underline' %> · <%= day.strftime('%b %-d, %Y') %></p><% end %>
+  <section aria-label="Close date" class="toolbar-band">
+    <%= form_with url: financial_close_path, method: :get, class: 'toolbar' do |f| %>
+      <div class="toolbar-field"><%= f.label :day, 'Business date', class: 'field-label' %>
+        <nav class="date-stepper" aria-label="Close business dates">
+          <%= link_to '‹', financial_close_path(day: (day - 1).iso8601), class: 'btn-ghost btn-sm', rel: 'prev', aria: { label: 'Previous day' }, title: 'Previous day' %>
+          <%= f.date_field :day, value: day, required: true, class: 'input' %>
+          <%= link_to '›', financial_close_path(day: (day + 1).iso8601), class: 'btn-ghost btn-sm', rel: 'next', aria: { label: 'Next day' }, title: 'Next day' %>
+        </nav>
+      </div>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><% if day != Date.yesterday %><%= link_to 'Yesterday', financial_close_path(day: Date.yesterday.iso8601), class: 'btn-ghost' %><% end %></div>
+    <% end %>
+    <% if (next_check = workflow.blockers.first) %><p class="mt-2 text-sm text-mocha">Next check: <%= link_to next_check[:title], '#close-blockers', class: 'font-semibold text-olive-deep hover:underline' %></p><% end %>
+  </section>
   <% if @error %><p role="alert" class="flash flash-alert"><%= @error %> Your closing note and selections are preserved below.</p><% end %>
 
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Close status overview">
-    <% [['Checks needing action', workflow.blockers.size, 'close_check'], ['Current review', !workflow.review ? 'Not recorded' : !workflow.review_current? ? 'Evidence changed' : workflow.review.status.humanize, 'fingerprint'], ['Retained originals / versions', workflow.report.documents.size, 'original_document'], ['Open follow-ups', workflow.open_follow_ups.size, 'follow_up']].each do |label, value, term| %><div class="stat min-w-0"><div class="stat-label"><%= label %><%= define(term) %></div><p class="stat-value-sm mt-1 break-words"><%= value %></p></div><% end %>
+    <% [['Checks needing action', workflow.blockers.size, 'close_check'], ['Current review', !workflow.review ? 'Not recorded' : !workflow.review_current? ? 'Evidence changed' : workflow.review.status.humanize, 'fingerprint'], ['Originals retained', workflow.report.documents.size, 'original_document'], ['Open follow-ups', workflow.open_follow_ups.size, 'follow_up']].each do |label, value, term| %><div class="stat min-w-0"><div class="stat-label"><%= label %><%= define(term) %></div><p class="stat-value-sm mt-1 break-words"><%= value %></p></div><% end %>
   </section>
 
-  <nav class="operations-stages" aria-label="Reconciliation workflow">
-    <%= link_to reconciliation_documents_path(from: day.iso8601, to: day.iso8601, close_day: day.iso8601) do %><p class="eyebrow text-olive">1 · Gather</p><p class="mt-2 font-semibold">Find source originals</p><p class="mt-1 text-xs text-mocha">Reports, invoices and statements covering this date</p><% end %>
-    <%= link_to daily_reconciliations_path(day: day.iso8601, anchor: 'control-comparisons') do %><p class="eyebrow text-olive">2 · Compare</p><p class="mt-2 font-semibold">Investigate and review</p><p class="mt-1 text-xs text-mocha">Source, currency and location stay separate</p><% end %>
-    <%= link_to(can_write ? '#retain-close' : '#close-history') do %><p class="eyebrow text-olive">3 · Retain</p><p class="mt-2 font-semibold"><%= can_write ? 'Finish the close checklist' : 'Inspect saved close versions' %></p><p class="mt-1 text-xs text-mocha">A current review is required before saving a package</p><% end %>
+  <nav class="card" aria-label="Reconciliation workflow">
+    <ol class="row-list">
+      <% [['1', 'Gather', 'Find source originals', 'Reports, invoices and statements covering this date.', reconciliation_documents_path(from: day.iso8601, to: day.iso8601, close_day: day.iso8601)],
+          ['2', 'Compare', 'Investigate and review', 'Source, currency and location stay separate.', daily_reconciliations_path(day: day.iso8601, anchor: 'control-comparisons')],
+          ['3', 'Retain', (can_write ? 'Finish the close checklist' : 'Inspect saved close versions'), 'A current review is required before saving a package.', (can_write ? '#retain-close' : '#close-history')]].each do |number, step, title, caption, path| %>
+        <li class="row-item">
+          <div class="min-w-0"><p class="font-semibold text-ink"><span class="text-taupe"><%= number %> · <%= step %>:</span> <%= link_to title, path, class: 'hover:underline' %></p><p class="text-xs text-taupe"><%= caption %></p></div>
+        </li>
+      <% end %>
+    </ol>
   </nav>
 
   <%= render 'shared/daily_close_summary', day: day %>
@@ -40,13 +48,13 @@
     <div class="min-w-0">
       <% if can_write %>
         <section id="retain-close" class="section-card" aria-labelledby="retain-close-title">
-          <div class="card-head"><div><h2 id="retain-close-title" class="section-title">Retain the close package<%= define('close_package') %></h2><p class="card-hint">Keeps a version of the evidence, review, outstanding work and your checklist. Supporting originals are checksum-verified and the reconciliation CSV is archived with the package.</p></div></div>
+          <div class="card-head"><div><h2 id="retain-close-title" class="section-title">Retain the close package<%= define('close_package') %></h2><p class="card-hint">Keeps a version of the evidence, review, outstanding work and your checklist.</p></div></div>
           <%= form_with url: financial_close_path, scope: :close, class: 'space-y-4' do |f| %>
             <%= f.hidden_field :day, value: day.iso8601 %><%= f.hidden_field :workflow_digest, value: workflow.digest %>
             <div><%= f.label :disposition, 'Close disposition', class: 'field-label' %><%= f.select :disposition, [['Complete recorded checks', 'complete', { disabled: !workflow.clear_for_close? }], ['Close with documented exceptions', 'with_exceptions']], { selected: @values&.dig('disposition') || (workflow.clear_for_close? ? 'complete' : 'with_exceptions') }, class: 'select' %></div>
             <fieldset class="space-y-3"><legend class="card-title">Reviewer checklist</legend><% FinancialCloseWorkflow::CHECKS.each do |key, label| %><label class="flex items-start gap-3 text-sm"><%= f.check_box key, { checked: @values&.dig(key) == '1', required: true, class: 'mt-1' }, '1', '0' %><span><%= label %></span></label><% end %></fieldset>
             <div><%= f.label :notes, 'Closing explanation / documented exceptions', class: 'field-label' %><%= f.text_area :notes, value: @values&.dig('notes'), required: true, maxlength: 4000, rows: 4, class: 'input', placeholder: 'Evidence checked, unresolved items, who owns them, and any retention or bank-verification exceptions.' %></div>
-            <p class="text-xs text-mocha">Use documented exceptions for any missing bank, source or policy evidence, including a required Drive copy. Saving does not close follow-ups, post a ledger transaction or send a message.</p>
+            <p class="text-xs text-mocha">Use documented exceptions for any missing bank, source or policy evidence, including a required Drive copy. Supporting originals are checksum-verified and the reconciliation CSV is archived with the package. Saving does not close follow-ups, post a ledger transaction or send a message.</p>
             <% unless workflow.review_current? %><p class="rounded-card border border-warn-edge bg-warn-bg p-3 text-sm">A current review is required before retaining either type of package. <%= link_to 'Record current review', daily_reconciliations_path(day: day.iso8601, anchor: 'review-history'), class: 'font-semibold text-olive-deep hover:underline' %></p><% end %>
             <div class="form-actions"><%= f.submit 'Verify originals & retain close package', disabled: !workflow.review_current?, class: 'btn-primary' %></div>
           <% end %>

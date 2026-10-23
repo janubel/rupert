@@ -6,9 +6,16 @@
     <% if blockers.any? %><%= link_to "Start: #{blockers.first[:title]}", financial_close_blocker_path(blockers.first[:key], day), class: 'btn-primary' %><% else %><%= link_to(can_write ? 'Complete close checklist' : 'Inspect retained close versions', can_write ? '#retain-close' : '#close-history', class: 'btn-primary') %><% end %>
     <p class="text-xs text-mocha">Counts describe checks and may overlap. Verify retention requirements separately; local originals stay available.</p>
   </div>
-  <div class="grid gap-3 md:grid-cols-2" aria-label="Checks needing action">
-    <% blockers.each do |blocker| %><article class="section-card min-w-0"><div class="card-head"><h3 class="card-title"><%= blocker[:title] %><%= blocker[:count] ? " · #{blocker[:count]}" : '' %></h3><span class="<%= blocker[:required] ? 'pill-rose' : 'pill-clay' %>"><%= blocker[:required] ? 'Required for any package' : 'Blocks complete close' %></span></div><p class="text-sm text-mocha"><%= blocker[:detail] %></p><%= link_to financial_close_action_label(blocker[:key]), financial_close_blocker_path(blocker[:key], day), class: 'btn-ghost btn-sm', aria: { label: "Open #{blocker[:title]}" } %></article><% end %>
-  </div>
+  <% if blockers.any? %>
+    <div class="card row-list" aria-label="Checks needing action">
+      <% blockers.each do |blocker| %>
+        <article class="row-item">
+          <div class="min-w-0 flex-1"><h3 class="font-semibold text-ink"><%= blocker[:title] %><%= blocker[:count] ? " · #{blocker[:count]}" : '' %></h3><p class="text-xs text-mocha"><%= blocker[:detail] %></p></div>
+          <div class="row-item-end"><span class="<%= blocker[:required] ? 'pill-rose' : 'pill-clay' %>"><%= blocker[:required] ? 'Required for any package' : 'Blocks complete close' %></span><%= link_to financial_close_action_label(blocker[:key]), financial_close_blocker_path(blocker[:key], day), class: 'btn-ghost btn-sm', aria: { label: "Open #{blocker[:title]}" } %></div>
+        </article>
+      <% end %>
+    </div>
+  <% end %>
   <% if workflow.attention.missing_controls.any? %><section id="close-missing-reports" class="space-y-3" aria-label="Missing reports blocking close"><%= section_heading 'Which register reports are missing?', level: :h3 %>
     <% workflow.attention.missing_controls.first(4).each do |row| %>
       <div class="section-card"><%= render 'financial_close/missing_report', row: row, request: workflow.missing_control_request(row), control_key: workflow.attention.control_key(row), day: day, can_write: can_write %></div>

@@ -4,15 +4,13 @@
 <% menu << ['Consolidate profiles', consolidation_people_employees_path] if Current.user.can?("hr.write") && Current.user.can_manage_accounts? %>
 <div class="space-y-6">
   <div <%= tour_anchor('actions') %>>
-    <%= page_header 'Staff', subtitle: 'The team directory with department, position and employment status.', menu: menu do %>
+    <%= page_header 'Staff', subtitle: 'The team directory: department, position and status.', menu: menu do %>
       <% if Current.user.can?("hr.write") %>
         <%= link_to "Add staff member", new_people_employee_path, class: "btn-primary" %>
       <% end %>
     <% end %>
   </div>
 
-  <%= render "shared/directory_sync_status", kind: "employees", tour: "sync" %>
-  <%= fold_explainer('Each staff member can have accounts in several apps. Consolidated profiles retain every source identity. Confirm employment type and payroll details before payroll.', class: 'text-sm text-mocha') %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" <%= tour_anchor('stats') %>>
     <div class="stat">
@@ -37,7 +35,7 @@
     </div>
   </section>
 
-  <p class="text-sm text-mocha"><%= @missing_logins %> active staff records need a login. <%= link_to 'Review staff without logins', people_employees_path(login: 'missing'), class: 'font-semibold text-olive-deep hover:underline' %></p>
+  <% if @missing_logins.to_i.positive? %><p class="text-sm text-mocha"><%= @missing_logins %> active staff records need a login. <%= link_to 'Review staff without logins', people_employees_path(login: 'missing'), class: 'font-semibold text-olive-deep hover:underline' %></p><% end %>
 
   <%= form_tag people_employees_path, method: :get, class: "toolbar", data: { tour: 'filters' } do %>
     <div class="toolbar-field">
@@ -105,4 +103,6 @@
     </div>
     <% if @pagy.pages > 1 %><div class="p-4"><%== @pagy.series_nav %></div><% end %>
   </div>
+  <%= render "shared/directory_sync_status", kind: "employees", tour: "sync" %>
+  <%= fold_explainer('Each staff member can have accounts in several apps. Consolidated profiles retain every source identity. Confirm employment type and payroll details before payroll.', class: 'text-sm text-mocha') %>
 </div>

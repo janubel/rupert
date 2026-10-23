@@ -112,7 +112,7 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     get customer_path(@customer)
     assert_response :success
     assert_includes response.body, 'CAD 10.00'
-    assert_includes response.body, 'USD 10.00'
+    assert_includes response.body, '$10.00'
     26.times { |n| @customer.interactions.create!(author: @user, body: "Entry #{n}") }
     get customer_path(@customer), params: { activity_page: 2 }
     assert_response :success
@@ -138,7 +138,7 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Unverified / historical'
   end
 
-  test 'index is discoverable from the Sell area and dashboard shortcuts, not a duplicate header icon' do
+  test 'index is discoverable from the Sell area, not a header icon or a dashboard shortcut row' do
     get customers_path
     assert_response :success
     assert_select 'nav[aria-label="Module areas"] a[aria-current="page"]', text: /Sell/
@@ -148,7 +148,7 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
     assert_select 'a.nav-utility[href=?]', customers_path, count: 0
-    assert_select 'nav[aria-label="Daily work"] a[href=?]', customers_path
+    assert_select 'nav[aria-label="Daily work"]', count: 0
   end
 
   test 'users without customers.read get an explanation instead of a silent redirect' do

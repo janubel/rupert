@@ -1,7 +1,0 @@
-<nav aria-label="Daily work" class="flex flex-wrap gap-2">
-  <% if Current.user.can_use_pos? %><%= link_to 'Open retail POS', ctrax_pos_path, class: 'btn-ghost' %><% end %>
-  <% if Current.user.can?('sales.read') %><%= link_to 'C-Trax daily close', ctrax_days_path, class: 'btn-ghost' %><% end %>
-  <% if Current.user.can?('customers.read') %><%= link_to 'Customers', customers_path, class: 'btn-ghost' %><% end %>
-  <% if Current.user.can?('reports.read') %><%= link_to 'Books desk', books_desk_path, class: 'btn-ghost' %><% end %>
-  <% if Current.user.can?('timesheets.self') %><%= link_to 'My time & time off', employee_app_path, class: 'btn-ghost' %><% end %>
-</nav>

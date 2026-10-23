@@ -1,7 +1,7 @@
 <% content_for :title, "Projects" %>
 <% filters = [["Active work", nil], ["Planned", "planned"], ["Active", "active"], ["On hold", "on_hold"], ["Completed", "completed"], ["Archived", "archived"]] %>
 <div class="space-y-6">
-  <%= page_header 'Projects', subtitle: 'Plan work, track tasks and hit goals.', menu: [['Getting started', projects_getting_started_path], ['Export CSV', export_projects_projects_path]] do %>
+  <%= page_header 'Projects', subtitle: 'Plan work, track tasks and hit goals.', menu: [['Getting started', projects_getting_started_path], ['Download CSV', export_projects_projects_path]] do %>
     <% if Current.user.can?("projects.write") %>
       <%= link_to "Add project", new_projects_project_path, class: "btn-primary" %>
     <% end %>
@@ -22,7 +22,7 @@
     <div class="toolbar-field"><%= label_tag :q, "Search", class: "field-label" %><%= search_field_tag :q, params[:q], placeholder: "Project name", class: "search w-full" %></div>
     <div class="toolbar-field"><%= label_tag :status, "Status", class: "field-label" %><%= select_tag :status, options_for_select(filters.map { |label, key| [key && @status_counts[key].to_i.positive? ? "#{label} (#{@status_counts[key]})" : label, key] }, @status), class: "select w-full", data: { action: "change->auto-submit#submit" } %></div>
     <div class="toolbar-field"><%= label_tag :sort, "Sort", class: "field-label" %><%= select_tag :sort, options_for_select([["Recently updated", "updated"], ["Due date", "due"], ["Name", "name"]], params[:sort]), class: "select w-full", data: { action: "change->auto-submit#submit" } %></div>
-    <div class="toolbar-actions"><%= submit_tag "Apply", class: "btn-primary" %><%= link_to "Clear", projects_projects_path, class: "btn-ghost" %></div>
+    <div class="toolbar-actions"><%= submit_tag "Apply", class: "btn-primary" %><% if params[:q].present? || @status || params[:sort].present? %><%= link_to "Clear", projects_projects_path, class: "btn-ghost" %><% end %></div>
   <% end %>
 
   <% if @projects.empty? %>
@@ -32,7 +32,7 @@
   <% else %>
   <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
     <% @projects.each do |project| %>
-      <%= link_to project, class: "card card-pad group block transition hover:-translate-y-0.5 hover:border-taupe hover:shadow-md" do %>
+      <%= link_to project, class: "card card-pad group block transition hover:border-taupe" do %>
         <div class="flex items-start justify-between gap-2">
           <h3 class="card-title min-w-0 truncate group-hover:text-olive-deep"><%= project.name %></h3>
           <%= project_status_pill(project) %>

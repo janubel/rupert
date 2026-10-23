@@ -110,12 +110,12 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
       orders_json: [{ 'id' => '41', 'status' => 'completed', 'deleted' => false, 'completed_at' => at.iso8601, 'total' => 2000, 'tip' => 500 }], sessions_json: [], controls_json: {})
     get sales_path, params: { date: day.iso8601, window: 7 }
     assert_response :success
-    assert_select '[aria-label="Recorded sales summary"]', text: /Recorded sales.*USD 30.00.*Sales recorded.*2/m
+    assert_select '[aria-label="Recorded sales summary"]', text: /Recorded sales.*\$30.00.*Sales recorded.*2/m
     assert_select '[aria-label="Order journal"]', text: /EUR 50.00/m
-    assert_select '[aria-label="Hourly sales by location"] tr', text: /11 PM.*USD 10.00/m
+    assert_select '[aria-label="Hourly sales by location"] tr', text: /11 PM.*\$10.00/m
     assert_includes response.body, 'ending 2026-10-10'
     get sales_path, params: { date: day.iso8601, source: 'ctrax', window: 7 }
-    assert_select '[aria-label="Recorded sales summary"]', text: /Recorded sales.*USD 20.00/m
+    assert_select '[aria-label="Recorded sales summary"]', text: /Recorded sales.*\$20.00/m
     assert_select 'td.empty-row', text: /native C-Trax receipts/
   end
 
@@ -154,9 +154,9 @@ class OperationsWorkspaceTest < ActionDispatch::IntegrationTest
     end
     get ledger_index_path
     assert_response :success
-    assert_select '[aria-label="Ledger totals by currency"]', text: /USD 10.00/
+    assert_select '[aria-label="Ledger totals by currency"]', text: /\$10.00/
     assert_select '[aria-label="Ledger totals by currency"]', text: /EUR 20.00/
-    assert_not_includes response.body, 'USD 30.00'
+    assert_not_includes response.body, '$30.00'
   end
 
   private

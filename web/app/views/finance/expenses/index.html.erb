@@ -3,13 +3,13 @@
 <div class="space-y-6">
   <%= render layout: 'finance/page_header', locals: { title: 'Expenses', range: range_text, print: true,
         menu: [['Download CSV', finance_expenses_path(request.query_parameters.merge(format: :csv)), { data: { turbo: false } }], ['Expense categories', finance_expense_categories_path], ['By payee', finance_payees_path]],
-        explain: 'Money the business has paid out. Each expense posts to the ledger. Removing one keeps it on this list as Removed and can be undone.' } do %>
+        explain: 'Money the business has paid out.' } do %>
     <% if @can_write %><%= link_to 'Add expense', new_finance_expense_path, class: 'btn-primary' %><% end %>
   <% end %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Expense summary">
     <div class="stat">
-      <div class="stat-label">Active expenses · USD<%= define('expense') %></div>
+      <div class="stat-label">Active expenses<%= define('expense') %></div>
       <p class="stat-value mt-1"><%= finance_money(@total_cents) %></p>
       <p class="mt-1 text-xs text-taupe"><%= pluralize(@entry_count, 'active expense') %> in range<%= ', filtered' if @q.present? || @min_cents || @max_cents || @category != 'all' %></p>
     </div>
@@ -21,19 +21,28 @@
     <% end %>
   </section>
 
-  <%= form_tag finance_expenses_path, method: :get, class: 'toolbar', role: 'search', aria: { label: 'Filter expenses' } do %>
-    <div class="toolbar-field"><%= label_tag :q, 'Payee, vendor or reference', class: 'field-label' %><%= search_field_tag :q, @q, class: 'input', autocomplete: 'off' %></div>
-    <div class="toolbar-field"><%= label_tag :category, 'Category', class: 'field-label' %>
-      <%= select_tag :category, options_for_select([['All categories', 'all']] + Finance::ExpenseCategory.catalog.map { |c| [c.name, c.key] }, @category), class: 'select' %></div>
-    <div class="toolbar-field"><%= label_tag :month, 'Month (optional)', class: 'field-label' %><%= month_field_tag :month, @month, min: '2000-01', max: '2099-12', class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from, class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @through, class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :min, 'Amount from (USD)', class: 'field-label' %><%= text_field_tag :min, params[:min], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
-    <div class="toolbar-field"><%= label_tag :max, 'Amount to (USD)', class: 'field-label' %><%= text_field_tag :max, params[:max], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
-    <%= hidden_field_tag :include_deleted, '0', id: nil %>
-    <label class="flex items-center gap-1.5 pb-2 text-sm text-mocha"><%= check_box_tag :include_deleted, '1', @include_deleted, class: 'checkbox' %> Show removed expenses</label>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_expenses_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <section class="toolbar-band" aria-label="Expense filters">
+    <%= form_tag finance_expenses_path, method: :get, role: 'search', aria: { label: 'Filter expenses' } do %>
+      <div class="toolbar">
+        <div class="toolbar-field"><%= label_tag :q, 'Payee, vendor or reference', class: 'field-label' %><%= search_field_tag :q, @q, class: 'input', autocomplete: 'off' %></div>
+        <div class="toolbar-field"><%= label_tag :category, 'Category', class: 'field-label' %>
+          <%= select_tag :category, options_for_select([['All categories', 'all']] + Finance::ExpenseCategory.catalog.map { |c| [c.name, c.key] }, @category), class: 'select' %></div>
+        <div class="toolbar-field"><%= label_tag :month, 'Month (optional)', class: 'field-label' %><%= month_field_tag :month, @month, min: '2000-01', max: '2099-12', class: 'input' %></div>
+        <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from, class: 'input' %></div>
+        <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @through, class: 'input' %></div>
+        <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_expenses_path, class: 'btn-ghost' %></div>
+      </div>
+      <details class="explainer mt-3" <%= 'open' if params[:min].present? || params[:max].present? || @include_deleted %>>
+        <summary class="explainer-summary">More filters</summary>
+        <div class="toolbar mt-2">
+          <div class="toolbar-field"><%= label_tag :min, 'Amount from', class: 'field-label' %><%= text_field_tag :min, params[:min], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
+          <div class="toolbar-field"><%= label_tag :max, 'Amount to', class: 'field-label' %><%= text_field_tag :max, params[:max], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
+          <%= hidden_field_tag :include_deleted, '0', id: nil %>
+          <label class="flex items-center gap-1.5 pb-2 text-sm text-mocha"><%= check_box_tag :include_deleted, '1', @include_deleted, class: 'checkbox' %> Show removed expenses</label>
+        </div>
+      </details>
+    <% end %>
+  </section>
 
   <% if @filter_problem %><p role="alert" class="flash flash-alert"><%= @filter_problem %></p><% end %>
 
@@ -99,6 +108,9 @@
       </table>
     </div>
   </div>
-  <p class="text-xs text-mocha">Totals count active expenses only. <%= pluralize(@removed_count, 'removed expense') %> in the list<%= @include_deleted ? '' : ' (hidden by the filter)' %>. This register records payments that already happened; no money is transferred.</p>
   <%== @pagy.series_nav if @pagy.pages > 1 %>
+  <details class="explainer text-xs text-mocha">
+    <summary class="explainer-summary">How this register works</summary>
+    <p class="mt-1">Each expense posts to the ledger. Removing one keeps it on this list as Removed and can be undone. Totals count active expenses only; <%= pluralize(@removed_count, 'removed expense') %> in the list<%= @include_deleted ? '' : ' (hidden by the filter)' %>. This register records payments that already happened; no money is transferred.</p>
+  </details>
 </div>

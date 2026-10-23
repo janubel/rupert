@@ -20,53 +20,62 @@
     <% unless Current.user %><%= render 'layouts/build_version' %><% end %>
     <% if Current.user %>
       <% if Current.user.can?('dashboard.read') %>
-        <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="topbar-search" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="topbar-search-label">Search</span><kbd>/</kbd></button>
+        <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="topbar-search" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="topbar-search-label">Search orders, customers, SKUs…</span><kbd>/</kbd></button>
       <% end %>
+      <%# Four things live up here and nothing else: Ask Rupert, Team chat, notifications and the
+          account. Sync, help and bug reports sit in the status bar; the rest is in the account menu. %>
       <div class="header-utilities">
-        <% if ask_rupert_available? %>
-          <button type="button" class="nav-utility" aria-label="Ask Rupert" aria-haspopup="dialog" aria-expanded="false" title="Ask Rupert — your help assistant" data-action="click->ask-rupert#toggle" data-ask-rupert-target="trigger"><%= navigation_icon('ask') %><span class="nav-hint">Ask Rupert</span></button>
-        <% end %>
-        <% if Current.user.super_admin? %>
-          <%= link_to platform_path, class: 'nav-utility', aria: { label: 'Instance overview' }, title: 'Instance overview' do %><%= navigation_icon('platform') %><span class="nav-hint">Instance overview</span><% end %>
-        <% end %>
         <% if Current.user.can?('dashboard.read') %>
           <button type="button" onclick="window.dispatchEvent(new Event('rupert:open-search'))" class="nav-utility topbar-search-icon" aria-label="Search" title="Search — press /"><%= navigation_icon('search') %><span class="nav-hint">Search · <kbd>/</kbd></span></button>
         <% end %>
-        <%= render 'shared/header_notifications' %>
+        <% if ask_rupert_available? %>
+          <button type="button" class="nav-utility" aria-label="Ask Rupert" aria-haspopup="dialog" aria-expanded="false" title="Ask Rupert — your help assistant" data-action="click->ask-rupert#toggle" data-ask-rupert-target="trigger"><%= navigation_icon('ask') %><span class="nav-hint">Ask Rupert</span></button>
+        <% end %>
         <% if team_chat_on %>
           <%= link_to team_chat_path, class: "nav-utility chat-dock-trigger#{' nav-pill-active' if controller_name == 'team_chat'}", aria: { label: 'Team chat', current: (controller_name == 'team_chat' ? 'page' : nil), haspopup: (chat_dock_here ? 'dialog' : nil), expanded: 'false' }, title: 'Team chat',
                 data: { action: 'click->chat-dock#toggle', chat_dock_target: 'trigger' } do %><%= navigation_icon('chat') %><span class="chat-dock-badge" data-chat-dock-target="badge" hidden></span><span class="nav-hint">Team chat</span><% end %>
         <% end %>
-        <%= render 'shared/header_sync_pill', sync: @last_sync %>
-        <%= render 'shared/feedback_button' %>
-        <%= link_to learning_index_path, class: 'nav-utility', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><%= navigation_icon('help') %><span class="nav-hint">Help · <kbd>?</kbd></span><% end %>
+        <%= render 'shared/header_notifications' %>
         <div data-controller="dropdown" class="relative">
           <% initials = Current.user.display_name.split(/\s+/).map { |word| word[0] }.join.upcase[0, 2] %>
-          <button type="button" data-action="dropdown#toggle" data-dropdown-target="trigger" aria-label="Account menu for <%= Current.user.display_name %>" aria-haspopup="menu" aria-expanded="false" title="<%= Current.user.display_name %> · <%= navigation_role_name(Current.user) %>" class="nav-utility"><span class="avatar"><%= initials %></span><span class="nav-hint">Account · <%= navigation_role_name(Current.user) %></span></button>
+          <button type="button" data-action="dropdown#toggle" data-dropdown-target="trigger" aria-label="Account menu for <%= Current.user.display_name %>" aria-haspopup="menu" aria-expanded="false" title="<%= Current.user.display_name %> · <%= navigation_role_name(Current.user) %>" class="nav-utility nav-account"><span class="avatar"><%= initials %></span></button>
           <span class="hidden" data-access-level title="<%= navigation_signin_method %>"><%= navigation_role_name(Current.user) %></span>
           <div data-dropdown-target="menu" role="menu" class="account-menu hidden">
-            <div class="border-b border-fog px-4 py-3"><p class="truncate text-sm font-semibold text-ink"><%= Current.user.display_name %></p><p class="truncate text-xs text-mocha"><%= Current.user.email %></p><p class="mt-2 text-xs font-semibold text-olive"><%= navigation_role_name(Current.user) %></p><p class="text-xs text-mocha" data-signin-method><%= navigation_signin_method %></p></div>
-            <div class="p-2">
-              <%= link_to 'My time & time off', employee_app_path, class: 'nav-menu-item', role: 'menuitem' %>
-              <% if ask_rupert_available? %>
-                <button type="button" class="nav-menu-item w-full" role="menuitem" onclick="window.dispatchEvent(new CustomEvent('rupert:open-ask', { detail: 'history' }))"><%= navigation_icon('ask') %><span>Ask Rupert chats</span></button>
-              <% end %>
+            <div class="account-menu-head"><p class="truncate text-sm font-semibold text-ink"><%= Current.user.display_name %></p><p class="truncate text-xs text-mocha"><%= Current.user.email %></p><p class="mt-1 text-xs text-mocha"><span class="font-semibold text-olive-deep"><%= navigation_role_name(Current.user) %></span> · <span data-signin-method><%= navigation_signin_method %></span></p></div>
+            <div class="account-menu-group">
+              <%= link_to employee_app_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>My time &amp; time off</span><% end %>
               <% unless nav_area?('me') %>
                 <%= link_to time_clock_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('clock') %><span>Time clock</span><% end %>
               <% end %>
-              <div data-controller="theme" role="group" aria-label="Appearance" class="appearance-picker">
-                <p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-[0.12em] text-taupe">Appearance</p>
-                <% { 'herbal' => 'Herbal · company colors', 'light' => 'Light · white', 'mist' => 'Mist · softer light', 'sepia' => 'Sepia · warm paper', 'dark' => 'Dark' }.each do |value, label| %>
-                  <button type="button" class="nav-menu-item w-full appearance-option" role="menuitemradio" aria-checked="false" data-theme-value="<%= value %>" data-theme-target="option" data-action="theme#select"><span class="appearance-swatch appearance-swatch-<%= value %>" aria-hidden="true"></span><span><%= label %></span></button>
-                <% end %>
-              </div>
+              <% if ask_rupert_available? %>
+                <button type="button" class="nav-menu-item w-full" role="menuitem" onclick="window.dispatchEvent(new CustomEvent('rupert:open-ask', { detail: 'history' }))"><%= navigation_icon('ask') %><span>Ask Rupert chats</span></button>
+              <% end %>
+              <% if Current.user.super_admin? %>
+                <%= link_to platform_path, class: 'nav-menu-item', role: 'menuitem', aria: { label: 'Instance overview' } do %><%= navigation_icon('platform') %><span>Instance overview</span><% end %>
+              <% end %>
+            </div>
+            <div class="account-menu-group">
+              <% unless nav_area?('me') %>
+                <%= link_to learning_index_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('help') %><span>Help &amp; lessons</span><% end %>
+              <% end %>
+              <%= link_to feedback_reports_path, class: 'nav-menu-item', role: 'menuitem', data: { action: 'click->feedback#toggle', feedback_ignore: '' } do %><%= navigation_icon('bug') %><span>Report a problem</span><% end %>
               <% unless nav_area?('system') %>
                 <%= link_to roadmap_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('document') %><span>Features &amp; roadmap</span><% end %>
               <% end %>
               <% if Current.user.admin? && Current.user.tenant_id == Current.tenant_id %>
-                <%= link_to 'Subscription & billing', billing_path, class: 'nav-menu-item', role: 'menuitem' %>
-                <%= link_to 'Support permissions', support_access_path, class: 'nav-menu-item', role: 'menuitem' %>
+                <%= link_to billing_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('document') %><span>Subscription &amp; billing</span><% end %>
+                <%= link_to support_access_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('platform') %><span>Support permissions</span><% end %>
               <% end %>
+            </div>
+            <div data-controller="theme" role="group" aria-label="Appearance" class="appearance-picker">
+              <p class="appearance-title">Appearance</p>
+              <div class="appearance-row">
+                <% { 'herbal' => 'Herbal · company colors', 'light' => 'Light · white', 'mist' => 'Mist · softer light', 'sepia' => 'Sepia · warm paper', 'dark' => 'Dark' }.each do |value, label| %>
+                  <button type="button" class="appearance-option" role="menuitemradio" aria-checked="false" aria-label="<%= label %>" title="<%= label %>" data-theme-value="<%= value %>" data-theme-target="option" data-action="theme#select"><span class="appearance-swatch appearance-swatch-<%= value %>" aria-hidden="true"></span><span class="appearance-name"><%= label.split(' · ').first %></span></button>
+                <% end %>
+              </div>
+            </div>
+            <div class="account-menu-group">
               <%= button_to logout_path, method: :delete, class: 'nav-menu-item w-full text-rose', role: 'menuitem' do %><%= navigation_icon('logout') %><span>Sign out</span><% end %>
             </div>
             <%= render "layouts/build_version" %>
@@ -87,10 +96,19 @@
             <% if active && active_area_modules.length > 1 %>
               <nav class="rail-modules" aria-label="Module" <%= tour_anchor('tools') %>>
                 <% current_entry = active_module_entry || active_area_modules.first %>
+                <%# Long sections (more than eight pages) fold their groups: only the group holding the
+                    current page is open, so the rail stays short. Short sections list everything. %>
+                <% fold_groups = active_area_modules.length > 8 %>
                 <% active_area_groups.each do |group| %>
-                  <% if group[:name] %><p class="rail-group"><%= group[:name] %></p><% end %>
-                  <% group[:modules].each do |entry| %>
-                    <%= link_to entry.name, safe_module_path(entry), class: "rail-link #{entry.key == current_entry.key ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}", aria: { current: (entry.key == current_entry.key ? 'page' : nil) } %>
+                  <% links = safe_join(group[:modules].map { |entry| link_to(entry.name, safe_module_path(entry), class: "rail-link #{entry.key == current_entry.key ? 'nav-pill-active-sm' : 'nav-pill-idle-sm'}", aria: { current: (entry.key == current_entry.key ? 'page' : nil) }) }) %>
+                  <% if group[:name] && fold_groups %>
+                    <details class="rail-fold" <%= 'open' if group[:modules].any? { |entry| entry.key == current_entry.key } %>>
+                      <summary class="rail-group"><%= group[:name] %></summary>
+                      <%= links %>
+                    </details>
+                  <% else %>
+                    <% if group[:name] %><p class="rail-group"><%= group[:name] %></p><% end %>
+                    <%= links %>
                   <% end %>
                 <% end %>
               </nav>

@@ -2,8 +2,8 @@
 <div class="space-y-6">
   <%= render layout: 'finance/page_header', locals: { title: 'Sales tax', range: report_range_label(@from, @to), print: true,
         menu: [['Download CSV', finance_reports_sales_tax_path(format: :csv, from: @from, to: @to), { data: { turbo: false } }],
-               ['Filter sources or estimate SwipeSimple tax', sales_tax_reports_path(from: @from, to: @to)], ['All statements', finance_reports_path]],
-        explain: 'Tax collected on sales between any two dates, by source and store. Pick the dates your filing period uses. Each source and store is its own line and lines are not added together: a card sale can appear in a store and in its processor. Unavailable means the source did not report the amount.' } do %><% end %>
+               ['Filter sources or estimate SwipeSimple tax', sales_tax_reports_path(from: @from, to: @to)]],
+        explain: 'Tax collected on sales between any two dates, by source and store. Each source and store is its own line and lines are not added together: a card sale can appear in a store and in its processor. Unavailable means the source did not report the amount.' } do %><% end %>
   <%= render 'finance/reports/tabs' %>
   <%= render 'window', path: finance_reports_sales_tax_path %>
 

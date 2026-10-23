@@ -3,7 +3,6 @@
   <%= page_header 'Owner checklists', subtitle: 'A private place for each domain’s purpose, service renewals and owner feature reviews.' do %>
     <%= link_to 'Add domain checklist', new_owner_checklist_path, class: 'btn-primary', data: { turbo: false } %>
   <% end %>
-  <%= fold_explainer('Only active owners in this workspace can open these records. Record account references and password-manager labels here; passwords, API keys, recovery codes and login tokens stay in your vault. Dates are manual planning references: this page does not send reminders or renew services.', class: 'text-sm text-mocha') %>
   <% if @checklists.empty? %>
     <%= empty_state 'No owner checklists yet', hint: 'Add a domain checklist to collect service references and review the current feature catalog.' do %>
       <%= link_to 'Add domain checklist', new_owner_checklist_path, class: 'btn-primary', data: { turbo: false } %>
@@ -24,4 +23,5 @@
     </section>
   <% end %>
   <% if @pagy.pages > 1 %><%== @pagy.series_nav %><% end %>
+  <%= fold_explainer('Only active owners in this workspace can open these records. Record account references and password-manager labels here; passwords, API keys, recovery codes and login tokens stay in your vault. Dates are manual planning references: this page does not send reminders or renew services.', class: 'text-sm text-mocha') %>
 </div>

@@ -2,8 +2,8 @@
 <% reversible = @can_write && %w[manual opening].include?(@entry.kind) && !@entry.void? && @reversed_by.nil? %>
 <% source_text = if @source_link then nil elsif @entry.source_type.present? && @entry.source_type != 'Finance::JournalEntry' then "#{@entry.source_type} ##{@entry.source_id}" end %>
 <div class="space-y-6">
-  <%= page_header "Journal entry ##{@entry.id}", eyebrow: 'Bookkeeping · Journal entry',
-        subtitle: [l(@entry.posted_on, format: :short), @entry.kind.tr('_', ' ').humanize, 'USD', source_text].compact.join(' · '),
+  <%= page_header "Journal entry ##{@entry.id}", eyebrow: 'Journal entry',
+        subtitle: [l(@entry.posted_on, format: :short), @entry.kind.tr('_', ' ').humanize, source_text].compact.join(' · '),
         menu: [['General ledger', finance_journal_entries_path], ['Trial balance', finance_reports_trial_balance_path]] %>
 
   <dl class="facts">

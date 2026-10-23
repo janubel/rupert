@@ -8,16 +8,16 @@
    menu << ['Chart of accounts', finance_chart_of_accounts_path]
    menu << ['Open follow-ups', reconciliation_follow_ups_path] if Current.user.can?('reports.read') %>
 <div class="space-y-6">
-  <%= page_header 'Bookkeeping', subtitle: 'Know what moved, what is recorded, and what still needs a decision.', menu: menu do %>
-    <% if Current.user.can?('finance.write') %><%= link_to 'Import bank statement', bank_statements_path, class: 'btn-primary' %><% end %>
-  <% end %>
+  <%= page_header 'Bookkeeping', subtitle: 'What moved, what is recorded, and what still needs a decision.', menu: menu %>
 
-  <%= form_with url: bookkeeping_path, method: :get, class: 'toolbar', data: { turbo: false } do |f| %>
-    <div class="toolbar-field"><%= f.label :month, 'Month', class: 'field-label' %><%= f.month_field :month, value: month_param, min: '2000-01', max: '2099-12', class: 'input', required: true %></div>
-    <% if overview.accounts.any? %><div class="toolbar-field"><%= f.label :account, 'Bank account', class: 'field-label' %><%= f.select :account, overview.accounts, { selected: overview.account }, class: 'select' %></div><% end %>
-    <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', bookkeeping_path, class: 'btn-ghost' %></div>
-  <% end %>
-  <p class="text-xs text-mocha"><%= month_label %> · bank figures cover the selected account; expenses cover this workspace.</p>
+  <section aria-label="Bookkeeping filters" class="toolbar-band">
+    <%= form_with url: bookkeeping_path, method: :get, class: 'toolbar', data: { turbo: false } do |f| %>
+      <div class="toolbar-field"><%= f.label :month, 'Month', class: 'field-label' %><%= f.month_field :month, value: month_param, min: '2000-01', max: '2099-12', class: 'input', required: true %></div>
+      <% if overview.accounts.any? %><div class="toolbar-field"><%= f.label :account, 'Bank account', class: 'field-label' %><%= f.select :account, overview.accounts, { selected: overview.account }, class: 'select' %></div><% end %>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', bookkeeping_path, class: 'btn-ghost' %></div>
+    <% end %>
+    <p class="mt-2 text-xs text-mocha"><%= month_label %> · bank figures cover the selected account; expenses cover this workspace.</p>
+  </section>
 
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Financial summary for selected month">
     <div class="stat">
@@ -43,11 +43,10 @@
   <section class="section-card" aria-labelledby="bookkeeping-review-heading">
     <div class="card-head">
       <div>
-        <p class="eyebrow text-olive">Do this next</p>
-        <h2 id="bookkeeping-review-heading" class="section-title mt-1"><%= overview.line_count.zero? ? 'Import a statement to start reviewing' : (overview.pending_count.positive? ? "Review #{pluralize(overview.pending_count, 'bank transaction')}" : 'Transaction review is up to date') %></h2>
+        <h2 id="bookkeeping-review-heading" class="section-title"><%= overview.line_count.zero? ? 'Import a statement to start reviewing' : (overview.pending_count.positive? ? "Review #{pluralize(overview.pending_count, 'bank transaction')}" : 'Transaction review is up to date') %></h2>
         <p class="card-hint"><%= overview.decided_count %> of <%= overview.line_count %> decided · <%= overview.flagged_count %> flagged for clarification</p>
       </div>
-      <div class="card-head-actions"><%= link_to 'Review transactions', bank_statements_path, class: 'btn-primary' %></div>
+      <div class="card-head-actions"><%= link_to (overview.line_count.zero? && Current.user.can?('finance.write') ? 'Import bank statement' : 'Review transactions'), bank_statements_path, class: 'btn-primary' %></div>
     </div>
     <%# The bar width is data, so it stays an inline width until the meter gets its own component. %>
     <div class="desk-meter max-w-md" role="progressbar" aria-label="Bank transactions decided" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= overview.progress %>"><span style="width:<%= overview.progress %>%"></span></div>
@@ -56,7 +55,7 @@
   <div class="grid gap-4 lg:grid-cols-2">
     <section class="section-card" aria-labelledby="bookkeeping-expenses">
       <div class="card-head">
-        <div><h2 id="bookkeeping-expenses" class="section-title">Recorded expenses<%= define('expense') %></h2><p class="card-hint">Only confirmed expenses entered in Rupert. Pending lines and excluded transfers are separate.</p></div>
+        <div><h2 id="bookkeeping-expenses" class="section-title">Recorded expenses<%= define('expense') %></h2><p class="card-hint">Confirmed expenses entered in Rupert.</p></div>
         <div class="card-head-actions"><%= link_to 'Open expenses', finance_expenses_path(month: month_param), class: 'btn-ghost btn-sm' %></div>
       </div>
       <p class="stat-value-sm num text-left"><%= operations_money(overview.expense_cents) %></p>
@@ -79,7 +78,7 @@
 
     <section class="section-card" aria-labelledby="bookkeeping-questions">
       <div class="card-head">
-        <div><h2 id="bookkeeping-questions" class="section-title">Needs your attention</h2><p class="card-hint">Bank lines flagged for clarification or still waiting for a category.</p></div>
+        <div><h2 id="bookkeeping-questions" class="section-title">Needs your attention</h2><p class="card-hint">Bank lines flagged or still waiting for a category.</p></div>
         <div class="card-head-actions"><span class="<%= overview.pending_count.positive? ? 'pill-clay' : 'pill-fern' %>"><%= overview.pending_count %> waiting</span></div>
       </div>
       <% if overview.questions.any? %>
@@ -103,7 +102,7 @@
 
   <section class="section-card" aria-labelledby="bookkeeping-activity">
     <div class="card-head">
-      <div><h2 id="bookkeeping-activity" class="section-title">Recent bank transactions</h2><p class="card-hint"><%= overview.account.presence || 'No bank account imported' %> · category, review status and the original line together.</p></div>
+      <div><h2 id="bookkeeping-activity" class="section-title">Recent bank transactions</h2><p class="card-hint"><%= overview.account.presence || 'No bank account imported' %></p></div>
       <div class="card-head-actions"><%= link_to 'Open bank transactions', bank_statements_path, class: 'btn-ghost btn-sm' %></div>
     </div>
     <div class="table-region" role="region" tabindex="0" aria-label="Recent bank transactions">
@@ -126,13 +125,20 @@
   </section>
 
   <section class="space-y-3" aria-labelledby="bookkeeping-statements">
-    <%= section_heading 'Financial statements', hint: 'Posted entries for this period. Pending bank lines and other unposted records are not included.' %>
-    <div class="grid gap-3 md:grid-cols-3">
-      <%= link_to finance_reports_income_statement_path(from: overview.from, to: overview.to), class: 'section-card operations-task' do %><p class="eyebrow text-taupe">Performance</p><h3 class="card-title mt-1">Income statement</h3><p class="text-sm text-mocha">Revenue and expenses from the posted ledger.</p><% end %>
-      <%= link_to finance_reports_balance_sheet_path(from: overview.from, to: overview.to), class: 'section-card operations-task' do %><p class="eyebrow text-taupe">Position</p><h3 class="card-title mt-1">Balance sheet</h3><p class="text-sm text-mocha">Posted assets, liabilities and equity through month end.</p><% end %>
-      <%= link_to finance_reports_trial_balance_path(from: overview.from, to: overview.to), class: 'section-card operations-task' do %><p class="eyebrow text-taupe">Control</p><h3 class="card-title mt-1">Trial balance</h3><p class="text-sm text-mocha">Account debits and credits for the selected period.</p><% end %>
+    <%= section_heading 'Financial statements', id: 'bookkeeping-statements', hint: 'Posted entries for this period only.' %>
+    <div class="card">
+      <ul class="row-list">
+        <% [['Income statement', 'Revenue and expenses from the posted ledger.', finance_reports_income_statement_path(from: overview.from, to: overview.to)],
+            ['Balance sheet', 'Posted assets, liabilities and equity through month end.', finance_reports_balance_sheet_path(from: overview.from, to: overview.to)],
+            ['Trial balance', 'Account debits and credits for the selected period.', finance_reports_trial_balance_path(from: overview.from, to: overview.to)]].each do |name, caption, path| %>
+          <li class="row-item">
+            <div class="min-w-0"><h3 class="font-semibold text-ink"><%= name %></h3><p class="text-xs text-taupe"><%= caption %></p></div>
+            <div class="row-item-end"><%= link_to 'Open', path, class: 'btn-ghost btn-sm', aria: { label: "Open #{name.downcase}" } %></div>
+          </li>
+        <% end %>
+      </ul>
     </div>
   </section>
 
-  <%= fold_explainer('Bank movement, recorded expenses and vendor payments answer different questions. This overview does not certify reconciliation or calculate profit. The default month is the latest imported activity for the selected bank account.', class: 'text-xs text-mocha') %>
+  <%= fold_explainer('Bank movement, recorded expenses and vendor payments answer different questions. Pending bank lines, excluded transfers and other unposted records are not in the expense or statement figures. This overview does not certify reconciliation or calculate profit. The default month is the latest imported activity for the selected bank account.', class: 'text-xs text-mocha') %>
 </div>

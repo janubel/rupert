@@ -9,23 +9,32 @@
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-label="Payment summary">
     <div class="stat">
-      <div class="stat-label">Recorded payments · USD<%= define('vendor_payment') %></div>
+      <div class="stat-label">Recorded payments<%= define('vendor_payment') %></div>
       <p class="stat-value mt-1"><%= finance_money(@total_cents) %></p>
       <p class="mt-1 text-xs text-taupe"><%= pluralize(@entry_count, 'active payment') %> in range<%= ', filtered' if @q.present? || @min_cents || @max_cents %></p>
     </div>
   </section>
 
-  <%= form_tag finance_vendor_payments_path, method: :get, class: 'toolbar', role: 'search', aria: { label: 'Filter payments' } do %>
-    <div class="toolbar-field"><%= label_tag :q, 'Vendor or reference', class: 'field-label' %><%= search_field_tag :q, @q, class: 'input', autocomplete: 'off' %></div>
-    <div class="toolbar-field"><%= label_tag :month, 'Month (optional)', class: 'field-label' %><%= month_field_tag :month, @month, min: '2000-01', max: '2099-12', class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from, class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @through, class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :min, 'Amount from (USD)', class: 'field-label' %><%= text_field_tag :min, params[:min], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
-    <div class="toolbar-field"><%= label_tag :max, 'Amount to (USD)', class: 'field-label' %><%= text_field_tag :max, params[:max], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
-    <%= hidden_field_tag :include_deleted, '0', id: nil %>
-    <label class="flex items-center gap-1.5 pb-2 text-sm text-mocha"><%= check_box_tag :include_deleted, '1', @include_deleted, class: 'checkbox' %> Show removed payments</label>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_vendor_payments_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <section class="toolbar-band" aria-label="Payment filters">
+    <%= form_tag finance_vendor_payments_path, method: :get, role: 'search', aria: { label: 'Filter payments' } do %>
+      <div class="toolbar">
+        <div class="toolbar-field"><%= label_tag :q, 'Vendor or reference', class: 'field-label' %><%= search_field_tag :q, @q, class: 'input', autocomplete: 'off' %></div>
+        <div class="toolbar-field"><%= label_tag :month, 'Month (optional)', class: 'field-label' %><%= month_field_tag :month, @month, min: '2000-01', max: '2099-12', class: 'input' %></div>
+        <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from, class: 'input' %></div>
+        <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @through, class: 'input' %></div>
+        <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_vendor_payments_path, class: 'btn-ghost' %></div>
+      </div>
+      <details class="explainer mt-3" <%= 'open' if params[:min].present? || params[:max].present? || @include_deleted %>>
+        <summary class="explainer-summary">More filters</summary>
+        <div class="toolbar mt-2">
+          <div class="toolbar-field"><%= label_tag :min, 'Amount from', class: 'field-label' %><%= text_field_tag :min, params[:min], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
+          <div class="toolbar-field"><%= label_tag :max, 'Amount to', class: 'field-label' %><%= text_field_tag :max, params[:max], class: 'input money', inputmode: 'decimal', placeholder: '0.00' %></div>
+          <%= hidden_field_tag :include_deleted, '0', id: nil %>
+          <label class="flex items-center gap-1.5 pb-2 text-sm text-mocha"><%= check_box_tag :include_deleted, '1', @include_deleted, class: 'checkbox' %> Show removed payments</label>
+        </div>
+      </details>
+    <% end %>
+  </section>
   <% if @filter_problem %><p role="alert" class="flash flash-alert"><%= @filter_problem %></p><% end %>
 
   <div class="card">

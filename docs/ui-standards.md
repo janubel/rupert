@@ -19,6 +19,9 @@ one thing, see the state of the business at a glance, and trust the numbers.
 
 - **Calm over clever.** A page is a quiet surface with one clear thing to do. No page opens
   with a wall of caveats, a strip of seven buttons, or three rows of navigation.
+- **Content carries the weight.** Surfaces are flat paper with a hairline edge: no gradients,
+  no drop shadows, no all-capital labels. Figures, names and the one action are the only
+  things on a page with visual weight. Location is said once, by the rail.
 - **Everything has one home.** A page lives in one section and one group; a label is the
   same word everywhere; a colour means one thing. If two places say the same thing in
   different words, one of them is wrong.
@@ -59,9 +62,9 @@ one thing, see the state of the business at a glance, and trust the numbers.
 
 ```
 ┌ top bar ──────────────────────────────────────────────────────────────┐
-│ ☰  Rupert   [search /]                  Ask  Buzz  Sync  Bug  ?  (DO) │
+│ ☰  Rupert   [search orders, customers, SKUs… /]   Ask  Chat  🔔  (DO) │
 ├ rail ─────┬ main ─────────────────────────────────────────────────────┤
-│ Overview  │ SECTION · GROUP                                           │
+│ Overview  │                                                           │
 │ Sell      │ Page title                                   [More ▾] [+] │
 │ Stock     │ One-line subtitle.                                        │
 │ Bookkeep. │                                                           │
@@ -71,21 +74,29 @@ one thing, see the state of the business at a glance, and trust the numbers.
 │ Reports   │                                                           │
 │ …         │                                                           │
 │ ‹ collapse│                                                           │
-└───────────┴───────────────────────────────────────────────────────────┘
+├───────────┴───────────────────────────────────────────────────────────┤
+│ ● Synced 2 min ago  Team chat 3 · Jo: …      Report a problem  Help ? │
+└───────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Top bar** (`.app-topbar`): menu button (phone/tablet), brand, global search, utilities,
-  account. One row, always. Nothing page-specific lives here.
+- **Top bar** (`.app-topbar`): menu button (phone/tablet), brand, global search, then exactly
+  four utilities: Ask Rupert, Team chat, notifications, account. One row, always. Nothing
+  page-specific lives here, and nothing joins the four without taking one away. Sync state,
+  help and bug reports live in the status bar; everything personal or rare (time, billing,
+  support access, appearance, roadmap, instance overview) lives in the account menu.
 - **Rail** (`.app-rail`): the sections (`nav[aria-label="Module areas"]`). The current section
-  is expanded and lists its pages in named groups (`nav[aria-label="Module"]`). On wide screens
+  is expanded and lists its pages in named groups (`nav[aria-label="Module"]`). A section with
+  more than eight pages folds its groups: only the group holding the current page is open, the
+  rest are one click away (`details.rail-fold`). On wide screens
   the rail is persistent and can be collapsed to icons (remembered per browser); under 1024px
   it becomes a drawer behind the menu button. Phones get the same drawer.
 - **Main** (`main#main`): flashes, then the page. Width tiers: default `max-w-6xl` for tables and
   dashboards, `.page-medium` (56rem) for reading and settings, `.page-narrow` (42rem) for forms
   and short detail pages. No other `max-w-*` on page wrappers.
 - **Page help** (`shared/workspace_help`): a quiet line under the page content, not above it.
-- **Status bar** (`.app-statusbar`): one thin strip at the bottom of every page: sync state,
-  Team chat unread badge with the latest message, build. Badges, not popups: a toast appears only
+- **Status bar** (`.app-statusbar`): one thin strip at the bottom of every page: sync state
+  (live-updated, `#statusbar-sync`), Team chat unread badge with the latest message, Report a
+  problem, Help (`?`), build. Phones hide it; help and bug reports are in the account menu there. Badges, not popups: a toast appears only
   for something that needs attention now, and never stacks more than three.
 
 **Display size.** The management app is desktop first and sized large: one width per
@@ -128,17 +139,18 @@ Every page is one of these. The skeleton is the contract; the Style guide shows 
 
 | Template | Use for | Skeleton |
 | --- | --- | --- |
-| **Overview** | A section's landing page | `page_header` → stat row (`.stat`) → work queues / cards |
+| **Overview** | A section's landing page | `page_header` → stat row (`.stat`) → work queues / row lists |
 | **List** | Records of one kind | `page_header` (primary: `Add X`) → `.toolbar` (search, filters, `Apply`) → `.card` table → pagination / `.empty-state` |
 | **Detail** | One record | `page_header` (eyebrow: kind, title: name, `Edit`, `More`) → `.facts` → related sections as `.section-card` |
 | **Form** | Add or edit | `.page-narrow` → `page_header` → `.card` with fieldsets → `.form-actions` (`Save`, `Cancel`) |
-| **Report** | Figures over a period | `page_header` → `.tabs` (sibling reports) → `.toolbar` period picker → report table |
+| **Report** | Figures over a period | `page_header` → `.tabs` (sibling reports) → `.toolbar-band` period picker → stat row → report table |
 | **Settings** | Configuration | `.page-medium` → `page_header` → one `.section-card` per topic |
 
 Rules that apply to all templates:
 
-- Exactly one `h1`, rendered by `page_header`. The eyebrow is the section and group, filled in
-  automatically from the registry; pass `eyebrow:` only to override.
+- Exactly one `h1`, rendered by `page_header`. No eyebrow by default: the rail already says
+  where the page lives. Pass `eyebrow:` only on a Detail page to name the kind of record
+  (`Customer · Shopify`, `Journal entry`).
 - One primary button (`.btn-primary`) per page header, at most. Everything else is `.btn-ghost`
   or lives in the `More` menu (`page_header ... menu: [[label, path], …]`).
 - Section headings are `h2.section-title`; card headings are `h3.card-title`.
@@ -153,6 +165,9 @@ Rules that apply to all templates:
 | `.card`, `.card-pad`, `.section-card`, `.card-head`, `.card-title` | Surfaces and their headings |
 | `.stat`, `.stat-label`, `.stat-value`, `.stat-value-sm` | Figures that matter |
 | `.toolbar`, `.toolbar-field`, `.field-label` | Filter/search row above a table |
+| `.toolbar-band` | A report's filters set on the page with a hairline under them, not inside a card |
+| `.date-stepper` | `‹ [date] ›` for business-day pages; replaces Previous / Today / Next button rows |
+| `.row-list`, `.row-item`, `.row-item-end`, `.row-list-foot` | A handful of like things (sources, channels, queues) as rows in one card, never a grid of small cards |
 | `.table`, `.th`, `.td`, `.num`, `.empty-row` | Data tables |
 | `.facts`, `.facts dt/dd` | Key–value summary on a detail page |
 | `.tabs`, `.tab` | Views of the same record or report |
@@ -302,6 +317,12 @@ Work top down. Answer each question in order; the answers decide the markup.
 - Five to seven ghost buttons under a title.
 - Opening paragraphs that explain what the page is not.
 - Pixel font sizes, hex colours, ad-hoc `max-w-*` wrappers, `rounded-full` inputs.
+- Gradients, drop shadows or all-capital tracking on surfaces and labels.
+- A grid of small cards for three to seven like things (use a row list), or a card around filters.
+- A row of shortcut buttons to other modules on a dashboard (the rail is the navigation).
+- The same status shown twice (sync in the header and the status bar; a caveat in the subtitle
+  and again in an explainer).
+- `USD 1,234.56` or `· USD` in labels: dollars read `$1,234.56`; only other currencies name the code.
 - Colour as the only carrier of a state.
 - `View`, `See`, `Show`, `New`, `Record`, `Export`, `Refresh`, `Back` as button labels.
 

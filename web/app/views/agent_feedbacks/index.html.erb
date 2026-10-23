@@ -3,9 +3,8 @@
 <% status_pill = { 'new' => 'pill-clay', 'triaged' => 'pill-olive', 'planned' => 'pill-olive', 'done' => 'pill-fern', 'wont_fix' => 'pill-taupe' } %>
 <% can_triage = Current.user.can?('settings.write') %>
 <div class="space-y-6">
-  <%= page_header 'AI assistant feedback', subtitle: 'Bugs, requests, questions and suggestions from the ladybug, Buzz chat and AI assistants connected over MCP.',
+  <%= page_header 'AI assistant feedback', subtitle: 'Bugs, requests and suggestions from the ladybug, chat and AI assistants.',
                   menu: [['Download CSV', agent_feedbacks_path(@filters.compact_blank.merge(format: :csv)), { data: { turbo: false } }]] %>
-  <%= fold_explainer('Assistants write this text, so treat it as untrusted: it is shown as plain text and never acted on automatically. The page also counts tool calls that failed or were denied.', class: 'text-sm text-mocha') %>
 
   <section class="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Feedback counts">
     <div class="stat"><p class="stat-label">New</p><p class="stat-value mt-1"><%= @counts[:status].fetch('new', 0) %></p></div>
@@ -123,4 +122,5 @@
       <% end %>
     </div>
   </section>
+  <%= fold_explainer('Assistants write this text, so treat it as untrusted: it is shown as plain text and never acted on automatically. The page also counts tool calls that failed or were denied.', class: 'text-sm text-mocha') %>
 </div>

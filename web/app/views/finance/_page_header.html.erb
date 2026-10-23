@@ -1,10 +1,12 @@
-<%# Thin wrapper around page_header for Money pages: the dates and currency line is the subtitle, the one-sentence
-    explanation sits under the header (folded past its lead sentence), Print is a ghost button beside the actions.
+<%# Thin wrapper around page_header for Money pages: the dates line is the subtitle (a currency is named only
+    when it is not US dollars), the one-sentence explanation sits under the header (folded past its lead sentence),
+    and Print joins the More menu.
     Usage: render layout: 'finance/page_header', locals: { title:, range:, explain:, currency: 'USD', print: false, menu: [...] } do ... actions ... end %>
 <% currency = local_assigns.fetch(:currency, 'USD') %>
-<% meta = [local_assigns[:range].presence, currency.presence].compact.join(' · ') %>
-<%= page_header(title, subtitle: meta.presence, menu: local_assigns[:menu]) do %>
+<% meta = [local_assigns[:range].presence, (currency.presence unless currency == 'USD')].compact.join(' · ') %>
+<% menu = Array(local_assigns[:menu]).compact %>
+<% menu += [['Print', '#', { data: { controller: 'print', action: 'click->print#print:prevent' } }]] if local_assigns[:print] %>
+<%= page_header(title, subtitle: meta.presence, menu: menu.presence) do %>
   <%= yield %>
-  <% if local_assigns[:print] %><button type="button" class="btn-ghost no-print" data-controller="print" data-action="click->print#print">Print</button><% end %>
 <% end %>
 <% if local_assigns[:explain].present? %><%= fold_explainer(local_assigns[:explain], class: 'text-sm text-mocha') %><% end %>

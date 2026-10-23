@@ -1,20 +1,21 @@
 <% content_for :title, 'Financial statements' %>
 <div class="space-y-6">
-  <%= page_header 'Financial statements', subtitle: 'Statements computed from the double-entry general ledger.',
+  <%= page_header 'Financial statements', subtitle: 'Statements computed from the general ledger.',
         menu: [['General ledger', finance_journal_entries_path], ['Chart of accounts', finance_chart_of_accounts_path], ['Download ledger', finance_ledger_export_path]] %>
   <%= render 'finance/reports/coverage_notice' %>
   <%= render 'finance/reports/tabs' %>
 
-  <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <section class="card" aria-label="Statements">
+    <ul class="row-list">
     <% [['Trial balance', 'Every account with debit, credit and balance for a period.', finance_reports_trial_balance_path],
         ['Income statement', 'Revenue and expenses, and net income for a period.', finance_reports_income_statement_path],
         ['Balance sheet', 'Assets, liabilities and equity as of a date.', finance_reports_balance_sheet_path],
         ['Sales tax', 'Tax collected from Shopify, C-Trax and SwipeSimple for any dates you choose.', finance_reports_sales_tax_path]].each do |name, blurb, path| %>
-      <%= link_to path, class: 'card card-pad hover:border-mocha' do %>
-        <h2 class="card-title"><%= name %></h2>
-        <p class="mt-1 text-sm text-mocha"><%= blurb %></p>
-        <p class="mt-3 text-sm font-semibold text-olive-deep">Open</p>
-      <% end %>
+      <li class="row-item">
+        <div class="min-w-0"><h2 class="font-semibold text-ink"><%= name %></h2><p class="text-xs text-taupe"><%= blurb %></p></div>
+        <div class="row-item-end"><%= link_to 'Open', path, class: 'btn-ghost btn-sm', aria: { label: "Open #{name.downcase}" } %></div>
+      </li>
     <% end %>
+    </ul>
   </section>
 </div>

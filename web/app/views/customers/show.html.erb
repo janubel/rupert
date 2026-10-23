@@ -7,8 +7,6 @@
 <div class="space-y-6">
   <%= page_header @customer.name, eyebrow: "Customer · #{directory_label(@customer.source)}" do %>
     <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Quick actions">
-      <%= customer_status_pill(@customer) %>
-      <%= customer_tag_pills(@customer) %>
       <%= page_menu(quick) %>
       <% if can_write %><%= link_to 'Edit', edit_customer_path(@customer), class: 'btn-primary' %><% end %>
     </div>
@@ -27,6 +25,7 @@
 
   <section class="section-card" aria-label="Details">
     <dl class="facts">
+      <div><dt>Relationship</dt><dd class="flex flex-wrap gap-1"><%= customer_status_pill(@customer) %><%= customer_tag_pills(@customer) %></dd></div>
       <div><dt>Email</dt><dd><%= @customer.email.presence || '—' %></dd></div>
       <div><dt>Phone</dt><dd><%= @customer.phone.presence || '—' %></dd></div>
       <div><dt>Assigned to</dt><dd><%= @customer.owner&.display_name || 'Unassigned' %></dd></div>
@@ -73,7 +72,7 @@
 
     <div class="space-y-4 lg:col-span-2">
       <section id="timeline" class="section-card" aria-label="Activity timeline">
-        <%= section_heading 'Activity timeline', hint: 'Conversations and contact history, newest first.' %>
+        <%= section_heading 'Activity timeline', hint: 'Newest first.' %>
         <% if can_write %>
           <%= form_with url: customer_interactions_path(@customer), scope: :interaction, id: 'log-interaction', class: 'space-y-3 rounded-card bg-haze/60 p-4' do |f| %>
             <%= section_heading 'Log an interaction', level: :h3 %>

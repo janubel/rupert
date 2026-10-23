@@ -7,11 +7,12 @@
    tabs = [['Waiting', bank_statement_path(@document.id, show: 'pending'), @filter == 'pending'], ['Everything', bank_statement_path(@document.id, show: 'all'), @filter == 'all']]
    tabs << ["Flagged · #{@flagged_count}", bank_statement_path(@document.id, show: 'flagged'), @filter == 'flagged'] if @flagged_count.positive? || @filter == 'flagged' %>
 <div class="space-y-6">
-  <%= page_header @document.filename, subtitle: "#{@document.period_from} to #{@document.period_to} · #{@counts.fetch('pending', 0)} to review · #{@counts.fetch('recorded', 0)} recorded · #{@counts.fetch('ignored', 0)} ignored · #{@counts.fetch('matched', 0)} matched.", menu: menu %>
+  <%= page_header @document.filename, eyebrow: 'Bank statement', subtitle: "#{@document.period_from.strftime('%b %-d')} – #{@document.period_to.strftime('%b %-d, %Y')} · #{@counts.fetch('pending', 0)} to review.", menu: menu %>
 
   <section class="section-card" aria-label="Review progress">
     <dl class="facts">
       <div><dt>Lines decided</dt><dd><%= decided %> of <%= pluralize(total_lines, 'line') %></dd></div>
+      <div><dt>Decided as</dt><dd><%= @counts.fetch('recorded', 0) %> recorded · <%= @counts.fetch('ignored', 0) %> ignored · <%= @counts.fetch('matched', 0) %> matched</dd></div>
       <div><dt>Flagged</dt><dd><%= @flagged_count.positive? ? "#{@flagged_count} for your clarification" : 'None' %></dd></div>
       <div><dt>Statement</dt><dd><%= @document.metadata['note'].presence || @document.filename %></dd></div>
     </dl>
@@ -27,19 +28,28 @@
     <% end %>
   <% else %>
     <%= form_with url: decide_bank_statement_path(@document.id), class: 'space-y-4', data: { controller: 'bank-decisions', action: 'submit->bank-decisions#submit' } do |f| %>
-      <% if @can_write && @lines.any? { |l| l.pending? && l.money_out? && @suggestions[l.id] != 'other' } %>
-        <div class="card card-pad flex flex-wrap items-center justify-between gap-3 text-sm">
-          <p class="max-w-xl text-mocha">Rupert recognised some payees from their description (rent, utilities, shipping, software and so on). Fill those in, check each one, then save. Nothing is recorded until you press Save.</p>
-          <div class="flex flex-wrap gap-2">
-            <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#fillSuggestions" data-bank-decisions-target="fill">Use suggestions</button>
-            <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#clear">Clear choices</button>
-          </div>
-        </div>
-      <% end %>
-      <% if @can_write && @lines.any? { |l| l.pending? && l.money_in? } %>
-        <div class="card card-pad flex flex-wrap items-center justify-between gap-3 text-sm">
-          <p class="max-w-xl text-mocha">Deposits are money received, never expenses. Accept them in one go and add who each one came from if you like. Nothing is saved until you press Save.</p>
-          <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#acceptDeposits" data-bank-decisions-target="deposits">Accept all deposits</button>
+      <% suggest = @can_write && @lines.any? { |l| l.pending? && l.money_out? && @suggestions[l.id] != 'other' }
+         deposits = @can_write && @lines.any? { |l| l.pending? && l.money_in? } %>
+      <% if suggest || deposits %>
+        <div class="card">
+          <ul class="row-list text-sm">
+            <% if suggest %>
+              <li class="row-item">
+                <p class="min-w-0 text-mocha">Rupert recognised some payees (rent, utilities, shipping, software…). Fill those in and check each one.</p>
+                <div class="row-item-end">
+                  <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#fillSuggestions" data-bank-decisions-target="fill">Use suggestions</button>
+                  <button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#clear">Clear choices</button>
+                </div>
+              </li>
+            <% end %>
+            <% if deposits %>
+              <li class="row-item">
+                <p class="min-w-0 text-mocha">Deposits are money received, never expenses. Accept them in one go and add who each came from if you like.</p>
+                <div class="row-item-end"><button type="button" class="btn-ghost btn-sm" data-action="bank-decisions#acceptDeposits" data-bank-decisions-target="deposits">Accept all deposits</button></div>
+              </li>
+            <% end %>
+          </ul>
+          <p class="row-list-foot text-xs text-mocha">Nothing is recorded until you press Save.</p>
         </div>
       <% end %>
       <%= hidden_field_tag :show, @filter %>

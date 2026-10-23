@@ -36,7 +36,7 @@
             <tbody>
               <% @catalog.each do |group| %>
                 <tr class="bg-haze/40">
-                  <th scope="rowgroup" colspan="2" class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-mocha"><%= group[:area] %></th>
+                  <th scope="rowgroup" colspan="2" class="px-4 py-2 text-left text-xs font-semibold text-mocha"><%= group[:area] %></th>
                 </tr>
                 <% group[:permissions].each do |permission| %>
                   <% checked = @user.user_permissions.find_by(permission: permission)&.enabled? %>

@@ -1,14 +1,11 @@
 <% content_for :title, "Notifications" %>
-<div class="mx-auto max-w-3xl space-y-5">
-  <%= page_header "Notifications", subtitle: (@unread.positive? ? "#{pluralize(@unread, "unread message")}." : "You're all caught up."), eyebrow: "Me" do %>
+<div class="page-medium space-y-6">
+  <%= page_header "Notifications", subtitle: (@unread.positive? ? "#{pluralize(@unread, "unread message")}." : "You're all caught up.") do %>
     <% if @unread.positive? %><%= button_to "Mark all read", read_all_notifications_path, method: :post, class: "btn-ghost btn-sm" %><% end %>
   <% end %>
 
   <% if @notifications.empty? %>
-    <div class="card card-pad py-10 text-center">
-      <p class="font-display text-lg text-ink">Nothing yet.</p>
-      <p class="mt-1 text-sm text-taupe">Task assignments, comments, blocked work and due dates show up here.</p>
-    </div>
+    <%= empty_state 'No notifications yet.', hint: 'Task assignments, comments, blocked work and due dates show up here.' %>
   <% else %>
     <ul class="card divide-y divide-fog">
       <% @notifications.each do |notification| %>

@@ -1,59 +1,77 @@
 <% content_for :title, 'Open days' %>
 <% focus = @focus || 'all'; visible_days = @overview.focused_days(focus)
    range = "#{@overview.starting_on.strftime('%b %-d')} – #{@overview.ending_on.strftime('%b %-d, %Y')}"
-   menu = [['Follow-ups', reconciliation_follow_ups_path], ['Source documents', reconciliation_documents_path], ['Compare close dates', '#business-days']]
+   menu = [['Compare close dates', '#business-days']]
    menu << ['Priority follow-ups', '#priority-follow-ups'] if @next_follow_ups.any?
    menu << ['Reports to request', '#report-gaps'] %>
 <div class="space-y-6">
-  <%= page_header 'Open days', subtitle: "#{range} · close checks, reviews and retained versions across seven business dates, with report requests across all dates.", menu: menu do %>
+  <%= page_header 'Open days', subtitle: "#{range} · close checks and reviews across seven business dates.", menu: menu do %>
     <% if Current.user.can?('reports.write') %><%= link_to 'Add follow-up', new_reconciliation_follow_up_path, class: 'btn-primary' %><% end %>
   <% end %>
 
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Attention overview">
-    <a href="#business-days" class="stat block"><p class="stat-label">Dates with issues · selected week</p><p class="stat-value-sm mt-1"><%= @overview.days_needing_attention %> <span class="text-sm text-mocha">of 7</span></p></a>
-    <a href="#report-gaps" class="stat block <%= 'border-warn-edge' if @overview.untracked_reports.any? %>"><p class="stat-label">Register reports to request · selected dates</p><p class="stat-value-sm mt-1"><%= @overview.untracked_reports.size %></p></a>
-    <%= link_to reconciliation_follow_ups_path(status: 'overdue'), class: "stat block #{'border-warn-edge' if @overdue_count.positive?}" do %><p class="stat-label">Overdue follow-ups · all dates</p><p class="stat-value-sm mt-1"><%= @overdue_count %></p><% end %>
-    <%= link_to reconciliation_follow_ups_path(status: 'today'), class: 'stat block' do %><p class="stat-label">Due today · all dates</p><p class="stat-value-sm mt-1"><%= @today_count %></p><% end %>
+    <a href="#business-days" class="stat block"><p class="stat-label">Dates with issues</p><p class="stat-value-sm mt-1"><%= @overview.days_needing_attention %> <span class="text-sm text-mocha">of 7</span></p><p class="mt-1 text-xs text-taupe">Selected week</p></a>
+    <a href="#report-gaps" class="stat block <%= 'border-warn-edge' if @overview.untracked_reports.any? %>"><p class="stat-label">Reports to request</p><p class="stat-value-sm mt-1"><%= @overview.untracked_reports.size %></p><p class="mt-1 text-xs text-taupe">Selected dates</p></a>
+    <%= link_to reconciliation_follow_ups_path(status: 'overdue'), class: "stat block #{'border-warn-edge' if @overdue_count.positive?}" do %><p class="stat-label">Overdue follow-ups</p><p class="stat-value-sm mt-1"><%= @overdue_count %></p><p class="mt-1 text-xs text-taupe">All dates</p><% end %>
+    <%= link_to reconciliation_follow_ups_path(status: 'today'), class: 'stat block' do %><p class="stat-label">Due today</p><p class="stat-value-sm mt-1"><%= @today_count %></p><p class="mt-1 text-xs text-taupe">All dates</p><% end %>
   </section>
 
   <% if @next_follow_ups.any? %>
     <section id="priority-follow-ups" class="scroll-mt-48 md:scroll-mt-32 space-y-4" aria-labelledby="next-follow-ups">
-      <%= section_heading 'Follow up next · all dates', hint: 'Overdue first, then due today and upcoming. Includes requests outside the selected week.' do %><%= link_to 'Open full queue', reconciliation_follow_ups_path, class: 'btn-ghost btn-sm' %><% end %>
+      <%= section_heading 'Follow up next · all dates', id: 'next-follow-ups', hint: 'Overdue first, then due today and upcoming, across all dates.' do %><%= link_to 'Open full queue', reconciliation_follow_ups_path, class: 'btn-ghost btn-sm' %><% end %>
       <div class="grid gap-4 md:grid-cols-2"><%= render partial: 'card', collection: @next_follow_ups, as: :item, locals: { heading_tag: :h3 } %></div>
     </section>
   <% end %>
 
   <section id="report-gaps" class="scroll-mt-48 md:scroll-mt-32 space-y-4" aria-labelledby="report-gaps-title">
-    <%= section_heading 'Register reports to request', hint: 'Recorded pools with no current register control and no open report request in the selected seven dates. Check retained files first. Oldest date first.' %>
+    <%= section_heading 'Register reports to request', id: 'report-gaps-title', hint: 'Recorded pools with no register control and no open request in the selected dates, oldest first. Check retained files first.' %>
     <% if @overview.untracked_reports.any? %>
-      <div class="grid gap-3 lg:grid-cols-3"><%= render partial: 'report_gap', collection: @overview.untracked_reports.first(3), as: :row %></div>
-      <% if @overview.untracked_reports.size > 3 %><details class="explainer card card-pad"><summary class="explainer-summary font-semibold">Show <%= pluralize(@overview.untracked_reports.size - 3, 'more report gap') %></summary><div class="mt-4 grid gap-3 lg:grid-cols-3"><%= render partial: 'report_gap', collection: @overview.untracked_reports.drop(3), as: :row %></div></details><% end %>
+      <div class="card">
+        <div class="row-list"><%= render partial: 'report_gap', collection: @overview.untracked_reports.first(3), as: :row %></div>
+        <% if @overview.untracked_reports.size > 3 %><details class="row-list-foot"><summary class="explainer-summary font-semibold">Show <%= pluralize(@overview.untracked_reports.size - 3, 'more report gap') %></summary><div class="row-list mt-2"><%= render partial: 'report_gap', collection: @overview.untracked_reports.drop(3), as: :row %></div></details><% end %>
+      </div>
     <% else %>
       <%= empty_state 'No unrequested register-control gaps in the selected dates', hint: 'Check open follow-ups and track any other invoices or statements you expect.' %>
     <% end %>
   </section>
 
   <section id="business-days" class="scroll-mt-48 md:scroll-mt-32 space-y-4" aria-labelledby="business-days-title">
-    <%= section_heading 'Business dates at a glance', hint: "#{range} · Eastern time · live local records" %>
-    <%= form_with url: overview_reconciliation_follow_ups_path, method: :get, class: 'toolbar' do |f| %>
-      <%= f.hidden_field :focus, value: focus %>
-      <div class="toolbar-field"><%= f.label :ending_on, 'Seven days ending', class: 'field-label' %><%= f.date_field :ending_on, value: @overview.ending_on, required: true, class: 'input' %></div>
-      <nav class="toolbar-actions" aria-label="Week navigation">
-        <%= f.submit 'Apply', class: 'btn-primary' %>
-        <%= link_to 'Previous 7 days', overview_reconciliation_follow_ups_path(ending_on: (@overview.ending_on - 7).iso8601, focus: focus, anchor: 'business-days'), class: 'btn-ghost' %>
-        <%= link_to 'Through yesterday', overview_reconciliation_follow_ups_path(focus: focus, anchor: 'business-days'), class: 'btn-ghost' %>
-        <%= link_to 'Include today', overview_reconciliation_follow_ups_path(ending_on: Date.current.iso8601, focus: focus, anchor: 'business-days'), class: 'btn-ghost' %>
-        <%= link_to 'Next 7 days', overview_reconciliation_follow_ups_path(ending_on: (@overview.ending_on + 7).iso8601, focus: focus, anchor: 'business-days'), class: 'btn-ghost' %>
-      </nav>
-    <% end %>
+    <%= section_heading 'Business dates at a glance', id: 'business-days-title', hint: "#{range} · Eastern time · live local records" %>
+    <div class="toolbar-band">
+      <%= form_with url: overview_reconciliation_follow_ups_path, method: :get, class: 'toolbar' do |f| %>
+        <%= f.hidden_field :focus, value: focus %>
+        <div class="toolbar-field"><%= f.label :ending_on, 'Seven days ending', class: 'field-label' %>
+          <nav class="date-stepper" aria-label="Week navigation">
+            <%= link_to '‹', overview_reconciliation_follow_ups_path(ending_on: (@overview.ending_on - 7).iso8601, focus: focus, anchor: 'business-days'), class: 'btn-ghost btn-sm', rel: 'prev', aria: { label: 'Previous 7 days' }, title: 'Previous 7 days' %>
+            <%= f.date_field :ending_on, value: @overview.ending_on, required: true, class: 'input' %>
+            <%= link_to '›', overview_reconciliation_follow_ups_path(ending_on: (@overview.ending_on + 7).iso8601, focus: focus, anchor: 'business-days'), class: 'btn-ghost btn-sm', rel: 'next', aria: { label: 'Next 7 days' }, title: 'Next 7 days' %>
+          </nav>
+        </div>
+        <div class="toolbar-actions">
+          <%= f.submit 'Apply', class: 'btn-primary' %>
+          <% if @overview.ending_on == Date.yesterday %><%= link_to 'Include today', overview_reconciliation_follow_ups_path(ending_on: Date.current.iso8601, focus: focus, anchor: 'business-days'), class: 'btn-ghost' %>
+          <% else %><%= link_to 'Through yesterday', overview_reconciliation_follow_ups_path(focus: focus, anchor: 'business-days'), class: 'btn-ghost' %><% end %>
+        </div>
+      <% end %>
+    </div>
     <%= page_tabs(ReconciliationAcrossDays::FOCUS.map { |key, label| ["#{label} · #{@overview.focused_days(key).size}", overview_reconciliation_follow_ups_path(ending_on: @overview.ending_on.iso8601, focus: key, anchor: 'business-days'), key == focus] }, label: 'Focus close dates') %>
     <p role="status" class="text-sm text-mocha"><%= visible_days.size %> of 7 dates · <%= ReconciliationAcrossDays::FOCUS.fetch(focus) %>. Counts are dates, not distinct requests. Priority follow-ups above still cover all dates.</p>
     <% if visible_days.empty? %>
       <%= empty_state 'No dates match this focus in the selected week' do %><%= link_to 'Show all close dates', overview_reconciliation_follow_ups_path(ending_on: @overview.ending_on.iso8601, anchor: 'business-days'), class: 'btn-ghost' %><% end %>
     <% end %>
-    <nav class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" aria-label="Jump to a business date">
-      <% visible_days.reverse.each do |entry| %><%= link_to "#day-#{entry[:day].iso8601}", class: "rounded-card border bg-paper p-3 #{entry[:counts].values.any?(&:positive?) || entry[:overdue].positive? ? 'border-warn-edge' : 'border-fog'}" do %><p class="text-sm font-semibold"><%= entry[:day].strftime('%a %-d') %></p><p class="mt-2 text-xs">Missing: <%= entry[:counts][:missing_controls] %></p><p class="mt-1 text-xs">Issues: <%= entry[:counts].values_at(:variances, :unavailable, :conflicts).sum %></p><p class="mt-1 text-xs">Overdue: <%= entry[:overdue] %></p><p class="mt-1 text-xs"><%= entry[:close][:review] %></p><p class="mt-1 text-xs"><%= entry[:close][:package_id] ? (entry[:close][:package_current] ? 'Package unchanged' : 'Package changed') : 'No close package' %></p><% end %><% end %>
-    </nav>
+    <% if visible_days.any? %>
+      <nav class="card" aria-label="Jump to a business date">
+        <ul class="row-list">
+          <% visible_days.reverse.each do |entry| %>
+            <% attention = entry[:counts].values.any?(&:positive?) || entry[:overdue].positive? %>
+            <li class="row-item">
+              <div class="min-w-0"><%= link_to entry[:day].strftime('%a %b %-d'), "#day-#{entry[:day].iso8601}", class: 'font-semibold text-olive-deep hover:underline' %><p class="text-xs text-taupe"><%= entry[:close][:review] %> · <%= entry[:close][:package_id] ? (entry[:close][:package_current] ? 'Package unchanged' : 'Package changed') : 'No close package' %></p></div>
+              <div class="row-item-end text-xs <%= attention ? 'text-ink' : 'text-mocha' %>"><span>Missing: <%= entry[:counts][:missing_controls] %></span><span>Issues: <%= entry[:counts].values_at(:variances, :unavailable, :conflicts).sum %></span><span>Overdue: <%= entry[:overdue] %></span><% if attention %><span class="pill-clay">Needs attention</span><% end %></div>
+            </li>
+          <% end %>
+        </ul>
+      </nav>
+    <% end %>
     <% visible_days.each do |entry| %>
       <% day = entry[:day]; counts = entry[:counts]; issues = counts[:variances] + counts[:unavailable] + counts[:conflicts] %>
       <article id="day-<%= day.iso8601 %>" class="section-card min-w-0 scroll-mt-48 md:scroll-mt-32" aria-label="Business date <%= day.iso8601 %>">

@@ -30,7 +30,7 @@ class LiveSyncTest < ActionDispatch::IntegrationTest
     get live_sync_status_path, headers: { 'Accept' => 'text/vnd.turbo-stream.html' }
     assert_response :success
     assert_equal 'text/vnd.turbo-stream.html', response.media_type
-    %w[sync-banner last-sync sync-runs].each do |target|
+    %w[sync-banner statusbar-sync sync-runs].each do |target|
       assert_match(/<turbo-stream action="replace" target="#{target}">/, response.body)
     end
   end
@@ -46,12 +46,12 @@ class LiveSyncTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, 'Every outbound write'
   end
 
-  test 'dashboard includes the live-sync controller, banner, and last-sync line' do
+  test 'dashboard includes the live-sync controller, banner, and the status-bar sync item' do
     get root_path
     assert_response :success
     assert_select '[data-controller~=live-sync]'
     assert_select '#sync-banner'
-    assert_select '#last-sync'
+    assert_select 'footer #statusbar-sync'
   end
 
   test 'sync_status is rejected without a session' do
@@ -65,7 +65,7 @@ class LiveSyncTest < ActionDispatch::IntegrationTest
       startedAt: 10.minutes.ago, finishedAt: 2.minutes.ago)
     get syncs_path
     assert_response :success
-    assert_select '#header-sync-pill', text: /swipesimple.*csv.*success/m
-    assert_select '#header-sync-pill time[datetime=?]', run.finishedAt.iso8601
+    assert_select '#statusbar-sync', text: /swipesimple.*csv.*success/m
+    assert_select '#statusbar-sync time[datetime=?]', run.finishedAt.iso8601
   end
 end

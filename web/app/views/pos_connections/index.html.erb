@@ -1,18 +1,24 @@
 <%# POS & payments: an Overview page listing every provider (docs/ui-standards.md §4). %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
-  <%= page_header 'POS & payments', subtitle: 'Prepare the accounts and terminals your business uses, and evaluate alternatives when you are ready.' %>
-  <div class="grid gap-4 lg:grid-cols-2">
-    <% @providers.each do |provider| %>
-      <% connection = @connections[provider[:key]] || PosConnection.new(provider: provider[:key]) %>
-      <section class="section-card">
-        <%= section_heading provider[:name], hint: provider[:relationship], level: :h3 do %>
-          <span class="pill-taupe"><%= connection.status_label %></span>
-        <% end %>
-        <p class="text-sm text-mocha"><%= provider[:description] %></p>
-        <div><%= link_to 'Open setup', pos_connection_path(provider[:key]), class: 'btn-ghost btn-sm' %></div>
-      </section>
-    <% end %>
+  <%= page_header 'POS & payments', subtitle: 'The accounts and terminals your business uses, and the alternatives.' %>
+  <div class="card">
+    <ul class="row-list">
+      <% @providers.each do |provider| %>
+        <% connection = @connections[provider[:key]] || PosConnection.new(provider: provider[:key]) %>
+        <li class="row-item">
+          <div class="min-w-0 flex-1">
+            <h3 class="font-semibold text-ink"><%= provider[:name] %></h3>
+            <p class="text-xs text-taupe"><%= provider[:relationship] %></p>
+            <p class="mt-1 text-sm text-mocha"><%= provider[:description] %></p>
+          </div>
+          <div class="row-item-end">
+            <span class="pill-taupe"><%= connection.status_label %></span>
+            <%= link_to 'Open setup', pos_connection_path(provider[:key]), class: 'btn-ghost btn-sm' %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
   </div>
   <%= fold_explainer('A provider check confirms only the documented operation shown on its setup page: API authentication, merchant profile access or a store/location read. Payment collection, refunds, terminal commands and automatic POS imports need their own provider adapter and checkout validation. Your existing POS remains the place to complete sales.', class: 'text-sm text-mocha') %>
 </div>

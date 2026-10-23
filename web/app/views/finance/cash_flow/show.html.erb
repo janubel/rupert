@@ -2,20 +2,21 @@
 <% report = @report %>
 <div class="space-y-6 cash-flow-workspace" data-controller="cash-flow" data-cash-flow-interval-value="30000" data-cash-flow-url-value="<%= finance_cash_flow_path(request.query_parameters) %>">
 
-  <%= page_header 'Cash flow', subtitle: 'What came into and left the bank, what was sold and what was spent, for the dates you choose.',
-        menu: [['Cash forecast', cash_forecast_path], ['Bank transactions', bank_statements_path], ['Expenses', finance_expenses_path], ['Vendor payments', finance_vendor_payments_path]] %>
+  <%= page_header 'Cash flow', subtitle: 'What came into and left the bank, what was sold and what was spent.' %>
 
   <%# One period row above everything it scopes: named ranges as tabs, custom dates in the toolbar. The server resolves the same params without JavaScript. %>
   <%= page_tabs(cash_flow_period_tabs(report), label: 'Period') %>
-  <%= form_with url: finance_cash_flow_path, method: :get, class: 'toolbar', data: { turbo: false } do |f| %>
-    <div class="toolbar-field"><%= f.label :from, 'From', class: 'field-label' %><%= f.date_field :from, value: report.from.iso8601, class: 'input', required: true %></div>
-    <div class="toolbar-field"><%= f.label :to, 'To', class: 'field-label' %><%= f.date_field :to, value: report.to.iso8601, class: 'input', required: true %></div>
-    <% if report.accounts.size > 1 %>
-      <div class="toolbar-field"><%= f.label :account, 'Bank account', class: 'field-label' %><%= f.select :account, [['All accounts', '']] + report.accounts.map { |a| [a, a] }, { selected: report.account.to_s }, class: 'select' %></div>
+  <section class="toolbar-band" aria-label="Cash flow dates">
+    <%= form_with url: finance_cash_flow_path, method: :get, class: 'toolbar', data: { turbo: false } do |f| %>
+      <div class="toolbar-field"><%= f.label :from, 'From', class: 'field-label' %><%= f.date_field :from, value: report.from.iso8601, class: 'input', required: true %></div>
+      <div class="toolbar-field"><%= f.label :to, 'To', class: 'field-label' %><%= f.date_field :to, value: report.to.iso8601, class: 'input', required: true %></div>
+      <% if report.accounts.size > 1 %>
+        <div class="toolbar-field"><%= f.label :account, 'Bank account', class: 'field-label' %><%= f.select :account, [['All accounts', '']] + report.accounts.map { |a| [a, a] }, { selected: report.account.to_s }, class: 'select' %></div>
+      <% end %>
+      <div class="toolbar-actions"><%= button_tag 'Apply', type: 'submit', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_cash_flow_path, class: 'btn-ghost' %></div>
     <% end %>
-    <div class="toolbar-actions"><%= button_tag 'Apply', type: 'submit', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_cash_flow_path, class: 'btn-ghost' %></div>
-  <% end %>
-  <%= render 'finance/cash_flow/meta', report: report %>
+    <div class="mt-3"><%= render 'finance/cash_flow/meta', report: report %></div>
+  </section>
 
   <%# Position and net flow first: where cash stands, then the headline figures with the net flow leading. %>
   <section class="grid gap-4 lg:grid-cols-3" aria-label="Cash position and headline figures">
@@ -24,14 +25,14 @@
   </section>
 
   <section class="card card-pad cash-flow-chart-card">
-    <%= section_heading 'Money in and out of the bank', hint: "Per #{report.bucket} · deposits above the line, withdrawals below · the running net since #{report.from.strftime('%b %-d')} as a line#{' · dashed where the cash forecast takes over' if report.forecast_series[:labels].any?}" %>
+    <%= section_heading 'Money in and out of the bank', hint: "Per #{report.bucket} · deposits above, withdrawals below, running net since #{report.from.strftime('%b %-d')} as a line#{' (dashed where the cash forecast takes over)' if report.forecast_series[:labels].any?}" %>
     <div class="cash-flow-canvas"><canvas data-cash-flow-target="bankChart" role="img" aria-label="Money in and out of the bank per <%= report.bucket %> with the running net. The table below lists every value."></canvas></div>
     <%= render 'finance/cash_flow/bank_table', report: report %>
   </section>
 
   <section class="grid gap-4 lg:grid-cols-3">
     <div class="card card-pad lg:col-span-2 cash-flow-chart-card">
-      <%= section_heading 'Sales taken, by channel', hint: "Per #{report.bucket} · paid or fulfilled orders and completed C-Trax sales, before refunds · what was sold, not yet what reached the bank" %>
+      <%= section_heading 'Sales taken, by channel', hint: "Per #{report.bucket} · paid or fulfilled orders and completed C-Trax sales, before refunds" %>
       <div class="cash-flow-canvas"><canvas data-cash-flow-target="channelChart" role="img" aria-label="Sales by channel per <%= report.bucket %>. The table below lists every value."></canvas></div>
       <%= render 'finance/cash_flow/channels_table', report: report %>
     </div>
@@ -43,4 +44,12 @@
   <%= render 'finance/cash_flow/events', report: report %>
 
   <%= render 'finance/cash_flow/data', report: report %>
+
+  <details class="explainer text-sm text-mocha">
+    <summary class="explainer-summary">Where these figures come from</summary>
+    <div class="mt-2 space-y-2">
+      <p>Bank figures come from imported statements, sales from connected channels and spend from what you recorded; nothing is matched or guessed. A live bank balance is not connected, so the balance is the last retained statement's closing balance.</p>
+      <p>Sales are what was sold, not yet what reached the bank. Card sales arrive later as processor payouts, net of fees; “From sale to bank” compares the two totals for the range and is not a reconciliation.</p>
+    </div>
+  </details>
 </div>

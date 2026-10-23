@@ -25,7 +25,7 @@ class FinanceReportsUiTest < ActionDispatch::IntegrationTest
     post_entry(123_456_789)
     get finance_reports_trial_balance_path
     assert_response :success
-    assert_select '.page-header .page-subtitle', /\A\w{3} \d{1,2}.* – .*\d{4} · USD\z/
+    assert_select '.page-header .page-subtitle', /\A\w{3} \d{1,2}.* – .*\d{4}\z/
     assert_select 'th[scope=col]', text: 'Debit'
     assert_select 'tfoot .money', text: '$1,234,567.89', count: 2
     assert_select 'td a[href*=?]', finance_chart_of_account_path(@cash)

@@ -1,4 +1,4 @@
-<%= render "reports/layout", title: "Inventory reconciliation", subtitle: "Side-by-side Shopify and Square stock counts from the sync mirrors, refreshed every 15 minutes." do %>
+<%= render "reports/layout", title: "Inventory reconciliation", subtitle: "Shopify and Square stock counts side by side." do %>
   <section class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     <div class="stat">
       <div class="stat-label">Linked SKUs<%= define('sku') %></div>
@@ -119,4 +119,5 @@
       </table>
     <% end %>
   </div>
+  <p class="text-xs text-taupe">Counts come from the sync mirrors, refreshed every 15 minutes.</p>
 <% end %>

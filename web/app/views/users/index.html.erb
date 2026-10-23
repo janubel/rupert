@@ -1,8 +1,8 @@
 <% can_manage_accounts = Current.user.can_manage_accounts? %>
 <% content_for :title, "Users" %>
 <div class="space-y-6">
-  <%= page_header 'Users', subtitle: 'Login accounts for Rupert and their access level. HR records live under Staff.' do %>
-    <%= link_to "Permissions", permissions_path, class: "btn-ghost", data: { tour: 'permissions' } %>
+  <%= page_header 'Users', subtitle: 'Login accounts for Rupert and their access level.',
+        menu: [['Permissions', permissions_path, { data: { tour: 'permissions' } }]] do %>
     <% if can_manage_accounts %>
     <%= link_to "Add user", new_user_path, class: "btn-primary", data: { tour: 'add' } %>
     <% end %>
@@ -65,4 +65,5 @@
       </table>
     </div>
   </div>
+  <p class="text-xs text-mocha">HR records (pay, position, documents) live under Staff.</p>
 </div>

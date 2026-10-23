@@ -1,8 +1,7 @@
 <%# API access: a Settings page (docs/ui-standards.md §4) with one card per topic and the token list. %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="page-medium space-y-6">
-  <%= page_header 'API access', subtitle: 'Connect your tools and AI assistants to Rupert’s versioned read API with store-scoped tokens.' %>
-  <%= fold_explainer('Each token belongs to this store, has selected scopes, and can be revoked here. The same token can connect an AI assistant over MCP (see below).', class: 'text-sm text-mocha') %>
+  <%= page_header 'API access', subtitle: 'Store-scoped tokens for Rupert’s read API and AI assistants.' %>
 
   <% if @issued_secret %>
     <section class="section-card" aria-label="New API token">
@@ -66,4 +65,5 @@ curl -H 'Authorization: Bearer YOUR_TOKEN' '<%= request.base_url %>/api/v1/roadm
     <pre class="overflow-x-auto rounded-control bg-haze p-3 text-xs"><code>claude mcp add --transport http rupert <%= request.base_url %>/mcp --header "Authorization: Bearer YOUR_TOKEN"</code></pre>
     <p class="text-xs text-taupe">Any token can send feedback (bugs, struggles, task reports, suggestions) with the submit_feedback tool; review it under <%= Current.user.can?('settings.read') ? link_to('AI assistant feedback', agent_feedbacks_path, class: 'underline') : 'AI assistant feedback' %>. Setup for other clients, the tool list and the scopes each tool needs are in docs/mcp.md.</p>
   </section>
+  <%= fold_explainer('Each token belongs to this store, has selected scopes, and can be revoked here. The same token can connect an AI assistant over MCP (see above).', class: 'text-sm text-mocha') %>
 </div>

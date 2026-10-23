@@ -1,7 +1,7 @@
 <% content_for :title, 'Balance sheet' %>
 <div class="space-y-6">
   <%= render layout: 'finance/page_header', locals: { title: 'Balance sheet', range: "As of #{@to.strftime('%b %-d, %Y')}", print: true,
-        menu: [['Download CSV', finance_reports_balance_sheet_path(format: :csv, to: @to), { data: { turbo: false } }], ['All statements', finance_reports_path]],
+        menu: [['Download CSV', finance_reports_balance_sheet_path(format: :csv, to: @to), { data: { turbo: false } }]],
         explain: 'What the business owns (assets), owes (liabilities) and is worth to the owner (equity) on one date. Assets must equal liabilities plus equity.' } do %><% end %>
   <%= render 'finance/reports/coverage_notice' %>
   <%= render 'finance/reports/tabs' %>

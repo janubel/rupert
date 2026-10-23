@@ -1,8 +1,7 @@
 <%# Uploads: a List page (docs/ui-standards.md §4). The dropzone sits above the list; status is a toolbar filter. %>
 <div class="space-y-6 operations-workspace">
-  <%= page_header 'Uploads', subtitle: 'Send any file here; Rupert keeps the original, works out what it is and changes nothing until a person approves a dry run.',
-                  menu: [['Insights', insights_uploads_path], (['Copy from Google Drive', uploads_drive_path] if @can_write)].compact %>
-  <%= fold_explainer('Bank statements, QuickBooks exports, SwipeSimple, NAB / IRIS, Authorize.net and timesheets all belong here. Rupert keeps the original untouched, works out what it is, and shows what it would do. Nothing changes in your records until a person runs a dry run and approves it.', class: 'text-sm text-mocha') %>
+  <%= page_header 'Uploads', subtitle: 'Send any file here; nothing changes until a person approves a dry run.',
+                  menu: [['Insights', insights_uploads_path]] %>
 
   <% if @can_write %>
     <%= form_with url: uploads_path, multipart: true, data: { controller: 'dropzone', turbo: false, dropzone_max_files_value: Uploads::Limits::MAX_FILES_PER_REQUEST, dropzone_max_bytes_value: Uploads::Limits::MAX_FILE_BYTES, dropzone_max_total_value: Uploads::Limits::MAX_REQUEST_BYTES }, class: 'card card-pad space-y-3', id: 'upload-form' do |f| %>
@@ -79,4 +78,5 @@
     </div>
     <%== @pagy.series_nav if @uploads.any? && @pagy.pages > 1 %>
   </section>
+  <%= fold_explainer('Bank statements, QuickBooks exports, SwipeSimple, NAB / IRIS, Authorize.net and timesheets all belong here. Rupert keeps the original untouched, works out what it is, and shows what it would do. Nothing changes in your records until a person runs a dry run and approves it.', class: 'text-sm text-mocha') %>
 </div>

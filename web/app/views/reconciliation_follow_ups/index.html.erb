@@ -1,11 +1,9 @@
 <% content_for :title, 'Follow-ups' %>
-<% menu = [['Open days', overview_reconciliation_follow_ups_path(ending_on: @day&.iso8601)],
-           ['Daily reconciliation', daily_reconciliations_path(day: @day&.iso8601)],
-           ['Source documents', reconciliation_documents_path]]
+<% menu = [['Open days', overview_reconciliation_follow_ups_path(ending_on: @day&.iso8601)]]
    filters_open = @status != 'active' || @source || @owner_filter || @day || @category || @evidence_filter %>
 <div class="space-y-6">
   <%= render layout: 'finance/page_header', locals: { title: 'Follow-ups', currency: nil, menu: menu,
-        explain: 'Missing reports and differences to investigate, kept visible across business days until each is closed with a reason. Follow-ups are saved in Rupert only; status changes, assignments and notes stay in their history. Closing records a reviewer’s decision; it does not assert a match or change source transactions.' } do %>
+        explain: 'Missing reports and differences to investigate, kept visible until each is closed with a reason.' } do %>
     <% if Current.user.can?('reports.write') %><%= link_to 'Add follow-up', new_reconciliation_follow_up_path, class: 'btn-primary' %><% end %>
   <% end %>
 
@@ -20,28 +18,40 @@
 
   <%= render 'view_priorities' %>
 
-  <details class="explainer card card-pad">
-    <summary class="explainer-summary font-semibold">Across all dates · queue shortcuts</summary>
-    <div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5" aria-label="Follow-up shortcuts across all dates">
+  <details class="card">
+    <summary class="disclosure-trigger card-pad font-semibold">Across all dates · queue shortcuts</summary>
+    <ul class="row-list" aria-label="Follow-up shortcuts across all dates">
       <% [['Open or waiting', @open_count, {}], ['Overdue', @overdue_count, { status: 'overdue' }], ['Due today', @today_count, { status: 'today' }], ['Unassigned', @unassigned_count, { owner: 'unassigned' }], ['Reports without a linked original', @missing_file_count, { category: 'missing_report', evidence: 'missing' }]].each do |label, count, filters| %>
-        <%= link_to reconciliation_follow_ups_path(filters), class: "stat block #{filters[:status] == 'overdue' && count.positive? ? 'border-warn-edge' : ''}" do %><p class="stat-label"><%= label %></p><p class="stat-value-sm mt-1"><%= count %></p><% end %>
+        <li class="row-item">
+          <%= link_to label, reconciliation_follow_ups_path(filters), class: 'font-semibold text-olive-deep hover:underline' %>
+          <div class="row-item-end"><span class="num font-semibold <%= filters[:status] == 'overdue' && count.positive? ? 'text-rose' : 'text-ink' %>"><%= count %></span></div>
+        </li>
       <% end %>
-    </div>
-    <p class="mt-2 text-xs text-mocha">Shortcut counts cover all dates; the list below uses your selected filters.</p>
+    </ul>
+    <p class="row-list-foot text-xs text-mocha">Shortcut counts cover all dates; the list below uses your selected filters.</p>
   </details>
 
   <%= page_tabs([['All purposes', nil], ['Missing reports', 'missing_report'], ['Difference investigations', 'difference']].map { |label, category| [label, reconciliation_follow_ups_path(request.query_parameters.except('page').merge('category' => category)), @category == category] }, label: 'Follow-up purpose') %>
 
-  <%= form_with url: reconciliation_follow_ups_path, method: :get, class: 'toolbar', html: { role: 'search' } do |f| %>
-    <%= f.hidden_field :original, value: @original.id if @original %>
-    <div class="toolbar-field"><%= f.label :status, 'Status', class: 'field-label' %><%= f.select :status, [['Open or waiting', 'active'], ['Open', 'open'], ['Waiting', 'waiting'], ['Overdue', 'overdue'], ['Due today', 'today'], ['Closed', 'closed'], ['All statuses', 'all']], { selected: @status }, class: 'select' %></div>
-    <div class="toolbar-field"><%= f.label :source, 'Source', class: 'field-label' %><%= f.select :source, ReconciliationLibrary::SOURCE_NAMES.except('rupert').map { |key, name| [name, key] }, { include_blank: 'All sources', selected: @source }, class: 'select' %></div>
-    <div class="toolbar-field"><%= f.label :owner, 'Assigned to', class: 'field-label' %><%= f.select :owner, [['Me', 'mine'], ['Unassigned', 'unassigned']], { include_blank: 'Anyone', selected: @owner_filter }, class: 'select' %></div>
-    <div class="toolbar-field"><%= f.label :category, 'Purpose', class: 'field-label' %><%= f.select :category, ReconciliationFollowUp::CATEGORIES.map { |key, name| [name, key] }, { include_blank: 'All purposes', selected: @category }, class: 'select' %></div>
-    <div class="toolbar-field"><%= f.label :evidence, 'Retained evidence', class: 'field-label' %><%= f.select :evidence, [['No original linked', 'missing']], { include_blank: 'Any evidence state', selected: @evidence_filter }, class: 'select' %></div>
-    <div class="toolbar-field"><%= f.label :day, 'Covers business day', class: 'field-label' %><%= f.date_field :day, value: @day, class: 'input' %></div>
-    <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', reconciliation_follow_ups_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <section class="toolbar-band" aria-label="Follow-up filters">
+    <%= form_with url: reconciliation_follow_ups_path, method: :get, html: { role: 'search' } do |f| %>
+      <%= f.hidden_field :original, value: @original.id if @original %>
+      <div class="toolbar">
+        <div class="toolbar-field"><%= f.label :status, 'Status', class: 'field-label' %><%= f.select :status, [['Open or waiting', 'active'], ['Open', 'open'], ['Waiting', 'waiting'], ['Overdue', 'overdue'], ['Due today', 'today'], ['Closed', 'closed'], ['All statuses', 'all']], { selected: @status }, class: 'select' %></div>
+        <div class="toolbar-field"><%= f.label :source, 'Source', class: 'field-label' %><%= f.select :source, ReconciliationLibrary::SOURCE_NAMES.except('rupert').map { |key, name| [name, key] }, { include_blank: 'All sources', selected: @source }, class: 'select' %></div>
+        <div class="toolbar-field"><%= f.label :day, 'Covers business day', class: 'field-label' %><%= f.date_field :day, value: @day, class: 'input' %></div>
+        <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', reconciliation_follow_ups_path, class: 'btn-ghost' %></div>
+      </div>
+      <details class="explainer mt-3" <%= 'open' if @owner_filter || @category || @evidence_filter %>>
+        <summary class="explainer-summary">More filters</summary>
+        <div class="toolbar mt-2">
+          <div class="toolbar-field"><%= f.label :owner, 'Assigned to', class: 'field-label' %><%= f.select :owner, [['Me', 'mine'], ['Unassigned', 'unassigned']], { include_blank: 'Anyone', selected: @owner_filter }, class: 'select' %></div>
+          <div class="toolbar-field"><%= f.label :category, 'Purpose', class: 'field-label' %><%= f.select :category, ReconciliationFollowUp::CATEGORIES.map { |key, name| [name, key] }, { include_blank: 'All purposes', selected: @category }, class: 'select' %></div>
+          <div class="toolbar-field"><%= f.label :evidence, 'Retained evidence', class: 'field-label' %><%= f.select :evidence, [['No original linked', 'missing']], { include_blank: 'Any evidence state', selected: @evidence_filter }, class: 'select' %></div>
+        </div>
+      </details>
+    <% end %>
+  </section>
   <p class="text-sm text-mocha" role="status"><%= @pagy.count %> matching follow-ups · earliest due first<%= " · covers #{@day.strftime('%b %-d, %Y')}" if @day %><%= " · #{reconciliation_source(@source)}" if @source %><%= " · #{ReconciliationFollowUp::CATEGORIES[@category]}" if @category %><%= ' · no original linked' if @evidence_filter %><%= ' · filters applied' if filters_open %></p>
 
   <% if @follow_ups.empty? %>
@@ -52,5 +62,8 @@
     <div class="grid gap-4 md:grid-cols-2"><% @follow_ups.each do |item| %><%= render 'card', item: item, close_day: @day, queue_filters: @queue_filters %><% end %></div>
   <% end %>
   <%== @pagy.series_nav if @pagy.pages > 1 %>
-  <p class="text-xs text-mocha">A file may already be retained but not linked to its request.</p>
+  <details class="explainer text-xs text-mocha">
+    <summary class="explainer-summary">About follow-ups</summary>
+    <p class="mt-1">Follow-ups are saved in Rupert only; status changes, assignments and notes stay in their history. Closing records a reviewer’s decision; it does not assert a match or change source transactions. A file may already be retained but not linked to its request.</p>
+  </details>
 </div>

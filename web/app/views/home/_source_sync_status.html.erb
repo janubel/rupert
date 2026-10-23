@@ -1,15 +1,14 @@
-<section id="source-sync-status" aria-label="Source sync status" class="space-y-4">
-  <%= section_heading 'Source pulls & coverage', hint: 'Pull time describes data freshness. Payment and deposit sources do not add to sales.' do %>
-    <% if Current.user.can?('reports.read') %><%= link_to 'Reconciliation', money_reconciliations_path, class: 'btn-ghost btn-sm' %><% end %>
+<section id="source-sync-status" aria-label="Source sync status" class="space-y-3">
+  <%= section_heading 'Sources', hint: 'How fresh each source is. Payment and deposit sources never add to sales.' do %>
     <% if Current.user.can?('settings.read') %><%= link_to 'Credentials & sync', connections_path, class: 'btn-ghost btn-sm' %><% end %>
   <% end %>
-  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+  <div class="card">
+    <ul class="row-list">
     <% SourceSyncStatus.all.each do |source| %>
       <% syncing = SourceSyncStatus::ACTIVE_BADGES.include?(source[:badge]) %>
-      <article class="<%= class_names('section-card', syncing ? 'source-sync-active' : 'source-sync-inactive') %>" data-source="<%= source[:key] %>">
-        <%= section_heading source[:label], hint: { 'ctrax' => 'Native retail sales & stock', 'shopify' => 'Online sales & stock', 'square' => 'POS sales & stock', 'swipesimple' => 'Payment evidence only', 'authorize_net' => 'Payment evidence only', 'bank' => 'Deposit evidence only', 'google_backup' => 'Recovery backup' }.fetch(source[:key]), level: :h3 do %>
-          <span class="<%= syncing ? 'pill-fern' : source[:badge] == 'Error' ? 'pill-rose' : 'pill-taupe' %>"><%= source[:key] == 'ctrax' ? "Stock: #{source[:badge]}" : source[:badge] %></span>
-        <% end %>
+      <li class="row-item source-row" data-source="<%= source[:key] %>">
+        <div class="min-w-0 flex-1">
+          <p class="flex flex-wrap items-baseline gap-x-2"><span class="font-semibold text-ink"><%= source[:label] %></span> <span class="text-xs text-taupe"><%= { 'ctrax' => 'Native retail sales & stock', 'shopify' => 'Online sales & stock', 'square' => 'POS sales & stock', 'swipesimple' => 'Payment evidence only', 'authorize_net' => 'Payment evidence only', 'bank' => 'Deposit evidence only', 'google_backup' => 'Recovery backup' }.fetch(source[:key]) %></span></p>
         <p class="text-xs text-mocha"><%= source[:mode] == 'backup' ? 'Last successful backup:' : source[:key] == 'ctrax' ? 'Last stock pull:' : 'Last successful pull:' %> <% if source[:last_at] %><time datetime="<%= source[:last_at].iso8601 %>"><%= source[:last_at].in_time_zone.strftime('%b %-d, %-I:%M %p %Z') %></time><% else %>None yet<% end %></p>
         <% if source[:key] == 'ctrax' %>
           <p class="text-xs text-mocha">Last sales pull: <% if source[:sales_last_at] %><time datetime="<%= source[:sales_last_at].iso8601 %>"><%= source[:sales_last_at].in_time_zone.strftime('%b %-d, %-I:%M %p %Z') %></time><% else %>None yet<% end %> · <strong><%= source[:sales_badge] %></strong></p>
@@ -42,7 +41,10 @@
             <% end %>
           </div>
         </details>
-      </article>
+        </div>
+        <span class="<%= syncing ? 'pill-fern' : source[:badge] == 'Error' ? 'pill-rose' : 'pill-taupe' %> shrink-0 self-start"><%= source[:key] == 'ctrax' ? "Stock: #{source[:badge]}" : source[:badge] %></span>
+      </li>
     <% end %>
+    </ul>
   </div>
 </section>

@@ -3,7 +3,6 @@
 <div class="space-y-6">
   <%= page_header 'Permissions', subtitle: 'What each role can do.',
         menu: (can_manage_accounts ? [['Reset to defaults', reset_permissions_path, { method: :post, data: { turbo_confirm: "Clear all role overrides and use the built-in defaults?" } }]] : nil) %>
-  <%= fold_explainer('Super admin always has full access; overrides below replace a role\'s built-in defaults. Staff access is fixed to POS, their own time records and assigned tasks and cannot be expanded by overrides. Empty cells mean a role uses its built-in default for that permission.', class: 'text-sm text-mocha') %>
 
   <%= form_tag save_permissions_path, method: :post, class: "space-y-4" do %>
     <div class="card">
@@ -20,7 +19,7 @@
           <tbody>
             <% @catalog.each do |group| %>
               <tr class="bg-haze/40">
-                <th scope="rowgroup" colspan="<%= @roles.length + 1 %>" class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-mocha"><%= group[:area] %></th>
+                <th scope="rowgroup" colspan="<%= @roles.length + 1 %>" class="px-4 py-2 text-left text-xs font-semibold text-mocha"><%= group[:area] %></th>
               </tr>
               <% group[:permissions].each do |permission| %>
                 <tr>
@@ -59,4 +58,5 @@
     </div>
     <% end %>
   <% end %>
+  <%= fold_explainer('Super admin always has full access; overrides in this table replace a role\'s built-in defaults. Staff access is fixed to POS, their own time records and assigned tasks and cannot be expanded by overrides. Empty cells mean a role uses its built-in default for that permission.', class: 'text-sm text-mocha') %>
 </div>

@@ -1,6 +1,6 @@
 <% content_for :title, @variant.title %>
 <div class="space-y-6">
-  <%= page_header @variant.title, subtitle: "#{@product&.title} · #{@variant.sku.presence || 'no SKU'}", eyebrow: 'Stock · Shopify variant' do %>
+  <%= page_header @variant.title, subtitle: "#{@product&.title} · #{@variant.sku.presence || 'no SKU'}", eyebrow: 'Shopify variant' do %>
     <% if @variant.tracked %><span class="pill-fern">Tracked</span><% end %>
     <span class="<%= @link ? 'pill-fern' : 'pill-taupe' %>"><%= @link ? 'Linked to Square' : 'Not linked' %></span>
   <% end %>

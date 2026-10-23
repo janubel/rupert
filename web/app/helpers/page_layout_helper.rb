@@ -6,10 +6,10 @@
 #   .page-medium  56rem  reading and settings pages
 #   (default)     the layout's max-w-6xl, for tables and dashboards
 module PageLayoutHelper
-  # Renders the eyebrow, <h1>, subtitle, the primary action(s) and an optional
-  # "More" menu, and sets the browser-tab title from the same text unless the
-  # view already set one. The eyebrow defaults to the page's section and group
-  # from ModuleRegistry, so every page says where it lives the same way.
+  # Renders the <h1>, subtitle, the primary action(s) and an optional "More"
+  # menu, and sets the browser-tab title from the same text unless the view
+  # already set one. Location is shown once, by the rail; pass eyebrow: only
+  # when a page needs to name the kind of record it shows ("Customer").
   #
   #   <%= page_header 'Edit goal', subtitle: 'Targets for the month.' %>
   #   <%= page_header 'Customers', menu: [['Download CSV', export_customers_path], ['Sync now', sync_customers_path, { method: :post }]] do %>
@@ -18,7 +18,6 @@ module PageLayoutHelper
   def page_header(title, subtitle: nil, eyebrow: nil, menu: nil, &block)
     content_for(:title, title) unless content_for?(:title)
     actions = capture(&block) if block
-    eyebrow = page_eyebrow if eyebrow.nil?
     menu_html = page_menu(menu)
 
     tag.header(class: 'page-header') do
@@ -72,16 +71,17 @@ module PageLayoutHelper
     end
   end
 
-  # Section heading inside a page: <h2> plus optional actions on the right.
+  # Section heading inside a page: <h2> plus optional actions on the right. Pass id: when a
+  # section is aria-labelledby this heading.
   #
   #   <%= section_heading 'Follow-ups due' do %><%= link_to 'Open all', ..., class: 'btn-ghost btn-sm' %><% end %>
-  def section_heading(title, hint: nil, level: :h2, &block)
+  def section_heading(title, hint: nil, level: :h2, id: nil, &block)
     actions = capture(&block) if block
     tag.div(class: 'card-head') do
       safe_join([
         tag.div do
           safe_join([
-            content_tag(level, title, class: level == :h2 ? 'section-title' : 'card-title'),
+            content_tag(level, title, class: level == :h2 ? 'section-title' : 'card-title', id: id),
             (tag.p(hint, class: 'card-hint') if hint.present?)
           ].compact)
         end,

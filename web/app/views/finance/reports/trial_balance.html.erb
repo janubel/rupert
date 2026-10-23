@@ -1,7 +1,7 @@
 <% content_for :title, 'Trial balance' %>
 <div class="space-y-6">
   <%= render layout: 'finance/page_header', locals: { title: 'Trial balance', range: report_range_label(@from, @to), print: true,
-        menu: [['Download CSV', finance_reports_trial_balance_path(format: :csv, from: @from, to: @to), { data: { turbo: false } }], ['All statements', finance_reports_path]],
+        menu: [['Download CSV', finance_reports_trial_balance_path(format: :csv, from: @from, to: @to), { data: { turbo: false } }]],
         explain: 'Lists every account with activity, with the total debited and credited. If the books are in order, the two totals are equal.' } do %><% end %>
   <%= render 'finance/reports/coverage_notice' %>
   <%= render 'finance/reports/tabs' %>

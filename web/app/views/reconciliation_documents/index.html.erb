@@ -1,10 +1,10 @@
 <% content_for :title, 'Source documents' %>
 <% library_context = @library_context || {}; reset_context = library_context.merge(@close_day && !@report_request ? { from: @close_day.iso8601, to: @close_day.iso8601 } : {})
    can_write = Current.user.can?('reports.write')
-   menu = [['Open days', overview_reconciliation_follow_ups_path], ['Follow-ups', reconciliation_follow_ups_path], ['Daily reconciliation', daily_reconciliations_path], ['Drive copies', retention_drive_path]] %>
+   menu = nil %>
 <div class="space-y-6">
   <%= render layout: 'finance/page_header', locals: { title: 'Source documents', currency: nil, menu: menu,
-        explain: 'Find the original reports, invoices and statements behind the books, including every saved version, across dates. Originals, corrections and review history are retained without automatic deletion. Downloads verify stored checksums, and local originals stay available independently of Drive.' } do %>
+        explain: 'The original reports, invoices and statements behind the books, with every saved version. Originals, corrections and review history are retained without automatic deletion. Downloads verify stored checksums, and local originals stay available independently of Drive.' } do %>
     <% if can_write %><%= link_to 'Add document', daily_reconciliations_path(anchor: 'upload-document'), class: 'btn-primary' %><% end %>
   <% end %>
 
@@ -22,6 +22,7 @@
 
   <% if @library_error %><p role="alert" class="flash flash-alert"><%= @library_error %></p><% end %>
 
+  <section class="toolbar-band" aria-label="Document filters">
   <%= form_with url: reconciliation_documents_path, method: :get, class: 'toolbar', html: { role: 'search' } do |f| %>
     <% library_context.each do |key, value| %><%= hidden_field_tag key, value %><% end %>
     <div class="toolbar-field"><%= f.label :q, 'Search', class: 'field-label' %><%= f.search_field :q, value: @library.filters['q'], placeholder: 'Filename, source or #reference', maxlength: 100, class: 'input' %></div>
@@ -31,7 +32,8 @@
     <div class="toolbar-field"><%= f.label :to, 'Through date', class: 'field-label' %><%= f.date_field :to, value: @library.filters['to'], class: 'input' %></div>
     <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', reconciliation_documents_path(reset_context), class: 'btn-ghost' %></div>
   <% end %>
-  <p class="text-xs text-mocha">Dates match covered periods for vault documents and received export dates for native CSVs. An export date does not establish its transaction coverage.</p>
+  <p class="mt-2 text-xs text-mocha">Dates match covered periods for vault documents and received export dates for native CSVs. An export date does not establish its transaction coverage.</p>
+  </section>
   <p class="text-sm" role="status"><strong><%= @library.total %></strong> matching <%= @library.total == 1 ? 'file' : 'files' %> · newest retained first<% if params[:cursor].present? %> · older results<% end %></p>
 
   <% if @entries.empty? %>

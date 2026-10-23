@@ -4,9 +4,9 @@
 <% totals = @overview.fetch(:totals); instance = @overview.fetch(:instance); jobs = @overview.fetch(:jobs) %>
 <div class="space-y-6">
   <div>
-    <%= page_header 'Instance overview', subtitle: 'Workspace requests, account totals and recorded service activity across this Rupert installation.',
+    <%= page_header 'Instance overview', subtitle: 'Workspaces, accounts and service activity across this installation.',
                     menu: [['Manage workspaces', tenants_path, { data: { turbo: false } }], ['Backup and restore settings', settings_path, { data: { turbo: false } }]] %>
-    <p class="mt-2 text-xs text-taupe">Snapshot at <%= @overview.fetch(:generated_at).utc.iso8601 %>. Counts can change while this page is open. Only active platform administrators can open this page.</p>
+    <p class="mt-2 text-xs text-taupe">Snapshot at <%= @overview.fetch(:generated_at).utc.iso8601 %>; counts can change while this page is open. Only active platform administrators can open this page.</p>
   </div>
 
   <section class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4" aria-label="Account and setup totals">

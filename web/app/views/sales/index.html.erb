@@ -1,84 +1,81 @@
 <% content_for :title, 'Sales' %>
 <% keep = { source: @source, window: @window_days, status: @status } %>
 <div class="operations-workspace space-y-6">
-  <%= page_header 'Sales', subtitle: 'Recorded sales across channels, with a separate order journal for status and fulfillment.',
-      menu: [['Open order journal', '#sales-journal'],
-             ['Print packing slips', sales_print_path(date: @date, source: @source, status: @status)],
+  <%= page_header 'Sales', subtitle: 'Recorded sales across every channel.',
+      menu: [['Print packing slips', sales_print_path(date: @date, source: @source, status: @status)],
              ['Print invoices', sales_print_path(date: @date, source: @source, status: @status, doc: 'invoice')]] %>
 
   <%= page_tabs((['all'] + @sources).map { |source| [source == 'all' ? 'All' : operations_source_name(source), sales_path(keep.merge(source: source, date: @date)), @source == source] }, label: 'Sales sources') %>
 
-  <section class="card card-pad space-y-3" aria-label="Sales filters" <%= tour_anchor('filters') %>>
+  <section aria-label="Sales filters" class="toolbar-band" <%= tour_anchor('filters') %>>
     <%= form_tag sales_path, method: :get, class: 'toolbar' do %>
       <%= hidden_field_tag :source, @source %>
-      <div class="toolbar-field"><%= label_tag :date, 'Business date', class: 'field-label' %><%= date_field_tag :date, @date, required: true, class: 'input' %></div>
+      <div class="toolbar-field"><%= label_tag :date, 'Business date', class: 'field-label' %>
+        <div class="date-stepper">
+          <%= link_to '‹', sales_path(keep.merge(date: @date - 1)), class: 'btn-ghost btn-sm', aria: { label: 'Previous day' }, title: 'Previous day' %>
+          <%= date_field_tag :date, @date, required: true, class: 'input' %>
+          <%= link_to '›', sales_path(keep.merge(date: @date + 1)), class: 'btn-ghost btn-sm', aria: { label: 'Next day' }, title: 'Next day' %>
+        </div>
+      </div>
       <div class="toolbar-field"><%= label_tag :window, 'Chart period', class: 'field-label' %><%= select_tag :window, options_for_select([7, 30, 90, 365].map { |days| ["#{days} days", days] } | [["#{@window_days} days", @window_days]], @window_days), class: 'input' %></div>
       <div class="toolbar-field"><%= label_tag :status, 'Journal status', class: 'field-label' %><%= select_tag :status, options_for_select(%w[all paid fulfilled placed cancelled refunded].map { |status| [status == 'all' ? 'All statuses' : status.humanize, status] }, @status), class: 'input' %></div>
-      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><%= link_to 'Clear', sales_path(source: @source), class: 'btn-ghost' %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><% if @date != Date.current || @status != 'all' %><%= link_to 'Today', sales_path(source: @source), class: 'btn-ghost' %><% end %></div>
     <% end %>
-    <nav aria-label="Business dates" class="flex flex-wrap gap-2">
-      <%= link_to 'Previous day', sales_path(keep.merge(date: @date - 1)), class: 'btn-ghost btn-sm' %>
-      <%= link_to 'Today', sales_path(keep), class: 'btn-ghost btn-sm' %>
-      <%= link_to 'Next day', sales_path(keep.merge(date: @date + 1)), class: 'btn-ghost btn-sm' %>
-    </nav>
   </section>
 
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Recorded sales summary" <%= tour_anchor('summary') %>>
-    <% [['Recorded sales · USD', operations_money(@day_total_cents), @date.strftime('%b %-d, %Y'), 'sales_total'],
-        ['Sales recorded', @day_count, 'Paid / fulfilled and native completed orders', 'journal'],
-        ['Average sale · USD', @day_count.zero? ? '—' : operations_money(BigDecimal(@day_total_cents.to_s) / @day_count), 'Recorded sales only', 'average_sale'],
-        ["#{@window_days}-day sales · USD", operations_money(@total_cents), "#{@sales.from.to_date} through #{@date}", 'date_window']].each do |label, value, detail, term| %>
-      <div class="stat min-w-0"><div class="stat-label"><%= label %><%= define(term) %></div><p class="stat-value retail-money mt-2"><%= value %></p><p class="mt-2 text-xs text-mocha"><%= detail %></p></div>
+    <% [['Recorded sales', operations_money(@day_total_cents), @date.strftime('%b %-d, %Y'), 'sales_total'],
+        ['Sales recorded', @day_count, 'Paid, fulfilled and completed', 'journal'],
+        ['Average sale', @day_count.zero? ? '—' : operations_money(BigDecimal(@day_total_cents.to_s) / @day_count), 'Recorded sales only', 'average_sale'],
+        ["Last #{@window_days} days", operations_money(@total_cents), "#{@sales.from.to_date.strftime('%b %-d')} – #{@date.strftime('%b %-d')}", 'date_window']].each do |label, value, detail, term| %>
+      <div class="stat min-w-0"><div class="stat-label"><%= label %><%= define(term) %></div><p class="stat-value retail-money mt-1"><%= value %></p><p class="mt-1 text-xs text-taupe"><%= detail %></p></div>
     <% end %>
   </section>
 
-  <div class="text-sm text-mocha" <%= tour_anchor('explanation') %>>
-    <p>Totals include USD paid / fulfilled orders and native completed C-Trax sales once, before refunds; tips, payments and deposits stay separate.</p>
-    <details class="explainer" data-sales-total-explanation>
+  <% if @sales.warnings.any? %><div class="flash flash-alert" role="status"><ul class="list-disc pl-5"><% @sales.warnings.each do |warning| %><li><%= warning %></li><% end %></ul></div><% end %>
+
+  <section class="card" aria-label="Sales sources and freshness" <%= tour_anchor('sources') %>>
+    <ul class="row-list">
+      <% (@source == 'all' ? (%w[shopify ctrax square] | @source_groups.map(&:first)) : [@source]).each do |source| %>
+        <% group = @source_groups.find { |row| row.first == source }; freshness = @freshness[source] || {} %>
+        <li class="row-item">
+          <div class="min-w-0">
+            <p class="font-semibold text-ink"><%= operations_source_name(source) %></p>
+            <p class="text-xs text-taupe">Last pull: <%= retail_source_time(freshness[:pulled_at]) %><% if source == 'ctrax' %> · business date <%= freshness[:business_date] || 'not imported' %><% end %></p>
+          </div>
+          <div class="row-item-end">
+            <span class="text-xs text-mocha"><%= pluralize(group&.third || 0, 'sale') %></span>
+            <span class="num retail-money font-semibold text-ink"><%= operations_money(group&.second || 0) %></span>
+            <% if source == 'ctrax' %><%= link_to 'Daily close', ctrax_days_path(date: @date), class: 'btn-ghost btn-sm' %><% end %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+    <details class="explainer row-list-foot" data-sales-total-explanation <%= tour_anchor('explanation') %>>
       <summary class="explainer-summary">What makes up these totals?</summary>
-      <div class="mt-2 space-y-3">
-        <p>For <%= @date.strftime('%B %-d, %Y') %>, the recorded-sales total adds these included USD sales before refunds. Paid / fulfilled canonical orders and native completed C-Trax orders are counted once. Tips, payment reports and bank deposits stay separate.</p>
+      <div class="mt-2 space-y-3 text-sm text-mocha">
+        <p>For <%= @date.strftime('%B %-d, %Y') %>, recorded sales add paid and fulfilled USD orders and completed C-Trax sales once, before refunds. Tips, payment reports and bank deposits stay separate.</p>
         <dl class="divide-y divide-fog"><% @source_groups.each do |source, cents, count| %><div class="flex flex-wrap justify-between gap-2 py-2"><dt><%= operations_source_name(source) %> · <%= pluralize(count, 'sale') %></dt><dd class="num font-semibold"><%= operations_money(cents) %></dd></div><% end %><div class="flex justify-between gap-3 py-3 font-semibold"><dt>Recorded sales</dt><dd class="num"><%= operations_money(@day_total_cents) %></dd></div></dl>
         <p><% if @day_count.positive? %>Average sale = <%= operations_money(@day_total_cents) %> ÷ <%= pluralize(@day_count, 'included sale') %> = <%= operations_money(BigDecimal(@day_total_cents.to_s) / @day_count) %>.<% else %>No included sales are stored for this day. The average is shown as a dash; check source coverage before treating zero as no activity.<% end %></p>
-        <p>The <%= @window_days %>-day figure covers <%= @sales.from.to_date %> through <%= @date %>. The order journal’s status filter only changes the journal.</p>
+        <p>The <%= @window_days %>-day figure covers <%= @sales.from.to_date %> through <%= @date %>. The journal status filter only changes the order journal.</p>
         <%= link_to 'Try a sales-total example', learning_path('sales', anchor: 'lesson-example'), class: 'inline-block font-semibold text-olive-deep underline' %>
       </div>
     </details>
-  </div>
-
-  <% if @sales.warnings.any? %><div class="flash flash-alert" role="status"><ul class="list-disc pl-5"><% @sales.warnings.each do |warning| %><li><%= warning %></li><% end %></ul></div><% end %>
-
-  <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Sales sources and freshness" <%= tour_anchor('sources') %>>
-    <% (@source == 'all' ? (%w[shopify ctrax square] | @source_groups.map(&:first)) : [@source]).each do |source| %>
-      <% group = @source_groups.find { |row| row.first == source }; freshness = @freshness[source] || {} %>
-      <article class="section-card">
-        <%= section_heading operations_source_name(source), level: :h3 %>
-        <p class="retail-money text-lg font-semibold"><%= operations_money(group&.second || 0) %> <span class="text-xs font-normal text-mocha">· <%= pluralize(group&.third || 0, 'sale') %></span></p>
-        <p class="text-xs text-mocha">Last source pull: <%= retail_source_time(freshness[:pulled_at]) %></p>
-        <% if source == 'ctrax' %>
-          <p class="text-xs text-mocha">Latest stored business date: <%= freshness[:business_date] || 'Not imported' %></p>
-          <%= link_to 'Open C-Trax daily close', ctrax_days_path(date: @date), class: 'btn-ghost btn-sm' %>
-        <% end %>
-      </article>
-    <% end %>
   </section>
 
   <section class="grid gap-4 lg:grid-cols-2" aria-label="Sales trends">
     <div class="section-card">
-      <%= section_heading "Recorded sales · #{@window_days} days", hint: "USD · ending #{@date}" %>
+      <%= section_heading "Last #{@window_days} days", hint: "Recorded sales, ending #{@date}" %>
       <%= area_chart @revenue_series, height: '200px', legend: false, colors: chart_color(:olive_deep) %>
     </div>
     <div class="section-card">
-      <%= section_heading 'Sales by hour', hint: "USD · all 24 hours · #{Time.zone.name}" %>
+      <%= section_heading 'By hour', hint: "Selected day · #{Time.zone.name}" %>
       <%= column_chart @hourly_series, height: '200px', legend: false, colors: chart_color(:olive_deep) %>
     </div>
   </section>
 
   <section id="sales-journal" tabindex="-1" class="section-card" <%= tour_anchor('journal') %>>
-    <%= section_heading 'Order journal', hint: "#{pluralize(@pagy.count, 'order')} in this view · amounts keep each order’s currency · native C-Trax receipts stay in daily close." do %>
-      <%= link_to 'Print packing slips', sales_print_path(date: @date, source: @source, status: @status), class: 'btn-ghost btn-sm' %>
-      <%= link_to 'Print invoices', sales_print_path(date: @date, source: @source, status: @status, doc: 'invoice'), class: 'btn-ghost btn-sm' %>
-    <% end %>
+    <%= section_heading 'Order journal', hint: "#{pluralize(@pagy.count, 'order')} · each in its own currency" %>
     <div class="table-region" role="region" tabindex="0" aria-label="Order journal">
       <table class="table"><caption class="sr-only">Canonical orders for <%= @date %>, <%= @source %> source, <%= @status %> statuses</caption>
         <thead><tr><% ['Time', 'Order', 'Location', 'Source / channel', 'Items'].each do |heading| %><th scope="col" class="th"><%= heading %></th><% end %><th scope="col" class="th num">Order gross</th><th scope="col" class="th">Status</th><th scope="col" class="th">Tracking</th></tr></thead>
@@ -103,8 +100,8 @@
   </section>
 
   <details class="section-card">
-    <summary class="disclosure-trigger font-semibold">Hourly × location · canonical USD sales</summary>
-    <p class="text-xs text-mocha">Paid and fulfilled canonical orders only. All 24 hours; native C-Trax receipts remain in daily close.</p>
+    <summary class="disclosure-trigger font-semibold">Hourly × location</summary>
+    <p class="text-xs text-mocha">Paid and fulfilled USD orders, all 24 hours. C-Trax receipts stay in daily close.</p>
     <div class="table-region" role="region" tabindex="0" aria-label="Hourly sales by location">
       <table class="table">
         <thead><tr><th scope="col" class="th">Hour</th><% @hourly.first[:cells].each_key do |name| %><th scope="col" class="th num"><%= name %></th><% end %><th scope="col" class="th num">Day total</th></tr></thead>

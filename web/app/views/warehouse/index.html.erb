@@ -1,13 +1,12 @@
 <% content_for :title, 'Warehouse sales' %>
 <div class="space-y-6">
-  <%= page_header 'Warehouse sales', subtitle: 'Secret links shared with vendors, each with its own pricing multiplier and bulk tiers.' do %>
+  <%= page_header 'Warehouse sales', subtitle: 'Secret links shared with vendors, each with its own pricing.' do %>
     <a href="#add-vendor-link" class="btn-primary">Add vendor link</a>
   <% end %>
-  <p class="text-sm text-mocha">Links are never listed in navigation; the token in the URL is the access.</p>
 
   <% if @stock_holds %>
     <section class="section-card">
-      <%= section_heading 'Stock awaiting fulfillment confirmation', hint: "#{pluralize(@hold_count, 'held line')}. Open the paid order after fulfillment and source inventory reconciliation. Uncertain payments require review in the original gateway account." %>
+      <%= section_heading 'Stock awaiting fulfillment confirmation', hint: "#{pluralize(@hold_count, 'held line')}. Open the paid order after fulfillment and source inventory reconciliation." %>
       <ul class="space-y-2">
         <% @stock_holds.each do |hold| %>
           <% item = hold.warehouse_cart.items.find { |row| row.variant_id == hold.variant_id } %>
@@ -21,12 +20,12 @@
           </li>
         <% end %>
       </ul>
-      <% if @hold_count > 100 %><p class="text-xs text-taupe">Showing the oldest 100 held lines.</p><% end %>
+      <p class="text-xs text-taupe"><% if @hold_count > 100 %>Showing the oldest 100 held lines. <% end %>Uncertain payments require review in the original gateway account.</p>
     </section>
   <% end %>
 
   <section class="section-card">
-    <%= section_heading 'Vendor links' %>
+    <%= section_heading 'Vendor links', hint: 'Each link has its own multiplier and bulk tiers. Links are never listed in navigation; the token in the URL is the access.' %>
     <div class="table-region" role="region" tabindex="0" aria-label="Vendor links">
       <table class="table">
         <thead>

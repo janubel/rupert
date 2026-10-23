@@ -1,7 +1,6 @@
 <% content_for :title, 'Material use' %>
 <div class="space-y-6">
-  <%= page_header 'Material use', subtitle: 'Imported Shopify sale lines and the raw-material use recorded against a lot for each.', menu: [['Download CSV', export_bulk_consumptions_path(from: @from.iso8601, to: @to.iso8601)]] %>
-  <%= fold_explainer('Only complete, uncancelled, paid Shopify snapshots with exact source IDs and matching original/current positive whole-unit quantities can be applied. Missing, legacy, reduced-quantity, truncated and refunded snapshots stay blocked. This does not prove an order was never edited; verify the physical sale. A shared SKU never identifies a sale or recipe. Each source sale line can deduct once. Reviews use the local imported snapshot; verify its source time and quantities. Refunds never automatically return material to a lot. This records local bulk use and leaves independent platform stock unchanged.', class: 'text-sm text-mocha') %>
+  <%= page_header 'Material use', subtitle: 'Imported Shopify sale lines and the material used for each.', menu: [['Download CSV', export_bulk_consumptions_path(from: @from.iso8601, to: @to.iso8601)]] %>
 
   <%= form_with url: bulk_consumptions_path, method: :get, class: 'toolbar' do |f| %>
     <div class="toolbar-field"><%= f.label :from, 'From', class: 'field-label' %><%= f.date_field :from, value: @from, class: 'input' %></div>
@@ -40,4 +39,5 @@
       </table>
     </div>
   </section>
+  <%= fold_explainer('Only complete, uncancelled, paid Shopify snapshots with exact source IDs and matching original/current positive whole-unit quantities can be applied. Missing, legacy, reduced-quantity, truncated and refunded snapshots stay blocked. This does not prove an order was never edited; verify the physical sale. A shared SKU never identifies a sale or recipe. Each source sale line can deduct once. Reviews use the local imported snapshot; verify its source time and quantities. Refunds never automatically return material to a lot. This records local bulk use and leaves independent platform stock unchanged.', class: 'text-sm text-mocha') %>
 </div>

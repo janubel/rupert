@@ -8,10 +8,6 @@
   <%= section_heading 'Backups', hint: 'Five layers, each for a different way of losing data.' do %>
     <span class="<%= headline[1] %>"><%= headline[0] %></span>
   <% end %>
-  <details class="explainer text-sm text-mocha">
-    <summary class="explainer-summary">How layers are judged</summary>
-    <p class="mt-1">A layer that has not reported in its usual interval is marked overdue; one that has never reported is not installed on this server.</p>
-  </details>
   <ul class="divide-y divide-fog">
     <% backups.each do |layer| %>
       <% state = layer.state(now) %>
@@ -39,5 +35,9 @@
       </li>
     <% end %>
   </ul>
-  <p class="text-xs text-taupe">Restore steps, install commands and what each file contains: <%= link_to 'docs/ops/backups.md', 'https://github.com/techmore/rupert/blob/main/docs/ops/backups.md', class: 'underline' %>.</p>
+  <details class="explainer text-sm text-mocha">
+    <summary class="explainer-summary">How layers are judged</summary>
+    <p class="mt-1">A layer that has not reported in its usual interval is marked overdue; one that has never reported is not installed on this server.</p>
+    <p class="mt-1 text-xs text-taupe">Restore steps, install commands and what each file contains: <%= link_to 'docs/ops/backups.md', 'https://github.com/techmore/rupert/blob/main/docs/ops/backups.md', class: 'underline' %>.</p>
+  </details>
 </section>

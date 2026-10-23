@@ -28,11 +28,11 @@ class FeedbackPanelLayoutTest < ActionDispatch::IntegrationTest
     assert_select "[data-feedback-request-id-value]:not([data-feedback-request-id-value=''])", 1
   end
 
-  test 'a signed-in administrator sees the ladybug in the header' do
+  test 'a signed-in administrator sees the ladybug in the status bar' do
     sign_in('admin')
     get dashboard_path
     assert_response :success
-    assert_select '.header-utilities a[data-feedback-target="trigger"]', 1
+    assert_select 'footer.app-statusbar a[data-feedback-target="trigger"]', 1
     assert_ladybug
   end
 

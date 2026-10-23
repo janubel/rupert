@@ -130,5 +130,8 @@
       <% upcoming.each do |day, name| %><li><%= link_to day.strftime('%a, %b %-d'), people_timesheets_path(period: day.beginning_of_week.iso8601), class: 'text-olive hover:underline' %> — <%= name %></li><% end %>
     </ul>
   </div>
-  <p class="text-xs text-mocha">Faded blocks are in the past. “Logged” shows hours typed onto a timesheet without clock times. Rupert clock, Square and C-Trax shifts are separate sources and are never added together. Turning a staff member off only hides them from this view.</p>
+  <details class="explainer">
+    <summary class="explainer-summary">Reading the calendar</summary>
+    <p class="mt-2 text-sm text-mocha">Faded blocks are in the past. “Logged” shows hours typed onto a timesheet without clock times. Rupert clock, Square and C-Trax shifts are separate sources and are never added together. Turning a staff member off only hides them from this view.</p>
+  </details>
 </section>

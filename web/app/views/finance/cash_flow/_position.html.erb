@@ -5,7 +5,7 @@
     <p class="stat-label">Last verified bank balance<%= define('statement_balance') %></p>
     <% if balance %>
       <p class="stat-value mt-1" title="<%= finance_money_text(balance[:cents], currency: balance[:currency]) %>"><%= cash_flow_compact(balance[:cents], currency: balance[:currency]) %></p>
-      <p class="mt-1 text-xs text-taupe">As of <%= balance[:date].strftime('%b %-d, %Y') %>, from the retained statement. A live bank balance is not connected.</p>
+      <p class="mt-1 text-xs text-taupe">As of <%= balance[:date].strftime('%b %-d, %Y') %>, from the retained statement.</p>
     <% else %>
       <p class="stat-value-sm mt-1">Unavailable</p>
       <p class="mt-1 text-xs text-taupe">Upload a bank statement with a closing balance to see it here. Unavailable is not zero.</p>

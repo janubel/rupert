@@ -1,8 +1,8 @@
 <% content_for :title, 'Inventory' %>
 <div class="space-y-6">
-  <%= page_header 'Inventory', subtitle: 'Stock held at each location; Shopify and Square keep independent inventories.',
-        menu: [['Inventory snapshot PDF', pdf_inventory_index_path, { data: { turbo: false } }],
-               ['Recommended SKUs CSV', recommended_skus_inventory_index_path, { data: { turbo: false } }]] do %>
+  <%= page_header 'Inventory', subtitle: 'Stock held at each location.',
+        menu: [['Download snapshot PDF', pdf_inventory_index_path, { data: { turbo: false } }],
+               ['Download recommended SKUs CSV', recommended_skus_inventory_index_path, { data: { turbo: false } }]] do %>
     <%= link_to 'Count stock', inventory_counts_path, class: 'btn-primary', data: { tour: 'actions' } %>
   <% end %>
 
@@ -30,7 +30,7 @@
             <% @stock_locations.each_with_index do |location, location_index| %>
               <th scope="col" class="th num" <%= tour_anchor('locations') if location_index.zero? %> title="<%= location.source == 'shopify' ? 'Shopify' : 'Square' %> — <%= location.name %>">
                 <span class="block max-w-28 truncate ml-auto"><%= location.name %></span>
-                <span class="block text-xs font-normal normal-case tracking-normal text-taupe"><%= location.source %></span>
+                <span class="block text-xs font-normal text-taupe"><%= location.source %></span>
               </th>
             <% end %>
             <th scope="col" class="th num" <%= tour_anchor('mirror') %>>Total mirror quantity<%= define('mirror') %></th>
@@ -140,7 +140,6 @@
     </div>
   </div>
   <% end %>
-  <p class="px-1 text-xs text-taupe">† Shared Square stock: one Square variation is linked to more than one Shopify variant, so its quantity cannot be attributed to a single row. A middle dot means the item is not carried at that location.</p>
 
   <% if @pagy.pages > 1 %>
     <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-taupe">
@@ -150,4 +149,12 @@
   <% elsif @q.blank? && @products.length >= 40 %>
     <p class="text-xs text-taupe">All products shown.</p>
   <% end %>
+
+  <details class="explainer">
+    <summary class="explainer-summary">How to read this table</summary>
+    <div class="mt-2 space-y-2 text-sm text-mocha">
+      <p>Shopify and Square keep independent inventories.</p>
+      <p>† Shared Square stock: one Square variation is linked to more than one Shopify variant, so its quantity cannot be attributed to a single row. A middle dot means the item is not carried at that location.</p>
+    </div>
+  </details>
 </div>

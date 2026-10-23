@@ -1,12 +1,12 @@
 <% content_for :title, @share.name %>
 <div class="space-y-6">
-  <%= page_header @share.name, subtitle: "Vendor link · multiplier #{number_with_precision(@share.priceMultiplier, precision: 2)}×.", eyebrow: 'Stock · Warehouse sales',
+  <%= page_header @share.name, subtitle: "Multiplier #{number_with_precision(@share.priceMultiplier, precision: 2)}×.", eyebrow: 'Vendor link',
       menu: [['Remove link', warehouse_share_path(@share), { method: :delete, data: { turbo_confirm: 'Delete this vendor link permanently? Anyone with the URL will lose access.' } }]] do %>
     <span class="<%= @share.active? ? 'pill-fern' : 'pill-taupe' %>"><%= @share.status.to_s.humanize %></span>
   <% end %>
 
   <section class="section-card">
-    <%= section_heading 'Vendor link', hint: 'Copy this secret URL and send it to the vendor. The token in the URL is the only access control.' %>
+    <%= section_heading 'Vendor link', hint: 'Copy this secret URL and send it to the vendor; the token is the only access control.' %>
     <div class="flex items-center gap-2" data-controller="copy">
       <code data-copy-target="source" class="min-w-0 flex-1 truncate rounded-control border border-fog bg-haze px-3 py-2 font-mono text-xs text-mocha"><%= warehouse_sale_url(@share.token) %></code>
       <button type="button" data-action="click->copy#copy" class="btn-ghost btn-sm shrink-0">Copy</button>

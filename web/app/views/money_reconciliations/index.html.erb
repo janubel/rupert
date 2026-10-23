@@ -1,6 +1,5 @@
 <% content_for :title, 'Source reports' %>
-<% menu = [['Download CSV', money_reconciliations_path(kind: @report.kind, date: @report.from, saved: @saved&.id, format: :csv), { data: { turbo: false } }],
-           ['Daily reconciliation', daily_reconciliations_path(day: @report.from.iso8601)]]
+<% menu = [['Download CSV', money_reconciliations_path(kind: @report.kind, date: @report.from, saved: @saved&.id, format: :csv), { data: { turbo: false } }]]
    menu << ['Save this review', money_reconciliations_path(kind: @report.kind, date: @report.from), { method: :post, form: { data: { turbo: false } } }] if Current.user.can?('sync.write')
    menu << ['NAB / IRIS deposits and imports', pos_connection_path('iris_reporting')] if retail_business_access?('settings.read') %>
 <div class="space-y-6">
@@ -10,11 +9,13 @@
   <% end %>
   <%= render 'shared/reconciliation_findings', findings: @findings %>
 
-  <%= form_tag money_reconciliations_path, method: :get, class: 'toolbar', 'aria-label': 'Money report period' do %>
-    <div class="toolbar-field"><%= label_tag :kind, 'Period', class: 'field-label' %><%= select_tag :kind, options_for_select([['Daily', 'daily'], ['Weekly · Monday to Sunday', 'weekly'], ['Monthly', 'monthly'], ['Quarterly', 'quarterly'], ['Yearly', 'yearly']], @report.kind), class: 'select' %></div>
-    <div class="toolbar-field"><%= label_tag :date, 'Date within the period', class: 'field-label' %><%= date_field_tag :date, @report.from, required: true, min: '2000-01-01', max: '2099-12-31', class: 'input' %></div>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><%= link_to 'Clear', money_reconciliations_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <section class="toolbar-band">
+    <%= form_tag money_reconciliations_path, method: :get, class: 'toolbar', 'aria-label': 'Money report period' do %>
+      <div class="toolbar-field"><%= label_tag :kind, 'Period', class: 'field-label' %><%= select_tag :kind, options_for_select([['Daily', 'daily'], ['Weekly · Monday to Sunday', 'weekly'], ['Monthly', 'monthly'], ['Quarterly', 'quarterly'], ['Yearly', 'yearly']], @report.kind), class: 'select' %></div>
+      <div class="toolbar-field"><%= label_tag :date, 'Date within the period', class: 'field-label' %><%= date_field_tag :date, @report.from, required: true, min: '2000-01-01', max: '2099-12-31', class: 'input' %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><%= link_to 'Clear', money_reconciliations_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </section>
 
   <section class="section-card" aria-label="Period review status">
     <%= section_heading "#{@payload['from']} through #{@payload['to']}", hint: "#{@saved ? 'Saved source review' : 'Current source observations'} · generated #{retail_event_time(@payload['generated_at'], timezone: 'America/New_York')}" do %><span class="pill-clay"><%= @payload['status'] %></span><% end %>

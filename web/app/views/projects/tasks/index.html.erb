@@ -2,9 +2,9 @@
 <% own_tasks = Current.user.employee? %>
 <% can_write = own_tasks || Current.user.can?("projects.write") %>
 <div class="space-y-6">
-  <%= page_header own_tasks ? "My tasks" : "Tasks", subtitle: own_tasks ? "Your assigned work; update notes or move tasks between columns as you go." : "Everything in flight across projects; drag cards between columns to update their status.", menu: (own_tasks ? nil : [['Export CSV', tasks_export_path]]) do %>
-    <%= link_to "Getting started", projects_getting_started_path, class: "btn-ghost", data: { tour: 'guide' } %>
-  <% end %>
+  <% task_menu = [["Getting started", projects_getting_started_path, { data: { tour: 'guide' } }]] %>
+  <% task_menu << ['Download CSV', tasks_export_path] unless own_tasks %>
+  <%= page_header own_tasks ? "My tasks" : "Tasks", subtitle: own_tasks ? "Your assigned work; drag a card to change its status." : "Everything in flight across projects; drag a card to change its status.", menu: task_menu %>
 
   <div <%= tour_anchor('views') %>>
     <%= page_tabs([["Board", tasks_filter_path(view: nil), @view == "board"], ["List", tasks_filter_path(view: "list"), @view == "list"], ["Calendar", tasks_filter_path(view: "calendar"), @view == "calendar"]], label: 'Task views') %>
@@ -61,12 +61,13 @@
   <% elsif @view == "calendar" %>
     <%= render "projects/tasks/calendar" %>
   <% else %>
-    <div class="space-y-2">
-      <% if @tasks.empty? %>
-        <%= empty_state(tasks_filtered? ? "No tasks match these filters." : "No tasks yet.", hint: (tasks_filtered? ? "Try clearing a filter." : (own_tasks ? "Tasks assigned to you will appear here." : "Add your first task above, or open a project to plan it."))) %>
-      <% end %>
+    <% if @tasks.empty? %>
+      <%= empty_state(tasks_filtered? ? "No tasks match these filters." : "No tasks yet.", hint: (tasks_filtered? ? "Try clearing a filter." : (own_tasks ? "Tasks assigned to you will appear here." : "Add your first task above, or open a project to plan it."))) %>
+    <% else %>
+    <section class="card" aria-label="Task list">
+      <ul class="row-list">
       <% @tasks.each do |task| %>
-        <div class="card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <li class="row-item">
           <div class="flex min-w-0 flex-1 items-start gap-3">
             <span class="mt-1.5"><%= priority_dot(task.priority) %></span>
             <div class="min-w-0">
@@ -82,18 +83,20 @@
               </p>
             </div>
           </div>
-          <div class="flex shrink-0 items-center gap-2">
+          <div class="row-item-end">
             <% if can_write %>
               <% if task.may_start? %><%= button_to "Start", transition_projects_task_path(task, event: "start"), method: :post, class: "btn-ghost btn-sm" %><% end %>
-              <% if task.may_finish? %><%= button_to "Done", transition_projects_task_path(task, event: "finish"), method: :post, class: "btn-primary btn-sm" %><% end %>
+              <% if task.may_finish? %><%= button_to "Done", transition_projects_task_path(task, event: "finish"), method: :post, class: "btn-ghost btn-sm" %><% end %>
               <% if task.may_block? && !task.done? %><%= button_to "Block", transition_projects_task_path(task, event: "block"), method: :post, class: "btn-ghost btn-sm" %><% end %>
               <% if task.may_reopen? %><%= button_to "Reopen", transition_projects_task_path(task, event: "reopen"), method: :post, class: "btn-ghost btn-sm" %><% end %>
             <% end %>
             <%= task_status_pill(task) %>
           </div>
-        </div>
+        </li>
       <% end %>
-    </div>
+      </ul>
+    </section>
+    <% end %>
     <%== @pagy.series_nav if @pagy.pages > 1 %>
   <% end %>
 </div>

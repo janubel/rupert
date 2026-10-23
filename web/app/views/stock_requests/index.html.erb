@@ -1,7 +1,7 @@
 <% content_for :title, 'Transfers & backorders' %>
 <% transfer = @kind == 'transfer' %>
 <div class="space-y-6">
-  <%= page_header 'Transfers & backorders', subtitle: (transfer ? 'Reserve one native item at its source location, record dispatch, then receive it at the destination.' : 'Record demand at a fulfillment location, allocate available stock, then confirm fulfillment.') do %>
+  <%= page_header 'Transfers & backorders', subtitle: (transfer ? 'Reserve at the source, dispatch, then receive at the destination.' : 'Record demand, allocate stock, then confirm fulfillment.') do %>
     <%= link_to (transfer ? 'Add transfer' : 'Add backorder'), new_stock_request_path(kind: @kind), class: 'btn-primary' if Current.user.can?('inventory.write') %>
   <% end %>
   <%= page_tabs([['Transfers', stock_requests_path(kind: 'transfer'), transfer], ['Backorders', stock_requests_path(kind: 'backorder'), !transfer]], label: 'Request kind') %>

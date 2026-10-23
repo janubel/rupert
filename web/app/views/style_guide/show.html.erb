@@ -100,13 +100,31 @@
     </article>
 
     <article class="section-card">
+      <%= section_heading 'Filter band and row list', hint: 'Report filters sit on the page, not in a card; a handful of like things is a row list, not a grid of small cards.', level: :h3 %>
+      <div class="toolbar-band">
+        <form class="toolbar" onsubmit="return false">
+          <div class="toolbar-field"><label class="field-label" for="sg-day">Business date</label><div class="date-stepper"><a href="#" class="btn-ghost btn-sm" aria-label="Previous day">‹</a><input id="sg-day" type="date" class="input" value="2026-10-21"><a href="#" class="btn-ghost btn-sm" aria-label="Next day">›</a></div></div>
+          <div class="toolbar-field"><label class="field-label" for="sg-window">Chart period</label><select id="sg-window" class="input"><option>30 days</option></select></div>
+          <div class="toolbar-actions"><button type="submit" class="btn-primary">Apply</button></div>
+        </form>
+      </div>
+      <div class="card">
+        <ul class="row-list">
+          <li class="row-item"><div class="min-w-0"><p class="font-semibold text-ink">Shopify</p><p class="text-xs text-taupe">Last pull: Oct 21, 3:40 PM</p></div><div class="row-item-end"><span class="text-xs text-mocha">42 sales</span><span class="num font-semibold text-ink">$2,310.40</span></div></li>
+          <li class="row-item"><div class="min-w-0"><p class="font-semibold text-ink">C-Trax</p><p class="text-xs text-taupe">Last pull: Oct 21, 3:35 PM · business date Oct 21</p></div><div class="row-item-end"><span class="text-xs text-mocha">118 sales</span><span class="num font-semibold text-ink">$8,904.10</span><a href="#" class="btn-ghost btn-sm">Daily close</a></div></li>
+        </ul>
+        <details class="explainer row-list-foot"><summary class="explainer-summary">What makes up these totals?</summary><p class="mt-2 text-sm text-mocha">Paid and fulfilled orders once, before refunds.</p></details>
+      </div>
+    </article>
+
+    <article class="section-card">
       <%= section_heading 'Badges, status bar and toasts', hint: 'Badges, not popups: a toast only when something needs attention now.', level: :h3 %>
       <div class="flex flex-wrap items-center gap-4">
         <span class="relative inline-flex"><span class="nav-utility" aria-hidden="true"><%= navigation_icon('chat') %></span><span class="badge nav-badge">3</span></span>
         <span class="inline-flex items-center gap-2 text-sm text-mocha">Team chat <span class="badge">12</span></span>
         <button type="button" class="btn-ghost btn-sm" onclick="window.dispatchEvent(new CustomEvent('rupert:toast', { detail: { title: 'Jordan mentioned you', body: '@Demo can you check the Tuesday deposit before close?', href: '#' } }))">Raise a sample toast</button>
       </div>
-      <p class="text-sm text-mocha">The status bar at the bottom of this page is the real one: sync state, Team chat unread count with the latest message, help and build.</p>
+      <p class="text-sm text-mocha">The status bar at the bottom of this page is the real one: sync state, Team chat unread count with the latest message, Report a problem, help and build. The top bar holds only search, Ask Rupert, Team chat, notifications and the account menu.</p>
     </article>
 
     <article class="section-card">
@@ -129,7 +147,7 @@
       <p class="card-title mt-2">Card title · sans 1rem semibold</p>
       <p class="mt-2 text-sm text-ink">Body · sans 0.875rem. One idea per sentence.</p>
       <p class="mt-1 text-xs text-mocha">Caption · 0.75rem, secondary colour.</p>
-      <p class="eyebrow mt-3 text-olive">Eyebrow · section and group</p>
+      <p class="eyebrow mt-3 text-olive">Eyebrow · the kind of record, on detail pages only</p>
     </div>
   </section>
 
