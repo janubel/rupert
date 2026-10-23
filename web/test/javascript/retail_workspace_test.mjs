@@ -26,16 +26,19 @@ cart.hasCountTarget = false;
 cart.render([]); // Existing preview and embedded demos need no counter target.
 const checkout = new context.Checkout();
 checkout.tenderTarget = { value: 'cash' };
+checkout.tenderButtonTargets = [{ dataset: { tender: 'cash' }, setAttribute() {} }, { dataset: { tender: 'card', available: 'false' }, setAttribute() {} }];
 checkout.cashFieldsTarget = {};
 checkout.cashTarget = {};
 checkout.submitTarget = {};
 checkout.demoValue = false;
 checkout.tenderChanged();
 assert.equal(checkout.submitTarget.value, 'Complete cash sale');
+assert.equal(checkout.submitTarget.disabled, false);
 assert.equal(checkout.cashTarget.required, true);
 checkout.tenderTarget.value = 'card';
 checkout.tenderChanged();
-assert.equal(checkout.submitTarget.value, 'Send card checkout');
+assert.equal(checkout.submitTarget.value, 'Send card checkout to customer screen');
+assert.equal(checkout.submitTarget.disabled, true); // card not set up for this store
 assert.equal(checkout.cashFieldsTarget.hidden, true);
 assert.equal(checkout.cashTarget.required, false);
 checkout.demoValue = true;
