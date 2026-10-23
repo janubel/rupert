@@ -77,9 +77,11 @@ class BankStatementsController < AuthenticatedController
     BankStatementLine.transaction do
       Tenant.where(id: Current.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
       name_payers(document, payers, done)
-      decisions.each do |id, choice|
-        line = lines[id] or next
-        apply(line, choice, document, done)
+      PeriodLock.batch do
+        decisions.each do |id, choice|
+          line = lines[id] or next
+          apply(line, choice, document, done)
+        end
       end
     end
     stale = (decisions.keys - lines.keys).size

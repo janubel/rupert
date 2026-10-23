@@ -43,7 +43,10 @@ class HostVitals
     end
 
     def memory_percent
-      info = File.read('/proc/meminfo').lines.to_h { |line| key, value = line.split(':'); [key, value.to_i] }
+      info = File.read('/proc/meminfo').lines.to_h do |line|
+        key, value = line.split(':')
+        [key, value.to_i]
+      end
       total = info['MemTotal'].to_i
       available = info['MemAvailable'].to_i
       total.positive? ? ((total - available) * 100.0 / total).round : nil

@@ -76,15 +76,26 @@ class PeriodLock < ApplicationRecord
 
     def active_locks = latest_events.select(&:lock?)
 
-    # Every lock event for this workspace, read once per request or job (money
-    # records check locks on every save). A new event clears it (after_create).
+    # Saving many money records at once (bank decisions) checks the locks once
+    # for the whole batch instead of once per record. Outside a batch every
+    # check reads the table, so a lock is seen the moment it exists.
+    def batch
+      outer = Current.metadata.key?(:period_lock_events)
+      Current.metadata[:period_lock_events] ||= {}
+      yield
+    ensure
+      Current.metadata.delete(:period_lock_events) unless outer
+    end
+
     def request_events
-      cache = (Current.metadata[:period_lock_events] ||= {})
+      cache = Current.metadata[:period_lock_events]
+      return chronological.to_a unless cache
+
       cache[Current.tenant_id] ||= chronological.to_a
     end
 
     def forget_request_events!
-      Current.metadata.delete(:period_lock_events)
+      Current.metadata[:period_lock_events]&.clear
     end
 
     # The narrowest active lock covering a date (or any day of a range).
