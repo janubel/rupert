@@ -523,3 +523,32 @@ result returning after revocation cannot be checkpointed. Runs predating the
 permission snapshot fail closed and must be asked again. Any permission change,
 including a grant, requires a new request rather than reuse of an older transcript.
 This does not retroactively erase completed conversations or change task assignees.
+
+### Structured financial evidence
+
+Chat no longer certifies a financial answer by finding a similar number in tool
+text or conversation history. Financial tool results are converted to versioned,
+private fact envelopes: exact decimal value and unit, explicit supported currency,
+meaning, source, inclusive dates and timezone, tenant, tool invocation, original
+field and content-derived fact ID. Those envelopes are persisted in the existing
+run receipts; recovery checks their tenant, invocation and integrity.
+
+Ruby renders financial replies directly from these facts, including the meaning,
+source, period and currency. Model prose cannot relabel gross sales as profit,
+substitute tax for sales, move a figure to another period or convert currencies.
+Financial drafts and all numeric draft chunks are withheld from streaming.
+Money uses integer cents and decimal strings, including negative and zero amounts;
+there is no absolute-value or float-tolerance matching. Missing values stay unknown.
+
+Initial contracts cover gross sales, orders, average order value, refund rate,
+source shares and expense totals in `metric`; source lines and currency totals
+in `sales_summary`; gross sales in `period_review`, `business_pulse` and
+`time_keeping_report`; and reported/refunded/net/estimated tax by source and store
+in `sales_tax_report`. Estimates are explicitly distinct from reported tax.
+Currencies supported by this first two-decimal contract are USD, CAD, EUR, GBP,
+AUD, NZD, CHF, CNY, HKD, SGD, MXN, BRL, ZAR and INR. Other currency conventions,
+uncertified sections (including product/daily/category breakdowns and uncoded
+review expenses), malformed contracts and legacy financial receipts are unavailable,
+with an explanation, rather than rendered from unverified prose. No source totals
+are added, currencies converted or new financial calculations performed here.
+Replies contain at most twelve complete facts and explicitly disclose omissions.

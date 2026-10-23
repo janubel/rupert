@@ -23,7 +23,7 @@ module TeamChat
 
     Definition = Struct.new(:name, :description, :schema, :kind, :activity, keyword_init: true)
 
-    attr_reader :calls, :tools_used, :results
+    attr_reader :calls, :tools_used, :results, :financial_evidence
     attr_accessor :call_id, :execution_info
 
     # only: tool names to offer (the question's data guide topics, for local bots); nil offers every tool.
@@ -39,11 +39,15 @@ module TeamChat
       @calls = saved.size
       @tools_used = saved.pluck('name')
       @results = saved.pluck('result')
+      @financial_evidence = saved.filter_map { |entry| FinancialEvidence.decode(entry['result'], @user.tenant_id, tool: entry['name'], invocation: entry['id']) if FinancialEvidence::CONTRACTS.include?(entry['name']) }
+      @financial = saved.any? { |entry| FinancialEvidence::TOOLS.include?(entry['name']) || FinancialEvidence.decode(entry['result'], @user.tenant_id).present? }
     end
 
     def definitions
       @definitions ||= lookup_definitions + mcp_definitions + write_definitions
     end
+
+    def financial? = @financial
 
     def names = definitions.map(&:name)
 
@@ -85,6 +89,7 @@ module TeamChat
       coerced, problems = Mcp::SchemaValidator.call(definition.schema, args)
       return log(name, started, 'invalid', "Invalid arguments: #{problems.first(3).join(' ')}") if problems.any?
 
+      @financial = true if FinancialEvidence::TOOLS.include?(definition.name)
       @tools_used << definition.name
       text = case definition.kind
              when :lookup then run_lookup(definition.name, coerced)
@@ -134,6 +139,12 @@ module TeamChat
     def run_mcp(name, args)
       tool = Mcp::Registry.find(name)
       outcome = tool.new(token: @token).call(args)
+      if FinancialEvidence::TOOLS.include?(name) || FinancialEvidence.financial_data?(outcome.data)
+        @financial = true
+        evidence = FinancialEvidence.build(tool: name, data: outcome.data, arguments: args, tenant_id: @user.tenant_id, invocation: call_id || "call-#{@calls}")
+        @financial_evidence << evidence
+        return JSON.generate(evidence)
+      end
       AskRupert::Redactor.personal("#{outcome.text}\n#{JSON.generate(with_dollars(outcome.data))}")
     end
 
