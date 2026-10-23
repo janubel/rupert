@@ -37,15 +37,19 @@ class NextThings
     item = all.find { |candidate| candidate[:key] == key.to_s }
     return false unless item && NextThingDismissal::KINDS.include?(kind)
 
-    until_at = if kind == 'snooze' then @now + NextThingDismissal::SNOOZE_FOR
-               elsif item[:level] == 'fix' then @now + NextThingDismissal::FIX_DONE_FOR
-               end
+    until_at = done_until(kind, item)
     record = NextThingDismissal.find_or_initialize_by(user_id: @user.id, item_key: item[:key])
     record.update!(kind: kind, fingerprint: item[:fingerprint], until_at: until_at)
     true
   end
 
   private
+
+  def done_until(kind, item)
+    return @now + NextThingDismissal::SNOOZE_FOR if kind == 'snooze'
+
+    @now + NextThingDismissal::FIX_DONE_FOR if item[:level] == 'fix'
+  end
 
   def paths = Rails.application.routes.url_helpers
 
@@ -116,12 +120,17 @@ class NextThings
 
   def task_item(id, title, due_on, level, status)
     due = due_on && Date.parse(due_on.to_s)
-    detail = if due.nil? then nil
-             elsif due < Date.current then "Due #{due.strftime('%b %-d')}, #{(Date.current - due).to_i} day#{'s' unless (Date.current - due).to_i == 1} late"
-             else 'Due today'
-             end
+    detail = due_detail(due)
     item(key: "task:#{id}", title: title, detail: detail, path: paths.projects_task_path(id), level: level, area: 'Tasks',
       fingerprint: "#{status}/#{due_on}")
+  end
+
+  def due_detail(due)
+    return nil if due.nil?
+    return 'Due today' unless due < Date.current
+
+    late = (Date.current - due).to_i
+    "Due #{due.strftime('%b %-d')}, #{late} day#{'s' unless late == 1} late"
   end
 
   def alert_items(token)
