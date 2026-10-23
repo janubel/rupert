@@ -95,8 +95,9 @@ class BooksPeriod
       'money_out' => money_out.transform_keys(&:to_s), 'digest' => digest }
   end
 
+  # Read once per period object (state, stage and detail all ask for it).
   def approvals
-    BookApproval.for_period(kind, from).where(period_to: to).chronological.to_a
+    @approvals ||= BookApproval.for_period(kind, from).where(period_to: to).chronological.to_a
   end
 
   def latest_approval = approvals.last
