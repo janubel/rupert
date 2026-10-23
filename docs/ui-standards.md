@@ -83,7 +83,9 @@ one thing, see the state of the business at a glance, and trust the numbers.
   four utilities: Ask Rupert, Team chat, notifications, account. One row, always. Nothing
   page-specific lives here, and nothing joins the four without taking one away. Sync state,
   help and bug reports live in the status bar; everything personal or rare (time, billing,
-  support access, appearance, roadmap, instance overview) lives in the account menu.
+  support access, appearance, roadmap, instance overview) lives in the account menu. A problem with the system
+  itself (card processing down) is not a banner on every page: it turns the notifications bell's badge red with
+  `!` and is listed at the top of Notifications with the link that fixes it (`system_alerts`).
 - **Rail** (`.app-rail`): the sections (`nav[aria-label="Module areas"]`). The current section
   is expanded and lists its pages in named groups (`nav[aria-label="Module"]`). A section with
   more than eight pages folds its groups: only the group holding the current page is open, the
