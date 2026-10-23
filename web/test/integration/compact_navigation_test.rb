@@ -143,4 +143,13 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     get people_scheduled_shifts_path
     assert_select '.page-header button[data-action="full-window#toggle"]'
   end
+
+  test 'only the platform administrator sees server health in the status bar' do
+    get inventory_index_path
+    assert_select 'footer.app-statusbar .statusbar-vitals', count: 0
+    @admin.update!(role: 'super_admin')
+    get inventory_index_path
+    assert_select 'footer.app-statusbar a.statusbar-vitals[href=?]', system_path
+    %w[cpu memory disk db backup].each { |key| assert_select "footer.app-statusbar [data-vital=#{key}]" }
+  end
 end

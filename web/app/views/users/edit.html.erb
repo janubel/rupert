@@ -34,12 +34,13 @@
               </tr>
             </thead>
             <tbody>
+              <% enabled_overrides = @user.user_permissions.select(&:enabled?).map(&:permission).to_set %>
               <% @catalog.each do |group| %>
                 <tr class="bg-haze/40">
                   <th scope="rowgroup" colspan="2" class="px-4 py-2 text-left text-xs font-semibold text-mocha"><%= group[:area] %></th>
                 </tr>
                 <% group[:permissions].each do |permission| %>
-                  <% checked = @user.user_permissions.find_by(permission: permission)&.enabled? %>
+                  <% checked = enabled_overrides.include?(permission) %>
                   <tr>
                     <td class="td">
                       <label for="perm-<%= permission.tr('.', '-') %>" class="font-medium text-ink"><%= permission.split(".").last.humanize %></label>

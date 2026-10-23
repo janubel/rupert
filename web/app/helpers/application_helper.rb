@@ -18,8 +18,14 @@ module ApplicationHelper
 
   # --- Module-area navigation helpers (see ModuleRegistry) ---
 
+  # The pages this person may open, computed once per request (the rail, the
+  # start page and the active-page match all read it).
+  def nav_entries
+    @nav_entries ||= ModuleRegistry.nav_for(Current.user)
+  end
+
   def nav_areas
-    @nav_areas ||= ModuleRegistry.areas_for(Current.user)
+    @nav_areas ||= ModuleRegistry.areas_for(Current.user, visible: nav_entries)
   end
 
   # Whether the header already offers this area. Account-menu shortcuts that an
@@ -49,7 +55,7 @@ module ApplicationHelper
   end
 
   def active_module_entry
-    @active_module_entry ||= ModuleRegistry.nav_for(Current.user)
+    @active_module_entry ||= nav_entries
       .select { |entry| module_match_strength(safe_module_path(entry)).positive? }
       .max_by { |entry| module_match_strength(safe_module_path(entry)) }
   end
@@ -59,8 +65,7 @@ module ApplicationHelper
   FULL_SCREEN_MODULES = %w[ctrax_pos].freeze
 
   def navigation_start_path
-    entries = ModuleRegistry.nav_for(Current.user)
-    entry = entries.find { |candidate| FULL_SCREEN_MODULES.exclude?(candidate.key) } || entries.first
+    entry = nav_entries.find { |candidate| FULL_SCREEN_MODULES.exclude?(candidate.key) } || nav_entries.first
     entry ? safe_module_path(entry) : root_path
   end
 

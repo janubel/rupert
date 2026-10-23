@@ -255,11 +255,11 @@ module People
     def load_admin_overview(visible)
       @upcoming_weeks = (0..3).map do |offset|
         monday = Date.current.beginning_of_week + offset.weeks
-        week = visible.where('period_start <= ? AND period_end >= ?', monday + 6, monday)
+        counts = visible.where('period_start <= ? AND period_end >= ?', monday + 6, monday).group(:status).count
         { monday: monday, label: offset.zero? ? 'This week' : monday.strftime('%b %-d'),
-          total: week.count, submitted: week.by_status('submitted').count,
-          approved: week.by_status('approved').count, draft: week.by_status('draft').count,
-          rejected: week.by_status('rejected').count }
+          total: counts.values.sum, submitted: counts.fetch('submitted', 0),
+          approved: counts.fetch('approved', 0), draft: counts.fetch('draft', 0),
+          rejected: counts.fetch('rejected', 0) }
       end
       @upcoming_leave = People::LeaveRequest.where(status: %w[requested approved])
         .where('ends_on >= ?', Date.current).order(:starts_on).limit(8)

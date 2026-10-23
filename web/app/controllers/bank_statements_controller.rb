@@ -77,9 +77,11 @@ class BankStatementsController < AuthenticatedController
     BankStatementLine.transaction do
       Tenant.where(id: Current.tenant_id).update_all(updated_at: Arel.sql('updated_at'))
       name_payers(document, payers, done)
-      decisions.each do |id, choice|
-        line = lines[id] or next
-        apply(line, choice, document, done)
+      PeriodLock.batch do
+        decisions.each do |id, choice|
+          line = lines[id] or next
+          apply(line, choice, document, done)
+        end
       end
     end
     stale = (decisions.keys - lines.keys).size
@@ -123,9 +125,17 @@ class BankStatementsController < AuthenticatedController
     end
   end
 
+  # One lookup per statement account for the whole batch, not one per line.
+  def statement_mapping(label)
+    @statement_mappings ||= {}
+    return @statement_mappings[label] if @statement_mappings.key?(label)
+
+    @statement_mappings[label] = BankStatementAccount.includes(:ledger_account).find_by(account_label: label)
+  end
+
   def apply(line, choice, document, done)
     kind, value = choice.split(':', 2)
-    mapping = BankStatementAccount.find_by(account_label: line.account_label)
+    mapping = statement_mapping(line.account_label)
     if %w[expense payment].include?(kind) && mapping && mapping.ledger_account.code != '1100'
       raise BankStatementImport::Error, 'Statement expense and vendor-payment creation currently posts to Checking (1100). For this mapped account, create the correct journal entry and confirm its match in Bank reconciliation. Nothing was recorded.'
     end

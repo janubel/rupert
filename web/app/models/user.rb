@@ -155,9 +155,12 @@ class User < ActiveRecord::Base
   end
 
   # Account and role administration cannot be delegated to ordinary staff.
+  # Re-reads the account (it must be active right now), once per loaded user.
   def can_manage_accounts?
+    return @can_manage_accounts if defined?(@can_manage_accounts)
+
     actor = User.find_by(id: id, active: true)
-    actor && (actor.admin? || actor.super_admin?) && actor.can?('users.write')
+    @can_manage_accounts = !!(actor && (actor.admin? || actor.super_admin?) && actor.can?('users.write'))
   end
 
   def active?
@@ -167,6 +170,7 @@ class User < ActiveRecord::Base
   # Clear the memoized permission list on reload so fresh data always applies.
   def reload(*args)
     @effective_permissions = nil
+    remove_instance_variable(:@can_manage_accounts) if defined?(@can_manage_accounts)
     super
   end
 

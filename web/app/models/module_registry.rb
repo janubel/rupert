@@ -240,8 +240,8 @@ class ModuleRegistry
     end
 
     # Areas with their modules filtered by the user's permissions.
-    def areas_for(user)
-      visible = nav_for(user)
+    def areas_for(user, visible: nil)
+      visible ||= nav_for(user)
       # Staff members get one personal section with everything they can open.
       return [{ key: 'me', name: 'Me', modules: visible, groups: [] }] if user&.employee? && visible.any?
 

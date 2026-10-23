@@ -1,0 +1,12 @@
+<%# Platform administrators only: server health at a glance (HostVitals, cached 30 s). %>
+<% vitals = HostVitals.current %>
+<% level = ->(percent) { percent.nil? ? '' : (percent >= HostVitals::ALERT ? 'vital-alert' : (percent >= HostVitals::WARN ? 'vital-warn' : '')) } %>
+<% backup_old = vitals.backup_at.nil? || vitals.backup_at < 26.hours.ago %>
+<%= link_to system_path, class: 'statusbar-item statusbar-vitals', aria: { label: 'Server health' },
+      title: "Server health, read #{l(vitals.taken_at, format: :short)}. Amber from #{HostVitals::WARN}%, red from #{HostVitals::ALERT}%." do %>
+  <span class="<%= level.(vitals.cpu) %>" data-vital="cpu">CPU <%= vitals.cpu ? "#{vitals.cpu}%" : '—' %></span>
+  <span class="<%= level.(vitals.memory) %>" data-vital="memory">RAM <%= vitals.memory ? "#{vitals.memory}%" : '—' %></span>
+  <span class="<%= level.(vitals.disk) %>" data-vital="disk">Disk <%= vitals.disk ? "#{vitals.disk}%" : '—' %></span>
+  <span class="statusbar-label" data-vital="db">DB <%= vitals.db_bytes ? number_to_human_size(vitals.db_bytes, precision: 3) : '—' %></span>
+  <span class="statusbar-label <%= 'vital-alert' if backup_old %>" data-vital="backup"><% if vitals.backup_bytes %>Backup <%= number_to_human_size(vitals.backup_bytes, precision: 3) %>, <%= time_ago_in_words(vitals.backup_at) %> ago<% else %>No backup yet<% end %></span>
+<% end %>

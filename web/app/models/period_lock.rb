@@ -40,6 +40,7 @@ class PeriodLock < ApplicationRecord
   before_destroy { throw :abort }
 
   scope :chronological, -> { order(:id) }
+  after_create { self.class.forget_request_events! }
 
   def lock? = action == 'lock'
   def summary = JSON.parse(summary_json)
@@ -75,11 +76,33 @@ class PeriodLock < ApplicationRecord
 
     def active_locks = latest_events.select(&:lock?)
 
+    # Saving many money records at once (bank decisions) checks the locks once
+    # for the whole batch instead of once per record. Outside a batch every
+    # check reads the table, so a lock is seen the moment it exists.
+    def batch
+      outer = Current.metadata.key?(:period_lock_events)
+      Current.metadata[:period_lock_events] ||= {}
+      yield
+    ensure
+      Current.metadata.delete(:period_lock_events) unless outer
+    end
+
+    def request_events
+      cache = Current.metadata[:period_lock_events]
+      return chronological.to_a unless cache
+
+      cache[Current.tenant_id] ||= chronological.to_a
+    end
+
+    def forget_request_events!
+      Current.metadata[:period_lock_events]&.clear
+    end
+
     # The narrowest active lock covering a date (or any day of a range).
     def lock_covering(first, last = first)
       return nil if first.blank? || last.blank?
 
-      candidates = where('period_from <= ? AND period_to >= ?', last, first).chronological.to_a
+      candidates = request_events.select { |e| e.period_from <= last && e.period_to >= first }
       candidates.group_by { |e| [e.period_kind, e.period_from] }.values.map(&:last).select(&:lock?)
         .min_by { |e| e.period_to - e.period_from }
     end

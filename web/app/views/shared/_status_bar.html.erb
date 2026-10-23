@@ -1,5 +1,6 @@
 <%# The status bar (docs/ui-standards.md §2): one thin strip under every page with the sync
-    state, the Team chat unread badge and latest message, help, bug reports and the build.
+    state, the Team chat unread badge and latest message, server health for platform
+    administrators, help, bug reports and the build.
     Badges, not popups. %>
 <footer class="app-statusbar" aria-label="Status">
   <%= render 'shared/statusbar_sync', sync: local_assigns[:sync] %>
@@ -12,6 +13,7 @@
     <% end %>
   <% end %>
   <span class="statusbar-spacer"></span>
+  <%= render 'shared/statusbar_vitals' if Current.user.super_admin? %>
   <%= link_to feedback_reports_path, class: 'statusbar-item', aria: { label: 'Report a bug or send a request', expanded: 'false', haspopup: 'dialog', controls: 'feedback-panel' }, title: 'Report a bug or request', data: { action: 'click->feedback#toggle', feedback_target: 'trigger', feedback_ignore: '' } do %><%= navigation_icon('bug', css_class: 'nav-symbol statusbar-icon') %><span class="statusbar-label">Report a problem</span><% end %>
   <%= link_to learning_index_path, class: 'statusbar-item', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><span>Help</span> <kbd>?</kbd><% end %>
   <span class="statusbar-item statusbar-build" title="<%= BuildInfo.current.revision %>"><%= BuildInfo.current.label %></span>

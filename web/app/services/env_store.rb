@@ -56,13 +56,19 @@ module EnvStore
   def self.platform_fetch(key, default = nil)
     raise ArgumentError, 'Key is not a platform setting' unless PLATFORM_KEYS.include?(key)
 
-    setting = Setting.find_by(key: key, tenant_id: nil)
+    setting = platform_settings[key]
     setting ? setting.value : ENV.fetch(key, default)
+  end
+
+  # All platform rows, read once per request or job; platform_set clears it.
+  def self.platform_settings
+    Current.metadata[:platform_settings] ||= Setting.where(key: PLATFORM_KEYS, tenant_id: nil).index_by(&:key)
   end
 
   def self.platform_set(key, value)
     raise ArgumentError, 'Key is not a platform setting' unless PLATFORM_KEYS.include?(key)
 
+    Current.metadata.delete(:platform_settings)
     setting = Setting.find_by(key: key, tenant_id: nil)
     if value.nil?
       setting&.destroy!
