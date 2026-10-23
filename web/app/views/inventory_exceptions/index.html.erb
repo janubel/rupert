@@ -3,13 +3,15 @@
 <div class="space-y-6">
   <%= page_header 'Stock review', subtitle: 'Shortages, uncertain stock and catalog conflicts to review.' %>
 
-  <%= form_with url: inventory_exceptions_path, method: :get, class: 'toolbar' do |f| %>
-    <div class="toolbar-field"><%= f.label :source, 'Platform stock', class: 'field-label' %><%= f.select :source, [['All sources', ''], ['Shopify', 'shopify'], ['Square', 'square']], { selected: @queue.source }, class: 'input' %></div>
-    <div class="toolbar-field"><%= f.label :location_id, 'Stock location', class: 'field-label' %><%= f.select :location_id, [['All locations', '']] + @locations.map { |location| ["#{location.source} · #{location.name}", location.id] }, { selected: @queue.location_id }, class: 'input' %><% if @locations_limited %><p class="mt-1 text-xs text-mocha">Location selector limited to the first 200 locations.</p><% end %></div>
-    <div class="toolbar-field"><%= f.label :stale_hours, 'Stale after (hours)', class: 'field-label' %><%= f.number_field :stale_hours, value: @queue.stale_hours, min: 1, max: 168, required: true, class: 'input' %></div>
-    <div class="toolbar-field"><%= f.label :section, 'Work type', class: 'field-label' %><%= f.select :section, [['All work', '']] + InventoryExceptions::SECTION_LABELS.map { |key, label| [label, key] }, { selected: @queue.section }, class: 'input' %></div>
-    <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', inventory_exceptions_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <div class="toolbar-band">
+    <%= form_with url: inventory_exceptions_path, method: :get, class: 'toolbar' do |f| %>
+      <div class="toolbar-field"><%= f.label :source, 'Platform stock', class: 'field-label' %><%= f.select :source, [['All sources', ''], ['Shopify', 'shopify'], ['Square', 'square']], { selected: @queue.source }, class: 'input' %></div>
+      <div class="toolbar-field"><%= f.label :location_id, 'Stock location', class: 'field-label' %><%= f.select :location_id, [['All locations', '']] + @locations.map { |location| ["#{location.source} · #{location.name}", location.id] }, { selected: @queue.location_id }, class: 'input' %><% if @locations_limited %><p class="mt-1 text-xs text-mocha">Location selector limited to the first 200 locations.</p><% end %></div>
+      <div class="toolbar-field"><%= f.label :stale_hours, 'Stale after (hours)', class: 'field-label' %><%= f.number_field :stale_hours, value: @queue.stale_hours, min: 1, max: 168, required: true, class: 'input' %></div>
+      <div class="toolbar-field"><%= f.label :section, 'Work type', class: 'field-label' %><%= f.select :section, [['All work', '']] + InventoryExceptions::SECTION_LABELS.map { |key, label| [label, key] }, { selected: @queue.section }, class: 'input' %></div>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', inventory_exceptions_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </div>
 
   <% if @queue.summary[:limited] %><p role="status" class="flash flash-alert">Results limited: additional matching records or identity members were not checked or displayed. Narrow the platform or location filter and review the coverage notes below.</p><% end %>
 

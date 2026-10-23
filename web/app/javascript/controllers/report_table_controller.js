@@ -239,6 +239,8 @@ export default class extends Controller {
       this.countTarget.textContent = `${rowsText} · ${visibleColumns} of ${this.columns.length} columns`
     }
     if (this.hasEmptyTarget) this.emptyTarget.hidden = !(query !== "" && shown === 0 && this.rows.length > 0)
+    // Lets a companion controller (data-grid) follow column and sort changes.
+    if (typeof this.dispatch === "function") this.dispatch("applied")
   }
 
   // Rows and columns exactly as shown, in the order shown.

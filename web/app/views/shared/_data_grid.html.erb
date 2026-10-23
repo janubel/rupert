@@ -1,0 +1,23 @@
+<%# Spreadsheet view: see ReportTableHelper#data_grid and docs/ui-standards.md §5. %>
+<div class="report-table data-grid" data-controller="report-table data-grid" data-report-table-key-value="<%= key %>" data-report-table-filename-value="<%= filename %>" data-action="report-table:applied->data-grid#sync">
+  <div class="report-table-toolbar no-print" <%= tour_anchor('columns') %>>
+    <% if filter %><input type="search" class="input report-table-filter" placeholder="Narrow rows…" aria-label="Narrow rows in <%= label %>" data-report-table-target="filter" data-action="input->report-table#filter keydown.esc->report-table#clearFilter"><% end %>
+    <details class="report-table-menu">
+      <summary class="btn-ghost btn-sm">Columns</summary>
+      <fieldset class="report-table-columns">
+        <legend class="sr-only">Columns shown in <%= label %></legend>
+        <div data-report-table-target="columns"></div>
+      </fieldset>
+    </details>
+    <button type="button" class="btn-ghost btn-sm" data-action="report-table#reset" title="Show the default columns and order">Reset</button>
+    <% if csv_path %>
+      <%= link_to 'Download CSV', csv_path, class: 'btn-ghost btn-sm', data: { data_grid_target: 'csv', turbo: false }, title: 'Every matching row, with the columns shown' %>
+    <% else %>
+      <button type="button" class="btn-ghost btn-sm" data-action="report-table#download" title="The rows and columns shown, in this order">Download CSV</button>
+    <% end %>
+    <span class="report-table-count" data-report-table-target="count" aria-live="polite"></span>
+  </div>
+  <div class="report-table-scroll data-grid-scroll" role="region" tabindex="0" aria-label="<%= label %>"><%= table %></div>
+  <p class="report-table-empty" data-report-table-target="empty" hidden>No rows match. <button type="button" class="font-semibold underline" data-action="report-table#clearFilter">Clear filter</button></p>
+  <p class="data-grid-keys no-print">Arrow keys move between cells; Enter opens the cell's link.</p>
+</div>

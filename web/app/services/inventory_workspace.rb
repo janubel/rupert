@@ -41,7 +41,10 @@ class InventoryWorkspace
         native_id: item&.id, mirror_quantity: level.sourceQuantity || level.quantity, available: level.available, held: held, warehouse: warehouse,
         promise: valid_identity ? [(available || 0) - held - warehouse, 0].max : 0,
         demand: @demand.fetch(pool&.id, 0), incoming: @incoming.fetch(pool&.id, 0),
-        fresh: valid_identity && level.location.active && level.updatedAt.between?(1.hour.ago, Time.current) }
+        fresh: valid_identity && level.location.active && level.updatedAt.between?(1.hour.ago, Time.current),
+        # Presentation only: why promise is what it is (identity, unknown mirror, local capacity).
+        valid_identity: valid_identity ? true : false, capacity: available,
+        known: !(level.quantity.nil? || level.available.nil? || level.updatedAt.nil? || level.updatedAt > Time.current) }
     end
   end
 end

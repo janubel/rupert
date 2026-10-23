@@ -6,13 +6,15 @@
     <% end %>
   <% end %>
 
-  <%= form_tag purchasing_vendors_path, method: :get, class: 'toolbar' do %>
-    <div class="toolbar-field">
-      <label class="field-label" for="q">Search</label>
-      <input type="search" id="q" name="q" value="<%= @q %>" placeholder="Vendor name" class="input" autocomplete="off">
-    </div>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', purchasing_vendors_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <div class="toolbar-band">
+    <%= form_tag purchasing_vendors_path, method: :get, class: 'toolbar' do %>
+      <div class="toolbar-field">
+        <label class="field-label" for="q">Search</label>
+        <input type="search" id="q" name="q" value="<%= @q %>" placeholder="Vendor name" class="input" autocomplete="off">
+      </div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', purchasing_vendors_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </div>
 
   <div class="card overflow-hidden">
     <div class="table-region" role="region" tabindex="0" aria-label="Vendors">

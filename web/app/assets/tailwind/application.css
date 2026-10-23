@@ -473,6 +473,47 @@ a.statusbar-item:hover,button.statusbar-item:hover { background:var(--color-haze
 .row-item-end .num { min-width:6.5rem; }
 .row-list-foot { margin:0;padding:.7rem 1.25rem .85rem;border-top:1px solid var(--color-fog); }
 
+/* --- Data grid (spreadsheet view) and Stock --- */
+/* Data grid: the report-table controls on a dense, read-only sheet. Header row and first column
+   stay put while the body scrolls both ways; numbers are tabular and right-aligned; rows are
+   hairlined and zebra-striped. Backgrounds are opaque so sticky cells hide what slides under. */
+.data-grid-scroll { overflow:auto;max-height:min(72vh,52rem);overscroll-behavior:contain; }
+.data-grid-table { width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;font-size:.8125rem;line-height:1.25;font-variant-numeric:tabular-nums; }
+.data-grid-table th,.data-grid-table td { height:2rem;padding:.3rem .7rem;white-space:nowrap;text-align:left;vertical-align:middle;color:var(--color-ink);background:var(--color-paper);border-bottom:1px solid var(--color-fog);border-right:1px solid color-mix(in srgb,var(--color-fog) 55%,var(--color-paper)); }
+.data-grid-table thead th { position:sticky;top:0;z-index:2;font-size:.75rem;font-weight:600;color:var(--color-taupe);background:var(--color-cream);border-bottom-color:var(--color-edge); }
+.data-grid-table tbody tr:nth-child(even) > * { background:color-mix(in srgb,var(--color-haze) 45%,var(--color-paper)); }
+.data-grid-table tbody tr:hover > * { background:color-mix(in srgb,var(--color-haze) 85%,var(--color-paper)); }
+.data-grid-table tr > :first-child { position:sticky;left:0;z-index:1;max-width:22rem;overflow:hidden;text-overflow:ellipsis;box-shadow:inset -1px 0 0 var(--color-edge); }
+.data-grid-table thead tr > :first-child { z-index:3; }
+.data-grid-table .num { text-align:right; }
+.data-grid-table a { color:var(--color-ink);text-decoration:none; }
+.data-grid-table a:hover { text-decoration:underline; }
+.data-grid-table :is(th,td):focus { outline:2px solid var(--color-olive);outline-offset:-2px; }
+.data-grid-table :is(.pill-fern,.pill-clay,.pill-rose,.pill-olive,.pill-taupe) { min-height:0;padding-block:0; }
+.data-grid-table tr > td.empty-row { position:static;max-width:none;white-space:normal;text-align:center;box-shadow:none; }
+.data-grid-table .data-grid-negative { color:var(--color-rose);font-weight:600; }
+.data-grid-keys { margin:0;padding:.5rem 1rem;font-size:.75rem;color:var(--color-taupe);border-top:1px solid var(--color-fog); }
+@media (pointer:coarse) { .data-grid-keys { display:none; } }
+@media print { .data-grid-scroll { max-height:none;overflow:visible; } .data-grid-table th,.data-grid-table td { position:static; } }
+
+/* Stock rows: a small product image, the name, and SKU / native ID underneath; the lead figure
+   (available to promise) is large, with a word pill when it is low, out, unknown or oversold. */
+.stock-viewbar { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem 1rem; }
+.stock-item { display:flex;align-items:center;gap:.75rem;min-width:14rem; }
+.stock-thumb { flex:none;width:2.5rem;height:2.5rem;border:1px solid var(--color-fog);border-radius:var(--radius-control);background:var(--color-haze);object-fit:cover; }
+.stock-thumb-empty { display:grid;place-items:center;font-family:var(--font-display);font-size:1rem;color:var(--color-taupe); }
+.stock-item-name { font-weight:500;color:var(--color-ink);overflow-wrap:anywhere; }
+.stock-item-meta { margin-top:.1rem;font-size:.75rem;color:var(--color-taupe);overflow-wrap:anywhere; }
+.stock-promise { display:flex;align-items:center;justify-content:flex-end;gap:.5rem; }
+.stock-figure { font-family:var(--font-display);font-size:1.375rem;line-height:1.1;color:var(--color-ink);font-variant-numeric:tabular-nums; }
+.stock-figure-note { margin-top:.2rem;font-size:.75rem;color:var(--color-taupe);white-space:nowrap; }
+.stock-row-actions { display:flex;flex-wrap:wrap;gap:.25rem .75rem;font-size:.8rem;font-weight:500;white-space:nowrap; }
+.stock-row-actions a { color:var(--color-olive-deep); }
+.stock-row-actions a:hover { text-decoration:underline; }
+.stock-progress { display:block;height:.3rem;margin-top:.35rem;margin-left:auto;width:6rem;border-radius:var(--radius-pill);background:var(--color-haze);overflow:hidden; }
+.stock-progress > span { display:block;height:100%;background:var(--color-olive); }
+/* --- end Data grid and Stock --- */
+
 .facts { display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:.9rem 1.5rem;margin:0; }
 .facts > div { min-width:0; }
 .facts dt { font-size:.8rem;font-weight:500;color:var(--color-mocha); }

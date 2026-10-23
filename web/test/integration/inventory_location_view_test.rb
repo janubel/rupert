@@ -34,6 +34,19 @@ class InventoryLocationViewTest < ActionDispatch::IntegrationTest
     assert_select 'form[action=?][method=post]', stock_comparison_path, count: 0
   end
 
+  test 'comparison grid keeps signed source figures and is remembered' do
+    get stock_comparison_path, params: { q: 'Tea', view: 'grid' }
+    assert_response :success
+    assert_select 'nav[aria-label="Comparison view"] a[aria-current="page"]', 'Grid'
+    assert_select '.data-grid table.data-grid-table th', text: 'Committed'
+    assert_select 'table.data-grid-table td', text: '-3'
+    assert_select 'table.data-grid-table td', text: '-8'
+    assert_select '.data-grid button[data-action="report-table#download"]', 'Download CSV'
+    get stock_comparison_path, params: { q: 'Tea' }
+    assert_select 'table.data-grid-table'
+    assert_select 'input[type=hidden][name=view][value=grid]'
+  end
+
   test 'view and CSV do not contact providers or write counts' do
     ShopifyClient.expects(:graphql).never
     Ctrax::StockSync.expects(:call).never
