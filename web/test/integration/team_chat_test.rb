@@ -922,5 +922,4 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert_not_includes response.body, 'PRIVATE-SALES-RESULT'
   end
-
 end
