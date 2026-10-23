@@ -13,6 +13,13 @@
     <div class="stat"><p class="stat-label">Failed or denied tool calls</p><p class="stat-value mt-1"><%= @issue_totals.sum { |_tool, count| count } %></p></div>
   </section>
   <p class="text-xs text-taupe">By kind: <%= AgentFeedback::KINDS.map { |key, label| "#{label} #{@counts[:kind].fetch(key, 0)}" }.join(' · ') %></p>
+  <p class="text-xs text-taupe" data-github-sync>
+    <% if GithubIssues.configured? %>
+      New reports are posted to GitHub (<%= link_to GithubIssues.repo, "https://github.com/#{GithubIssues.repo}/issues?q=label%3Afrom-rupert", target: '_blank', rel: 'noopener', class: 'underline' %><%= ", milestone #{GithubIssues.milestone_title}" if GithubIssues.milestone_title.present? %>) with names, emails, phones and attachments left out; closing the issue there closes the report here.
+    <% else %>
+      GitHub sync is off. Set GITHUB_ISSUES_TOKEN (and GITHUB_ISSUES_MILESTONE) on the server to post new reports to GitHub.
+    <% end %>
+  </p>
 
   <%= form_tag agent_feedbacks_path, method: :get, class: 'toolbar' do %>
     <div class="toolbar-field"><%= label_tag :kind, 'Kind', class: 'field-label' %><%= select_tag :kind, options_for_select([['All kinds', '']] + AgentFeedback::KINDS.map { |key, label| [label, key] }, @filters[:kind]), class: 'input' %></div>
@@ -62,6 +69,7 @@
               <td class="td text-xs"><%= feedback.api_access_token&.name || (feedback.source == 'agent' ? 'Revoked/deleted token' : 'No token') %><span class="block text-taupe"><%= feedback.user&.email %></span></td>
               <td class="td min-w-56">
                 <span class="<%= status_pill.fetch(feedback.status, 'pill-taupe') %>"><%= feedback.status_label %></span>
+                <% if feedback.github_issue_url %><p class="mt-1 text-xs"><%= link_to "GitHub ##{feedback.github_issue_number}", feedback.github_issue_url, target: '_blank', rel: 'noopener', class: 'font-semibold text-olive-deep underline', data: { github_issue: feedback.github_issue_number } %> · <%= feedback.github_state || 'open' %></p><% end %>
                 <% if feedback.owner_notes.present? %><p class="mt-1 whitespace-pre-wrap text-xs text-mocha"><%= feedback.owner_notes %></p><% end %>
                 <% if feedback.triaged_at %><p class="text-xs text-taupe">by <%= feedback.triaged_by&.email || '—' %>, <%= l(feedback.triaged_at, format: :short) %></p><% end %>
                 <% if can_triage %>

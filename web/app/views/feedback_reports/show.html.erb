@@ -8,7 +8,7 @@
   <%= page_header @report.summary, eyebrow: "#{@report.kind_label} · ##{@report.id}",
                   subtitle: "Sent #{l(@report.created_at, format: :short)}#{" by #{@report.user.display_name}" if @report.user && @report.user_id != Current.user.id}. #{status_note.fetch(@report.status, '')}",
                   menu: [['My reports', feedback_reports_path], (['Review', agent_feedbacks_path(anchor: dom_id(@report))] if can_view_attachments)].compact do %>
-    <span class="<%= status_pill.fetch(@report.status, 'pill-taupe') %>"><%= @report.status_label %></span>
+    <span class="<%= status_pill.fetch(@report.status, 'pill-taupe') %>"><%= @report.status_label %></span><% if @report.github_issue_url %> <%= link_to "GitHub ##{@report.github_issue_number}", @report.github_issue_url, target: '_blank', rel: 'noopener', class: 'pill-taupe' %><% end %>
     <% if @report.ready_for_development && can_view_attachments %><span class="pill-fern">Ready for development</span><% end %>
   <% end %>
   <% if @report.details.present? %>

@@ -44,6 +44,9 @@ class AgentFeedback < ApplicationRecord
   validates :owner_notes, length: { maximum: NOTES_MAX }
 
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
+
+  # New reports go to GitHub (see GithubIssues) once the token is set.
+  after_create_commit { GithubIssuePostJob.perform_later(id) if GithubIssues.configured? }
   scope :reported_by, ->(user) { where(user_id: user.id) }
 
   # Removes control characters (except newlines/tabs in long text) and trims.
