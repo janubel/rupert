@@ -53,7 +53,7 @@ class GithubIssuesTest < ActiveSupport::TestCase
     feedback = report
     stub_request(:get, %r{#{API}/milestones}).to_return(status: 200, body: [{ title: 'v0.2.1', number: 2 }].to_json)
     post = stub_request(:post, "#{API}/issues")
-      .with { |req| body = JSON.parse(req.body); body['milestone'] == 2 && body['labels'] == %w[from-rupert bug] }
+      .with { |req| JSON.parse(req.body).values_at('milestone', 'labels') == [2, %w[from-rupert bug]] }
       .to_return(status: 201, body: { number: 501, html_url: 'https://github.com/techmore/rupert/issues/501', state: 'open' }.to_json)
     GithubIssues.post_report!(feedback)
     GithubIssues.post_report!(feedback.reload)
