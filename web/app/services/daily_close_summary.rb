@@ -93,7 +93,6 @@ class DailyCloseSummary
     CtraxDay.includes(:location).where(business_date: day).order(:location_id).map { |snapshot| self.class.ctrax_row(snapshot) }
   end
 
-
   def register_rows
     summary = DailyRegisterSummary.new(day: day.iso8601)
     tips = tips_by_pool
