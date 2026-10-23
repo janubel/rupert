@@ -26,6 +26,8 @@ module TeamChat
       groups = Hash.new { |hash, key| hash[key] = [] }
       replies.each do |id, status, raw|
         meta = parse(raw)
+        next if meta['engine'] == NavigationAnswer::ENGINE
+
         groups[[meta['agent'].presence || 'rupert', meta['model'].to_s, meta['engine'].to_s]] << [id, status, meta]
       end
       groups.map do |(agent, model, engine), rows|
@@ -42,7 +44,7 @@ module TeamChat
     # Answers that took longer than SLOW_SECONDS, newest first.
     def slow(since: 30.days.ago, limit: 50)
       rows = Message.where(author_kind: 'assistant', status: 'done', created_at: since..).includes(:room).order(id: :desc).limit(REPLY_LIMIT).select do |message|
-        message.meta.to_h['duration_ms'].to_f / 1000 > SLOW_SECONDS
+        message.meta.to_h['engine'] != NavigationAnswer::ENGINE && message.meta.to_h['duration_ms'].to_f / 1000 > SLOW_SECONDS
       end.first(limit)
       questions = Message.where(id: rows.map { |message| message.meta.to_h['trigger_id'] }.compact).pluck(:id, :body).to_h
       rows.map do |message|

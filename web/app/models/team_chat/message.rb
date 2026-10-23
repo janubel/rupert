@@ -127,7 +127,7 @@ module TeamChat
       }
     end
 
-    LOCAL_ENGINES = %w[local_gateway ollama].freeze
+    LOCAL_ENGINES = %w[local_gateway ollama direct_navigation].freeze
 
     # How long a finished assistant reply took and which model wrote it, shown next to the post.
     def answer_timing

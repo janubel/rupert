@@ -31,7 +31,7 @@ class TeamChatAgentTest < ActiveSupport::TestCase
 
   test 'the reply calls a Rupert tool natively and streams the answer into the room' do
     requests = script_model({ tool: 'where_is', arguments: { query: 'timesheets' } }, { text: 'Timesheets are under Team. Open [Timesheets](/people/timesheets).' })
-    reply = ask('@rupert where are timesheets?')
+    reply = ask('@rupert where are timesheets? Also explain the approval workflow.')
 
     TeamChat::Agent.new(reply, config: team_chat_config).run
     reply.reload
@@ -48,7 +48,7 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     assert_includes first['tools'].map { |tool| tool.dig('function', 'name') }, 'sales_summary'
     assert_equal 'system', first['messages'].first['role']
     assert_includes first['messages'].first['content'], 'You are Rupert'
-    assert_match(/: @rupert where are timesheets\?\z/, first['messages'].last['content'])
+    assert_match(/: @rupert where are timesheets\? Also explain the approval workflow\.\z/, first['messages'].last['content'])
     tool_message = requests.last['messages'].find { |message| message['role'] == 'tool' }
     assert tool_message, 'the tool result goes back to the model'
   end
