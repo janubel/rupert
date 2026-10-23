@@ -1,5 +1,5 @@
 <% content_for :title, 'Inventory' %>
-<% csv_path = workspace_inventory_index_path(request.query_parameters.except('page', 'view', 'columns').merge(format: :csv)) %>
+<% csv_path = workspace_inventory_index_path(request.query_parameters.except('page', 'view', 'columns', 'format').to_h.symbolize_keys.merge(format: :csv)) %>
 <div class="space-y-6">
   <%= page_header 'Inventory', subtitle: 'What you can sell at each location, and how fresh each read is.',
         menu: [['Download CSV', csv_path],
@@ -21,7 +21,7 @@
     <% end %>
   </section>
 
-  <% filters = request.query_parameters.except('page', 'view', 'columns', 'format') %>
+  <% filters = request.query_parameters.except('page', 'view', 'columns', 'format').to_h.symbolize_keys %>
   <% grid = @view == 'grid' %>
   <% can_write = Current.user.can?('inventory.write') %>
   <div class="toolbar-band">
