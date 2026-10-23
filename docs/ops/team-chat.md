@@ -692,6 +692,14 @@ more hits; a tie stays general. Naming a bot (@qwen, @liquid, @rupert ...) alway
 model server everything goes to @rupert. The gateway keeps `qwen3.5-4b` loaded (`--keep-loaded`); @qwen (35B) and
 Flint load on demand.
 
+### Bot rooms (2026-10-23)
+
+Each person has a private room per bot, besides their Rupert room: `rooms:` in
+`config/team_chat/routing.yml` lists `qwen-4b, flint-think, qwen, liquid, gemma`.
+Everything typed there goes to that bot, no @ needed. Gemma was added so every
+@mentionable bot (@liquid, @qwen, @gemma) has one. Leftover PR verification rooms
+in production were archived on 2026-10-23 (archived, not deleted).
+
 ## Edited and deleted requests
 
 Each human message has a server-owned revision counter in its private metadata.

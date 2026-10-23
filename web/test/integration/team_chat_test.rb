@@ -57,7 +57,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_path
     follow_redirect!
     assert_response :success
-    %w[qwen-4b flint-think qwen liquid].each do |handle|
+    %w[qwen-4b flint-think qwen liquid gemma].each do |handle|
       assert_select ".chat-rail-room[href='#{team_chat_room_path("bot-#{handle}-#{@admin.id}")}']"
     end
     assert_select '.chat-rail-room', text: /Qwen 4B/
