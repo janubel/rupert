@@ -27,7 +27,7 @@ class SwipesimpleWebTest < ActiveSupport::TestCase
 
   test 'own login reads full exports with isolated cookies and never makes business writes' do
     assert_no_difference ['Core::Order.count', 'Core::Payment.count', 'LedgerEntry.count'] do
-      assert_equal({ transactions: 13, invoices: 7, reports: :pulled, items: :updated }, SwipesimpleWeb::Sync.call(connection: @connection))
+      assert_equal({ transactions: 13, invoices: 7, reports: :pulled, report_history: :complete, items: :updated }, SwipesimpleWeb::Sync.call(connection: @connection))
     end
     assert_equal 2, SwipesimpleExport.count
     assert_equal 20, SwipesimpleReportRow.count

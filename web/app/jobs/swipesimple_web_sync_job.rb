@@ -24,7 +24,7 @@ class SwipesimpleWebSyncJob < ApplicationJob
         next if result[:busy]
 
         ActivityLogger.log('swipesimple_web_synced', subject: connection,
-          details: "#{manual ? 'manual' : 'scheduled'}: #{result[:transactions]} transactions, #{result[:invoices]} invoices, reports #{result[:reports]}, items #{result[:items]}")
+          details: "#{manual ? 'manual' : 'scheduled'}: #{result[:transactions]} transactions, #{result[:invoices]} invoices, reports #{result[:reports]}, older months #{result[:report_history]}, items #{result[:items]}")
       rescue SwipesimpleWeb::Client::Error => e
         ActivityLogger.log('swipesimple_web_sync_failed', subject: connection, details: e.message)
       end
