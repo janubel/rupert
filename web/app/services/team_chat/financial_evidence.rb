@@ -197,6 +197,97 @@ module TeamChat
       nil
     end
 
+    # The bot's own wording, kept only when every figure in it is one of the checked facts: each money amount (to
+    # the cent, in a currency the facts have), percentage and order count; no profit/margin wording; tax, refunds,
+    # expenses or averages only when a fact means that; and period words (today, last month...) only when a fact
+    # covers exactly that period. Then Ruby adds what the figures are (meaning, source, period) and any gaps.
+    # Returns nil when the prose does not pass, so the caller renders the facts instead.
+    RELABEL = /\b(?:profits?|margins?|net income|earnings|take[- ]home|cash flow|bottom line)\b/i
+    CONCEPTS = { /\btax(?:es)?\b/i => /tax/i, /\brefund/i => /refund/i, /\bexpense/i => /expense/i, /\baverage\b/i => /average/i,
+                 /\bshare\b/i => /share/i }.freeze
+    PERIOD_WORDS = { 'today' => 'today', 'yesterday' => 'yesterday', 'this week' => 'this_week', 'last week' => 'last_week',
+                     'this month' => 'this_month', 'last month' => 'last_month', 'this quarter' => 'this_quarter',
+                     'last quarter' => 'last_quarter', 'this year' => 'year_to_date', 'last year' => 'last_year' }.freeze
+    CODED_AMOUNT = /(?<![\w.])-?\d[\d,]*\.\d{2}\s?(?<code>[A-Z]{3})\b/
+    ORDER_COUNT = /(?<![\w.$])(?<count>\d[\d,]*)\s+(?:(?:paid|fulfilled|online|shopify|square)\s+)*orders?\b/i
+
+    def checked_prose(text, evidence, today: Date.current)
+      facts = evidence.flat_map { |item| item['facts'] }
+      prose = text.to_s.strip
+      return nil if facts.empty? || prose.blank? || prose.match?(RELABEL)
+
+      meanings = facts.map { |fact| fact['meaning'].to_s }
+      return nil if CONCEPTS.any? { |word, meaning| prose.match?(word) && meanings.none? { |known| known.match?(meaning) } }
+      return nil unless periods_match?(prose, facts, today)
+
+      currencies = facts.map { |fact| fact['currency'] }.uniq
+      return nil if prose.scan(CODED_AMOUNT).flatten.any? { |code| !currencies.include?(code) }
+
+      money = facts.select { |fact| fact['unit'] == 'money' }
+      checked = 0
+      NumberCheck.figures_in(prose).each do |figure|
+        pool = figure.kind == :percent ? facts.select { |fact| fact['unit'] == 'percent' } : money
+        pool = pool.select { |fact| fact['currency'] == 'USD' } if figure.kind == :money && figure.text.include?('$')
+        return nil unless pool.any? { |fact| figure_matches?(figure, fact) }
+
+        checked += 1
+      end
+      counts = facts.select { |fact| fact['unit'] == 'count' }.map { |fact| BigDecimal(fact['value']) }
+      prose.scan(ORDER_COUNT).flatten.each do |count|
+        return nil unless counts.include?(BigDecimal(count.delete(',')))
+
+        checked += 1
+      end
+      return nil if checked.zero?
+
+      [prose, note(facts, evidence, today)].join("\n\n")
+    end
+
+    def figure_matches?(figure, fact)
+      value = BigDecimal(fact['value']).abs
+      shown = BigDecimal(figure.text[/\d[\d,]*(?:\.\d+)?/].delete(','))
+      return (value - shown).abs <= BigDecimal('0.5') / (10**figure.decimals) if figure.kind == :percent
+      return false unless figure.decimals == 2 || (figure.decimals.zero? && value.frac.zero?)
+
+      value == shown
+    end
+
+    def periods_match?(prose, facts, today)
+      spans = facts.map { |fact| [fact.dig('period', 'from'), fact.dig('period', 'to')] }.uniq
+      PERIOD_WORDS.all? do |words, key|
+        next true unless prose.match?(/\b#{words}(?:'s)?\b/i)
+
+        window = Metrics::Window.resolve(period: key, today: today)
+        spans.include?([window.from.iso8601, window.to.iso8601])
+      rescue ArgumentError
+        false
+      end
+    end
+
+    # One short line per kind of figure: what it means, where it comes from and the period, written by Ruby.
+    def note(facts, evidence, today)
+      lines = facts.map { |fact| [fact['meaning'], source_label(fact['source']), period_label(fact['period'], today)] }.uniq.first(3).map do |meaning, source, period|
+        "✓ #{meaning} · #{source} · #{period}"
+      end
+      (lines + evidence.flat_map { |item| item['gaps'] }.uniq).join("\n")
+    end
+
+    def source_label(source)
+      source.to_s.sub(ORDER_SOURCE, 'Shopify, Square, Rupert POS and manual orders (not C-Trax or SwipeSimple)')
+    end
+
+    def period_label(period, today)
+      from = Date.iso8601(period['from'].to_s)
+      to = Date.iso8601(period['to'].to_s)
+      return 'today' if from == today && to == today
+      return 'yesterday' if from == today - 1 && to == today - 1
+      return from.strftime('%b %-d, %Y') if from == to
+
+      from.year == to.year ? "#{from.strftime('%b %-d')} – #{to.strftime('%b %-d, %Y')}" : "#{from.strftime('%b %-d, %Y')} – #{to.strftime('%b %-d, %Y')}"
+    rescue Date::Error, TypeError
+      "#{period['from']} to #{period['to']}"
+    end
+
     def render(evidence)
       facts = evidence.flat_map { |item| item['facts'] }
       lines = facts.first(12).map do |fact|
@@ -206,7 +297,7 @@ module TeamChat
         value += '%' if fact['unit'] == 'percent'
         "- #{fact['meaning']}: #{value} #{fact['currency']} (#{fact['source']}; #{fact.dig('period', 'from')} to #{fact.dig('period', 'to')} #{fact['timezone']})."
       end
-      lines.unshift('Verified financial figures from Rupert:') if lines.any?
+      lines.unshift('From Rupert’s records:') if lines.any?
       lines << 'I could not verify financial figures for this request.' if facts.empty?
       lines << 'Additional verified facts were omitted. Narrow the question for the remaining figures.' if facts.size > 12
       lines.concat(evidence.flat_map { |item| item['gaps'] }.uniq)

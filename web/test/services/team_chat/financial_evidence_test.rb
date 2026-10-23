@@ -209,4 +209,46 @@ class TeamChatFinancialEvidenceTest < ActiveSupport::TestCase
     payload[:lines][0][:store] = 'x' * 257
     assert_empty evidence(payload, tool: 'sales_tax_report', args: @period)['facts']
   end
+
+  def prose(text, item = evidence) = TeamChat::FinancialEvidence.checked_prose(text, [item])
+
+  test 'the bot keeps its own words when every figure, period and meaning checks out, and Ruby says what they are' do
+    kept = prose('Shopify took $214.83 today, a quiet start.')
+    assert kept.start_with?('Shopify took $214.83 today, a quiet start.')
+    assert_includes kept, '✓ Gross sales (paid or fulfilled orders) · shopify canonical orders (paid or fulfilled) · today'
+    assert prose('Gross sales so far: 214.83 USD.')
+  end
+
+  test 'a wrong cent, another period, a count or meaning no fact has, or no checked figure at all replaces the words' do
+    assert_nil prose('Shopify took $214.80 today.'), 'to the cent'
+    assert_nil prose('Shopify took $215 today.'), 'no rounding of money'
+    assert_nil prose('Shopify took $214.83 yesterday.'), 'the fact is for today'
+    assert_nil prose('Shopify took $214.83 across 2 orders.'), 'no order count fact'
+    assert_nil prose('Tax collected was $214.83.'), 'gross is not tax'
+    assert_nil prose('Profit today: $214.83.')
+    assert_nil prose('Shopify took 214.83 CAD.')
+    assert_nil prose('Sales look healthy today.'), 'words with no checked figure'
+  end
+
+  test 'order counts and percentages pass only when a fact has them' do
+    orders = evidence(data(3).merge(metric: 'orders'), args: { name: 'orders', period: 'today', source: 'shopify' })
+    assert prose('3 orders on Shopify today.', orders)
+    assert_nil prose('4 orders on Shopify today.', orders)
+    rate = evidence(data(12.5).merge(metric: 'refund_rate'), args: { name: 'refund_rate', period: 'today', source: 'shopify' })
+    assert prose('Refunds were 12.5% of gross sales today.', rate)
+    assert_nil prose('Refunds were 15% of gross sales today.', rate)
+  end
+
+  test 'in a real reply the checked words are kept and a mismatch falls back to the facts' do
+    Core::Order.create!(source: 'shopify', source_order_id: 'prose-order', occurred_at: Time.current, gross_cents: 21483, currency: 'USD').mark_paid!
+    call = { tool: 'metric', arguments: { name: 'gross_sales', period: 'today', source: 'shopify', compare: 'none' } }
+    script_model(call, { text: 'Shopify is at $214.83 so far today.' })
+    reply = TeamChat::Post.call(room: @room, user: @user, body: '@rupert how is shopify doing today').reply
+    TeamChat::Agent.new(reply, config: team_chat_config).run
+    assert reply.reload.body.start_with?('Shopify is at $214.83 so far today.')
+    assert_includes reply.body, '✓ Gross sales'
+    assert reply.meta['prose_checked']
+    assert_includes reply.meta['follow_ups'], 'How does that compare with last week?'
+    assert_equal reply.meta['follow_ups'], reply.as_payload(viewer: @user)[:follow_ups]
+  end
 end

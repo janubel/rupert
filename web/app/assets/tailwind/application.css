@@ -1649,6 +1649,8 @@ body.tour-active { overflow-x:hidden; }
 .chat-suggestions { display:flex;gap:.4rem;min-width:0;max-width:100%;overflow-x:auto;padding:0 .1rem .45rem;scrollbar-width:none;-webkit-overflow-scrolling:touch; }
 .chat-suggestions::-webkit-scrollbar { display:none; }
 .chat-suggestions .chat-starter { flex:0 0 auto;white-space:nowrap; }
+.chat-suggestions-label { flex:none;align-self:center;font-size:.72rem;font-weight:650;color:var(--color-mocha); }
+.chat-starter.is-follow-up { border-color:var(--color-olive);color:var(--color-olive-deep); }
 .chat-day { display:flex;align-items:center;gap:.6rem;margin:.8rem 0 .3rem;font-size:.66rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--color-taupe); }
 .chat-day::before,.chat-day::after { content:"";flex:1;height:1px;background:var(--color-fog); }
 .chat-msg { position:relative;display:flex;gap:.65rem;align-items:flex-start;padding:.3rem .5rem;border-radius:.5rem; }

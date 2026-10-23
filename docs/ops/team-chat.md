@@ -553,6 +553,22 @@ with an explanation, rather than rendered from unverified prose. No source total
 are added, currencies converted or new financial calculations performed here.
 Replies contain at most twelve complete facts and explicitly disclose omissions.
 
+**Checked prose (2026-10-23).** Every money answer used to be replaced by the fact list, so "yo how was today"
+got a form ("Verified financial figures from Rupert: - Gross sales (paid or fulfilled orders): 662.54 USD
+(canonical orders: …)"). Now the bot's own words are kept when `FinancialEvidence.checked_prose` passes them:
+
+- every money amount equals a fact to the cent, in a currency the facts have (`$` means USD; no rounding);
+- every percentage matches a percent fact (to the decimals written) and every "N orders" a count fact;
+- no profit, margin, earnings or cash-flow wording; "tax", "refund", "expense", "average" or "share" only when a
+  fact means that; period words (today, yesterday, this/last week, month, quarter, year) only when a fact covers
+  exactly that period;
+- at least one checked figure.
+
+Ruby then adds a line per kind of figure: `✓ meaning · source · period` and any gaps. Otherwise the fact list
+is shown as before (headed "From Rupert's records:"). `meta['prose_checked']` records which. An answer with
+money figures but no financial tool is replaced only when no tool ran or a figure is not in the tool results
+(the conversation itself is never evidence), with a pointer to a question that works.
+
 
 ## Bounded cloud generation retries
 
@@ -719,6 +735,28 @@ before 11:00, afternoon, evening from 17:00), plus Monday and start-of-month one
 changes daily per person. A tap sends the question. In a channel where bots answer only when named (#admins) the
 bubble adds `@rupert `. No bubbles in direct messages between people or rooms where bots are off. Edit the YAML
 and deploy to change them.
+
+### Prompt and gating audit (2026-10-23)
+
+Reviewed against every real (non-test) question in production so far:
+
+| Seen | Cause | Change |
+| --- | --- | --- |
+| Money answers read like a form | Ruby replaced all prose when a financial tool ran | Checked prose (above) |
+| "how is the website doing" → "could not verify financial figures" | any digit plus "sales" was refused | refuse only unchecked money figures, with a pointer |
+| "what is your model" → "I don't know" | the prompt never said | each bot's prompt names its model |
+| "hello" → "I can check the sales summary for today." | no rule for small talk | one line back plus one or two offers |
+| a $0 sale explained by arithmetic (👎) | guessing at causes | say what the records show and where to look |
+
+Unchanged on purpose: replies in shared channels move to the asker's private room (PR #384), and local bots get
+only their topics' tools when a question matches a topic (all tools otherwise).
+
+### Next questions after an answer (2026-10-23)
+
+When a bot finishes, `TeamChat::Suggestions.follow_ups` picks up to four questions that follow on from it
+(`follow_ups:` per data guide topic in `config/team_chat/suggestions.yml`, else by the tools it used through
+`tool_topics:`), never the question just asked, and stores them in `meta['follow_ups']`. While the newest message
+is a finished bot answer, the bubble row above the box shows "Next:" with those; otherwise the usual bubbles.
 
 ## Edited and deleted requests
 
