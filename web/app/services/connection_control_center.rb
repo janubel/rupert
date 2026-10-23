@@ -69,11 +69,18 @@ class ConnectionControlCenter
 
   def self.presence(key)
     { set: EnvStore.effective(key).present?, unreadable: false,
-      source: Setting.exists?(key: key, tenant_id: EnvStore::PLATFORM_KEYS.include?(key) ? nil : Current.tenant_id) ? 'Saved in Rupert' : 'Hosting configuration' }
+      source: saved_keys(EnvStore::PLATFORM_KEYS.include?(key) ? nil : Current.tenant_id).include?(key) ? 'Saved in Rupert' : 'Hosting configuration' }
   rescue ActiveRecord::Encryption::Errors::Decryption
     { set: false, unreadable: true, source: 'Ask the platform operator to restore the encryption keys' }
   end
   private_class_method :presence
+
+  # Which keys are saved in Rupert, read once per request per scope (not one query per key).
+  def self.saved_keys(tenant_id)
+    cache = RequestStore.fetch(:connection_saved_keys) { {} }
+    cache.fetch(tenant_id) { cache[tenant_id] = Setting.where(tenant_id: tenant_id).distinct.pluck(:key).to_set }
+  end
+  private_class_method :saved_keys
 
   def self.provider_setup(provider)
     connection = PosConnection.find_by(provider: provider[:key]) || PosConnection.new(provider: provider[:key])

@@ -9,13 +9,18 @@ class FeatureFlag
   }.freeze
 
   class << self
+    # Read once per request or job (Current resets between them); set clears it.
     def enabled?(flag)
       key = FLAGS.fetch(flag.to_sym)
-      Setting.find_by(key: key, tenant_id: Current.tenant_id)&.value == '1'
+      cache = (Current.metadata[:feature_flags] ||= {})
+      cache.fetch([Current.tenant_id, key]) do
+        cache[[Current.tenant_id, key]] = Setting.find_by(key: key, tenant_id: Current.tenant_id)&.value == '1'
+      end
     end
 
     def set(flag, enabled)
       key = FLAGS.fetch(flag.to_sym)
+      Current.metadata.delete(:feature_flags)
       Setting.find_or_create_for(key, Current.tenant_id) do |setting|
         setting.value = enabled ? '1' : '0'
       end
