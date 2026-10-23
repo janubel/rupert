@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_230000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -877,6 +877,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_220000) do
     t.index ["message_id"], name: "index_chat_attachments_on_message_id"
     t.index ["room_id"], name: "index_chat_attachments_on_room_id"
     t.index ["tenant_id", "drive_status"], name: "index_chat_attachments_on_tenant_id_and_drive_status"
+  end
+
+  create_table "chat_battery_questions", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "set_name", null: false
+    t.string "question_id", null: false
+    t.string "status", default: "active", null: false
+    t.text "question"
+    t.text "expect"
+    t.string "cadence"
+    t.string "area"
+    t.text "checks_json"
+    t.text "needs_json"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "set_name", "question_id"], name: "idx_chat_battery_questions_scope", unique: true
   end
 
   create_table "chat_battery_runs", force: :cascade do |t|

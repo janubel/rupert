@@ -761,6 +761,23 @@ When a bot finishes, `TeamChat::Suggestions.follow_ups` picks up to four questio
 `tool_topics:`), never the question just asked, and stores them in `meta['follow_ups']`. While the newest message
 is a finished bot answer, the bubble row above the box shows "Next:" with those; otherwise the usual bubbles.
 
+### Test questions page (2026-10-23)
+
+Team chat → Model scores → **Open test questions** (`/chat/models/questions`, `TeamChatQuestionsController`) shows
+every question set (General = `battery.yml`, Finance, Across areas) with each question, what a good answer does,
+and the tools whose output the grader treats as the truth. People who can use team chat can:
+
+- **Add** a question (id `w1`, `w2`…), **Edit** any question (a built-in one gets the workspace's own copy),
+  **Remove** a built-in one from the set and **Restore** it as shipped. Stored per workspace in
+  `chat_battery_questions` (`TeamChat::BatteryQuestion`); the YAML files are unchanged. Checks are read-only Rupert
+  tools, one per line with `key=value` arguments (`daily_close from=yesterday.from to=yesterday.to`), at most three.
+- **Run these questions** on a bot: `TeamChat::BatteryJob` in the background, one run at a time, skipped if the
+  same bot, model, set and build already ran. Answers appear in the bot's test room; the grade on Model scores.
+
+An edited set is saved under its own name (`finance-edited-1a2b3c`, a digest of the edits), so its scores are never
+compared with the built-in questions or an earlier version of the edits. Changes are in the activity log
+(`team_chat_question_changed`). Bookkeepers need team chat access (settings permission) to open the page.
+
 ## Edited and deleted requests
 
 Each human message has a server-owned revision counter in its private metadata.

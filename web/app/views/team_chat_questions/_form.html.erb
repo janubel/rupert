@@ -1,0 +1,15 @@
+<%# One test question. Checks: one tool per line with optional key=value arguments, e.g. "daily_close from=yesterday.from to=yesterday.to". %>
+<%= form_with url: url, method: method, class: 'mt-3 grid gap-3' do %>
+  <label><span class="field-label">Question</span><%= text_area_tag :question, item&.question, rows: 2, maxlength: 500, required: true, class: 'input' %></label>
+  <label><span class="field-label">What a good answer does (the grader reads this)</span><%= text_area_tag :expect, item&.expect, rows: 2, maxlength: 1000, class: 'input' %></label>
+  <div class="grid gap-3 sm:grid-cols-2">
+    <label><span class="field-label">Kind</span><%= select_tag :cadence, options_for_select(TeamChat::BatteryQuestion::CADENCES, item&.cadence || 'daily'), class: 'select' %></label>
+    <label><span class="field-label">Part of Rupert (optional)</span><%= text_field_tag :area, item&.module, maxlength: 30, placeholder: 'sell, bookkeeping, stock…', class: 'input' %></label>
+  </div>
+  <label><span class="field-label">Tools with the right answer, one per line (up to 3)</span>
+    <%= text_area_tag :checks, Array(item&.checks).map { |check| check_text.call(check) }.join("\n"), rows: 2, class: 'input font-mono text-xs', placeholder: "daily_close\nperiod_review period=yesterday" %>
+    <span class="mt-1 block text-xs text-taupe">Leave empty for an honesty question (Rupert has no data for it). Tools: <%= tools.join(', ') %>. Dates: today, yesterday, last_month.from…</span></label>
+  <details><summary class="cursor-pointer text-xs text-mocha">Fields the answer must use (optional)</summary>
+    <%= text_area_tag :needs, Array(item&.needs).join("\n"), rows: 2, class: 'input mt-1 font-mono text-xs', placeholder: 'daily_close:stores' %></details>
+  <div><%= submit_tag submit, class: 'btn-primary btn-sm' %></div>
+<% end %>
