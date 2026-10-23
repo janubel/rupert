@@ -61,6 +61,8 @@ module TeamChat
       @execution.pin_configuration!(@config)
       return fail!(:error, started) unless @asker && @trigger && TeamChat.allowed?(@asker)
 
+      return deliver_privately! unless @room.direct?
+
       @topics = question_topics
       # Local bots get only the tools for what the question is about (smaller prompt, fewer wrong picks), unless
       # RUPERT_LOCAL_TOOLS=all: then every tool, so the instructions and tool list stay the same from question to
@@ -139,6 +141,25 @@ module TeamChat
     end
 
     private
+
+    # Every assistant turn is private, including ordinary prose: classifying a
+    # question or trusting a model to redact history is not an access boundary.
+    # The handoff and source receipt commit together under the run's claim.
+    def deliver_privately!
+      @execution.locked do
+        private_room = Room.direct_for(@asker)
+        if @trigger.body.present?
+          trigger = private_room.messages.create!(user: @asker, author_kind: 'person', body: @trigger.body)
+          meta = { 'asked_by' => @asker.id, 'trigger_id' => trigger.id, 'source_room_id' => @room.id, 'isolated' => true }
+          meta['agent'] = @local_agent.handle if @local_agent
+          reply = private_room.messages.create!(author_kind: 'assistant', status: 'pending', activity: 'Thinking', meta: meta)
+          Run.for_reply!(reply)
+          ActiveRecord.after_all_transactions_commit { ReplyJob.perform_later(reply.id) }
+        end
+        @reply.update!(body: "Continue in [your private Rupert room](/chat/#{private_room.slug}) for my answer. Files and quoted messages are not forwarded.", status: 'done', activity: nil)
+        @execution.run.update!(state: 'succeeded', owner_token: nil, lease_until: nil)
+      end
+    end
 
     def answer
       return answer_with_cli unless @config.native?

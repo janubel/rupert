@@ -12,7 +12,8 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
     @user = users(:regular_user)
     Current.tenant = @tenant
     Current.user = @user
-    @room = TeamChat::Room.ensure_defaults!(@user)
+    @room = TeamChat::Room.direct_for(@user)
+    @room.update!(assistant_mode: 'mentions')
     @previous = ENV['RUPERT_LOCAL_LLM_URL']
     ENV['RUPERT_LOCAL_LLM_URL'] = LLM_BASE
   end
@@ -146,12 +147,12 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
   test 'the instructions stay the same from question to question so the model server can reuse them' do
     requests = script_model({ text: 'One.' }, { text: 'Two.' })
     TeamChat::Agent.new(post('@qwen how were sales yesterday?').replies.first).run
-    other = TeamChat::Room.create!(name: 'inventory', slug: 'inventory', kind: 'channel', created_by: @user)
+    other = TeamChat::Room.create!(name: 'inventory', slug: 'inventory', kind: 'direct', assistant_mode: 'mentions', created_by: @user)
     reply = TeamChat::Post.call(room: other, user: @user, body: '@qwen any low stock?').replies.first
     TeamChat::Agent.new(reply).run
 
     assert_equal requests.first['messages'].first['content'], requests.last['messages'].first['content']
-    assert_match(/\AContext for this reply \(from Rupert\):\nYou are in the #inventory room/, requests.last['messages'].last['content'])
+    assert_match(/\AContext for this reply \(from Rupert\):\nYou are in your direct room with/, requests.last['messages'].last['content'])
     assert_match(/Today is \w+day #{Date.current.iso8601}/, requests.last['messages'].last['content'])
   end
 

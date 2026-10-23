@@ -4,6 +4,9 @@ module TeamChat
   # Fences every checkpoint, proposal and public write. No transaction spans a
   # model request or a read tool. Proposal + replay receipt commit together.
   class Execution
+    AccessChanged = Class.new(Run::Stopped)
+    ACCESS_CHANGED = 'Access changed. Please ask Rupert again in your private room.'
+
     attr_reader :run, :token
     attr_accessor :chat
 
@@ -13,6 +16,8 @@ module TeamChat
     end
 
     def check!
+      raise Run::Stopped, 'Wrong tenant context' unless Current.tenant_id == run.tenant_id
+
       run.reload
       run.expire! if run.deadline_at <= Time.current
       raise Run::Stopped, 'Run no longer owned' unless run.state == 'running' && run.owner_token == token && run.lease_until > Time.current
@@ -21,7 +26,36 @@ module TeamChat
         run.cancel!
         raise Run::Stopped, 'Reply deleted'
       end
+      check_access!
       true
+    end
+
+    # Always use fresh records: User memoizes effective permissions, and a
+    # recovered transcript may contain results obtained before access changed.
+    def check_access!
+      message = run.message.reload
+      context = run.request_context.to_h
+      user = User.find_by(id: context['requester_id'], tenant_id: run.tenant_id)
+      room = Room.find_by(id: message.room_id, tenant_id: run.tenant_id)
+      source = context['source_room_id'] && Room.find_by(id: context['source_room_id'], tenant_id: run.tenant_id)
+      valid = Current.tenant_id == run.tenant_id && user && TeamChat.allowed?(user) && user.can?('dashboard.read') &&
+        user.tenant&.status == 'active' && room&.visible_to?(user) &&
+        context['permissions_signature'].present? && context['permissions_signature'] == user.permissions_signature &&
+        message.meta.to_h['asked_by'] == context['requester_id'] &&
+        message.meta.to_h['trigger_id'] == context['trigger_id'] &&
+        (!context['source_room_id'] || source&.visible_to?(user))
+      return if valid
+
+      stop_for_access_change!
+      raise AccessChanged, 'Access changed'
+    end
+
+    def private_delivery!
+      room = run.message.room.reload
+      return if room.direct? && room.created_by_id == run.request_context['requester_id']
+
+      stop_for_access_change!
+      raise AccessChanged, 'Business answers require a private Rupert room'
     end
 
     def remaining
@@ -33,6 +67,18 @@ module TeamChat
       run.with_lock do
         check!
         yield
+      end
+    rescue AccessChanged
+      # check! may run inside this transaction. Persist cancellation after its
+      # rollback as well, so a rejected stream cannot leave a recoverable run.
+      stop_for_access_change!
+      raise
+    end
+
+    def stop_for_access_change!
+      run.with_lock do
+        # A slow access check from a superseded worker cannot cancel its successor.
+        run.terminalize!('cancelled', ACCESS_CHANGED, dismiss: true) if run.state == 'running' && run.owner_token == token
       end
     end
 
@@ -51,6 +97,7 @@ module TeamChat
 
     def write_reply!(attributes, terminal: nil)
       locked do
+        private_delivery!
         run.message.update!(attributes)
         run.update!(state: terminal, owner_token: nil, lease_until: nil) if terminal
       end
@@ -58,6 +105,7 @@ module TeamChat
 
     def tool!(id, name, arguments, write: false)
       check!
+      private_delivery!
       raise 'Tool call has no durable ID' if id.blank?
 
       cached = run.tool_results.find { |entry| entry['id'] == id }

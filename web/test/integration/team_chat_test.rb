@@ -902,4 +902,25 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   ensure
     ENV.delete('RUPERT_LOCAL_LLM_URL')
   end
+  test 'a mixed-permission channel viewer cannot fetch the private assistant delivery' do
+    channel = TeamChat::Room.ensure_defaults!(@admin)
+    message = TeamChat::Post.call(room: channel, user: @admin, body: '@rupert show sales').reply
+    TeamChat::Execution.any_instance.stubs(:start_watch)
+    TeamChat::Agent.new(message).run
+    room = TeamChat::Room.direct_for(@admin)
+    private_reply = room.messages.where(author_kind: 'assistant').last
+    context = TeamChat::Execution.new(private_reply.run, private_reply.run.claim!)
+    context.write_reply!({ body: 'PRIVATE-SALES-RESULT', status: 'done' }, terminal: 'succeeded')
+    viewer = manager
+    viewer.update_permission_overrides!(%w[settings.write dashboard.read])
+    sign_in(viewer, password: 'password123')
+    get team_chat_messages_path(channel), as: :json
+    assert_response :success
+    assert_includes response.body, 'private Rupert room'
+    assert_not_includes response.body, 'PRIVATE-SALES-RESULT'
+    get team_chat_messages_path(room), as: :json
+    assert_response :not_found
+    assert_not_includes response.body, 'PRIVATE-SALES-RESULT'
+  end
+
 end

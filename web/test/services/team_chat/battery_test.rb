@@ -40,7 +40,7 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     battery = TeamChat::Battery.new(user: @user, agent: 'liquid', grader: grader, items: items, out: nil)
     results = battery.run
 
-    room = TeamChat::Room.find_by!(slug: 'test-liquid')
+    room = TeamChat::Room.find_by!(slug: "test-liquid-#{@user.id}")
     assert_equal ['done', 'done'], results.map(&:status)
     assert_equal [['period_review'], []], results.map(&:tools)
     replies = room.messages.where(author_kind: 'assistant').order(:id)
@@ -110,11 +110,15 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
 
   test 'every bot gets its own test room, created up front' do
     slugs = TeamChat::Battery.ensure_rooms!(@user).map(&:slug)
-    assert_includes slugs, 'test-rupert'
-    assert_includes slugs, 'test-liquid'
-    assert_includes slugs, 'test-gemma-e2b'
+    assert_includes slugs, "test-rupert-#{@user.id}"
+    assert_includes slugs, "test-liquid-#{@user.id}"
+    assert_includes slugs, "test-gemma-e2b-#{@user.id}"
     assert_equal slugs.size, TeamChat::Room.where(slug: slugs).count
-    assert TeamChat::Room.find_by(slug: 'test-qwen').visible_to?(@user)
+    assert TeamChat::Room.where(slug: slugs).all? { |room| room.direct? && room.created_by_id == @user.id }
+    other = User.create!(tenant: @tenant, email: 'battery-peer@example.com', role: 'admin', password: 'password123')
+    assert TeamChat::Room.where(slug: slugs).none? { |room| room.visible_to?(other) }
+    assert TeamChat::Room.find_by(slug: "test-qwen-#{@user.id}").visible_to?(@user)
+    assert_equal "rupert-#{@user.id}", TeamChat::Room.direct_for(@user).slug
   end
 
   test 'trial models are only for the battery, and an unknown bot is refused' do
