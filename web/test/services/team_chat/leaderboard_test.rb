@@ -34,7 +34,7 @@ class TeamChatLeaderboardTest < ActiveSupport::TestCase
     top, second = rows
     assert top.leader
     assert_not second.leader
-    assert_equal ['qwen', 'local', 21], [top.handle, top.where, top.graded], 'the handle is the bot people use now (@qwen), not the test name'
+    assert_equal ['qwen-35b', 'local', 21], [top.handle, top.where, top.graded], 'the 35B left @qwen on 2026-10-23; it shows under its test name'
     assert_equal 100, top.cells['sell'].score
     assert_equal 100, top.cells['bookkeeping'].score
     assert_equal 60, top.cells['honesty'].score

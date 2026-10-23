@@ -1573,7 +1573,8 @@ export default class extends Controller {
   }
 
   useStarter(event) {
-    this.inputTarget.value = event.currentTarget.textContent.trim()
+    if (this.formTarget.dataset.busy === "true") return
+    this.inputTarget.value = (event.currentTarget.dataset.text || event.currentTarget.textContent).trim()
     this.input()
     this.formTarget.requestSubmit()
   }

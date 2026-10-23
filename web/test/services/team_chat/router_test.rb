@@ -40,10 +40,10 @@ class TeamChatRouterTest < ActiveSupport::TestCase
   end
 
   test 'a question with no bot named goes where routing.yml says' do
-    assert_equal ['qwen-4b'], answered_by(post('Which tasks are overdue?'))
+    assert_equal ['qwen'], answered_by(post('Which tasks are overdue?'))
 
     finance = post('How much sales tax did we collect last month?')
-    assert_equal %w[rupert qwen-4b], answered_by(finance)
+    assert_equal %w[rupert qwen], answered_by(finance)
     assert(finance.replies.all? { |reply| reply.meta['compare_of'] == finance.message.id && reply.meta['route'] == 'finance' }, 'side by side')
 
     assert_equal ['rupert'], answered_by(post('How many hours did the team work last pay week, and how did sales do over the same days?'))
@@ -51,7 +51,7 @@ class TeamChatRouterTest < ActiveSupport::TestCase
   end
 
   test 'naming a bot, or @rupert, skips routing' do
-    assert_equal ['liquid'], answered_by(post('@liquid which tasks are overdue?'))
+    assert_equal ['gemma'], answered_by(post('@gemma which tasks are overdue?'))
     assert_equal ['rupert'], answered_by(post('@rupert which tasks are overdue?'))
   end
 

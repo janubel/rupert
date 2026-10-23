@@ -1,0 +1,35 @@
+# Suggestion bubbles always shown above the chat box (TeamChat::Suggestions). A tap sends the question.
+# In a channel where bots answer only when named (#admins), the bubble adds "@rupert " so someone answers.
+# Six are shown, chosen per person per day: the ones for this time of day first, then the rest in a daily order.
+# Keep each one a question Rupert's tools can answer (config/team_chat/data_guide.yml). Edit and deploy; no code change.
+
+# Before 11:00
+morning:
+  - How did yesterday go?
+  - What should I look at first today?
+  - Any orders waiting to ship?
+# 11:00 to 16:59
+afternoon:
+  - How are sales today so far?
+  - Anything low on stock?
+  - Any overdue tasks?
+# From 17:00
+evening:
+  - How did today go?
+  - Is today's money review done?
+  - What is still open for tomorrow?
+# Mondays
+monday:
+  - How did last week compare with the week before?
+# The 1st to the 5th of the month
+month_start:
+  - Is last month closed in the books?
+  - How much sales tax did we collect last month?
+anytime:
+  - Any alerts I should look at?
+  - Is sync healthy?
+  - What are the top sellers this week?
+  - Who is working today?
+  - Any timesheets waiting for approval?
+  - Any unpaid invoices?
+  - How do I add an expense?

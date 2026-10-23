@@ -45,7 +45,7 @@ module TeamChat
     # user: who the questions are asked as (their permissions). agent: a local bot handle, or 'rupert'.
     attr_reader :set
 
-    def initialize(user:, agent: 'liquid', only: nil, grader: Grader.new, items: self.class.items, out: $stdout, set: 'default')
+    def initialize(user:, agent: 'qwen', only: nil, grader: Grader.new, items: self.class.items, out: $stdout, set: 'default')
       @set = set.to_s.presence || 'default'
       @user = user
       @agent = agent.to_s == 'rupert' ? nil : (LocalAgents.find(agent) || LocalAgents.trial(agent))
@@ -66,7 +66,7 @@ module TeamChat
     def self.room_slug(handle) = "test-#{handle.presence || 'rupert'}"
 
     # Evaluation can read business data too: use a separate requester-owned room.
-    def self.room_for(user, handle = 'liquid')
+    def self.room_for(user, handle = 'qwen')
       slug = "#{room_slug(handle)}-#{user.id}"
       room = Room.find_by(slug: slug) ||
              Room.create!(name: slug, slug: slug, kind: 'direct', topic: format(ROOM_TOPIC, handle: handle.presence || 'rupert'),
