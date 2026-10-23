@@ -120,6 +120,8 @@
     <% end %>
 
     <main id="main" tabindex="-1" class="app-main<%= ' app-main-wide' if content_for?(:wide_page) %> focus:outline-none">
+      <%# Next thing to do (NextThingsController): loads after the page into its own frame; empty when nothing is waiting. %>
+      <% if Current.user %><turbo-frame id="next_thing" src="<%= next_thing_path %>" loading="lazy"></turbo-frame><% end %>
       <% if (down_location = card_processing_down_location) %>
         <div role="alert" class="flash flash-alert mb-4 flex flex-wrap items-center justify-between gap-3" data-card-processing-banner>
           <span><strong>Card processing is down.</strong> Customers cannot pay by card until the payment gateway is connected and verified.</span>

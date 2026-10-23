@@ -470,6 +470,13 @@ Rails.application.routes.draw do
     end
   end
   resources :ledger, only: :index
+  # Next thing to do bar (NextThingsController).
+  resource :next_thing, only: :show do
+    post :done
+    post :snooze
+    post :skip
+    post :mode
+  end
   resources :alerts, only: :index do
     collection do
       post :update_status

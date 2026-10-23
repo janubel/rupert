@@ -409,6 +409,16 @@
 }
 
 /* Status bar: one thin strip under every page (sync, Team chat badge, report a problem, help, build). */
+/* Next thing to do (shared shell, docs/ui-standards.md §2): one quiet line at the top of the page,
+   the most urgent item with the page that fixes it. Ops mode gives it a little more weight. */
+#next_thing { display:block; }
+.next-bar { display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .6rem;margin:0 0 1rem;padding:.45rem .75rem;border:1px solid var(--color-fog);border-radius:var(--radius-card,0.75rem);background:var(--color-paper);font-size:.85rem;color:var(--color-ink); }
+.next-bar-ops { border-color:var(--color-edge);background:color-mix(in srgb,var(--color-paper) 88%,var(--color-oat));padding:.6rem .85rem; }
+.next-bar-label { font-weight:600;color:var(--color-mocha);white-space:nowrap; }
+.next-bar-text { flex:1 1 16rem;min-width:0; }
+.next-bar-link { font-weight:600;color:var(--color-ink);text-decoration:underline;text-underline-offset:2px; }
+.next-bar-detail { color:var(--color-taupe); }
+.next-bar-actions { display:flex;flex-wrap:wrap;align-items:center;gap:.25rem; }
 .app-statusbar { position:fixed;left:var(--rail-w,0px);right:0;bottom:0;z-index:25;display:flex;align-items:center;gap:.25rem;height:2.1rem;padding:0 .75rem;border-top:1px solid var(--color-fog);background:color-mix(in srgb,var(--color-paper) 82%,var(--color-oat));font-size:.75rem;color:var(--color-taupe);transition:left .15s ease; }
 @supports (backdrop-filter: blur(1px)) { .app-statusbar { background:color-mix(in srgb,var(--color-paper) 70%,transparent);backdrop-filter:saturate(160%) blur(12px); } }
 .statusbar-item { display:inline-flex;align-items:center;gap:.4rem;min-height:1.7rem;padding:0 .5rem;border-radius:.45rem;color:var(--color-taupe);white-space:nowrap; }

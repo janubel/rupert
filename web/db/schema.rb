@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_220000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -379,7 +379,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_150000) do
     t.boolean "ready_for_development", default: false, null: false
     t.datetime "ready_marked_at"
     t.string "ready_marked_by"
+    t.integer "github_issue_number"
+    t.string "github_issue_url"
+    t.string "github_state"
+    t.datetime "github_synced_at"
     t.index ["api_access_token_id"], name: "index_agent_feedbacks_on_api_access_token_id"
+    t.index ["github_issue_number"], name: "index_agent_feedbacks_on_github_issue_number"
     t.index ["task_id"], name: "index_agent_feedbacks_on_task_id"
     t.index ["tenant_id", "created_at"], name: "index_agent_feedbacks_on_tenant_id_and_created_at"
     t.index ["tenant_id", "source_ref"], name: "idx_agent_feedbacks_source_ref"
@@ -1993,6 +1998,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_150000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["tenant_id", "period_kind", "period_from"], name: "idx_money_reconciliation_period", unique: true
+  end
+
+  create_table "next_thing_dismissals", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.string "item_key", null: false
+    t.string "fingerprint"
+    t.string "kind", null: false
+    t.datetime "until_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "user_id", "item_key"], name: "idx_next_thing_dismissals_scope", unique: true
   end
 
   create_table "notifications", force: :cascade do |t|
