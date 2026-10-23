@@ -60,11 +60,14 @@ module TeamChat
       @telemetry.measure('execution') do
         @execution = Execution.new(durable_run, token)
         @execution.start_watch
-        @execution.pin_configuration!(@config)
         return fail!(:error, started) unless @asker && @trigger && TeamChat.allowed?(@asker)
 
         return deliver_privately! unless @room.direct?
 
+        return if NavigationAnswer.new(@execution, telemetry: @telemetry).call(started: started)
+
+        @execution.pin_configuration!(@config)
+        @telemetry.record('routing', outcome: 'succeeded', facts: { 'route' => 'agent' })
         sanitize_draft!
         @topics = question_topics
         # Local bots get only the tools for what the question is about (smaller prompt, fewer wrong picks), unless
@@ -157,6 +160,8 @@ module TeamChat
           trigger = private_room.messages.create!(user: @asker, author_kind: 'person', body: @trigger.body)
           meta = { 'asked_by' => @asker.id, 'trigger_id' => trigger.id, 'source_room_id' => @room.id, 'isolated' => true }
           meta['agent'] = @local_agent.handle if @local_agent
+          # Preserve routing context without copying a file, quoted content or shared history.
+          meta['navigation_requires_agent'] = true if NavigationAnswer.contextual?(@reply, @trigger) || @reply.body.present? || @reply.actions_list.any?
           reply = private_room.messages.create!(author_kind: 'assistant', status: 'pending', activity: 'Thinking', meta: meta)
           Run.for_reply!(reply)
           ActiveRecord.after_all_transactions_commit { ReplyJob.perform_later(reply.id) }
@@ -220,7 +225,7 @@ module TeamChat
         if last&.tool_call?
           chat.run_tools
         else
-          @execution.generate(chat) do |chunk|
+          chat = generate_native(chat) do |chunk|
             next if chunk.content.blank?
 
             buffer << chunk.content
@@ -242,6 +247,28 @@ module TeamChat
       raise Failure.new(:timeout, e.message)
     rescue RubyLLM::Error => e
       raise Failure.new(:error, e.message)
+    end
+
+    # Rebuild from the durable checkpoint after a refusal; never replay tools
+    # or a partially streamed response, and never delegate retries to the SDK.
+    def generate_native(chat)
+      loop do
+        streamed = false
+        begin
+          @execution.generate(chat) do |chunk|
+            streamed = true
+            yield chunk
+          end
+          return chat
+        rescue RubyLLM::Error => error
+          delay = @config.local? || streamed ? nil : GenerationRetry.delay(error)
+          raise unless delay && @execution.reserve_retry!(delay, status: error.response.status)
+
+          activity!('Retrying model')
+          @telemetry.measure('retry_wait') { @execution.wait_for_retry!(delay) }
+          chat = native_chat
+        end
+      end
     end
 
     def record_cli_usage(usage, cost)
@@ -464,7 +491,7 @@ module TeamChat
 
     # Cloud replies count toward System → AI health's token totals, as Ask Rupert's do.
     def note_ai_health(outcome)
-      return if %w[ollama local_gateway].include?(@engine) || !defined?(AiAgentRun)
+      return if direct_navigation? || %w[ollama local_gateway].include?(@engine) || !defined?(AiAgentRun)
 
       meta = @reply.meta.to_h
       AiAgentRun.create!(agent: 'team_chat', model: meta['model'].to_s, outcome: outcome, tokens_in: @tokens_in, tokens_out: @tokens_out,
@@ -473,10 +500,13 @@ module TeamChat
       Rails.logger.warn "[TeamChat] could not note ai health: #{e.class}"
     end
 
+    def direct_navigation? = @execution&.run&.configuration&.dig('engine') == NavigationAnswer::ENGINE
+
     def meta_with(started, outcome)
       ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
-      @reply.meta.to_h.merge('engine' => @engine, 'model' => (@engine == 'opencode_cli' ? AskRupert::Providers::Opencode.new.model : @config.model),
-        'tokens_in' => @tokens_in, 'tokens_out' => @tokens_out, 'tools' => @toolbox&.tools_used.to_a.uniq, 'duration_ms' => ms, 'outcome' => outcome)
+      model = @engine == 'opencode_cli' ? AskRupert::Providers::Opencode.new.model : @config.model
+      @reply.meta.to_h.merge('engine' => direct_navigation? ? NavigationAnswer::ENGINE : @engine, 'model' => direct_navigation? ? nil : model,
+        'tokens_in' => direct_navigation? ? nil : @tokens_in, 'tokens_out' => direct_navigation? ? nil : @tokens_out, 'tools' => @toolbox&.tools_used.to_a.uniq, 'duration_ms' => ms, 'outcome' => outcome)
         .tap { |meta| meta['topics'] = @topics.map(&:key) if @topics.present? }
     end
 

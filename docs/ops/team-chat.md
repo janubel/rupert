@@ -554,6 +554,29 @@ are added, currencies converted or new financial calculations performed here.
 Replies contain at most twelve complete facts and explicitly disclose omissions.
 
 
+## Bounded cloud generation retries
+
+The native cloud agent may reserve one additional generation per durable run after
+an explicit HTTP 429, 500, 502, 503, 504 or 529 refusal, only before any streamed chunk.
+The SDK's automatic retry remains disabled when the agent supplies its remaining
+whole-run budget. Network timeouts/connection failures, malformed requests, authorization
+or billing errors, partially streamed responses and local model cold starts do not retry.
+
+The default wait is half a second. A valid Retry-After delay or HTTP date is honored
+only within five seconds and with at least one further second in the run budget.
+Invalid or longer hints fail normally. The wait polls current permissions, cancellation,
+claim ownership and deadlines. Each request is rebuilt from the durable transcript with
+a fresh remaining timeout; tools from a completed round are not repeated. Reservation
+is recorded before waiting and survives worker recovery, preventing a fresh allowance
+on each restart. This does not imply exactly-once provider billing.
+
+Telemetry keeps each physical provider attempt, its failed/successful outcome and nullable
+usage/cost. `generation_retry_reservations` counts durable reservations, including a retry
+cancelled before it starts; `provider_attempts` remains the actual observed attempt count.
+`transport_retries` continues to describe SDK retries within a generation; `retry_wait`
+records actual backoff duration and completion/interruption separately. No exception
+messages, provider bodies, conversation text or credentials enter retry facts.
+
 ## Durable chat telemetry
 
 `chat_telemetry` is the private operational ledger for new chat runs. It is tenant scoped,
@@ -600,6 +623,40 @@ reported stage durations and completeness, claim and physical attempt counts, SD
 partial token totals and per-field completeness, reported USD cost and cost completeness.
 Do not sum nested execution/generation/inference timings as elapsed time, or interpret
 `failed_spans` (which includes nested receipts) as a count of failed replies.
+
+
+## Direct page navigation
+
+Clear, standalone page-navigation requests can be answered from `AskRupert::Guide`
+without invoking a model: for example “Where are Timesheets?”, “Open Inventory”,
+or “Where is stock?”. The router requires a complete supported navigation phrase
+and exactly one permitted page with an exact title, registered key, singular key,
+or a small allowlist of the guide's clear aliases. Generic search keywords such as
+“time”, “hours” or “new” do not become navigation shortcuts. Unknown, ambiguous,
+negated, mixed, threaded, quoted and attachment-bearing requests continue through the agent.
+Private handoff preserves that routing restriction as a boolean without forwarding
+the file, quote or shared history. Existing drafts or action cards also retain the agent path.
+Explicit local agents, model comparisons and battery evaluations also continue
+through their existing model path.
+
+Private handoff happens first. Direct answers keep the same atomic claim, whole-run
+deadline, cancellation and fresh permission-signature checks as model answers.
+The selected page key, normalized query and router version are pinned in the private
+run configuration before lookup. Recovery keeps that route even if model settings
+change, re-resolves the permitted destination and verifies its actual guide link.
+A previous model run cannot be reclassified, and an unsupported saved navigation
+version or missing destination fails closed. The immutable original request snapshot
+supplies the query; no cached answer or URL is replayed. Publication uses the ordinary
+fenced terminal write, so a revoked permission, cancelled run or superseded claimant
+cannot deliver the link. Read-only lookup may repeat after a crash; the reply does not.
+
+Routing and lookup timings are recorded in `chat_telemetry`. The reply uses engine
+`direct_navigation`, a null model and null token counts, with server-local answer timing.
+The telemetry summary marks inference and cost `not_applicable` for this route when
+no provider or CLI attempt exists. It does not fabricate provider token counts or a
+reported zero price, and it creates no model-health charge record or model-score entry. The direct path
+needs no model credentials and changes no model-provider configuration. Existing
+`chat_runs.configuration` stores the checkpoint, so no database migration is needed.
 
 ## Assistant destination links
 

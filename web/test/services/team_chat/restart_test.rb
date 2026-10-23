@@ -3,6 +3,7 @@
 require 'test_helper'
 require_relative '../../support/team_chat_helper'
 require 'timeout'
+require 'minitest/mock'
 
 class TeamChatRestartTest < ActiveSupport::TestCase
   include TeamChatHelper
@@ -88,6 +89,43 @@ class TeamChatRestartTest < ActiveSupport::TestCase
     actor&.join
   end
 
+  test 'SIGKILL after reserving a retry cannot replenish the allowance on recovery' do
+    reader, writer = IO.pipe
+    request = stub_request(:post, "#{LLM_BASE}/chat/completions").to_return(status: 503, body: '{"error":{"message":"temporary refusal"}}')
+    ActiveRecord::Base.connection_handler.clear_all_connections!
+    child = fork do
+      reader.close
+      ActiveRecord::Base.establish_connection
+      TeamChat::Execution.define_method(:wait_for_retry!) do |_delay|
+        writer.write('reserved')
+        writer.flush
+        Process.kill('KILL', Process.pid)
+      end
+      TeamChat::Agent.new(TeamChat::Message.find(@reply.id), config: team_chat_config).run
+      exit! 2
+    end
+    writer.close
+    assert_equal 'reserved', Timeout.timeout(10) { reader.read }
+    _, status = Process.waitpid2(child)
+    child = nil
+    assert_equal Signal.list.fetch('KILL'), status.termsig
+    run = TeamChat::Run.unscoped.find_by!(message_id: @reply.id)
+    assert_equal 'running', run.state
+    assert_equal 1, TeamChat::Telemetry.summary(run)['generation_retry_reservations']
+    run.update!(lease_until: 1.second.ago)
+    TeamChat::Agent.new(@reply.reload, config: team_chat_config).run
+    assert_requested request, times: 1 # Child requests are in a separate process.
+    assert_equal 'failed', run.reload.state
+    assert_equal 2, run.attempts
+    assert_equal 1, TeamChat::Telemetry.summary(run)['generation_retry_reservations']
+    assert_equal 2, TeamChat::Telemetry.where(run_id: run.id, kind: 'provider_attempt').count
+  ensure
+    Process.kill('KILL', child) if child
+    Process.waitpid(child) if child
+    reader&.close unless reader&.closed?
+    writer&.close unless writer&.closed?
+  end
+
   test 'SIGKILL after tool checkpoint recovers in a new process without another proposal' do
     reader, writer = IO.pipe
     stub_request(:post, "#{LLM_BASE}/chat/completions").to_return do |request|
@@ -127,6 +165,51 @@ class TeamChatRestartTest < ActiveSupport::TestCase
     assert_equal 2, ledger.where(kind: 'provider_attempt').count
     assert ledger.where(kind: 'inference', outcome: 'interrupted', duration_ms: nil).exists?
     assert_not TeamChat::Telemetry.summary(run)['tokens']['input_tokens']['complete']
+  ensure
+    Process.kill('KILL', child) if child
+    Process.waitpid(child) if child
+    reader&.close unless reader&.closed?
+    writer&.close unless writer&.closed?
+  end
+
+  test 'SIGKILL after navigation selection resumes the pinned destination without provider inference' do
+    navigation = TeamChat::Post.call(room: @room, user: @user, body: '@rupert where are timesheets?').reply
+    reader, writer = IO.pipe
+    ActiveRecord::Base.connection_handler.clear_all_connections!
+    child = fork do
+      reader.close
+      ActiveRecord::Base.establish_connection
+      lookup = AskRupert::Tools.new(user: @user)
+      proxy = Object.new
+      proxy.define_singleton_method(:call) do |name, args|
+        lookup.call(name, args)
+        writer.write('navigation-selected')
+        writer.flush
+        Process.kill('KILL', Process.pid)
+      end
+      AskRupert::Tools.stub(:new, ->(**_args) { proxy }) do
+        TeamChat::Agent.new(TeamChat::Message.find(navigation.id), config: team_chat_config).run
+      end
+      exit! 2
+    end
+    writer.close
+    assert_equal 'navigation-selected', Timeout.timeout(10) { reader.read }
+    _, status = Process.waitpid2(child)
+    child = nil
+    assert_equal Signal.list.fetch('KILL'), status.termsig
+    run = TeamChat::Run.unscoped.find_by!(message_id: navigation.id)
+    assert_equal 'direct_navigation', run.configuration['engine']
+    assert_equal 'timesheets', run.configuration['page_key']
+    assert_equal 'running', run.state
+    run.update!(lease_until: 1.second.ago)
+    TeamChat::Agent.new(navigation.reload, config: team_chat_config('RUPERT_CHAT_MODEL' => 'different-unused-model')).run
+    assert_equal 'succeeded', run.reload.state
+    assert_equal 2, run.attempts
+    assert_equal 'Open [Timesheets](/people/timesheets).', navigation.reload.body
+    assert_equal 0, TeamChat::Telemetry.where(run_id: run.id, kind: 'provider_attempt').count
+    assert_equal 'not_applicable', TeamChat::Telemetry.summary(run)['inference']
+    assert TeamChat::Telemetry.where(run_id: run.id, kind: 'tool', outcome: 'interrupted').exists?
+    assert_not_requested :post, "#{LLM_BASE}/chat/completions"
   ensure
     Process.kill('KILL', child) if child
     Process.waitpid(child) if child

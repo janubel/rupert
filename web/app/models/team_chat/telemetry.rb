@@ -20,17 +20,22 @@ module TeamChat
         [field, { 'reported' => values.compact.presence&.sum, 'complete' => usage.any? && !incomplete && values.none?(&:nil?) }]
       end
       costs = usage.map { |row| row.facts['cost_usd'] }
+      no_inference = run.configuration['engine'] == NavigationAnswer::ENGINE &&
+                     rows.none? { |row| %w[provider_attempt cli_inference].include?(row.kind) }
       { 'state' => run.state, 'elapsed_ms' => ([(run.updated_at - run.created_at) * 1000, 0].max.round unless Run::ACTIVE.include?(run.state)), 'queue_ms' => rows.find { |row| row.kind == 'claim' }&.facts&.fetch('queue_ms', nil),
         'configuration' => run.configuration.slice('engine', 'model'),
-        'duration_ms' => %w[execution inference cli_inference tool].to_h do |kind|
+        'duration_ms' => %w[execution inference cli_inference tool retry_wait].to_h do |kind|
           spans = rows.select { |row| row.kind == kind }
           values = spans.map(&:duration_ms)
           complete = values.any? && values.none?(&:nil?) && spans.none? { |row| %w[running interrupted].include?(row.outcome) }
           [kind, { 'reported' => values.compact.presence&.sum, 'complete' => complete }]
         end,
         'claims' => rows.count { |row| row.kind == 'claim' }, 'provider_attempts' => rows.count { |row| row.kind == 'provider_attempt' },
+        'generation_retry_reservations' => rows.count { |row| row.kind == 'generation_retry' },
         'cli_invocations' => rows.count { |row| row.kind == 'cli_inference' },
         'transport_retries' => rows.select { |row| row.kind == 'generation' }.sum { |row| [row.facts.fetch('attempts', 0) - 1, 0].max },
+        'inference' => no_inference ? 'not_applicable' : 'model',
+        'cost_status' => no_inference ? 'not_applicable' : (usage.any? && !incomplete && costs.none?(&:nil?) ? 'reported' : 'unknown'),
         'tokens' => counts, 'reported_cost_usd' => costs.compact.presence&.sum,
         'cost_complete' => usage.any? && !incomplete && costs.none?(&:nil?),
         'failed_spans' => rows.count { |row| %w[failed cancelled interrupted expired].include?(row.outcome) } }
