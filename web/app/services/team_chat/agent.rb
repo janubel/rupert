@@ -369,7 +369,7 @@ module TeamChat
     end
 
     def finish(text, started)
-      body = AskRupert::ReplyFormat.tidy(text)
+      body = AskRupert::ReplyFormat.tidy(without_echo(text))
       if @toolbox.financial?
         body = FinancialEvidence.render(@toolbox.financial_evidence)
       elsif FinancialEvidence.financial_text?(body)
@@ -443,6 +443,14 @@ module TeamChat
       Array(@toolbox&.results) + transcript.map { |entry| entry[:content] }
     rescue StandardError
       Array(@toolbox&.results)
+    end
+
+    # Some local models start their reply by repeating the question as the transcript shows it ("Sean: @flint ...").
+    def without_echo(text)
+      name = @asker&.display_name
+      return text if name.blank? || !@local_agent
+
+      text.to_s.sub(/\A\s*#{Regexp.escape(name)}:[^\n]*\n+/, '')
     end
 
     # With RUPERT_VERIFY, a local bot's answer is checked sentence by sentence against its tool data and the

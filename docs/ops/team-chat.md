@@ -674,6 +674,24 @@ Resumed drafts are checked before inference resumes. Each publication reloads th
 the ordinary durable execution fence still enforces permission revocation, cancellation,
 deadlines and claim ownership at the write boundary. Human messages are unaffected.
 
+### Who answers a question that names no bot (2026-10-23)
+
+`config/team_chat/routing.yml` (TeamChat::Router). In a room where Rupert answers everything (your Rupert room), a
+question that @mentions no bot is sorted by its data guide keywords:
+
+| Kind | Who answers | Why (battery, 2026-10-22) |
+| --- | --- | --- |
+| general | Qwen 4B (`qwen-4b`) | as good as Qwen 35B on single-topic questions, ~11 s, 3 GB, so it stays loaded |
+| finance (books, tax, expenses, sales, order tracking) | @rupert and Qwen 4B side by side | meant to be private; side by side until Qwen 4B is trusted, then `[qwen-4b]` |
+| cross (finance plus stock, people, tasks or system) | @rupert | best at joining several tools |
+| "think harder", "think it through", "take your time" | Flint with thinking (`flint-think`) | best local bot on general questions, ~36 s plus a ~17 s load |
+
+Keyword hits are counted per side (finance topics vs the rest); a question is cross only when both sides have hits and
+it joins two parts ("and", "same days", "still", or one of the data guide's cross phrases), or both sides have two or
+more hits; a tie stays general. Naming a bot (@qwen, @liquid, @rupert ...) always asks just that bot. Without the local
+model server everything goes to @rupert. The gateway keeps `qwen3.5-4b` loaded (`--keep-loaded`); @qwen (35B) and
+Flint load on demand.
+
 ## Edited and deleted requests
 
 Each human message has a server-owned revision counter in its private metadata.

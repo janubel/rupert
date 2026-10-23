@@ -92,7 +92,7 @@ topics:
       date window. Quote sales per currency; do not compute your own comparison or a sales-per-hour ratio.
   - key: sales
     title: Sales and orders
-    keywords: [sales, sold, sell, revenue, gross, orders, order value, average order, aov, top products, best day, best seller, takings, shopify, square, rupert pos, today, yesterday]
+    keywords: [sales, sold, sell, revenue, gross, orders, order value, average order, aov, top products, top-selling, top selling, best-selling, best selling, best day, best seller, takings, shopify, square, rupert pos, today, yesterday]
     tools: [metric, sales_summary, period_review]
     card: >-
       For a single figure use metric (gross_sales, orders, average_order_value, best_day, sales_by_source, top_products,

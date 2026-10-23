@@ -66,13 +66,19 @@ module TeamChat
       else
         rupert = answer?(message)
         agents = LocalAgents.mentioned(@body)
+        # Naming a bot asks that bot, even in a room where @rupert answers everything.
+        rupert = message.mentions_rupert? if agents.any?
         # Replying to a bot's answer, without naming a bot, asks that same bot again.
         if !rupert && agents.empty? && quote&.assistant? && quote.status == 'done'
           agents = LocalAgents.all.select { |agent| agent.handle == quote.local_agent&.handle }
           rupert = agents.empty? # @rupert's own answer, or a local bot that is not running now
         end
-        replies << start_reply(message) if rupert
-        agents.each { |agent| replies << start_reply(message, agent: agent) }
+        # Nobody named: the router picks by topic (config/team_chat/routing.yml).
+        route = nil
+        route, rupert, agents = Router.answerers(@body) if rupert && agents.empty? && !message.mentions_rupert?
+        together = route && agents.size + (rupert ? 1 : 0) > 1
+        replies << start_reply(message, compare: together, route: route&.kind) if rupert
+        agents.each { |agent| replies << start_reply(message, agent: agent, compare: together, route: route&.kind) }
       end
       replies
     end
@@ -129,12 +135,13 @@ module TeamChat
 
     # A pending assistant reply. A local @agent's reply says "Waiting for the model"
     # until the gateway has it loaded (only one model runs at a time).
-    def start_reply(message, agent: nil, compare: false)
+    def start_reply(message, agent: nil, compare: false, route: nil)
       raise Limited, 'Rupert has answered a lot of your messages in the last few minutes. Wait a moment and ask again.' if limited?
 
       meta = { 'asked_by' => @user.id, 'trigger_id' => message.id }
       meta['agent'] = agent.handle if agent
       meta['compare_of'] = message.id if compare
+      meta['route'] = route if route
       meta['prior_reply_ids'] = @prior_reply_ids if @prior_reply_ids.any?
       reply = @room.messages.create!(author_kind: 'assistant', status: 'pending', activity: agent ? "Loading #{agent.name}" : 'Thinking',
         parent_id: message.parent_id, meta: meta)

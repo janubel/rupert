@@ -6,7 +6,7 @@ After=network-online.target
 [Service]
 User=llm
 Group=llm
-ExecStart=/usr/bin/python3 /usr/local/lib/rupert-llm/llm_gateway.py --models /etc/rupert-llm/models.json --listen 0.0.0.0:8080 --allow 127.0.0.1 --allow 10.96.131.8 --server-bin /opt/llama/current/llama-server --threads 8 --idle-seconds 600 --keep-loaded qwen3.6-35b-a3b
+ExecStart=/usr/bin/python3 /usr/local/lib/rupert-llm/llm_gateway.py --models /etc/rupert-llm/models.json --listen 0.0.0.0:8080 --allow 127.0.0.1 --allow 10.96.131.8 --server-bin /opt/llama/current/llama-server --threads 8 --idle-seconds 600 --keep-loaded qwen3.5-4b
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
