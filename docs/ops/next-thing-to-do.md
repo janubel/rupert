@@ -17,7 +17,8 @@ so everyone sees only what they may act on:
 | Stock | `list_alerts` (alerts read) | | open low-stock alerts |
 
 Someone those checks do not cover (for example an employee account) sees their own late tasks (Fix) and
-tasks due today (Watch). Fix comes before Watch; within each, broken data first, then customers waiting,
+tasks due today (Watch). The bar is in both the management app and the employee app (`layouts/employee`);
+`restrict_employee_workspace` allows `next_things` for employees, who only ever get their own tasks there. Fix comes before Watch; within each, broken data first, then customers waiting,
 then people's work, then paperwork. Results are cached two minutes per person.
 
 ## Buttons

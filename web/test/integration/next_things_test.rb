@@ -61,4 +61,25 @@ class NextThingsIntegrationTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select '.next-bar', 0, 'nothing waiting: the quiet bar is empty'
   end
+
+  test 'an employee gets the bar in the employee app with only their own tasks' do
+    tenant = @admin.tenant
+    worker = User.create!(tenant: tenant, email: 'next-employee@example.com', password: 'password123', role: 'employee')
+    worker.update_permission_overrides!(%w[tasks.self])
+    Current.set(tenant: tenant) { People::Employee.create!(first_name: 'Sam', last_name: 'Floor', user: worker) }
+    mine = Current.set(tenant: tenant) { Projects::Task.create!(title: 'Restock the tea wall', assignee: worker, due_on: Date.current - 1) }
+    delete logout_path
+    post login_path, params: { email: worker.email, password: 'password123' }
+    get employee_app_path
+    assert_response :success
+    assert_select "turbo-frame#next_thing[src='#{next_thing_path}']"
+    get next_thing_path
+    assert_response :success
+    assert_select "a.next-bar-link[href='/projects/tasks/#{mine.id}']", 'Restock the tea wall'
+    assert_select 'a.next-bar-link', count: 1
+    assert_no_match 'Approve the timesheets', response.body, "another person's task never shows"
+    post done_next_thing_path, params: { key: "task:#{mine.id}" }
+    follow_redirect!
+    assert_select '.next-bar', 0
+  end
 end
