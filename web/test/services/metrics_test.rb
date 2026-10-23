@@ -20,6 +20,10 @@ class MetricsTest < ActiveSupport::TestCase
     row
   end
 
+  def expense(day, cents, category: 'supplies')
+    Finance::Expense.create!(payee: 'Metrics fixture', category: category, amount_cents: cents, incurred_on: day)
+  end
+
   def metric(name, **options) = Metrics.call(name, today: TODAY, **options)
 
   test 'gross sales per currency, with each source, compared with the period before' do
@@ -80,5 +84,35 @@ class MetricsTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { metric('orders', period: 'last_decade') }
     assert_raises(ArgumentError) { metric('orders', compare: 'tomorrow') }
     assert_raises(ArgumentError) { metric('orders', from: '2026-10-10', to: '2026-10-01') }
+  end
+
+  test 'expenses by category uses active register entries and compares totals' do
+    expense(TODAY - 1, 10_000, category: 'supplies')
+    expense(TODAY - 1, 2_500, category: 'software')
+    expense(TODAY - 2, 1_000, category: 'supplies')
+    expense(TODAY, 90_000, category: 'software') # outside the requested period
+    removed = expense(TODAY - 1, 80_000, category: 'rent')
+    removed.discard!
+
+    result = metric('expenses_by_category', period: 'yesterday')
+    assert_equal [{ currency: 'USD', value: 12_500, formatted: '$125.00', expense_count: 2,
+                    categories: [
+                      { key: 'supplies', name: 'Supplies', amount_cents: 10_000, formatted: '$100.00', expenses: 1, share_percent: 80.0 },
+                      { key: 'software', name: 'Software', amount_cents: 2_500, formatted: '$25.00', expenses: 1, share_percent: 20.0 }
+                    ] }], result[:values]
+    assert_equal ['USD', 11_500, 1_150.0, 'up $115.00 (+1150.0%)'], result[:change].first.values_at(:currency, :change_amount, :change_percent, :formatted)
+    assert_match(/\$125\.00 by category: Supplies \$100\.00, Software \$25\.00/, result[:text])
+    assert_includes result[:caveats].first, 'removed expenses and vendor payments are excluded'
+
+    assert_raises(ArgumentError) { metric('expenses_by_category', period: 'yesterday', source: 'shopify') }
+  end
+
+  test 'expenses by category explains an empty period' do
+    result = metric('expenses_by_category', period: 'last_quarter', compare: 'none')
+
+    assert_empty result[:values]
+    assert_match(/no active expense records/, result[:text])
+    assert_match(/does not prove there was no money out/, result[:caveats].join)
+    assert_nil result[:change]
   end
 end

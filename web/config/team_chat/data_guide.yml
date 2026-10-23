@@ -28,6 +28,8 @@ topics:
     tools: [metric, period_review, sales_summary]
     card: >-
       metric refund_rate gives refunds as a percent of gross sales, with the amount and count.
+      metric expenses_by_category returns active Rupert expense-register totals by category in USD, with the
+      comparison already computed; vendor payments are separate and are not added as expenses.
       Refunds are recorded per order (period_review has refund totals per currency; sales_summary counts refunded
       orders per source). Expenses come from the finance ledger (period_review expenses_cents, for people allowed to
       see finance). Profit or margin needs cost of goods, which Rupert does not have: say so instead of estimating.

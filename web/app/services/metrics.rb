@@ -24,7 +24,8 @@ module Metrics
     Definition.new('best_day', 'Best sales day', 'day', 'The day with the highest gross sales in the period (and its orders).'),
     Definition.new('sales_by_source', 'Sales by source', 'share', 'Gross and orders per source and its share of the currency total.'),
     Definition.new('top_products', 'Top products', 'share', 'The ten products with the most revenue, with units and share of product revenue.'),
-    Definition.new('refund_rate', 'Refund rate', 'percent', 'Refunds recorded in the period as a percent of gross sales, with the amount and count.')
+    Definition.new('refund_rate', 'Refund rate', 'percent', 'Refunds recorded in the period as a percent of gross sales, with the amount and count.'),
+    Definition.new('expenses_by_category', 'Expenses by category', 'money', 'Active expense-register totals by category, in USD.')
   ].freeze
 
   module_function
@@ -39,6 +40,9 @@ module Metrics
     compare = compare.presence || 'previous'
     raise ArgumentError, "compare must be one of: #{COMPARES.join(', ')}." unless COMPARES.include?(compare)
     raise ArgumentError, "source must be one of: #{SOURCES.join(', ')}." if source.present? && !SOURCES.include?(source)
+    if source.present? && metric.key == 'expenses_by_category'
+      raise ArgumentError, 'source filtering is not available for expenses_by_category.'
+    end
 
     window = Window.resolve(period: period, from: from, to: to, today: today)
     other = { 'previous' => window.previous, 'last_year' => window.last_year }[compare]
@@ -64,6 +68,7 @@ module Metrics
     when 'best_day' then { values: best_day(orders) }
     when 'top_products' then { values: top_products(orders) }
     when 'refund_rate' then { values: refund_rate(orders, window, source) }
+    when 'expenses_by_category' then { values: expenses_by_category(window) }
     end
   end
 
@@ -135,6 +140,32 @@ module Metrics
     end
   end
 
+  # Expenses are recorded in USD and dated by incurred_on. Use the active,
+  # tenant-scoped expense register; vendor payments settle payables and must
+  # not be counted as a second expense.
+  def expenses_by_category(window)
+    rows = Finance::Expense.where(incurred_on: window.from..window.to)
+                           .group(:category)
+                           .pluck(:category, Arel.sql('SUM(amount_cents)'), Arel.sql('COUNT(*)'))
+    return [] if rows.empty?
+
+    names = Finance::ExpenseCategory.where(key: rows.map(&:first)).pluck(:key, :name).to_h
+    categories = rows.sort_by { |key, cents, _count| [-cents.to_i, key] }.map do |key, cents, count|
+      amount = cents.to_i
+      { key: key, name: names[key] || key.to_s.tr('_', ' ').titleize,
+        amount_cents: amount, formatted: money(amount), expenses: count,
+        share_percent: nil }
+    end
+    total = categories.sum { |category| category[:amount_cents] }
+    if total.positive?
+      categories.each do |category|
+        category[:share_percent] = (category[:amount_cents] * 100.0 / total).round(1)
+      end
+    end
+    [{ currency: 'USD', value: total, formatted: money(total),
+       expense_count: categories.sum { |category| category[:expenses] }, categories: categories }]
+  end
+
   # --- comparison and wording ---
 
   def change(metric, now, before)
@@ -160,21 +191,43 @@ module Metrics
   end
 
   def caveats(key, now, source)
-    list = ['Only orders stored in Rupert (Shopify, Square, Rupert POS, manual). C-Trax and SwipeSimple are separate and not added in.']
+    list = if key == 'expenses_by_category'
+      ["Active entries in Rupert's USD expense register only; removed expenses and vendor payments are excluded."]
+    else
+      ['Only orders stored in Rupert (Shopify, Square, Rupert POS, manual). C-Trax and SwipeSimple are separate and not added in.']
+    end
     list << 'Currencies are separate; never add them together.' if now[:values].size > 1
     list << "Only the #{source} source." if source.present?
-    list << 'No stored orders in this period: that does not prove zero sales (a sync may be missing).' if now[:values].empty?
+    if now[:values].empty?
+      list << if key == 'expenses_by_category'
+        'No active expense records in this period; that does not prove there was no money out.'
+      else
+        'No stored orders in this period: that does not prove zero sales (a sync may be missing).'
+      end
+    end
     list << 'Refunds are counted by refund date; some refund sales from an earlier period.' if key == 'refund_rate'
     list
   end
 
   def sentence(metric, window, other, compare, result)
-    return "#{metric.title}, #{window.label} (#{window.from} to #{window.to}): no stored orders." if result[:values].empty?
+    if result[:values].empty?
+      empty_reason = metric.key == 'expenses_by_category' ? 'no active expense records' : 'no stored orders'
+      return "#{metric.title}, #{window.label} (#{window.from} to #{window.to}): #{empty_reason}."
+    end
 
     parts = result[:values].map do |row|
       change = Array(result[:change]).find { |entry| entry[:currency] == row[:currency] }
       against = other && (compare == 'last_year' ? 'the same dates last year' : "the period before (#{other.from} to #{other.to})")
-      "#{row[:formatted]}#{", #{change[:formatted]} vs #{against}" if change && change[:formatted]}"
+      formatted = row[:formatted]
+      if metric.key == 'expenses_by_category'
+        breakdown = row[:categories].first(5).map do |category|
+          "#{category[:name]} #{category[:formatted]}"
+        end
+        remaining = row[:categories].length - breakdown.length
+        breakdown << "#{remaining} more categories" if remaining.positive?
+        formatted = "#{formatted} by category: #{breakdown.join(', ')}" unless breakdown.empty?
+      end
+      "#{formatted}#{", #{change[:formatted]} vs #{against}" if change && change[:formatted]}"
     end
     "#{metric.title}, #{window.label} (#{window.from} to #{window.to}): #{parts.join('; ')}."
   end

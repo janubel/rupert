@@ -7,7 +7,8 @@ module Mcp
       tool 'metric',
         title: 'Metric (a computed business figure)',
         description: 'Returns one business figure computed by Rupert, ready to quote: gross_sales, orders, average_order_value, ' \
-                     'best_day, sales_by_source (with shares), top_products (with shares) or refund_rate, per currency, for a ' \
+                     'best_day, sales_by_source (with shares), top_products (with shares), refund_rate or expenses_by_category ' \
+                     '(active expense-register amounts by category, in USD), for a ' \
                      'named period or from/to dates, compared with the period before (default) or the same dates last year, ' \
                      'with the change amount, change percent and direction already computed. `sales_by_source` also carries ' \
                      'the latest sync status when the user may read system health. Quote `formatted`, `text` and ' \
