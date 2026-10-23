@@ -28,6 +28,11 @@ module TeamChat
 
     def self.normalize(text) = text.to_s.downcase.tr('_-', '  ').squish
 
+    def self.contextual?(reply, trigger)
+      reply.parent_id.present? || trigger&.quote_id.present? || trigger&.attachment_infos&.exists? ||
+        reply.meta.to_h.values_at('agent', 'battery', 'compare_of', 'navigation_requires_agent').any?(&:present?)
+    end
+
     def initialize(execution, telemetry:)
       @execution, @telemetry = execution, telemetry
     end
@@ -37,10 +42,10 @@ module TeamChat
       run = @execution.run
       saved = run.configuration
       recovering = saved['engine'] == ENGINE
-      return false unless recovering || (saved.empty? && run.transcript.empty? && run.tool_results.empty? && run.steps.zero?)
+      return false unless recovering || (saved.empty? && run.transcript.empty? && run.tool_results.empty? && run.steps.zero? &&
+                                        run.message.body.blank? && run.message.actions_list.empty?)
       trigger = Message.find_by(id: run.request_context['trigger_id'], tenant_id: run.tenant_id)
-      model_requested = run.message.meta.to_h.values_at('agent', 'battery', 'compare_of').any?(&:present?)
-      return false if !recovering && (model_requested || run.message.parent_id || trigger&.attachment_infos&.exists?)
+      return false if !recovering && self.class.contextual?(run.message, trigger)
 
       query = self.class.query(run.request_context['last_chat'])
       if recovering

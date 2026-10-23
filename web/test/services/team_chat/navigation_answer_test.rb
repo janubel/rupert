@@ -266,4 +266,58 @@ class TeamChatNavigationAnswerTest < ActiveSupport::TestCase
       WebMock.reset!
     end
   end
+
+  test 'legacy partial output is not reclassified as a new direct answer' do
+    reply = ask
+    reply.update!(body: 'Earlier agent draft that has not finished.')
+    requests = script_model(text: 'The model resumed the request.')
+    execute(reply)
+    assert_equal 1, requests.size
+    assert_equal 'openai', reply.meta['engine']
+  end
+
+  test 'a quoted request keeps its surrounding context with the agent' do
+    quote = @room.messages.create!(user: @user, author_kind: 'person', body: 'Explain the approval policy before pointing to its screen.')
+    reply = TeamChat::Post.call(room: @room, user: @user, body: '@rupert where are timesheets?', quote_id: quote.id).reply
+    requests = script_model(text: 'The model handled the quoted context.')
+    execute(reply)
+    assert_equal 1, requests.size
+    assert_equal 'openai', reply.meta['engine']
+  end
+
+  test 'private handoff preserves the need for an agent without forwarding attachment or thread contents' do
+    channel = TeamChat::Room.ensure_defaults!(@user)
+    [:attachment, :thread, :quote].each do |kind|
+      original = channel.messages.create!(user: @user, author_kind: 'person', body: 'Private contextual instruction for this navigation question.') unless kind == :attachment
+      reply = if kind == :quote
+        TeamChat::Post.call(room: channel, user: @user, body: '@rupert where are timesheets?', quote_id: original.id).reply
+      else
+        ask(room: channel, parent_id: kind == :thread ? original.id : nil)
+      end
+      if kind == :attachment
+        TeamChat::Message.find(reply.meta['trigger_id']).attachments.create!(room: channel,
+          filename: 'context.txt', content_type: 'text/plain', byte_size: 7, data: 'Private')
+      end
+      execute(reply)
+      handed_off = @room.messages.where(author_kind: 'assistant', status: 'pending').order(:id).last
+      requests = script_model(text: 'The model handled this handoff.')
+      execute(handed_off)
+      assert_equal 1, requests.size, kind.to_s
+      assert_equal 'openai', handed_off.meta['engine'], kind.to_s
+      assert_not_includes requests.first.to_json, 'Private contextual instruction'
+      assert_not_includes requests.first.to_json, 'context.txt'
+      WebMock.reset!
+    end
+  end
+
+  test 'existing action cards keep the request on the agent route' do
+    reply = ask
+    card = TeamChat::Actions.propose!(reply, tool: 'create_task', arguments: { 'title' => 'Earlier pending proposal' }, proposed_for: @user)
+    requests = script_model(text: 'The agent retained the pending proposal.')
+    execute(reply)
+    assert_equal 1, requests.size
+    assert_equal 'openai', reply.meta['engine']
+    assert_equal card['id'], reply.reload.actions_list.first['id']
+    assert_equal 'proposed', reply.actions_list.first['status']
+  end
 end

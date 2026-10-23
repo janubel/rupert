@@ -159,6 +159,8 @@ module TeamChat
           trigger = private_room.messages.create!(user: @asker, author_kind: 'person', body: @trigger.body)
           meta = { 'asked_by' => @asker.id, 'trigger_id' => trigger.id, 'source_room_id' => @room.id, 'isolated' => true }
           meta['agent'] = @local_agent.handle if @local_agent
+          # Preserve routing context without copying a file, quoted content or shared history.
+          meta['navigation_requires_agent'] = true if NavigationAnswer.contextual?(@reply, @trigger) || @reply.body.present? || @reply.actions_list.any?
           reply = private_room.messages.create!(author_kind: 'assistant', status: 'pending', activity: 'Thinking', meta: meta)
           Run.for_reply!(reply)
           ActiveRecord.after_all_transactions_commit { ReplyJob.perform_later(reply.id) }

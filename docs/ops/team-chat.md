@@ -610,7 +610,9 @@ or “Where is stock?”. The router requires a complete supported navigation ph
 and exactly one permitted page with an exact title, registered key, singular key,
 or a small allowlist of the guide's clear aliases. Generic search keywords such as
 “time”, “hours” or “new” do not become navigation shortcuts. Unknown, ambiguous,
-negated, mixed, threaded and attachment-bearing requests continue through the agent.
+negated, mixed, threaded, quoted and attachment-bearing requests continue through the agent.
+Private handoff preserves that routing restriction as a boolean without forwarding
+the file, quote or shared history. Existing drafts or action cards also retain the agent path.
 Explicit local agents, model comparisons and battery evaluations also continue
 through their existing model path.
 
