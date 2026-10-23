@@ -29,8 +29,8 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'nav[aria-label="Module"] .rail-group', text: 'Counts & requests'
     assert_select 'nav[aria-label="Module"] a[aria-current="page"]', text: 'Inventory'
     assert_select 'nav[aria-label="Module"] a', text: 'Locations'
-    assert_select 'aside#app-rail button[data-rail-target="collapse"]', count: 1
-    assert_select 'header button[data-rail-target="menu"][aria-controls="app-rail"]', count: 1
+    assert_select 'aside#app-rail .rail-collapse', count: 0
+    assert_select 'header button[data-rail-target="menu"][data-action="rail#toggle"][aria-controls="app-rail"]', count: 1
   end
 
   test 'every page carries the status bar with sync, the Team chat badge and the build' do

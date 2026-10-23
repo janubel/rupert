@@ -9,7 +9,7 @@
   <% end %>
   <header class="app-topbar">
     <% if Current.user && nav_areas.any? %>
-      <button type="button" class="topbar-menu nav-utility" data-action="rail#toggleDrawer" data-rail-target="menu" aria-label="Menu" aria-controls="app-rail" aria-expanded="false"><%= navigation_icon('menu') %></button>
+      <button type="button" class="topbar-menu nav-utility" data-action="rail#toggle" data-rail-target="menu" aria-label="Collapse navigation" title="Collapse navigation" aria-controls="app-rail" aria-expanded="true"><%= navigation_icon('menu') %></button>
     <% end %>
     <%# The sign-in card carries its own large mark; skip the duplicate brand there. %>
     <% unless controller_name == 'sessions' && action_name == 'new' %>
@@ -115,9 +115,6 @@
             <% end %>
           <% end %>
         </nav>
-        <div class="rail-foot">
-          <button type="button" class="rail-collapse" data-action="rail#toggleCollapse" data-rail-target="collapse" aria-expanded="true" aria-label="Collapse navigation" title="Collapse navigation"><%= navigation_icon('collapse') %><span class="rail-label">Collapse</span></button>
-        </div>
       </aside>
       <div class="rail-backdrop" data-action="click->rail#closeDrawer"></div>
     <% end %>

@@ -73,13 +73,13 @@ one thing, see the state of the business at a glance, and trust the numbers.
 │  │ · page │                                                           │
 │ Reports   │                                                           │
 │ …         │                                                           │
-│ ‹ collapse│                                                           │
+│           │                                                           │
 ├───────────┴───────────────────────────────────────────────────────────┤
 │ ● Synced 2 min ago  Team chat 3 · Jo: …      Report a problem  Help ? │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Top bar** (`.app-topbar`): menu button (phone/tablet), brand, global search, then exactly
+- **Top bar** (`.app-topbar`): menu button (☰, the rail's only control), brand, global search, then exactly
   four utilities: Ask Rupert, Team chat, notifications, account. One row, always. Nothing
   page-specific lives here, and nothing joins the four without taking one away. Sync state,
   help and bug reports live in the status bar; everything personal or rare (time, billing,
@@ -88,8 +88,8 @@ one thing, see the state of the business at a glance, and trust the numbers.
   is expanded and lists its pages in named groups (`nav[aria-label="Module"]`). A section with
   more than eight pages folds its groups: only the group holding the current page is open, the
   rest are one click away (`details.rail-fold`). On wide screens
-  the rail is persistent and can be collapsed to icons (remembered per browser); under 1024px
-  it becomes a drawer behind the menu button. Phones get the same drawer.
+  the rail is persistent and the ☰ menu button folds it to icons and back (remembered per
+  browser); under 1024px it becomes a drawer behind the same button. Phones get the same drawer.
 - **Main** (`main#main`): flashes, then the page. Width tiers: default `max-w-6xl` for tables and
   dashboards, `.page-medium` (56rem) for reading and settings, `.page-narrow` (42rem) for forms
   and short detail pages. No other `max-w-*` on page wrappers.

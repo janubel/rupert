@@ -321,7 +321,7 @@
 .app-topbar { position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:.6rem;height:3.25rem;padding:0 .75rem 0 .6rem;border-bottom:1px solid var(--color-fog);background:color-mix(in srgb,var(--color-paper) 72%,var(--color-oat)); }
 .app-brand { display:flex;flex:none;align-items:center;gap:.5rem;min-height:40px;padding:0 .35rem;border-radius:var(--radius-control); }
 .app-brand-name { font:1.1rem var(--font-display);color:var(--color-ink); }
-.topbar-menu { display:none; }
+.topbar-menu { display:inline-flex; }
 .topbar-search { display:none;align-items:center;gap:.5rem;min-height:36px;width:min(30rem,100%);margin-left:1.25rem;padding:0 .6rem 0 .7rem;border:1px solid var(--color-fog);border-radius:var(--radius-control);background:var(--color-paper);color:var(--color-taupe);font-size:.85rem;text-align:left; }
 .topbar-search:hover { border-color:var(--color-edge);color:var(--color-mocha); }
 .topbar-search .nav-symbol { width:16px;height:16px; }
@@ -331,7 +331,7 @@
 .nav-symbol { flex:none;width:20px;height:20px; }
 .nav-utility { position:relative;display:inline-flex;flex:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--radius-pill);color:var(--color-mocha); }
 .nav-utility:hover,.nav-utility[aria-current=page] { background:var(--color-haze);color:var(--color-ink); }
-.nav-utility:focus-visible,.rail-area:focus-visible,.rail-link:focus-visible,.rail-collapse:focus-visible,.nav-menu-item:focus-visible,.app-brand:focus-visible,.topbar-search:focus-visible { outline:2px solid var(--color-olive);outline-offset:2px; }
+.nav-utility:focus-visible,.rail-area:focus-visible,.rail-link:focus-visible,.nav-menu-item:focus-visible,.app-brand:focus-visible,.topbar-search:focus-visible { outline:2px solid var(--color-olive);outline-offset:2px; }
 .nav-hint { display:none;position:absolute;right:0;top:calc(100% + 5px);z-index:50;width:max-content;max-width:min(20rem,calc(100vw - 2rem));padding:.5rem .7rem;border:1px solid var(--color-fog);border-radius:.65rem;background:var(--color-paper);color:var(--color-ink);font-size:.8rem;font-weight:500;line-height:1.5;box-shadow:0 4px 14px rgb(var(--shadow-ink)/0.09);pointer-events:none; }
 .nav-utility:hover .nav-hint,.nav-utility:focus-visible .nav-hint { display:block; }
 .sync-status-dot { position:absolute;right:6px;bottom:6px;width:6px;height:6px;border-radius:999px;outline:2px solid var(--color-oat); }
@@ -374,10 +374,6 @@
 .rail-link { display:block;min-height:32px;padding:.35rem .5rem;border-radius:.5rem;font-size:.85rem;line-height:1.3;color:var(--color-mocha); }
 .rail-link:hover { background:var(--color-haze);color:var(--color-ink); }
 .rail-link.nav-pill-active-sm { background:var(--color-paper);color:var(--color-olive-deep);font-weight:600;box-shadow:0 1px 2px rgb(var(--shadow-ink)/0.08); }
-.rail-foot { margin-top:auto;padding:.5rem .55rem;border-top:1px solid var(--color-fog); }
-.rail-collapse { display:flex;width:100%;align-items:center;gap:.6rem;min-height:36px;padding:.35rem .6rem;border-radius:var(--radius-control);font-size:.8rem;color:var(--color-taupe); }
-.rail-collapse:hover { background:var(--color-haze);color:var(--color-ink); }
-.rail-collapse .nav-symbol { transition:transform .15s ease; }
 .rail-backdrop { display:none; }
 .app-main { flex:1;width:100%;min-width:0;max-width:72rem;margin:0 auto;padding:2rem 1.5rem 4.5rem; }
 @media(min-width:640px) { .app-main { padding:2rem 2rem 5rem; } }
@@ -393,20 +389,16 @@
   html[data-rail="collapsed"] .app-rail { width:3.6rem; }
   html[data-rail="collapsed"] .rail-label,
   html[data-rail="collapsed"] .rail-modules { display:none; }
-  html[data-rail="collapsed"] .rail-area,
-  html[data-rail="collapsed"] .rail-collapse { justify-content:center;padding:.4rem; }
-  html[data-rail="collapsed"] .rail-collapse .nav-symbol { transform:rotate(180deg); }
+  html[data-rail="collapsed"] .rail-area { justify-content:center;padding:.4rem; }
 }
 
 /* Drawer: the rail slides in from the left behind the menu button. */
 @media(max-width:1023px) {
   .app-body { --rail-w:0px; }
-  .topbar-menu { display:inline-flex; }
   .app-rail { position:fixed;top:0;left:0;bottom:0;z-index:50;width:min(18rem,85vw);height:100vh;padding-top:.5rem;transform:translateX(-100%);transition:transform .2s ease; }
   html[data-rail-open] .app-rail { transform:none;box-shadow:0 10px 40px rgb(var(--shadow-ink)/0.25); }
   html[data-rail-open] .rail-backdrop { display:block;position:fixed;inset:0;z-index:49;background:#0007; }
   html[data-rail-open] { overflow:hidden; }
-  .rail-foot { display:none; }
 }
 @media(pointer:coarse) { .nav-utility { width:44px;height:44px; } }
 /* Phones: the same four utilities; help and bug reports are in the account menu. */
