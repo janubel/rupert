@@ -39,7 +39,6 @@ module OpsLog
     def finish(request, env, status, headers, started, handle, tag_count, error: nil)
       OpsLog::RequestLine.emit(request, env, status, headers, started, error: error)
     ensure
-      Thread.current[:ops_log_context] = nil
       finish_request_instrumentation(handle, tag_count)
     end
 
@@ -57,6 +56,9 @@ module OpsLog
       # Observer failures must not replace application errors or interrupt body
       # delivery. Tags and flushing still get their cleanup, in every format.
       nil
+    ensure
+      # Finishing subscribers and flushing can create context too. Clear it last.
+      Thread.current[:ops_log_context] = nil
     end
   end
 end
