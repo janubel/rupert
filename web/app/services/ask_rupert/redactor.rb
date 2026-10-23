@@ -6,9 +6,9 @@ module AskRupert
   # that must never leave Rupert, whichever model is answering.
   module Redactor
     SECRET = /\b(?:rupert_[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,})\b|Bearer\s+[A-Za-z0-9._~+\/=-]{16,}/
-    CARD = /\b(?:\d[ -]?){13,19}\b/
+    CARD = /\b(?:\d[ -]?){12,18}\d\b/
     EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/
-    PHONE = /(?<![\w.])\+?\d[\d ().-]{7,}\d(?![\w.])/
+    PHONE = /(?<![\w.])\+?\d[\d ().-]{7,}\d(?!\w|\.\d)/
     CONTROL = /[^\P{Cc}\n\t]/
 
     module_function
