@@ -18,6 +18,7 @@ module NavigationIconsHelper
     'clock' => ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M12 7v5l3 2'],
     'chevron' => ['m6 9 6 6 6-6'],
     'menu' => ['M4 7h16M4 12h16M4 17h16'],
+    'expand' => ['M4 9V4h5', 'M20 9V4h-5', 'M4 15v5h5', 'M20 15v5h-5'],
     'collapse' => ['m14 7-5 5 5 5', 'M5 5v14'],
     'marketing' => ['M3 10v4h3l6 4V6L6 10H3Z', 'M16 9a3.5 3.5 0 0 1 0 6', 'M18.5 6a7 7 0 0 1 0 12'],
     'learn' => ['M3 6c3-1 6-1 9 1 3-2 6-2 9-1v13c-3-1-6-1-9 1-3-2-6-2-9-1Z', 'M12 7v13'],

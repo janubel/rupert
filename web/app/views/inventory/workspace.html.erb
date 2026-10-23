@@ -5,6 +5,7 @@
         menu: [['Download CSV', csv_path],
                ['Download snapshot PDF', pdf_inventory_index_path, { data: { turbo: false } }],
                ['Download store comparison PDF', stock_comparison_path(format: :pdf), { data: { turbo: false } }]] do %>
+    <%= full_window_button %>
     <%= link_to 'Count stock', inventory_counts_path, class: 'btn-primary' %>
   <% end %>
 

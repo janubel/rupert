@@ -2,6 +2,7 @@
 <% can_write = Current.user.can?("hr.write") %>
 <div class="space-y-6">
   <%= page_header 'Shifts', subtitle: 'Planned shifts for the week.' do %>
+    <%= full_window_button %>
     <% if can_write %><%= link_to "Add shift", new_people_scheduled_shift_path(date: [@week, Date.current].max.iso8601), class: "btn-primary" %><% end %>
   <% end %>
 

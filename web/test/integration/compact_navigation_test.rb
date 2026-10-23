@@ -133,4 +133,14 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'a.app-brand[href=?]', inventory_index_path
     assert_select 'nav[aria-label="Module areas"] a[aria-label="Overview"]', count: 0
   end
+
+  test 'wide pages offer full window and the shell carries one way back' do
+    get people_team_schedule_path
+    assert_response :success
+    assert_select '.app-shell[data-controller~="full-window"]'
+    assert_select '.page-header button[data-action="full-window#toggle"][data-full-window-target="toggle"]', text: /Full window/
+    assert_select 'button.full-window-exit[data-action="full-window#exit"]', count: 1
+    get people_scheduled_shifts_path
+    assert_select '.page-header button[data-action="full-window#toggle"]'
+  end
 end
