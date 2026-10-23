@@ -280,4 +280,15 @@ class CanonicalOrderImporterTest < ActiveSupport::TestCase
     assert_equal 1200, order.total_refunded_cents
     assert_equal 'refunded', order.status, 'the full sale came back'
   end
+
+  test 'a Shopify POS sale is stored as pos at its store; a web order stays online with no location' do
+    store = Location.create!(source: 'shopify', externalId: 'gid://shopify/Location/77', name: 'Main Street')
+    CanonicalOrderImporter.from_shopify!([shopify_order(id: 'gid://shopify/Order/901', name: '#901').merge('sourceName' => 'pos',
+      'retailLocation' => { 'id' => 'gid://shopify/Location/77' })])
+    CanonicalOrderImporter.from_shopify!([shopify_order(id: 'gid://shopify/Order/902', name: '#902').merge('sourceName' => 'web')])
+    pos = Core::Order.find_by!(source_order_id: 'gid://shopify/Order/901')
+    web = Core::Order.find_by!(source_order_id: 'gid://shopify/Order/902')
+    assert_equal ['pos', store.id], [pos.channel, pos.location_id]
+    assert_equal ['online', nil], [web.channel, web.location_id]
+  end
 end

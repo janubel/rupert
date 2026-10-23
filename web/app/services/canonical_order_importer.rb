@@ -28,7 +28,7 @@ class CanonicalOrderImporter
 
         Core::Order.transaction do
           Core::Order.upsert(
-            order_attrs(node, source: 'shopify', channel: 'online', customer_id: customer&.id),
+            order_attrs(node.merge('location_id' => shopify_location_id(node)), source: 'shopify', channel: shopify_channel(node), customer_id: customer&.id),
             unique_by: %i[tenant_id source source_order_id]
           )
           order = Core::Order.find_by(
@@ -322,6 +322,17 @@ class CanonicalOrderImporter
       when 'CARD', 'SQUARE_ACCOUNT', 'CASH_APP_PAY', 'BUY_NOW_PAY_LATER' then 'card'
       else 'other'
       end
+    end
+
+    # Shopify POS orders were all stored as online with no location, so in-store sales looked like web orders
+    # (and showed up as "paid, not shipped"). sourceName "pos" marks a POS sale; retailLocation is the store.
+    def shopify_channel(node) = node['sourceName'].to_s == 'pos' ? 'pos' : 'online'
+
+    def shopify_location_id(node)
+      gid = node.dig('retailLocation', 'id').presence
+      return nil unless gid
+
+      Location.find_by(source: 'shopify', externalId: gid)&.id || gid
     end
 
     def order_attrs(data = nil, channel: nil, customer_id: nil, source: nil, **kw)
