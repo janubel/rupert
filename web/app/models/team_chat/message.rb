@@ -97,6 +97,10 @@ module TeamChat
       COLORS[user_id.to_i % COLORS.size]
     end
 
+    attr_reader :revision_updates
+
+    def request_revision = meta.to_h.fetch('request_revision', 0).to_i
+
     def soft_delete!
       drive_ids = attachments.where(drive_status: 'stored').pluck(:drive_file_id)
       DriveTrashJob.perform_later(tenant_id, drive_ids) if drive_ids.any?
@@ -104,6 +108,7 @@ module TeamChat
         attachments.delete_all
         reactions.delete_all
         update_columns(deleted_at: Time.current, body: '', actions: nil, mentions: nil, pinned_at: nil, pinned_by_id: nil, updated_at: Time.current)
+        @revision_updates = RequestRevision.changed!(self, restart: false)
       end
     end
 
@@ -146,8 +151,16 @@ module TeamChat
       text = text.to_s.scrub('').gsub(AskRupert::Redactor::CONTROL, '').strip
       raise ActiveRecord::RecordInvalid, self if text.blank? && attachment_infos.empty?
 
-      kept = mention_ids.select { |id| (name = User.find_by(id: id)&.display_name) && text.include?("@#{name}") }
-      update!(body: text.first(BODY_MAX), edited_at: Time.current, mentions: kept.presence)
+      @revision_updates = []
+      with_lock do
+        return true if body == text.first(BODY_MAX)
+
+        kept = mention_ids.select { |id| (name = User.find_by(id: id)&.display_name) && text.include?("@#{name}") }
+        update!(body: text.first(BODY_MAX), edited_at: Time.current, mentions: kept.presence,
+          meta: meta.to_h.merge('request_revision' => request_revision + 1))
+        @revision_updates = RequestRevision.changed!(self, restart: true)
+      end
+      true
     end
 
     # Pins or unpins this message as `user`. Pinning posts a short notice in the room.

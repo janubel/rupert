@@ -673,3 +673,40 @@ paths, authority-relative addresses and dot segments cannot bypass destination c
 Resumed drafts are checked before inference resumes. Each publication reloads the user;
 the ordinary durable execution fence still enforces permission revocation, cancellation,
 deadlines and claim ownership at the write boundary. Human messages are unaffected.
+
+## Edited and deleted requests
+
+Each human message has a server-owned revision counter in its private metadata.
+A durable run captures that revision, exact request text, requester, parent and
+request time. Editing pending work stops the old run and creates fresh replies for
+the edited message under the room's normal mention/model rules; it does not post
+a second human message. The replacement records the edit time as `requested_at` and gets a fresh deadline.
+Unchanged edits and edits to completed answers without unresolved approvals do not
+start inference. Removing a mention can stop work without starting another bot.
+
+Unapproved cards are retracted when their request changes or is deleted, including
+cards on a completed answer awaiting review. Completed answer text, executed
+approvals, task effects and original audit snapshots are preserved. Approval also
+checks the current request before executing, so a source changed outside the normal
+editor cannot authorize an old proposal. Already decided receipts remain idempotent.
+Pending proposals without a verifiable durable request require a fresh proposal.
+
+The edit, cancellation, retraction and replacement commit atomically. Rate-limit
+failure rolls them back together. Replacement jobs enqueue only after the outer
+transaction commits; the existing recovery sweep can dispatch a committed queued
+run if enqueueing was interrupted. Superseded jobs cannot claim their cancelled
+runs. Deleting a request stops work without creating a replacement.
+
+Workers recheck revision, text, author, tenant and thread before tools, publication
+and checkpoints, including recovery and direct navigation. Private handoffs retain
+only source identity/revision/time, not shared history or attachment content; editing
+or deleting the original source also stops its private work. Legacy handoffs lacking
+source identity stop rather than resume an unverifiable request. Legacy snapshots
+without counters reject edits newer than run creation. The existing permission,
+cancellation, ownership and deadline fences continue to apply.
+
+An edit response includes the stopped and new messages from that same room so the
+existing chat renderer updates immediately; private handoff messages never enter a
+shared room's response. A replacement can know that a previous revision already had
+an approved effect, but previous tool results are not copied into its context. It
+must inspect current state with permitted tools before proposing further work.

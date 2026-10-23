@@ -64,7 +64,13 @@ module TeamChat
           return record.action
         end
         raise Denied, 'This message is no longer available.' if message.deleted?
-        verify_assignee!(record, user) if approve
+        if approve
+          run = message.run
+          trigger = Message.find_by(id: run&.request_context&.dig('trigger_id'), tenant_id: message.tenant_id)
+          raise Denied, 'The original request changed or is unavailable. Ask for a new proposal.' unless run&.request_matches?(trigger)
+
+          verify_assignee!(record, user)
+        end
 
         action = record.proposal.deep_dup
         action.merge!('decided_by' => user.display_name, 'decided_at' => Time.current.iso8601)

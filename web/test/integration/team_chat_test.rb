@@ -166,7 +166,9 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     sign_in(@admin)
     get team_chat_path
     room = TeamChat::Room.find_by!(slug: 'admins')
-    message = room.messages.create!(author_kind: 'assistant', status: 'done')
+    trigger = room.messages.create!(author_kind: 'person', user: @admin, body: 'Create the HTTP approval task once.')
+    message = room.messages.create!(author_kind: 'assistant', status: 'done', meta: { 'asked_by' => @admin.id, 'trigger_id' => trigger.id })
+    TeamChat::Run.for_reply!(message).update!(state: 'succeeded')
     card = TeamChat::Actions.propose!(message, tool: 'create_task', arguments: { 'title' => 'HTTP approval once' }, proposed_for: @admin)
     route = team_chat_action_path(room.slug, message.id, card['id'])
     assert_difference -> { Projects::Task.count }, 1 do

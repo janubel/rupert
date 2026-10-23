@@ -15,7 +15,7 @@ module TeamChat
 
     def self.call(...) = new(...).call
 
-    def initialize(room:, user:, body:, parent_id: nil, files: [], mention_ids: [], quote_id: nil)
+    def initialize(room:, user:, body:, parent_id: nil, files: [], mention_ids: [], quote_id: nil, prior_reply_ids: [])
       @room = room
       @user = user
       @body = body.to_s.scrub('').gsub(AskRupert::Redactor::CONTROL, '').strip
@@ -23,6 +23,7 @@ module TeamChat
       @files = Array(files).compact_blank
       @mention_ids = Array(mention_ids).map(&:to_i).uniq
       @quote_id = quote_id.presence&.to_i
+      @prior_reply_ids = Array(prior_reply_ids).map(&:to_i).uniq
     end
 
     def call
@@ -42,21 +43,7 @@ module TeamChat
         message.save!
         # Mentioning someone pulls them into a channel, never into a private conversation.
         people.each { |person| @room.membership_for(person) } if @room.channel?
-        if asks_everyone?
-          # @all: every bot answers the same question; the page shows the answers side by side.
-          replies << start_reply(message, compare: true)
-          LocalAgents.all.each { |agent| replies << start_reply(message, agent: agent, compare: true) }
-        else
-          rupert = answer?(message)
-          agents = LocalAgents.mentioned(@body)
-          # Replying to a bot's answer, without naming a bot, asks that same bot again.
-          if !rupert && agents.empty? && quote&.assistant? && quote.status == 'done'
-            agents = LocalAgents.all.select { |agent| agent.handle == quote.local_agent&.handle }
-            rupert = agents.empty? # @rupert's own answer, or a local bot that is not running now
-          end
-          replies << start_reply(message) if rupert
-          agents.each { |agent| replies << start_reply(message, agent: agent) }
-        end
+        replies = replies_for(message, quote: quote)
       end
       membership = @room.membership_for(@user)
       membership.mark_read!(message.id)
@@ -66,6 +53,28 @@ module TeamChat
       Result.new(message: message, reply: replies.first, replies: replies)
     rescue ActiveRecord::RecordInvalid => e
       raise Invalid, e.record.errors.full_messages.to_sentence
+    end
+
+    # Shared by a new post and an edited request; this does not post another
+    # human message or enqueue before the caller's transaction has committed.
+    def replies_for(message, quote: nil)
+      replies = []
+      if asks_everyone?
+        # @all: every bot answers the same question; the page shows the answers side by side.
+        replies << start_reply(message, compare: true)
+        LocalAgents.all.each { |agent| replies << start_reply(message, agent: agent, compare: true) }
+      else
+        rupert = answer?(message)
+        agents = LocalAgents.mentioned(@body)
+        # Replying to a bot's answer, without naming a bot, asks that same bot again.
+        if !rupert && agents.empty? && quote&.assistant? && quote.status == 'done'
+          agents = LocalAgents.all.select { |agent| agent.handle == quote.local_agent&.handle }
+          rupert = agents.empty? # @rupert's own answer, or a local bot that is not running now
+        end
+        replies << start_reply(message) if rupert
+        agents.each { |agent| replies << start_reply(message, agent: agent) }
+      end
+      replies
     end
 
     # Everyone who can be @mentioned in team chat: the people allowed to use it.
@@ -126,6 +135,7 @@ module TeamChat
       meta = { 'asked_by' => @user.id, 'trigger_id' => message.id }
       meta['agent'] = agent.handle if agent
       meta['compare_of'] = message.id if compare
+      meta['prior_reply_ids'] = @prior_reply_ids if @prior_reply_ids.any?
       reply = @room.messages.create!(author_kind: 'assistant', status: 'pending', activity: agent ? "Loading #{agent.name}" : 'Thinking',
         parent_id: message.parent_id, meta: meta)
       Run.for_reply!(reply)

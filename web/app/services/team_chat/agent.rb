@@ -156,9 +156,12 @@ module TeamChat
     def deliver_privately!
       @execution.locked do
         private_room = Room.direct_for(@asker)
-        if @trigger.body.present?
-          trigger = private_room.messages.create!(user: @asker, author_kind: 'person', body: @trigger.body)
-          meta = { 'asked_by' => @asker.id, 'trigger_id' => trigger.id, 'source_room_id' => @room.id, 'isolated' => true }
+        if request_text.present?
+          trigger = private_room.messages.create!(user: @asker, author_kind: 'person', body: request_text)
+          meta = { 'asked_by' => @asker.id, 'trigger_id' => trigger.id, 'source_room_id' => @room.id, 'isolated' => true,
+                   'source_trigger_id' => @trigger.id, 'source_request_revision' => @trigger.request_revision, 'source_parent_id' => @trigger.parent_id,
+                   'source_requested_at' => @execution.run.request_context['requested_at'] }
+          meta['prior_reply_ids'] = @execution.run.request_context['prior_reply_ids'] if @execution.run.request_context['prior_reply_ids'].present?
           meta['agent'] = @local_agent.handle if @local_agent
           # Preserve routing context without copying a file, quoted content or shared history.
           meta['navigation_requires_agent'] = true if NavigationAnswer.contextual?(@reply, @trigger) || @reply.body.present? || @reply.actions_list.any?
@@ -389,10 +392,10 @@ module TeamChat
 
     # The data guide topics a question is about: from its own words, else from the conversation just before it.
     def question_topics
-      found = DataGuide.match(@trigger.body)
+      found = DataGuide.match(request_text)
       return found if found.any?
 
-      DataGuide.match(context_rows.last(4).map(&:body).join("\n"))
+      DataGuide.match(context_rows.last(4).map { |row| row.id == @trigger.id ? request_text : row.body }.join("\n"))
     rescue StandardError
       []
     end
@@ -413,10 +416,14 @@ module TeamChat
       end
       lines = ["You are in #{where}.", "You are answering #{@asker.display_name} (role: #{@asker.role.to_s.tr('_', ' ')}).",
                "Today is #{Date.current.strftime('%A')} #{Date.current.iso8601} (#{Time.zone.name})."]
+      prior = Array(@execution&.run&.request_context&.fetch('prior_reply_ids', []))
+      if Approval.where(source_message_id: prior, state: 'done').exists?
+        lines << 'A previous version of this request already had an approved change executed. Check current state with permitted tools before proposing any further change; do not repeat the earlier change just because the wording was edited.'
+      end
       lines << "About this question (how this data is stored):" if @topics.present?
       lines += Array(@topics).map { |topic| "- #{topic.title} (tools: #{topic.tools.join(', ')}): #{topic.card}" }
       lines << "Use these tools for this question: #{DataGuide.tools_for(@topics).join(', ')}." if @topics.present? && @local_agent && all_tools?
-      dates = DateHints.call(@trigger&.body)
+      dates = DateHints.call(request_text)
       lines << "Dates in this question, already worked out (use these exact dates): #{dates.join('; ')}." if dates.any?
       "Context for this reply (from Rupert):\n#{lines.join("\n")}"
     end
@@ -446,7 +453,7 @@ module TeamChat
       return text unless @local_agent && @config.native? && text.present? && Verify.enabled_for?(@local_agent)
 
       activity!('Checking the answer')
-      outcome = Verify.new(config: @config, question: @trigger.body, evidence: @toolbox.results, draft: text,
+      outcome = Verify.new(config: @config, question: request_text, evidence: @toolbox.results, draft: text,
         session: "rupert-room-#{@room.id}", chat_factory: ->(instructions) {
           @config.chat(session: "rupert-room-#{@room.id}", timeout: @execution.remaining,
             instrumenter: TelemetryRecorder.new(@execution.run, @execution.token, stage: 'verify'))
@@ -512,6 +519,10 @@ module TeamChat
 
     # --- conversation ---
 
+    def request_text
+      @execution&.run&.request_context&.fetch('last_chat', nil) || @trigger&.body.to_s
+    end
+
     def context_rows
       # A test-battery question is answered on its own, without the room around it.
       return [@trigger] if @reply.meta.to_h['isolated']
@@ -526,7 +537,7 @@ module TeamChat
     end
 
     def entry_for(row)
-      text = row.body.to_s.first(TURN_CHARS)
+      text = (row.id == @trigger&.id && @execution ? request_text : row.body).to_s.first(TURN_CHARS)
       files = row.attachment_infos.map { |file| "#{file.filename} (#{file.image? ? 'image' : file.content_type})" }
       text = [text.presence, ("[attached: #{files.join(', ')}]" if files.any?)].compact.join("\n")
       return nil if text.blank? || row.status == 'failed'

@@ -8,7 +8,9 @@ class TeamChatActionsTest < ActiveSupport::TestCase
     @user = users(:regular_user)
     Current.user = @user
     @room = TeamChat::Room.ensure_defaults!(@user)
-    @reply = @room.messages.create!(author_kind: 'assistant', status: 'pending')
+    trigger = @room.messages.create!(author_kind: 'person', user: @user, body: 'Please propose the work.')
+    @reply = @room.messages.create!(author_kind: 'assistant', status: 'pending', meta: { 'asked_by' => @user.id, 'trigger_id' => trigger.id })
+    TeamChat::Run.for_reply!(@reply)
   end
 
   teardown { Current.reset }

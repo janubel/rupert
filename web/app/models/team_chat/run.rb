@@ -24,15 +24,36 @@ module TeamChat
         trigger = Message.unscoped.find_by(id: reply.meta.to_h['trigger_id'], room_id: reply.room_id, tenant_id: reply.tenant_id)
         if trigger&.person?
           run.request_context = { 'requester_id' => trigger.user_id, 'requester_name' => trigger.user&.display_name,
-                                  'trigger_id' => trigger.id, 'last_chat' => trigger.body, 'requested_at' => trigger.created_at.iso8601(6),
-                                  'parent_id' => trigger.parent_id, 'permissions_signature' => trigger.user&.permissions_signature,
+                                  'trigger_id' => trigger.id, 'last_chat' => trigger.body, 'requested_at' => (reply.meta.to_h['source_requested_at'] || (trigger.edited_at || trigger.created_at).iso8601(6)),
+                                  'parent_id' => trigger.parent_id, 'request_revision' => trigger.request_revision, 'permissions_signature' => trigger.user&.permissions_signature,
                                   'source_room_id' => reply.meta.to_h['source_room_id'] }
+          %w[source_trigger_id source_request_revision source_parent_id prior_reply_ids].each do |key|
+            run.request_context[key] = reply.meta[key] if reply.meta.to_h.key?(key)
+          end
         end
         run.deadline_at = reply.created_at + (reply.local_agent ? 5.minutes : 2.minutes)
       end
     end
 
     # A single conditional UPDATE is the claim; a prior read is not ownership.
+    def request_matches?(trigger)
+      context = request_context.to_h
+      return false if !context.key?('request_revision') && trigger&.edited_at && trigger.edited_at > created_at
+      return false unless matches_request?(trigger, room_id: message.room_id, parent_id: context['parent_id'], revision: context.fetch('request_revision', 0))
+      return true unless context['source_room_id']
+      return false unless context['source_trigger_id']
+
+      source = Message.unscoped.find_by(id: context['source_trigger_id'], tenant_id: tenant_id)
+      matches_request?(source, room_id: context['source_room_id'], parent_id: context['source_parent_id'], revision: context.fetch('source_request_revision', 0))
+    end
+
+    def matches_request?(trigger, room_id:, parent_id:, revision:)
+      context = request_context.to_h
+      trigger&.person? && !trigger.deleted? && trigger.tenant_id == tenant_id &&
+        trigger.room_id == room_id && trigger.user_id == context['requester_id'] &&
+        trigger.parent_id == parent_id && trigger.body == context['last_chat'] && trigger.request_revision == revision
+    end
+
     def claim!
       expire! if deadline_at <= Time.current
       token = SecureRandom.uuid
