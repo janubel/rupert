@@ -56,21 +56,24 @@ module TeamChat
       token = durable_run.claim!
       return unless token
 
-      @execution = Execution.new(durable_run, token)
-      @execution.start_watch
-      @execution.pin_configuration!(@config)
-      return fail!(:error, started) unless @asker && @trigger && TeamChat.allowed?(@asker)
+      @telemetry = TelemetryRecorder.new(durable_run, token)
+      @telemetry.measure('execution') do
+        @execution = Execution.new(durable_run, token)
+        @execution.start_watch
+        @execution.pin_configuration!(@config)
+        return fail!(:error, started) unless @asker && @trigger && TeamChat.allowed?(@asker)
 
-      return deliver_privately! unless @room.direct?
+        return deliver_privately! unless @room.direct?
 
-      @topics = question_topics
-      # Local bots get only the tools for what the question is about (smaller prompt, fewer wrong picks), unless
-      # RUPERT_LOCAL_TOOLS=all: then every tool, so the instructions and tool list stay the same from question to
-      # question and the model server reuses them from its cache, and the question names the tools to use.
-      only = DataGuide.tools_for(@topics) if @local_agent && @topics.any? && !all_tools?
-      @toolbox = Toolbox.new(user: @asker, room: @room, reply: @reply, only: only, execution: @execution)
-      text = verified(answer)
-      finish(text, started)
+        @topics = question_topics
+        # Local bots get only the tools for what the question is about (smaller prompt, fewer wrong picks), unless
+        # RUPERT_LOCAL_TOOLS=all: then every tool, so the instructions and tool list stay the same from question to
+        # question and the model server reuses them from its cache, and the question names the tools to use.
+        only = DataGuide.tools_for(@topics) if @local_agent && @topics.any? && !all_tools?
+        @toolbox = Toolbox.new(user: @asker, room: @room, reply: @reply, only: only, execution: @execution)
+        text = verified(answer)
+        finish(text, started)
+      end
     rescue Run::Stopped
       @execution.run.expire! if @execution && @execution.run.deadline_at <= Time.current
       nil
@@ -180,7 +183,7 @@ module TeamChat
     # --- RubyLLM, native tool calling ---
 
     def native_chat
-      chat = @config.chat(session: "rupert-room-#{@room.id}", timeout: @execution.remaining)
+      chat = @config.chat(session: "rupert-room-#{@room.id}", timeout: @execution.remaining, instrumenter: @telemetry)
       chat.with_instructions(system_prompt).with_temperature(0.2)
       chat.with_tools(*@toolbox.llm_tools).with_tool_options(concurrency: false)
       @execution.chat = chat
@@ -240,6 +243,18 @@ module TeamChat
       raise Failure.new(:error, e.message)
     end
 
+    def record_cli_usage(usage, cost)
+      usage = usage.is_a?(Hash) ? usage : {}
+      cache = usage['cache'].is_a?(Hash) ? usage['cache'] : {}
+      cost = TelemetryRecorder.cost(cost)
+      facts = { 'input_tokens' => usage['input'], 'output_tokens' => usage['output'],
+                'thinking_tokens' => usage['reasoning'], 'cache_read_tokens' => cache['read'], 'cache_write_tokens' => cache['write'],
+                'cost_usd' => cost, 'cost_source' => cost.nil? ? 'unknown' : 'cli_reported', 'internal_attempts' => 'unknown' }
+      TelemetryRecorder::TOKEN_FIELDS.each { |key| facts[key.to_s] = TelemetryRecorder.count(facts[key.to_s]) }
+      @cli_span.update!(facts: @cli_span.facts.merge('usage_reports' => @cli_span.facts.fetch('usage_reports', 0) + 1))
+      @telemetry.record('cli_usage', outcome: 'reported', facts: facts.merge('invocation_id' => @cli_span.id))
+    end
+
     def count_tokens(chat)
       tokens = chat.tokens
       @tokens_in = tokens.respond_to?(:input) ? tokens.input.to_i : 0
@@ -271,7 +286,13 @@ module TeamChat
         @execution.check!
         stamp_tool_source!
         @toolbox.call_id = "cli-#{round}"
-        reply = provider.complete(system: system, messages: messages, deadline: @execution.run.deadline_at, checkpoint: -> { @execution.check! }) { |partial| publish(partial) unless partial.to_s.lstrip.start_with?('TOOL') }
+        reply = @telemetry.measure('cli_inference', facts: { 'internal_attempts' => 'unknown' }) do |span|
+          @cli_span = span
+          provider.complete(system: system, messages: messages, deadline: @execution.run.deadline_at,
+            checkpoint: -> { @execution.check! }, telemetry: ->(usage, cost) { record_cli_usage(usage, cost) }) do |partial|
+            publish(partial) unless partial.to_s.lstrip.start_with?('TOOL')
+          end
+        end
         @tokens_in += reply.tokens_in.to_i
         @tokens_out += reply.tokens_out.to_i
         call = AskRupert::ReplyFormat.parse_call(reply.text)
@@ -390,7 +411,11 @@ module TeamChat
 
       activity!('Checking the answer')
       outcome = Verify.new(config: @config, question: @trigger.body, evidence: @toolbox.results, draft: text,
-        session: "rupert-room-#{@room.id}").call
+        session: "rupert-room-#{@room.id}", chat_factory: ->(instructions) {
+          @config.chat(session: "rupert-room-#{@room.id}", timeout: @execution.remaining,
+            instrumenter: TelemetryRecorder.new(@execution.run, @execution.token, stage: 'verify'))
+            .with_instructions(instructions).with_temperature(0)
+        }).call
       @verify_meta = outcome.meta
       outcome.text
     end
@@ -420,6 +445,7 @@ module TeamChat
 
     def fail!(kind, started)
       @execution.write_reply!({ body: FAILURES.fetch(kind, FAILURES[:error]), status: 'failed', activity: nil, meta: meta_with(started, kind.to_s) }, terminal: 'failed')
+      @telemetry&.record('failure', outcome: 'failed', facts: { 'kind' => kind.to_s })
       note_ai_health('error')
     rescue Run::Stopped
       nil

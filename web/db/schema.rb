@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_150000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -999,11 +999,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_140000) do
     t.json "configuration", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.json "request_context"
     t.index ["message_id"], name: "index_chat_runs_on_message_id", unique: true
     t.index ["state", "deadline_at"], name: "index_chat_runs_on_state_and_deadline_at"
     t.index ["state", "lease_until"], name: "index_chat_runs_on_state_and_lease_until"
     t.index ["tenant_id"], name: "index_chat_runs_on_tenant_id"
-    t.json "request_context"
+  end
+
+  create_table "chat_telemetry", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.integer "run_id", null: false
+    t.string "claim_token", null: false
+    t.string "kind", null: false
+    t.string "stage"
+    t.string "outcome", default: "running", null: false
+    t.datetime "started_at", null: false
+    t.datetime "finished_at"
+    t.integer "duration_ms"
+    t.json "facts", default: {}, null: false
+    t.index ["run_id"], name: "index_chat_telemetry_on_run_id"
+    t.index ["tenant_id", "started_at"], name: "index_chat_telemetry_on_tenant_id_and_started_at"
   end
 
   create_table "clock_corrections", force: :cascade do |t|
@@ -3572,6 +3587,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_140000) do
   add_foreign_key "chat_ratings", "chat_messages", column: "message_id"
   add_foreign_key "chat_reactions", "chat_messages", column: "message_id"
   add_foreign_key "chat_runs", "chat_messages", column: "message_id", on_delete: :cascade
+  add_foreign_key "chat_telemetry", "chat_runs", column: "run_id", on_delete: :cascade
   add_foreign_key "clock_corrections", "clock_shifts"
   add_foreign_key "clock_corrections", "tenants"
   add_foreign_key "clock_corrections", "users", column: "requested_by_id", on_delete: :nullify

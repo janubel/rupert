@@ -39,6 +39,7 @@ class TeamChatRestartTest < ActiveSupport::TestCase
     threads.each(&:join)
     assert_equal 1, 2.times.map { results.pop }.compact.size
     assert_equal 1, @reply.run.reload.attempts
+    assert_equal 1, TeamChat::Telemetry.where(run_id: @reply.run.id, kind: 'claim').count
   end
 
   test 'heartbeat keeps a slow live worker lease fresh and stops after release' do
@@ -81,6 +82,7 @@ class TeamChatRestartTest < ActiveSupport::TestCase
     assert actor.join(3), 'silent inference must not retain the chat worker'
     assert Timeout.timeout(3) { released.pop }
     assert_equal 'cancelled', @reply.run.reload.state
+    assert_not TeamChat::Telemetry.where(run_id: @reply.run.id, outcome: 'running').exists?
   ensure
     actor&.kill if actor&.alive?
     actor&.join
@@ -119,6 +121,12 @@ class TeamChatRestartTest < ActiveSupport::TestCase
     assert_equal 2, run.attempts
     assert_equal 1, @reply.reload.actions_list.size
     assert_equal 1, requests.size
+    ledger = TeamChat::Telemetry.where(run_id: run.id)
+    assert_equal 2, ledger.where(kind: 'claim').count
+    assert_equal 1, ledger.where(kind: 'tool').count
+    assert_equal 2, ledger.where(kind: 'provider_attempt').count
+    assert ledger.where(kind: 'inference', outcome: 'interrupted', duration_ms: nil).exists?
+    assert_not TeamChat::Telemetry.summary(run)['tokens']['input_tokens']['complete']
   ensure
     Process.kill('KILL', child) if child
     Process.waitpid(child) if child
