@@ -111,6 +111,9 @@ class CanonicalOrderImporter
       existing = Core::Customer.find_by(source: source, external_id: external_id)
       # Order payloads can contain partial or historical customer information.
       return existing if existing&.source_synced_at
+      # Square orders carry only a customer ID. Don't create a profile with no
+      # name or contact details; it would just clutter the CRM.
+      return existing if [email, first_name, last_name, phone].all?(&:blank?)
 
       Core::Customer.upsert(
         {
