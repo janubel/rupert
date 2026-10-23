@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_230000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -379,7 +379,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_150000) do
     t.boolean "ready_for_development", default: false, null: false
     t.datetime "ready_marked_at"
     t.string "ready_marked_by"
+    t.integer "github_issue_number"
+    t.string "github_issue_url"
+    t.string "github_state"
+    t.datetime "github_synced_at"
     t.index ["api_access_token_id"], name: "index_agent_feedbacks_on_api_access_token_id"
+    t.index ["github_issue_number"], name: "index_agent_feedbacks_on_github_issue_number"
     t.index ["task_id"], name: "index_agent_feedbacks_on_task_id"
     t.index ["tenant_id", "created_at"], name: "index_agent_feedbacks_on_tenant_id_and_created_at"
     t.index ["tenant_id", "source_ref"], name: "idx_agent_feedbacks_source_ref"
@@ -2084,6 +2089,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_150000) do
     t.boolean "source_lines_complete", default: false, null: false
     t.string "source_financial_status"
     t.integer "tip_cents", default: 0, null: false
+    t.json "discount_codes", default: [], null: false
     t.index ["location_id"], name: "index_orders_on_location_id"
     t.index ["tenant_id", "customer_id"], name: "index_orders_on_tenant_id_and_customer_id"
     t.index ["tenant_id", "occurred_at"], name: "index_orders_on_tenant_id_and_occurred_at"

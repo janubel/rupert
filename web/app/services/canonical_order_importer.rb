@@ -324,6 +324,13 @@ class CanonicalOrderImporter
       end
     end
 
+    # Shopify sends the codes typed at checkout; Square has no codes, so its discount names stand in. Kept as typed,
+    # trimmed and de-duplicated; matching to an employee's code is case-insensitive at read time.
+    def discount_codes(data)
+      codes = data['discountCodes'] || Array(data['discounts']).map { |discount| discount['name'] if discount.is_a?(Hash) }
+      Array(codes).filter_map { |code| code.to_s.strip.presence&.slice(0, 100) }.uniq.first(20)
+    end
+
     def order_attrs(data = nil, channel: nil, customer_id: nil, source: nil, **kw)
       data = kw if data.nil?
       gross_cents = money_cents(data.dig('currentTotalPriceSet', 'shopMoney')) ||
@@ -341,6 +348,7 @@ class CanonicalOrderImporter
           "SQ-#{data['id'].to_s.slice(0, 12)}",
         channel: channel || data[:channel] || data['channel'],
         customer_id: customer_id,
+        discount_codes: discount_codes(data),
         location_id: data['location_id'] || data[:locationId] || data['locationId'],
         occurred_at: parse_time(data['createdAt'] || data['created_at']) ||
           (data[:occurredAt] || data['occurredAt']) || Time.current,
