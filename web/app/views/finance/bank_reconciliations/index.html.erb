@@ -36,17 +36,17 @@
       <p class="mt-1 text-xs text-taupe"><%= s[:matched] %> with a matching ledger movement · <%= s[:unmatched_lines] %> without one</p>
     </div>
     <div class="stat">
-      <div class="stat-label">Statement net · USD<%= define('statement_net') %></div>
+      <div class="stat-label">Statement net<%= define('statement_net') %></div>
       <p class="stat-value mt-1"><%= finance_money(s[:statement_net_cents]) %></p>
       <p class="mt-1 text-xs text-taupe">in <%= finance_money(s[:statement_in_cents]) %> · out <%= finance_money(s[:statement_out_cents]) %></p>
     </div>
     <div class="stat">
-      <div class="stat-label">Ledger net · USD<%= define('ledger_net') %></div>
+      <div class="stat-label">Ledger net<%= define('ledger_net') %></div>
       <p class="stat-value mt-1"><%= s[:gl_net_cents].nil? ? 'Unavailable' : finance_money(s[:gl_net_cents]) %></p>
       <p class="mt-1 text-xs text-taupe"><%= @reconciliation.mapping&.ledger_account&.label || 'No account mapped' %></p>
     </div>
     <div class="stat">
-      <div class="stat-label">Difference · USD<%= define('bank_difference') %></div>
+      <div class="stat-label">Difference<%= define('bank_difference') %></div>
       <p class="stat-value mt-1"><%= s[:difference_cents].nil? ? 'Unavailable' : finance_money(s[:difference_cents]) %></p>
       <p class="mt-1 text-xs font-semibold text-mocha"><%= s[:difference_cents].nil? ? 'Choose the statement ledger account.' : s[:difference_cents].zero? ? 'Net movements agree; review unmatched lines.' : "Net difference of #{finance_money_text(s[:difference_cents].abs)}." %></p>
       <% money_or_na = ->(cents) { cents.nil? ? 'Unavailable' : finance_money(cents) } %>

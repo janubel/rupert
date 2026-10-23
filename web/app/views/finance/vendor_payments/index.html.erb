@@ -9,7 +9,7 @@
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-3" aria-label="Payment summary">
     <div class="stat">
-      <div class="stat-label">Recorded payments · USD<%= define('vendor_payment') %></div>
+      <div class="stat-label">Recorded payments<%= define('vendor_payment') %></div>
       <p class="stat-value mt-1"><%= finance_money(@total_cents) %></p>
       <p class="mt-1 text-xs text-taupe"><%= pluralize(@entry_count, 'active payment') %> in range<%= ', filtered' if @q.present? || @min_cents || @max_cents %></p>
     </div>

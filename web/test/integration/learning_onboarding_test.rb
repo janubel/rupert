@@ -138,7 +138,7 @@ class LearningOnboardingTest < ActionDispatch::IntegrationTest
 
   test 'the help panel and ? button render on management and staff layouts' do
     get inventory_index_path
-    assert_select 'a.nav-utility[aria-label="Help"][href=?]', learning_index_path
+    assert_select 'footer a[aria-label="Help"][href=?]', learning_index_path
     assert_select 'aside.help-panel[role="dialog"] #help-panel-search'
     assert_select '.help-panel button', text: /Show me around/
     assert_select '.help-panel a[href=?]', learning_path('stock')

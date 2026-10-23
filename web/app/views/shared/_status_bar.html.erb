@@ -1,14 +1,8 @@
 <%# The status bar (docs/ui-standards.md §2): one thin strip under every page with the sync
-    state, the Team chat unread badge and latest message, and the build. Badges, not popups. %>
-<% sync = local_assigns[:sync] || @last_sync %>
+    state, the Team chat unread badge and latest message, help, bug reports and the build.
+    Badges, not popups. %>
 <footer class="app-statusbar" aria-label="Status">
-  <% if Current.user.can?('sync.read') %>
-    <% event_at = sync && (sync.success? && sync.finishedAt ? sync.finishedAt : sync.startedAt) %>
-    <%= link_to syncs_path, class: 'statusbar-item', title: sync ? "#{sync.source.presence || 'Unknown source'} · #{sync.mode} · #{sync.status}" : 'Never synced' do %>
-      <span aria-hidden="true" class="dot <%= sync ? (sync.success? ? 'bg-fern' : 'bg-clay') : 'bg-taupe' %>"></span>
-      <span><% if event_at %>Synced <time datetime="<%= event_at.iso8601 %>"><%= time_ago_in_words(event_at) %> ago</time><% else %>Never synced<% end %></span>
-    <% end %>
-  <% end %>
+  <%= render 'shared/statusbar_sync', sync: local_assigns[:sync] %>
   <% if team_chat_badge_available? %>
     <%= link_to team_chat_path, class: 'statusbar-item statusbar-chat', data: { action: 'team-chat-badge#open' } do %>
       <%= navigation_icon('chat', css_class: 'nav-symbol statusbar-icon') %>
@@ -18,6 +12,7 @@
     <% end %>
   <% end %>
   <span class="statusbar-spacer"></span>
-  <button type="button" class="statusbar-item" data-action="click->help-panel#toggle" title="Help — press ?">Help <kbd>?</kbd></button>
+  <%= link_to feedback_reports_path, class: 'statusbar-item', aria: { label: 'Report a bug or send a request', expanded: 'false', haspopup: 'dialog', controls: 'feedback-panel' }, title: 'Report a bug or request', data: { action: 'click->feedback#toggle', feedback_target: 'trigger', feedback_ignore: '' } do %><%= navigation_icon('bug', css_class: 'nav-symbol statusbar-icon') %><span class="statusbar-label">Report a problem</span><% end %>
+  <%= link_to learning_index_path, class: 'statusbar-item', aria: { label: 'Help', expanded: 'false', haspopup: 'dialog' }, title: 'Help — press ?', data: { action: 'click->help-panel#toggle', help_panel_target: 'trigger', tour: 'help' } do %><span>Help</span> <kbd>?</kbd><% end %>
   <span class="statusbar-item statusbar-build" title="<%= BuildInfo.current.revision %>"><%= BuildInfo.current.label %></span>
 </footer>

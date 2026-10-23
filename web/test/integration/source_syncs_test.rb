@@ -59,7 +59,7 @@ class SourceSyncsTest < ActionDispatch::IntegrationTest
     OnboardingController.stubs(:configured?).returns(true)
     get root_path
     assert_response :success
-    assert_select '[data-source=square]', text: /Live.*Last successful pull:.*Latest stored sale:/m
+    assert_select '[data-source=square]', text: /Last successful pull:.*Latest stored sale:.*Live/m
     assert_select '[data-source=square] form[action=?]', source_syncs_path(source: 'square')
     assert_select '[data-sales-source=square]', text: /No sales imported for today/
     refute_includes response.body, 'private-square-fixture'
@@ -74,8 +74,7 @@ class SourceSyncsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select '[data-sales-source=shopify] time[datetime]'
     assert_select '#source-sync-status', count: 0
-    assert_select 'nav[aria-label="Daily work"] a[href=?]', ctrax_days_path
-    assert_select 'nav[aria-label="Daily work"] a[href=?]', ctrax_pos_path, count: 0
+    assert_select 'a[href=?]', ctrax_pos_path, count: 0
   end
 
   test 'dashboard refresh updates sales in place and respects delegated widget permissions' do

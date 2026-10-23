@@ -173,8 +173,8 @@ class LearningFlowTest < ActionDispatch::IntegrationTest
       occurred_at: Time.current, gross_cents: 90000, currency: 'USD', tenant_id: @user.tenant_id)
     get sales_path, params: { source: 'shopify', status: 'placed' }
     assert_response :success
-    assert_select '[data-sales-total-explanation] dd', text: 'USD 50.00'
-    assert_select '[data-sales-total-explanation] p', text: /Average sale = USD 50.00 ÷ 2 included sales = USD 25.00/
+    assert_select '[data-sales-total-explanation] dd', text: '$50.00'
+    assert_select '[data-sales-total-explanation] p', text: /Average sale = \$50.00 ÷ 2 included sales = \$25.00/
   end
 
   test 'signed out requests cannot read or write personal learning state' do

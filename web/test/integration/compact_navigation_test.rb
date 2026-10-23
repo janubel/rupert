@@ -58,8 +58,8 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'nav[aria-label="Module areas"] a[aria-label="Team"]', count: 0
     assert_select 'nav[aria-label="Module areas"] a[aria-label="System"]', count: 0
-    assert_select 'a.nav-utility[aria-label="Instance overview"]', count: 0
-    assert_select '#header-sync-pill a', count: 0
+    assert_select 'a[aria-label="Instance overview"]', count: 0
+    assert_select '#statusbar-sync a', count: 0
     refute_includes response.body, 'swipesimple · csv'
     assert_select 'nav[aria-label="Module areas"] a[aria-label="Me"]'
     assert_select '.account-menu a[href=?]', time_clock_path, count: 0
@@ -90,12 +90,12 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
   test 'platform icons and system health require platform role even with delegated permissions' do
     @admin.update_permission_overrides!(%w[dashboard.read inventory.read system.read settings.read])
     get inventory_index_path
-    assert_select 'a.nav-utility[aria-label="Instance overview"]', count: 0
+    assert_select 'a[aria-label="Instance overview"]', count: 0
     assert_select 'nav[aria-label="Module"] a[href=?]', system_path, count: 0
     @admin.update!(role: 'super_admin')
     get platform_path
     assert_response :success
-    assert_select 'a.nav-utility[aria-label="Instance overview"] svg'
+    assert_select 'a[aria-label="Instance overview"] svg'
     assert_select 'nav[aria-label="Module"] a[href=?]', system_path
     assert_select '.account-menu', text: /Platform administrator/
   end

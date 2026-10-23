@@ -14,11 +14,11 @@
       <p class="mt-1 text-xs text-taupe"><%= @totals[:void] %> of them void</p>
     </div>
     <div class="stat">
-      <div class="stat-label">Total debits · USD<%= define('debit_credit') %></div>
+      <div class="stat-label">Total debits<%= define('debit_credit') %></div>
       <p class="stat-value mt-1"><%= finance_money(@totals[:debits]) %></p>
     </div>
     <div class="stat">
-      <div class="stat-label">Total credits · USD<%= define('debit_credit') %></div>
+      <div class="stat-label">Total credits<%= define('debit_credit') %></div>
       <p class="stat-value mt-1"><%= finance_money(@totals[:credits]) %></p>
       <%= explain_calculation(title: 'Do the listed entries balance?', id: 'ledger-balance-check',
             formula: 'Total debits − total credits across the entries matching these filters. Zero means every listed entry is balanced.',

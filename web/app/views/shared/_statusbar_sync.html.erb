@@ -1,0 +1,13 @@
+<%# Sync state in the status bar. Live-replaced by LiveController while a sync runs. %>
+<span id="statusbar-sync">
+  <% if Current.user&.can?('sync.read') %>
+    <% sync = local_assigns[:sync] || @last_sync %>
+    <% event_at = sync && (sync.success? && sync.finishedAt ? sync.finishedAt : sync.startedAt) %>
+    <% description = sync ? "#{sync.source.presence || 'Unknown source'} · #{sync.mode} · #{sync.status}" : 'Never synced' %>
+    <%= link_to syncs_path, class: 'statusbar-item', title: "Sync: #{description}" do %>
+      <span aria-hidden="true" class="dot <%= sync ? (sync.success? ? 'bg-fern' : 'bg-clay') : 'bg-taupe' %>"></span>
+      <span><% if event_at %>Synced <time datetime="<%= event_at.iso8601 %>"><%= time_ago_in_words(event_at) %> ago</time><% else %>Never synced<% end %></span>
+      <span class="sr-only"><%= description %></span>
+    <% end %>
+  <% end %>
+</span>

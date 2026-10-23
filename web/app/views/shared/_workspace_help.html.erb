@@ -6,7 +6,7 @@
   <% tour_steps = tour ? tour.steps.map { |step| { anchor: step[:anchor], title: step[:title], body: step[:body] } } : [] %>
   <div class="help-bar mb-4" <% if tour %>data-controller="tour" data-action="rupert:start-tour@window->tour#start" data-tour-key-value="<%= tour.key %>" data-tour-title-value="<%= tour.title %>" data-tour-steps-value="<%= tour_steps.to_json %>" data-tour-save-url-value="<%= learning_preferences_path %>" data-tour-done-value="<%= learning_journey.tour_done?(tour.key) %>" data-tour-autostart-value="<%= (params[:tour] == '1' || tour.key == 'team_chat') && !learning_journey.tour_done?(tour.key) %>"<% end %>>
     <details class="workspace-help">
-      <summary class="cursor-pointer font-semibold text-olive-deep">How this page works</summary>
+      <summary class="cursor-pointer font-medium text-mocha hover:text-ink">How this page works</summary>
       <div id="page-guide-panel" class="card card-pad mt-3 space-y-4">
         <div><h2 class="font-display text-lg"><%= guide ? guide.title : (lesson ? lesson[:title] : tour.title) %></h2><p class="mt-2 text-sm text-mocha"><%= guide ? guide.summary : (lesson ? lesson[:summary] : tour.intro) %></p></div>
         <% if guide %>

@@ -12,7 +12,7 @@
         ['Vendor credits / prepayments', @credits_total, 'Shown separately from balances due', 'vendor_credit'],
         ['Ordered, not received', @committed_total, 'Purchase commitments, separate from received goods', 'po_pending']].each do |label, value, detail, term| %>
       <div class="stat min-w-0">
-        <div class="stat-label"><%= label %> · USD<%= define(term) %></div>
+        <div class="stat-label"><%= label %><%= define(term) %></div>
         <p class="stat-value mt-1"><%= finance_money(value) %></p>
         <p class="mt-1 text-xs text-taupe"><%= detail %></p>
       </div>
