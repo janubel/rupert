@@ -12,6 +12,23 @@ class CommissionPreview
 
   attr_reader :gateway_matched_orders, :gateway_excluded_orders, :rows, :eligible_orders, :excluded_orders, :source, :currency, :start_date, :end_date
 
+  # Within a block, the same preview (dates, source, currency) is built once and shared, so the incentive model can
+  # ask for many employees over many weeks without recounting the same orders.
+  def self.caching
+    outer = Thread.current[:commission_preview_cache]
+    Thread.current[:commission_preview_cache] ||= {}
+    yield
+  ensure
+    Thread.current[:commission_preview_cache] = outer
+  end
+
+  def self.cached(**args)
+    store = Thread.current[:commission_preview_cache]
+    return new(**args) unless store
+
+    store[args.transform_values(&:to_s)] ||= new(**args)
+  end
+
   def initialize(start_date:, end_date:, source:, currency:)
     @start_date = Date.iso8601(start_date.to_s)
     @end_date = Date.iso8601(end_date.to_s)

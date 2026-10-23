@@ -17,10 +17,11 @@ class EmployeePayWeek
     date.beginning_of_week(:thursday)
   end
 
-  def initialize(employee:, week_of: Date.current)
+  # from/to: a part of a week instead of the whole Thursday-Wednesday week (the incentive model uses single days).
+  def initialize(employee:, week_of: Date.current, from: nil, to: nil)
     @employee = employee
-    @start_date = self.class.week_start(week_of)
-    @end_date = @start_date + 6
+    @start_date = from || self.class.week_start(week_of)
+    @end_date = to || (@start_date + 6)
     @notes = []
     @sales_cents = 0
     @commission_cents = 0
@@ -74,7 +75,7 @@ class EmployeePayWeek
     return if @own_keys.empty?
 
     CommissionPreview::SOURCES.each do |source|
-      preview = CommissionPreview.new(start_date: start_date.iso8601, end_date: end_date.iso8601, source: source, currency: CURRENCY)
+      preview = CommissionPreview.cached(start_date: start_date.iso8601, end_date: end_date.iso8601, source: source, currency: CURRENCY)
       row = preview.rows.find { |candidate| candidate[:employee_id] == employee.id }
       next unless row
 
@@ -86,11 +87,19 @@ class EmployeePayWeek
     @notes << "Shopify, Square and SwipeSimple sales were not included: #{e.message}"
   end
 
+  # A C-Trax day's orders, decoded once per CommissionPreview.caching block.
+  def ctrax_orders(day)
+    store = Thread.current[:commission_preview_cache]
+    return Ctrax::Reconciliation.new(day).orders unless store
+
+    store[[:ctrax, day.id, day.updated_at]] ||= Ctrax::Reconciliation.new(day).orders
+  end
+
   def add_ctrax_days
     return if @own_keys.empty?
 
     CtraxDay.where(business_date: (start_date - 1)..(end_date + 1), currency: CURRENCY).find_each do |day|
-      Ctrax::Reconciliation.new(day).orders.each do |order|
+      ctrax_orders(day).each do |order|
         at = Time.iso8601(order['completed_at'].to_s).in_time_zone
         next unless window.cover?(at) && order['total'].is_a?(Integer) && order['tax'].is_a?(Integer) && order['refund_count'].to_i.zero?
 
