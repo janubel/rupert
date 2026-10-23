@@ -264,6 +264,7 @@ Rails.application.routes.draw do
       member do
         post :transition
         post :move
+        get :approved_request
       end
       resources :comments, only: :create, controller: 'task_comments'
       resources :checklist_items, only: %i[create update destroy], controller: 'task_checklist_items'

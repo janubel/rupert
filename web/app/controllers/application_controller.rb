@@ -42,7 +42,7 @@ class ApplicationController < ActionController::Base
     when 'employee_access'
       %w[edit update].include?(action_name)
     when 'projects/tasks'
-      %w[index show update transition move].include?(action_name)
+      %w[index show update transition move approved_request].include?(action_name)
     when 'projects/task_comments'
       action_name == 'create'
     when 'projects/task_checklist_items'

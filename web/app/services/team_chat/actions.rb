@@ -154,6 +154,7 @@ module TeamChat
         outcome = tool.new(token: Token.new(user, write: tool.scope)).call(action['arguments'] || {})
         action['status'] = 'done'
         action['result'] = outcome.text.to_s.first(300)
+        action['task_id'] = outcome.data.to_h[:id] if %w[create_task update_task].include?(action['tool'])
         action['assignee_id'] = outcome.data.to_h[:assignee_id].presence if outcome.data.to_h.key?(:assignee_id)
         record.record!('executed', user: user, details: { result: outcome.data.to_h, duration_ms: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round })
         log_execution!(record, user, outcome)
@@ -206,6 +207,10 @@ module TeamChat
         when 'failed' then "#{action['decided_by']} approved “#{action['summary']}”, but it did not work: #{action['result']}"
         else "#{action['decided_by']} dismissed “#{action['summary']}”."
         end
+      if action['status'] == 'done' && action['task_id'].is_a?(Integer)
+        routes = Rails.application.routes.url_helpers
+        text += " [View task](#{routes.projects_task_path(action['task_id'])}) · [View approved request](#{routes.approved_request_projects_task_path(action['task_id'], approval_id: action['id'])})"
+      end
       message.room.messages.create!(author_kind: 'system', body: text, parent_id: message.parent_id, mentions: notify_ids(message.room, action).presence)
     end
 

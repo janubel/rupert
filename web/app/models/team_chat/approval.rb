@@ -16,6 +16,15 @@ module TeamChat
       errors.add(:base, 'A decided approval is immutable') unless state_in_database == 'proposed'
     end
 
+    # Requester and approver retain access after deletion; other viewers need
+    # current access to the source room. Task authorization is checked separately.
+    def original_request_visible_to?(user)
+      return false unless user&.active? && user.tenant_id == tenant_id
+      return true if [provenance['requester_id'].to_s, decided_by_id.to_s].include?(user.id.to_s)
+
+      TeamChat.allowed?(user) && Room.visible_to(user).exists?(id: provenance['room_id'])
+    end
+
     def action
       receipt.present? ? receipt : proposal.merge('status' => state)
     end

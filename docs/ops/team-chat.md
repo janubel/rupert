@@ -490,3 +490,16 @@ missing sources show an unavailable label; original chat text and raw audit JSON
 are never printed in task history. Missing legacy metadata says Not recorded.
 Human activity keeps its existing text. This is a presentation change over the
 saved approval/audit records; it requires no migration or approval replay.
+
+### Retained approved task requests
+
+Successful task approval notices link to the task and its saved approved request.
+Task History also has a **View approved request** link. The canonical approval
+retains the original message snapshot and exact approved arguments even when
+the source message or room is deleted. Editing the chat later does not rewrite it.
+The detail page requires access to the executed task; another task's approval
+cannot be substituted. Task readers can inspect the approved change. Original
+chat text is restricted to the active requester, approver, and people who currently
+have access to the source chat. After room deletion only the requester and
+approver retain that text access, subject to task access and tenant boundaries.
+Legacy approvals without an original snapshot display **Not recorded**.
