@@ -11,9 +11,12 @@
     <span class="<%= @reconciliation.matched? ? 'pill-fern' : 'pill-clay' %>"><%= @reconciliation.matched? ? 'Controls match' : 'Needs review' %></span>
   <% end %>
 
-  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Daily sales summary">
-    <% [['Recorded sales', @reconciliation.sum(@reconciliation.orders, 'total')], ['Tax included', @reconciliation.sum(@reconciliation.orders, 'tax')], ['Tips · separate', @reconciliation.sum(@reconciliation.orders, 'tip')]].each do |label, value| %>
-      <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value mt-2"><%= money.call(value) %></p></div>
+  <% close = DailyCloseSummary.ctrax_row(@day) %>
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Daily sales summary" data-ctrax-close>
+    <% [['Gross sales', close.gross, 'After discounts, before tax and tips'], ['Refunds', close.refunds, nil], ['Net sales', close.net, 'Gross sales minus refunds'],
+        ['Tax collected', close.tax, nil], ['Tips collected', close.tips, 'Not part of sales'], ['Cash collected', close.cash, 'Cash tenders, tips included'],
+        ['Credit collected', close.credit, 'Card tenders, tips included']].each do |label, value, hint| %>
+      <div class="stat"><p class="stat-label"><%= label %></p><p class="stat-value mt-2"><%= money.call(value) %></p><% if hint %><p class="mt-1 text-xs text-mocha"><%= hint %></p><% end %></div>
     <% end %>
     <div class="stat"><p class="stat-label">Completed orders</p><p class="stat-value mt-2"><%= @reconciliation.orders.size %></p><p class="mt-1 text-xs text-mocha">Source detail only</p></div>
   </section>
