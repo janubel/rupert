@@ -47,7 +47,8 @@ class ChatWorkerIsolationTest < ActiveSupport::TestCase
     %w[development test production].each do |environment|
       workers = worker_config(environment)
       assert_equal 2, workers.size
-      assert_equal ['default', 'chat'], workers.pluck('queues')
+      # The default worker also serves Solid Queue's own recurring housekeeping queue (it had no worker before).
+      assert_equal [%w[default solid_queue_recurring], 'chat'], workers.pluck('queues')
       assert_equal [1, 1], workers.last.values_at('threads', 'processes')
     end
     assert_equal 'chat', TeamChat::ReplyJob.queue_name
