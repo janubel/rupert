@@ -2089,7 +2089,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_230000) do
     t.boolean "source_lines_complete", default: false, null: false
     t.string "source_financial_status"
     t.integer "tip_cents", default: 0, null: false
-    t.json "discount_codes", default: [], null: false
+    t.json "discount_codes", default: []
     t.index ["location_id"], name: "index_orders_on_location_id"
     t.index ["tenant_id", "customer_id"], name: "index_orders_on_tenant_id_and_customer_id"
     t.index ["tenant_id", "occurred_at"], name: "index_orders_on_tenant_id_and_occurred_at"
