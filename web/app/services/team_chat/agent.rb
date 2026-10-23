@@ -60,11 +60,14 @@ module TeamChat
       @telemetry.measure('execution') do
         @execution = Execution.new(durable_run, token)
         @execution.start_watch
-        @execution.pin_configuration!(@config)
         return fail!(:error, started) unless @asker && @trigger && TeamChat.allowed?(@asker)
 
         return deliver_privately! unless @room.direct?
 
+        return if NavigationAnswer.new(@execution, telemetry: @telemetry).call(started: started)
+
+        @execution.pin_configuration!(@config)
+        @telemetry.record('routing', outcome: 'succeeded', facts: { 'route' => 'agent' })
         @topics = question_topics
         # Local bots get only the tools for what the question is about (smaller prompt, fewer wrong picks), unless
         # RUPERT_LOCAL_TOOLS=all: then every tool, so the instructions and tool list stay the same from question to
@@ -455,7 +458,7 @@ module TeamChat
 
     # Cloud replies count toward System → AI health's token totals, as Ask Rupert's do.
     def note_ai_health(outcome)
-      return if %w[ollama local_gateway].include?(@engine) || !defined?(AiAgentRun)
+      return if direct_navigation? || %w[ollama local_gateway].include?(@engine) || !defined?(AiAgentRun)
 
       meta = @reply.meta.to_h
       AiAgentRun.create!(agent: 'team_chat', model: meta['model'].to_s, outcome: outcome, tokens_in: @tokens_in, tokens_out: @tokens_out,
@@ -464,10 +467,13 @@ module TeamChat
       Rails.logger.warn "[TeamChat] could not note ai health: #{e.class}"
     end
 
+    def direct_navigation? = @execution&.run&.configuration&.dig('engine') == NavigationAnswer::ENGINE
+
     def meta_with(started, outcome)
       ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
-      @reply.meta.to_h.merge('engine' => @engine, 'model' => (@engine == 'opencode_cli' ? AskRupert::Providers::Opencode.new.model : @config.model),
-        'tokens_in' => @tokens_in, 'tokens_out' => @tokens_out, 'tools' => @toolbox&.tools_used.to_a.uniq, 'duration_ms' => ms, 'outcome' => outcome)
+      model = @engine == 'opencode_cli' ? AskRupert::Providers::Opencode.new.model : @config.model
+      @reply.meta.to_h.merge('engine' => direct_navigation? ? NavigationAnswer::ENGINE : @engine, 'model' => direct_navigation? ? nil : model,
+        'tokens_in' => direct_navigation? ? nil : @tokens_in, 'tokens_out' => direct_navigation? ? nil : @tokens_out, 'tools' => @toolbox&.tools_used.to_a.uniq, 'duration_ms' => ms, 'outcome' => outcome)
         .tap { |meta| meta['topics'] = @topics.map(&:key) if @topics.present? }
     end
 
