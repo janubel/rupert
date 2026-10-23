@@ -25,7 +25,7 @@
         <% @records.each do |record| %>
           <% item = pos_tile_payload(record, image_links: image_links) %>
           <button type="button" class="pos-tile<%= ' pos-tile-out' if item[:stock] == 'Out' %><%= ' pos-tile-review' unless item[:addable] %>" data-action="pos-screen#open" data-item="<%= item.to_json %>" aria-label="<%= [item[:title], item[:variant], item[:price], item[:stock]].compact.join(', ') %>">
-            <span class="pos-tile-media"><%= image_tag @images.url(record, size: 480), alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' %></span>
+            <span class="pos-tile-media"><%= image_tag @images.url(record, 480), alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' %></span>
             <span class="pos-tile-body">
               <span class="pos-tile-name"><%= item[:title] %></span>
               <span class="pos-tile-variant"><%= item[:variant] || (item[:variants] ? "#{item[:variants].size} sizes" : '') %></span>

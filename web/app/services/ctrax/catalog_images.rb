@@ -28,7 +28,7 @@ module Ctrax
     end
 
     # size: the square thumbnail edge in pixels (the POS tile and item sheet ask for larger ones).
-    def url(record, size: 320)
+    def url(record, size = 320)
       product = product_for(record)
       return unless product && product.featuredImageUrl.present?
 

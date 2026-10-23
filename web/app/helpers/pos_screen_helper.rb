@@ -53,7 +53,7 @@ module PosScreenHelper
       sku: record['sku'], barcode: record['barcode'], category: record['category'].presence || 'Uncategorized',
       price: record['variable_price'] ? 'Variable price' : ctrax_money(record['price_cents']),
       addable: pos_addable?(record), stock: stock[:word], stock_tone: stock[:tone], stock_detail: stock[:detail],
-      image: @images.url(record, size: 800),
+      image: @images.url(record, 800),
       image_link_url: (ctrax_pos_image_path(@snapshot.location_id, record['id']) if image_links),
       image_product_id: (@images.product_for(record)&.id if image_links)
     }
