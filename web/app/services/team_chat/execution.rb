@@ -168,6 +168,30 @@ module TeamChat
       end
     end
 
+    # One extra generation per durable run, including across worker recovery.
+    # Reserve before waiting/requesting so a crash cannot reset this allowance.
+    def reserve_retry!(delay, status:)
+      locked do
+        return false if remaining < delay + 1
+        return false if Telemetry.where(run_id: run.id, kind: 'generation_retry').exists?
+
+        TelemetryRecorder.new(run, token).record('generation_retry', outcome: 'reserved',
+          facts: { 'http_status' => status, 'delay_ms' => (delay * 1000).round })
+        true
+      end
+    end
+
+    def wait_for_retry!(delay)
+      until_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) + delay
+      loop do
+        check!
+        left = until_at - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        break if left <= 0
+
+        sleep [left, 0.05].min
+      end
+    end
+
     def start_watch
       @stop_watch = false
       @watch = Thread.new do

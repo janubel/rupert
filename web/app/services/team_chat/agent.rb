@@ -219,7 +219,7 @@ module TeamChat
         if last&.tool_call?
           chat.run_tools
         else
-          @execution.generate(chat) do |chunk|
+          chat = generate_native(chat) do |chunk|
             next if chunk.content.blank?
 
             buffer << chunk.content
@@ -241,6 +241,28 @@ module TeamChat
       raise Failure.new(:timeout, e.message)
     rescue RubyLLM::Error => e
       raise Failure.new(:error, e.message)
+    end
+
+    # Rebuild from the durable checkpoint after a refusal; never replay tools
+    # or a partially streamed response, and never delegate retries to the SDK.
+    def generate_native(chat)
+      loop do
+        streamed = false
+        begin
+          @execution.generate(chat) do |chunk|
+            streamed = true
+            yield chunk
+          end
+          return chat
+        rescue RubyLLM::Error => error
+          delay = @config.local? || streamed ? nil : GenerationRetry.delay(error)
+          raise unless delay && @execution.reserve_retry!(delay, status: error.response.status)
+
+          activity!('Retrying model')
+          @telemetry.measure('retry_wait') { @execution.wait_for_retry!(delay) }
+          chat = native_chat
+        end
+      end
     end
 
     def record_cli_usage(usage, cost)
