@@ -79,6 +79,17 @@ class TeamChatNavigationAnswerTest < ActiveSupport::TestCase
     end
   end
 
+  test 'mixed navigation fallback retains current destination filtering after routing' do
+    @user.update_permission_overrides!(%w[settings.write dashboard.read])
+    requests = script_model(text: 'Open [Payroll](/people/pay_runs) or [Home](/).')
+    reply = ask('@rupert Where is payroll? Also explain how it works.')
+    execute(reply)
+    assert_equal 1, requests.size
+    assert_equal 'openai', reply.meta['engine']
+    assert_equal 'Open Payroll or [Home](/).', reply.body
+    assert_equal 'succeeded', reply.run.reload.state
+  end
+
   test 'a thread remains with the agent even when its last sentence looks navigational' do
     parent = @room.messages.create!(author_kind: 'person', user: @user, body: 'Explain the approval workflow.')
     requests = script_model(text: 'The agent handles this conversation.')
