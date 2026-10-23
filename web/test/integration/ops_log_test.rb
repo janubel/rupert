@@ -198,14 +198,16 @@ class OpsLogTest < ActionDispatch::IntegrationTest
     original = Rails.application.env_config['action_dispatch.show_exceptions']
     Rails.application.env_config['action_dispatch.show_exceptions'] = :all
     Rails.application.env_config['action_dispatch.debug_exception_log_level'] = Logger::DEBUG
-    lines = capture_ops_log { get dashboard_path }
+    lines = capture_ops_log { get dashboard_path, headers: { 'X-Request-Id' => 'redaction-4111' } }
     assert_response :internal_server_error
     line = requests(lines).first
     assert_equal 'error', line['level']
     assert_equal 500, line['status']
     assert_equal 'RuntimeError', line['error_class']
     assert_equal 'home', line['controller']
-    ['jane@example.com', '4111', 'private value'].each { |text| refute_includes ops_raw, text }
+    assert_equal 'redaction-4111', line['request_id']
+    refute_includes line['error_message'], '4111'
+    ['jane@example.com', '4111 1111 1111 1111', 'private value'].each { |text| refute_includes ops_raw, text }
     row = OpsEvent.where(kind: 'request').sole
     assert_equal 'error', row.level
     assert_equal 'RuntimeError', row.fields[:error_class]
