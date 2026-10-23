@@ -34,10 +34,13 @@ class NegativeInventory
 
     private
 
+    # Reads the platform's own figure: Shopify levels are stored clamped at 0 with the real (oversold) figure in
+    # sourceQuantity. The fixes above keep selecting on the stored quantity, so this does not widen any write.
     def negative_levels(source)
+      raw = Arel.sql('COALESCE("sourceQuantity", quantity)')
       InventoryLevel.where(source: source)
-                    .where('quantity < 0')
-                    .order(:quantity)
+                    .where(Arel.sql('COALESCE("sourceQuantity", quantity) < 0'))
+                    .order(raw)
                     .includes(:square_variation, :shopify_variant, :location)
                     .map do |level|
         if source == 'square'
@@ -54,7 +57,7 @@ class NegativeInventory
           sku: sku,
           name: name,
           location: level.location&.name,
-          quantity: level.quantity
+          quantity: level.sourceQuantity || level.quantity
         )
       end
     end

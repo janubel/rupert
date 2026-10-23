@@ -157,29 +157,38 @@ class SquareClient
     # Orders changed since `since_iso`. Filtered on updated_at (Square requires
     # the sort field to match the date filter) so a later refund or return
     # re-selects the order; refunds arrive on the order payload.
+    # Square takes at most 10 locations per search, so every group of 10 is read (it used to send only the first
+    # 10). Reaching `max` raises instead of returning a partial list: the caller would otherwise move its watermark
+    # past orders it never read.
     def orders(location_ids, since_iso, max: nil)
-      orders = []
-      cursor = nil
       max ||= 100_000
-      loop do
-        body = {
-          location_ids: location_ids.first(10),
-          query: {
-            filter: {
-              state_filter: { states: ['COMPLETED'] },
-              date_time_filter: { updated_at: { start_at: since_iso } }
+      orders = {}
+      Array(location_ids).each_slice(10) do |group|
+        cursor = nil
+        loop do
+          body = {
+            location_ids: group,
+            query: {
+              filter: {
+                state_filter: { states: ['COMPLETED'] },
+                date_time_filter: { updated_at: { start_at: since_iso } }
+              },
+              sort: { sort_field: 'UPDATED_AT', sort_order: 'DESC' }
             },
-            sort: { sort_field: 'UPDATED_AT', sort_order: 'DESC' }
-          },
-          limit: 200
-        }
-        body[:cursor] = cursor if cursor
-        payload = request('/orders/search', method: 'POST', body: body)
-        orders.concat(payload['orders'] || [])
-        cursor = payload['cursor']
-        break if cursor.blank? || orders.length >= max
+            limit: 200
+          }
+          body[:cursor] = cursor if cursor
+          payload = request('/orders/search', method: 'POST', body: body)
+          Array(payload['orders']).each { |order| orders[order['id'] || order.object_id] = order }
+          if orders.size > max
+            raise Error.new("Square returned more than #{max} changed orders since #{since_iso}; nothing was imported and the sync point was kept.",
+              reason: :response)
+          end
+          cursor = payload['cursor']
+          break if cursor.blank?
+        end
       end
-      orders
+      orders.values
     end
 
     def configured?
