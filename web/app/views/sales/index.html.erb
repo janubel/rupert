@@ -41,7 +41,7 @@
         <li class="row-item">
           <div class="min-w-0">
             <p class="font-semibold text-ink"><%= operations_source_name(source) %></p>
-            <p class="text-xs text-taupe">Last pull <%= retail_source_time(freshness[:pulled_at]) %><% if source == 'ctrax' %> · business date <%= freshness[:business_date] || 'not imported' %><% end %></p>
+            <p class="text-xs text-taupe">Last pull: <%= retail_source_time(freshness[:pulled_at]) %><% if source == 'ctrax' %> · business date <%= freshness[:business_date] || 'not imported' %><% end %></p>
           </div>
           <div class="row-item-end">
             <span class="text-xs text-mocha"><%= pluralize(group&.third || 0, 'sale') %></span>
