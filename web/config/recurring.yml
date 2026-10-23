@@ -21,6 +21,10 @@ production:
     class: DailyReconciliationArchiveJob
     queue: default
     schedule: "15 7 * * * America/New_York"
+  github_issue_sync:
+    class: GithubIssueSyncJob
+    queue: default
+    schedule: every 30 minutes
   task_reminders:
     class: TaskReminderJob
     queue: default

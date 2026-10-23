@@ -36,6 +36,9 @@ module EnvStore
     GOOGLE_DRIVE_ACCOUNT_EMAIL
     GOOGLE_DRIVE_FOLDER_ID
     GOOGLE_DRIVE_RETENTION
+    GITHUB_ISSUES_REPO
+    GITHUB_ISSUES_TOKEN
+    GITHUB_ISSUES_MILESTONE
     GOOGLE_OAUTH_CLIENT_ID
     GOOGLE_OAUTH_CLIENT_SECRET
     FULFILLMENT_ALERT_HOURS
@@ -46,7 +49,7 @@ module EnvStore
     PUSH_FREEZE_SQUARE
   ].freeze
 
-  PLATFORM_KEYS = MANAGED_KEYS.grep(/\AGOOGLE_DRIVE_/).freeze
+  PLATFORM_KEYS = MANAGED_KEYS.grep(/\A(?:GOOGLE_DRIVE|GITHUB_ISSUES)_/).freeze
 
   # Whole-instance backup destinations belong to the platform operator. Never
   # consult tenant rows: they may have been configured by a store administrator.
