@@ -48,6 +48,14 @@ class TeamChatRequestRevisionHttpTest < ActionDispatch::IntegrationTest
     assert_equal 'cancelled', child.run.reload.state
   end
 
+  test 'oversized input returns a useful error and leaves the original answer active' do
+    patch team_chat_message_path(@room.slug, @post.message.id), params: { body: 'x' * (TeamChat::Message::BODY_MAX + 1) }, as: :json
+    assert_response :unprocessable_entity
+    assert_match(/long/i, response.parsed_body['error'])
+    assert_equal 'queued', @post.reply.run.reload.state
+    assert_equal 0, @post.message.reload.request_revision
+  end
+
   test 'an edit cannot restart a different persons request' do
     other = User.create!(tenant: @tenant, email: 'revision-owner@example.com', role: 'admin', password: 'password123')
     channel = TeamChat::Room.ensure_defaults!(@user)

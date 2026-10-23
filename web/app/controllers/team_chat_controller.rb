@@ -245,8 +245,8 @@ class TeamChatController < AuthenticatedController
     render json: { messages: payload([message.reload, *Array(message.revision_updates).select { |reply| reply.room_id == @room.id }]) }
   rescue TeamChat::Post::Limited => e
     render json: { error: e.message }, status: :too_many_requests
-  rescue ActiveRecord::RecordInvalid
-    render json: { error: 'A message needs some text.' }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence.presence || 'A message needs some text.' }, status: :unprocessable_entity
   end
 
   # POST /chat/:room/typing — "you are typing" heartbeat, shown to the others for a few seconds.

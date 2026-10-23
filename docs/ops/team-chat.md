@@ -681,6 +681,8 @@ A durable run captures that revision, exact request text, requester, parent and
 request time. Editing pending work stops the old run and creates fresh replies for
 the edited message under the room's normal mention/model rules; it does not post
 a second human message. The replacement records the edit time as `requested_at` and gets a fresh deadline.
+The full accepted current question reaches the model; history excerpt limits apply
+only to older messages.
 Unchanged edits and edits to completed answers without unresolved approvals do not
 start inference. Removing a mention can stop work without starting another bot.
 
@@ -692,7 +694,7 @@ editor cannot authorize an old proposal. Already decided receipts remain idempot
 Pending proposals without a verifiable durable request require a fresh proposal.
 
 The edit, cancellation, retraction and replacement commit atomically. Rate-limit
-failure rolls them back together. Replacement jobs enqueue only after the outer
+failure rolls them back together. Oversized edits are rejected rather than truncated. Replacement jobs enqueue only after the outer
 transaction commits; the existing recovery sweep can dispatch a committed queued
 run if enqueueing was interrupted. Superseded jobs cannot claim their cancelled
 runs. Deleting a request stops work without creating a replacement.
@@ -701,8 +703,8 @@ Workers recheck revision, text, author, tenant and thread before tools, publicat
 and checkpoints, including recovery and direct navigation. Private handoffs retain
 only source identity/revision/time, not shared history or attachment content; editing
 or deleting the original source also stops its private work. Legacy handoffs lacking
-source identity stop rather than resume an unverifiable request. Legacy snapshots
-without counters reject edits newer than run creation. The existing permission,
+source identity stop rather than resume an unverifiable request. Edit timestamps also reject source changes newer than run creation when an external
+writer leaves the counter unchanged, including legacy snapshots. The existing permission,
 cancellation, ownership and deadline fences continue to apply.
 
 An edit response includes the stopped and new messages from that same room so the

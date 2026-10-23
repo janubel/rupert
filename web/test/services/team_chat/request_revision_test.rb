@@ -84,11 +84,15 @@ class TeamChatRequestRevisionTest < ActiveSupport::TestCase
     AskRupert::Tools.define_method(:call, lookup) if lookup
   end
 
-  test 'legacy snapshots cannot recover after an edit that returns to the original text' do
-    TeamChat::Run.where(id: @run.id).update_all(request_context: @run.request_context.except('request_revision'))
-    @trigger.update_columns(edited_at: 1.second.from_now)
-    execute
-    assert_equal 'cancelled', @run.reload.state
+  test 'timestamp checks fence external edits that leave the revision counter unchanged' do
+    [true, false].each do |legacy|
+      post = TeamChat::Post.call(room: @room, user: @user, body: '@rupert explain the original workflow')
+      run = post.reply.run
+      TeamChat::Run.where(id: run.id).update_all(request_context: run.request_context.except('request_revision')) if legacy
+      post.message.update_columns(edited_at: 1.second.from_now)
+      execute(post.reply)
+      assert_equal 'cancelled', run.reload.state
+    end
     assert_not_requested :post, "#{LLM_BASE}/chat/completions"
   end
 
@@ -219,6 +223,28 @@ class TeamChatRequestRevisionTest < ActiveSupport::TestCase
       edit
     end
     assert_equal 'cancelled', @run.reload.state
+  end
+
+  test 'the full valid current request reaches the provider rather than the history excerpt limit' do
+    marker = 'Final instruction: preserve this last sentence.'
+    body = '@rupert ' + ('review ' * (TeamChat::Agent::TURN_CHARS / 7 + 20)) + marker
+    assert_operator body.length, :<=, TeamChat::Message::BODY_MAX
+    post = TeamChat::Post.call(room: @room, user: @user, body: body)
+    requests = script_model(text: 'Reviewed the complete request.')
+    execute(post.reply)
+    assert_equal 'succeeded', post.reply.run.reload.state
+    assert_includes requests.first['messages'].last['content'], marker
+    assert_equal body, post.reply.run.request_context['last_chat']
+  end
+
+  test 'oversized edits are rejected rather than starting a silently truncated request' do
+    body = @trigger.body
+    assert_no_difference -> { TeamChat::Run.count } do
+      assert_raises(ActiveRecord::RecordInvalid) { edit('x' * (TeamChat::Message::BODY_MAX + 1)) }
+    end
+    assert_equal body, @trigger.reload.body
+    assert_equal 0, @trigger.request_revision
+    assert_equal 'queued', @run.reload.state
   end
 
   test 'rate limiting rolls back the edit cancellation and replacement atomically' do

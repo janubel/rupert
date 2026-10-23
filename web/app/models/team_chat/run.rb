@@ -38,7 +38,6 @@ module TeamChat
     # A single conditional UPDATE is the claim; a prior read is not ownership.
     def request_matches?(trigger)
       context = request_context.to_h
-      return false if !context.key?('request_revision') && trigger&.edited_at && trigger.edited_at > created_at
       return false unless matches_request?(trigger, room_id: message.room_id, parent_id: context['parent_id'], revision: context.fetch('request_revision', 0))
       return true unless context['source_room_id']
       return false unless context['source_trigger_id']
@@ -51,7 +50,8 @@ module TeamChat
       context = request_context.to_h
       trigger&.person? && !trigger.deleted? && trigger.tenant_id == tenant_id &&
         trigger.room_id == room_id && trigger.user_id == context['requester_id'] &&
-        trigger.parent_id == parent_id && trigger.body == context['last_chat'] && trigger.request_revision == revision
+        trigger.parent_id == parent_id && trigger.body == context['last_chat'] && trigger.request_revision == revision &&
+        (trigger.edited_at.nil? || trigger.edited_at <= created_at)
     end
 
     def claim!

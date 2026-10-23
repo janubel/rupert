@@ -150,13 +150,17 @@ module TeamChat
     def edit_body!(text)
       text = text.to_s.scrub('').gsub(AskRupert::Redactor::CONTROL, '').strip
       raise ActiveRecord::RecordInvalid, self if text.blank? && attachment_infos.empty?
+      if text.length > BODY_MAX
+        errors.add(:body, :too_long, count: BODY_MAX)
+        raise ActiveRecord::RecordInvalid, self
+      end
 
       @revision_updates = []
       with_lock do
-        return true if body == text.first(BODY_MAX)
+        return true if body == text
 
         kept = mention_ids.select { |id| (name = User.find_by(id: id)&.display_name) && text.include?("@#{name}") }
-        update!(body: text.first(BODY_MAX), edited_at: Time.current, mentions: kept.presence,
+        update!(body: text, edited_at: Time.current, mentions: kept.presence,
           meta: meta.to_h.merge('request_revision' => request_revision + 1))
         @revision_updates = RequestRevision.changed!(self, restart: true)
       end
