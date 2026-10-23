@@ -10,6 +10,7 @@ import { verifyBackports } from '../scripts/security-backports.mjs';
 const require = createRequire(import.meta.url);
 const braces = require('braces');
 const forge = require('node-forge');
+const { z } = require('zod/v4');
 
 test('backports match the reviewed upstream versions and source hashes', () => {
   verifyBackports();
@@ -60,6 +61,28 @@ test('RSA verification accepts valid signatures and rejects hidden DigestAlgorit
   }
 });
 
+test('oversized zod arrays and sets fail their size check before any element is parsed', () => {
+  let parsed = 0;
+  const element = z.string().refine(() => { parsed += 1; return false; });
+  const huge = Array(200000).fill('x');
+  for (const [schema, input] of [[z.array(element).max(3), huge], [z.array(element).length(3), huge],
+    [z.set(element).max(3), new Set(huge.map((_, i) => String(i)))], [z.set(element).size(3), new Set(huge.map((_, i) => String(i)))]]) {
+    const result = schema.safeParse(input);
+    assert.equal(result.success, false);
+    assert.equal(result.error.issues.length, 1);
+    assert.equal(result.error.issues[0].code, 'too_big');
+  }
+  assert.equal(parsed, 0);
+});
+
+test('zod still parses and reports normal arrays, maps and sets', () => {
+  assert.deepEqual(z.array(z.number()).max(3).parse([1, 2]), [1, 2]);
+  assert.equal(z.array(z.number()).max(3).safeParse([1, 'a']).error.issues[0].path[0], 1);
+  assert.equal(z.array(z.number()).min(2).max(3).safeParse([1, 2, 3, 4]).error.issues[0].code, 'too_big');
+  assert.equal(z.set(z.string()).max(2).parse(new Set(['a'])).size, 1);
+  assert.equal(z.map(z.string(), z.number()).parse(new Map([['a', 1]])).get('a'), 1);
+});
+
 test('Xcode generates unique project identifiers without the retired UUID dependency', () => {
   const xcode = require('xcode');
   assert.equal(require('xcode/package.json').dependencies.uuid, undefined);
@@ -82,7 +105,7 @@ test('installer fails closed on skipped, tampered or unknown upstream source', (
     for (const change of manifest.changes) {
       put(`node_modules/${change.package}/package.json`, JSON.stringify({ version: change.version }));
       if (change.before_sha256 !== null) {
-        const patched = readFileSync(require.resolve(`${change.package}/${change.path}`), 'utf8');
+        const patched = readFileSync(join(dirname(require.resolve(`${change.package}/package.json`)), change.path), 'utf8');
         put(`node_modules/${change.package}/${change.path}`, patched.replace(change.replace, change.find));
       }
     }
