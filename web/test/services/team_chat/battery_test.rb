@@ -54,13 +54,13 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     assert_match(/"from":"#{Date.current.prev_month.beginning_of_month.iso8601}"/, grader.calls.last[:reference])
     grades = room.messages.where(author_kind: 'system').where('body LIKE ?', 'Grade %')
     assert_equal 2, grades.count
-    assert_match(/Grade 4\/5 for Liquid .*Right totals.*\n- No top product\n⚠ Number check: \$100 not found in Rupert's data\.\n— graded by fake-grader/m, grades.first.body)
+    assert_match(/Grade 4\/5 for Liquid .*Right totals.*\n- No top product\n— graded by fake-grader/m, grades.first.body)
 
     summary = room.messages.pinned.first
     assert_match(/answered 2\/2/, summary.body)
     assert_match(%r{Average grade 4.0/5}, summary.body)
     assert_match(/By cadence: daily 4.0 · monthly 4.0/, summary.body)
-    assert_match(/Number check: figures not found in Rupert's data in 1 of 2 answers/, summary.body)
+    assert_match(/Number check: figures not found in Rupert's data in 0 of 2 answers/, summary.body)
     report = battery.report_markdown
     assert_match(/\| 1 \| daily \| How did we do yesterday\? \| [\d.]+ s \| period_review \| 4 \|/, report)
   end
@@ -74,9 +74,9 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     assert_equal ['done', 'default', 'liquid', 'lfm2.5-8b-a1b', 2, 2], [run.status, run.set_name, run.agent, run.model, run.questions, run.answered]
     assert_in_delta 4.0, run.avg_grade.to_f
     assert_equal({ 'daily' => 4.0, 'monthly' => 4.0 }, run.cadence_scores)
-    assert_equal 1, run.flagged
+    assert_equal 0, run.flagged
     assert_equal %w[d1 m3], run.results_list.pluck('id')
-    assert_equal ['$100'], run.results_list.first['unverified']
+    assert_empty run.results_list.first['unverified']
     assert_equal run, TeamChat::Battery.new(user: @user, agent: 'liquid', grader: FakeGrader.new([]), items: items, out: nil).already_done
     assert_nil TeamChat::Battery.new(user: @user, agent: 'liquid', only: ['d1'], grader: FakeGrader.new([]), items: items, out: nil).already_done
   end

@@ -53,7 +53,7 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     assert tool_message, 'the tool result goes back to the model'
   end
 
-  test 'figures not in the tool results are flagged on the reply, and tools hand the model dollar amounts' do
+  test 'financial drafts are replaced with typed source period currency and meaning' do
     order = Core::Order.create!(source: 'shopify', source_order_id: 'nc-1', occurred_at: 1.day.ago.change(hour: 12), gross_cents: 21_483, tax_cents: 0, currency: 'USD')
     order.mark_paid!
     requests = script_model({ tool: 'sales_summary', arguments: { from: (Date.current - 1).iso8601, to: (Date.current - 1).iso8601 } },
@@ -61,10 +61,14 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     reply = ask('@rupert how were sales yesterday?')
     TeamChat::Agent.new(reply, config: team_chat_config).run
 
-    assert_equal ['12%', '$999.99'], reply.reload.meta['unverified']
-    assert_equal ['12%', '$999.99'], reply.as_payload(viewer: @user)[:unverified]
+    assert_nil reply.reload.meta['unverified']
+    assert_includes reply.body, '214.83 USD'
+    assert_includes reply.body, 'Gross sales'
+    assert_includes reply.body, 'shopify canonical orders'
+    assert_not_includes reply.body, '999.99'
+    assert_not_includes reply.body, '12%'
     tool_message = requests.last['messages'].find { |message| message['role'] == 'tool' }
-    assert_includes tool_message['content'], '"gross_dollars":"$214.83"'
+    assert_includes tool_message['content'], '"value":"214.83"'
     assert_includes requests.first['messages'].first['content'], 'Never add, subtract, average, convert'
   end
 
