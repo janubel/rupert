@@ -3,7 +3,7 @@
 <a href="#main" class="sr-only z-50 rounded-full bg-olive px-4 py-2 text-sm font-semibold text-cream focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-ink focus:fixed focus:left-4 focus:top-3">Skip to content</a>
 <% team_chat_on = Current.user && TeamChat.allowed?(Current.user) %>
 <% chat_dock_here = team_chat_on && controller_name != 'team_chat' %>
-<div class="app-shell" data-controller="rail<% if Current.user %> help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %><%= ' chat-dock team-chat-badge' if team_chat_on %><% end %>"<% if Current.user %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %><% if team_chat_on %> data-chat-dock-unread-url-value="<%= team_chat_unread_path %>" data-chat-dock-dock-url-value="<%= team_chat_dock_path %>" data-team-chat-badge-url-value="<%= team_chat_messages_path('general') %>" data-team-chat-badge-chat-path-value="<%= team_chat_path %>"<% end %>>
+<div class="app-shell" data-controller="rail full-window<% if Current.user %> help-panel feedback<%= ' ask-rupert' if ask_rupert_available? %><%= ' chat-dock team-chat-badge' if team_chat_on %><% end %>"<% if Current.user %> data-feedback-url-value="<%= feedback_reports_path %>" data-feedback-build-value="<%= BuildInfo.current.short_revision %>" data-feedback-request-id-value="<%= request.request_id %>"<% end %><% if team_chat_on %> data-chat-dock-unread-url-value="<%= team_chat_unread_path %>" data-chat-dock-dock-url-value="<%= team_chat_dock_path %>" data-team-chat-badge-url-value="<%= team_chat_messages_path('general') %>" data-team-chat-badge-chat-path-value="<%= team_chat_path %>"<% end %>>
   <% if Current.user&.super_admin? && Current.tenant_id != Current.user.tenant_id %>
     <div role="status" class="flash flash-notice support-banner"><span>Read-only customer support · <%= Current.tenant.name %></span><%= button_to 'Leave support session', leave_platform_support_path, method: :delete, class: 'btn-ghost btn-sm' %></div>
   <% end %>
@@ -145,6 +145,7 @@
       <%= render 'shared/workspace_help' if Current.user %>
     </main>
   </div>
+  <button type="button" class="full-window-exit btn-ghost btn-sm" data-action="full-window#exit"><%= navigation_icon('collapse', css_class: 'nav-symbol') %> Exit full window</button>
   <% if Current.user %>
     <%= render 'shared/status_bar', sync: @last_sync %>
     <div class="toast-stack" data-controller="toasts" aria-live="polite"></div>

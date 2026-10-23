@@ -106,6 +106,15 @@ module PageLayoutHelper
     end
   end
 
+  # "Full window" for wide pages (schedules, grids): hides the shell and asks the
+  # browser for fullscreen. Put it in the page_header block.
+  def full_window_button
+    tag.button(type: 'button', class: 'btn-ghost', aria: { pressed: 'false' }, title: 'Use the whole screen (Esc to exit)',
+      data: { action: 'full-window#toggle', full_window_target: 'toggle' }) do
+      safe_join([navigation_icon('expand', css_class: 'nav-symbol'), tag.span('Full window', data: { full_window_label: '' })], ' ')
+    end
+  end
+
   # In-page tabs for views of the same record or report (never for moving between modules).
   # tabs: [[label, path, active?], ...]
   def page_tabs(tabs, label:)

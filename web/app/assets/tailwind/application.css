@@ -421,6 +421,17 @@ a.statusbar-item:hover,button.statusbar-item:hover { background:var(--color-haze
 .statusbar-latest strong:not([hidden])::after { content:":"; }
 .statusbar-spacer { flex:1; }
 .statusbar-build { font-variant-numeric:tabular-nums; }
+/* Full window (full_window_button): the page alone, edge to edge; one floating way back. */
+.full-window-exit { display:none; }
+html[data-full-window] .app-topbar,
+html[data-full-window] .app-rail,
+html[data-full-window] .rail-backdrop,
+html[data-full-window] .app-statusbar,
+html[data-full-window] .help-bar { display:none; }
+html[data-full-window] .app-body { --rail-w:0px; }
+html[data-full-window] .app-main { max-width:none;padding:1rem 1.25rem 1.5rem; }
+html[data-full-window] .full-window-exit { display:inline-flex;align-items:center;gap:.4rem;position:fixed;top:.6rem;right:.75rem;z-index:60;background:var(--color-paper);box-shadow:0 4px 14px rgb(var(--shadow-ink)/0.12); }
+html[data-full-window] .table-region { max-height:none; }
 @media(max-width:900px) { .statusbar-label { display:none; } }
 @media(max-width:640px) { .app-statusbar { display:none; } .app-main { padding-bottom:2rem; } }
 @media print { .app-statusbar,.toast-stack { display:none !important; } }

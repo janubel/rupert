@@ -168,6 +168,7 @@ Rules that apply to all templates:
 | `.toolbar-band` | A report's filters set on the page with a hairline under them, not inside a card |
 | `.date-stepper` | `‹ [date] ›` for business-day pages; replaces Previous / Today / Next button rows |
 | `.row-list`, `.row-item`, `.row-item-end`, `.row-list-foot` | A handful of like things (sources, channels, queues) as rows in one card, never a grid of small cards |
+| `full_window_button` (`html[data-full-window]`) | Wide pages (schedules, grids): hides top bar, rail and status bar and asks the browser for fullscreen; Esc or the floating Exit returns |
 | `.table`, `.th`, `.td`, `.num`, `.empty-row` | Data tables |
 | `.report-table` (`report_table` helper) | A table the viewer can shape: Columns chooser (`th[data-default-hidden]` starts folded), click-to-sort headings (`td[data-sort-value]`), optional row narrowing and Download view. Layout is remembered per browser |
 | `.data-grid`, `.data-grid-table` (`data_grid` helper) | Spreadsheet view for scanning many rows: dense hairlined zebra rows, header row and first column frozen while scrolling, tabular right-aligned numbers, Columns chooser, click-to-sort, arrow keys between cells, Download CSV (server CSV with the visible columns via `th[data-csv]`, or the rows on screen). Read-only. Offer it as a `List · Grid` `.tabs` pair beside the list, remembered per browser; the list keeps the lead figure, the grid shows every column |
