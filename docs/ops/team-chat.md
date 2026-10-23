@@ -552,3 +552,51 @@ review expenses), malformed contracts and legacy financial receipts are unavaila
 with an explanation, rather than rendered from unverified prose. No source totals
 are added, currencies converted or new financial calculations performed here.
 Replies contain at most twelve complete facts and explicitly disclose omissions.
+
+
+## Durable chat telemetry
+
+`chat_telemetry` is the private operational ledger for new chat runs. It is tenant scoped,
+linked to `chat_runs`, and deleted with the run. It is not part of room JSON or a model's
+context. No prompt, tool arguments/results, response text, URL, credentials or exception
+messages are copied into it. This is the authoritative accounting source; the older
+`AiAgentRun` dashboard counters and reply metadata remain compatibility summaries and
+must not be used to infer complete usage or free calls.
+
+A successful atomic claim and its queue receipt commit together. Duplicate job deliveries
+produce no claim. First claim `queue_ms` measures persisted run creation to claim; later
+claim ages include prior work and are not additional queue time. Each claim has an immutable
+owner token. Recovery marks that owner's unfinished spans interrupted with unknown duration;
+a late completion cannot change them to success. The ledger does not infer unreported
+usage from a recovered transcript, or replayed tools from their saved results.
+
+The ledger records execution, RubyLLM generation and HTTP inference spans, time to first
+received chunk (including tool-call chunks), physical provider usage attempts, tool outcomes,
+replays, and classified failures. Timed spans use a monotonic clock; queue and lifecycle
+boundaries use persisted wall times. An inference span includes SDK retry backoff; physical
+usage events have completion timestamps, not invented individual attempt durations. Physical
+attempt ordinals within a generation distinguish SDK retries from additional tool rounds and
+worker recovery. Verification requests use stage `verify`. OpenCode CLI invocations and
+reported step usage are separate: internal provider retries in that subprocess are unknown.
+
+Provider-reported USD cost and CLI-reported cost are kept with their provenance, including
+explicit zero. Missing cost stays null/unknown. Catalog prices are deliberately not applied
+to local gateways, custom endpoints or subscriptions. Input, output, cache read/write and
+thinking tokens are separate nullable counters; thinking is not added again to output.
+A partially reported sum is labelled incomplete, not presented as a complete run total.
+Interrupted requests and missing CLI usage also make completeness false. No retrospective
+backfill guesses usage for runs created before this migration.
+
+Operator Rails console example (use the authorized tenant context):
+
+```ruby
+run = TeamChat::Run.find_by!(message_id: message_id)
+TeamChat::Telemetry.summary(run)
+TeamChat::Telemetry.where(run_id: run.id).order(:id).pluck(:kind, :stage, :outcome, :duration_ms, :facts)
+```
+
+The summary includes first queue time, final run state, total lifecycle elapsed time,
+reported stage durations and completeness, claim and physical attempt counts, SDK retries,
+partial token totals and per-field completeness, reported USD cost and cost completeness.
+Do not sum nested execution/generation/inference timings as elapsed time, or interpret
+`failed_spans` (which includes nested receipts) as a count of failed replies.

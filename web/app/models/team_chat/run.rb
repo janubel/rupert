@@ -37,11 +37,18 @@ module TeamChat
       expire! if deadline_at <= Time.current
       token = SecureRandom.uuid
       now = Time.current
-      claimed = self.class.unscoped.where(id: id, state: ACTIVE).where('deadline_at > ? AND attempts < ?', now, MAX_ATTEMPTS)
-                    .where('state = ? OR lease_until <= ?', 'queued', now)
-                    .update_all(['state = ?, owner_token = ?, lease_until = ?, heartbeat_at = ?, attempts = attempts + 1, updated_at = ?',
-                      'running', token, now + LEASE, now, now])
-      claimed == 1 ? token : nil
+      self.class.transaction do
+        claimed = self.class.unscoped.where(id: id, state: ACTIVE).where('deadline_at > ? AND attempts < ?', now, MAX_ATTEMPTS)
+                      .where('state = ? OR lease_until <= ?', 'queued', now)
+                      .update_all(['state = ?, owner_token = ?, lease_until = ?, heartbeat_at = ?, attempts = attempts + 1, updated_at = ?',
+                        'running', token, now + LEASE, now, now])
+        if claimed == 1
+          Telemetry.unscoped.where(run_id: id, outcome: 'running').update_all(outcome: 'interrupted', finished_at: now)
+          TelemetryRecorder.new(self, token).record('claim', outcome: 'succeeded',
+            facts: { 'queue_ms' => [(now - created_at) * 1000, 0].max.round, 'attempt' => reload.attempts })
+          token
+        end
+      end
     end
 
     def cancel!(user: nil)
@@ -63,6 +70,7 @@ module TeamChat
         message.update!(attrs)
       end
       update!(state: status, owner_token: nil, lease_until: nil)
+      Telemetry.unscoped.where(run_id: id, outcome: 'running').update_all(outcome: 'interrupted', finished_at: Time.current)
     end
   end
 end

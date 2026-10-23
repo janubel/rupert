@@ -24,9 +24,9 @@ module AskRupert
       def binary = ENV['ASK_RUPERT_OPENCODE_BIN'].presence || 'opencode'
       def agent = ENV['ASK_RUPERT_OPENCODE_AGENT'].presence || 'chat'
 
-      def complete(system:, messages:, deadline: nil, checkpoint: nil, &on_text)
+      def complete(system:, messages:, deadline: nil, checkpoint: nil, telemetry: nil, &on_text)
         prompt = build_prompt(system, messages)
-        stream(prompt, deadline: deadline, checkpoint: checkpoint, &on_text)
+        stream(prompt, deadline: deadline, checkpoint: checkpoint, telemetry: telemetry, &on_text)
       end
 
       private
@@ -37,7 +37,7 @@ module AskRupert
         prompt.length > MAX_PROMPT_CHARS ? prompt.last(MAX_PROMPT_CHARS) : prompt
       end
 
-      def stream(prompt, deadline:, checkpoint:)
+      def stream(prompt, deadline:, checkpoint:, telemetry:)
         text = +''
         tokens = Hash.new(0)
         raw_errors = +''
@@ -59,7 +59,9 @@ module AskRupert
               text << part['text']
               yield text if block_given?
             elsif event['type'] == 'step_finish'
-              add_tokens(tokens, event.dig('part', 'tokens'))
+              found = event.dig('part', 'tokens')
+              telemetry&.call(found, event.dig('part', 'cost'))
+              add_tokens(tokens, found)
             elsif event['type'] == 'error'
               raw_errors << event['error'].to_json.first(300)
             end

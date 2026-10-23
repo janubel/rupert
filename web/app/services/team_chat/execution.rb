@@ -112,6 +112,7 @@ module TeamChat
       if cached
         raise 'Tool call changed during replay' unless cached['name'] == name && cached['arguments'] == arguments.deep_stringify_keys
 
+        TelemetryRecorder.new(run, @token).record('tool_replay', outcome: 'succeeded', facts: { 'replayed' => true })
         return cached['result']
       end
       result = nil
@@ -134,6 +135,8 @@ module TeamChat
     # or write replies. We can stop silent network I/O without interrupting a
     # database transaction, and release the chat worker promptly on Stop.
     def generate(chat)
+      first_chunk = true
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       events = Queue.new
       request = Thread.new do
         chat.generate { |chunk| events << [:chunk, chunk] }
@@ -150,6 +153,11 @@ module TeamChat
         raise value if kind == :error
         break if kind == :done
 
+        if first_chunk
+          TelemetryRecorder.new(run, @token).record('first_chunk', outcome: 'received',
+            duration_ms: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round)
+          first_chunk = false
+        end
         yield value
       end
     ensure

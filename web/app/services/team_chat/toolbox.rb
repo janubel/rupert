@@ -74,13 +74,23 @@ module TeamChat
     def call(name, arguments)
       return call_once(name, arguments) unless @execution
 
-      @execution.tool!(call_id, name, arguments || {}, write: WRITE_TOOLS.include?(name)) { call_once(name, arguments) }
+      @execution.tool!(call_id, name, arguments || {}, write: WRITE_TOOLS.include?(name)) do
+        TelemetryRecorder.new(@execution.run, @execution.token).measure('tool',
+          facts: { 'name' => names.include?(name.to_s) ? name.to_s : 'unknown' }) do |span|
+          @telemetry_span = span
+          begin
+            call_once(name, arguments)
+          ensure
+            @telemetry_span = nil
+          end
+        end
+      end
     end
 
     def call_once(name, arguments)
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       @calls += 1
-      return 'Tool budget used up for this message. Answer now from what you already have, and say what you could not check.' if @calls > MAX_CALLS
+      return log(name, started, 'budget_exhausted', 'Tool budget used up for this message. Answer now from what you already have, and say what you could not check.') if @calls > MAX_CALLS
 
       definition = definitions.find { |candidate| candidate.name == name.to_s }
       return log(name, started, 'unknown', "No tool named #{name.to_s.first(40)}. Use one of: #{names.join(', ')}.") unless definition
@@ -194,6 +204,7 @@ module TeamChat
 
     def log(name, started, outcome, text)
       ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+      @telemetry_span&.update!(facts: @telemetry_span.facts.merge('result_outcome' => outcome))
       ActivityLogger.log('team_chat_tool', actor: @user,
         details: "tool=#{name.to_s.gsub(/[^\w]/, '?').first(30)}; outcome=#{outcome}; duration_ms=#{ms}; room=#{@room.id}")
       text = text.to_s.first(MAX_RESULT_CHARS)
