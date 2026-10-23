@@ -21,7 +21,8 @@ module DriveOauthCallback
 
     GoogleDriveBackupService.exchange_code!(params[:code], redirect_uri: google_callback_url)
     ActivityLogger.log('drive_connected', details: "Google Drive backup connected as #{GoogleDriveBackupService.account_email}")
-    redirect_to(settings_path, notice: "Connected to Google Drive as #{GoogleDriveBackupService.account_email}.")
+    account = GoogleDriveBackupService.account_email.presence
+    redirect_to(settings_path, notice: account ? "Connected to Google Drive as #{account}." : 'Connected to Google Drive.')
   rescue GoogleDriveBackupService::DomainNotAllowedError => e
     ActivityLogger.log('drive_connect_refused', details: e.message)
     redirect_to(settings_path, alert: e.message)
