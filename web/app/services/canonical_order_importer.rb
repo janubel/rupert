@@ -328,12 +328,9 @@ class CanonicalOrderImporter
     # (and showed up as "paid, not shipped"). sourceName "pos" marks a POS sale; retailLocation is the store.
     def shopify_channel(node) = node['sourceName'].to_s == 'pos' ? 'pos' : 'online'
 
-    def shopify_location_id(node)
-      gid = node.dig('retailLocation', 'id').presence
-      return nil unless gid
-
-      Location.find_by(source: 'shopify', externalId: gid)&.id || gid
-    end
+    # Orders point at a location by its source ID (Core::Order belongs_to :location via externalId), as Square
+    # and Rupert POS orders do.
+    def shopify_location_id(node) = node.dig('retailLocation', 'id').presence
 
     def order_attrs(data = nil, channel: nil, customer_id: nil, source: nil, **kw)
       data = kw if data.nil?

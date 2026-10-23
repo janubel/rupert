@@ -91,7 +91,10 @@ class DailyCloseSummary
   def register_rows
     summary = DailyRegisterSummary.new(day: day.iso8601)
     tips = tips_by_pool
-    names = Location.where(id: summary.rows.filter_map { |row| row[:location_id].presence }).pluck(:id, :name).to_h
+    # Orders carry a location's source ID (externalId); older rows may carry Rupert's own ID. Match either.
+    ids = summary.rows.filter_map { |row| row[:location_id].presence }
+    names = Location.where(id: ids).or(Location.where(externalId: ids)).pluck(:id, :externalId, :name)
+                    .each_with_object({}) { |(id, external, name), map| map[id] = name; map[external] = name }
     summary.rows.select { |row| STORE_SOURCES.include?(row[:source]) }.map do |row|
       total = row[:order_total_cents]
       tax = row[:tax_cents]

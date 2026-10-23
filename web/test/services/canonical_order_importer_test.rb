@@ -288,7 +288,7 @@ class CanonicalOrderImporterTest < ActiveSupport::TestCase
     CanonicalOrderImporter.from_shopify!([shopify_order(id: 'gid://shopify/Order/902', name: '#902').merge('sourceName' => 'web')])
     pos = Core::Order.find_by!(source_order_id: 'gid://shopify/Order/901')
     web = Core::Order.find_by!(source_order_id: 'gid://shopify/Order/902')
-    assert_equal ['pos', store.id], [pos.channel, pos.location_id]
+    assert_equal ['pos', 'gid://shopify/Location/77', store], [pos.channel, pos.location_id, pos.location]
     assert_equal ['online', nil], [web.channel, web.location_id]
   end
 end
