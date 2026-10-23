@@ -237,6 +237,19 @@ class TeamChatRequestRevisionTest < ActiveSupport::TestCase
     assert_equal body, post.reply.run.request_context['last_chat']
   end
 
+  test 'accepted internal harness requests also retain their complete current text' do
+    marker = 'Internal harness final instruction.'
+    body = 'review ' * (TeamChat::Message::BODY_MAX / 7 + 20) + marker
+    trigger = @room.messages.create!(user: @user, author_kind: 'person', body: body)
+    reply = @room.messages.create!(author_kind: 'assistant', status: 'pending', meta: { 'asked_by' => @user.id, 'trigger_id' => trigger.id })
+    TeamChat::Run.for_reply!(reply)
+    requests = script_model(text: 'Reviewed the complete harness request.')
+    execute(reply)
+    assert_equal 'succeeded', reply.run.reload.state
+    assert_includes requests.first['messages'].last['content'], marker
+    assert_equal body, reply.run.request_context['last_chat']
+  end
+
   test 'oversized edits are rejected rather than starting a silently truncated request' do
     body = @trigger.body
     assert_no_difference -> { TeamChat::Run.count } do

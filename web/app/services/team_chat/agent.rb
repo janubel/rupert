@@ -538,7 +538,8 @@ module TeamChat
 
     def entry_for(row)
       current_request = row.id == @trigger&.id
-      text = (current_request && @execution ? request_text : row.body).to_s.first(current_request ? Message::BODY_MAX : TURN_CHARS)
+      text = (current_request && @execution ? request_text : row.body).to_s
+      text = text.first(TURN_CHARS) unless current_request
       files = row.attachment_infos.map { |file| "#{file.filename} (#{file.image? ? 'image' : file.content_type})" }
       text = [text.presence, ("[attached: #{files.join(', ')}]" if files.any?)].compact.join("\n")
       return nil if text.blank? || row.status == 'failed'
