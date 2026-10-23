@@ -120,7 +120,7 @@ module TeamChat
     def room_label(room)
       return "##{room.name}" if room.channel?
 
-      room.direct? ? "Rupert — #{room.created_by&.display_name}" : "Direct — #{room.members.map(&:display_name).sort.join(' & ')}"
+      room.direct? ? "#{room.display_name} — #{room.created_by&.display_name}" : "Direct — #{room.members.map(&:display_name).sort.join(' & ')}"
     end
 
     def create_folder(name, parent)

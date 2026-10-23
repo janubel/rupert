@@ -7,12 +7,14 @@
     </div>
   </div>
   <nav class="chat-dock-rooms" aria-label="Rooms">
-    <% @rooms.reject(&:hidden?).sort_by { |room| [room.direct? ? 0 : 1, -(room.last_message_at || room.created_at).to_i] }.each do |room| %>
+    <%# Private rooms in the dock: Rupert's and the bots' (test-run rooms open from Model scores). %>
+    <% @rooms.reject(&:hidden?).reject { |room| room.direct? && !room.rupert_room? && !room.bot_room? }
+             .sort_by { |room| [room.rupert_room? ? 0 : (room.bot_room? ? 1 : 2), -(room.last_message_at || room.created_at).to_i] }.each do |room| %>
       <% unread = room.unread %>
       <% mentions = room.mentions %>
       <%= link_to team_chat_dock_room_path(room), class: "chat-dock-room #{'has-unread' if unread.positive? || mentions.positive?}", data: { chat_dock_room: room.slug } do %>
         <% if room.direct? %>
-          <span class="chat-rail-bot" aria-hidden="true">R</span><span class="chat-dock-room-name">Rupert <small>direct</small></span>
+          <span class="chat-rail-bot" aria-hidden="true"><%= room.avatar_letter %></span><span class="chat-dock-room-name"><%= room.display_name %> <small>direct</small></span>
         <% elsif room.dm? %>
           <% partner = room.dm_partner(Current.user) %>
           <span class="chat-rail-person" <%= presence_attrs(partner) %> style="background:<%= TeamChat::Message::COLORS[partner&.id.to_i % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= partner&.display_name.to_s.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span><span class="chat-dock-room-name"><%= partner&.display_name || 'Direct message' %> <small>direct</small></span>

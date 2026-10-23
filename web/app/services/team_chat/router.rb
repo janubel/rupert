@@ -54,6 +54,11 @@ module TeamChat
       Route.new(kind: kind, handles: Array(config[kind]).map(&:to_s).presence || ['rupert'])
     end
 
+    # The bots with their own room (rooms: in routing.yml) that can answer now; none without the local model server.
+    def room_agents
+      Array(config['rooms']).filter_map { |handle| LocalAgents.find(handle) || LocalAgents.trial(handle) }
+    end
+
     # The bots for this question: [rupert?, local agents]. A local bot that is not available drops out;
     # if none is left, @rupert answers.
     def answerers(text)

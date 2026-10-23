@@ -63,6 +63,10 @@ module TeamChat
         # @all: every bot answers the same question; the page shows the answers side by side.
         replies << start_reply(message, compare: true)
         LocalAgents.all.each { |agent| replies << start_reply(message, agent: agent, compare: true) }
+      elsif (owner = @room.bot_agent)
+        # A bot's own room: everything goes to that bot; @mentioning another bot or @rupert brings them in too.
+        replies << start_reply(message) if message.mentions_rupert?
+        ([owner] + LocalAgents.mentioned(@body)).uniq(&:handle).each { |agent| replies << start_reply(message, agent: agent) }
       else
         rupert = answer?(message)
         agents = LocalAgents.mentioned(@body)

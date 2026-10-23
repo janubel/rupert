@@ -50,6 +50,45 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_includes ModuleRegistry.nav_for(@admin).map(&:key), 'team_chat'
   end
 
+  test 'each bot in routing.yml gets its own room in the rail, where every message goes to that bot' do
+    previous = ENV['RUPERT_LOCAL_LLM_URL']
+    ENV['RUPERT_LOCAL_LLM_URL'] = 'https://llm.test/v1'
+    sign_in(@admin)
+    get team_chat_path
+    follow_redirect!
+    assert_response :success
+    %w[qwen-4b flint-think qwen liquid].each do |handle|
+      assert_select ".chat-rail-room[href='#{team_chat_room_path("bot-#{handle}-#{@admin.id}")}']"
+    end
+    assert_select '.chat-rail-room', text: /Qwen 4B/
+
+    get team_chat_room_path("bot-qwen-4b-#{@admin.id}")
+    assert_response :success
+    assert_select 'h2', text: /Qwen 4B/
+    assert_select "textarea[placeholder='Ask Qwen 4B…']"
+
+    post team_chat_messages_path("bot-qwen-4b-#{@admin.id}"), params: { body: 'Which tasks are overdue?' }, as: :json
+    assert_response :created
+    room = TeamChat::Room.find_by!(slug: "bot-qwen-4b-#{@admin.id}")
+    assert_equal ['qwen-4b'], room.messages.where(author_kind: 'assistant').map { |reply| reply.meta['agent'] }
+
+    post team_chat_messages_path("bot-qwen-4b-#{@admin.id}"), params: { body: '@rupert and you: how much sales tax last month?' }, as: :json
+    assert_equal [nil, 'qwen-4b'], room.messages.where(author_kind: 'assistant').order(:id).last(2).map { |reply| reply.meta['agent'] }
+  ensure
+    ENV['RUPERT_LOCAL_LLM_URL'] = previous
+  end
+
+  test 'without the local model server there are no bot rooms' do
+    previous = ENV['RUPERT_LOCAL_LLM_URL']
+    ENV['RUPERT_LOCAL_LLM_URL'] = nil
+    sign_in(@admin)
+    get team_chat_path
+    follow_redirect!
+    assert_select ".chat-rail-room[href^='/chat/bot-']", count: 0
+  ensure
+    ENV['RUPERT_LOCAL_LLM_URL'] = previous
+  end
+
   test 'posting, mentioning @rupert and polling' do
     sign_in(@admin)
     get team_chat_path

@@ -1,11 +1,13 @@
-<% content_for :title, "#{@room.direct? ? 'Rupert' : (@room.dm? ? @room.display_name(Current.user) : "##{@room.name}")} · Team chat" %>
+<% content_for :title, "#{@room.direct? || @room.dm? ? @room.display_name(Current.user) : "##{@room.name}"} · Team chat" %>
 <% me = Current.user %>
 <% my_initials = me.display_name.to_s.split(/\s+/).first(2).map { |word| word[0] }.join.upcase.presence || 'U' %>
 <% channels = @rooms.select(&:channel?) %>
-<% direct = @rooms.find(&:direct?) %>
+<% direct = @rooms.find(&:rupert_room?) %>
+<% room_order = TeamChat::Router.room_agents.map(&:handle) %>
+<% bot_rooms = @rooms.select { |room| room.bot_room? && room_order.include?(room.bot_handle) }.sort_by { |room| room_order.index(room.bot_handle) } %>
 <% dms = @rooms.select(&:dm?).map { |room| [room, room.dm_partner(me)] }.select(&:last) %>
 <% dm_partner = @room.dm_partner(me) if @room.dm? %>
-<% room_label = @room.direct? ? 'Rupert' : (dm_partner ? dm_partner.display_name : "##{@room.name}") %>
+<% room_label = @room.direct? ? @room.display_name : (dm_partner ? dm_partner.display_name : "##{@room.name}") %>
 <% content_for :wide_page, true %>
 <div class="chat-app"
      data-controller="team-chat"
@@ -45,6 +47,15 @@
               data: { team_chat_target: 'roomLink', slug: direct.slug, name: 'rupert' } do %>
           <span class="chat-rail-bot" aria-hidden="true">R</span>
           <span class="chat-rail-room-name">Rupert</span>
+          <span class="chat-unread" data-unread hidden></span>
+        <% end %>
+      <% end %>
+      <%# Each bot's own room: everything typed there goes to that bot, no @ needed. %>
+      <% bot_rooms.each do |room| %>
+        <%= link_to team_chat_room_path(room), class: "chat-rail-room #{'is-active' if room == @room}", aria: { current: (room == @room ? 'page' : nil) },
+              title: room.topic, data: { team_chat_target: 'roomLink', slug: room.slug, name: room.bot_handle } do %>
+          <span class="chat-rail-bot" aria-hidden="true"><%= room.avatar_letter %></span>
+          <span class="chat-rail-room-name"><%= room.display_name %></span>
           <span class="chat-unread" data-unread hidden></span>
         <% end %>
       <% end %>
@@ -106,7 +117,7 @@
   <main class="chat-main">
     <header class="chat-head">
       <div class="chat-head-title">
-        <h2><% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true">R</span>Rupert<% elsif dm_partner %><span class="chat-rail-person" <%= presence_attrs(dm_partner) %> style="background:<%= TeamChat::Message::COLORS[dm_partner.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= dm_partner.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span><%= dm_partner.display_name %><% else %><span class="chat-hash">#</span><%= @room.name %><% end %></h2>
+        <h2><% if @room.direct? %><span class="chat-rail-bot" aria-hidden="true"><%= @room.avatar_letter %></span><%= room_label %><% elsif dm_partner %><span class="chat-rail-person" <%= presence_attrs(dm_partner) %> style="background:<%= TeamChat::Message::COLORS[dm_partner.id % TeamChat::Message::COLORS.size] %>" aria-hidden="true"><%= dm_partner.display_name.split(/\s+/).first(2).map { |word| word[0] }.join.upcase %></span><%= dm_partner.display_name %><% else %><span class="chat-hash">#</span><%= @room.name %><% end %></h2>
         <p data-team-chat-target="topic"><%= @room.dm? ? "#{dm_partner&.email} · Direct message: only the two of you read it. Mention @rupert to bring him in." : (@room.topic.presence || 'No topic yet.') %></p>
         <div class="chat-tabs" role="tablist" aria-label="Show">
           <button type="button" role="tab" class="chat-tab is-active" aria-selected="true" data-tab="messages" data-action="team-chat#showTab">Messages</button>
@@ -211,12 +222,12 @@
     <section class="chat-body" aria-label="Messages">
       <div class="chat-log-wrap">
         <div class="chat-log" <%= tour_anchor('chat-messages') %> data-team-chat-target="log" data-action="scroll->team-chat#onScroll" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"
-             aria-label="Messages in <%= @room.direct? ? 'your room with Rupert' : room_label %>">
+             aria-label="Messages in <%= @room.direct? ? "your room with #{room_label}" : room_label %>">
           <button type="button" class="btn-ghost btn-sm chat-more" data-team-chat-target="more" data-action="team-chat#loadEarlier" hidden>Load earlier messages</button>
           <p class="chat-hint" data-team-chat-target="loading">Loading messages…</p>
           <div class="chat-empty" data-team-chat-target="empty" hidden>
             <% if @room.direct? %>
-              <p class="chat-empty-title">Ask Rupert anything about the business.</p>
+              <p class="chat-empty-title">Ask <%= room_label %> anything about the business.</p>
               <div class="chat-starters">
                 <% ['How were sales yesterday?', 'Anything low on stock?', 'Any alerts I should look at?', 'Is sync healthy?'].each do |starter| %>
                   <button type="button" class="chat-starter" data-action="team-chat#useStarter"><%= starter %></button>
@@ -241,10 +252,10 @@
           <div class="chat-files" data-team-chat-target="files" hidden></div>
           <textarea id="chat-input" class="chat-input" rows="1" maxlength="<%= TeamChat::Message::BODY_MAX %>" data-team-chat-target="input"
                     data-action="input->team-chat#input keydown->team-chat#keydown paste->team-chat#paste" autocomplete="off"
-                    placeholder="<%= @room.direct? ? 'Ask Rupert…' : "Message #{room_label}" %>"></textarea>
+                    placeholder="<%= @room.direct? ? "Ask #{room_label}…" : "Message #{room_label}" %>"></textarea>
           <div class="chat-composer-bar">
             <span class="chat-composer-hint">
-              <% if @room.direct? %>Rupert answers every message here.<% elsif @room.assistant_mode == 'off' %>Rupert is off in this room.<% else %>Write <strong>@rupert</strong> to ask him.<% end %>
+              <% if @room.direct? %><%= room_label %> answers every message here.<% elsif @room.assistant_mode == 'off' %>Rupert is off in this room.<% else %>Write <strong>@rupert</strong> to ask him.<% end %>
               @ to mention · Enter sends · Shift+Enter new line · ↑ ↓ your earlier messages · paste or drop images.
             </span>
             <span class="chat-composer-actions">

@@ -47,7 +47,21 @@ module TeamChat
       general.add_members(everyone) if general.memberships.count < everyone.size
       general.membership_for(user)
       direct_for(user)
+      bot_rooms_for(user)
       general
+    end
+
+    # A private room per bot listed under rooms: in config/team_chat/routing.yml: every message there goes to that
+    # bot, with no @ needed. Only bots that can answer right now get one.
+    BOT_ROOM = /\Abot-(?<handle>[a-z0-9][a-z0-9-]*?)-(?<owner>\d+)\z/
+
+    def self.bot_rooms_for(user)
+      Router.room_agents.map do |agent|
+        slug = "bot-#{agent.handle}-#{user.id}"
+        find_by(kind: 'direct', created_by_id: user.id, slug: slug) ||
+          create!(kind: 'direct', name: agent.name, slug: slug, assistant_mode: 'all', created_by: user,
+            topic: "Just you and #{agent.name} (@#{agent.handle}, #{agent.about}). Every message here goes to it; no @ needed.")
+      end
     end
 
     # The direct-message room between two people (created on first use).
@@ -71,6 +85,18 @@ module TeamChat
     end
 
     def direct? = kind == 'direct'
+    def rupert_room? = direct? && slug == "rupert-#{created_by_id}"
+    def bot_handle = (slug.to_s[BOT_ROOM, :handle] if direct?)
+    def bot_room? = bot_handle.present?
+
+    # The bot that answers everything in this room, if it is one of the bot rooms.
+    def bot_agent
+      handle = bot_handle
+      handle && (LocalAgents.find(handle) || LocalAgents.trial(handle))
+    end
+
+    # One letter for the room's avatar in the rail: R for Rupert, the bot's initial for a bot room.
+    def avatar_letter = rupert_room? ? 'R' : display_name.to_s[0].to_s.upcase
     def dm? = kind == 'dm'
     def channel? = kind == 'channel'
     def archived? = archived_at.present?
@@ -101,7 +127,8 @@ module TeamChat
     end
 
     def display_name(viewer = nil)
-      return 'Rupert' if direct?
+      return 'Rupert' if rupert_room?
+      return bot_agent&.name || name if direct?
       return dm_partner(viewer)&.display_name || 'Direct message' if dm? && viewer
 
       name
