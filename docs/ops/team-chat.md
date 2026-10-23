@@ -600,3 +600,19 @@ reported stage durations and completeness, claim and physical attempt counts, SD
 partial token totals and per-field completeness, reported USD cost and cost completeness.
 Do not sum nested execution/generation/inference timings as elapsed time, or interpret
 `failed_spans` (which includes nested receipts) as a count of failed replies.
+
+## Assistant destination links
+
+Model output is checked before each saved streaming draft and final reply. A GET route
+alone is insufficient: page-guide destinations require current permission, record links
+require the record policy and tenant, and chat files require current source-room access.
+Retained approval links must match the task in the executed receipt. Unknown destinations
+lose their active link while retaining the label. This does not replace controller checks
+or authorize disclosure of page contents.
+
+Same-instance absolute URLs are converted to checked relative links. Other absolute
+addresses stay readable without becoming clickable; code spans remain literal. Encoded
+paths, authority-relative addresses and dot segments cannot bypass destination checks.
+Resumed drafts are checked before inference resumes. Each publication reloads the user;
+the ordinary durable execution fence still enforces permission revocation, cancellation,
+deadlines and claim ownership at the write boundary. Human messages are unaffected.
