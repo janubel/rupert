@@ -554,6 +554,29 @@ are added, currencies converted or new financial calculations performed here.
 Replies contain at most twelve complete facts and explicitly disclose omissions.
 
 
+## Bounded cloud generation retries
+
+The native cloud agent may reserve one additional generation per durable run after
+an explicit HTTP 429, 500, 502, 503, 504 or 529 refusal, only before any streamed chunk.
+The SDK's automatic retry remains disabled when the agent supplies its remaining
+whole-run budget. Network timeouts/connection failures, malformed requests, authorization
+or billing errors, partially streamed responses and local model cold starts do not retry.
+
+The default wait is half a second. A valid Retry-After delay or HTTP date is honored
+only within five seconds and with at least one further second in the run budget.
+Invalid or longer hints fail normally. The wait polls current permissions, cancellation,
+claim ownership and deadlines. Each request is rebuilt from the durable transcript with
+a fresh remaining timeout; tools from a completed round are not repeated. Reservation
+is recorded before waiting and survives worker recovery, preventing a fresh allowance
+on each restart. This does not imply exactly-once provider billing.
+
+Telemetry keeps each physical provider attempt, its failed/successful outcome and nullable
+usage/cost. `generation_retry_reservations` counts durable reservations, including a retry
+cancelled before it starts; `provider_attempts` remains the actual observed attempt count.
+`transport_retries` continues to describe SDK retries within a generation; `retry_wait`
+records actual backoff duration and completion/interruption separately. No exception
+messages, provider bodies, conversation text or credentials enter retry facts.
+
 ## Durable chat telemetry
 
 `chat_telemetry` is the private operational ledger for new chat runs. It is tenant scoped,

@@ -88,6 +88,43 @@ class TeamChatRestartTest < ActiveSupport::TestCase
     actor&.join
   end
 
+  test 'SIGKILL after reserving a retry cannot replenish the allowance on recovery' do
+    reader, writer = IO.pipe
+    request = stub_request(:post, "#{LLM_BASE}/chat/completions").to_return(status: 503, body: '{"error":{"message":"temporary refusal"}}')
+    ActiveRecord::Base.connection_handler.clear_all_connections!
+    child = fork do
+      reader.close
+      ActiveRecord::Base.establish_connection
+      TeamChat::Execution.define_method(:wait_for_retry!) do |_delay|
+        writer.write('reserved')
+        writer.flush
+        Process.kill('KILL', Process.pid)
+      end
+      TeamChat::Agent.new(TeamChat::Message.find(@reply.id), config: team_chat_config).run
+      exit! 2
+    end
+    writer.close
+    assert_equal 'reserved', Timeout.timeout(10) { reader.read }
+    _, status = Process.waitpid2(child)
+    child = nil
+    assert_equal Signal.list.fetch('KILL'), status.termsig
+    run = TeamChat::Run.unscoped.find_by!(message_id: @reply.id)
+    assert_equal 'running', run.state
+    assert_equal 1, TeamChat::Telemetry.summary(run)['generation_retry_reservations']
+    run.update!(lease_until: 1.second.ago)
+    TeamChat::Agent.new(@reply.reload, config: team_chat_config).run
+    assert_requested request, times: 1 # Child requests are in a separate process.
+    assert_equal 'failed', run.reload.state
+    assert_equal 2, run.attempts
+    assert_equal 1, TeamChat::Telemetry.summary(run)['generation_retry_reservations']
+    assert_equal 2, TeamChat::Telemetry.where(run_id: run.id, kind: 'provider_attempt').count
+  ensure
+    Process.kill('KILL', child) if child
+    Process.waitpid(child) if child
+    reader&.close unless reader&.closed?
+    writer&.close unless writer&.closed?
+  end
+
   test 'SIGKILL after tool checkpoint recovers in a new process without another proposal' do
     reader, writer = IO.pipe
     stub_request(:post, "#{LLM_BASE}/chat/completions").to_return do |request|
