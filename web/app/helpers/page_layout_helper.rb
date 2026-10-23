@@ -71,16 +71,17 @@ module PageLayoutHelper
     end
   end
 
-  # Section heading inside a page: <h2> plus optional actions on the right.
+  # Section heading inside a page: <h2> plus optional actions on the right. Pass id: when a
+  # section is aria-labelledby this heading.
   #
   #   <%= section_heading 'Follow-ups due' do %><%= link_to 'Open all', ..., class: 'btn-ghost btn-sm' %><% end %>
-  def section_heading(title, hint: nil, level: :h2, &block)
+  def section_heading(title, hint: nil, level: :h2, id: nil, &block)
     actions = capture(&block) if block
     tag.div(class: 'card-head') do
       safe_join([
         tag.div do
           safe_join([
-            content_tag(level, title, class: level == :h2 ? 'section-title' : 'card-title'),
+            content_tag(level, title, class: level == :h2 ? 'section-title' : 'card-title', id: id),
             (tag.p(hint, class: 'card-hint') if hint.present?)
           ].compact)
         end,

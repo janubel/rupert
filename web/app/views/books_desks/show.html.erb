@@ -81,7 +81,7 @@
 
     <div class="desk-week-grid">
       <section class="section-card desk-chores" aria-labelledby="desk-chores-title">
-        <%= section_heading 'Weekly chores', hint: "#{tasks.count { |t| t.done? && !t.optional }} of #{tasks.count { |t| !t.optional }} done", level: :h3 %>
+        <%= section_heading 'Weekly chores', id: 'desk-chores-title', hint: "#{tasks.count { |t| t.done? && !t.optional }} of #{tasks.count { |t| !t.optional }} done", level: :h3 %>
         <ol class="space-y-2">
           <% tasks.each do |task| %>
             <li class="desk-task" data-state="<%= task.state %>">
@@ -100,7 +100,7 @@
   </section>
 
   <section class="space-y-3" aria-labelledby="desk-period-end" <%= tour_anchor('periods') %>>
-    <%= section_heading 'Month, quarter and year end', hint: 'Finish each period, then lock it so history cannot be edited by accident.' %>
+    <div class="card-head"><div><h2 id="desk-period-end" class="section-title">Month, quarter and year end</h2><p class="card-hint">Finish each period, then lock it so history cannot be edited by accident.</p></div></div>
     <div class="card row-list">
       <% desk.period_closes.each do |close| %>
         <% close_task = close.tasks.find { |t| !t.done? && !t.optional } %>

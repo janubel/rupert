@@ -10,7 +10,7 @@
   <% if @form_error %><p role="alert" class="flash flash-alert"><%= @form_error %></p><% end %>
 
   <section class="space-y-3" aria-labelledby="statements-title">
-    <%= section_heading 'Uploaded statements' %>
+    <%= section_heading 'Uploaded statements', id: 'statements-title' %>
     <div class="table-region" role="region" tabindex="0" aria-label="Uploaded statements"><table class="table">
       <thead><tr><% %w[Account File Dates].each do |h| %><th scope="col" class="th"><%= h %></th><% end %><th scope="col" class="th num">Lines</th><th scope="col" class="th">Waiting<%= define('decision') %></th></tr></thead>
       <tbody>
@@ -30,7 +30,7 @@
 
   <% if @can_write %>
     <section class="section-card page-narrow" id="upload-statement" aria-labelledby="upload-statement-title">
-      <%= section_heading 'Import a statement', hint: 'Up to 5,000 rows and 8 MiB. The original file and descriptions are kept encrypted.' %>
+      <%= section_heading 'Import a statement', id: 'upload-statement-title', hint: 'Up to 5,000 rows and 8 MiB. The original file and descriptions are kept encrypted.' %>
       <%= form_with url: bank_statements_path, multipart: true, class: 'space-y-4' do |f| %>
         <fieldset class="space-y-3">
           <legend class="sr-only">Statement</legend>

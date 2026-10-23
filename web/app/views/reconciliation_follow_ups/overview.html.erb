@@ -18,13 +18,13 @@
 
   <% if @next_follow_ups.any? %>
     <section id="priority-follow-ups" class="scroll-mt-48 md:scroll-mt-32 space-y-4" aria-labelledby="next-follow-ups">
-      <%= section_heading 'Follow up next · all dates', hint: 'Overdue first, then due today and upcoming, across all dates.' do %><%= link_to 'Open full queue', reconciliation_follow_ups_path, class: 'btn-ghost btn-sm' %><% end %>
+      <%= section_heading 'Follow up next · all dates', id: 'next-follow-ups', hint: 'Overdue first, then due today and upcoming, across all dates.' do %><%= link_to 'Open full queue', reconciliation_follow_ups_path, class: 'btn-ghost btn-sm' %><% end %>
       <div class="grid gap-4 md:grid-cols-2"><%= render partial: 'card', collection: @next_follow_ups, as: :item, locals: { heading_tag: :h3 } %></div>
     </section>
   <% end %>
 
   <section id="report-gaps" class="scroll-mt-48 md:scroll-mt-32 space-y-4" aria-labelledby="report-gaps-title">
-    <%= section_heading 'Register reports to request', hint: 'Recorded pools with no register control and no open request in the selected dates, oldest first. Check retained files first.' %>
+    <%= section_heading 'Register reports to request', id: 'report-gaps-title', hint: 'Recorded pools with no register control and no open request in the selected dates, oldest first. Check retained files first.' %>
     <% if @overview.untracked_reports.any? %>
       <div class="card">
         <div class="row-list"><%= render partial: 'report_gap', collection: @overview.untracked_reports.first(3), as: :row %></div>
@@ -36,7 +36,7 @@
   </section>
 
   <section id="business-days" class="scroll-mt-48 md:scroll-mt-32 space-y-4" aria-labelledby="business-days-title">
-    <%= section_heading 'Business dates at a glance', hint: "#{range} · Eastern time · live local records" %>
+    <%= section_heading 'Business dates at a glance', id: 'business-days-title', hint: "#{range} · Eastern time · live local records" %>
     <div class="toolbar-band">
       <%= form_with url: overview_reconciliation_follow_ups_path, method: :get, class: 'toolbar' do |f| %>
         <%= f.hidden_field :focus, value: focus %>

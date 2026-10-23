@@ -125,7 +125,7 @@
   </section>
 
   <section class="space-y-3" aria-labelledby="bookkeeping-statements">
-    <%= section_heading 'Financial statements', hint: 'Posted entries for this period only.' %>
+    <%= section_heading 'Financial statements', id: 'bookkeeping-statements', hint: 'Posted entries for this period only.' %>
     <div class="card">
       <ul class="row-list">
         <% [['Income statement', 'Revenue and expenses from the posted ledger.', finance_reports_income_statement_path(from: overview.from, to: overview.to)],
