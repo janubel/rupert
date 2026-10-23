@@ -13,6 +13,10 @@ module OpsLog
     def call_app(request, env)
       return super unless OpsLog.single_line?
 
+      call_structured_app(request, env)
+    end
+
+    def call_structured_app(request, env)
       tag_count = env['rails.rack_logger_tag_count']
       instrumenter = ActiveSupport::Notifications.instrumenter
       handle = instrumenter.build_handle('request.action_dispatch', { request: request })
@@ -37,6 +41,22 @@ module OpsLog
     ensure
       Thread.current[:ops_log_context] = nil
       finish_request_instrumentation(handle, tag_count)
+    end
+
+    def finish_request_instrumentation(handle, tag_count)
+      begin
+        handle.finish
+      ensure
+        begin
+          logger.pop_tags(tag_count) if logger.respond_to?(:pop_tags) && tag_count.to_i.positive?
+        ensure
+          ActiveSupport::LogSubscriber.flush_all!
+        end
+      end
+    rescue StandardError
+      # Observer failures must not replace application errors or interrupt body
+      # delivery. Tags and flushing still get their cleanup, in every format.
+      nil
     end
   end
 end

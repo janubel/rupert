@@ -175,6 +175,13 @@ The stale file can be deleted: `rm /opt/rupert/web/log/test.log` (not done from 
 
 ## Developing with it
 
+Rails-format requests delegate to Rails outside the structured request rescue path, so
+application exceptions retain their original class and backtrace. Structured requests
+finish when their response body closes (or immediately on application failure). A
+finishing observer failure cannot replace an application exception or break body
+closing; request-tag cleanup and log flushing still run. The Rack logger regression
+tests exercise all three formats, frozen responses and failing notification subscribers.
+
 * `OpsLog.event('name', level: :warn, some_id: 5, outcome: 'rejected')` writes an event. Pass ids, kinds, counts and durations;
   pass free text only through `OpsLog.safe_text`. `OpsLog.import(kind:, outcome:, rows: …)` is the shortcut for imports.
   Warnings and errors are stored for the System page automatically (`persist: false` opts out).
