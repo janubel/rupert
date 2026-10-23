@@ -1,14 +1,19 @@
 import { Controller } from "@hotwired/stimulus"
 
-// The navigation rail. On wide screens it is always there and can fold to icons
-// (remembered per browser; layouts/_theme applies the saved state before first
-// paint). Under 1024px it is a drawer behind the top-bar menu button.
+// The navigation rail. The top-bar menu button is its one control: on wide
+// screens it folds the rail to icons and back (remembered per browser;
+// layouts/_theme applies the saved state before first paint); under 1024px
+// the rail is a drawer and the same button opens and closes it.
 const STORAGE_KEY = "rupert-rail"
+const WIDE = "(min-width: 1024px)"
 
 export default class extends Controller {
-  static targets = ["collapse", "menu"]
+  static targets = ["menu"]
 
   connect() {
+    this.media = window.matchMedia(WIDE)
+    this.onMedia = () => { this.closeDrawer() }
+    this.media.addEventListener("change", this.onMedia)
     this.onKey = (event) => {
       if (event.key === "Escape" && this.drawerOpen) {
         this.closeDrawer()
@@ -22,6 +27,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.media?.removeEventListener("change", this.onMedia)
     document.removeEventListener("keydown", this.onKey)
     document.removeEventListener("turbo:before-cache", this.onCache)
   }
@@ -32,6 +38,16 @@ export default class extends Controller {
 
   get drawerOpen() {
     return document.documentElement.hasAttribute("data-rail-open")
+  }
+
+  get wide() {
+    return this.media ? this.media.matches : window.matchMedia(WIDE).matches
+  }
+
+  // The menu button: fold the rail on wide screens, open the drawer on small ones.
+  toggle() {
+    if (this.wide) this.toggleCollapse()
+    else this.toggleDrawer()
   }
 
   toggleCollapse() {
@@ -59,11 +75,17 @@ export default class extends Controller {
   }
 
   render() {
-    if (this.hasCollapseTarget) {
-      this.collapseTarget.setAttribute("aria-expanded", this.collapsed ? "false" : "true")
-      this.collapseTarget.setAttribute("aria-label", this.collapsed ? "Expand navigation" : "Collapse navigation")
-      this.collapseTarget.title = this.collapsed ? "Expand navigation" : "Collapse navigation"
+    if (!this.hasMenuTarget) return
+    const menu = this.menuTarget
+    if (this.wide) {
+      const label = this.collapsed ? "Expand navigation" : "Collapse navigation"
+      menu.setAttribute("aria-expanded", this.collapsed ? "false" : "true")
+      menu.setAttribute("aria-label", label)
+      menu.title = label
+    } else {
+      menu.setAttribute("aria-expanded", this.drawerOpen ? "true" : "false")
+      menu.setAttribute("aria-label", "Menu")
+      menu.title = "Menu"
     }
-    if (this.hasMenuTarget) this.menuTarget.setAttribute("aria-expanded", this.drawerOpen ? "true" : "false")
   }
 }
