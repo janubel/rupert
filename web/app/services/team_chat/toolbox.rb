@@ -23,7 +23,7 @@ module TeamChat
 
     Definition = Struct.new(:name, :description, :schema, :kind, :activity, keyword_init: true)
 
-    attr_reader :calls, :tools_used, :results, :financial_evidence
+    attr_reader :calls, :tools_used, :results, :financial_evidence, :views
     attr_accessor :call_id, :execution_info
 
     # only: tool names to offer (the question's data guide topics, for local bots); nil offers every tool.
@@ -36,6 +36,7 @@ module TeamChat
       @lookups = AskRupert::Tools.new(user: user)
       @execution = execution
       saved = execution&.run&.tool_results || []
+      @views = []
       @calls = saved.size
       @tools_used = saved.pluck('name')
       @results = saved.pluck('result')
@@ -44,7 +45,7 @@ module TeamChat
     end
 
     def definitions
-      @definitions ||= lookup_definitions + mcp_definitions + write_definitions
+      @definitions ||= lookup_definitions + mcp_definitions + write_definitions + view_definitions
     end
 
     def financial? = @financial
@@ -105,6 +106,7 @@ module TeamChat
              when :lookup then run_lookup(definition.name, coerced)
              when :mcp then run_mcp(definition.name, coerced)
              when :write then propose(definition.name, coerced)
+             when :view then show_view(coerced)
              end
       log(name, started, 'ok', text)
     rescue Mcp::ToolError => e
@@ -130,6 +132,22 @@ module TeamChat
         Definition.new(name: tool.tool_name, description: tool.description, kind: :mcp, schema: tool.input_schema,
           activity: "Checking #{tool.title.to_s.downcase.presence || tool.tool_name.tr('_', ' ')}")
       end
+    end
+
+    # show_view is offered to every bot: it only displays data the bot already has.
+    def view_definitions
+      [Definition.new(name: 'show_view', description: Views::DESCRIPTION, kind: :view, schema: Views::SCHEMA, activity: 'Building a view')]
+    end
+
+    def show_view(args)
+      return 'You already showed the most views allowed for one reply; answer now.' if @views.size >= Views::MAX_VIEWS
+
+      view = Views.build(args, known_text: @results.join("\n"))
+      @views << view
+      flagged = view['unchecked'].to_i.positive? ? " #{view['unchecked']} of its figures are not in your tool results and will be flagged; fix them if you can." : ''
+      "Shown beside the chat as “#{view['title']}” (a button under your reply opens it).#{flagged} Say in your reply what it shows."
+    rescue ArgumentError => e
+      "The view was not shown: #{e.message}."
     end
 
     def write_definitions

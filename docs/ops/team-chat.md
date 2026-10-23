@@ -778,6 +778,22 @@ An edited set is saved under its own name (`finance-edited-1a2b3c`, a digest of 
 compared with the built-in questions or an earlier version of the edits. Changes are in the activity log
 (`team_chat_question_changed`). Bookkeepers need team chat access (settings permission) to open the page.
 
+### Side panel (2026-10-23)
+
+A panel on the right of the chat page (it replaces the thread pane while open; Ctrl/Cmd-click opens things the
+usual way):
+
+- **Rupert pages**: a link to a Rupert page in a message opens it in the panel with `?panel=1`, which renders the
+  page without the top bar, rail and status bar (`panel_view?`); its links and forms open in the full window
+  (`<base target="_top">`, Turbo off). Chat pages and outside links are not opened there. "Open full page" leaves.
+- **Files**: images and PDFs as they are, CSV files as a table (first 200 rows), text files as text.
+- **Views a bot builds**: `show_view` (offered to every bot; it changes nothing) takes a title, a kind (`table`,
+  `bar_chart`, `line_chart`, `html`), columns and rows, or simple HTML, and a note. A button under the reply opens
+  it. The page draws tables and SVG charts from the data itself; HTML is cleaned (scripts, styles, forms, frames
+  and their content dropped; only basic tags, no links, images or handlers) and shown in a sandboxed frame with no
+  scripts. Every figure that is not in the bot's tool results is counted (`unchecked`) and flagged in the panel.
+  At most three views per reply, 12 columns, 200 rows (`TeamChat::Views`).
+
 ## Edited and deleted requests
 
 Each human message has a server-owned revision counter in its private metadata.
