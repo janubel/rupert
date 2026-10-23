@@ -3,6 +3,17 @@
 class SourceSyncStatus
   FRESH_FOR = 60.minutes
   ACTIVE_BADGES = ['Live', 'Healthy', 'Syncing', 'Files current', 'Backing up', 'Recent API read'].freeze
+  # Something is broken or missing and nothing will fix itself: shown in red.
+  PROBLEM_BADGES = ['Needs connection', 'Wrong account', 'Needs access', 'Needs login', 'Credentials unreadable',
+                    'Error', 'Stale', 'Stale snapshot', 'Stale export'].freeze
+
+  # One colour rule for every source badge: green working, red broken, amber waiting.
+  def self.tone(badge)
+    return 'pill-fern' if ACTIVE_BADGES.include?(badge)
+    return 'pill-rose' if PROBLEM_BADGES.include?(badge)
+
+    'pill-clay'
+  end
 
   def self.all(include_platform: true)
     new.all(include_platform: include_platform)
@@ -95,6 +106,8 @@ class SourceSyncStatus
     last_at = logs.where(status: 'success').order(finishedAt: :desc).first&.finishedAt
     badge = if !connected
       'Needs connection'
+    elsif GoogleDriveBackupService.wrong_account?
+      'Wrong account'
     elsif latest&.status == 'running'
       'Backing up'
     elsif latest&.status == 'failed'

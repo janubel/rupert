@@ -614,6 +614,7 @@ Rails.application.routes.draw do
     get :drive_oauth_callback
     post :drive_backup, defaults: { format: :json }
     post :drive_disconnect
+    post :drive_domain
   end
 
   resources :size_families, only: %i[index new create edit update destroy] do

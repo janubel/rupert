@@ -175,7 +175,7 @@ Rules that apply to all templates:
 | `.menu`, `.menu-item` | The `More` overflow menu (`<details>` based) |
 | `.input`, `.select`, `.search`, `.checkbox` | Form controls |
 | `.form-actions` | Save/Cancel row at the end of a form |
-| `.pill-*` | Status: `fern` done/positive, `clay` attention, `rose` problem, `olive` info, `taupe` neutral |
+| `.pill-*` | Status: `fern` done/positive, `clay` waiting or attention, `rose` broken or missing, `olive` info, `taupe` neutral (an outline, never a tint, so it cannot pass for "OK"). Source badges get their colour from `SourceSyncStatus.tone` |
 | `.flash-notice`, `.flash-alert` | Result of an action |
 | `.empty-state`, `.empty-state-title`, `.empty-state-hint` | Nothing here yet |
 | `.explainer` | Folded explanation |

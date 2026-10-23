@@ -20,7 +20,11 @@ module DriveOauthCallback
     return redirect_to(settings_path, alert: 'Google Drive did not return an authorization code.') if params[:code].blank?
 
     GoogleDriveBackupService.exchange_code!(params[:code], redirect_uri: google_callback_url)
-    redirect_to(settings_path, notice: 'Connected to Google Drive.')
+    ActivityLogger.log('drive_connected', details: "Google Drive backup connected as #{GoogleDriveBackupService.account_email}")
+    redirect_to(settings_path, notice: "Connected to Google Drive as #{GoogleDriveBackupService.account_email}.")
+  rescue GoogleDriveBackupService::DomainNotAllowedError => e
+    ActivityLogger.log('drive_connect_refused', details: e.message)
+    redirect_to(settings_path, alert: e.message)
   rescue GoogleDriveBackupService::NotConfiguredError,
          GoogleDriveBackupService::NotConnectedError, Signet::AuthorizationError
     redirect_to(settings_path, alert: 'Google Drive could not be connected. Please try again.')

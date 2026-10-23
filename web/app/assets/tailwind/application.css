@@ -283,7 +283,8 @@
   }
 
   .pill-taupe {
-    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold border-fog bg-haze text-mocha;
+    /* Neutral is an outline, not a tint: Herbal's haze is mint and read as "OK". */
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold border-edge bg-transparent text-mocha;
   }
 
   .dot {

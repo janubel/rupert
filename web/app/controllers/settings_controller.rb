@@ -4,7 +4,7 @@ class SettingsController < AuthenticatedController
   include DriveOauthCallback
   before_action :authorize_read, only: %i[show env drive_status drive_logs backup]
   before_action :authorize_write, except: %i[show env drive_status drive_logs backup]
-  before_action :authorize_super_admin, only: %i[backup restore drive_backup new_env_export env_export drive_auth drive_oauth_callback drive_disconnect drive_status drive_logs]
+  before_action :authorize_super_admin, only: %i[backup restore drive_backup new_env_export env_export drive_auth drive_oauth_callback drive_disconnect drive_domain drive_status drive_logs]
 
   before_action :protect_customer_backup_exports, only: %i[backup drive_status drive_logs drive_backup]
 
@@ -150,6 +150,20 @@ class SettingsController < AuthenticatedController
            })
   rescue GoogleDriveBackupService::NotConnectedError => e
     render(json: { ok: false, error: e.message }, status: :unprocessable_entity)
+  end
+
+  # POST /settings/drive_domain — the only Google Workspace domain backups may go to
+  def drive_domain
+    return redirect_to(settings_path(anchor: 'drive'), alert: 'Only the platform administrator can change the backup domain.') unless Current.user.super_admin?
+
+    GoogleDriveBackupService.allowed_domain = params[:domain]
+    domain = GoogleDriveBackupService.allowed_domain
+    ActivityLogger.log('drive_domain_set', details: domain.presence || 'cleared')
+    notice = domain.present? ? "Backups now only go to Google accounts in #{domain}." : 'Backup domain restriction removed.'
+    notice += ' The connected account is outside it; disconnect and reconnect.' if GoogleDriveBackupService.wrong_account?
+    redirect_to(settings_path(anchor: 'drive'), notice: notice)
+  rescue ArgumentError => e
+    redirect_to(settings_path(anchor: 'drive'), alert: e.message)
   end
 
   # POST /settings/drive_disconnect — forget the refresh token
