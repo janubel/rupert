@@ -102,7 +102,17 @@ class BooksDesk
   end
 
   def week_period(monday)
-    @weekly[monday] ||= BooksPeriod.new(kind: 'weekly', date: monday, workflows: workflows_for(week_dates(monday)))
+    @weekly[monday] ||= with_approvals(BooksPeriod.new(kind: 'weekly', date: monday, workflows: workflows_for(week_dates(monday))))
+  end
+
+  # Approvals for the desk's recent window, read once; older periods query their own.
+  APPROVAL_WINDOW = 120
+
+  def with_approvals(period)
+    return period if period.from < today - APPROVAL_WINDOW
+
+    @recent_approvals ||= BookApproval.where(period_from: (today - APPROVAL_WINDOW)..today).chronological.to_a
+    period.preload_approvals!(@recent_approvals)
   end
 
   # Month, quarter and year end for the most recent finished period of each.
@@ -223,7 +233,7 @@ class BooksDesk
   # finished week point at the weekly sign-off (blocker :week); days of the
   # current week wait for it instead of nagging for a daily approval.
   def approval_stage(day)
-    periods = [BooksPeriod.new(kind: 'daily', date: day, workflows: workflows_for([day]))]
+    periods = [with_approvals(BooksPeriod.new(kind: 'daily', date: day, workflows: workflows_for([day])))]
     monday = day.beginning_of_week
     week_done = monday + 6 < today
     periods << week_period(monday) if week_done

@@ -48,7 +48,7 @@ module Finance
 
       def catalog
         ensure_defaults!
-        ordered.to_a
+        ordered.includes(:ledger_account).to_a
       end
 
       # [label, key] pairs for selects. Keeps a record's current (possibly
