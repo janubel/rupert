@@ -13,7 +13,7 @@
   <% end %>
   <dl class="facts">
     <div><dt>Status</dt><dd><span class="<%= receipt_status_pill_class(@receipt.status) %>"><%= receipt_status_label(@receipt.status) %></span></dd></div>
-    <div><dt>Amount · USD</dt><dd class="num text-left"><%= finance_money(@receipt.amount_cents) %></dd></div>
+    <div><dt>Amount</dt><dd class="num text-left"><%= finance_money(@receipt.amount_cents) %></dd></div>
     <div><dt>Purchase date</dt><dd><%= l(@receipt.incurred_on, format: :long) %></dd></div>
     <div><dt>Category</dt><dd><%= @receipt.category.humanize %></dd></div>
     <div><dt>Submitted by</dt><dd><%= @receipt.submitted_by.display_name %></dd></div>

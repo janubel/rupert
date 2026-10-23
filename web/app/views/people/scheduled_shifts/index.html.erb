@@ -1,18 +1,20 @@
 <% content_for :title, "Shifts" %>
 <% can_write = Current.user.can?("hr.write") %>
 <div class="space-y-6">
-  <%= page_header 'Shifts', subtitle: 'Planned shifts for the week. Staff see their own on the Schedule tab of their workspace.' do %>
+  <%= page_header 'Shifts', subtitle: 'Planned shifts for the week.' do %>
     <% if can_write %><%= link_to "Add shift", new_people_scheduled_shift_path(date: [@week, Date.current].max.iso8601), class: "btn-primary" %><% end %>
   <% end %>
 
-  <div class="card-head">
-    <div><h2 class="section-title"><%= @week.strftime("%b %-d") %> – <%= (@week + 6).strftime("%b %-d, %Y") %></h2></div>
-    <nav class="card-head-actions" aria-label="Week">
-      <%= link_to "Previous week", people_scheduled_shifts_path(week: (@week - 7).iso8601), class: "btn-ghost btn-sm" %>
-      <%= link_to "This week", people_scheduled_shifts_path, class: "btn-ghost btn-sm" %>
-      <%= link_to "Next week", people_scheduled_shifts_path(week: (@week + 7).iso8601), class: "btn-ghost btn-sm" %>
+  <section class="toolbar-band">
+    <nav class="toolbar" aria-label="Week">
+      <div class="date-stepper">
+        <%= link_to "‹", people_scheduled_shifts_path(week: (@week - 7).iso8601), class: "btn-ghost btn-sm", aria: { label: "Previous week" }, title: "Previous week" %>
+        <h2 class="section-title"><%= @week.strftime("%b %-d") %> – <%= (@week + 6).strftime("%b %-d, %Y") %></h2>
+        <%= link_to "›", people_scheduled_shifts_path(week: (@week + 7).iso8601), class: "btn-ghost btn-sm", aria: { label: "Next week" }, title: "Next week" %>
+      </div>
+      <% unless Date.current.between?(@week, @week + 6) %><%= link_to "This week", people_scheduled_shifts_path, class: "btn-ghost btn-sm" %><% end %>
     </nav>
-  </div>
+  </section>
 
   <div class="card">
     <div class="table-region" role="region" tabindex="0" aria-label="Planned shifts">
@@ -45,4 +47,5 @@
       </table>
     </div>
   </div>
+  <p class="text-xs text-mocha">Staff see their own shifts on the Schedule tab of their workspace.</p>
 </div>

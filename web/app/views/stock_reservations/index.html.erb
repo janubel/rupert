@@ -1,12 +1,8 @@
 <% content_for :title, 'Reservations' %>
 <div class="space-y-6">
-  <%= page_header 'Reservations', subtitle: 'Local holds that reduce Rupert\'s available-to-promise for one platform item at one location.' do %>
+  <%= page_header 'Reservations', subtitle: 'Local holds on one platform item at one location.' do %>
     <% if Current.user.can?('inventory.write') %><%= link_to 'Add reservation', new_stock_reservation_path, class: 'btn-primary' %><% end %>
   <% end %>
-  <div class="text-sm text-mocha"><p>Shopify and Square remain separate and can still sell held stock.<%= define('hold') %><%= define('promise') %></p>
-    <details class="explainer"><summary class="explainer-summary">More detail</summary><p class="mt-1">These holds do not reserve stock in Shopify or Square. Channels can still sell it, and a later sync can reduce availability. Expired holds stop consuming local availability automatically.</p></details>
-  </div>
-
   <div class="card overflow-hidden">
     <div class="table-region" role="region" tabindex="0" aria-label="Stock reservations">
       <table class="table">
@@ -35,4 +31,9 @@
     </div>
   </div>
   <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
+
+  <details class="explainer">
+    <summary class="explainer-summary">What a local hold does</summary>
+    <p class="mt-1 text-sm text-mocha">A hold reduces Rupert's available-to-promise. Shopify and Square remain separate and can still sell held stock: these holds do not reserve stock in Shopify or Square, and a later sync can reduce availability. Expired holds stop consuming local availability automatically.<%= define('hold') %><%= define('promise') %></p>
+  </details>
 </div>

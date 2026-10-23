@@ -74,7 +74,7 @@
       </p>
     </div>
     <div class="stat">
-      <p class="stat-label">7-day trend <span class="text-taupe">· <%= number_with_delimiter(h[:tokens][:week_total]) %> tokens</span></p>
+      <p class="stat-label">Tokens, last 7 days <span class="text-taupe">· <%= number_with_delimiter(h[:tokens][:week_total]) %></span></p>
       <div class="mt-2 flex h-16 items-end gap-1.5" role="img"
            aria-label="Tokens per day, last 7 days: <%= trend.map { |d| "#{Date.parse(d[:date]).strftime('%a')} #{d[:tokens_in] + d[:tokens_out] + d[:tokens_reasoning]}" }.join(', ') %>">
         <% trend.each do |d| %>
@@ -90,14 +90,13 @@
     </div>
   </div>
 
-  <% if h[:free_models][:ids].any? %>
-    <details class="explainer text-sm">
-      <summary class="explainer-summary">Free models right now</summary>
+  <details class="explainer text-sm">
+    <summary class="explainer-summary"><%= h[:free_models][:ids].any? ? 'Free models right now' : 'About these figures' %></summary>
+    <% if h[:free_models][:ids].any? %>
       <ul class="mt-2 flex flex-wrap gap-2">
         <% h[:free_models][:ids].each do |id| %><li class="pill-taupe font-mono"><%= id %></li><% end %>
       </ul>
-    </details>
-  <% end %>
-
-  <p class="text-xs text-taupe"><%= h[:usage_api][:note] %> Free models have IP-level limits; the key and message content are never shown or stored here.</p>
+    <% end %>
+    <p class="mt-2 text-xs text-taupe"><%= h[:usage_api][:note] %> Free models have IP-level limits; the key and message content are never shown or stored here.</p>
+  </details>
 </section>

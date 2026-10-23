@@ -1,9 +1,8 @@
 <% content_for :title, 'Bulk materials' %>
 <div class="space-y-6">
-  <%= page_header 'Bulk materials', subtitle: 'Local bulk stock by material and lot, with receipts, use and an append-only movement ledger.', menu: [['Download CSV', export_bulk_materials_path]] do %>
+  <%= page_header 'Bulk materials', subtitle: 'Local bulk stock by material and lot.', menu: [['Download CSV', export_bulk_materials_path]] do %>
     <% if Current.user.can?('inventory.write') %><%= link_to 'Add material', new_bulk_material_path, class: 'btn-primary' %><% end %>
   <% end %>
-  <%= fold_explainer('This ledger tracks bulk material inside Rupert and never changes Shopify or Square quantities or SKUs. Weights use integer milligrams; decimal inputs round once to the nearest milligram. Automatic sale-to-gram mappings and Google Sheets synchronization are pending, so download the ledger CSV for a manual import into Sheets.', class: 'text-sm text-mocha') %>
   <div class="card overflow-hidden">
     <div class="table-region" role="region" tabindex="0" aria-label="Bulk materials">
       <table class="table">
@@ -16,4 +15,5 @@
     </div>
   </div>
   <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
+  <%= fold_explainer('This ledger tracks bulk material inside Rupert and never changes Shopify or Square quantities or SKUs. Weights use integer milligrams; decimal inputs round once to the nearest milligram. Automatic sale-to-gram mappings and Google Sheets synchronization are pending, so download the ledger CSV for a manual import into Sheets.', class: 'text-sm text-mocha') %>
 </div>

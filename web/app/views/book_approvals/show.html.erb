@@ -9,21 +9,24 @@
                     unavailable: 'Unavailable comparisons', coverage: 'Payment / record coverage flags',
                     unconfirmed_imports: 'Unconfirmed source imports', open_follow_ups: 'Open follow-ups' } %>
 <div class="space-y-6">
-  <%= page_header 'Book approvals', subtitle: 'Look over the numbers, then sign them off.', menu: [['Open expenses', finance_expenses_path], ['Open vendor payments', finance_vendor_payments_path]] %>
+  <%= page_header 'Book approvals', subtitle: 'Look over the numbers, then sign them off.' %>
   <%= fold_explainer('Your name and the exact time are recorded in a tamper-evident ledger tied to this version of the books. If anything changes afterwards, the approval shows as changed and needs a fresh look.', class: 'text-sm text-mocha') %>
 
   <%= page_tabs(%w[daily weekly].map { |k| [k.capitalize, book_approvals_path(kind: k), period.kind == k] }, label: 'Approval period') %>
 
-  <%= form_with url: book_approvals_path, method: :get, class: 'toolbar' do |f| %>
-    <%= f.hidden_field :kind, value: period.kind %>
-    <div class="toolbar-field"><%= f.label :date, 'Date', class: 'field-label' %><%= f.date_field :date, value: period.from, class: 'input' %></div>
-    <div class="toolbar-actions">
-      <%= f.submit 'Apply', class: 'btn-primary' %>
-      <%= link_to 'Earlier', book_approvals_path(kind: period.kind, date: period.previous.from.iso8601), class: 'btn-ghost' %>
-      <% unless period.next_period.to >= Date.current %><%= link_to 'Later', book_approvals_path(kind: period.kind, date: period.next_period.from.iso8601), class: 'btn-ghost' %><% end %>
-      <%= link_to 'Latest', book_approvals_path(kind: period.kind), class: 'btn-ghost' %>
-    </div>
-  <% end %>
+  <section class="toolbar-band" aria-label="Approval date">
+    <%= form_with url: book_approvals_path, method: :get, class: 'toolbar' do |f| %>
+      <%= f.hidden_field :kind, value: period.kind %>
+      <div class="toolbar-field"><%= f.label :date, 'Date', class: 'field-label' %>
+        <div class="date-stepper">
+          <%= link_to '‹', book_approvals_path(kind: period.kind, date: period.previous.from.iso8601), class: 'btn-ghost btn-sm', rel: 'prev', aria: { label: 'Earlier' }, title: 'Earlier' %>
+          <%= f.date_field :date, value: period.from, class: 'input' %>
+          <% unless period.next_period.to >= Date.current %><%= link_to '›', book_approvals_path(kind: period.kind, date: period.next_period.from.iso8601), class: 'btn-ghost btn-sm', rel: 'next', aria: { label: 'Later' }, title: 'Later' %><% end %>
+        </div>
+      </div>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Latest', book_approvals_path(kind: period.kind), class: 'btn-ghost' %></div>
+    <% end %>
+  </section>
 
   <section aria-label="Recent days" class="section-card">
     <%= section_heading 'Last 14 days', hint: 'Open a day to review or approve it.', level: :h3 %>

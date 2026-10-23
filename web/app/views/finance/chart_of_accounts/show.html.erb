@@ -1,8 +1,8 @@
 <% content_for :title, "Account #{@account.code}" %>
 <% range_text = @from || @to ? "#{@from ? @from.to_date.strftime('%b %-d, %Y') : 'Start'} – #{@to ? @to.to_date.strftime('%b %-d, %Y') : 'today'}" : 'All dates' %>
 <div class="space-y-6">
-  <%= page_header finance_account_label(@account), eyebrow: 'Bookkeeping · Account',
-        subtitle: "#{@account.type_label.singularize} account · normal balance #{@account.normal_balance} · #{range_text} · USD",
+  <%= page_header finance_account_label(@account), eyebrow: 'Account',
+        subtitle: "#{@account.type_label.singularize} account · normal balance #{@account.normal_balance} · #{range_text}",
         menu: [['Chart of accounts', finance_chart_of_accounts_path], ['Trial balance', finance_reports_trial_balance_path(from: @from, to: @to)]] do %>
     <% if Current.user.can?('finance.write') %><%= link_to 'Edit', edit_finance_chart_of_account_path(@account), class: 'btn-primary' %><% end %>
   <% end %>

@@ -1,7 +1,6 @@
 <% content_for :title, 'Catalog links' %>
 <div class="space-y-6">
-  <%= page_header 'Catalog links', subtitle: 'Which sellable items are linked across Shopify and Square, by SKU.', menu: (retail_business_access?('inventory.read') ? [['Open store comparison', stock_comparison_path]] : nil) %>
-  <%= fold_explainer('This is an identity audit only. Shopify and Square are separate locations with independent inventories, so different quantities are normal and never auto-corrected. Financial reconciliation lives in Bookkeeping → Daily close.', class: 'text-sm text-mocha') %>
+  <%= page_header 'Catalog links', subtitle: 'Which sellable items are linked across Shopify and Square, by SKU.' %>
 
   <section class="grid grid-cols-2 gap-4 md:grid-cols-4">
     <div class="stat">
@@ -30,7 +29,7 @@
   <% end %>
 
   <section>
-    <%= section_heading 'Linked items', hint: "#{@pagy.count} matching links, mismatches first. Quantities per platform are independent on purpose." %>
+    <%= section_heading 'Linked items', hint: "#{@pagy.count} matching links, mismatches first." %>
     <div class="card mt-3 overflow-hidden">
       <div class="table-region" role="region" tabindex="0" aria-label="Catalog links">
         <table class="table">
@@ -148,4 +147,9 @@
       <% end %>
     </details>
   <% end %>
+
+  <details class="explainer">
+    <summary class="explainer-summary">Why quantities differ</summary>
+    <p class="mt-1 text-sm text-mocha">This is an identity audit only. Shopify and Square are separate locations with independent inventories, so different quantities are normal and never auto-corrected. Financial reconciliation lives in Bookkeeping → Daily close.</p>
+  </details>
 </div>

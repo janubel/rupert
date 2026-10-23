@@ -3,7 +3,6 @@
   <%= page_header 'Bulk recipes', subtitle: 'Exact Shopify variants mapped to grams of one raw material per sold unit.' do %>
     <% if Current.user.can?('inventory.write') %><%= link_to 'Add recipe version', new_bulk_recipe_path, class: 'btn-primary' %><% end %>
   <% end %>
-  <%= fold_explainer('Every definition is a new immutable version with an effective time. Applied material-use receipts retain their original version, and reused SKUs never choose the recipe. Record receipts and lot balances under Bulk materials, then review imported sale lines under Material use. Automatic source stock changes, refund restocking and Google Sheets synchronization remain separate work.', class: 'text-sm text-mocha') %>
   <div class="card overflow-hidden">
     <div class="table-region" role="region" tabindex="0" aria-label="Bulk recipes">
       <table class="table">
@@ -16,4 +15,5 @@
     </div>
   </div>
   <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
+  <%= fold_explainer('Every definition is a new immutable version with an effective time. Applied material-use receipts retain their original version, and reused SKUs never choose the recipe. Record receipts and lot balances under Bulk materials, then review imported sale lines under Material use. Automatic source stock changes, refund restocking and Google Sheets synchronization remain separate work.', class: 'text-sm text-mocha') %>
 </div>

@@ -1,8 +1,7 @@
 <% content_for :title, 'C-Trax history' %>
 <div class="space-y-6">
-  <%= page_header 'C-Trax history', subtitle: 'Read-only C-Trax register shifts, including inactive staff, open shifts and records awaiting a match or review.',
+  <%= page_header 'C-Trax history', subtitle: 'Read-only C-Trax register shifts, including open and unmatched ones.',
         menu: [['Open punch report', people_punch_history_path(source: 'ctrax')], ['Download CSV', people_ctrax_timesheets_path(time_range_query(@from, @to).merge(format: :csv)), { data: { turbo: false } }]] %>
-  <%= fold_explainer('C-Trax reported hours and elapsed clock time can differ; neither establishes overtime, Rupert approval or payment. Each shift retains its original observation and a dated change history. These records stay separate from Square history and Rupert timesheets; overlapping source hours are never added together, and C-Trax shifts do not enter Rupert payroll or personal hour totals.', class: 'text-sm text-mocha') %>
   <%= render 'automatic_refresh' %>
 
   <section class="grid grid-cols-3 gap-3" aria-label="C-Trax totals">
@@ -54,4 +53,5 @@
     </div>
   </div>
   <%== @pagy.series_nav if @pagy.pages > 1 %>
+  <%= fold_explainer('C-Trax reported hours and elapsed clock time can differ; neither establishes overtime, Rupert approval or payment. Each shift retains its original observation and a dated change history. These records stay separate from Square history and Rupert timesheets; overlapping source hours are never added together, and C-Trax shifts do not enter Rupert payroll or personal hour totals.', class: 'text-sm text-mocha') %>
 </div>

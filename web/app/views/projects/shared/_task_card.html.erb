@@ -1,6 +1,6 @@
 <%# One draggable task. locals: task, assignees, show_project (default true), can_write %>
 <% show_project = local_assigns.fetch(:show_project, true) %>
-<article class="group card p-3 transition hover:border-taupe hover:shadow-md <%= "cursor-grab" if can_write %>"
+<article class="group card p-3 transition hover:border-taupe <%= "cursor-grab" if can_write %>"
          data-task-board-target="card" data-task-id="<%= task.id %>" data-status="<%= task.status %>"
          data-move-url="<%= move_projects_task_path(task) %>" <%= "draggable=true".html_safe if can_write %>>
   <div class="flex items-start gap-2">

@@ -55,7 +55,9 @@
               <% end %>
             </div>
             <div class="account-menu-group">
-              <%= link_to learning_index_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('help') %><span>Help &amp; lessons</span><% end %>
+              <% unless nav_area?('me') %>
+                <%= link_to learning_index_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('help') %><span>Help &amp; lessons</span><% end %>
+              <% end %>
               <%= link_to feedback_reports_path, class: 'nav-menu-item', role: 'menuitem', data: { action: 'click->feedback#toggle', feedback_ignore: '' } do %><%= navigation_icon('bug') %><span>Report a problem</span><% end %>
               <% unless nav_area?('system') %>
                 <%= link_to roadmap_path, class: 'nav-menu-item', role: 'menuitem' do %><%= navigation_icon('document') %><span>Features &amp; roadmap</span><% end %>

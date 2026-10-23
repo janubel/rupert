@@ -1,7 +1,6 @@
 <%# Updates: a Settings page (docs/ui-standards.md §4), one card per topic. %>
 <div class="page-medium space-y-6">
-  <%= page_header 'Updates', subtitle: 'Rupert installs new code from GitHub main only after its checks pass, backs up the database first and rolls back if the new build is unhealthy.' %>
-  <p class="text-xs text-taupe">Updates apply to every workspace on this server.</p>
+  <%= page_header 'Updates', subtitle: 'New code from GitHub main, installed only after its checks pass.' %>
 
   <section class="grid gap-4 lg:grid-cols-2">
     <div class="section-card" data-update-build>
@@ -121,4 +120,5 @@
       </div>
     </section>
   <% end %>
+  <p class="text-xs text-taupe">Updates apply to every workspace on this server. Rupert backs up the database before installing and rolls back if the new build is unhealthy.</p>
 </div>

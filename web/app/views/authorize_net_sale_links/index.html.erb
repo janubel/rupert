@@ -2,8 +2,8 @@
 <% menu = [['Commission preview', commission_preview_time_clock_path]] %>
 <% menu.unshift(['Connection and live payment reports', pos_connection_path('authorize_net_reporting')]) if Current.user.can?('settings.read') %>
 <div class="space-y-6">
-  <%= page_header 'Authorize.net payment matches', subtitle: 'Confirm that a gateway charge paid for an existing sale; each match stays with that sale as payment statuses change.', menu: menu %>
-  <%= fold_explainer('Refunds and voids remove a match from the 1% estimate; replayed events never add another sale. Suggestions use an exact invoice reference, currency and full amount. A suggestion still needs review. When no shared reference is available, verify both source receipts before entering the exact sale number and source. Matching by amount or time alone is insufficient. Partial and split payments are not supported here.', class: 'text-sm text-mocha') %>
+  <%= page_header 'Authorize.net payment matches', subtitle: 'Confirm that a gateway charge paid for an existing sale.', menu: menu %>
+  <%= fold_explainer('Each match stays with that sale as payment statuses change. Refunds and voids remove a match from the 1% estimate; replayed events never add another sale. Suggestions use an exact invoice reference, currency and full amount. A suggestion still needs review. When no shared reference is available, verify both source receipts before entering the exact sale number and source. Matching by amount or time alone is insufficient. Partial and split payments are not supported here.', class: 'text-sm text-mocha') %>
   <% if @payments.empty? %>
     <section class="card">
       <%= empty_state 'No production API payments imported yet', hint: 'Save the existing reporting credentials, check access and import payments first. Manual portal exports remain available as evidence but do not activate this live matching workflow.' do %>

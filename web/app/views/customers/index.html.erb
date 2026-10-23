@@ -5,7 +5,7 @@
 <% menu << ['Download CSV', export_customers_path(request.query_parameters.except('page')), { data: { turbo: false }, title: 'Downloads the customers matching the current filters' }] if can_write %>
 <% menu << ['Sync now', sync_directory_customers_path, { method: :post }] if can_write && Current.user.can?('sync.write') %>
 <div class="space-y-6">
-  <%= page_header 'Customers', subtitle: 'Contacts, relationship history and follow-ups across your connected sources.', menu: menu do %>
+  <%= page_header 'Customers', subtitle: 'Contacts, history and follow-ups from every source.', menu: menu do %>
     <% if can_write %><span <%= tour_anchor('actions') %>><%= link_to 'Add customer', new_customer_path, class: 'btn-primary' %></span><% end %>
   <% end %>
 
@@ -13,7 +13,7 @@
     <%= link_to customers_path, class: 'stat block hover:border-taupe' do %>
       <p class="stat-label">All customers</p>
       <p class="stat-value mt-1"><%= number_with_delimiter(@total_customers) %></p>
-      <p class="mt-1 text-xs text-taupe">Source profiles, including retained history</p>
+      <p class="mt-1 text-xs text-taupe">Including retained history</p>
     <% end %>
     <%= link_to customers_path(status: 'lead'), class: 'stat block hover:border-taupe' do %>
       <p class="stat-label">Leads</p>
@@ -35,8 +35,7 @@
   <% if @due_count.positive? %>
     <section class="section-card" aria-label="Follow-ups due">
       <%= section_heading 'Follow-ups due' do %>
-        <span class="pill-clay"><%= @due_count %> due</span>
-        <%= link_to 'Open these customers', customers_path(due: '1'), class: 'btn-ghost btn-sm' %>
+        <%= link_to 'Open all', customers_path(due: '1'), class: 'btn-ghost btn-sm' %>
       <% end %>
       <ul class="divide-y divide-fog">
         <% @due_follow_ups.each do |task| %>
@@ -49,7 +48,7 @@
     </section>
   <% end %>
 
-  <section class="card card-pad space-y-4" aria-label="Find customers" <%= tour_anchor('search') %>>
+  <section class="toolbar-band space-y-4" aria-label="Find customers" <%= tour_anchor('search') %>>
     <%= search_form_for @q, url: customers_path, class: 'toolbar' do |f| %>
       <div class="toolbar-field"><%= f.label search_key, 'Search', class: 'field-label' %><%= f.search_field search_key, placeholder: 'Name, email or phone', class: 'search' %></div>
       <div class="toolbar-field"><%= f.label :tags_cont, 'Tag', class: 'field-label' %><%= f.search_field :tags_cont, placeholder: 'Any tag', class: 'search' %></div>
@@ -59,7 +58,7 @@
       <div class="toolbar-field"><%= label_tag :sort, 'Sort', class: 'field-label' %><%= select_tag :sort, options_for_select(CustomersController::SORTS.map { |key, (_, label)| [label, key] }, @sort), class: 'select w-full' %></div>
       <%= hidden_field_tag :due, '1' if params[:due] == '1' %>
       <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
-      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', customers_path, class: 'btn-ghost' %></div>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %></div>
     <% end %>
 
     <%= page_tabs([['All · ' + @total_customers.to_s, customers_path(customer_filter_params.except('status')), params[:status].blank?]] +
@@ -146,7 +145,7 @@
   <% end %>
 
   <details class="section-card explainer" <%= tour_anchor('sources') %>>
-    <summary class="explainer-summary">Where customers come from (directory sync status)</summary>
+    <summary class="explainer-summary">Where customers come from</summary>
     <div class="mt-3"><%= render 'shared/directory_sync_status', kind: 'customers' %></div>
   </details>
 </div>

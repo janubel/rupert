@@ -4,7 +4,7 @@
 <% open_batch = !closed %>
 <div class="space-y-6">
 
-  <%= page_header "#{@batch.kind_label} ##{@batch.id}", eyebrow: 'Bookkeeping · QuickBooks import',
+  <%= page_header "#{@batch.kind_label} ##{@batch.id}", eyebrow: 'QuickBooks import',
         subtitle: "#{@batch.filename} · uploaded #{l(@batch.created_at.in_time_zone, format: :short)}#{" by #{@batch.created_by_name}" if @batch.created_by_name.present?}",
         menu: [['All uploads', finance_quickbooks_imports_path], ['General ledger', finance_journal_entries_path]] %>
 

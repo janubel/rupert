@@ -1,7 +1,7 @@
 <% content_for :title, 'Staff access' %>
 <div class="page-narrow space-y-6">
   <%= page_header "Set up #{@employee.name}'s login", subtitle: 'Share this private link directly with the staff member.' do %>
-    <%= link_to 'Back to staff member', people_employee_path(@employee), class: 'btn-ghost' %>
+    <%= link_to 'Open staff member', people_employee_path(@employee), class: 'btn-ghost' %>
   <% end %>
   <section class="card card-pad space-y-4">
     <div><label for="setup-link" class="field-label">Private setup link</label><input id="setup-link" class="input w-full" readonly value="<%= @setup_url %>" onclick="this.select()"></div>

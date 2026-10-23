@@ -5,7 +5,7 @@ module CustomersHelper
     return '—' if totals.empty?
 
     totals.sort_by { |currency, _| currency.to_s }.map do |currency, cents|
-      "#{currency.presence || 'Unknown currency'} #{number_with_precision(cents / 100.0, precision: 2, delimiter: ',')}"
+      operations_money(cents, currency: currency.presence || 'Unknown currency')
     end.join(' · ')
   end
 

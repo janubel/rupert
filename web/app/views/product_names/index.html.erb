@@ -4,10 +4,9 @@
 <% menu = sheets.drop(1).map { |sheet, label| ["#{label} PDF", pdf_product_names_path(sheet: sheet), { target: '_blank', rel: 'noopener' }] } %>
 <% menu << ['Download CSV', product_names_path(format: :csv)] %>
 <div class="space-y-6">
-  <%= page_header 'Product names', subtitle: 'One name per product: the website (Shopify) name is primary and Square, SwipeSimple and C-Trax names are matched to it.', menu: menu do %>
+  <%= page_header 'Product names', subtitle: 'One name per product, with Square, SwipeSimple and C-Trax names matched to the website (Shopify) name.', menu: menu do %>
     <%= link_to 'Download PDF', pdf_product_names_path(sheet: sheets.first.first), class: 'btn-primary', target: '_blank', rel: 'noopener' %>
   <% end %>
-  <%= fold_explainer('Secondary names are matched by SKU first, then by name. This page is read-only and never changes a name in any system; the PDFs in More are print sheets for checking names on the floor.', class: 'text-sm text-mocha') %>
 
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Product name overview">
     <% [['Website products (current)', summary[:website]], ['Square matched', "#{summary[:square]} of #{summary[:square_total]}"], ['SwipeSimple matched', @crosswalk.swipesimple_available? ? "#{summary[:swipesimple]} of #{summary[:swipesimple_total]}" : 'No catalog loaded'], ['C-Trax matched', "#{summary[:ctrax]} of #{summary[:ctrax_total]}"]].each do |label, value| %>
@@ -71,4 +70,6 @@
   </div>
   <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
   <% if !last_page && @unmatched_items.any? %><p class="text-xs text-mocha"><%= @unmatched_items.size %> items with no website match are listed below the last page.</p><% end %>
+
+  <%= fold_explainer('Secondary names are matched by SKU first, then by name. This page is read-only and never changes a name in any system; the PDFs in More are print sheets for checking names on the floor.', class: 'text-sm text-mocha') %>
 </div>

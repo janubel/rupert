@@ -1,15 +1,17 @@
 <% content_for :title, "Team schedule" %>
 <div class="space-y-6">
-  <%= page_header 'Team schedule', subtitle: 'Hours worked per staff member per day, from Rupert punches, Square timecards and C-Trax shifts.' %>
+  <%= page_header 'Team schedule', subtitle: 'Hours worked per staff member per day.' %>
 
-  <div class="card-head">
-    <div><h2 class="section-title"><%= @week.strftime('%b %-d') %> – <%= (@week + 6).strftime('%b %-d, %Y') %></h2></div>
-    <nav class="card-head-actions" aria-label="Week">
-      <%= link_to 'Previous week', people_team_schedule_path(week: @prev_week.iso8601), class: 'btn-ghost btn-sm' %>
-      <%= link_to 'This week', people_team_schedule_path, class: 'btn-ghost btn-sm' %>
-      <%= link_to 'Next week', people_team_schedule_path(week: @next_week.iso8601), class: 'btn-ghost btn-sm' %>
+  <section class="toolbar-band">
+    <nav class="toolbar" aria-label="Week">
+      <div class="date-stepper">
+        <%= link_to '‹', people_team_schedule_path(week: @prev_week.iso8601), class: 'btn-ghost btn-sm', aria: { label: 'Previous week' }, title: 'Previous week' %>
+        <h2 class="section-title"><%= @week.strftime('%b %-d') %> – <%= (@week + 6).strftime('%b %-d, %Y') %></h2>
+        <%= link_to '›', people_team_schedule_path(week: @next_week.iso8601), class: 'btn-ghost btn-sm', aria: { label: 'Next week' }, title: 'Next week' %>
+      </div>
+      <% unless Date.current.between?(@week, @week + 6) %><%= link_to 'This week', people_team_schedule_path, class: 'btn-ghost btn-sm' %><% end %>
     </nav>
-  </div>
+  </section>
 
   <div class="card">
     <div class="table-region" role="region" tabindex="0" aria-label="Hours worked by day">

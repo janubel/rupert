@@ -1,8 +1,7 @@
 <%# Activity: a List page (docs/ui-standards.md §4) over the audit trail. %>
 <div class="space-y-6">
-  <%= page_header 'Activity', subtitle: "Who did what, and when: #{number_with_delimiter(@pagy.count)} matching action#{@pagy.count == 1 ? '' : 's'}, newest first.",
+  <%= page_header 'Activity', subtitle: 'Who did what, and when.',
                   menu: [['Download CSV', activity_path(request.query_parameters.merge(format: :csv)), { data: { turbo: false } }]] %>
-  <p class="text-xs text-taupe">Entries are kept for seven years.</p>
 
   <%= form_tag activity_path, method: :get, class: "toolbar" do %>
     <div class="toolbar-field">
@@ -25,8 +24,10 @@
       <%= submit_tag "Apply", class: "btn-primary", name: nil %>
       <%= link_to "Clear", activity_path, class: "btn-ghost" %>
     </div>
+    <p class="basis-full text-xs text-taupe"><%= number_with_delimiter(@pagy.count) %> matching action<%= @pagy.count == 1 ? '' : 's' %>, newest first. Entries are kept for seven years.</p>
   <% end %>
 
+  <div class="card">
   <div class="table-region" role="region" tabindex="0" aria-label="Activity">
     <table class="table">
       <thead>
@@ -60,6 +61,7 @@
         <% end %>
       </tbody>
     </table>
+  </div>
   </div>
   <% if @pagy.pages > 1 %>
     <div class="text-xs text-taupe"><%== @pagy.series_nav %></div>

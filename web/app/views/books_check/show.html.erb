@@ -3,10 +3,12 @@
 <div class="space-y-6">
   <%= page_header 'Books health', subtitle: "Read-only checks on the last #{check.window_days} days of sales, payments, refunds and retained evidence.", menu: [['Download CSV', books_check_path(days: check.window_days, format: :csv), { data: { turbo: false } }]] %>
 
-  <%= form_with url: books_check_path, method: :get, class: 'toolbar' do |f| %>
-    <div class="toolbar-field"><%= f.label :days, 'Window', class: 'field-label' %><%= f.select :days, options_for_select([['7 days', 7], ['30 days', 30], ['90 days', 90], ['1 year', 365]], check.window_days), {}, class: 'select' %></div>
-    <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', books_check_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <section class="toolbar-band" aria-label="Check window">
+    <%= form_with url: books_check_path, method: :get, class: 'toolbar' do |f| %>
+      <div class="toolbar-field"><%= f.label :days, 'Window', class: 'field-label' %><%= f.select :days, options_for_select([['7 days', 7], ['30 days', 30], ['90 days', 90], ['1 year', 365]], check.window_days), {}, class: 'select' %></div>
+      <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', books_check_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </section>
 
   <section class="rounded-card border p-5 <%= verdict[1] %>" role="status" aria-label="Verdict">
     <div class="card-head">

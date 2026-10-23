@@ -9,12 +9,11 @@
 <% menu << ['Approve all pending', approve_all_size_families_path, { method: :post, data: { turbo_confirm: 'Write every pending size to Square?' } }] if can_apply && total_pending.positive? %>
 
 <div class="space-y-6">
-  <%= page_header 'Sizes', subtitle: 'Multi-size gram products derived from a root gram bank and written to Square on approval.', menu: menu do %>
+  <%= page_header 'Sizes', subtitle: 'Multi-size gram products derived from a root gram bank.', menu: menu do %>
     <% if can_manage %>
       <%= link_to 'Add family', new_size_family_path, class: 'btn-primary' %>
     <% end %>
   <% end %>
-  <%= fold_explainer('Every 15-minute sync folds in new sales and recomputes each size as floor(root grams ÷ size grams), then writes to Square instead of trusting realtime counts. Approval-only families record derived sizes as pending; auto-apply families write them every sync.', class: 'text-sm text-mocha') %>
 
   <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
     <div class="stat">
@@ -128,11 +127,7 @@
 
   <section class="card overflow-hidden">
     <div class="card-pad pb-3">
-      <%= section_heading 'Pending approvals', hint: 'Derived quantities from the last sync awaiting sign-off before they are written to Square.' do %>
-        <% if total_pending.positive? && can_apply %>
-          <%= button_to 'Approve all', approve_all_size_families_path, method: :post, class: 'btn-ghost btn-sm', form_class: 'contents', data: { turbo_confirm: 'Write every pending size to Square?' } %>
-        <% end %>
-      <% end %>
+      <%= section_heading 'Pending approvals', hint: 'Derived quantities awaiting sign-off before they are written to Square.' %>
     </div>
     <div class="table-region" role="region" tabindex="0" aria-label="Pending size approvals">
       <table class="table">
@@ -186,4 +181,6 @@
       </table>
     </div>
   </section>
+
+  <%= fold_explainer('Every 15-minute sync folds in new sales and recomputes each size as floor(root grams ÷ size grams), then writes to Square instead of trusting realtime counts. Approval-only families record derived sizes as pending and write them to Square on approval; auto-apply families write them every sync.', class: 'text-sm text-mocha') %>
 </div>

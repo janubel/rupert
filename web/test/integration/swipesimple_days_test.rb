@@ -35,8 +35,8 @@ class SwipesimpleDaysTest < ActionDispatch::IntegrationTest
     assert_select '[data-check="unknown_tips"]'
     assert_select '#close-deposit', text: /deposit isn’t available/
     assert_select '.report-table[data-report-table-key-value="swipesimple-day"] tbody tr', 4
-    assert_select 'a[href=?]', swipesimple_days_path(date: '2026-10-13'), text: 'Previous day'
-    assert_select 'a[href=?]', swipesimple_days_path(date: '2026-10-15'), text: 'Next day'
+    assert_select 'a[href=?][aria-label="Previous day"]', swipesimple_days_path(date: '2026-10-13')
+    assert_select 'a[href=?][aria-label="Next day"]', swipesimple_days_path(date: '2026-10-15')
     assert_select 'form[action=?] input[name=source_digest]', review_swipesimple_days_path
   end
 

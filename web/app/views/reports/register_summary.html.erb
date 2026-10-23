@@ -2,33 +2,32 @@
 <% money = ->(cents) { cents.nil? ? 'Unavailable' : number_with_precision(BigDecimal(cents.to_s) / 100, precision: 2) } %>
 <% summary_query = { source: @summary.source, location_id: @summary.location_id }.compact_blank %>
 <div class="space-y-6">
-  <%= page_header 'Register summary', subtitle: 'Recorded sales, tenders and refunds by platform, location and currency for one day.',
+  <%= page_header 'Register summary', subtitle: 'Recorded sales, tenders and refunds for one day.',
         menu: [['Download CSV', register_summary_reports_path(format: :csv, day: @summary.day.iso8601, source: @summary.source, location_id: @summary.location_id), { data: { turbo: false } }],
-               ['Reconcile totals and retain source documents', daily_reconciliations_path(day: @summary.day.iso8601)], ['All reports', reports_path]] %>
+               ['Daily controls for this day', daily_reconciliations_path(day: @summary.day.iso8601)]] %>
   <%= render 'reports/tabs' %>
 
-  <div class="card card-pad space-y-3">
-    <nav class="flex items-center gap-2" aria-label="Report period">
-      <%= link_to register_summary_reports_path(summary_query.merge(day: (@summary.day - 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'prev', title: 'Previous day' do %>←<span class="sr-only">Previous day</span><% end %>
-      <strong class="text-sm text-ink" aria-live="polite"><%= @summary.day.strftime('%a %b %-d, %Y') %></strong>
-      <% if @summary.day < Date.current %>
-        <%= link_to register_summary_reports_path(summary_query.merge(day: (@summary.day + 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'next', title: 'Next day' do %>→<span class="sr-only">Next day</span><% end %>
-      <% else %>
-        <span class="btn-ghost btn-sm cursor-not-allowed opacity-50" aria-disabled="true" title="No later day yet">→</span>
-      <% end %>
-    </nav>
+  <section class="toolbar-band" aria-label="Register summary filters">
     <%= form_with url: register_summary_reports_path, method: :get, class: 'toolbar' do |f| %>
-      <div class="toolbar-field"><%= f.label :day, 'Day', class: 'field-label' %><%= f.date_field :day, value: @summary.day, required: true, class: 'input' %></div>
-      <div class="toolbar-field"><%= f.label :source, 'Source (optional)', class: 'field-label' %><%= f.text_field :source, value: @summary.source, placeholder: 'shopify, square, swipesimple', class: 'input' %></div>
-      <div class="toolbar-field"><%= f.label :location_id, 'Location ID (optional)', class: 'field-label' %><%= f.text_field :location_id, value: @summary.location_id, class: 'input' %></div>
-      <div class="toolbar-actions"><%= button_tag 'Apply', type: 'submit', class: 'btn-primary', name: nil %><%= link_to 'Clear', register_summary_reports_path, class: 'btn-ghost' %></div>
+      <div class="toolbar-field"><%= f.label :day, 'Day', class: 'field-label' %>
+        <nav class="date-stepper" aria-label="Report period">
+          <%= link_to register_summary_reports_path(summary_query.merge(day: (@summary.day - 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'prev', title: 'Previous day' do %>‹<span class="sr-only">Previous day</span><% end %>
+          <%= f.date_field :day, value: @summary.day, required: true, class: 'input' %>
+          <% if @summary.day < Date.current %>
+            <%= link_to register_summary_reports_path(summary_query.merge(day: (@summary.day + 1).iso8601)), class: 'btn-ghost btn-sm', rel: 'next', title: 'Next day' do %>›<span class="sr-only">Next day</span><% end %>
+          <% else %>
+            <span class="btn-ghost btn-sm cursor-not-allowed opacity-50" aria-disabled="true" title="No later day yet">›</span>
+          <% end %>
+        </nav>
+      </div>
+      <div class="toolbar-field"><%= f.label :source, 'Source', class: 'field-label' %><%= f.text_field :source, value: @summary.source, placeholder: 'Any, or shopify, square…', class: 'input' %></div>
+      <div class="toolbar-field"><%= f.label :location_id, 'Location ID', class: 'field-label' %><%= f.text_field :location_id, value: @summary.location_id, placeholder: 'Any', class: 'input' %></div>
+      <div class="toolbar-actions"><%= button_tag 'Apply', type: 'submit', class: 'btn-primary', name: nil %><% if summary_query.any? %><%= link_to 'Clear', register_summary_reports_path(day: @summary.day.iso8601), class: 'btn-ghost' %><% end %></div>
     <% end %>
-  </div>
-
-  <%= fold_explainer("Tenders use the stored payment timestamp; refunds use the stored refund timestamp, including returns against older orders. Sales use the stored order date. Day boundaries use #{Time.zone.name}; timestamps below include their UTC offset. Shopify tenders are inferred from gateway names and order totals. Their payment timestamp may be order creation, not collection. These amounts do not verify payment collection or split tenders. Completed payments on placed, cancelled or other unsettled orders are excluded. Coverage is limited to records imported into Rupert. C-Trax, terminal settlement, bank deposits, discounts, collected tips and merchant fees are unavailable here. Unknown tax or payment amounts stay unavailable instead of showing a false zero. Legacy imports may have substituted an import timestamp for an absent source date; missing stored timestamp counts cannot identify that substitution. Tenders less refunds includes recorded gift-card and store-credit activity. It is an accounting comparison, not settled cash or bank deposits.", class: 'text-sm text-mocha') %>
+  </section>
 
   <section class="card">
-    <div class="card-pad border-b border-fog"><%= section_heading 'Recorded activity', hint: 'Eligible orders, order totals, recorded tax and tenders less refunds for the selected day.' %></div>
+    <div class="card-pad border-b border-fog"><%= section_heading 'Recorded activity', hint: 'Orders, totals, tax and tenders less refunds.' %></div>
     <%= report_table 'register-activity', label: 'Selected-day recorded activity' do %>
       <table class="table">
         <caption class="sr-only">Selected-day recorded activity</caption>
@@ -57,7 +56,7 @@
   </section>
 
   <section class="card">
-    <div class="card-pad border-b border-fog"><%= section_heading 'Tender detail', hint: 'Recorded tender, refunds and net by tender type · Shopify amounts are inferred.' %></div>
+    <div class="card-pad border-b border-fog"><%= section_heading 'Tender detail', hint: 'By tender type. Shopify amounts are inferred.' %></div>
     <%= report_table 'register-tenders', label: 'Selected-day tender detail' do %>
       <table class="table">
         <caption class="sr-only">Selected-day tender detail · Shopify amounts are inferred</caption>
@@ -112,4 +111,6 @@
     <% end %>
     <p class="card-pad text-sm text-mocha">Failed runs and skipped sources do not refresh success. Full-sync source evidence is inspected for the latest <%= DailyRegisterSummary::FULL_SYNC_HISTORY_LIMIT %> successful full runs. Compare with source register and processor reports before closing.</p>
   </section>
+
+  <%= fold_explainer("Tenders use the stored payment timestamp; refunds use the stored refund timestamp, including returns against older orders. Sales use the stored order date. Day boundaries use #{Time.zone.name}; timestamps in the tables include their UTC offset. Shopify tenders are inferred from gateway names and order totals. Their payment timestamp may be order creation, not collection. These amounts do not verify payment collection or split tenders. Completed payments on placed, cancelled or other unsettled orders are excluded. Coverage is limited to records imported into Rupert. C-Trax, terminal settlement, bank deposits, discounts, collected tips and merchant fees are unavailable here. Unknown tax or payment amounts stay unavailable instead of showing a false zero. Legacy imports may have substituted an import timestamp for an absent source date; missing stored timestamp counts cannot identify that substitution. Tenders less refunds includes recorded gift-card and store-credit activity. It is an accounting comparison, not settled cash or bank deposits.", class: 'text-sm text-mocha') %>
 </div>

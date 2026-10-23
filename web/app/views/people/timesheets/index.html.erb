@@ -1,41 +1,13 @@
 <% content_for :title, "Timesheets" %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
-  <%= page_header 'Timesheets', subtitle: (@reviewer ? 'Weekly hours submitted by staff, waiting for review or already decided.' : 'Your hours by week, submitted for review.'),
+  <%= page_header 'Timesheets', subtitle: (@reviewer ? 'Weekly hours from staff, to review and approve.' : 'Your hours by week, submitted for review.'),
         menu: [['Download CSV', people_timesheets_path(format: :csv, status: @status, from: @from&.iso8601, to: @to&.iso8601, q: @query), { data: { turbo: false } }]] do %>
     <% if policy(People::Timesheet).create? %><%= link_to "Add timesheet", new_people_timesheet_path, class: "btn-primary" %><% end %>
   <% end %>
 
   <% status_labels = { 'submitted' => 'Needs review', 'all' => 'All timesheets', 'approved' => 'Approved', 'rejected' => 'Returned for correction', 'draft' => 'Drafts' } %>
   <% status_count = ->(status) { status == 'submitted' ? @awaiting : status == 'all' ? (@status_counts || {}).values.sum : (@status_counts || {}).fetch(status, 0) } %>
-  <%= form_with url: people_timesheets_path, method: :get, class: 'toolbar', html: { 'aria-label': 'Timesheet filters' }, data: { turbo: false } do %>
-    <%= hidden_field_tag :view, @view %>
-    <% weeks = (0..52).map { |n| Date.current.beginning_of_week - (n - 2).weeks } %>
-    <% from_choices = ([@from] + weeks).compact.uniq.sort.reverse %>
-    <% to_choices = ([@to] + weeks.map { |w| w + 6 }).compact.uniq.sort.reverse %>
-    <div class="toolbar-field">
-      <%= label_tag :from, 'From', class: 'field-label' %>
-      <%= select_tag :from, options_for_select([['All dates', '']] + from_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @from&.iso8601), class: 'select' %>
-    </div>
-    <div class="toolbar-field">
-      <%= label_tag :to, 'To', class: 'field-label' %>
-      <%= select_tag :to, options_for_select([['All dates', '']] + to_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @to&.iso8601), class: 'select' %>
-    </div>
-    <div class="toolbar-field" <%= tour_anchor('tabs') %>>
-      <%= label_tag :status, 'Status', class: 'field-label' %>
-      <%= select_tag :status, options_for_select(status_labels.map { |key, label| ["#{label} (#{status_count.call(key)})", key] }, @status), class: 'select',
-            aria: { label: @reviewer ? 'Timesheet review' : 'Status' } %>
-    </div>
-    <div class="toolbar-field">
-      <%= label_tag :q, 'Staff member', class: 'field-label' %>
-      <%= search_field_tag :q, @query, class: 'input', placeholder: 'Search by name' %>
-    </div>
-    <div class="toolbar-actions">
-      <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
-      <%= link_to 'Clear', people_timesheets_path(view: @view), class: 'btn-ghost' %>
-    </div>
-  <% end %>
-
   <div class="flex flex-wrap items-center justify-between gap-3" <%= tour_anchor('views') %>>
     <%= page_tabs([['list', 'Rupert timesheets'], ['unified', 'All sources'], ['calendar', 'Calendar']].map { |key, label| [label, people_timesheets_path(request.query_parameters.merge(view: key, month: (key == 'calendar' ? (@month || @from || Date.current).strftime('%Y-%m') : nil)).compact), @view == key] }, label: 'Timesheet view') %>
     <% if @reviewer && @awaiting.positive? && @status != 'submitted' %>
@@ -43,17 +15,49 @@
     <% end %>
   </div>
 
+  <section class="toolbar-band">
+    <%= form_with url: people_timesheets_path, method: :get, class: 'toolbar', html: { 'aria-label': 'Timesheet filters' }, data: { turbo: false } do %>
+      <%= hidden_field_tag :view, @view %>
+      <% weeks = (0..52).map { |n| Date.current.beginning_of_week - (n - 2).weeks } %>
+      <% from_choices = ([@from] + weeks).compact.uniq.sort.reverse %>
+      <% to_choices = ([@to] + weeks.map { |w| w + 6 }).compact.uniq.sort.reverse %>
+      <div class="toolbar-field">
+        <%= label_tag :from, 'From', class: 'field-label' %>
+        <%= select_tag :from, options_for_select([['All dates', '']] + from_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @from&.iso8601), class: 'select' %>
+      </div>
+      <div class="toolbar-field">
+        <%= label_tag :to, 'To', class: 'field-label' %>
+        <%= select_tag :to, options_for_select([['All dates', '']] + to_choices.map { |d| [d.strftime('%a %b %-d, %Y'), d.iso8601] }, @to&.iso8601), class: 'select' %>
+      </div>
+      <div class="toolbar-field" <%= tour_anchor('tabs') %>>
+        <%= label_tag :status, 'Status', class: 'field-label' %>
+        <%= select_tag :status, options_for_select(status_labels.map { |key, label| ["#{label} (#{status_count.call(key)})", key] }, @status), class: 'select',
+              aria: { label: @reviewer ? 'Timesheet review' : 'Status' } %>
+      </div>
+      <div class="toolbar-field">
+        <%= label_tag :q, 'Staff member', class: 'field-label' %>
+        <%= search_field_tag :q, @query, class: 'input', placeholder: 'Search by name' %>
+      </div>
+      <div class="toolbar-actions">
+        <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
+        <%= link_to 'Clear', people_timesheets_path(view: @view), class: 'btn-ghost' %>
+      </div>
+    <% end %>
+  </section>
+
   <% if @view == 'calendar' %>
   <section class="section-card">
     <div class="card-head">
       <div><h2 class="section-title"><%= @month.strftime('%B %Y') %></h2></div>
       <nav class="card-head-actions" aria-label="Month">
-        <%= link_to 'Previous month', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: @prev_month.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %>
-        <%= link_to 'This month', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: Date.current.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %>
-        <%= link_to 'Next month', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: @next_month.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %>
+        <div class="date-stepper">
+          <%= link_to '‹', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: @prev_month.strftime('%Y-%m'))), class: 'btn-ghost btn-sm', aria: { label: 'Previous month' }, title: 'Previous month' %>
+          <% unless @month.strftime('%Y-%m') == Date.current.strftime('%Y-%m') %><%= link_to 'This month', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: Date.current.strftime('%Y-%m'))), class: 'btn-ghost btn-sm' %><% end %>
+          <%= link_to '›', people_timesheets_path(request.query_parameters.merge(view: 'calendar', month: @next_month.strftime('%Y-%m'))), class: 'btn-ghost btn-sm', aria: { label: 'Next month' }, title: 'Next month' %>
+        </div>
       </nav>
     </div>
-    <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wide text-mocha">
+    <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-mocha">
       <% Date::DAYNAMES.rotate.each do |day| %><div class="py-1"><%= day %></div><% end %>
     </div>
     <div class="grid grid-cols-7 gap-1">
@@ -200,18 +204,19 @@
   <% if @reviewer %>
     <div class="grid gap-6 lg:grid-cols-2">
       <section class="space-y-3" aria-label="Upcoming weeks" <%= tour_anchor('weeks') %>>
-        <%= section_heading 'Weeks at a glance', hint: 'Open a week to review what is in it.' %>
-        <div class="grid gap-3 sm:grid-cols-2">
-          <% @upcoming_weeks.each do |week| %>
-            <%= link_to people_timesheets_path(period: week[:monday].iso8601, status: 'all'), class: 'card card-pad space-y-1 hover:bg-cream' do %>
-              <div class="flex items-baseline justify-between gap-2">
-                <h3 class="card-title"><%= week[:label] %></h3>
-                <span class="text-xs text-mocha"><%= week[:monday].strftime('%b %-d') %> – <%= (week[:monday] + 6).strftime('%b %-d') %></span>
-              </div>
-              <p class="stat-value-sm"><%= week[:total] %> <span class="text-sm font-normal text-mocha">timesheets</span></p>
-              <p class="text-xs text-mocha"><%= week[:submitted] %> awaiting · <%= week[:approved] %> approved<% if week[:draft].positive? %> · <%= week[:draft] %> draft<% end %><% if week[:rejected].positive? %> · <%= week[:rejected] %> returned<% end %></p>
+        <%= section_heading 'Weeks at a glance' %>
+        <div class="card">
+          <ul class="row-list">
+            <% @upcoming_weeks.each do |week| %>
+              <li class="row-item">
+                <div class="min-w-0">
+                  <p class="font-semibold text-ink"><%= link_to week[:label], people_timesheets_path(period: week[:monday].iso8601, status: 'all'), class: 'hover:underline' %></p>
+                  <p class="text-xs text-mocha"><%= week[:monday].strftime('%b %-d') %> – <%= (week[:monday] + 6).strftime('%b %-d') %> · <%= week[:submitted] %> awaiting · <%= week[:approved] %> approved<% if week[:draft].positive? %> · <%= week[:draft] %> draft<% end %><% if week[:rejected].positive? %> · <%= week[:rejected] %> returned<% end %></p>
+                </div>
+                <div class="row-item-end"><span class="num font-semibold text-ink"><%= pluralize(week[:total], 'timesheet') %></span></div>
+              </li>
             <% end %>
-          <% end %>
+          </ul>
         </div>
       </section>
 

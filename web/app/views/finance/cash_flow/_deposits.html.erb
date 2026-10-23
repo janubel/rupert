@@ -1,5 +1,5 @@
 <aside id="cash-flow-deposits" class="card card-pad">
-  <%= section_heading 'From sale to bank', hint: 'Card sales reach the bank as processor payouts, later and net of fees. This compares the two totals for the range; it is not a reconciliation.' %>
+  <%= section_heading 'From sale to bank', hint: 'Card sales reach the bank later as processor payouts, net of fees.' %>
   <% d = { sales: report.sales_cents, refunds: report.refunds_cents, deposits: report.processor_deposits_cents } %>
   <% gap = d[:sales] - d[:refunds] - d[:deposits] %>
   <ol class="cash-flow-flow">

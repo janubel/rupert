@@ -1,26 +1,28 @@
 <% content_for :title, 'Registers' %>
 <div class="space-y-6">
-  <%= page_header 'Registers', subtitle: 'Checkout shifts and local cash counts; native C-Trax sessions and bank deposits are reviewed separately.' do %>
+  <%= page_header 'Registers', subtitle: 'Checkout shifts and their cash counts.' do %>
     <% if Current.user.can?('sales.write') %>
       <%= link_to 'Open register', new_sales_pos_session_path, class: 'btn-primary' %>
     <% end %>
   <% end %>
 
   <% if @open_sessions.any? %>
-    <section class="space-y-3" aria-label="Open registers">
-      <%= section_heading 'Open now' %>
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section class="card" aria-label="Open registers">
+      <div class="card-pad pb-0"><h2 class="card-title">Open now</h2></div>
+      <ul class="row-list">
         <% @open_sessions.each do |s| %>
-          <%= link_to s, class: 'card card-pad block hover:border-taupe' do %>
-            <div class="flex items-center justify-between gap-2">
-              <h3 class="card-title"><%= s.name %></h3>
-              <span class="pill-fern">Open</span>
+          <li class="row-item">
+            <div class="min-w-0">
+              <p class="font-semibold text-ink"><%= link_to s.name, s, class: 'text-olive-deep hover:underline' %> <span class="pill-fern">Open</span></p>
+              <p class="text-xs text-taupe">Opened <%= l(s.opened_at, format: :short) %></p>
             </div>
-            <p class="mt-2 text-sm text-mocha">Opened <%= l(s.opened_at, format: :short) %></p>
-            <p class="mt-1 text-sm text-mocha">Recorded tenders: <span class="num font-semibold text-ink"><%= number_to_currency(s.total_sales_cents / 100.0) %></span></p>
-          <% end %>
+            <div class="row-item-end">
+              <span class="text-xs text-mocha">Recorded tenders</span>
+              <span class="num font-semibold text-ink"><%= number_to_currency(s.total_sales_cents / 100.0) %></span>
+            </div>
+          </li>
         <% end %>
-      </div>
+      </ul>
     </section>
   <% end %>
 
@@ -65,4 +67,9 @@
       </table>
     </div>
   </section>
+
+  <details class="explainer">
+    <summary class="explainer-summary">What a register covers</summary>
+    <p class="mt-2 text-sm text-mocha">Registers record checkout shifts and local cash counts in Rupert. Native C-Trax register sessions and bank deposits are reviewed separately, in daily close and bookkeeping.</p>
+  </details>
 </div>

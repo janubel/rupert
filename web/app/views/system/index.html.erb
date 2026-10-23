@@ -32,6 +32,10 @@
     </div>
   </section>
 
+  <%= render 'system/ops_activity', activity: @ops_activity %>
+
+  <%= render 'system/backups', backups: @backups %>
+
   <section class="grid gap-4 lg:grid-cols-2">
     <div class="section-card">
       <%= section_heading 'Web server' %>
@@ -52,10 +56,6 @@
       <p class="text-xs text-taupe">Sync success rate: <span class="font-semibold text-ink"><%= @system.sync_success_rate %>%</span></p>
     </div>
   </section>
-
-  <%= render 'system/ops_activity', activity: @ops_activity %>
-
-  <%= render 'system/backups', backups: @backups %>
 
   <%= render 'system/ai_health', ai_health: @ai_health %>
 

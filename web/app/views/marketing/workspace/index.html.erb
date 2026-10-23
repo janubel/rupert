@@ -9,10 +9,9 @@
 <% end %>
 <% menu << [@enabled ? 'Disable Marketing' : 'Enable Marketing', marketing_toggle_path, { method: :post, params: { enabled: @enabled ? '0' : '1' } }] if Current.user.can_manage_accounts? && Current.user.can?('settings.write') %>
 <div class="space-y-6">
-  <%= page_header 'Marketing', subtitle: 'Find discussions through topic search, save relevant threads and review replies that use existing group discount codes.', menu: menu do %>
+  <%= page_header 'Marketing', subtitle: 'Find discussions, save threads and review replies that use group codes.', menu: menu do %>
     <% if can_write %><%= link_to 'Add campaign', new_marketing_campaign_path, class: 'btn-primary' %><% end %>
   <% end %>
-  <%= fold_explainer('Publication is manual. Codes and inventory are not changed from here; Rupert never fetches group pages or posts replies on your behalf.', class: 'text-sm text-mocha') %>
 
   <% if @enabled %>
     <section class="section-card" aria-label="Campaigns">
@@ -41,9 +40,7 @@
     </section>
 
     <section class="section-card" aria-label="Groups and topic search">
-      <%= section_heading 'Groups and topic search', hint: 'Search opens Bing; results are not imported automatically.' do %>
-        <% if can_write %><%= link_to 'Add group', new_marketing_community_path, class: 'btn-ghost btn-sm' %><% end %>
-      <% end %>
+      <%= section_heading 'Groups and topic search', hint: 'Search opens Bing; results are not imported.' %>
       <% if @communities.empty? %><p class="text-sm text-mocha">No groups yet. Add a group with its promotion rules and topic search.</p><% end %>
       <% @communities.first(200).each do |group| %>
         <article class="space-y-2 border-t border-fog pt-4">
@@ -62,9 +59,7 @@
     </section>
 
     <section class="section-card" aria-label="Group discount codes">
-      <%= section_heading 'Group discount codes', hint: 'Each reply links to its selected offer record.' do %>
-        <% if can_write %><%= link_to 'Add group code', new_marketing_offer_path, class: 'btn-ghost btn-sm' %><% end %>
-      <% end %>
+      <%= section_heading 'Group discount codes', hint: 'Each reply links to its selected offer record.' %>
       <% if @offers.empty? %><p class="text-sm text-mocha">No group codes recorded yet. Add an existing merchant code with its terms and evidence.</p><% end %>
       <% @offers.first(30).each do |offer| %>
         <article class="space-y-2 border-t border-fog pt-4">
@@ -107,14 +102,12 @@
     </section>
 
     <section class="section-card" aria-label="Thread review queue">
-      <%= section_heading 'Thread review queue' do %>
-        <% if can_write %><%= link_to 'Save thread', new_marketing_thread_path, class: 'btn-ghost btn-sm' %><% end %>
-      <% end %>
+      <%= section_heading 'Thread review queue' %>
       <%= form_with url: marketing_path, method: :get, class: 'toolbar' do |f| %>
         <div class="toolbar-field"><%= f.label :q, 'Search', class: 'field-label' %><%= f.search_field :q, value: params[:q], placeholder: 'Saved context', class: 'search' %></div>
         <div class="toolbar-field"><%= f.label :community_id, 'Group', class: 'field-label' %><%= f.select :community_id, @communities.first(200).map { |g| [g.name, g.id] }, { include_blank: 'All groups', selected: params[:community_id] }, class: 'select w-full' %></div>
         <div class="toolbar-field"><%= f.label :status, 'Status', class: 'field-label' %><%= f.select :status, %w[new relevant dismissed snoozed].map { |s| [s.humanize, s] }, { include_blank: 'All due threads', selected: params[:status] }, class: 'select w-full' %></div>
-        <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><%= link_to 'Clear', marketing_path, class: 'btn-ghost' %></div>
+        <div class="toolbar-actions"><%= f.submit 'Apply', class: 'btn-primary' %><% if params[:q].present? || params[:community_id].present? || params[:status].present? %><%= link_to 'Clear', marketing_path, class: 'btn-ghost' %><% end %></div>
       <% end %>
       <% if @threads.empty? %>
         <%= empty_state 'No matching threads', hint: 'Open a group topic search and save a relevant discussion URL.' do %>
@@ -153,4 +146,6 @@
       <%= empty_state 'Marketing is disabled for this workspace', hint: 'A workspace administrator can enable it from the More menu.' %>
     </section>
   <% end %>
+
+  <%= fold_explainer('Publication is manual. Codes and inventory are not changed from here; Rupert never fetches group pages or posts replies on your behalf.', class: 'text-sm text-mocha') %>
 </div>

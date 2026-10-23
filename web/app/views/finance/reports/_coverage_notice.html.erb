@@ -1,1 +1,7 @@
-<p role="status" class="text-sm text-mocha"><%= Finance::ReportsController.coverage_notice %></p>
+<%# The standing ledger-coverage caveat, folded to one line; the count of payments still missing from the ledger stays on the surface. %>
+<% notice = Finance::ReportsController.coverage_notice; standing = Finance::ReportsController::COVERAGE_NOTICE
+   extra = notice.delete_prefix(standing).strip %>
+<details class="explainer text-sm text-mocha" role="status">
+  <summary class="explainer-summary">Incomplete ledger coverage<%= " · #{extra}" if extra.present? %></summary>
+  <p class="mt-1"><%= standing.delete_prefix('Incomplete ledger coverage: ').sub(/\A./, &:upcase) %></p>
+</details>

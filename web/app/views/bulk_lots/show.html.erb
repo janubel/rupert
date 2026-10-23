@@ -7,7 +7,6 @@
     <div><dt>First received</dt><dd><%= l(@lot.created_at, format: :short) %></dd></div>
     <% if @lot.note.present? %><div><dt>Note</dt><dd><%= @lot.note %></dd></div><% end %>
   </dl>
-  <%= fold_explainer('Sales do not automatically consume this ledger. Product-to-gram mappings and Google Sheets synchronization are pending; record each use with its reference.', class: 'text-sm text-mocha') %>
   <% if @movement.errors.any? %><div role="alert" class="flash flash-alert"><%= @movement.errors.full_messages.to_sentence %></div><% end %>
   <% if Current.user.can?('inventory.write') %>
     <section class="section-card">
@@ -37,4 +36,5 @@
     </div>
   </div>
   <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
+  <%= fold_explainer('Sales do not automatically consume this ledger. Product-to-gram mappings and Google Sheets synchronization are pending; record each use with its reference.', class: 'text-sm text-mocha') %>
 </div>

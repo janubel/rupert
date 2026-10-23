@@ -1,13 +1,8 @@
 <% waiting_total = @statements.sum { |row| row[3].to_i } %>
 <div class="space-y-6">
-  <%= page_header 'Bank transactions', subtitle: 'Upload a statement CSV from your bank, then say what each withdrawal was.', menu: [['Open bookkeeping', bookkeeping_path]] do %>
+  <%= page_header 'Bank transactions', subtitle: 'Upload a statement CSV from your bank, then say what each withdrawal was.' do %>
     <% if @can_write %><%= link_to 'Import bank statement', '#upload-statement', class: 'btn-primary' %><% end %>
   <% end %>
-  <div class="text-sm text-mocha">
-    <%= fold_explainer('Rupert has no connection to your bank. Nothing is recorded until you choose it, and a line is never imported twice.') %>
-    <span class="inline-flex gap-1"><%= define('decision') %><%= define('statement_balance') %></span>
-  </div>
-
   <% if waiting_total.positive? %>
     <p class="rounded-card border border-warn-edge bg-warn-bg p-4 text-sm" role="status"><strong><%= pluralize(waiting_total, 'line') %></strong> across your statements still need a decision. Undecided withdrawals are missing from money out.</p>
   <% end %>
@@ -35,7 +30,7 @@
 
   <% if @can_write %>
     <section class="section-card page-narrow" id="upload-statement" aria-labelledby="upload-statement-title">
-      <%= section_heading 'Import a statement', hint: 'The original file is kept unchanged and encrypted. Descriptions are encrypted. Up to 5,000 rows and 8 MiB.' %>
+      <%= section_heading 'Import a statement', hint: 'Up to 5,000 rows and 8 MiB. The original file and descriptions are kept encrypted.' %>
       <%= form_with url: bank_statements_path, multipart: true, class: 'space-y-4' do |f| %>
         <fieldset class="space-y-3">
           <legend class="sr-only">Statement</legend>
@@ -47,4 +42,9 @@
       <% end %>
     </section>
   <% end %>
+
+  <div class="flex flex-wrap items-start gap-1 text-xs text-mocha">
+    <%= fold_explainer('Rupert has no connection to your bank. Nothing is recorded until you choose it, and a line is never imported twice.') %>
+    <span class="inline-flex gap-1"><%= define('decision') %><%= define('statement_balance') %></span>
+  </div>
 </div>

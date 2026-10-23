@@ -6,17 +6,6 @@
     <%= page_tabs(%w[open resolved ignored all].map { |tab| ["#{tab.capitalize}#{@counts[tab] ? " (#{@counts[tab]})" : ''}", alerts_path(status: tab), @status == tab] }, label: 'Alert status') %>
   </div>
 
-  <%= fold_explainer('Open alerts are sorted by urgency, least days of cover first. "Suggested" reorders about 30 days of stock at the recent sales pace; it is advice, and nothing is ordered automatically.', class: 'text-sm text-mocha') %>
-  <% example = @alerts.map { |alert| [alert, @advice[alert.id]] }.find { |_alert, row| row&.days_of_cover } %>
-  <% if example %>
-    <% alert, row = example; on_hand = row.shop_qty.to_i + row.pos_qty.to_i; pace = row.sold_30.to_f / RestockAdvisor::COVER_DAYS %>
-    <%= explain_calculation(title: "Cover and suggested reorder for #{alert.sku.presence || alert.product_name.presence || 'the first alert'}", id: 'alert-calculation', summary: 'How are cover and suggested calculated?',
-          rows: [["On hand: #{row.shop_qty.to_i} shop + #{row.pos_qty.to_i} POS", "#{on_hand} units"], ['Sold in the last 30 days', "#{row.sold_30.to_i} units"], ["Pace: #{row.sold_30.to_i} ÷ 30 days", "#{number_with_precision(pace, precision: 2)} per day"], ["Days of cover: #{on_hand} ÷ #{number_with_precision(pace, precision: 2)}", "#{row.days_of_cover} days"], ["Suggested: 30 × #{number_with_precision(pace, precision: 2)} − #{on_hand}, never below zero", "#{row.suggested_qty} units"]],
-          formula: 'cover = on hand ÷ (sold in 30 days ÷ 30) · suggested = max(⌈30 × pace⌉ − on hand, 0)',
-          note: 'Pace counts every channel. Items with no recent sales show “no sales” because there is no pace to divide by. Nothing is ordered or written to a platform.',
-          lesson: 'alerts', term: 'days_of_cover') %>
-  <% end %>
-
   <%= form_tag bulk_update_alerts_path, method: :post do %>
     <%= hidden_field_tag :tab, @status %>
     <div class="card overflow-hidden">
@@ -101,5 +90,16 @@
         </table>
       </div>
     </div>
+  <% end %>
+
+  <%= fold_explainer('Open alerts are sorted by urgency, least days of cover first. "Suggested" reorders about 30 days of stock at the recent sales pace; it is advice, and nothing is ordered automatically.', class: 'text-sm text-mocha') %>
+  <% example = @alerts.map { |alert| [alert, @advice[alert.id]] }.find { |_alert, row| row&.days_of_cover } %>
+  <% if example %>
+    <% alert, row = example; on_hand = row.shop_qty.to_i + row.pos_qty.to_i; pace = row.sold_30.to_f / RestockAdvisor::COVER_DAYS %>
+    <%= explain_calculation(title: "Cover and suggested reorder for #{alert.sku.presence || alert.product_name.presence || 'the first alert'}", id: 'alert-calculation', summary: 'How are cover and suggested calculated?',
+          rows: [["On hand: #{row.shop_qty.to_i} shop + #{row.pos_qty.to_i} POS", "#{on_hand} units"], ['Sold in the last 30 days', "#{row.sold_30.to_i} units"], ["Pace: #{row.sold_30.to_i} ÷ 30 days", "#{number_with_precision(pace, precision: 2)} per day"], ["Days of cover: #{on_hand} ÷ #{number_with_precision(pace, precision: 2)}", "#{row.days_of_cover} days"], ["Suggested: 30 × #{number_with_precision(pace, precision: 2)} − #{on_hand}, never below zero", "#{row.suggested_qty} units"]],
+          formula: 'cover = on hand ÷ (sold in 30 days ÷ 30) · suggested = max(⌈30 × pace⌉ − on hand, 0)',
+          note: 'Pace counts every channel. Items with no recent sales show “no sales” because there is no pace to divide by. Nothing is ordered or written to a platform.',
+          lesson: 'alerts', term: 'days_of_cover') %>
   <% end %>
 </div>

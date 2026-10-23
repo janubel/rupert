@@ -477,8 +477,8 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
       assert_select 'section[aria-label="Priorities in this filtered view"]' do
         assert_select 'article p.stat-value-sm', text: '26', count: 2
         assert_select 'a[href=?]', reconciliation_follow_up_path(requests.first, close_day: '2026-10-14', queue: filters, anchor: 'record-progress'), text: 'Work earliest due', count: 2
-        assert_select 'a[href=?]', reconciliation_follow_ups_path(filters.merge(day: '2026-10-13')), text: 'Previous day'
-        assert_select 'a[href=?]', reconciliation_follow_ups_path(filters.merge(day: '2026-10-15')), text: 'Next day'
+        assert_select 'a[href=?][aria-label="Previous day"]', reconciliation_follow_ups_path(filters.merge(day: '2026-10-13'))
+        assert_select 'a[href=?][aria-label="Next day"]', reconciliation_follow_ups_path(filters.merge(day: '2026-10-15'))
         assert_select 'a[href=?]', reconciliation_follow_ups_path(filters.except(:day)), text: 'All dates with these filters'
         assert_select 'a[href=?]', cash_forecast_path(day: '2026-10-14')
       end
@@ -498,7 +498,7 @@ class ReconciliationFollowUpsTest < ActionDispatch::IntegrationTest
       assert_select 'section[aria-label="Priorities in this filtered view"]' do
         assert_select 'a', text: 'Work earliest due', count: 0
         assert_select 'a', text: 'Review earliest due', count: 2
-        assert_select 'a[href=?]', reconciliation_follow_ups_path(status: 'active', original: doc.id, day: '2026-10-15'), text: 'Next day'
+        assert_select 'a[href=?][aria-label="Next day"]', reconciliation_follow_ups_path(status: 'active', original: doc.id, day: '2026-10-15')
       end
       item.update!(status: 'closed', notes: 'Synthetic reviewed exception.')
       get reconciliation_follow_ups_path(status: 'closed')

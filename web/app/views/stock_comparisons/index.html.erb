@@ -3,7 +3,7 @@
 <% menu = [['Download CSV', stock_comparison_path(export_params.merge(format: :csv))]] %>
 <% menu << ['Open source reads', syncs_path] if Current.user.can?('sync.write') %>
 <div class="space-y-6">
-  <%= page_header 'Store comparison', subtitle: 'One Shopify location beside one C-Trax store; quantities are never added together and nothing is written back.', menu: menu do %>
+  <%= page_header 'Store comparison', subtitle: 'One Shopify location beside one C-Trax store.', menu: menu do %>
     <%= link_to 'Download PDF', stock_comparison_path(export_params.merge(format: :pdf)), class: 'btn-primary', id: 'store-comparison-pdf', data: { turbo: false } %>
   <% end %>
 
@@ -27,26 +27,8 @@
     <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', stock_comparison_path, class: 'btn-ghost' %></div>
   <% end %>
 
-  <section class="grid gap-3 sm:grid-cols-2" aria-label="Stock source freshness">
-    <% [['Shopify', @comparison.shopify], ['C-Trax · physical reference', @comparison.ctrax]].each do |label, snapshot| %>
-      <div class="stat">
-        <div class="flex flex-wrap items-center justify-between gap-2"><p class="stat-label"><%= label %></p><span class="<%= !snapshot || @comparison.stale?(snapshot) ? 'pill-clay' : 'pill-fern' %>"><%= !snapshot ? 'Missing read' : @comparison.stale?(snapshot) ? 'Stale read' : 'Read current' %></span></div>
-        <p class="mt-2 text-xs text-mocha">Last stock pull: <%= retail_source_time(snapshot&.captured_at) %></p>
-      </div>
-    <% end %>
-  </section>
-  <p class="text-xs text-taupe">Catalog read: <%= @comparison.catalog_read_at&.iso8601 || 'Awaiting a complete Shopify read' %> · <%= @comparison.historical_catalog_count %> historical variants absent from that read are excluded. Only current active tracked Shopify variants appear.</p>
-  <% unless @comparison.shopify && @comparison.ctrax %><p role="status" class="flash flash-alert">Choose both sources after their stock reads complete. Missing stock stays unknown.</p><% end %>
-
   <% summary = @comparison.summary %>
-  <% if @comparison.findings.reviewed_at || @comparison.findings.status %>
-    <section class="section-card" aria-label="Saved stock investigation">
-      <%= section_heading 'Saved stock investigation', hint: "#{@comparison.findings.reviewed_at ? "Source evidence checked #{@comparison.findings.reviewed_at.iso8601}. " : ''}#{@comparison.findings.status}." do %>
-        <%= link_to 'Show findings', stock_comparison_path(request.query_parameters.slice('q', 'shopify_location_id', 'ctrax_location_id').merge(filter: 'findings')), class: 'btn-ghost btn-sm' %>
-      <% end %>
-      <p class="text-sm text-mocha"><%= summary[:findings] %> rows have dated findings; <%= summary[:investigated_candidates] %> additional candidate links are supported by that investigation. These links show the two observations together and always withhold a quantity difference. Package, formula and source-copy uncertainties remain flagged beside each item.</p>
-    </section>
-  <% end %>
+  <% unless @comparison.shopify && @comparison.ctrax %><p role="status" class="flash flash-alert">Choose both sources after their stock reads complete. Missing stock stays unknown.</p><% end %>
 
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Stock comparison overview">
     <% [['Comparison rows', summary[:rows]], ['Identity pairs / candidates', summary[:paired]], ['Unknown stock rows', summary[:unknown]], ['Negative stock rows', summary[:negative]]].each do |label, value| %>
@@ -54,13 +36,7 @@
     <% end %>
   </section>
 
-  <div class="text-sm text-mocha">
-    <p><%= summary[:name_candidates] %> name/package candidates need equivalence review; <%= summary[:historical] %> C-Trax rows have historical Shopify candidates.</p>
-    <details class="explainer">
-      <summary class="explainer-summary">How to read stock and matching evidence</summary>
-      <p class="mt-1">Historical items remain excluded from current Shopify stock. Shopify on-hand includes committed units; available is shown separately. Signed source values are preserved. SKU/barcode and name/package candidates are not approved mappings. Name/package candidates show both observations without a quantity difference. Unknown, fractional, untracked or over-one-hour-old observations also have no numerical difference. Missing packages, duplicate identifiers and conflicting source links stay unresolved.</p>
-    </details>
-  </div>
+  <p class="text-sm text-mocha"><%= summary[:name_candidates] %> name/package candidates need equivalence review; <%= summary[:historical] %> C-Trax rows have historical Shopify candidates.</p>
 
   <div id="stock-comparison-results" tabindex="-1" class="retail-anchor">
     <%= section_heading 'Comparison results', hint: "#{@pagy.count} matching rows · #{@rows.size} shown" %>
@@ -96,4 +72,33 @@
     </div>
   </div>
   <% if @pagy.pages > 1 %><div class="text-sm"><%== @pagy.series_nav %></div><% end %>
+
+  <section class="card" aria-label="Stock source freshness">
+    <ul class="row-list">
+      <% [['Shopify', @comparison.shopify], ['C-Trax · physical reference', @comparison.ctrax]].each do |label, snapshot| %>
+        <li class="row-item">
+          <div class="min-w-0">
+            <p class="font-semibold text-ink"><%= label %></p>
+            <p class="text-xs text-taupe">Last stock pull: <%= retail_source_time(snapshot&.captured_at) %></p>
+          </div>
+          <div class="row-item-end"><span class="<%= !snapshot || @comparison.stale?(snapshot) ? 'pill-clay' : 'pill-fern' %>"><%= !snapshot ? 'Missing read' : @comparison.stale?(snapshot) ? 'Stale read' : 'Read current' %></span></div>
+        </li>
+      <% end %>
+    </ul>
+    <p class="row-list-foot text-xs text-taupe">Catalog read: <%= @comparison.catalog_read_at&.iso8601 || 'Awaiting a complete Shopify read' %> · <%= @comparison.historical_catalog_count %> historical variants absent from that read are excluded. Only current active tracked Shopify variants appear.</p>
+  </section>
+
+  <% if @comparison.findings.reviewed_at || @comparison.findings.status %>
+    <section class="section-card" aria-label="Saved stock investigation">
+      <%= section_heading 'Saved stock investigation', hint: "#{@comparison.findings.reviewed_at ? "Source evidence checked #{@comparison.findings.reviewed_at.iso8601}. " : ''}#{@comparison.findings.status}." do %>
+        <%= link_to 'Open findings', stock_comparison_path(request.query_parameters.slice('q', 'shopify_location_id', 'ctrax_location_id').merge(filter: 'findings')), class: 'btn-ghost btn-sm' %>
+      <% end %>
+      <p class="text-sm text-mocha"><%= summary[:findings] %> rows have dated findings; <%= summary[:investigated_candidates] %> additional candidate links are supported by that investigation. These links show the two observations together and always withhold a quantity difference. Package, formula and source-copy uncertainties remain flagged beside each item.</p>
+    </section>
+  <% end %>
+
+  <details class="explainer">
+    <summary class="explainer-summary">How to read stock and matching evidence</summary>
+    <p class="mt-1 text-sm text-mocha">Quantities from the two sources are never added together and nothing is written back. Historical items remain excluded from current Shopify stock. Shopify on-hand includes committed units; available is shown separately. Signed source values are preserved. SKU/barcode and name/package candidates are not approved mappings. Name/package candidates show both observations without a quantity difference. Unknown, fractional, untracked or over-one-hour-old observations also have no numerical difference. Missing packages, duplicate identifiers and conflicting source links stay unresolved.</p>
+  </details>
 </div>

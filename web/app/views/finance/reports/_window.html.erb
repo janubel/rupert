@@ -1,7 +1,7 @@
-<%# Period picker shared by the statements: quick ranges as a second row of tabs, then the dates. +as_of+ reports take one date. %>
+<%# Period picker shared by the statements, set on the page (not in a card): quick ranges, then the dates. +as_of+ reports take one date. %>
 <% as_of = local_assigns[:as_of] %>
 <% presets = report_date_presets %>
-<div class="card card-pad space-y-3 no-print">
+<section class="toolbar-band space-y-3 no-print" aria-label="Report dates">
   <nav class="tabs" aria-label="Quick date ranges">
     <% presets.each do |label, from, to| %>
       <% active = as_of ? @to == to : (@from == from && @to == to) %>
@@ -13,4 +13,4 @@
     <div class="toolbar-field"><%= label_tag :to, as_of ? 'As of' : 'To', class: 'field-label' %><%= date_field_tag :to, @to, class: 'input' %></div>
     <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', path, class: 'btn-ghost' %></div>
   <% end %>
-</div>
+</section>

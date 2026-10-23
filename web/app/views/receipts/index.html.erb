@@ -1,16 +1,16 @@
 <% content_for :title, 'My receipts' %>
 <div class="space-y-6">
-  <%= page_header 'My receipts', subtitle: (@reviewer ? 'Review submitted purchases or track your own receipts.' : 'Upload and track your own purchase receipts; a reviewer approves or returns each one.') do %>
+  <%= page_header 'My receipts', subtitle: (@reviewer ? 'Review submitted purchases or track your own receipts.' : 'Upload and track your own purchase receipts.') do %>
     <%= link_to 'Add receipt', new_receipt_path, class: 'btn-primary', data: { tour: 'new' } %>
   <% end %>
-  <p class="card card-pad text-sm" <%= tour_anchor('awaiting') %>><strong><%= @awaiting %> awaiting approval.</strong> Approval records a review; it does not pay a reimbursement or add an expense to the books.</p>
+  <p class="text-sm text-mocha" <%= tour_anchor('awaiting') %>><strong class="text-ink"><%= @awaiting %> awaiting approval.</strong> A reviewer approves or returns each one; approval records a review, it does not pay a reimbursement or add an expense to the books.</p>
   <%= form_tag receipts_path, method: :get, class: 'toolbar', data: { tour: 'status' } do %>
     <div class="toolbar-field"><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select([['All receipts', 'all']] + PurchaseReceipt::STATUSES.map { |s| [s == 'rejected' ? 'Returned for correction' : s.humanize, s] }, @status), class: 'select w-full' %></div>
     <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><%= link_to 'Clear', receipts_path(status: 'all'), class: 'btn-ghost' %></div>
   <% end %>
   <div class="card" <%= tour_anchor('table') %>>
     <div class="table-region" role="region" tabindex="0" aria-label="Purchase receipts">
-      <table class="table"><thead><tr><th scope="col" class="th">Purchase</th><th scope="col" class="th">Submitted by</th><th scope="col" class="th num">Amount · USD</th><th scope="col" class="th">Status</th></tr></thead><tbody>
+      <table class="table"><thead><tr><th scope="col" class="th">Purchase</th><th scope="col" class="th">Submitted by</th><th scope="col" class="th num">Amount</th><th scope="col" class="th">Status</th></tr></thead><tbody>
         <% @receipts.each do |receipt| %><tr><td class="td"><%= link_to receipt.payee, receipt_path(receipt), class: 'font-semibold text-olive-deep hover:underline' %><p class="text-xs text-taupe"><%= l(receipt.incurred_on, format: :long) %></p></td><td class="td text-mocha"><%= receipt.submitted_by.display_name %></td><td class="td num"><%= finance_money(receipt.amount_cents) %></td><td class="td"><span class="<%= receipt_status_pill_class(receipt.status) %>"><%= receipt_status_label(receipt.status) %></span></td></tr><% end %>
         <% if @receipts.empty? %><tr><td colspan="4" class="empty-row">No receipts match this status. Add a receipt or clear the filter.</td></tr><% end %>
       </tbody></table>

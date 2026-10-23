@@ -1,22 +1,24 @@
 <% content_for :title, 'Punch report' %>
 <div class="space-y-6" data-controller="punch-calendar">
-  <%= page_header 'Punch report', subtitle: 'Every punch from Rupert, Square and C-Trax for a date range, with hours per staff member and anything that needs a look.' do %>
-    <%= link_to 'Download CSV', people_punch_history_path(time_range_query(@from, @to).merge(format: :csv)), class: 'btn-primary' %>
-  <% end %>
-  <%= fold_explainer('Read-only: nothing here creates, edits or approves payroll. A shift recorded in two sources is never added together. Counted hours are Rupert clock plus imported Square; C-Trax is shown for comparison only.', class: 'text-sm text-mocha') %>
+  <%= page_header 'Punch report', subtitle: 'Every punch from Rupert, Square and C-Trax for a date range.',
+        menu: [['Download CSV', people_punch_history_path(time_range_query(@from, @to).merge(format: :csv)), { data: { turbo: false } }]] %>
 
-  <%= form_with url: people_punch_history_path, method: :get, class: 'toolbar', data: { punch_calendar_target: 'form' } do |f| %>
-    <%= hidden_field_tag :view, @view %>
-    <%= render 'shared/time_range_picker', from: @from, to: @to, from_data: { punch_calendar_target: 'from' }, to_data: { punch_calendar_target: 'to' } %>
-    <div class="toolbar-field"><%= label_tag :employee_id, 'Staff member', class: 'field-label' %><%= select_tag :employee_id, options_for_select([['All staff', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
-    <div class="toolbar-field"><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', ''], ['Rupert clock', 'rupert'], ['Square', 'square'], ['C-Trax', 'ctrax']], params[:source]), class: 'select' %></div>
-    <div class="toolbar-field"><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select([['All statuses', ''], ['Closed / counted', 'closed'], ['Open (still punched in)', 'open'], ['Conflict', 'conflict'], ['Unmatched', 'unmatched'], ['Unassigned', 'unassigned']], params[:status]), class: 'select' %></div>
-    <div class="toolbar-actions">
-      <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
-      <%= link_to 'Clear', people_punch_history_path, class: 'btn-ghost' %>
-    </div>
-    <p class="basis-full text-sm text-mocha">Selected range: <strong data-punch-calendar-target="label"><%= @from.strftime('%b %-d, %Y') %> – <%= @to.strftime('%b %-d, %Y') %></strong><% if @view == 'calendar' %> · drag across days to pick a range<% end %></p>
-  <% end %>
+  <%= page_tabs([['List', people_punch_history_path(time_range_query(@from, @to).merge(view: 'list')), @view == 'list'], ['Calendar', people_punch_history_path(time_range_query(@from, @to).merge(view: 'calendar')), @view == 'calendar']], label: 'Punch report view') %>
+
+  <section class="toolbar-band">
+    <%= form_with url: people_punch_history_path, method: :get, class: 'toolbar', data: { punch_calendar_target: 'form' } do |f| %>
+      <%= hidden_field_tag :view, @view %>
+      <%= render 'shared/time_range_picker', from: @from, to: @to, from_data: { punch_calendar_target: 'from' }, to_data: { punch_calendar_target: 'to' } %>
+      <div class="toolbar-field"><%= label_tag :employee_id, 'Staff member', class: 'field-label' %><%= select_tag :employee_id, options_for_select([['All staff', '']] + @employees.map { |e| [e.name, e.id] }, params[:employee_id]), class: 'select' %></div>
+      <div class="toolbar-field"><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', ''], ['Rupert clock', 'rupert'], ['Square', 'square'], ['C-Trax', 'ctrax']], params[:source]), class: 'select' %></div>
+      <div class="toolbar-field"><%= label_tag :status, 'Status', class: 'field-label' %><%= select_tag :status, options_for_select([['All statuses', ''], ['Closed / counted', 'closed'], ['Open (still punched in)', 'open'], ['Conflict', 'conflict'], ['Unmatched', 'unmatched'], ['Unassigned', 'unassigned']], params[:status]), class: 'select' %></div>
+      <div class="toolbar-actions">
+        <%= submit_tag 'Apply', class: 'btn-primary', name: nil %>
+        <%= link_to 'Clear', people_punch_history_path, class: 'btn-ghost' %>
+      </div>
+      <p class="basis-full text-xs text-mocha">Selected range: <strong data-punch-calendar-target="label"><%= @from.strftime('%b %-d, %Y') %> – <%= @to.strftime('%b %-d, %Y') %></strong><% if @view == 'calendar' %> · drag across days to pick a range<% end %></p>
+    <% end %>
+  </section>
 
   <section class="grid grid-cols-2 gap-3 sm:grid-cols-5" aria-label="Report totals">
     <div class="stat"><p class="stat-label">Punches</p><p class="stat-value mt-1"><%= @summary.punches %></p><p class="text-xs text-mocha"><%= @summary.by_source.map { |src, n| "#{n} #{time_source_label(src)}" }.join(' · ') %></p></div>
@@ -63,18 +65,16 @@
     <% end %>
   </section>
 
-  <%= page_tabs([['List', people_punch_history_path(time_range_query(@from, @to).merge(view: 'list')), @view == 'list'], ['Calendar', people_punch_history_path(time_range_query(@from, @to).merge(view: 'calendar')), @view == 'calendar']], label: 'Punch report view') %>
-
   <% if @view == 'calendar' %>
     <section class="section-card">
       <div class="card-head">
         <div><h2 class="section-title"><%= @from.strftime('%B %Y') %></h2></div>
-        <nav class="card-head-actions" aria-label="Month">
-          <%= link_to 'Previous month', people_punch_history_path(time_range_query(@from, @to).merge(from: (@from - 1.month).beginning_of_month.iso8601, to: (@from - 1.month).end_of_month.iso8601)), class: 'btn-ghost btn-sm' %>
-          <%= link_to 'Next month', people_punch_history_path(time_range_query(@from, @to).merge(from: (@from + 1.month).beginning_of_month.iso8601, to: (@from + 1.month).end_of_month.iso8601)), class: 'btn-ghost btn-sm' %>
+        <nav class="card-head-actions date-stepper" aria-label="Month">
+          <%= link_to '‹', people_punch_history_path(time_range_query(@from, @to).merge(from: (@from - 1.month).beginning_of_month.iso8601, to: (@from - 1.month).end_of_month.iso8601)), class: 'btn-ghost btn-sm', aria: { label: 'Previous month' }, title: 'Previous month' %>
+          <%= link_to '›', people_punch_history_path(time_range_query(@from, @to).merge(from: (@from + 1.month).beginning_of_month.iso8601, to: (@from + 1.month).end_of_month.iso8601)), class: 'btn-ghost btn-sm', aria: { label: 'Next month' }, title: 'Next month' %>
         </nav>
       </div>
-      <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase tracking-wide text-mocha">
+      <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-mocha">
         <% Date::DAYNAMES.rotate.each do |day| %><div class="py-1"><%= day %></div><% end %>
       </div>
       <div class="grid grid-cols-7 gap-1" data-punch-calendar-target="grid">
@@ -134,5 +134,6 @@
     </div>
   <% end %>
 
+  <%= fold_explainer('Read-only: nothing here creates, edits or approves payroll. A shift recorded in two sources is never added together. Counted hours are Rupert clock plus imported Square; C-Trax is shown for comparison only.', class: 'text-sm text-mocha') %>
   <%= render 'shared/time_source_coverage', coverage: @coverage %>
 </div>

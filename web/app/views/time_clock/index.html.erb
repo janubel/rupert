@@ -1,7 +1,7 @@
 <% content_for :title, 'Time clock' %>
 <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <div class="space-y-6">
-  <%= page_header 'Time clock', subtitle: "Clock your own work from this device, including remote work. Times display in #{Time.zone.name}.",
+  <%= page_header 'Time clock', subtitle: "Clock your own work from this device, including remote work (#{Time.zone.name} time).",
         menu: (Current.user.can?('payroll.read') ? [['Commission preview', commission_preview_time_clock_path]] : nil) %>
   <section class="section-card">
     <% if @worker %>

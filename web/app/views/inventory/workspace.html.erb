@@ -1,10 +1,10 @@
 <% content_for :title, 'Inventory' %>
 <% csv_path = workspace_inventory_index_path(request.query_parameters.except('page').merge(format: :csv)) %>
 <div class="space-y-6">
-  <%= page_header 'Inventory', subtitle: 'Stock by item, source and location, with the counts, transfers and holds that affect it.',
-        menu: [['Store comparison PDF', stock_comparison_path(format: :pdf), { data: { turbo: false } }],
-               ['Inventory snapshot PDF', pdf_inventory_index_path, { data: { turbo: false } }],
-               ['Download CSV', csv_path]] do %>
+  <%= page_header 'Inventory', subtitle: 'Stock by item, source and location.',
+        menu: [['Download CSV', csv_path],
+               ['Download snapshot PDF', pdf_inventory_index_path, { data: { turbo: false } }],
+               ['Download store comparison PDF', stock_comparison_path(format: :pdf), { data: { turbo: false } }]] do %>
     <%= link_to 'Count stock', inventory_counts_path, class: 'btn-primary' %>
   <% end %>
 
@@ -21,25 +21,6 @@
     <% end %>
   </section>
 
-  <% if @native_reads.any? %>
-    <section class="section-card" aria-label="Native stock freshness">
-      <%= section_heading 'Native stock reads', hint: 'The latest stock pulled from each source location.' do %>
-        <%= link_to 'Open store comparison', stock_comparison_path, class: 'btn-ghost btn-sm' %>
-      <% end %>
-      <ul class="space-y-1 text-sm text-ink">
-        <% @native_reads.each do |snapshot| %>
-          <% current = snapshot.captured_at.between?(1.hour.ago, Time.current) %>
-          <li class="flex flex-wrap items-center gap-2">
-            <span><%= snapshot.location&.source == 'ctrax' ? 'C-Trax · physical reference' : 'Shopify' %> · <%= snapshot.location&.name %> · <%= l(snapshot.captured_at, format: :short) %></span>
-            <span class="<%= current ? 'pill-fern' : 'pill-clay' %>"><%= current ? 'Current' : 'Refresh needed' %></span>
-          </li>
-        <% end %>
-      </ul>
-    </section>
-  <% end %>
-
-  <%= fold_explainer('Mirrored stock remains separate for each source and location. Local holds reduce Rupert availability; incoming transfers and waiting backorders never increase it. Warehouse holds have no assigned location, so each Shopify pool conservatively accounts for the full warehouse hold. Shopify legacy mirror quantity is available stock or an aggregate fallback, rather than a physical on-hand count. Use the Shopify / C-Trax comparison for native on-hand, available, committed and physical-reference evidence.', class: 'text-sm text-mocha') %>
-
   <%= form_with url: workspace_inventory_index_path, method: :get, class: 'toolbar' do %>
     <div class="toolbar-field"><%= label_tag :q, 'Search', class: 'field-label' %><%= search_field_tag :q, params[:q], class: 'input', placeholder: 'SKU or item' %></div>
     <div class="toolbar-field"><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['Shopify', 'shopify'], ['Square', 'square']], params[:source]), include_blank: 'All sources', class: 'input' %></div>
@@ -48,15 +29,7 @@
     <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', workspace_inventory_index_path, class: 'btn-ghost' %></div>
   <% end %>
 
-  <p class="text-xs text-taupe"><%= @pagy.count %> mirrored pools · <%= @rows.size %> on this page. Stale or missing identities need review before allocation.</p>
-
-  <details class="explainer">
-    <summary class="explainer-summary">How to read these stock numbers</summary>
-    <dl class="mt-3 space-y-3">
-      <% %w[mirror available hold promise].each do |term| %><% label, definition = LearningCatalog::TERMS.fetch(term) %><div><dt class="text-sm font-semibold text-ink"><%= label %></dt><dd class="mt-1 text-sm text-mocha"><%= definition %></dd></div><% end %>
-    </dl>
-    <%= link_to 'Practice with a stock example', learning_path('stock', anchor: 'lesson-example'), class: 'mt-3 inline-block text-sm text-olive-deep underline' %>
-  </details>
+  <p class="text-xs text-taupe"><%= @pagy.count %> mirrored pools · <%= @rows.size %> on this page.</p>
 
   <div class="card overflow-hidden">
     <div class="table-region" role="region" tabindex="0" aria-label="Mirrored stock pools">
@@ -94,4 +67,33 @@
     </div>
   </div>
   <% if @pagy.pages > 1 %><div class="text-xs text-taupe"><%== @pagy.series_nav %></div><% end %>
+
+  <% if @native_reads.any? %>
+    <section class="card" aria-label="Native stock freshness">
+      <div class="px-5 pt-4"><%= section_heading 'Native stock reads', hint: 'The latest stock pulled from each source location.', level: :h3 %></div>
+      <ul class="row-list">
+        <% @native_reads.each do |snapshot| %>
+          <% current = snapshot.captured_at.between?(1.hour.ago, Time.current) %>
+          <li class="row-item">
+            <div class="min-w-0">
+              <p class="font-semibold text-ink"><%= snapshot.location&.source == 'ctrax' ? 'C-Trax · physical reference' : 'Shopify' %> · <%= snapshot.location&.name %></p>
+              <p class="text-xs text-taupe"><%= l(snapshot.captured_at, format: :short) %></p>
+            </div>
+            <div class="row-item-end"><span class="<%= current ? 'pill-fern' : 'pill-clay' %>"><%= current ? 'Current' : 'Refresh needed' %></span></div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <details class="explainer">
+    <summary class="explainer-summary">How to read these stock numbers</summary>
+    <div class="mt-3 space-y-3 text-sm text-mocha">
+      <p>Mirrored stock remains separate for each source and location. Local holds reduce Rupert availability; incoming transfers and waiting backorders never increase it. Warehouse holds have no assigned location, so each Shopify pool conservatively accounts for the full warehouse hold. Shopify legacy mirror quantity is available stock or an aggregate fallback, rather than a physical on-hand count. Use the Shopify / C-Trax comparison for native on-hand, available, committed and physical-reference evidence. Stale or missing identities need review before allocation.</p>
+      <dl class="space-y-3">
+        <% %w[mirror available hold promise].each do |term| %><% label, definition = LearningCatalog::TERMS.fetch(term) %><div><dt class="text-sm font-semibold text-ink"><%= label %></dt><dd class="mt-1 text-sm text-mocha"><%= definition %></dd></div><% end %>
+      </dl>
+      <%= link_to 'Practice with a stock example', learning_path('stock', anchor: 'lesson-example'), class: 'inline-block text-sm text-olive-deep underline' %>
+    </div>
+  </details>
 </div>

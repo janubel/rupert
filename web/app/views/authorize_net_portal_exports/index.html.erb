@@ -1,8 +1,8 @@
 <% content_for :title, 'Authorize.net portal reports' %>
 <div class="space-y-6">
-  <%= page_header 'Authorize.net portal reports', subtitle: 'Dated transaction observations downloaded from the merchant webpage, separate from API reconciliation, Shopify sales and bank deposits.',
+  <%= page_header 'Authorize.net portal reports', subtitle: 'Transaction reports downloaded from the Authorize.net merchant website.',
       menu: [['Open sales portal', 'https://new.authorize.net/smb2/merchant/TransactionManagement/ManageTransactions', { target: '_blank', rel: 'noopener noreferrer' }]] %>
-  <%= fold_explainer('Use Manage Transactions → download → Expanded Fields/Comma Separated for settled and unsettled results. Import each file below. Portal sign-in may expire; no API key change is needed for this workflow.', class: 'text-sm text-mocha') %>
+  <%= fold_explainer('These observations stay separate from API reconciliation, Shopify sales and bank deposits. Use Manage Transactions → download → Expanded Fields/Comma Separated for settled and unsettled results. Import each file below. Portal sign-in may expire; no API key change is needed for this workflow.', class: 'text-sm text-mocha') %>
 
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Portal report summary">
     <% @settled_totals.each do |currency, cents| %>

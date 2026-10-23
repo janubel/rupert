@@ -3,7 +3,7 @@
 <div class="space-y-6">
   <%= render layout: 'finance/page_header', locals: { title: 'General ledger', range: range_text, print: true,
         menu: [['Financial statements', finance_reports_path], ['Download ledger', finance_ledger_export_path], ['Chart of accounts', finance_chart_of_accounts_path]],
-        explain: 'The record of every posted entry. Each entry has equal debits and credits. Entries from expenses and sales are created automatically; you can add manual entries and reverse them.' } do %>
+        explain: 'Every posted entry, each with equal debits and credits. Entries from expenses and sales are created automatically; you can add manual entries and reverse them.' } do %>
     <% if @can_write %><%= link_to 'Add entry', new_finance_journal_entry_path, class: 'btn-primary' %><% end %>
   <% end %>
 
@@ -28,23 +28,29 @@
             term: 'debit_credit', lesson: 'books') %>
     </div>
   </section>
-  <div>
-    <%= finance_balance_status(@totals[:debits] - @totals[:credits], balanced_text: 'Balanced: debits equal credits') %>
-    <p class="mt-2 text-xs text-mocha">Totals include void entries shown in the list. Reports and exports leave void entries out.</p>
-  </div>
+  <%= finance_balance_status(@totals[:debits] - @totals[:credits], balanced_text: 'Balanced: debits equal credits') %>
 
-  <%= form_tag finance_journal_entries_path, method: :get, class: 'toolbar', role: 'search', aria: { label: 'Filter ledger entries' } do %>
-    <div class="toolbar-field"><%= label_tag :q, 'Memo contains', class: 'field-label' %><%= search_field_tag :q, @q, class: 'input', autocomplete: 'off' %></div>
-    <div class="toolbar-field"><%= label_tag :account_id, 'Account', class: 'field-label' %>
-      <%= select_tag :account_id, options_for_select(Finance::Account.ordered.map { |a| [a.label, a.id] }, @account&.id), include_blank: 'All accounts', class: 'select' %></div>
-    <div class="toolbar-field"><%= label_tag :kind, 'Kind', class: 'field-label' %>
-      <%= select_tag :kind, options_for_select([['All kinds', 'all']] + Finance::JournalEntry::KINDS.map { |k| [k.tr('_', ' ').humanize, k] }, @kind), class: 'select' %></div>
-    <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from, class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @to, class: 'input' %></div>
-    <div class="toolbar-field"><%= label_tag :min, 'Amount from (USD)', class: 'field-label' %><%= text_field_tag :min, params[:min], class: 'input money', inputmode: 'decimal' %></div>
-    <div class="toolbar-field"><%= label_tag :max, 'Amount to (USD)', class: 'field-label' %><%= text_field_tag :max, params[:max], class: 'input money', inputmode: 'decimal' %></div>
-    <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_journal_entries_path, class: 'btn-ghost' %></div>
-  <% end %>
+  <section class="toolbar-band" aria-label="Ledger filters">
+    <%= form_tag finance_journal_entries_path, method: :get, role: 'search', aria: { label: 'Filter ledger entries' } do %>
+      <div class="toolbar">
+        <div class="toolbar-field"><%= label_tag :q, 'Memo contains', class: 'field-label' %><%= search_field_tag :q, @q, class: 'input', autocomplete: 'off' %></div>
+        <div class="toolbar-field"><%= label_tag :account_id, 'Account', class: 'field-label' %>
+          <%= select_tag :account_id, options_for_select(Finance::Account.ordered.map { |a| [a.label, a.id] }, @account&.id), include_blank: 'All accounts', class: 'select' %></div>
+        <div class="toolbar-field"><%= label_tag :from, 'From', class: 'field-label' %><%= date_field_tag :from, @from, class: 'input' %></div>
+        <div class="toolbar-field"><%= label_tag :to, 'To', class: 'field-label' %><%= date_field_tag :to, @to, class: 'input' %></div>
+        <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', name: nil %><%= link_to 'Clear', finance_journal_entries_path, class: 'btn-ghost' %></div>
+      </div>
+      <details class="explainer mt-3" <%= 'open' if params[:min].present? || params[:max].present? || (@kind.present? && @kind != 'all') %>>
+        <summary class="explainer-summary">More filters</summary>
+        <div class="toolbar mt-2">
+          <div class="toolbar-field"><%= label_tag :kind, 'Kind', class: 'field-label' %>
+            <%= select_tag :kind, options_for_select([['All kinds', 'all']] + Finance::JournalEntry::KINDS.map { |k| [k.tr('_', ' ').humanize, k] }, @kind), class: 'select' %></div>
+          <div class="toolbar-field"><%= label_tag :min, 'Amount from', class: 'field-label' %><%= text_field_tag :min, params[:min], class: 'input money', inputmode: 'decimal' %></div>
+          <div class="toolbar-field"><%= label_tag :max, 'Amount to', class: 'field-label' %><%= text_field_tag :max, params[:max], class: 'input money', inputmode: 'decimal' %></div>
+        </div>
+      </details>
+    <% end %>
+  </section>
   <% if @filter_problem %><p role="alert" class="flash flash-alert"><%= @filter_problem %></p><% end %>
 
   <div class="card">

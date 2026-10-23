@@ -3,8 +3,8 @@
    when_ = ->(iso) { iso.present? ? I18n.l(Time.iso8601(iso).in_time_zone, format: :short) : 'Never seen' }
    age = ->(iso) { iso.present? ? "#{time_ago_in_words(Time.iso8601(iso))} ago" : 'no record' } %>
 <div class="space-y-6">
-  <%= page_header 'Business snapshot', subtitle: "#{d['business'] || 'Business'} · prepared #{when_.call(d['generated_at'])} (#{d['timezone']}) from live records." do %>
-    <button type="button" class="btn-ghost" data-controller="print" data-action="click->print#print">Print</button>
+  <%= page_header 'Business snapshot', subtitle: "#{d['business'] || 'Business'} · prepared #{when_.call(d['generated_at'])} (#{d['timezone']}) from live records.",
+        menu: [['Print', '#', { data: { controller: 'print', action: 'click->print#print:prevent' } }]] do %>
     <% if Current.user.can?('reports.write') %>
       <%= button_to 'Save a dated copy', business_snapshot_path, method: :post, class: 'btn-primary', form: { class: 'inline' }, data: { turbo_confirm: 'Keep an unchangeable copy of this snapshot as evidence?' } %>
     <% end %>

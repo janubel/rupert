@@ -33,8 +33,6 @@
     <p class="flash flash-notice" role="status">Approved as an audit record. Counted quantities do not change platform inventory.</p>
   <% end %>
 
-  <%= fold_explainer('Comparisons freeze one source, location and item at submission. New Shopify comparisons use signed native on-hand snapshots less than one hour old with matching catalog identity; available stock and legacy aggregates are excluded. Missing or ambiguous pools have no numerical delta. Historical comparisons retain their original labeled basis. Stored observations do not guarantee current shelf stock or reserve stock against other sales.', class: 'text-sm text-mocha') %>
-
   <% items = count.items.order(:sku).to_a; known = items.reject { |item| item.delta.nil? } %>
   <div class="card overflow-hidden">
     <div class="card-pad pb-3">
@@ -115,4 +113,6 @@
       </table>
     </div>
   </div>
+
+  <%= fold_explainer('Comparisons freeze one source, location and item at submission. New Shopify comparisons use signed native on-hand snapshots less than one hour old with matching catalog identity; available stock and legacy aggregates are excluded. Missing or ambiguous pools have no numerical delta. Historical comparisons retain their original labeled basis. Stored observations do not guarantee current shelf stock or reserve stock against other sales.', class: 'text-sm text-mocha') %>
 </div>

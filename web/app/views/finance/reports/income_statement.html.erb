@@ -1,7 +1,7 @@
 <% content_for :title, 'Income statement' %>
 <div class="space-y-6">
   <%= render layout: 'finance/page_header', locals: { title: 'Income statement', range: report_range_label(@from, @to), print: true,
-        menu: [['Download CSV', finance_reports_income_statement_path(format: :csv, from: @from, to: @to), { data: { turbo: false } }], ['All statements', finance_reports_path]],
+        menu: [['Download CSV', finance_reports_income_statement_path(format: :csv, from: @from, to: @to), { data: { turbo: false } }]],
         explain: 'Revenue earned less expenses incurred in the period. The difference is net income (or a net loss, shown with a minus sign).' } do %><% end %>
   <%= render 'finance/reports/coverage_notice' %>
   <%= render 'finance/reports/tabs' %>

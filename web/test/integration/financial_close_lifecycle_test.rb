@@ -51,8 +51,8 @@ class FinancialCloseLifecycleTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'Review not recorded'
     assert_select '[aria-label="Checks needing action"]', text: /Required for any package/
     assert_select 'input[value="Verify originals & retain close package"][disabled]'
-    assert_select 'a[href=?]', financial_close_path(day: '2026-10-13'), text: 'Previous day'
-    assert_select 'a[href=?]', financial_close_path(day: '2026-10-15'), text: 'Next day'
+    assert_select 'a[href=?][aria-label="Previous day"]', financial_close_path(day: '2026-10-13')
+    assert_select 'a[href=?][aria-label="Next day"]', financial_close_path(day: '2026-10-15')
     assert_no_difference 'ReconciliationDocument.count' do
       post financial_close_path, params: { close: close_values }
     end

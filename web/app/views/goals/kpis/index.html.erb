@@ -1,6 +1,6 @@
 <% content_for :title, "KPIs" %>
 <div class="space-y-6">
-  <%= page_header 'KPIs', subtitle: 'Key performance indicators with historical readings.' do %>
+  <%= page_header 'KPIs', subtitle: 'Key figures and their readings over time.' do %>
     <% if Current.user.can?("projects.write") %>
       <%= link_to "Add KPI", new_goals_kpi_path, class: "btn-primary" %>
     <% end %>
@@ -11,22 +11,22 @@
       <% if Current.user.can?("projects.write") %><%= link_to "Add KPI", new_goals_kpi_path, class: "btn-primary" %><% end %>
     <% end %>
   <% else %>
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <% @kpis.each do |kpi| %>
-      <%= link_to kpi, class: "card card-pad block hover:border-taupe" do %>
-        <div class="flex items-center justify-between gap-2">
-          <h3 class="card-title truncate"><%= kpi.name %></h3>
-          <span class="<%= kpi.on_track? ? "pill-fern" : "pill-clay" %>"><%= kpi.on_track? ? "On track" : "Off track" %></span>
-        </div>
-        <p class="mt-2 font-display text-3xl text-ink"><%= number_with_precision(kpi.latest_value, precision: 2, delimiter: ',') %></p>
-        <p class="text-xs text-taupe">
-          target <%= number_with_precision(kpi.target_value, precision: 2, delimiter: ',') %>
-          <% if kpi.unit %> · <%= kpi.unit %><% end %>
-          · <%= pluralize(kpi.readings.count, 'reading') %>
-        </p>
+  <section class="card" aria-label="KPIs">
+    <ul class="row-list">
+      <% @kpis.each do |kpi| %>
+        <li class="row-item">
+          <div class="min-w-0">
+            <p class="font-semibold text-ink"><%= link_to kpi.name, kpi, class: 'text-olive-deep hover:underline' %></p>
+            <p class="text-xs text-taupe">Target <%= number_with_precision(kpi.target_value, precision: 2, delimiter: ',') %><% if kpi.unit %> <%= kpi.unit %><% end %> · <%= pluralize(kpi.readings.count, 'reading') %></p>
+          </div>
+          <div class="row-item-end">
+            <span class="num font-semibold text-ink"><%= number_with_precision(kpi.latest_value, precision: 2, delimiter: ',') %></span>
+            <span class="<%= kpi.on_track? ? "pill-fern" : "pill-clay" %>"><%= kpi.on_track? ? "On track" : "Off track" %></span>
+          </div>
+        </li>
       <% end %>
-    <% end %>
-  </div>
+    </ul>
+  </section>
   <% end %>
 
   <%== @pagy.series_nav if @pagy.pages > 1 %>
