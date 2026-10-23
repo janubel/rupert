@@ -99,11 +99,11 @@ module TeamChat
           raise ArgumentError unless allowed.include?(row['source']) && row['store'].present?
 
           store = row['store'].to_s
-          if AskRupert::Redactor.personal(store) != store
+          if store.length > 256 || AskRupert::Redactor.personal(store) != store
             out['gaps'] << 'A store identity could not be displayed safely; its figures were omitted.'
             next
           end
-          source = "#{row['source']} / store #{store.gsub(/[\r\n]/, ' ').first(80).inspect}; separate source, never added across sources"
+          source = "#{row['source']} / store #{store.inspect}; separate source, never added across sources"
           { 'tax_collected' => 'Reported tax collected', 'tax_refunded' => 'Reported tax refunded', 'net_tax' => 'Net reported tax', 'estimated_tax' => 'Estimated tax (not reported tax)' }.each do |field, meaning|
             add(out, row[field], 'money', row['currency'], source, period, meaning, "lines.#{index}.#{field}")
           end

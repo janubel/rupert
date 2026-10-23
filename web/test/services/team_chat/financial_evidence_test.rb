@@ -206,5 +206,7 @@ class TeamChatFinancialEvidenceTest < ActiveSupport::TestCase
     item = evidence(payload, tool: 'sales_tax_report', args: @period)
     assert_empty item['facts']
     assert_not_includes JSON.generate(item), 'customer@example.com'
+    payload[:lines][0][:store] = 'x' * 257
+    assert_empty evidence(payload, tool: 'sales_tax_report', args: @period)['facts']
   end
 end
