@@ -12,7 +12,8 @@ class TeamChatRunTest < ActiveSupport::TestCase
     Current.tenant = tenants(:default_tenant)
     @user = users(:regular_user)
     Current.user = @user
-    @room = TeamChat::Room.ensure_defaults!(@user)
+    @room = TeamChat::Room.direct_for(@user)
+    @room.update!(assistant_mode: 'mentions')
     @reply = TeamChat::Post.call(room: @room, user: @user, body: '@rupert make a task').reply
     @run = @reply.run
     TeamChat::Execution.any_instance.stubs(:start_watch)

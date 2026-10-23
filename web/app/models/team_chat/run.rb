@@ -25,7 +25,8 @@ module TeamChat
         if trigger&.person?
           run.request_context = { 'requester_id' => trigger.user_id, 'requester_name' => trigger.user&.display_name,
                                   'trigger_id' => trigger.id, 'last_chat' => trigger.body, 'requested_at' => trigger.created_at.iso8601(6),
-                                  'parent_id' => trigger.parent_id }
+                                  'parent_id' => trigger.parent_id, 'permissions_signature' => trigger.user&.permissions_signature,
+                                  'source_room_id' => reply.meta.to_h['source_room_id'] }
         end
         run.deadline_at = reply.created_at + (reply.local_agent ? 5.minutes : 2.minutes)
       end

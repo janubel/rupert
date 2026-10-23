@@ -65,13 +65,15 @@ module TeamChat
 
     def self.room_slug(handle) = "test-#{handle.presence || 'rupert'}"
 
-    # The bot's test room, created (with every chat user in it) the first time.
+    # Evaluation can read business data too: use a separate requester-owned room.
     def self.room_for(user, handle = 'liquid')
-      slug = room_slug(handle)
+      slug = "#{room_slug(handle)}-#{user.id}"
       room = Room.find_by(slug: slug) ||
-             Room.create!(name: slug, slug: slug, kind: 'channel', topic: format(ROOM_TOPIC, handle: handle.presence || 'rupert'),
+             Room.create!(name: slug, slug: slug, kind: 'direct', topic: format(ROOM_TOPIC, handle: handle.presence || 'rupert'),
                assistant_mode: 'off', created_by: user)
-      Post.mentionable.each { |person| room.membership_for(person) }
+      raise ArgumentError, 'Test room must be private to its requester' unless room.direct? && room.created_by_id == user.id
+
+      room.membership_for(user)
       room
     end
 

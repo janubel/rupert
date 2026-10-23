@@ -65,7 +65,7 @@ module TeamChat
 
     # The person's private room with Rupert, where he answers every message.
     def self.direct_for(user)
-      find_by(kind: 'direct', created_by_id: user.id) ||
+      find_by(kind: 'direct', created_by_id: user.id, slug: "rupert-#{user.id}") ||
         create!(kind: 'direct', name: 'Rupert', slug: "rupert-#{user.id}", assistant_mode: 'all', created_by: user,
           topic: 'Just you and Rupert. Ask about sales, stock, staff, tasks or how Rupert works.')
     end

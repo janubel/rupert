@@ -11,7 +11,8 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     @user = users(:regular_user)
     Current.tenant = @tenant
     Current.user = @user
-    @room = TeamChat::Room.ensure_defaults!(@user)
+    @room = TeamChat::Room.direct_for(@user)
+    @room.update!(assistant_mode: 'mentions')
   end
 
   teardown { Current.reset }
@@ -98,7 +99,7 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     end
   end
 
-  test 'assigning a task from chat proposes update_task for the right person and mentions them when approved' do
+  test 'assigning a task privately preserves the assignee without notifying them into the private room' do
     jan = User.create!(tenant: @tenant, email: 'jan.tester@example.com', name: 'Jan Tester', role: @user.role, password: 'password123')
     task = Projects::Task.create!(title: 'Count the tea shelf', priority: 'medium')
     script_model({ tool: 'update_task', arguments: { task_id: task.id, assignee: 'Jan', due_on: '2026-10-30', priority: 'high' } },
@@ -117,7 +118,8 @@ class TeamChatAgentTest < ActiveSupport::TestCase
     assert_equal [jan.id.to_s, 'high', Date.new(2026, 10, 30)], [task.assignee_id, task.priority, task.due_on]
     notice = @room.messages.where(author_kind: 'system').last
     assert_match(/approved: Updated task ##{task.id}/, notice.body)
-    assert_equal [jan.id], notice.mention_ids
+    assert_empty notice.mention_ids
+    assert_not @room.visible_to?(jan)
   end
 
   test 'a name that matches two people is sent back to the model to ask which one' do

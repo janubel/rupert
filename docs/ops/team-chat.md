@@ -503,3 +503,23 @@ chat text is restricted to the active requester, approver, and people who curren
 have access to the source chat. After room deletion only the requester and
 approver retain that text access, subject to task access and tenant boundaries.
 Legacy approvals without an original snapshot display **Not recorded**.
+
+### Private assistant delivery and current permissions
+
+Assistant requests in channels and person-to-person DMs now receive only a neutral
+link to the requester's private Rupert room. The worker atomically copies the
+request text into that room and queues one private reply for the selected bot.
+Shared history, attachments and quoted messages are not forwarded. Retried jobs
+cannot create another handoff after the source run has completed. Existing shared
+history is not rewritten. New model evaluations use requester-owned private test
+rooms too; old shared evaluation rooms are retained without being reused.
+
+Each new run records the requester's permission signature. Before model recovery,
+tool starts and cached-result replay, checkpoints and streamed/final writes, the
+worker loads fresh requester, tenant, destination and source-room access. A
+permission change, deactivation, loss of chat/dashboard access or room access
+cancels the run, clears its partial reply and dismisses pending proposals. A tool
+result returning after revocation cannot be checkpointed. Runs predating the
+permission snapshot fail closed and must be asked again. Any permission change,
+including a grant, requires a new request rather than reuse of an older transcript.
+This does not retroactively erase completed conversations or change task assignees.
