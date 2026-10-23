@@ -13,7 +13,7 @@
 <% else %>
   <%= page_header "Hi, #{@worker.first_name}", eyebrow: Date.current.strftime('%A, %B %-d') do %>
     <%= link_to 'My time clock', personal_time_clock_path, class: 'btn-ghost' %>
-    <% if !@preview && Current.user.can_use_pos? %><%= link_to 'Open retail POS', ctrax_pos_path, class: 'btn-primary' %><% end %>
+    <% if !@preview && Current.user.can_use_pos? %><%= link_to 'Open POS', ctrax_pos_path, class: 'btn-primary' %><% end %>
   <% end %>
   <section class="card card-pad flex flex-wrap items-center justify-between gap-4" <%= tour_anchor('clock') %>>
     <div>

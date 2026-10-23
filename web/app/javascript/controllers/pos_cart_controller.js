@@ -1,10 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Shared POS cart controller used by the Shopify preview page and the C-Trax
-// retail workspace. Every target added for the preview page is optional so the
-// C-Trax view keeps working unchanged.
+// Cart controller for the full-screen C-Trax cashier (and the retired Shopify preview's
+// lookup path). Quantities live here; prices, tax and totals always come from the server
+// quote. Optional targets (tax, total, checkout) belong to the full-screen cart panel.
 export default class extends Controller {
-  static targets = ["form", "items", "status", "subtotal", "tip", "previewTotal", "tipType", "tipPercentage", "tipAmount", "percentageFields", "amountFields", "count", "barcode", "lookupForm", "searchInput"]
+  static targets = ["form", "items", "status", "subtotal", "tip", "previewTotal", "tipType", "tipPercentage", "tipAmount", "percentageFields", "amountFields", "count", "barcode", "lookupForm", "searchInput", "tax", "total", "checkout"]
   static values = { cartKey: String, initialQuote: Object, clearUrl: String, lookupUrl: String }
 
   connect() {
@@ -202,6 +202,18 @@ export default class extends Controller {
     this.refresh()
   }
 
+  // − / + beside a cart line. Going below one leaves the line at one; Remove takes it out.
+  step(event) {
+    const id = event.currentTarget.closest("[data-variant-id]").dataset.variantId
+    const current = this.cart.get(id)
+    if (!current) return
+    const next = Math.min(999, Math.max(1, current + Number(event.currentTarget.dataset.delta || 0)))
+    if (next === current) return
+    this.cart.set(id, next)
+    this.persist()
+    this.refresh()
+  }
+
   remove(event) {
     const id = event.target.closest("[data-variant-id]").dataset.variantId
     this.cart.delete(id)
@@ -325,10 +337,18 @@ export default class extends Controller {
   showTotals(result) {
     const totals = result || this.lastTotals
     const prefix = result ? "" : "~"
-    const show = (target, value) => { target.textContent = value ? prefix + this.amount(value) : "—" }
+    const known = (value) => value !== null && value !== undefined && value !== ""
+    const show = (target, value) => { target.textContent = known(value) ? prefix + this.amount(value) : "—" }
     show(this.subtotalTarget, totals?.subtotal)
     show(this.tipTarget, totals?.tip_amount ?? totals?.tip)
     show(this.previewTotalTarget, totals?.preview_total ?? totals?.total)
+    // Tax and the before-tip total are server cents; unknown tax stays "Unknown", never zero.
+    const cents = (value) => known(value) ? Number(value) / 100 : null
+    if (this.hasTaxTarget) {
+      if (totals && totals.tax_verified === false) this.taxTarget.textContent = "Unknown"
+      else show(this.taxTarget, cents(totals?.tax_cents))
+    }
+    if (this.hasTotalTarget) show(this.totalTarget, cents(totals?.total_before_tip_cents))
   }
 
   rememberPrices(lines) {
@@ -337,7 +357,8 @@ export default class extends Controller {
 
   rememberTotals(quote) {
     if (!quote) { this.lastTotals = null; return }
-    this.lastTotals = { subtotal: quote.subtotal, tip: quote.tip_amount, total: quote.preview_total }
+    this.lastTotals = { subtotal: quote.subtotal, tip: quote.tip_amount, total: quote.preview_total,
+      tax_cents: quote.tax_cents, tax_verified: quote.tax_verified, total_before_tip_cents: quote.total_before_tip_cents }
   }
 
   quoteText() {
@@ -353,32 +374,63 @@ export default class extends Controller {
   }
 
   render(lines) {
-    if (this.hasCountTarget) this.countTargets.forEach(target => { target.textContent = Array.from(this.cart.values()).reduce((total, quantity) => total + quantity, 0) })
+    const units = Array.from(this.cart.values()).reduce((total, quantity) => total + quantity, 0)
+    if (this.hasCountTarget) this.countTargets.forEach(target => { target.textContent = units })
+    if (this.hasCheckoutTarget) this.checkoutTargets.forEach(button => { button.disabled = !this.cart.size })
     const byId = new Map(lines.map(line => [line.variant_id, line]))
     const previousPrices = this.lastPrices || new Map()
     this.itemsTarget.replaceChildren()
     if (!this.cart.size) {
       const empty = document.createElement("p")
-      empty.className = "text-sm text-taupe"
-      empty.textContent = "Your cart is empty. Add a product to begin."
+      empty.className = "pos-cart-empty"
+      empty.textContent = "The cart is empty. Search, scan or tap a product to add it."
       this.itemsTarget.append(empty)
       return
     }
     Array.from(this.cart).forEach(([id, quantity], index) => {
       const line = byId.get(id)
+      const name = line ? line.product_title : "Checking item…"
+      const variant = line ? this.variantLabel(line.product_title, line.title) : ""
       const row = document.createElement("div")
       row.dataset.variantId = id
-      row.className = "rounded-xl border border-fog p-3 space-y-2"
+      row.className = "pos-line"
+
+      const media = document.createElement("span")
+      media.className = "pos-line-thumb"
       if (line?.thumbnail_url) {
         const image = document.createElement("img")
         image.src = line.thumbnail_url
-        image.alt = line.product_title
-        image.className = "h-16 w-16 rounded-lg object-contain"
-        row.append(image)
+        image.alt = ""
+        image.referrerPolicy = "no-referrer"
+        media.append(image)
       }
+
+      const main = document.createElement("div")
+      main.className = "pos-line-main"
       const title = document.createElement("p")
-      title.className = "text-sm font-medium"
-      title.textContent = line ? `${line.product_title} · ${line.title}` : "Catalog item awaiting validation"
+      title.className = "pos-line-name"
+      title.textContent = name
+      const detail = document.createElement("p")
+      detail.className = "pos-line-detail"
+      const priceChanged = line && previousPrices.has(id) && previousPrices.get(id) !== line.unit_price
+      detail.textContent = [variant, line ? `${this.amount(line.unit_price)} each` : "Price pending", priceChanged ? "price updated" : ""].filter(Boolean).join(" · ")
+
+      const controls = document.createElement("div")
+      controls.className = "pos-line-controls"
+      const stepper = document.createElement("div")
+      stepper.className = "pos-stepper pos-stepper-sm"
+      stepper.setAttribute("role", "group")
+      stepper.setAttribute("aria-label", `Quantity for ${name}`)
+      const stepButton = (delta, text, label) => {
+        const button = document.createElement("button")
+        button.type = "button"
+        button.className = "pos-step"
+        button.textContent = text
+        button.dataset.delta = String(delta)
+        button.dataset.action = "pos-cart#step"
+        button.setAttribute("aria-label", label)
+        return button
+      }
       const hidden = document.createElement("input")
       hidden.type = "hidden"
       hidden.name = `items[${index}][variant_id]`
@@ -391,34 +443,46 @@ export default class extends Controller {
       input.max = "999"
       input.step = "1"
       input.required = true
-      input.className = "input w-24"
-      input.setAttribute("aria-label", `Cart quantity for ${line?.product_title || "item"}`)
+      input.inputMode = "numeric"
+      input.className = "pos-step-input"
+      input.setAttribute("aria-label", `Cart quantity for ${name}`)
       input.dataset.action = "change->pos-cart#change"
-      const price = document.createElement("p")
-      price.className = "text-sm text-mocha"
-      const priceChanged = line && previousPrices.has(id) && previousPrices.get(id) !== line.unit_price
-      price.textContent = line
-        ? `${this.amount(line.unit_price)} each · ${this.amount(line.line_total)}${priceChanged ? " · price updated since last check" : " previously checked"}`
-        : "Price pending"
+      stepper.append(stepButton(-1, "−", `One fewer ${name}`), input, stepButton(1, "+", `One more ${name}`))
       const remove = document.createElement("button")
       remove.type = "button"
       remove.textContent = "Remove"
-      remove.setAttribute("aria-label", `Remove ${line?.product_title || "item"} from cart`)
-      remove.className = "btn-ghost btn-sm"
+      remove.setAttribute("aria-label", `Remove ${name} from cart`)
+      remove.className = "pos-line-remove"
       remove.dataset.action = "pos-cart#remove"
-      row.append(title, hidden, input, price, remove)
+      controls.append(stepper, remove)
+      main.append(title, detail, controls)
+
+      const total = document.createElement("strong")
+      total.className = "pos-line-total retail-money"
+      total.textContent = line ? this.amount(line.line_total) : "—"
+      row.append(media, main, hidden, total)
       this.itemsTarget.append(row)
     })
+  }
+
+  // "Tea Tin 30ml" under "Tea Tin" reads "30ml"; a name that does not extend the product stays whole.
+  variantLabel(product, title) {
+    if (!title || title === "Default Title" || title === product) return ""
+    if (product && title.toLowerCase().startsWith(product.toLowerCase())) {
+      return title.slice(product.length).replace(/^[\s\-–—·:,|\/]+/, "").trim()
+    }
+    return title
   }
 
   csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || ""
   }
 
+  // Quotes on this screen are USD (C-Trax source prices); shown as $1,234.56.
   amount(value) {
     const number = Number(value)
     return Number.isFinite(number)
-      ? new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number)
+      ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(number)
       : "—"
   }
 }

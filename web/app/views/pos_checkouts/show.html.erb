@@ -1,7 +1,7 @@
 <% kind = @checkout.sandbox_payment? ? 'Sandbox receipt' : (@checkout.demo? ? 'Demo receipt' : 'Receipt') %>
 <% content_for :title, "#{kind} #{@checkout.reference}" %>
 <div class="page-medium space-y-6">
-  <%= page_header kind, subtitle: "#{@checkout.reference} · USD", eyebrow: "Retail POS · #{@checkout.location.name}" do %>
+  <%= page_header kind, subtitle: "#{@checkout.reference} · USD", eyebrow: "POS · #{@checkout.location.name}" do %>
     <span class="<%= @checkout.paid? ? 'pill-fern' : @checkout.unresolved? ? 'pill-clay' : 'pill-taupe' %>"><%= @checkout.paid? ? (@checkout.sandbox_payment? ? 'Sandbox complete' : 'Paid') : @checkout.status.humanize %></span>
     <%= link_to 'Open cashier', ctrax_pos_path(location_id: @checkout.location_id, display_id: (@checkout.pos_display_session.active? && @checkout.user_id == Current.user.id ? @checkout.pos_display_session_id : nil)), class: 'btn-primary' %>
   <% end %>

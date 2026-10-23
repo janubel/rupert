@@ -1,0 +1,9 @@
+<%# Why a tender button is off, in one line each; the setup link only for people who may configure it. %>
+<% if cash_blocker || card_blocker %>
+  <ul class="pos-tender-blockers">
+    <% [[cash_blocker, 'data-cash-unavailable'], [card_blocker, 'data-card-unavailable']].each do |reason, marker| %>
+      <% next unless reason %>
+      <li <%= marker %>><%= reason %><% if pos_setup_allowed? %> — <%= link_to 'POS checkout setup', pos_setting_path(@snapshot.location_id) %><% else %>. Ask a manager to set this up.<% end %></li>
+    <% end %>
+  </ul>
+<% end %>

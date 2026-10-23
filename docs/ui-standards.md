@@ -123,7 +123,7 @@ everywhere (rail, page eyebrow, search, dashboard links). Sections follow the op
 | Section | What belongs there |
 | --- | --- |
 | Overview | Dashboard |
-| Sell | Sales, POS, daily closes, registers, customers |
+| Sell | POS (first; full screen), sales, daily closes, registers, customers |
 | Marketing | Campaigns, influencers (feature-flagged) |
 | Stock | Inventory, counts, transfers, materials, purchasing, catalog links |
 | Bookkeeping | Overview, daily close, books & review, ledger & accounts, planning |
@@ -186,6 +186,23 @@ Rules that apply to all templates:
 | `.toast-stack`, `.toast` | Attention-only popups raised with the `rupert:toast` event; three at most |
 
 Add a component by adding it here, to the stylesheet and to the Style guide, in that order.
+
+### POS
+
+The cashier (`/ctrax_pos`, **Sell → POS**) is the one screen outside the shell: `layouts/pos`
+fills the viewport with no top bar, rail, status bar, Ask Rupert, Team chat or page help, and
+shows no sales or report figures. Styles live in the `POS (full screen cashier)` block at the
+end of `application.css`.
+
+| Class | Purpose |
+| --- | --- |
+| `.pos-topbar` | The slim strip: store (switcher when several), stock read, register, customer screen, `Unfinished (n)`, `More`, cashier, then `Exit POS` (back-office users) or `Sign out` (POS-only staff) |
+| `.pos-search-input` | The large search-or-scan field; focused on load, after each add and on `/` |
+| `.pos-chip` | Category chips in one scrolling row under search; also sibling sizes and quick cash amounts |
+| `.pos-tile`, `.pos-tile-out`, `.pos-stock` | Product tile: square photo, two-line name, size, price, stock word pill (In stock / Low / Out / Unknown / Not tracked); out of stock is muted, never hidden |
+| `.pos-sheet` | Confirm sheet (`<dialog>`): big photo, name, size, SKU, price, stock, sibling sizes, quantity stepper, one `Add to cart` |
+| `.pos-cart`, `.pos-line`, `.pos-stepper`, `.pos-totals`, `.pos-total` | Cart panel always beside the grid: lines with − / + and Remove, Subtotal, Tax, Tip (customer-confirmed), large Total, one `Checkout` |
+| `.pos-checkout`, `.pos-tender` | Checkout step inside the cart panel: register, `Cash` / `Card` as two big buttons, a disabled tender says why in one line |
 
 ## 6. Colour, type, spacing
 

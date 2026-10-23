@@ -21,8 +21,10 @@ class EmployeePosAccessTest < ActionDispatch::IntegrationTest
     assert @user.can_use_pos?
     get ctrax_pos_path
     assert_response :success
-    assert_select 'nav[aria-label="My workspace"] a[href=?]', ctrax_pos_path
-    [ctrax_days_path, pos_connection_path('ctrax'), pos_setting_path(@location.id), new_sales_pos_session_path].each do |path|
+    assert_select 'header.pos-topbar h1', /POS/
+    assert_select 'a', text: 'Exit POS', count: 0
+    assert_select 'header.pos-topbar form[action=?] button', logout_path, text: 'Sign out'
+    [root_path, sales_path, ctrax_days_path, pos_connection_path('ctrax'), pos_setting_path(@location.id), new_sales_pos_session_path].each do |path|
       assert_select 'a[href=?]', path, count: 0
     end
     assert_equal %w[ctrax_pos receipts time_clock timesheets learning], ModuleRegistry.nav_for(@user).map(&:key)
@@ -55,11 +57,13 @@ class EmployeePosAccessTest < ActionDispatch::IntegrationTest
     display = PosDisplaySession.create!(user: @user, location: @location)
     get ctrax_pos_path(location_id: @location.id, display_id: display.id)
     assert_response :success
-    assert_select 'nav[aria-label="My workspace"] a[aria-current="page"]', 'POS'
+    assert_select '.app-rail', count: 0
+    assert_select 'nav[aria-label="My workspace"]', count: 0
+    assert_select 'a', text: 'Exit POS', count: 0
     assert_select '#retail-cart form input[value="Complete cash sale"]'
     assert_select 'select[name=register_id][required]'
     assert_includes response.body, 'Ask a manager to open a register'
-    [ctrax_days_path, sales_pos_sessions_path, new_sales_pos_session_path, pos_setting_path(@location.id)].each do |path|
+    [root_path, ctrax_days_path, sales_pos_sessions_path, new_sales_pos_session_path, pos_setting_path(@location.id)].each do |path|
       assert_select 'a[href=?]', path, count: 0
     end
     get customer_display_path(display_token: display.display_token)

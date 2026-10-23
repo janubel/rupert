@@ -2,7 +2,7 @@
 <div class="space-y-4">
   <%= page_header 'Two-screen POS demo', subtitle: 'Add products on the cashier side and choose a tip on the customer side; payments and stock movements are simulated.',
       menu: [['Open customer view in another window', customer_display_path(display_token: @display.display_token), { target: '_blank', rel: 'noopener noreferrer' }]] do %>
-    <%= link_to 'Open retail POS', ctrax_pos_path(location_id: @display.location_id), class: 'btn-primary' %>
+    <%= link_to 'Open POS', ctrax_pos_path(location_id: @display.location_id), class: 'btn-primary' %>
   <% end %>
   <%= fold_explainer('The tip choice stays private until confirmation. Confirm a tip, then run cash checkout or send a simulated card checkout to the customer. Changing the cart requires a new confirmation.', class: 'text-sm text-mocha') %>
   <div class="grid gap-4 lg:grid-cols-2">

@@ -22,13 +22,14 @@ class RetailWorkspaceTest < ActionDispatch::IntegrationTest
   test 'POS exposes a reachable cart unique quantity fields and preserves source stock' do
     get ctrax_pos_path
     assert_response :success
-    assert_select 'nav[aria-label="Module"] a[href=?]', ctrax_days_path
-    assert_select 'a.retail-cart-link[href="#retail-cart"]'
+    assert_select '.app-rail', count: 0
+    assert_select 'a[href=?]', ctrax_days_path, count: 0
+    assert_select 'a.pos-cart-jump[href="#retail-cart"]'
     assert_select '#retail-cart[tabindex="-1"]'
-    assert_select 'input[type=number][id=ctrax_quantity_3]'
-    assert_select 'input[type=number][id=ctrax_quantity_4]'
-    assert_includes response.body, 'Stock: -2'
-    assert_includes response.body, 'Stock: Unknown'
+    assert_select 'button.pos-tile', count: 2
+    assert_select 'input[type=number][id=pos_item_quantity][min="1"][max="999"][required]'
+    assert_select '.pos-stock[title="Stock: -2"]', 'Out'
+    assert_select '.pos-stock[title="Stock: Unknown"]', 'Unknown'
     assert_select '[data-pos-cart-target=count]', count: 2
     ids = Nokogiri::HTML(response.body).css('[id]').map { |node| node['id'] }
     assert_equal ids.uniq, ids
@@ -41,7 +42,7 @@ class RetailWorkspaceTest < ActionDispatch::IntegrationTest
   test 'stale stock is explained before an add action and admin setup stays role filtered' do
     CtraxStockSnapshot.find_by!(location: @location).update!(captured_at: 2.hours.ago)
     get ctrax_pos_path
-    assert_select 'input[type=submit][value=Add][disabled]', count: 2
+    assert_select 'dialog#pos-item-dialog button.pos-add[type=submit][disabled]', 'Add to cart'
     assert_includes response.body, 'Stock read stale'
     @user.update_permission_overrides!(%w[dashboard.read sales.read sales.write inventory.read])
     get ctrax_pos_path

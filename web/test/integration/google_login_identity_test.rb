@@ -220,7 +220,7 @@ class GoogleLoginIdentityTest < ActionDispatch::IntegrationTest
     assert_equal employee.id, session[:user_id]
     get ctrax_pos_path
     assert_response :success
-    assert_select 'nav[aria-label="My workspace"] a[href=?]', ctrax_pos_path
+    assert_select 'header.pos-topbar form[action=?] button', logout_path, text: 'Sign out'
     get people_timesheets_path(view: 'list')
     assert_response :success
     assert_select 'a[href=?]', people_timesheet_path(own_sheet)

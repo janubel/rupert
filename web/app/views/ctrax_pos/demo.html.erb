@@ -1,5 +1,5 @@
-<div class="space-y-4" data-action="pos-cart:changing->pos-display#pending pos-cart:checked->pos-display#checked" data-controller="pos-cart pos-display" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>" data-pos-cart-clear-url-value="<%= clear_pos_display_path(@display) %>" data-pos-display-status-url-value="<%= pos_display_path(@display) %>">
-  <%= page_header 'Cashier cart', subtitle: 'Demonstration · full checkout flow · simulated payment.', eyebrow: 'Retail POS · demo' %>
+<div class="space-y-4" data-action="pos-cart:changing->pos-display#pending pos-cart:checked->pos-display#checked" data-controller="pos-cart pos-display pos-screen" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>" data-pos-cart-clear-url-value="<%= clear_pos_display_path(@display) %>" data-pos-display-status-url-value="<%= pos_display_path(@display) %>">
+  <%= page_header 'Cashier cart', subtitle: 'Demonstration · full checkout flow · simulated payment.', eyebrow: 'POS · demo' %>
   <%= render 'cart' %>
   <section id="retail-catalog" class="retail-anchor section-card">
     <%= section_heading 'Add a product', hint: 'Adding or removing an item clears the customer’s confirmation.' %>

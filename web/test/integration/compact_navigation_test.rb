@@ -109,6 +109,21 @@ class CompactNavigationTest < ActionDispatch::IntegrationTest
     assert_select 'nav[aria-label="Module"] a[href=?]', size_families_path
   end
 
+  test 'Sell lists POS first while the section link and brand stay in the management shell' do
+    get sales_path
+    assert_response :success
+    links = css_select('nav[aria-label="Module"] a').map { |link| link.text.strip }
+    assert_equal 'POS', links.first
+    assert_operator links.index('POS'), :<, links.index('Sales')
+    assert_select 'nav[aria-label="Module"] a[href=?]', ctrax_pos_path, text: 'POS'
+    assert_select 'nav[aria-label="Module areas"] a[aria-label="Sell"][href=?]', sales_path
+    sell = ModuleRegistry.singleton_class::AREAS.find { |area| area[:key] == 'sell' }
+    assert_equal %w[ctrax_pos sales registers], ModuleRegistry.groups_for(sell, ModuleRegistry.nav_for(@admin)).first[:modules].map(&:key)
+    @admin.update_permission_overrides!(%w[sales.read sales.write inventory.read])
+    get sales_path
+    assert_select 'a.app-brand[href=?]', sales_path
+  end
+
   test 'revoked dashboard access removes search and makes the logo lead to an allowed module' do
     @admin.update_permission_overrides!(['inventory.read'])
     get inventory_index_path
