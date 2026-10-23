@@ -9,6 +9,7 @@ class ConnectionControlCenter
     'Needs access' => 'Open setup, obtain the correct account access, save credentials, then check read access.',
     'Needs login' => 'Open login setup, restore website sign-in and complete any additional verification with the vendor.',
     'Needs connection' => 'Ask the platform operator to complete the approved backup connection.',
+    'Wrong account' => 'Disconnect Google Drive in Settings and reconnect with an account in the allowed company domain.',
     'Paused' => 'Review the saved account and access check. Enable its schedule only when you intend automatic reads.',
     'Error' => 'Open setup and review its last check. Recheck access before retrying a read.',
     'Stale' => 'Try one read after checking access. If it stays stale, ask the operator to inspect the job worker and schedule.',

@@ -112,6 +112,18 @@
     <% end %>
     <p class="text-xs text-taupe">The last <span id="drive-retention">7</span> backups are kept; each attempt is logged below.</p>
 
+    <%= form_with url: drive_domain_settings_path, method: :post, class: 'toolbar', data: { turbo: false } do %>
+      <div class="toolbar-field">
+        <%= label_tag :drive_domain, 'Allowed Google domain', class: 'field-label' %>
+        <%= text_field_tag :domain, GoogleDriveBackupService.allowed_domain, id: 'drive_domain', class: 'input', placeholder: 'yourcompany.com', autocomplete: 'off', spellcheck: false, disabled: !can_write %>
+      </div>
+      <% if can_write %><div class="toolbar-actions"><%= submit_tag 'Save', class: 'btn-ghost' %></div><% end %>
+    <% end %>
+    <p class="text-xs text-taupe">Backups only go to a Google account in this domain. Any other account is refused at connect time and its access revoked.</p>
+    <% if GoogleDriveBackupService.allowed_domain.blank? %>
+      <p class="flash flash-alert text-sm" role="status">No backup domain set: any Google account could receive the database. Set your company domain before connecting.</p>
+    <% end %>
+
     <div id="drive-setup" class="hidden">
       <details class="explainer text-sm">
         <summary class="explainer-summary">Easy setup: about 5 minutes, one time</summary>
@@ -177,6 +189,7 @@
     </div>
 
     <div id="drive-connected" class="hidden">
+      <p id="drive-account" class="text-sm text-mocha"></p>
       <div class="flex flex-wrap items-center gap-3">
         <% if Current.user.super_admin? && can_write %>
           <%= button_to "Back up now", drive_backup_settings_path, method: :post, class: "btn-primary", data: { turbo: false }, id: "drive-backup-btn" %>
@@ -299,8 +312,14 @@
     var resultEl = document.getElementById("drive-backup-result");
 
     function driveBadge(status) {
-      connEl.textContent = status.connected ? "Connected" : (status.configured ? "Not connected" : "Not configured");
-      connEl.className = status.connected ? "pill-fern" : "pill-taupe";
+      var ok = status.connected && !status.wrong_account;
+      connEl.textContent = status.wrong_account ? "Wrong account" : (status.connected ? "Connected" : (status.configured ? "Not connected" : "Not configured"));
+      connEl.className = ok ? "pill-fern" : "pill-rose";
+      var who = document.getElementById("drive-account");
+      if (who) {
+        who.textContent = status.connected ? ("Connected as " + (status.account_email || "an unrecorded account") + (status.wrong_account ? ", outside " + status.allowed_domain + ". Disconnect and reconnect." : ".")) : "";
+        who.className = status.wrong_account ? "text-sm text-rose" : "text-sm text-mocha";
+      }
     }
 
     function driveRender(s) {

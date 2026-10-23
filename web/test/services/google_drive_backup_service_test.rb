@@ -22,6 +22,8 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
     EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_ID', nil)
     EnvStore.platform_set('GOOGLE_DRIVE_CLIENT_SECRET', nil)
     EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_ALLOWED_DOMAIN', nil)
+    EnvStore.platform_set('GOOGLE_DRIVE_ACCOUNT_EMAIL', nil)
   end
 
   test 'configured? and connected? reflect stored credentials' do
@@ -137,5 +139,60 @@ class GoogleDriveBackupServiceTest < ActiveSupport::TestCase
     assert_raises(GoogleDriveBackupService::NotConnectedError) { GoogleDriveBackupService.backup! }
     assert_equal 'failed', BackupLog.unscoped.where(tenant_id: nil).order(startedAt: :desc).first.status
     refute File.exist?(@snapshot)
+  end
+
+  test 'allowed domain is normalised and validated' do
+    GoogleDriveBackupService.allowed_domain = '  @HerbalHealersCBD.com '
+    assert_equal 'herbalhealerscbd.com', GoogleDriveBackupService.allowed_domain
+    assert_raises(ArgumentError) { GoogleDriveBackupService.allowed_domain = 'not a domain' }
+    GoogleDriveBackupService.allowed_domain = ''
+    assert_equal '', GoogleDriveBackupService.allowed_domain
+  end
+
+  test 'auth_url pre-selects the allowed domain' do
+    GoogleDriveBackupService.allowed_domain = 'example.com'
+    url = GoogleDriveBackupService.auth_url(redirect_uri: 'https://x/cb', state: 's')
+    assert_includes url, 'hd=example.com'
+  end
+
+  test 'connecting an account outside the allowed domain stores nothing and revokes the token' do
+    GoogleDriveBackupService.allowed_domain = 'example.com'
+    EnvStore.platform_set('GOOGLE_DRIVE_REFRESH_TOKEN', nil)
+    Signet::OAuth2::Client.any_instance.stubs(:fetch_access_token!).returns(true)
+    Signet::OAuth2::Client.any_instance.stubs(:refresh_token).returns('new-refresh')
+    GoogleDriveBackupService.stubs(:account_email_for).returns('someone@gmail.com')
+    GoogleDriveBackupService.expects(:revoke).with('new-refresh').once
+    error = assert_raises(GoogleDriveBackupService::DomainNotAllowedError) do
+      GoogleDriveBackupService.exchange_code!('code', redirect_uri: 'https://x/cb')
+    end
+    assert_includes error.message, 'example.com'
+    refute GoogleDriveBackupService.connected?
+    assert_equal '', GoogleDriveBackupService.account_email
+  end
+
+  test 'connecting an account inside the allowed domain records the account' do
+    GoogleDriveBackupService.allowed_domain = 'example.com'
+    Signet::OAuth2::Client.any_instance.stubs(:fetch_access_token!).returns(true)
+    Signet::OAuth2::Client.any_instance.stubs(:refresh_token).returns('new-refresh')
+    GoogleDriveBackupService.stubs(:account_email_for).returns('backups@example.com')
+    GoogleDriveBackupService.expects(:revoke).never
+    GoogleDriveBackupService.exchange_code!('code', redirect_uri: 'https://x/cb')
+    assert_equal 'backups@example.com', GoogleDriveBackupService.account_email
+    refute GoogleDriveBackupService.wrong_account?
+  end
+
+  test 'a connection outside a newly set domain is the wrong account and cannot back up' do
+    EnvStore.platform_set('GOOGLE_DRIVE_ACCOUNT_EMAIL', 'owner@gmail.com')
+    GoogleDriveBackupService.allowed_domain = 'example.com'
+    assert GoogleDriveBackupService.wrong_account?
+    assert_equal 'Wrong account', SourceSyncStatus.all.find { |source| source[:key] == 'google_backup' }[:badge]
+    assert_raises(GoogleDriveBackupService::DomainNotAllowedError) { GoogleDriveBackupService.backup! }
+  end
+
+  test 'status badges use one colour rule' do
+    assert_equal 'pill-rose', SourceSyncStatus.tone('Needs connection')
+    assert_equal 'pill-rose', SourceSyncStatus.tone('Wrong account')
+    assert_equal 'pill-fern', SourceSyncStatus.tone('Healthy')
+    assert_equal 'pill-clay', SourceSyncStatus.tone('Awaiting backup')
   end
 end
