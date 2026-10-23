@@ -719,8 +719,11 @@ once). Now:
 | `@qwen` | Qwen3.5 4B (`qwen3.5-4b`), local | back to the 4B it was until 2026-10-22; also answers questions that name no bot |
 | `@gemma` | Gemma 4 E4B, local | unchanged |
 
-Liquid (`liquid`) and Qwen 35B (`qwen-35b`) stay on the gateway as test-only models for the battery
-(`AGENT=liquid`); the battery's default bot is now `qwen`. Old replies keep their names and models.
+Liquid 8B (`liquid`), Liquid 24B (`lfm-24b`) and Qwen 35B (`qwen-35b`) were then removed from the model server
+too (2026-10-23, owner's request): out of `models.json` on `rupert-llm` (previous menu kept as
+`/etc/rupert-llm/models.json.pre-remove-20261023`) and moved to `RETIRED`, so old replies and scores keep their
+names. Their model files stay in `/var/lib/rupert-llm/models/` (about 49 GB with the second Qwen 35B file) so they
+can come back by restoring that menu; delete them to free the space. The battery's default bot is `qwen`.
 
 Each person has a private room per bot besides their Rupert room: `rooms: [qwen, flint-think, gemma]` in
 `config/team_chat/routing.yml`. Everything typed there goes to that bot, no @ needed. A room for a bot that is no
