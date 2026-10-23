@@ -54,9 +54,19 @@ module ApplicationHelper
       .max_by { |entry| module_match_strength(safe_module_path(entry)) }
   end
 
+  # The full-screen POS is never a landing page: the brand link and a section's rail link
+  # skip it while the person has another page to go to, so they stay in the shell.
+  FULL_SCREEN_MODULES = %w[ctrax_pos].freeze
+
   def navigation_start_path
-    entry = ModuleRegistry.nav_for(Current.user).first
+    entries = ModuleRegistry.nav_for(Current.user)
+    entry = entries.find { |candidate| FULL_SCREEN_MODULES.exclude?(candidate.key) } || entries.first
     entry ? safe_module_path(entry) : root_path
+  end
+
+  # The page a section's rail link opens: its first module that keeps the management shell.
+  def area_landing_entry(area)
+    area[:modules].find { |entry| FULL_SCREEN_MODULES.exclude?(entry.key) } || area[:modules].first
   end
 
   def active_area_key

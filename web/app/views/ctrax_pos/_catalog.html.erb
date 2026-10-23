@@ -1,0 +1,48 @@
+<%# Product frame: category chips, results and pages. Search, chips and pages reload only this
+    frame (filtering happens on the server before pagination). The inner element carries the
+    query it answers and, when the query is exactly one item's SKU or barcode, that item. %>
+<% image_links = retail_business_access?('inventory.write') %>
+<% base = { location_id: @snapshot.location_id, display_id: @display&.id, q: @query.presence } %>
+<% pages = (@total.to_f / @page_size).ceil %>
+<%= turbo_frame_tag 'pos_catalog', class: 'pos-catalog-frame', data: { turbo_action: 'replace' } do %>
+  <%= tag.div class: 'pos-catalog', data: { pos_screen_target: 'results', query: @query, category: @category, exact_item: (pos_item_payload(@exact_record) if @exact_record) } do %>
+    <nav class="pos-chips" aria-label="Categories">
+      <%= link_to 'All', ctrax_pos_path(base.compact), class: 'pos-chip', aria: { current: (@category.blank? ? 'true' : nil) }, data: { action: 'pos-screen#pickCategory', category: '' } %>
+      <% @categories.each do |category| %>
+        <%= link_to category, ctrax_pos_path(base.merge(category: category).compact), class: 'pos-chip', aria: { current: (@category == category ? 'true' : nil) }, data: { action: 'pos-screen#pickCategory', category: category } %>
+      <% end %>
+    </nav>
+    <div class="pos-grid-scroll">
+      <p class="pos-results-meta"><%= pluralize(@total, 'product') %><%= " matching “#{@query}”" if @query.present? %><%= " in #{@category}" if @category.present? %><%= " · page #{@page} of #{pages}" if pages > 1 %></p>
+      <% if @records.empty? %>
+        <div class="card">
+          <%= empty_state 'No products match these filters', hint: 'Try a different name, SKU, barcode or category.' do %>
+            <%= link_to 'Clear', ctrax_pos_path(base.except(:q).compact), class: 'btn-ghost', data: { action: 'pos-screen#clearSearch' } %>
+          <% end %>
+        </div>
+      <% end %>
+      <div class="pos-grid" <%= tour_anchor('products') %>>
+        <% @records.each do |record| %>
+          <% item = pos_tile_payload(record, image_links: image_links) %>
+          <button type="button" class="pos-tile<%= ' pos-tile-out' if item[:stock] == 'Out' %><%= ' pos-tile-review' unless item[:addable] %>" data-action="pos-screen#open" data-item="<%= item.to_json %>" aria-label="<%= [item[:title], item[:variant], item[:price], item[:stock]].compact.join(', ') %>">
+            <span class="pos-tile-media"><%= image_tag @images.url(record, size: 480), alt: '', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' %></span>
+            <span class="pos-tile-body">
+              <span class="pos-tile-name"><%= item[:title] %></span>
+              <span class="pos-tile-variant"><%= item[:variant] || (item[:variants] ? "#{item[:variants].size} sizes" : '') %></span>
+              <span class="pos-tile-foot">
+                <span class="pos-tile-price retail-money"><%= item[:price] %></span>
+                <span class="<%= item[:stock_tone] %> pos-stock" title="<%= item[:stock_detail] %>"><%= item[:stock] %></span>
+              </span>
+            </span>
+          </button>
+        <% end %>
+      </div>
+      <% if pages > 1 %>
+        <nav class="pos-pager" aria-label="Catalog pages">
+          <% if @page > 1 %><%= link_to 'Previous', ctrax_pos_path(base.merge(category: @category.presence, page: @page - 1).compact), class: 'btn-ghost btn-lg' %><% end %>
+          <% if @page < pages %><%= link_to 'Next', ctrax_pos_path(base.merge(category: @category.presence, page: @page + 1).compact), class: 'btn-ghost btn-lg' %><% end %>
+        </nav>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

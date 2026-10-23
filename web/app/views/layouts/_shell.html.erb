@@ -92,7 +92,7 @@
         <nav class="rail-areas" aria-label="Module areas" <%= tour_anchor('areas') %>>
           <% nav_areas.each do |area| %>
             <% active = area[:key] == active_area_key %>
-            <%= link_to safe_module_path(area[:modules].first), class: "rail-area #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { label: area[:name], current: (active ? 'page' : nil) }, title: area[:name] do %><%= navigation_icon(area[:key]) %><span class="rail-label"><%= area[:name] %></span><% end %>
+            <%= link_to safe_module_path(area_landing_entry(area)), class: "rail-area #{active ? 'nav-pill-active' : 'nav-pill-idle'}", aria: { label: area[:name], current: (active ? 'page' : nil) }, title: area[:name] do %><%= navigation_icon(area[:key]) %><span class="rail-label"><%= area[:name] %></span><% end %>
             <% if active && active_area_modules.length > 1 %>
               <nav class="rail-modules" aria-label="Module" <%= tour_anchor('tools') %>>
                 <% current_entry = active_module_entry || active_area_modules.first %>

@@ -130,13 +130,13 @@ class PageTours
       ]
     ),
     Tour.new(
-      key: 'ctrax_pos', title: 'Selling with C-Trax retail', paths: ['/ctrax_pos'], permission: 'pos',
+      key: 'ctrax_pos', title: 'Selling at the POS', paths: ['/ctrax_pos'], permission: 'pos',
       intro: 'Check the stock read, find products, check the cart, then let the customer confirm privately.',
       steps: [
         { anchor: 'store', title: 'Store and stock freshness', body: 'The store you are selling from and when its stock was last read. A stale read disables Add until someone refreshes the C-Trax connection.' },
-        { anchor: 'search', title: 'Find a product', body: 'Switch store or category, or search by name, SKU or barcode. Only products with a linked website image are shown.' },
-        { anchor: 'products', title: 'Products', body: 'Each card shows the source price and tracked stock. Variable-price items must be sold in C-Trax itself.' },
-        { anchor: 'cart', title: 'Cashier cart', body: 'Check cart re-reads source prices and tax before checkout. Adding items does not reserve stock.' },
+        { anchor: 'search', title: 'Find a product', body: 'Search or scan by name, SKU or barcode; categories sit under the search. Only products with a linked website image are shown.' },
+        { anchor: 'products', title: 'Products', body: 'Tap a product to confirm its size, price and stock before adding it. Variable-price items must be sold in C-Trax itself.' },
+        { anchor: 'cart', title: 'Cart', body: 'Source prices and tax are checked on the server as the cart changes. Adding items does not reserve stock.' },
         { anchor: 'display', title: 'Customer screen', body: 'Pair a second screen so the customer confirms their tip privately. Demo both screens simulates payment and never creates a live sale.' },
         { anchor: 'unfinished', title: 'Unfinished checkouts', body: 'A checkout that was started but not completed waits here. Check its receipt before collecting another payment.' }
       ]

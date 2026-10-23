@@ -1,94 +1,101 @@
-<% content_for :title, 'Retail POS' %>
-<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
-<% image_options = @images.products.sort_by(&:title).map { |p| [p.title, p.id] } if retail_business_access?('inventory.write') %>
-<% stock_fresh = @snapshot && @snapshot.captured_at >= 60.minutes.ago %>
-<% setup_menu = [] %>
+<% content_for :title, 'POS' %>
+<% if turbo_frame_request? %>
+  <%= render 'catalog' if @snapshot %>
+<% else %>
+<% image_links = retail_business_access?('inventory.write') %>
+<% image_options = image_links ? @images.products.sort_by(&:title).map { |p| [p.title, p.id] } : [] %>
+<% stock_fresh = @snapshot.present? && @snapshot.captured_at >= 60.minutes.ago %>
 <% if @snapshot %>
-  <% setup_menu << ['Checkout setup', pos_setting_path(@snapshot.location_id)] if retail_business_access?('settings.write') && Current.user.can?('inventory.write') %>
-  <% setup_menu << ['C-Trax connection', pos_connection_path('ctrax')] if retail_business_access?('settings.read') %>
-  <% setup_menu << ['Checkout lesson', learning_path('checkout')] %>
+<div class="pos-app" data-controller="pos-cart pos-screen<%= ' pos-display' if @display %>" data-action="<%= 'pos-cart:changing->pos-display#pending pos-cart:checked->pos-display#checked' if @display %>" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>" data-pos-screen-stock-fresh-value="<%= stock_fresh %>" <% if @display %>data-pos-cart-clear-url-value="<%= clear_pos_display_path(@display) %>" data-pos-display-status-url-value="<%= pos_display_path(@display) %>"<% end %>>
+<% else %>
+<div class="pos-app">
 <% end %>
-<div class="retail-workspace space-y-5" data-action="pos-cart:changing->pos-display#pending pos-cart:checked->pos-display#checked" data-controller="pos-cart<%= ' pos-display' if @display %>" data-pos-cart-cart-key-value="<%= @cart_key %>" data-pos-cart-initial-quote-value="<%= (@quote || {}).to_json %>" <% if @display %>data-pos-cart-clear-url-value="<%= clear_pos_display_path(@display) %>" data-pos-display-status-url-value="<%= pos_display_path(@display) %>" data-pos-display-clear-url-value="<%= clear_pos_display_path(@display) %>"<% end %>>
-  <%= page_header 'Retail POS', subtitle: 'Find products, check the cart, then let the customer confirm their tip privately.', menu: setup_menu do %>
-    <% if @snapshot %><a href="#retail-cart" class="btn-ghost">Review cart · <span data-pos-cart-target="count">0</span> items</a><% end %>
-  <% end %>
-  <details class="explainer text-sm text-mocha"><summary class="explainer-summary">New to the register?</summary><p class="mt-2">Check the store, review your cart, then verify the final receipt. <%= link_to 'Take the three-minute checkout lesson', learning_path('checkout'), class: 'underline' %></p></details>
-  <% if @unfinished_checkouts.any? %>
-    <section class="flash flash-alert space-y-2" role="alert" aria-label="Unfinished checkouts" <%= tour_anchor('unfinished') %>><p class="font-semibold">Resume an unfinished checkout</p><p>Check the receipt before collecting another payment.</p><div class="flex flex-wrap gap-2"><% @unfinished_checkouts.each do |checkout| %><%= link_to "#{checkout.reference} · #{checkout.status.humanize}", pos_checkout_path(checkout), class: 'btn-ghost btn-sm' %><% end %></div></section>
+  <%= render 'topbar', stock_fresh: stock_fresh, image_links: image_links %>
+  <% if notice || alert || (@snapshot && !stock_fresh) %>
+    <div class="pos-flashes">
+      <% if notice %><p role="status" class="flash flash-notice"><%= notice %></p><% end %>
+      <% if alert %><p role="alert" class="flash flash-alert"><%= alert %></p><% end %>
+      <% if @snapshot && !stock_fresh %><p role="alert" class="flash flash-alert">A new stock read is required before items can be added. <%= retail_business_access?('settings.read') ? 'Refresh the C-Trax connection before continuing.' : 'Ask a manager to refresh the C-Trax stock read.' %></p><% end %>
+    </div>
   <% end %>
   <% if @snapshot %>
-    <section class="section-card" aria-label="Retail source and customer screen">
-      <div <%= tour_anchor('store') %>>
-        <p class="font-semibold"><%= @snapshot.location.name %> <span class="<%= stock_fresh ? 'pill-fern' : 'pill-clay' %>"><%= stock_fresh ? 'Stock read current' : 'Stock read stale' %></span></p>
-        <p class="mt-1 text-xs text-mocha"><%= @snapshot.records.size %> native variants · Last stock pull: <time datetime="<%= @snapshot.captured_at.iso8601 %>"><%= retail_source_time(@snapshot.captured_at) %></time></p>
-      </div>
-      <% if retail_business_access?('inventory.write') && @missing_image_records.any? %>
-        <details class="explainer"><summary class="explainer-summary">Link missing website images · <%= @missing_image_records.size %> hidden products</summary>
-          <p class="mt-2 text-xs text-mocha">Choose the matching website product. Its image makes this variant visible in the POS.</p>
-          <%= form_tag ctrax_pos_images_path(@snapshot.location_id), method: :post, class: 'toolbar mt-3' do %>
-            <div class="toolbar-field"><%= label_tag :missing_image_variant, 'C-Trax variant', class: 'field-label' %><%= select_tag :variant_id, options_for_select(@missing_image_records.sort_by { |r| r['name'].to_s }.map { |r| [r['name'], r['id']] }), id: 'missing_image_variant', include_blank: 'Choose hidden product', required: true, class: 'select w-full' %></div>
-            <div class="toolbar-field"><%= label_tag :missing_image_product, 'Website product image', class: 'field-label' %><%= select_tag :product_id, options_for_select(image_options), id: 'missing_image_product', include_blank: 'Choose website product', required: true, class: 'select w-full' %></div>
-            <div class="toolbar-actions"><%= submit_tag 'Link image', class: 'btn-primary' %></div>
-          <% end %>
-        </details>
-      <% end %>
-      <% unless stock_fresh %><p class="text-sm text-clay">A new stock read is required to check this cart. <%= retail_business_access?('settings.read') ? 'Refresh the C-Trax connection before continuing.' : 'Ask a manager to refresh the C-Trax stock read.' %></p><% end %>
-      <div class="flex flex-wrap items-center gap-2" <%= tour_anchor('display') %>>
-        <% if @display %>
-          <span class="pill-fern">Customer screen paired</span>
-          <%= link_to 'Open customer screen', customer_display_path(display_token: @display.display_token), target: '_blank', rel: 'noopener noreferrer', class: 'btn-primary' %>
-          <%= button_to 'Close customer screen', pos_display_path(@display), method: :delete, class: 'btn-ghost', data: { turbo: false } %>
-        <% else %>
-          <%= button_to 'Pair customer screen', pos_displays_path(location_id: @snapshot.location_id), method: :post, class: 'btn-primary', data: { turbo: false } %>
+    <main id="main" class="pos-main" tabindex="-1">
+      <section id="retail-catalog" class="pos-catalog-pane" aria-label="Products">
+        <%= form_tag ctrax_pos_path, method: :get, class: 'pos-search', role: 'search', data: { turbo_frame: 'pos_catalog', busy: false, pos_screen_target: 'searchForm', tour: 'search' } do %>
+          <%= hidden_field_tag :location_id, @snapshot.location_id, id: 'pos_search_location' %>
+          <%= hidden_field_tag :display_id, @display.id, id: 'pos_search_display' if @display %>
+          <%= hidden_field_tag :category, @category, id: 'pos_search_category', data: { pos_screen_target: 'category' } %>
+          <%= label_tag :pos_q, 'Search products', class: 'sr-only' %>
+          <span class="pos-search-icon" aria-hidden="true"><%= navigation_icon('search') %></span>
+          <%= search_field_tag :q, @query, id: 'pos_q', class: 'pos-search-input', placeholder: 'Search or scan: name, SKU or barcode', autocomplete: 'off', autocorrect: 'off', autocapitalize: 'off', spellcheck: false, autofocus: true, enterkeyhint: 'search', data: { pos_screen_target: 'search', action: 'input->pos-screen#typed keydown->pos-screen#searchKeydown' } %>
+          <kbd class="pos-search-key" title="Press / to search">/</kbd>
+          <noscript><%= submit_tag 'Apply', class: 'btn-ghost' %></noscript>
         <% end %>
-        <%= button_to 'Demo both screens', pos_displays_path(location_id: @snapshot.location_id, demo: '1'), method: :post, class: 'btn-ghost', data: { turbo: false } %>
-      </div>
-      <p class="text-xs text-mocha"><%= @display ? 'Open the customer screen on a separate display. The customer’s tip stays private until confirmed.' : 'Pair a screen before checkout. The demo simulates payment and does not create a live sale.' %></p>
-    </section>
-    <div class="retail-pos-grid">
-      <section id="retail-catalog" class="retail-anchor min-w-0 space-y-4" aria-label="Product catalog">
-        <%= form_tag ctrax_pos_path, method: :get, class: 'card card-pad toolbar', data: { turbo: false, tour: 'search' } do %>
-          <%= hidden_field_tag :display_id, @display&.id, id: 'catalog_display_id' %><%= hidden_field_tag :location_id, @snapshot.location_id, id: 'catalog_location_id' if @display %>
-          <div class="toolbar-field"><%= label_tag :location_id, 'Store', class: 'field-label' %><%= select_tag :location_id, options_for_select(@snapshots.map { |s| [s.location.name, s.location_id] }, @snapshot.location_id), disabled: @display.present?, class: 'select w-full', aria: { label: 'C-Trax store' } %></div>
-          <div class="toolbar-field"><%= label_tag :category, 'Category', class: 'field-label' %><%= select_tag :category, options_for_select([['All categories', '']] + @categories.map { |c| [c, c] }, @category), class: 'select w-full', aria: { label: 'Product category' } %></div>
-          <div class="toolbar-field"><%= label_tag :q, 'Search', class: 'field-label' %><%= search_field_tag :q, @query, placeholder: 'Name, SKU or barcode', class: 'search', aria: { label: 'Search C-Trax products' } %></div>
-          <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %><%= link_to 'Clear', ctrax_pos_path(location_id: @snapshot.location_id, display_id: @display&.id), class: 'btn-ghost' %></div>
-        <% end %>
-        <%= section_heading 'Products', hint: 'Only products with website images are shown.' do %>
-          <p class="text-sm text-mocha"><%= @total %> results · page <%= @page %></p>
-        <% end %>
-        <% if @records.empty? %><div class="card"><%= empty_state 'No products match these filters', hint: 'Try a different name, SKU, barcode or category.' %></div><% end %>
-        <div class="retail-product-grid" <%= tour_anchor('products') %>>
-          <% @records.each do |record| %>
-            <article class="card retail-product-card overflow-hidden" aria-label="<%= record['name'] %>">
-              <% if (image = @images.url(record)) %><%= image_tag image, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', class: 'h-48 w-full bg-haze object-contain' %><% else %><div class="grid h-48 w-full place-items-center bg-haze text-xs text-taupe">Image not linked</div><% end %>
-              <div class="retail-product-body">
-                <p class="text-xs text-taupe"><%= record['category'].presence || 'Uncategorized' %></p>
-                <h3 class="card-title leading-snug"><%= record['product_name'].presence || record['name'] %></h3><p class="text-sm text-mocha"><%= record['name'] %></p>
-                <p class="text-xs text-mocha">Stock: <%= record['manage_stock'] ? (record['quantity'].nil? ? 'Unknown' : record['quantity']) : 'Not tracked' %></p>
-                <p class="retail-money text-lg font-semibold text-olive-deep"><%= record['variable_price'] ? 'Variable price' : ctrax_money(record['price_cents']) %></p>
-                <% if record['price_cents'].is_a?(Integer) && !record['variable_price'] %>
-                  <%= form_tag quote_ctrax_pos_path(@snapshot.location_id, display_id: @display&.id), method: :post, class: 'retail-product-actions', data: { action: 'submit->pos-cart#add', turbo: false, busy: false } do %>
-                    <%= hidden_field_tag 'items[0][variant_id]', record['id'], id: "ctrax_variant_#{record['id']}" %>
-                    <%= number_field_tag 'items[0][quantity]', 1, id: "ctrax_quantity_#{record['id']}", min: 1, max: 999, class: 'input', aria: { label: "Quantity for #{record['name']}" } %>
-                    <%= submit_tag 'Add', class: 'btn-primary', disabled: !stock_fresh, aria: { label: "Add #{record['name']} to cart" } %>
-                  <% end %>
-                <% else %><p class="text-xs text-clay">Review this price in C-Trax.</p><% end %>
-                <% if retail_business_access?('inventory.write') %><details class="explainer text-xs"><summary class="explainer-summary">Website image link</summary><%= form_tag ctrax_pos_image_path(@snapshot.location_id, record['id']), method: :post, class: 'mt-2 space-y-2' do %><%= select_tag :product_id, options_for_select(image_options, @images.product_for(record)&.id), id: "ctrax_image_product_#{record['id']}", include_blank: 'Select website product', required: true, class: 'select w-full', aria: { label: "Website image for #{record['name']}" } %><%= submit_tag 'Link image', class: 'btn-ghost btn-sm' %><% end %></details><% end %>
-              </div>
-            </article>
-          <% end %>
-        </div>
-        <nav aria-label="Catalog pages" class="flex flex-wrap items-center justify-between gap-2 text-sm"><% if @page > 1 %><%= link_to 'Previous', ctrax_pos_path(location_id: @snapshot.location_id, q: @query, category: @category, page: @page - 1, display_id: @display&.id), class: 'btn-ghost' %><% end %><% if @page * 24 < @total %><%= link_to 'Next', ctrax_pos_path(location_id: @snapshot.location_id, q: @query, category: @category, page: @page + 1, display_id: @display&.id), class: 'btn-ghost' %><% end %></nav>
+        <p class="pos-announce" role="status" aria-live="polite" data-pos-screen-target="announce"></p>
+        <%= render 'catalog' %>
       </section>
       <%= render 'cart' %>
-    </div>
-    <a href="#retail-cart" class="btn-primary retail-cart-link">Review cart · <span data-pos-cart-target="count" aria-live="polite">0</span> items</a>
+    </main>
+    <a href="#retail-cart" class="btn-primary pos-cart-jump">Cart · <span data-pos-cart-target="count" aria-live="polite">0</span> items</a>
+
+    <dialog id="pos-item-dialog" class="pos-sheet" aria-labelledby="pos-item-title" data-pos-screen-target="itemDialog" data-action="close->pos-screen#itemClosed click->pos-screen#backdropClose">
+      <div class="pos-sheet-body">
+        <div class="pos-sheet-media"><img alt="" referrerpolicy="no-referrer" data-pos-screen-target="itemImage"></div>
+        <div class="pos-sheet-info">
+          <p class="pos-sheet-category" data-pos-screen-target="itemCategory"></p>
+          <h2 id="pos-item-title" class="pos-sheet-title" data-pos-screen-target="itemTitle">Product</h2>
+          <p class="pos-sheet-variant" data-pos-screen-target="itemVariant"></p>
+          <p class="pos-sheet-price retail-money" data-pos-screen-target="itemPrice"></p>
+          <p class="pos-sheet-stock"><span data-pos-screen-target="itemStock"></span> <span data-pos-screen-target="itemStockDetail"></span></p>
+          <p class="pos-sheet-codes" data-pos-screen-target="itemCodes"></p>
+          <div class="pos-variants" role="group" aria-label="Sizes" data-pos-screen-target="itemVariants" hidden></div>
+          <p class="pos-sheet-note" data-pos-screen-target="itemNote" hidden></p>
+          <%= form_tag quote_ctrax_pos_path(@snapshot.location_id, display_id: @display&.id), method: :post, class: 'pos-sheet-form', data: { action: 'submit->pos-cart#add submit->pos-screen#added', turbo: false, busy: false } do %>
+            <%= hidden_field_tag 'items[0][variant_id]', '', id: 'pos_item_variant', data: { pos_screen_target: 'itemId' } %>
+            <div class="pos-stepper" role="group" aria-label="Quantity">
+              <button type="button" class="pos-step" data-action="pos-screen#stepQuantity" data-delta="-1" aria-label="One fewer">−</button>
+              <%= number_field_tag 'items[0][quantity]', 1, id: 'pos_item_quantity', min: 1, max: 999, step: 1, required: true, inputmode: 'numeric', class: 'pos-step-input', aria: { label: 'Quantity' }, data: { pos_screen_target: 'itemQuantity' } %>
+              <button type="button" class="pos-step" data-action="pos-screen#stepQuantity" data-delta="1" aria-label="One more">+</button>
+            </div>
+            <div class="pos-sheet-actions">
+              <button type="button" class="btn-ghost btn-lg" data-action="pos-screen#closeItem" data-pos-screen-target="itemCancel">Cancel</button>
+              <%= button_tag 'Add to cart', type: 'submit', class: 'btn-primary btn-lg pos-add', disabled: !stock_fresh, data: { pos_screen_target: 'itemAdd' } %>
+            </div>
+          <% end %>
+          <% if image_links %>
+            <details class="explainer pos-sheet-imagelink">
+              <summary class="explainer-summary">Website image link</summary>
+              <%= form_tag ctrax_pos_images_path(@snapshot.location_id), method: :post, class: 'mt-2 space-y-2', data: { pos_screen_target: 'imageForm', turbo: false } do %>
+                <%= select_tag :product_id, options_for_select(image_options), id: 'pos_image_product', include_blank: 'Select website product', required: true, class: 'select w-full', aria: { label: 'Website product image' }, data: { pos_screen_target: 'imageProduct' } %>
+                <%= submit_tag 'Link image', class: 'btn-ghost btn-sm' %>
+              <% end %>
+            </details>
+          <% end %>
+        </div>
+      </div>
+    </dialog>
+
+    <% if image_links && @missing_image_records.any? %>
+      <dialog id="pos-images-dialog" class="pos-sheet pos-sheet-narrow" aria-labelledby="pos-images-title" data-pos-screen-target="imagesDialog" data-action="close->pos-screen#itemClosed click->pos-screen#backdropClose">
+        <div class="pos-sheet-pad">
+          <h2 id="pos-images-title" class="pos-sheet-title">Link website images</h2>
+          <p class="text-sm text-mocha"><%= pluralize(@missing_image_records.size, 'product') %> hidden without a website image. Choose the matching website product; its image makes the variant visible here. Source stock and SKU do not change.</p>
+          <%= form_tag ctrax_pos_images_path(@snapshot.location_id), method: :post, class: 'space-y-3', data: { turbo: false } do %>
+            <div><%= label_tag :missing_image_variant, 'C-Trax variant', class: 'field-label' %><%= select_tag :variant_id, options_for_select(@missing_image_records.sort_by { |r| r['name'].to_s }.map { |r| [r['name'], r['id']] }), id: 'missing_image_variant', include_blank: 'Choose hidden product', required: true, class: 'select w-full' %></div>
+            <div><%= label_tag :missing_image_product, 'Website product image', class: 'field-label' %><%= select_tag :product_id, options_for_select(image_options), id: 'missing_image_product', include_blank: 'Choose website product', required: true, class: 'select w-full' %></div>
+            <div class="pos-sheet-actions"><button type="button" class="btn-ghost" data-action="pos-screen#closeImages">Cancel</button><%= submit_tag 'Link image', class: 'btn-primary' %></div>
+          <% end %>
+        </div>
+      </dialog>
+    <% end %>
   <% else %>
-    <section class="card">
-      <%= empty_state 'Connect the retail catalog', hint: 'A successful C-Trax stock read supplies this cashier view.' do %>
-        <% if retail_business_access?('settings.read') %><%= link_to 'Open C-Trax connection', pos_connection_path('ctrax'), class: 'btn-primary' %><% else %><p class="text-sm text-mocha">Ask an administrator to connect the retail catalog.</p><% end %>
-      <% end %>
-    </section>
+    <main id="main" class="pos-main pos-main-empty" tabindex="-1">
+      <section class="card pos-empty">
+        <%= empty_state 'Connect the retail catalog', hint: 'A successful C-Trax stock read supplies this cashier view.' do %>
+          <% if retail_business_access?('settings.read') %><%= link_to 'Open C-Trax connection', pos_connection_path('ctrax'), class: 'btn-primary' %><% else %><p class="text-sm text-mocha">Ask an administrator to connect the retail catalog.</p><% end %>
+        <% end %>
+      </section>
+    </main>
   <% end %>
 </div>
+<% end %>

@@ -1,0 +1,26 @@
+<%# Full-screen cashier (docs/ui-standards.md §5, POS): no management top bar, rail, status bar,
+    Ask Rupert, Team chat or page help. The view draws its own slim strip with Exit POS. %>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%= render "layouts/favicon" %>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <title><%= safe_join([content_for(:title), "Rupert"].compact, " · ") %></title>
+    <meta name="turbo-cache-control" content="no-cache">
+    <meta name="theme-color" content="#e6efea">
+    <meta name="color-scheme" content="dark light">
+    <%= render "layouts/theme" %>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&display=swap">
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    <%= yield :head %>
+  </head>
+  <body class="pos-body">
+    <%= yield %>
+  </body>
+</html>

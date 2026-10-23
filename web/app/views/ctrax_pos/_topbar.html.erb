@@ -1,0 +1,79 @@
+<%# The POS strip: store, stock read, register, customer screen, unfinished checkouts, then the
+    cashier and the way out. No sales or report figures live here. POS-only staff (employee
+    role) sign out; everyone who can use the back office gets Exit POS. %>
+<% pos_only = Current.user.employee? %>
+<header class="pos-topbar">
+  <div class="pos-topbar-group pos-topbar-start">
+    <span class="pos-mark" aria-hidden="true"><%= render 'shared/rupert_face', size: 28 %></span>
+    <h1 class="pos-title"><span class="pos-title-label">POS</span><% if @snapshot && (@snapshots.size <= 1 || @display) %> <span class="pos-store" <%= tour_anchor('store') %>><%= @snapshot.location.name %></span><% end %></h1>
+    <% if @snapshot && @snapshots.size > 1 && !@display %>
+      <%= form_tag ctrax_pos_path, method: :get, class: 'pos-store-form', data: { busy: false, tour: 'store' } do %>
+        <%= label_tag :pos_store, 'Store', class: 'sr-only' %>
+        <%= select_tag :location_id, options_for_select(@snapshots.map { |s| [s.location.name, s.location_id] }, @snapshot.location_id), id: 'pos_store', class: 'select pos-store-select', data: { action: 'change->pos-screen#switchStore' } %>
+        <noscript><%= submit_tag 'Apply', class: 'btn-ghost btn-sm' %></noscript>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @snapshot %>
+    <div class="pos-topbar-group pos-topbar-status">
+      <span class="<%= stock_fresh ? 'pill-fern' : 'pill-clay' %>" title="Last stock pull: <%= retail_source_time(@snapshot.captured_at) %>"><%= stock_fresh ? 'Stock read current' : 'Stock read stale' %></span>
+      <% unless @display&.demo? %>
+        <% if @registers.any? %>
+          <span class="pill-fern" title="<%= @registers.map(&:name).join(', ') %>"><%= @registers.size == 1 ? "Register open · #{@registers.first.name}" : "#{@registers.size} registers open" %></span>
+        <% else %>
+          <span class="pill-clay">Register closed</span>
+          <% if retail_business_access?('sales.write') %><%= link_to 'Open a register', new_sales_pos_session_path(location_id: @snapshot.location_id), target: '_blank', rel: 'noopener noreferrer', class: 'btn-ghost btn-sm' %><% end %>
+        <% end %>
+      <% end %>
+      <span class="pos-topbar-group" <%= tour_anchor('display') %>>
+        <% if @display %>
+          <span class="<%= @display.demo? ? 'pill-olive' : 'pill-fern' %>"><%= @display.demo? ? 'Demo customer screen' : 'Customer screen paired' %></span>
+          <%= link_to 'Open customer screen', customer_display_path(display_token: @display.display_token), target: '_blank', rel: 'noopener noreferrer', class: 'btn-ghost btn-sm' %>
+          <%= button_to 'Close', pos_display_path(@display), method: :delete, class: 'btn-ghost btn-sm', form_class: 'contents', aria: { label: 'Close customer screen' }, data: { turbo: false } %>
+        <% else %>
+          <%= button_to 'Pair customer screen', pos_displays_path(location_id: @snapshot.location_id), method: :post, class: 'btn-ghost btn-sm', form_class: 'contents', data: { turbo: false } %>
+        <% end %>
+      </span>
+      <% if @unfinished_checkouts.any? %>
+        <details class="menu pos-unfinished" data-controller="navigation-menu" <%= tour_anchor('unfinished') %>>
+          <summary class="btn-ghost btn-sm menu-trigger pos-unfinished-trigger" aria-haspopup="menu">Unfinished (<%= @unfinished_checkouts.size %>)</summary>
+          <div class="menu-panel" role="menu">
+            <p class="pos-menu-note">Check the receipt before collecting another payment.</p>
+            <% @unfinished_checkouts.each do |checkout| %>
+              <%= link_to "#{checkout.reference.first(8)} · #{checkout.status.humanize}", pos_checkout_path(checkout), class: 'menu-item', role: 'menuitem' %>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="pos-topbar-group pos-topbar-end">
+    <details class="menu" data-controller="navigation-menu">
+      <summary class="btn-ghost btn-sm menu-trigger" aria-haspopup="menu">More<%= navigation_icon('chevron', css_class: 'nav-symbol menu-chevron') %></summary>
+      <div class="menu-panel" role="menu">
+        <% if @snapshot %>
+          <%= button_to 'Demo both screens', pos_displays_path(location_id: @snapshot.location_id, demo: '1'), method: :post, class: 'menu-item', role: 'menuitem', form_class: 'contents', data: { turbo: false } %>
+          <% if image_links && @missing_image_records&.any? %>
+            <button type="button" class="menu-item" role="menuitem" data-action="pos-screen#openImages">Link website images · <%= @missing_image_records.size %> hidden</button>
+          <% end %>
+          <% if pos_setup_allowed? %><%= link_to 'POS checkout setup', pos_setting_path(@snapshot.location_id), class: 'menu-item', role: 'menuitem' %><% end %>
+        <% end %>
+        <% if retail_business_access?('settings.read') %><%= link_to 'C-Trax connection', pos_connection_path('ctrax'), class: 'menu-item', role: 'menuitem' %><% end %>
+        <%= link_to 'Checkout lesson', learning_path('checkout'), class: 'menu-item', role: 'menuitem' %>
+      </div>
+    </details>
+    <span class="pos-cashier" title="<%= navigation_signin_method %>">
+      <span class="pos-cashier-name"><%= Current.user.display_name %></span>
+      <span class="pos-cashier-role" data-access-level><%= navigation_role_name(Current.user) %></span>
+      <span class="sr-only" data-signin-method><%= navigation_signin_method %></span>
+    </span>
+    <% if pos_only %>
+      <%= link_to 'My time', employee_app_path, class: 'btn-ghost btn-sm' %>
+      <%= button_to 'Sign out', logout_path, method: :delete, class: 'btn-ghost btn-sm', form_class: 'contents' %>
+    <% else %>
+      <%= link_to 'Exit POS', navigation_start_path, class: 'btn-ghost btn-sm pos-exit', data: { turbo: false } %>
+    <% end %>
+  </div>
+</header>

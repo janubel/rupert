@@ -19,14 +19,16 @@ class PosCheckoutIntegrationTest < ActionDispatch::IntegrationTest
   end
   teardown { Current.reset }
 
-  test 'admins see a card processing banner linking to gateway setup until the gateway is verified' do
-    get ctrax_pos_path
-    assert_select '[data-card-processing-banner] a[href=?]', pos_setting_path(@location.id), text: 'Open POS settings'
+  test 'admins see why card checkout is off with a link to gateway setup until the gateway is verified' do
+    get ctrax_pos_path(location_id: @location.id, display_id: @display.id)
+    assert_select '.pos-tender[data-tender="card"][disabled]'
+    assert_select '[data-card-unavailable] a[href=?]', pos_setting_path(@location.id), text: 'POS checkout setup'
+    assert_select '[data-card-processing-banner]', false
     get pos_setting_path(@location.id)
     assert_select '[data-card-processing-banner]', false
     PosSetting.where(location: @location).update_all(card_enabled: true, verified_at: Time.current)
-    get ctrax_pos_path
-    assert_select '[data-card-processing-banner]', false
+    get ctrax_pos_path(location_id: @location.id, display_id: @display.id)
+    assert_select '[data-card-unavailable]', false
   end
 
   test 'header shows the signed in role and how the session was validated' do

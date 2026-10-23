@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 class CtraxPosController < PointOfSaleController
+  PAGE_SIZE = 48
+
+  # The cashier screen is full screen (layouts/pos): no management chrome. A catalog
+  # search/category/page change reloads only the product frame, so it renders bare.
+  layout -> { turbo_frame_request? ? false : 'pos' }
   before_action :load_store
   rescue_from Pos::Error, with: :invalid_quote
 
@@ -46,13 +51,43 @@ class CtraxPosController < PointOfSaleController
     records = records.select { |row| row['listed'] != false }
     records, @missing_image_records = records.partition { |row| @images.url(row).present? }
     @categories = records.map { |row| row['category'].presence || 'Uncategorized' }.uniq.sort
+    # Sizes of one product, so the item sheet can offer the sibling variants.
+    @variant_siblings = records.group_by { |row| variant_group_key(row) }.values.select { |rows| rows.size > 1 }
+      .each_with_object({}) { |rows, siblings| rows.each { |row| siblings[row['id']] = rows } }
+    # A scanned or typed code that is exactly one item's SKU or barcode (any category).
+    @exact_record = exact_code_match(records, @query) if @query.present?
     records = records.select { |row| (row['category'].presence || 'Uncategorized') == @category } if @category.present?
-    records = records.select { |row| [row['name'], row['product_name'], row['sku'], row['barcode']].any? { |v| v.to_s.downcase.include?(@query.downcase) } } if @query.present?
+    if @query.present?
+      term = @query.downcase
+      records = records.select { |row| [row['name'], row['product_name'], row['sku'], row['barcode']].any? { |v| v.to_s.downcase.include?(term) } }
+      records = records.each_with_index.sort_by { |row, index| [search_rank(row, term), index] }.map(&:first)
+    end
     @total = records.size
+    @page_size = PAGE_SIZE
     @page = [params[:page].to_i, 1].max
-    @records = records.slice((@page - 1) * 24, 24) || []
+    @records = records.slice((@page - 1) * PAGE_SIZE, PAGE_SIZE) || []
     @cart_key = "rupert:ctrax:#{Current.tenant_id}:#{Current.user.id}:#{@snapshot&.location_id}:#{@display&.id}"
     @quote ||= @display.draft.deep_symbolize_keys if @display&.demo? && @display.draft['lines'].present?
+  end
+
+  def variant_group_key(row)
+    row['product_id'].presence || "name:#{(row['product_name'].presence || row['name']).to_s.downcase.strip}"
+  end
+
+  def exact_code_match(records, query)
+    matches = records.select { |row| [row['sku'], row['barcode']].any? { |code| code.present? && code.to_s.strip.casecmp?(query) } }
+    matches.first if matches.size == 1
+  end
+
+  # Exact code first, then names that start with the term, then a word that does, then the rest.
+  def search_rank(row, term)
+    return 0 if [row['sku'], row['barcode']].any? { |code| code.to_s.strip.downcase == term }
+
+    names = [row['product_name'], row['name']].map { |name| name.to_s.downcase }
+    return 1 if names.any? { |name| name.start_with?(term) }
+    return 2 if names.any? { |name| name.match?(/(?:\A|[^[:alnum:]])#{Regexp.escape(term)}/) }
+
+    3
   end
 
   def quote_source = 'ctrax'

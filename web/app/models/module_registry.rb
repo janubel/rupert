@@ -18,8 +18,10 @@ class ModuleRegistry
     # Overview
     Entry.new(key: 'dashboard', name: 'Dashboard', path: -> { root_path }, permission: 'dashboard.read', position: 10),
     # Sell
+    # The full-screen cashier sits above Sales; the section's rail link still opens Sales
+    # (ApplicationHelper#area_landing_entry) so "Sell" never leaves the management shell.
+    Entry.new(key: 'ctrax_pos', name: 'POS', path: -> { ctrax_pos_path }, permission: %w[sales.read sales.write inventory.read], position: 19),
     Entry.new(key: 'sales', name: 'Sales', path: -> { sales_path }, permission: 'sales.read', position: 20),
-    Entry.new(key: 'ctrax_pos', name: 'Retail POS', path: -> { ctrax_pos_path }, permission: %w[sales.read sales.write inventory.read], position: 21),
     Entry.new(key: 'registers', name: 'Registers', path: -> { sales_pos_sessions_path }, permission: 'sales.read', position: 22),
     Entry.new(key: 'ctrax_days', name: 'C-Trax daily close', path: -> { ctrax_days_path }, permission: 'sales.read', position: 24),
     Entry.new(key: 'swipesimple_days', name: 'SwipeSimple daily close', path: -> { swipesimple_days_path }, permission: 'sales.read', position: 24.5),
@@ -165,9 +167,9 @@ class ModuleRegistry
     AREAS = [
       { key: 'overview', name: 'Overview', modules: ['dashboard'] },
       { key: 'sell', name: 'Sell',
-        modules: %w[sales ctrax_pos registers ctrax_days swipesimple_days customers],
+        modules: %w[ctrax_pos sales registers ctrax_days swipesimple_days customers],
         groups: [
-          { name: 'Sales & POS', modules: %w[sales ctrax_pos registers] },
+          { name: 'Sales & POS', modules: %w[ctrax_pos sales registers] },
           { name: 'Daily close', modules: %w[ctrax_days swipesimple_days] },
           { name: 'Customers', modules: %w[customers] }
         ] },

@@ -27,7 +27,8 @@ module Ctrax
       matches.first if matches.size == 1
     end
 
-    def url(record)
+    # size: the square thumbnail edge in pixels (the POS tile and item sheet ask for larger ones).
+    def url(record, size: 320)
       product = product_for(record)
       return unless product && product.featuredImageUrl.present?
 
@@ -35,7 +36,7 @@ module Ctrax
       return unless uri.scheme == 'https' && uri.userinfo.nil? && uri.port == 443 &&
                     (uri.host == 'cdn.shopify.com' || uri.host == 'herbalhealerscbd.com' || uri.host == 'www.herbalhealerscbd.com' || uri.host == 'herbalhealers.com' || uri.host == 'www.herbalhealers.com')
 
-      product.thumbnail_url(width: 320, height: 320)
+      product.thumbnail_url(width: size, height: size)
     rescue URI::InvalidURIError
       nil
     end

@@ -1,33 +1,89 @@
-<section id="retail-cart" class="section-card retail-cart min-w-0" tabindex="-1" aria-label="Cashier cart" <%= tour_anchor('cart') %>>
-  <%= section_heading 'Cashier cart', hint: 'USD · source prices are checked before checkout. Adding items does not reserve stock.' do %>
-    <a href="#retail-catalog" class="btn-ghost btn-sm">Products</a>
-  <% end %>
-  <p role="status" aria-live="polite" class="text-sm" data-pos-cart-target="status"><%= @quote_error %></p>
-  <%= form_tag quote_ctrax_pos_path(@snapshot.location_id, display_id: @display&.id), method: :post, class: 'space-y-4', data: { pos_cart_target: 'form', action: 'submit->pos-cart#quote', turbo: false, busy: false } do %>
-    <div class="space-y-3" data-pos-cart-target="items"></div>
+<%# Cashier cart (docs/ui-standards.md §5, POS cart panel). Two steps in one panel: the cart
+    (lines, totals, Checkout) and checkout (register, Cash / Card, cash received). Prices,
+    tax and totals come from the server quote; the tip only from the customer's confirmation. %>
+<% demo = @display&.demo? %>
+<% card_blocker = pos_tender_blocker('card') %>
+<% cash_blocker = pos_tender_blocker('cash') %>
+<section id="retail-cart" class="pos-cart" tabindex="-1" aria-label="Cart" data-step="cart" data-pos-screen-target="cart" <%= tour_anchor('cart') %>>
+  <header class="pos-cart-head">
+    <h2 class="pos-cart-title">Cart <span class="pos-cart-count"><span data-pos-cart-target="count">0</span> items</span></h2>
+    <button type="button" class="btn-ghost btn-sm pos-cart-clear" data-action="pos-screen#confirmClear">Clear cart</button>
+  </header>
+  <p role="status" aria-live="polite" class="pos-cart-status" data-pos-cart-target="status"><%= @quote_error %></p>
+
+  <%= form_tag quote_ctrax_pos_path(@snapshot.location_id, display_id: @display&.id), method: :post, id: 'pos-cart-form', class: 'pos-cart-form', data: { pos_cart_target: 'form', action: 'submit->pos-cart#quote', turbo: false, busy: false } do %>
+    <div class="pos-cart-lines" data-pos-cart-target="items"></div>
     <%= hidden_field_tag :tip_type, 'none', data: { pos_cart_target: 'tipType' } %>
     <span hidden data-pos-cart-target="percentageFields"><%= select_tag :tip_percentage, options_for_select([['15%', '15']]), data: { pos_cart_target: 'tipPercentage' } %></span>
     <span hidden data-pos-cart-target="amountFields"><%= hidden_field_tag :tip_amount, '0', data: { pos_cart_target: 'tipAmount' } %></span>
-    <div class="flex justify-between gap-3 rounded-control bg-haze p-3"><span>Subtotal before tax</span><strong class="retail-money" data-pos-cart-target="subtotal">—</strong></div>
     <span hidden data-pos-cart-target="tip">—</span><span hidden data-pos-cart-target="previewTotal">—</span>
-    <% if @display %><div class="rounded-control border border-fog bg-haze p-3"><p class="text-sm font-semibold" data-pos-display-target="status" role="status" aria-live="polite">Customer screen paired. Waiting for the customer’s private confirmation.</p><p class="retail-money mt-2 text-sm" data-pos-display-target="total"></p></div><% else %><p class="text-sm text-mocha">Pair a customer screen to confirm the tip and continue to payment.</p><% end %>
-    <div class="flex flex-wrap gap-2"><%= submit_tag 'Check cart', class: 'btn-primary btn-lg' %><button type="button" class="btn-ghost" data-action="pos-cart#clear">Clear cart</button></div>
   <% end %>
+
   <% if @display %>
-    <section class="space-y-3 border-t border-fog pt-4" data-controller="pos-checkout" data-pos-checkout-url-value="<%= pos_checkouts_path %>" data-pos-checkout-display-id-value="<%= @display.id %>" data-pos-checkout-demo-value="<%= @display.demo? %>">
-      <%= section_heading "Checkout#{' · Demo' if @display.demo?}", hint: 'Confirm the customer’s tip choice first. Tax and source prices are rechecked before payment.', level: :h3 %>
-      <%= form_tag pos_checkouts_path, method: :post, data: { action: 'submit->pos-checkout#submit', busy: false, turbo: false }, class: 'space-y-3' do %>
+    <section class="pos-checkout" aria-labelledby="pos-checkout-title" data-controller="pos-checkout" data-pos-checkout-url-value="<%= pos_checkouts_path %>" data-pos-checkout-display-id-value="<%= @display.id %>" data-pos-checkout-demo-value="<%= demo %>">
+      <h3 id="pos-checkout-title" class="pos-checkout-title">Checkout<%= ' · Demo' if demo %></h3>
+      <p class="pos-checkout-hint">The customer confirms their tip on their screen first. Prices and tax are checked again before payment.</p>
+      <%= form_tag pos_checkouts_path, method: :post, class: 'pos-checkout-form', data: { action: 'submit->pos-checkout#submit', busy: false, turbo: false } do %>
         <%= hidden_field_tag :display_id, @display.id %>
-        <% unless @display.demo? %>
-          <div><%= label_tag :register_id, 'Open register', class: 'field-label' %><%= select_tag :register_id, options_for_select(@registers.map { |register| [register.name, register.id] }), include_blank: 'Choose register', required: true, class: 'select w-full' %></div>
-          <% if retail_business_access?('sales.write') %><%= link_to 'Open a register', new_sales_pos_session_path(location_id: @snapshot.location_id), target: '_blank', rel: 'noopener noreferrer', class: 'btn-ghost btn-sm' %><% elsif @registers.empty? %><p class="text-sm text-clay">Ask a manager to open a register for this store.</p><% end %>
+        <% unless demo %>
+          <div>
+            <%= label_tag :register_id, 'Register', class: 'field-label' %>
+            <%= select_tag :register_id, options_for_select(@registers.map { |register| [register.name, register.id] }, (@registers.first.id if @registers.size == 1)), include_blank: 'Choose register', required: true, class: 'select pos-register-select' %>
+            <% if retail_business_access?('sales.write') %><%= link_to 'Open a register', new_sales_pos_session_path(location_id: @snapshot.location_id), target: '_blank', rel: 'noopener noreferrer', class: 'pos-inline-link' %><% elsif @registers.empty? %><p class="pos-checkout-hint">Ask a manager to open a register for this store.</p><% end %>
+          </div>
         <% end %>
-        <div><%= label_tag :tender, 'Payment method', class: 'field-label' %><%= select_tag :tender, options_for_select([['Cash', 'cash'], ['Card · private customer checkout', 'card']]), class: 'select w-full', data: { action: 'change->pos-checkout#tenderChanged', pos_checkout_target: 'tender' } %></div>
-        <div data-pos-checkout-target="cashFields"><%= label_tag :cash_received, 'Cash physically received (USD)', class: 'field-label' %><%= number_field_tag :cash_received, nil, min: 0, max: 999999.99, step: 0.01, required: true, inputmode: 'decimal', placeholder: '0.00', class: 'input', data: { pos_checkout_target: 'cash' } %></div>
-        <%= submit_tag(@display.demo? ? 'Run demo cash checkout' : 'Complete cash sale', class: 'btn-primary btn-lg', data: { pos_checkout_target: 'submit' }) %>
+        <%= hidden_field_tag :tender, (cash_blocker && !card_blocker ? 'card' : 'cash'), data: { pos_checkout_target: 'tender' } %>
+        <div class="pos-tenders" role="group" aria-label="Payment method">
+          <button type="button" class="pos-tender" data-tender="cash" data-available="<%= cash_blocker.nil? %>" data-pos-checkout-target="tenderButton" data-action="pos-checkout#choose" aria-pressed="false" <%= 'disabled' if cash_blocker %>>Cash</button>
+          <button type="button" class="pos-tender" data-tender="card" data-available="<%= card_blocker.nil? %>" data-pos-checkout-target="tenderButton" data-action="pos-checkout#choose" aria-pressed="false" <%= 'disabled' if card_blocker %>>Card</button>
+        </div>
+        <%= render 'ctrax_pos/tender_blockers', cash_blocker: cash_blocker, card_blocker: card_blocker %>
+        <div class="pos-cash" data-pos-checkout-target="cashFields">
+          <%= label_tag :cash_received, 'Cash received', class: 'field-label' %>
+          <%= number_field_tag :cash_received, nil, min: 0, max: 999999.99, step: 0.01, required: true, inputmode: 'decimal', placeholder: '0.00', class: 'input pos-cash-input', data: { pos_checkout_target: 'cash' } %>
+          <div class="pos-cash-quick" role="group" aria-label="Quick cash amounts">
+            <button type="button" class="pos-chip" data-action="pos-checkout#exact" data-pos-checkout-target="exact" disabled>Exact</button>
+            <% [20, 50, 100].each do |bill| %><button type="button" class="pos-chip" data-action="pos-checkout#quick" data-amount="<%= bill %>">$<%= bill %></button><% end %>
+          </div>
+        </div>
+        <%= submit_tag(demo ? 'Run demo cash checkout' : 'Complete cash sale', class: 'btn-primary btn-lg pos-pay', data: { pos_checkout_target: 'submit' }) %>
       <% end %>
-      <p role="status" aria-live="polite" class="text-sm" data-pos-checkout-target="status"></p>
-      <div class="space-y-3" data-pos-checkout-target="result"></div>
+      <p role="status" aria-live="polite" class="pos-checkout-status" data-pos-checkout-target="status"></p>
+      <div class="pos-checkout-result" data-pos-checkout-target="result"></div>
+    </section>
+  <% else %>
+    <section class="pos-checkout" aria-labelledby="pos-checkout-title">
+      <h3 id="pos-checkout-title" class="pos-checkout-title">Checkout</h3>
+      <p class="pos-checkout-hint">Pair the customer screen so the customer can confirm their tip privately. Payment opens once it is paired.</p>
+      <%= button_to 'Pair customer screen', pos_displays_path(location_id: @snapshot.location_id), method: :post, class: 'btn-primary btn-lg', form_class: 'pos-pair-form', data: { turbo: false } %>
+      <div class="pos-tenders" role="group" aria-label="Payment method">
+        <button type="button" class="pos-tender" disabled>Cash</button>
+        <button type="button" class="pos-tender" disabled>Card</button>
+      </div>
+      <%= render 'ctrax_pos/tender_blockers', cash_blocker: cash_blocker, card_blocker: card_blocker %>
     </section>
   <% end %>
+
+  <footer class="pos-cart-foot">
+    <dl class="pos-totals">
+      <div><dt>Subtotal</dt><dd class="retail-money" data-pos-cart-target="subtotal">—</dd></div>
+      <div><dt>Tax</dt><dd class="retail-money" data-pos-cart-target="tax">—</dd></div>
+      <div><dt>Tip</dt><dd class="retail-money"<% if @display %> data-pos-display-target="tip"<% end %>><%= @display ? 'Customer chooses' : 'On customer screen' %></dd></div>
+      <div class="pos-total"<% if @display %> data-pos-display-target="totalRow"<% end %>>
+        <dt>Total <span class="pos-total-note">before tip</span></dt>
+        <dd class="retail-money"><span class="pos-total-pre" data-pos-cart-target="total">—</span><% if @display %><span class="pos-total-confirmed" data-pos-display-target="grandTotal"></span><% end %></dd>
+      </div>
+    </dl>
+    <% if @display %>
+      <div class="pos-customer-status">
+        <p data-pos-display-target="status" role="status" aria-live="polite">Customer screen paired. Waiting for the customer’s private confirmation.</p>
+        <p class="retail-money" data-pos-display-target="total"></p>
+      </div>
+    <% end %>
+    <div class="pos-cart-actions">
+      <button type="button" class="btn-primary btn-lg pos-checkout-button" data-pos-cart-target="checkout" data-action="pos-screen#checkout" disabled>Checkout</button>
+      <button type="button" class="btn-ghost btn-lg pos-back-button" data-action="pos-screen#backToCart">Back to cart</button>
+      <button type="submit" form="pos-cart-form" class="pos-inline-link pos-recheck">Check prices again</button>
+    </div>
+  </footer>
 </section>

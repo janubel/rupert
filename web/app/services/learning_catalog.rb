@@ -183,7 +183,7 @@ class LearningCatalog
       questions: [{ prompt: 'The total due is $43.16 and the customer hands you $50. What is the change?', choices: ['$6.84', '$7.84', '$50.00'], answer: 0, explanation: 'Change is cash received minus the amount due: $50.00 − $43.16 = $6.84.' }],
       mistakes: ['Collecting a second payment because the screen looked stuck.', 'Reading cash received as the sale amount.'],
       practice: 'change',
-      destination: '/ctrax_pos', action: 'Open retail POS' },
+      destination: '/ctrax_pos', action: 'Open POS' },
     { key: 'customers', title: 'Keep customer records useful', minutes: 2, permission: 'customers.read', paths: ['/customers'], terms: %w[customer_profile lead lifetime_value follow_up source],
       summary: 'Find a person, read their history and record the next step.',
       steps: ['Search by name, email or phone. One person can have profiles from several sources; the merged profile keeps every source identity.', 'Read lifetime value as recorded sales only. A missing import or a cash sale with no record lowers it.', 'Record interactions and follow-ups with an owner and date, so the next person knows what was promised.'],

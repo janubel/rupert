@@ -20,7 +20,7 @@ class CtraxPosTest < ActionDispatch::IntegrationTest
     assert_select 'img[src*="cdn.shopify.com/tea.jpg"]'
     assert_select 'button', 'Demo both screens'
     assert_select 'select[name=tip_type]', count: 0
-    assert_includes response.body, 'Stock: -2'
+    assert_select 'button.pos-tile .pos-stock[title="Stock: -2"]', 'Out'
     assert_equal 'no-store', response.headers['Cache-Control']
     post pos_displays_path, params: { location_id: @location.id, demo: '1' }
     display = PosDisplaySession.last
@@ -39,26 +39,26 @@ class CtraxPosTest < ActionDispatch::IntegrationTest
     @snapshot.update!(records_json: unseen + @snapshot.records)
     get ctrax_pos_path
     assert_response :success
-    assert_select 'article.retail-product-card', count: 1
-    assert_select 'article.retail-product-card img', count: 1
-    assert_select 'select[name=category] option', text: 'Hidden category', count: 0
-    assert_select 'p', /1 results/
+    assert_select 'button.pos-tile', count: 1
+    assert_select 'button.pos-tile img', count: 1
+    assert_select 'nav[aria-label="Categories"] a', text: 'Hidden category', count: 0
+    assert_select 'p.pos-results-meta', /1 product/
     get ctrax_pos_path, params: { q: 'No image' }
-    assert_select 'article.retail-product-card', count: 0
+    assert_select 'button.pos-tile', count: 0
     get ctrax_pos_path, params: { page: 2 }
-    assert_select 'article.retail-product-card', count: 0
+    assert_select 'button.pos-tile', count: 0
     @product.update!(featuredImageUrl: nil)
     get ctrax_pos_path
-    assert_select 'article.retail-product-card', count: 0
+    assert_select 'button.pos-tile', count: 0
     @product.update!(featuredImageUrl: 'https://cdn.shopify.com/tea.jpg')
     get ctrax_pos_path
-    assert_select 'article.retail-product-card', count: 1
+    assert_select 'button.pos-tile', count: 1
     assert_select 'nav a[href=?]', point_of_sale_path, count: 0
     assert_select 'select#missing_image_variant option[value="hidden-0"]'
     post ctrax_pos_images_path(@location.id), params: { variant_id: 'hidden-0', product_id: @product.id }
     assert_redirected_to ctrax_pos_path(location_id: @location.id)
     follow_redirect!
-    assert_select 'article.retail-product-card', count: 2
+    assert_select 'button.pos-tile', count: 2
     assert_equal 26, @snapshot.reload.records.size
     assert_equal 'No image 0', @snapshot.records.find { |r| r['id'] == 'hidden-0' }['name']
   end
@@ -142,6 +142,59 @@ class CtraxPosTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     post quote_ctrax_pos_path(@location.id), params: { items: [{ variant_id: '3', quantity: 1 }, { variant_id: '3', quantity: 2 }] }, as: :json
     assert_response :unprocessable_entity
+  end
+
+  test 'POS is full screen with no management chrome and an admin can exit to the dashboard' do
+    get ctrax_pos_path
+    assert_response :success
+    assert_select '.app-rail', count: 0
+    assert_select '.app-topbar', count: 0
+    assert_select 'footer.app-statusbar', count: 0
+    assert_select '[data-controller~="ask-rupert"]', count: 0
+    assert_select 'header.pos-topbar h1', /POS/
+    assert_select 'header.pos-topbar a[href=?]', root_path, text: 'Exit POS'
+    assert_select 'header.pos-topbar button', text: 'Sign out', count: 0
+    assert_select 'input#pos_q[type=search][autofocus]'
+    assert_select 'dialog#pos-item-dialog button[type=submit]', 'Add to cart'
+    assert_select '#retail-cart button[data-pos-cart-target=checkout]', 'Checkout'
+  end
+
+  test 'catalog search reloads only the product frame and marks an exact SKU or barcode match' do
+    @snapshot.update!(records_json: [
+      { 'id' => '3', 'name' => 'Tea Tin 30ml', 'product_name' => 'Tea Tin', 'product_id' => '90', 'sku' => 'TT-30', 'barcode' => '0123456789', 'price_cents' => 1235, 'quantity' => '9', 'manage_stock' => true, 'listed' => true },
+      { 'id' => '4', 'name' => 'Tea Tin 60ml', 'product_name' => 'Tea Tin', 'product_id' => '90', 'sku' => 'TT-60', 'price_cents' => 2000, 'quantity' => '0', 'manage_stock' => true, 'listed' => true }
+    ])
+    @product.update!(title: 'Tea Tin')
+    get ctrax_pos_path, params: { q: 'tt-30' }, headers: { 'Turbo-Frame' => 'pos_catalog' }
+    assert_response :success
+    assert_not_includes response.body, '<html'
+    assert_select 'header.pos-topbar', count: 0
+    assert_select 'turbo-frame#pos_catalog .pos-catalog[data-query="tt-30"]'
+    exact = JSON.parse(css_select('.pos-catalog').first['data-exact-item'])
+    assert_equal '3', exact['id']
+    assert_equal '30ml', exact['variant']
+    get ctrax_pos_path, params: { q: '0123456789' }, headers: { 'Turbo-Frame' => 'pos_catalog' }
+    assert_equal '3', JSON.parse(css_select('.pos-catalog').first['data-exact-item'])['id']
+    get ctrax_pos_path, params: { q: 'TT' }, headers: { 'Turbo-Frame' => 'pos_catalog' }
+    assert_select '.pos-catalog[data-exact-item]', count: 0
+    assert_select 'button.pos-tile', count: 2
+    item = JSON.parse(css_select('button.pos-tile').first['data-item'])
+    assert_equal %w[3 4], item['variants'].map { |variant| variant['id'] }
+    assert_select 'button.pos-tile.pos-tile-out .pos-stock', 'Out'
+  end
+
+  test 'card tender is disabled with its reason until the store has verified card payments' do
+    display = PosDisplaySession.create!(user: @user, location: @location)
+    get ctrax_pos_path(location_id: @location.id, display_id: display.id)
+    assert_select '.pos-tender[data-tender="card"][disabled]'
+    assert_select '[data-card-unavailable]', text: /Card payments are not set up for this store/
+    assert_select '[data-card-unavailable] a[href=?]', pos_setting_path(@location.id), text: 'POS checkout setup'
+    PosSetting.create!(location: @location, cash_enabled: true)
+    PosSetting.where(location: @location).update_all(card_enabled: true, verified_at: Time.current)
+    get ctrax_pos_path(location_id: @location.id, display_id: display.id)
+    assert_select '[data-card-unavailable]', count: 0
+    assert_select '.pos-tender[data-tender="card"]:not([disabled])'
+    assert_select '.pos-tender[data-tender="cash"]:not([disabled])'
   end
 
   private
