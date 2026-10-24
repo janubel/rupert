@@ -34,7 +34,7 @@
       <main id="main" class="app-main app-main-panel"><%= yield %></main>
     </body>
   <% else %>
-    <body class="min-h-full">
+    <body class="min-h-full<%= ' native-app' if hotwire_native_app? %>">
       <%= render "layouts/shell" %>
     </body>
   <% end %>

@@ -87,6 +87,11 @@ Rails.application.routes.draw do
   get '/auth/google', to: 'oauth#authorize', as: :google_auth
   get '/auth/google/callback', to: 'oauth#callback', as: :google_callback
 
+  # The Rupert iPhone app (ios/): navigation rules and the Google sign-in handoff.
+  get '/native/ios/path-configuration.json', to: 'native/configurations#ios', as: :native_ios_path_configuration,
+    defaults: { format: :json }
+  post '/native/session', to: 'native/sessions#create', as: :native_session
+
   get '/workspace', to: 'workspaces#show', as: :workspace
   post '/workspace/session', to: 'workspaces#session_start', as: :workspace_session
   get '/instance/health', to: 'instance_health#show'

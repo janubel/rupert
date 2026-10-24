@@ -1,0 +1,4 @@
+version: 1
+bundleID: com.rupertpos.Rupert
+product: Rupert
+infoPath: Info.plist

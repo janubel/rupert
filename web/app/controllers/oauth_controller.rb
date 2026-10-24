@@ -30,6 +30,12 @@ class OauthController < ApplicationController
     session[:oauth_started_at] = Time.current.to_i
     session.delete(:workspace_signup_intent)
     session.delete(:registration_intent)
+    # The Rupert iPhone app signs in through a system browser sheet (see NativeSignIn).
+    if NativeSignIn.valid_challenge?(params[:native_challenge])
+      session[:oauth_native_challenge] = params[:native_challenge]
+    else
+      session.delete(:oauth_native_challenge)
+    end
     AccessLogger.record(source: 'google', status: 'attempt', request: request, detail: 'Google sign-in started')
     redirect_to(
       GoogleOauthService.auth_url(redirect_uri: google_callback_url, state: state),
@@ -51,19 +57,20 @@ class OauthController < ApplicationController
     return complete_uploads_drive_oauth if params[:state].to_s.start_with?('uploads_drive:')
 
     info = nil
+    @native_challenge = session.delete(:oauth_native_challenge)
     tested_domain = params[:hd].presence
     if params[:error].present?
       clear_oauth_intent
       AccessLogger.record(source: 'google', status: 'failure', request: request, domain: tested_domain,
         detail: 'consent declined')
-      return redirect_to(login_path, alert: 'Google sign-in was declined.')
+      return login_failed('Google sign-in was declined.')
     end
     if session[:oauth_state].blank? || session[:oauth_state] != params[:state] ||
         session[:oauth_started_at].to_i < 10.minutes.ago.to_i
       clear_oauth_intent
       AccessLogger.record(source: 'google', status: 'failure', request: request, domain: tested_domain,
         detail: 'state check failed')
-      return redirect_to(login_path, alert: 'Google sign-in failed the state check. Try again.')
+      return login_failed('Google sign-in failed the state check. Try again.')
     end
 
     registration_intent = session.delete(:registration_intent)
@@ -104,8 +111,7 @@ class OauthController < ApplicationController
         domain: tested_domain,
         detail: 'domain not allowed'
       )
-      return redirect_to(login_path,
-        alert: "Your Google account (#{email}) isn't on an allowed domain. Ask an admin to allow #{email.split('@').last}.")
+      return login_failed("Your Google account (#{email}) isn't on an allowed domain. Ask an admin to allow #{email.split('@').last}.")
     end
 
     # Newly approved workspace owners are bound to the verified Google
@@ -125,10 +131,12 @@ class OauthController < ApplicationController
         domain: tested_domain,
         detail: 'deactivated account'
       )
-      return redirect_to(login_path, alert: 'This account has been deactivated. Contact an admin.')
+      return login_failed('This account has been deactivated. Contact an admin.')
     end
 
     identity&.verify_subject!(info['sub'])
+
+    return hand_off_to_app(user, email, identity) if @native_challenge
 
     start_browser_session(user, method: 'google', google_email: email, google_identity: identity)
     AccessLogger.record(source: 'google', status: 'success', request: request, user: user, email: email,
@@ -138,7 +146,7 @@ class OauthController < ApplicationController
     clear_oauth_intent
     AccessLogger.record(source: 'google', status: 'failure', request: request, email: info&.dig('email'),
       domain: tested_domain || info&.dig('email')&.split('@')&.last, detail: e.message.to_s[0, 200])
-    redirect_to(login_path, alert: e.message)
+    login_failed(e.message)
   rescue ActiveRecord::RecordInvalid => e
     clear_oauth_intent
     redirect_to(signup_path, alert: e.record.errors.full_messages.to_sentence)
@@ -146,8 +154,7 @@ class OauthController < ApplicationController
     clear_oauth_intent
     AccessLogger.record(source: 'google', status: 'failure', request: request, email: e.message,
       domain: e.message.to_s.split('@').last, detail: 'account belongs to another tenant')
-    redirect_to(login_path,
-      alert: 'This Google account already belongs to another workspace. Ask the workspace admin to invite you.')
+    login_failed('This Google account already belongs to another workspace. Ask the workspace admin to invite you.')
   rescue StandardError => e
     clear_oauth_intent
     AccessLogger.record(source: 'google', status: 'failure', request: request, email: info&.dig('email'),
@@ -157,7 +164,23 @@ class OauthController < ApplicationController
 
   private
 
+  # A failed sign-in returns to the login page, or to the iPhone app when it started the flow.
+  def login_failed(message)
+    return redirect_to(NativeSignIn.callback_url(error: message), allow_other_host: true) if @native_challenge
+
+    redirect_to(login_path, alert: message)
+  end
+
+  # The app redeems the code with its verifier (Native::SessionsController). The browser sheet
+  # gets no Rupert session of its own.
+  def hand_off_to_app(user, email, identity)
+    code = NativeSignIn.issue(user: user, google_email: email, google_identity: identity, challenge: @native_challenge)
+    reset_session
+    redirect_to(NativeSignIn.callback_url(code: code), allow_other_host: true)
+  end
+
   def clear_oauth_intent
+    session.delete(:oauth_native_challenge)
     session.delete(:registration_intent)
     session.delete(:oauth_state)
     session.delete(:oauth_started_at)

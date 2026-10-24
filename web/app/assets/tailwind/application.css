@@ -419,6 +419,13 @@
 .next-bar-link { font-weight:600;color:var(--color-ink);text-decoration:underline;text-underline-offset:2px; }
 .next-bar-detail { color:var(--color-taupe); }
 .next-bar-actions { display:flex;flex-wrap:wrap;align-items:center;gap:.25rem; }
+/* Inside the Rupert iPhone app (Hotwire Native): the native tab bar carries Home, Team chat, Ask
+   Rupert, Notifications and Search, and the native navigation bar shows the page title. The web top
+   bar keeps only the menu, the brand and the account; the status bar and chat dock step aside. */
+.native-app .header-utilities > :not([data-controller~="dropdown"]),
+.native-app .topbar-search,
+.native-app .app-statusbar,
+.native-app .chat-dock { display:none !important; }
 .app-statusbar { position:fixed;left:var(--rail-w,0px);right:0;bottom:0;z-index:25;display:flex;align-items:center;gap:.25rem;height:2.1rem;padding:0 .75rem;border-top:1px solid var(--color-fog);background:color-mix(in srgb,var(--color-paper) 82%,var(--color-oat));font-size:.75rem;color:var(--color-taupe);transition:left .15s ease; }
 @supports (backdrop-filter: blur(1px)) { .app-statusbar { background:color-mix(in srgb,var(--color-paper) 70%,transparent);backdrop-filter:saturate(160%) blur(12px); } }
 .statusbar-item { display:inline-flex;align-items:center;gap:.4rem;min-height:1.7rem;padding:0 .5rem;border-radius:.45rem;color:var(--color-taupe);white-space:nowrap; }
