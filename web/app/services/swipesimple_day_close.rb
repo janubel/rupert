@@ -81,6 +81,37 @@ class SwipesimpleDayClose
     cards.empty? ? nil : cards.sum(&:net_cents)
   end
 
+  # The native daily sales report already includes tax and tips in its net
+  # collection amounts. Keep this independent of the transaction-export
+  # totals: these are two observations of the same sales, not extra revenue.
+  REGISTER_FIELDS = %i[net_sales_cents tax_cents net_card_cents net_cash_cents].freeze
+
+  def register_reports
+    @register_reports ||= begin
+      days = SwipesimpleSalesDay.where(business_date: date).index_by(&:merchant_account)
+      pulls = SwipesimpleReportPull.where(topic: 'sales')
+        .where('period_from <= ? AND period_to >= ?', date, date).to_a
+        .group_by(&:merchant_account).transform_values { |list| list.max_by { |pull| [pull.pulled_at, pull.id] } }
+      accounts = SwipesimpleExport.where(kind: 'transactions', currency: 'USD').distinct.pluck(:merchant_account)
+      (accounts + days.keys + pulls.keys).uniq.sort.map do |account|
+        day = days[account]
+        pull = pulls[account]
+        # A current-day report can omit a day whose first sale has not landed
+        # yet. Only a pull after the day ended proves an omitted day was empty.
+        empty_day = day.nil? && pull && pull.pulled_at >= window.end
+        values = REGISTER_FIELDS.to_h { |field| [field, day ? day.public_send(field) : (empty_day ? 0 : nil)] }
+        { account: account, pulled_at: day&.pulled_at || pull&.pulled_at, values: values }
+      end
+    end
+  end
+
+  def register_totals
+    @register_totals ||= REGISTER_FIELDS.to_h do |field|
+      amounts = register_reports.map { |report| report[:values][field] }
+      [field, amounts.any? && amounts.none?(&:nil?) ? amounts.sum : nil]
+    end
+  end
+
   def unknown_tip_rows
     approved.select { |row| row.tip_cents.nil? }
   end
@@ -253,13 +284,14 @@ class SwipesimpleDayClose
     review.present? && review.reviewed_digest == source_digest
   end
 
-  # Changes whenever the day's transaction evidence, invoice observations or
-  # the deposit records shown here change, which invalidates a local review.
+  # Changes whenever the day's transaction evidence, native collection totals,
+  # invoice observations or deposit records change, invalidating a local review.
   def source_digest
     @source_digest ||= Digest::SHA256.hexdigest(JSON.generate([
-      'swipesimple-day-v2', date.iso8601,
+      'swipesimple-day-v3', date.iso8601,
       rows.map { |row| [row.identity, row.transaction_type, row.status, row.tender, row.amount_cents, row.tip_cents, row.occurred_at.utc.iso8601] },
       invoices.map { |row| [row.source_number, row.status, row.amount_cents, row.occurred_at.utc.iso8601] },
+      register_reports.map { |report| [report[:account], report[:values]] },
       deposit_evidence
     ]))
   end
