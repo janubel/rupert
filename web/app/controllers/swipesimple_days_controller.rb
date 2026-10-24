@@ -45,7 +45,7 @@ class SwipesimpleDaysController < AuthenticatedController
     close = SwipesimpleDayClose.new(date)
     note = params[:note].to_s.strip.first(1000)
     if close.source_digest != params[:source_digest]
-      return redirect_to swipesimple_days_path(date: date), alert: 'The SwipeSimple export changed. Review the current data first.'
+      return redirect_to swipesimple_days_path(date: date), alert: 'The SwipeSimple reports changed. Review the current data first.'
     end
     if close.warnings.any? && note.blank?
       return redirect_to swipesimple_days_path(date: date, anchor: 'close-review'), alert: 'Add a note for the flagged checks.'
