@@ -12,7 +12,7 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
     "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins", "typing", "newDm", "threadSuggest",
-    "media", "mediaSearch", "mediaStatus", "mediaGrid", "mediaMore", "presence", "presenceToggle", "presenceLabel"]
+    "media", "mediaSearch", "mediaStatus", "mediaGrid", "mediaMore", "presence", "presenceToggle", "presenceLabel", "suggestions"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
     compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
@@ -330,6 +330,41 @@ export default class extends Controller {
     }
     if (this.threadId && this.hasThreadTarget) this.renderThread()
     this.applyPresence()
+    this.renderFollowUps(messages)
+  }
+
+  // After a bot's answer, the bubbles above the box become "Next:" questions that follow on from it
+  // (meta follow_ups); otherwise they are the usual suggestions the page was rendered with.
+  renderFollowUps(messages) {
+    if (!this.hasSuggestionsTarget) return
+    const row = this.suggestionsTarget
+    if (this.originalSuggestions === undefined) this.originalSuggestions = Array.from(row.children)
+    const last = messages[messages.length - 1]
+    const next = last && last.kind === "assistant" && last.status === "done" ? (last.follow_ups || []) : []
+    const key = next.length ? `${last.id}` : ""
+    if (row.dataset.followUpsFor === key) return
+    row.dataset.followUpsFor = key
+    if (!next.length) {
+      row.replaceChildren(...this.originalSuggestions)
+      row.setAttribute("aria-label", "Suggested questions")
+      return
+    }
+    const label = document.createElement("span")
+    label.className = "chat-suggestions-label"
+    label.textContent = "Next:"
+    const prefix = row.dataset.prefix || ""
+    const chips = next.map((question) => {
+      const chip = document.createElement("button")
+      chip.type = "button"
+      chip.className = "chat-starter is-follow-up"
+      chip.dataset.text = `${prefix}${question}`
+      chip.dataset.action = "team-chat#useStarter"
+      chip.title = `Send “${prefix}${question}”`
+      chip.textContent = question
+      return chip
+    })
+    row.replaceChildren(label, ...chips)
+    row.setAttribute("aria-label", "Suggested next questions")
   }
 
   renderList(messages, { thread }) {

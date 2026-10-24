@@ -79,3 +79,28 @@ test('polling renders completion even when the final text was already streamed',
   assert.equal(rendered.length, 1);
   assert.equal(rendered[0].status, 'done');
 });
+
+test('after a finished bot answer the bubbles become its Next questions, and go back otherwise', () => {
+  const node = (tag) => ({ tag, children: [], dataset: {}, attrs: {}, className: '', textContent: '',
+    setAttribute(name, value) { this.attrs[name] = value }, replaceChildren(...kids) { this.children = kids } });
+  context.document.createElement = node;
+  const row = node('div');
+  const original = node('button');
+  original.textContent = 'How did yesterday go?';
+  row.children = [original];
+  row.dataset.prefix = '@rupert ';
+  const chat = Object.create(Chat.prototype);
+  Object.defineProperty(chat, 'hasSuggestionsTarget', { value: true });
+  Object.defineProperty(chat, 'suggestionsTarget', { value: row });
+  const answer = { id: 7, kind: 'assistant', status: 'done', follow_ups: ['Which source sold the most?'] };
+
+  chat.renderFollowUps([{ id: 6, kind: 'person' }, answer]);
+  assert.equal(row.children[0].textContent, 'Next:');
+  assert.equal(row.children[1].textContent, 'Which source sold the most?');
+  assert.equal(row.children[1].dataset.text, '@rupert Which source sold the most?');
+  assert.equal(row.attrs['aria-label'], 'Suggested next questions');
+
+  chat.renderFollowUps([answer, { id: 8, kind: 'assistant', status: 'pending' }]);
+  assert.equal(row.children.length, 1);
+  assert.equal(row.children[0], original);
+});

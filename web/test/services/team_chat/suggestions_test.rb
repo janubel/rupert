@@ -44,4 +44,13 @@ class TeamChatSuggestionsTest < ActiveSupport::TestCase
     other = User.where(tenant_id: @user.tenant_id).where.not(id: @user.id).first
     assert_empty TeamChat::Suggestions.for(room: TeamChat::Room.dm_between(@user, other), user: @user) if other
   end
+
+  test 'follow-up questions come from what was just asked, never repeat it, and fall back to the tools used' do
+    sales = TeamChat::Suggestions.follow_ups(topics: %w[sales], asked: 'What are the top sellers this week?')
+    assert_equal 3, sales.size, 'four for sales, less the one just asked'
+    assert_includes sales, 'How does that compare with last week?'
+    assert_not_includes sales, 'What are the top sellers this week?'
+    assert_includes TeamChat::Suggestions.follow_ups(topics: [], tools: %w[order_queues]), 'Which orders are late to ship?'
+    assert_empty TeamChat::Suggestions.follow_ups(topics: [], tools: %w[how_do_i])
+  end
 end

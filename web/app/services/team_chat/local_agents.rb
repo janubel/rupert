@@ -40,6 +40,13 @@ module TeamChat
 
     # Handles no longer offered, kept so older replies still show who wrote them.
     RETIRED = [
+      # Removed from the model server on 2026-10-23 at the owner's request (rarely used); files kept on disk.
+      Agent.new(handle: 'liquid', name: 'Liquid', model: 'lfm2.5-8b-a1b', color: '#0f766e', aliases: %w[lfm lfm2 lfm2.5],
+        about: 'Liquid AI LFM2.5 8B-A1B, local (removed 2026-10-23)'),
+      Agent.new(handle: 'lfm-24b', name: 'Liquid 24B', model: 'lfm2.5-24b-a2b', color: '#115e59',
+        about: 'Liquid AI LFM2.5 24B-A2B (QAD Q4_0), local (removed 2026-10-23)'),
+      Agent.new(handle: 'qwen-35b', name: 'Qwen 35B', model: 'qwen3.6-35b-a3b', color: '#9a3412',
+        about: 'Alibaba Qwen3.6 35B-A3B, local (was @qwen 2026-10-22 to 10-23; removed 2026-10-23)'),
       Agent.new(handle: 'deepseek', name: 'DeepSeek', model: 'deepseek-v4.1-flash', color: '#1d4ed8', cloud: true,
         about: 'DeepSeek V4.1 Flash via OpenCode, cloud (now @rupert)'),
       Agent.new(handle: 'ternary', name: 'Ternary', model: 'ternary-bonsai-2-9b', color: '#65a30d', aliases: %w[bonsai],
@@ -50,17 +57,10 @@ module TeamChat
 
     # Models on the gateway that only the test battery asks (rake team_chat:battery AGENT=gemma-e2b); never @mentionable.
     TRIALS = [
-      # @liquid until 2026-10-23, when the owner dropped it from chat (almost never asked outside the test battery).
-      Agent.new(handle: 'liquid', name: 'Liquid', model: 'lfm2.5-8b-a1b', color: '#0f766e', aliases: %w[lfm lfm2 lfm2.5],
-        about: 'Liquid AI LFM2.5 8B-A1B, local (test only since 2026-10-23)'),
       Agent.new(handle: 'gemma-e2b', name: 'Gemma E2B', model: 'gemma-4-e2b', color: '#a855f7',
         about: 'Google Gemma 4 E2B (Unsloth UD-Q4_K_XL), local'),
       Agent.new(handle: 'gemma-e4b-ud', name: 'Gemma E4B UD', model: 'gemma-4-e4b-ud', color: '#7e22ce',
         about: 'Google Gemma 4 E4B (Unsloth UD-Q4_K_XL), local'),
-      Agent.new(handle: 'lfm-24b', name: 'Liquid 24B', model: 'lfm2.5-24b-a2b', color: '#115e59',
-        about: 'Liquid AI LFM2.5 24B-A2B (QAD Q4_0), local'),
-      Agent.new(handle: 'qwen-35b', name: 'Qwen 35B', model: 'qwen3.6-35b-a3b', color: '#9a3412',
-        about: 'Alibaba Qwen3.6 35B-A3B (Unsloth MTP UD-IQ3_S, draft-mtp), local (was @qwen 2026-10-22 to 10-23)'),
       Agent.new(handle: 'qwen-4b', name: 'Qwen 4B', model: 'qwen3.5-4b', color: '#ea580c',
         about: 'Alibaba Qwen3.5 4B, local (was @qwen until 2026-10-22)'),
       Agent.new(handle: 'gemma-26b', name: 'Gemma 26B', model: 'gemma-4-26b-a4b', color: '#6b21a8',
@@ -161,7 +161,8 @@ module TeamChat
         ## How you sound
         - Short and plain. One to four sentences, or a short list, under about 80 words unless they ask for detail. No headings, no filler, no repeating the question.
         - Reply in the language the person wrote in. Lead with the answer.
-        - If you are unsure, say so. A missing number is unknown, not zero.
+        - If you are unsure, say so. A missing number is unknown, not zero. Do not guess at causes; say what the records show.
+        - A greeting gets one short line back and an offer of one or two things you can look up (today's sales, what is waiting).
         - Never calculate. Quote every amount, count and percentage exactly as a tool gave it (money from the *_dollars values). If the number you need is not in a tool result, say you could not get it.
 
         ## Boundaries
