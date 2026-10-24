@@ -18,6 +18,17 @@ class GithubIssues
   TITLE_MAX = 120
   BODY_MAX = 6000
 
+  Tracker = Struct.new(:title, :url, :open_count, :closed_count, :issues, :fetched_at, keyword_init: true) do
+    def total = open_count + closed_count
+    def percent_done = total.positive? ? (closed_count * 100 / total) : 0
+
+    # Open issues by their area:* label ("Payroll", "Setup"…), largest group first; no area label is "Other".
+    def by_area
+      issues.group_by { |issue| issue[:area] || 'Other' }.sort_by { |area, rows| [area == 'Other' ? 1 : 0, -rows.size, area] }
+    end
+  end
+  TRACKER_KEY = 'github_issues:release_tracker'
+
   class << self
     def repo
       value = EnvStore.platform_fetch('GITHUB_ISSUES_REPO', DEFAULT_REPO).to_s.strip
@@ -58,6 +69,24 @@ class GithubIssues
       end
     rescue Error
       []
+    end
+
+    # What is left before the release: the open issues on the release milestone (GITHUB_ISSUES_MILESTONE, or the
+    # newest open "v…" milestone). Reads work without a token when the repository is public. Cached 10 minutes;
+    # nil when GitHub cannot be read.
+    def release_tracker(refresh: false)
+      Rails.cache.delete("#{TRACKER_KEY}:#{repo}") if refresh
+      tracker_from(Rails.cache.fetch("#{TRACKER_KEY}:#{repo}", expires_in: 10.minutes, skip_nil: true) { read_tracker&.to_h })
+    end
+
+    # For the header: never calls GitHub while a page renders.
+    def cached_release_tracker
+      tracker_from(Rails.cache.read("#{TRACKER_KEY}:#{repo}"))
+    end
+
+    # The cache holds a plain hash, so a deploy that changes Tracker never meets an old object.
+    def tracker_from(hash)
+      Tracker.new(**hash.slice(*Tracker.members)) if hash.is_a?(Hash)
     end
 
     # The text an operator starts from: the report's own words, scrubbed.
@@ -111,19 +140,48 @@ class GithubIssues
 
     private
 
+    def read_tracker
+      list = Array(request(:get, "/repos/#{repo}/milestones?state=open&sort=due_on&direction=desc&per_page=30", anonymous: true))
+      wanted = milestone_title
+      milestone = wanted.present? ? list.find { |row| row['title'] == wanted } : list.find { |row| row['title'].to_s.match?(/\Av\d/) }
+      return unless milestone
+
+      issues = []
+      (1..5).each do |page|
+        batch = Array(request(:get, "/repos/#{repo}/issues?milestone=#{milestone['number'].to_i}&state=open&per_page=100&page=#{page}", anonymous: true))
+        issues += batch.reject { |issue| issue.key?('pull_request') }
+        break if batch.size < 100
+      end
+      Tracker.new(title: milestone['title'].to_s, url: milestone['html_url'].to_s, open_count: milestone['open_issues'].to_i,
+        closed_count: milestone['closed_issues'].to_i, fetched_at: Time.current,
+        issues: issues.sort_by { |issue| issue['number'].to_i }.map { |issue| tracker_issue(issue) })
+    rescue Error => e
+      Rails.logger.warn("GithubIssues.release_tracker: #{e.message}")
+      nil
+    end
+
+    def tracker_issue(issue)
+      labels = Array(issue['labels']).map { |label| label['name'].to_s }
+      area = labels.find { |name| name.start_with?('area:') }&.delete_prefix('area:')
+      { number: issue['number'].to_i, title: issue['title'].to_s, url: issue['html_url'].to_s,
+        area: area&.split('-')&.map { |word| %w[ui lms crm api].include?(word) ? word.upcase : word.capitalize }&.join(' / '),
+        labels: labels.grep_v(/\Aarea:|\Av\d|\Arelease\z/) }
+    end
+
     def token
       EnvStore.platform_fetch('GITHUB_ISSUES_TOKEN', '').to_s.strip
     end
 
-    def request(method, path, payload = nil)
-      raise NotConfiguredError, 'GitHub issues are not set up: add GITHUB_ISSUES_TOKEN.' unless configured?
+    # anonymous: a read that also works without a token, for a public repository.
+    def request(method, path, payload = nil, anonymous: false)
+      raise NotConfiguredError, 'GitHub issues are not set up: add GITHUB_ISSUES_TOKEN.' unless configured? || (anonymous && method == :get)
 
       http = Net::HTTP.new('api.github.com', 443)
       http.use_ssl = true
       http.open_timeout = 5
       http.read_timeout = 10
       req = (method == :post ? Net::HTTP::Post : Net::HTTP::Get).new(path)
-      req['Authorization'] = "Bearer #{token}"
+      req['Authorization'] = "Bearer #{token}" if configured?
       req['Accept'] = 'application/vnd.github+json'
       req['X-GitHub-Api-Version'] = '2022-11-28'
       req['User-Agent'] = 'Rupert'
