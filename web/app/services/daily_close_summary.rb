@@ -19,6 +19,33 @@ class DailyCloseSummary
 
   attr_reader :day
 
+  # One C-Trax store-day as the owner reads it: gross sales after discounts and before tax and tips (the order
+  # total is items minus order discounts plus tax, and tips sit outside it), refunds, net, tax, tips, cash and
+  # credit. Shared by the Daily close page and the C-Trax daily close so they never disagree. nil = unknown.
+  def self.ctrax_row(snapshot)
+    detail = Ctrax::Reconciliation.new(snapshot)
+    orders = detail.orders
+    payments = detail.payments
+    total = detail.sum(orders, 'total')
+    tax = detail.sum(orders, 'tax')
+    gross = total && tax ? total - tax : nil
+    refunds = ctrax_refunds(snapshot)
+    Row.new(label: "#{snapshot.location.name} (C-Trax)", kind: 'ctrax', currency: snapshot.currency, gross: gross, refunds: refunds,
+      net: gross && refunds ? gross - refunds : nil, tax: tax, tips: detail.sum(orders, 'tip'),
+      cash: detail.sum(payments.select { |p| p['type'] == 'cash' }, 'total_amount'),
+      credit: detail.sum(payments.select { |p| CTRAX_CARD_TYPES.include?(p['type']) }, 'total_amount'),
+      notes: detail.matched? ? nil : 'C-Trax controls do not match; open the day to review.', path: snapshot)
+  end
+
+  def self.ctrax_refunds(snapshot)
+    controls = snapshot.controls
+    totals = controls['refunds_totals_sum']
+    taxes = controls['refunds_taxes_sum']
+    return totals - taxes if totals && taxes
+
+    controls['refund_count'] == 0 ? 0 : nil
+  end
+
   def initialize(day:)
     @day = day.is_a?(Date) ? day : Date.iso8601(day.to_s)
   end
@@ -63,29 +90,7 @@ class DailyCloseSummary
   end
 
   def ctrax_rows
-    CtraxDay.includes(:location).where(business_date: day).order(:location_id).map do |snapshot|
-      detail = Ctrax::Reconciliation.new(snapshot)
-      orders = detail.orders
-      payments = detail.payments
-      total = detail.sum(orders, 'total')
-      tax = detail.sum(orders, 'tax')
-      gross = total && tax ? total - tax : nil
-      refunds = ctrax_refunds(snapshot)
-      Row.new(label: "#{snapshot.location.name} (C-Trax)", kind: 'ctrax', currency: snapshot.currency, gross: gross, refunds: refunds,
-        net: gross && refunds ? gross - refunds : nil, tax: tax, tips: detail.sum(orders, 'tip'),
-        cash: detail.sum(payments.select { |p| p['type'] == 'cash' }, 'total_amount'),
-        credit: detail.sum(payments.select { |p| CTRAX_CARD_TYPES.include?(p['type']) }, 'total_amount'),
-        notes: detail.matched? ? nil : 'C-Trax controls do not match; open the day to review.', path: snapshot)
-    end
-  end
-
-  def ctrax_refunds(snapshot)
-    controls = snapshot.controls
-    totals = controls['refunds_totals_sum']
-    taxes = controls['refunds_taxes_sum']
-    return totals - taxes if totals && taxes
-
-    controls['refund_count'] == 0 ? 0 : nil
+    CtraxDay.includes(:location).where(business_date: day).order(:location_id).map { |snapshot| self.class.ctrax_row(snapshot) }
   end
 
   def register_rows

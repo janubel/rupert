@@ -40,8 +40,10 @@
                 <p class="text-xs text-taupe"><%= pluralize(day.sessions.size, 'register session') %> · <%= day.reviewed? ? 'Reviewed' : 'Not reviewed' %> · last pulled <time datetime="<%= day.captured_at.iso8601 %>"><%= retail_source_time(day.captured_at) %></time></p>
               </div>
               <div class="row-item-end">
-                <div class="text-right"><p class="text-xs text-mocha">Recorded sales</p><p class="num font-semibold text-ink"><%= ctrax_money(reconciliation.sum(reconciliation.orders, 'total'), currency: day.currency) %></p><p class="text-xs text-taupe"><%= pluralize(reconciliation.orders.size, 'completed order') %></p></div>
-                <div class="text-right"><p class="text-xs text-mocha">Recorded tips</p><p class="num font-semibold text-ink"><%= ctrax_money(reconciliation.sum(reconciliation.orders, 'tip'), currency: day.currency) %></p><p class="text-xs text-taupe">Not in sales</p></div>
+                <% close = DailyCloseSummary.ctrax_row(day) %>
+                <div class="text-right"><p class="text-xs text-mocha">Gross sales</p><p class="num font-semibold text-ink"><%= ctrax_money(close.gross, currency: day.currency) %></p><p class="text-xs text-taupe"><%= pluralize(reconciliation.orders.size, 'completed order') %></p></div>
+                <div class="text-right"><p class="text-xs text-mocha">Net sales</p><p class="num font-semibold text-ink"><%= ctrax_money(close.net, currency: day.currency) %></p><p class="text-xs text-taupe">After refunds</p></div>
+                <div class="text-right"><p class="text-xs text-mocha">Tips collected</p><p class="num font-semibold text-ink"><%= ctrax_money(close.tips, currency: day.currency) %></p><p class="text-xs text-taupe">Not in sales</p></div>
                 <%= link_to 'Review', ctrax_day_path(day), class: 'btn-ghost btn-sm', aria: { label: "Review #{day.location.name} sales and cash" } %>
               </div>
             </article>
