@@ -21,7 +21,7 @@ class CatalogSyncer
       products(first: 100, sortKey: TITLE, after: $cursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
-          id title tags status handle publishedAt totalInventory
+          id title tags status handle publishedAt totalInventory vendor productType
           featuredImage { url altText }
           variants(first: 100) { pageInfo { hasNextPage endCursor } nodes { id title sku barcode price inventoryQuantity inventoryItem { id tracked } } }
         }
@@ -81,7 +81,8 @@ class CatalogSyncer
       orders(first: 5, query: $orderQuery, sortKey: UPDATED_AT, reverse: true, after: $orderCursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
-          id name createdAt updatedAt cancelledAt displayFinancialStatus paymentGatewayNames discountCodes
+          id name createdAt updatedAt cancelledAt displayFinancialStatus paymentGatewayNames sourceName discountCodes
+          retailLocation { id }
           currentTotalPriceSet { shopMoney { amount currencyCode } }
           currentTotalTaxSet { shopMoney { amount currencyCode } }
           refunds { id createdAt totalRefundedSet { shopMoney { amount currencyCode } } }
@@ -462,6 +463,8 @@ class CatalogSyncer
           publishedAt: parse_time(product['publishedAt']),
           totalInventory: product['totalInventory'].to_i,
           featuredImageUrl: product.dig('featuredImage', 'url'),
+          vendor: product['vendor'].presence,
+          productType: product['productType'].presence,
           tags: Array(product['tags']).join(', '),
           syncedAt: now,
           tenant_id: Current.tenant_id

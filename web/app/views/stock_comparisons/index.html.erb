@@ -20,7 +20,7 @@
       </div>
       <div class="toolbar-field">
         <%= label_tag :filter, 'Show', class: 'field-label' %>
-        <%= select_tag :filter, options_for_select([['All items', 'all'], ['Needs attention', 'attention'], ['No current pair', 'unmatched'], ['Product/package candidates', 'candidates'], ['Saved investigation findings', 'findings'], ['Historical Shopify candidates', 'historical']], @comparison.filter), class: 'input' %>
+        <%= select_tag :filter, options_for_select([['All items', 'all'], ['Needs attention', 'attention'], ['No current pair', 'unmatched'], ['Product/package candidates', 'candidates'], ['Saved investigation findings', 'findings'], ['Historical Shopify candidates', 'historical'], ['To pair (suggested, not confirmed)', 'to_pair']], @comparison.filter), class: 'input' %>
       </div>
       <div class="toolbar-field">
         <%= label_tag :q, 'Search', class: 'field-label' %>
@@ -40,6 +40,16 @@
   </section>
 
   <p class="text-sm text-mocha"><%= summary[:name_candidates] %> name/package candidates need equivalence review; <%= summary[:historical] %> C-Trax rows have historical Shopify candidates.</p>
+  <% if summary[:ctrax_items].positive? %>
+    <% share = (summary[:ctrax_certain] * 100.0 / summary[:ctrax_items]).round %>
+    <section class="card card-pad flex flex-wrap items-center gap-3" aria-label="Pairing coverage" data-pairing-coverage>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-ink">C-Trax items paired: <%= summary[:ctrax_certain] %> of <%= summary[:ctrax_items] %> (<%= share %>%)</p>
+        <p class="text-sm text-mocha">Confirmed by a person (<%= summary[:confirmed] %>) or matched on the same ID, SKU or barcode. Stock is only compared, counted and recommended for paired items. Goal: 90%.</p>
+      </div>
+      <%= link_to 'Review suggested pairs', stock_comparison_path(request.query_parameters.slice('shopify_location_id', 'ctrax_location_id').merge(filter: 'to_pair')), class: 'btn-primary btn-sm' %>
+    </section>
+  <% end %>
 
   <% grid = @view == 'grid' %>
   <% view_params = request.query_parameters.except('page', 'view') %>
@@ -111,7 +121,7 @@
                 <td class="td num"><%= comparison_quantity(row[key]) %></td>
               <% end %>
               <td class="td num<%= ' font-semibold text-rose' if row[:difference]&.negative? %><%= ' font-semibold text-ink' if row[:difference]&.positive? %>"><%= comparison_quantity(row[:difference]) %></td>
-              <td class="td"><%= review.first ? tag.span(review.last, class: review.first) : review.last %><%= ' · Not listed for sale' if row[:ctrax_id] && !row[:listed] %><% if row[:evidence].any? || row[:historical].any? %><details class="mt-2"><summary class="cursor-pointer">Matching evidence</summary><p class="text-xs text-taupe"><%= row[:evidence].join(' · ') %></p><% row[:historical].each do |old| %><p class="text-xs"><%= link_to old[:label], shopify_variant_path(old[:id]), class: 'hover:underline' %> · <%= old[:status] || 'Unknown status' %> · <%= old[:present] == false || old[:product_present] == false ? 'Absent from complete catalog read' : (old[:present].nil? || old[:product_present].nil? ? 'Catalog presence not verified' : 'Present') %></p><% end %></details><% end %></td>
+              <td class="td"><%= review.first ? tag.span(review.last, class: review.first) : review.last %><%= ' · Not listed for sale' if row[:ctrax_id] && !row[:listed] %><%= render 'stock_comparisons/pair_actions', row: row %><% if row[:evidence].any? || row[:historical].any? %><details class="mt-2"<%= ' open' if @comparison.filter == 'to_pair' %>><summary class="cursor-pointer">Matching evidence</summary><p class="text-xs text-taupe"><%= row[:evidence].join(' · ') %></p><% row[:historical].each do |old| %><p class="text-xs"><%= link_to old[:label], shopify_variant_path(old[:id]), class: 'hover:underline' %> · <%= old[:status] || 'Unknown status' %> · <%= old[:present] == false || old[:product_present] == false ? 'Absent from complete catalog read' : (old[:present].nil? || old[:product_present].nil? ? 'Catalog presence not verified' : 'Present') %></p><% end %></details><% end %></td>
             </tr>
             <% if row[:issues].any? || row[:finding_notes].any? %>
               <tr data-investigation-row>
@@ -154,6 +164,23 @@
       <% end %>
       <p class="text-sm text-mocha"><%= summary[:findings] %> rows have dated findings; <%= summary[:investigated_candidates] %> additional candidate links are supported by that investigation. These links show the two observations together and always withhold a quantity difference. Package, formula and source-copy uncertainties remain flagged beside each item.</p>
     </section>
+  <% end %>
+
+  <% if @comparison.decisions.any? %>
+    <details class="card card-pad" data-pair-decisions>
+      <summary class="cursor-pointer font-semibold">Pairing decisions (<%= @comparison.decisions.size %>)</summary>
+      <ul class="mt-2 space-y-1 text-sm">
+        <% @comparison.decisions.sort_by(&:updated_at).reverse.first(100).each do |pair| %>
+          <li class="flex flex-wrap items-center gap-2">
+            <span class="<%= pair.paired? ? 'pill-fern' : 'pill-taupe' %>"><%= pair.paired? ? 'Paired' : 'Not the same' %></span>
+            <span class="text-mocha">Shopify <%= pair.shopify_variant_id %> · C-Trax <%= pair.ctrax_record_id %> · <%= pair.decided_label %></span>
+            <% if Current.user.can?('inventory.write') %>
+              <%= button_to 'Undo', stock_comparison_pairs_path, method: :delete, params: { shopify_variant_id: pair.shopify_variant_id, ctrax_location_id: pair.ctrax_location_id, ctrax_record_id: pair.ctrax_record_id, shopify_location_id: @comparison.shopify&.location_id }, class: 'btn-ghost btn-sm' %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </details>
   <% end %>
 
   <details class="explainer">

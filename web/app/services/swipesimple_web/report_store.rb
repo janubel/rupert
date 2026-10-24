@@ -41,12 +41,12 @@ module SwipesimpleWeb
       true
     end
 
-    # The single merchant account verified by earlier transaction pulls.
-    def self.verified_account
-      accounts = SwipesimpleExport.distinct.pluck(:merchant_account)
-      raise Client::Error, :identity unless accounts.one?
+    # The merchant accounts verified by earlier transaction pulls.
+    def self.verified_accounts
+      accounts = SwipesimpleExport.where(kind: 'transactions').distinct.order(:merchant_account).pluck(:merchant_account)
+      raise Client::Error, :identity if accounts.empty?
 
-      accounts.first
+      accounts
     end
   end
 end

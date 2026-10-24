@@ -90,14 +90,29 @@ topics:
       last_quarter, year_to_date...) and returns it next to the period before, with the change already worked out
       (gross_change_percent). For worked hours and sales on the same days, time_keeping_report returns both for its exact
       date window. Quote sales per currency; do not compute your own comparison or a sales-per-hour ratio.
+  - key: store_sales
+    title: In-person store sales (the registers)
+    keywords: [store, stores, shop, register, registers, till, in store, in-store, walk-in, takings, did we make, we made, money made, made today, make today, cash, card, tips, tip, daily close, close out, closing out, end of day, terminal, pax, swipesimple, c-trax, ctrax]
+    tools: [daily_close, sales_tax_report]
+    card: >-
+      The store's own sales are rung up on the in-person registers: the SwipeSimple register (the store's main register
+      since October 2026) and C-Trax. They are NOT in the order store, so sales_summary, metric, period_review and
+      business_pulse never include them. For "how much did the store make", register, takings, cash, card or tips use
+      daily_close: one row per store with net, gross, cash, card, tax, refunds and tips, the same as the Daily close
+      page. Report each store on its own and never add stores together or to online orders. If the person asked about
+      "the store" and you also give online (Shopify) or Square figures, label those as online/Square, separately.
+      A store with no day stored is missing, not zero.
   - key: sales
-    title: Sales and orders
-    keywords: [sales, sold, sell, revenue, gross, orders, order value, average order, aov, top products, top-selling, top selling, best-selling, best selling, best day, best seller, takings, shopify, square, rupert pos, today, yesterday]
+    title: Online and Square sales and orders
+    keywords: [sales, sold, sell, revenue, gross, orders, order value, average order, aov, top products, top-selling, top selling, best-selling, best selling, best day, best seller, shopify, square, rupert pos, website, web store, today, yesterday]
     tools: [metric, sales_summary, period_review]
     card: >-
       For a single figure use metric (gross_sales, orders, average_order_value, best_day, sales_by_source, top_products,
       refund_rate): Rupert computes it per currency with the comparison already worked out; quote it.
       Orders live in Rupert's order store (Shopify, Square, Rupert POS, manual). Paid and fulfilled orders count as
       sales. Money is in cents with a ready *_dollars value beside it. Totals are per currency, never added across
-      currencies. C-Trax and SwipeSimple are separate snapshots, not orders: never add them to order totals.
+      currencies. These are NOT the store's register sales: the SwipeSimple and C-Trax registers are separate (use
+      daily_close) and never added to order totals. When you answer from these tools say "online and Square" (or the
+      source), never "the store", and if the question was about the whole business add the store registers from
+      daily_close as their own lines.
       Days are business days in the workspace time zone. No stored orders for a day does not prove zero sales.

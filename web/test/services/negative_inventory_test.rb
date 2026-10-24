@@ -62,4 +62,16 @@ class NegativeInventoryTest < ActiveSupport::TestCase
     assert_equal 0, results[:failed]
     assert_equal 0, InventoryLevel.where(source: 'square', squareVariationId: 'neg1').first.quantity
   end
+
+  test 'summary counts an oversold Shopify variant from its real figure, not the 0 it is stored as' do
+    product = ShopifyProduct.create!(id: 'p-over', title: 'Oversold tea')
+    variant = ShopifyVariant.create!(id: 'v-over', product: product, sku: 'OVER', title: 'Oversold tea 50g', tracked: true)
+    shop = Location.create!(source: 'shopify', externalId: 'shop-1', name: 'Shop')
+    InventoryLevel.create!(source: 'shopify', locationId: shop.externalId, shopifyVariantId: variant.id, quantity: 0, available: 0,
+      sourceQuantity: -7, tenant_id: @tenant.id)
+    summary = NegativeInventory.summary
+    assert_equal 2, summary[:total]
+    assert_equal [['OVER', -7]], summary[:shopify].map { |item| [item.sku, item.quantity] }
+    assert_empty InventoryLevel.where(source: 'shopify').where('quantity < 0'), 'the fixes still select on the stored quantity'
+  end
 end

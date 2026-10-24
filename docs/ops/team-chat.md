@@ -553,6 +553,22 @@ with an explanation, rather than rendered from unverified prose. No source total
 are added, currencies converted or new financial calculations performed here.
 Replies contain at most twelve complete facts and explicitly disclose omissions.
 
+**Checked prose (2026-10-23).** Every money answer used to be replaced by the fact list, so "yo how was today"
+got a form ("Verified financial figures from Rupert: - Gross sales (paid or fulfilled orders): 662.54 USD
+(canonical orders: …)"). Now the bot's own words are kept when `FinancialEvidence.checked_prose` passes them:
+
+- every money amount equals a fact to the cent, in a currency the facts have (`$` means USD; no rounding);
+- every percentage matches a percent fact (to the decimals written) and every "N orders" a count fact;
+- no profit, margin, earnings or cash-flow wording; "tax", "refund", "expense", "average" or "share" only when a
+  fact means that; period words (today, yesterday, this/last week, month, quarter, year) only when a fact covers
+  exactly that period;
+- at least one checked figure.
+
+Ruby then adds a line per kind of figure: `✓ meaning · source · period` and any gaps. Otherwise the fact list
+is shown as before (headed "From Rupert's records:"). `meta['prose_checked']` records which. An answer with
+money figures but no financial tool is replaced only when no tool ran or a figure is not in the tool results
+(the conversation itself is never evidence), with a pointer to a question that works.
+
 
 ## Bounded cloud generation retries
 
@@ -691,6 +707,92 @@ it joins two parts ("and", "same days", "still", or one of the data guide's cros
 more hits; a tie stays general. Naming a bot (@qwen, @liquid, @rupert ...) always asks just that bot. Without the local
 model server everything goes to @rupert. The gateway keeps `qwen3.5-4b` loaded (`--keep-loaded`); @qwen (35B) and
 Flint load on demand.
+
+### Bot lineup and rooms (2026-10-23)
+
+The owner dropped the bots nobody asked (outside the test battery, @liquid had answered twice and the 35B @qwen
+once). Now:
+
+| Mention | Model | Notes |
+| --- | --- | --- |
+| `@rupert` | DeepSeek V4.1 Flash, cloud | unchanged |
+| `@qwen` | Qwen3.5 4B (`qwen3.5-4b`), local | back to the 4B it was until 2026-10-22; also answers questions that name no bot |
+| `@gemma` | Gemma 4 E4B, local | unchanged |
+
+Liquid 8B (`liquid`), Liquid 24B (`lfm-24b`) and Qwen 35B (`qwen-35b`) were then removed from the model server
+too (2026-10-23, owner's request): out of `models.json` on `rupert-llm` (previous menu kept as
+`/etc/rupert-llm/models.json.pre-remove-20261023`) and moved to `RETIRED`, so old replies and scores keep their
+names. Their model files stay in `/var/lib/rupert-llm/models/` (about 49 GB with the second Qwen 35B file) so they
+can come back by restoring that menu; delete them to free the space. The battery's default bot is `qwen`.
+
+Each person has a private room per bot besides their Rupert room: `rooms: [qwen, flint-think, gemma]` in
+`config/team_chat/routing.yml`. Everything typed there goes to that bot, no @ needed. A room for a bot that is no
+longer listed (or not running) is archived with its history and reopens if the bot comes back. Leftover PR
+verification rooms in production were archived on 2026-10-23 (archived, not deleted).
+
+### Suggestion bubbles (2026-10-23)
+
+A row of six question bubbles sits above the chat box on the chat page and in the dock
+(`config/team_chat/suggestions.yml`, `TeamChat::Suggestions`). Questions for the time of day come first (morning
+before 11:00, afternoon, evening from 17:00), plus Monday and start-of-month ones, then the rest in an order that
+changes daily per person. A tap sends the question. In a channel where bots answer only when named (#admins) the
+bubble adds `@rupert `. No bubbles in direct messages between people or rooms where bots are off. Edit the YAML
+and deploy to change them.
+
+### Prompt and gating audit (2026-10-23)
+
+Reviewed against every real (non-test) question in production so far:
+
+| Seen | Cause | Change |
+| --- | --- | --- |
+| Money answers read like a form | Ruby replaced all prose when a financial tool ran | Checked prose (above) |
+| "how is the website doing" → "could not verify financial figures" | any digit plus "sales" was refused | refuse only unchecked money figures, with a pointer |
+| "what is your model" → "I don't know" | the prompt never said | each bot's prompt names its model |
+| "hello" → "I can check the sales summary for today." | no rule for small talk | one line back plus one or two offers |
+| a $0 sale explained by arithmetic (👎) | guessing at causes | say what the records show and where to look |
+
+Unchanged on purpose: replies in shared channels move to the asker's private room (PR #384), and local bots get
+only their topics' tools when a question matches a topic (all tools otherwise).
+
+### Next questions after an answer (2026-10-23)
+
+When a bot finishes, `TeamChat::Suggestions.follow_ups` picks up to four questions that follow on from it
+(`follow_ups:` per data guide topic in `config/team_chat/suggestions.yml`, else by the tools it used through
+`tool_topics:`), never the question just asked, and stores them in `meta['follow_ups']`. While the newest message
+is a finished bot answer, the bubble row above the box shows "Next:" with those; otherwise the usual bubbles.
+
+### Test questions page (2026-10-23)
+
+Team chat → Model scores → **Open test questions** (`/chat/models/questions`, `TeamChatQuestionsController`) shows
+every question set (General = `battery.yml`, Finance, Across areas) with each question, what a good answer does,
+and the tools whose output the grader treats as the truth. People who can use team chat can:
+
+- **Add** a question (id `w1`, `w2`…), **Edit** any question (a built-in one gets the workspace's own copy),
+  **Remove** a built-in one from the set and **Restore** it as shipped. Stored per workspace in
+  `chat_battery_questions` (`TeamChat::BatteryQuestion`); the YAML files are unchanged. Checks are read-only Rupert
+  tools, one per line with `key=value` arguments (`daily_close from=yesterday.from to=yesterday.to`), at most three.
+- **Run these questions** on a bot: `TeamChat::BatteryJob` in the background, one run at a time, skipped if the
+  same bot, model, set and build already ran. Answers appear in the bot's test room; the grade on Model scores.
+
+An edited set is saved under its own name (`finance-edited-1a2b3c`, a digest of the edits), so its scores are never
+compared with the built-in questions or an earlier version of the edits. Changes are in the activity log
+(`team_chat_question_changed`). Bookkeepers need team chat access (settings permission) to open the page.
+
+### Side panel (2026-10-23)
+
+A panel on the right of the chat page (it replaces the thread pane while open; Ctrl/Cmd-click opens things the
+usual way):
+
+- **Rupert pages**: a link to a Rupert page in a message opens it in the panel with `?panel=1`, which renders the
+  page without the top bar, rail and status bar (`panel_view?`); its links and forms open in the full window
+  (`<base target="_top">`, Turbo off). Chat pages and outside links are not opened there. "Open full page" leaves.
+- **Files**: images and PDFs as they are, CSV files as a table (first 200 rows), text files as text.
+- **Views a bot builds**: `show_view` (offered to every bot; it changes nothing) takes a title, a kind (`table`,
+  `bar_chart`, `line_chart`, `html`), columns and rows, or simple HTML, and a note. A button under the reply opens
+  it. The page draws tables and SVG charts from the data itself; HTML is cleaned (scripts, styles, forms, frames
+  and their content dropped; only basic tags, no links, images or handlers) and shown in a sandboxed frame with no
+  scripts. Every figure that is not in the bot's tool results is counted (`unchecked`) and flagged in the panel.
+  At most three views per reply, 12 columns, 200 rows (`TeamChat::Views`).
 
 ## Edited and deleted requests
 

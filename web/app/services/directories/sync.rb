@@ -61,6 +61,9 @@ module Directories
           if @kind == 'employees'
             publish_employee(attributes, started)
           else
+            # A profile with no name or contact details is noise in the CRM.
+            next if attributes.values_at(:first_name, :last_name, :email, :phone).all?(&:blank?)
+
             record = Core::Customer.find_or_initialize_by(source: @provider, external_id: attributes.fetch(:external_id))
             record.update!(attributes.merge(source_synced_at: started))
           end

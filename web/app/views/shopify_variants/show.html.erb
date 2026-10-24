@@ -1,32 +1,75 @@
-<% content_for :title, @variant.title %>
+<% profile = @profile %>
+<% money = ->(cents) { cents.nil? ? nil : number_to_currency(cents / 100.0) } %>
+<% content_for :title, profile.name %>
 <div class="space-y-6">
-  <%= page_header @variant.title, subtitle: "#{@product&.title} · #{@variant.sku.presence || 'no SKU'}", eyebrow: 'Shopify variant' do %>
+  <%= page_header profile.name, subtitle: [profile.vendor && "From #{profile.vendor}", profile.product_type, @product&.status&.capitalize].compact.join(' · ').presence, eyebrow: 'Item' do %>
     <% if @variant.tracked %><span class="pill-fern">Tracked</span><% end %>
-    <span class="<%= @link ? 'pill-fern' : 'pill-taupe' %>"><%= @link ? 'Linked to Square' : 'Not linked' %></span>
+    <span class="<%= @link ? 'pill-fern' : 'pill-taupe' %>"><%= @link ? 'Linked to Square' : 'Not linked to Square' %></span>
+    <span class="<%= profile.ctrax ? 'pill-fern' : 'pill-taupe' %>"><%= profile.ctrax ? 'Paired with C-Trax' : 'Not paired with C-Trax' %></span>
   <% end %>
 
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Variant summary">
-    <div class="stat">
-      <p class="stat-label">Shopify</p>
-      <p class="stat-value mt-1"><%= @variant.inventoryQuantity %></p>
-      <p class="mt-1 text-xs text-taupe">On hand (Shopify)</p>
+  <section class="item-hero card card-pad" aria-label="Item">
+    <div class="item-hero-image">
+      <% if profile.image_url %>
+        <%= image_tag profile.image_url, alt: profile.name, loading: 'lazy' %>
+      <% else %>
+        <span class="item-hero-placeholder" aria-hidden="true">No photo</span>
+      <% end %>
     </div>
-    <div class="stat">
-      <p class="stat-label">Square</p>
-      <p class="stat-value mt-1"><%= @link ? @link.square_variation&.levels&.sum(:quantity) || '—' : '—' %></p>
-      <p class="mt-1 text-xs text-taupe"><%= @link ? 'Via linked variation' : 'Not linked' %></p>
-    </div>
-    <div class="stat">
-      <p class="stat-label">Price</p>
-      <p class="stat-value mt-1"><%= number_to_currency(@variant.price) %></p>
-      <p class="mt-1 text-xs text-taupe">Retail</p>
-    </div>
-    <div class="stat">
-      <p class="stat-label">Link</p>
-      <p class="stat-value-sm mt-1"><%= @link ? 'Linked' : 'Unlinked' %></p>
-      <p class="mt-1 text-xs text-taupe"><%= @link ? @link.square_variation&.name : 'No Square match' %></p>
-    </div>
+    <h2 class="item-hero-name"><%= @product&.title.presence || profile.name %></h2>
+    <% if profile.option %><p class="item-hero-option"><%= profile.option %></p><% end %>
+    <p class="item-hero-ids"><%= @variant.sku.presence ? "SKU #{@variant.sku}" : 'No SKU' %><%= " · Barcode #{@variant.barcode}" if @variant.barcode.present? %></p>
+    <dl class="item-hero-facts">
+      <div><dt>Price</dt><dd><%= money.call(profile.price_cents) || 'Unknown' %></dd></div>
+      <div><dt>Cost of goods</dt><dd><%= money.call(profile.cost_cents) || 'Unknown' %></dd><p><%= profile.cost_note %></p></div>
+      <div><dt>Margin per unit</dt><dd><%= profile.margin_cents ? "#{money.call(profile.margin_cents)} (#{profile.margin_percent}%)" : 'Unknown' %></dd><p>Price minus cost, before tax. An estimate, not profit.</p></div>
+    </dl>
   </section>
+
+  <section class="section-card" aria-labelledby="item-source-title">
+    <h2 id="item-source-title" class="section-title">Source</h2>
+    <dl class="facts">
+      <div><dt>Vendor</dt><dd><%= profile.vendor || 'Not set in Shopify' %></dd></div>
+      <div><dt>Product type</dt><dd><%= profile.product_type || 'Not set in Shopify' %></dd></div>
+      <div><dt>C-Trax item</dt><dd><%= profile.ctrax ? "#{profile.ctrax[:record]['name']} (#{profile.ctrax[:how].downcase})" : 'Not paired' %></dd></div>
+      <div><dt>Tags</dt><dd><%= profile.tags.any? ? profile.tags.join(', ') : 'None' %></dd></div>
+    </dl>
+    <% unless profile.ctrax %><p class="text-xs text-mocha">Pair it on <%= link_to 'Stock comparison', stock_comparison_path(filter: 'to_pair', q: @variant.sku.presence || @product&.title), class: 'underline' %> to see its C-Trax stock and cost here.</p><% end %>
+  </section>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <section class="section-card" aria-labelledby="item-stock-title">
+      <h2 id="item-stock-title" class="section-title">Stock everywhere</h2>
+      <table class="table">
+        <thead><tr><th scope="col" class="th">Platform</th><th scope="col" class="th">Where</th><th scope="col" class="th num">On hand</th></tr></thead>
+        <tbody>
+          <% profile.stock.each do |row| %>
+            <tr><td class="td"><%= row.platform %></td><td class="td"><%= row.place %><% if row.note %><span class="block text-xs text-taupe"><%= row.note %></span><% end %></td>
+              <td class="td num<%= ' text-rose font-semibold' if row.quantity.respond_to?(:negative?) && row.quantity.negative? %>"><%= row.quantity.nil? ? 'Unknown' : row.quantity %></td></tr>
+          <% end %>
+        </tbody>
+      </table>
+      <p class="mt-2 text-xs text-mocha">Each platform counts its own stock; they are shown side by side, never added together.</p>
+    </section>
+
+    <section class="section-card" aria-labelledby="item-sales-title">
+      <h2 id="item-sales-title" class="section-title">Sold in the last <%= ItemProfile::SALES_DAYS %> days</h2>
+      <% sales = profile.sales %>
+      <% if sales.empty? %>
+        <p class="text-sm text-taupe">No paid or fulfilled orders with this item in the last <%= ItemProfile::SALES_DAYS %> days. SwipeSimple and C-Trax register sales are not broken down by item here.</p>
+      <% else %>
+        <table class="table">
+          <thead><tr><th scope="col" class="th">Source</th><th scope="col" class="th num">Units</th><th scope="col" class="th num">Gross</th></tr></thead>
+          <tbody>
+            <% sales.each do |sale| %>
+              <tr><td class="td"><%= sale.source.to_s.titleize %> <span class="text-xs text-taupe"><%= sale.channel == 'pos' ? 'in store' : sale.channel %></span></td><td class="td num"><%= sale.units %></td><td class="td num"><%= money.call(sale.gross_cents) %></td></tr>
+            <% end %>
+          </tbody>
+        </table>
+        <p class="mt-2 text-xs text-mocha">Order lines matched by this item or its SKU. SwipeSimple and C-Trax register sales are not broken down by item here.</p>
+      <% end %>
+    </section>
+  </div>
 
   <div class="grid gap-4 lg:grid-cols-2">
     <section class="section-card">
@@ -53,20 +96,6 @@
       <% end %>
     </section>
 
-    <section class="section-card">
-      <%= section_heading 'Levels' %>
-      <div class="space-y-2">
-        <% if @shopify_levels.empty? %>
-          <p class="text-sm text-taupe">No inventory levels recorded.</p>
-        <% end %>
-        <% @shopify_levels.each do |level| %>
-          <div class="flex items-center justify-between rounded-control bg-haze px-4 py-2.5 text-sm">
-            <span class="text-mocha"><%= level.location&.name || 'Unknown location' %></span>
-            <span class="num font-medium text-ink"><%= level.quantity %> <span class="text-xs text-taupe">available <%= level.available %></span></span>
-          </div>
-        <% end %>
-      </div>
-    </section>
   </div>
 
   <div class="grid gap-4 lg:grid-cols-2">

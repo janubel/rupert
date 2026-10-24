@@ -93,4 +93,14 @@ class SyncObservabilityTest < ActiveSupport::TestCase
     assert_raises(RuntimeError) { SyncObservability.observe('swipesimple', 'web') { raise 'synthetic-failure' } }
     assert_equal before, connection.reload.attributes_before_type_cast
   end
+
+  test 'the next run closes an attempt a dead worker left running, and leaves a recent one alone' do
+    old = SyncAttempt.create!(source: 'square', operation: 'catalog', status: 'running', queued_at: 3.hours.ago, started_at: 3.hours.ago)
+    recent = SyncAttempt.create!(source: 'square', operation: 'catalog', status: 'running', queued_at: 10.minutes.ago, started_at: 10.minutes.ago)
+    other = SyncAttempt.create!(source: 'shopify', operation: 'catalog', status: 'running', queued_at: 3.hours.ago, started_at: 3.hours.ago)
+    SyncObservability.observe('square', 'catalog') { :ok }
+    assert_equal %w[failed worker], old.reload.values_at(:status, :error_category)
+    assert_equal 'running', recent.reload.status
+    assert_equal 'running', other.reload.status, 'only the same source and operation'
+  end
 end

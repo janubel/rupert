@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#e6efea">
     <meta name="color-scheme" content="dark light">
     <%= render "layouts/theme" %>
+    <% if panel_view? %><base target="_top"><% end %>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +27,15 @@
       turbo-progress-bar { background: var(--color-olive); height: 3px; }
     </style>
   </head>
-  <body class="min-h-full">
-    <%= render "layouts/shell" %>
-  </body>
+  <% if panel_view? %>
+    <%# A page opened in the team chat side panel: just the page, no top bar, rail or status bar; links and forms
+        open in the full window. %>
+    <body class="min-h-full panel-view" data-turbo="false">
+      <main id="main" class="app-main app-main-panel"><%= yield %></main>
+    </body>
+  <% else %>
+    <body class="min-h-full">
+      <%= render "layouts/shell" %>
+    </body>
+  <% end %>
 </html>

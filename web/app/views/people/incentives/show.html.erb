@@ -1,0 +1,68 @@
+<% money = ->(cents) { finance_money(cents) }
+   plan = @plan
+   current_total = @model.total(:current_cents)
+   plan_total = @model.total(:plan_cents)
+   sales_total = @model.total(:sales_cents) %>
+<div class="space-y-6">
+  <%= page_header 'Incentives model', subtitle: 'Try a commission plan against real shifts and sales, and see what it would have cost.' %>
+
+  <section class="toolbar-band">
+    <%= form_tag people_incentives_path, method: :get, class: 'toolbar flex-wrap', 'aria-label': 'Plan and period' do %>
+      <div class="toolbar-field"><%= label_tag :period, 'Period', class: 'field-label' %><%= select_tag :period, options_for_select(IncentiveModel::PERIODS.invert, @model.period), class: 'select' %></div>
+      <div class="toolbar-field"><%= label_tag :from, 'From (custom)', class: 'field-label' %><%= date_field_tag :from, (@model.from if @model.period == 'custom'), class: 'input' %></div>
+      <div class="toolbar-field"><%= label_tag :to, 'To (custom)', class: 'field-label' %><%= date_field_tag :to, (@model.to if @model.period == 'custom'), class: 'input' %></div>
+      <div class="toolbar-field"><%= label_tag :shift_rate, 'Shift commission %', class: 'field-label' %><%= number_field_tag :shift_rate, plan.shift_rate, min: 0, max: 10, step: 0.25, class: 'input' %></div>
+      <div class="toolbar-field"><%= label_tag :training_rate, 'Training rate %', class: 'field-label' %><%= number_field_tag :training_rate, plan.training_rate, min: 0, max: 10, step: 0.25, class: 'input' %></div>
+      <div class="toolbar-field"><%= label_tag :training_hours, 'Training: more than (hours a week)', class: 'field-label' %><%= number_field_tag :training_hours, plan.training_hours, min: 0, max: 60, step: 1, class: 'input' %></div>
+      <% if @model.rows.any? %>
+        <fieldset class="toolbar-field">
+          <legend class="field-label">In training</legend>
+          <div class="flex flex-wrap gap-3"><% @model.rows.each do |row| %><label class="flex items-center gap-2 text-sm"><%= check_box_tag 'trainees[]', row.employee.id, plan.trainees.include?(row.employee.id.to_s), id: "trainee_#{row.employee.id}", class: 'checkbox' %><%= row.employee.name %></label><% end %></div>
+        </fieldset>
+      <% end %>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary', data: { turbo_submits_with: 'Working…' } %><%= link_to 'Clear', people_incentives_path, class: 'btn-ghost' %></div>
+    <% end %>
+  </section>
+
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Plan totals">
+    <div class="stat"><div class="stat-label">Today's rule (1%)</div><p class="stat-value mt-2 tabular-nums"><%= money.call(current_total) %></p></div>
+    <div class="stat"><div class="stat-label">This plan</div><p class="stat-value mt-2 tabular-nums"><%= money.call(plan_total) %></p><p class="text-xs text-mocha">Change <%= money.call(plan_total - current_total) %></p></div>
+    <div class="stat"><div class="stat-label">Plan cost as % of sales</div><p class="stat-value mt-2 tabular-nums"><%= sales_total.positive? ? number_to_percentage(plan_total * 100.0 / sales_total, precision: 2) : '—' %></p></div>
+    <div class="stat"><div class="stat-label">Plan cost per hour worked</div><p class="stat-value mt-2 tabular-nums"><%= @model.cost_per_hour_cents ? money.call(@model.cost_per_hour_cents) : '—' %></p></div>
+  </section>
+
+  <section class="space-y-3" aria-label="By employee">
+    <%= section_heading 'By employee', hint: "#{@model.from.strftime('%b %-d')} – #{@model.to.strftime('%b %-d, %Y')} · #{@model.days} days" %>
+    <div class="card"><div class="table-region" role="region" tabindex="0" aria-label="Incentives by employee"><table class="table">
+      <thead><tr><th class="th" scope="col">Employee</th><th class="th num" scope="col">Hours</th><th class="th num" scope="col">Sales on shift</th><th class="th num" scope="col">Today's rule</th><th class="th num" scope="col">This plan</th><th class="th num" scope="col">Change</th><th class="th num" scope="col">Training weeks</th></tr></thead>
+      <tbody>
+        <% @model.rows.each do |row| %>
+          <tr>
+            <th scope="row" class="td text-left font-medium"><%= row.employee.name %></th>
+            <td class="td num"><%= number_with_precision(row.hours, precision: 1) %></td>
+            <td class="td num"><%= money.call(row.sales_cents) %></td>
+            <td class="td num"><%= money.call(row.current_cents) %></td>
+            <td class="td num font-semibold"><%= money.call(row.plan_cents) %></td>
+            <td class="td num"><%= money.call(row.difference_cents) %></td>
+            <td class="td num"><%= row.training_weeks %></td>
+          </tr>
+        <% end %>
+        <% if @model.rows.empty? %><tr><td colspan="7" class="empty-row">No clocked-in shifts in this period. Pick a longer period or other dates.</td></tr><% end %>
+      </tbody>
+      <% if @model.rows.any? %>
+        <tfoot><tr><th scope="row" class="td text-left font-semibold">Total</th><td class="td num"><%= number_with_precision(@model.total_hours, precision: 1) %></td><td class="td num"><%= money.call(sales_total) %></td><td class="td num"><%= money.call(current_total) %></td><td class="td num font-semibold"><%= money.call(plan_total) %></td><td class="td num"><%= money.call(plan_total - current_total) %></td><td class="td"></td></tr></tfoot>
+      <% end %>
+    </table></div></div>
+  </section>
+
+  <details class="explainer card card-pad">
+    <summary class="explainer-summary font-semibold">How this is worked out<%= " · #{@model.notes.size} notes" if @model.notes.any? %></summary>
+    <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-mocha">
+      <li>Sales are before tax and after discounts, rung up while the employee was clocked in: the same matching as the Pay tab, so the figures agree.</li>
+      <li>Staff ticked as in training earn the training rate in any Thursday–Wednesday week where they worked more than the hours set. Other weeks use the shift rate.</li>
+      <li>Coupon and referral bonuses are not modelled yet: discount codes are not imported from orders.</li>
+      <li>Nothing is saved or posted to payroll. The plan is in the page address, so copying the link shares the scenario.</li>
+      <% @model.notes.each do |note| %><li><%= note %></li><% end %>
+    </ul>
+  </details>
+</div>

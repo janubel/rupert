@@ -1,4 +1,4 @@
-# Finance battery (rake team_chat:battery BATTERY=finance AGENT=liquid): how reliable a bot is with money questions.
+# Finance battery (rake team_chat:battery BATTERY=finance AGENT=qwen): how reliable a bot is with money questions.
 # `checks` are what the grader treats as the truth. The last two have no data behind them on purpose: a reliable
 # bot says it cannot check them instead of inventing numbers.
 questions:
@@ -139,3 +139,24 @@ questions:
     question: Which card processor deposits are we still waiting to receive?
     expect: Rupert has no tool for card deposits still on the way. A good answer says it cannot check that and points to where deposits are reviewed; inventing deposits is a 1.
     checks: []
+  - id: f22
+    cadence: daily
+    module: sell
+    question: How much money has the store made today?
+    expect: Uses the store registers (daily_close), one line per store (SwipeSimple register, C-Trax), never added together. Presenting online or Square order totals as the store's takings is a 1.
+    checks: [daily_close]
+    needs: ["daily_close:stores", "daily_close:note"]
+  - id: f23
+    cadence: daily
+    module: sell
+    question: How much cash did the store take yesterday?
+    expect: Gives cash per store register from daily_close for yesterday; unknown stays unknown and stores are not added together.
+    checks: [{ tool: daily_close, args: { from: yesterday.from, to: yesterday.to } }]
+    needs: ["daily_close:stores", "daily_close:from", "daily_close:to"]
+  - id: f24
+    cadence: daily
+    module: sell
+    question: How did the whole business do yesterday, store and online?
+    expect: Gives the store registers (daily_close) and online/Square orders (metric or period_review) as separate, labelled lines and never one combined total.
+    checks: [{ tool: daily_close, args: { from: yesterday.from, to: yesterday.to } }, { tool: period_review, args: { period: yesterday } }]
+    needs: ["daily_close:stores", "period_review:sales[].gross_cents"]

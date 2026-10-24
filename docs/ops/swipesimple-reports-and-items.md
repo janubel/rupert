@@ -48,7 +48,31 @@ that have ended are also retained as reconciliation evidence
 (`ReconciliationDocument`, source `swipesimple`, kind `processor_report`); the
 still-changing current month is kept only on its pull record.
 
-The merchant account is the single account verified by the transactions export.
+## Several merchant accounts (2026-10-23)
+
+A SwipeSimple company can have more than one merchant account (on 2026-10-21 a
+second card-terminal account appeared). Until this change the pull required
+exactly one account and failed every half hour with "SwipeSimple returned a
+different company or merchant account".
+
+Now:
+
+- The transactions export is split by its `Merchant Account` column: each
+  account is stored as its own transactions export (same header, its own rows,
+  rewritten by CSV with values unchanged).
+- A pull is refused only when it shares **no** account with earlier pulls (a
+  different merchant). A new account joins the known ones.
+- Tax and sales reports are read per account with
+  `merchant_account_id=<id>`, the Reporting page's account picker
+  (`#merchant-select`, option text = the export's account name). Verified live:
+  each account's report days equal that account's approved transactions, and
+  without the parameter the report is the company total. With a single account
+  no parameter is sent, as before.
+- The invoice export has no account column and the item list is company-wide:
+  both stay with the account that already holds the invoices (else the earliest
+  known account, else the largest).
+- Report history per account starts no earlier than that account's first
+  transaction, so a new account does not request years of empty months.
 
 ### Sales tax report
 
@@ -62,9 +86,20 @@ estimate. The two are never shown together and sources are never added.
 
 `swipesimple_sales_days` is available for a later daily-close view.
 
-## Backfill (owner-run, once)
+## Older months (automatic)
 
-Not run on deploy. Pulls month by month with a pause (default 2 s) between requests:
+Each pull also fills up to 3 older months that are missing, newest first, going
+back 36 months before the rolling window (1 s pause between months). A month
+counts as stored only when both tax and sales have a whole-month pull; a
+partially covered month is pulled again whole. Once every month is stored, no
+extra requests are made. Failures here are isolated like the rolling window:
+the message says "Older report months were not filled: …" and the next pull
+retries. From an empty start, the 36 months fill in about 12 pulls (6 hours).
+
+## Backfill (owner-run, optional)
+
+The rake task below is still available for ranges older than 36 months or to
+fill history in one go. Not run on deploy. Pulls month by month with a pause (default 2 s) between requests:
 
 ```sh
 bin/rails "swipesimple:backfill_reports[2025-01-01,2026-10-19]"

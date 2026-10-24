@@ -28,7 +28,7 @@ class CanonicalOrderImporter
 
         Core::Order.transaction do
           Core::Order.upsert(
-            order_attrs(node, source: 'shopify', channel: 'online', customer_id: customer&.id),
+            order_attrs(node.merge('location_id' => shopify_location_id(node)), source: 'shopify', channel: shopify_channel(node), customer_id: customer&.id),
             unique_by: %i[tenant_id source source_order_id]
           )
           order = Core::Order.find_by(
@@ -111,6 +111,9 @@ class CanonicalOrderImporter
       existing = Core::Customer.find_by(source: source, external_id: external_id)
       # Order payloads can contain partial or historical customer information.
       return existing if existing&.source_synced_at
+      # Square orders carry only a customer ID. Don't create a profile with no
+      # name or contact details; it would just clutter the CRM.
+      return existing if [email, first_name, last_name, phone].all?(&:blank?)
 
       Core::Customer.upsert(
         {
@@ -323,6 +326,14 @@ class CanonicalOrderImporter
       else 'other'
       end
     end
+
+    # Shopify POS orders were all stored as online with no location, so in-store sales looked like web orders
+    # (and showed up as "paid, not shipped"). sourceName "pos" marks a POS sale; retailLocation is the store.
+    def shopify_channel(node) = node['sourceName'].to_s == 'pos' ? 'pos' : 'online'
+
+    # Orders point at a location by its source ID (Core::Order belongs_to :location via externalId), as Square
+    # and Rupert POS orders do.
+    def shopify_location_id(node) = node.dig('retailLocation', 'id').presence
 
     # Shopify sends the codes typed at checkout; Square has no codes, so its discount names stand in. Kept as typed,
     # trimmed and de-duplicated; matching to an employee's code is case-insensitive at read time.

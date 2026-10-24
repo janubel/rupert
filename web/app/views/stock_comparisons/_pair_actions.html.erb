@@ -1,0 +1,13 @@
+<%# Confirm or reject a suggested pair (ProductPair). Saved in Rupert only; nothing is written to Shopify or C-Trax. %>
+<% if row[:shopify_id] && row[:ctrax_id] && @comparison.ctrax && Current.user.can?('inventory.write') %>
+  <% keys = { shopify_variant_id: row[:shopify_id], ctrax_location_id: @comparison.ctrax.location_id, ctrax_record_id: row[:ctrax_id],
+              shopify_location_id: @comparison.shopify&.location_id, filter: @comparison.filter, q: @comparison.query.presence } %>
+  <span class="mt-2 flex flex-wrap gap-1" data-pair-actions>
+    <% if row[:confirmed] %>
+      <%= button_to 'Undo pair', stock_comparison_pairs_path, method: :delete, params: keys.compact, class: 'btn-ghost btn-sm' %>
+    <% else %>
+      <%= button_to 'Confirm pair', stock_comparison_pairs_path, method: :post, params: keys.merge(decision: 'paired').compact, class: 'btn-primary btn-sm' %>
+      <%= button_to 'Not the same', stock_comparison_pairs_path, method: :post, params: keys.merge(decision: 'not_same').compact, class: 'btn-ghost btn-sm' %>
+    <% end %>
+  </span>
+<% end %>

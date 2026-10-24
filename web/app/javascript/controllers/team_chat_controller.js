@@ -12,7 +12,8 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["log", "more", "notice", "form", "input", "send", "jump", "empty", "loading", "filter", "roomLink",
     "thread", "threadLog", "threadInput", "threadSend", "newRoom", "topic", "suggest", "files", "fileInput", "pins", "typing", "newDm", "threadSuggest",
-    "media", "mediaSearch", "mediaStatus", "mediaGrid", "mediaMore", "presence", "presenceToggle", "presenceLabel"]
+    "media", "mediaSearch", "mediaStatus", "mediaGrid", "mediaMore", "presence", "presenceToggle", "presenceLabel", "suggestions",
+    "panel", "panelTitle", "panelOpen", "panelBody"]
   static values = { url: String, roomUrl: String, room: String, direct: Boolean, postMax: { type: Number, default: 4000 }, title: String,
     compact: Boolean, people: Array, agents: Array, me: String, emoji: Array, fileMax: { type: Number, default: 8388608 }, fileCount: { type: Number, default: 4 } }
 
@@ -47,10 +48,14 @@ export default class extends Controller {
     this.schedule()
     this.onVisible = () => { if (!document.hidden) this.poll() }
     document.addEventListener("visibilitychange", this.onVisible)
+    // Rupert page links, attachments and bot-built views open in the side panel (Ctrl/Cmd-click still opens normally).
+    this.onPanelClick = (event) => this.panelClick(event)
+    if (this.hasPanelTarget) this.element.addEventListener("click", this.onPanelClick)
   }
 
   disconnect() {
     clearTimeout(this.timer)
+    this.element.removeEventListener("click", this.onPanelClick)
     document.removeEventListener("visibilitychange", this.onVisible)
     this.stopFitting()
     if (!this.compactValue) document.title = this.titleValue
@@ -101,9 +106,15 @@ export default class extends Controller {
 
   // Height = the visible window below the chat's top edge, minus the page's bottom padding.
   fitToWindow() {
+    const main = this.element.closest("main")
+    // The page layout fits the chat between the top bar and the status bar (CSS: main is a flex column);
+    // measuring here would count the fixed status bar and cut off the message box.
+    if (main && this.element.parentElement === main && getComputedStyle(main).display === "flex") {
+      if (this.element.style.height) this.element.style.height = ""
+      return
+    }
     const viewport = window.visualViewport?.height || window.innerHeight
     const top = this.element.getBoundingClientRect().top + window.scrollY
-    const main = this.element.closest("main")
     const gap = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0
     const height = Math.max(this.constructor.MIN_HEIGHT, Math.floor(viewport - top - gap - this.heightBelow(main)))
     if (this.element.style.height !== `${height}px`) this.element.style.height = `${height}px`
@@ -324,6 +335,41 @@ export default class extends Controller {
     }
     if (this.threadId && this.hasThreadTarget) this.renderThread()
     this.applyPresence()
+    this.renderFollowUps(messages)
+  }
+
+  // After a bot's answer, the bubbles above the box become "Next:" questions that follow on from it
+  // (meta follow_ups); otherwise they are the usual suggestions the page was rendered with.
+  renderFollowUps(messages) {
+    if (!this.hasSuggestionsTarget) return
+    const row = this.suggestionsTarget
+    if (this.originalSuggestions === undefined) this.originalSuggestions = Array.from(row.children)
+    const last = messages[messages.length - 1]
+    const next = last && last.kind === "assistant" && last.status === "done" ? (last.follow_ups || []) : []
+    const key = next.length ? `${last.id}` : ""
+    if (row.dataset.followUpsFor === key) return
+    row.dataset.followUpsFor = key
+    if (!next.length) {
+      row.replaceChildren(...this.originalSuggestions)
+      row.setAttribute("aria-label", "Suggested questions")
+      return
+    }
+    const label = document.createElement("span")
+    label.className = "chat-suggestions-label"
+    label.textContent = "Next:"
+    const prefix = row.dataset.prefix || ""
+    const chips = next.map((question) => {
+      const chip = document.createElement("button")
+      chip.type = "button"
+      chip.className = "chat-starter is-follow-up"
+      chip.dataset.text = `${prefix}${question}`
+      chip.dataset.action = "team-chat#useStarter"
+      chip.title = `Send “${prefix}${question}”`
+      chip.textContent = question
+      return chip
+    })
+    row.replaceChildren(label, ...chips)
+    row.setAttribute("aria-label", "Suggested next questions")
   }
 
   renderList(messages, { thread }) {
@@ -467,6 +513,7 @@ export default class extends Controller {
 
     if (!message.deleted && message.unverified?.length) main.append(this.unverifiedNode(message.unverified))
     if (!message.deleted && message.attachments?.length) main.append(this.attachmentsNode(message.attachments))
+    if (!message.deleted && message.views?.length) main.append(this.viewsNode(message))
     ;(message.actions || []).forEach((action) => main.append(this.actionNode(message, action)))
     if (message.reactions?.length) main.append(this.reactionsNode(message))
     if (message.rating && !message.deleted) main.append(this.ratingNode(message))
@@ -733,6 +780,7 @@ export default class extends Controller {
       link.href = file.url
       link.target = "_blank"
       link.rel = "noopener"
+      link.dataset.panelFile = JSON.stringify({ url: file.url, name: file.name, type: file.type, image: !!file.image })
       if (file.image) {
         link.className = "chat-attachment-image"
         const img = document.createElement("img")
@@ -1280,6 +1328,7 @@ export default class extends Controller {
       return
     }
     if (this.threadId !== id) this.clearQuote("thread")
+    if (this.hasPanelTarget && !this.panelTarget.hidden) this.closePanel()
     this.threadId = id
     this.threadTarget.hidden = false
     this.renderThread()
@@ -1289,6 +1338,258 @@ export default class extends Controller {
       this.renderThread()
     }
     this.threadInputTarget.focus()
+  }
+
+  // --- side panel: Rupert pages, files and bot-built views beside the chat ---
+
+  viewsNode(message) {
+    const holder = document.createElement("div")
+    holder.className = "chat-views"
+    message.views.forEach((view) => {
+      const chip = document.createElement("button")
+      chip.type = "button"
+      chip.className = "chat-view-chip"
+      chip.dataset.panelView = `${message.id}:${view.id}`
+      chip.textContent = `${{ table: "▦", bar_chart: "▮", line_chart: "↗", html: "◧" }[view.kind] || "▦"} ${view.title}`
+      holder.append(chip)
+    })
+    return holder
+  }
+
+  panelClick(event) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    const viewChip = event.target.closest("[data-panel-view]")
+    if (viewChip) {
+      event.preventDefault()
+      const [messageId, viewId] = viewChip.dataset.panelView.split(":")
+      const view = (this.byId.get(Number(messageId))?.views || []).find((item) => item.id === viewId)
+      if (view) this.openPanel(view.title, null, (body) => this.renderView(body, view))
+      return
+    }
+    const fileLink = event.target.closest("[data-panel-file]")
+    if (fileLink) {
+      event.preventDefault()
+      const file = JSON.parse(fileLink.dataset.panelFile)
+      this.openPanel(file.name, file.url, (body) => this.renderFile(body, file))
+      return
+    }
+    const link = event.target.closest(".chat-msg-body a[href]")
+    if (!link) return
+    const path = this.constructor.panelPath(link.getAttribute("href"), window.location.origin)
+    if (!path) return
+    event.preventDefault()
+    this.openPanel(link.textContent.trim() || "Rupert", link.getAttribute("href"), (body) => {
+      const frame = document.createElement("iframe")
+      frame.className = "chat-panel-frame"
+      frame.src = path
+      frame.title = link.textContent.trim() || "Rupert page"
+      body.append(frame)
+    })
+  }
+
+  // A Rupert page shown in the panel (?panel=1 drops the shell). Chat pages and other sites stay normal links.
+  static panelPath(href, origin) {
+    if (!href || !href.startsWith("/") || href.startsWith("//")) return null
+    const url = new URL(href, origin)
+    if (url.origin !== origin || url.pathname === "/chat" || url.pathname.startsWith("/chat/")) return null
+    url.searchParams.set("panel", "1")
+    return `${url.pathname}${url.search}${url.hash}`
+  }
+
+  openPanel(title, openHref, render) {
+    if (!this.hasPanelTarget) return
+    if (this.threadId) this.closeThread()
+    this.panelTitleTarget.textContent = title
+    this.panelOpenTarget.hidden = !openHref
+    if (openHref) this.panelOpenTarget.href = openHref
+    this.panelBodyTarget.replaceChildren()
+    render(this.panelBodyTarget)
+    this.panelTarget.hidden = false
+  }
+
+  closePanel() {
+    if (!this.hasPanelTarget) return
+    this.panelTarget.hidden = true
+    this.panelBodyTarget.replaceChildren()
+  }
+
+  async renderFile(body, file) {
+    if (file.image) {
+      const img = document.createElement("img")
+      img.src = file.url
+      img.alt = file.name
+      img.className = "chat-panel-image"
+      body.append(img)
+    } else if (file.type === "application/pdf") {
+      const frame = document.createElement("iframe")
+      frame.className = "chat-panel-frame"
+      frame.src = file.url
+      frame.title = file.name
+      body.append(frame)
+    } else {
+      const status = document.createElement("p")
+      status.className = "chat-hint"
+      status.textContent = "Loading…"
+      body.append(status)
+      const response = await fetch(file.url, { credentials: "same-origin" }).catch(() => null)
+      const text = response && response.ok ? await response.text() : null
+      if (text === null) { status.textContent = "This file could not be opened here. Use Open full page."; return }
+      if (file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv")) {
+        const rows = this.constructor.parseCsv(text, 201)
+        status.replaceWith(this.tableNode(rows[0] || [], rows.slice(1), rows.length > 200 ? "First 200 rows." : null))
+      } else {
+        const pre = document.createElement("pre")
+        pre.className = "chat-panel-text"
+        pre.textContent = text.slice(0, 200000)
+        status.replaceWith(pre)
+      }
+    }
+  }
+
+  renderView(body, view) {
+    if (view.unchecked > 0) {
+      const warn = document.createElement("p")
+      warn.className = "chat-panel-warning"
+      warn.textContent = `${view.unchecked} ${view.unchecked === 1 ? "figure" : "figures"} here could not be checked against Rupert's records.`
+      body.append(warn)
+    }
+    if (view.kind === "html") {
+      const frame = document.createElement("iframe")
+      frame.className = "chat-panel-frame"
+      frame.setAttribute("sandbox", "")
+      frame.title = view.title
+      frame.srcdoc = `<!doctype html><meta charset="utf-8"><style>${this.constructor.VIEW_CSS}</style>${view.html}`
+      body.append(frame)
+    } else if (view.kind === "table") {
+      body.append(this.tableNode(view.columns || [], view.rows || [], null))
+    } else {
+      body.append(this.chartNode(view))
+      body.append(this.tableNode(view.columns || [], view.rows || [], null))
+    }
+    if (view.note) {
+      const note = document.createElement("p")
+      note.className = "chat-panel-note"
+      note.textContent = view.note
+      body.append(note)
+    }
+  }
+
+  tableNode(columns, rows, note) {
+    const wrap = document.createElement("div")
+    wrap.className = "chat-panel-table"
+    const table = document.createElement("table")
+    const head = document.createElement("tr")
+    columns.forEach((column) => { const th = document.createElement("th"); th.textContent = column; head.append(th) })
+    const thead = document.createElement("thead")
+    thead.append(head)
+    const tbody = document.createElement("tbody")
+    rows.forEach((row) => {
+      const tr = document.createElement("tr")
+      row.forEach((cell) => {
+        const td = document.createElement("td")
+        td.textContent = cell === null || cell === undefined ? "—" : String(cell)
+        if (typeof cell === "number" || this.constructor.numberOf(cell) !== null) td.className = "num"
+        tr.append(td)
+      })
+      tbody.append(tr)
+    })
+    table.append(thead, tbody)
+    wrap.append(table)
+    if (note) { const p = document.createElement("p"); p.className = "chat-panel-note"; p.textContent = note; wrap.append(p) }
+    return wrap
+  }
+
+  chartNode(view) {
+    const spec = this.constructor.chartSpec(view.columns || [], view.rows || [], view.kind)
+    const ns = "http://www.w3.org/2000/svg"
+    const svg = document.createElementNS(ns, "svg")
+    svg.setAttribute("viewBox", `0 0 ${spec.width} ${spec.height}`)
+    svg.setAttribute("role", "img")
+    svg.setAttribute("aria-label", view.title)
+    svg.classList.add("chat-panel-chart")
+    spec.marks.forEach((mark) => {
+      const node = document.createElementNS(ns, mark.tag)
+      Object.entries(mark.attrs).forEach(([key, value]) => node.setAttribute(key, value))
+      if (mark.text) node.textContent = mark.text
+      svg.append(node)
+    })
+    return svg
+  }
+
+  static VIEW_CSS = "body{font:14px/1.45 system-ui,sans-serif;color:#1f2a29;margin:12px}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #d9e0dd;padding:4px 8px;text-align:left}th{font-weight:600}h2,h3,h4{margin:.6em 0 .3em}"
+
+  static numberOf(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : null
+    const text = String(value ?? "").trim()
+    if (!/^[-−]?\$?\d[\d,]*(\.\d+)?%?$/.test(text)) return null
+    return Number(text.replace(/[$,%]/g, "").replace("−", "-"))
+  }
+
+  // Bars or lines from the first column (labels) and up to three numeric columns. Pure, for the tests.
+  static chartSpec(columns, rows, kind) {
+    const width = 560
+    const height = 260
+    const pad = { left: 48, right: 12, top: 12, bottom: 48 }
+    const series = columns.slice(1).map((name, index) => ({ name, index: index + 1 }))
+      .filter((column) => rows.some((row) => this.numberOf(row[column.index]) !== null)).slice(0, 3)
+    const values = rows.flatMap((row) => series.map((column) => this.numberOf(row[column.index]) ?? 0))
+    const max = Math.max(0, ...values)
+    const min = Math.min(0, ...values)
+    const span = max - min || 1
+    const plotW = width - pad.left - pad.right
+    const plotH = height - pad.top - pad.bottom
+    const y = (value) => pad.top + plotH - ((value - min) / span) * plotH
+    const step = plotW / Math.max(rows.length, 1)
+    const colors = ["#2f6f5e", "#b07d2a", "#6d5bb3"]
+    const marks = [{ tag: "line", attrs: { x1: pad.left, x2: width - pad.right, y1: y(0), y2: y(0), stroke: "#9aa8a4" } }]
+    marks.push({ tag: "text", attrs: { x: 4, y: pad.top + 10, "font-size": 11, fill: "#5b6b67" }, text: String(max) })
+    rows.forEach((row, rowIndex) => {
+      const x0 = pad.left + rowIndex * step
+      marks.push({ tag: "text", attrs: { x: x0 + step / 2, y: height - pad.bottom + 16, "font-size": 11, "text-anchor": "middle", fill: "#5b6b67" },
+        text: String(row[0] ?? "").slice(0, 14) })
+    })
+    series.forEach((column, seriesIndex) => {
+      const color = colors[seriesIndex]
+      if (kind === "line_chart") {
+        const points = rows.map((row, rowIndex) => `${pad.left + rowIndex * step + step / 2},${y(this.numberOf(row[column.index]) ?? 0)}`)
+        marks.push({ tag: "polyline", attrs: { points: points.join(" "), fill: "none", stroke: color, "stroke-width": 2 } })
+      } else {
+        const barW = (step * 0.8) / series.length
+        rows.forEach((row, rowIndex) => {
+          const value = this.numberOf(row[column.index]) ?? 0
+          const top = Math.min(y(value), y(0))
+          marks.push({ tag: "rect", attrs: { x: pad.left + rowIndex * step + step * 0.1 + seriesIndex * barW, y: top, width: Math.max(barW - 2, 1),
+            height: Math.abs(y(value) - y(0)), fill: color } })
+        })
+      }
+      marks.push({ tag: "text", attrs: { x: pad.left + seriesIndex * 140, y: height - 8, "font-size": 11, fill: color }, text: `■ ${column.name}` })
+    })
+    return { width, height, marks, series: series.map((column) => column.name) }
+  }
+
+  // Simple CSV (quoted fields, doubled quotes, commas and newlines inside quotes). Pure, for the tests.
+  static parseCsv(text, maxRows = 201) {
+    const rows = []
+    let row = []
+    let field = ""
+    let quoted = false
+    const source = text.replace(/^\uFEFF/, "")
+    for (let i = 0; i < source.length; i++) {
+      const char = source[i]
+      if (quoted) {
+        if (char === '"' && source[i + 1] === '"') { field += '"'; i++ }
+        else if (char === '"') quoted = false
+        else field += char
+      } else if (char === '"') quoted = true
+      else if (char === ",") { row.push(field); field = "" }
+      else if (char === "\n" || char === "\r") {
+        if (char === "\r" && source[i + 1] === "\n") i++
+        row.push(field); rows.push(row); row = []; field = ""
+        if (rows.length >= maxRows) return rows
+      } else field += char
+    }
+    if (field !== "" || row.length) { row.push(field); rows.push(row) }
+    return rows
   }
 
   closeThread() {
@@ -1573,7 +1874,8 @@ export default class extends Controller {
   }
 
   useStarter(event) {
-    this.inputTarget.value = event.currentTarget.textContent.trim()
+    if (this.formTarget.dataset.busy === "true") return
+    this.inputTarget.value = (event.currentTarget.dataset.text || event.currentTarget.textContent).trim()
     this.input()
     this.formTarget.requestSubmit()
   }

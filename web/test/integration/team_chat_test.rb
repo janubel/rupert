@@ -57,23 +57,29 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     get team_chat_path
     follow_redirect!
     assert_response :success
-    %w[qwen-4b flint-think qwen liquid].each do |handle|
+    %w[qwen flint-think gemma].each do |handle|
       assert_select ".chat-rail-room[href='#{team_chat_room_path("bot-#{handle}-#{@admin.id}")}']"
     end
-    assert_select '.chat-rail-room', text: /Qwen 4B/
+    assert_select '.chat-rail-room', text: /Qwen/
 
-    get team_chat_room_path("bot-qwen-4b-#{@admin.id}")
+    # A room for a bot that left chat (Liquid, 2026-10-23) is archived, its history kept.
+    Current.set(tenant: @admin.tenant) do
+      TeamChat::Room.create!(kind: 'direct', name: 'Liquid', slug: "bot-liquid-#{@admin.id}", assistant_mode: 'all', created_by: @admin)
+    end
+    get team_chat_room_path("bot-qwen-#{@admin.id}")
     assert_response :success
-    assert_select 'h2', text: /Qwen 4B/
-    assert_select "textarea[placeholder='Ask Qwen 4B…']"
+    assert TeamChat::Room.unscoped.find_by!(slug: "bot-liquid-#{@admin.id}").archived?
+    assert_select ".chat-rail-room[href='#{team_chat_room_path("bot-liquid-#{@admin.id}")}']", 0
+    assert_select 'h2', text: /Qwen/
+    assert_select "textarea[placeholder='Ask Qwen…']"
 
-    post team_chat_messages_path("bot-qwen-4b-#{@admin.id}"), params: { body: 'Which tasks are overdue?' }, as: :json
+    post team_chat_messages_path("bot-qwen-#{@admin.id}"), params: { body: 'Which tasks are overdue?' }, as: :json
     assert_response :created
-    room = TeamChat::Room.find_by!(slug: "bot-qwen-4b-#{@admin.id}")
-    assert_equal ['qwen-4b'], room.messages.where(author_kind: 'assistant').map { |reply| reply.meta['agent'] }
+    room = TeamChat::Room.find_by!(slug: "bot-qwen-#{@admin.id}")
+    assert_equal ['qwen'], room.messages.where(author_kind: 'assistant').map { |reply| reply.meta['agent'] }
 
-    post team_chat_messages_path("bot-qwen-4b-#{@admin.id}"), params: { body: '@rupert and you: how much sales tax last month?' }, as: :json
-    assert_equal [nil, 'qwen-4b'], room.messages.where(author_kind: 'assistant').order(:id).last(2).map { |reply| reply.meta['agent'] }
+    post team_chat_messages_path("bot-qwen-#{@admin.id}"), params: { body: '@rupert and you: how much sales tax last month?' }, as: :json
+    assert_equal [nil, 'qwen'], room.messages.where(author_kind: 'assistant').order(:id).last(2).map { |reply| reply.meta['agent'] }
   ensure
     ENV['RUPERT_LOCAL_LLM_URL'] = previous
   end
@@ -700,21 +706,33 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_select 'form.chat-rail-form', 0
   end
 
+  test 'suggestion bubbles sit above the chat box; in #admins they ask @rupert' do
+    sign_in(@admin)
+    get team_chat_path
+    follow_redirect!
+    assert_select '.chat-compose .chat-suggestions + .chat-composer'
+    assert_select '.chat-compose .chat-suggestions .chat-starter', 6
+    assert_select '.chat-compose .chat-suggestions .chat-starter[data-text^="@rupert "]', 6
+    get team_chat_room_path("rupert-#{@admin.id}")
+    assert_select '.chat-compose .chat-suggestions .chat-starter[data-text^="@rupert "]', 0
+    assert_select '.chat-compose .chat-suggestions .chat-starter', 6
+  end
+
   test 'the local models are @mentionable and answer through the gateway' do
     ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
-    assert_equal %w[liquid qwen gemma], TeamChat::LocalAgents.all.map(&:handle)
+    assert_equal %w[qwen gemma], TeamChat::LocalAgents.all.map(&:handle)
     qwen = TeamChat::LocalAgents.find('qwen')
-    assert_equal %w[local_gateway qwen3.6-35b-a3b], [TeamChat::ModelConfig.for_local(qwen).engine, TeamChat::ModelConfig.for_local(qwen).model]
+    assert_equal %w[local_gateway qwen3.5-4b], [TeamChat::ModelConfig.for_local(qwen).engine, TeamChat::ModelConfig.for_local(qwen).model]
     assert_match(/open model/, TeamChat::LocalAgents.persona(qwen))
 
     sign_in(@admin)
     get team_chat_path
     assert_enqueued_jobs 2, only: TeamChat::ReplyJob do
-      post team_chat_messages_path('admins'), params: { body: '@liquid and @qwen: sales yesterday?' }, as: :json
+      post team_chat_messages_path('admins'), params: { body: '@gemma and @qwen: sales yesterday?' }, as: :json
     end
-    assert_equal %w[liquid qwen], json['messages'].drop(1).map { |reply| reply['author']['agent'] }
+    assert_equal %w[gemma qwen], json['messages'].drop(1).map { |reply| reply['author']['agent'] }
     get team_chat_room_path('admins')
-    assert_select '[data-team-chat-agents-value*=liquid]'
+    assert_select '[data-team-chat-agents-value*=gemma]'
     assert_select '.chat-thread .chat-suggest[data-team-chat-target=threadSuggest]'
   ensure
     ENV.delete('RUPERT_LOCAL_LLM_URL')
@@ -732,7 +750,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     sign_in(@admin)
     get team_chat_path
     follow_redirect!
-    assert_select '.chat-bots .chat-bots-row', 4
+    assert_select '.chat-bots .chat-bots-row', 3
     assert_select '.chat-bots-row dt', text: /@ternary/, count: 0
     assert_select '.chat-bots-row dt', /@gemma\s+local/
     assert_select '.chat-bots-row dt', /@rupert/
@@ -766,11 +784,11 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
     sign_in(@admin)
     get team_chat_path
-    assert_enqueued_jobs 4, only: TeamChat::ReplyJob do
+    assert_enqueued_jobs 3, only: TeamChat::ReplyJob do
       post team_chat_messages_path('admins'), params: { body: '@all how were sales yesterday?' }, as: :json
     end
     question, *answers = json['messages']
-    assert_equal [nil, 'liquid', 'qwen', 'gemma'], answers.map { |reply| reply['author']['agent'] }
+    assert_equal [nil, 'qwen', 'gemma'], answers.map { |reply| reply['author']['agent'] }
     assert(answers.all? { |reply| reply['compare_of'] == question['id'] })
     assert_nil question['compare_of']
   ensure
@@ -912,17 +930,17 @@ class TeamChatTest < ActionDispatch::IntegrationTest
 
   test 'the bot key shows each bot latest test grades and the best local bot for money questions' do
     ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
-    TeamChat::BatteryRun.create!(run_key: 'q-fin', set_name: 'finance', agent: 'qwen-35b', model: 'qwen3.6-35b-a3b', status: 'done', questions: 21, answered: 21, avg_grade: 4.52, started_at: 1.hour.ago)
-    TeamChat::BatteryRun.create!(run_key: 'q-old', set_name: 'finance', agent: 'qwen', model: 'qwen3.6-35b-a3b', status: 'done', questions: 21, answered: 21, avg_grade: 3.4, started_at: 1.day.ago)
-    TeamChat::BatteryRun.create!(run_key: 'l-fin', set_name: 'finance', agent: 'liquid', model: 'lfm2.5-8b-a1b', status: 'done', questions: 21, answered: 21, avg_grade: 3.4, started_at: 1.hour.ago)
-    TeamChat::BatteryRun.create!(run_key: 'l-gen', set_name: 'default', agent: 'liquid', model: 'lfm2.5-8b-a1b', status: 'done', questions: 21, answered: 21, avg_grade: 4.1, started_at: 1.hour.ago)
-    TeamChat::BatteryRun.create!(run_key: 'l-part', set_name: 'default (part)', agent: 'liquid', model: 'lfm2.5-8b-a1b', status: 'done', questions: 3, answered: 3, avg_grade: 1.0, started_at: 1.minute.ago)
+    TeamChat::BatteryRun.create!(run_key: 'q-fin', set_name: 'finance', agent: 'qwen-4b', model: 'qwen3.5-4b', status: 'done', questions: 21, answered: 21, avg_grade: 4.52, started_at: 1.hour.ago)
+    TeamChat::BatteryRun.create!(run_key: 'q-old', set_name: 'finance', agent: 'qwen', model: 'qwen3.5-4b', status: 'done', questions: 21, answered: 21, avg_grade: 3.4, started_at: 1.day.ago)
+    TeamChat::BatteryRun.create!(run_key: 'l-fin', set_name: 'finance', agent: 'gemma', model: 'gemma-4-e4b', status: 'done', questions: 21, answered: 21, avg_grade: 3.4, started_at: 1.hour.ago)
+    TeamChat::BatteryRun.create!(run_key: 'l-gen', set_name: 'default', agent: 'gemma', model: 'gemma-4-e4b', status: 'done', questions: 21, answered: 21, avg_grade: 4.1, started_at: 1.hour.ago)
+    TeamChat::BatteryRun.create!(run_key: 'l-part', set_name: 'default (part)', agent: 'gemma', model: 'gemma-4-e4b', status: 'done', questions: 3, answered: 3, avg_grade: 1.0, started_at: 1.minute.ago)
     sign_in(@admin)
     get team_chat_path
     follow_redirect!
     assert_select '.chat-bots-row', text: /@qwen.*💰 Best local bot for money questions.*Tested: finance 4\.5\/5/m
-    assert_select '.chat-bots-row', text: /@liquid.*Tested: general 4\.1\/5 · finance 3\.4\/5/m
-    assert_select '.chat-bots-row', text: /@liquid.*Best local bot/m, count: 0
+    assert_select '.chat-bots-row', text: /@gemma.*Tested: general 4\.1\/5 · finance 3\.4\/5/m
+    assert_select '.chat-bots-row', text: /@gemma.*Best local bot/m, count: 0
   ensure
     ENV.delete('RUPERT_LOCAL_LLM_URL')
   end
@@ -930,7 +948,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'the leaderboard on Model scores and the trophy in the bot key' do
     ENV['RUPERT_LOCAL_LLM_URL'] = 'http://10.0.0.7:8080/v1'
     results = [{ 'id' => 'f15', 'cadence' => 'tax', 'grade' => 5 }] * 21
-    TeamChat::BatteryRun.create!(run_key: 'lb-1', set_name: 'finance', agent: 'qwen-35b', model: 'qwen3.6-35b-a3b', engine: 'local_gateway',
+    TeamChat::BatteryRun.create!(run_key: 'lb-1', set_name: 'finance', agent: 'qwen-4b', model: 'qwen3.5-4b', engine: 'local_gateway',
       status: 'done', questions: 21, answered: 21, avg_grade: 5, results: results, avg_seconds: 14.3, started_at: 1.hour.ago)
     sign_in(@admin)
     get team_chat_scores_path

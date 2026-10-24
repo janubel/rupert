@@ -61,10 +61,10 @@ class ProductDetailFlowTest < ActionDispatch::IntegrationTest
   test 'variant detail page renders quantities and link state' do
     get_page shopify_variant_path(@variant)
     assert_response :success
-    assert_select 'h1', /50g/
-    assert_select 'p.page-subtitle', /TEA-50/
+    assert_select 'h1', /Herbal Tea · 50g/
+    assert_select '.item-hero-ids', /SKU TEA-50/
     assert_select 'h2', /Square link/
-    assert_select 'h2', /Levels/
+    assert_select 'h2', /Stock everywhere/
     assert_select 'span.pill-taupe', /Not linked/
   end
 

@@ -3,7 +3,9 @@ default: &default
     - polling_interval: 1
       batch_size: 500
   workers:
-    - queues: default
+    # solid_queue_recurring: scheduler housekeeping (e.g. clearing finished jobs). No worker served it, so those
+    # jobs waited forever (connections audit, 2026-10-23).
+    - queues: [default, solid_queue_recurring]
       # SQLite has one writer; default to one job thread to reduce contention
       # with web requests.
       threads: <%= ENV.fetch("JOB_THREADS", 1) %>

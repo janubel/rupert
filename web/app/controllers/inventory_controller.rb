@@ -31,6 +31,36 @@ class InventoryController < AuthenticatedController
     end
   end
 
+  # POST /stock_comparison/pairs { shopify_variant_id, ctrax_location_id, ctrax_record_id, decision: paired|not_same }
+  # Saves a person's decision in Rupert only; nothing is written to Shopify or C-Trax.
+  def pair
+    authorize(:module, :inventory_write?)
+    variant = ShopifyVariant.find(params[:shopify_variant_id].to_s)
+    snapshot = CtraxStockSnapshot.find_by!(location_id: params[:ctrax_location_id].to_s)
+    record = snapshot.records.find { |row| row['id'].to_s == params[:ctrax_record_id].to_s }
+    raise ActiveRecord::RecordNotFound unless record
+
+    pair = ProductPair.find_or_initialize_by(shopify_variant_id: variant.id, ctrax_location_id: snapshot.location_id, ctrax_record_id: record['id'].to_s)
+    pair.assign_attributes(decision: params[:decision].to_s, decided_by: Current.user, note: params[:note].to_s.strip.first(500).presence,
+      shopify_signature: StockIdentityFindings.shopify_signature(variant), ctrax_signature: StockIdentityFindings.ctrax_signature(record))
+    if pair.save
+      ActivityLogger.log('product_pair_decided', actor: Current.user, details: "#{pair.decision}: shopify=#{variant.id}; ctrax=#{record['id']}")
+      redirect_back_to_comparison(notice: pair.paired? ? "Paired #{variant.product&.title} with #{record['name']}." : 'Marked as different products; that suggestion will not come back.')
+    else
+      redirect_back_to_comparison(alert: pair.errors.full_messages.to_sentence)
+    end
+  end
+
+  # DELETE /stock_comparison/pairs { shopify_variant_id, ctrax_location_id, ctrax_record_id } — undoes a decision.
+  def unpair
+    authorize(:module, :inventory_write?)
+    pair = ProductPair.find_by!(shopify_variant_id: params[:shopify_variant_id].to_s, ctrax_location_id: params[:ctrax_location_id].to_s,
+      ctrax_record_id: params[:ctrax_record_id].to_s)
+    pair.destroy!
+    ActivityLogger.log('product_pair_undone', actor: Current.user, details: "#{pair.decision}: shopify=#{pair.shopify_variant_id}; ctrax=#{pair.ctrax_record_id}")
+    redirect_back_to_comparison(notice: 'Decision undone.')
+  end
+
   def workspace
     response.headers['Cache-Control'] = 'no-store'
     @native_reads = [ShopifyStockSnapshot, CtraxStockSnapshot].flat_map do |model|
@@ -131,6 +161,11 @@ class InventoryController < AuthenticatedController
   def inventory_csv_columns
     requested = params[:columns].to_s.split(',').map(&:strip) & StockHelper::INVENTORY_COLUMNS.keys
     requested.presence || INVENTORY_CSV_DEFAULT
+  end
+
+  def redirect_back_to_comparison(**flash)
+    keep = params.permit(:shopify_location_id, :q, :filter, :page).to_h.merge(ctrax_location_id: params[:ctrax_location_id]).compact_blank
+    redirect_to stock_comparison_path(keep), **flash
   end
 
   def authorize_read

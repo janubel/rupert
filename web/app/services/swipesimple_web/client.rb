@@ -53,32 +53,53 @@ module SwipesimpleWeb
       end
     end
 
+    # One transactions snapshot per merchant account (a company can have several,
+    # e.g. a second card terminal), then the company's invoices with no account:
+    # the invoice export has no account column, so Sync assigns it.
     def fetch
       guarded do
         sign_in!
         transactions = export('transactions')
-        accounts = CSV.parse(transactions.text.delete_prefix("\uFEFF"), headers: true).map { |row| row['Merchant Account'].to_s.strip }.uniq
-        raise Error, :identity unless accounts.one? && accounts.first.present?
+        split_by_account(transactions) + [export('invoices')]
+      end
+    end
 
-        transactions.merchant_account = accounts.first
-        invoices = export('invoices')
-        invoices.merchant_account = accounts.first
-        [transactions, invoices]
+    # { merchant account name => SwipeSimple's merchant_account_id } from the
+    # Reporting page's account picker. Names must be exactly the given accounts.
+    def merchant_account_ids(accounts)
+      guarded do
+        sign_in!
+        refresh_deadline!
+        page, url = get("https://swipesimple.com#{reporting_path}?topic=sales")
+        raise Error, :login unless url.host == 'swipesimple.com' && url.path == reporting_path
+
+        options = Nokogiri::HTML(page.body).css('#merchant-select option').filter_map do |option|
+          [option.text.strip, option['value'].to_s] if option['value'].present?
+        end
+        ids = options.to_h
+        raise Error, :response unless ids.size == options.size && ids.values.all? { |id| id.match?(/\A[1-9][0-9]{0,19}\z/) }
+        raise Error, :identity unless ids.keys.sort == accounts.sort
+
+        ids
       end
     end
 
     # Reporting -> tax or sales CSV for from..to, one request per calendar month.
     # Each month is parsed and checked (headers, dates inside the month, day
     # rows add up to SwipeSimple's Totals) before it is returned.
-    def report(topic, from:, to:, pause: 0)
+    # merchant_account_id limits the report to one account (verified: its days
+    # then match that account's transactions); without it the report covers the
+    # whole company.
+    def report(topic, from:, to:, pause: 0, merchant_account_id: nil)
       raise ArgumentError, 'Unknown SwipeSimple report.' unless REPORT_TOPICS.include?(topic)
       raise ArgumentError, 'Choose an ordered date range.' unless from.is_a?(Date) && to.is_a?(Date) && from <= to
+      raise ArgumentError, 'Unknown merchant account.' unless merchant_account_id.nil? || merchant_account_id.to_s.match?(/\A[1-9][0-9]{0,19}\z/)
 
       guarded do
         sign_in!
         self.class.months(from, to).each_with_index.map do |(first, last), index|
           sleep(pause) if index.positive? && pause.positive?
-          report_month(topic, first, last)
+          report_month(topic, first, last, merchant_account_id)
         end
       end
     end
@@ -139,12 +160,14 @@ module SwipesimpleWeb
       @deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 120
     end
 
-    def report_month(topic, first, last)
+    def report_month(topic, first, last, merchant_account_id = nil)
       refresh_deadline!
       url = URI("https://swipesimple.com#{reports_path}")
       # Only these verified ISO parameters; anything else falls back to the
       # last 30 days, which the date check below would reject.
-      url.query = URI.encode_www_form([['report[topic]', topic], ['start_date', first.iso8601], ['end_date', last.iso8601]])
+      params = [['report[topic]', topic], ['start_date', first.iso8601], ['end_date', last.iso8601]]
+      params << ['merchant_account_id', merchant_account_id.to_s] if merchant_account_id
+      url.query = URI.encode_www_form(params)
       response, final = get(url)
       raise Error, :login unless final.host == 'swipesimple.com' && final.path == reports_path
       raise Error, :response unless response['content-type'].to_s.match?(CSV_TYPES)
@@ -158,6 +181,25 @@ module SwipesimpleWeb
     end
 
     def reports_path = "/companies/#{@company_id}/reports.csv"
+    def reporting_path = "/companies/#{@company_id}/reporting"
+
+    # The transaction export lists every merchant account. The importer takes one
+    # account per file, so each account gets a file of its own rows under the
+    # original header (re-written by CSV, values unchanged).
+    def split_by_account(snapshot)
+      table = CSV.parse(snapshot.text.delete_prefix("\uFEFF"), headers: true)
+      groups = table.group_by { |row| row['Merchant Account'].to_s.strip }
+      raise Error, :identity if groups.empty? || groups.key?('')
+      return [snapshot.tap { |item| item.merchant_account = groups.keys.first }] if groups.one?
+
+      groups.sort.map do |account, rows|
+        text = CSV.generate(row_sep: "\r\n") do |csv|
+          csv << table.headers
+          rows.each { |row| csv << row.fields }
+        end
+        Snapshot.new(kind: snapshot.kind, text: text, exported_at: snapshot.exported_at, merchant_account: account)
+      end
+    end
 
     def login!
       _response, url = get('https://swipesimple.com/sign_in')
@@ -284,7 +326,7 @@ module SwipesimpleWeb
         %w[/oauth2/authorize /connect/authorize /connect/authorize/callback /login /api/v1/login/context].include?(url.path)
       else
         %w[/ /sign_in /sign_in_v2 /sign_in_v2_handoff /transactions /transactions.csv /transactions.json /invoices.csv /invoices.json /items.xlsx].include?(url.path) ||
-          url.path.match?(%r{\A/companies/[1-9][0-9]*/dashboard\z}) || url.path == reports_path
+          url.path.match?(%r{\A/companies/[1-9][0-9]*/dashboard\z}) || url.path == reports_path || url.path == reporting_path
       end
     end
   end

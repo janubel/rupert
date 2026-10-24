@@ -1,0 +1,9 @@
+<%# Suggestion bubbles above the chat box (TeamChat::Suggestions). A tap sends the question. %>
+<% suggestions = TeamChat::Suggestions.for(room: room, user: Current.user) %>
+<% if suggestions.any? %>
+  <div class="chat-suggestions" role="group" aria-label="Suggested questions" data-team-chat-target="suggestions" data-prefix="<%= suggestions.first[:text].delete_suffix(suggestions.first[:label]) %>">
+    <% suggestions.each do |suggestion| %>
+      <button type="button" class="chat-starter" data-text="<%= suggestion[:text] %>" data-action="team-chat#useStarter" title="Send “<%= suggestion[:text] %>”"><%= suggestion[:label] %></button>
+    <% end %>
+  </div>
+<% end %>

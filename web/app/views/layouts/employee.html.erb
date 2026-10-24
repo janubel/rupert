@@ -32,7 +32,7 @@
     </div>
     <% if Current.user %>
       <nav aria-label="My workspace" class="workspace-navigation mx-auto max-w-3xl px-4 pb-3 sm:px-6" <%= tour_anchor('nav') %>>
-        <% links = @preview ? [['Today', employee_app_path(preview: 1)], ['Timesheets', employee_preview_timesheets_path], ['Schedule', employee_preview_schedule_path], ['Pay', employee_preview_pay_path], ['Time off', employee_preview_time_off_path], ['Reports', employee_preview_reports_path]] : [['Today', employee_app_path], ['Receipts', receipts_path], ['Timesheets', people_timesheets_path], ['Schedule', employee_schedule_path], ['Time off', employee_time_off_path], ['Reports', employee_reports_path]] %>
+        <% links = @preview ? [['Today', employee_app_path(preview: 1)], ['Timesheets', employee_preview_timesheets_path], ['Schedule', employee_preview_schedule_path], ['Pay', employee_preview_pay_path], ['Time off', employee_preview_time_off_path], ['Reports', employee_preview_reports_path]] : [['Today', employee_app_path], ['Receipts', receipts_path], ['Timesheets', people_timesheets_path], ['Pay', employee_pay_path], ['Schedule', employee_schedule_path], ['Time off', employee_time_off_path], ['Reports', employee_reports_path]] %>
         <% links << ['My tasks', projects_tasks_path] if !@preview && Current.user.employee? && Current.user.can?('tasks.self') %>
         <% links.unshift(['POS', ctrax_pos_path]) if !@preview && Current.user.can_use_pos? %>
         <% links.each do |label, path| %>
@@ -42,6 +42,8 @@
     <% end %>
   </header>
   <main id="main" class="mx-auto <%= %w[ctrax_pos point_of_sale projects/tasks].include?(controller_path) ? 'max-w-7xl' : 'max-w-3xl' %> space-y-6 px-4 py-6 sm:px-6 sm:py-8" tabindex="-1">
+    <%# Next thing to do (NextThingsController): the person's own late and due-today tasks; empty when nothing is waiting. %>
+    <% if Current.user && !@preview %><turbo-frame id="next_thing" src="<%= next_thing_path %>" loading="lazy"></turbo-frame><% end %>
     <%= render 'shared/workspace_help' if Current.user && !@preview %>
     <% if notice %><p role="status" class="flash flash-notice"><%= notice %></p><% end %>
     <% if alert %><p role="alert" class="flash flash-alert"><%= alert %></p><% end %>

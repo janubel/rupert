@@ -79,3 +79,50 @@ test('polling renders completion even when the final text was already streamed',
   assert.equal(rendered.length, 1);
   assert.equal(rendered[0].status, 'done');
 });
+
+test('after a finished bot answer the bubbles become its Next questions, and go back otherwise', () => {
+  const node = (tag) => ({ tag, children: [], dataset: {}, attrs: {}, className: '', textContent: '',
+    setAttribute(name, value) { this.attrs[name] = value }, replaceChildren(...kids) { this.children = kids } });
+  context.document.createElement = node;
+  const row = node('div');
+  const original = node('button');
+  original.textContent = 'How did yesterday go?';
+  row.children = [original];
+  row.dataset.prefix = '@rupert ';
+  const chat = Object.create(Chat.prototype);
+  Object.defineProperty(chat, 'hasSuggestionsTarget', { value: true });
+  Object.defineProperty(chat, 'suggestionsTarget', { value: row });
+  const answer = { id: 7, kind: 'assistant', status: 'done', follow_ups: ['Which source sold the most?'] };
+
+  chat.renderFollowUps([{ id: 6, kind: 'person' }, answer]);
+  assert.equal(row.children[0].textContent, 'Next:');
+  assert.equal(row.children[1].textContent, 'Which source sold the most?');
+  assert.equal(row.children[1].dataset.text, '@rupert Which source sold the most?');
+  assert.equal(row.attrs['aria-label'], 'Suggested next questions');
+
+  chat.renderFollowUps([answer, { id: 8, kind: 'assistant', status: 'pending' }]);
+  assert.equal(row.children.length, 1);
+  assert.equal(row.children[0], original);
+});
+
+test('side panel: Rupert pages open in panel mode; chat pages and other sites stay normal links', () => {
+  assert.equal(Chat.panelPath('/reports/sales?from=2026-10-01', 'https://rupert.test'), '/reports/sales?from=2026-10-01&panel=1');
+  assert.equal(Chat.panelPath('/chat/admins', 'https://rupert.test'), null);
+  assert.equal(Chat.panelPath('//evil.test/x', 'https://rupert.test'), null);
+  assert.equal(Chat.panelPath('https://evil.test/x', 'https://rupert.test'), null);
+});
+
+test('side panel: CSV files become rows, with quoted commas and quotes', () => {
+  assert.deepEqual(plain(Chat.parseCsv('\uFEFFItem,Note\r\n"Tea, green","He said ""hi"""\r\nMug,')),
+    [['Item', 'Note'], ['Tea, green', 'He said "hi"'], ['Mug', '']]);
+  assert.equal(Chat.parseCsv('a\nb\nc\n', 2).length, 2);
+});
+
+test('side panel: charts draw one bar per row and series, labels from the first column', () => {
+  const spec = Chat.chartSpec(['Day', 'Store', 'Online'], [['Mon', '$10.00', 5], ['Tue', 20, '7']], 'bar_chart');
+  assert.deepEqual(plain(spec.series), ['Store', 'Online']);
+  assert.equal(spec.marks.filter((mark) => mark.tag === 'rect').length, 4);
+  assert.equal(Chat.chartSpec(['Day', 'Sales'], [['Mon', 1], ['Tue', 2]], 'line_chart').marks.filter((mark) => mark.tag === 'polyline').length, 1);
+  assert.equal(Chat.numberOf('−$1,200.50'), -1200.5);
+  assert.equal(Chat.numberOf('n/a'), null);
+});

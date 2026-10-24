@@ -16,19 +16,22 @@ module SwipesimpleWeb
         raise Client::Error, :invalid
       end
 
-      account = ReportStore.verified_account
+      accounts = ReportStore.verified_accounts
       client = Client.new(connection.credential_values, company_id: connection.account_reference)
+      ids = accounts.one? ? { accounts.first => nil } : client.merchant_account_ids(accounts)
       stored = 0
-      Client.months(from, to).each_with_index do |(first, last), index|
-        Client::REPORT_TOPICS.each_with_index do |topic, position|
-          sleep(pause) if pause.positive? && (index.positive? || position.positive?)
-          chunk = client.report(topic, from: first, to: last).sole
-          ReportStore.replace!(chunk, merchant_account: account)
-          stored += 1
-          log.call("#{topic} #{first}..#{last}: #{chunk.rows.size} rows stored")
+      accounts.each do |account|
+        Client.months(from, to).each_with_index do |(first, last), index|
+          Client::REPORT_TOPICS.each_with_index do |topic, position|
+            sleep(pause) if pause.positive? && (stored.positive? || index.positive? || position.positive?)
+            chunk = client.report(topic, from: first, to: last, merchant_account_id: ids.fetch(account)).sole
+            ReportStore.replace!(chunk, merchant_account: account)
+            stored += 1
+            log.call("#{"#{account}: " unless accounts.one?}#{topic} #{first}..#{last}: #{chunk.rows.size} rows stored")
+          end
         end
       end
-      { months: stored / Client::REPORT_TOPICS.size, from: from, to: to }
+      { months: stored / Client::REPORT_TOPICS.size / accounts.size, accounts: accounts.size, from: from, to: to }
     end
   end
 end

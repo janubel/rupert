@@ -45,7 +45,18 @@ class AlertGenerator
           created += 1
         end
       end
-      { created: created, resolved: resolved }
+      { created: created, resolved: resolved + retire_unsold! }
+    end
+
+    # Alerts for products no longer sold on Shopify (archived, draft, removed from the catalog, or the SKU taken
+    # off) were never revisited above, so they stayed open for good (503 of 627 open on 2026-10-23). Close them
+    # with the reason; if the product is sold again and still low, the pass above opens a fresh alert.
+    def retire_unsold!
+      sellable = ShopifyVariant.joins(:product).merge(ShopifyProduct.active).where.not(sku: [nil, '']).select(:id)
+      StockAlert.open.where.not(shopifyVariantId: nil).where.not(shopifyVariantId: sellable).update_all(
+        status: 'resolved', resolvedAt: Time.current,
+        note: 'Closed: no longer sold on Shopify (archived, draft or removed from the catalog)'
+      )
     end
 
     def sync_variant!(variant_id, sku, quantity)

@@ -13,6 +13,7 @@ class SyncObservability
   def self.observe(source, operation)
     job_id = Current.metadata[:sync_job_id]
     attempt = store do
+      close_abandoned!(source, operation)
       queued = SyncAttempt.where(source: source, operation: operation, active_job_id: job_id, status: 'queued').order(id: :desc).first if job_id
       queued ||= SyncAttempt.new(source: source, operation: operation, active_job_id: job_id, queued_at: Time.current)
       queued.update!(status: 'running', started_at: Time.current)
@@ -31,6 +32,15 @@ class SyncObservability
       log_run(source, operation, busy ? 'skipped' : 'succeeded', started, tenant_id: attempt&.tenant_id)
       result
     end
+  end
+
+  ABANDONED_AFTER = 2.hours
+
+  # A worker that died mid-run left its attempt "running" for good, so health views thought a sync was still going
+  # (5 such rows from Oct 16-22). The next run of the same source and operation closes them as a worker failure.
+  def self.close_abandoned!(source, operation)
+    SyncAttempt.where(source: source, operation: operation, status: 'running').where(started_at: ...ABANDONED_AFTER.ago)
+               .update_all(status: 'failed', error_category: 'worker', finished_at: Time.current, updated_at: Time.current)
   end
 
   # One structured event per sync run (the SyncAttempt row stays the durable record).

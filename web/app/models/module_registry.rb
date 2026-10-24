@@ -110,6 +110,7 @@ class ModuleRegistry
     Entry.new(key: 'team_schedule', name: 'Team schedule', path: -> { people_team_schedule_path }, permission: 'timesheets.read', position: 88.3),
     Entry.new(key: 'leave', name: 'Leave & PTO', path: -> { people_leave_requests_path }, permission: 'leave.read', position: 89),
     Entry.new(key: 'payroll', name: 'Payroll', path: -> { people_pay_runs_path }, permission: 'payroll.read', position: 90),
+    Entry.new(key: 'incentives', name: 'Incentives model', path: -> { people_incentives_path }, permission: 'payroll.read', position: 90.5),
     Entry.new(key: 'employee_reports', name: 'Staff reports', path: -> { people_work_reports_path }, permission: 'hr.read', position: 86),
     Entry.new(key: 'training', name: 'Training progress', path: -> { learning_team_path }, permission: 'hr.read', position: 86.5),
     # System
@@ -210,11 +211,11 @@ class ModuleRegistry
       { key: 'team', name: 'Team',
         modules: %w[employees team_chat accounts permissions departments positions
                     time_keeping timesheets punch_history square_timesheets ctrax_timesheets schedule team_schedule leave
-                    payroll employee_reports training],
+                    payroll incentives employee_reports training],
         groups: [
           { name: 'People', modules: %w[employees team_chat accounts permissions departments positions] },
           { name: 'Time', modules: %w[time_keeping timesheets punch_history square_timesheets ctrax_timesheets schedule team_schedule leave] },
-          { name: 'Pay & reports', modules: %w[payroll employee_reports training] }
+          { name: 'Pay & reports', modules: %w[payroll incentives employee_reports training] }
         ] },
       { key: 'system', name: 'System',
         modules: %w[system platform activity access_log

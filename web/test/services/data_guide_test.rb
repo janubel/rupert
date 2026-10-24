@@ -21,4 +21,12 @@ class DataGuideTest < ActiveSupport::TestCase
     assert_equal DataGuide.topics.size, DataGuide.markdown.scan(/^### /).size
     assert_equal %w[metric sales_summary period_review sales_tax_report], DataGuide.tools_for([DataGuide.find('sales'), DataGuide.find('tax')])
   end
+
+  test 'questions about the store go to its registers, questions about the website to online orders' do
+    assert_equal 'store_sales', keys('how much money has the store made today').first
+    assert_equal 'store_sales', keys('how much cash did we take at the register yesterday').first
+    assert_includes DataGuide.tools_for(DataGuide.match('how much money has the store made today')), 'daily_close'
+    assert_equal 'sales', keys('how is the website doing').first
+    assert_not_includes keys('how do I make a task'), 'store_sales'
+  end
 end
