@@ -127,9 +127,9 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { TeamChat::Battery.new(user: @user, agent: 'nobody', grader: FakeGrader.new([]), items: items, out: nil) }
     assert_equal 21, TeamChat::Battery.items.size
     finance = TeamChat::Battery.items(TeamChat::Battery.config_for('finance'))
-    assert_equal 21, finance.size
+    assert_equal 24, finance.size, 'f22-f24 ask about the store registers'
     assert_match(/no cost of goods/, finance.find { |item| item.id == 'f20' }.expect)
-    assert_equal %w[sales comparison money_out tax books honesty], finance.map(&:cadence).uniq
+    assert_equal %w[sales comparison money_out tax books honesty daily], finance.map(&:cadence).uniq
     assert_raises(ArgumentError) { TeamChat::Battery.config_for('../etc/passwd') }
     assert_raises(ArgumentError) { TeamChat::Battery.config_for('nope') }
     assert_equal TeamChat::Battery::CONFIG, TeamChat::Battery.config_for(nil)

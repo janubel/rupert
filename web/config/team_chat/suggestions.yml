@@ -31,7 +31,7 @@ anytime:
   - What are the top sellers this week?
   - Who is working today?
   - Any timesheets waiting for approval?
-  - Any unpaid invoices?
+  - How much did the store take yesterday?
   - How do I add an expense?
 
 # After a bot answers, the row shows "Next:" questions that follow on from what was just asked: up to four from
@@ -42,6 +42,11 @@ follow_ups:
     - What are the top sellers this week?
     - Which source sold the most?
     - What was the average order this month?
+  store_sales:
+    - How much cash did the store take today?
+    - How did the store do yesterday?
+    - What were the tips today?
+    - How did the store do this week?
   comparison:
     - How does this month compare with last month?
     - What was our best day this month?
@@ -68,8 +73,8 @@ follow_ups:
     - Any purchase orders late?
   stock:
     - Which items are out of stock?
-    - Any stock counts waiting for approval?
-    - What should I reorder?
+    - Which items are lowest on stock?
+    - How does C-Trax stock compare with Shopify?
   tasks:
     - What is overdue on the task board?
     - What is assigned to me?
@@ -81,10 +86,8 @@ follow_ups:
     - What should I look at first today?
     - Any alerts I should look at?
     - Anything waiting to be processed?
-  customers:
-    - Who are our top customers this month?
-    - Any customer follow-ups due?
 tool_topics:
+  daily_close: store_sales
   metric: sales
   sales_summary: sales
   period_review: comparison
