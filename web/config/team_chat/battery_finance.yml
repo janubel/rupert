@@ -1,4 +1,4 @@
-# Finance battery (rake team_chat:battery BATTERY=finance AGENT=liquid): how reliable a bot is with money questions.
+# Finance battery (rake team_chat:battery BATTERY=finance AGENT=qwen): how reliable a bot is with money questions.
 # `checks` are what the grader treats as the truth. The last two have no data behind them on purpose: a reliable
 # bot says it cannot check them instead of inventing numbers.
 questions:

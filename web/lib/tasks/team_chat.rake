@@ -72,7 +72,7 @@ end
 
 namespace :team_chat do
   desc 'Run the test battery (config/team_chat/battery.yml) on one bot in its test room (#test-<bot>): each answer timed and graded by DeepSeek. ' \
-       'AGENT=liquid (or qwen, gemma, gemma-e2b, gemma-e4b-ud, rupert) BATTERY=finance USER_EMAIL=... ONLY=d1,w1 REPORT=path.md ' \
+       'AGENT=qwen (or gemma, liquid, gemma-e2b, gemma-e4b-ud, rupert) BATTERY=finance USER_EMAIL=... ONLY=d1,w1 REPORT=path.md ' \
        'RUPERT_VERIFY=1 (check and fix each answer; saved as e.g. finance+verify)'
   task battery: :environment do
     tenant = ENV['TENANT_ID'].present? ? Tenant.find(ENV['TENANT_ID']) : Tenant.where(status: 'active').first
@@ -80,7 +80,7 @@ namespace :team_chat do
     user = ENV['USER_EMAIL'].present? ? User.find_by!(email: ENV['USER_EMAIL'], tenant_id: tenant.id) : User.where(tenant_id: tenant.id, role: %w[admin super_admin], active: true).first
     Current.user = user
     set = ENV['BATTERY'].presence || 'default'
-    battery = TeamChat::Battery.new(user: user, agent: ENV.fetch('AGENT', 'liquid'), only: ENV['ONLY'].to_s.split(','),
+    battery = TeamChat::Battery.new(user: user, agent: ENV.fetch('AGENT', 'qwen'), only: ENV['ONLY'].to_s.split(','),
       items: TeamChat::Battery.items(TeamChat::Battery.config_for(set)), set: set)
     if (done = battery.already_done) && ENV['FORCE'].blank?
       puts "Already tested: #{done.label} on the #{done.set_name} questions with this Rupert build (#{done.revision}), " \

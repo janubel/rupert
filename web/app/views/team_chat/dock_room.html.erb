@@ -33,11 +33,6 @@
         <div class="chat-empty" data-team-chat-target="empty" hidden>
           <% if @room.direct? %>
             <p class="chat-empty-title">Ask <%= @room.display_name %> anything about the business.</p>
-            <div class="chat-starters">
-              <% ['How were sales yesterday?', 'Anything low on stock?', 'Any alerts?'].each do |starter| %>
-                <button type="button" class="chat-starter" data-action="team-chat#useStarter"><%= starter %></button>
-              <% end %>
-            </div>
           <% else %>
             <p class="chat-empty-title">Nothing here yet.</p>
             <p>Say hello, or write <strong>@rupert</strong> with a question.</p>
@@ -51,6 +46,7 @@
     <form class="chat-compose" data-busy="false" data-team-chat-target="form" data-action="submit->team-chat#send dragover->team-chat#dragOver dragleave->team-chat#dragLeave drop->team-chat#drop">
       <p class="chat-typing" data-team-chat-target="typing" aria-live="polite" hidden></p>
       <p class="chat-error" data-team-chat-target="notice" role="alert" hidden></p>
+      <%= render 'team_chat/suggestions', room: @room %>
       <div class="chat-composer">
         <label for="chat-dock-input" class="sr-only">Message</label>
         <ul class="chat-suggest" data-team-chat-target="suggest" role="listbox" hidden></ul>

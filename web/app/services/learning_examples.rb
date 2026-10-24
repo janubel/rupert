@@ -96,7 +96,7 @@ class LearningExamples
     'team_chat' => {
       title: 'Ask every bot, keep the best answer',
       context: 'A fictional manager writes "@all how were sales yesterday?" in #admins.',
-      rows: [['@rupert (cloud)', '4 s — 2 orders, $214.83, all Shopify'], ['@qwen (local)', '41 s — same total, shorter'], ['@liquid (local)', '55 s — missed the refund'], ['Your rating', '👍 @rupert, 👎 @liquid: “ignored the refund”']],
+      rows: [['@rupert (cloud)', '4 s — 2 orders, $214.83, all Shopify'], ['@qwen (local)', '41 s — same total, shorter'], ['@gemma (local)', '95 s — missed the refund'], ['Your rating', '👍 @rupert, 👎 @gemma: “ignored the refund”']],
       takeaway: 'Comparing side by side and noting why turns everyday questions into a record of which model to trust.'
     },
     'tasks' => {

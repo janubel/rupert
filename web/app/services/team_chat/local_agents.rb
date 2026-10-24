@@ -6,7 +6,7 @@ module TeamChat
   # Models people can @mention in team chat next to @rupert, each answering with the
   # same tools, permissions and approve-cards as @rupert:
   #
-  # - local (@liquid, @qwen, @gemma): open models on this server (the
+  # - local (@qwen, @gemma): open models on this server (the
   #   `rupert-llm` container) through one OpenAI-compatible gateway that keeps only
   #   ONE model in memory at a time, swaps on demand and unloads after ten idle
   #   minutes (deploy/ser8/team-chat/llm-gateway). On when RUPERT_LOCAL_LLM_URL is set.
@@ -28,14 +28,11 @@ module TeamChat
     end
 
     ALL = [
-      Agent.new(handle: 'liquid', name: 'Liquid', model: 'lfm2.5-8b-a1b', color: '#0f766e', aliases: %w[lfm lfm2 lfm2.5],
-        about: 'Liquid AI LFM2.5 8B-A1B, local',
-        purpose: 'Local mixture-of-experts model: quick for its size. Private.'),
-      # Qwen3.6 35B-A3B since 2026-10-22: best local model in the test battery (finance 4.62, general 4.33),
-      # mixture of experts with ~3B active, so it answers in about 15 s on the 780M. It fills the GPU on its own.
-      Agent.new(handle: 'qwen', name: 'Qwen', model: 'qwen3.6-35b-a3b', color: '#c2410c', aliases: %w[qwen3 qwen3.5 qwen3.6],
-        about: 'Alibaba Qwen3.6 35B-A3B, local',
-        purpose: 'Best local bot in Rupert’s tests, on a par with @rupert for money questions. Private, about 15 seconds.'),
+      # Qwen3.5 4B again since 2026-10-23 (it was @qwen until 2026-10-22, then the 35B): the bot people actually use.
+      # It answers questions that name no bot (routing.yml), stays loaded and answers in about 11 s.
+      Agent.new(handle: 'qwen', name: 'Qwen', model: 'qwen3.5-4b', color: '#c2410c', aliases: %w[qwen3 qwen3.5],
+        about: 'Alibaba Qwen3.5 4B, local',
+        purpose: 'Fast private bot, about 11 seconds; it also answers questions that name no bot.'),
       Agent.new(handle: 'gemma', name: 'Gemma', model: 'gemma-4-e4b', color: '#9333ea', aliases: %w[gemma4 gemma-4],
         about: 'Google Gemma 4 E4B, local',
         purpose: 'Google’s open model: good with Rupert’s tools, about 1½–2 minutes an answer. Private.')
@@ -53,6 +50,9 @@ module TeamChat
 
     # Models on the gateway that only the test battery asks (rake team_chat:battery AGENT=gemma-e2b); never @mentionable.
     TRIALS = [
+      # @liquid until 2026-10-23, when the owner dropped it from chat (almost never asked outside the test battery).
+      Agent.new(handle: 'liquid', name: 'Liquid', model: 'lfm2.5-8b-a1b', color: '#0f766e', aliases: %w[lfm lfm2 lfm2.5],
+        about: 'Liquid AI LFM2.5 8B-A1B, local (test only since 2026-10-23)'),
       Agent.new(handle: 'gemma-e2b', name: 'Gemma E2B', model: 'gemma-4-e2b', color: '#a855f7',
         about: 'Google Gemma 4 E2B (Unsloth UD-Q4_K_XL), local'),
       Agent.new(handle: 'gemma-e4b-ud', name: 'Gemma E4B UD', model: 'gemma-4-e4b-ud', color: '#7e22ce',
@@ -60,7 +60,7 @@ module TeamChat
       Agent.new(handle: 'lfm-24b', name: 'Liquid 24B', model: 'lfm2.5-24b-a2b', color: '#115e59',
         about: 'Liquid AI LFM2.5 24B-A2B (QAD Q4_0), local'),
       Agent.new(handle: 'qwen-35b', name: 'Qwen 35B', model: 'qwen3.6-35b-a3b', color: '#9a3412',
-        about: 'Alibaba Qwen3.6 35B-A3B (Unsloth MTP UD-IQ3_S, draft-mtp), local'),
+        about: 'Alibaba Qwen3.6 35B-A3B (Unsloth MTP UD-IQ3_S, draft-mtp), local (was @qwen 2026-10-22 to 10-23)'),
       Agent.new(handle: 'qwen-4b', name: 'Qwen 4B', model: 'qwen3.5-4b', color: '#ea580c',
         about: 'Alibaba Qwen3.5 4B, local (was @qwen until 2026-10-22)'),
       Agent.new(handle: 'gemma-26b', name: 'Gemma 26B', model: 'gemma-4-26b-a4b', color: '#6b21a8',

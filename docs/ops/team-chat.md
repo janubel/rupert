@@ -692,13 +692,33 @@ more hits; a tie stays general. Naming a bot (@qwen, @liquid, @rupert ...) alway
 model server everything goes to @rupert. The gateway keeps `qwen3.5-4b` loaded (`--keep-loaded`); @qwen (35B) and
 Flint load on demand.
 
-### Bot rooms (2026-10-23)
+### Bot lineup and rooms (2026-10-23)
 
-Each person has a private room per bot, besides their Rupert room: `rooms:` in
-`config/team_chat/routing.yml` lists `qwen-4b, flint-think, qwen, liquid, gemma`.
-Everything typed there goes to that bot, no @ needed. Gemma was added so every
-@mentionable bot (@liquid, @qwen, @gemma) has one. Leftover PR verification rooms
-in production were archived on 2026-10-23 (archived, not deleted).
+The owner dropped the bots nobody asked (outside the test battery, @liquid had answered twice and the 35B @qwen
+once). Now:
+
+| Mention | Model | Notes |
+| --- | --- | --- |
+| `@rupert` | DeepSeek V4.1 Flash, cloud | unchanged |
+| `@qwen` | Qwen3.5 4B (`qwen3.5-4b`), local | back to the 4B it was until 2026-10-22; also answers questions that name no bot |
+| `@gemma` | Gemma 4 E4B, local | unchanged |
+
+Liquid (`liquid`) and Qwen 35B (`qwen-35b`) stay on the gateway as test-only models for the battery
+(`AGENT=liquid`); the battery's default bot is now `qwen`. Old replies keep their names and models.
+
+Each person has a private room per bot besides their Rupert room: `rooms: [qwen, flint-think, gemma]` in
+`config/team_chat/routing.yml`. Everything typed there goes to that bot, no @ needed. A room for a bot that is no
+longer listed (or not running) is archived with its history and reopens if the bot comes back. Leftover PR
+verification rooms in production were archived on 2026-10-23 (archived, not deleted).
+
+### Suggestion bubbles (2026-10-23)
+
+A row of six question bubbles sits above the chat box on the chat page and in the dock
+(`config/team_chat/suggestions.yml`, `TeamChat::Suggestions`). Questions for the time of day come first (morning
+before 11:00, afternoon, evening from 17:00), plus Monday and start-of-month ones, then the rest in an order that
+changes daily per person. A tap sends the question. In a channel where bots answer only when named (#admins) the
+bubble adds `@rupert `. No bubbles in direct messages between people or rooms where bots are off. Edit the YAML
+and deploy to change them.
 
 ## Edited and deleted requests
 

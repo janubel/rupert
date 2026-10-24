@@ -3,18 +3,18 @@
 # More than one handle: they answer side by side. Edit and deploy to change; no code change needed.
 #
 # Chosen 2026-10-23 from the test battery (docs/ops/local-ai-report-2026-10-22.md):
-# Qwen 4B is about as good as Qwen 35B on single-topic questions at ~11 s; Flint with thinking is the best local
+# @qwen is Qwen 4B (2026-10-23). Qwen 4B is about as good as Qwen 35B on single-topic questions at ~11 s; Flint with thinking is the best local
 # bot on general questions but ~36 s; @rupert is best at questions that join several areas.
-general: [qwen-4b]
-# Finance is meant to stay private (local). Side by side with @rupert until Qwen 4B is trusted; then [qwen-4b].
-finance: [rupert, qwen-4b]
+general: [qwen]
+# Finance is meant to stay private (local). Side by side with @rupert until Qwen 4B is trusted; then [qwen].
+finance: [rupert, qwen]
 # A question that joins finance with stock, people, tasks or system needs several tools at once.
 cross: [rupert]
 # "Think harder", "think it through", "take your time": the slower, more careful bot.
 think: [flint-think]
 
 # Bots that get their own private room in the rail (besides Rupert's room). Everything typed there goes to that bot.
-rooms: [qwen-4b, flint-think, qwen, liquid, gemma]
+rooms: [qwen, flint-think, gemma]
 
 # Data guide topics (config/team_chat/data_guide.yml) that make a question a finance question: books, tax,
 # expenses, sales, order tracking. Any other topic is general. Finance plus general is cross.

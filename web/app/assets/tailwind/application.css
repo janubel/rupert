@@ -1633,9 +1633,12 @@ body.tour-active { overflow-x:hidden; }
 .chat-empty { max-width:32rem;margin:3rem auto 1rem;text-align:center;color:var(--color-mocha);font-size:.86rem; }
 .chat-empty[hidden] { display:none; }
 .chat-empty-title { margin:0 0 .4rem;font-weight:700;font-size:1rem;color:var(--color-ink); }
-.chat-starters { display:flex;flex-wrap:wrap;justify-content:center;gap:.45rem;margin-top:.9rem; }
 .chat-starter { padding:.4rem .75rem;border:1px solid var(--color-edge);border-radius:999px;background:var(--color-paper);color:var(--color-ink);font:inherit;font-size:.8rem;cursor:pointer; }
 .chat-starter:hover { background:var(--color-haze); }
+/* Suggestion bubbles above the chat box: one row that scrolls sideways inside itself, never the page. */
+.chat-suggestions { display:flex;gap:.4rem;min-width:0;max-width:100%;overflow-x:auto;padding:0 .1rem .45rem;scrollbar-width:none;-webkit-overflow-scrolling:touch; }
+.chat-suggestions::-webkit-scrollbar { display:none; }
+.chat-suggestions .chat-starter { flex:0 0 auto;white-space:nowrap; }
 .chat-day { display:flex;align-items:center;gap:.6rem;margin:.8rem 0 .3rem;font-size:.66rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--color-taupe); }
 .chat-day::before,.chat-day::after { content:"";flex:1;height:1px;background:var(--color-fog); }
 .chat-msg { position:relative;display:flex;gap:.65rem;align-items:flex-start;padding:.3rem .5rem;border-radius:.5rem; }
