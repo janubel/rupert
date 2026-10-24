@@ -1,5 +1,6 @@
 import HotwireNative
 import UIKit
+import WebKit
 
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -40,6 +41,13 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         Hotwire.config.backButtonDisplayMode = .minimal
         Hotwire.config.showDoneButtonOnModals = true
         Hotwire.config.animateReplaceActions = true
+        // Page diagnostics and a late-Turbo connection (WebViewSupport), then Hotwire's defaults.
+        Hotwire.config.makeCustomWebView = { configuration in
+            WebViewSupport.install(in: configuration)
+            let webView = WKWebView(frame: .zero, configuration: configuration)
+            if #available(iOS 16.4, *) { webView.isInspectable = true }
+            return webView
+        }
 
         // Google refuses sign-in inside web views: sign-in and sign-up go to the system sheet.
         // rupert:// links are Rupert talking to the app (workspace handoff). Plain links on Rupert's
