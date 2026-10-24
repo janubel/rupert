@@ -86,6 +86,34 @@ class TaxPayeesTest < ActionDispatch::IntegrationTest
     refute_includes response.body, '123456789'
   end
 
+  test 'recipient copies need payer details, then print each payee who needs a 1099 with the TIN truncated' do
+    payee
+    Finance::VendorPayment.create!(vendor: @vendor, amount_cents: 2_500_00, paid_on: Date.new(2026, 3, 1), method: 'check')
+    post login_path, params: { email: @admin.email, password: 'password' }
+    get forms_finance_tax_payees_path(year: 2026)
+    assert_redirected_to payer_finance_tax_payees_path
+
+    patch payer_finance_tax_payees_path, params: { tax_payer: { name: 'Rupert Test Shop LLC', street: '1 Main St', city: 'Albany', state: 'ny', zip: '12207', tin: '12-3456789' } }
+    assert_redirected_to finance_tax_payees_path
+    assert_equal ['NY', '123456789'], [Finance::TaxPayer.load.state, Finance::TaxPayer.load.tin]
+    get payer_finance_tax_payees_path
+    refute_includes response.body, '123456789'
+    patch payer_finance_tax_payees_path, params: { tax_payer: { name: 'Rupert Test Shop LLC', street: '1 Main St', city: 'Albany', state: 'NY', zip: '12207', tin: '' } }
+    assert_equal '123456789', Finance::TaxPayer.load.tin
+
+    get forms_finance_tax_payees_path(year: 2026)
+    assert_response :success
+    assert_equal 'application/pdf', response.media_type
+    text = pdf_text(response.body)
+    assert_includes text, 'Copy B'
+    assert_includes text, 'XXX-XX-6789'
+    assert_includes text, '$2,500.00'
+    assert_includes text, '12-3456789'
+    refute_includes text, '123456789'
+  ensure
+    Finance::TaxPayer::FIELDS.each_value { |key| EnvStore.set(key, nil) }
+  end
+
   test 'managers and cashiers cannot open 1099 payees' do
     payee
     %w[manager cashier].each do |role|
@@ -95,5 +123,19 @@ class TaxPayeesTest < ActionDispatch::IntegrationTest
       assert_includes [302, 303, 403], response.status, role
       delete logout_path
     end
+  end
+
+  private
+
+  # Prawn's text operators, decoded (as in the stock comparison PDF test).
+  def pdf_text(body)
+    content = body.b.scan(/stream\r?\n(.*?)\nendstream/m).flatten.map do |stream|
+      Zlib::Inflate.inflate(stream)
+    rescue Zlib::Error
+      stream
+    end.join("\n")
+    content.scan(/\[([^\]]*)\]\s*TJ|<(\h*)>\s*Tj/).map do |array, single|
+      (single ? [single] : array.scan(/<(\h*)>/).flatten).map { |hex| [hex].pack('H*') }.join
+    end.join("\n").force_encoding('Windows-1252').encode('UTF-8')
   end
 end
