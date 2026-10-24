@@ -42,6 +42,8 @@
     <% end %>
   </header>
   <main id="main" class="mx-auto <%= %w[ctrax_pos point_of_sale projects/tasks].include?(controller_path) ? 'max-w-7xl' : 'max-w-3xl' %> space-y-6 px-4 py-6 sm:px-6 sm:py-8" tabindex="-1">
+    <%# Next thing to do (NextThingsController): the person's own late and due-today tasks; empty when nothing is waiting. %>
+    <% if Current.user && !@preview %><turbo-frame id="next_thing" src="<%= next_thing_path %>" loading="lazy"></turbo-frame><% end %>
     <%= render 'shared/workspace_help' if Current.user && !@preview %>
     <% if notice %><p role="status" class="flash flash-notice"><%= notice %></p><% end %>
     <% if alert %><p role="alert" class="flash flash-alert"><%= alert %></p><% end %>

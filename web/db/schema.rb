@@ -2002,6 +2002,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_010000) do
     t.index ["tenant_id", "period_kind", "period_from"], name: "idx_money_reconciliation_period", unique: true
   end
 
+  create_table "next_thing_dismissals", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.bigint "user_id", null: false
+    t.string "item_key", null: false
+    t.string "fingerprint"
+    t.string "kind", null: false
+    t.datetime "until_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "user_id", "item_key"], name: "idx_next_thing_dismissals_scope", unique: true
+  end
+
   create_table "notifications", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.bigint "user_id", null: false
