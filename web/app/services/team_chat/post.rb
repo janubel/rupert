@@ -68,7 +68,7 @@ module TeamChat
         replies << start_reply(message) if message.mentions_rupert?
         ([owner] + LocalAgents.mentioned(@body)).uniq(&:handle).each { |agent| replies << start_reply(message, agent: agent) }
       else
-        rupert = answer?(message)
+        rupert = answer?(message, quote)
         agents = LocalAgents.mentioned(@body)
         # Naming a bot asks that bot, even in a room where @rupert answers everything.
         rupert = message.mentions_rupert? if agents.any?
@@ -129,12 +129,19 @@ module TeamChat
 
     def asks_everyone? = @body.match?(ALL_MENTION)
 
-    def answer?(message)
+    def answer?(message, quote = nil)
       case @room.assistant_mode
-      when 'all' then true
+      when 'all' then message.mentions_rupert? || !to_colleague?(message, quote)
       when 'mentions' then message.mentions_rupert?
       else false
       end
+    end
+
+    # In a room where Rupert answers everything, a message meant for a colleague is left to them: one that opens by
+    # addressing a person ("@Sam can you cover Saturday?") or quotes a person's message. A colleague named later
+    # ("How many hours did @Sam work?") is still a question for Rupert.
+    def to_colleague?(message, quote)
+      (message.mention_ids.any? && @body.match?(/\A\s*@/)) || quote&.person?
     end
 
     # A pending assistant reply. A local @agent's reply says "Waiting for the model"

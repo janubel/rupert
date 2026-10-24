@@ -35,14 +35,14 @@ module TeamChat
     }
 
     MAIN_SLUG = 'admins'
-    MAIN_TOPIC = 'All admins, with Rupert. Mention @rupert, or a local model (@qwen, @gemma), to ask about the business.'
+    MAIN_TOPIC = 'All admins, with Rupert. Rupert answers every message, except one that starts with @ a colleague. Mention a local model (@qwen, @gemma) to ask it instead.'
 
     # #admins holds every person who can use team chat, plus Rupert. (It was #general;
     # an existing #general is renamed in place, so its history and links carry over.)
     def self.ensure_defaults!(user)
       general = channels.find_by(slug: MAIN_SLUG) ||
                 channels.find_by(slug: 'general')&.tap { |room| room.update!(name: MAIN_SLUG, slug: MAIN_SLUG, topic: MAIN_TOPIC) } ||
-                create!(name: MAIN_SLUG, slug: MAIN_SLUG, topic: MAIN_TOPIC, created_by: user)
+                create!(name: MAIN_SLUG, slug: MAIN_SLUG, topic: MAIN_TOPIC, assistant_mode: 'all', created_by: user)
       everyone = Post.mentionable
       general.add_members(everyone) if general.memberships.count < everyone.size
       general.membership_for(user)

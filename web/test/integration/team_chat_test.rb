@@ -98,6 +98,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'posting, mentioning @rupert and polling' do
     sign_in(@admin)
     get team_chat_path
+    TeamChat::Room.find_by!(slug: 'admins').update!(assistant_mode: 'mentions')
     post team_chat_messages_path('admins'), params: { body: 'Good morning' }, as: :json
     assert_response :created
     assert_equal 1, json['messages'].size
@@ -278,6 +279,7 @@ class TeamChatTest < ActionDispatch::IntegrationTest
   test 'thread replies stay out of the main page but come with their thread' do
     sign_in(@admin)
     get team_chat_path
+    TeamChat::Room.find_by!(slug: 'admins').update!(assistant_mode: 'mentions')
     post team_chat_messages_path('admins'), params: { body: 'Root' }, as: :json
     root = json['messages'].first['id']
     post team_chat_messages_path('admins'), params: { body: 'In thread', parent_id: root }, as: :json
@@ -374,6 +376,26 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     secret.save!
     get team_chat_attachment_path('admins', secret.attachments.first.id)
     assert_response :not_found
+  end
+
+  test '#admins starts with Rupert answering every message, except one that opens with @ a colleague' do
+    alex = User.create!(tenant: @tenant, email: 'alex-admins@example.com', role: 'admin', password: 'password123', name: 'Alex Rivera')
+    sign_in(@admin)
+    get team_chat_path
+    assert_equal 'all', TeamChat::Room.find_by!(slug: 'admins').assistant_mode
+    assert_enqueued_with(job: TeamChat::ReplyJob) do
+      post team_chat_messages_path('admins'), params: { body: 'How were sales yesterday?' }, as: :json
+    end
+    assert_equal %w[person assistant], json['messages'].pluck('kind')
+
+    post team_chat_messages_path('admins'), params: { body: '@Alex Rivera can you cover Saturday?', mention_ids: [alex.id] }, as: :json
+    assert_equal %w[person], json['messages'].pluck('kind')
+
+    post team_chat_messages_path('admins'), params: { body: 'How many hours did @Alex Rivera work this week?', mention_ids: [alex.id] }, as: :json
+    assert_equal %w[person assistant], json['messages'].pluck('kind')
+
+    post team_chat_messages_path('admins'), params: { body: '@Alex Rivera and @rupert: who closed last night?', mention_ids: [alex.id] }, as: :json
+    assert_equal %w[person assistant], json['messages'].pluck('kind')
   end
 
   test 'mentions are kept only for people named in the text, and show as unread mentions' do
@@ -706,12 +728,15 @@ class TeamChatTest < ActionDispatch::IntegrationTest
     assert_select 'form.chat-rail-form', 0
   end
 
-  test 'suggestion bubbles sit above the chat box; in #admins they ask @rupert' do
+  test 'suggestion bubbles sit above the chat box; they ask @rupert only where he waits to be mentioned' do
     sign_in(@admin)
     get team_chat_path
     follow_redirect!
     assert_select '.chat-compose .chat-suggestions + .chat-composer'
     assert_select '.chat-compose .chat-suggestions .chat-starter', 6
+    assert_select '.chat-compose .chat-suggestions .chat-starter[data-text^="@rupert "]', 0
+    TeamChat::Room.find_by!(slug: 'admins').update!(assistant_mode: 'mentions')
+    get team_chat_room_path('admins')
     assert_select '.chat-compose .chat-suggestions .chat-starter[data-text^="@rupert "]', 6
     get team_chat_room_path("rupert-#{@admin.id}")
     assert_select '.chat-compose .chat-suggestions .chat-starter[data-text^="@rupert "]', 0
