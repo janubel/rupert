@@ -148,6 +148,7 @@ class ModuleRegistry
         next user.can_use_pos? if %w[ctrax_pos point_of_sale].include?(entry.key)
         next false if %w[platform system].include?(entry.key) && !user.super_admin?
         next false if entry.key == 'employee_reports' && !user.can_manage_accounts?
+        next user.can?('hr.read') || user.can?('schedule.write') if entry.key == 'schedule'
         next false if entry.key == 'owner_checklists' && !(user&.active? && (user.admin? || user.super_admin?))
 
         next false if entry.key == 'influencers' && !FeatureFlag.enabled?(:marketing)

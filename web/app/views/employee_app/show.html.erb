@@ -47,7 +47,8 @@
       <% if @timesheet&.review_note.present? %><p class="rounded-card bg-haze p-3 text-sm"><strong>Review comment:</strong> <%= @timesheet.review_note %></p><% end %>
     <% else %><div class="flex flex-wrap items-center gap-3"><%= link_to 'Open this week’s timesheet', employee_preview_timesheet_path('current'), class: 'btn-primary' %><%= link_to 'All my timesheets', employee_preview_timesheets_path, class: 'text-sm text-olive underline' %></div><% end %>
   </section>
-  <section class="grid gap-3 sm:grid-cols-2">
+  <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="card card-pad space-y-2"><h2 class="card-title">Next shift</h2><p class="text-sm text-mocha"><%= if @preview then 'Your next planned shift shows here.' elsif @next_shift then "#{@next_shift.starts_at.to_date == Date.current ? 'Today' : @next_shift.starts_at.strftime('%a %b %-d')} · #{@next_shift.time_label}#{" · #{@next_shift.role_label}" if @next_shift.role_label.present?}" else 'No shift planned yet.' end %></p><%= link_to 'Open schedule', personal_schedule_path, class: 'btn-ghost btn-sm' %></div>
     <div class="card card-pad space-y-2"><h2 class="card-title">Time off</h2><p class="text-sm text-mocha"><%= @next_leave ? "#{@next_leave.leave_type.titleize} · #{@next_leave.starts_on.strftime('%b %-d')} – #{@next_leave.ends_on.strftime('%b %-d')} · #{@next_leave.status.humanize}" : 'Plan a vacation, request a day off or check your calendar.' %></p><%= link_to 'Open time off', personal_time_off_path, class: 'btn-ghost btn-sm' %></div>
     <div class="card card-pad space-y-2"><h2 class="card-title">My reports</h2><p class="text-sm text-mocha">Check hours, estimated pay and finalized payslips. Download your hours when you need them.</p><%= link_to 'Open my reports', personal_reports_path, class: 'btn-ghost btn-sm' %></div>
   </section>

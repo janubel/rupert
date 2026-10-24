@@ -7,7 +7,7 @@ module People
     rescue_from Date::Error, with: :invalid_week
 
     def index
-      authorize(:module, :hr_read?)
+      authorize(:module, :schedule_read?)
       day = params[:week].present? ? Date.iso8601(params[:week]) : Date.current
       raise Date::Error unless (1900..2100).cover?(day.year)
 
@@ -17,14 +17,14 @@ module People
     end
 
     def new
-      authorize(:module, :hr_write?)
+      authorize(:module, :schedule_write?)
       day = params[:date].present? ? Date.iso8601(params[:date]) : Date.current
       @shift = People::ScheduledShift.new(employee_id: params[:employee_id], starts_at: day.in_time_zone + 9.hours, ends_at: day.in_time_zone + 17.hours)
       load_employees
     end
 
     def create
-      authorize(:module, :hr_write?)
+      authorize(:module, :schedule_write?)
       @shift = People::ScheduledShift.new(shift_params)
       if @shift.save
         ActivityLogger.log('scheduled_shift_created', subject: @shift, details: shift_details)
@@ -36,12 +36,12 @@ module People
     end
 
     def edit
-      authorize(:module, :hr_write?)
+      authorize(:module, :schedule_write?)
       load_employees
     end
 
     def update
-      authorize(:module, :hr_write?)
+      authorize(:module, :schedule_write?)
       if @shift.update(shift_params)
         ActivityLogger.log('scheduled_shift_updated', subject: @shift, details: shift_details)
         redirect_to(people_scheduled_shifts_path(week: @shift.starts_at.to_date.iso8601), notice: 'Shift updated.')
@@ -52,7 +52,7 @@ module People
     end
 
     def destroy
-      authorize(:module, :hr_write?)
+      authorize(:module, :schedule_write?)
       @shift.destroy!
       ActivityLogger.log('scheduled_shift_deleted', subject: @shift, details: shift_details)
       redirect_to(people_scheduled_shifts_path(week: @shift.starts_at.to_date.iso8601), notice: 'Shift removed.')
