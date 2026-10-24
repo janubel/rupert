@@ -44,6 +44,53 @@ class SwipesimpleDayCloseTest < ActiveSupport::TestCase
     refute_includes close.checks.map(&:key), :declines, 'a tiny day never fires the decline flag'
   end
 
+  test 'register boxes use native report amounts across accounts without adding transaction totals or tips again' do
+    import(ROWS)
+    native_sales_day!
+    native_sales_day!(merchant_account: 'Example Terminal', net_sales_cents: 1500, tax_cents: 50, net_card_cents: 500, net_cash_cents: 1000)
+    close = SwipesimpleDayClose.new(Date.new(2026, 10, 14))
+    assert_equal [11_500, 650, 7500, 4000], close.register_totals.values_at(*SwipesimpleDayClose::REGISTER_FIELDS)
+    assert_equal 6800, close.card_net_cents, 'native report amounts do not replace or inflate transaction evidence'
+    assert_equal ['Example Terminal', 'Example Wholesale'], close.register_reports.map { |report| report[:account] }
+  end
+
+  test 'register boxes preserve missing cells and accounts rather than displaying partial totals' do
+    import(ROWS)
+    assert SwipesimpleDayClose.new(Date.new(2026, 10, 14)).register_totals.values.all?(&:nil?)
+    native_sales_day!(tax_cents: nil)
+    close = SwipesimpleDayClose.new(Date.new(2026, 10, 14))
+    assert_equal 10_000, close.register_totals[:net_sales_cents]
+    assert_nil close.register_totals[:tax_cents], 'a blank tax cell cannot be inferred from a tax rate or tenders'
+
+    SwipesimpleSalesDay.where(merchant_account: 'Example Wholesale').delete_all
+    native_sales_day!(merchant_account: 'Example Terminal')
+    assert SwipesimpleDayClose.new(Date.new(2026, 10, 14)).register_totals.values.all?(&:nil?), 'one account report cannot stand for all accounts'
+  end
+
+  test 'only a covering sales report pulled after day end proves an omitted day had zero collections' do
+    import(ROWS)
+    pull = SwipesimpleReportPull.create!(merchant_account: 'Example Wholesale', topic: 'sales',
+      period_from: '2026-10-01', period_to: '2026-10-31', row_count: 0, source_digest: 'synthetic-empty-sales',
+      pulled_at: Time.iso8601('2026-10-14T22:00:00Z'), original_csv: 'synthetic header-only sales report')
+    assert SwipesimpleDayClose.new(Date.new(2026, 10, 14)).register_totals.values.all?(&:nil?)
+    pull.update!(pulled_at: Time.iso8601('2026-10-15T04:00:00Z'))
+    assert_equal [0, 0, 0, 0], SwipesimpleDayClose.new(Date.new(2026, 10, 14)).register_totals.values
+    assert SwipesimpleDayClose.new(Date.new(2026, 11, 1)).register_totals.values.all?(&:nil?), 'coverage cannot extend beyond the pulled range'
+  end
+
+  test 'register report changes invalidate review evidence while other dates and tenants stay separate' do
+    import(ROWS)
+    day = native_sales_day!
+    digest = SwipesimpleDayClose.new(Date.new(2026, 10, 14)).source_digest
+    native_sales_day!(business_date: Date.new(2026, 10, 13))
+    assert_equal digest, SwipesimpleDayClose.new(Date.new(2026, 10, 14)).source_digest
+    other = Tenant.create!(name: 'Other synthetic store', subdomain: 'other-synthetic-store', status: 'active')
+    native_sales_day!(tenant: other, tax_cents: 999_999)
+    assert_equal digest, SwipesimpleDayClose.new(Date.new(2026, 10, 14)).source_digest
+    day.update!(tax_cents: 601)
+    assert_not_equal digest, SwipesimpleDayClose.new(Date.new(2026, 10, 14)).source_digest
+  end
+
   test 'decline flag fires at 5 percent of attempts once there are enough attempts' do
     approved = (1..19).map { |n| "SYN-A#{n},10/14/2026 9:#{format('%02d', n)} AM,Sale,$1.00,Approved,Swiped,Visa,Example Wholesale,$0.00" }
     import(approved + ['SYN-D1,10/14/2026 10:00 AM,Sale,$1.00,Declined,Swiped,Visa,Example Wholesale,'])
@@ -171,6 +218,12 @@ class SwipesimpleDayCloseTest < ActiveSupport::TestCase
   end
 
   private
+
+  def native_sales_day!(**attributes)
+    SwipesimpleSalesDay.create!({ merchant_account: 'Example Wholesale', business_date: Date.new(2026, 10, 14),
+      net_sales_cents: 10_000, tax_cents: 600, net_card_cents: 7000, net_cash_cents: 3000,
+      tips_cents: 500, source_digest: 'synthetic-daily-sales', pulled_at: Time.current }.merge(attributes))
+  end
 
   def import(rows, exported_at: '2026-10-15T22:00:00-04:00')
     csv = ([HEADER] + rows).join("\n") + "\n"
