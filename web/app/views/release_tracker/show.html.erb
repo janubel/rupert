@@ -1,0 +1,49 @@
+<% tracker = @tracker %>
+<% menu = [['Refresh from GitHub', release_tracker_path(refresh: 1)]]
+   menu << ['Open the milestone on GitHub', tracker.url, { target: '_blank', rel: 'noopener' }] if tracker&.url.present? %>
+<div class="space-y-6">
+  <%= page_header(tracker ? "#{tracker.title} release blockers" : 'Release blockers',
+        subtitle: 'What must be fixed before the next release, from the GitHub milestone.', menu: menu) %>
+
+  <% if tracker %>
+    <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Release progress">
+      <div class="stat"><div class="stat-label">Open</div><p class="stat-value mt-2 tabular-nums"><%= tracker.open_count %></p></div>
+      <div class="stat"><div class="stat-label">Done</div><p class="stat-value mt-2 tabular-nums"><%= tracker.closed_count %></p></div>
+      <div class="stat"><div class="stat-label">Progress</div><p class="stat-value mt-2 tabular-nums"><%= tracker.percent_done %>%</p></div>
+      <div class="stat"><div class="stat-label">Read from GitHub</div><p class="stat-value-sm mt-2"><%= l(tracker.fetched_at, format: :short) %></p></div>
+    </section>
+
+    <% if tracker.issues.empty? %>
+      <%= empty_state "Nothing open on #{tracker.title}", hint: 'Every issue on the milestone is closed. The release can go ahead once its checks pass.' %>
+    <% else %>
+      <% tracker.by_area.each do |area, issues| %>
+        <section class="space-y-3" aria-label="<%= area %>">
+          <%= section_heading area, hint: pluralize(issues.size, 'open issue') %>
+          <div class="card">
+            <ul class="row-list">
+              <% issues.each do |issue| %>
+                <li class="row-item">
+                  <div class="min-w-0">
+                    <h3 class="font-semibold text-ink"><span class="text-taupe tabular-nums">#<%= issue[:number] %></span> <%= issue[:title] %></h3>
+                    <% if issue[:labels].any? %><p class="mt-1 flex flex-wrap gap-1"><% issue[:labels].each do |label| %><span class="<%= label == 'bug' ? 'pill-rose' : 'pill-taupe' %>"><%= label %></span><% end %></p><% end %>
+                  </div>
+                  <div class="row-item-end"><%= link_to 'Open', issue[:url], class: 'btn-ghost btn-sm', target: '_blank', rel: 'noopener', aria: { label: "Open issue #{issue[:number]} on GitHub" } %></div>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        </section>
+      <% end %>
+    <% end %>
+  <% else %>
+    <%= empty_state 'The release milestone could not be read', hint: 'GitHub did not answer, or there is no open milestone named like "v0.2.1". Set GITHUB_ISSUES_MILESTONE in the platform settings, or try Refresh from GitHub in a moment.' %>
+  <% end %>
+
+  <details class="explainer card card-pad">
+    <summary class="explainer-summary font-semibold">How this list works</summary>
+    <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-mocha">
+      <li>It lists the open issues on the release milestone in the <%= GithubIssues.repo %> GitHub repository, grouped by their area label. It refreshes every 10 minutes.</li>
+      <li>Issues are worked and closed on GitHub; closing one there removes it here. Reports filed from Rupert's bug button join this milestone when GitHub posting is set up.</li>
+    </ul>
+  </details>
+</div>

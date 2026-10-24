@@ -1,0 +1,7 @@
+<%# Header: open release blockers, for people who can read settings. Uses only the cached count, so no page waits on GitHub. %>
+<% if Current.user.can?('settings.read') %>
+  <% tracker = GithubIssues.cached_release_tracker %>
+  <% ReleaseTrackerRefreshJob.perform_later if tracker.nil? && !Rails.env.test? %>
+  <% label = tracker ? "#{tracker.title}: #{tracker.open_count} open release blockers" : 'Release blockers' %>
+  <%= link_to release_tracker_path, class: "nav-utility#{' nav-pill-active' if controller_name == 'release_tracker'}", aria: { label: label, current: (controller_name == 'release_tracker' ? 'page' : nil) }, title: label, data: { release_open: tracker&.open_count } do %><%= navigation_icon('bug') %><% if tracker&.open_count.to_i.positive? %><span class="absolute right-1 top-1 grid h-4 min-w-[1rem] place-items-center rounded-full bg-clay px-1 text-[10px] font-bold leading-none text-cream" aria-hidden="true"><%= tracker.open_count > 99 ? '99+' : tracker.open_count %></span><% end %><span class="nav-hint"><%= tracker ? "#{tracker.title} · #{tracker.open_count} open" : 'Release blockers' %></span><% end %>
+<% end %>

@@ -383,6 +383,7 @@ Rails.application.routes.draw do
       end
     end
   end
+  get 'release', to: 'release_tracker#show', as: :release_tracker
   namespace :people do
     # What-if model of staff incentive plans (IncentiveModel); read-only.
     get 'incentives', to: 'incentives#show', as: :incentives

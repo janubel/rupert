@@ -127,6 +127,7 @@ class ModuleRegistry
     Entry.new(key: 'agent_feedback', name: 'AI assistant feedback', path: -> { agent_feedbacks_path }, permission: 'settings.read', position: 108),
     Entry.new(key: 'ask_rupert_usage', name: 'Ask Rupert usage', path: -> { ask_rupert_usage_path }, permission: 'settings.read', position: 108.5),
     Entry.new(key: 'owner_checklists', name: 'Owner checklists', path: -> { owner_checklists_path }, permission: nil, position: 109),
+    Entry.new(key: 'release', name: 'Release blockers', path: -> { release_tracker_path }, permission: 'settings.read', position: 109.5),
     Entry.new(key: 'roadmap', name: 'Features & roadmap', path: -> { roadmap_path }, permission: nil, position: 110),
     Entry.new(key: 'style_guide', name: 'Style guide', path: -> { system_style_guide_path }, permission: 'settings.read', position: 111)
   ].freeze
@@ -221,11 +222,11 @@ class ModuleRegistry
       { key: 'system', name: 'System',
         modules: %w[system platform activity access_log
                     connections pos_connections sync uploads
-                    settings api_access_tokens agent_feedback ask_rupert_usage owner_checklists roadmap style_guide],
+                    settings api_access_tokens agent_feedback ask_rupert_usage owner_checklists release roadmap style_guide],
         groups: [
           { name: 'Health', modules: %w[system platform activity access_log] },
           { name: 'Connections', modules: %w[connections pos_connections sync uploads] },
-          { name: 'Settings', modules: %w[settings api_access_tokens agent_feedback ask_rupert_usage owner_checklists roadmap style_guide] }
+          { name: 'Settings', modules: %w[settings api_access_tokens agent_feedback ask_rupert_usage owner_checklists release roadmap style_guide] }
         ] }
     ].freeze
 
