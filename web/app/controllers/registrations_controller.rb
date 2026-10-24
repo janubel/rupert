@@ -16,8 +16,11 @@ class RegistrationsController < ApplicationController
       flash.now[:alert] = 'Choose a company name and an available workspace address (2–63 lowercase letters, numbers or hyphens).'
       return render(:new, status: :unprocessable_entity)
     end
-    # The iPhone app runs Google in the system sheet; the form travels with it (NativeSignIn).
-    return redirect_to(google_auth_path(intent: NativeSignIn.intent_token('registration', fields))) if hotwire_native_app?
+    # The iPhone app runs Google in the system sheet, and a sign-up on a host other than
+    # GoogleOauthService.sign_in_host must move there: the form travels as an intent (NativeSignIn).
+    if hotwire_native_app? || GoogleOauthService.sign_in_elsewhere?(request.host)
+      return redirect_to(google_auth_path(intent: NativeSignIn.intent_token('registration', fields)))
+    end
 
     session[:oauth_state] = SecureRandom.hex(24)
     session[:oauth_started_at] = Time.current.to_i

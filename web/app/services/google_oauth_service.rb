@@ -23,6 +23,25 @@ class GoogleOauthService
   SCOPE = 'openid email profile'
 
   class << self
+    # The one host whose callback is registered with Google. Every Google sign-in and sign-up
+    # runs there, so pos.rupertpos.com, rupertpos.com and the iPhone app need no callback of their
+    # own. RUPERT_GOOGLE_OAUTH_HOST, else the canonical HOST in production; nil means "any host".
+    def sign_in_host
+      configured = ENV['RUPERT_GOOGLE_OAUTH_HOST'].presence
+      configured ||= ENV['HOST'].presence if Rails.env.production?
+      return nil if configured.blank?
+
+      (configured.include?('://') ? URI(configured).host : configured.split('/').first).presence&.downcase
+    rescue URI::InvalidURIError
+      nil
+    end
+
+    # Whether a sign-in that starts on `host` has to move to sign_in_host first.
+    def sign_in_elsewhere?(host)
+      target = sign_in_host
+      target.present? && target != host.to_s.downcase
+    end
+
     def configured?
       client_id.present? && client_secret.present?
     end

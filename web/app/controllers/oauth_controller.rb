@@ -25,6 +25,11 @@ class OauthController < ApplicationController
 
   def authorize
     return redirect_to(WorkspaceNode.control_origin + '/login', allow_other_host: true) if WorkspaceNode.isolated?
+    # Google only knows one callback host; the whole flow (state, intent, callback) runs there.
+    if GoogleOauthService.sign_in_elsewhere?(request.host)
+      return redirect_to("https://#{GoogleOauthService.sign_in_host}#{request.fullpath}", allow_other_host: true)
+    end
+
     state = SecureRandom.hex(24)
     session[:oauth_state] = state
     session[:oauth_started_at] = Time.current.to_i
@@ -33,12 +38,13 @@ class OauthController < ApplicationController
     # The Rupert iPhone app signs in through a system browser sheet (see NativeSignIn).
     if NativeSignIn.valid_challenge?(params[:native_challenge])
       session[:oauth_native_challenge] = params[:native_challenge]
-      kind, fields = NativeSignIn.read_intent(params[:intent])
-      session[:registration_intent] = fields if kind == 'registration'
-      session[:workspace_signup_intent] = fields if kind == 'workspace_signup'
     else
       session.delete(:oauth_native_challenge)
     end
+    # A sign-up form that had to move hosts (or came from the app) arrives as an encrypted intent.
+    kind, fields = NativeSignIn.read_intent(params[:intent])
+    session[:registration_intent] = fields if kind == 'registration'
+    session[:workspace_signup_intent] = fields if kind == 'workspace_signup'
     AccessLogger.record(source: 'google', status: 'attempt', request: request, detail: 'Google sign-in started')
     redirect_to(
       GoogleOauthService.auth_url(redirect_uri: google_callback_url, state: state),
