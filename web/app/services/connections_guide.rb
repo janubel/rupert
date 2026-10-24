@@ -63,9 +63,9 @@ class ConnectionsGuide
       key: 'apple_pay',
       name: 'Apple Pay',
       description: 'Apple Pay button on warehouse checkout. Payments still run through Authorize.net.',
-      keys: %w[APPLE_PAY_MERCHANT_ID APPLE_PAY_DISPLAY_NAME APPLE_PAY_IDENTITY_CERT APPLE_PAY_IDENTITY_KEY],
+      keys: %w[APPLE_PAY_MERCHANT_ID APPLE_PAY_DISPLAY_NAME APPLE_PAY_IDENTITY_CERT APPLE_PAY_IDENTITY_KEY APPLE_PAY_DOMAIN_ASSOCIATION],
       find_url: 'https://developer.apple.com/account/resources/identifiers/list/merchant',
-      find_hint: 'Apple Developer → Identifiers → Merchant IDs. Create a Merchant ID, add your checkout domain, download the domain-association file into web/public/.well-known/, and create a Merchant Identity Certificate (paste its PEM certificate and private key). Separately, in the Authorize.net Merchant Interface (Account → Digital Payment Solutions → Apple Pay) generate the Payment Processing certificate request and upload Apple\'s signed certificate back.',
+      find_hint: 'Apple Developer → Identifiers → Merchant IDs. Create a Merchant ID, add your checkout domain, paste the downloaded domain-association file’s contents as APPLE_PAY_DOMAIN_ASSOCIATION (Rupert serves it at /.well-known/apple-developer-merchantid-domain-association; then press Verify in Apple’s portal), and create a Merchant Identity Certificate (paste its PEM certificate and private key). Separately, in the Authorize.net Merchant Interface (Account → Digital Payment Solutions → Apple Pay) generate the Payment Processing certificate request and upload Apple\'s signed certificate back.',
       renewal_note: 'Apple certificates expire after about 25 months. Renew both the Merchant Identity and Payment Processing certificates before then or the button stops working.'
     ),
     Service.new(
