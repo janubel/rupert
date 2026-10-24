@@ -1,30 +1,51 @@
-<%= page_header '1099 payees', subtitle: 'Who may get a 1099, which form, and whether their W-9 is on file.' do %>
+<% labels = { 'needed' => ['Needs a 1099', 'pill-clay'], 'under' => ['Under threshold', 'pill-taupe'], 'exempt' => ['Likely exempt', 'pill-olive'], 'none' => ['No 1099', 'pill-taupe'] } %>
+<% needed = @totals.needed %>
+<%= page_header '1099 payees', subtitle: 'Who may get a 1099, what they were paid, and whether their W-9 is on file.',
+      menu: [['Download CSV', finance_tax_payees_path(year: @year, format: :csv), { data: { turbo: false } }]] do %>
   <% if @can_write %><%= link_to 'Add payee', new_finance_tax_payee_path, class: 'btn-primary' %><% end %>
 <% end %>
 <div class="space-y-6 mt-6">
-  <div class="card"><div class="table-region" role="region" tabindex="0" aria-label="1099 payees"><table class="table">
-    <thead><tr><th class="th" scope="col">Payee</th><th class="th" scope="col">Form</th><th class="th" scope="col">Classification</th><th class="th" scope="col">TIN</th><th class="th" scope="col">W-9</th><th class="th" scope="col">Needs</th><th class="th" scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+  <section class="toolbar-band">
+    <%= form_tag finance_tax_payees_path, method: :get, class: 'toolbar', 'aria-label': 'Tax year' do %>
+      <div class="toolbar-field"><%= label_tag :year, 'Tax year', class: 'field-label' %><%= select_tag :year, options_for_select((2024..Date.current.year).to_a.reverse, @year), class: 'select' %></div>
+      <div class="toolbar-actions"><%= submit_tag 'Apply', class: 'btn-primary' %></div>
+    <% end %>
+  </section>
+
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="<%= @year %> summary">
+    <div class="stat"><div class="stat-label">Payees</div><p class="stat-value mt-2 tabular-nums"><%= @totals.rows.size %></p></div>
+    <div class="stat"><div class="stat-label">Need a 1099 for <%= @year %></div><p class="stat-value mt-2 tabular-nums"><%= needed.size %></p></div>
+    <div class="stat"><div class="stat-label">Of those, missing W-9 details</div><p class="stat-value mt-2 tabular-nums"><%= needed.count { |row| row.payee.missing.any? } %></p></div>
+    <div class="stat"><div class="stat-label">Reportable paid</div><p class="stat-value mt-2 tabular-nums"><%= finance_money(needed.sum(&:paid_cents)) %></p></div>
+  </section>
+
+  <div class="card"><div class="table-region" role="region" tabindex="0" aria-label="1099 payees for <%= @year %>"><table class="table">
+    <thead><tr><th class="th" scope="col">Payee</th><th class="th" scope="col">Form</th><th class="th" scope="col">TIN</th><th class="th num" scope="col">Paid <%= @year %></th><th class="th num" scope="col">Card (left out)</th><th class="th" scope="col">Status</th><th class="th" scope="col">W-9 needs</th><th class="th" scope="col"><span class="sr-only">Actions</span></th></tr></thead>
     <tbody>
-      <% @payees.each do |payee| %>
+      <% @totals.rows.each do |row| %>
+        <% payee = row.payee; label, tone = labels[row.status(@year)] %>
         <tr>
-          <th scope="row" class="td text-left"><span class="font-medium"><%= payee.legal_name %></span><% if payee.business_name.present? %><span class="block text-xs text-mocha"><%= payee.business_name %></span><% end %><span class="block text-xs text-taupe">Paid as <%= payee.payee_label %></span></th>
-          <td class="td"><%= payee.form_label %><% if payee.likely_exempt? %> <span class="pill-olive">Likely exempt</span><% end %></td>
-          <td class="td text-mocha"><%= Finance::TaxPayee::CLASSIFICATIONS[payee.tax_classification] %></td>
+          <th scope="row" class="td text-left"><span class="font-medium"><%= payee.legal_name %></span><% if payee.business_name.present? %><span class="block text-xs text-mocha"><%= payee.business_name %></span><% end %><span class="block text-xs text-taupe">Paid as <%= payee.payee_label %> · <%= Finance::TaxPayee::CLASSIFICATIONS[payee.tax_classification] %></span></th>
+          <td class="td"><%= payee.form_label %></td>
           <td class="td tabular-nums"><%= payee.masked_tin ? "#{Finance::TaxPayee::TIN_TYPES[payee.tin_type]} #{payee.masked_tin}" : '—' %></td>
-          <td class="td"><%= payee.w9_received_on ? l(payee.w9_received_on, format: :long) : '—' %></td>
+          <td class="td num"><%= finance_money(row.paid_cents) %><% if row.other_method_cents.positive? %><span class="block text-xs text-warn" title="Paid by an 'other' method: if that was a payment app, it is reported on a 1099-K instead.">incl. <%= finance_money_text(row.other_method_cents) %> other method</span><% end %></td>
+          <td class="td num text-mocha"><%= finance_money(row.card_cents, zero: :dash) %></td>
+          <td class="td"><span class="<%= tone %>"><%= label %></span></td>
           <td class="td"><% if payee.missing.any? %><span class="pill-clay"><%= payee.missing.to_sentence %></span><% else %><span class="pill-fern">Complete</span><% end %></td>
           <td class="td text-right"><% if @can_write %><%= link_to 'Edit', edit_finance_tax_payee_path(payee), class: 'btn-ghost btn-sm', aria: { label: "Edit #{payee.legal_name}" } %><% end %></td>
         </tr>
       <% end %>
-      <% if @payees.empty? %><tr><td colspan="7" class="empty-row">No 1099 payees yet. Add the contractors and vendors you pay who may need a 1099.</td></tr><% end %>
+      <% if @totals.rows.empty? %><tr><td colspan="8" class="empty-row">No 1099 payees yet. Add the contractors and vendors you pay who may need a 1099.</td></tr><% end %>
     </tbody>
   </table></div></div>
+
   <details class="explainer card card-pad">
-    <summary class="explainer-summary font-semibold">Who needs a 1099</summary>
+    <summary class="explainer-summary font-semibold">How the totals and thresholds work</summary>
     <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-mocha">
-      <li><strong>1099-NEC</strong> covers pay for services by people and businesses who are not employees. <strong>1099-MISC</strong> covers rent, royalties, attorney fees and other income.</li>
-      <li>Corporations are usually exempt, except for attorney fees. Card and payment-app payments are reported by the processor on a 1099-K, so they will be left out of the totals.</li>
-      <li>The TIN is encrypted and shown only as its last four digits. Yearly totals and the forms come next (#472). Have a tax preparer review before filing.</li>
+      <li><strong>Paid</strong> adds expenses and vendor payments to that vendor or payee name dated in <%= @year %>, and paid payslips for a contractor on staff (by pay date). <strong>Card payments are left out</strong>: the card processor reports those on a 1099-K. Payments with the method "other" are counted but marked, in case they went through a payment app.</li>
+      <li><strong>Threshold for <%= @year %>:</strong> <%= finance_money_text(Finance::Form1099Totals::THRESHOLDS.fetch(@year) { @year < 2025 ? 600_00 : Finance::Form1099Totals::LATER_THRESHOLD }) %> (royalties: <%= finance_money_text(Finance::Form1099Totals::ROYALTY_THRESHOLD) %>). The 2025 tax law raised it from $600 to $2,000 for payments made after 2025. Corporations are usually exempt, except attorney fees.</li>
+      <li><strong>1099-NEC</strong> covers pay for services by non-employees; <strong>1099-MISC</strong> covers rent, royalties, attorney fees and other income. The TIN is encrypted and shown only as its last four digits, also in the CSV.</li>
+      <li>This is a preparation aid, not tax advice. Have a tax preparer review the totals before filing. The forms themselves come next (#472).</li>
     </ul>
   </details>
 </div>
