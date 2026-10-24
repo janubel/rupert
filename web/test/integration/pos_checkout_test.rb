@@ -19,6 +19,23 @@ class PosCheckoutIntegrationTest < ActionDispatch::IntegrationTest
   end
   teardown { Current.reset }
 
+  test 'card processing down is a red alert on the bell and at the top of Notifications, not a banner on every page' do
+    get notifications_path
+    assert_select 'a.nav-utility[data-system-alerts="1"][aria-label^="Notifications, 1 alert"]' do
+      assert_select 'span.bg-rose', '!'
+    end
+    assert_select '[data-system-alert]', /Card processing is down/ do
+      assert_select 'a[href=?]', pos_setting_path(@location.id), 'Open POS settings'
+    end
+    get alerts_path
+    assert_select '[data-system-alert]', false
+    assert_select 'main [role=alert]', { text: /Card processing is down/, count: 0 }
+    PosSetting.where(location: @location).update_all(card_enabled: true, verified_at: Time.current)
+    get notifications_path
+    assert_select 'a.nav-utility[data-system-alerts="0"]'
+    assert_select '[data-system-alert]', false
+  end
+
   test 'admins see why card checkout is off with a link to gateway setup until the gateway is verified' do
     get ctrax_pos_path(location_id: @location.id, display_id: @display.id)
     assert_select '.pos-tender[data-tender="card"][disabled]'

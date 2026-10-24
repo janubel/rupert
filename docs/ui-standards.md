@@ -64,7 +64,7 @@ one thing, see the state of the business at a glance, and trust the numbers.
 ┌ top bar ──────────────────────────────────────────────────────────────┐
 │ ☰  Rupert   [search orders, customers, SKUs… /]   Ask  Chat  🔔  (DO) │
 ├ rail ─────┬ main ─────────────────────────────────────────────────────┤
-│ Overview  │                                                           │
+│ Overview  │ Next  [Fix] SwipeSimple sync is failing   Done · Snooze · ⚑ │
 │ Sell      │ Page title                                   [More ▾] [+] │
 │ Stock     │ One-line subtitle.                                        │
 │ Bookkeep. │                                                           │
@@ -83,13 +83,20 @@ one thing, see the state of the business at a glance, and trust the numbers.
   four utilities: Ask Rupert, Team chat, notifications, account. One row, always. Nothing
   page-specific lives here, and nothing joins the four without taking one away. Sync state,
   help and bug reports live in the status bar; everything personal or rare (time, billing,
-  support access, appearance, roadmap, instance overview) lives in the account menu.
+  support access, appearance, roadmap, instance overview) lives in the account menu. A problem with the system
+  itself (card processing down) is not a banner on every page: it turns the notifications bell's badge red with
+  `!` and is listed at the top of Notifications with the link that fixes it (`system_alerts`).
 - **Rail** (`.app-rail`): the sections (`nav[aria-label="Module areas"]`). The current section
   is expanded and lists its pages in named groups (`nav[aria-label="Module"]`). A section with
   more than eight pages folds its groups: only the group holding the current page is open, the
   rest are one click away (`details.rail-fold`). On wide screens
   the rail is persistent and the ☰ menu button folds it to icons and back (remembered per
   browser); under 1024px it becomes a drawer behind the same button. Phones get the same drawer.
+- **Next thing to do** (`turbo-frame#next_thing`, `.next-bar`): the first line of `main`, above the flashes.
+  One quiet line with the most urgent item for this person, its Fix/Watch pill, the page that fixes it and
+  `Done`, `Snooze 1 h`, `Start ops mode`. It loads after the page (lazy frame) and is empty when nothing is
+  waiting. **Ops mode** gives it a little more weight and works the list one item at a time (`Open`, `Done`,
+  `Snooze 1 h`, `Skip`, `Exit ops mode`). Items come from `NextThings`; nothing else joins this line.
 - **Main** (`main#main`): flashes, then the page. Width tiers: default `max-w-6xl` for tables and
   dashboards, `.page-medium` (56rem) for reading and settings, `.page-narrow` (42rem) for forms
   and short detail pages. No other `max-w-*` on page wrappers.

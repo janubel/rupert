@@ -50,14 +50,14 @@ class RetailWorkspaceTest < ActionDispatch::IntegrationTest
     assert_select 'details', text: /Website image link/, count: 0
   end
 
-  test 'daily close summarizes completed source orders without adding tender or tip money' do
+  test 'daily close shows gross after discounts, refunds, net, tax, tips, cash and credit without adding tips to sales' do
     day = create_day
     get ctrax_days_path, params: { date: day.business_date }
     assert_response :success
-    assert_select 'article[aria-label="Retail UI fixture daily close"]', text: /Recorded sales.*\$10.00.*1 completed order.*Recorded tips.*\$2.00/m
+    assert_select 'article[aria-label="Retail UI fixture daily close"]', text: /Gross sales.*\$9.00.*1 completed order.*Net sales.*Tips collected.*\$2.00/m
     get ctrax_day_path(day)
     assert_response :success
-    assert_select '[aria-label="Daily sales summary"]', text: /Recorded sales.*\$10.00.*Tax included.*\$1.00.*Tips.*\$2.00.*Completed orders.*1/m
+    assert_select '[aria-label="Daily sales summary"]', text: /Gross sales.*\$9.00.*After discounts.*Refunds.*Net sales.*Tax collected.*\$1.00.*Tips collected.*\$2.00.*Cash collected.*Credit collected.*Completed orders.*1/m
     assert_select '[role=region][tabindex="0"][aria-label="Daily source checks"] table caption'
     assert_select 'th[scope=row]', 'Card terminal tender'
     assert_not_includes response.body, 'standaloneCardTerminal tender'
@@ -66,7 +66,7 @@ class RetailWorkspaceTest < ActionDispatch::IntegrationTest
     assert_select 'textarea.retail-notes'
     day.update!(currency: 'EUR', orders_json: day.orders.map { |order| order.merge('total' => nil) })
     get ctrax_day_path(day)
-    assert_select '[aria-label="Daily sales summary"]', text: /Recorded sales.*Unknown.*Tax included.*EUR 1.00/m
+    assert_select '[aria-label="Daily sales summary"]', text: /Gross sales.*Unknown.*Net sales.*Unknown.*Tax collected.*EUR 1.00/m
   end
 
   test 'readers can inspect daily checks without review forms or register refresh actions' do

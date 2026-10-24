@@ -16,7 +16,7 @@ namespace :swipesimple do
     Current.set(tenant: connection.tenant) do
       result = SwipesimpleWeb::Backfill.call(connection: connection, from: from, to: to, pause: ENV.fetch('PAUSE', '2').to_f,
         log: ->(line) { puts line })
-      puts "Done: #{result[:months]} months of tax and sales reports stored for #{result[:from]}..#{result[:to]}."
+      puts "Done: #{result[:months]} months of tax and sales reports stored for #{result[:accounts]} account(s) for #{result[:from]}..#{result[:to]}."
     end
   rescue Date::Error
     abort 'Use dates in YYYY-MM-DD format, e.g. bin/rails "swipesimple:backfill_reports[2025-01-01,2026-10-19]".'

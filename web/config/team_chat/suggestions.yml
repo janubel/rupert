@@ -1,0 +1,102 @@
+# Suggestion bubbles always shown above the chat box (TeamChat::Suggestions). A tap sends the question.
+# In a channel where bots answer only when named (#admins), the bubble adds "@rupert " so someone answers.
+# Six are shown, chosen per person per day: the ones for this time of day first, then the rest in a daily order.
+# Keep each one a question Rupert's tools can answer (config/team_chat/data_guide.yml). Edit and deploy; no code change.
+
+# Before 11:00
+morning:
+  - How did yesterday go?
+  - What should I look at first today?
+  - Any orders waiting to ship?
+# 11:00 to 16:59
+afternoon:
+  - How are sales today so far?
+  - Anything low on stock?
+  - Any overdue tasks?
+# From 17:00
+evening:
+  - How did today go?
+  - Is today's money review done?
+  - What is still open for tomorrow?
+# Mondays
+monday:
+  - How did last week compare with the week before?
+# The 1st to the 5th of the month
+month_start:
+  - Is last month closed in the books?
+  - How much sales tax did we collect last month?
+anytime:
+  - Any alerts I should look at?
+  - Is sync healthy?
+  - What are the top sellers this week?
+  - Who is working today?
+  - Any timesheets waiting for approval?
+  - How much did the store take yesterday?
+  - How do I add an expense?
+
+# After a bot answers, the row shows "Next:" questions that follow on from what was just asked: up to four from
+# the answer's data guide topics (config/team_chat/data_guide.yml), else from the tools it used (tool_topics).
+follow_ups:
+  sales:
+    - How does that compare with last week?
+    - What are the top sellers this week?
+    - Which source sold the most?
+    - What was the average order this month?
+  store_sales:
+    - How much cash did the store take today?
+    - How did the store do yesterday?
+    - What were the tips today?
+    - How did the store do this week?
+  comparison:
+    - How does this month compare with last month?
+    - What was our best day this month?
+    - How does that compare with last year?
+  tax:
+    - How much sales tax did we collect this month?
+    - Which source collected the most tax?
+    - Is last month closed in the books?
+  money_out:
+    - What is the refund rate this month?
+    - What did we spend by category last month?
+    - Any expense receipts waiting for review?
+  books:
+    - What is still open to close last month?
+    - Any bank lines waiting?
+    - Any daily money reviews overdue?
+  people:
+    - Any timesheets waiting for approval?
+    - How many hours did the team work last pay week?
+    - Any time off requests waiting?
+  queues:
+    - Which orders are late to ship?
+    - Any orders waiting on low stock?
+    - Any purchase orders late?
+  stock:
+    - Which items are out of stock?
+    - Which items are lowest on stock?
+    - How does C-Trax stock compare with Shopify?
+  tasks:
+    - What is overdue on the task board?
+    - What is assigned to me?
+    - What is due this week?
+  system:
+    - Is sync healthy?
+    - When did each source last sync?
+  cross:
+    - What should I look at first today?
+    - Any alerts I should look at?
+    - Anything waiting to be processed?
+tool_topics:
+  daily_close: store_sales
+  metric: sales
+  sales_summary: sales
+  period_review: comparison
+  sales_tax_report: tax
+  order_queues: queues
+  list_alerts: stock
+  inventory_search: stock
+  list_tasks: tasks
+  compliance_check: books
+  time_keeping_report: people
+  sync_health: system
+  business_pulse: cross

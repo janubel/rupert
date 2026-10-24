@@ -153,18 +153,111 @@ class SwipesimpleWebReportsTest < ActiveSupport::TestCase
     stub_items
     result = SwipesimpleWeb::Sync.call(connection: @connection)
     assert_equal %i[pulled updated], result.values_at(:reports, :items)
+    window = SwipesimpleReportPull.where(period_from: Date.new(2026, 9, 1)..)
     assert_equal [%w[sales 2026-09-01 2026-09-30], %w[sales 2026-10-01 2026-10-15], %w[tax 2026-09-01 2026-09-30], %w[tax 2026-10-01 2026-10-15]],
-      SwipesimpleReportPull.order(:topic, :period_from).map { |pull| [pull.topic, pull.period_from.iso8601, pull.period_to.iso8601] }
+      window.order(:topic, :period_from).map { |pull| [pull.topic, pull.period_from.iso8601, pull.period_to.iso8601] }
     assert_equal 2, SwipesimpleSalesDay.count
-    assert_equal 2, ReconciliationDocument.where(source: 'swipesimple', kind: 'processor_report').count, 'only September is closed'
+    assert_equal 2, ReconciliationDocument.where(source: 'swipesimple', kind: 'processor_report', id: window.select(:reconciliation_document_id)).count,
+      'only September is closed in the rolling window'
     assert_includes @connection.reload.last_report_message, 'Tax and sales reports pulled for 2026-09-01 through 2026-10-15.'
     snapshot = SwipesimpleItemSnapshot.sole
     assert snapshot.automatic?
     assert_equal %w[101 102], snapshot.records.map { |r| r['id'] }
   end
 
-  test 'report and item failures are isolated from the transaction pull' do
+  test 'each pull fills a few older report months, newest first, until history is complete' do
+    stub_exports_for_sync(transform: OLD_HISTORY)
+    stub_reports
+    stub_items
+    result = SwipesimpleWeb::Sync.call(connection: @connection)
+    assert_equal :filled, result[:report_history]
+    history = -> { SwipesimpleReportPull.where(period_to: ...Date.new(2026, 9, 1)).distinct.pluck(:period_from).sort }
+    assert_equal [Date.new(2026, 6, 1), Date.new(2026, 7, 1), Date.new(2026, 8, 1)], history.call
+    assert_equal 6, SwipesimpleReportPull.where(period_from: history.call).count, 'tax and sales for each month'
+    assert_includes @connection.reload.last_report_message, 'Older report months filled: 2026-06, 2026-07, 2026-08 (33 more to fetch on later pulls).'
+
+    # A partially covered month counts as missing and is pulled whole.
+    SwipesimpleReportPull.where(topic: 'sales', period_from: Date.new(2026, 8, 1)).update_all(period_to: Date.new(2026, 8, 15))
+    assert_equal Date.new(2026, 8, 1), SwipesimpleWeb::Sync.missing_history('Example Wholesale').first
+
+    travel 30.minutes
+    SwipesimpleWeb::Sync.call(connection: @connection.reload)
+    assert_equal (4..8).map { |month| Date.new(2026, month, 1) }, history.call
+    assert_equal Date.new(2026, 8, 31), SwipesimpleReportPull.where(topic: 'sales', period_from: Date.new(2026, 8, 1)).sole.period_to
+  end
+
+  test 'report history stops asking once every month in range is stored' do
+    SwipesimpleWeb::Sync.missing_history('Example Wholesale').each do |month|
+      SwipesimpleWeb::Client::REPORT_TOPICS.each do |topic|
+        SwipesimpleReportPull.create!(merchant_account: 'Example Wholesale', topic: topic, period_from: month, period_to: month.end_of_month,
+          row_count: 0, source_digest: 'a' * 64, original_csv: "Date\n", pulled_at: Time.current)
+      end
+    end
+    assert_empty SwipesimpleWeb::Sync.missing_history('Example Wholesale')
     stub_exports_for_sync
+    stub_reports
+    stub_items
+    result = SwipesimpleWeb::Sync.call(connection: @connection)
+    assert_equal :complete, result[:report_history]
+    refute_includes @connection.reload.last_report_message, 'Older report months'
+  end
+
+  test 'report history does not reach back before the first transaction of the account' do
+    stub_exports_for_sync
+    stub_reports
+    stub_items
+    result = SwipesimpleWeb::Sync.call(connection: @connection)
+    assert_equal :complete, result[:report_history], 'the fixture starts in September, inside the rolling window'
+    assert_equal [Date.new(2026, 9, 1), Date.new(2026, 10, 1)], SwipesimpleReportPull.distinct.order(:period_from).pluck(:period_from)
+    assert_equal [Date.new(2026, 8, 1)], SwipesimpleWeb::Sync.missing_history('Example Wholesale', since: Time.zone.local(2026, 8, 20))
+  end
+
+  test 'a second merchant account is split out and gets its own reports; invoices and items stay with the first' do
+    stub_exports_for_sync
+    stub_reports
+    stub_items
+    SwipesimpleWeb::Sync.call(connection: @connection)
+    travel 30.minutes
+    # A second card terminal joins: two of the rows now belong to it.
+    stub_exports_for_sync(transform: ->(text) { text.sub(',Example Wholesale,', ',Example Terminal,').sub(',Example Wholesale,', ',Example Terminal,') })
+    stub_request(:get, 'https://swipesimple.com/companies/42/reporting?topic=sales').to_return(status: 200,
+      body: '<select id="merchant-select"><option value="">All</option><option value="111">Example Wholesale</option><option value="222">Example Terminal</option></select>')
+    asked = []
+    stub_reports do |topic, from, _to|
+      asked << [topic, from]
+      nil
+    end
+    result = SwipesimpleWeb::Sync.call(connection: @connection.reload)
+    assert_equal [13, 7, :pulled], result.values_at(:transactions, :invoices, :reports)
+    @connection.reload
+    assert_equal 'succeeded', @connection.last_report_status
+    assert_includes @connection.last_report_message, 'across 2 merchant accounts'
+    terminal = SwipesimpleExport.where(kind: 'transactions', merchant_account: 'Example Terminal').sole
+    assert_equal 2, SwipesimpleReportRow.where(swipesimple_export_id: terminal.id).count
+    latest = SwipesimpleExport.where(kind: 'transactions', merchant_account: 'Example Wholesale').order(:exported_at).last
+    assert_equal 11, SwipesimpleReportRow.where(swipesimple_export_id: latest.id).count
+    assert_equal ['Example Wholesale'], SwipesimpleExport.where(kind: 'invoices').distinct.pluck(:merchant_account)
+    assert_equal 'Example Wholesale', SwipesimpleItemSnapshot.sole.merchant_account
+    %w[111 222].each do |id|
+      assert_requested :get, %r{\Ahttps://swipesimple\.com/companies/42/reports\.csv\?.*merchant_account_id=#{id}}, times: 4
+    end
+    assert_equal %w[Example\ Terminal Example\ Wholesale], SwipesimpleReportPull.where(period_from: Date.new(2026, 10, 1)).distinct.order(:merchant_account).pluck(:merchant_account)
+  end
+
+  test 'a pull that shares no merchant account with earlier pulls is refused' do
+    stub_exports_for_sync
+    stub_reports
+    stub_items
+    SwipesimpleWeb::Sync.call(connection: @connection)
+    travel 30.minutes
+    stub_exports_for_sync(transform: ->(text) { text.gsub(',Example Wholesale,', ',Someone Else,') })
+    assert_raises(SwipesimpleWeb::Client::Error) { SwipesimpleWeb::Sync.call(connection: @connection.reload) }
+    assert_equal 'failed', @connection.reload.last_report_status
+    refute SwipesimpleExport.exists?(merchant_account: 'Someone Else')
+  end
+
+  test 'report and item failures are isolated from the transaction pull' do
+    stub_exports_for_sync(transform: OLD_HISTORY)
     stub_reports
     stub_items
     SwipesimpleWeb::Sync.call(connection: @connection)
@@ -180,6 +273,7 @@ class SwipesimpleWebReportsTest < ActiveSupport::TestCase
     @connection.reload
     assert_equal 'succeeded', @connection.last_report_status
     assert_includes @connection.last_report_message, 'Tax and sales reports were not updated'
+    assert_includes @connection.last_report_message, 'Older report months were not filled'
     assert_includes @connection.last_report_message, 'Items were not updated'
     refute_includes @connection.last_report_message, 'private upstream'
     assert @connection.reporting_enabled
@@ -254,9 +348,13 @@ class SwipesimpleWebReportsTest < ActiveSupport::TestCase
 
   private
 
-  def stub_exports_for_sync
+  # Moves the oldest fixture transaction back to 2020, so report history reaches the 36-month limit.
+  OLD_HISTORY = ->(text) { text.sub('09/30/2026', '01/30/2020') }
+
+  def stub_exports_for_sync(transform: nil)
     %w[transactions invoices].each do |kind|
       text = File.binread(Rails.root.join("test/fixtures/files/swipesimple_#{kind}.csv")).force_encoding(Encoding::UTF_8).gsub('\\r\\n', "\r\n")
+      text = transform.call(text) if transform && kind == 'transactions'
       total = CSV.parse(text.delete_prefix("﻿"), headers: true).size
       stub_request(:get, "https://swipesimple.com/#{kind}.json?iDisplayStart=0&iDisplayLength=1&sEcho=1")
         .to_return(json_response(iTotalRecords: total, iTotalDisplayRecords: total))

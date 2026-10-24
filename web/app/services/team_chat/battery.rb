@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'securerandom'
+require 'digest'
 
 module TeamChat
   # A fixed set of questions (config/team_chat/battery.yml) asked to one bot in
@@ -35,18 +36,63 @@ module TeamChat
       path
     end
 
-    def self.items(path = CONFIG)
+    # Every question set: default plus each config/team_chat/battery_<name>.yml.
+    def self.sets
+      ['default'] + Dir[Rails.root.join('config/team_chat/battery_*.yml')].map { |path| File.basename(path, '.yml').delete_prefix('battery_') }.sort
+    end
+
+    def self.set_name_for(path)
+      name = File.basename(path.to_s, '.yml')
+      name == 'battery' ? 'default' : name.delete_prefix('battery_')
+    end
+
+    # The set as shipped in the YAML file.
+    def self.builtin_items(path = CONFIG)
       YAML.safe_load_file(path).fetch('questions').map do |row|
         Item.new(id: row.fetch('id'), cadence: row.fetch('cadence'), question: row.fetch('question'), checks: Array(row['checks']),
           expect: row['expect'].to_s.squish.presence, module: row['module'].presence, needs: Array(row['needs']).map(&:to_s))
       end
     end
 
+    # The set as this workspace asks it: built-in questions, with its own edits (same id) and removals applied, then
+    # its own new questions (TeamChat::BatteryQuestion).
+    def self.items(path = CONFIG)
+      base = builtin_items(path)
+      edits = edits_for(set_name_for(path))
+      return base if edits.empty?
+
+      by_id = edits.index_by(&:question_id)
+      kept = base.filter_map do |item|
+        edit = by_id.delete(item.id)
+        next item unless edit
+
+        edit.to_item if edit.active?
+      end
+      kept + by_id.values.select(&:active?).sort_by(&:created_at).map(&:to_item)
+    end
+
+    def self.edits_for(set)
+      return [] unless Current.tenant_id
+
+      BatteryQuestion.where(set_name: set.to_s).order(:id).to_a
+    end
+
+    # The name a run is saved under: an edited set gets its own name (finance-edited-1a2b3c), so its scores are never
+    # compared with runs of the built-in questions or of an earlier version of the edits.
+    def self.run_set_name(set)
+      edits = edits_for(set)
+      return set.to_s if edits.empty?
+
+      digest = Digest::SHA256.hexdigest(edits.map { |edit| [edit.question_id, edit.status, edit.question, edit.expect, edit.checks, edit.needs] }.to_json)
+      "#{set}-edited-#{digest.first(6)}"
+    end
+
     # user: who the questions are asked as (their permissions). agent: a local bot handle, or 'rupert'.
     attr_reader :set
 
-    def initialize(user:, agent: 'liquid', only: nil, grader: Grader.new, items: self.class.items, out: $stdout, set: 'default')
+    def initialize(user:, agent: 'qwen', only: nil, grader: Grader.new, items: self.class.items, out: $stdout, set: 'default')
       @set = set.to_s.presence || 'default'
+      @run_set = self.class.run_set_name(@set)
       @user = user
       @agent = agent.to_s == 'rupert' ? nil : (LocalAgents.find(agent) || LocalAgents.trial(agent))
       raise ArgumentError, "No bot @#{agent} is available here." if agent.to_s != 'rupert' && !@agent
@@ -66,7 +112,7 @@ module TeamChat
     def self.room_slug(handle) = "test-#{handle.presence || 'rupert'}"
 
     # Evaluation can read business data too: use a separate requester-owned room.
-    def self.room_for(user, handle = 'liquid')
+    def self.room_for(user, handle = 'qwen')
       slug = "#{room_slug(handle)}-#{user.id}"
       room = Room.find_by(slug: slug) ||
              Room.create!(name: slug, slug: slug, kind: 'direct', topic: format(ROOM_TOPIC, handle: handle.presence || 'rupert'),
@@ -106,7 +152,7 @@ module TeamChat
     # The saved name of this run's question set; a run of only some questions is marked so it never counts as the full set.
     # Runs with the answer check (RUPERT_VERIFY) are kept apart: "finance+verify".
     def record_set_name
-      name = Verify.enabled_for?(@agent) ? "#{@set}+verify" : @set
+      name = Verify.enabled_for?(@agent) ? "#{@run_set}+verify" : @run_set
       @partial ? "#{name} (part)" : name
     end
 

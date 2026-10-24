@@ -82,6 +82,8 @@ module Ctrax
         'website_product_id' => row.dig('product', 'shopify_product_identifier')&.to_s,
         'website_variant_id' => row['shopify_product_variant_identifier']&.to_s,
         'price_cents' => minor_units(effective.call('is_promo_pricing_enabled') == true ? effective.call('promo_price') : effective.call('regular_price')),
+        # Cost as entered in C-Trax (same units as its prices); 0 means not entered, kept as unknown.
+        'cost_cents' => (cost = minor_units(effective.call('cost'))) && cost.positive? ? cost : nil,
         'tax_status' => effective.call('tax_status'),
         'tax_rates_mbp' => tax_rates(effective.call('tax_status'), row['attribute_store_overrides']),
         'tax_rate_mbp' => tax_rates(effective.call('tax_status'), row['attribute_store_overrides'])&.sum,

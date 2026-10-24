@@ -6,7 +6,7 @@ module Mcp
     def self.tools
       [
         Tools::GetWorkspaceInfo, Tools::DataGuide, Tools::ListReports, Tools::BusinessPulse,
-        Tools::SalesSummary, Tools::Metric, Tools::ListMetrics, Tools::PeriodReview, Tools::SalesTaxReport,
+        Tools::SalesSummary, Tools::Metric, Tools::ListMetrics, Tools::PeriodReview, Tools::SalesTaxReport, Tools::DailyClose,
         Tools::ComplianceCheck, Tools::OrderQueues,
         Tools::InventorySearch, Tools::StockComparison, Tools::SwipesimpleItems, Tools::TimeKeepingReport, Tools::ListTasks,
         Tools::CreateTask, Tools::UpdateTask, Tools::ListAlerts, Tools::AiHealth, Tools::SubmitFeedback, Tools::ListMyFeedback,

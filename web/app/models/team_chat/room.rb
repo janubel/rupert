@@ -35,7 +35,7 @@ module TeamChat
     }
 
     MAIN_SLUG = 'admins'
-    MAIN_TOPIC = 'All admins, with Rupert. Mention @rupert, or a local model (@liquid, @qwen, @gemma), to ask about the business.'
+    MAIN_TOPIC = 'All admins, with Rupert. Mention @rupert, or a local model (@qwen, @gemma), to ask about the business.'
 
     # #admins holds every person who can use team chat, plus Rupert. (It was #general;
     # an existing #general is renamed in place, so its history and links carry over.)
@@ -55,13 +55,18 @@ module TeamChat
     # bot, with no @ needed. Only bots that can answer right now get one.
     BOT_ROOM = /\Abot-(?<handle>[a-z0-9][a-z0-9-]*?)-(?<owner>\d+)\z/
 
+    # A bot that is no longer listed (or not running) has its room archived, history kept; it reopens when it is back.
     def self.bot_rooms_for(user)
-      Router.room_agents.map do |agent|
+      rooms = where(kind: 'direct', created_by_id: user.id).where('slug LIKE ?', 'bot-%').to_a.select(&:bot_room?).index_by(&:slug)
+      current = Router.room_agents.map do |agent|
         slug = "bot-#{agent.handle}-#{user.id}"
-        find_by(kind: 'direct', created_by_id: user.id, slug: slug) ||
-          create!(kind: 'direct', name: agent.name, slug: slug, assistant_mode: 'all', created_by: user,
-            topic: "Just you and #{agent.name} (@#{agent.handle}, #{agent.about}). Every message here goes to it; no @ needed.")
+        room = rooms[slug]
+        room&.update!(archived_at: nil) if room&.archived?
+        room || create!(kind: 'direct', name: agent.name, slug: slug, assistant_mode: 'all', created_by: user,
+          topic: "Just you and #{agent.name} (@#{agent.handle}, #{agent.about}). Every message here goes to it; no @ needed.")
       end
+      rooms.each_value { |room| room.update!(archived_at: Time.current) unless room.archived? || current.include?(room) }
+      current
     end
 
     # The direct-message room between two people (created on first use).

@@ -26,23 +26,23 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
   def post(text) = TeamChat::Post.call(room: @room, user: @user, body: text)
 
   test 'local agents exist only when the gateway is configured' do
-    assert_equal %w[liquid qwen gemma], TeamChat::LocalAgents.all.map(&:handle)
+    assert_equal %w[qwen gemma], TeamChat::LocalAgents.all.map(&:handle)
     ENV['RUPERT_LOCAL_LLM_URL'] = nil
     assert_empty TeamChat::LocalAgents.all
     assert_empty post('@qwen hello').replies
   end
 
-  test 'bots answer to the names people actually type: @gemma4, @Gemma-4, @qwen3.5, @lfm' do
+  test 'bots answer to the names people actually type: @gemma4, @Gemma-4, @qwen3.5; @lfm is test only now' do
     assert_equal ['gemma'], post('@gemma4 how are sales today').replies.map { |reply| reply.meta['agent'] }
     assert_equal ['gemma'], post('@Gemma-4 hi').replies.map { |reply| reply.meta['agent'] }
     assert_equal ['qwen'], post('@qwen3.5 hi').replies.map { |reply| reply.meta['agent'] }
-    assert_equal ['liquid'], post('hey @lfm, hi').replies.map { |reply| reply.meta['agent'] }
+    assert_empty post('hey @lfm, hi').replies, 'Liquid left chat on 2026-10-23'
     assert_empty post('@gemma-e2b and @gemmas and email@gemma.dev').replies
   end
 
   test 'each mentioned local agent gets its own pending reply, alongside @rupert' do
-    result = post('@rupert and @qwen and @liquid: how were sales yesterday?')
-    assert_equal [nil, 'qwen', 'liquid'], result.replies.map { |reply| reply.meta['agent'] }
+    result = post('@rupert and @qwen and @gemma: how were sales yesterday?')
+    assert_equal [nil, 'qwen', 'gemma'], result.replies.map { |reply| reply.meta['agent'] }
     qwen_reply = result.replies.second
     assert qwen_reply.pending?
     assert_equal 'Qwen', qwen_reply.author_name
@@ -60,7 +60,7 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
 
     assert_equal 'done', reply.status
     assert_equal 'Hi, I am Qwen.', reply.body
-    assert_equal 'qwen3.6-35b-a3b', requests.first['model']
+    assert_equal 'qwen3.5-4b', requests.first['model']
     assert_equal 'local_gateway', reply.meta['engine']
     assert_includes requests.first['messages'].first['content'], 'You are Qwen (@qwen)'
     users = requests.first['messages'].select { |message| message['role'] == 'user' }.map { |message| message['content'].to_s }
@@ -68,7 +68,7 @@ class TeamChatLocalAgentsTest < ActiveSupport::TestCase
   end
 
   test 'a reply that waited for the model to load says how long the load took' do
-    @gateway_last_load = { model: 'qwen3.6-35b-a3b', seconds: 17.5, finished_at: Time.now.to_f, reason: 'request' }
+    @gateway_last_load = { model: 'qwen3.5-4b', seconds: 17.5, finished_at: Time.now.to_f, reason: 'request' }
     script_model({ text: 'Loaded and ready.' })
     reply = post('@qwen hello').replies.first
     TeamChat::Agent.new(reply).run

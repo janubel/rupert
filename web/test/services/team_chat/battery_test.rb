@@ -37,15 +37,15 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
   test 'asks each question to the bot on its own in its test room, times it, grades it and posts a pinned summary' do
     requests = script_model({ tool: 'period_review', arguments: { period: 'yesterday' } }, { text: 'Yesterday: 2 orders, $100.' }, { text: 'No tax data.' })
     grader = FakeGrader.new([])
-    battery = TeamChat::Battery.new(user: @user, agent: 'liquid', grader: grader, items: items, out: nil)
+    battery = TeamChat::Battery.new(user: @user, agent: 'qwen', grader: grader, items: items, out: nil)
     results = battery.run
 
-    room = TeamChat::Room.find_by!(slug: "test-liquid-#{@user.id}")
+    room = TeamChat::Room.find_by!(slug: "test-qwen-#{@user.id}")
     assert_equal ['done', 'done'], results.map(&:status)
     assert_equal [['period_review'], []], results.map(&:tools)
     replies = room.messages.where(author_kind: 'assistant').order(:id)
-    assert_equal %w[liquid liquid], replies.map { |reply| reply.meta['agent'] }
-    assert_equal 'lfm2.5-8b-a1b', requests.first['model']
+    assert_equal %w[qwen qwen], replies.map { |reply| reply.meta['agent'] }
+    assert_equal 'qwen3.5-4b', requests.first['model']
     # Each question stands alone: the second request does not carry the first question.
     assert_not_includes requests.last['messages'].map { |message| message['content'].to_s }.join, 'How did we do yesterday?'
 
@@ -54,7 +54,7 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     assert_match(/"from":"#{Date.current.prev_month.beginning_of_month.iso8601}"/, grader.calls.last[:reference])
     grades = room.messages.where(author_kind: 'system').where('body LIKE ?', 'Grade %')
     assert_equal 2, grades.count
-    assert_match(/Grade 4\/5 for Liquid .*Right totals.*\n- No top product\n— graded by fake-grader/m, grades.first.body)
+    assert_match(/Grade 4\/5 for Qwen .*Right totals.*\n- No top product\n— graded by fake-grader/m, grades.first.body)
 
     summary = room.messages.pinned.first
     assert_match(/answered 2\/2/, summary.body)
@@ -67,18 +67,18 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
 
   test 'each run is saved with its per-question results, and the same model, set and build counts as already done' do
     script_model({ tool: 'period_review', arguments: { period: 'yesterday' } }, { text: 'Yesterday: 2 orders, $100.' }, { text: 'No tax data.' })
-    battery = TeamChat::Battery.new(user: @user, agent: 'liquid', grader: FakeGrader.new([]), items: items, out: nil)
+    battery = TeamChat::Battery.new(user: @user, agent: 'qwen', grader: FakeGrader.new([]), items: items, out: nil)
     battery.run
 
     run = TeamChat::BatteryRun.find_by!(run_key: battery.run_id)
-    assert_equal ['done', 'default', 'liquid', 'lfm2.5-8b-a1b', 2, 2], [run.status, run.set_name, run.agent, run.model, run.questions, run.answered]
+    assert_equal ['done', 'default', 'qwen', 'qwen3.5-4b', 2, 2], [run.status, run.set_name, run.agent, run.model, run.questions, run.answered]
     assert_in_delta 4.0, run.avg_grade.to_f
     assert_equal({ 'daily' => 4.0, 'monthly' => 4.0 }, run.cadence_scores)
     assert_equal 0, run.flagged
     assert_equal %w[d1 m3], run.results_list.pluck('id')
     assert_empty run.results_list.first['unverified']
-    assert_equal run, TeamChat::Battery.new(user: @user, agent: 'liquid', grader: FakeGrader.new([]), items: items, out: nil).already_done
-    assert_nil TeamChat::Battery.new(user: @user, agent: 'liquid', only: ['d1'], grader: FakeGrader.new([]), items: items, out: nil).already_done
+    assert_equal run, TeamChat::Battery.new(user: @user, agent: 'qwen', grader: FakeGrader.new([]), items: items, out: nil).already_done
+    assert_nil TeamChat::Battery.new(user: @user, agent: 'qwen', only: ['d1'], grader: FakeGrader.new([]), items: items, out: nil).already_done
   end
 
   test 'runs from before saving are rebuilt from #liquid-testing' do
@@ -102,7 +102,7 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     script_model({ tool: 'create_task', arguments: { title: 'Recount' } }, { text: 'Proposed.' })
     item = TeamChat::Battery::Item.new(id: 'x', cadence: 'general', question: 'Make a task', checks: [])
     assert_no_difference -> { Projects::Task.count } do
-      TeamChat::Battery.new(user: @user, agent: 'liquid', grader: FakeGrader.new([]), items: [item], out: nil).run
+      TeamChat::Battery.new(user: @user, agent: 'qwen', grader: FakeGrader.new([]), items: [item], out: nil).run
     end
     reply = TeamChat::Message.where(author_kind: 'assistant').last
     assert_equal 'dismissed', reply.actions_list.first['status']
@@ -111,7 +111,7 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
   test 'every bot gets its own test room, created up front' do
     slugs = TeamChat::Battery.ensure_rooms!(@user).map(&:slug)
     assert_includes slugs, "test-rupert-#{@user.id}"
-    assert_includes slugs, "test-liquid-#{@user.id}"
+    assert_includes slugs, "test-qwen-#{@user.id}"
     assert_includes slugs, "test-gemma-e2b-#{@user.id}"
     assert_equal slugs.size, TeamChat::Room.where(slug: slugs).count
     assert TeamChat::Room.where(slug: slugs).all? { |room| room.direct? && room.created_by_id == @user.id }
@@ -127,9 +127,9 @@ class TeamChatBatteryTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { TeamChat::Battery.new(user: @user, agent: 'nobody', grader: FakeGrader.new([]), items: items, out: nil) }
     assert_equal 21, TeamChat::Battery.items.size
     finance = TeamChat::Battery.items(TeamChat::Battery.config_for('finance'))
-    assert_equal 21, finance.size
+    assert_equal 24, finance.size, 'f22-f24 ask about the store registers'
     assert_match(/no cost of goods/, finance.find { |item| item.id == 'f20' }.expect)
-    assert_equal %w[sales comparison money_out tax books honesty], finance.map(&:cadence).uniq
+    assert_equal %w[sales comparison money_out tax books honesty daily], finance.map(&:cadence).uniq
     assert_raises(ArgumentError) { TeamChat::Battery.config_for('../etc/passwd') }
     assert_raises(ArgumentError) { TeamChat::Battery.config_for('nope') }
     assert_equal TeamChat::Battery::CONFIG, TeamChat::Battery.config_for(nil)

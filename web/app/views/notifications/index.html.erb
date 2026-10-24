@@ -4,6 +4,17 @@
     <% if @unread.positive? %><%= button_to "Mark all read", read_all_notifications_path, method: :post, class: "btn-ghost btn-sm" %><% end %>
   <% end %>
 
+  <% if system_alerts.any? %>
+    <ul class="space-y-2" aria-label="Alerts">
+      <% system_alerts.each do |alert| %>
+        <li role="alert" class="flash flash-alert flex flex-wrap items-center justify-between gap-3" data-system-alert>
+          <span><strong><%= alert[:title] %>.</strong> <%= alert[:body] %></span>
+          <%= link_to alert[:link], alert[:path], class: 'font-semibold underline' %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
   <% if @notifications.empty? %>
     <%= empty_state 'No notifications yet.', hint: 'Task assignments, comments, blocked work and due dates show up here.' %>
   <% else %>

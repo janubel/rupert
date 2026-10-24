@@ -284,7 +284,7 @@ class LearningCatalog
       video: '/videos/team-chat-demo.mp4',
       summary: 'Talk to the team in rooms and direct messages, and ask Rupert’s bots about the business.',
       steps: ['Open Team chat from the chat button in the header (a small window on any page) or System → Team chat for the full view. #admins holds every admin and Rupert; Direct lists each person.',
-              'Type @ to mention someone. @rupert asks the main assistant (DeepSeek, cloud, fast); @liquid, @qwen and @gemma are private local models (slower); @all asks every bot and shows their answers side by side.',
+              'Type @ to mention someone. @rupert asks the main assistant (DeepSeek, cloud, fast); @qwen and @gemma are private local models (slower); @all asks every bot and shows their answers side by side.',
               'Hover a message to reply in a thread, react, pin it as the room banner, copy a link to it or edit your own. Paste or drop photos and files into the message box.',
               'Rate bot replies with 👍 or 👎 and add a few words on why. Model scores shows which bot helps most. When a bot proposes a change, nothing happens until someone presses Approve.'],
       question: 'You want to compare how every bot answers the same question. What do you write?', choices: ['@rupert', '@all', '@everyone'], answer: 1,
