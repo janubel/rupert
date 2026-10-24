@@ -206,6 +206,13 @@ Rails.application.routes.draw do
   get    '/chat/dock',                                to: 'team_chat#dock',            as: :team_chat_dock
   get    '/chat/unread',                              to: 'team_chat#unread',          as: :team_chat_unread
   get    '/chat/models',                              to: 'team_chat#scores',          as: :team_chat_scores
+  # Test questions that score the bots (TeamChatQuestionsController).
+  get    '/chat/models/questions',                    to: 'team_chat_questions#index', as: :team_chat_questions
+  post   '/chat/models/questions',                    to: 'team_chat_questions#create'
+  post   '/chat/models/questions/run',                to: 'team_chat_questions#run',   as: :run_team_chat_questions
+  patch  '/chat/models/questions/:question_id',       to: 'team_chat_questions#update', as: :team_chat_question
+  delete '/chat/models/questions/:question_id',       to: 'team_chat_questions#destroy'
+  post   '/chat/models/questions/:question_id/remove', to: 'team_chat_questions#remove', as: :remove_team_chat_question
   patch  '/chat/presence',                            to: 'team_chat#presence',        as: :team_chat_presence
   patch  '/chat/presence/policy',                     to: 'team_chat#presence_policy', as: :team_chat_presence_policy
   get    '/chat/:room/dock',                          to: 'team_chat#dock_room',       as: :team_chat_dock_room

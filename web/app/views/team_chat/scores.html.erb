@@ -1,4 +1,5 @@
 <%= page_header 'Model scores', subtitle: "Which models people like in team chat (👍 and 👎 over the last #{pluralize(@days, 'day')}), and how each did in the test runs." do %>
+  <%= link_to 'Open test questions', team_chat_questions_path, class: 'btn-ghost' %>
   <%= link_to 'Back to team chat', team_chat_path, class: 'btn-ghost' %>
 <% end %>
 
