@@ -84,7 +84,9 @@ class User < ActiveRecord::Base
       'leave.read',
       'leave.write',
       'payroll.read',
-      'payroll.write'
+      'payroll.write',
+      'tax.read',
+      'tax.write'
     ],
     'manager' => [
       'receipts.review',
@@ -244,6 +246,10 @@ class User < ActiveRecord::Base
         area: 'Commerce',
         permissions: ['pos.use', 'sales.read', 'sales.write', 'customers.read', 'customers.write', 'inventory.read',
                       'inventory.write']
+      },
+      {
+        area: 'Taxes',
+        permissions: ['tax.read', 'tax.write']
       },
       {
         area: 'Operations',

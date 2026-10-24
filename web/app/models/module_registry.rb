@@ -76,6 +76,7 @@ class ModuleRegistry
     Entry.new(key: 'expenses', name: 'Expenses', path: -> { finance_expenses_path }, permission: 'finance.read', position: 49),
     Entry.new(key: 'expense_categories', name: 'Expense categories', path: -> { finance_expense_categories_path }, permission: 'finance.read', position: 49.1),
     Entry.new(key: 'payments', name: 'Vendor payments', path: -> { finance_vendor_payments_path }, permission: 'finance.read', position: 50),
+    Entry.new(key: 'tax_payees', name: '1099 payees', path: -> { finance_tax_payees_path }, permission: 'tax.read', position: 50.2),
     Entry.new(key: 'payees', name: 'By payee', path: -> { finance_payees_path }, permission: 'finance.read', position: 50.1),
     Entry.new(key: 'finance_history', name: 'History', path: -> { finance_history_path }, permission: 'finance.read', position: 50.2),
     Entry.new(key: 'quickbooks_imports', name: 'QuickBooks import', path: -> { finance_quickbooks_imports_path }, permission: 'finance.read', position: 50.3),
@@ -194,14 +195,14 @@ class ModuleRegistry
         modules: %w[bookkeeping cash_flow business_snapshot books_check
                     financial_close daily_reconciliation register_summary reconciliation_overview reconciliation_follow_ups reconciliation_documents
                     books_desk book_approvals period_locks bank_statements bank_reconciliation source_reports swipesimple_reports zelle_reports retention_drive
-                    ledger journal_entries chart_of_accounts finance_accounts expenses expense_categories payments payees finance_history quickbooks_imports ledger_export
+                    ledger journal_entries chart_of_accounts finance_accounts expenses expense_categories payments payees tax_payees finance_history quickbooks_imports ledger_export
                     cash_forecast],
         # Display order is group order; every module of the area appears in exactly one group.
         groups: [
           { name: 'Overview', modules: %w[bookkeeping cash_flow business_snapshot books_check] },
           { name: 'Daily close', modules: %w[financial_close daily_reconciliation register_summary reconciliation_overview reconciliation_follow_ups reconciliation_documents] },
           { name: 'Books & review', modules: %w[books_desk book_approvals period_locks bank_statements bank_reconciliation source_reports swipesimple_reports zelle_reports retention_drive] },
-          { name: 'Ledger & accounts', modules: %w[ledger journal_entries chart_of_accounts finance_accounts expenses expense_categories payments payees finance_history quickbooks_imports ledger_export] },
+          { name: 'Ledger & accounts', modules: %w[ledger journal_entries chart_of_accounts finance_accounts expenses expense_categories payments payees tax_payees finance_history quickbooks_imports ledger_export] },
           { name: 'Planning', modules: %w[cash_forecast] }
         ] },
       # Every report in one place; each report page also carries the same tab bar.

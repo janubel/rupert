@@ -1,0 +1,30 @@
+<%= page_header '1099 payees', subtitle: 'Who may get a 1099, which form, and whether their W-9 is on file.' do %>
+  <% if @can_write %><%= link_to 'Add payee', new_finance_tax_payee_path, class: 'btn-primary' %><% end %>
+<% end %>
+<div class="space-y-6 mt-6">
+  <div class="card"><div class="table-region" role="region" tabindex="0" aria-label="1099 payees"><table class="table">
+    <thead><tr><th class="th" scope="col">Payee</th><th class="th" scope="col">Form</th><th class="th" scope="col">Classification</th><th class="th" scope="col">TIN</th><th class="th" scope="col">W-9</th><th class="th" scope="col">Needs</th><th class="th" scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+      <% @payees.each do |payee| %>
+        <tr>
+          <th scope="row" class="td text-left"><span class="font-medium"><%= payee.legal_name %></span><% if payee.business_name.present? %><span class="block text-xs text-mocha"><%= payee.business_name %></span><% end %><span class="block text-xs text-taupe">Paid as <%= payee.payee_label %></span></th>
+          <td class="td"><%= payee.form_label %><% if payee.likely_exempt? %> <span class="pill-olive">Likely exempt</span><% end %></td>
+          <td class="td text-mocha"><%= Finance::TaxPayee::CLASSIFICATIONS[payee.tax_classification] %></td>
+          <td class="td tabular-nums"><%= payee.masked_tin ? "#{Finance::TaxPayee::TIN_TYPES[payee.tin_type]} #{payee.masked_tin}" : '—' %></td>
+          <td class="td"><%= payee.w9_received_on ? l(payee.w9_received_on, format: :long) : '—' %></td>
+          <td class="td"><% if payee.missing.any? %><span class="pill-clay"><%= payee.missing.to_sentence %></span><% else %><span class="pill-fern">Complete</span><% end %></td>
+          <td class="td text-right"><% if @can_write %><%= link_to 'Edit', edit_finance_tax_payee_path(payee), class: 'btn-ghost btn-sm', aria: { label: "Edit #{payee.legal_name}" } %><% end %></td>
+        </tr>
+      <% end %>
+      <% if @payees.empty? %><tr><td colspan="7" class="empty-row">No 1099 payees yet. Add the contractors and vendors you pay who may need a 1099.</td></tr><% end %>
+    </tbody>
+  </table></div></div>
+  <details class="explainer card card-pad">
+    <summary class="explainer-summary font-semibold">Who needs a 1099</summary>
+    <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-mocha">
+      <li><strong>1099-NEC</strong> covers pay for services by people and businesses who are not employees. <strong>1099-MISC</strong> covers rent, royalties, attorney fees and other income.</li>
+      <li>Corporations are usually exempt, except for attorney fees. Card and payment-app payments are reported by the processor on a 1099-K, so they will be left out of the totals.</li>
+      <li>The TIN is encrypted and shown only as its last four digits. Yearly totals and the forms come next (#472). Have a tax preparer review before filing.</li>
+    </ul>
+  </details>
+</div>

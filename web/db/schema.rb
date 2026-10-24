@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_030000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -3229,6 +3229,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_020000) do
     t.index ["tenant_id", "due_on"], name: "index_tasks_on_tenant_id_and_due_on"
     t.index ["tenant_id", "project_id"], name: "index_tasks_on_tenant_id_and_project_id"
     t.index ["tenant_id", "status"], name: "index_tasks_on_tenant_id_and_status"
+  end
+
+  create_table "tax_payees", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "payee_key", null: false
+    t.string "legal_name", null: false
+    t.string "business_name"
+    t.string "tax_classification", null: false
+    t.string "tin_type"
+    t.text "tin"
+    t.string "tin_last4"
+    t.string "address_line1"
+    t.string "address_line2"
+    t.string "city"
+    t.string "state"
+    t.string "postal_code"
+    t.string "form_type", null: false
+    t.string "misc_box"
+    t.date "w9_received_on"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "payee_key"], name: "index_tax_payees_on_tenant_id_and_payee_key", unique: true
   end
 
   create_table "tenants", id: :string, force: :cascade do |t|
