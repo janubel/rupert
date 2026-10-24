@@ -111,8 +111,16 @@ class CanonicalOrderImporterTest < ActiveSupport::TestCase
     assert_equal 'cash', order.payments.first.method
     assert_equal 1200, order.payments.first.amount_cents
 
-    customer = Core::Customer.find_by(external_id: 'cust-1', source: 'square')
-    assert customer
+    # Square orders carry only a customer ID, so no blank profile is created.
+    assert_nil Core::Customer.find_by(external_id: 'cust-1', source: 'square')
+    assert_nil order.customer_id
+  end
+
+  test 'from_square! links the order to a customer already known from the directory' do
+    customer = Core::Customer.create!(source: 'square', external_id: 'cust-1', first_name: 'Ada',
+      source_synced_at: Time.current)
+    CanonicalOrderImporter.from_square!([square_order])
+    order = Core::Order.find_by(source: 'square', source_order_id: 'sq-abc')
     assert_equal customer.id, order.customer_id
   end
 
