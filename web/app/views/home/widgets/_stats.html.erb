@@ -4,7 +4,7 @@
   <%= render "home/stat", label: "Today's sales", term: 'sales_total', value: number_to_currency(today_cents / 100.0), note: "#{presenter.today_orders} orders",
         calculation: explain_calculation(title: "Today’s recorded sales, by source", summary: 'What’s in this total?', id: 'today-sales-calculation',
           rows: groups.map { |source, cents, count| ["#{operations_source_name(source)} · #{pluralize(count, 'sale')}", number_to_currency(cents.to_i / 100.0)] } + [['Recorded sales today', number_to_currency(today_cents / 100.0)]],
-          formula: 'Paid or fulfilled canonical orders + completed C-Trax sales, USD, before refunds',
+          formula: 'Paid or fulfilled canonical orders + completed C-Trax sales + SwipeSimple daily net sales, USD, before refunds',
           note: 'Tips, payment reports and deposits are never added. A source with an old pull can be under-counted; check Source pulls & coverage.',
           lesson: 'sales') %>
   <%= render "home/stat", label: "Yesterday", term: 'business_date', value: number_to_currency(presenter.yesterday_revenue.to_i / 100.0), note: vs_yesterday(presenter.today_revenue, presenter.yesterday_revenue) %>

@@ -38,6 +38,25 @@ class DashboardSalesTest < ActiveSupport::TestCase
     end
   end
 
+  test 'SwipeSimple daily net sales count as their own source, by day, and stay out of the hourly chart' do
+    canonical(source: 'shopify', source_order_id: 'web', status: 'paid', occurred_at: @now - 1.hour, gross_cents: 2000, currency: 'USD')
+    [['Herbal Healers', 850_000], ['Herbal Healers Pax A920', 140_169]].each do |account, cents|
+      SwipesimpleSalesDay.create!(merchant_account: account, business_date: @now.to_date, net_sales_cents: cents, source_digest: SecureRandom.hex(8), pulled_at: @now)
+    end
+    SwipesimpleSalesDay.create!(merchant_account: 'Herbal Healers', business_date: @now.to_date - 1, net_sales_cents: 5_000, source_digest: 'y', pulled_at: @now)
+    SwipesimpleSalesDay.create!(merchant_account: 'Herbal Healers', business_date: @now.to_date - 2, net_sales_cents: 0, source_digest: 'z', pulled_at: @now)
+    result = DashboardSales.new(now: @now, include_ctrax: false)
+    assert_equal [['shopify', 2000, 1], ['swipesimple', 995_169, 3]], result.groups
+    assert_equal 2000 + 990_169, result.gross(since: @now.beginning_of_day)
+    assert_equal 9901.69, result.daily(source: 'swipesimple')[@now.to_date]
+    assert_equal 20.0, result.hourly.values.sum
+    travel_to(@now) do
+      presenter = DashboardPresenter.new
+      assert_includes presenter.today_groups.map(&:first), 'swipesimple'
+      assert_equal %w[Shopify SwipeSimple], presenter.revenue_by_source.pluck(:name)
+    end
+  end
+
   test 'fully refunded canonical orders stay outside paid sales and refund payments never create sales' do
     order = canonical(source: 'shopify', source_order_id: 'refunded', status: 'refunded',
       occurred_at: @now, gross_cents: 2000, currency: 'USD')
