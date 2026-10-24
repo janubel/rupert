@@ -26,6 +26,44 @@
     <% end %>
   </section>
 
+  <section aria-label="Register close totals" class="space-y-3">
+    <%= section_heading 'Register close totals', hint: "SwipeSimple’s daily sales report for #{@date.strftime('%b %-d, %Y')}, across all merchant accounts." %>
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <% [['Total collected', :net_sales_cents], ['Sales tax collected', :tax_cents], ['Credit card collected', :net_card_cents], ['Cash collected', :net_cash_cents]].each do |label, field| %>
+        <div class="stat" data-register-total="<%= field %>">
+          <p class="stat-label"><%= label %></p>
+          <p class="stat-value mt-2"><%= money.call(close.register_totals[field]) %></p>
+        </div>
+      <% end %>
+    </div>
+    <% if close.register_totals.values.any?(&:nil?) %>
+      <p class="text-sm text-mocha">Some daily sales report amounts are missing. They are shown as Unknown until the reports supply them.</p>
+      <% if retail_business_access?('settings.read') %><p><%= link_to 'Open SwipeSimple connection', pos_connection_path('swipesimple'), class: 'btn-ghost btn-sm' %></p><% end %>
+    <% end %>
+    <details class="explainer">
+      <summary class="explainer-summary">Where these amounts come from</summary>
+      <div class="mt-2 space-y-3 text-sm text-mocha">
+        <p>Total collected is SwipeSimple’s Total Net Sales; tax, tips and refunds are already reflected in the reported amounts. Sales tax is shown separately for reference, not added again. These reports and the transaction totals below describe the same activity.</p>
+        <p>Amounts are the latest stored figures for this business date. A report pulled before the day ended is provisional. An omitted day is zero only when a report covering it was pulled after the day ended. Missing accounts or blank report amounts keep the combined figure Unknown.</p>
+        <% if close.register_reports.empty? %>
+          <p>No daily sales reports are stored for this date.</p>
+        <% else %>
+          <div class="table-region" role="region" tabindex="0" aria-label="Register close totals by account">
+            <table class="table">
+              <caption class="sr-only">SwipeSimple native daily sales report amounts for <%= @date %></caption>
+              <thead><tr><th scope="col" class="th">Account</th><th scope="col" class="th num">Total collected</th><th scope="col" class="th num">Sales tax collected</th><th scope="col" class="th num">Credit card collected</th><th scope="col" class="th num">Cash collected</th><th scope="col" class="th">Report pulled</th></tr></thead>
+              <tbody><% close.register_reports.each do |report| %><tr>
+                <th scope="row" class="td text-left font-medium"><%= report[:account] %></th>
+                <% SwipesimpleDayClose::REGISTER_FIELDS.each do |field| %><td class="td num"><%= money.call(report[:values][field]) %></td><% end %>
+                <td class="td"><%= report[:pulled_at] ? retail_source_time(report[:pulled_at]) : 'No report stored' %></td>
+              </tr><% end %></tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
+    </details>
+  </section>
+
   <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Daily SwipeSimple summary">
     <div class="stat"><p class="stat-label">Approved sales</p><p class="stat-value mt-2"><%= usd.empty? ? 'None stored' : money.call(usd.sum(&:sale_cents)) %></p><p class="mt-1 text-xs text-mocha"><%= pluralize(usd.sum(&:sale_count), 'sale') %></p></div>
     <div class="stat"><p class="stat-label">Refunds</p><p class="stat-value mt-2"><%= usd.empty? ? 'None stored' : money.call(usd.sum(&:refund_cents)) %></p><p class="mt-1 text-xs text-mocha"><%= pluralize(usd.sum(&:refund_count), 'refund') %></p></div>
@@ -77,10 +115,6 @@
         </table>
       </div>
     <% end %>
-    <%# SwipeSimple Reporting "sales"/"tax" daily CSVs (feature/swipesimple-tax-reports, planned tables
-        swipesimple_sales_days / swipesimple_tax_days) belong here once they land: render an optional
-        "SwipeSimple's own daily report" block (subtotal, discounts, sales tax, tips, refunds, net card,
-        net cash) only when a row exists for @date, shown next to these export totals, never added to them. %>
     <%= section_heading 'Invoices created this day', level: :h3 %>
     <% if close.invoices.empty? %>
       <p class="text-sm text-mocha">No invoices created on this day in the latest full invoice export.</p>
@@ -190,7 +224,7 @@
 
   <% if retail_business_access?('sales.write') %>
     <section id="close-review" class="retail-anchor section-card">
-      <%= section_heading 'Record a local review', hint: 'Records your review in Rupert only. A changed export needs another review.' do %>
+      <%= section_heading 'Record a local review', hint: 'Records your review in Rupert only. A changed report or export needs another review.' do %>
         <span class="<%= close.reviewed? ? 'pill-fern' : 'pill-clay' %>"><%= close.reviewed? ? 'Current version reviewed' : 'Review needed' %></span>
       <% end %>
       <% if close.review %>
