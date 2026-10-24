@@ -11,6 +11,28 @@ class HostVitalsTest < ActiveSupport::TestCase
     assert reading.db_bytes.positive?
   end
 
+  test 'CPU is this container\'s own CPU time, not the host load average' do
+    previous_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    Rails.cache.write(HostVitals::CPU_SAMPLE_KEY, [now - 10, 1_000_000])
+    cores = Etc.nprocessors
+    # Half of every core for the last 10 seconds.
+    HostVitals.stub(:cgroup_cpu_usec, 1_000_000 + (cores * 5_000_000)) do
+      HostVitals.stub(:load_percent, 100) do
+        assert_in_delta 50, HostVitals.send(:cpu_percent), 1
+      end
+    end
+  ensure
+    Rails.cache = previous_cache
+  end
+
+  test 'without a cgroup, CPU falls back to the load average' do
+    HostVitals.stub(:cgroup_cpu_usec, nil) do
+      HostVitals.stub(:load_percent, 42) { assert_equal 42, HostVitals.send(:cpu_percent) }
+    end
+  end
+
   test 'thresholds turn amber at 80 and red at 90' do
     assert_equal 'pill-fern', HostVitals.tone(10)
     assert_equal 'pill-clay', HostVitals.tone(80)
