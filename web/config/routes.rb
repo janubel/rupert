@@ -334,7 +334,13 @@ Rails.application.routes.draw do
   end
 
   namespace :finance do
-    resources :tax_payees, only: %i[index new create edit update]
+    resources :tax_payees, only: %i[index new create edit update] do
+      collection do
+        get :forms
+        get :payer
+        patch :payer, action: :update_payer
+      end
+    end
     get 'cash_flow', to: 'cash_flow#show', as: :cash_flow
     get '/accounts', to: 'accounts#show', as: :accounts
     resources :chart_of_accounts, only: %i[index show new create edit update] do

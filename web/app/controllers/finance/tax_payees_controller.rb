@@ -12,11 +12,43 @@ module Finance
       default_year = Date.current.month <= 3 ? Date.current.year - 1 : Date.current.year
       @year = params[:year].to_i.between?(2000, Date.current.year) ? params[:year].to_i : default_year
       @totals = Finance::Form1099Totals.new(year: @year)
+      @payer = Finance::TaxPayer.load
       @can_write = Current.user.can?('tax.write')
       return unless request.format.csv?
 
       ActivityLogger.log('tax_payees_exported', details: "1099 totals #{@year}")
       send_data totals_csv, filename: "1099-totals-#{@year}.csv", type: 'text/csv'
+    end
+
+    # Recipient copies (Copy B) for every payee who needs a 1099 that year, then a payer summary.
+    def forms
+      authorize(:module, :tax_read?)
+      year = params[:year].to_i
+      return redirect_to(finance_tax_payees_path, alert: 'Choose a tax year.') unless year.between?(2000, Date.current.year)
+
+      payer = Finance::TaxPayer.load
+      return redirect_to(payer_finance_tax_payees_path, alert: 'Add the payer details first: they print on every form.') unless payer.complete?
+
+      rows = Finance::Form1099Totals.new(year: year).needed
+      ActivityLogger.log('tax_forms_generated', details: "1099 recipient copies #{year}: #{rows.size}")
+      send_data Finance::Form1099Pdf.new(year: year, rows: rows, payer: payer).render, filename: "1099-recipient-copies-#{year}.pdf",
+        type: 'application/pdf', disposition: 'inline'
+    end
+
+    def payer
+      authorize(:module, :tax_write?)
+      @payer = Finance::TaxPayer.load
+    end
+
+    def update_payer
+      authorize(:module, :tax_write?)
+      @payer = Finance::TaxPayer.load
+      if @payer.update(params.require(:tax_payer).permit(*Finance::TaxPayer::FIELDS.keys))
+        ActivityLogger.log('tax_payer_updated', details: "#{@payer.name} · EIN #{@payer.masked_tin}")
+        redirect_to finance_tax_payees_path, notice: 'Payer details saved.'
+      else
+        render :payer, status: :unprocessable_entity
+      end
     end
 
     def new

@@ -1,10 +1,15 @@
 <% labels = { 'needed' => ['Needs a 1099', 'pill-clay'], 'under' => ['Under threshold', 'pill-taupe'], 'exempt' => ['Likely exempt', 'pill-olive'], 'none' => ['No 1099', 'pill-taupe'] } %>
 <% needed = @totals.needed %>
 <%= page_header '1099 payees', subtitle: 'Who may get a 1099, what they were paid, and whether their W-9 is on file.',
-      menu: [['Download CSV', finance_tax_payees_path(year: @year, format: :csv), { data: { turbo: false } }]] do %>
+      menu: [['Recipient copies (PDF)', forms_finance_tax_payees_path(year: @year), { data: { turbo: false }, target: '_blank' }],
+             ['Download CSV', finance_tax_payees_path(year: @year, format: :csv), { data: { turbo: false } }],
+             (['Payer details', payer_finance_tax_payees_path] if @can_write)].compact do %>
   <% if @can_write %><%= link_to 'Add payee', new_finance_tax_payee_path, class: 'btn-primary' %><% end %>
 <% end %>
 <div class="space-y-6 mt-6">
+  <% unless @payer.complete? %>
+    <div class="flash-alert" role="status">Add the business's legal name, address and EIN before printing forms. <% if @can_write %><%= link_to 'Add payer details', payer_finance_tax_payees_path, class: 'underline' %><% end %></div>
+  <% end %>
   <section class="toolbar-band">
     <%= form_tag finance_tax_payees_path, method: :get, class: 'toolbar', 'aria-label': 'Tax year' do %>
       <div class="toolbar-field"><%= label_tag :year, 'Tax year', class: 'field-label' %><%= select_tag :year, options_for_select((2024..Date.current.year).to_a.reverse, @year), class: 'select' %></div>
