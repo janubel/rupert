@@ -14,6 +14,7 @@ class ShopifyVariantsController < AuthenticatedController
     @alerts = @variant.alerts.order(createdAt: :desc).limit(10)
     @shopify_levels = @variant.levels.order(:locationId)
     @square_variations = searchable_square_variations
+    @profile = ItemProfile.new(@variant)
   end
 
   # Manually link this Shopify variant to a Square variation (overrides any

@@ -111,8 +111,16 @@ class CanonicalOrderImporterTest < ActiveSupport::TestCase
     assert_equal 'cash', order.payments.first.method
     assert_equal 1200, order.payments.first.amount_cents
 
-    customer = Core::Customer.find_by(external_id: 'cust-1', source: 'square')
-    assert customer
+    # Square orders carry only a customer ID, so no blank profile is created.
+    assert_nil Core::Customer.find_by(external_id: 'cust-1', source: 'square')
+    assert_nil order.customer_id
+  end
+
+  test 'from_square! links the order to a customer already known from the directory' do
+    customer = Core::Customer.create!(source: 'square', external_id: 'cust-1', first_name: 'Ada',
+      source_synced_at: Time.current)
+    CanonicalOrderImporter.from_square!([square_order])
+    order = Core::Order.find_by(source: 'square', source_order_id: 'sq-abc')
     assert_equal customer.id, order.customer_id
   end
 
@@ -279,5 +287,16 @@ class CanonicalOrderImporterTest < ActiveSupport::TestCase
     order = Core::Order.find_by!(source: 'square', source_order_id: 'sq-ret')
     assert_equal 1200, order.total_refunded_cents
     assert_equal 'refunded', order.status, 'the full sale came back'
+  end
+
+  test 'a Shopify POS sale is stored as pos at its store; a web order stays online with no location' do
+    store = Location.create!(source: 'shopify', externalId: 'gid://shopify/Location/77', name: 'Main Street')
+    CanonicalOrderImporter.from_shopify!([shopify_order(id: 'gid://shopify/Order/901', name: '#901').merge('sourceName' => 'pos',
+      'retailLocation' => { 'id' => 'gid://shopify/Location/77' })])
+    CanonicalOrderImporter.from_shopify!([shopify_order(id: 'gid://shopify/Order/902', name: '#902').merge('sourceName' => 'web')])
+    pos = Core::Order.find_by!(source_order_id: 'gid://shopify/Order/901')
+    web = Core::Order.find_by!(source_order_id: 'gid://shopify/Order/902')
+    assert_equal ['pos', 'gid://shopify/Location/77', store], [pos.channel, pos.location_id, pos.location]
+    assert_equal ['online', nil], [web.channel, web.location_id]
   end
 end

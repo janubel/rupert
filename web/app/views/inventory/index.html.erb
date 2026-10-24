@@ -63,8 +63,8 @@
                       <span class="grid h-10 w-10 shrink-0 place-items-center rounded-control border border-fog bg-haze font-display text-base text-taupe"><%= product.title.first.upcase %></span>
                     <% end %>
                     <div class="min-w-0">
-                      <p class="truncate font-medium text-ink"><%= link_to variant.title, shopify_variant_path(variant), class: 'hover:text-olive hover:underline' %></p>
-                      <p class="truncate text-xs text-taupe"><%= product.title %></p>
+                      <p class="truncate font-medium text-ink"><%= link_to ItemProfile.display_name(variant), shopify_variant_path(variant), class: 'hover:text-olive hover:underline' %></p>
+                      <p class="truncate text-xs text-taupe"><%= variant.sku.presence ? "SKU #{variant.sku}" : 'No SKU' %></p>
                       <%# The stock columns scroll out of view on narrow screens; repeat the headline counts here. %>
                       <p class="mt-0.5 text-xs text-ink">
                         <span class="font-semibold"><%= shopify_qty %></span> shop<% if square_qty.nil? %> · not carried<% else %>

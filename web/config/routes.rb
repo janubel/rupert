@@ -64,6 +64,7 @@ Rails.application.routes.draw do
     get '/reports', action: :reports, as: :reports
   end
   get '/employee/reports', to: 'employee_workspace#reports', as: :employee_reports
+  get '/employee/pay', to: 'employee_workspace#pay', as: :employee_pay
   get '/employee/schedule', to: 'employee_workspace#schedule', as: :employee_schedule
   get '/employee/time-off', to: 'employee_workspace#time_off', as: :employee_time_off
   post '/employee/time-off', to: 'employee_workspace#request_time_off'

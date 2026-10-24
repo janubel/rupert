@@ -176,4 +176,22 @@ class EmployeeWorkspaceTest < ActionDispatch::IntegrationTest
       post employee_week_path, params: { preview: 1, employee_id: @other.id }
     end
   end
+
+  test 'the Pay tab shows the worker their own week: rate, base pay, commission, tips and the total' do
+    sign_in
+    get employee_app_path
+    assert_select 'nav[aria-label="My workspace"] a', 'Pay'
+    get employee_pay_path(week: @from.iso8601)
+    assert_response :success
+    assert_equal 'no-store', response.headers['Cache-Control']
+    assert_select '#pay-week h2', 'Your week'
+    assert_select '#pay-week', /Thursday to Wednesday/
+    %w[Hours\ worked Rate\ per\ hour Base\ pay Commission Tips Total\ for\ the\ week].each do |label|
+      assert_select '#pay-week dt', /#{label}/
+    end
+    assert_select '#pay-week dd', /\$20\.00/, 'the hourly rate on file'
+    assert_select '#pay-week', /Total = base pay \+ commission \+ tips/
+    get employee_pay_path(week: 'not-a-date')
+    assert_response :success
+  end
 end
