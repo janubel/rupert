@@ -58,6 +58,34 @@ class TaxPayeesTest < ActionDispatch::IntegrationTest
     assert_select "option[value='v:#{@vendor.id}']", count: 0
   end
 
+  test 'yearly totals leave out card payments, count paid contractor payslips, and apply the year threshold' do
+    lawyer = payee
+    Finance::VendorPayment.create!(vendor: @vendor, amount_cents: 1_500_00, paid_on: Date.new(2026, 3, 1), method: 'check')
+    Finance::Expense.create!(vendor_id: @vendor.id, amount_cents: 700_00, incurred_on: Date.new(2026, 4, 1), method: 'other', category: 'other')
+    Finance::Expense.create!(vendor_id: @vendor.id, amount_cents: 900_00, incurred_on: Date.new(2026, 5, 1), method: 'card', category: 'other')
+    Finance::VendorPayment.create!(vendor: @vendor, amount_cents: 5_000_00, paid_on: Date.new(2025, 12, 31), method: 'check')
+    cleaner = Finance::TaxPayee.create!(payee_key: 'p:sparkle cleaning', legal_name: 'Sam Sparkle', tax_classification: 'individual', form_type: 'nec')
+    Finance::Expense.create!(payee: ' Sparkle Cleaning ', amount_cents: 650_00, incurred_on: Date.new(2026, 6, 1), method: 'cash', category: 'other')
+
+    totals = Finance::Form1099Totals.new(year: 2026)
+    row = totals.rows.find { |candidate| candidate.payee == lawyer }
+    assert_equal [2_200_00, 900_00, 700_00, 2], [row.paid_cents, row.card_cents, row.other_method_cents, row.count]
+    assert_equal 'needed', row.status(2026)
+    small = totals.rows.find { |candidate| candidate.payee == cleaner }
+    assert_equal [650_00, 'under'], [small.paid_cents, small.status(2026)]
+    assert_equal 'needed', Finance::Form1099Totals.new(year: 2025).rows.find { |candidate| candidate.payee == lawyer }.status(2025)
+    assert_equal 600_00, Finance::Form1099Totals.threshold_cents(2025, cleaner)
+
+    post login_path, params: { email: @admin.email, password: 'password' }
+    get finance_tax_payees_path(year: 2026)
+    assert_response :success
+    assert_includes response.body, 'Needs a 1099'
+    get finance_tax_payees_path(year: 2026, format: :csv)
+    assert_includes response.body, '2200.00'
+    assert_includes response.body, '•••-••-6789'
+    refute_includes response.body, '123456789'
+  end
+
   test 'managers and cashiers cannot open 1099 payees' do
     payee
     %w[manager cashier].each do |role|

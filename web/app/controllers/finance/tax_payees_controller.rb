@@ -8,8 +8,15 @@ module Finance
 
     def index
       authorize(:module, :tax_read?)
-      @payees = Finance::TaxPayee.order(:legal_name).to_a
+      # From January to March the year to file is last year.
+      default_year = Date.current.month <= 3 ? Date.current.year - 1 : Date.current.year
+      @year = params[:year].to_i.between?(2000, Date.current.year) ? params[:year].to_i : default_year
+      @totals = Finance::Form1099Totals.new(year: @year)
       @can_write = Current.user.can?('tax.write')
+      return unless request.format.csv?
+
+      ActivityLogger.log('tax_payees_exported', details: "1099 totals #{@year}")
+      send_data totals_csv, filename: "1099-totals-#{@year}.csv", type: 'text/csv'
     end
 
     def new
@@ -48,6 +55,29 @@ module Finance
     end
 
     private
+
+    STATUS_LABELS = { 'needed' => 'Needs a 1099', 'under' => 'Under threshold', 'exempt' => 'Likely exempt', 'none' => 'No 1099' }.freeze
+
+    # For the tax preparer: totals and W-9 status, with the TIN masked.
+    def totals_csv
+      require 'csv'
+      CSV.generate do |csv|
+        csv << ['Legal name', 'Business name', 'Paid as', 'Form', 'Classification', 'TIN (masked)', 'Address', "Paid #{@year}",
+                'Card payments (left out, 1099-K)', "Of which method 'other'", 'Threshold', 'Status', 'Missing']
+        @totals.rows.each do |row|
+          payee = row.payee
+          address = [payee.address_line1, payee.address_line2, payee.city, payee.state, payee.postal_code].compact_blank.join(', ')
+          csv << [payee.legal_name, payee.business_name, payee.payee_label, payee.form_label, Finance::TaxPayee::CLASSIFICATIONS[payee.tax_classification],
+                  payee.masked_tin, address, cents(row.paid_cents), cents(row.card_cents), cents(row.other_method_cents),
+                  cents(row.threshold_cents(@year)), STATUS_LABELS[row.status(@year)], payee.missing.join('; ')].map { |value| safe_cell(value) }
+        end
+      end
+    end
+
+    def cents(value) = format('%.2f', value.to_i / 100.0)
+
+    # Spreadsheet formula injection guard.
+    def safe_cell(value) = value.is_a?(String) && value.match?(/\A[=+\-@\t\r]/) ? "'#{value}" : value
 
     def set_payee
       @payee = Finance::TaxPayee.find(params[:id])
