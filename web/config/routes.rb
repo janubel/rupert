@@ -671,6 +671,7 @@ Rails.application.routes.draw do
 
   get '/w/:token/checkout', to: 'warehouse_checkouts#show', as: :warehouse_checkout
   post '/w/:token/checkout', to: 'warehouse_checkouts#create', as: :warehouse_checkout_submit
+  get '/.well-known/apple-developer-merchantid-domain-association', to: 'apple_pay_domain#show', as: :apple_pay_domain_association
   post '/w/:token/apple_pay/session', to: 'warehouse_checkouts#apple_pay_session', as: :warehouse_apple_pay_session
 
   get '/w/:token/orders/:order_number', to: 'warehouse_orders#show', as: :warehouse_order
