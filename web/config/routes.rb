@@ -384,6 +384,8 @@ Rails.application.routes.draw do
     end
   end
   namespace :people do
+    # What-if model of staff incentive plans (IncentiveModel); read-only.
+    get 'incentives', to: 'incentives#show', as: :incentives
     resources :work_reports, only: %i[index update]
     resources :employees, only: %i[index show new create edit update destroy] do
       post :add_pay_rate, on: :member
