@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_020000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -2120,6 +2120,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_010000) do
     t.boolean "source_lines_complete", default: false, null: false
     t.string "source_financial_status"
     t.integer "tip_cents", default: 0, null: false
+    t.json "discount_codes", default: []
     t.index ["location_id"], name: "index_orders_on_location_id"
     t.index ["tenant_id", "customer_id"], name: "index_orders_on_tenant_id_and_customer_id"
     t.index ["tenant_id", "occurred_at"], name: "index_orders_on_tenant_id_and_occurred_at"

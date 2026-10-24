@@ -81,7 +81,7 @@ class CatalogSyncer
       orders(first: 5, query: $orderQuery, sortKey: UPDATED_AT, reverse: true, after: $orderCursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
-          id name createdAt updatedAt cancelledAt displayFinancialStatus paymentGatewayNames sourceName
+          id name createdAt updatedAt cancelledAt displayFinancialStatus paymentGatewayNames sourceName discountCodes
           retailLocation { id }
           currentTotalPriceSet { shopMoney { amount currencyCode } }
           currentTotalTaxSet { shopMoney { amount currencyCode } }

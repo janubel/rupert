@@ -124,6 +124,15 @@ class CanonicalOrderImporterTest < ActiveSupport::TestCase
     assert_equal customer.id, order.customer_id
   end
 
+  test 'discount codes are stored from Shopify codes and Square discount names' do
+    CanonicalOrderImporter.from_shopify!([shopify_order.merge('discountCodes' => [' SAM20 ', 'SAM20', '', 'WELCOME'])])
+    assert_equal %w[SAM20 WELCOME], Core::Order.find_by!(source: 'shopify').discount_codes
+    CanonicalOrderImporter.from_square!([square_order.merge('discounts' => [{ 'name' => 'Staff referral', 'type' => 'FIXED_AMOUNT' }])])
+    assert_equal ['Staff referral'], Core::Order.find_by!(source: 'square').discount_codes
+    CanonicalOrderImporter.from_square!([square_order(id: 'sq-plain')])
+    assert_equal [], Core::Order.find_by!(source_order_id: 'sq-plain').discount_codes
+  end
+
   test 'from_square! stores money in cents without inflating (amounts are already cents)' do
     CanonicalOrderImporter.from_square!([square_order])
     order = Core::Order.find_by(source: 'square', source_order_id: 'sq-abc')
