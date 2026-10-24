@@ -40,6 +40,34 @@ class SwipesimpleDaysTest < ActionDispatch::IntegrationTest
     assert_select 'form[action=?] input[name=source_digest]', review_swipesimple_days_path
   end
 
+  test 'register close shows all four requested boxes from native daily sales reports' do
+    import(ROWS)
+    SwipesimpleSalesDay.create!(merchant_account: 'Example Wholesale', business_date: '2026-10-14',
+      net_sales_cents: 10_700, tax_cents: 600, net_card_cents: 8000, net_cash_cents: 2700,
+      tips_cents: 100, source_digest: 'synthetic-register-close', pulled_at: Time.current)
+    before = SwipesimpleReportRow.unscoped.count
+    get swipesimple_days_path(date: '2026-10-14')
+    assert_response :success
+    { 'net_sales_cents' => ['Total collected', '$107.00'], 'tax_cents' => ['Sales tax collected', '$6.00'],
+      'net_card_cents' => ['Credit card collected', '$80.00'], 'net_cash_cents' => ['Cash collected', '$27.00'] }.each do |field, (label, value)|
+      assert_select "[data-register-total=#{field}] .stat-label", label
+      assert_select "[data-register-total=#{field}] .stat-value", value
+    end
+    assert_select '[aria-label="Daily SwipeSimple summary"]', text: /Approved sales.*\$100\.00/m
+    assert_equal before, SwipesimpleReportRow.unscoped.count
+    assert_select '[aria-label="Register close totals by account"]', text: /Example Wholesale/
+  end
+
+  test 'missing native reports keep register boxes unknown for readers too' do
+    import(ROWS)
+    reader = User.create!(email: 'ss-register-reader@example.invalid', password: 'password123', role: 'reader', tenant: @tenant)
+    switch_to(reader)
+    get swipesimple_days_path(date: '2026-10-14')
+    assert_response :success
+    assert_select '[aria-label="Register close totals"] .stat-value', text: 'Unknown', count: 4
+    assert_select '[aria-label="Register close totals"] input', count: 0
+  end
+
   test 'empty day says no data and links to the connection' do
     get swipesimple_days_path(date: '2026-10-14')
     assert_response :success
