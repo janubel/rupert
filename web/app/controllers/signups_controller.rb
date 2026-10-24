@@ -22,6 +22,9 @@ class SignupsController < ApplicationController
       return render(:new, status: :unprocessable_entity)
     end
     session.delete(:registration_intent)
+    # The iPhone app runs Google in the system sheet; the form travels with it (NativeSignIn).
+    return redirect_to(google_auth_path(intent: NativeSignIn.intent_token('workspace_signup', attributes))) if hotwire_native_app?
+
     state = SecureRandom.hex(24)
     session[:oauth_state] = state
     session[:oauth_started_at] = Time.current.to_i

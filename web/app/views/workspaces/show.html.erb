@@ -4,7 +4,7 @@
 <div class="page-narrow space-y-6">
   <%= page_header 'Your private workspace', subtitle: 'Your business records live in a separate customer instance with its own database and credentials.', eyebrow: 'Your workspace',
                   menu: [['Subscription', billing_path], ['Support access', support_access_path]] do %>
-    <% if @deployment.status == 'ready' %><%= button_to 'Open my workspace', workspace_session_path, class: 'btn-primary' %><% elsif @deployment.status != 'failed' %><%= link_to 'Check setup progress', workspace_path, class: 'btn-primary' %><% end %>
+    <% if @deployment.status == 'ready' %><%= button_to 'Open my workspace', workspace_session_path, class: 'btn-primary', form: { data: { turbo: false } } %><% elsif @deployment.status != 'failed' %><%= link_to 'Check setup progress', workspace_path, class: 'btn-primary' %><% end %>
   <% end %>
 
   <section class="section-card">

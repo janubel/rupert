@@ -16,6 +16,9 @@ class RegistrationsController < ApplicationController
       flash.now[:alert] = 'Choose a company name and an available workspace address (2–63 lowercase letters, numbers or hyphens).'
       return render(:new, status: :unprocessable_entity)
     end
+    # The iPhone app runs Google in the system sheet; the form travels with it (NativeSignIn).
+    return redirect_to(google_auth_path(intent: NativeSignIn.intent_token('registration', fields))) if hotwire_native_app?
+
     session[:oauth_state] = SecureRandom.hex(24)
     session[:oauth_started_at] = Time.current.to_i
     session.delete(:workspace_signup_intent)

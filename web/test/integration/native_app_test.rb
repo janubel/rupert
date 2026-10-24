@@ -41,6 +41,13 @@ class NativeAppTest < ActionDispatch::IntegrationTest
     assert(rules.any? { |rule| rule['properties']['context'] == 'modal' })
   end
 
+  test 'a signed-out app opening Home goes to sign-in, not the marketing page' do
+    get root_path, headers: { 'User-Agent' => 'Mozilla/5.0 (iPhone) Rupert iOS/1.0.0; Hotwire Native iOS; Turbo Native iOS' }
+    assert_redirected_to login_path
+    get root_path
+    assert_response :success
+  end
+
   test 'the app layout drops the chrome the native tab bar replaces' do
     post login_path, params: { email: @admin.email, password: 'password123' }
     get root_path, headers: { 'User-Agent' => 'Mozilla/5.0 (iPhone) Hotwire Native iOS; Turbo Native iOS; bridge-components: []' }
@@ -103,5 +110,58 @@ class NativeAppTest < ActionDispatch::IntegrationTest
     get google_callback_path, params: { code: 'code123', state: session[:oauth_state] }
     assert_redirected_to platform_path
     assert_equal @admin.id, session[:user_id]
+  end
+
+  NATIVE_UA = { 'User-Agent' => 'Mozilla/5.0 (iPhone) Rupert iOS/1.0.0; Hotwire Native iOS; Turbo Native iOS' }.freeze
+
+  test 'sign-up in the app carries the form through the Google sheet and lands on the new workspace' do
+    post start_path, params: { registration: { workspace_name: 'Native Shop', requested_subdomain: 'native-shop' } },
+      headers: NATIVE_UA
+    intent = Rack::Utils.parse_query(URI.parse(response.location).query)['intent']
+    assert_equal '/auth/google', URI.parse(response.location).path
+    assert intent.present?
+    assert_nil session[:registration_intent], 'the web view keeps no half-finished sign-up'
+
+    get google_auth_path, params: { native_challenge: challenge, intent: intent }
+    assert_equal({ 'workspace_name' => 'Native Shop', 'requested_subdomain' => 'native-shop' }, session[:registration_intent])
+    GoogleOauthService.stubs(:exchange_code!).returns('email' => 'native.owner@gmail.com', 'sub' => 'native-owner',
+      'email_verified' => true, 'name' => 'Native Owner')
+    assert_difference 'User.count', 1 do
+      get google_callback_path, params: { code: 'code123', state: session[:oauth_state] }
+    end
+    code = handed_off('code')
+    assert_nil session[:user_id]
+
+    post native_session_path, params: { code: code, verifier: VERIFIER }, as: :json
+    assert_response :success
+    assert_equal workspace_path, response.parsed_body['location']
+    assert_equal User.find_by!(email: 'native.owner@gmail.com').id, session[:user_id]
+  end
+
+  test 'a workspace request from the app returns the receipt as a message' do
+    token = NativeSignIn.intent_token('workspace_signup', { 'workspace_name' => 'Requested', 'requested_subdomain' => 'requested-shop' })
+    get google_auth_path, params: { native_challenge: challenge, intent: token }
+    assert_equal 'requested-shop', session[:workspace_signup_intent]['requested_subdomain']
+    GoogleOauthService.stubs(:exchange_code!).returns('email' => 'owner@requested.example', 'sub' => 'requested-owner',
+      'email_verified' => true)
+    WorkspaceSignupProvisioner.stubs(:request_signup).returns(WorkspaceSignup.new(status: 'pending'))
+    get google_callback_path, params: { code: 'code123', state: session[:oauth_state] }
+    assert_match(/waiting for platform owner review/, handed_off('message'))
+    assert_nil session[:user_id]
+  end
+
+  test 'a forged or unknown intent is ignored' do
+    get google_auth_path, params: { native_challenge: challenge, intent: 'not-a-token' }
+    assert_nil session[:registration_intent]
+    assert_nil session[:workspace_signup_intent]
+    assert_nil NativeSignIn.read_intent(NativeSignIn.intent_token('registration', {}).reverse)
+    assert_raises(ArgumentError) { NativeSignIn.intent_token('admin', {}) }
+  end
+
+  test 'landing paths stay on the instance' do
+    code = NativeSignIn.issue(user: @admin, google_email: @admin.email, google_identity: nil, challenge: challenge,
+      location: '//evil.example/x')
+    _, _, _, location = NativeSignIn.redeem(code, VERIFIER)
+    assert_nil location
   end
 end

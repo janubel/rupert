@@ -33,6 +33,9 @@ class OauthController < ApplicationController
     # The Rupert iPhone app signs in through a system browser sheet (see NativeSignIn).
     if NativeSignIn.valid_challenge?(params[:native_challenge])
       session[:oauth_native_challenge] = params[:native_challenge]
+      kind, fields = NativeSignIn.read_intent(params[:intent])
+      session[:registration_intent] = fields if kind == 'registration'
+      session[:workspace_signup_intent] = fields if kind == 'workspace_signup'
     else
       session.delete(:oauth_native_challenge)
     end
@@ -83,6 +86,8 @@ class OauthController < ApplicationController
     if registration_intent
       user = VerifiedWorkspaceRegistration.call(info: info, attributes: registration_intent)
       identity = user.google_login_identities.find_by!(email: user.email)
+      return hand_off_to_app(user, user.email, identity, location: workspace_path) if @native_challenge
+
       start_browser_session(user, method: 'google', google_email: user.email, google_identity: identity)
       return redirect_to(workspace_path, notice: 'Your free account is ready.')
     end
@@ -90,6 +95,8 @@ class OauthController < ApplicationController
     if signup_intent
       @signup = WorkspaceSignupProvisioner.request_signup(info: info, attributes: signup_intent)
       reset_session
+      return redirect_to(NativeSignIn.callback_url(message: signup_receipt_message(@signup)), allow_other_host: true) if @native_challenge
+
       return render('signups/receipt')
     end
 
@@ -173,10 +180,20 @@ class OauthController < ApplicationController
 
   # The app redeems the code with its verifier (Native::SessionsController). The browser sheet
   # gets no Rupert session of its own.
-  def hand_off_to_app(user, email, identity)
-    code = NativeSignIn.issue(user: user, google_email: email, google_identity: identity, challenge: @native_challenge)
+  def hand_off_to_app(user, email, identity, location: nil)
+    code = NativeSignIn.issue(user: user, google_email: email, google_identity: identity, challenge: @native_challenge,
+      location: location)
     reset_session
     redirect_to(NativeSignIn.callback_url(code: code), allow_other_host: true)
+  end
+
+  # The same words as signups/receipt, for the app's alert.
+  def signup_receipt_message(signup)
+    case signup.status
+    when 'approved' then 'Your workspace has been approved. Sign in with the same Google account to continue.'
+    when 'rejected' then 'The platform owner did not approve this workspace request.'
+    else 'Your workspace request is waiting for platform owner review. You have not been signed in.'
+    end
   end
 
   def clear_oauth_intent

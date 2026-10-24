@@ -31,7 +31,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         if let bundled = Bundle.module.url(forResource: "path-configuration", withExtension: "json") {
             sources.append(.file(bundled))
         }
-        sources.append(.server(Instance.url("/native/ios/path-configuration.json")))
+        sources.append(.server(Instance.url("/native/ios/path-configuration.json", on: Instance.controlPlane)))
         Hotwire.loadPathConfiguration(from: sources)
 
         // Rupert recognises the app by "Hotwire Native" in the user agent (turbo-rails'
@@ -41,14 +41,25 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         Hotwire.config.showDoneButtonOnModals = true
         Hotwire.config.animateReplaceActions = true
 
-        // Google refuses sign-in inside web views; GoogleSignInPolicy sends it to the system sheet.
-        // The rest are Hotwire Native's defaults, in their order.
+        // Google refuses sign-in inside web views: sign-in and sign-up go to the system sheet.
+        // rupert:// links are Rupert talking to the app (workspace handoff). Plain links on Rupert's
+        // sites open in the app. The rest are Hotwire Native's defaults, in their order.
         Hotwire.registerWebViewPolicyDecisionHandlers([
             GoogleSignInPolicy(),
+            RupertSchemePolicy(),
             ReloadWebViewPolicyDecisionHandler(),
             NewWindowWebViewPolicyDecisionHandler(),
+            RupertPlainLinkPolicy(),
             ExternalNavigationWebViewPolicyDecisionHandler(),
             LinkActivatedWebViewPolicyDecisionHandler(),
+        ])
+        // Every Rupert site (control plane and workspaces) stays in the app; other sites open in an
+        // in-app Safari view, and other schemes (mailto:, tel:) in their apps.
+        Hotwire.registerRouteDecisionHandlers([
+            GoogleSignInRoute(),
+            RupertSitesRoute(),
+            SafariViewControllerRouteDecisionHandler(),
+            SystemNavigationRouteDecisionHandler(),
         ])
 #if DEBUG
         Hotwire.config.debugLoggingEnabled = true

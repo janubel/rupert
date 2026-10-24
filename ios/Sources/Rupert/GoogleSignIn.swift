@@ -11,13 +11,32 @@ struct GoogleSignInPolicy: WebViewPolicyDecisionHandler {
 
     func matches(navigationAction: WKNavigationAction, configuration: Navigator.Configuration) -> Bool {
         guard navigationAction.targetFrame?.isMainFrame ?? true, let url = navigationAction.request.url else { return false }
-        return Instance.isInstance(url) && url.path == "/auth/google"
+        return Instance.isRupert(url) && url.path == "/auth/google"
     }
 
     func handle(navigationAction: WKNavigationAction, configuration: Navigator.Configuration,
                 navigator: Navigating) -> WebViewPolicyManager.Decision {
+        guard let url = navigationAction.request.url else { return .cancel }
         let anchor = navigator.activeNavigationController
-        Task { @MainActor in GoogleSignIn.shared.start(from: anchor) }
+        Task { @MainActor in GoogleSignIn.shared.start(url, from: anchor) }
+        return .cancel
+    }
+}
+
+/// Sign-up forms (/start, /signup) answer the app with a redirect to /auth/google?intent=…,
+/// which arrives as a visit proposal rather than a link tap.
+struct GoogleSignInRoute: RouteDecisionHandler {
+    let name = "rupert-google-sign-in-route"
+
+    func matches(proposal: VisitProposal, configuration: Navigator.Configuration) -> Bool {
+        Instance.isRupert(proposal.url) && proposal.url.path == "/auth/google"
+    }
+
+    func handle(proposal: VisitProposal, configuration: Navigator.Configuration,
+                navigator: Navigating) -> Router.Decision {
+        let url = proposal.url
+        let anchor = navigator.activeNavigationController
+        Task { @MainActor in GoogleSignIn.shared.start(url, from: anchor) }
         return .cancel
     }
 }
@@ -26,7 +45,8 @@ struct GoogleSignInPolicy: WebViewPolicyDecisionHandler {
 ///
 /// 1. A random verifier stays in memory here; its SHA-256 (the challenge) goes to /auth/google.
 /// 2. Google signs the person in inside ASWebAuthenticationSession. Rupert answers with
-///    rupert://auth/google?code=CODE (or ?error=MESSAGE) instead of a browser session.
+///    rupert://auth/google?code=CODE (or ?error= / ?message= for a refusal or a sign-up receipt)
+///    instead of a browser session. A sign-up form's `intent` rides along on the same URL.
 /// 3. POST /native/session {code, verifier} returns Rupert's session cookie, which is copied into
 ///    the web views' cookie store. A code is useless without the verifier and works once.
 @MainActor
@@ -34,18 +54,25 @@ final class GoogleSignIn: NSObject, ASWebAuthenticationPresentationContextProvid
     static let shared = GoogleSignIn()
     static let callbackScheme = "rupert"
 
-    /// Called with the account's landing page after a successful sign-in.
+    /// Called with the account's landing page (absolute) after a successful sign-in.
     var onSignedIn: ((URL) -> Void)?
 
     private var session: ASWebAuthenticationSession?
     private weak var anchor: UIViewController?
 
-    func start(from viewController: UIViewController) {
-        guard session == nil else { return }
+    /// The Rupert site the sign-in started on; the code is redeemed there.
+    private var site = Instance.controlPlane
+
+    /// `url` is Rupert's /auth/google link, with any sign-up `intent` it carries.
+    func start(_ url: URL, from viewController: UIViewController) {
+        guard session == nil, let origin = Instance.httpsOrigin(url) else { return }
         anchor = viewController
+        site = origin
         let verifier = Self.randomVerifier()
-        var components = URLComponents(url: Instance.url("/auth/google"), resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "native_challenge", value: Self.challenge(for: verifier))]
+        var components = URLComponents(url: Instance.url("/auth/google", on: origin), resolvingAgainstBaseURL: false)!
+        let carried = (URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [])
+            .filter { $0.name == "intent" }
+        components.queryItems = carried + [URLQueryItem(name: "native_challenge", value: Self.challenge(for: verifier))]
 
         let authSession = ASWebAuthenticationSession(url: components.url!, callbackURLScheme: Self.callbackScheme) { [weak self] callback, error in
             Task { @MainActor in self?.finish(callback: callback, error: error, verifier: verifier) }
@@ -78,6 +105,10 @@ final class GoogleSignIn: NSObject, ASWebAuthenticationPresentationContextProvid
             showProblem(message)
             return
         }
+        if let message = items.first(where: { $0.name == "message" })?.value {
+            show(title: "Workspace request", message: message)
+            return
+        }
         guard let code = items.first(where: { $0.name == "code" })?.value else {
             showProblem("Google sign-in did not finish. Try again.")
             return
@@ -93,7 +124,7 @@ final class GoogleSignIn: NSObject, ASWebAuthenticationPresentationContextProvid
     }
 
     private func redeem(code: String, verifier: String) async throws -> URL {
-        let endpoint = Instance.url("/native/session")
+        let endpoint = Instance.url("/native/session", on: site)
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -117,12 +148,16 @@ final class GoogleSignIn: NSObject, ASWebAuthenticationPresentationContextProvid
         for cookie in cookies {
             await store.setCookie(cookie)
         }
-        return Instance.url(body?["location"] as? String ?? "/")
+        return Instance.url(body?["location"] as? String ?? "/", on: site)
     }
 
     private func showProblem(_ message: String) {
+        show(title: "Sign in with Google", message: message)
+    }
+
+    private func show(title: String, message: String) {
         guard let presenter = anchor?.view.window?.rootViewController else { return }
-        let alert = UIAlertController(title: "Sign in with Google", message: message, preferredStyle: .alert)
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         (presenter.presentedViewController ?? presenter).present(alert, animated: true)
     }

@@ -6,8 +6,8 @@
 	<string>Rupert</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.0</string>
-	<key>RupertBaseURL</key>
-	<string>https://herbalhealers.rupertpos.com</string>
+	<key>RupertControlPlaneURL</key>
+	<string>https://pos.rupertpos.com</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>

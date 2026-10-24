@@ -1,7 +1,8 @@
 import HotwireNative
 import UIKit
 
-/// The one window: a tab bar where each tab keeps its own navigation stack of Rupert pages.
+/// The one window: a tab bar where each tab keeps its own navigation stack of Rupert pages, on the
+/// instance the app is pointed at (Instance.current).
 final class SceneController: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
 
@@ -16,22 +17,27 @@ final class SceneController: UIResponder, UIWindowSceneDelegate {
         window.makeKeyAndVisible()
         self.window = window
 
-        tabBarController.load(HotwireTab.all)
+        tabBarController.load(HotwireTab.all(on: Instance.current))
+
         GoogleSignIn.shared.onSignedIn = { [weak self] landing in
-            self?.reloadAfterSignIn(landing: landing)
+            self?.show(instance: Instance.httpsOrigin(landing) ?? Instance.current, landing: landing)
+        }
+        WorkspaceHandoff.shared.onOpened = { [weak self] origin, landing in
+            self?.show(instance: origin, landing: landing)
         }
     }
 
-    /// After a Google sign-in every tab still shows the sign-in page. Start each tab over on its
-    /// own page and open the account's landing page on Home.
-    private func reloadAfterSignIn(landing: URL) {
-        for tab in HotwireTab.all {
-            guard let navigator = tabBarController.navigator(for: tab) else { continue }
-            navigator.clearAll(animated: false)
-            let destination = tab == .home ? landing : tab.url
-            navigator.route(destination, options: VisitOptions(action: .replace))
-        }
+    /// Point every tab at `instance` (after a sign-in or a workspace handoff) and open `landing`
+    /// on Home. Each tab starts over, since they all showed the sign-in page or the control plane.
+    private func show(instance: URL, landing: URL) {
+        Instance.setCurrent(instance)
+        let tabs = HotwireTab.all(on: instance)
+        tabBarController.load(tabs)
         tabBarController.selectedIndex = 0
+        if landing.path != "/" || landing.query != nil, let home = tabs.first,
+           let navigator = tabBarController.navigator(for: home) {
+            navigator.route(landing, options: VisitOptions(action: .replace))
+        }
     }
 }
 

@@ -37,8 +37,11 @@ class HomeController < AuthenticatedController
 
   private
 
+  # The iPhone app (Hotwire Native) never shows the marketing page: it has no Turbo, so the app
+  # would wait on it forever. A signed-out app goes to the sign-in page like any other page.
   def public_landing?
-    !WorkspaceNode.isolated? && Current.user.nil? && request.path == root_path && action_name == 'index'
+    !WorkspaceNode.isolated? && Current.user.nil? && request.path == root_path && action_name == 'index' &&
+      !hotwire_native_app?
   end
 
   def require_login

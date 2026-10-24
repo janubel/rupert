@@ -9,8 +9,16 @@
 # It redirects to rupert://auth/google?code=CODE instead. CODE is encrypted, expires in two
 # minutes and is accepted once, and only together with the verifier (Native::SessionsController).
 # Another app that intercepts the redirect cannot use the code without the verifier.
+#
+# Sign-up runs the same way: /start and /signup send the app to /auth/google?intent=TOKEN, an
+# encrypted copy of the form the person filled in, which the sheet's session picks up.
+# Opening an isolated workspace from the control plane returns rupert://workspace?origin=…&handoff=…
+# to the app's own web view, which posts the one-time handoff to the instance natively.
 module NativeSignIn
   CALLBACK = 'rupert://auth/google'
+  WORKSPACE_CALLBACK = 'rupert://workspace'
+  INTENT_KINDS = %w[registration workspace_signup].freeze
+  INTENT_TTL = 10.minutes
   CHALLENGE = /\A[A-Za-z0-9_-]{43}\z/
   VERIFIER = /\A[A-Za-z0-9._~-]{43,128}\z/
   TTL = 2.minutes
@@ -28,7 +36,7 @@ module NativeSignIn
     Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
   end
 
-  def issue(user:, google_email:, google_identity:, challenge:)
+  def issue(user:, google_email:, google_identity:, challenge:, location: nil)
     raise ArgumentError, 'invalid challenge' unless valid_challenge?(challenge)
 
     payload = {
@@ -36,17 +44,48 @@ module NativeSignIn
       'email' => google_email,
       'identity_id' => google_identity&.id,
       'challenge' => challenge,
+      'location' => location.to_s.match?(%r{\A/(?![/\\])}) ? location.to_s : nil,
       'jti' => SecureRandom.hex(16)
     }
     encryptor.encrypt_and_sign(payload, expires_in: TTL, purpose: PURPOSE)
   end
 
-  def callback_url(code: nil, error: nil)
-    query = code ? { code: code } : { error: error.to_s[0, 200] }
+  def callback_url(code: nil, error: nil, message: nil)
+    query =
+      if code
+        { code: code }
+      elsif message
+        { message: message.to_s[0, 300] }
+      else
+        { error: error.to_s[0, 200] }
+      end
     "#{CALLBACK}?#{query.to_query}"
   end
 
-  # Returns [user, google_email, google_identity] or raises Invalid.
+  def workspace_url(origin:, handoff:, control:)
+    "#{WORKSPACE_CALLBACK}?#{{ origin: origin, handoff: handoff, control: control }.to_query}"
+  end
+
+  # The sign-up form the person filled in, carried through the app into the Google sheet.
+  def intent_token(kind, fields)
+    raise ArgumentError, 'unknown intent' unless INTENT_KINDS.include?(kind)
+
+    encryptor.encrypt_and_sign({ 'kind' => kind, 'fields' => fields.to_h }, expires_in: INTENT_TTL, purpose: :native_google_intent)
+  end
+
+  # Returns [kind, fields] or nil.
+  def read_intent(token)
+    return nil unless token.is_a?(String) && token.present?
+
+    payload = encryptor.decrypt_and_verify(token, purpose: :native_google_intent)
+    return nil unless payload.is_a?(Hash) && INTENT_KINDS.include?(payload['kind']) && payload['fields'].is_a?(Hash)
+
+    [payload['kind'], payload['fields']]
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::MessageVerifier::InvalidSignature
+    nil
+  end
+
+  # Returns [user, google_email, google_identity, landing path or nil] or raises Invalid.
   def redeem(code, verifier)
     raise Invalid unless code.is_a?(String) && verifier.is_a?(String) && VERIFIER.match?(verifier)
 
@@ -63,7 +102,7 @@ module NativeSignIn
       identity = GoogleLoginIdentity.find_by(id: payload['identity_id'], user_id: user.id)
       raise Invalid unless identity
     end
-    [user, payload['email'], identity]
+    [user, payload['email'], identity, payload['location']]
   rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::MessageVerifier::InvalidSignature
     raise Invalid
   end

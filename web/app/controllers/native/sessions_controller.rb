@@ -11,11 +11,11 @@ module Native
 
     def create
       response.set_header('Cache-Control', 'no-store')
-      user, email, identity = NativeSignIn.redeem(params[:code], params[:verifier])
+      user, email, identity, location = NativeSignIn.redeem(params[:code], params[:verifier])
       start_browser_session(user, method: 'google', google_email: email, google_identity: identity)
       AccessLogger.record(source: 'google', status: 'success', request: request, user: user, email: email,
         domain: email.to_s.split('@').last, detail: 'iPhone app')
-      render json: { location: sign_in_landing_path(user) }
+      render json: { location: location || sign_in_landing_path(user) }
     rescue NativeSignIn::Invalid
       AccessLogger.record(source: 'google', status: 'failure', request: request, detail: 'iPhone app sign-in code rejected')
       render json: { error: 'That sign-in expired. Sign in with Google again.' }, status: :unprocessable_entity
