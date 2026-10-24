@@ -1,5 +1,5 @@
 <% content_for :title, "Shifts" %>
-<% can_write = Current.user.can?("hr.write") %>
+<% can_write = Current.user.can?('schedule.write') || Current.user.can?('hr.write') %>
 <div class="space-y-6">
   <%= page_header 'Shifts', subtitle: 'Planned shifts for the week.' do %>
     <%= full_window_button %>

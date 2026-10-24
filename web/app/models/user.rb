@@ -78,6 +78,7 @@ class User < ActiveRecord::Base
       'uploads.write',
       'hr.read',
       'hr.write',
+      'schedule.write',
       'timesheets.read',
       'timesheets.write',
       'leave.read',
@@ -102,6 +103,7 @@ class User < ActiveRecord::Base
       'alerts.write',
       'sync.read',
       'hr.read',
+      'schedule.write',
       'timesheets.read',
       'timesheets.write',
       'leave.read',
@@ -256,7 +258,7 @@ class User < ActiveRecord::Base
       },
       {
         area: 'Team',
-        permissions: ['users.read', 'users.write', 'hr.read', 'hr.write', 'timesheets.read', 'timesheets.write', 'timesheets.review', 'timesheets.self',
+        permissions: ['users.read', 'users.write', 'hr.read', 'hr.write', 'schedule.write', 'timesheets.read', 'timesheets.write', 'timesheets.review', 'timesheets.self',
                       'leave.read', 'leave.write', 'payroll.read', 'payroll.write']
       }
     ]

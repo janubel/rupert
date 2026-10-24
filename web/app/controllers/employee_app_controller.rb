@@ -25,6 +25,7 @@ class EmployeeAppController < ApplicationController
       @summary = EmployeeWorkSummary.new(employee: @worker, from: Date.current.beginning_of_week, to: Date.current.end_of_week)
       @open_shift = ClockShift.open.find_by(employee_id: @worker.id, user_id: Current.user.id)
       @timesheet = @worker.timesheets.where('period_start <= ? AND period_end >= ?', Date.current, Date.current).first
+      @next_shift = @worker.scheduled_shifts.where('ends_at > ?', Time.current).chronological.first
       @next_leave = @worker.leave_requests.where(status: %w[requested approved]).where('ends_on >= ?', Date.current).order(:starts_on).first
     end
   end

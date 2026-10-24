@@ -65,6 +65,41 @@ class ScheduleTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test 'managers can plan shifts; shift leaders only once granted schedule editing' do
+    manager = User.create!(tenant: @tenant, email: 'schedule-manager@example.com', password: 'password123', role: 'manager')
+    sign_in(manager, 'password123')
+    get people_scheduled_shifts_path(week: '2026-10-19')
+    assert_response :success
+    assert_difference 'People::ScheduledShift.count', 1 do
+      post people_scheduled_shifts_path, params: { scheduled_shift: { employee_id: @worker.id, starts_at: '2026-10-21T10:00', ends_at: '2026-10-21T14:00' } }
+    end
+    delete logout_path
+
+    leader = User.create!(tenant: @tenant, email: 'schedule-leader@example.com', password: 'password123', role: 'shift_leader')
+    sign_in(leader, 'password123')
+    assert_no_difference 'People::ScheduledShift.count' do
+      post people_scheduled_shifts_path, params: { scheduled_shift: { employee_id: @worker.id, starts_at: '2026-10-22T10:00', ends_at: '2026-10-22T14:00' } }
+    end
+    refute_includes ModuleRegistry.nav_for(leader).map(&:key), 'schedule'
+    leader.user_permissions.create!(tenant_id: @tenant.id, permission: 'schedule.write', enabled: true)
+    assert_includes ModuleRegistry.nav_for(leader.reload).map(&:key), 'schedule'
+    assert_difference 'People::ScheduledShift.count', 1 do
+      post people_scheduled_shifts_path, params: { scheduled_shift: { employee_id: @worker.id, starts_at: '2026-10-22T10:00', ends_at: '2026-10-22T14:00' } }
+    end
+  end
+
+  test 'the Employee app shows the next planned shift' do
+    travel_to @monday.in_time_zone + 8.hours
+    sign_in(@user, 'password123')
+    get employee_app_path
+    assert_response :success
+    assert_select '.card-title', 'Next shift'
+    assert_includes response.body, 'Today · 9:00 AM – 5:00 PM · Counter'
+    travel_to @monday.in_time_zone + 18.hours
+    get employee_app_path
+    assert_includes response.body, 'No shift planned yet.'
+  end
+
   test 'employees cannot open the manager schedule' do
     sign_in(@user, 'password123')
     get people_scheduled_shifts_path

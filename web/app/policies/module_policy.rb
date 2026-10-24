@@ -52,4 +52,8 @@ class ModulePolicy < ApplicationPolicy
   ].each do |perm|
     define_method("#{perm}?") { module?(perm.to_s.tr('_', '.')) }
   end
+
+  # Add, change and remove planned shifts. hr.write still covers it, so people granted HR editing keep it.
+  def schedule_write? = module?('schedule.write') || module?('hr.write')
+  def schedule_read? = hr_read? || schedule_write?
 end
