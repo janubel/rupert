@@ -47,6 +47,13 @@ class DirectorySyncTest < ActiveSupport::TestCase
     assert_not_requested :post, %r{/api/v1/}
   end
 
+  test 'customers with no name or contact details are skipped' do
+    blank = { id: 3, first_name: nil, last_name: '', email: nil, phone_number: ' ' }
+    stub_customers([customer(1), blank])
+    Directories::Sync.call(provider: 'ctrax', kind: 'customers')
+    assert_equal ['fixture.api.cannatrax.net/1'], Core::Customer.where(source: 'ctrax').pluck(:external_id)
+  end
+
   test 'failure on a later page retains the complete last successful directory' do
     stub_customers([customer(1, 'Original')])
     Directories::Sync.call(provider: 'ctrax', kind: 'customers')

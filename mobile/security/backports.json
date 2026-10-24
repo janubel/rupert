@@ -1,7 +1,8 @@
 {
   "advisories": {
     "braces": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
-    "node-forge": "https://github.com/advisories/GHSA-86w9-cpqp-85rv"
+    "node-forge": "https://github.com/advisories/GHSA-86w9-cpqp-85rv",
+    "zod": "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5"
   },
   "changes": [
     {
@@ -56,6 +57,24 @@
       "after_sha256": "c4e8f82890f9175ee71620f538463e40d249525efd3fe223bb9d531e7b37e289",
       "find": "  while (index < length) {\n    block = stack[stack.length - 1];",
       "replace": "  while (index < length) {\n    if (stack.length > 256) throw new SyntaxError('Brace pattern exceeds maximum nesting depth (256)');\n    block = stack[stack.length - 1];"
+    },
+    {
+      "package": "zod",
+      "version": "3.25.76",
+      "path": "v4/core/schemas.js",
+      "before_sha256": "d466582c022b08a3f9eb1a65d5970d8ca25064d73a5a838d76414ae36440a76b",
+      "after_sha256": "ed74bd5bce927d65ef4a4d4118afd52e4fb83d35ff58b8843abdf3cceaf0bc5d",
+      "find": "        inst._zod.run = (payload, ctx) => {\n            const result = inst._zod.parse(payload, ctx);",
+      "replace": "        // GHSA-mrhx-c7xc-m3w5 (backport of zod 4.6.6): an array, map or set larger than its leading size check fails\n        // that check before any element is parsed, so an oversized input cannot pile up one issue per element.\n        const sizeOf = (value) => def.type === \"array\" ? (Array.isArray(value) ? value.length : -1)\n            : def.type === \"map\" ? (value instanceof Map ? value.size : -1)\n                : def.type === \"set\" ? (value instanceof Set ? value.size : -1) : -1;\n        const rejectOversized = (payload) => {\n            const size = sizeOf(payload.value);\n            if (size < 0)\n                return undefined;\n            for (const ch of checks) {\n                const d = ch._zod.def;\n                if (!/_(length|size)$|_equals$/.test(d.check))\n                    break;\n                const max = d.maximum ?? d.length ?? d.size;\n                if (max >= 0 && size > max && (!d.when || d.when(payload))) {\n                    const start = payload.issues.length;\n                    ch._zod.check(payload);\n                    if (payload.issues[start])\n                        payload.issues[start].continue = false;\n                    return payload;\n                }\n            }\n            return undefined;\n        };\n        inst._zod.run = (payload, ctx) => {\n            const oversized = rejectOversized(payload);\n            if (oversized)\n                return oversized;\n            const result = inst._zod.parse(payload, ctx);"
+    },
+    {
+      "package": "zod",
+      "version": "3.25.76",
+      "path": "v4/core/schemas.cjs",
+      "before_sha256": "f5d17a7db487c943c9d07cc624010ebb6d93683eabd14339846f4912cc88b51f",
+      "after_sha256": "72036774d5d06cfe049ec94e7e00cb2036fffa67f3593266e2724afb36d2bf0f",
+      "find": "        inst._zod.run = (payload, ctx) => {\n            const result = inst._zod.parse(payload, ctx);",
+      "replace": "        // GHSA-mrhx-c7xc-m3w5 (backport of zod 4.6.6): an array, map or set larger than its leading size check fails\n        // that check before any element is parsed, so an oversized input cannot pile up one issue per element.\n        const sizeOf = (value) => def.type === \"array\" ? (Array.isArray(value) ? value.length : -1)\n            : def.type === \"map\" ? (value instanceof Map ? value.size : -1)\n                : def.type === \"set\" ? (value instanceof Set ? value.size : -1) : -1;\n        const rejectOversized = (payload) => {\n            const size = sizeOf(payload.value);\n            if (size < 0)\n                return undefined;\n            for (const ch of checks) {\n                const d = ch._zod.def;\n                if (!/_(length|size)$|_equals$/.test(d.check))\n                    break;\n                const max = d.maximum ?? d.length ?? d.size;\n                if (max >= 0 && size > max && (!d.when || d.when(payload))) {\n                    const start = payload.issues.length;\n                    ch._zod.check(payload);\n                    if (payload.issues[start])\n                        payload.issues[start].continue = false;\n                    return payload;\n                }\n            }\n            return undefined;\n        };\n        inst._zod.run = (payload, ctx) => {\n            const oversized = rejectOversized(payload);\n            if (oversized)\n                return oversized;\n            const result = inst._zod.parse(payload, ctx);"
     }
   ]
 }

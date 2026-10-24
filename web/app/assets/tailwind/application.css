@@ -2160,3 +2160,18 @@ body.tour-active { overflow-x:hidden; }
   .pos-sheet-media { max-height:40dvh;border-right:0;border-bottom:1px solid var(--color-fog); }
 }
 @media (prefers-reduced-motion: reduce) { .pos-tile { transition:none; } .pos-tile:active { transform:none; } }
+
+/* Item page: the photo and name centered, with price, cost and margin under them. */
+.item-hero { display:flex;flex-direction:column;align-items:center;gap:.4rem;text-align:center; }
+.item-hero-image { display:grid;place-items:center;width:min(16rem,100%);aspect-ratio:1;overflow:hidden;border:1px solid var(--color-fog);border-radius:var(--radius-card);background:var(--color-cream); }
+.item-hero-image img { width:100%;height:100%;object-fit:contain; }
+.item-hero-placeholder { font-size:.8rem;color:var(--color-taupe); }
+.item-hero-name { margin:.4rem 0 0;font-size:1.25rem;font-weight:700;color:var(--color-ink); }
+.item-hero-option { margin:0;font-size:.9rem;color:var(--color-mocha); }
+.item-hero-ids { margin:0;font-size:.78rem;color:var(--color-taupe); }
+.item-hero-facts { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;width:min(40rem,100%);margin-top:.6rem; }
+.item-hero-facts > div { padding:.6rem;border:1px solid var(--color-fog);border-radius:var(--radius-control,.6rem); }
+.item-hero-facts dt { font-size:.72rem;color:var(--color-mocha); }
+.item-hero-facts dd { margin:.15rem 0 0;font-size:1.05rem;font-weight:700;color:var(--color-ink);font-variant-numeric:tabular-nums; }
+.item-hero-facts p { margin:.2rem 0 0;font-size:.68rem;color:var(--color-taupe); }
+@media (max-width:639px) { .item-hero-facts { grid-template-columns:1fr; } }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_010000) do
   create_table "BackupLog", id: :string, force: :cascade do |t|
     t.string "driveFileId"
     t.string "driveUrl"
@@ -187,6 +187,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_230000) do
     t.integer "totalInventory", default: 0
     t.boolean "catalog_present"
     t.datetime "catalog_read_at"
+    t.string "vendor"
+    t.string "productType"
     t.index ["status"], name: "index_ShopifyProduct_on_status"
     t.index ["tenant_id"], name: "index_ShopifyProduct_on_tenant_id"
     t.index ["title"], name: "index_ShopifyProduct_on_title"
