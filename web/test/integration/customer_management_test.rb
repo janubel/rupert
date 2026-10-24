@@ -15,6 +15,33 @@ class CustomerManagementTest < ActionDispatch::IntegrationTest
 
   teardown { Current.reset }
 
+  test 'unknown customers are tagged, filterable, sorted last by name, and the order and spend sorts work' do
+    unknown = Core::Customer.create!(source: 'manual', external_id: 'crm-unknown', email: 'nobody@example.com')
+    big = Core::Customer.create!(source: 'manual', external_id: 'crm-big', first_name: 'Zed', last_name: 'Big')
+    [[big, 50_000, 2.days.ago], [@customer, 1_000, 1.hour.ago]].each do |customer, cents, at|
+      order = Core::Order.new(source: 'shopify', source_order_id: SecureRandom.uuid, occurred_at: at, gross_cents: cents, currency: 'USD', customer_id: customer.id)
+      order.aasm.current_state = :paid
+      order.save!
+    end
+    assert unknown.unknown?
+    refute @customer.unknown?
+
+    get customers_path(name: 'unknown')
+    assert_select 'tbody tr', 1
+    assert_select 'tbody tr a.pill-taupe', 'Unknown'
+    assert_includes response.body, 'nobody@example.com'
+    get customers_path(name: 'named')
+    refute_includes response.body, 'nobody@example.com'
+
+    get customers_path(sort: 'name')
+    names = css_select('tbody tr td:first-child > a:first-child').map { |link| link.text.strip }
+    assert_equal 'nobody@example.com', names.last
+    get customers_path(sort: 'spend')
+    assert_equal 'Zed Big', css_select('tbody tr td:first-child > a:first-child').first.text.strip
+    get customers_path(sort: 'last_order')
+    assert_equal 'Fixture', css_select('tbody tr td:first-child > a:first-child').first.text.strip
+  end
+
   test 'manual customer form and redirects use the customer namespace and persist CRM fields' do
     get new_customer_path
     assert_response :success

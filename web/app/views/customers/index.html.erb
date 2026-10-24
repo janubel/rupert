@@ -55,6 +55,7 @@
       <div class="toolbar-field"><%= label_tag :source, 'Source', class: 'field-label' %><%= select_tag :source, options_for_select([['All sources', '']] + Core::Customer::SOURCES.map { |v| [directory_label(v), v] }, params[:source]), class: 'select w-full' %></div>
       <div class="toolbar-field"><%= label_tag :directory, 'Profiles', class: 'field-label' %><%= select_tag :directory, options_for_select([['All profiles', ''], ['Verified in latest read', 'verified'], ['Unverified / historical', 'historical']], params[:directory]), class: 'select w-full' %></div>
       <div class="toolbar-field"><%= label_tag :owner, 'Assignment', class: 'field-label' %><%= select_tag :owner, options_for_select([['All assignments', ''], ['Assigned to me', 'mine'], ['Unassigned', 'unassigned']], params[:owner]), class: 'select w-full' %></div>
+      <div class="toolbar-field"><%= label_tag :name, 'Name', class: 'field-label' %><%= select_tag :name, options_for_select([['Everyone', '']] + CustomersController::NAME_FILTERS.invert.to_a, params[:name]), class: 'select w-full' %></div>
       <div class="toolbar-field"><%= label_tag :sort, 'Sort', class: 'field-label' %><%= select_tag :sort, options_for_select(CustomersController::SORTS.map { |key, (_, label)| [label, key] }, @sort), class: 'select w-full' %></div>
       <%= hidden_field_tag :due, '1' if params[:due] == '1' %>
       <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
@@ -128,7 +129,7 @@
           <tbody>
             <% @customers.each do |customer| %>
               <tr>
-                <td class="td font-medium text-ink"><%= link_to customer.name, customer_path(customer), class: 'text-olive-deep hover:underline' %></td>
+                <td class="td font-medium text-ink"><%= link_to customer.name, customer_path(customer), class: 'text-olive-deep hover:underline' %><% if customer.unknown? %> <%= link_to 'Unknown', customers_path(name: 'unknown'), class: 'pill-taupe', title: 'No name on file. Shown by email or phone when there is one.' %><% end %></td>
                 <td class="td text-mocha"><%= customer.email.presence || '—' %><p class="text-xs text-taupe"><%= customer.phone.presence || '—' %></p></td>
                 <td class="td"><%= customer_status_pill(customer) %><% if customer.tag_list.any? %><p class="mt-1 text-xs text-taupe"><%= customer.tag_list.join(', ') %></p><% end %></td>
                 <td class="td"><span class="pill-taupe"><%= directory_label(customer.source) %></span><p class="mt-1 text-xs text-taupe"><%= customer_directory_status(customer) %></p></td>

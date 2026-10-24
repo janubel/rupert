@@ -3,12 +3,18 @@
 require 'csv'
 
 class CustomersController < AuthenticatedController
+  LAST_ORDER_SQL = '(SELECT MAX(orders.occurred_at) FROM orders WHERE orders.customer_id = customers.id)'
+  SPEND_SQL = '(SELECT COALESCE(SUM(orders.gross_cents), 0) FROM orders WHERE orders.customer_id = customers.id)'
+  UNKNOWN_LAST_SQL = "CASE WHEN #{Core::Customer::UNKNOWN_SQL} THEN 1 ELSE 0 END".freeze
   SORTS = {
     'recent' => [{ created_at: :desc, id: :desc }, 'Newest first'],
     'oldest' => [{ created_at: :asc, id: :asc }, 'Oldest first'],
-    'name' => [%i[last_name first_name id], 'Name A–Z'],
-    'email' => [%i[email id], 'Email A–Z']
+    'name' => [[Arel.sql(UNKNOWN_LAST_SQL), :last_name, :first_name, :id], 'Name A–Z (unknown last)'],
+    'email' => [%i[email id], 'Email A–Z'],
+    'last_order' => [[Arel.sql("#{LAST_ORDER_SQL} IS NULL"), Arel.sql("#{LAST_ORDER_SQL} DESC"), { id: :desc }], 'Most recent order'],
+    'spend' => [[Arel.sql("#{SPEND_SQL} DESC"), { id: :desc }], 'Biggest spenders']
   }.freeze
+  NAME_FILTERS = { 'unknown' => 'Unknown (no name)', 'named' => 'Named' }.freeze
 
   before_action :set_customer, only: %i[show edit update]
 
@@ -21,7 +27,10 @@ class CustomersController < AuthenticatedController
     @due_count = CustomerFollowUp.due.count
     @owners = crm_owners
     @sort = SORTS.key?(params[:sort]) ? params[:sort] : 'recent'
-    @pagy, @customers = pagy(:offset, @q.result.distinct.order(SORTS.fetch(@sort).first), limit: 25)
+    # Ordered outside the DISTINCT search, so the order and spend sorts work on every database.
+    matching = Core::Customer.where(id: @q.result.select(:id))
+    @pagy, @customers = pagy(:offset, matching.order(*Array.wrap(SORTS.fetch(@sort).first)), limit: 25)
+    @unknown_count = Core::Customer.unknown.count
     @status_counts = Core::Customer.group(:crm_status).count
     @total_customers = @status_counts.values.sum
     @filtered = filters_active?
@@ -121,7 +130,7 @@ class CustomersController < AuthenticatedController
 
   def filters_active?
     q = params[:q].respond_to?(:values) ? params[:q].values.any?(&:present?) : false
-    q || %i[status source owner due directory].any? { |key| params[key].present? }
+    q || %i[status source owner due directory name].any? { |key| params[key].present? }
   end
 
   def filtered_customers
@@ -130,6 +139,8 @@ class CustomersController < AuthenticatedController
     records = records.where(source: params[:source]) if Core::Customer::SOURCES.include?(params[:source])
     records = records.where(owner_id: Current.user.id) if params[:owner] == 'mine'
     records = records.where(owner_id: nil) if params[:owner] == 'unassigned'
+    records = records.unknown if params[:name] == 'unknown'
+    records = records.named if params[:name] == 'named'
     records = records.where(id: CustomerFollowUp.due.select(:customer_id)) if params[:due] == '1'
     records = records.where(id: verified_customers.select(:id)) if params[:directory] == 'verified'
     records = records.where.not(source: 'manual').where.not(id: verified_customers.select(:id)) if params[:directory] == 'historical'

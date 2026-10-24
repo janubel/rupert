@@ -47,6 +47,14 @@ module Core
       end
     end
 
+    # No first, last or preferred name: the CRM shows these as Unknown.
+    UNKNOWN_SQL = "COALESCE(TRIM(customers.first_name), '') = '' AND COALESCE(TRIM(customers.last_name), '') = '' " \
+                  "AND COALESCE(TRIM(customers.preferred_name), '') = ''"
+    scope :unknown, -> { where(Arel.sql(UNKNOWN_SQL)) }
+    scope :named, -> { where.not(Arel.sql(UNKNOWN_SQL)) }
+
+    def unknown? = [first_name, last_name, (preferred_name if has_attribute?(:preferred_name))].all?(&:blank?)
+
     def name
       local_name = preferred_name if has_attribute?(:preferred_name)
       local_name.presence || [first_name, last_name].compact.join(' ').presence || email || phone || 'Unnamed customer'
