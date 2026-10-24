@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Server health for the platform administrator's status bar: CPU load, memory,
+# Server health for the platform administrator's status bar: CPU use, memory,
 # disk use, database size and the last good backup. Read from /proc, df and the
 # database file at most every 30 seconds (cached), so showing it on every page
 # costs nothing. Any reading that cannot be taken is nil, never 0.
@@ -9,6 +9,9 @@ class HostVitals
   TTL = 30.seconds
   WARN = 80
   ALERT = 90
+  CPU_STAT = '/sys/fs/cgroup/cpu.stat'
+  CPU_SAMPLE_KEY = 'host_vitals/cpu_sample'
+  CPU_SAMPLE_WINDOW = 0.25
 
   Reading = Struct.new(:cpu, :memory, :disk, :db_bytes, :backup_bytes, :backup_at, :taken_at, keyword_init: true)
 
@@ -34,8 +37,37 @@ class HostVitals
 
     private
 
-    # One-minute load average as a share of the cores this process may use.
+    # CPU time this server (its container's cgroup) used since the last reading, as a share of the cores it may use.
+    # Inside a container /proc/loadavg is the whole host's load, so other containers' work used to show here as
+    # Rupert's. The first reading, or one after a long gap, samples a quarter of a second instead.
     def cpu_percent
+      now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      usage = cgroup_cpu_usec
+      return load_percent unless usage
+
+      previous = Rails.cache.read(CPU_SAMPLE_KEY)
+      Rails.cache.write(CPU_SAMPLE_KEY, [now, usage], expires_in: 10.minutes)
+      unless previous.is_a?(Array) && now - previous[0] >= 1 && now - previous[0] <= 600 && usage >= previous[1]
+        sleep CPU_SAMPLE_WINDOW
+        previous = [now, usage]
+        now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        usage = cgroup_cpu_usec or return load_percent
+      end
+      busy = (usage - previous[1]) / 1_000_000.0
+      [(busy / ((now - previous[0]) * Etc.nprocessors) * 100).round, 100].min
+    rescue SystemCallError, ZeroDivisionError
+      nil
+    end
+
+    def cgroup_cpu_usec
+      File.foreach(CPU_STAT) { |line| return line.split[1].to_i if line.start_with?('usage_usec ') }
+      nil
+    rescue SystemCallError
+      nil
+    end
+
+    # Without a cgroup (a laptop, say): the one-minute load average as a share of the cores.
+    def load_percent
       load1 = File.read('/proc/loadavg').split.first.to_f
       [(load1 / Etc.nprocessors * 100).round, 100].min
     rescue SystemCallError, ZeroDivisionError
