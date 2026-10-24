@@ -72,7 +72,7 @@ class DashboardPresenter
 
     # Keep the selling channels visible even on days with no imported sales.
     actual = sales.groups(since: today_start).index_by(&:first)
-    (%w[shopify ctrax square] | actual.keys).map { |source| actual.fetch(source, [source, 0, 0]) }
+    (%w[shopify ctrax swipesimple square] | actual.keys).map { |source| actual.fetch(source, [source, 0, 0]) }
   end
 
   def yesterday_revenue
@@ -93,6 +93,15 @@ class DashboardPresenter
 
   def revenue_series(days: 30, source: nil)
     can_read?('sales.read') ? sales(days: days).daily(source: source) : {}
+  end
+
+  # One daily series per selling source with sales in the window, for a stacked chart.
+  def revenue_by_source(days: 30)
+    return [] unless can_read?('sales.read')
+
+    sales(days: days).groups.map do |source, _cents, _count|
+      { name: DashboardSales::LABELS.fetch(source, source.humanize), source: source, data: sales(days: days).daily(source: source) }
+    end
   end
 
   def sales_volume_series(days: 30, source: nil)

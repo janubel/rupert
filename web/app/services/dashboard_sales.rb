@@ -4,7 +4,7 @@
 # mirrors. Native C-Trax sales remain snapshots, not duplicate canonical orders.
 class DashboardSales
   SOURCES = %w[shopify square rupert_pos manual pos].freeze
-  LABELS = { 'shopify' => 'Shopify', 'square' => 'Square', 'ctrax' => 'C-Trax',
+  LABELS = { 'shopify' => 'Shopify', 'square' => 'Square', 'ctrax' => 'C-Trax', 'swipesimple' => 'SwipeSimple',
              'rupert_pos' => 'Rupert POS', 'manual' => 'Manual', 'pos' => 'POS' }.freeze
   attr_reader :now, :from, :warnings
 
@@ -12,7 +12,7 @@ class DashboardSales
     @now = now.in_time_zone
     @from = (@now.to_date - (days - 1)).beginning_of_day
     @warnings = []
-    @rows = canonical_rows + (include_ctrax ? ctrax_rows : [])
+    @rows = canonical_rows + (include_ctrax ? ctrax_rows : []) + swipesimple_rows
     @warnings.uniq!
   end
 
@@ -44,7 +44,8 @@ class DashboardSales
 
   def hourly(source: nil)
     series = (0..23).index_with { 0 }
-    rows(source: source).each { |row| series[row[:at].in_time_zone.hour] += row[:cents] }
+    # SwipeSimple reports whole days only, so it has no hour to sit in.
+    rows(source: source).each { |row| series[row[:at].in_time_zone.hour] += row[:cents] unless row[:daily] }
     series.transform_values { |cents| cents / 100.0 }
   end
 
@@ -59,6 +60,17 @@ class DashboardSales
       end
       { source: source, at: at, cents: cents }
     end
+  end
+
+  # SwipeSimple card-terminal sales: one row per merchant account and day ("Total Net Sales" from its sales report).
+  # Counted from the start of that day. Accounts are added together; deposits are never counted.
+  def swipesimple_rows
+    SwipesimpleSalesDay.where(business_date: from.to_date..now.to_date).where.not(net_sales_cents: [nil, 0])
+      .pluck(:business_date, :net_sales_cents).map do |date, cents|
+      { source: 'swipesimple', at: date.in_time_zone.beginning_of_day, cents: cents, daily: true }
+    end
+  rescue ActiveRecord::StatementInvalid
+    []
   end
 
   def ctrax_rows

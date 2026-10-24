@@ -1,16 +1,19 @@
 <div class="section-card">
-  <%= section_heading 'Revenue · last 30 days', hint: 'Daily gross' %>
+  <%= section_heading 'Revenue · last 30 days', hint: 'Daily gross by source, stacked' %>
   <%# A flat zero line with 0 / 0.5 / 1 axes says nothing; show the chart only once there are sales. %>
   <% if presenter.ledger_groups.any? %>
     <div>
-      <%= area_chart presenter.revenue_series, height: "220px", legend: false, colors: chart_color(:olive_deep), library: { scales: { x: { ticks: { maxTicksLimit: 8 } } } } %>
+      <% palette = { 'shopify' => :olive_deep, 'ctrax' => :sage, 'swipesimple' => :butter, 'square' => :clay } %>
+      <% series = presenter.revenue_by_source %>
+      <%= area_chart series.map { |row| row.except(:source) }, height: "240px", stacked: true, legend: 'bottom', prefix: '$', thousands: ',',
+            colors: chart_color(*series.map { |row| palette.fetch(row[:source], :ink) }), library: { scales: { x: { ticks: { maxTicksLimit: 8 } } } } %>
     </div>
     <dl class="facts">
       <% presenter.ledger_groups.each do |source, gross, count| %>
         <div>
           <dt class="capitalize"><%= DashboardSales::LABELS.fetch(source, source.humanize) %></dt>
           <dd class="stat-value-sm"><%= number_to_currency(gross.to_i / 100.0) %></dd>
-          <dd class="text-xs text-taupe"><%= count %> orders</dd>
+          <dd class="text-xs text-taupe"><%= source == 'swipesimple' ? "#{pluralize(count, 'account-day')} reported" : pluralize(count, 'order') %></dd>
         </div>
       <% end %>
     </dl>
