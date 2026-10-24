@@ -14,7 +14,7 @@ cross: [rupert]
 think: [flint-think]
 
 # Bots that get their own private room in the rail (besides Rupert's room). Everything typed there goes to that bot.
-rooms: [qwen-4b, flint-think, qwen, liquid]
+rooms: [qwen-4b, flint-think, qwen, liquid, gemma]
 
 # Data guide topics (config/team_chat/data_guide.yml) that make a question a finance question: books, tax,
 # expenses, sales, order tracking. Any other topic is general. Finance plus general is cross.
