@@ -1,0 +1,3 @@
+<% content_for :title, 'Pay' %>
+<%= page_header 'Pay', subtitle: 'Your pay for the week you choose: hours, rate, base pay, commission, tips and the total.' %>
+<%= render 'shared/pay_week', pay: @pay_week, week_url: ->(week) { employee_pay_path(week: week&.iso8601) }, form_url: employee_pay_path, title: 'Your week' %>
