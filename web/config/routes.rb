@@ -303,6 +303,9 @@ Rails.application.routes.draw do
   end
 
   get 'stock_comparison', to: 'inventory#comparison'
+  # Product pairing decisions (ProductPair): stored in Rupert only.
+  post   'stock_comparison/pairs', to: 'inventory#pair',   as: :stock_comparison_pairs
+  delete 'stock_comparison/pairs', to: 'inventory#unpair'
   resources :product_names, only: :index do
     collection { get :pdf }
   end

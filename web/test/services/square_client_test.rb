@@ -115,4 +115,24 @@ class SquareClientTest < ActiveSupport::TestCase
     EnvStore.clear_cache!
     assert_not SquareClient.configured?
   end
+
+  test 'orders reads every location in groups of ten and drops repeats' do
+    seen = []
+    stub_request(:post, 'https://connect.squareup.com/v2/orders/search').to_return do |req|
+      ids = JSON.parse(req.body)['location_ids']
+      seen << ids
+      { status: 200, body: { orders: [{ id: "o-#{ids.first}" }, { id: 'shared' }] }.to_json }
+    end
+    locations = (1..12).map { |n| "L#{n}" }
+    orders = SquareClient.orders(locations, '2026-01-01T00:00:00Z')
+    assert_equal [locations.first(10), locations.last(2)], seen
+    assert_equal %w[o-L1 shared o-L11], orders.map { |order| order['id'] }
+  end
+
+  test 'orders past the cap fail instead of returning a partial list' do
+    stub_request(:post, 'https://connect.squareup.com/v2/orders/search')
+      .to_return(status: 200, body: { orders: [{ id: 'a' }, { id: 'b' }, { id: 'c' }], cursor: 'next' }.to_json)
+    error = assert_raises(SquareClient::Error) { SquareClient.orders(['L1'], '2026-01-01T00:00:00Z', max: 2) }
+    assert_includes error.message, 'nothing was imported'
+  end
 end

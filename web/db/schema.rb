@@ -2405,6 +2405,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_010000) do
     t.index ["tenant_id", "name"], name: "index_positions_on_tenant_id_and_name"
   end
 
+  create_table "product_pairs", force: :cascade do |t|
+    t.string "tenant_id", null: false
+    t.string "shopify_variant_id", null: false
+    t.string "ctrax_location_id", null: false
+    t.string "ctrax_record_id", null: false
+    t.string "decision", null: false
+    t.string "shopify_signature"
+    t.string "ctrax_signature"
+    t.string "note", limit: 500
+    t.bigint "decided_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tenant_id", "ctrax_location_id", "shopify_variant_id", "ctrax_record_id"], name: "idx_product_pairs_scope", unique: true
+  end
+
   create_table "project_members", force: :cascade do |t|
     t.string "tenant_id", null: false
     t.integer "project_id", null: false

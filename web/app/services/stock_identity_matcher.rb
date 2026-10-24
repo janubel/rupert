@@ -1,11 +1,18 @@
 # frozen_string_literal: true
 
+require 'set'
+
 # Suggestions are calculated from this tenant's observations; nothing is saved
 # and no result is an approved stock mapping.
 class StockIdentityMatcher
   Match = Struct.new(:record, :identity, :evidence, :issues, :priority, keyword_init: true)
 
-  def initialize(catalog:, records:, historical: [], findings: nil)
+  # decisions: ProductPair rows for these records' store. A confirmed pair is the strongest evidence; a "not the same"
+  # decision stops that suggestion from coming back.
+  def initialize(catalog:, records:, historical: [], findings: nil, decisions: [])
+    @confirmed = Array(decisions).select(&:paired?).index_by(&:shopify_variant_id)
+    @confirmed_records = @confirmed.values.to_h { |pair| [pair.ctrax_record_id, pair.shopify_variant_id] }
+    @rejected = Array(decisions).reject(&:paired?).to_set { |pair| [pair.shopify_variant_id, pair.ctrax_record_id] }
     @catalog = catalog
     @records = records
     @historical = historical
@@ -81,6 +88,7 @@ class StockIdentityMatcher
 
     record = @records.find { |r| r['id'] == proposal['ctrax_id'] }
     return original unless record && !source_conflict?(variant, record)
+    return original if @rejected.include?([variant.id, record['id'].to_s]) || @confirmed_records.key?(record['id'].to_s)
     left = @variant_evidence.fetch(variant)
     right = @record_evidence.fetch(record)
     return original if left.package_conflict?(right) || left.descriptor_conflict?(right)
@@ -119,6 +127,36 @@ class StockIdentityMatcher
   end
 
   def propose(variant)
+    confirmed = confirmed_match(variant)
+    return confirmed if confirmed
+
+    match = suggest(variant)
+    return match unless match.record
+
+    record_id = match.record.fetch('id')
+    if @rejected.include?([variant.id, record_id])
+      return Match.new(identity: 'Marked not the same product', evidence: ['A person marked this suggestion as a different product'], issues: [], priority: 9)
+    end
+    owner = @confirmed_records[record_id]
+    return Match.new(identity: 'C-Trax item already paired with another Shopify item', evidence: [], issues: [], priority: 9) if owner && owner != variant.id
+
+    match
+  end
+
+  # A person confirmed this pair. It still shows package or price differences, and flags a change since then.
+  def confirmed_match(variant)
+    pair = @confirmed[variant.id]
+    record = pair && @records.find { |row| row['id'].to_s == pair.ctrax_record_id }
+    return nil unless record
+
+    match = candidate(variant, record, 'Confirmed pair', -1, ["Confirmed by #{pair.decided_label.presence || 'a person'}"])
+    return match unless match.record
+
+    match.issues << 'Changed since it was confirmed; check the pair again' if pair.changed_since?(variant, record)
+    match
+  end
+
+  def suggest(variant)
     direct = @native.fetch(native_id(variant.id), [])
     return reject_match('Ambiguous source IDs', direct) if direct.many?
     if direct.one?
