@@ -161,6 +161,11 @@ module ApplicationHelper
   # to users who may run the POS setup. Nil when everything is ready.
   # Problems with the system itself, shown as a red badge on the bell and at the top of Notifications instead of a
   # banner on every page: [{ title:, body:, path:, link: }].
+  # A page opened inside the team chat side panel (?panel=1): rendered without the shell.
+  def panel_view?
+    params[:panel] == '1' && request.get? && Current.user.present?
+  end
+
   def system_alerts
     @system_alerts ||= begin
       alerts = []

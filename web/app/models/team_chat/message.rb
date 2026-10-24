@@ -129,6 +129,7 @@ module TeamChat
         answer: answer_timing, compare_of: (meta.to_h['compare_of'] if assistant?),
         unverified: (Array(meta.to_h['unverified']) if assistant? && meta.to_h['unverified'].present?),
         follow_ups: (Array(meta.to_h['follow_ups']).first(4) if assistant? && status == 'done' && meta.to_h['follow_ups'].present?),
+        views: (Array(meta.to_h['views']).first(TeamChat::Views::MAX_VIEWS) if assistant? && status == 'done' && !deleted? && meta.to_h['views'].present?),
         quote: (quotes[quote_id]&.quote_payload if quote_id && !deleted?)
       }
     end

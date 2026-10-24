@@ -293,6 +293,14 @@
       </div>
     </form>
   </aside>
+  <aside class="chat-panel" data-team-chat-target="panel" aria-label="Side panel" hidden>
+    <header class="chat-thread-head chat-panel-head">
+      <h3 class="chat-panel-title" data-team-chat-target="panelTitle">View</h3>
+      <a class="btn-ghost btn-sm" data-team-chat-target="panelOpen" target="_top" hidden>Open full page</a>
+      <button type="button" class="btn-ghost btn-sm" data-action="team-chat#closePanel" aria-label="Close side panel">✕</button>
+    </header>
+    <div class="chat-panel-body" data-team-chat-target="panelBody"></div>
+  </aside>
 
   <dialog class="chat-dialog" data-team-chat-target="presence" aria-labelledby="chat-presence-title"
           data-url="<%= team_chat_presence_path %>" data-policy-url="<%= team_chat_presence_policy_path %>">

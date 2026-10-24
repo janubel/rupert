@@ -1586,6 +1586,28 @@ body.tour-active { overflow-x:hidden; }
    light and dark follow the app. Layout: room rail | conversation | thread. */
 .chat-app { display:grid;grid-template-columns:15.5rem minmax(0,1fr);height:calc(100dvh - 9rem);min-height:20rem;border:1px solid var(--color-edge);border-radius:1rem;overflow:hidden;background:var(--color-paper); }
 .chat-app:has(.chat-thread:not([hidden])) { grid-template-columns:15.5rem minmax(0,1fr) minmax(18rem,24rem); }
+/* Side panel: Rupert pages, files and bot-built views beside the chat (replaces the thread pane while open). */
+.chat-app:has(.chat-panel:not([hidden])) { grid-template-columns:15.5rem minmax(0,1fr) minmax(22rem,40rem); }
+.chat-panel { display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid var(--color-fog);background:var(--color-paper); }
+.chat-panel[hidden] { display:none; }
+.chat-panel-head { display:flex;align-items:center;gap:.5rem; }
+.chat-panel-title { flex:1;min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem;font-weight:700; }
+.chat-panel-body { display:flex;flex-direction:column;gap:.5rem;flex:1;min-height:0;overflow:auto;padding:.6rem .75rem; }
+.chat-panel-frame { flex:1;width:100%;min-height:24rem;border:1px solid var(--color-fog);border-radius:.5rem;background:var(--color-paper); }
+.chat-panel-image { max-width:100%;height:auto;border-radius:.5rem; }
+.chat-panel-text { margin:0;white-space:pre-wrap;font-size:.78rem; }
+.chat-panel-table { overflow:auto; }
+.chat-panel-table table { width:100%;border-collapse:collapse;font-size:.8rem; }
+.chat-panel-table th,.chat-panel-table td { padding:.25rem .45rem;border-bottom:1px solid var(--color-fog);text-align:left;white-space:nowrap; }
+.chat-panel-table td.num { text-align:right;font-variant-numeric:tabular-nums; }
+.chat-panel-chart { width:100%;height:auto; }
+.chat-panel-note { margin:0;font-size:.72rem;color:var(--color-taupe); }
+.chat-panel-warning { margin:0;padding:.35rem .5rem;border-radius:.4rem;background:var(--color-danger-bg);color:var(--color-danger);font-size:.76rem; }
+.chat-views { display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.35rem; }
+.chat-view-chip { padding:.25rem .6rem;border:1px solid var(--color-olive);border-radius:.45rem;background:var(--color-paper);color:var(--color-olive-deep);font:inherit;font-size:.78rem;font-weight:650;cursor:pointer; }
+.chat-view-chip:hover { background:var(--color-haze); }
+/* A page opened in the chat side panel (?panel=1): no shell. */
+.app-main.app-main-panel { max-width:none;padding:.75rem; }
 .chat-rail { display:flex;flex-direction:column;gap:.6rem;min-height:0;padding:.9rem .65rem .7rem;background:var(--color-cream);border-right:1px solid var(--color-fog); }
 .chat-workspace { display:flex;align-items:center;gap:.6rem;padding:.1rem .35rem .3rem; }
 .chat-workspace-mark { display:grid;place-items:center;flex:none;width:2rem;height:2rem;border-radius:.6rem;background:var(--color-olive-deep);color:var(--color-paper);font-weight:800;font-size:.9rem; }

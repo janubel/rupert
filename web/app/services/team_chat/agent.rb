@@ -146,6 +146,9 @@ module TeamChat
           sales tax → sales_tax_report; hours worked and same-day sales → time_keeping_report; timesheets awaiting
           approval, books closed, overdue reviews or record keeping → compliance_check; what is waiting to be processed → order_queues.
         - Look it up instead of asking the person to clarify, unless the question names nothing you can look up.
+        - show_view lays out a table, bar or line chart, or a small HTML page beside the chat. Use it when several rows or a
+          comparison are clearer laid out (days, stores, products side by side); copy figures exactly from tool results and
+          say in your reply what the view shows. It changes nothing.
         - create_task, update_task and submit_feedback only PROPOSE a change: a card with Approve appears under your reply. Propose only what was asked, then say it is waiting for approval.
         - "Assign X to Jan", "give Derek the shelf count", "move it to done", "due Friday": find the task with list_tasks (create it if it does not exist and they asked for a new one), then propose update_task or create_task with assignee set to the person's name or email. Work out dates like "Friday" from today's date. If a name matches more than one person, ask which one.
 
@@ -402,6 +405,7 @@ module TeamChat
       meta['verify'] = @verify_meta if @verify_meta
       meta['financial_evidence'] = @toolbox.financial_evidence if @toolbox.financial?
       meta['prose_checked'] = @prose_checked if @toolbox.financial?
+      meta['views'] = @toolbox.views if @toolbox.views.any?
       follow_ups = Suggestions.follow_ups(topics: Array(@topics).map(&:key), tools: @toolbox.tools_used, asked: request_text)
       meta['follow_ups'] = follow_ups if follow_ups.any?
       load_ms = model_load_ms
