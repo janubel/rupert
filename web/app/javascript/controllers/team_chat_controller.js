@@ -101,9 +101,15 @@ export default class extends Controller {
 
   // Height = the visible window below the chat's top edge, minus the page's bottom padding.
   fitToWindow() {
+    const main = this.element.closest("main")
+    // The page layout fits the chat between the top bar and the status bar (CSS: main is a flex column);
+    // measuring here would count the fixed status bar and cut off the message box.
+    if (main && this.element.parentElement === main && getComputedStyle(main).display === "flex") {
+      if (this.element.style.height) this.element.style.height = ""
+      return
+    }
     const viewport = window.visualViewport?.height || window.innerHeight
     const top = this.element.getBoundingClientRect().top + window.scrollY
-    const main = this.element.closest("main")
     const gap = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0
     const height = Math.max(this.constructor.MIN_HEIGHT, Math.floor(viewport - top - gap - this.heightBelow(main)))
     if (this.element.style.height !== `${height}px`) this.element.style.height = `${height}px`
