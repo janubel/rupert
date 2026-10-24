@@ -84,7 +84,22 @@ days, pulled through <date>" when some days have not been pulled). Accounts with
 no pulled tax report fall back to the transaction-export line and optional
 estimate. The two are never shown together and sources are never added.
 
-`swipesimple_sales_days` is available for a later daily-close view.
+SwipeSimple daily close shows four **Register close totals** from
+`swipesimple_sales_days`: Total collected (`net_sales_cents`), Sales tax
+collected (`tax_cents`), Credit card collected (`net_card_cents`) and Cash
+collected (`net_cash_cents`). These are the native sales report's amounts,
+including its treatment of tax, tips and refunds; they are never added to
+transaction-export totals or deposits. A folded account table shows each
+account's figures and report pull time.
+
+The combined figure for a field remains Unknown if any known account is
+missing that field or its report. A covered day omitted from the report is
+zero only when its sales report was pulled after that business day ended;
+an in-progress omitted day remains Unknown. A missing tax cell is not
+estimated. Report values for one tenant/date never use C-Trax or another
+tenant's records. Changes to the displayed native report values invalidate a
+local review, just as changed transaction evidence does. This adds no provider
+writes, journal entries or database migrations.
 
 ## Older months (automatic)
 
