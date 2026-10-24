@@ -49,6 +49,8 @@ class ModulePolicy < ApplicationPolicy
     leave_write
     payroll_read
     payroll_write
+    tax_read
+    tax_write
   ].each do |perm|
     define_method("#{perm}?") { module?(perm.to_s.tr('_', '.')) }
   end
